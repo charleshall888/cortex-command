@@ -406,7 +406,7 @@ def initialize_overnight_state(
                 integration_branches[repo_key] = integration_branch_name
 
     # Create a git integration worktree for each unique cross-repo target.
-    # Skip the machine-config repo (already has a worktree created above).
+    # Skip the home repo (already has a worktree created above).
     integration_worktrees: dict[str, str] = {}
     for repo_path, branch_name in integration_branches.items():
         if repo_path == project_root:
@@ -472,16 +472,16 @@ def initialize_overnight_state(
         integration_worktrees[repo_path] = str(cross_worktree_path)
 
     # Pure wild-light routing: when the session targets exactly one
-    # cross-repo and has NO MC-local features, make that cross-repo worktree
-    # the primary worktree_path and store the MC worktree in
+    # cross-repo and has NO home-repo-local features, make that cross-repo worktree
+    # the primary worktree_path and store the home-repo worktree in
     # integration_worktrees so ticket 1075 can still locate it.
-    # Mixed sessions (MC + cross-repo) always use the MC worktree as primary.
-    has_mc_features = any(
+    # Mixed sessions (home + cross-repo) always use the home-repo worktree as primary.
+    has_home_features = any(
         item.repo is None
         for batch in selection.batches
         for item in batch.items
     )
-    if len(integration_worktrees) == 1 and not has_mc_features:
+    if len(integration_worktrees) == 1 and not has_home_features:
         primary_repo_key = next(iter(integration_worktrees))
         primary_worktree_str = integration_worktrees[primary_repo_key]
         integration_worktrees[project_root] = str(worktree_path)
