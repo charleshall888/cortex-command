@@ -1,6 +1,58 @@
 # Cortex Command
 
-An opinionated AI workflow framework for [Claude Code](https://docs.anthropic.com/en/docs/claude-code). It coordinates how development work flows from a vague idea through research, specification, planning, implementation, and review -- across single features, parallel batches, or fully autonomous overnight sessions. Skills are the primitive units; hooks wire them into the development environment at the right moments; and state files let the system resume across sessions and tool invocations. All config is deployed via symlinks.
+The north star is fully autonomous coding -- agents that take a vague idea all the way through research, specification, planning, implementation, and review without you babysitting each step. Getting there requires rigor: rushed specs produce bad code, and bad code means you're reviewing agent mistakes instead of shipping. Cortex Command is the workflow infrastructure that makes this tractable. It enforces a structured lifecycle where humans drive the high-stakes decisions (what to build, why, how it should behave) and agents handle the execution. The result is a system where you can queue up a batch of well-specified features before bed and wake up to reviewed, mergeable pull requests.
+
+Skills are the primitive units -- slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. All config is deployed via symlinks so the whole thing lives in version control.
+
+```
+ ┌──────────────────────────────────────────────────────────────────────────┐
+ │  REQUIREMENTS   requirements/project.md  ·  requirements/{area}.md       │
+ └────────────────────────────────────┬─────────────────────────────────────┘
+                                      │ informs scope
+ ┌────────────────────────────────────▼─────────────────────────────────────┐
+ │  DISCOVERY   /discovery [topic]                                          │
+ │  Researches problem space, decomposes into epics and backlog tickets     │
+ └────────────────────────────────────┬─────────────────────────────────────┘
+                                      │
+ ┌────────────────────────────────────▼─────────────────────────────────────┐
+ │  BACKLOG   backlog/NNN-feature.md                                        │
+ │  status: draft ──► /refine ──► ready                                     │
+ │                    (Clarify + Research + Spec per ticket)                │
+ └──────────────────────┬───────────────────────────┬───────────────────────┘
+                        │ interactive               │ autonomous
+          ┌─────────────▼────────────┐    ┌─────────▼────────────────────┐
+          │  /lifecycle              │    │  /overnight                  │
+          │  one feature at a time   │    │  selects status:ready items  │
+          │  human-in-the-loop       │    │  runs features in parallel   │
+          └──────────────────────────┘    └───────────────┬──────────────┘
+                                                          │
+                                         ┌────────────────▼───────────────┐
+                                         │  /morning-review               │
+                                         │  review artifacts              │
+                                         │  answer deferred Q&A           │
+                                         │  advance to complete           │
+                                         └────────────────────────────────┘
+```
+
+```
+        ┌──────────── /refine ──────┐
+        │                           │
+You ──► Clarify ──► Research ──► Spec ──► Plan ──► Implement ──► Review ──► Complete
+                                    │                               ▲         │
+                                    └──────── /overnight ───────────┘    /morning-review
+                                         agents run autonomously              │
+                                               (Plan → Complete)             You
+
+  Complexity tier — auto-detected or set in lifecycle.config.md:
+    simple   ·  standard gates only
+    complex  ·  /critical-review challenges spec before Plan begins
+                (auto-escalated when research surfaces ≥2 open questions)
+
+  Criticality — controls rigor and model selection:
+    low/medium  ·  tier-based review  ·  Haiku explore, Sonnet build
+    high        ·  review always required  ·  Sonnet explore, Opus build
+    critical    ·  parallel research + competing plans  ·  Sonnet explore, Opus build
+```
 
 ## Prerequisites
 
@@ -53,58 +105,6 @@ The setup recipe will warn before overwriting non-symlink files at these locatio
 | `backlog/` | YAML-frontmatter backlog items with overnight readiness gates |
 | `claude/reference/` | Reference docs loaded conditionally by agent instructions |
 | `bin/` | CLI utilities deployed to `~/.local/bin/` -- `jcc` (recipe wrapper), `count-tokens`, `audit-doc`, `overnight-start` |
-
-## How It Works
-
-```
- ┌──────────────────────────────────────────────────────────────────────────┐
- │  REQUIREMENTS   requirements/project.md  ·  requirements/{area}.md       │
- └────────────────────────────────────┬─────────────────────────────────────┘
-                                      │ informs scope
- ┌────────────────────────────────────▼─────────────────────────────────────┐
- │  DISCOVERY   /discovery [topic]                                          │
- │  Researches problem space, decomposes into epics and backlog tickets     │
- └────────────────────────────────────┬─────────────────────────────────────┘
-                                      │
- ┌────────────────────────────────────▼─────────────────────────────────────┐
- │  BACKLOG   backlog/NNN-feature.md                                        │
- │  status: draft ──► /refine ──► ready                                     │
- │                    (Clarify + Research + Spec per ticket)                │
- └──────────────────────┬───────────────────────────┬───────────────────────┘
-                        │ interactive               │ autonomous
-          ┌─────────────▼────────────┐    ┌─────────▼────────────────────┐
-          │  /lifecycle              │    │  /overnight                  │
-          │  one feature at a time   │    │  selects status:ready items  │
-          │  human-in-the-loop       │    │  runs features in parallel   │
-          └──────────────────────────┘    └───────────────┬──────────────┘
-                                                          │
-                                         ┌────────────────▼───────────────┐
-                                         │  /morning-review               │
-                                         │  review artifacts              │
-                                         │  answer deferred Q&A           │
-                                         │  advance to complete           │
-                                         └────────────────────────────────┘
-```
-
-```
-        ┌──────────── /refine ──────┐
-        │                           │
-You ──► Clarify ──► Research ──► Spec ──► Plan ──► Implement ──► Review ──► Complete
-                                    │                               ▲         │
-                                    └──────── /overnight ───────────┘    /morning-review
-                                         agents run autonomously              │
-                                               (Plan → Complete)             You
-
-  Complexity tier — auto-detected or set in lifecycle.config.md:
-    simple   ·  standard gates only
-    complex  ·  /critical-review challenges spec before Plan begins
-                (auto-escalated when research surfaces ≥2 open questions)
-
-  Criticality — controls rigor and model selection:
-    low/medium  ·  tier-based review  ·  Haiku explore, Sonnet build
-    high        ·  review always required  ·  Sonnet explore, Opus build
-    critical    ·  parallel research + competing plans  ·  Sonnet explore, Opus build
-```
 
 ## Customization
 
