@@ -27,9 +27,9 @@ from claude.common import TERMINAL_STATUSES, normalize_status, slugify
 
 STATUSES = (
     "open", "in-progress", "blocked", "resolved", "wontfix", "done",
-    "backlog", "refined", "in_progress", "implementing", "review", "complete", "abandoned",
+    "backlog", "ready", "refined", "in_progress", "implementing", "review", "complete", "abandoned",
 )
-ELIGIBLE_STATUSES = ("backlog", "in_progress", "implementing", "refined")
+ELIGIBLE_STATUSES = ("backlog", "ready", "in_progress", "implementing", "refined")
 PRIORITIES = ("critical", "high", "medium", "low")
 TYPES = ("feature", "bug", "chore", "spike", "idea", "epic")
 
