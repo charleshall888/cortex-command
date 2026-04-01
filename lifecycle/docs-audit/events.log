@@ -18,3 +18,6 @@
 {"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 7, "batch": 0, "status": "success"}
 {"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 8, "batch": 0, "status": "success"}
 {"ts": "2026-04-01T00:09:00Z", "event": "phase_transition", "feature": "docs-audit", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-01T00:10:00Z", "event": "review_verdict", "feature": "docs-audit", "verdict": "APPROVED", "cycle": 1}
+{"ts": "2026-04-01T00:10:01Z", "event": "phase_transition", "feature": "docs-audit", "from": "review", "to": "complete"}
+{"ts": "2026-04-01T00:11:00Z", "event": "feature_complete", "feature": "docs-audit", "tasks_total": 8, "rework_cycles": 0}

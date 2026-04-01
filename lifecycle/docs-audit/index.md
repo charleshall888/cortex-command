@@ -2,7 +2,7 @@
 feature: docs-audit
 parent_backlog_uuid: null
 parent_backlog_id: null
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: []
 created: 2026-04-01
 updated: 2026-04-01
@@ -11,3 +11,4 @@ updated: 2026-04-01
 - Research: [[docs-audit/research|research.md]]
 - Spec: [[docs-audit/spec|spec.md]]
 - Plan: [[docs-audit/plan|plan.md]]
+- Review: [[docs-audit/review|review.md]]
