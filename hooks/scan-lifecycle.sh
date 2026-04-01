@@ -419,7 +419,7 @@ fi
 # --- Output (agent-specific format) ---
 
 if [[ -n "$context" ]]; then
-  if [[ "$AGENT" == "claude" ]]; then
+  if [[ "${AGENT:-}" == "claude" ]]; then
     jq -n --arg ctx "$context" '{
       hookSpecificOutput: {
         hookEventName: "SessionStart",
