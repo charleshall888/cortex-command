@@ -5,7 +5,7 @@
 # log file under $TMPDIR so operators can diagnose sandbox tuning issues.
 #
 # Log line format:
-#   {ISO8601 timestamp} REQUESTED tool={tool_name} input={truncated_input}
+#   {ISO8601 timestamp} REQUESTED type={notification_type} title={title} message={truncated_message}
 #
 # Log file path:
 #   $TMPDIR/claude-permissions-{session_key}.log
@@ -59,30 +59,31 @@ if [[ -z "$INPUT" ]]; then
 fi
 
 # Check event type — only log permission_prompt events.
-EVENT=$(echo "$INPUT" | jq -r '.event // .hook_event_name // empty' 2>/dev/null || true)
+EVENT=$(echo "$INPUT" | jq -r '.notification_type // empty' 2>/dev/null || true)
 if [[ -n "$EVENT" && "$EVENT" != "null" && "$EVENT" != "permission_prompt" ]]; then
   exit 0
 fi
 
 # Extract fields — fall back gracefully if absent.
-TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"' 2>/dev/null || echo "unknown")
-if [[ -z "$TOOL_NAME" || "$TOOL_NAME" == "null" ]]; then
-  TOOL_NAME="unknown"
+NOTIF_TYPE=$(echo "$INPUT" | jq -r '.notification_type // "unknown"' 2>/dev/null || echo "unknown")
+if [[ -z "$NOTIF_TYPE" || "$NOTIF_TYPE" == "null" ]]; then
+  NOTIF_TYPE="unknown"
 fi
 
-TOOL_INPUT=$(echo "$INPUT" | jq -r '.tool_input.command // (.tool_input | tostring) // ""' 2>/dev/null || true)
-if [[ -z "$TOOL_INPUT" || "$TOOL_INPUT" == "null" ]]; then
-  TOOL_INPUT=""
+TITLE=$(echo "$INPUT" | jq -r '.title // "unknown"' 2>/dev/null || echo "unknown")
+if [[ -z "$TITLE" || "$TITLE" == "null" ]]; then
+  TITLE="unknown"
 fi
 
-# Truncate input to 200 chars.
-TRUNCATED_INPUT="${TOOL_INPUT:0:200}"
+MESSAGE=$(echo "$INPUT" | jq -r '.message // ""' 2>/dev/null || true)
+if [[ -z "$MESSAGE" || "$MESSAGE" == "null" ]]; then
+  MESSAGE=""
+fi
+
+# Truncate message to 200 chars.
+TRUNCATED_MESSAGE="${MESSAGE:0:200}"
 
 # --- Write log line ---
-if [[ -n "$TRUNCATED_INPUT" ]]; then
-  printf '%s REQUESTED tool=%s input=%s\n' "$TIMESTAMP" "$TOOL_NAME" "$TRUNCATED_INPUT" >> "$LOG_FILE" 2>/dev/null || true
-else
-  printf '%s REQUESTED tool=%s\n' "$TIMESTAMP" "$TOOL_NAME" >> "$LOG_FILE" 2>/dev/null || true
-fi
+printf '%s REQUESTED type=%s title=%s message=%s\n' "$TIMESTAMP" "$NOTIF_TYPE" "$TITLE" "$TRUNCATED_MESSAGE" >> "$LOG_FILE" 2>/dev/null || true
 
 exit 0
