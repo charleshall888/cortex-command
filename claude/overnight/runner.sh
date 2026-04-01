@@ -418,9 +418,9 @@ raw = os.environ.get('LOG_DETAILS', '')
 details = ast.literal_eval(raw) if raw else None
 log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=details, log_path=Path(os.environ['LOG_EVENTS_PATH']))
 " 2>/dev/null || true
-            # Write stall flag and kill the target process
+            # Write stall flag and kill the target's entire process group
             echo "1" > "$STALL_FLAG"
-            kill "$target_pid" 2>/dev/null || true
+            kill -- -"$target_pid" 2>/dev/null || true
             return 0
         fi
     done
@@ -438,6 +438,9 @@ elapsed_hours() {
 # ---------------------------------------------------------------------------
 
 cleanup() {
+    # Kill child process groups first — with set -m they won't receive our signals
+    [[ -n "${CLAUDE_PID:-}" ]] && kill -- -"$CLAUDE_PID" 2>/dev/null || true
+    [[ -n "${BATCH_PID:-}" ]] && kill -- -"$BATCH_PID" 2>/dev/null || true
     rm -f "${LOCK_FILE:-}"
     echo ""
     echo "Signal received — pausing overnight session"
@@ -568,12 +571,17 @@ while [[ $ROUND -le $MAX_ROUNDS ]]; do
     # Clear stall flag for this round
     > "$STALL_FLAG"
     set +e
+    # set -m gives the child its own PGID so the watchdog can kill the
+    # entire process group. $! == PGID only holds for direct cmd & (not pipelines).
+    set -m
     claude -p "$FILLED_PROMPT" \
         --dangerously-skip-permissions \
         --max-turns 50 2>&1 & CLAUDE_PID=$!
+    set +m
     ( watch_events_log "$EVENTS_PATH" 1800 $CLAUDE_PID ) & WATCHDOG_PID=$!
     wait $CLAUDE_PID
     EXIT_CODE=$?
+    CLAUDE_PID=""
     kill $WATCHDOG_PID 2>/dev/null || true
     wait $WATCHDOG_PID 2>/dev/null || true
     set -e
@@ -624,6 +632,9 @@ log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=de
         # Clear stall flag for batch_runner watchdog
         > "$STALL_FLAG"
         set +e
+        # set -m gives batch_runner its own PGID for process group kill.
+        # $! == PGID only holds for direct cmd & (not pipelines).
+        set -m
         python3 -m claude.overnight.batch_runner \
             --plan "$BATCH_PLAN_PATH" \
             --batch-id $ROUND \
@@ -632,9 +643,11 @@ log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=de
             --state-path "$STATE_PATH" \
             --events-path "$EVENTS_PATH" \
             --test-command "${TEST_COMMAND:-none}" & BATCH_PID=$!
+        set +m
         ( watch_events_log "$EVENTS_PATH" 1800 $BATCH_PID ) & BATCH_WATCHDOG_PID=$!
         wait $BATCH_PID
         BATCH_EXIT=$?
+        BATCH_PID=""
         kill $BATCH_WATCHDOG_PID 2>/dev/null || true
         wait $BATCH_WATCHDOG_PID 2>/dev/null || true
         set -e
