@@ -1,28 +1,17 @@
 #!/bin/bash
-# Shared hook: validate git commit messages before execution.
-# Works with both Claude Code (PreToolUse) and Cursor (beforeShellExecution).
-# Detects the calling agent from input JSON shape and adapts output format.
+# Hook: validate git commit messages before execution (PreToolUse).
 set -euo pipefail
 
 INPUT=$(cat)
 
-# --- Agent detection and command extraction ---
+# --- Command extraction ---
 # Claude sends: {"tool_name": "Bash", "tool_input": {"command": "..."}}
-# Cursor sends: {"command": "...", "cwd": "..."}
 
-AGENT="unknown"
-COMMAND=""
+TOOL=$(echo "$INPUT" | jq -r '.tool_name // empty')
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 
-if echo "$INPUT" | jq -e '.tool_name' >/dev/null 2>&1; then
-  AGENT="claude"
-  TOOL=$(echo "$INPUT" | jq -r '.tool_name // empty')
-  COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
-  # Only validate git commit commands from Bash tool
-  [[ "$TOOL" == "Bash" ]] || exit 0
-else
-  AGENT="cursor"
-  COMMAND=$(echo "$INPUT" | jq -r '.command // empty')
-fi
+# Only validate git commit commands from Bash tool
+[[ "$TOOL" == "Bash" ]] || exit 0
 
 # Only validate git commit commands
 [[ "$COMMAND" == *"git commit"* ]] || exit 0
@@ -103,33 +92,20 @@ fi
 if (( ${#ERRORS[@]} > 0 )); then
   REASON=$(printf "• %s\n" "${ERRORS[@]}")
 
-  if [[ "$AGENT" == "claude" ]]; then
-    jq -n --arg reason "$REASON" '{
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        permissionDecision: "deny",
-        permissionDecisionReason: ("Commit message validation failed:\n" + $reason)
-      }
-    }'
-  else
-    jq -n --arg reason "$REASON" '{
-      permission: "deny",
-      user_message: ("Commit message validation failed:\n" + $reason)
-    }'
-  fi
+  jq -n --arg reason "$REASON" '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: ("Commit message validation failed:\n" + $reason)
+    }
+  }'
 else
-  if [[ "$AGENT" == "claude" ]]; then
-    jq -n '{
-      hookSpecificOutput: {
-        hookEventName: "PreToolUse",
-        permissionDecision: "allow"
-      }
-    }'
-  else
-    jq -n '{
-      permission: "allow"
-    }'
-  fi
+  jq -n '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "allow"
+    }
+  }'
 fi
 
 exit 0

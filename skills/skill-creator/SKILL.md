@@ -224,12 +224,7 @@ When a skill creates or references project instruction files, follow the `Agents
 
 ```bash
 ln -s Agents.md CLAUDE.md
-ln -s Agents.md GEMINI.md
-ln -s Agents.md .cursorrules
-mkdir -p .github && ln -s ../Agents.md .github/copilot-instructions.md
 ```
-
-This ensures instructions are maintained in one place and shared across all AI coding agents.
 
 ## Prompt Contracts
 

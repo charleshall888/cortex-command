@@ -1,21 +1,8 @@
 #!/bin/bash
-# Shared hook: scan lifecycle directories and inject state awareness.
-# Works with both Claude Code (SessionStart) and Cursor (sessionStart).
-# Detects the calling agent from input JSON shape and adapts output format.
+# Hook: scan lifecycle directories and inject state awareness (SessionStart).
 set -euo pipefail
 
 INPUT=$(cat)
-
-# --- Agent detection ---
-# Claude sends: {"hook_event_name": "...", "session_id": "...", "cwd": "..."}
-# Cursor sends: {"session_id": "...", "is_background_agent": ...}
-# Use hook_event_name presence as the Claude discriminator (both agents send session_id).
-AGENT="unknown"
-if echo "$INPUT" | jq -e 'has("hook_event_name")' >/dev/null 2>&1; then
-  AGENT="claude"
-elif echo "$INPUT" | jq -e 'has("is_background_agent")' >/dev/null 2>&1; then
-  AGENT="cursor"
-fi
 
 # --- Session identity injection ---
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""')

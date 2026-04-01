@@ -48,7 +48,7 @@ The `test-skills` master runner wraps each sub-suite:
 ```
 [PASS] test-skill-contracts
 [FAIL] test-hook-commit
-       FAIL validate-commit/cursor-valid-simple: expected 'allow', got 'null'
+       FAIL validate-commit/valid-simple: expected 'allow', got 'null'
        1 passed, 1 failed (out of 2)
 
 Test suite: 4/5 passed
@@ -104,8 +104,6 @@ JSON files fed to the hook via stdin. Filename prefix determines expected outcom
 
 - `valid-*` — hook should allow/succeed (exit 0, `permissionDecision: "allow"`)
 - `invalid-*` — hook should deny/fail (exit 0, `permissionDecision: "deny"`)
-- `cursor-valid-*` — Cursor-format valid input
-- `cursor-invalid-*` — Cursor-format invalid input
 
 ### Contract fixtures (`fixtures/contracts/<case-name>/`)
 

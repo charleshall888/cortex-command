@@ -37,10 +37,9 @@ for fixture in "$FIXTURE_DIR"/*.json; do
   name="$(basename "$fixture" .json)"
 
   # Derive expected decision from filename prefix
-  # Handles both plain (valid-*, invalid-*) and agent-prefixed (cursor-valid-*, cursor-invalid-*)
-  if [[ "$name" == valid-* || "$name" == cursor-valid-* ]]; then
+  if [[ "$name" == valid-* ]]; then
     expected="allow"
-  elif [[ "$name" == invalid-* || "$name" == cursor-invalid-* ]]; then
+  elif [[ "$name" == invalid-* ]]; then
     expected="deny"
   else
     fail "validate-commit/$name" "unknown fixture prefix — must be valid-* or invalid-*"
@@ -57,15 +56,9 @@ for fixture in "$FIXTURE_DIR"/*.json; do
     continue
   fi
 
-  # Extract decision from JSON output — handles both Claude and Cursor shapes
+  # Extract decision from JSON output
   decision=$(echo "$output" | jq -r '
-    if .hookSpecificOutput.permissionDecision != null then
-      .hookSpecificOutput.permissionDecision
-    elif .permission != null then
-      .permission
-    else
-      "unknown"
-    end
+    .hookSpecificOutput.permissionDecision // "unknown"
   ' 2>/dev/null)
 
   if [[ "$decision" == "$expected" ]]; then

@@ -75,7 +75,7 @@ deploy-hooks:
         ln -sf "$(pwd)/$hook" "$HOME/.claude/hooks/$name"
     done
 
-# Deploy config files (settings.json, CLAUDE.md, statusline, cursor hooks)
+# Deploy config files (settings.json, CLAUDE.md, statusline)
 deploy-config:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -96,9 +96,6 @@ deploy-config:
             *statusline.sh) ln -sf "$(pwd)/claude/statusline.sh" "$target" ;;
         esac
     done
-    # Cursor hooks
-    mkdir -p .cursor
-    ln -sf "$(pwd)/cursor/hooks.json" .cursor/hooks.json
 
 # --- Dependencies ---
 

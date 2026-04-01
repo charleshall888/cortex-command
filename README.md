@@ -51,11 +51,10 @@ The setup recipe will warn before overwriting non-symlink files at these locatio
 | `backlog/` | YAML-frontmatter backlog items with overnight readiness gates |
 | `claude/reference/` | Reference docs loaded conditionally by agent instructions |
 | `bin/` | CLI utilities deployed to `~/.local/bin/` -- `jcc` (recipe wrapper), `count-tokens`, `audit-doc`, `overnight-start` |
-| `cursor/` | Cursor-specific config -- hooks, per-skill symlinks for cross-agent support |
 
-## How It Works
+## Workflow Diagrams
 
-### Main Workflow
+### Diagram A — Main Workflow Flow
 
 ```mermaid
 graph TD
@@ -101,7 +100,7 @@ graph TD
     EVOLVE -->|"new items"| BACKLOG
 ```
 
-### Lifecycle Phases
+### Diagram B — Lifecycle Phase Sequence
 
 ```
 [Discovery artifacts] -----------------------------+
@@ -121,32 +120,9 @@ Review phase conditions:
   - Always forced for high and critical criticality
 ```
 
-## Cross-Agent Support
-
-Skills and hooks are agent-agnostic where possible. Both Claude Code and Cursor can use the shared skills in `skills/` and hooks in `hooks/`. Agent-specific config lives in `claude/` and `cursor/` respectively. See [`docs/setup.md`](docs/setup.md) for Cursor setup instructions.
-
 ## Customization
 
-`claude/settings.json` ships with the author's preferences:
-
-- `model: opus[1m]` -- model selection
-- `cleanupPeriodDays: 365` -- session retention
-- `alwaysThinkingEnabled: true` -- extended thinking
-- Experimental environment variables for agent teams
-
-Review and adjust these for your own setup. Use `settings.local.json` in any project for per-machine overrides without modifying the tracked file.
-
-## OS Compatibility
-
-| Component | macOS | Linux | Windows |
-|-----------|:-----:|:-----:|:-------:|
-| Skills | Yes | Yes | Yes |
-| Hooks (commit, lifecycle) | Yes | Yes | Yes |
-| Overnight runner | Yes | Yes | -- |
-| Dashboard | Yes | Yes | -- |
-| Notifications (`notify.sh`) | Yes | -- | -- |
-| Statusline (shell) | Yes | Yes | -- |
-| Statusline (PowerShell) | -- | -- | Yes |
+`claude/settings.json` is tracked and symlinked to `~/.claude/settings.json`. Review and adjust the model, session retention, thinking mode, and experimental flags for your own setup. Use `settings.local.json` in any project for per-machine overrides without modifying the tracked file.
 
 ## Commands
 
@@ -169,7 +145,7 @@ just validate-skills       # Check skill frontmatter
 | Guide | Covers |
 |-------|--------|
 | [`docs/agentic-layer.md`](docs/agentic-layer.md) | Full skill and hook inventory, workflow diagrams, lifecycle phase map |
-| [`docs/setup.md`](docs/setup.md) | Installation, symlinks, Cursor setup, macOS caffeinate, GPG/PAT config |
+| [`docs/setup.md`](docs/setup.md) | Installation, symlinks, macOS caffeinate, GPG/PAT config |
 | [`docs/overnight.md`](docs/overnight.md) | Autonomous overnight runner -- planning, execution, deferral, morning review |
 | [`docs/dashboard.md`](docs/dashboard.md) | Web dashboard for monitoring overnight sessions |
 | [`docs/backlog.md`](docs/backlog.md) | Backlog YAML schema, readiness gates, overnight eligibility |

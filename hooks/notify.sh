@@ -1,7 +1,7 @@
 #!/bin/bash
-# Shared notification helper for AI coding agents.
+# Notification helper for Claude Code.
 # Sends macOS notification and terminal bell.
-# Called by both Claude Code (Stop/Notification hooks) and Cursor (stop hook).
+# Called by Stop and Notification hooks.
 #
 # TODO: When Ghostty adds native notification suppression (tracking:
 # https://github.com/ghostty-org/ghostty/discussions/3555), replace this

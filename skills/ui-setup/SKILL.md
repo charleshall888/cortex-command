@@ -39,11 +39,6 @@ Then add to IDE settings:
 { "mcpServers": { "shadcn": { "command": "npx", "args": ["shadcn@latest", "mcp"] } } }
 ```
 
-**Cursor** (`~/.cursor/mcp.json`):
-```json
-{ "mcpServers": { "shadcn": { "command": "npx", "args": ["shadcn@latest", "mcp"] } } }
-```
-
 ### C. ESLint
 
 Check for: the selected Tailwind ESLint plugin, `eslint-plugin-jsx-a11y`, and an ESLint config (`eslint.config.mjs`, `eslint.config.js`, `.eslintrc.json`) containing `no-arbitrary-value: "error"` and `jsx-a11y` recommended rules.
