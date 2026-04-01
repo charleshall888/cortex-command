@@ -93,8 +93,16 @@ def main() -> None:
     local_settings["permissions"] = local_perms
     local_settings["_globalPermissionsHash"] = current_hash
 
+    new_content = json.dumps(local_settings, indent=2) + "\n"
     try:
-        local_path.write_text(json.dumps(local_settings, indent=2) + "\n")
+        current_content = local_path.read_text()
+        if new_content == current_content:
+            return
+    except OSError:
+        pass
+
+    try:
+        local_path.write_text(new_content)
     except OSError:
         return
 
