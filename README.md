@@ -1,6 +1,8 @@
 # Cortex Command
 
-The north star is fully autonomous coding -- agents that take a vague idea all the way through research, specification, planning, implementation, and review without you babysitting each step. Getting there requires rigor: rushed specs produce bad code, and bad code means you're reviewing agent mistakes instead of shipping. Cortex Command is the workflow infrastructure that makes this tractable. It enforces a structured lifecycle where humans drive the high-stakes decisions (what to build, why, how it should behave) and agents handle the execution. The result is a system where you can queue up a batch of well-specified features before bed and wake up to reviewed, mergeable pull requests.
+The north star is autonomous coding -- agents that can execute a fully specified feature from plan through reviewed pull request without intervention. Getting there requires rigor: rushed specs produce bad code, and bad code means you're reviewing agent mistakes instead of shipping. Cortex Command is the workflow infrastructure that makes this tractable.
+
+The front half of the lifecycle is intentionally human-driven. You clarify what you want to build, run discovery to map the problem space, and collaborate with agents to spec individual features before they're marked ready. That investment is what makes autonomous execution safe. Once a feature is well-specified, you can hand it off -- run it interactively with `/lifecycle` when you want to stay in the loop, or queue a batch for `/overnight` and wake up to reviewed pull requests.
 
 Skills are the primitive units -- slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. All config is deployed via symlinks so the whole thing lives in version control.
 
