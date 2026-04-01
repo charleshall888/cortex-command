@@ -207,6 +207,7 @@
     "ask": [],
     "defaultMode": "default"
   },
+  "model": "sonnet[1m]",
   "enableAllProjectMcpServers": false,
   "hooks": {
     "SessionStart": [
@@ -366,6 +367,5 @@
     ]
   },
   "alwaysThinkingEnabled": true,
-  "effortLevel": "high",
-  "model": "opus[1m]"
+  "effortLevel": "high"
 }
