@@ -102,7 +102,9 @@ Features enabled by this config:
 - FiraCode Nerd Font
 - Bell notifications (title icon, dock bounce, border flash)
 
-### Windows Terminal Equivalent
+---
+
+## Windows Terminal (Windows)
 
 Ghostty is macOS only. On Windows, configure FiraCode Nerd Font in Windows Terminal's `settings.json`:
 
@@ -122,7 +124,12 @@ Ghostty is macOS only. On Windows, configure FiraCode Nerd Font in Windows Termi
 
 ## macOS Sleep Prevention (macOS only)
 
-Long-running Claude Code sessions and overnight pipeline runs are interrupted when the Mac auto-sleeps or locks the screen. This polling daemon watches for active tmux sessions or Claude processes and keeps the machine awake for the duration using `caffeinate -d -i`. It runs as a launchd service and starts automatically at login — no manual intervention needed between sessions.
+Long-running Claude Code sessions and overnight pipeline runs are interrupted when the Mac auto-sleeps or locks the screen. This polling daemon watches for active tmux sessions or Claude processes and keeps the machine awake for the duration using `caffeinate -d -i`.
+
+`caffeinate-monitor.sh` serves two roles:
+
+1. **Symlinked binary** — linked to `~/.local/bin/caffeinate-monitor.sh` so it can be invoked directly from the command line.
+2. **Launchd service** — registered via `mac/local.caffeinate-monitor.plist` at `~/Library/LaunchAgents/`, which means it starts automatically at login with no manual intervention needed between sessions.
 
 ```bash
 chmod +x "$(pwd)/mac/caffeinate-monitor.sh"
@@ -159,6 +166,21 @@ After forking, update these files before linking anything to `~/`:
 | `remote/SETUP.md` | Replace the hostname examples with your own Tailscale hostname |
 
 > **Customize**: `claude/settings.json` contains MCP plugin `allow`/`deny` permission patterns. These are personal — they reference specific tool names and path patterns. Review and update them for the tools you use; remove entries for tools you don't have installed.
+
+To add an MCP server, add a `mcpServers` block to `claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "server-name": {
+      "command": "npx",
+      "args": ["-y", "@scope/server-package"]
+    }
+  }
+}
+```
+
+Then add permission patterns for its tools in the `permissions.allow` list (e.g. `"mcp__server-name__*"`).
 
 ### Full Setup (macOS)
 
