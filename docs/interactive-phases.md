@@ -96,6 +96,8 @@ Two parameters govern the lifecycle:
 
 Both can be overridden at any point by asking the agent to change them.
 
+**Persistence note**: When the complexity tier is escalated mid-lifecycle (either automatically at phase transitions or manually on request), the escalation is recorded as a `complexity_override` event in `lifecycle/{feature}/events.log`. It is NOT written back to the backlog item's YAML frontmatter — the `complexity:` field in the backlog item is set only during the Clarify phase and does not change thereafter. The active tier for all subsequent phases is determined by reading `events.log` at resume time.
+
 ---
 
 ## /refine — Clarify → Research → Spec in One Invocation
@@ -125,6 +127,12 @@ After spec approval, `/refine` writes `status: refined` and `spec:` to the backl
 - If `spec.md` already exists: offers to re-run (re-running resets `status` to `in_progress` until the new spec is approved)
 - If `research.md` exists but not `spec.md`: resumes at Spec (applies a sufficiency check to verify the existing research covers the clarified intent)
 - Otherwise: starts at Clarify
+
+### Stale Artifact Limitation
+
+The readiness gate (and `/lifecycle`'s phase detection) checks for artifact file existence only — it does not assess content freshness. A `spec.md` written months ago passes the gate and is scheduled for overnight execution exactly like a freshly approved spec. There is no automatic staleness detection.
+
+**Workaround**: If you suspect `research.md` or `spec.md` is out of date (e.g., the codebase has changed significantly since the artifact was written), delete or rename the stale file and re-run `/refine` to regenerate it. Once the new artifact is approved, the feature is ready for overnight execution again.
 
 ---
 
