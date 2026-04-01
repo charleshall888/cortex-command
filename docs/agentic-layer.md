@@ -270,7 +270,7 @@ Hooks that need request context receive a JSON object on **stdin** before they w
 - **`PreToolUse`** — `{"tool_name": "Bash", "tool_input": {"command": "..."}, ...}`. Used by `validate-commit.sh` to extract the git commit command and its message.
 - **`SessionStart`** — `{"cwd": "/path/to/project", "session_id": "...", ...}`. Used by `sync-permissions.py` to locate the project's `settings.local.json` and by `worktree-create.sh` to determine where to create the new worktree.
 - **`WorktreeCreate`** — `{"cwd": "...", "name": "...", "session_id": "...", "hook_event_name": "WorktreeCreate"}`. `worktree-create.sh` reads `cwd` and `name` to construct the worktree path and branch name.
-- **`Notification`** — `{"event": "permission_prompt", ...}`. Used by `permission-audit-log.sh` to log the prompt.
+- **`Notification`** — `{"hook_event_name": "Notification", "notification_type": "permission_prompt", "message": "...", "title": "..."}`. Used by `permission-audit-log.sh` to log the prompt. Note: `hook_event_name` is always `"Notification"` for all notification events; `notification_type` discriminates between event subtypes.
 
 Hooks that do not need request context (e.g., `notify.sh`, `cleanup-session.sh`) ignore stdin.
 
