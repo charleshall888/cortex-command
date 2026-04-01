@@ -1,0 +1,32 @@
+<h2>Round History</h2>
+{% if state.overnight and state.overnight.round_history %}
+<table class="round-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Started</th>
+      <th>Completed</th>
+      <th>Duration</th>
+      <th>Merged</th>
+      <th>Paused</th>
+      <th>Deferred</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for round in state.overnight.round_history %}
+    {% set rt = state.round_timestamps.get(round.round_number, {}) %}
+    <tr>
+      <td>{{ round.round_number }}</td>
+      <td>{{ rt.get('started_at') | format_date }}</td>
+      <td>{{ rt.get('completed_at') | format_date }}</td>
+      <td>{{ rt.get('started_at') | format_duration(rt.get('completed_at')) }}</td>
+      <td>{% set items = round.features_merged %}{% if items | length > 3 %}{{ items[:3] | join(', ') }} +{{ items | length - 3 }} more{% elif items %}{{ items | join(', ') }}{% else %}—{% endif %}</td>
+      <td>{% set items = round.features_paused %}{% if items | length > 3 %}{{ items[:3] | join(', ') }} +{{ items | length - 3 }} more{% elif items %}{{ items | join(', ') }}{% else %}—{% endif %}</td>
+      <td>{% set items = round.features_deferred %}{% if items | length > 3 %}{{ items[:3] | join(', ') }} +{{ items | length - 3 }} more{% elif items %}{{ items | join(', ') }}{% else %}—{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty-state">No completed rounds yet.</p>
+{% endif %}

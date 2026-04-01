@@ -1,0 +1,1 @@
+{"tool_name": "Read", "tool_input": {"file_path": "/does-not-exist"}, "tool_response": {"exit_code": 1, "stdout": "", "stderr": "file not found"}, "session_id": "__SESSION_ID__"}

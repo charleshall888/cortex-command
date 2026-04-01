@@ -1,0 +1,205 @@
+"""Unit tests for parser.py separator tolerance.
+
+Task 6 — TestSeparatorVariants: all four separator styles parse correctly.
+Task 6 — TestEmbeddedSeparator: em dashes in task names are preserved.
+Task 6 — TestMixedSeparators: plans with mixed separator styles parse all tasks.
+Task 6 — TestNormalizationIdempotent: normalization is a no-op on correct plans.
+Task 6 — TestNormalizationPreservesBody: body text with separators is unchanged.
+"""
+
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from claude.pipeline.parser import (
+    FeaturePlan,
+    parse_feature_plan,
+    _normalize_task_separators,
+)
+
+
+def _make_plan(tasks_body: str) -> str:
+    """Return a minimal valid plan with the given tasks section."""
+    return (
+        "# Plan: test-feature\n\n"
+        "## Overview\ntest\n\n"
+        "## Tasks\n"
+        f"{tasks_body}"
+    )
+
+
+def _task_block(heading: str, **fields: str) -> str:
+    """Build a single task block from a heading and optional fields."""
+    lines = [heading]
+    for key, value in fields.items():
+        lines.append(f"- **{key}**: {value}")
+    return "\n".join(lines) + "\n"
+
+
+class TestSeparatorVariants(unittest.TestCase):
+    """Task headings with all four separator variants parse to correct task number and description."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _parse(self, tasks_body: str) -> FeaturePlan:
+        plan_path = Path(self._tmpdir.name) / "plan.md"
+        plan_path.write_text(_make_plan(tasks_body), encoding="utf-8")
+        return parse_feature_plan(plan_path)
+
+    def test_colon_separator(self):
+        """### Task 1: Description parses correctly."""
+        plan = self._parse(_task_block(
+            "### Task 1: Build the widget",
+            Complexity="simple",
+        ))
+        self.assertEqual(len(plan.tasks), 1)
+        self.assertEqual(plan.tasks[0].number, 1)
+        self.assertEqual(plan.tasks[0].description, "Build the widget")
+
+    def test_em_dash_separator(self):
+        """### Task 1 \u2014 Description (em dash) parses correctly."""
+        plan = self._parse(_task_block(
+            "### Task 1 \u2014 Build the widget",
+            Complexity="simple",
+        ))
+        self.assertEqual(len(plan.tasks), 1)
+        self.assertEqual(plan.tasks[0].number, 1)
+        self.assertEqual(plan.tasks[0].description, "Build the widget")
+
+    def test_en_dash_separator(self):
+        """### Task 1\u2013 Description (en dash) parses correctly."""
+        plan = self._parse(_task_block(
+            "### Task 1\u2013 Build the widget",
+            Complexity="simple",
+        ))
+        self.assertEqual(len(plan.tasks), 1)
+        self.assertEqual(plan.tasks[0].number, 1)
+        self.assertEqual(plan.tasks[0].description, "Build the widget")
+
+    def test_hyphen_separator(self):
+        """### Task 1 - Description (hyphen-minus) parses correctly."""
+        plan = self._parse(_task_block(
+            "### Task 1 - Build the widget",
+            Complexity="simple",
+        ))
+        self.assertEqual(len(plan.tasks), 1)
+        self.assertEqual(plan.tasks[0].number, 1)
+        self.assertEqual(plan.tasks[0].description, "Build the widget")
+
+
+class TestEmbeddedSeparator(unittest.TestCase):
+    """Task names with embedded em dashes don't get truncated."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _parse(self, tasks_body: str) -> FeaturePlan:
+        plan_path = Path(self._tmpdir.name) / "plan.md"
+        plan_path.write_text(_make_plan(tasks_body), encoding="utf-8")
+        return parse_feature_plan(plan_path)
+
+    def test_embedded_em_dash_preserved(self):
+        """### Task 1 \u2014 Fix em-dash parser \u2014 round 2 keeps full description."""
+        plan = self._parse(_task_block(
+            "### Task 1 \u2014 Fix em-dash parser \u2014 round 2",
+            Complexity="simple",
+        ))
+        self.assertEqual(len(plan.tasks), 1)
+        self.assertEqual(plan.tasks[0].number, 1)
+        self.assertEqual(
+            plan.tasks[0].description,
+            "Fix em-dash parser \u2014 round 2",
+        )
+
+
+class TestMixedSeparators(unittest.TestCase):
+    """Plans with mixed separator styles parse all tasks correctly."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _parse(self, tasks_body: str) -> FeaturePlan:
+        plan_path = Path(self._tmpdir.name) / "plan.md"
+        plan_path.write_text(_make_plan(tasks_body), encoding="utf-8")
+        return parse_feature_plan(plan_path)
+
+    def test_mixed_separators_all_parsed(self):
+        """Four tasks with different separators all parse successfully."""
+        body = (
+            _task_block("### Task 1: Colon task", Complexity="simple")
+            + _task_block("### Task 2 \u2014 Em dash task", Complexity="moderate")
+            + _task_block("### Task 3\u2013 En dash task", Complexity="simple")
+            + _task_block("### Task 4 - Hyphen task", Complexity="simple")
+        )
+        plan = self._parse(body)
+        self.assertEqual(len(plan.tasks), 4)
+        self.assertEqual(plan.tasks[0].number, 1)
+        self.assertEqual(plan.tasks[0].description, "Colon task")
+        self.assertEqual(plan.tasks[1].number, 2)
+        self.assertEqual(plan.tasks[1].description, "Em dash task")
+        self.assertEqual(plan.tasks[2].number, 3)
+        self.assertEqual(plan.tasks[2].description, "En dash task")
+        self.assertEqual(plan.tasks[3].number, 4)
+        self.assertEqual(plan.tasks[3].description, "Hyphen task")
+
+
+class TestNormalizationIdempotent(unittest.TestCase):
+    """Normalization is a no-op on already-correct plans (colon separators)."""
+
+    def test_colon_plan_unchanged(self):
+        """A plan that already uses colons is not modified by normalization."""
+        text = _make_plan(
+            _task_block("### Task 1: First task", Complexity="simple")
+            + _task_block("### Task 2: Second task", Complexity="simple")
+        )
+        normalized = _normalize_task_separators(text)
+        self.assertEqual(normalized, text)
+
+
+class TestNormalizationPreservesBody(unittest.TestCase):
+    """Normalization does not corrupt task body text containing separator characters."""
+
+    def test_body_em_dash_unchanged(self):
+        """Em dash in bullet text within a task body is preserved after normalization."""
+        task_body = (
+            "### Task 1 \u2014 My task\n"
+            "- **What**: Fix the parser \u2014 this is important\n"
+            "- **Files**: `src/parser.py`\n"
+            "- **Complexity**: simple\n"
+        )
+        text = _make_plan(task_body)
+        normalized = _normalize_task_separators(text)
+        # The heading should be normalized to colon
+        self.assertIn("### Task 1: My task", normalized)
+        # The body line with em dash should be unchanged
+        self.assertIn("Fix the parser \u2014 this is important", normalized)
+
+    def test_body_hyphen_in_description_unchanged(self):
+        """Hyphen-minus in non-heading body text is not affected by normalization."""
+        task_body = (
+            "### Task 1 - My task\n"
+            "- **What**: Use key-value pairs - they are faster\n"
+            "- **Complexity**: simple\n"
+        )
+        text = _make_plan(task_body)
+        normalized = _normalize_task_separators(text)
+        # The heading should be normalized to colon
+        self.assertIn("### Task 1: My task", normalized)
+        # The body line with hyphen should be unchanged
+        self.assertIn("Use key-value pairs - they are faster", normalized)
+
+
+if __name__ == "__main__":
+    unittest.main()

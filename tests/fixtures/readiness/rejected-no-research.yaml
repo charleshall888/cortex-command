@@ -1,0 +1,13 @@
+---
+title: No Research Feature
+status: open
+priority: medium
+type: feature
+tags: []
+created: 2026-01-01
+updated: 2026-01-01
+blocked-by: []
+spec: lifecycle/no-research-feature/spec.md
+---
+
+A backlog item with no research field — should be rejected at step 3.

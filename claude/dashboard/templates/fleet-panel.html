@@ -1,0 +1,29 @@
+{% import "patterns/feature-card.html" as fc %}
+{% if state.agent_fleet %}
+<p class="phase-label m-0 mb-3">{{ state.agent_fleet | length }} agent{{ 's' if state.agent_fleet | length != 1 }} active</p>
+  {% for card in state.agent_fleet %}
+  {% call fc.feature_card() %}
+    <div class="card-row">
+      <strong>{{ card.slug }}</strong>
+      {% if card.current_phase != '—' %}
+      <span class="phase-label">{{ card.current_phase }}</span>
+      {% endif %}
+    </div>
+    <div class="card-row">
+      <span class="phase-label">Duration:</span>
+      <span>{{ card.duration_str }}</span>
+    </div>
+    <div class="card-row">
+      <span class="phase-label">Last activity:</span>
+      <span class="phase-label word-break-all">{% if card.last_activity_ts %}{{ card.last_activity_ts | format_elapsed }}{% else %}not dispatched{% endif %}</span>
+    </div>
+  {% endcall %}
+  {% endfor %}
+{% else %}
+{% set is_executing = state.overnight and state.overnight.phase == 'executing' %}
+{% if is_executing %}
+<p class="phase-label m-0">Waiting — round {{ state.overnight.current_round }} complete</p>
+{% else %}
+<p class="phase-label m-0">Session complete — round {{ state.overnight.current_round if state.overnight else '—' }}</p>
+{% endif %}
+{% endif %}

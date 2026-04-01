@@ -1,0 +1,14 @@
+---
+title: Blocked Feature
+status: open
+priority: medium
+type: feature
+tags: []
+created: 2026-01-01
+updated: 2026-01-01
+blocked-by: [99]
+research: lifecycle/blocked-feature/research.md
+spec: lifecycle/blocked-feature/spec.md
+---
+
+A backlog item blocked by item 99 (which has non-terminal status) — should be rejected at step 2.

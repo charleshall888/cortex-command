@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "./hooks/scan-lifecycle.sh"
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "./hooks/validate-commit.sh"
+      }
+    ],
+    "stop": [
+      {
+        "command": "./hooks/notify.sh complete"
+      }
+    ]
+  }
+}

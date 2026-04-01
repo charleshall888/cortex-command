@@ -1,0 +1,18 @@
+{% from "patterns/badge.html" import badge %}
+{% if state.pipeline %}
+<h2>Pipeline</h2>
+<div class="card-row">
+  <span class="phase-label">Phase</span>
+  {{ badge(status=state.pipeline.phase) }}
+</div>
+<div class="feature-list">
+  {% for feature in state.pipeline.features %}
+  <div class="card-row">
+    <span>{{ feature.name }}</span>
+    {{ badge(status=feature.status) }}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="phase-label m-0">No active pipeline.</p>
+{% endif %}

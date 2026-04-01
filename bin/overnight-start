@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# overnight-start — launch the overnight runner in a detached tmux session from any repo.
+#
+# Usage: overnight-start [state-path] [time-limit] [max-rounds] [tier]
+#   All args are positional. Do NOT use --flag=value syntax.
+#
+# Examples:
+#   overnight-start
+#   overnight-start lifecycle/sessions/.../overnight-state.json
+#   overnight-start lifecycle/sessions/.../overnight-state.json 8h
+#   overnight-start lifecycle/sessions/.../overnight-state.json 6 10 max_100
+
+set -euo pipefail
+
+REPO_ROOT="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/.."
+RUNNER="$REPO_ROOT/claude/overnight/runner.sh"
+
+STATE_ARG="${1:-}"
+TIME_LIMIT="${2:-6}"
+MAX_ROUNDS="${3:-10}"
+TIER="${4:-max_100}"
+
+# Guard against flag-style args being passed as the state argument
+if [[ "$STATE_ARG" == --* || "$STATE_ARG" == *=* ]]; then
+    echo "Error: wrong arg format — use positional syntax:" >&2
+    echo "  overnight-start <state-path> <time-limit-hours>" >&2
+    echo "  overnight-start lifecycle/sessions/.../overnight-state.json 6h" >&2
+    exit 1
+fi
+
+if ! command -v tmux &>/dev/null; then
+    echo "tmux not found — run in foreground with: jcc overnight-run" >&2
+    exit 1
+fi
+
+# Resolve state path to absolute before entering tmux (survives any cd inside runner.sh)
+if [[ -n "$STATE_ARG" ]]; then
+    STATE_ABS="$(realpath "$STATE_ARG")"
+    STATE_FLAG="--state $STATE_ABS"
+else
+    STATE_FLAG=""
+fi
+
+SESSION="overnight-runner"
+N=2
+while tmux has-session -t "=$SESSION" 2>/dev/null; do
+    SESSION="overnight-runner-$N"
+    N=$((N + 1))
+done
+
+REPO_ROOT="$(pwd)"
+
+tmux new-session -d -s "$SESSION" -c "$REPO_ROOT" \
+    "bash $RUNNER $STATE_FLAG --time-limit $TIME_LIMIT --max-rounds $MAX_ROUNDS --tier $TIER"
+
+echo "Overnight runner started in tmux session '$SESSION'"
+echo "  Attach : tmux attach -t $SESSION"
+echo "  Watch  : tail -f lifecycle/sessions/latest-overnight/overnight-events.log"

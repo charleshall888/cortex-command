@@ -1,0 +1,14 @@
+---
+title: Spec Missing Feature
+status: open
+priority: medium
+type: feature
+tags: []
+created: 2026-01-01
+updated: 2026-01-01
+blocked-by: []
+research: lifecycle/spec-missing-feature/research.md
+spec: lifecycle/spec-missing-feature/spec.md
+---
+
+A backlog item whose spec file does not exist on disk — should be rejected at step 5b.

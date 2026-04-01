@@ -1,0 +1,6 @@
+{
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "git commit -m \"Add user authentication\" -m \"- Implement JWT token generation\n- Add login and logout endpoints\""
+  }
+}

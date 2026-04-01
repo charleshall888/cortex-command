@@ -1,0 +1,1 @@
+{"tool_name": "Bash", "tool_input": {"command": "ls /nonexistent"}, "tool_response": {"exit_code": 1, "stdout": "", "stderr": "ls: /nonexistent: No such file or directory"}, "session_id": "__SESSION_ID__"}

@@ -1,0 +1,1 @@
+{% macro badge(status=None, css_class=None, label=None) %}<span class="badge {{ css_class if css_class else status | badge_class }}">{{ label if label is not none else status }}</span>{% endmacro %}

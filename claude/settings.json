@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "apiKeyHelper": "",
+  "cleanupPeriodDays": 365,
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "teammateMode": "inprocess"
+  },
+  "attribution": {
+    "commit": ""
+  },
+  "permissions": {
+    "allow": [
+      "Ping",
+      "WebSearch",
+      "WebFetch",
+      "Read(~/**)",
+      "Bash(git log *)",
+      "Bash(git log)",
+      "Bash(git show *)",
+      "Bash(git show)",
+      "Bash(git diff *)",
+      "Bash(git diff)",
+      "Bash(git status *)",
+      "Bash(git status)",
+      "Bash(git branch *)",
+      "Bash(git branch)",
+      "Bash(git remote *)",
+      "Bash(git remote)",
+      "Bash(git tag *)",
+      "Bash(git tag)",
+      "Bash(git stash list *)",
+      "Bash(git stash list)",
+      "Bash(git rev-parse *)",
+      "Bash(git merge-base *)",
+      "Bash(git ls-tree *)",
+      "Bash(git cat-file *)",
+      "Bash(git fetch *)",
+      "Bash(git fetch)",
+      "Bash(git --version)",
+      "Bash(git commit *)",
+      "Bash(GNUPGHOME=* git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git push *)",
+      "Bash(git push)",
+      "Bash(git blame *)",
+      "Bash(git shortlog *)",
+      "Bash(git reflog *)",
+      "Bash(git config --get *)",
+      "Bash(git config --list *)",
+      "Bash(git config --list)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(file *)",
+      "Bash(stat *)",
+      "Bash(tree *)",
+      "Bash(touch *)",
+      "Bash(mkdir *)",
+      "Bash(diff *)",
+      "Bash(cp *)",
+      "Bash(ln *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(comm *)",
+      "Bash(cut *)",
+      "Bash(tr *)",
+      "Bash(awk *)",
+      "Bash(sed *)",
+      "Bash(jq *)",
+      "Bash(xargs *)",
+      "Bash(realpath *)",
+      "Bash(basename *)",
+      "Bash(dirname *)",
+      "Bash(echo *)",
+      "Bash(pwd *)",
+      "Bash(pwd)",
+      "Bash(whoami *)",
+      "Bash(whoami)",
+      "Bash(which *)",
+      "Bash(type *)",
+      "Bash(uname *)",
+      "Bash(uname)",
+      "Bash(hostname *)",
+      "Bash(hostname)",
+      "Bash(date *)",
+      "Bash(date)",
+      "Bash(env *)",
+      "Bash(env)",
+      "Bash(printenv *)",
+      "Bash(printenv)",
+      "Bash(* --version)",
+      "Bash(* --help *)",
+      "Bash(bash *)",
+      "Bash(sh *)",
+      "Bash(source *)",
+      "Bash(chmod +x *)",
+      "Bash(mv *)",
+      "Bash(curl *)",
+      "Bash(git add *)",
+      "Bash(git merge *)",
+      "Bash(git worktree *)",
+      "Bash(git stash *)",
+      "Bash(git rebase *)",
+      "Bash(git cherry-pick *)",
+      "Bash(git restore *)",
+      "Bash(git reset *)",
+      "Bash(git ls-files *)",
+      "Bash(git describe *)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(pip3 *)",
+      "Bash(deno *)",
+      "Bash(go *)",
+      "Bash(docker *)",
+      "Bash(make *)",
+      "Bash(claude *)",
+      "Bash(tee *)",
+      "Bash(less *)",
+      "Bash(more *)",
+      "Bash(test *)",
+      "Bash([ *)",
+      "Bash(tar *)",
+      "Bash(zip *)",
+      "Bash(unzip *)",
+      "Bash(gzip *)",
+      "Bash(gunzip *)",
+      "Bash(brew *)",
+      "Bash(gh *)",
+      "Bash(update-item *)",
+      "Bash(generate-backlog-index *)",
+      "Bash(generate-backlog-index)",
+      "Bash(tmux *)",
+      "Bash(open -na *)",
+      "Bash(pbcopy *)",
+      "Bash(pbcopy)",
+      "mcp__perplexity__*",
+      "mcp__jetbrains__*",
+      "mcp__atlassian__*"
+    ],
+    "deny": [
+      "Bash(sudo *)",
+      "Bash(sudo)",
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(mkfs*)",
+      "Bash(dd *)",
+      "Bash(shutdown *)",
+      "Bash(reboot*)",
+      "Bash(kill -9 -1*)",
+      "Bash(chmod 777 *)",
+      "Bash(history -c*)",
+      "Bash(launchctl *)",
+      "Bash(defaults write *)",
+      "Bash(git push --force *)",
+      "Bash(git push * --force)",
+      "Bash(git push * --force *)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(git stash clear*)",
+      "Bash(chown *)",
+      "Bash(npm publish *)",
+      "Bash(npm publish)",
+      "Bash(curl *|bash*)",
+      "Bash(curl *| bash*)",
+      "Bash(curl *|sh*)",
+      "Bash(curl *| sh*)",
+      "Bash(wget *|bash*)",
+      "Bash(wget *| bash*)",
+      "Bash(wget *|sh*)",
+      "Bash(wget *| sh*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Read(**/*.pfx)",
+      "Read(~/.aws/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.kube/**)",
+      "Read(~/.config/gcloud/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.docker/config.json)",
+      "Read(~/.git-credentials)",
+      "Read(~/.npmrc)",
+      "Read(~/.npm/**)",
+      "Read(~/.pypirc)",
+      "Read(~/.gem/credentials)",
+      "Read(~/.azure/**)",
+      "Read(~/Library/Keychains/**)",
+      "Edit(~/.bashrc)",
+      "Edit(~/.zshrc)",
+      "Edit(~/.bash_profile)",
+      "Edit(~/.zprofile)",
+      "Edit(~/.ssh/**)",
+      "WebFetch(domain:localhost)",
+      "WebFetch(domain:127.0.0.1)"
+    ],
+    "ask": [],
+    "defaultMode": "default"
+  },
+  "enableAllProjectMcpServers": false,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/sync-permissions.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/scan-lifecycle.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/setup-gpg-sandbox-home.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cleanup-session.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/validate-commit.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/notify.sh permission"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/notify-remote.sh permission"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/permission-audit-log.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/notify.sh complete"
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/notify-remote.sh complete"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/tool-failure-tracker.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/skill-edit-advisor.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'INPUT=$(cat); CWD=$(echo \"$INPUT\" | jq -r .cwd); [ -f \"$CWD/claude/hooks/worktree-create.sh\" ] && bash \"$CWD/claude/hooks/worktree-create.sh\" <<< \"$INPUT\"'"
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'INPUT=$(cat); CWD=$(echo \"$INPUT\" | jq -r .cwd); [ -f \"$CWD/claude/hooks/worktree-remove.sh\" ] && bash \"$CWD/claude/hooks/worktree-remove.sh\" <<< \"$INPUT\"'"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh",
+    "padding": 0
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true,
+    "code-review@claude-plugins-official": false,
+    "claude-md-management@claude-plugins-official": true
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "network": {
+      "allowedDomains": [
+        "api.github.com",
+        "raw.githubusercontent.com",
+        "registry.npmjs.org",
+        "*.anthropic.com"
+      ],
+      "allowUnixSockets": [
+        "~/.local/share/gnupg/S.gpg-agent.sandbox"
+      ]
+    },
+    "filesystem": {
+      "allowWrite": [
+        "~/cortex-command/lifecycle/sessions/"
+      ]
+    },
+    "excludedCommands": [
+      "gh:*",
+      "git:*",
+      "WebFetch"
+    ]
+  },
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "high",
+  "model": "opus[1m]"
+}

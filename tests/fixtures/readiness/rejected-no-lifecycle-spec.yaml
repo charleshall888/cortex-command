@@ -1,0 +1,14 @@
+---
+title: No Lifecycle Spec Feature
+status: open
+priority: medium
+type: feature
+tags: []
+created: 2026-01-01
+updated: 2026-01-01
+blocked-by: []
+research: lifecycle/no-lifecycle-spec-feature/research.md
+spec: lifecycle/no-lifecycle-spec-feature/spec.md
+---
+
+A backlog item with research and spec files present but no lifecycle/slug/spec.md — should be rejected at step 6.

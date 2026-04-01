@@ -1,0 +1,1 @@
+{"tool_name": "Bash", "tool_input": {"command": "echo hello"}, "tool_response": {"exit_code": 0, "stdout": "hello", "stderr": ""}, "session_id": "__SESSION_ID__"}

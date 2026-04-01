@@ -1,0 +1,20 @@
+[project]
+name = "cortex-command"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "claude-agent-sdk",
+    "fastapi",
+    "uvicorn[standard]",
+    "jinja2",
+    "markdown",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "claude/dashboard/tests", "claude/pipeline/tests", "claude/overnight/tests"]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]

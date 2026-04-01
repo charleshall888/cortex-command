@@ -1,0 +1,1 @@
+{% macro feature_card(extra_class="") %}<div class="feature-card{{ ' ' + extra_class if extra_class else '' }}">{{ caller() }}</div>{% endmacro %}

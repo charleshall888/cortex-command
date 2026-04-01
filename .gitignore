@@ -1,0 +1,48 @@
+# Worktree directories
+.claude/worktrees/
+worktrees/
+
+# Lifecycle ephemeral session files
+lifecycle/*/.session
+lifecycle/*/.session-owner
+lifecycle/.fresh-resume
+
+# Retros ephemeral files
+retros/.session-lessons.md
+retros/.retro-written-*
+
+# Runtime logs
+claude/statusline.sh.log
+claude/statusline.log
+
+# Auto-generated skill registry
+skills/registry.json
+
+# Python
+.venv/
+*.pyc
+__pycache__/
+
+# Dashboard dev artifacts
+claude/dashboard/node_modules/
+claude/dashboard/package-lock.json
+claude/dashboard/.pid
+
+# Lifecycle runtime artifacts
+lifecycle/*/agent-activity.jsonl
+
+# Backlog audit logs
+backlog/*.events.jsonl
+
+# Overnight session archives
+lifecycle/sessions/
+
+# OS
+.DS_Store
+
+# Environment
+.env
+.env.*
+
+# UI check output
+ui-check-results/

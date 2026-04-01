@@ -1,0 +1,36 @@
+{% if lanes %}
+<div class="overflow-x-auto">
+  {% for lane in lanes %}
+  <div class="flex items-center gap-3 mb-2">
+    <div class="lane-label" title="{{ lane.slug }}">
+      {{ lane.slug[:20] }}
+    </div>
+    <div class="lane-track">
+      {% for event in lane.events %}
+      <div class="text-white absolute top-1 h-8 py-0.5 px-1.5 whitespace-nowrap rounded-sm text-xs z-1" style="left: {{ event.x_pct }}%; background: {{ lane.color }};"
+           title="{{ event.tooltip }}">
+        {{ event.label }}
+      </div>
+      {% endfor %}
+      {% if not summary_mode %}
+        {% for x_pct in lane.tool_tick_xs %}
+        <div class="absolute top-0 h-10 w-0.5" style="left: {{ x_pct }}%; background: rgba(255,255,255,0.3);"></div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% if ticks %}
+<div class="lane-tick-axis" style="position: relative; height: 20px; margin-left: 200px;">
+  {% for tick in ticks %}
+  <span class="phase-label" style="position: absolute; left: {{ tick.x_pct }}%; transform: translateX(-50%); font-size: 0.7rem;">{{ tick.label }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+{% if summary_mode %}
+<p class="empty-state mt-2">Summary mode — tool ticks hidden (&gt;200 events)</p>
+{% endif %}
+{% else %}
+<p class="empty-state">{{ swim_lane_empty_label | default("No active session") }}</p>
+{% endif %}

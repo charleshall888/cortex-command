@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# jcc — invoke Cortex Command's just recipes from any directory.
+#
+# Requires the CORTEX_COMMAND_ROOT environment variable to point to the
+# Cortex Command repository root. Set it in your shell profile:
+#   export CORTEX_COMMAND_ROOT="$HOME/cortex-command"
+
+if [ -z "$CORTEX_COMMAND_ROOT" ]; then
+    echo "jcc: CORTEX_COMMAND_ROOT is not set" >&2
+    echo "     Set it in your shell profile to the Cortex Command repo root" >&2
+    exit 1
+fi
+
+JUSTFILE="$CORTEX_COMMAND_ROOT/justfile"
+
+if [ ! -f "$JUSTFILE" ]; then
+    echo "jcc: justfile not found at $JUSTFILE" >&2
+    echo "     Verify CORTEX_COMMAND_ROOT points to the correct directory" >&2
+    exit 1
+fi
+
+exec just -f "$JUSTFILE" "$@"

@@ -1,0 +1,433 @@
+{% from "patterns/badge.html" import badge %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Agent Dashboard{% endblock %}</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      /* Reset: removes all default Tailwind utilities — only named tokens generate classes */
+      --*: initial;
+
+      /* Restore text-white utility removed by --*: initial */
+      --color-white: white;
+
+      /* Brand */
+      --color-brand-primary: oklch(0.55 0.18 260);
+      --color-brand-secondary: oklch(0.45 0.16 260);
+      --color-on-brand: oklch(0.98 0.01 260);
+
+      /* Surface (light-mode defaults) */
+      --color-surface: oklch(0.97 0.004 260);
+      --color-surface-raised: oklch(0.94 0.005 260);
+      --color-surface-overlay: oklch(0.91 0.006 260);
+
+      /* Text (light-mode defaults) */
+      --color-text-primary: oklch(0.12 0.005 260);
+      --color-text-secondary: oklch(0.45 0.006 260);
+      --color-text-disabled: oklch(0.65 0.005 260);
+
+      /* Border (light-mode defaults) */
+      --color-border: oklch(0.82 0.006 260);
+      --color-border-strong: oklch(0.68 0.008 260);
+
+      /* Feedback */
+      --color-error: oklch(0.50 0.22 25);
+      --color-error-surface: oklch(0.95 0.06 25);
+      --color-success: oklch(0.50 0.18 145);
+      --color-success-surface: oklch(0.95 0.06 145);
+      --color-warning: oklch(0.60 0.18 75);
+      --color-warning-surface: oklch(0.95 0.08 75);
+
+      /* Status badge colors */
+      --color-status-green: #2da44e;
+      --color-status-blue: #388bfd;
+      --color-status-red: #f85149;
+      --color-status-amber: #d29922;
+      --color-status-gray: #6e7681;
+      --color-status-purple: #8957e5;
+      --color-status-on-badge: white;
+
+      /* Swim-lane phase segment colors */
+      /* #7a5d00 on white: ~6.1:1 contrast ratio — passes WCAG AA (≥4.5:1) and AAA (≥7:1 for large text) */
+      --color-lane-paused: #7a5d00;
+
+      /* Typography — families */
+      --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: ui-monospace, "Cascadia Code", "Fira Code", "JetBrains Mono", monospace;
+
+      /* Typography — size scale */
+      --text-xs: 0.75rem;
+      --text-sm: 0.875rem;
+      --text-base: 1rem;
+      --text-md: 1.125rem;
+      --text-lg: 1.25rem;
+      --text-xl: 1.5rem;
+      --text-2xl: 2rem;
+      --text-3xl: 2.25rem;
+      --text-4xl: 3rem;
+
+      /* Typography — weight */
+      --font-weight-normal: 400;
+      --font-weight-medium: 500;
+      --font-weight-semibold: 600;
+      --font-weight-bold: 700;
+
+      /* Typography — leading */
+      --leading-tight: 1.25;
+      --leading-normal: 1.5;
+      --leading-relaxed: 1.75;
+
+      /* Spacing — 4px grid */
+      --spacing: 0.25rem;
+
+      /* Radius */
+      --radius-none: 0;
+      --radius-sm: 0.125rem;
+      --radius-md: 0.375rem;
+      --radius-lg: 0.5rem;
+      --radius-xl: 0.75rem;
+      --radius-2xl: 1rem;
+      --radius-full: 9999px;
+
+      /* Breakpoints */
+      --breakpoint-sm: 640px;
+      --breakpoint-md: 768px;
+      --breakpoint-lg: 1024px;
+      --breakpoint-xl: 1280px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-surface: oklch(0.07 0.004 260);
+        --color-surface-raised: oklch(0.11 0.005 260);
+        --color-surface-overlay: oklch(0.13 0.006 260);
+        --color-text-primary: oklch(0.92 0.005 260);
+        --color-text-secondary: oklch(0.50 0.006 260);
+        --color-text-disabled: oklch(0.35 0.005 260);
+        --color-border: oklch(0.22 0.006 260);
+        --color-border-strong: oklch(0.38 0.008 260);
+        --color-error-surface: oklch(0.18 0.06 25);
+        --color-success-surface: oklch(0.16 0.06 145);
+        --color-warning-surface: oklch(0.16 0.08 75);
+        /* #a06400 on white: ~4.78:1 contrast ratio — passes WCAG AA (≥4.5:1); visually distinct from dark lane-track */
+        --color-lane-paused: #a06400;
+      }
+    }
+
+    :root {
+      --background: var(--color-surface);
+      --foreground: var(--color-text-primary);
+      --primary: var(--color-brand-primary);
+      --primary-foreground: var(--color-on-brand);
+      --secondary: var(--color-brand-secondary);
+      --secondary-foreground: var(--color-on-brand);
+      --muted: var(--color-surface-raised);
+      --muted-foreground: var(--color-text-secondary);
+      --accent: var(--color-surface-overlay);
+      --accent-foreground: var(--color-text-primary);
+      --destructive: var(--color-error);
+      --destructive-foreground: oklch(0.98 0.01 25);
+      --border: var(--color-border);
+      --input: var(--color-border);
+      --ring: var(--color-brand-primary);
+      --radius: var(--radius-md);
+      --card: var(--color-surface-raised);
+      --card-foreground: var(--color-text-primary);
+      --popover: var(--color-surface-overlay);
+      --popover-foreground: var(--color-text-primary);
+    }
+
+    @layer components {
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--color-surface);
+        color: var(--color-text-primary);
+      }
+      header {
+        background-color: var(--color-surface-raised);
+        border-bottom: 1px solid var(--color-border);
+        padding: 1rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      header h1 {
+        margin: 0;
+        font-size: var(--text-lg);
+        font-weight: var(--font-weight-semibold);
+      }
+      main {
+        padding: 0 1.5rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      section {
+        background-color: var(--color-surface-raised);
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+      }
+      section#alerts-banner {
+        background: none;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+      }
+      section h2 {
+        margin: 0 0 0.75rem;
+        font-size: var(--text-base);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.15em 0.5em;
+        border-radius: 4px;
+        font-size: var(--text-xs);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-status-on-badge);
+      }
+      .badge-green  { background-color: var(--color-status-green); }
+      .badge-blue   { background-color: var(--color-status-blue); }
+      .badge-red    { background-color: var(--color-status-red); }
+      .badge-amber  { background-color: var(--color-status-amber); }
+      .badge-gray   { background-color: var(--color-status-gray); }
+      .badge-purple { background-color: var(--color-status-purple); }
+      .cost-chip {
+        color: var(--color-text-secondary);
+        font-size: 0.8rem;
+      }
+      .feature-card {
+        background-color: var(--color-surface-overlay);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        margin-bottom: 0.75rem;
+      }
+      .feature-card:last-child { margin-bottom: 0; }
+      .feature-card--running {
+        border-left: 3px solid var(--color-brand-primary);
+      }
+      .card-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: var(--text-sm);
+      }
+      .phase-label {
+        color: var(--color-text-secondary);
+        font-size: 0.8rem;
+      }
+      .task-ratio {
+        font-size: 0.8rem;
+        color: var(--color-text-secondary);
+      }
+      .round-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: var(--text-sm);
+      }
+      .round-table th,
+      .round-table td {
+        padding: 0.4rem 0.75rem;
+        border-bottom: 1px solid var(--color-border);
+        text-align: left;
+      }
+      .round-table th {
+        color: var(--color-text-secondary);
+        font-weight: var(--font-weight-semibold);
+      }
+      .alert-badge {
+        display: inline-block;
+        border-radius: 3px;
+        font-size: var(--text-xs);
+        font-weight: var(--font-weight-semibold);
+        padding: 2px 6px;
+      }
+      .alert-badge-red {
+        background-color: var(--color-error-surface);
+        color: var(--color-error);
+        border: 1px solid var(--color-error);
+      }
+      .alert-badge-amber {
+        background-color: var(--color-warning-surface);
+        color: var(--color-warning);
+        border: 1px solid var(--color-warning);
+      }
+      .circuit-breaker-banner {
+        display: block;
+        background-color: var(--color-error-surface);
+        color: var(--color-error);
+        font-weight: var(--font-weight-semibold);
+        border: 1px solid var(--color-error);
+        padding: 0.75rem 1.25rem;
+        border-radius: 6px;
+        margin-bottom: 0.75rem;
+      }
+      .feature-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      .lane-label {
+        width: 200px;
+        flex-shrink: 0;
+        font-size: var(--text-xs);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--color-text-primary);
+      }
+      .lane-track {
+        position: relative;
+        flex: 1;
+        height: 56px;
+        border-radius: var(--radius-sm);
+        background-color: var(--color-surface-overlay);
+      }
+      .empty-state {
+        color: var(--color-text-secondary);
+        font-size: var(--text-sm);
+      }
+      .section-primary {
+        border-left: 3px solid var(--color-brand-primary);
+      }
+      .nav-link {
+        text-decoration: none;
+        font-size: var(--text-sm);
+        padding: 0.25rem 0.5rem;
+        color: var(--color-text-secondary);
+        opacity: 0.7;
+      }
+      .nav-link-active {
+        color: var(--color-brand-primary);
+        opacity: 1;
+        border-bottom: 2px solid var(--color-brand-primary);
+        padding-bottom: calc(0.25rem - 2px);
+      }
+      .live-indicator {
+        margin-left: auto;
+        font-size: var(--text-sm);
+        color: var(--color-text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        border-left: 1px solid var(--color-border);
+        padding-left: 1rem;
+      }
+      .live-indicator--active {
+        color: var(--color-success);
+        font-weight: var(--font-weight-semibold);
+      }
+      .word-break-all { word-break: break-all; }
+      .overflow-x-auto { overflow-x: auto; }
+      .progress-bar {
+        position: relative;
+        height: 6px;
+        background-color: var(--color-border);
+        border-radius: var(--radius-full);
+        overflow: hidden;
+        margin: 0.25rem 0;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        background-color: var(--color-brand-primary);
+        border-radius: var(--radius-full);
+      }
+      .live-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: var(--radius-full);
+        background-color: var(--color-success);
+        animation: pulse 2s infinite;
+        vertical-align: middle;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+      .dash-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      @media (min-width: 1024px) {
+        .dash-grid {
+          grid-template-columns: 3fr 2fr;
+        }
+      }
+      .dash-grid-main,
+      .dash-grid-side {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header>
+    <h1>Agent Dashboard</h1>
+    <nav>
+      <a href="/" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">Live</a>
+      <a href="/sessions" class="nav-link {% if request.url.path.startswith('/sessions') %}nav-link-active{% endif %}">History</a>
+    </nav>
+    <span id="live-indicator" class="live-indicator">No session</span>
+    {% block header_extra %}{% endblock %}
+  </header>
+
+  <main>
+    {% block page_main %}
+    <section id="alerts-banner" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="innerHTML"></section>
+
+    <section id="session-panel" class="section-primary" hx-get="/partials/session-panel" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+
+    <div class="dash-grid">
+      <div class="dash-grid-main">
+        <section id="feature-cards" class="section-primary" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+      </div>
+
+      <div class="dash-grid-side">
+        <section id="fleet-panel" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="innerHTML">
+          <h2>Agent Fleet</h2>
+          <p class="empty-state">Loading...</p>
+        </section>
+      </div>
+    </div>
+
+    <section id="swim-lane" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="innerHTML">
+      <h2>Timeline</h2>
+      <p class="empty-state">Loading...</p>
+    </section>
+
+    <section id="round-history" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+
+    <section id="pipeline-panel" class="section-primary">
+      {% block pipeline_panel %}{% include "pipeline_panel.html" %}{% endblock %}
+    </section>
+
+    <section id="backlog-panel">
+      {% set open_count = state.backlog_counts.get('open', 0) %}
+      {% set done_count = state.backlog_counts.get('done', 0) %}
+      <p class="phase-label m-0">Backlog: {{ open_count }} open / {{ done_count }} done</p>
+    </section>
+    {% endblock %}
+  </main>
+
+  {% block body_extra %}{% endblock %}
+</body>
+</html>

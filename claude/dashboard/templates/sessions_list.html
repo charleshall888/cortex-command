@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "patterns/badge.html" import badge %}
+
+{% block title %}Session History{% endblock %}
+
+{% block page_main %}
+<section>
+  <div class="card-row justify-between mb-3">
+    <h2 class="m-0">Session History</h2>
+    <a href="/" class="phase-label no-underline">← Live view</a>
+  </div>
+
+  {% if not sessions %}
+  <p class="text-text-secondary">No sessions found.</p>
+  {% else %}
+  <table class="round-table">
+    <thead>
+      <tr>
+        <th>Session</th>
+        <th>Started</th>
+        <th>Duration</th>
+        <th>Features</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      <tr>
+        <td><a href="/sessions/{{ s.session_id }}" class="text-brand-primary no-underline">{{ s.session_id }}</a></td>
+        <td>{{ s.start_ts | format_date }}</td>
+        <td>{{ s.duration_str | default("—") }}</td>
+        <td>
+          {% if s.features_merged %}
+          {{ badge(css_class="badge-green", label=s.features_merged ~ " merged") }}
+          {% endif %}
+          {% if s.features_paused %}
+          {{ badge(css_class="badge-amber", label=s.features_paused ~ " paused") }}
+          {% endif %}
+          {% if s.features_failed %}
+          {{ badge(css_class="badge-red", label=s.features_failed ~ " failed") }}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% from "patterns/badge.html" import badge %}
+<span id="live-indicator" class="live-indicator{% if state.overnight and state.overnight.phase == 'executing' %} live-indicator--active{% endif %}" hx-swap-oob="true">{% if state.overnight and state.overnight.phase == 'executing' %}<span class="live-dot"></span> Live{% else %}No session{% endif %}</span>
+<h2>Session</h2>
+{% if state.overnight is not none %}
+{% set is_executing = (state.overnight.phase == 'executing') %}
+<div class="card-row">
+  <span class="phase-label">{{ state.overnight.session_id }}</span>
+  {{ badge(status=state.overnight.phase) }}
+  {% if is_executing %}
+  <span class="phase-label">Running for {{ state.overnight.started_at | format_elapsed_no_suffix }}</span>
+  {% else %}
+  <span class="phase-label">Completed</span>
+  {% endif %}
+</div>
+<div class="card-row">
+  <span class="phase-label">Round {{ state.overnight.current_round }}</span>
+  <span class="phase-label">·</span>
+  <span class="phase-label">{{ state.overnight.started_at | format_elapsed }}</span>
+  {% if state.session_cost_total is not none %}<span class="cost-chip">· Total: ${{ '%.2f' | format(state.session_cost_total) }}</span>{% endif %}
+</div>
+{% set ns = namespace(merged=0, running=0, pending=0, paused=0, failed=0, deferred=0) %}
+{% for feat in state.overnight.features.values() %}
+  {% if feat.status == 'merged' %}{% set ns.merged = ns.merged + 1 %}
+  {% elif feat.status == 'running' %}{% set ns.running = ns.running + 1 %}
+  {% elif feat.status == 'pending' %}{% set ns.pending = ns.pending + 1 %}
+  {% elif feat.status == 'paused' %}{% set ns.paused = ns.paused + 1 %}
+  {% elif feat.status == 'failed' %}{% set ns.failed = ns.failed + 1 %}
+  {% elif feat.status == 'deferred' %}{% set ns.deferred = ns.deferred + 1 %}
+  {% endif %}
+{% endfor %}
+{% set total = state.overnight.features | length %}
+<div class="progress-bar">
+  <div class="progress-bar-fill" style="width: {{ ((ns.merged + ns.running * 0.5) / total * 100) | int if total > 0 else 0 }}%"></div>
+</div>
+<div class="card-row">
+  {% if ns.failed > 0 %}<span style="color: var(--color-warning); font-weight: 600;">{{ ns.failed }} failed</span>{% endif %}
+  {% if ns.merged > 0 %}{{ badge(css_class="badge-green", label=ns.merged ~ " merged") }}{% endif %}
+  {% if ns.running > 0 %}{{ badge(css_class="badge-blue", label=ns.running ~ " running") }}{% endif %}
+  {% if ns.pending > 0 %}{{ badge(css_class="badge-gray", label=ns.pending ~ " pending") }}{% endif %}
+  {% if ns.paused > 0 %}{{ badge(css_class="badge-amber", label=ns.paused ~ " paused") }}{% endif %}
+  {% if ns.failed > 0 %}{{ badge(css_class="badge-red", label=ns.failed ~ " failed") }}{% endif %}
+  {% if ns.deferred > 0 %}{{ badge(css_class="badge-amber", label=ns.deferred ~ " deferred") }}{% endif %}
+</div>
+{% if state.worker_exit_issues > 0 %}<div class="card-row"><span class="phase-label" style="color: var(--color-warning);">{{ state.worker_exit_issues }} workers exited without report</span></div>{% endif %}
+<div class="card-row">
+  {% if state.overnight.integration_branch %}<span class="phase-label">{{ state.overnight.integration_branch }}</span>{% endif %}
+  {% if state.overnight.plan_ref %}<span class="phase-label">{{ state.overnight.plan_ref }}</span>{% endif %}
+</div>
+<div class="card-row">
+  <span class="phase-label">Last updated: {{ state.last_updated | format_elapsed if state.last_updated else "—" }}</span>
+</div>
+{% else %}
+<h3 class="m-0 mb-2 text-base font-semibold">No active session</h3>
+{% if last_session %}
+<div class="card-row mb-1">
+  <span class="phase-label">Last session:</span>
+  <strong class="text-sm">{{ last_session.session_id }}</strong>
+</div>
+<div class="card-row mb-1">
+  {{ badge(css_class="badge-green", label=last_session.features_merged ~ " merged") }}
+  {% if last_session.features_failed > 0 %}
+  {{ badge(css_class="badge-red", label=last_session.features_failed ~ " failed") }}
+  {% endif %}
+  <span class="phase-label">/ {{ last_session.features_total }} total</span>
+</div>
+<div class="card-row">
+  <span class="phase-label">Ended {{ last_session.ended_hours_ago | round(1) }}h ago</span>
+</div>
+<div class="card-row">
+  <a href="/sessions/{{ last_session.session_id }}" class="text-brand-primary text-sm">View morning report →</a>
+</div>
+{% endif %}
+{% endif %}

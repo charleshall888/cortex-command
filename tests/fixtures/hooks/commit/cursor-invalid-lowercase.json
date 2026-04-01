@@ -1,0 +1,1 @@
+{"command": "git commit -m \"add something without capital letter\"", "cwd": "/some/path"}
