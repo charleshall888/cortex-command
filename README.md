@@ -1,8 +1,8 @@
 # Cortex Command
 
-The north star is autonomous coding -- agents that can execute a fully specified feature from plan through reviewed pull request without intervention. Getting there requires rigor: rushed specs produce bad code, and bad code means you're reviewing agent mistakes instead of shipping. Cortex Command is the workflow infrastructure that makes this tractable.
+Cortex Command is an AI workflow framework for Claude Code built on a single insight: autonomous execution is only as good as the specification that precedes it. Most AI coding tools optimize for speed. The result is fast accumulation of plausible-looking code that misses the point -- because the problem space was never mapped, the scope was never agreed on, and nobody was asking the hard questions before the first line was written.
 
-The front half of the lifecycle is intentionally human-driven. You clarify what you want to build, run discovery to map the problem space, and collaborate with agents to spec individual features before they're marked ready. That investment is what makes autonomous execution safe. Once a feature is well-specified, you can hand it off -- run it interactively with `/lifecycle` when you want to stay in the loop, or queue a batch for `/overnight` and wake up to reviewed pull requests.
+The front half of the lifecycle is deliberately human-driven. You run discovery to understand the problem space, collaborate with agents to write tight specs, and mark features ready only when the scope is genuinely clear. Once that work is done, the handoff is earned. Run `/lifecycle` to stay in the loop for interactive, one-feature-at-a-time development, or queue a batch for `/overnight` and wake up to a morning report of what shipped. The overnight runner isn't a special mode -- it's the natural payoff of doing the front half well.
 
 Skills are the primitive units -- slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. All config is deployed via symlinks so the whole thing lives in version control.
 
