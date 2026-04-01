@@ -8,3 +8,13 @@
 {"ts": "2026-04-01T00:04:00Z", "event": "phase_transition", "feature": "docs-audit", "from": "specify", "to": "plan"}
 {"ts": "2026-04-01T00:05:00Z", "event": "orchestrator_review", "feature": "docs-audit", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-01T00:06:00Z", "event": "phase_transition", "feature": "docs-audit", "from": "plan", "to": "implement"}
+{"ts": "2026-04-01T00:07:00Z", "event": "batch_dispatch", "feature": "docs-audit", "batch": 0, "tasks": [1,2,3,4,5,6,7,8]}
+{"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 2, "batch": 0, "status": "success"}
+{"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 3, "batch": 0, "status": "success"}
+{"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 4, "batch": 0, "status": "success"}
+{"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 5, "batch": 0, "status": "success"}
+{"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 6, "batch": 0, "status": "success"}
+{"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 7, "batch": 0, "status": "success"}
+{"ts": "2026-04-01T00:08:00Z", "event": "task_complete", "feature": "docs-audit", "task": 8, "batch": 0, "status": "success"}
+{"ts": "2026-04-01T00:09:00Z", "event": "phase_transition", "feature": "docs-audit", "tier": "complex", "from": "implement", "to": "review"}
