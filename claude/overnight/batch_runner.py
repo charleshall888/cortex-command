@@ -183,7 +183,7 @@ def _effective_base_branch(
         integration_branches: Mapping of absolute repo path string to
             integration branch name (from OvernightState.integration_branches).
         default: Fallback branch name — typically config.base_branch, which
-            is always set to the machine-config integration branch by the
+            is always set to the home repo's integration branch by the
             orchestrator.
 
     Returns:
@@ -1022,7 +1022,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 # Runtime backlog directory — set from overnight state so write-backs find items
-# in non-machine-config repos. Falls back to _PROJECT_ROOT / "backlog" when unset.
+# in external repos. Falls back to _PROJECT_ROOT / "backlog" when unset.
 _backlog_dir: Optional[Path] = None
 
 

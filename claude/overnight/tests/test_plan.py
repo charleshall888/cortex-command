@@ -250,13 +250,13 @@ class TestInitializeOvernightState(unittest.TestCase):
 
         self.assertIsNone(state.plan_hash)
 
-    def test_integration_branches_populated_for_machine_config(self):
+    def test_integration_branches_populated_for_home_repo(self):
         """integration_branches contains the current working directory root path mapped to integration_branch."""
         selection = _make_selection("Feature Omicron")
         state, _ = self._run(selection)
 
         # The repo root is computed as Path.cwd() from plan.py — the CWD when the test
-        # runner is invoked from machine-config is the repository root.
+        # runner is invoked from the home repo is the repository root.
         expected_root = str(Path.cwd().resolve())
 
         self.assertIn(expected_root, state.integration_branches)
@@ -298,12 +298,12 @@ class TestInitializeOvernightState(unittest.TestCase):
 
         self.assertEqual(next(iter(state.integration_branches)), str(Path("/tmp/fake-repo").resolve()))
 
-    def test_integration_branches_machine_config_regression(self):
+    def test_integration_branches_home_repo_regression(self):
         """integration_branches first key matches Path.cwd().resolve() — regression guard.
 
-        This test does NOT patch Path.cwd(), so it uses the actual machine-config
+        This test does NOT patch Path.cwd(), so it uses the actual project root
         CWD. It passes before Task 2 (where plan.py uses Path(__file__)) because
-        when run from machine-config, Path(__file__).parent.parent.parent ==
+        when run from the home repo, Path(__file__).parent.parent.parent ==
         Path.cwd().resolve(). It continues to pass after Task 2 once plan.py
         switches to Path.cwd().
         """
@@ -433,12 +433,12 @@ class TestInitializeOvernightState(unittest.TestCase):
     # ------------------------------------------------------------------
 
     def _cross_repo_side_effects(self, stale_branch_exists: bool = False):
-        """Build a side_effect list for subprocess.run covering MC + 1 cross-repo target.
+        """Build a side_effect list for subprocess.run covering home-repo + 1 cross-repo target.
 
         Call sequence:
-        1. MC git worktree prune (no cwd)
-        2. MC git show-ref --verify (no cwd) -> returncode 1 (no stale branch)
-        3. MC git worktree add (no cwd, check=True) -> returncode 0
+        1. Home-repo git worktree prune (no cwd)
+        2. Home-repo git show-ref --verify (no cwd) -> returncode 1 (no stale branch)
+        3. Home-repo git worktree add (no cwd, check=True) -> returncode 0
         4. Cross-repo git rev-parse origin/HEAD (cwd=repo, capture_output) -> "abc123\\n"
         5. Cross-repo git worktree prune (cwd=repo)
         6. Cross-repo git show-ref --verify (cwd=repo) -> returncode 0 or 1
@@ -446,11 +446,11 @@ class TestInitializeOvernightState(unittest.TestCase):
         7b. Cross-repo git worktree add (cwd=repo, check=True)
         """
         effects = []
-        # 1. MC prune
+        # 1. Home-repo prune
         effects.append(MagicMock(returncode=0))
-        # 2. MC show-ref -> no stale branch
+        # 2. Home-repo show-ref -> no stale branch
         effects.append(MagicMock(returncode=1))
-        # 3. MC worktree add
+        # 3. Home-repo worktree add
         effects.append(MagicMock(returncode=0))
         # 4. cross-repo rev-parse -> stdout "abc123\n"
         rev_parse_mock = MagicMock(returncode=0)
@@ -595,11 +595,11 @@ class TestInitializeOvernightState(unittest.TestCase):
 
         # Build side effects: same as _cross_repo_side_effects but with prune raising.
         effects = []
-        # 1. MC prune
+        # 1. Home-repo prune
         effects.append(MagicMock(returncode=0))
-        # 2. MC show-ref -> no stale branch
+        # 2. Home-repo show-ref -> no stale branch
         effects.append(MagicMock(returncode=1))
-        # 3. MC worktree add
+        # 3. Home-repo worktree add
         effects.append(MagicMock(returncode=0))
         # 4. cross-repo rev-parse -> stdout "abc123\n"
         rev_parse_mock = MagicMock(returncode=0)
@@ -626,9 +626,9 @@ class TestInitializeOvernightState(unittest.TestCase):
         # integration_worktrees should still be populated (worktree add succeeded)
         self.assertIn(cross_repo_path, state.integration_worktrees)
 
-    def test_mc_only_selection_produces_empty_integration_worktrees(self):
+    def test_home_only_selection_produces_empty_integration_worktrees(self):
         """A selection with no cross-repo items produces empty integration_worktrees."""
-        selection = _make_selection("MC Only Feature")
+        selection = _make_selection("Home Repo Only Feature")
         state, _ = self._run(selection)
 
         self.assertEqual(state.integration_worktrees, {})
@@ -639,11 +639,11 @@ class TestInitializeOvernightState(unittest.TestCase):
 
         # Build side effects with rev-parse returning failure.
         effects = []
-        # 1. MC prune
+        # 1. Home-repo prune
         effects.append(MagicMock(returncode=0))
-        # 2. MC show-ref -> no stale branch
+        # 2. Home-repo show-ref -> no stale branch
         effects.append(MagicMock(returncode=1))
-        # 3. MC worktree add
+        # 3. Home-repo worktree add
         effects.append(MagicMock(returncode=0))
         # 4. cross-repo rev-parse -> FAILS (returncode=1, empty stdout)
         rev_parse_mock = MagicMock(returncode=1)

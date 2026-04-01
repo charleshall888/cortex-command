@@ -180,7 +180,7 @@ class OvernightState:
             None when the session was created before worktree isolation was
             introduced (backwards-compatible).
         project_root: Absolute path to the project repository root for this
-            session. None when the session targets the default (machine-config)
+            session. None when the session targets the default (home)
             repository or was created before multi-repo support.
         integration_worktrees: Keys are absolute repo paths (strings); values
             are absolute worktree paths checked out on that repo's integration

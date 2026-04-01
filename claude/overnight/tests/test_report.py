@@ -28,11 +28,11 @@ def _pytest_make_data(features: dict, integration_branches: dict | None = None, 
 
 
 # ---------------------------------------------------------------------------
-# Test 1: Two features — machine-config and cross-repo — group headers present
+# Test 1: Two features — home repo and cross-repo — group headers present
 # ---------------------------------------------------------------------------
 
 def test_two_features_group_headers() -> None:
-    """Two features (machine-config + cross-repo) produce correct group headers."""
+    """Two features (home repo + cross-repo) produce correct group headers."""
     from claude.overnight import report as _report_module
     home_repo_name = Path(_report_module.__file__).resolve().parent.parent.parent.name
     features = {
@@ -69,11 +69,11 @@ def test_pr_url_in_cross_repo_output() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 3: Single machine-config feature — group header still present
+# Test 3: Single home repo feature — group header still present
 # ---------------------------------------------------------------------------
 
-def test_single_machine_config_feature() -> None:
-    """Single machine-config feature still renders a group header."""
+def test_single_home_repo_feature() -> None:
+    """Single home repo feature still renders a group header."""
     from claude.overnight import report as _report_module
     home_repo_name = Path(_report_module.__file__).resolve().parent.parent.parent.name
     features = {
@@ -98,7 +98,7 @@ def test_render_uses_home_repo_name_from_integration_branches():
 
     Pre-Task 4: FAILS — render_completed_features ignores integration_branches and
     hard-codes the repo name using Path(__file__), so the output shows
-    '### machine-config' rather than '### wild-light'.
+    '### <repo-dir-name>' rather than '### wild-light'.
     Post-Task 4: PASSES once render_completed_features reads integration_branches
     to determine the home repo name dynamically.
     """
@@ -113,27 +113,27 @@ def test_render_uses_home_repo_name_from_integration_branches():
     assert "### wild-light" in output, f"Expected '### wild-light' in output, got:\n{output[:400]}"
 
 
-def test_render_machine_config_group_header_regression():
-    """render_completed_features shows '### machine-config' for home repo — regression guard.
+def test_render_home_repo_group_header_regression():
+    """render_completed_features shows '### <repo-dir-name>' for home repo — regression guard.
 
-    Uses the actual machine-config path in integration_branches, derived the same
+    Uses the actual repo root path in integration_branches, derived the same
     way render_completed_features currently derives it (via report.__file__).
     Passes before and after Task 4 because the home repo name in the header always
     matches the repo root directory name.
 
     NOTE: In worktree contexts the directory name is the worktree name rather than
-    'machine-config'. The assertion uses the dynamic repo root name to remain correct
+    the repo name. The assertion uses the dynamic repo root name to remain correct
     in all contexts.
     """
     from claude.overnight import report as _report_module
-    machine_config_root = str(Path(_report_module.__file__).resolve().parent.parent.parent)
-    expected_name = Path(machine_config_root).name
+    home_repo_root = str(Path(_report_module.__file__).resolve().parent.parent.parent)
+    expected_name = Path(home_repo_root).name
     features = {
         "feature-delta": OvernightFeatureStatus(status="merged", repo_path=None),
     }
     data = _pytest_make_data(
         features,
-        integration_branches={machine_config_root: "overnight/x"},
+        integration_branches={home_repo_root: "overnight/x"},
     )
     output = render_completed_features(data)
     assert f"### {expected_name}" in output, (

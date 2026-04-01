@@ -132,7 +132,7 @@ def events_log_path(
 
     Args:
         session_id: Session ID from OvernightState (e.g. overnight-2025-01-15-2200).
-        lifecycle_root: Root lifecycle directory (defaults to machine-config lifecycle/).
+        lifecycle_root: Root lifecycle directory (defaults to the home repo's lifecycle/).
 
     Returns:
         Path to lifecycle/overnight-events-{session_id}.log.

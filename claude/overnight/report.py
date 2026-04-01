@@ -479,9 +479,9 @@ def render_completed_features(data: ReportData) -> str:
         lines.append("No overnight state found.")
         return "\n".join(lines)
 
-    # Determine home repo name for the machine-config group.
+    # Determine home repo name for the home repo group.
     # Prefer the first key of integration_branches (the home repo path) so that
-    # non-machine-config sessions label the group correctly.  Fall back to
+    # non-home-repo sessions label the group correctly.  Fall back to
     # deriving the name from this file's location when integration_branches is
     # empty (e.g. legacy state files).
     if data.state.integration_branches:
@@ -504,7 +504,7 @@ def render_completed_features(data: ReportData) -> str:
         lines.append("")
         return "\n".join(lines)
 
-    # Sort: machine-config (None) first, then cross-repo alphabetically by name
+    # Sort: home repo (None) first, then cross-repo alphabetically by name
     sorted_keys: list[Optional[str]] = []
     if None in groups:
         sorted_keys.append(None)

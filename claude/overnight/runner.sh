@@ -250,7 +250,7 @@ os.replace(tmp_path, pointer_path)
 " || true
 
 # For cross-repo sessions, the overnight skill writes overnight-plan.md to
-# machine-config's session dir (REPO_ROOT/lifecycle/sessions/SESSION_ID/), not
+# the home repo's session dir (REPO_ROOT/lifecycle/sessions/SESSION_ID/), not
 # the target repo's session dir that SESSION_DIR points to. Override PLAN_PATH.
 if [[ -n "$WORKTREE_PATH" ]]; then
     PLAN_PATH="$REPO_ROOT/lifecycle/sessions/${SESSION_ID}/overnight-plan.md"
@@ -265,7 +265,7 @@ print(data.get('integration_branch') or 'main')
 ")
 
 # Derive the home project root from the first key of integration_branches.
-# For machine-config sessions this equals REPO_ROOT; for per-repo sessions
+# For home-repo sessions this equals REPO_ROOT; for per-repo sessions
 # it equals the target project root (e.g. wild-light).
 HOME_PROJECT_ROOT=$(python3 -c "
 import json, os
@@ -274,9 +274,9 @@ branches = data.get('integration_branches', {})
 print(os.path.realpath(next(iter(branches)))) if branches else print(os.path.realpath('$REPO_ROOT'))
 ")
 
-# Derive the target project root — the single non-MC repo in integration_branches.
+# Derive the target project root — the single non-home repo in integration_branches.
 # For cross-repo sessions this is the external project (e.g. wild-light);
-# for MC-only sessions this is empty (all keys resolve to REPO_ROOT).
+# for home-only sessions this is empty (all keys resolve to REPO_ROOT).
 TARGET_PROJECT_ROOT=$(python3 -c "
 import json, os
 data = json.load(open('$STATE_PATH'))
@@ -888,14 +888,14 @@ if [[ -n "$WORKTREE_PATH" ]]; then
         cp "$SESSION_DIR"/batch-*-results.json      "$TARGET_INTEGRATION_WORKTREE/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
         cp "$SESSION_DIR/overnight-strategy.json"   "$TARGET_INTEGRATION_WORKTREE/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
     else
-        # MC-only session: copy artifacts to machine-config's session dir
+        # Home-only session: copy artifacts to the home repo's session dir
         mkdir -p "$REPO_ROOT/lifecycle/sessions/${SESSION_ID}/"
         cp "$SESSION_DIR"/batch-*-results.json      "$REPO_ROOT/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
         cp "$SESSION_DIR/overnight-strategy.json"   "$REPO_ROOT/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
     fi
 
-    # MC git-add subshell — always runs in both cross-repo and MC-only sessions.
-    # For cross-repo sessions, batch results won't be in MC, but any MC lifecycle
+    # Home-repo git-add subshell — always runs in both cross-repo and home-only sessions.
+    # For cross-repo sessions, batch results won't be in the home repo, but any home-repo lifecycle
     # artifacts that changed during the session are still committed here.
     set +e
     (
@@ -921,7 +921,7 @@ fi
 # ---------------------------------------------------------------------------
 # Cross-repo PR creation
 # ---------------------------------------------------------------------------
-# Iterate integration_branches, skip machine-config, create PRs for repos
+# Iterate integration_branches, skip the home repo, create PRs for repos
 # with at least one merged feature. Collect PR URLs in a temp JSON file for
 # the morning report.
 # ---------------------------------------------------------------------------
