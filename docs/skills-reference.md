@@ -5,7 +5,7 @@
 **For:** All users — quick reference to find the right skill for the job.
 **Assumes:** Claude Code is set up and skills are symlinked.
 
-A grouped inventory of all 30 skills. Each entry shows what the skill does and links to its full SKILL.md for trigger phrases, inputs, outputs, and implementation details.
+A grouped inventory of all 29 skills. Each entry shows what the skill does and links to its full SKILL.md for trigger phrases, inputs, outputs, and implementation details.
 
 ---
 
@@ -57,6 +57,16 @@ Manage project backlog items as individual markdown files with YAML frontmatter.
 Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the bash runner for unattended execution. Requires features to already have research and spec artifacts produced by `/refine` or `/lifecycle`.
 
 [skills/overnight/SKILL.md](../skills/overnight/SKILL.md)
+
+---
+
+### Choosing between `/dev`, `/lifecycle`, and `/overnight`
+
+These three skills overlap and route to each other — here is when to use each:
+
+- **`/dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/lifecycle`, `/overnight`, `/discovery`, or direct implementation. Start here if you do not already know which workflow you need.
+- **`/lifecycle`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete). It is a structured, interactive state machine for a single feature. `/dev` routes non-trivial single features here automatically.
+- **`/overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/refine` or `/lifecycle`) and you want autonomous unattended execution. It handles plan approval and hands off to the bash runner; no interactive research or spec phases occur. `/dev` recommends this when all backlog children are refined.
 
 ---
 
@@ -214,13 +224,6 @@ Systematic 4-phase debugging for skills, hooks, lifecycle, and overnight runner 
 Seed Claude's context with a full project orientation. Runs `git ls-files` and `git log`, reads `CLAUDE.md`, `README.md`, `requirements/project.md`, and `backlog/index.md`, then reports project summary, conventions, current state, and what kinds of tasks are likely next.
 
 [skills/prime/SKILL.md](../skills/prime/SKILL.md)
-
----
-
-### serena-memory
-Create a well-structured Serena memory following best practices. Covers architectural decisions, cross-cutting patterns, and complex workflows not obvious from code — things that LSP cannot discover. Evaluates candidates against a WHY/LSP/Staleness/Cross-Cutting checklist before writing.
-
-[skills/serena-memory/SKILL.md](../skills/serena-memory/SKILL.md)
 
 ---
 
