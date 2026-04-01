@@ -49,7 +49,7 @@ deploy-skills:
     mkdir -p ~/.claude/skills
     for skill in skills/*/SKILL.md; do
         name=$(basename "$(dirname "$skill")")
-        ln -sf "$(pwd)/skills/$name" "$HOME/.claude/skills/$name"
+        ln -sfn "$(pwd)/skills/$name" "$HOME/.claude/skills/$name"
     done
 
 # Deploy hooks to ~/.claude/hooks/ and ~/.claude/notify.sh as symlinks
