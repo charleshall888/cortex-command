@@ -52,72 +52,56 @@ The setup recipe will warn before overwriting non-symlink files at these locatio
 | `claude/reference/` | Reference docs loaded conditionally by agent instructions |
 | `bin/` | CLI utilities deployed to `~/.local/bin/` -- `jcc` (recipe wrapper), `count-tokens`, `audit-doc`, `overnight-start` |
 
-## Workflow Diagrams
-
-### Diagram A — Main Workflow Flow
-
-```mermaid
-graph TD
-    START([New idea / request])
-    DEV["/dev · routing hub"]
-
-    LC["/lifecycle\nfull interactive · single feature\nClarify → Research → Specify → Plan → Implement → Review → Complete"]
-    DISC["/discovery\nresearch + decompose\ncreates backlog tickets"]
-    BACKLOG[("Backlog")]
-
-    REFINE["/refine\nClarify → Research → Specify\nsets status: refined"]
-    GATE{"Readiness\ngate\nresearch ✓  spec ✓"}
-
-    OVN["/overnight\nselect · plan · execute\nparallel workers per feature"]
-    INTBR["overnight/&#123;session&#125; branch"]
-
-    MR["/morning-review\nanswer deferrals\nadvance lifecycles\nmerge PR → main"]
-
-    EVOLVE["/retro → /evolve\nself-improvement loop"]
-
-    MAIN([main branch])
-
-    START --> DEV
-    DEV -->|"single feature"| LC
-    DEV -->|"vague / research"| DISC
-    DEV -->|"batch / what's next"| BACKLOG
-
-    DISC -->|"creates tickets"| BACKLOG
-
-    BACKLOG -->|"pick item"| REFINE
-    REFINE -->|"status: refined + artifacts"| GATE
-    GATE -->|"eligible"| OVN
-    GATE -->|"needs more prep"| REFINE
-
-    OVN --> INTBR
-    INTBR --> MR
-    MR -->|"PR merged"| MAIN
-    MR -->|"closes tickets"| BACKLOG
-
-    LC -->|"Complete · closes ticket"| MAIN
-
-    MAIN --> EVOLVE
-    EVOLVE -->|"new items"| BACKLOG
-```
-
-### Diagram B — Lifecycle Phase Sequence
+## How It Works
 
 ```
-[Discovery artifacts] -----------------------------+
-                                                   |  (skips Clarify + Research + Specify)
-                                                   v
-+---------+    +----------+    +---------+    +--------+    +-----------+    +--------+    +----------+
-| Clarify +--> | Research +--> | Specify +--> |  Plan  +--> | Implement +--> | Review +--> | Complete |
-+---------+    +----------+    +---------+    +--------+    +-----------+    +--------+    +----------+
-[________________ /refine _______________]
-                                                                  |              |
-                                                                  |  [rework]    |
-                                                                  ^--------------+
+ ┌──────────────────────────────────────────────────────────────────────────┐
+ │  REQUIREMENTS   requirements/project.md  ·  requirements/{area}.md       │
+ └────────────────────────────────────┬─────────────────────────────────────┘
+                                      │ informs scope
+ ┌────────────────────────────────────▼─────────────────────────────────────┐
+ │  DISCOVERY   /discovery [topic]                                          │
+ │  Researches problem space, decomposes into epics and backlog tickets     │
+ └────────────────────────────────────┬─────────────────────────────────────┘
+                                      │
+ ┌────────────────────────────────────▼─────────────────────────────────────┐
+ │  BACKLOG   backlog/NNN-feature.md                                        │
+ │  status: draft ──► /refine ──► ready                                     │
+ │                    (Clarify + Research + Spec per ticket)                │
+ └──────────────────────┬───────────────────────────┬───────────────────────┘
+                        │ interactive               │ autonomous
+          ┌─────────────▼────────────┐    ┌─────────▼────────────────────┐
+          │  /lifecycle              │    │  /overnight                  │
+          │  one feature at a time   │    │  selects status:ready items  │
+          │  human-in-the-loop       │    │  runs features in parallel   │
+          └──────────────────────────┘    └───────────────┬──────────────┘
+                                                          │
+                                         ┌────────────────▼───────────────┐
+                                         │  /morning-review               │
+                                         │  review artifacts              │
+                                         │  answer deferred Q&A           │
+                                         │  advance to complete           │
+                                         └────────────────────────────────┘
+```
 
-Review phase conditions:
-  - Skipped for simple tier (1-5 files, existing pattern, clear requirements)
-  - Required for complex tier (6+ files, novel pattern, ambiguous scope)
-  - Always forced for high and critical criticality
+```
+        ┌──────────── /refine ──────┐
+        │                           │
+You ──► Clarify ──► Research ──► Spec ──► Plan ──► Implement ──► Review ──► Complete
+                                    │                               ▲         │
+                                    └──────── /overnight ───────────┘    /morning-review
+                                         agents run autonomously              │
+                                               (Plan → Complete)             You
+
+  Complexity tier — auto-detected or set in lifecycle.config.md:
+    simple   ·  standard gates only
+    complex  ·  /critical-review challenges spec before Plan begins
+                (auto-escalated when research surfaces ≥2 open questions)
+
+  Criticality — controls rigor and model selection:
+    low/medium  ·  tier-based review  ·  Haiku explore, Sonnet build
+    high        ·  review always required  ·  Sonnet explore, Opus build
+    critical    ·  parallel research + competing plans  ·  Sonnet explore, Opus build
 ```
 
 ## Customization
