@@ -308,6 +308,7 @@ def write_session_manifest(
 def initialize_overnight_state(
     selection: SelectionResult,
     plan_content: str | None = None,
+    project_root: Path | None = None,
 ) -> OvernightState:
     """Create the initial OvernightState from an approved session plan.
 
@@ -327,12 +328,18 @@ def initialize_overnight_state(
             and used as the stable component in per-task idempotency
             tokens. Pass ``None`` only in tests or legacy callers that
             do not need idempotency tokens.
+        project_root: Root of the target git repository. Defaults to
+            ``Path.cwd()`` when not provided. Pass this explicitly
+            when the caller's working directory may differ from the
+            target project (e.g. invoking from the home repo while
+            targeting a separate project repo).
 
     Returns:
         A fully-initialised OvernightState ready for the orchestrator
         to begin execution. The caller is responsible for persisting
         the state via ``save_state()``.
     """
+    repo_root: Path = Path(project_root).resolve() if project_root is not None else Path.cwd().resolve()
     session_id = datetime.now(timezone.utc).strftime("overnight-%Y-%m-%d-%H%M")
 
     # Collision-avoidance: if a session directory already exists for this
@@ -357,8 +364,9 @@ def initialize_overnight_state(
     worktree_path = Path(os.environ.get("TMPDIR", "/tmp")) / "overnight-worktrees" / session_id
     # Prune stale worktree metadata, then remove any leftover directory, before
     # creating the new worktree (handles the case where a previous run left an
-    # orphaned worktree at the same path).
-    subprocess.run(["git", "worktree", "prune"])
+    # orphaned worktree at the same path). --expire now bypasses the default
+    # 2-week grace period so recently-created-but-missing entries are pruned too.
+    subprocess.run(["git", "worktree", "prune", "--expire", "now"], cwd=repo_root)
     if worktree_path.exists():
         shutil.rmtree(worktree_path, ignore_errors=True)
 
@@ -367,11 +375,13 @@ def initialize_overnight_state(
     integration_branch_name = f"overnight/{session_id}"
     result = subprocess.run(
         ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{integration_branch_name}"],
+        cwd=repo_root,
     )
     if result.returncode == 0:
         try:
             subprocess.run(
                 ["git", "branch", "-D", integration_branch_name],
+                cwd=repo_root,
                 check=True,
             )
         except subprocess.CalledProcessError:
@@ -382,10 +392,11 @@ def initialize_overnight_state(
 
     subprocess.run(
         ["git", "worktree", "add", str(worktree_path), "-b", integration_branch_name],
+        cwd=repo_root,
         check=True,
     )
 
-    project_root = str(Path.cwd().resolve())
+    project_root = str(repo_root)
     integration_branches: dict[str, str] = {project_root: integration_branch_name}
 
     features: dict[str, OvernightFeatureStatus] = {}
@@ -431,7 +442,7 @@ def initialize_overnight_state(
 
         # Stale cleanup: prune, rmtree, show-ref + branch -D.
         try:
-            subprocess.run(["git", "worktree", "prune"], cwd=repo_path)
+            subprocess.run(["git", "worktree", "prune", "--expire", "now"], cwd=repo_path)
         except Exception:
             print(
                 f"Warning: git worktree prune failed for {repo_path}",
@@ -505,6 +516,7 @@ def initialize_overnight_state(
 def bootstrap_session(
     selection: SelectionResult,
     plan_content: str,
+    project_root: Path | None = None,
 ) -> tuple[OvernightState, Path]:
     """Initialize a complete overnight session from a selection and plan.
 
@@ -521,13 +533,15 @@ def bootstrap_session(
     Args:
         selection: The batch selection result containing features to execute.
         plan_content: Rendered session-plan markdown string.
+        project_root: Root of the target git repository. Forwarded to
+            ``initialize_overnight_state``; defaults to ``Path.cwd()``.
 
     Returns:
         A ``(state, state_dir)`` tuple where *state* is the fully-populated
         ``OvernightState`` and *state_dir* is the ``Path`` to the session
         directory on disk.
     """
-    state = initialize_overnight_state(selection, plan_content=plan_content)
+    state = initialize_overnight_state(selection, plan_content=plan_content, project_root=project_root)
     state_dir = session_dir(state.session_id)
     write_session_plan(plan_content, plan_dir=state_dir)
     write_session_manifest(
