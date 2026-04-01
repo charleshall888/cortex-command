@@ -1,10 +1,10 @@
 # Cortex Command
 
-Cortex Command is an AI workflow framework for Claude Code built on a single insight: autonomous execution is only as good as the specification that precedes it. Most AI coding tools optimize for speed. The result is fast accumulation of plausible-looking code that misses the point -- because the problem space was never mapped, the scope was never agreed on, and nobody was asking the hard questions before the first line was written.
+Cortex Command is an AI workflow framework for Claude Code built on a single insight: autonomous execution is only as good as the specification that precedes it. Most AI coding tools optimize for speed. The result is fast accumulation of plausible-looking code that misses the point, because the problem space was never mapped, the scope was never agreed on, and nobody was asking the hard questions before the first line was written.
 
-The front half of the lifecycle is deliberately human-driven. You run discovery to understand the problem space, collaborate with agents to write tight specs, and mark features ready only when the scope is genuinely clear. Once that work is done, the handoff is earned. Run `/lifecycle` to stay in the loop for interactive, one-feature-at-a-time development, or queue a batch for `/overnight` and wake up to a morning report with PRs ready to review. The overnight runner isn't a special mode -- it's the natural payoff of doing the front half well.
+The front half of the lifecycle is deliberately human-driven. You run discovery to understand the problem space, collaborate with agents to write tight specs, and mark features ready only when the scope is genuinely clear. Once that work is done, the handoff is earned. Run `/lifecycle` to stay in the loop for interactive development, or queue a batch for `/overnight` and wake up to a morning report with PRs ready to review. The overnight runner is the natural payoff of doing the front half well.
 
-Skills are the primitive units -- slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. All config is deployed via symlinks so the whole thing lives in version control.
+Skills are slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. All config is deployed via symlinks so the whole thing lives in version control.
 
 ```
  ┌──────────────────────────────────────────────────────────────────────────┐
