@@ -9,6 +9,8 @@ An opinionated AI workflow framework for [Claude Code](https://docs.anthropic.co
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) package manager (`brew install uv`)
 
+> These instructions target macOS. For Linux or Windows setup, see [`docs/setup.md`](docs/setup.md).
+
 ## Quick Start
 
 ```bash
@@ -24,8 +26,8 @@ just setup
 > ```
 >
 > Several components (the `jcc` wrapper, overnight runner) require this variable.
-> If you clone to a different location, update the path accordingly and also edit
-> `claude/settings.json` to update the `allowWrite` path under `sandbox.filesystem`.
+> If you clone to a different location, update the path accordingly. The sandbox
+> `allowWrite` path is configured automatically by `just setup`.
 
 ### Backup Warning
 

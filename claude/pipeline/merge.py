@@ -69,8 +69,7 @@ def run_tests(test_command: str = None, cwd: str = None) -> TestResult:
         cwd = str(_repo_root())
 
     result = subprocess.run(
-        test_command,
-        shell=True,
+        ["sh", "-c", test_command],
         capture_output=True,
         text=True,
         cwd=cwd,

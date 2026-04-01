@@ -193,9 +193,9 @@ if [[ ! -f "$PROMPT_TEMPLATE" ]]; then
 fi
 
 # Verify state phase is 'executing'
-PHASE=$(python3 -c "
-import json, sys
-state = json.load(open('$STATE_PATH'))
+PHASE=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 print(state.get('phase', ''))
 ")
 if [[ "$PHASE" != "executing" ]]; then
@@ -204,9 +204,9 @@ if [[ "$PHASE" != "executing" ]]; then
 fi
 
 # Read session ID and derive per-session events log path
-SESSION_ID=$(python3 -c "
-import json, sys
-state = json.load(open('$STATE_PATH'))
+SESSION_ID=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 print(state.get('session_id', ''))
 ")
 if [[ -z "$SESSION_ID" ]]; then
@@ -218,9 +218,9 @@ PLAN_PATH="${SESSION_DIR}/overnight-plan.md"
 
 # For new-style sessions (worktree_path set), update latest-overnight to an
 # absolute symlink pointing into the worktree session directory.
-WORKTREE_PATH=$(python3 -c "
-import json
-s = json.load(open('$STATE_PATH'))
+WORKTREE_PATH=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+s = json.load(open(os.environ['STATE_PATH']))
 print(s.get('worktree_path') or '')
 ")
 if [[ -n "$WORKTREE_PATH" ]]; then
@@ -228,7 +228,7 @@ if [[ -n "$WORKTREE_PATH" ]]; then
 fi
 
 # Write active-session pointer so the dashboard can find sessions from any repo
-python3 -c "
+SESSION_ID="$SESSION_ID" REPO_ROOT="$REPO_ROOT" STATE_PATH="$STATE_PATH" python3 -c "
 import json, os, tempfile
 from pathlib import Path
 from datetime import datetime, timezone
@@ -237,9 +237,9 @@ pointer_dir = Path.home() / '.local' / 'share' / 'overnight-sessions'
 pointer_dir.mkdir(parents=True, exist_ok=True)
 pointer_path = pointer_dir / 'active-session.json'
 data = {
-    'session_id': '$SESSION_ID',
-    'repo_path': '$REPO_ROOT',
-    'state_path': '$STATE_PATH',
+    'session_id': os.environ['SESSION_ID'],
+    'repo_path': os.environ['REPO_ROOT'],
+    'state_path': os.environ['STATE_PATH'],
     'started_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
     'phase': 'executing',
 }
@@ -258,29 +258,29 @@ fi
 
 # Derive integration branch name from scalar state field (fallback: "main").
 # Used by batch_runner invocation (--base-branch) later in the round loop.
-INTEGRATION_BRANCH=$(python3 -c "
-import json
-data = json.load(open('$STATE_PATH'))
+INTEGRATION_BRANCH=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+data = json.load(open(os.environ['STATE_PATH']))
 print(data.get('integration_branch') or 'main')
 ")
 
 # Derive the home project root from the first key of integration_branches.
 # For home-repo sessions this equals REPO_ROOT; for per-repo sessions
 # it equals the target project root (e.g. wild-light).
-HOME_PROJECT_ROOT=$(python3 -c "
+HOME_PROJECT_ROOT=$(STATE_PATH="$STATE_PATH" REPO_ROOT="$REPO_ROOT" python3 -c "
 import json, os
-data = json.load(open('$STATE_PATH'))
+data = json.load(open(os.environ['STATE_PATH']))
 branches = data.get('integration_branches', {})
-print(os.path.realpath(next(iter(branches)))) if branches else print(os.path.realpath('$REPO_ROOT'))
+print(os.path.realpath(next(iter(branches)))) if branches else print(os.path.realpath(os.environ['REPO_ROOT']))
 ")
 
 # Derive the target project root — the single non-home repo in integration_branches.
 # For cross-repo sessions this is the external project (e.g. wild-light);
 # for home-only sessions this is empty (all keys resolve to REPO_ROOT).
-TARGET_PROJECT_ROOT=$(python3 -c "
+TARGET_PROJECT_ROOT=$(STATE_PATH="$STATE_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" python3 -c "
 import json, os
-data = json.load(open('$STATE_PATH'))
-mc = os.path.realpath('$HOME_PROJECT_ROOT')
+data = json.load(open(os.environ['STATE_PATH']))
+mc = os.path.realpath(os.environ['HOME_PROJECT_ROOT'])
 for repo_path in data.get('integration_branches', {}):
     if os.path.realpath(repo_path) != mc:
         print(repo_path)
@@ -292,19 +292,19 @@ for repo_path in data.get('integration_branches', {}):
 # to TARGET_PROJECT_ROOT. Sets TARGET_INTEGRATION_WORKTREE if found and valid.
 TARGET_INTEGRATION_WORKTREE=""
 if [[ -n "$TARGET_PROJECT_ROOT" ]]; then
-    _IW_LOOKUP=$(python3 -c "
+    _IW_LOOKUP=$(STATE_PATH="$STATE_PATH" TARGET_PROJECT_ROOT="$TARGET_PROJECT_ROOT" python3 -c "
 import json, os
-data = json.load(open('$STATE_PATH'))
-target = os.path.realpath('$TARGET_PROJECT_ROOT')
+data = json.load(open(os.environ['STATE_PATH']))
+target = os.path.realpath(os.environ['TARGET_PROJECT_ROOT'])
 for k, v in data.get('integration_worktrees', {}).items():
     if os.path.realpath(k) == target:
         print(v)
         break
 ")
     if [[ -z "$_IW_LOOKUP" ]]; then
-        log_event "integration_worktree_missing" "$(( ROUND - 1 ))" "{'reason': 'no entry in integration_worktrees for target', 'target': '$TARGET_PROJECT_ROOT'}"
+        log_event "integration_worktree_missing" "$(( ROUND - 1 ))" "{\"reason\": \"no entry in integration_worktrees for target\", \"target\": \"$TARGET_PROJECT_ROOT\"}"
     elif [[ ! -d "$_IW_LOOKUP" ]]; then
-        log_event "integration_worktree_missing" "$(( ROUND - 1 ))" "{'reason': 'path not on disk', 'path': '$_IW_LOOKUP', 'target': '$TARGET_PROJECT_ROOT'}"
+        log_event "integration_worktree_missing" "$(( ROUND - 1 ))" "{\"reason\": \"path not on disk\", \"path\": \"$_IW_LOOKUP\", \"target\": \"$TARGET_PROJECT_ROOT\"}"
     else
         TARGET_INTEGRATION_WORKTREE="$_IW_LOOKUP"
     fi
@@ -335,19 +335,19 @@ log_event() {
     local round_num="$2"
     local details="${3:-}"
     LOG_EVENT_NAME="$event" LOG_ROUND="$round_num" LOG_DETAILS="$details" LOG_EVENTS_PATH="$EVENTS_PATH" python3 -c "
-import ast, os
+import json, os
 from claude.overnight.events import log_event
 from pathlib import Path
 raw = os.environ.get('LOG_DETAILS', '')
-details = ast.literal_eval(raw) if raw else None
+details = json.loads(raw) if raw else None
 log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=details, log_path=Path(os.environ['LOG_EVENTS_PATH']))
 "
 }
 
 count_pending() {
-    python3 -c "
-import json
-state = json.load(open('$STATE_PATH'))
+    STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 features = state.get('features', {})
 count = sum(1 for f in features.values() if f.get('status') in ('pending', 'running'))
 print(count)
@@ -356,13 +356,17 @@ print(count)
 
 fill_prompt() {
     local round_num="$1"
-    sed \
-        -e "s|{state_path}|$STATE_PATH|g" \
-        -e "s|{plan_path}|$PLAN_PATH|g" \
-        -e "s|{events_path}|$EVENTS_PATH|g" \
-        -e "s|{round_number}|$round_num|g" \
-        -e "s|{tier}|$TIER|g" \
-        "$PROMPT_TEMPLATE"
+    STATE_PATH="$STATE_PATH" PLAN_PATH="$PLAN_PATH" EVENTS_PATH="$EVENTS_PATH" \
+    ROUND_NUM="$round_num" TIER="$TIER" TEMPLATE="$PROMPT_TEMPLATE" python3 -c "
+import os
+t = open(os.environ['TEMPLATE']).read()
+t = t.replace('{state_path}', os.environ['STATE_PATH'])
+t = t.replace('{plan_path}', os.environ['PLAN_PATH'])
+t = t.replace('{events_path}', os.environ['EVENTS_PATH'])
+t = t.replace('{round_number}', os.environ['ROUND_NUM'])
+t = t.replace('{tier}', os.environ['TIER'])
+print(t, end='')
+"
 }
 
 
@@ -410,12 +414,12 @@ except Exception:
 " "$last_ts" 2>/dev/null || echo 0)
         if [[ "$age_secs" -ge "$timeout_secs" ]]; then
             # Log STALL_TIMEOUT event
-            LOG_EVENT_NAME="stall_timeout" LOG_ROUND="$ROUND" LOG_DETAILS="{'session_id': '$SESSION_ID', 'last_event_ago_seconds': $age_secs, 'round': $ROUND}" LOG_EVENTS_PATH="$EVENTS_PATH" python3 -c "
-import ast, os
+            LOG_EVENT_NAME="stall_timeout" LOG_ROUND="$ROUND" LOG_DETAILS="{\"session_id\": \"$SESSION_ID\", \"last_event_ago_seconds\": $age_secs, \"round\": $ROUND}" LOG_EVENTS_PATH="$EVENTS_PATH" python3 -c "
+import json, os
 from claude.overnight.events import log_event
 from pathlib import Path
 raw = os.environ.get('LOG_DETAILS', '')
-details = ast.literal_eval(raw) if raw else None
+details = json.loads(raw) if raw else None
 log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=details, log_path=Path(os.environ['LOG_EVENTS_PATH']))
 " 2>/dev/null || true
             # Write stall flag and kill the target's entire process group
@@ -444,18 +448,19 @@ cleanup() {
     rm -f "${LOCK_FILE:-}"
     echo ""
     echo "Signal received — pausing overnight session"
-    python3 -c "
+    STATE_PATH="$STATE_PATH" python3 -c "
+import os
 from claude.overnight.state import load_state, save_state, transition
 from pathlib import Path
-state = load_state(Path('$STATE_PATH'))
+state = load_state(Path(os.environ['STATE_PATH']))
 if state.phase != 'complete' and state.phase != 'paused':
     state = transition(state, 'paused')
     state.paused_reason = 'signal'
-    save_state(state, Path('$STATE_PATH'))
+    save_state(state, Path(os.environ['STATE_PATH']))
     print(f'State saved (paused from {state.paused_from}, reason: signal)')
 "
     # Update active-session pointer to reflect paused phase
-    python3 -c "
+    SESSION_ID="$SESSION_ID" python3 -c "
 import json, os, tempfile
 from pathlib import Path
 
@@ -463,7 +468,7 @@ pointer_path = Path.home() / '.local' / 'share' / 'overnight-sessions' / 'active
 if pointer_path.exists():
     try:
         data = json.loads(pointer_path.read_text())
-        if data.get('session_id') == '$SESSION_ID':
+        if data.get('session_id') == os.environ['SESSION_ID']:
             data['phase'] = 'paused'
             with tempfile.NamedTemporaryFile(mode='w', dir=str(pointer_path.parent), delete=False, suffix='.tmp') as f:
                 json.dump(data, f)
@@ -472,18 +477,20 @@ if pointer_path.exists():
     except Exception:
         pass
 " || true
-    log_event "circuit_breaker" "$ROUND" "{'reason': 'signal'}"
-    python3 -c "
+    log_event "circuit_breaker" "$ROUND" "{\"reason\": \"signal\"}"
+    STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" TARGET_PROJECT_ROOT="$TARGET_PROJECT_ROOT" REPO_ROOT="$REPO_ROOT" SESSION_ID="$SESSION_ID" python3 -c "
+import os
 from pathlib import Path
 from datetime import datetime, timezone
 from claude.overnight.report import collect_report_data, create_followup_backlog_items, generate_report, write_report
-data = collect_report_data(state_path=Path('$STATE_PATH'), events_path=Path('$EVENTS_PATH'))
+data = collect_report_data(state_path=Path(os.environ['STATE_PATH']), events_path=Path(os.environ['EVENTS_PATH']))
 data.new_backlog_items = create_followup_backlog_items(data)
 report = generate_report(data)
 ts = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 report = f'> **Interrupted Session** — partial report generated at {ts}\n\n' + report
-target = '$TARGET_PROJECT_ROOT' if '$TARGET_PROJECT_ROOT' else '$REPO_ROOT'
-write_report(report, path=Path(target) / 'lifecycle' / 'sessions' / '$SESSION_ID' / 'morning-report.md')
+target = os.environ['TARGET_PROJECT_ROOT'] if os.environ['TARGET_PROJECT_ROOT'] else os.environ['REPO_ROOT']
+sid = os.environ['SESSION_ID']
+write_report(report, path=Path(target) / 'lifecycle' / 'sessions' / sid / 'morning-report.md')
 write_report(report, path=Path(target) / 'lifecycle' / 'morning-report.md')
 " || true
     ~/.claude/notify.sh "Overnight session killed — partial report in lifecycle/sessions/${SESSION_ID}/. Session: $SESSION_ID" || true
@@ -503,9 +510,9 @@ STALL_FLAG=$(mktemp)
 MERGED_BEFORE=0
 
 # Count already-merged features at start
-MERGED_BEFORE=$(python3 -c "
-import json
-state = json.load(open('$STATE_PATH'))
+MERGED_BEFORE=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 features = state.get('features', {})
 print(sum(1 for f in features.values() if f.get('status') == 'merged'))
 ")
@@ -519,10 +526,10 @@ echo "  Started:    $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 echo ""
 
 # Create integration branches in cross-repo target repos
-python3 -c "
+STATE_PATH="$STATE_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" python3 -c "
 import json, os, subprocess
-data = json.load(open('$STATE_PATH'))
-repo_root = os.path.realpath('$HOME_PROJECT_ROOT')
+data = json.load(open(os.environ['STATE_PATH']))
+repo_root = os.path.realpath(os.environ['HOME_PROJECT_ROOT'])
 integration_worktrees = data.get('integration_worktrees', {})
 worktree_repos = set(os.path.realpath(k) for k in integration_worktrees)
 for repo_path, branch_name in data.get('integration_branches', {}).items():
@@ -540,7 +547,7 @@ for repo_path, branch_name in data.get('integration_branches', {}).items():
     (cd "$REPO_PATH" && git branch "$BRANCH_NAME" 2>/dev/null || echo "Warning: branch $BRANCH_NAME already exists in $REPO_PATH")
 done
 
-log_event "session_start" "1" "{'time_limit_hours': $TIME_LIMIT_HOURS, 'max_rounds': $MAX_ROUNDS}"
+log_event "session_start" "1" "{\"time_limit_hours\": $TIME_LIMIT_HOURS, \"max_rounds\": $MAX_ROUNDS}"
 
 # Reset any features stuck in running status from a previous interrupted session
 python3 -m claude.overnight.interrupt "$STATE_PATH"
@@ -549,6 +556,25 @@ python3 -m claude.overnight.interrupt "$STATE_PATH"
 # operate in the correct git context. Old-style sessions (no worktree_path)
 # continue running from the main repo — no cd.
 if [[ -n "$WORKTREE_PATH" ]]; then
+    if [[ ! -d "$WORKTREE_PATH" ]]; then
+        echo "Worktree missing at $WORKTREE_PATH -- attempting auto-recovery..." >&2
+        # Prune stale git metadata. --expire now bypasses the default 2-week grace
+        # period so recently-created-but-missing entries are cleaned up too.
+        (cd "$HOME_PROJECT_ROOT" && git worktree prune --expire now) || true
+        mkdir -p "$(dirname "$WORKTREE_PATH")"
+        if (cd "$HOME_PROJECT_ROOT" && git worktree add "$WORKTREE_PATH" "$INTEGRATION_BRANCH") 2>&1; then
+            echo "Worktree recreated at $WORKTREE_PATH" >&2
+        else
+            echo "" >&2
+            echo "Error: could not recreate worktree at $WORKTREE_PATH" >&2
+            echo "  Branch:     $INTEGRATION_BRANCH" >&2
+            echo "  State file: $STATE_PATH" >&2
+            echo "" >&2
+            echo "Check that the integration branch exists:" >&2
+            echo "  (cd \"$HOME_PROJECT_ROOT\" && git branch -l \"$INTEGRATION_BRANCH\")" >&2
+            exit 1
+        fi
+    fi
     cd "$WORKTREE_PATH"
 fi
 
@@ -561,7 +587,7 @@ while [[ $ROUND -le $MAX_ROUNDS ]]; do
     fi
 
     echo "--- Round $ROUND (${PENDING} features pending) ---"
-    log_event "round_start" "$ROUND" "{'pending': $PENDING}"
+    log_event "round_start" "$ROUND" "{\"pending\": $PENDING}"
 
     # Fill the prompt template
     FILLED_PROMPT=$(fill_prompt "$ROUND")
@@ -591,25 +617,26 @@ while [[ $ROUND -le $MAX_ROUNDS ]]; do
     if [[ -s "$STALL_FLAG" ]]; then
         STALLED=true
         echo "Warning: watchdog killed orchestrator due to event log silence (stall timeout)"
-        python3 -c "
+        STATE_PATH="$STATE_PATH" python3 -c "
+import os
 from claude.overnight.state import load_state, save_state, transition
 from pathlib import Path
-state = load_state(Path('$STATE_PATH'))
+state = load_state(Path(os.environ['STATE_PATH']))
 if state.phase != 'paused' and state.phase != 'complete':
     state = transition(state, 'paused')
     state.paused_reason = 'stall_timeout'
-    save_state(state, Path('$STATE_PATH'))
+    save_state(state, Path(os.environ['STATE_PATH']))
     print('Session transitioned to paused due to stall timeout')
 "
         ~/.claude/notify.sh "Overnight session stalled — no pipeline activity for 30+ minutes. Session paused. Session: $SESSION_ID" || true
     elif [[ $EXIT_CODE -ne 0 ]]; then
         echo "Warning: orchestrator agent exited with code $EXIT_CODE"
-        LOG_EVENT_NAME="orchestrator_failed" LOG_ROUND="$ROUND" LOG_DETAILS="{'exit_code': $EXIT_CODE}" LOG_EVENTS_PATH="$EVENTS_PATH" python3 -c "
-import ast, os
+        LOG_EVENT_NAME="orchestrator_failed" LOG_ROUND="$ROUND" LOG_DETAILS="{\"exit_code\": $EXIT_CODE}" LOG_EVENTS_PATH="$EVENTS_PATH" python3 -c "
+import json, os
 from claude.overnight.events import log_event
 from pathlib import Path
 raw = os.environ.get('LOG_DETAILS', '')
-details = ast.literal_eval(raw) if raw else None
+details = json.loads(raw) if raw else None
 log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=details, log_path=Path(os.environ['LOG_EVENTS_PATH']))
 " 2>/dev/null || true
     fi
@@ -625,7 +652,7 @@ log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=de
     # -----------------------------------------------------------------------
     BATCH_PLAN_PATH="$SESSION_DIR/batch-plan-round-$ROUND.md"
     if [[ ! -f "$BATCH_PLAN_PATH" ]]; then
-        log_event "orchestrator_no_plan" "$ROUND" "{'round': $ROUND}"
+        log_event "orchestrator_no_plan" "$ROUND" "{\"round\": $ROUND}"
         echo "Round $ROUND: no batch plan produced — skipping batch_runner"
     else
         export LIFECYCLE_SESSION_ID="$SESSION_ID"
@@ -655,29 +682,30 @@ log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=de
         # Check if the watchdog triggered a stall timeout on batch_runner
         if [[ -s "$STALL_FLAG" ]]; then
             echo "Warning: watchdog killed batch_runner due to event log silence (stall timeout)"
-            log_event "batch_runner_stalled" "$ROUND" "{'round': $ROUND}"
-            python3 -c "
+            log_event "batch_runner_stalled" "$ROUND" "{\"round\": $ROUND}"
+            STATE_PATH="$STATE_PATH" python3 -c "
+import os
 from claude.overnight.state import load_state, save_state, transition
 from pathlib import Path
-state = load_state(Path('$STATE_PATH'))
+state = load_state(Path(os.environ['STATE_PATH']))
 if state.phase != 'paused' and state.phase != 'complete':
     state = transition(state, 'paused')
     state.paused_reason = 'stall_timeout'
-    save_state(state, Path('$STATE_PATH'))
+    save_state(state, Path(os.environ['STATE_PATH']))
     print('Session transitioned to paused due to batch_runner stall timeout')
 "
             ~/.claude/notify.sh "Overnight batch_runner stalled — no pipeline activity for 30+ minutes. Session paused. Session: $SESSION_ID" || true
             break
         elif [[ $BATCH_EXIT -ne 0 ]]; then
             echo "Warning: batch_runner exited with code $BATCH_EXIT"
-            log_event "orchestrator_failed" "$ROUND" "{'exit_code': $BATCH_EXIT}"
+            log_event "orchestrator_failed" "$ROUND" "{\"exit_code\": $BATCH_EXIT}"
         fi
 
         # Check if session was paused due to budget exhaustion
-        PAUSED_REASON=$(python3 -c "import json; state = json.load(open('$STATE_PATH')); print(state.get('paused_reason') or '')")
+        PAUSED_REASON=$(STATE_PATH="$STATE_PATH" python3 -c "import json, os; state = json.load(open(os.environ['STATE_PATH'])); print(state.get('paused_reason') or '')")
         if [[ "$PAUSED_REASON" == "budget_exhausted" ]]; then
             echo "Session paused: API budget exhausted — stopping round loop"
-            log_event "circuit_breaker" "$ROUND" "{'reason': 'budget_exhausted'}"
+            log_event "circuit_breaker" "$ROUND" "{\"reason\": \"budget_exhausted\"}"
             break
         fi
 
@@ -694,9 +722,9 @@ if state.phase != 'paused' and state.phase != 'complete':
     fi
 
     # Count merged features after this round
-    MERGED_AFTER=$(python3 -c "
-import json
-state = json.load(open('$STATE_PATH'))
+    MERGED_AFTER=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 features = state.get('features', {})
 print(sum(1 for f in features.values() if f.get('status') == 'merged'))
 ")
@@ -704,7 +732,7 @@ print(sum(1 for f in features.values() if f.get('status') == 'merged'))
     MERGED_THIS_ROUND=$(( MERGED_AFTER - MERGED_BEFORE ))
     echo "Round $ROUND complete: $MERGED_THIS_ROUND features merged this round ($MERGED_AFTER total)"
 
-    log_event "round_complete" "$ROUND" "{'merged_this_round': $MERGED_THIS_ROUND, 'merged_total': $MERGED_AFTER}"
+    log_event "round_complete" "$ROUND" "{\"merged_this_round\": $MERGED_THIS_ROUND, \"merged_total\": $MERGED_AFTER}"
     log_event "round_setup_start" "$ROUND"
 
     # Progress circuit breaker
@@ -713,8 +741,8 @@ print(sum(1 for f in features.values() if f.get('status') == 'merged'))
         echo "Warning: zero features merged this round (stall count: $STALL_COUNT/2)"
         if [[ $STALL_COUNT -ge 2 ]]; then
             echo "Circuit breaker: 2 consecutive rounds with zero progress — stopping"
-            log_event "circuit_breaker" "$ROUND" "{'reason': 'stall', 'stall_count': $STALL_COUNT}"
-            REMAINING_PENDING=$(python3 -c "import json; state = json.load(open('$STATE_PATH')); features = state.get('features', {}); print(sum(1 for f in features.values() if f.get('status') == 'pending'))")
+            log_event "circuit_breaker" "$ROUND" "{\"reason\": \"stall\", \"stall_count\": $STALL_COUNT}"
+            REMAINING_PENDING=$(STATE_PATH="$STATE_PATH" python3 -c "import json, os; state = json.load(open(os.environ['STATE_PATH'])); features = state.get('features', {}); print(sum(1 for f in features.values() if f.get('status') == 'pending'))")
             if [[ "$REMAINING_PENDING" -eq 0 ]]; then
                 ~/.claude/notify.sh "Overnight session abandoned — no progress after 2 rounds. Session: $SESSION_ID. Check morning report." || true
             fi
@@ -731,18 +759,19 @@ print(sum(1 for f in features.values() if f.get('status') == 'merged'))
     HOURS=$(elapsed_hours)
     if [[ $HOURS -ge $TIME_LIMIT_HOURS ]]; then
         echo "Time limit reached (${HOURS}h >= ${TIME_LIMIT_HOURS}h) — stopping"
-        log_event "circuit_breaker" "$ROUND" "{'reason': 'time_limit', 'elapsed_hours': $HOURS}"
+        log_event "circuit_breaker" "$ROUND" "{\"reason\": \"time_limit\", \"elapsed_hours\": $HOURS}"
         log_event "round_setup_complete" "$ROUND"
         break
     fi
 
     # Update round in state
-    python3 -c "
+    STATE_PATH="$STATE_PATH" ROUND="$ROUND" python3 -c "
+import os
 from claude.overnight.state import load_state, save_state
 from pathlib import Path
-state = load_state(Path('$STATE_PATH'))
-state.current_round = $ROUND + 1
-save_state(state, Path('$STATE_PATH'))
+state = load_state(Path(os.environ['STATE_PATH']))
+state.current_round = int(os.environ['ROUND']) + 1
+save_state(state, Path(os.environ['STATE_PATH']))
 "
     log_event "round_setup_complete" "$ROUND"
 
@@ -775,9 +804,9 @@ rm -f "$STALL_FLAG"
 echo ""
 echo "=== Overnight Session Complete ==="
 
-FINAL_MERGED=$(python3 -c "
-import json
-state = json.load(open('$STATE_PATH'))
+FINAL_MERGED=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 features = state.get('features', {})
 merged = sum(1 for f in features.values() if f.get('status') == 'merged')
 total = len(features)
@@ -787,24 +816,25 @@ echo "  Features merged: $FINAL_MERGED"
 echo "  Rounds executed: $(( ROUND - 1 ))"
 echo "  Finished:        $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
-log_event "session_complete" "$(( ROUND - 1 ))" "{'features_merged': '$FINAL_MERGED'}"
+log_event "session_complete" "$(( ROUND - 1 ))" "{\"features_merged\": \"$FINAL_MERGED\"}"
 
 # Transition state to complete if all features are done
-python3 -c "
+STATE_PATH="$STATE_PATH" python3 -c "
+import os
 from claude.overnight.state import load_state, save_state, transition
 from pathlib import Path
-state = load_state(Path('$STATE_PATH'))
+state = load_state(Path(os.environ['STATE_PATH']))
 pending = sum(1 for f in state.features.values() if f.status in ('pending', 'running'))
 if pending == 0 and state.phase == 'executing':
     state = transition(state, 'complete')
-    save_state(state, Path('$STATE_PATH'))
+    save_state(state, Path(os.environ['STATE_PATH']))
     print('Session marked complete')
 else:
     print(f'{pending} features still pending — session remains in executing phase')
 "
 
 # Sync active-session pointer phase with the updated state
-python3 -c "
+STATE_PATH="$STATE_PATH" python3 -c "
 import json, os, tempfile
 from pathlib import Path
 
@@ -812,7 +842,7 @@ pointer_path = Path.home() / '.local' / 'share' / 'overnight-sessions' / 'active
 if pointer_path.exists():
     try:
         data = json.loads(pointer_path.read_text())
-        state = json.loads(Path('$STATE_PATH').read_text())
+        state = json.loads(Path(os.environ['STATE_PATH']).read_text())
         data['phase'] = state.get('phase', data['phase'])
         with tempfile.NamedTemporaryFile(mode='w', dir=str(pointer_path.parent), delete=False, suffix='.tmp') as f:
             json.dump(data, f)
@@ -826,7 +856,7 @@ if pointer_path.exists():
 if [[ -n "$TEST_COMMAND" ]] && [[ -n "$WORKTREE_PATH" ]] && [[ -d "$WORKTREE_PATH" ]]; then
     echo "Running integration gate: $TEST_COMMAND"
     set +e
-    ( cd "$WORKTREE_PATH" && eval "$TEST_COMMAND" ) > "$INTEGRATION_TEST_OUTPUT" 2>&1
+    ( cd "$WORKTREE_PATH" && bash -c "$TEST_COMMAND" ) > "$INTEGRATION_TEST_OUTPUT" 2>&1
     GATE_EXIT=$?
     set -e
     if [[ $GATE_EXIT -ne 0 ]]; then
@@ -842,10 +872,11 @@ if [[ -n "$TEST_COMMAND" ]] && [[ -n "$WORKTREE_PATH" ]] && [[ -d "$WORKTREE_PAT
         set -e
         if [[ $RECOVERY_EXIT -ne 0 ]]; then
             INTEGRATION_DEGRADED=true
-            python3 -c "
+            STATE_PATH="$STATE_PATH" python3 -c "
+import os
 from pathlib import Path
 from claude.overnight.strategy import load_strategy, save_strategy
-_p = Path('$STATE_PATH').parent / 'overnight-strategy.json'
+_p = Path(os.environ['STATE_PATH']).parent / 'overnight-strategy.json'
 _s = load_strategy(_p)
 _s.integration_health = 'degraded'
 save_strategy(_s, _p)
@@ -910,7 +941,7 @@ if [[ -n "$WORKTREE_PATH" ]]; then
         git add "backlog/archive/"                             2>/dev/null || true
         if ! git diff --cached --quiet; then
             if ! git commit -m "Overnight session ${SESSION_ID}: record artifacts"; then
-                log_event "artifact_commit_failed" "$(( ROUND - 1 ))" "{'session_id': '$SESSION_ID'}"
+                log_event "artifact_commit_failed" "$(( ROUND - 1 ))" "{\"session_id\": \"$SESSION_ID\"}"
                 ~/.claude/notify.sh "Overnight: artifact commit failed for session ${SESSION_ID}" || true
             fi
         fi
@@ -930,10 +961,10 @@ echo '{}' > "$PR_URLS_FILE"
 PUSH_FAILED_REPOS_FILE="$TMPDIR/overnight-push-failed-repos.txt"
 > "$PUSH_FAILED_REPOS_FILE"
 
-python3 -c "
+STATE_PATH="$STATE_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" python3 -c "
 import json, os
-data = json.load(open('$STATE_PATH'))
-repo_root = os.path.realpath('$HOME_PROJECT_ROOT')
+data = json.load(open(os.environ['STATE_PATH']))
+repo_root = os.path.realpath(os.environ['HOME_PROJECT_ROOT'])
 for repo_path, branch_name in data.get('integration_branches', {}).items():
     if os.path.realpath(repo_path) == repo_root:
         continue
@@ -942,10 +973,10 @@ for repo_path, branch_name in data.get('integration_branches', {}).items():
     REPO_NAME=$(basename "$REPO_PATH")
 
     # Count merged features for this repo
-    MERGED_COUNT=$(python3 -c "
+    MERGED_COUNT=$(STATE_PATH="$STATE_PATH" REPO_PATH="$REPO_PATH" python3 -c "
 import json, os
-data = json.load(open('$STATE_PATH'))
-repo_path = os.path.realpath('$REPO_PATH')
+data = json.load(open(os.environ['STATE_PATH']))
+repo_path = os.path.realpath(os.environ['REPO_PATH'])
 count = 0
 for fs in data.get('features', {}).values():
     rp = fs.get('repo_path')
@@ -1006,20 +1037,20 @@ print(count)
     fi
 
     # Append to PR URLs JSON
-    python3 -c "
-import json
+    PR_URLS_FILE="$PR_URLS_FILE" REPO_PATH="$REPO_PATH" PR_URL="$PR_URL" python3 -c "
+import json, os
 from pathlib import Path
-f = Path('$PR_URLS_FILE')
+f = Path(os.environ['PR_URLS_FILE'])
 data = json.loads(f.read_text())
-data['$REPO_PATH'] = '$PR_URL'
+data[os.environ['REPO_PATH']] = os.environ['PR_URL']
 f.write_text(json.dumps(data))
 "
 done
 
 # Create PR from integration branch to main
-INTEGRATION_BRANCH=$(python3 -c "
-import json
-state = json.load(open('$STATE_PATH'))
+INTEGRATION_BRANCH=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 print(state.get('integration_branch') or '')
 ")
 
@@ -1028,14 +1059,14 @@ if [[ -n "$INTEGRATION_BRANCH" ]]; then
     git push -u origin "$INTEGRATION_BRANCH" \
         && echo "Pushed $INTEGRATION_BRANCH to origin" \
         || {
-            log_event "push_failed" "$(( ROUND - 1 ))" "{'session_id': '$SESSION_ID', 'branch': '$INTEGRATION_BRANCH'}"
+            log_event "push_failed" "$(( ROUND - 1 ))" "{\"session_id\": \"$SESSION_ID\", \"branch\": \"$INTEGRATION_BRANCH\"}"
             ~/.claude/notify.sh "Overnight push failed — $INTEGRATION_BRANCH was not pushed to origin. Session: $SESSION_ID" || true
         }
 
     PR_BODY_FILE="$TMPDIR/overnight-pr-body.txt"
-    MC_MERGED_COUNT=$(python3 -c "
-import json
-state = json.load(open('$STATE_PATH'))
+    MC_MERGED_COUNT=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 count = sum(
     1 for fs in state.get('features', {}).values()
     if fs.get('status') == 'merged' and fs.get('repo_path') is None
@@ -1067,12 +1098,12 @@ print(count)
         echo "PR created from $INTEGRATION_BRANCH to main: $MC_PR_URL"
     fi
     if [[ -n "$MC_PR_URL" ]]; then
-        python3 -c "
+        PR_URLS_FILE="$PR_URLS_FILE" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" MC_PR_URL="$MC_PR_URL" python3 -c "
 import json, os
 from pathlib import Path
-f = Path('$PR_URLS_FILE')
+f = Path(os.environ['PR_URLS_FILE'])
 data = json.loads(f.read_text()) if f.exists() else {}
-data[os.path.realpath('$HOME_PROJECT_ROOT')] = '$MC_PR_URL'
+data[os.path.realpath(os.environ['HOME_PROJECT_ROOT'])] = os.environ['MC_PR_URL']
 f.write_text(json.dumps(data))
 "
     fi
@@ -1080,35 +1111,38 @@ fi
 
 # Generate morning report (after all PR creation so URLs are available)
 if [[ -n "$TARGET_INTEGRATION_WORKTREE" ]]; then
-    python3 -c "
-import json
+    PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" TARGET_INTEGRATION_WORKTREE="$TARGET_INTEGRATION_WORKTREE" SESSION_ID="$SESSION_ID" python3 -c "
+import json, os
 from pathlib import Path
 from claude.overnight.report import generate_and_write_report
-pr_urls_file = Path('$PR_URLS_FILE')
+pr_urls_file = Path(os.environ['PR_URLS_FILE'])
 pr_urls = json.loads(pr_urls_file.read_text()) if pr_urls_file.exists() else {}
+sid = os.environ['SESSION_ID']
+tiw = os.environ['TARGET_INTEGRATION_WORKTREE']
 generate_and_write_report(
-    state_path=Path('$STATE_PATH'),
-    events_path=Path('$EVENTS_PATH'),
-    deferred_dir=Path('$HOME_PROJECT_ROOT') / 'lifecycle' / 'deferrals',
+    state_path=Path(os.environ['STATE_PATH']),
+    events_path=Path(os.environ['EVENTS_PATH']),
+    deferred_dir=Path(os.environ['HOME_PROJECT_ROOT']) / 'lifecycle' / 'deferrals',
     pr_urls=pr_urls,
-    report_dir=Path('$TARGET_INTEGRATION_WORKTREE') / 'lifecycle' / 'sessions' / '$SESSION_ID',
-    results_dir=Path('$TARGET_INTEGRATION_WORKTREE') / 'lifecycle' / 'sessions' / '$SESSION_ID',
-    project_root=Path('$TARGET_INTEGRATION_WORKTREE'),
+    report_dir=Path(tiw) / 'lifecycle' / 'sessions' / sid,
+    results_dir=Path(tiw) / 'lifecycle' / 'sessions' / sid,
+    project_root=Path(tiw),
 )
 " || echo "Warning: morning report generation failed"
 else
-    python3 -c "
-import json
+    PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" REPO_ROOT="$REPO_ROOT" SESSION_ID="$SESSION_ID" python3 -c "
+import json, os
 from pathlib import Path
 from claude.overnight.report import generate_and_write_report
-pr_urls_file = Path('$PR_URLS_FILE')
+pr_urls_file = Path(os.environ['PR_URLS_FILE'])
 pr_urls = json.loads(pr_urls_file.read_text()) if pr_urls_file.exists() else {}
+sid = os.environ['SESSION_ID']
 generate_and_write_report(
-    state_path=Path('$STATE_PATH'),
-    events_path=Path('$EVENTS_PATH'),
-    deferred_dir=Path('$HOME_PROJECT_ROOT') / 'lifecycle' / 'deferrals',
+    state_path=Path(os.environ['STATE_PATH']),
+    events_path=Path(os.environ['EVENTS_PATH']),
+    deferred_dir=Path(os.environ['HOME_PROJECT_ROOT']) / 'lifecycle' / 'deferrals',
     pr_urls=pr_urls,
-    report_dir=Path('$REPO_ROOT') / 'lifecycle' / 'sessions' / '$SESSION_ID',
+    report_dir=Path(os.environ['REPO_ROOT']) / 'lifecycle' / 'sessions' / sid,
 )
 " || echo "Warning: morning report generation failed"
 fi
@@ -1126,11 +1160,11 @@ set +e
 
 # Commit morning report in target project (cross-repo sessions only)
 if [[ -n "$TARGET_INTEGRATION_WORKTREE" ]]; then
-    TARGET_INTEGRATION_BRANCH=$(python3 -c "
+    TARGET_INTEGRATION_BRANCH=$(STATE_PATH="$STATE_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" python3 -c "
 import json, os
-data = json.load(open('$STATE_PATH'))
+data = json.load(open(os.environ['STATE_PATH']))
 branches = data.get('integration_branches', {})
-repo_root = os.path.realpath('$HOME_PROJECT_ROOT')
+repo_root = os.path.realpath(os.environ['HOME_PROJECT_ROOT'])
 target = [b for k, b in branches.items() if os.path.realpath(k) != repo_root]
 print(target[0] if target else '')
 ")
@@ -1152,7 +1186,7 @@ fi
 if [[ -n "$INTEGRATION_BRANCH" ]]; then
     git push origin "${INTEGRATION_BRANCH}" \
         || {
-            log_event "morning_report_commit_failed" "$(( ROUND - 1 ))" "{'session_id': '$SESSION_ID'}"
+            log_event "morning_report_commit_failed" "$(( ROUND - 1 ))" "{\"session_id\": \"$SESSION_ID\"}"
             ~/.claude/notify.sh "Overnight: morning report push failed for session ${SESSION_ID}" || true
         }
 fi
@@ -1162,7 +1196,7 @@ if [[ -n "$TARGET_INTEGRATION_WORKTREE" && -n "$TARGET_INTEGRATION_BRANCH" ]]; t
         cd "$TARGET_INTEGRATION_WORKTREE"
         git push origin "$TARGET_INTEGRATION_BRANCH" \
             || {
-                log_event "morning_report_commit_failed" "$(( ROUND - 1 ))" "{'session_id': '$SESSION_ID', 'target': '$TARGET_PROJECT_ROOT'}"
+                log_event "morning_report_commit_failed" "$(( ROUND - 1 ))" "{\"session_id\": \"$SESSION_ID\", \"target\": \"$TARGET_PROJECT_ROOT\"}"
                 ~/.claude/notify.sh "Overnight: morning report push failed for target project ${TARGET_PROJECT_ROOT} session ${SESSION_ID}" || true
             }
     )
@@ -1170,18 +1204,18 @@ fi
 set -e
 
 # Notify on successful session completion
-TOTAL_MERGED=$(python3 -c "
-import json
-state = json.load(open('$STATE_PATH'))
+TOTAL_MERGED=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 count = sum(1 for fs in state.get('features', {}).values() if fs.get('status') == 'merged')
 print(count)
 ")
-TOTAL_FEATURES=$(python3 -c "
-import json
-state = json.load(open('$STATE_PATH'))
+TOTAL_FEATURES=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
 print(len(state.get('features', {})))
 ")
-PAUSED_REASON_FINAL=$(python3 -c "import json; state = json.load(open('$STATE_PATH')); print(state.get('paused_reason') or '')")
+PAUSED_REASON_FINAL=$(STATE_PATH="$STATE_PATH" python3 -c "import json, os; state = json.load(open(os.environ['STATE_PATH'])); print(state.get('paused_reason') or '')")
 if [[ "$PAUSED_REASON_FINAL" == "budget_exhausted" ]]; then
     ~/.claude/notify.sh "Overnight session paused — API budget exhausted. Resume with /overnight resume when Anthropic limit resets. Session: $SESSION_ID" || true
 else
@@ -1207,7 +1241,7 @@ if [[ -n "$WORKTREE_PATH" ]]; then
     fi
 
     # Sync active-session pointer phase after symlink adjustment
-    python3 -c "
+    STATE_PATH="$STATE_PATH" python3 -c "
 import json, os, tempfile
 from pathlib import Path
 
@@ -1215,7 +1249,7 @@ pointer_path = Path.home() / '.local' / 'share' / 'overnight-sessions' / 'active
 if pointer_path.exists():
     try:
         data = json.loads(pointer_path.read_text())
-        state = json.loads(Path('$STATE_PATH').read_text())
+        state = json.loads(Path(os.environ['STATE_PATH']).read_text())
         data['phase'] = state.get('phase', data['phase'])
         with tempfile.NamedTemporaryFile(mode='w', dir=str(pointer_path.parent), delete=False, suffix='.tmp') as f:
             json.dump(data, f)
@@ -1239,10 +1273,10 @@ fi
 # Delete integration branches in cross-repo target repos
 # (push already happened in the PR creation block above;
 # skip branch deletion for push-failed repos to preserve local work)
-python3 -c "
+STATE_PATH="$STATE_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" python3 -c "
 import json, os
-data = json.load(open('$STATE_PATH'))
-repo_root = os.path.realpath('$HOME_PROJECT_ROOT')
+data = json.load(open(os.environ['STATE_PATH']))
+repo_root = os.path.realpath(os.environ['HOME_PROJECT_ROOT'])
 for repo_path, branch_name in data.get('integration_branches', {}).items():
     if os.path.realpath(repo_path) == repo_root:
         continue

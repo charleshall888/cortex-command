@@ -7,7 +7,7 @@ INPUT=$(cat)
 # --- Session identity injection ---
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""')
 if [[ -n "$SESSION_ID" && -n "${CLAUDE_ENV_FILE:-}" ]]; then
-  echo "export LIFECYCLE_SESSION_ID=$SESSION_ID" >> "$CLAUDE_ENV_FILE"
+  echo "export LIFECYCLE_SESSION_ID='$SESSION_ID'" >> "$CLAUDE_ENV_FILE"
 elif [[ -n "$SESSION_ID" ]]; then
   echo "[scan-lifecycle] CLAUDE_ENV_FILE not set; cannot inject LIFECYCLE_SESSION_ID" >&2
 fi

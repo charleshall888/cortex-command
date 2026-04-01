@@ -14,6 +14,12 @@ setup:
     just deploy-hooks
     just deploy-config
     just python-setup
+    @echo ""
+    @echo "Setup complete. Add the following to your shell profile (.zshrc, .bashrc, etc.):"
+    @echo ""
+    @echo "  export CORTEX_COMMAND_ROOT=\"$(pwd)\""
+    @echo ""
+    @echo "Then restart your shell and run: just verify-setup"
 
 # Deploy bin/ utilities to ~/.local/bin/
 # Refuses to run from a git worktree — symlinks must point to the real repo root.
@@ -96,6 +102,18 @@ deploy-config:
             *statusline.sh) ln -sf "$(pwd)/claude/statusline.sh" "$target" ;;
         esac
     done
+    # Write settings.local.json with correct allowWrite path for this clone location
+    LOCAL_SETTINGS="$HOME/.claude/settings.local.json"
+    ALLOW_PATH="$(pwd)/lifecycle/sessions/"
+    if [ -f "$LOCAL_SETTINGS" ] && command -v jq &>/dev/null; then
+        # Merge into existing settings.local.json
+        jq --arg path "$ALLOW_PATH" '.sandbox.filesystem.allowWrite = [$path]' "$LOCAL_SETTINGS" > "$LOCAL_SETTINGS.tmp"
+        mv "$LOCAL_SETTINGS.tmp" "$LOCAL_SETTINGS"
+    else
+        # Create new settings.local.json
+        mkdir -p "$(dirname "$LOCAL_SETTINGS")"
+        printf '{\n  "sandbox": {\n    "filesystem": {\n      "allowWrite": ["%s"]\n    }\n  }\n}\n' "$ALLOW_PATH" > "$LOCAL_SETTINGS"
+    fi
 
 # --- Dependencies ---
 
@@ -457,6 +475,56 @@ check-symlinks:
         echo "$errors symlink(s) missing."
         exit 1
     fi
+
+# Verify full setup health: symlinks, prerequisites, and environment
+verify-setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    errors=0
+    pass() { printf '  ✓ %s\n' "$1"; }
+    fail() { printf '  ✗ %s — %s\n' "$1" "$2"; errors=$((errors + 1)); }
+    echo "Checking symlinks..."
+    just check-symlinks || errors=$((errors + 1))
+    echo ""
+    echo "Checking prerequisites..."
+    # Python 3.12+
+    if python3 -c "import sys; exit(0 if sys.version_info >= (3, 12) else 1)" 2>/dev/null; then
+        pass "Python $(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+    else
+        fail "Python 3.12+" "install Python 3.12 or later"
+    fi
+    # uv
+    if command -v uv &>/dev/null; then
+        pass "uv"
+    else
+        fail "uv" "install with: brew install uv"
+    fi
+    # claude CLI
+    if command -v claude &>/dev/null; then
+        pass "claude CLI"
+    else
+        fail "claude CLI" "install from https://docs.anthropic.com/en/docs/claude-code"
+    fi
+    # CORTEX_COMMAND_ROOT
+    if [ -z "${CORTEX_COMMAND_ROOT:-}" ]; then
+        fail "CORTEX_COMMAND_ROOT" "add to shell profile: export CORTEX_COMMAND_ROOT=\"$(pwd)\""
+    elif [ "$(cd "$CORTEX_COMMAND_ROOT" && pwd)" = "$(pwd)" ]; then
+        pass "CORTEX_COMMAND_ROOT=$CORTEX_COMMAND_ROOT"
+    else
+        fail "CORTEX_COMMAND_ROOT" "set to $(pwd) (currently $CORTEX_COMMAND_ROOT)"
+    fi
+    echo ""
+    if [ "$errors" -eq 0 ]; then
+        echo "All checks passed."
+    else
+        echo "$errors check(s) failed."
+        exit 1
+    fi
+
+# Verify setup including full test suite
+verify-setup-full:
+    just verify-setup
+    just test
 
 # --- Testing ---
 
