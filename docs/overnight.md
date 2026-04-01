@@ -379,7 +379,10 @@ session end. `/morning-review` surfaces its URL so you can review and merge.
 
 **3–5 features per session** is the sweet spot. Too few (1–2) wastes the overhead of
 spinning up the session infrastructure; too many (8+) increases the chance that a single
-failure in a shared file causes cascading conflicts that waste the session.
+failure in a shared file causes cascading conflicts that waste the session. The upper
+bound is also driven by context budget: each orchestrator agent reads all selected
+features' specs and plans, and loading too many at once risks overflowing the agent's
+context window.
 
 ### Concurrency
 
@@ -391,6 +394,18 @@ overnight-start
 ```
 
 To override concurrency, set it during `/overnight` plan approval, not at runner launch.
+
+**How concurrency interacts with git conflict detection:** Conflicts are detected at
+merge time, not at dispatch time. When parallel features both modify the same file,
+the second feature to attempt merging its branch to the integration branch will
+encounter a conflict. On conflict, the pipeline first attempts a trivial fast-path
+resolution (`--theirs` strategy); if that fails, it calls `dispatch_repair_agent()`
+which creates an isolated repair worktree and dispatches a Claude agent (Sonnet,
+escalating to Opus on quality failure) to resolve the conflict. If the repair agent
+also fails, the feature is marked `paused` and carried to the next session. Higher
+concurrency increases the probability of two features touching the same file in the
+same round, which is why 2 is the safe default and 3 should only be used for clearly
+non-overlapping feature sets.
 
 ### What to prepare the night before
 
@@ -413,10 +428,25 @@ closes lifecycle artifacts and archives backlog items in the right order. Then m
 
 ### Recovery: corrupt or inconsistent state
 
-If the runner crashed hard (power loss, OOM, kernel kill) rather than receiving a
-signal, the state file may have been written partially. Symptoms: `just overnight-status`
-errors, `/overnight resume` reports unexpected phase, or features show `running` despite
-no runner process.
+A feature can show `running` status in three distinct ways:
+
+1. **Crash with no graceful shutdown** — power loss, OOM kill, or `SIGKILL` left the
+   state file unmodified mid-execution. The status is stale: the feature was executing
+   when the process died and was never transitioned to a terminal state.
+2. **Normal round end while feature was still executing** — the batch runner closed
+   the round (e.g. hit the round time limit or a circuit breaker fired) while a
+   pipeline worker was still mid-execution. `map_results.py` maps any feature whose
+   pipeline status is still `pending` or `executing` at round-end to `running` in
+   overnight state. The feature was live when the round closed.
+3. **Orchestrator marks pending features running at round start** — at the beginning
+   of each round, the orchestrator reads features in `pending` state and transitions
+   them to `running` before dispatching workers. If the orchestrator itself is
+   interrupted after this point but before dispatch completes, features appear `running`
+   with no active worker.
+
+Symptoms: `just overnight-status` shows `running` features with no runner process
+visible, `/overnight resume` reports unexpected phase, or `just overnight-status`
+errors (if the JSON was partially written).
 
 **Diagnosis:**
 ```bash
