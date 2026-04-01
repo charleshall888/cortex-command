@@ -12,7 +12,7 @@ An opinionated AI workflow framework for [Claude Code](https://docs.anthropic.co
 ## Quick Start
 
 ```bash
-git clone https://github.com/charlie-hall/cortex-command.git ~/cortex-command
+git clone https://github.com/charleshall888/cortex-command.git ~/cortex-command
 cd ~/cortex-command
 just setup
 ```
