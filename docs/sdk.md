@@ -67,6 +67,8 @@ Max turns and budget scale on the complexity axis only; criticality affects mode
 
 **Error classification and recovery:**
 
+Classification is heuristic — triggers are substring matches against lowercased agent output, not structured signals. Misclassification is possible, particularly for refusals (Claude's refusal language varies across model versions) and test failures (any output mentioning "pytest" matches, including success messages).
+
 | Error type | Trigger | Recovery |
 |------------|---------|----------|
 | `agent_timeout` | `asyncio.TimeoutError` | retry |
@@ -106,6 +108,13 @@ Both paths use worktree isolation for parallel execution. The SDK's `isolation: 
 
 **Git reference pattern from main repo:** Use `git log HEAD..worktree/{name} --oneline` — do not `cd` into the worktree for git operations (Claude Code's security check rejects compound `cd && git` commands).
 
+**Stale worktrees:** If an interactive session (Path A) is interrupted mid-run, the worktree directory and branch may be left behind. The next run of the same skill with the same feature name will fail at hook level because `worktree-create.sh` exits non-zero when the target directory already exists. Clean up manually before retrying:
+
+```bash
+git worktree remove .claude/worktrees/{name}   # removes the directory
+git branch -d worktree/{name}                  # removes the branch (use -D if unmerged)
+```
+
 ---
 
 ## Settings Configuration
@@ -127,9 +136,11 @@ From `claude/settings.json`:
 
 ## Interrupt Recovery
 
-`claude/overnight/interrupt.py` runs at the start of every `overnight-start`. It finds features stuck in `running` status (from a prior interrupted session), classifies their worktree state, and resets them to `pending` for retry.
+`claude/overnight/interrupt.py` runs at the start of every `overnight-start`. It finds features stuck in `running` status (from a prior interrupted session), classifies their worktree state for diagnostic logging, and resets them to `pending` for retry. The recovery action (reset to pending) is the same regardless of worktree classification.
 
-This handles the correctness concern for interrupted overnight agents. The SDK's `resume: session_id` parameter is a different capability — it restores an agent's in-memory conversation context, which could reduce token waste if an agent was far into a complex task when interrupted. The project does not currently use it; `interrupt.py`'s state-machine reset is sufficient for correctness.
+Note: **recovery attempt counts are preserved across restarts.** A feature that exhausted its retry budget before the interrupt begins the next session with no remaining attempts and will be paused immediately after a single dispatch. If this is unexpected, reset `retries` manually in `overnight-state.json` before relaunching.
+
+The SDK's `resume: session_id` parameter is a different capability — it restores an agent's in-memory conversation context, which could reduce token waste if an agent was far into a complex task when interrupted. The project does not currently use it; `interrupt.py`'s state-machine reset is the baseline recovery mechanism.
 
 ---
 
@@ -138,6 +149,8 @@ This handles the correctness concern for interrupted overnight agents. The SDK's
 **File-based state over SDK Task tools.** The overnight runner uses `overnight-state.json`, NDJSON event logs, and Python dataclasses rather than `TaskCreate`/`TaskUpdate`. File state survives SDK version changes, persists across any kind of process crash, and is readable with standard tools (`cat`, `python3 -c`, `jq`). SDK task state persistence across multi-hour sessions is unclear. `status.py` already provides cross-session queryability for live sessions.
 
 **Python orchestration layer over Agent Teams.** The `claude/pipeline/` and `claude/overnight/` modules reinvent some of what Agent Teams provides (lead + worker pattern, parallel dispatch). The Python layer exists because it provides controls the Teams API doesn't expose: the 2D model selection matrix, per-tier budget limits, structured error classification, and repair agent escalation. Agent Teams is also still experimental. This trade-off should be revisited when Teams reaches stable and exposes equivalent control surfaces.
+
+**`bypassPermissions` with `Bash` access.** Overnight agents run with `permission_mode: "bypassPermissions"` and `Bash` in the allowed tool list. This means an overnight agent can execute arbitrary shell commands in its worktree without prompts. The sandbox write allowlist restricts which file paths the SDK itself can write to, but it does not constrain what a Bash subprocess can do. This is a deliberate trade-off for autonomous execution — prompts in an unattended session would stall the runner. Operators should be aware that agents operating on real codebases with `bypassPermissions + Bash` have broad execution access. Mitigation: agents run in isolated worktrees, not on the main branch directly; `bypassPermissions` is scoped to the Python pipeline path only (interactive skills inherit the parent session's permission model).
 
 **`interrupt.py` over SDK session resumption.** The state-machine recovery on restart (resetting stuck features to pending) was purpose-built for the overnight use case and handles correctness without requiring session ID tracking. SDK resumption is a future optimization, not a correctness gap.
 
