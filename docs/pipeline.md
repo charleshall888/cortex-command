@@ -10,6 +10,8 @@ To run multi-feature autonomous sessions, use [`/overnight`](overnight.md).
 
 ---
 
+> For how `dispatch.py` interacts with the Claude Code SDK — model selection matrix, error classification, and design trade-offs — see [SDK Integration](sdk.md).
+
 ## Module Contents
 
 The `claude/pipeline/` module contains the execution machinery used by the overnight runner:

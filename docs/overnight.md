@@ -167,6 +167,8 @@ You then run `overnight-start` in a terminal (or a separate Ghostty/tmux window)
 
 ### Architecture
 
+> For how the runner dispatches agents via the Claude Code SDK — model selection, budget tiers, error classification, and why certain SDK primitives are intentionally unused — see [SDK Integration](sdk.md).
+
 ```
 overnight-start
     → validates state file (phase must be 'executing')
