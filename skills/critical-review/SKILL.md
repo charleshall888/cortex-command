@@ -5,7 +5,7 @@ description: Dispatches parallel reviewer agents — each focused on a single ch
 
 # Critical Review
 
-Dispatches a fresh, unanchored agent to challenge the current plan, spec, or research before you commit to it. The reviewer derives its own angles — no anchoring to the reasoning that produced the artifact.
+Derives challenge angles from the artifact and domain context, dispatches one fresh reviewer agent per angle in parallel, then synthesizes findings with an Opus agent. Each reviewer works independently with no anchoring to the reasoning that produced the artifact.
 
 ## Step 1: Find the Artifact
 
