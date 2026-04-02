@@ -1,7 +1,7 @@
 #!/bin/bash
 # tests/test_skill_behavior.sh — behavioral test harness for the commit skill
 #
-# Creates a git worktree, then directly invokes hooks/validate-commit.sh with
+# Creates a git worktree, then directly invokes hooks/cortex-validate-commit.sh with
 # a crafted Claude PreToolUse payload (lowercase subject — intentionally bad)
 # and asserts the hook produces permissionDecision "deny".
 #
@@ -14,7 +14,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOOK="$REPO_ROOT/hooks/validate-commit.sh"
+HOOK="$REPO_ROOT/hooks/cortex-validate-commit.sh"
 WORKTREE_PATH="${TMPDIR}/skill-behavior-test-worktree-$$"
 
 PASS_COUNT=0

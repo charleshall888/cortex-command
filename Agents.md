@@ -24,7 +24,7 @@ Files in this repo are symlinked to system locations — always edit the repo co
 Key symlinks:
 - `skills/*` -> `~/.claude/skills/*`
 - `hooks/*` -> `~/.claude/hooks/*`
-- `hooks/notify.sh` -> `~/.claude/notify.sh` (direct — settings.json references this path)
+- `hooks/cortex-notify.sh` -> `~/.claude/notify.sh` (direct — settings.json references this path)
 - `claude/settings.json` -> `~/.claude/settings.json`
 - `claude/Agents.md` -> `~/.claude/CLAUDE.md` (global cross-project instructions)
 - `claude/reference/*` -> `~/.claude/reference/*`

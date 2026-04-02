@@ -67,7 +67,7 @@ deploy-hooks:
     for hook in hooks/*.sh; do
         [ -f "$hook" ] || continue
         name=$(basename "$hook")
-        if [ "$name" = "notify.sh" ]; then
+        if [ "$name" = "cortex-notify.sh" ]; then
             # notify.sh goes directly to ~/.claude/notify.sh (settings.json references this path)
             ln -sf "$(pwd)/$hook" "$HOME/.claude/notify.sh"
         else
@@ -87,7 +87,7 @@ deploy-config:
     set -euo pipefail
     mkdir -p ~/.claude
     # Warn if target exists as a regular file (not a symlink)
-    for target in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/statusline.sh; do
+    for target in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/statusline.sh ~/.claude/get-api-key.sh; do
         if [ -f "$target" ] && [ ! -L "$target" ]; then
             echo "Warning: $target exists as a regular file (not a symlink)."
             read -rp "  Overwrite with symlink? [y/N] " answer
@@ -99,7 +99,8 @@ deploy-config:
         case "$target" in
             *settings.json) ln -sf "$(pwd)/claude/settings.json" "$target" ;;
             *CLAUDE.md)     ln -sf "$(pwd)/claude/Agents.md" "$target" ;;
-            *statusline.sh) ln -sf "$(pwd)/claude/statusline.sh" "$target" ;;
+            *statusline.sh)   ln -sf "$(pwd)/claude/statusline.sh" "$target" ;;
+            *get-api-key.sh) ln -sf "$(pwd)/claude/get-api-key.sh" "$target" ;;
         esac
     done
     # Write settings.local.json with correct allowWrite path for this clone location
@@ -417,7 +418,7 @@ lifecycle-archive:
 
 # Test the commit message hook
 validate-commit msg="Test commit message":
-    echo "{{ msg }}" | bash hooks/validate-commit.sh
+    echo "{{ msg }}" | bash hooks/cortex-validate-commit.sh
 
 # Validate prompt contract frontmatter across all skills
 validate-skills:
@@ -445,14 +446,13 @@ check-symlinks:
     check ~/.claude/CLAUDE.md
     check ~/.claude/statusline.sh
     check ~/.claude/notify.sh
-    check ~/.claude/hooks/validate-commit.sh
-    check ~/.claude/hooks/scan-lifecycle.sh
-    check ~/.claude/hooks/setup-gpg-sandbox-home.sh
-    check ~/.claude/hooks/sync-permissions.py
-    check ~/.claude/hooks/setup-github-pat.sh
-    check ~/.claude/hooks/tool-failure-tracker.sh
-    check ~/.claude/hooks/skill-edit-advisor.sh
-    check ~/.claude/hooks/permission-audit-log.sh
+    check ~/.claude/hooks/cortex-validate-commit.sh
+    check ~/.claude/hooks/cortex-scan-lifecycle.sh
+    check ~/.claude/hooks/cortex-setup-gpg-sandbox-home.sh
+    check ~/.claude/hooks/cortex-sync-permissions.py
+    check ~/.claude/hooks/cortex-tool-failure-tracker.sh
+    check ~/.claude/hooks/cortex-skill-edit-advisor.sh
+    check ~/.claude/hooks/cortex-permission-audit-log.sh
     check ~/.local/bin/count-tokens
     check ~/.local/bin/audit-doc
     check ~/.local/bin/update-item

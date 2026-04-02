@@ -1,7 +1,7 @@
 #!/bin/bash
 # tests/test_hook_commit.sh — validate-commit hook regression tests
 # Feeds each fixture in tests/fixtures/hooks/validate-commit/ through
-# hooks/validate-commit.sh and asserts the permissionDecision matches the
+# hooks/cortex-validate-commit.sh and asserts the permissionDecision matches the
 # expected value derived from the fixture filename prefix.
 #
 # Naming convention:
@@ -13,7 +13,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOOK="$REPO_ROOT/hooks/validate-commit.sh"
+HOOK="$REPO_ROOT/hooks/cortex-validate-commit.sh"
 FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/commit"
 
 PASS_COUNT=0
@@ -30,7 +30,7 @@ fail() {
 }
 
 # ---------------------------------------------------------------------------
-# validate-commit.sh tests
+# cortex-validate-commit.sh tests
 # ---------------------------------------------------------------------------
 
 for fixture in "$FIXTURE_DIR"/*.json; do

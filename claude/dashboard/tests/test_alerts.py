@@ -171,7 +171,7 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
     """Tests for fire_notifications async subprocess dispatch."""
 
     async def test_fires_both_scripts_for_unnotified_alert(self):
-        """Two subprocess calls (notify.sh + notify-remote.sh) per unnotified alert."""
+        """Two subprocess calls (notify.sh + cortex-notify-remote.sh) per unnotified alert."""
         state = _make_state()
         state.alerts[("feat-a", "stall")] = {
             "first_seen": datetime.now(timezone.utc),

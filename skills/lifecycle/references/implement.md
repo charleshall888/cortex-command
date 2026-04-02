@@ -53,7 +53,7 @@ For each task in the batch (whether it succeeded or failed), append a `task_comp
 
 **e. Worktree Integration**: Skip this step entirely for sequential (non-worktree) dispatch.
 
-After checkpoint, merge each completed task's worktree branch back into the feature branch and clean up. This ensures subsequent batches' worktrees, created via `worktree-create.sh`, branch from the updated HEAD and see prior batches' changes.
+After checkpoint, merge each completed task's worktree branch back into the feature branch and clean up. This ensures subsequent batches' worktrees, created via `cortex-worktree-create.sh`, branch from the updated HEAD and see prior batches' changes.
 
 For each task in the batch (in task order):
 

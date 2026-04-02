@@ -185,7 +185,7 @@ Criticality is set per-feature and drives which models run at each phase and whe
 
 ### 1. Structured Single-Feature
 
-The most common path. The user asks `/dev` what to work on, or names a specific feature. `/dev` classifies the request as a single non-trivial feature and routes to `/lifecycle feature-name`. The lifecycle skill starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria. Planning produces a task breakdown that the orchestrator reviews before approval. Implementation proceeds as a series of commits, one per task *(PreToolUse hook: `validate-commit` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — four Sonnet reviewers in parallel, then an Opus cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
+The most common path. The user asks `/dev` what to work on, or names a specific feature. `/dev` classifies the request as a single non-trivial feature and routes to `/lifecycle feature-name`. The lifecycle skill starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria. Planning produces a task breakdown that the orchestrator reviews before approval. Implementation proceeds as a series of commits, one per task *(PreToolUse hook: `cortex-validate-commit` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — four Sonnet reviewers in parallel, then an Opus cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
 
 ### 2. Multiple Features via /overnight
 
@@ -193,7 +193,7 @@ When multiple backlog items are ready, the user runs `/refine` per feature to pr
 
 ### 3. Autonomous Overnight
 
-In the evening, the user runs `/overnight` to plan a batch of features for unattended execution *(SessionStart hook: `scan-lifecycle` fires here, injecting `LIFECYCLE_SESSION_ID`, active feature state, and any fresh-resume prompts into context so the session begins oriented to current work)*. **Prerequisite**: selected features must already have discovery artifacts (`research:` and `spec:` fields in their backlog YAML frontmatter) — `/overnight` does not run interactive research or spec phases. The plan lists the eligible features and estimated duration; after user approval, a bash runner detaches in a tmux session and begins working. Through the night, the runner selects features from the approved batch, creates branches, and runs lead agents with a concurrency limit to avoid resource contention. Each feature picks up at the plan phase (or implement, if already planned). In the morning, `/morning-review` walks the overnight report: it reads `morning-report.md` (a symlink to the latest session archive), closes completed lifecycles, merges approved PRs, and surfaces any features that need follow-up. For the full architecture and operational guide, see [Overnight: In Depth](overnight.md).
+In the evening, the user runs `/overnight` to plan a batch of features for unattended execution *(SessionStart hook: `cortex-scan-lifecycle` fires here, injecting `LIFECYCLE_SESSION_ID`, active feature state, and any fresh-resume prompts into context so the session begins oriented to current work)*. **Prerequisite**: selected features must already have discovery artifacts (`research:` and `spec:` fields in their backlog YAML frontmatter) — `/overnight` does not run interactive research or spec phases. The plan lists the eligible features and estimated duration; after user approval, a bash runner detaches in a tmux session and begins working. Through the night, the runner selects features from the approved batch, creates branches, and runs lead agents with a concurrency limit to avoid resource contention. Each feature picks up at the plan phase (or implement, if already planned). In the morning, `/morning-review` walks the overnight report: it reads `morning-report.md` (a symlink to the latest session archive), closes completed lifecycles, merges approved PRs, and surfaces any features that need follow-up. For the full architecture and operational guide, see [Overnight: In Depth](overnight.md).
 
 ### 4. Discovery to Backlog
 
@@ -211,19 +211,19 @@ Hooks in `hooks/` are shared entry points. Hooks in `claude/hooks/` are specific
 
 | File | Event | Purpose | Agents |
 |------|-------|---------|--------|
-| `hooks/validate-commit.sh` | PreToolUse | Validate commit message: imperative mood, ≤72 chars subject, no trailing period, blank line before body | Claude only |
-| `hooks/scan-lifecycle.sh` | SessionStart | Inject `LIFECYCLE_SESSION_ID`, active feature state, overnight execution state, and fresh-resume prompts into context | Claude only |
-| `hooks/notify.sh` | Stop, Notification | Desktop notifications via terminal-notifier when Claude needs input or completes (macOS) | Claude only |
-| `hooks/notify-remote.sh` | Stop, Notification | Push notifications to Android via ntfy.sh HTTP API when Claude needs attention in a tmux session | Claude only |
-| `hooks/cleanup-session.sh` | SessionEnd | Remove `.session` lock files from `lifecycle/*/` when a Claude Code session ends (skips on `/clear`) | Claude only |
+| `hooks/cortex-validate-commit.sh` | PreToolUse | Validate commit message: imperative mood, ≤72 chars subject, no trailing period, blank line before body | Claude only |
+| `hooks/cortex-scan-lifecycle.sh` | SessionStart | Inject `LIFECYCLE_SESSION_ID`, active feature state, overnight execution state, and fresh-resume prompts into context | Claude only |
+| `hooks/cortex-notify.sh` | Stop, Notification | Desktop notifications via terminal-notifier when Claude needs input or completes (macOS) | Claude only |
+| `hooks/cortex-notify-remote.sh` | Stop, Notification | Push notifications to Android via ntfy.sh HTTP API when Claude needs attention in a tmux session | Claude only |
+| `hooks/cortex-cleanup-session.sh` | SessionEnd | Remove `.session` lock files from `lifecycle/*/` when a Claude Code session ends (skips on `/clear`) | Claude only |
 | `claude/hooks/setup-github-pat.sh` | SessionStart | Read GitHub PATs from `~/.config/claude-code-secrets/` and write to `/tmp/claude/` so skills can authenticate `gh` inside the sandbox | Claude only |
-| `claude/hooks/setup-gpg-sandbox-home.sh` | SessionStart | Create minimal GNUPGHOME in `$TMPDIR` so GPG signing works inside the Claude sandbox | Claude only |
-| `claude/hooks/sync-permissions.py` | PreToolUse | Merge MCP allow/deny patterns from `settings.json` so permissions stay consistent | Claude only |
-| `claude/hooks/permission-audit-log.sh` | Notification (permission_prompt) | Append one line per permission prompt to a session-scoped log in `$TMPDIR` for sandbox tuning diagnostics | Claude only |
-| `claude/hooks/tool-failure-tracker.sh` | PostToolUse (Bash) | Track Bash tool failures by exit code; surface a warning via `additionalContext` after 3 failures for the same tool in one session | Claude only |
-| `claude/hooks/skill-edit-advisor.sh` | PostToolUse (Write\|Edit) | Advise on skill editing best practices when a Write or Edit touches a file inside `skills/` | Claude only |
-| `claude/hooks/worktree-create.sh` | WorktreeCreate | Create a git worktree with branch isolation for parallel overnight or feature work | Claude only |
-| `claude/hooks/worktree-remove.sh` | WorktreeRemove | Clean up the worktree directory and merged branch after work completes | Claude only |
+| `claude/hooks/cortex-setup-gpg-sandbox-home.sh` | SessionStart | Create minimal GNUPGHOME in `$TMPDIR` so GPG signing works inside the Claude sandbox | Claude only |
+| `claude/hooks/cortex-sync-permissions.py` | PreToolUse | Merge MCP allow/deny patterns from `settings.json` so permissions stay consistent | Claude only |
+| `claude/hooks/cortex-permission-audit-log.sh` | Notification (permission_prompt) | Append one line per permission prompt to a session-scoped log in `$TMPDIR` for sandbox tuning diagnostics | Claude only |
+| `claude/hooks/cortex-tool-failure-tracker.sh` | PostToolUse (Bash) | Track Bash tool failures by exit code; surface a warning via `additionalContext` after 3 failures for the same tool in one session | Claude only |
+| `claude/hooks/cortex-skill-edit-advisor.sh` | PostToolUse (Write\|Edit) | Advise on skill editing best practices when a Write or Edit touches a file inside `skills/` | Claude only |
+| `claude/hooks/cortex-worktree-create.sh` | WorktreeCreate | Create a git worktree with branch isolation for parallel overnight or feature work | Claude only |
+| `claude/hooks/cortex-worktree-remove.sh` | WorktreeRemove | Clean up the worktree directory and merged branch after work completes | Claude only |
 | `claude/hooks/bell.ps1` | Stop, Notification | Flash the WezTerm screen as a visual bell when Claude needs input (Windows) | Claude only |
 
 ### Hooks Architecture
@@ -267,12 +267,12 @@ Key rules:
 
 Hooks that need request context receive a JSON object on **stdin** before they write any output. The schema varies by event type:
 
-- **`PreToolUse`** — `{"tool_name": "Bash", "tool_input": {"command": "..."}, ...}`. Used by `validate-commit.sh` to extract the git commit command and its message.
-- **`SessionStart`** — `{"cwd": "/path/to/project", "session_id": "...", ...}`. Used by `sync-permissions.py` to locate the project's `settings.local.json` and by `worktree-create.sh` to determine where to create the new worktree.
-- **`WorktreeCreate`** — `{"cwd": "...", "name": "...", "session_id": "...", "hook_event_name": "WorktreeCreate"}`. `worktree-create.sh` reads `cwd` and `name` to construct the worktree path and branch name.
-- **`Notification`** — `{"hook_event_name": "Notification", "notification_type": "permission_prompt", "message": "...", "title": "..."}`. Used by `permission-audit-log.sh` to log the prompt. Note: `hook_event_name` is always `"Notification"` for all notification events; `notification_type` discriminates between event subtypes.
+- **`PreToolUse`** — `{"tool_name": "Bash", "tool_input": {"command": "..."}, ...}`. Used by `cortex-validate-commit.sh` to extract the git commit command and its message.
+- **`SessionStart`** — `{"cwd": "/path/to/project", "session_id": "...", ...}`. Used by `cortex-sync-permissions.py` to locate the project's `settings.local.json` and by `cortex-worktree-create.sh` to determine where to create the new worktree.
+- **`WorktreeCreate`** — `{"cwd": "...", "name": "...", "session_id": "...", "hook_event_name": "WorktreeCreate"}`. `cortex-worktree-create.sh` reads `cwd` and `name` to construct the worktree path and branch name.
+- **`Notification`** — `{"hook_event_name": "Notification", "notification_type": "permission_prompt", "message": "...", "title": "..."}`. Used by `cortex-permission-audit-log.sh` to log the prompt. Note: `hook_event_name` is always `"Notification"` for all notification events; `notification_type` discriminates between event subtypes.
 
-Hooks that do not need request context (e.g., `notify.sh`, `cleanup-session.sh`) ignore stdin.
+Hooks that do not need request context (e.g., `cortex-notify.sh`, `cortex-cleanup-session.sh`) ignore stdin.
 
 #### Ordering
 
@@ -303,9 +303,9 @@ Four markdown files in `claude/reference/` that agents load on-demand based on t
 
 1. **events.log** — Append-only per-feature lifecycle journal stored at `lifecycle/{feature}/events.log`. Phase transitions write structured entries; `/lifecycle resume` reads the log to determine which phase to restart from. `/morning-review` scans it to identify completions. Powers all progress reporting.
 
-2. **scan-lifecycle hook** — Runs at SessionStart and injects `LIFECYCLE_SESSION_ID`, the active feature's current phase, overnight execution state, and any fresh-resume prompts into the session context. This is what makes the system appear continuous across `/clear` invocations and new terminal sessions.
+2. **cortex-scan-lifecycle hook** — Runs at SessionStart and injects `LIFECYCLE_SESSION_ID`, the active feature's current phase, overnight execution state, and any fresh-resume prompts into the session context. This is what makes the system appear continuous across `/clear` invocations and new terminal sessions.
 
-3. **validate-commit hook** — Pre-execution gate on all `git commit` commands. Enforces imperative mood, ≤72-character subject line, no trailing period, and a blank line before the body.
+3. **cortex-validate-commit hook** — Pre-execution gate on all `git commit` commands. Enforces imperative mood, ≤72-character subject line, no trailing period, and a blank line before the body.
 
 4. **Backlog index** (`backlog/index.md`) — Generated by `/backlog reindex`. `/dev` reads it during triage to identify ready work. Items are auto-closed by `/lifecycle complete` and `/morning-review`, keeping the index current without manual intervention.
 

@@ -196,13 +196,13 @@ ln -sf "$(pwd)/claude/statusline.sh" ~/.claude/statusline.sh
 
 # Shared hooks
 mkdir -p ~/.claude/hooks
-ln -sf "$(pwd)/hooks/validate-commit.sh" ~/.claude/hooks/validate-commit.sh
-ln -sf "$(pwd)/hooks/scan-lifecycle.sh" ~/.claude/hooks/scan-lifecycle.sh
-ln -sf "$(pwd)/hooks/notify.sh" ~/.claude/notify.sh
+ln -sf "$(pwd)/hooks/cortex-validate-commit.sh" ~/.claude/hooks/cortex-validate-commit.sh
+ln -sf "$(pwd)/hooks/cortex-scan-lifecycle.sh" ~/.claude/hooks/cortex-scan-lifecycle.sh
+ln -sf "$(pwd)/hooks/cortex-notify.sh" ~/.claude/notify.sh
 brew install terminal-notifier
 
 # Claude-only hooks
-ln -sf "$(pwd)/claude/hooks/sync-permissions.py" ~/.claude/hooks/sync-permissions.py
+ln -sf "$(pwd)/claude/hooks/cortex-sync-permissions.py" ~/.claude/hooks/cortex-sync-permissions.py
 
 # Skills (all — symlink every skill directory)
 mkdir -p ~/.claude/skills
@@ -289,13 +289,13 @@ The remote setup uses Tailscale (mesh VPN) + tmux (session persistence) + mosh (
 | Component | macOS | Linux | Windows | Notes |
 |-----------|:-----:|:-----:|:-------:|-------|
 | Skills (`skills/`) | ✅ | ✅ | ✅ | Agent-agnostic, cross-platform |
-| `hooks/validate-commit.sh` | ✅ | ✅ | ✅ | Core hook, cross-platform |
-| `hooks/scan-lifecycle.sh` | ✅ | ✅ | ✅ | Core hook, cross-platform |
+| `hooks/cortex-validate-commit.sh` | ✅ | ✅ | ✅ | Core hook, cross-platform |
+| `hooks/cortex-scan-lifecycle.sh` | ✅ | ✅ | ✅ | Core hook, cross-platform |
 | `claude/statusline.sh` | ✅ | ✅ | — | Shell statusline |
 | `claude/statusline.ps1` | — | — | ✅ | PowerShell statusline (Windows) |
 | Git config (`git/ignore`) | ✅ | ✅ | ✅ | Cross-platform gitignore |
 | Starship prompt | ✅ | ✅ | ✅ | Cross-platform prompt |
-| `hooks/notify.sh` | ✅ | — | — | macOS only; requires `terminal-notifier` |
+| `hooks/cortex-notify.sh` | ✅ | — | — | macOS only; requires `terminal-notifier` |
 | `mac/` directory | ✅ | — | — | macOS only (launchd, caffeinate) |
 | Ghostty config (`ghostty/`) | ✅ | — | — | macOS only terminal |
 | WezTerm integration | — | — | ✅ | Windows alternative for visual notifications |

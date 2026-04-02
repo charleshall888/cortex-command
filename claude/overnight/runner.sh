@@ -791,7 +791,7 @@ rm -f "$STALL_FLAG"
 # Agent sandboxing: orchestrator and commit agents run with --dangerously-
 # skip-permissions (bypasses permission prompts, not FS restrictions) and
 # optionally with the global sandbox (claude/settings.json sandbox.enabled).
-# GPG commit signing in sandboxed agents works via setup-gpg-sandbox-home.sh
+# GPG commit signing in sandboxed agents works via cortex-setup-gpg-sandbox-home.sh
 # (extra socket at ~/.local/share/gnupg/S.gpg-agent.sandbox, GNUPGHOME in
 # $TMPDIR/gnupghome). The --dangerously-skip-permissions flag must remain;
 # removing it blocks autonomous execution.

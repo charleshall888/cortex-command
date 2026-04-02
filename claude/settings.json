@@ -216,17 +216,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ~/.claude/hooks/sync-permissions.py",
+            "command": "python3 ~/.claude/hooks/cortex-sync-permissions.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/scan-lifecycle.sh",
+            "command": "~/.claude/hooks/cortex-scan-lifecycle.sh",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/setup-gpg-sandbox-home.sh",
+            "command": "~/.claude/hooks/cortex-setup-gpg-sandbox-home.sh",
             "timeout": 10
           }
         ]
@@ -237,7 +237,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/cleanup-session.sh",
+            "command": "~/.claude/hooks/cortex-cleanup-session.sh",
             "timeout": 5
           }
         ]
@@ -249,7 +249,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/validate-commit.sh",
+            "command": "~/.claude/hooks/cortex-validate-commit.sh",
             "timeout": 5
           }
         ]
@@ -265,11 +265,11 @@
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/notify-remote.sh permission"
+            "command": "~/.claude/hooks/cortex-notify-remote.sh permission"
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/permission-audit-log.sh"
+            "command": "~/.claude/hooks/cortex-permission-audit-log.sh"
           }
         ]
       }
@@ -283,7 +283,7 @@
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/notify-remote.sh complete"
+            "command": "~/.claude/hooks/cortex-notify-remote.sh complete"
           }
         ]
       }
@@ -294,7 +294,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/tool-failure-tracker.sh",
+            "command": "~/.claude/hooks/cortex-tool-failure-tracker.sh",
             "timeout": 10
           }
         ]
@@ -304,7 +304,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/skill-edit-advisor.sh",
+            "command": "~/.claude/hooks/cortex-skill-edit-advisor.sh",
             "timeout": 10
           }
         ]
@@ -315,7 +315,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'INPUT=$(cat); CWD=$(echo \"$INPUT\" | jq -r .cwd); [ -f \"$CWD/claude/hooks/worktree-create.sh\" ] && bash \"$CWD/claude/hooks/worktree-create.sh\" <<< \"$INPUT\"'"
+            "command": "bash -c 'INPUT=$(cat); CWD=$(echo \"$INPUT\" | jq -r .cwd); [ -f \"$CWD/claude/hooks/cortex-worktree-create.sh\" ] && bash \"$CWD/claude/hooks/cortex-worktree-create.sh\" <<< \"$INPUT\"'"
           }
         ]
       }
@@ -325,7 +325,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'INPUT=$(cat); CWD=$(echo \"$INPUT\" | jq -r .cwd); [ -f \"$CWD/claude/hooks/worktree-remove.sh\" ] && bash \"$CWD/claude/hooks/worktree-remove.sh\" <<< \"$INPUT\"'"
+            "command": "bash -c 'INPUT=$(cat); CWD=$(echo \"$INPUT\" | jq -r .cwd); [ -f \"$CWD/claude/hooks/cortex-worktree-remove.sh\" ] && bash \"$CWD/claude/hooks/cortex-worktree-remove.sh\" <<< \"$INPUT\"'"
           }
         ]
       }
@@ -367,5 +367,6 @@
     ]
   },
   "alwaysThinkingEnabled": true,
-  "effortLevel": "high"
+  "effortLevel": "high",
+  "skipDangerousModePermissionPrompt": true
 }

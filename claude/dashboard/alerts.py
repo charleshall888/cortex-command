@@ -3,7 +3,7 @@
 Evaluates running overnight session features for four alertable conditions:
 stall (no activity for > 5 minutes), circuit breaker (CIRCUIT_BREAKER event
 in overnight_events), deferred (feature status == "deferred"), and high rework
-(rework_cycles >= 2). Fires notify.sh / notify-remote.sh subprocesses on first
+(rework_cycles >= 2). Fires notify.sh / cortex-notify-remote.sh subprocesses on first
 trigger and deduplicates subsequent fires.
 
 Functions:
@@ -96,7 +96,7 @@ def evaluate_alerts(state: "DashboardState", root: Path, lifecycle_dir: Path) ->
 
 
 async def fire_notifications(state: "DashboardState", root: Path) -> None:  # type: ignore[name-defined]
-    """Fire notify.sh / notify-remote.sh for each new unnotified alert.
+    """Fire notify.sh / cortex-notify-remote.sh for each new unnotified alert.
 
     Called every 5 seconds after ``evaluate_alerts``. For each alert entry
     with ``notified == False``, launches both notification scripts via
@@ -105,11 +105,11 @@ async def fire_notifications(state: "DashboardState", root: Path) -> None:  # ty
 
     Args:
         state: Shared ``DashboardState`` instance (mutated in place).
-        root: Project root path — notify scripts at ``root/hooks/notify.sh``
-            and ``root/hooks/notify-remote.sh``.
+        root: Project root path — notify scripts at ``root/hooks/cortex-notify.sh``
+            and ``root/hooks/cortex-notify-remote.sh``.
     """
-    notify_sh = root / "hooks" / "notify.sh"
-    notify_remote_sh = root / "hooks" / "notify-remote.sh"
+    notify_sh = root / "hooks" / "cortex-notify.sh"
+    notify_remote_sh = root / "hooks" / "cortex-notify-remote.sh"
 
     async def _fire(script: Path, message: str) -> None:
         try:

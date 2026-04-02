@@ -201,7 +201,7 @@ def collect_tool_failures(session_id: str) -> dict[str, dict]:
 
     Reads ``/tmp/claude-tool-failures-{session_id}/`` and parses per-tool
     failure counts and last exit codes written by the PostToolUse hook
-    (``tool-failure-tracker.sh``).
+    (``cortex-tool-failure-tracker.sh``).
 
     Each tool produces two files:
     - ``{tool_key}.count`` — current failure count (integer, one line).

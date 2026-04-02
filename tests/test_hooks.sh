@@ -1,13 +1,13 @@
 #!/bin/bash
 # tests/test_hooks.sh — hook regression tests
-# Runs cleanup-session.sh against its fixtures and reports PASS/FAIL per case.
+# Runs cortex-cleanup-session.sh against its fixtures and reports PASS/FAIL per case.
 # Designed as an extensible umbrella: add additional hook test sections below.
 # Exit 0 if all tests pass, 1 if any fail.
 
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOOK="$REPO_ROOT/hooks/cleanup-session.sh"
+HOOK="$REPO_ROOT/hooks/cortex-cleanup-session.sh"
 FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/cleanup-session"
 
 PASS_COUNT=0
@@ -36,7 +36,7 @@ run_hook_with_fixture() {
 }
 
 # ---------------------------------------------------------------------------
-# cleanup-session.sh tests
+# cortex-cleanup-session.sh tests
 # ---------------------------------------------------------------------------
 
 # Setup: create a shared temp directory for all cleanup-session tests.
@@ -91,10 +91,10 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# scan-lifecycle.sh tests
+# cortex-scan-lifecycle.sh tests
 # ---------------------------------------------------------------------------
 
-SCAN_HOOK="$REPO_ROOT/hooks/scan-lifecycle.sh"
+SCAN_HOOK="$REPO_ROOT/hooks/cortex-scan-lifecycle.sh"
 SCAN_FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/scan-lifecycle"
 SCAN_TMPDIR="$TMPDIR/test_hooks_scan_$$"
 mkdir -p "$SCAN_TMPDIR"
@@ -179,10 +179,10 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# setup-gpg-sandbox-home.sh tests
+# cortex-setup-gpg-sandbox-home.sh tests
 # ---------------------------------------------------------------------------
 
-GPG_HOOK="$REPO_ROOT/claude/hooks/setup-gpg-sandbox-home.sh"
+GPG_HOOK="$REPO_ROOT/claude/hooks/cortex-setup-gpg-sandbox-home.sh"
 GPG_FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/setup-gpg-sandbox-home"
 
 # --- Test: non-sandbox-env — early exit when TMPDIR does not match claude pattern ---
@@ -198,10 +198,10 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# worktree-create.sh tests
+# cortex-worktree-create.sh tests
 # ---------------------------------------------------------------------------
 
-WT_CREATE_HOOK="$REPO_ROOT/claude/hooks/worktree-create.sh"
+WT_CREATE_HOOK="$REPO_ROOT/claude/hooks/cortex-worktree-create.sh"
 WT_CREATE_FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/worktree-create"
 WT_TMPDIR="$TMPDIR/test_hooks_wt_$$"
 mkdir -p "$WT_TMPDIR"
@@ -295,10 +295,10 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# worktree-remove.sh tests
+# cortex-worktree-remove.sh tests
 # ---------------------------------------------------------------------------
 
-WT_REMOVE_HOOK="$REPO_ROOT/claude/hooks/worktree-remove.sh"
+WT_REMOVE_HOOK="$REPO_ROOT/claude/hooks/cortex-worktree-remove.sh"
 WT_REMOVE_FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/worktree-remove"
 
 # --- Test: missing-worktree-path — exits 1 ---
@@ -324,10 +324,10 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# sync-permissions.py tests
+# cortex-sync-permissions.py tests
 # ---------------------------------------------------------------------------
 
-SYNC_HOOK="$REPO_ROOT/claude/hooks/sync-permissions.py"
+SYNC_HOOK="$REPO_ROOT/claude/hooks/cortex-sync-permissions.py"
 SYNC_FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/sync-permissions"
 SYNC_TMPDIR="$TMPDIR/test_hooks_sync_$$"
 

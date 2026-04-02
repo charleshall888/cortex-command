@@ -1,5 +1,5 @@
 #!/bin/bash
-# tests/test_tool_failure_tracker.sh — unit tests for claude/hooks/tool-failure-tracker.sh
+# tests/test_tool_failure_tracker.sh — unit tests for claude/hooks/cortex-tool-failure-tracker.sh
 #
 # Verifies PostToolUse hook behaviour:
 #   - Non-Bash tool input is ignored (no tracking files created)
@@ -16,7 +16,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOOK="$REPO_ROOT/claude/hooks/tool-failure-tracker.sh"
+HOOK="$REPO_ROOT/claude/hooks/cortex-tool-failure-tracker.sh"
 FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/tool-failure-tracker"
 
 PASS_COUNT=0

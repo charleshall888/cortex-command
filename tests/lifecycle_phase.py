@@ -2,7 +2,7 @@
 """Lifecycle phase detection module.
 
 Implements detect_phase(lifecycle_dir: Path) -> str using the same logic as
-determine_phase() in hooks/scan-lifecycle.sh (lines 139-176).
+determine_phase() in hooks/cortex-scan-lifecycle.sh (lines 139-176).
 
 Phase precedence (highest priority first):
   1. events.log contains "feature_complete" -> "complete"

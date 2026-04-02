@@ -374,7 +374,7 @@ if [ -d "$_lc_base" ]; then
     _lc_fname="${_lc_fdir%/}"
     _lc_fname="${_lc_fname##*/}"
 
-    # --- Phase detection (fast, mirrors scan-lifecycle.sh) ---
+    # --- Phase detection (fast, mirrors cortex-scan-lifecycle.sh) ---
     _lc_phase=""
     if [ -f "$_lc_fdir/events.log" ] && grep -q '"feature_complete"' "$_lc_fdir/events.log" 2>/dev/null; then
       _lc_phase="complete"

@@ -370,6 +370,6 @@ The `Agent` tool's `isolation: "worktree"` handles all of this correctly — it 
 git log HEAD..worktree/{task-name} --oneline
 ```
 
-The task name is the `name` parameter passed to `Agent(isolation: "worktree")`; the branch is always `worktree/{name}` (from `worktree-create.sh` line 30).
+The task name is the `name` parameter passed to `Agent(isolation: "worktree")`; the branch is always `worktree/{name}` (from `cortex-worktree-create.sh` line 30).
 
 Hook `updatedPermissions` session injection: ruled out — `updatedPermissions` is exclusive to `PermissionRequest` hooks; `WorktreeCreate` command hooks use plain-text stdout only and cannot inject session allow rules. Fix is behavioral only: use `git log HEAD..worktree/{name}` from main CWD (never `cd <path> && git`).

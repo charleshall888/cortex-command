@@ -93,14 +93,14 @@ Model escalation ladder on retry: Haiku → Sonnet → Opus (terminal).
 
 Both paths use worktree isolation for parallel execution. The SDK's `isolation: "worktree"` parameter triggers a `WorktreeCreate` hook that provisions the worktree and branch.
 
-**`claude/hooks/worktree-create.sh`** (registered on `WorktreeCreate` event):
+**`claude/hooks/cortex-worktree-create.sh`** (registered on `WorktreeCreate` event):
 - Receives `{"cwd": "...", "name": "...", "session_id": "..."}` on stdin
 - Creates `$CWD/.claude/worktrees/$NAME` as a git worktree
 - Creates branch `worktree/$NAME` from HEAD
 - Symlinks `.venv` into the worktree for Python tooling
 - Writes absolute worktree path to stdout (required by SDK)
 
-**`claude/hooks/worktree-remove.sh`** (registered on `WorktreeRemove` event):
+**`claude/hooks/cortex-worktree-remove.sh`** (registered on `WorktreeRemove` event):
 - Cleans up the worktree directory
 - Sends a completion notification
 
@@ -108,7 +108,7 @@ Both paths use worktree isolation for parallel execution. The SDK's `isolation: 
 
 **Git reference pattern from main repo:** Use `git log HEAD..worktree/{name} --oneline` — do not `cd` into the worktree for git operations (Claude Code's security check rejects compound `cd && git` commands).
 
-**Stale worktrees:** If an interactive session (Path A) is interrupted mid-run, the worktree directory and branch may be left behind. The next run of the same skill with the same feature name will fail at hook level because `worktree-create.sh` exits non-zero when the target directory already exists. Clean up manually before retrying:
+**Stale worktrees:** If an interactive session (Path A) is interrupted mid-run, the worktree directory and branch may be left behind. The next run of the same skill with the same feature name will fail at hook level because `cortex-worktree-create.sh` exits non-zero when the target directory already exists. Clean up manually before retrying:
 
 ```bash
 git worktree remove .claude/worktrees/{name}   # removes the directory
