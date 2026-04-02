@@ -11,6 +11,7 @@ Multi-dimensional investigation to build deep understanding of a topic. Read-onl
 5. [Feasibility Assessment](#5-feasibility-assessment)
 6. [Write Research Artifact](#6-write-research-artifact)
 6a. [Orchestrator Review](#6a-orchestrator-review)
+6b. [Critical Review](#6b-critical-review)
 7. [Transition](#7-transition)
 
 ## Protocol
