@@ -1,6 +1,6 @@
 ---
 name: critical-review
-description: Dispatches a fresh, unanchored agent to deeply challenge a plan, spec, or research artifact from multiple angles before you commit. Use when the user says "critical review", "pressure test this", "deeply question this", "challenge from multiple angles", "adversarial review", "pre-commit challenge", or wants thorough adversarial analysis before committing to an approach. More thorough than /devils-advocate — uses a fresh agent with no context anchoring to derive and work through multiple challenge angles independently. Also auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval.
+description: Launches a fresh, unanchored agent — one with zero exposure to the conversation that produced the artifact — to deeply challenge a plan, spec, or research artifact from multiple angles before you commit. The fresh-agent execution model eliminates anchoring bias: the reviewer derives its own challenge angles from the artifact alone, so critiques are not shaped by the same reasoning that produced the work. Use when the user says "critical review", "pressure test", "adversarial review", "pre-commit challenge", "deeply question", or "challenge from multiple angles". More thorough than /devils-advocate because the fresh agent removes anchoring bias from the critique-generation step, producing challenges the in-context agent would self-censor or overlook. Also auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval.
 ---
 
 # Critical Review
