@@ -132,9 +132,45 @@ Do not be balanced. Do not reassure. Find the problems.
 
 Output the fallback agent's result directly (no synthesis step). Prefix the output with this one-line note: "Note: parallel dispatch failed, falling back to single reviewer" before proceeding to Step 3.
 
+### Step 2d: Opus Synthesis
+
+After all parallel reviewer agents from Step 2c complete (or the successful subset), dispatch one `opus` model agent with the following prompt template verbatim, with bracketed variables substituted at runtime:
+
+---
+
+You are synthesizing findings from multiple independent adversarial reviewers into a single coherent challenge.
+
+## Artifact
+{artifact content}
+
+## Reviewer Findings
+{all reviewer findings, one `## Findings: {angle}` block per reviewer}
+
+## Instructions
+1. Read all reviewer findings carefully.
+2. Find the through-lines — claims or concerns that appear across multiple angles. Flag these as high-confidence.
+3. Surface tensions where angles conflict or pull in different directions.
+4. Synthesize into a single coherent narrative challenge. Do not produce a per-angle dump.
+5. Be specific — cite exact parts of the artifact.
+6. End with: "These are the strongest objections. Proceed as you see fit."
+
+Do not be balanced. Do not reassure. Find the through-lines and make the strongest case.
+
+---
+
+#### Partial Coverage
+
+If partial coverage occurred in Step 2c (some agents succeeded, some failed), unconditionally prefix the synthesis output with "N of M reviewer angles completed." before the synthesis narrative.
+
+#### Synthesis Failure
+
+If the synthesis agent fails, skip synthesis and present the raw per-angle findings from Step 2c directly. Step 3 and Step 4 (Apply Feedback) then operate on the raw findings instead of a synthesized narrative.
+
+**Note:** Step 2d is skipped entirely when Step 2c's total-failure fallback was used — that path proceeds directly to Step 3.
+
 ## Step 3: Present
 
-Output the reviewer's synthesis directly. Do not soften or editorialize.
+Output the review result directly. Do not soften or editorialize.
 
 ## Step 4: Apply Feedback
 
