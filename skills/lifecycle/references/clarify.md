@@ -18,6 +18,8 @@ Determine which input context applies:
 3. If no match: switch to Context B (ad-hoc prompt) and treat the input as the topic name. Offer to create a backlog item (see R8 in spec) before continuing — if this seems impractical, note it and proceed without.
 4. Read the backlog item's frontmatter (`id`, `title`, `description`, `status`) and body.
 
+> **Note:** If the body contains implementation suggestions (e.g., a proposed fix or a specific approach), treat them as unvalidated hypotheses for the research phase — not as constraints on scope. Scope is determined by the problem to solve, not the suggested solution.
+
 **Context B — Ad-hoc prompt**: Input is raw text (a topic name or description) with no matching backlog item. Assess the prompt directly. The output intent statement and complexity/criticality assessments still apply; backlog write-backs are skipped.
 
 ### 2. Load Requirements Context
@@ -37,6 +39,8 @@ Assess confidence across three dimensions:
 | **Intent clarity** | Goal is unambiguous — one clear outcome | Goal is vague, multi-interpretable, or contradictory |
 | **Scope boundedness** | Boundaries are explicit — what is in and out is clear | Scope is open-ended, unbounded, or conflated with adjacent work |
 | **Requirements alignment** | Request aligns with requirements/ context; no conflicts detected | Request conflicts with, ignores, or has no connection to requirements context |
+
+> **Note:** A prescriptive ticket body — one that suggests a specific fix or approach — does not make scope "more bounded." Scope boundedness is assessed against the problem statement and what is in/out; a detailed implementation suggestion in the body should not raise the scope-boundedness rating.
 
 For Context B (ad-hoc), assess requirements alignment as "no requirements files found" if §2 was skipped.
 
