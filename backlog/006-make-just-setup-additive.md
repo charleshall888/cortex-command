@@ -2,7 +2,7 @@
 id: 006
 title: "Make `just setup` additive by default"
 type: feature
-status: in_progress
+status: complete
 priority: high
 parent: 003
 blocked-by: []
@@ -10,11 +10,12 @@ tags: [shareability, install, setup]
 created: 2026-04-02
 updated: 2026-04-02
 discovery_source: research/shareable-install/research.md
-session_id: ae86e687-1c8d-4115-a75e-37ed2cbb85ef
-lifecycle_phase: research
+session_id: null
+lifecycle_phase: implement
 lifecycle_slug: make-just-setup-additive-by-default
 complexity: complex
 criticality: high
+spec: lifecycle/make-just-setup-additive-by-default/spec.md
 ---
 
 # Make `just setup` additive by default

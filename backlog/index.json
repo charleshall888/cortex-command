@@ -54,33 +54,6 @@
     "repo": null
   },
   {
-    "id": 6,
-    "title": "Make `just setup` additive by default",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "shareability",
-      "install",
-      "setup"
-    ],
-    "created": "2026-04-02",
-    "updated": "2026-04-02",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "003",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/shareable-install/research.md",
-    "plan": null,
-    "uuid": null,
-    "lifecycle_slug": "make-just-setup-additive-by-default",
-    "session_id": "ae86e687-1c8d-4115-a75e-37ed2cbb85ef",
-    "lifecycle_phase": "research",
-    "schema_version": null,
-    "repo": null
-  },
-  {
     "id": 7,
     "title": "Build /setup-merge local skill",
     "status": "backlog",
@@ -95,9 +68,7 @@
     "created": "2026-04-02",
     "updated": "2026-04-02",
     "blocks": [],
-    "blocked_by": [
-      "006"
-    ],
+    "blocked_by": [],
     "parent": "003",
     "research": null,
     "spec": null,

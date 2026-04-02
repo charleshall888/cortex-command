@@ -1,0 +1,28 @@
+{"ts": "2026-04-02T21:31:27Z", "event": "discovery_reference", "feature": "make-just-setup-additive-by-default", "epic_research": "research/shareable-install/research.md", "epic_spec": null}
+{"ts": "2026-04-02T21:43:58Z", "event": "clarify_critic", "feature": "make-just-setup-additive-by-default", "findings": ["CLAUDE.md merge-target case leaves scope open — 005 dependency unresolved makes scope boundedness asserted rather than grounded.", "Missing fourth classification state — merge-target does not fit new/update/conflict; acceptance criteria are incomplete as written.", "settings.local.json exempted without justification — source asserts no conflict exists rather than classifying it.", "Requirements alignment asserted without quoting source material — relies on orchestrator characterization."], "dispositions": {"apply": 0, "dismiss": 2, "ask": 2}, "applied_fixes": [], "status": "ok"}
+{"ts": "2026-04-02T21:44:09Z", "event": "lifecycle_start", "feature": "make-just-setup-additive-by-default", "tier": "complex", "criticality": "high"}
+{"ts": "2026-04-02T21:44:19Z", "event": "phase_transition", "feature": "make-just-setup-additive-by-default", "from": "clarify", "to": "research"}
+{"ts": "2026-04-02T21:58:14Z", "event": "phase_transition", "feature": "make-just-setup-additive-by-default", "from": "research", "to": "specify"}
+{"ts": "2026-04-02T22:12:20Z", "event": "phase_transition", "feature": "make-just-setup-additive-by-default", "from": "specify", "to": "plan"}
+{"ts": "2026-04-02T22:17:36Z", "event": "orchestrator_review", "feature": "make-just-setup-additive-by-default", "phase": "plan", "verdict": "flag", "cycle": 1, "issues": ["Task 6 Context contains a verbatim jq filter expression (.sandbox.filesystem.allowWrite = ...) that violates the code budget — implementer would copy-paste it rather than write it from the pattern reference."]}
+{"ts": "2026-04-02T22:18:15Z", "event": "orchestrator_dispatch_fix", "feature": "make-just-setup-additive-by-default", "phase": "plan", "mode": "same_context", "issue": "Task 6 jq expression replaced with pattern reference (append+dedup requirements) — removed verbatim filter string"}
+{"ts": "2026-04-02T22:19:18Z", "event": "orchestrator_review", "feature": "make-just-setup-additive-by-default", "phase": "plan", "verdict": "pass", "cycle": 2, "issues": []}
+{"ts": "2026-04-02T22:25:35Z", "event": "phase_transition", "feature": "make-just-setup-additive-by-default", "from": "plan", "to": "implement"}
+{"ts": "2026-04-02T22:35:00Z", "event": "batch_dispatch", "feature": "make-just-setup-additive-by-default", "batch": 0, "tasks": [1]}
+{"ts": "2026-04-02T22:40:00Z", "event": "task_complete", "feature": "make-just-setup-additive-by-default", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-02T22:40:01Z", "event": "batch_dispatch", "feature": "make-just-setup-additive-by-default", "batch": 1, "tasks": [2]}
+{"ts": "2026-04-02T22:48:00Z", "event": "task_complete", "feature": "make-just-setup-additive-by-default", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-02T22:48:01Z", "event": "batch_dispatch", "feature": "make-just-setup-additive-by-default", "batch": 2, "tasks": [3]}
+{"ts": "2026-04-02T22:52:00Z", "event": "task_complete", "feature": "make-just-setup-additive-by-default", "task": 3, "batch": 2, "status": "success"}
+{"ts": "2026-04-02T22:52:01Z", "event": "batch_dispatch", "feature": "make-just-setup-additive-by-default", "batch": 3, "tasks": [4]}
+{"ts": "2026-04-02T22:56:00Z", "event": "task_complete", "feature": "make-just-setup-additive-by-default", "task": 4, "batch": 3, "status": "success"}
+{"ts": "2026-04-02T22:56:01Z", "event": "batch_dispatch", "feature": "make-just-setup-additive-by-default", "batch": 4, "tasks": [5]}
+{"ts": "2026-04-02T23:00:00Z", "event": "task_complete", "feature": "make-just-setup-additive-by-default", "task": 5, "batch": 4, "status": "success"}
+{"ts": "2026-04-02T23:00:01Z", "event": "batch_dispatch", "feature": "make-just-setup-additive-by-default", "batch": 5, "tasks": [6]}
+{"ts": "2026-04-02T23:05:00Z", "event": "task_complete", "feature": "make-just-setup-additive-by-default", "task": 6, "batch": 5, "status": "success"}
+{"ts": "2026-04-02T23:05:01Z", "event": "batch_dispatch", "feature": "make-just-setup-additive-by-default", "batch": 6, "tasks": [7]}
+{"ts": "2026-04-02T23:10:00Z", "event": "task_complete", "feature": "make-just-setup-additive-by-default", "task": 7, "batch": 6, "status": "success"}
+{"ts": "2026-04-02T23:15:00Z", "event": "phase_transition", "feature": "make-just-setup-additive-by-default", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-02T23:20:00Z", "event": "review_verdict", "feature": "make-just-setup-additive-by-default", "verdict": "APPROVED", "cycle": 1}
+{"ts": "2026-04-02T23:20:01Z", "event": "phase_transition", "feature": "make-just-setup-additive-by-default", "from": "review", "to": "complete"}
+{"ts": "2026-04-02T23:22:00Z", "event": "feature_complete", "feature": "make-just-setup-additive-by-default", "tasks_total": 7, "rework_cycles": 0}
