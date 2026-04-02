@@ -311,44 +311,61 @@ deploy-config:
     set -euo pipefail
     mkdir -p ~/.claude
     mkdir -p ~/.claude/rules/
-    # Warn if target exists as a regular file (not a symlink)
-    for target in ~/.claude/settings.json ~/.claude/statusline.sh; do
-        if [ -f "$target" ] && [ ! -L "$target" ]; then
-            echo "Warning: $target exists as a regular file (not a symlink)."
-            read -rp "  Overwrite with symlink? [y/N] " answer
-            if [[ ! "$answer" =~ ^[Yy] ]]; then
-                echo "  Skipping $target"
-                continue
-            fi
+    # Note: also update setup-force when adding new targets here.
+    pairs=(
+        "$(pwd)/claude/settings.json|$HOME/.claude/settings.json"
+        "$(pwd)/claude/statusline.sh|$HOME/.claude/statusline.sh"
+        "$(pwd)/claude/rules/global-agent-rules.md|$HOME/.claude/rules/cortex-global.md"
+        "$(pwd)/claude/rules/sandbox-behaviors.md|$HOME/.claude/rules/cortex-sandbox.md"
+    )
+    conflicts=()
+    for pair in "${pairs[@]}"; do
+        source="${pair%%|*}"
+        target="${pair##*|}"
+        if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+            echo "[new]      $target"
+            ln -sf "$source" "$target"
+        elif [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+            echo "[update]   $target"
+            ln -sf "$source" "$target"
+        elif [ ! -e "$target" ] && [ -L "$target" ]; then
+            echo "[conflict] $target — broken symlink"
+            conflicts+=("$target (broken symlink)")
+        elif [ -L "$target" ] && [ "$(readlink "$target")" != "$source" ]; then
+            echo "[conflict] $target — symlink to $(readlink "$target")"
+            conflicts+=("$target (symlink to $(readlink "$target"))")
+        else
+            echo "[conflict] $target — regular file"
+            conflicts+=("$target (regular file)")
         fi
-        case "$target" in
-            *settings.json) ln -sf "$(pwd)/claude/settings.json" "$target" ;;
-            *statusline.sh) ln -sf "$(pwd)/claude/statusline.sh" "$target" ;;
-        esac
     done
-    for target in ~/.claude/rules/cortex-global.md ~/.claude/rules/cortex-sandbox.md; do
-        if [ -f "$target" ] && [ ! -L "$target" ]; then
-            echo "Warning: $target exists as a regular file (not a symlink)."
-            read -rp "  Overwrite with symlink? [y/N] " answer
-            if [[ ! "$answer" =~ ^[Yy] ]]; then
-                echo "  Skipping $target"
-                continue
-            fi
+    if [ "${#conflicts[@]}" -gt 0 ]; then
+        if [ -n "${CONFLICTS_FILE:-}" ]; then
+            for entry in "${conflicts[@]}"; do echo "$entry" >> "$CONFLICTS_FILE"; done
+        else
+            echo ""
+            echo "${#conflicts[@]} conflict(s) skipped. Open Claude in the cortex-command directory and run:"
+            echo "  /setup-merge"
+            echo "to resolve the following targets:"
+            for entry in "${conflicts[@]}"; do echo "  - $entry"; done
         fi
-        case "$target" in
-            *cortex-global.md)  ln -sf "$(pwd)/claude/rules/global-agent-rules.md" "$target" ;;
-            *cortex-sandbox.md) ln -sf "$(pwd)/claude/rules/sandbox-behaviors.md" "$target" ;;
-        esac
-    done
+    fi
     # Write settings.local.json with correct allowWrite path for this clone location
     LOCAL_SETTINGS="$HOME/.claude/settings.local.json"
     ALLOW_PATH="$(pwd)/lifecycle/sessions/"
-    if [ -f "$LOCAL_SETTINGS" ] && command -v jq &>/dev/null; then
-        # Merge into existing settings.local.json
-        jq --arg path "$ALLOW_PATH" '.sandbox.filesystem.allowWrite = [$path]' "$LOCAL_SETTINGS" > "$LOCAL_SETTINGS.tmp"
-        mv "$LOCAL_SETTINGS.tmp" "$LOCAL_SETTINGS"
+    if [ -f "$LOCAL_SETTINGS" ]; then
+        if command -v jq &>/dev/null; then
+            jq --arg path "$ALLOW_PATH" '
+                .sandbox.filesystem.allowWrite = (
+                    (.sandbox.filesystem.allowWrite // []) + [$path] | unique
+                )
+            ' "$LOCAL_SETTINGS" > "$LOCAL_SETTINGS.tmp"
+            mv "$LOCAL_SETTINGS.tmp" "$LOCAL_SETTINGS"
+        else
+            echo "Warning: jq not found — settings.local.json overwritten. Install jq to preserve allowWrite paths from other clones."
+            printf '{\n  "sandbox": {\n    "filesystem": {\n      "allowWrite": ["%s"]\n    }\n  }\n}\n' "$ALLOW_PATH" > "$LOCAL_SETTINGS"
+        fi
     else
-        # Create new settings.local.json
         mkdir -p "$(dirname "$LOCAL_SETTINGS")"
         printf '{\n  "sandbox": {\n    "filesystem": {\n      "allowWrite": ["%s"]\n    }\n  }\n}\n' "$ALLOW_PATH" > "$LOCAL_SETTINGS"
     fi
