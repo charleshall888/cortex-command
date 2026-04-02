@@ -130,7 +130,7 @@ From `claude/settings.json`:
 
 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` enables the agent teams feature globally. `teammateMode: "inprocess"` is an **active** configuration — if any tool invokes TeamCreate, teammates share the same terminal. No skills currently call TeamCreate, so in practice teams are enabled but dormant.
 
-`apiKeyHelper` resolves `ANTHROPIC_API_KEY` for subagent spawning in the Python overnight pipeline. See `claude/get-api-key.sh`.
+`apiKeyHelper` resolves `ANTHROPIC_API_KEY` for subagent spawning in the Python overnight pipeline. Configure it in `~/.claude/settings.local.json` (machine-local, not committed) — `runner.sh` checks both `settings.json` and `settings.local.json`. When not configured, subagents use subscription billing.
 
 ---
 

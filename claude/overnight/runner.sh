@@ -41,25 +41,30 @@ export PYTHONPATH="$REPO_ROOT"
 # ---------------------------------------------------------------------------
 # apiKeyHelper only authenticates the parent `claude` process — it does NOT
 # export ANTHROPIC_API_KEY into child processes. SDK-spawned subagents need
-# the key injected explicitly. We read apiKeyHelper from ~/.claude/settings.json
-# and export the result so it propagates through the orchestrator into dispatch.py.
+# the key injected explicitly. We check settings.json then settings.local.json
+# for apiKeyHelper and export the result so it propagates into dispatch.py.
+# If no apiKeyHelper is configured, subagents use subscription billing.
 if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
     _API_KEY=$(python3 - <<'PYEOF' 2>/dev/null
 import json, shlex, subprocess, pathlib, sys
-p = pathlib.Path.home() / ".claude" / "settings.json"
-if p.exists():
-    helper = json.loads(p.read_text()).get("apiKeyHelper", "")
-    if helper:
-        parts = shlex.split(helper.replace("~", str(pathlib.Path.home())))
-        r = subprocess.run(parts, capture_output=True, text=True, timeout=5)
-        if r.returncode == 0:
-            sys.stdout.write(r.stdout.strip())
+home = pathlib.Path.home()
+helper = ""
+for p in [home / ".claude" / "settings.json", home / ".claude" / "settings.local.json"]:
+    if p.exists():
+        helper = json.loads(p.read_text()).get("apiKeyHelper", "")
+        if helper:
+            break
+if helper:
+    parts = shlex.split(helper.replace("~", str(home)))
+    r = subprocess.run(parts, capture_output=True, text=True, timeout=5)
+    if r.returncode == 0:
+        sys.stdout.write(r.stdout.strip())
 PYEOF
 )
     if [[ -n "$_API_KEY" ]]; then
         export ANTHROPIC_API_KEY="$_API_KEY"
     else
-        echo "Warning: apiKeyHelper returned empty — overnight subagents will use subscription billing" >&2
+        echo "Warning: no apiKeyHelper configured or returned empty — overnight subagents will use subscription billing" >&2
     fi
     unset _API_KEY
 fi

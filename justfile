@@ -87,7 +87,7 @@ deploy-config:
     set -euo pipefail
     mkdir -p ~/.claude
     # Warn if target exists as a regular file (not a symlink)
-    for target in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/statusline.sh ~/.claude/get-api-key.sh; do
+    for target in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/statusline.sh; do
         if [ -f "$target" ] && [ ! -L "$target" ]; then
             echo "Warning: $target exists as a regular file (not a symlink)."
             read -rp "  Overwrite with symlink? [y/N] " answer
@@ -100,7 +100,6 @@ deploy-config:
             *settings.json) ln -sf "$(pwd)/claude/settings.json" "$target" ;;
             *CLAUDE.md)     ln -sf "$(pwd)/claude/Agents.md" "$target" ;;
             *statusline.sh)   ln -sf "$(pwd)/claude/statusline.sh" "$target" ;;
-            *get-api-key.sh) ln -sf "$(pwd)/claude/get-api-key.sh" "$target" ;;
         esac
     done
     # Write settings.local.json with correct allowWrite path for this clone location
