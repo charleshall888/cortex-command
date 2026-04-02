@@ -21,7 +21,51 @@ Before dispatching any reviewer agent, load project context for injection into r
 2. If `lifecycle.config.md` exists, read it and check for a `type:` field. Only use the value if it is present, non-empty, and not commented out (i.e., the line is not prefixed with `#`). If the value is valid, include it as a one-line prefix: `**Project type:** {type}` before the project overview text.
 3. Construct a `## Project Context` block from these inputs. **If neither file exists** (or `requirements/project.md` is absent and `lifecycle.config.md` has no valid `type:` value), **omit the `## Project Context` section entirely** — do not inject an empty placeholder into reviewer prompts.
 
-### Step 2b: Dispatch Reviewer
+### Step 2b: Derive Angles
+
+The orchestrator (in main conversation context) derives 3-4 challenge angles from the artifact. Each angle must be **distinct** (no two angles are re-phrasings of each other) and must **reference specific sections or claims in the artifact** (not generic category labels).
+
+#### Angle Menu
+
+Select angles from the following menu, picking whichever are most likely to reveal real problems for this specific artifact. If domain context was loaded in Step 2a, weight domain-specific examples more heavily — but domain detection is optional, not required for angle derivation.
+
+**General examples:**
+- Architectural risk
+- Unexamined alternatives
+- Fragile assumptions
+- Integration risk
+- Scope creep
+- Real-world failure modes
+
+**Domain-specific examples (games):**
+- Performance budget
+- Game loop coupling
+- Save/load state
+- Platform store compliance
+
+**Domain-specific examples (mobile):**
+- Platform API constraints
+- Offline behavior
+- Haptic/accessibility
+- Background execution limits
+
+**Domain-specific examples (workflow/tooling):**
+- Agent isolation
+- Prompt injection
+- State file corruption
+- Failure propagation
+
+#### Angle Count
+
+- If the artifact is very short (< 10 lines): minimum 2 angles.
+- Otherwise: target 3-4 angles.
+
+#### Acceptance Criteria
+
+- **Distinctness**: No two derived angles may be re-phrasings of the same concern. Each must probe a different failure surface.
+- **Artifact-specificity**: Each angle must cite a specific section, claim, assumption, or design choice in the artifact — not a generic category label. "Fragile assumptions" alone is not an angle; "The retry logic in section 3 assumes idempotent endpoints, which breaks for the payment webhook described in section 5" is.
+
+### Step 2c: Dispatch Reviewer
 
 Launch a fresh general-purpose agent. Pass it the artifact content and this prompt verbatim:
 
@@ -36,7 +80,7 @@ You are conducting an adversarial review. Your job is to find what's wrong, risk
 ## Instructions
 
 1. Read the artifact carefully.
-2. Derive 3–4 distinct challenge angles from its content. Pick the angles most likely to reveal real problems for this specific artifact, not generic critiques. Examples: architectural risk, unexamined alternatives, fragile assumptions, integration risk, scope creep, real-world failure modes. Use what fits.
+2. Derive 3-4 distinct challenge angles from its content. Pick the angles most likely to reveal real problems for this specific artifact, not generic critiques. Examples: architectural risk, unexamined alternatives, fragile assumptions, integration risk, scope creep, real-world failure modes. Use what fits.
 3. Work through each angle. Be specific — cite exact parts of the artifact, not vague generalities. "This might not scale" is useless. "This approach requires X, but the artifact assumes Y, which breaks when Z" is useful.
 4. Synthesize into one coherent challenge — not a per-angle dump. Find the through-lines. Flag anything multiple angles agree on as high-confidence. Surface tensions where angles conflict.
 5. End with: "These are the strongest objections. Proceed as you see fit."
