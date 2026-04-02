@@ -65,9 +65,50 @@ Select angles from the following menu, picking whichever are most likely to reve
 - **Distinctness**: No two derived angles may be re-phrasings of the same concern. Each must probe a different failure surface.
 - **Artifact-specificity**: Each angle must cite a specific section, claim, assumption, or design choice in the artifact — not a generic category label. "Fragile assumptions" alone is not an angle; "The retry logic in section 3 assumes idempotent endpoints, which breaks for the payment webhook described in section 5" is.
 
-### Step 2c: Dispatch Reviewer
+### Step 2c: Dispatch Parallel Reviewers
 
-Launch a fresh general-purpose agent. Pass it the artifact content and this prompt verbatim:
+For each angle derived in Step 2b, dispatch one general-purpose agent as a parallel Task tool sub-task. All agents run simultaneously — do not wait for one to finish before launching the next.
+
+Each agent receives the following prompt template verbatim, with bracketed variables substituted at runtime:
+
+---
+
+You are conducting an adversarial review of one specific angle.
+
+## Artifact
+{artifact content}
+
+## Project Context
+{## Project Context block from Step 2a, omit this entire section if no context was loaded}
+
+## Your Angle
+**{angle name}**: {angle description — 1-2 sentences describing what this angle investigates}
+
+## Instructions
+1. Read the artifact focusing exclusively on your assigned angle.
+2. Be specific — cite exact artifact text. "This might not scale" is not acceptable.
+3. Return findings in this exact format:
+
+## Findings: {angle name}
+
+### What's wrong
+[Specific problems, each citing exact artifact text in quotes]
+
+### Assumptions at risk
+[Assumptions this angle reveals as fragile]
+
+### Convergence signal
+[One line: whether this angle's concerns likely overlap with other possible review angles, and which]
+
+Do not cover other angles. Do not be balanced.
+
+---
+
+#### Failure Handling
+
+**(a) Partial failure** — some agents succeed, some fail: Collect all successful results. Unconditionally note "N of M reviewer angles completed" at the top of the synthesis output (Step 2d). Proceed to Step 2d with the successful findings only.
+
+**(b) Total failure** — all agents fail: Fall back to a single-agent approach. Dispatch one general-purpose agent with this fallback prompt verbatim:
 
 ---
 
@@ -88,6 +129,8 @@ You are conducting an adversarial review. Your job is to find what's wrong, risk
 Do not be balanced. Do not reassure. Find the problems.
 
 ---
+
+Output the fallback agent's result directly (no synthesis step). Prefix the output with this one-line note: "Note: parallel dispatch failed, falling back to single reviewer" before proceeding to Step 3.
 
 ## Step 3: Present
 
