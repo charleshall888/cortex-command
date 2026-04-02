@@ -21,6 +21,81 @@ setup:
     @echo ""
     @echo "Then restart your shell and run: just verify-setup"
 
+# Force-deploy the full agentic layer unconditionally (clean re-install)
+setup-force:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Note: when adding new symlink targets to any deploy-* recipe, also add them here.
+    if [ "$(git rev-parse --git-dir)" != "$(git rev-parse --git-common-dir)" ]; then
+        echo "Error: setup-force must run from the main repo, not a worktree." >&2
+        echo "  Run from: $(git rev-parse --path-format=absolute --git-common-dir | sed 's|/\.git$||')" >&2
+        exit 1
+    fi
+    # --- bin ---
+    mkdir -p ~/.local/bin
+    ln -sf "$(pwd)/bin/count-tokens" ~/.local/bin/count-tokens
+    ln -sf "$(pwd)/bin/audit-doc" ~/.local/bin/audit-doc
+    ln -sf "$(pwd)/backlog/update_item.py" ~/.local/bin/update-item
+    ln -sf "$(pwd)/backlog/create_item.py" ~/.local/bin/create-backlog-item
+    ln -sf "$(pwd)/backlog/generate_index.py" ~/.local/bin/generate-backlog-index
+    ln -sf "$(pwd)/bin/jcc" ~/.local/bin/jcc
+    ln -sf "$(pwd)/bin/overnight-start" ~/.local/bin/overnight-start
+    # --- reference ---
+    mkdir -p ~/.claude/reference
+    ln -sf "$(pwd)/claude/reference/verification-mindset.md" ~/.claude/reference/verification-mindset.md
+    ln -sf "$(pwd)/claude/reference/parallel-agents.md" ~/.claude/reference/parallel-agents.md
+    ln -sf "$(pwd)/claude/reference/context-file-authoring.md" ~/.claude/reference/context-file-authoring.md
+    ln -sf "$(pwd)/claude/reference/claude-skills.md" ~/.claude/reference/claude-skills.md
+    # --- skills ---
+    mkdir -p ~/.claude/skills
+    for skill in skills/*/SKILL.md; do
+        name=$(basename "$(dirname "$skill")")
+        ln -sfn "$(pwd)/skills/$name" "$HOME/.claude/skills/$name"
+    done
+    # --- hooks ---
+    mkdir -p ~/.claude/hooks
+    for hook in hooks/*.sh; do
+        [ -f "$hook" ] || continue
+        name=$(basename "$hook")
+        if [ "$name" = "cortex-notify.sh" ]; then
+            ln -sf "$(pwd)/$hook" "$HOME/.claude/notify.sh"
+        else
+            ln -sf "$(pwd)/$hook" "$HOME/.claude/hooks/$name"
+        fi
+    done
+    for hook in claude/hooks/*; do
+        [ -f "$hook" ] || continue
+        name=$(basename "$hook")
+        ln -sf "$(pwd)/$hook" "$HOME/.claude/hooks/$name"
+    done
+    # --- config ---
+    mkdir -p ~/.claude
+    mkdir -p ~/.claude/rules
+    ln -sf "$(pwd)/claude/settings.json" ~/.claude/settings.json
+    ln -sf "$(pwd)/claude/statusline.sh" ~/.claude/statusline.sh
+    ln -sf "$(pwd)/claude/rules/global-agent-rules.md" ~/.claude/rules/cortex-global.md
+    ln -sf "$(pwd)/claude/rules/sandbox-behaviors.md" ~/.claude/rules/cortex-sandbox.md
+    # --- settings.local.json ---
+    LOCAL_SETTINGS="$HOME/.claude/settings.local.json"
+    ALLOW_PATH="$(pwd)/lifecycle/sessions/"
+    if [ -f "$LOCAL_SETTINGS" ]; then
+        if command -v jq &>/dev/null; then
+            jq --arg path "$ALLOW_PATH" '
+                .sandbox.filesystem.allowWrite = (
+                    (.sandbox.filesystem.allowWrite // []) + [$path] | unique
+                )
+            ' "$LOCAL_SETTINGS" > "$LOCAL_SETTINGS.tmp"
+            mv "$LOCAL_SETTINGS.tmp" "$LOCAL_SETTINGS"
+        else
+            echo "Warning: jq not found — settings.local.json overwritten. Install jq to preserve allowWrite paths from other clones."
+            printf '{\n  "sandbox": {\n    "filesystem": {\n      "allowWrite": ["%s"]\n    }\n  }\n}\n' "$ALLOW_PATH" > "$LOCAL_SETTINGS"
+        fi
+    else
+        mkdir -p "$(dirname "$LOCAL_SETTINGS")"
+        printf '{\n  "sandbox": {\n    "filesystem": {\n      "allowWrite": ["%s"]\n    }\n  }\n}\n' "$ALLOW_PATH" > "$LOCAL_SETTINGS"
+    fi
+    just python-setup
+
 # Deploy bin/ utilities to ~/.local/bin/
 # Refuses to run from a git worktree — symlinks must point to the real repo root.
 deploy-bin:
