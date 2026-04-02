@@ -248,9 +248,8 @@ SIGINT or SIGTERM (e.g. Ctrl-C or `kill`) triggers a graceful shutdown:
 ### Concurrency
 
 The batch runner uses a `ConcurrencyManager` from `throttle.py` to cap parallel
-workers. Default is 2. Setting it higher than 3 risks git conflicts and API rate
-limiting — keep it at 2 for most sessions, 3 only when features are clearly independent
-(non-overlapping file sets).
+workers. Default is 2. The runner scales well at higher concurrency; increase via the
+plan approval step in `/overnight`.
 
 ### Module Reference
 
@@ -379,12 +378,7 @@ session end. `/morning-review` surfaces its URL so you can review and merge.
 
 ### Session size
 
-**3–5 features per session** is the sweet spot. Too few (1–2) wastes the overhead of
-spinning up the session infrastructure; too many (8+) increases the chance that a single
-failure in a shared file causes cascading conflicts that waste the session. The upper
-bound is also driven by context budget: each orchestrator agent reads all selected
-features' specs and plans, and loading too many at once risks overflowing the agent's
-context window.
+The runner scales well — you can queue as many features as you like. There is no recommended upper limit.
 
 ### Concurrency
 
@@ -406,8 +400,7 @@ which creates an isolated repair worktree and dispatches a Claude agent (Sonnet,
 escalating to Opus on quality failure) to resolve the conflict. If the repair agent
 also fails, the feature is marked `paused` and carried to the next session. Higher
 concurrency increases the probability of two features touching the same file in the
-same round, which is why 2 is the safe default and 3 should only be used for clearly
-non-overlapping feature sets.
+same round.
 
 ### What to prepare the night before
 
