@@ -17,7 +17,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
 - **Complexity**: simple
 - **Context**: Read `lifecycle/non-destructive-claude-md-strategy/events.log` and look for a pre-existing `req1_verified` event with `"result": "pass"`. This event must have been written by a human during a prior daytime verification session — the agent must NOT write it. If no such event exists in events.log, **halt immediately** and surface this message: "Req 1 has not been verified. Run the live verification test (see spec Req 1), then record the result by appending this event to events.log: `{\"ts\": \"<ISO 8601>\", \"event\": \"req1_verified\", \"feature\": \"non-destructive-claude-md-strategy\", \"result\": \"pass\"}`. Re-run the plan after recording." Do not proceed to Task 2.
 - **Verification**: `events.log` already contains a `req1_verified` entry with `"result": "pass"` that precedes this plan execution. The agent did not create this entry.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Create `claude/rules/global-agent-rules.md`
 - **Files**: `claude/rules/global-agent-rules.md` (create new)
@@ -33,7 +33,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
   - The two extracted bullets (single-line example, then multi-line example + code block)
   Deploy target: `~/.claude/rules/cortex-global.md` (symlink added in Task 5)
 - **Verification**: `claude/rules/global-agent-rules.md` exists; contains both the single-line and multi-line commit format examples; begins with the scope-boundary comment; does not contain any reference to the `/commit` skill or cortex-command infrastructure.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Create `claude/rules/sandbox-behaviors.md`
 - **Files**: `claude/rules/sandbox-behaviors.md` (create new)
@@ -50,7 +50,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
   - Add a third section: `## Git Commits: Sandbox Constraints` containing only the heredoc warning bullet
   Deploy target: `~/.claude/rules/cortex-sandbox.md` (symlink added in Task 5)
 - **Verification**: `claude/rules/sandbox-behaviors.md` exists; contains both full sections and the heredoc warning; begins with the scope-boundary comment; does not contain the single-line or multi-line `-m` examples (those are in global-agent-rules.md).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Trim `claude/Agents.md`
 - **Files**: `claude/Agents.md` (modify)
@@ -69,7 +69,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
   - `## Conditional Loading` — full table + note
   After editing, verify that the three remaining sections are intact and no content was accidentally dropped.
 - **Verification**: `claude/Agents.md` no longer contains "Never Use `git -C`", "Avoid Chaining", the heredoc warning, or the `-m` format examples. Still contains the `/commit` skill requirement, Settings Architecture, and Conditional Loading sections. Line count is noticeably reduced (was ~44 lines; after trim should be ~25 lines).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Update `deploy-config` in `justfile`
 - **Files**: `justfile` (modify)
@@ -83,7 +83,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
   3. After `mkdir -p ~/.claude` (line 88), add `mkdir -p ~/.claude/rules/`
   4. After the existing `for` loop's `done`, add a new loop for the two rules/ targets. Follow the same regular-file-check guard pattern (`[ -f "$target" ] && [ ! -L "$target" ]` → prompt → `ln -sf`) already used in the existing loop (lines 90-104). Add `case` branches mapping `*cortex-global.md)` to `$(pwd)/claude/rules/global-agent-rules.md` and `*cortex-sandbox.md)` to `$(pwd)/claude/rules/sandbox-behaviors.md`.
 - **Verification**: `just deploy-config` runs without error; creates `~/.claude/rules/cortex-global.md` and `~/.claude/rules/cortex-sandbox.md` as symlinks; does NOT create or modify `~/.claude/CLAUDE.md` on a fresh machine. Confirm symlink targets: `readlink ~/.claude/rules/cortex-global.md` returns the absolute path to `claude/rules/global-agent-rules.md`; same for sandbox.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Update `check-symlinks` in `justfile`
 - **Files**: `justfile` (modify)
@@ -96,7 +96,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
   check ~/.claude/rules/cortex-sandbox.md
   ```
 - **Verification**: `just check-symlinks` exits 0 after running `just deploy-config`. Does not print a failure for `~/.claude/CLAUDE.md` being absent. Prints success for both rules/ symlinks.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Update `docs/setup.md`
 - **Files**: `docs/setup.md` (modify)
@@ -109,7 +109,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
   - Note that `~/.claude/CLAUDE.md` is only deployed by `just setup-force` (ticket 006, not yet available) for the repo owner
   If Req 1 verification failed and the fallback path is being taken: add a "Manual deployment (fallback)" section as specified in the Req 1 failure path (spec).
 - **Verification**: `docs/setup.md` does not describe `just setup` as deploying `~/.claude/CLAUDE.md`. Mentions `~/.claude/rules/cortex-global.md` and `cortex-sandbox.md`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Update `README.md` backup warning
 - **Files**: `README.md` (modify)
@@ -118,7 +118,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
 - **Complexity**: simple
 - **Context**: `README.md` lines 86-95 contain a backup warning: "`just setup` creates symlinks that **replace** existing files in `~/.claude/`." The bulleted list includes `~/.claude/CLAUDE.md`. Update this section to reflect the non-destructive default: `just setup` no longer replaces `~/.claude/CLAUDE.md` — it creates new files in `~/.claude/rules/` only. The warning about `~/.claude/settings.json`, statusline.sh, skills, and hooks still applies. Note that only `just setup-force` will replace `~/.claude/CLAUDE.md` (when available in ticket 006).
 - **Verification**: `README.md` backup warning section does not list `~/.claude/CLAUDE.md` as a file that `just setup` overwrites. `~/.claude/settings.json` and other files remain in the warning.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Atomic commit — content split, deploy, docs
 - **Files**: `claude/Agents.md`, `claude/rules/global-agent-rules.md`, `claude/rules/sandbox-behaviors.md`, `justfile`, `docs/setup.md`, `README.md`
@@ -133,7 +133,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
   Commit message: `Split claude/Agents.md into three files and deploy via ~/.claude/rules/`
   Use `/commit` skill.
 - **Verification**: Before staging: run `git check-ignore -v claude/rules/global-agent-rules.md claude/rules/sandbox-behaviors.md` — if either file is gitignored, fix the `.gitignore` before proceeding (do not use `git add -f`). After commit: `git log --oneline -1` shows one commit with all 6 files changed. `git show --stat HEAD` lists `claude/Agents.md`, both new files, `justfile`, `docs/setup.md`, `README.md` — verify all 6 are present. No earlier commit in the branch introduces a partial split.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Update `skills/skill-creator/SKILL.md`
 - **Files**: `skills/skill-creator/SKILL.md` (modify)
@@ -148,7 +148,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
   ```
   Replace with a description of the current architecture: generic rules live in `claude/rules/global-agent-rules.md` and `claude/rules/sandbox-behaviors.md` (deployed to `~/.claude/rules/`); cortex-specific instructions live in `claude/Agents.md` (deployed to `~/.claude/CLAUDE.md` only for repo owners via `just setup-force`). A new contributor should use `claude/rules/` for content that applies globally, not a monolithic `Agents.md` → `~/.claude/CLAUDE.md` symlink.
 - **Verification**: `skills/skill-creator/SKILL.md` no longer contains `ln -s Agents.md CLAUDE.md` or the old symlink pattern description. Contains a reference to the three-file architecture and `~/.claude/rules/`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Update ticket 006 backlog item
 - **Files**: `backlog/006-make-just-setup-additive.md` (modify)
@@ -159,7 +159,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
   - In the collision detection classifier list: `~/.claude/rules/cortex-global.md` and `~/.claude/rules/cortex-sandbox.md` as `new`/`update`/`conflict` classifiable targets
   - In the `just setup-force` requirements: "must deploy BOTH the rules/ symlinks (cortex-global.md and cortex-sandbox.md) AND `~/.claude/CLAUDE.md` → `claude/Agents.md` to give the repo owner the complete instruction set"
 - **Verification**: `backlog/006-make-just-setup-additive.md` mentions the two new rules/ targets and the setup-force deploy requirement.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Commit tasks 10-11
 - **Files**: `skills/skill-creator/SKILL.md`, `backlog/006-make-just-setup-additive.md`
@@ -169,7 +169,7 @@ Creates two new rules files by extracting content from `claude/Agents.md`, trims
 - **Context**: Separate from the main atomic commit (Task 9). Commit message: `Update skill-creator docs and ticket 006 for three-file rules architecture`
   Use `/commit` skill.
 - **Verification**: `git log --oneline -2` shows two recent commits: the atomic main commit and this follow-up commit.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 

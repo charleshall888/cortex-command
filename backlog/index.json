@@ -56,7 +56,7 @@
   {
     "id": 6,
     "title": "Make `just setup` additive by default",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -74,36 +74,9 @@
     "discovery_source": "research/shareable-install/research.md",
     "plan": null,
     "uuid": null,
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": null,
-    "repo": null
-  },
-  {
-    "id": 5,
-    "title": "Non-destructive CLAUDE.md strategy",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "shareability",
-      "install",
-      "claude-md"
-    ],
-    "created": "2026-04-02",
-    "updated": "2026-04-02",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "003",
-    "research": null,
-    "spec": "lifecycle/non-destructive-claude-md-strategy/spec.md",
-    "discovery_source": "research/shareable-install/research.md",
-    "plan": null,
-    "uuid": null,
-    "lifecycle_slug": "non-destructive-claude-md-strategy",
-    "session_id": "03401538-712d-4e53-9fac-275f3b4b0e43",
-    "lifecycle_phase": "plan",
+    "lifecycle_slug": "make-just-setup-additive-by-default",
+    "session_id": "ae86e687-1c8d-4115-a75e-37ed2cbb85ef",
+    "lifecycle_phase": "research",
     "schema_version": null,
     "repo": null
   },

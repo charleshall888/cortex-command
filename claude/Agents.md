@@ -1,3 +1,5 @@
+<!-- Cortex-command-specific instructions: applies only when the full cortex-command framework is installed (repo owner via just setup-force) -->
+
 # Global Agent Instructions
 
 These instructions apply to all projects on this machine.
