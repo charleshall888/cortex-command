@@ -1,6 +1,6 @@
 ---
 name: devils-advocate
-description: Stress-tests a direction, plan, or approach by arguing against it. Use when the user says "challenge this", "poke holes", "devil's advocate", "what could go wrong", "stress test this", "argue against this", or "play devil's advocate". Works in any phase — no lifecycle required. Reads relevant artifacts if a lifecycle is active; otherwise works from conversation context.
+description: Inline devil's advocate — argues against the current direction from the current agent's context (no fresh agent). Use when the user says "challenge this", "poke holes", "devil's advocate", "argue against this", "what could go wrong", or "stress-test this". Works in any phase — no lifecycle required.
 ---
 
 # Devil's Advocate
