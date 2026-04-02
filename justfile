@@ -200,10 +200,40 @@ deploy-skills:
     #!/usr/bin/env bash
     set -euo pipefail
     mkdir -p ~/.claude/skills
+    # Note: also update setup-force when adding new targets here.
+    conflicts=()
     for skill in skills/*/SKILL.md; do
         name=$(basename "$(dirname "$skill")")
-        ln -sfn "$(pwd)/skills/$name" "$HOME/.claude/skills/$name"
+        source="$(pwd)/skills/$name"
+        target="$HOME/.claude/skills/$name"
+        if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+            echo "[new]      $target"
+            ln -sfn "$source" "$target"
+        elif [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+            echo "[update]   $target"
+            ln -sfn "$source" "$target"
+        elif [ ! -e "$target" ] && [ -L "$target" ]; then
+            echo "[conflict] $target — broken symlink"
+            conflicts+=("$target (broken symlink)")
+        elif [ -L "$target" ] && [ "$(readlink "$target")" != "$source" ]; then
+            echo "[conflict] $target — symlink to $(readlink "$target")"
+            conflicts+=("$target (symlink to $(readlink "$target"))")
+        else
+            echo "[conflict] $target — regular file"
+            conflicts+=("$target (regular file)")
+        fi
     done
+    if [ "${#conflicts[@]}" -gt 0 ]; then
+        if [ -n "${CONFLICTS_FILE:-}" ]; then
+            for entry in "${conflicts[@]}"; do echo "$entry" >> "$CONFLICTS_FILE"; done
+        else
+            echo ""
+            echo "${#conflicts[@]} conflict(s) skipped. Open Claude in the cortex-command directory and run:"
+            echo "  /setup-merge"
+            echo "to resolve the following targets:"
+            for entry in "${conflicts[@]}"; do echo "  - $entry"; done
+        fi
+    fi
 
 # Deploy hooks to ~/.claude/hooks/ and ~/.claude/notify.sh as symlinks
 deploy-hooks:
