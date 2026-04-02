@@ -218,13 +218,15 @@ Write skill content so any AI coding agent can understand and execute it, not ju
 - Avoid referencing agent-specific tool names (e.g., "Bash tool", "Read tool") — describe the action directly
 - See `commit/SKILL.md` and `pr/SKILL.md` for examples of agent-neutral skill bodies
 
-**The Agents.md symlink pattern for project instructions:**
+**The three-file rules architecture for agent instructions:**
 
-When a skill creates or references project instruction files, follow the `Agents.md` symlink pattern — write the canonical instructions once in `Agents.md`, then symlink for each agent:
+Global agent instructions are split across three files. When a skill creates or references instruction files, follow this architecture:
 
-```bash
-ln -s Agents.md CLAUDE.md
-```
+- `claude/rules/global-agent-rules.md` — generic rules safe to inject globally for any Claude Code user (deployed to `~/.claude/rules/cortex-global.md`)
+- `claude/rules/sandbox-behaviors.md` — sandbox-specific behavioral rules (deployed to `~/.claude/rules/cortex-sandbox.md`)
+- `claude/Agents.md` — cortex-specific instructions for the repo owner (deployed to `~/.claude/CLAUDE.md` only via `just setup-force`)
+
+Use `claude/rules/` for content that should apply globally to any user. Use `claude/Agents.md` for cortex-command-specific content that assumes the full framework is installed.
 
 ## Prompt Contracts
 

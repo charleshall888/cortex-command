@@ -2,7 +2,7 @@
 id: 006
 title: "Make `just setup` additive by default"
 type: feature
-status: backlog
+status: in_progress
 priority: high
 parent: 003
 blocked-by: []
@@ -10,6 +10,11 @@ tags: [shareability, install, setup]
 created: 2026-04-02
 updated: 2026-04-02
 discovery_source: research/shareable-install/research.md
+session_id: ae86e687-1c8d-4115-a75e-37ed2cbb85ef
+lifecycle_phase: research
+lifecycle_slug: make-just-setup-additive-by-default
+complexity: complex
+criticality: high
 ---
 
 # Make `just setup` additive by default
@@ -41,5 +46,6 @@ Note: if ticket 005 takes the `@import` fallback path (i.e. `~/.claude/rules/` i
 - `new` and `update` targets are installed; `conflict` targets are skipped with a clear message
 - Pending conflict list printed at end with instruction to run `/setup-merge`
 - `settings.local.json` created with correct `allowWrite` path even in additive mode (no prompt needed — new file)
-- `just setup-force` preserves current destructive behavior end-to-end
+- `just setup-force` preserves current destructive behavior end-to-end; must deploy BOTH the rules/ symlinks (`~/.claude/rules/cortex-global.md` and `~/.claude/rules/cortex-sandbox.md`) AND `~/.claude/CLAUDE.md` → `claude/Agents.md` to give the repo owner the complete instruction set
 - Existing owner install (all symlinks pointing to this repo) produces zero conflicts on `just setup` re-run
+- Collision detection classifier covers all symlink targets, including `~/.claude/rules/cortex-global.md` and `~/.claude/rules/cortex-sandbox.md` (classify as `new`/`update`/`conflict` per the same rules as other targets)
