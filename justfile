@@ -81,13 +81,14 @@ deploy-hooks:
         ln -sf "$(pwd)/$hook" "$HOME/.claude/hooks/$name"
     done
 
-# Deploy config files (settings.json, CLAUDE.md, statusline)
+# Deploy config files (settings.json, statusline, and rules/)
 deploy-config:
     #!/usr/bin/env bash
     set -euo pipefail
     mkdir -p ~/.claude
+    mkdir -p ~/.claude/rules/
     # Warn if target exists as a regular file (not a symlink)
-    for target in ~/.claude/settings.json ~/.claude/CLAUDE.md ~/.claude/statusline.sh; do
+    for target in ~/.claude/settings.json ~/.claude/statusline.sh; do
         if [ -f "$target" ] && [ ! -L "$target" ]; then
             echo "Warning: $target exists as a regular file (not a symlink)."
             read -rp "  Overwrite with symlink? [y/N] " answer
@@ -98,8 +99,21 @@ deploy-config:
         fi
         case "$target" in
             *settings.json) ln -sf "$(pwd)/claude/settings.json" "$target" ;;
-            *CLAUDE.md)     ln -sf "$(pwd)/claude/Agents.md" "$target" ;;
-            *statusline.sh)   ln -sf "$(pwd)/claude/statusline.sh" "$target" ;;
+            *statusline.sh) ln -sf "$(pwd)/claude/statusline.sh" "$target" ;;
+        esac
+    done
+    for target in ~/.claude/rules/cortex-global.md ~/.claude/rules/cortex-sandbox.md; do
+        if [ -f "$target" ] && [ ! -L "$target" ]; then
+            echo "Warning: $target exists as a regular file (not a symlink)."
+            read -rp "  Overwrite with symlink? [y/N] " answer
+            if [[ ! "$answer" =~ ^[Yy] ]]; then
+                echo "  Skipping $target"
+                continue
+            fi
+        fi
+        case "$target" in
+            *cortex-global.md)  ln -sf "$(pwd)/claude/rules/global-agent-rules.md" "$target" ;;
+            *cortex-sandbox.md) ln -sf "$(pwd)/claude/rules/sandbox-behaviors.md" "$target" ;;
         esac
     done
     # Write settings.local.json with correct allowWrite path for this clone location
@@ -442,7 +456,8 @@ check-symlinks:
     }
     echo "Checking symlinks..."
     check ~/.claude/settings.json
-    check ~/.claude/CLAUDE.md
+    check ~/.claude/rules/cortex-global.md
+    check ~/.claude/rules/cortex-sandbox.md
     check ~/.claude/statusline.sh
     check ~/.claude/notify.sh
     check ~/.claude/hooks/cortex-validate-commit.sh

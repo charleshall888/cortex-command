@@ -185,8 +185,11 @@ Then add permission patterns for its tools in the `permissions.allow` list (e.g.
 ### Full Setup (macOS)
 
 ```bash
-# Global agent instructions
-ln -sf "$(pwd)/claude/Agents.md" ~/.claude/CLAUDE.md
+# Global agent rules (non-destructive — deploys to ~/.claude/rules/, NOT ~/.claude/CLAUDE.md)
+# just setup does NOT create or modify ~/.claude/CLAUDE.md; only just setup-force does (see ticket 006)
+mkdir -p ~/.claude/rules
+ln -sf "$(pwd)/claude/rules/global-agent-rules.md" ~/.claude/rules/cortex-global.md
+ln -sf "$(pwd)/claude/rules/sandbox-behaviors.md" ~/.claude/rules/cortex-sandbox.md
 
 # Settings (includes hooks, model preferences, permissions)
 ln -sf "$(pwd)/claude/settings.json" ~/.claude/settings.json

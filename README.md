@@ -88,10 +88,11 @@ just setup
 `just setup` creates symlinks that **replace** existing files in `~/.claude/`. If you already have Claude Code configured, back up these files first:
 
 - `~/.claude/settings.json`
-- `~/.claude/CLAUDE.md`
 - `~/.claude/statusline.sh`
 - Any custom skills in `~/.claude/skills/`
 - Any custom hooks in `~/.claude/hooks/`
+
+`just setup` does **not** create or modify `~/.claude/CLAUDE.md` — it creates new files in `~/.claude/rules/` only (`cortex-global.md` and `cortex-sandbox.md`). Your existing `CLAUDE.md` is safe. Only `just setup-force` (coming in a future release) will deploy `~/.claude/CLAUDE.md`.
 
 The setup recipe will warn before overwriting non-symlink files at these locations.
 
