@@ -107,13 +107,48 @@ deploy-bin:
         exit 1
     fi
     mkdir -p ~/.local/bin
-    ln -sf $(pwd)/bin/count-tokens ~/.local/bin/count-tokens
-    ln -sf $(pwd)/bin/audit-doc ~/.local/bin/audit-doc
-    ln -sf $(pwd)/backlog/update_item.py ~/.local/bin/update-item
-    ln -sf $(pwd)/backlog/create_item.py ~/.local/bin/create-backlog-item
-    ln -sf $(pwd)/backlog/generate_index.py ~/.local/bin/generate-backlog-index
-    ln -sf $(pwd)/bin/jcc ~/.local/bin/jcc
-    ln -sf $(pwd)/bin/overnight-start ~/.local/bin/overnight-start
+    # Note: also update setup-force when adding new targets here.
+    pairs=(
+        "$(pwd)/bin/count-tokens|$HOME/.local/bin/count-tokens"
+        "$(pwd)/bin/audit-doc|$HOME/.local/bin/audit-doc"
+        "$(pwd)/backlog/update_item.py|$HOME/.local/bin/update-item"
+        "$(pwd)/backlog/create_item.py|$HOME/.local/bin/create-backlog-item"
+        "$(pwd)/backlog/generate_index.py|$HOME/.local/bin/generate-backlog-index"
+        "$(pwd)/bin/jcc|$HOME/.local/bin/jcc"
+        "$(pwd)/bin/overnight-start|$HOME/.local/bin/overnight-start"
+    )
+    conflicts=()
+    for pair in "${pairs[@]}"; do
+        source="${pair%%|*}"
+        target="${pair##*|}"
+        if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+            echo "[new]      $target"
+            ln -sf "$source" "$target"
+        elif [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+            echo "[update]   $target"
+            ln -sf "$source" "$target"
+        elif [ ! -e "$target" ] && [ -L "$target" ]; then
+            echo "[conflict] $target — broken symlink"
+            conflicts+=("$target (broken symlink)")
+        elif [ -L "$target" ] && [ "$(readlink "$target")" != "$source" ]; then
+            echo "[conflict] $target — symlink to $(readlink "$target")"
+            conflicts+=("$target (symlink to $(readlink "$target"))")
+        else
+            echo "[conflict] $target — regular file"
+            conflicts+=("$target (regular file)")
+        fi
+    done
+    if [ "${#conflicts[@]}" -gt 0 ]; then
+        if [ -n "${CONFLICTS_FILE:-}" ]; then
+            for entry in "${conflicts[@]}"; do echo "$entry" >> "$CONFLICTS_FILE"; done
+        else
+            echo ""
+            echo "${#conflicts[@]} conflict(s) skipped. Open Claude in the cortex-command directory and run:"
+            echo "  /setup-merge"
+            echo "to resolve the following targets:"
+            for entry in "${conflicts[@]}"; do echo "  - $entry"; done
+        fi
+    fi
 
 # Deploy reference docs to ~/.claude/reference/ as symlinks
 deploy-reference:
