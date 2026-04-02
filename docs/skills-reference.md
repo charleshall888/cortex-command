@@ -103,7 +103,7 @@ Review a GitHub pull request using a multi-agent pipeline. Runs a Haiku triage a
 ## Thinking Tools
 
 ### critical-review
-Dispatches a fresh, unanchored agent to deeply challenge a plan, spec, or research artifact from multiple angles before you commit. More thorough than `/devils-advocate` — the reviewer derives its own angles with no anchoring to the reasoning that produced the artifact. Also auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval.
+Derives 3-4 challenge angles from the artifact and project context, then dispatches one reviewer agent per angle in parallel for deep, unanchored criticism. An Opus synthesis agent merges the parallel findings into a single coherent challenge. Also auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval.
 
 [skills/critical-review/SKILL.md](../skills/critical-review/SKILL.md)
 
