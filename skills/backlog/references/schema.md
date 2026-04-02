@@ -59,5 +59,11 @@ blocked-by: []
 
 Optional markdown body for description and acceptance criteria.
 
-When describing potential implementation approaches, frame them as **suggestions to explore**, not prescriptions. Use language like "one approach might be..." or "consider..." — the lifecycle's research and planning phases exist to evaluate approaches critically. Backlog items that prescribe exact solutions bypass the thinking that makes lifecycle valuable.
+**Implementation approaches must use exploratory framing by default.** Frame approaches as suggestions, not instructions. Use language like "one approach might be...", "consider...", or "research could explore..." — the lifecycle's research and planning phases exist to evaluate approaches critically. Backlog items that prescribe exact solutions bypass the thinking that makes lifecycle valuable.
+
+**Prescriptive framing is acceptable only in two narrow cases:**
+1. **No viable alternatives exist** — the solution is dictated by an external constraint (API shape, platform requirement, sole available library).
+2. **The approach exactly follows an already-established codebase pattern** — the ticket is asking to replicate something the repo already does elsewhere, and the pattern is the point.
+
+"I investigated this and believe it is correct" does not meet either exception. That level of confidence is precisely what the lifecycle research and plan phases exist to establish — it is the *starting point* for investigation, not the conclusion that justifies skipping it.
 ```
