@@ -10,7 +10,7 @@ default:
 setup:
     #!/usr/bin/env bash
     set -euo pipefail
-    CONFLICTS_FILE=$(mktemp)
+    CONFLICTS_FILE=$(mktemp "${TMPDIR:-/tmp}/conflicts-XXXXXX")
     trap "rm -f \"$CONFLICTS_FILE\"" EXIT
     CONFLICTS_FILE="$CONFLICTS_FILE" just deploy-bin
     CONFLICTS_FILE="$CONFLICTS_FILE" just deploy-reference
