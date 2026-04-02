@@ -8,18 +8,30 @@ default:
 
 # Deploy the full agentic layer: bin, reference, skills, hooks, config, Python deps
 setup:
-    just deploy-bin
-    just deploy-reference
-    just deploy-skills
-    just deploy-hooks
-    just deploy-config
+    #!/usr/bin/env bash
+    set -euo pipefail
+    CONFLICTS_FILE=$(mktemp)
+    trap "rm -f \"$CONFLICTS_FILE\"" EXIT
+    CONFLICTS_FILE="$CONFLICTS_FILE" just deploy-bin
+    CONFLICTS_FILE="$CONFLICTS_FILE" just deploy-reference
+    CONFLICTS_FILE="$CONFLICTS_FILE" just deploy-skills
+    CONFLICTS_FILE="$CONFLICTS_FILE" just deploy-hooks
+    CONFLICTS_FILE="$CONFLICTS_FILE" just deploy-config
     just python-setup
-    @echo ""
-    @echo "Setup complete. Add the following to your shell profile (.zshrc, .bashrc, etc.):"
-    @echo ""
-    @echo "  export CORTEX_COMMAND_ROOT=\"$(pwd)\""
-    @echo ""
-    @echo "Then restart your shell and run: just verify-setup"
+    if [ -s "$CONFLICTS_FILE" ]; then
+        conflict_count=$(wc -l < "$CONFLICTS_FILE" | tr -d ' ')
+        echo ""
+        echo "$conflict_count conflict(s) skipped. Open Claude in the cortex-command directory and run:"
+        echo "  /setup-merge"
+        echo "to resolve the following targets:"
+        while IFS= read -r entry; do echo "  - $entry"; done < "$CONFLICTS_FILE"
+    fi
+    echo ""
+    echo "Setup complete. Add the following to your shell profile (.zshrc, .bashrc, etc.):"
+    echo ""
+    echo "  export CORTEX_COMMAND_ROOT=\"$(pwd)\""
+    echo ""
+    echo "Then restart your shell and run: just verify-setup"
 
 # Force-deploy the full agentic layer unconditionally (clean re-install)
 setup-force:
