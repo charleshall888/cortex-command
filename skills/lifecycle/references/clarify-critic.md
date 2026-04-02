@@ -57,7 +57,7 @@ Do not be balanced. Do not summarize what the assessment got right.
 
 ## Disposition Framework
 
-After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection with one of three dispositions. Mirror the critical-review skill's framework exactly:
+After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection with one of three dispositions. (Apply/Dismiss/Ask framework below matches `/critical-review` Step 4 — reproduced here to avoid silent drift.)
 
 **Apply** — the objection identifies a concrete problem and the correct fix is clear and unambiguous. Examples: a High confidence rating is demonstrably unsupported by the source, the scope claim contradicts explicit text in the backlog item, the requirements alignment is asserted when no requirements file was loaded. Fix these without asking — revise the affected confidence dimension(s) accordingly.
 
