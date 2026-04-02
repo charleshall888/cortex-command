@@ -152,11 +152,48 @@ deploy-bin:
 
 # Deploy reference docs to ~/.claude/reference/ as symlinks
 deploy-reference:
+    #!/usr/bin/env bash
+    set -euo pipefail
     mkdir -p ~/.claude/reference
-    ln -sf $(pwd)/claude/reference/verification-mindset.md ~/.claude/reference/verification-mindset.md
-    ln -sf $(pwd)/claude/reference/parallel-agents.md ~/.claude/reference/parallel-agents.md
-    ln -sf $(pwd)/claude/reference/context-file-authoring.md ~/.claude/reference/context-file-authoring.md
-    ln -sf $(pwd)/claude/reference/claude-skills.md ~/.claude/reference/claude-skills.md
+    # Note: also update setup-force when adding new targets here.
+    pairs=(
+        "$(pwd)/claude/reference/verification-mindset.md|$HOME/.claude/reference/verification-mindset.md"
+        "$(pwd)/claude/reference/parallel-agents.md|$HOME/.claude/reference/parallel-agents.md"
+        "$(pwd)/claude/reference/context-file-authoring.md|$HOME/.claude/reference/context-file-authoring.md"
+        "$(pwd)/claude/reference/claude-skills.md|$HOME/.claude/reference/claude-skills.md"
+    )
+    conflicts=()
+    for pair in "${pairs[@]}"; do
+        source="${pair%%|*}"
+        target="${pair##*|}"
+        if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+            echo "[new]      $target"
+            ln -sf "$source" "$target"
+        elif [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+            echo "[update]   $target"
+            ln -sf "$source" "$target"
+        elif [ ! -e "$target" ] && [ -L "$target" ]; then
+            echo "[conflict] $target — broken symlink"
+            conflicts+=("$target (broken symlink)")
+        elif [ -L "$target" ] && [ "$(readlink "$target")" != "$source" ]; then
+            echo "[conflict] $target — symlink to $(readlink "$target")"
+            conflicts+=("$target (symlink to $(readlink "$target"))")
+        else
+            echo "[conflict] $target — regular file"
+            conflicts+=("$target (regular file)")
+        fi
+    done
+    if [ "${#conflicts[@]}" -gt 0 ]; then
+        if [ -n "${CONFLICTS_FILE:-}" ]; then
+            for entry in "${conflicts[@]}"; do echo "$entry" >> "$CONFLICTS_FILE"; done
+        else
+            echo ""
+            echo "${#conflicts[@]} conflict(s) skipped. Open Claude in the cortex-command directory and run:"
+            echo "  /setup-merge"
+            echo "to resolve the following targets:"
+            for entry in "${conflicts[@]}"; do echo "  - $entry"; done
+        fi
+    fi
 
 # Deploy skills to ~/.claude/skills/ as symlinks
 deploy-skills:
