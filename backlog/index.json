@@ -54,33 +54,6 @@
     "repo": null
   },
   {
-    "id": 4,
-    "title": "Prep hooks and apiKeyHelper for sharing",
-    "status": "refined",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "shareability",
-      "install",
-      "hooks"
-    ],
-    "created": "2026-04-02",
-    "updated": "2026-04-02",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "003",
-    "research": null,
-    "spec": "lifecycle/prep-hooks-and-apikey-for-sharing/spec.md",
-    "discovery_source": "research/shareable-install/research.md",
-    "plan": null,
-    "uuid": null,
-    "lifecycle_slug": "prep-hooks-and-apikey-for-sharing",
-    "session_id": "6193cc90-c1b2-488e-b395-eefddd1ae74e",
-    "lifecycle_phase": "implement",
-    "schema_version": null,
-    "repo": null
-  },
-  {
     "id": 6,
     "title": "Make `just setup` additive by default",
     "status": "backlog",
@@ -94,9 +67,7 @@
     "created": "2026-04-02",
     "updated": "2026-04-02",
     "blocks": [],
-    "blocked_by": [
-      "004"
-    ],
+    "blocked_by": [],
     "parent": "003",
     "research": null,
     "spec": null,
@@ -112,7 +83,7 @@
   {
     "id": 5,
     "title": "Non-destructive CLAUDE.md strategy",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -126,13 +97,13 @@
     "blocked_by": [],
     "parent": "003",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/non-destructive-claude-md-strategy/spec.md",
     "discovery_source": "research/shareable-install/research.md",
     "plan": null,
     "uuid": null,
     "lifecycle_slug": "non-destructive-claude-md-strategy",
     "session_id": "03401538-712d-4e53-9fac-275f3b4b0e43",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
     "schema_version": null,
     "repo": null
   },
@@ -152,7 +123,6 @@
     "updated": "2026-04-02",
     "blocks": [],
     "blocked_by": [
-      "004",
       "006"
     ],
     "parent": "003",

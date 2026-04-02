@@ -5,7 +5,7 @@ type: feature
 status: backlog
 priority: medium
 parent: 003
-blocked-by: [004, 006]
+blocked-by: [006]
 tags: [shareability, install, setup, skills]
 created: 2026-04-02
 updated: 2026-04-02

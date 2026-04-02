@@ -7,3 +7,23 @@
 {"ts": "2026-04-02T00:00:00Z", "event": "phase_transition", "feature": "prep-hooks-and-apikey-for-sharing", "from": "specify", "to": "plan"}
 {"ts": "2026-04-02T00:00:00Z", "event": "orchestrator_review", "feature": "prep-hooks-and-apikey-for-sharing", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-02T00:00:00Z", "event": "phase_transition", "feature": "prep-hooks-and-apikey-for-sharing", "from": "plan", "to": "implement"}
+{"ts": "2026-04-02T00:00:00Z", "event": "batch_dispatch", "feature": "prep-hooks-and-apikey-for-sharing", "batch": 0, "tasks": [1, 3, 4, 5, 6, 7, 8, 9]}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 3, "batch": 0, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 4, "batch": 0, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 5, "batch": 0, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 6, "batch": 0, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 7, "batch": 0, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 8, "batch": 0, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 9, "batch": 0, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "batch_dispatch", "feature": "prep-hooks-and-apikey-for-sharing", "batch": 1, "tasks": [2]}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "batch_dispatch", "feature": "prep-hooks-and-apikey-for-sharing", "batch": 2, "tasks": [10]}
+{"ts": "2026-04-02T00:00:00Z", "event": "task_complete", "feature": "prep-hooks-and-apikey-for-sharing", "task": 10, "batch": 2, "status": "success"}
+{"ts": "2026-04-02T00:00:00Z", "event": "phase_transition", "feature": "prep-hooks-and-apikey-for-sharing", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-02T00:00:00Z", "event": "review_verdict", "feature": "prep-hooks-and-apikey-for-sharing", "verdict": "CHANGES_REQUESTED", "cycle": 1}
+{"ts": "2026-04-02T00:00:00Z", "event": "phase_transition", "feature": "prep-hooks-and-apikey-for-sharing", "from": "review", "to": "implement"}
+{"ts": "2026-04-02T00:00:00Z", "event": "phase_transition", "feature": "prep-hooks-and-apikey-for-sharing", "from": "implement", "to": "review"}
+{"ts": "2026-04-02T00:00:00Z", "event": "review_verdict", "feature": "prep-hooks-and-apikey-for-sharing", "verdict": "APPROVED", "cycle": 2}
+{"ts": "2026-04-02T00:00:00Z", "event": "phase_transition", "feature": "prep-hooks-and-apikey-for-sharing", "from": "review", "to": "complete"}
+{"ts": "2026-04-02T00:00:00Z", "event": "feature_complete", "feature": "prep-hooks-and-apikey-for-sharing", "tasks_total": 10, "rework_cycles": 1}

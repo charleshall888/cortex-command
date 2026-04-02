@@ -2,15 +2,15 @@
 id: 004
 title: "Prep hooks and apiKeyHelper for sharing"
 type: chore
-status: refined
+status: complete
 priority: high
 parent: 003
 tags: [shareability, install, hooks]
 created: 2026-04-02
 updated: 2026-04-02
 discovery_source: research/shareable-install/research.md
-session_id: 6193cc90-c1b2-488e-b395-eefddd1ae74e
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: review
 lifecycle_slug: prep-hooks-and-apikey-for-sharing
 complexity: complex
 criticality: high

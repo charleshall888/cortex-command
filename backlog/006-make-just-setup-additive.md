@@ -5,7 +5,7 @@ type: feature
 status: backlog
 priority: high
 parent: 003
-blocked-by: [004]
+blocked-by: []
 tags: [shareability, install, setup]
 created: 2026-04-02
 updated: 2026-04-02

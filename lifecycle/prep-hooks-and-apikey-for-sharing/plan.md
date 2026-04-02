@@ -13,7 +13,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
 - **Complexity**: simple
 - **Context**: All 5 files live in `hooks/`. Use `git mv hooks/validate-commit.sh hooks/cortex-validate-commit.sh` (and similarly for each). Do not modify file contents. Reference updates happen in Tasks 3–9.
 - **Verification**: `git ls-files hooks/` shows only `cortex-*` prefixed files (no bare `validate-commit.sh`, `cleanup-session.sh`, etc.).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Rename 7 hook files in claude/hooks/
 - **Files**: `claude/hooks/cortex-permission-audit-log.sh`, `claude/hooks/cortex-setup-gpg-sandbox-home.sh`, `claude/hooks/cortex-skill-edit-advisor.sh`, `claude/hooks/cortex-sync-permissions.py`, `claude/hooks/cortex-tool-failure-tracker.sh`, `claude/hooks/cortex-worktree-create.sh`, `claude/hooks/cortex-worktree-remove.sh`
@@ -22,7 +22,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
 - **Complexity**: simple
 - **Context**: All 7 files live in `claude/hooks/`. Apply `git mv claude/hooks/<name> claude/hooks/cortex-<name>` for each. Python file: `git mv claude/hooks/sync-permissions.py claude/hooks/cortex-sync-permissions.py`. Do not modify file contents. Reference updates happen in Tasks 3–9. Serialized after Task 1 to avoid concurrent `.git/index.lock` contention.
 - **Verification**: `git ls-files claude/hooks/` shows only `cortex-*` prefixed files.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Update 11 hook path references in claude/settings.json
 - **Files**: `claude/settings.json`
@@ -44,7 +44,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
   - WorktreeRemove (line 325): `worktree-remove.sh` inside the inline bash string → `cortex-worktree-remove.sh`
   The inline bash strings at lines 317 and 325 are JSON string values containing a `bash -c '...'` command. Two filenames appear inside: one in the `-f "$CWD/claude/hooks/..."` existence check and one in the `bash "$CWD/claude/hooks/..."` invocation. Both must be updated. Preserve all JSON escaping.
 - **Verification**: `grep -c 'hooks/validate-commit\|hooks/cleanup-session\|hooks/scan-lifecycle\|hooks/notify-remote\|hooks/permission-audit-log\|hooks/tool-failure-tracker\|hooks/skill-edit-advisor\|hooks/sync-permissions\|hooks/setup-gpg-sandbox-home\|hooks/worktree-create\|hooks/worktree-remove' claude/settings.json` returns 0. `python3 -c "import json; json.load(open('claude/settings.json'))"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Update justfile — 4 changes
 - **Files**: `justfile`
@@ -57,7 +57,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
   3. `check-symlinks` recipe (around lines 448–455): update all 8 `~/.claude/hooks/<name>` entries to their `cortex-*` names. Remove the entry for `~/.claude/hooks/setup-github-pat.sh` entirely.
   4. `deploy-config` recipe (around line 85): add `~/.claude/get-api-key.sh` to the for-loop target list. Add the case arm: `*get-api-key.sh) ln -sf "$(pwd)/claude/get-api-key.sh" "$target" ;;`. The new target goes through the same regular-file guard as the existing targets (the guard fires only when the target is a non-symlink regular file — adding to the loop automatically includes it).
 - **Verification**: `just validate-commit msg="Test: valid message"` exits 0. `grep setup-github-pat justfile` returns nothing. `grep 'cortex-notify\.sh' justfile` matches the updated deploy-hooks check.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Create claude/get-api-key.sh stub
 - **Files**: `claude/get-api-key.sh` (new file)
@@ -66,7 +66,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
 - **Complexity**: simple
 - **Context**: New file: `claude/get-api-key.sh`. Shell script with shebang `#!/usr/bin/env bash`. Logic: if `$HOME/.claude/get-api-key-local.sh` exists and is executable, `exec "$HOME/.claude/get-api-key-local.sh" "$@"`; otherwise exit 0 with no output. After writing: `chmod +x claude/get-api-key.sh`. Must be executable before staging.
 - **Verification**: `ls -la claude/get-api-key.sh` shows executable bit set. `output=$(bash claude/get-api-key.sh); echo "exit=$? output='$output'"` prints `exit=0 output=''` when no local override exists. `bash -n claude/get-api-key.sh` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Update hook references in docs/
 - **Files**: `docs/agentic-layer.md`, `docs/setup.md`, `docs/sdk.md`
@@ -78,7 +78,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
   - `docs/setup.md`: 4 references including manual `ln -sf` examples at lines 199–200 (update both source and destination filenames in the example commands) and a table at lines 292–293.
   - `docs/sdk.md`: 3 references to worktree hooks at lines 96, 103, 111.
 - **Verification**: `grep -rn 'validate-commit\.sh\|cleanup-session\.sh\|scan-lifecycle\.sh\|notify-remote\.sh\|permission-audit-log\.sh\|tool-failure-tracker\.sh\|skill-edit-advisor\.sh\|sync-permissions\.py\|setup-gpg-sandbox-home\.sh\|worktree-create\.sh\|worktree-remove\.sh' docs/` returns no matches.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Update hook references in tests/
 - **Files**: `tests/test_skill_behavior.sh`, `tests/test_hook_commit.sh`, `tests/test_hooks.sh`, `tests/test_tool_failure_tracker.sh`, `tests/lifecycle_phase.py`
@@ -92,7 +92,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
   - `test_tool_failure_tracker.sh:19`: `HOOK="$REPO_ROOT/claude/hooks/tool-failure-tracker.sh"` → `cortex-tool-failure-tracker.sh`
   - `lifecycle_phase.py:5`: comment referencing `hooks/scan-lifecycle.sh` → `hooks/cortex-scan-lifecycle.sh`
 - **Verification**: `grep -rn 'validate-commit\.sh\|cleanup-session\.sh\|scan-lifecycle\.sh\|notify-remote\.sh\|permission-audit-log\.sh\|tool-failure-tracker\.sh\|skill-edit-advisor\.sh\|sync-permissions\.py\|setup-gpg-sandbox-home\.sh\|worktree-create\.sh\|worktree-remove\.sh' tests/` returns no matches.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Update hook references in skills/ prose
 - **Files**: `skills/lifecycle/SKILL.md`, `skills/lifecycle/references/implement.md`
@@ -103,7 +103,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
   - `skills/lifecycle/SKILL.md:373`: update `worktree-create.sh` → `cortex-worktree-create.sh`
   - `skills/lifecycle/references/implement.md:56`: same update
 - **Verification**: `grep -rn 'worktree-create\.sh\|worktree-remove\.sh' skills/` returns no matches (or only `cortex-*` references).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Update hook references in claude/ directory files
 - **Files**: `claude/dashboard/alerts.py`, `claude/overnight/runner.sh`, `claude/overnight/report.py`, `claude/statusline.sh`
@@ -116,7 +116,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
   - `claude/overnight/report.py:204`: docstring mentioning `tool-failure-tracker.sh` → `cortex-tool-failure-tracker.sh`
   - `claude/statusline.sh:377`: comment mentioning `scan-lifecycle.sh` → `cortex-scan-lifecycle.sh`
 - **Verification**: `grep -rn 'validate-commit\.sh\|cleanup-session\.sh\|scan-lifecycle\.sh\|notify-remote\.sh\|permission-audit-log\.sh\|tool-failure-tracker\.sh\|skill-edit-advisor\.sh\|sync-permissions\.py\|setup-gpg-sandbox-home\.sh\|worktree-create\.sh\|worktree-remove\.sh' claude/` (excluding `claude/settings.json` and `claude/hooks/`) returns no matches.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Verify and commit atomically
 - **Files**: none
@@ -135,7 +135,7 @@ Rename 12 hook files to the `cortex-` prefix using `git mv`, then cascade update
   - `just check-symlinks` — verify all hook symlinks exist with new names.
   - Interactive startup verification (Req 9): open a new Claude Code session and confirm no startup error related to `apiKeyHelper`.
 - **Verification**: AC grep returns zero matches. `python3 -c "import json; json.load(open('claude/settings.json'))"` exits 0. `just test` passes. Single commit in `git log --oneline -1`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Verification Strategy
 
