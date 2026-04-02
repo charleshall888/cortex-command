@@ -240,23 +240,70 @@ deploy-hooks:
     #!/usr/bin/env bash
     set -euo pipefail
     mkdir -p ~/.claude/hooks
+    # Note: also update setup-force when adding new targets here.
+    conflicts=()
     # Shared hooks
     for hook in hooks/*.sh; do
         [ -f "$hook" ] || continue
         name=$(basename "$hook")
         if [ "$name" = "cortex-notify.sh" ]; then
             # notify.sh goes directly to ~/.claude/notify.sh (settings.json references this path)
-            ln -sf "$(pwd)/$hook" "$HOME/.claude/notify.sh"
+            target="$HOME/.claude/notify.sh"
         else
-            ln -sf "$(pwd)/$hook" "$HOME/.claude/hooks/$name"
+            target="$HOME/.claude/hooks/$name"
+        fi
+        source="$(pwd)/$hook"
+        if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+            echo "[new]      $target"
+            ln -sf "$source" "$target"
+        elif [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+            echo "[update]   $target"
+            ln -sf "$source" "$target"
+        elif [ ! -e "$target" ] && [ -L "$target" ]; then
+            echo "[conflict] $target — broken symlink"
+            conflicts+=("$target (broken symlink)")
+        elif [ -L "$target" ] && [ "$(readlink "$target")" != "$source" ]; then
+            echo "[conflict] $target — symlink to $(readlink "$target")"
+            conflicts+=("$target (symlink to $(readlink "$target"))")
+        else
+            echo "[conflict] $target — regular file"
+            conflicts+=("$target (regular file)")
         fi
     done
     # Claude-specific hooks
     for hook in claude/hooks/*; do
         [ -f "$hook" ] || continue
         name=$(basename "$hook")
-        ln -sf "$(pwd)/$hook" "$HOME/.claude/hooks/$name"
+        target="$HOME/.claude/hooks/$name"
+        source="$(pwd)/$hook"
+        if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+            echo "[new]      $target"
+            ln -sf "$source" "$target"
+        elif [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+            echo "[update]   $target"
+            ln -sf "$source" "$target"
+        elif [ ! -e "$target" ] && [ -L "$target" ]; then
+            echo "[conflict] $target — broken symlink"
+            conflicts+=("$target (broken symlink)")
+        elif [ -L "$target" ] && [ "$(readlink "$target")" != "$source" ]; then
+            echo "[conflict] $target — symlink to $(readlink "$target")"
+            conflicts+=("$target (symlink to $(readlink "$target"))")
+        else
+            echo "[conflict] $target — regular file"
+            conflicts+=("$target (regular file)")
+        fi
     done
+    if [ "${#conflicts[@]}" -gt 0 ]; then
+        if [ -n "${CONFLICTS_FILE:-}" ]; then
+            for entry in "${conflicts[@]}"; do echo "$entry" >> "$CONFLICTS_FILE"; done
+        else
+            echo ""
+            echo "${#conflicts[@]} conflict(s) skipped. Open Claude in the cortex-command directory and run:"
+            echo "  /setup-merge"
+            echo "to resolve the following targets:"
+            for entry in "${conflicts[@]}"; do echo "  - $entry"; done
+        fi
+    fi
 
 # Deploy config files (settings.json, statusline, and rules/)
 deploy-config:
