@@ -1,6 +1,6 @@
 ---
 name: critical-review
-description: Launches a fresh, unanchored agent — one with zero exposure to the conversation that produced the artifact — to deeply challenge a plan, spec, or research artifact from multiple angles before you commit. The fresh-agent execution model eliminates anchoring bias: the reviewer derives its own challenge angles from the artifact alone, so critiques are not shaped by the same reasoning that produced the work. Use when the user says "critical review", "pressure test", "adversarial review", "pre-commit challenge", "deeply question", or "challenge from multiple angles". More thorough than /devils-advocate because the fresh agent removes anchoring bias from the critique-generation step, producing challenges the in-context agent would self-censor or overlook. Also auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval.
+description: Dispatches parallel reviewer agents — each focused on a single challenge angle — then synthesizes findings with an Opus agent to deeply challenge a plan, spec, or research artifact from multiple angles before you commit. Domain context from project requirements is injected so reviewers can surface domain-specific failure modes even when the artifact doesn't mention them. Use when the user says "critical review", "pressure test", "adversarial review", "pre-commit challenge", "deeply question", or "challenge from multiple angles". More thorough than /devils-advocate because parallel agents remove anchoring bias and produce deeper per-angle coverage than a single sequential pass. Also auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval.
 ---
 
 # Critical Review
@@ -11,7 +11,17 @@ Dispatches a fresh, unanchored agent to challenge the current plan, spec, or res
 
 If a lifecycle is active, read the most relevant artifact (`lifecycle/{feature}/plan.md` → `spec.md` → `research.md`, in that order). Otherwise use conversation context. If nothing is clear enough to challenge, ask: "What should I critically review?" before proceeding.
 
-## Step 2: Dispatch a Fresh Reviewer
+## Step 2: Review Setup and Dispatch
+
+### Step 2a: Load Domain Context
+
+Before dispatching any reviewer agent, load project context for injection into reviewer prompts:
+
+1. If `requirements/project.md` exists, read it and extract the **Overview** section (or the first top-level summary section if none is labeled "Overview") — up to ~250 words.
+2. If `lifecycle.config.md` exists, read it and check for a `type:` field. Only use the value if it is present, non-empty, and not commented out (i.e., the line is not prefixed with `#`). If the value is valid, include it as a one-line prefix: `**Project type:** {type}` before the project overview text.
+3. Construct a `## Project Context` block from these inputs. **If neither file exists** (or `requirements/project.md` is absent and `lifecycle.config.md` has no valid `type:` value), **omit the `## Project Context` section entirely** — do not inject an empty placeholder into reviewer prompts.
+
+### Step 2b: Dispatch Reviewer
 
 Launch a fresh general-purpose agent. Pass it the artifact content and this prompt verbatim:
 
