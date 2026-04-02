@@ -37,83 +37,57 @@ If there's no clear plan or direction in context, ask: "What direction or approa
 
 ## Step 2: Make the Case
 
-Write a coherent argument against the current approach — not a bullet list of nitpicks. Cover these four things in a flowing narrative (not a checklist):
+Write a substantive argument against the current approach, organized into these four sections:
 
-**Strongest failure mode**: What's the most likely way this approach fails or turns out to be wrong? Be specific. "This might not scale" is useless. "This joins two 500M-row tables with no partition key on the join column, so this will likely be a full shuffle" is useful.
+### Strongest Failure Mode
 
-**Unexamined alternatives**: What approaches weren't considered, and what do they offer? Name them — don't just say "there are other ways." For example, if the plan proposes caching, mention specific alternatives like write-through vs. write-behind, or in-process vs. distributed cache.
+Describe the most likely way this approach fails or turns out to be wrong. "This might not scale" is useless. "This joins two 500M-row tables with no partition key on the join column, so this will likely be a full shuffle" is useful.
 
-**Fragile assumption**: What's the one thing that, if it turns out to be different than expected, breaks the whole approach? Surface the hidden load-bearing assumption. Example: "This assumes all queries fit in memory; if dataset grows 10x, this collapses."
+### Unexamined Alternatives
 
-**Tradeoff blindspot**: What's being optimized for? What's being sacrificed? Is that the right call given the actual constraints? Example: "This prioritizes implementation speed over long-term maintainability, which is sensible for a prototype but risky for production."
+Name approaches that weren't considered and what they offer. "There are other ways" is useless. "Write-through vs. write-behind caching eliminates the stale-read window your proposal ignores" is useful.
+
+### Fragile Assumption
+
+Surface the one hidden load-bearing assumption that, if wrong, breaks the whole approach. "This might not work" is useless. "This assumes all queries fit in memory; if dataset grows 10x, this collapses" is useful.
+
+### Tradeoff Blindspot
+
+Identify what's being optimized for, what's being sacrificed, and whether that's the right call. "There are tradeoffs" is useless. "This prioritizes implementation speed over long-term maintainability, which is sensible for a prototype but risky for production" is useful.
 
 ## Success Criteria
 
 The response is successful when:
-- ✅ The argument is **coherent and narrative** (not a bullet list of gripes)
+- ✅ Each section contains **substantive, specific prose** — not a one-line bullet or vague generalization
 - ✅ All four elements (failure mode, alternatives, assumption, tradeoff) are explicitly covered
 - ✅ All claims are **concrete and specific** (no vague warnings like "might break")
 - ✅ The argument engages with the **actual design** (demonstrates understanding of the approach, constraints, and rationale)
 - ✅ The tone is **constructive** (goal is to strengthen the decision, not block it)
 
-## Output Format Examples
-
-### Example 1: Architectural Decision Under Attack
+## Output Format Example
 
 **Input**: User's plan proposes replacing Kafka with HTTP webhooks for inter-service communication.
 
 **Output**:
-> **The core problem I see**: You're trading a durable, buffered message queue for a fire-and-forget synchronous mechanism. The failure mode is clear — if Service B is down for 2 hours, you've now lost all events that occurred while it was unreachable. Kafka holds them; webhooks don't. You'd need to add a separate audit log just to recover, which recreates the durability layer you just removed.
+> ### Strongest Failure Mode:
+> You're trading a durable, buffered message queue for a fire-and-forget synchronous mechanism. If Service B is down for 2 hours, you lose all events that occurred while it was unreachable. Kafka holds them; webhooks don't. You'd need a separate audit log just to recover, which recreates the durability layer you just removed.
 >
-> **You haven't weighed the alternative**: A hybrid approach exists — keep Kafka for guaranteed delivery of critical events (orders, payments, account changes) but use webhooks for low-consequence notifications (analytics events, UI updates). You'd get the latency benefits of webhooks without sacrificing data integrity.
+> ### Unexamined Alternatives:
+> A hybrid approach — keep Kafka for guaranteed delivery of critical events (orders, payments, account changes) but use webhooks for low-consequence notifications (analytics events, UI updates). You'd get the latency benefits of webhooks without sacrificing data integrity.
 >
-> **The hidden assumption**: Your argument assumes webhook latency is a real bottleneck. But Kafka consumers are typically batched (consume in chunks), so end-to-end latency is already 100ms–1s depending on your batch window. Webhooks might shave off 50ms. Is that worth the operational complexity of managing re-delivery logic?
+> ### Fragile Assumption:
+> Your argument assumes webhook latency is a real bottleneck. But Kafka consumers are typically batched, so end-to-end latency is already 100ms-1s depending on your batch window. Webhooks might shave off 50ms. Is that worth the operational complexity of managing re-delivery logic?
 >
-> **What you're optimizing vs. what you're losing**: You're optimizing for simplicity and latency. Fair priorities. But you're sacrificing recoverability and pushing complexity onto 5 different services that now each need to implement retry logic, idempotency, and audit trails. The cost moves, not disappears.
-
-### Example 2: Input Validation Failure (Vague Direction)
-
-**Input**: User asks to "challenge the new API design" without specifying what that design is.
-
-**Output**:
-> I don't have enough to argue against. "Challenge the API design" — but I need to know:
-> - **What's the design?** (endpoint structure, payload format, auth scheme, versioning strategy?)
-> - **What problem does it solve?** (was the old API slow? unreadable? inflexible?)
-> - **What constraints exist?** (backward compatibility? performance targets? team size?)
->
-> Share the design doc or describe the approach, and I'll make a strong case against it.
+> ### Tradeoff Blindspot:
+> You're optimizing for simplicity and latency, but sacrificing recoverability and pushing complexity onto 5 different services that now each need to implement retry logic, idempotency, and audit trails. The cost moves, not disappears.
 
 ## Error Handling
 
-**Error: No direction provided**
-- **Detection**: After reading available context (lifecycle artifacts or conversation), no clear direction exists
-- **Recovery**:
-  1. Ask explicitly: "What direction or approach should I argue against? (Share a plan, design doc, or describe the approach in a few sentences.)"
-  2. Wait for user response before proceeding
-  3. If user still can't articulate a direction, suggest: "Perhaps start with a quick plan or spec first — once you've crystallized the approach, I can poke holes in it."
-
-**Error: Direction is too vague**
-- **Detection**: Direction lacks specificity (e.g., "improve performance," "better UX," "scale the system") without concrete technical choices
-- **Recovery**:
-  1. Identify what's vague: "You mentioned 'better caching' — which layer? In-process? Redis? CDN?"
-  2. Ask: "Can you be more specific? What exactly are you proposing?"
-  3. Example of sufficient specificity: "Use Redis for session cache with TTL of 15 minutes"
-  4. Only proceed after getting concrete details
-
-**Error: Insufficient context to argue meaningfully**
-- **Detection**: The direction is specified but you lack domain knowledge or constraints (e.g., user proposes a database choice but hasn't mentioned scale, consistency requirements, or operational constraints)
-- **Recovery**:
-  1. Acknowledge what you understand: "I understand you're proposing X. To argue against it fairly, I need to know..."
-  2. Ask specific follow-up questions: "What's the expected data volume? Consistency requirements? Operational budget?"
-  3. Once context is provided, proceed with the argument
-  4. If context still isn't available, argue from first principles and note your assumptions: "Assuming you need ACID guarantees and sub-100ms latency, here's why this approach breaks..."
-
-**Error: Lifecycle artifact not found**
-- **Detection**: A lifecycle is marked as active, but expected artifacts (plan.md, spec.md) don't exist
-- **Recovery**:
-  1. Fall back gracefully to conversation context: "I didn't find a plan in the lifecycle directory. I'll work from what you've described in conversation instead."
-  2. Proceed with conversation-based argument
-  3. If conversation context is also insufficient, return to input validation error handling
+| Error | Detection | Recovery |
+|-------|-----------|----------|
+| No direction | No clear direction in lifecycle artifacts or conversation context | Ask: "What direction should I argue against? Share a plan or describe the approach." |
+| Vague direction | Direction lacks concrete technical choices (e.g., "improve performance") | Identify the gap and ask for specifics: "You mentioned 'better caching' — which layer? In-process? Redis? CDN?" |
+| Insufficient context | Direction is specified but constraints, scale, or rationale are unknown | Ask targeted follow-up questions; if unanswered, argue from first principles and note assumptions. |
 
 ## What This Isn't
 
