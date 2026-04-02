@@ -56,7 +56,7 @@
   {
     "id": 4,
     "title": "Prep hooks and apiKeyHelper for sharing",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -70,13 +70,13 @@
     "blocked_by": [],
     "parent": "003",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/prep-hooks-and-apikey-for-sharing/spec.md",
     "discovery_source": "research/shareable-install/research.md",
     "plan": null,
     "uuid": null,
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "prep-hooks-and-apikey-for-sharing",
+    "session_id": "6193cc90-c1b2-488e-b395-eefddd1ae74e",
+    "lifecycle_phase": "implement",
     "schema_version": null,
     "repo": null
   },
@@ -112,7 +112,7 @@
   {
     "id": 5,
     "title": "Non-destructive CLAUDE.md strategy",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -130,9 +130,9 @@
     "discovery_source": "research/shareable-install/research.md",
     "plan": null,
     "uuid": null,
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "non-destructive-claude-md-strategy",
+    "session_id": "03401538-712d-4e53-9fac-275f3b4b0e43",
+    "lifecycle_phase": "specify",
     "schema_version": null,
     "repo": null
   },
