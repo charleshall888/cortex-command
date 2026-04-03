@@ -595,6 +595,70 @@ def render_completed_features(data: ReportData) -> str:
     return "\n".join(lines)
 
 
+def render_pending_drift(data: ReportData) -> str:
+    """Render a Requirements Drift Flags section for non-completed features.
+
+    Scans ``lifecycle/*/review.md`` for features that are NOT in the
+    merged set (already rendered in the completed section) and NOT in a
+    re-implementing state (stale review.md from a prior cycle).  For the
+    remaining features, reads the Requirements Drift section and collects
+    those with ``state == "detected"``.
+
+    Returns an empty string when there are no pending drift flags, so the
+    section is omitted entirely from the report.
+    """
+    # 1. Merged features — already rendered in the completed section
+    merged: set[str] = set()
+    if data.state is not None:
+        for name, fs in data.state.features.items():
+            if fs.status == "merged":
+                merged.add(name)
+
+    # 2. Re-implementing features — review.md is stale from a prior cycle
+    reimplementing: set[str] = set()
+    for review_path in sorted(Path("lifecycle").glob("*/review.md")):
+        feature = review_path.parent.name
+        events_path = Path(f"lifecycle/{feature}/events.log")
+        if not events_path.exists():
+            continue
+        events = read_events(events_path)
+        # Find most recent phase_transition event
+        phase_transitions = [
+            e for e in events if e.get("event") == "phase_transition"
+        ]
+        if phase_transitions and phase_transitions[-1].get("to") == "implement":
+            reimplementing.add(feature)
+
+    # 3. Scan lifecycle/*/review.md, skip merged and re-implementing
+    drift_features: list[tuple[str, dict]] = []
+    for review_path in sorted(Path("lifecycle").glob("*/review.md")):
+        feature = review_path.parent.name
+        if feature in merged or feature in reimplementing:
+            continue
+        drift = _read_requirements_drift(feature)
+        if drift is not None and drift.get("state") == "detected":
+            drift_features.append((feature, drift))
+
+    # 4. No detected drift — omit the section entirely
+    if not drift_features:
+        return ""
+
+    # 5. Render the section
+    lines: list[str] = ["## Requirements Drift Flags", ""]
+    for feature, drift in drift_features:
+        lines.append(f"### {feature}")
+        lines.append("")
+        findings = drift.get("findings", [])
+        if findings:
+            for finding in findings:
+                lines.append(f"- {finding}")
+        else:
+            lines.append("- (drift detected but no findings listed)")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def _next_backlog_id(backlog_dir: Path | str) -> int:
     """Return the next available backlog item ID.
 
@@ -1230,6 +1294,7 @@ def generate_report(data: ReportData) -> str:
         "",
         render_executive_summary(data),
         render_completed_features(data),
+        render_pending_drift(data),
         render_deferred_questions(data),
         render_failed_features(data),
         render_new_backlog_items(data),
