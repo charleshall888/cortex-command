@@ -30,7 +30,7 @@ Skills are slash commands you invoke from Claude Code. Hooks wire them into the 
                         │                  └────────┬─────────────────────┘
           ┌─────────────▼────────────┐    ┌─────────▼────────────────────┐
           │  /lifecycle              │    │  /overnight                  │
-          │  one feature at a time   │    │  selects status:refined items │
+          │  one feature at a time   │    │  selects status:refined items│
           │  human-in-the-loop       │    │  runs features in parallel   │
           └──────────────────────────┘    └───────────────┬──────────────┘
                                                           │
