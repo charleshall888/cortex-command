@@ -777,6 +777,15 @@ def render_failed_features(data: ReportData) -> str:
             feat = evt.get("feature", "")
             retry_counts[feat] = retry_counts.get(feat, 0) + 1
 
+    # Collect merge conflict details from events
+    conflict_info: dict[str, dict] = {}
+    for evt in data.events:
+        if evt.get("event") == "merge_conflict_classified":
+            feat = evt.get("feature", "")
+            details = evt.get("details", {})
+            if feat:
+                conflict_info[feat] = details
+
     for name, fs in sorted(failed.items()):
         error = fs.error or "unknown error"
         lines.append(f"### {name}: {error}")
@@ -784,6 +793,14 @@ def render_failed_features(data: ReportData) -> str:
         cb_status = "fired" if name in cb_features else "not triggered"
         lines.append(f"- Retry attempts: {retries}")
         lines.append(f"- Circuit breaker: {cb_status}")
+        conflict = conflict_info.get(name)
+        if conflict is not None:
+            conflict_summary = conflict.get("conflict_summary", "")
+            lines.append(f"- **Conflict summary**: {conflict_summary}")
+            conflicted_files = conflict.get("conflicted_files", [])
+            if conflicted_files:
+                files_str = ", ".join(f"`{f}`" for f in conflicted_files)
+                lines.append(f"- **Conflicted files**: {files_str}")
         lines.append(f"- Learnings: `lifecycle/{name}/learnings/progress.txt`")
         recovery_entry = _read_recovery_log_last_entry(name)
         if recovery_entry:
