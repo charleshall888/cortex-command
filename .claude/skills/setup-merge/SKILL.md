@@ -85,4 +85,60 @@ Display one row per settings category. For each category, show the count of entr
 
 If ALL symlinks are status `new` or `update` AND all settings categories show "already installed", print "All cortex-command components already installed." and stop.
 
-<!-- Steps 4-6 (symlink resolution, settings interactive flow, merge invocation) will be defined in Tasks 7-8 -->
+## Step 4: Symlink Resolution
+
+Process all symlinks from the detect JSON before moving on to settings categories.
+
+### Silent installs (new and update)
+
+For every symlink entry where `status` is `new` or `update`, silently run:
+
+```
+ln {ln_flag} {source} {target}
+```
+
+using the `ln_flag`, `source`, and `target` values from the detect JSON entry. Do not prompt for these -- just execute them. Keep a count of how many were installed for the final summary.
+
+### Conflict resolution (interactive)
+
+Iterate the symlinks array from the detect JSON. For each entry where `status` is one of `conflict-broken`, `conflict-wrong-target`, or `conflict-file`, present the appropriate prompt. Process conflicts in the order they appear in the detect output.
+
+#### conflict-broken
+
+Display:
+
+> Broken symlink at `{target}` (points to nothing). Replace with cortex-command symlink to `{source}`? [Y/n]
+
+On Y: run `ln {ln_flag} {source} {target}`
+
+On N: skip. Count as skipped for the summary.
+
+#### conflict-wrong-target
+
+First, read the current symlink target by running: `readlink {target}`
+
+Then display:
+
+> Symlink at `{target}` currently points to `{current_target}`. Repoint to `{source}`? [Y/n]
+
+where `{current_target}` is the output of the `readlink` command.
+
+On Y: run `ln {ln_flag} {source} {target}`
+
+On N: skip. Count as skipped for the summary.
+
+#### conflict-file
+
+First, attempt to show a diff by running: `diff {target} {source}`
+
+If `diff` is not available or fails, fall back to displaying the file size and inode info by running: `ls -li {target} {source}`
+
+Then display:
+
+> **Warning**: This file will be replaced by a symlink. This is destructive -- the original file will be lost. Replace `{target}` with symlink to `{source}`? [Y/n]
+
+On Y: run `ln {ln_flag} {source} {target}`
+
+On N: skip. Count as skipped for the summary.
+
+<!-- Steps 5-6 (settings interactive flow, merge invocation) will be defined in Task 8 -->
