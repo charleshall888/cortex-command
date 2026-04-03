@@ -301,6 +301,7 @@ allowed-tools: Read, Grep, Glob
 | Using `context: forked` instead of `context: fork` | The correct value is `fork` |
 | Missing `argument-hint` on skills that accept arguments | Add `argument-hint: <signature>` to frontmatter so users get autocomplete hints |
 | Adding `disable-model-invocation: true` to callee skills | This blocks the Skill tool entirely — do not add to skills called programmatically by other skills (commit, pr, retro, etc.) |
+| Relative sub-file path (`references/foo.md`) or repo-relative path (`skills/X/references/foo.md`) | Use `${CLAUDE_SKILL_DIR}/references/foo.md` in SKILL.md body; use `~/.claude/skills/{skill}/references/foo.md` in reference files. Paths resolve against the project CWD, not the skill directory. `${CLAUDE_SKILL_DIR}` is only substituted in SKILL.md body text (not in frontmatter hooks, not in reference files loaded via Read). Cross-skill pattern: `${CLAUDE_SKILL_DIR}/../other-skill/references/foo.md` (personal skills only). Fallback: `!cat ${CLAUDE_SKILL_DIR}/references/foo.md` injects content at load time. |
 
 ## Skill Description Audit Checklist
 
