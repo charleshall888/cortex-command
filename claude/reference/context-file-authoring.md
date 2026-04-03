@@ -76,6 +76,14 @@ When trimming or restructuring AGENTS.md, CLAUDE.md, reference files, or skills:
 4. **For non-Python languages (Go, Java, React)**: The paper only tested Python — be conservative about removing code examples and pattern explanations. Subtle gotchas agents get wrong should stay even if they're "generic" knowledge
 5. **Don't confuse human docs with agent docs**: READMEs, onboarding guides, and setup instructions are for humans — the paper's token optimization findings don't apply to them
 
+## Skill Sub-File Paths
+
+**Rule**: Use `${CLAUDE_SKILL_DIR}/references/foo.md` in SKILL.md; `~/.claude/skills/{skill}/references/foo.md` in reference files. Not relative paths, not repo-relative paths.
+
+**Reason**: Claude Code resolves bare paths against the project CWD — not the skill directory.
+
+See `claude/reference/claude-skills.md` Common Mistakes for cross-skill pattern and `!cat` injection alternative.
+
 ## Red Flags — STOP if you're about to:
 
 - Add a "Project Overview" or "Architecture" section
