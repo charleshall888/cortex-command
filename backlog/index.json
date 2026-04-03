@@ -56,7 +56,7 @@
   {
     "id": 10,
     "title": "Fix skill sub-file path bug across all skills",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -70,13 +70,13 @@
     "blocked_by": [],
     "parent": "009",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/fix-skill-sub-file-path-bug-across-all-skills/spec.md",
     "discovery_source": "research/requirements-audit/research.md",
     "plan": null,
     "uuid": "a3b93933-ae9c-4445-978a-e9478b101e77",
     "lifecycle_slug": "fix-skill-sub-file-path-bug-across-all-skills",
     "session_id": "4320582a-7a1b-4bcb-9180-251b7932be90",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -138,36 +138,9 @@
     "repo": null
   },
   {
-    "id": 15,
-    "title": "Surface conflict details inline in morning report",
-    "status": "backlog",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "merge-conflicts",
-      "morning-report"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "014",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/overnight-merge-conflict-prevention/research.md",
-    "plan": null,
-    "uuid": "c4d5e6f7-a8b9-0123-cdef-456789012345",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 16,
     "title": "Add recovery guidance to morning report for conflicted features",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -186,9 +159,9 @@
     "discovery_source": "research/overnight-merge-conflict-prevention/research.md",
     "plan": null,
     "uuid": "d5e6f7a8-b9c0-1234-def0-567890123456",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "add-recovery-guidance-to-morning-report-for-conflicted-features",
+    "session_id": "dea5ffcd-2eb5-4a1d-b9ec-351a16963c0d",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -294,7 +267,6 @@
     "updated": "2026-04-03",
     "blocks": [],
     "blocked_by": [
-      "015",
       "016"
     ],
     "parent": "014",
