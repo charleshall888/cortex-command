@@ -81,11 +81,11 @@ For area-level requirements, also read `requirements/project.md` if it exists â€
 
 ## Step 4: Structured Interview
 
-Read and follow [references/gather.md](references/gather.md) for the interview protocol.
+Read and follow [references/gather.md](${CLAUDE_SKILL_DIR}/references/gather.md) for the interview protocol.
 
 ## Step 5: Write Requirements Artifact
 
-After the interview, compile answers into the requirements document following the artifact format in [references/gather.md](references/gather.md).
+After the interview, compile answers into the requirements document following the artifact format in [references/gather.md](${CLAUDE_SKILL_DIR}/references/gather.md).
 
 ## Step 6: User Approval
 

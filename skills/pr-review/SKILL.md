@@ -40,7 +40,7 @@ for follow-up questions.
 
 ## Protocol
 
-Before doing anything else, read `references/protocol.md` in full. It defines every stage
+Before doing anything else, read `${CLAUDE_SKILL_DIR}/references/protocol.md` in full. It defines every stage
 of the pipeline: exact commands, verbatim prompt templates for each subagent, and failure
 handling for every error scenario. Do not proceed without reading it.
 
@@ -48,5 +48,5 @@ handling for every error scenario. Do not proceed without reading it.
 
 - Do not post the review as a GitHub comment unless the user explicitly requests it
 - Keep all prior agent outputs in context so the user can ask follow-up questions
-- If a stage fails, follow the failure handling rules in `references/protocol.md` exactly
+- If a stage fails, follow the failure handling rules in `${CLAUDE_SKILL_DIR}/references/protocol.md` exactly
 - No conversational text during execution — only tool calls until the final summary

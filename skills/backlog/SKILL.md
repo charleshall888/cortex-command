@@ -27,7 +27,7 @@ Subcommand: $ARGUMENTS (first word = subcommand, remainder = subcommand args; em
 
 ## Frontmatter Schema
 
-Read `references/schema.md` when creating or validating items — it contains the field table, enum values, and item template.
+Read `${CLAUDE_SKILL_DIR}/references/schema.md` when creating or validating items — it contains the field table, enum values, and item template.
 
 ## Filename Convention
 

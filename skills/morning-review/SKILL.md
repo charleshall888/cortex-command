@@ -12,7 +12,7 @@ preconditions:
 
 # Morning Review
 
-Interactive walkthrough of the morning report produced by an overnight session. Guides the user through the Executive Summary, completed features (batched with overnight metadata), deferred questions, and failed features in order. Advances completed-feature lifecycles to Complete and auto-closes backlog tickets at the end. See `references/walkthrough.md` for the section-by-section protocol.
+Interactive walkthrough of the morning report produced by an overnight session. Guides the user through the Executive Summary, completed features (batched with overnight metadata), deferred questions, and failed features in order. Advances completed-feature lifecycles to Complete and auto-closes backlog tickets at the end. See `${CLAUDE_SKILL_DIR}/references/walkthrough.md` for the section-by-section protocol.
 
 ## Invocation
 
@@ -74,7 +74,7 @@ Read the morning report located in Step 1. Extract and display the Executive Sum
 
 ### Step 3: Walk Sections in Order
 
-Work through the report sections in sequence. Delegate the per-section interaction protocol to `references/walkthrough.md`:
+Work through the report sections in sequence. Delegate the per-section interaction protocol to `${CLAUDE_SKILL_DIR}/references/walkthrough.md`:
 
 1. **Completed Features** — display all features at once (grouped by round, enriched with overnight metadata), ask a single batch verification question
 2. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `lifecycle/{feature}/events.log`
@@ -122,7 +122,7 @@ No additional user input is needed before committing — the review is authorita
 
 ### Step 6: PR Merge
 
-After the commit, locate the PR that the runner created for this session's integration branch, display it to the user, and offer to merge it to main. See `references/walkthrough.md` Section 6 for the full protocol.
+After the commit, locate the PR that the runner created for this session's integration branch, display it to the user, and offer to merge it to main. See `${CLAUDE_SKILL_DIR}/references/walkthrough.md` Section 6 for the full protocol.
 
 ## Constraints
 
