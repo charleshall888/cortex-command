@@ -1,6 +1,6 @@
 # Requirements: cortex-command
 
-> Last gathered: 2026-04-01
+> Last gathered: 2026-04-01 (updated 2026-04-03)
 
 ## Overview
 
@@ -8,62 +8,17 @@ Agentic workflow toolkit for AI-assisted software development. Defines the globa
 
 ## Philosophy of Work
 
-### The Day/Night Split
+**Day/night split**: Daytime is close, iterative collaboration — define goals, research, spec. Overnight is full handoff — Claude plans and executes without intervention. Morning is strategic review — not debugging sessions.
 
-Work is organized around two distinct modes of collaboration:
+**Handoff readiness**: A feature isn't ready for overnight until the spec has no open questions, success criteria are verifiable by an agent with zero prior context, and all lifecycle artifacts are fully self-contained. The spec is the entire communication channel.
 
-**Daytime** is close, iterative collaboration. The human guides direction — refining requirements, researching problems, speccing features. Claude follows the human's lead, proposes options, and surfaces gaps. This is where goals are defined and understood. Neither party should rush toward implementation before the goal is clear.
+**Failure handling**: Surface all failures in the morning report. Keep working on other tasks. Stop only if the failure blocks all remaining work in the session.
 
-**Overnight** is full handoff. Once a spec is solid, Claude takes over for technical planning and execution without human intervention. The human steps back completely. The goal is to wake up to finished work.
+**Daytime work quality**: Research before asking. Don't fill unknowns with assumptions — jumping to solutions before understanding the problem produces wasted work.
 
-**Morning** is review and steering. The human reviews what was built, answers any deferred questions, and decides what goes next. This is not debugging sessions — it's strategic review.
+**Complexity**: Must earn its place by solving a real problem that exists now. When in doubt, the simpler solution is correct.
 
-The long-term direction is fully autonomous: describe a goal, Claude builds it. Trust is earned incrementally as the system proves reliable.
-
-### Handoff Readiness
-
-A feature isn't ready for overnight execution until:
-
-- The spec has no open questions
-- Success criteria are explicit and verifiable by an agent that has never seen the conversation
-- All lifecycle artifacts are fully self-contained — assume zero shared context between the human and the overnight agent
-
-The spec is the entire communication channel. If the agent can't determine what "done" looks like from the written artifact alone, the spec isn't ready.
-
-### Failure Handling
-
-Overnight failures should not stop the session. When a task fails:
-
-- Keep going on other tasks and features
-- Surface every failure clearly in the morning report — no silent skips
-- Mark failed features and tasks appropriately so morning review is efficient
-- Only stop if the failure blocks all remaining work in the session
-
-Failures are data. They feed back into future specs and plans. They are not reasons to make the system more conservative — they are reasons to spec better.
-
-### Daytime Work Quality
-
-Claude should not fill unknowns with assumptions. When something is unclear:
-
-1. Research it first
-2. Ask only if research doesn't resolve it
-
-Jumping to detailed solutions before the problem is understood produces wasted work. The right order is: understand the goal → identify unknowns → resolve them → then specify.
-
-### Complexity
-
-Complexity must earn its place by solving a real problem that exists now. Anticipated complexity, built for hypothetical future needs, will be cut. When in doubt, the simpler solution is correct.
-
-### Quality Bar
-
-The bar for merging overnight work is pragmatic: tests pass and the feature works as specced. This is productivity infrastructure — ROI matters. The system exists to make shipping faster, not to be a project in itself.
-
-## Core Feature Areas
-
-1. **Skills & workflow engine**: Lifecycle state machine, pipeline orchestrator, discovery system, dev routing, backlog management. Defines how Claude plans, researches, specifies, implements, reviews, and completes features — with increasing autonomy over time.
-2. **Remote access**: Prompt Claude from Android via Tailscale/mosh with tmux persistence. Enables monitoring and steering autonomous work from anywhere. (Shared concern with machine-config, which owns the underlying dotfiles and terminal setup.)
-3. **Observability**: Statusline dashboard, cross-platform notifications (macOS, Android, Windows). Know when Claude needs attention or finishes work.
-4. **Multi-agent support**: Claude Code is primary. Cursor, Gemini, Copilot get shared instructions via Agents.md but are rarely used. Parity is nice-to-have, not a requirement. Claude Code's own parallel agent spawning (Agent tool, worktree isolation, team mode) is operational and in production.
+**Quality bar**: Tests pass and the feature works as specced. ROI matters — the system exists to make shipping faster, not to be a project in itself.
 
 ## Architectural Constraints
 
@@ -71,7 +26,7 @@ The bar for merging overnight work is pragmatic: tests pass and the feature work
 
 ## Quality Attributes
 
-- **Graceful partial failure**: Individual tasks in an autonomous plan may fail. The system should retry, potentially hand off to a fresh agent with clean context, and fail that task gracefully if unresolvable — while completing the rest. Full plan failure is not acceptable; partial task failure is.
+- **Graceful partial failure**: Individual tasks in an autonomous plan may fail. The system should retry, potentially hand off to a fresh agent with clean context, and fail that task gracefully if unresolvable — while completing the rest.
 - **Maintainability through simplicity**: Complexity is managed by iteratively trimming skills and workflows. The system should remain navigable by Claude even as it grows.
 - **Iterative improvement**: The architecture must tolerate exploratory development. Not everything is planned upfront — some design will be discovered through use.
 
@@ -80,10 +35,12 @@ The bar for merging overnight work is pragmatic: tests pass and the feature work
 ### In Scope
 
 - AI workflow orchestration (skills, lifecycle, pipeline, discovery, backlog)
-- Overnight execution framework and session management
+- Overnight execution framework, session management, and morning reporting
+- Dashboard (~1800 LOC FastAPI): real-time web monitoring of overnight sessions
+- Conflict resolution pipeline (~2500 LOC): classifies conflicts, dispatches repair agents, retries merges
 - Remote access integration (Tailscale, mosh, tmux, Cloudflare Tunnel)
-- Observability (statusline, notifications, metrics)
-- Multi-agent instructions and hooks
+- Observability (statusline, notifications, metrics, cost tracking)
+- Multi-agent orchestration: parallel dispatch, worktree isolation, Haiku/Sonnet/Opus model selection matrix
 - Global agent configuration (settings, hooks, reference docs)
 
 ### Out of Scope
@@ -91,7 +48,6 @@ The bar for merging overnight work is pragmatic: tests pass and the feature work
 - Dotfiles and machine configuration (terminals, shells, prompts, fonts, git) — those belong in machine-config
 - Application code or libraries — those belong in their own repos
 - Published packages or reusable modules for others
-- Multi-agent feature parity — Claude Code is primary, others get best-effort
 - Setup automation for new machines (owned by machine-config)
 
 ### Deferred
@@ -99,8 +55,9 @@ The bar for merging overnight work is pragmatic: tests pass and the feature work
 - Migration from file-based state if/when complexity demands it
 - Cross-repo work in a single overnight session
 
-## Open Questions
+## Conditional Loading
 
-- How will the autonomous overnight workflow handle cross-repo work (e.g., Claude working across multiple projects in one plan)?
-- At what complexity threshold should file-based state migrate to something more structured?
-- How should skills and workflows be versioned or rolled back if an iteration makes things worse?
+Working on statusline, dashboard, or notifications → requirements/observability.md
+Working on pipeline, overnight runner, conflict resolution, or deferral → requirements/pipeline.md
+Working on remote access, tmux, mosh, or Tailscale → requirements/remote-access.md
+Working on agent spawning, parallel dispatch, worktrees, or model selection → requirements/multi-agent.md

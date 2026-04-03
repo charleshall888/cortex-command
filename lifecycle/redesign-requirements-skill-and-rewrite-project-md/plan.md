@@ -13,7 +13,7 @@ Three sequential content edits across two files. gather.md gets updated format t
 - **Complexity**: simple
 - **Context**: gather.md has two format template sections — one for `requirements/project.md` (project-level) and one for `requirements/{area}.md` (area-level). The project.md template currently lists these sections: Overview, Philosophy of Work, Core Feature Areas, Architectural Constraints, Quality Attributes, Project Boundaries, Open Questions. Replace with: `## Overview`, `## Philosophy of Work`, `## Architectural Constraints`, `## Quality Attributes`, `## Project Boundaries`, `## Conditional Loading`. The `## Conditional Loading` section uses a trigger table format: `trigger phrase → path/to/file.md`, one line per area. The area sub-doc template currently has: Area Overview, Functional Requirements, Non-Functional Requirements, Constraints and Dependencies, Acceptance Criteria — with no parent backlink. Add a prose parent backlink as the first element: `**Parent doc**: requirements/project.md`. Do not add any "When to Load" section or `when_to_load` frontmatter — loading guidance belongs in the parent's Conditional Loading table. The `## Conditional Loading` format is documented in `claude/reference/context-file-authoring.md` under "CLAUDE.md Template".
 - **Verification**: Open gather.md and confirm: (1) project.md template contains exactly the six sections listed above, does not contain "Core Feature Areas" or "Open Questions"; (2) area template contains "Parent doc:" as its first content element; (3) no "When to Load" or "when_to_load" appears anywhere in either template.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Add Re-Gather Triggers section to gather.md
 - **Files**: `skills/requirements/references/gather.md`
@@ -22,9 +22,9 @@ Three sequential content edits across two files. gather.md gets updated format t
 - **Complexity**: simple
 - **Context**: This is a new section added to gather.md after the existing interview protocol sections. The section should list these specific trigger conditions (at minimum): (a) lifecycle review identifies drift between implementation and documented requirements, (b) a retro surfaces an assumption that requirements didn't cover, (c) a core architectural decision changes (e.g., file-based state migrates to a database), (d) scope changes significantly after a discovery research epic. For each trigger, note what signals the condition. Also include guidance on incremental updates: run `/requirements` with the `area` argument to update a specific sub-doc without regenerating the full project.md; update only the sections whose claims have changed; cross-check the Conditional Loading table in project.md if area scope has changed.
 - **Verification**: grep for "## Re-Gather Triggers" in gather.md returns a match. The section contains at least the four trigger conditions listed above.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
-### Task 3: Rewrite requirements/project.md
+### Task 3: Rewrite requirements/project.md [x]
 - **Files**: `requirements/project.md`
 - **What**: Full rewrite of project.md applying the hybrid index format, fixing all four inaccuracies, and adding the Conditional Loading trigger table. The resulting document must be ≤80 lines with `## Overview` as the first `##` heading.
 - **Depends on**: [1]
@@ -40,7 +40,7 @@ Three sequential content edits across two files. gather.md gets updated format t
   **Philosophy of Work**: retain all existing sections (Day/Night Split, Handoff Readiness, Failure Handling, Daytime Work Quality, Complexity, Quality Bar) — these are accurate cross-cutting behavioral constraints agents need.
   **## Overview heading**: must remain the first `##` heading. `critical-review/SKILL.md` extracts this section by name for reviewer prompts.
 - **Verification**: (1) `grep "^## Overview" requirements/project.md` returns a match as the first `##` heading; (2) `wc -l requirements/project.md` returns ≤80; (3) `grep "Cursor\|Gemini\|remote/SETUP" requirements/project.md` returns no match; (4) `grep "## Conditional Loading" requirements/project.md` returns a match; (5) `grep "## Core Feature Areas\|## Open Questions" requirements/project.md` returns no match; (6) all four area trigger entries are present.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Verification Strategy
 
