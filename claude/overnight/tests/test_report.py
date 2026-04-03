@@ -227,3 +227,58 @@ def test_non_conflicted_paused_feature_renders_no_conflict_lines() -> None:
     assert "**Conflicted files**" not in output, (
         f"Expected no conflicted files for non-conflict pause, got:\n{output[:400]}"
     )
+    assert "**Recovery branch**" not in output, (
+        f"Expected no recovery branch for non-conflict pause, got:\n{output[:400]}"
+    )
+
+
+def test_render_failed_features_shows_recovery_branch() -> None:
+    """Conflicted feature with conflicted_files renders the recovery branch line."""
+    features = {
+        "feature-name": OvernightFeatureStatus(
+            status="paused", error="merge conflict in src/foo.py"
+        ),
+    }
+    data = _pytest_make_data(features)
+    data.events = [
+        {
+            "event": "merge_conflict_classified",
+            "round": 1,
+            "feature": "feature-name",
+            "details": {
+                "conflicted_files": ["src/foo.py"],
+                "conflict_summary": "Both branches modified the same function",
+            },
+        }
+    ]
+    output = render_failed_features(data)
+
+    assert "- **Recovery branch**: `pipeline/feature-name`" in output, (
+        f"Expected recovery branch line in output, got:\n{output[:400]}"
+    )
+
+
+def test_render_failed_features_recovery_branch_shown_when_no_conflicted_files() -> None:
+    """Conflicted feature with empty conflicted_files still renders the recovery branch line."""
+    features = {
+        "feature-name": OvernightFeatureStatus(
+            status="paused", error="merge conflict"
+        ),
+    }
+    data = _pytest_make_data(features)
+    data.events = [
+        {
+            "event": "merge_conflict_classified",
+            "round": 1,
+            "feature": "feature-name",
+            "details": {
+                "conflicted_files": [],
+                "conflict_summary": "classification failed",
+            },
+        }
+    ]
+    output = render_failed_features(data)
+
+    assert "- **Recovery branch**: `pipeline/feature-name`" in output, (
+        f"Expected recovery branch line even with empty conflicted_files, got:\n{output[:400]}"
+    )
