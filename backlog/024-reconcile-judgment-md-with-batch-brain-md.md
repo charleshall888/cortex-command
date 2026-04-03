@@ -4,7 +4,7 @@ uuid: b7c8d9e0-f1a2-3456-bcde-678901234567
 id: "024"
 title: "Reconcile judgment.md with batch-brain.md"
 type: chore
-status: refined
+status: complete
 priority: high
 parent: "018"
 blocked-by: []
@@ -12,7 +12,7 @@ tags: [overnight, prompts, quality, triage]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/harness-design-long-running-apps/research.md
-session_id: 5793f885-88cd-466b-8444-57697bcd4863
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: reconcile-judgment-md-with-batch-brain-md
 complexity: complex

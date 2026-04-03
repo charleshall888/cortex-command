@@ -111,7 +111,7 @@
     "uuid": "c2d3e4f5-a6b7-8901-cdef-012345678901",
     "lifecycle_slug": "tighten-spec-template-and-plan-verification-requirements",
     "session_id": "12996531-b9cc-4dc1-a8a5-7cb77fc9e6a1",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -142,7 +142,7 @@
     "uuid": "f5a6b7c8-d9e0-1234-fab0-345678901234",
     "lifecycle_slug": "fix-non-atomic-state-writes-in-overnight-runner",
     "session_id": "bb7fa290-a795-47d6-a847-07ab973b1e85",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -172,38 +172,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 24,
-    "title": "Reconcile judgment.md with batch-brain.md",
-    "status": "refined",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "prompts",
-      "quality",
-      "triage"
-    ],
-    "areas": [
-      "overnight-runner",
-      "tests"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "018",
-    "research": null,
-    "spec": "lifecycle/reconcile-judgment-md-with-batch-brain-md/spec.md",
-    "discovery_source": "research/harness-design-long-running-apps/research.md",
-    "plan": null,
-    "uuid": "b7c8d9e0-f1a2-3456-bcde-678901234567",
-    "lifecycle_slug": "reconcile-judgment-md-with-batch-brain-md",
-    "session_id": "5793f885-88cd-466b-8444-57697bcd4863",
-    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -348,6 +316,35 @@
     "discovery_source": "research/harness-design-long-running-apps/research.md",
     "plan": null,
     "uuid": "e4f5a6b7-c8d9-0123-efab-234567890123",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 26,
+    "title": "Create remote/SETUP.md for remote access setup",
+    "status": "backlog",
+    "priority": "low",
+    "type": "chore",
+    "tags": [
+      "docs",
+      "remote-access"
+    ],
+    "areas": [
+      "docs"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-03",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "60388986-7df9-4e38-b274-b4736d4a906b",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,

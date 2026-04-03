@@ -8,18 +8,17 @@
 | 19 | Tighten lifecycle spec template and plan.md verification requirements | refined | high | chore | — | 018 | ✓ |
 | 22 | Fix non-atomic state writes in overnight runner | refined | high | chore | — | 018 | ✓ |
 | 23 | Replace spec dump with JIT loading in implement prompt | backlog | high | chore | — | 018 | — |
-| 24 | Reconcile judgment.md with batch-brain.md | refined | high | chore | — | 018 | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 13 | Wire requirements drift check into lifecycle review | refined | medium | chore | — | 009 | ✓ |
 | 20 | Add harness component pruning checklist | in_progress | medium | feature | — | 018 | — |
 | 25 | Prevent agents from writing their own completion evidence | backlog | medium | chore | — | 018 | — |
 | 21 | Define evaluator rubric for software features (spike) | backlog | low | spike | 019 | 018 | — |
+| 26 | Create remote/SETUP.md for remote access setup | backlog | low | chore | — | — | — |
 
 ## Refined
 
 - **19** Tighten lifecycle spec template and plan.md verification requirements
 - **22** Fix non-atomic state writes in overnight runner
-- **24** Reconcile judgment.md with batch-brain.md
 - **13** Wire requirements drift check into lifecycle review
 
 ## Backlog
@@ -30,6 +29,7 @@
 - **23** Replace spec dump with JIT loading in implement prompt
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 - **25** Prevent agents from writing their own completion evidence
+- **26** Create remote/SETUP.md for remote access setup
 
 ## In-Progress
 
