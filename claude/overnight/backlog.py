@@ -923,8 +923,19 @@ def group_into_batches(
         best_size = float("inf")
 
         item_tags = set(item.tags)
+        item_areas = set(item.areas)
 
         for idx, (batch_items, batch_tags) in enumerate(batches):
+            # Area-separation pre-filter: if the incoming item and any item
+            # already in this batch share at least one area, skip the batch
+            # to force area-overlapping items into separate rounds.
+            if item_areas:
+                batch_areas: set[str] = set()
+                for bi in batch_items:
+                    batch_areas.update(bi.areas)
+                if batch_areas & item_areas:
+                    continue
+
             overlap = len(item_tags & batch_tags)
             if overlap > best_overlap or (
                 overlap == best_overlap
