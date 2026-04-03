@@ -2,8 +2,8 @@
 schema_version: "1"
 uuid: e6f7a8b9-c0d1-2345-ef01-678901234567
 id: 017
-title: "Add `areas:` field to backlog items for conflict-aware round scheduling"
-type: feature
+title: "Investigate and solve conflict-aware round scheduling in overnight runner"
+type: spike
 status: backlog
 priority: medium
 parent: 014
@@ -14,29 +14,33 @@ updated: 2026-04-03
 discovery_source: research/overnight-merge-conflict-prevention/research.md
 ---
 
-# Add `areas:` field to backlog items for conflict-aware round scheduling
+# Investigate and solve conflict-aware round scheduling in overnight runner
 
-## Context from discovery
+## Problem
 
-The overnight runner's round assignment (`group_into_batches()` in `claude/overnight/backlog.py:869`) groups features by tag similarity — items with high tag overlap land in the same batch. For a fresh project where 10 tickets all share tags and modify the same new files, this actively clusters the most conflict-prone features into the same round.
+The overnight runner assigns features to rounds using tag similarity — features with overlapping tags land in the same batch and execute in parallel. This works well for grouping related work, but actively clusters the most conflict-prone features together. For a fresh project where all tickets come from a single discovery, they share tags and modify the same new files — the algorithm produces the worst possible scheduling for conflict avoidance.
 
-No file-level or area-level overlap detection exists. The `_detect_risks()` function in `plan.py` flags shared epics and overlapping tags post-hoc as warnings, but does not enforce separation.
+No overlap detection of any kind exists at scheduling time. The `_detect_risks()` function in `plan.py` flags shared parent epics and overlapping tags as post-hoc warnings, but doesn't enforce separation and is structurally checking the wrong thing (tag overlap *across* batches, while the grouper creates tag overlap *within* batches).
 
-## Findings
+## Research Context
 
-The root cause is that tag-grouping and conflict-prevention are opposite objectives for this population of work items. To address this:
+Prior discovery: `research/overnight-merge-conflict-prevention/research.md`
 
-- Add an `areas:` field to the backlog item YAML frontmatter (e.g., `areas: [auth, users]`)
-- `group_into_batches()` receives only `BacklogItem` instances (function signature: `list[tuple[BacklogItem, float]]`) — it never reads lifecycle spec or plan files. The field must live on the backlog item itself, not only in the lifecycle spec.
-- The scheduler needs a new constraint layer: area overlap must be treated as a **separation constraint** (force different rounds), not a grouping attractor. This directly conflicts with the existing tag-grouping behavior for items that share both tags and areas. The algorithm must define priority: area-overlap separation takes precedence over tag-similarity grouping.
-- `/refine` and `/lifecycle` plan phase should be responsible for populating `areas:` when writing the spec or plan.
+Key findings from that research:
+- `group_into_batches()` (`claude/overnight/backlog.py:869`) receives only `BacklogItem` metadata — no lifecycle spec or plan files are ever read at scheduling time
+- Tag-grouping and conflict-prevention are opposite objectives for same-discovery feature sets
+- File-level conflict prediction before implementation is an unsolved problem; no established standard exists at the work-item scheduling level
+- One candidate approach: declaring areas of impact on the backlog item itself, used as a separation constraint at scheduling time — but this has a fundamental limitation on net-new projects where file structure doesn't yet exist
+- Serialization approaches (run potentially-conflicting features sequentially rather than in parallel) would prevent conflicts but reduce throughput
 
-## Limitation
+## What to investigate
 
-Area declarations are hardest to write precisely on net-new projects (no established module boundaries) — exactly where conflicts are most likely. On established projects with clear structure, declarations are easier but conflicts are already less common. This approach delivers most value incrementally over time. For net-new project sessions, tickets 015 and 016 (visibility and recovery) are the primary mitigation.
+The goal is to find the best practical approach to reducing merge conflicts from parallel overnight execution. The right solution is not obvious — this needs deep investigation before any implementation decisions are made.
 
-## Notes
-
-- Blocked by 015 and 016: those should ship first as the primary near-term mitigation
-- The `_detect_risks()` function in `plan.py` may need updating to check area overlap in addition to tag overlap once this field exists
-- Open question: should `/refine` populate `areas:` from spec content, or should `/lifecycle` plan phase populate it from the plan (later, with more concrete file information)?
+Questions to answer:
+- What signals are actually available at scheduling time that could predict conflict risk?
+- Is declaration-based (human/AI annotated) or automatic inference more reliable in practice?
+- What are the throughput trade-offs of serialization vs. separation vs. detection-and-retry?
+- How does the existing tag-grouping objective interact with any conflict-separation objective? Can they coexist, or does one need to replace the other?
+- What would `_detect_risks()` need to become to be useful rather than contradictory?
+- Are there simpler interventions — e.g., defaulting to serial execution for features that share a parent epic — that capture most of the benefit with less complexity?

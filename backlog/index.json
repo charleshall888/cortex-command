@@ -280,10 +280,10 @@
   },
   {
     "id": 17,
-    "title": "Add `areas:` field to backlog items for conflict-aware round scheduling",
+    "title": "Investigate and solve conflict-aware round scheduling in overnight runner",
     "status": "backlog",
     "priority": "medium",
-    "type": "feature",
+    "type": "spike",
     "tags": [
       "overnight",
       "merge-conflicts",

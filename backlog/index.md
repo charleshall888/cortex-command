@@ -12,7 +12,7 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 12 | Gather area requirements docs for four missing areas | backlog | medium | chore | 011 | 009 | — |
 | 13 | Wire requirements drift check into lifecycle review | backlog | medium | chore | 011 | 009 | — |
-| 17 | Add `areas:` field to backlog items for conflict-aware round scheduling | backlog | medium | feature | 015, 016 | 014 | — |
+| 17 | Investigate and solve conflict-aware round scheduling in overnight runner | backlog | medium | spike | 015, 016 | 014 | — |
 
 ## Refined
 
