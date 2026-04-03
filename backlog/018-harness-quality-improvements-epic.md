@@ -28,3 +28,5 @@ The full research is at `research/harness-design-long-running-apps/research.md`.
 - 019 — Tighten lifecycle spec template and plan.md verification requirements
 - 020 — Add harness component pruning checklist
 - 021 — Define evaluator rubric for software features (spike)
+- 022 — Fix non-atomic state writes in overnight runner
+- 023 — Replace spec dump with JIT loading in implement prompt

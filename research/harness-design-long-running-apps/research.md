@@ -96,7 +96,7 @@ The cortex-command flow is: human writes spec → orchestrator checks existence 
 ## Decision Records
 
 ### DR-1: Should an evaluator agent be added to the overnight runner?
-- **Context:** Feature workers self-evaluate their work via the plan verification strategy. The article found this causes self-evaluation bias in UI work. Whether this manifests in software delivery is unverified — no overnight runner failure has been identified where a worker incorrectly self-certified completion while tests passed.
+- **Context:** Feature workers self-evaluate their work via the plan verification strategy. The article found this causes self-evaluation bias in UI work. Deep investigation confirmed this does occur in cortex-command (see "Declaring victory prematurely" in Deep Investigation Findings above) — but the primary instance (CHANGES_REQUESTED after all tasks reported success) was a spec compliance detail not captured in tests, not a failure that a separate evaluator agent would have caught before merge. The fix is upstream: encode compliance checks as runnable tests in the verification strategy (ticket 019).
 - **Prerequisite (blocking):** The evaluator rubric must be defined before implementation is estimated. Without a rubric, the evaluator cannot function and cannot be prototyped. The rubric is the invention; the agent is just the mechanism. Until the rubric can be specified, this recommendation should not advance to implementation.
 - **Options considered:**
   - No evaluator (current): binary merge gate (tests pass/fail); brain agent for triage only
@@ -125,6 +125,56 @@ The cortex-command flow is: human writes spec → orchestrator checks existence 
 - **Cost note:** Writing the ritual is S effort. Acting on its output is not. Removing a component from an 800-line shell orchestrator with coupled JSON state flow between runner.sh, batch_runner.py, brain.py, state.py, and orchestrator-round.md is M-L effort and carries non-trivial recovery cost if the pruning judgment is wrong. The ritual's risk is not "None" — it is bounded by how often it produces actionable output and how reliable the pruning rubric is.
 - **Recommendation:** Add a pruning checklist to the morning-review skill or as a lightweight standalone. The checklist should surface candidates for human review, not auto-create backlog tickets. Human judgment is required before a pruning candidate advances. The checklist question "Given current Claude baseline, would we build this component the same way today?" requires a rubric for what "load-bearing" means — this should be part of the checklist definition, not deferred.
 - **Trade-offs:** Low effort to write; requires the pruning rubric to be defined as part of writing it, not after.
+
+## Deep Investigation Findings
+
+A second-pass team investigation produced findings beyond the initial article comparison. These are grounded in actual codebase analysis and failure history, not article analogy.
+
+### "Declaring victory prematurely" is confirmed real
+
+Three concrete instances found in retros and lifecycle artifacts:
+
+1. **Self-sealing precondition check** (retro 2026-04-02-1629): A plan task used `ls ~/.claude/rules/` as its own completion evidence and wrote a `req1_verified` log entry itself. A self-written log entry is a false positive by construction. The fix required human intervention to catch and required rewriting the plan to prohibit the agent from writing that event.
+
+2. **CHANGES_REQUESTED after all 9 tasks reported success** (fix-skill-sub-file-path lifecycle): Every task completed with `"status": "success"`. Review found a spec compliance violation (display text format in a markdown link) that tests did not encode. The agent had self-evaluated its work as done; a human reviewer found the gap.
+
+3. **No-commit guard firing** (overnight batch-3-results.json): `fix-game-over-screen` reached `"status": "completed"` from the pipeline's perspective with zero new commits. The no-commit guard converted it to FEATURE_PAUSED. Without the guard, an empty feature would have merged silently.
+
+**This validates ticket 019.** Tighter verification requirements that encode compliance checks as runnable tests (rather than prose the worker self-checks) directly address the pattern observed in instance 2.
+
+### Non-atomic state writes are a real crash risk
+
+Two write sites bypass the atomic `save_state()` pattern and use raw `write_text`:
+
+- `orchestrator-round.md` Steps 0d, 3c, 4a: instructs the agent to call `Path(...).write_text(json.dumps(state, indent=2))` directly. A crash mid-write leaves a truncated `overnight-state.json`; every downstream component raises `json.JSONDecodeError` with no recovery path.
+- `batch_runner.py` lines ~1956–1963: `batch-{N}-results.json` written non-atomically. A crash causes `map_results.py` to mark all features as failed, including successfully-merged ones.
+
+Secondary: `escalations.jsonl` partial writes cause silent permanent loss of escalations; `recovery_attempts` increments are lost on mid-batch kills.
+
+Tracked in backlog ticket 022.
+
+### Context bloat: `_read_spec_excerpt` does not excerpt
+
+The function reads the entire spec file unconditionally. Every task worker in a batch receives the full spec before any conversation begins — 9,600–48,000 tokens per round depending on batch size and spec length. The brain agent compounds this: `batch-brain.md` explicitly labels three inputs as "complete, untruncated," making the brain one of the highest-context agents in the system for a single three-way decision.
+
+The fix (JIT spec loading via path reference) is independently valuable from the evaluator question. Tracked in ticket 023.
+
+### `judgment.md` and `batch-brain.md` are the same prompt, badly
+
+Both cover the post-failure triage decision (skip/defer/pause). `batch-brain.md` provides full context, downstream-impact signals, and careful calibration. `judgment.md` covers the same decision with a fraction of the signal and no stated relationship to the heavier prompt. Neither file acknowledges the other exists. A model invoked through `judgment.md` makes the same consequential call with materially less information.
+
+### Prompt altitude: over-specified control flow, under-specified decisions
+
+The dominant pattern across overnight prompts and skill files: control flow is over-specified (Python pseudocode embedded in prompts, hardcoded thresholds, explicit sort keys), while decision quality is under-specified (vague PAUSE/DEFER calibration, no guidance for two-sided merge conflicts). The most dangerous instance: `lifecycle.config.md` is documented as an override system but has no schema — overrides are interpreted by model inference, not a contract.
+
+### Load-bearing vs. compensation audit
+
+Three components identified as top candidates for the pruning checklist (ticket 020) to evaluate:
+- **Fresh-process-per-retry** (`retry.py`): pure model-limitation compensation; worth empirical testing
+- **Brain agent** (`brain.py`): worker exit reports already carry structured triage signals; brain adds a full API call per failure
+- **Thin orchestrator + batch plan file** (runner.sh + orchestrator-round.md): process boundary is load-bearing; file-based hand-off may not be
+
+Four components confirmed load-bearing (do not prune): circuit breaker, watchdog, throttle manager, idempotency tokens.
 
 ## Open Questions
 
