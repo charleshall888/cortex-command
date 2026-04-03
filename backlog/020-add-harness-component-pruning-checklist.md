@@ -4,7 +4,7 @@ uuid: d3e4f5a6-b7c8-9012-defa-123456789012
 id: "020"
 title: "Add harness component pruning checklist"
 type: feature
-status: backlog
+status: in_progress
 priority: medium
 parent: "018"
 blocked-by: []
@@ -12,6 +12,11 @@ tags: [overnight, harness, maintenance, quality]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/harness-design-long-running-apps/research.md
+session_id: 3285e4f8-66fe-4126-9860-d11c3786d0e4
+lifecycle_phase: research
+lifecycle_slug: add-harness-component-pruning-checklist
+complexity: simple
+criticality: medium
 ---
 
 # Add harness component pruning checklist
