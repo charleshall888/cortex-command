@@ -4,7 +4,7 @@ uuid: 1e372778-b612-4033-b008-c95ec08a12ab
 id: 012
 title: "Gather area requirements docs for four missing areas"
 type: chore
-status: backlog
+status: complete
 priority: medium
 parent: 009
 blocked-by: []
@@ -12,6 +12,12 @@ tags: [requirements, process]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/requirements-audit/research.md
+session_id: null
+lifecycle_phase: complete
+lifecycle_slug: gather-area-requirements-docs-for-four-missing-areas
+complexity: complex
+criticality: medium
+spec: lifecycle/gather-area-requirements-docs-for-four-missing-areas/spec.md
 ---
 
 # Gather area requirements docs for four missing areas

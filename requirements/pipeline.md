@@ -100,7 +100,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - **State file locking**: State file reads are not protected by locks by design. Writers use atomic `os.replace()`; readers may observe a state mid-mutation, but forward-only transitions make this safe. This is a permanent architectural constraint.
 - **Repair attempt cap**: The repair attempt limit (max 2 attempts for test failures; single Sonnet → Opus escalation for merge conflicts) is a fixed architectural constraint. It is cost-bounded and circuit-breaker backed; unlimited retries would be cost-prohibitive for autonomous overnight sessions.
 - **Integration branch persistence**: Integration branches (`overnight/{session_id}`) are not auto-deleted after session completion. They persist for manual PR creation and review.
-- **Dashboard access**: The web dashboard is unauthenticated and localhost-only by design (see `requirements/observability.md`).
+- **Dashboard access**: The web dashboard is unauthenticated and accessible to any host on the local network (binds to `0.0.0.0`) by design (see `requirements/observability.md`).
 
 ## Dependencies
 

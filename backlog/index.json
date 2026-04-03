@@ -87,7 +87,7 @@
   {
     "id": 19,
     "title": "Tighten lifecycle spec template and plan.md verification requirements",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -96,27 +96,29 @@
       "quality",
       "lifecycle"
     ],
-    "areas": [],
+    "areas": [
+      "lifecycle"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
     "blocked_by": [],
     "parent": "018",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/tighten-spec-template-and-plan-verification-requirements/spec.md",
     "discovery_source": "research/harness-design-long-running-apps/research.md",
     "plan": null,
     "uuid": "c2d3e4f5-a6b7-8901-cdef-012345678901",
     "lifecycle_slug": "tighten-spec-template-and-plan-verification-requirements",
     "session_id": "12996531-b9cc-4dc1-a8a5-7cb77fc9e6a1",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 22,
     "title": "Fix non-atomic state writes in overnight runner",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -125,20 +127,22 @@
       "state",
       "bugs"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
     "blocked_by": [],
     "parent": "018",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/fix-non-atomic-state-writes-in-overnight-runner/spec.md",
     "discovery_source": "research/harness-design-long-running-apps/research.md",
     "plan": null,
     "uuid": "f5a6b7c8-d9e0-1234-fab0-345678901234",
     "lifecycle_slug": "fix-non-atomic-state-writes-in-overnight-runner",
     "session_id": "bb7fa290-a795-47d6-a847-07ab973b1e85",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -174,7 +178,7 @@
   {
     "id": 24,
     "title": "Reconcile judgment.md with batch-brain.md",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -183,20 +187,23 @@
       "quality",
       "triage"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner",
+      "tests"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
     "blocked_by": [],
     "parent": "018",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/reconcile-judgment-md-with-batch-brain-md/spec.md",
     "discovery_source": "research/harness-design-long-running-apps/research.md",
     "plan": null,
     "uuid": "b7c8d9e0-f1a2-3456-bcde-678901234567",
     "lifecycle_slug": "reconcile-judgment-md-with-batch-brain-md",
     "session_id": "5793f885-88cd-466b-8444-57697bcd4863",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -228,33 +235,6 @@
     "session_id": null,
     "lifecycle_phase": null,
     "schema_version": null,
-    "repo": null
-  },
-  {
-    "id": 12,
-    "title": "Gather area requirements docs for four missing areas",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "requirements",
-      "process"
-    ],
-    "areas": [],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "009",
-    "research": null,
-    "spec": "lifecycle/gather-area-requirements-docs-for-four-missing-areas/spec.md",
-    "discovery_source": "research/requirements-audit/research.md",
-    "plan": null,
-    "uuid": "1e372778-b612-4033-b008-c95ec08a12ab",
-    "lifecycle_slug": "gather-area-requirements-docs-for-four-missing-areas",
-    "session_id": "2396956e-ac6a-4835-9066-baf623d6cfc7",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
     "repo": null
   },
   {
@@ -310,7 +290,7 @@
     "uuid": "d3e4f5a6-b7c8-9012-defa-123456789012",
     "lifecycle_slug": "add-harness-component-pruning-checklist",
     "session_id": "3285e4f8-66fe-4126-9860-d11c3786d0e4",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
