@@ -119,7 +119,11 @@ Do NOT modify any source files. This is a read-only review.
 
 ### 4. Process Verdict
 
-After the reviewer sub-task completes and `lifecycle/{feature}/review.md` is confirmed on disk, update `lifecycle/{feature}/index.md`:
+After the reviewer sub-task completes and `lifecycle/{feature}/review.md` is confirmed on disk:
+
+Before proceeding, validate that review.md contains a `## Requirements Drift` section. If the section is absent (e.g., the reviewer ran out of context), re-dispatch the reviewer with this targeted instruction: "review.md is missing the ## Requirements Drift section. Read the existing review.md, then append the ## Requirements Drift section in the correct format. Do not modify any other section." If the section remains absent after one re-dispatch, escalate to the user.
+
+Update `lifecycle/{feature}/index.md`:
 - If `"review"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"review"` to the artifacts inline array
 - Add wikilink: `- Review: [[{lifecycle-slug}/review|review.md]]`
@@ -139,8 +143,10 @@ The cycle counter prevents infinite rework loops. After cycle 2, always escalate
 After reading the verdict from the review artifact, append a `review_verdict` event to `lifecycle/{feature}/events.log`:
 
 ```
-{"ts": "<ISO 8601>", "event": "review_verdict", "feature": "<name>", "verdict": "APPROVED|CHANGES_REQUESTED|REJECTED", "cycle": <N>}
+{"ts": "<ISO 8601>", "event": "review_verdict", "feature": "<name>", "verdict": "APPROVED|CHANGES_REQUESTED|REJECTED", "cycle": <N>, "requirements_drift": "none|detected"}
 ```
+
+Where `requirements_drift` is read from the `"requirements_drift"` field in the verdict JSON block.
 
 ### 5. Transition
 
@@ -165,3 +171,5 @@ After reading the verdict from the review artifact, append a `review_verdict` ev
 | "I'll just fix the issues myself instead of flagging them" | The reviewer does not modify files. Flagging issues preserves separation of concerns and creates a paper trail. |
 | "Code quality issues are minor, I'll let them pass" | Minor issues compound. Flag them as PARTIAL with notes — the implementer can address them quickly. |
 | "I'll use `overall: PASS` for the verdict" | The verdict JSON must use exactly `"verdict": "APPROVED"` (or `CHANGES_REQUESTED` / `REJECTED`). State detection parses this exact field name and these exact values. |
+| "Requirements drift is hard to assess without clear traceability" | Assess against the requirements docs loaded in §1. If uncertain, log `detected` with a note — false positives generate a morning report entry; false negatives silently hide drift. |
+| "Requirements drift should influence whether I approve the feature" | Drift is an observation only. The verdict reflects spec compliance and code quality. A feature with detected drift may still be APPROVED. |
