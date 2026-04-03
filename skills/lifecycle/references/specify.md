@@ -115,8 +115,8 @@ Omit this callout entirely when §2a passed cleanly or no loop-back occurred.
 [One paragraph: what this solves, who benefits, why it matters]
 
 ## Requirements
-1. [Requirement]: [Acceptance criteria]
-2. [Requirement]: [Acceptance criteria]
+1. [Requirement]: [Acceptance criteria — binary-checkable: (a) command + expected output + pass/fail (e.g., "`just test` exits 0, pass if exit code = 0"), (b) observable state naming specific file and pattern (e.g., "`grep -c 'keyword' path/file` = 1"), or (c) "Interactive/session-dependent: [rationale]" if a command check is not possible]
+2. [Requirement]: [Acceptance criteria — same format as above]
 ...
 
 ## Non-Requirements
