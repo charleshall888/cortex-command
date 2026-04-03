@@ -7,7 +7,7 @@ type: spike
 status: backlog
 priority: low
 parent: "018"
-blocked-by: ["019"]
+blocked-by: []
 tags: [overnight, evaluator, quality, spike]
 created: 2026-04-03
 updated: 2026-04-03

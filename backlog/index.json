@@ -85,37 +85,6 @@
     "repo": null
   },
   {
-    "id": 19,
-    "title": "Tighten lifecycle spec template and plan.md verification requirements",
-    "status": "refined",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "specs",
-      "quality",
-      "lifecycle"
-    ],
-    "areas": [
-      "lifecycle"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "018",
-    "research": null,
-    "spec": "lifecycle/tighten-spec-template-and-plan-verification-requirements/spec.md",
-    "discovery_source": "research/harness-design-long-running-apps/research.md",
-    "plan": null,
-    "uuid": "c2d3e4f5-a6b7-8901-cdef-012345678901",
-    "lifecycle_slug": "tighten-spec-template-and-plan-verification-requirements",
-    "session_id": "12996531-b9cc-4dc1-a8a5-7cb77fc9e6a1",
-    "lifecycle_phase": "complete",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 23,
     "title": "Replace spec dump with JIT loading in implement prompt",
     "status": "backlog",
@@ -276,9 +245,7 @@
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
-    "blocked_by": [
-      "019"
-    ],
+    "blocked_by": [],
     "parent": "018",
     "research": null,
     "spec": null,
