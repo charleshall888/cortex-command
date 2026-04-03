@@ -7,3 +7,9 @@
 {"ts": "2026-04-03T15:22:39Z", "event": "phase_transition", "feature": "reconcile-judgment-md-with-batch-brain-md", "from": "specify", "to": "plan"}
 {"ts": "2026-04-03T15:22:39Z", "event": "orchestrator_review", "feature": "reconcile-judgment-md-with-batch-brain-md", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-03T15:22:39Z", "event": "phase_transition", "feature": "reconcile-judgment-md-with-batch-brain-md", "from": "plan", "to": "implement"}
+{"ts": "2026-04-03T15:22:39Z", "event": "batch_dispatch", "feature": "reconcile-judgment-md-with-batch-brain-md", "batch": 0, "tasks": [1, 2]}
+{"ts": "2026-04-03T15:22:39Z", "event": "task_complete", "feature": "reconcile-judgment-md-with-batch-brain-md", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-03T15:22:39Z", "event": "task_complete", "feature": "reconcile-judgment-md-with-batch-brain-md", "task": 2, "batch": 0, "status": "success"}
+{"ts": "2026-04-03T15:22:39Z", "event": "batch_dispatch", "feature": "reconcile-judgment-md-with-batch-brain-md", "batch": 1, "tasks": [3]}
+{"ts": "2026-04-03T15:22:39Z", "event": "task_complete", "feature": "reconcile-judgment-md-with-batch-brain-md", "task": 3, "batch": 1, "status": "success"}
+{"ts": "2026-04-03T15:22:39Z", "event": "phase_transition", "feature": "reconcile-judgment-md-with-batch-brain-md", "tier": "complex", "from": "implement", "to": "review"}
