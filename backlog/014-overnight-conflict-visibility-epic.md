@@ -4,7 +4,7 @@ uuid: b3e1a2c4-d5f6-7890-abcd-ef1234567890
 id: 014
 title: "Overnight conflict prevention and visibility improvements"
 type: epic
-status: backlog
+status: complete
 priority: high
 tags: [overnight, merge-conflicts, morning-report, scheduling]
 created: 2026-04-03

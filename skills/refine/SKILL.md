@@ -39,15 +39,21 @@ These two slugs are often different. Do not conflate them.
 Check for existing artifacts to determine the resume point:
 
 ```
-if lifecycle/{lifecycle-slug}/spec.md exists:
-    offer to re-run or exit (spec is already complete)
+if lifecycle/{lifecycle-slug}/spec.md exists AND lifecycle/{lifecycle-slug}/research.md exists:
+    offer to re-run or exit (both artifacts present — spec is complete)
+elif lifecycle/{lifecycle-slug}/spec.md exists AND lifecycle/{lifecycle-slug}/research.md does NOT exist:
+    warn: "spec.md exists but research.md is missing — overnight requires both. Running research phase."
+    resume = research phase (skip Clarify — intent was already established when spec was written)
 elif lifecycle/{lifecycle-slug}/research.md exists:
     resume = spec phase (research already done — sufficiency check applies at phase entry)
+    NOTE: Only lifecycle/{lifecycle-slug}/research.md satisfies this check. Any file loaded from
+    a backlog item's discovery_source or research frontmatter field is background context only —
+    it does NOT satisfy this check regardless of path.
 else:
     resume = clarify phase (start from beginning)
 ```
 
-If `spec.md` exists, present the offer clearly: re-running will overwrite the existing spec and reset `status` to `in_progress` until the new spec is approved.
+If both artifacts exist and the user chooses to re-run, re-running will overwrite the existing spec and reset `status` to `in_progress` until the new spec is approved.
 
 ## Step 3: Clarify Phase
 
@@ -73,6 +79,8 @@ If `update-item` fails, surface the error and wait for the user to resolve befor
 ### Sufficiency Check
 
 If `lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
+
+**Path guard**: Only `lifecycle/{lifecycle-slug}/research.md` satisfies this check. Any file loaded from a backlog item's `discovery_source` or `research` frontmatter field is background context — it does NOT count as the lifecycle research artifact and does NOT satisfy this check, regardless of path. If `lifecycle/{lifecycle-slug}/research.md` does not exist, always run Research Execution below.
 
 - **Sufficient**: Announce that existing research is sufficient, state which sufficiency signals were checked, and skip to Spec (Step 5).
 - **Insufficient**: State which signal(s) triggered insufficiency, then proceed to run new research.

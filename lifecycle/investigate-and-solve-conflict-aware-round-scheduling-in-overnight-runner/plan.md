@@ -18,7 +18,7 @@ Implement the `areas:` field as a hard area-separation constraint in the overnig
   - `load_from_index()` constructs `BacklogItem` at `backlog.py:~308–332` from a JSON dict. Add: `areas=entry.get("areas") or []`.
   - `backlog/generate_index.py` outputs a dict per backlog item at `~line 125` where `"tags": _parse_inline_str_list(fm.get("tags", "[]"))` already exists. Add an adjacent line: `"areas": _parse_inline_str_list(fm.get("areas", "[]"))`. The `_parse_inline_str_list` function is imported/defined in that file already (it handles inline YAML arrays like `[foo, bar]`).
 - **Verification**: Run `python3 -c "from claude.overnight.backlog import BacklogItem; b = BacklogItem(); assert b.areas == []"` to confirm the default. Run `python3 backlog/generate_index.py` and check that `backlog/index.json` entries include an `"areas"` key (value `[]` for items without the field). Run existing tests to confirm no regressions: `python3 -m pytest tests/test_select_overnight_batch.py -x`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -34,7 +34,7 @@ Implement the `areas:` field as a hard area-separation constraint in the overnig
   - The existing tie-break logic (`best_overlap`, `best_batch_size`) is unchanged — the pre-filter only gates which batches are candidates. If all existing batches are skipped, the algorithm falls through to opening a new batch (the `best_idx == -1` path at `~line 936`).
   - Do not modify Phase 1 (quick wins extraction at `~lines 900–912`) or Phase 3 (`_split_oversized_batch()` at `~lines 942–949`).
 - **Verification**: Manually verify inline (Task 4 adds the full test suite — this step must be self-contained): construct two `BacklogItem` instances with `tags=["auth"]` and `areas=["overnight-runner"]`; call `group_into_batches([(item1, 1.0), (item2, 1.0)], batch_size_cap=5)` and confirm they land in different batches (different list indices in the result). Also verify negative case: same two items with `areas=[]` land in the same batch. Run `python3 -m pytest tests/test_select_overnight_batch.py -x` to confirm existing tests still pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -52,7 +52,7 @@ Implement the `areas:` field as a hard area-separation constraint in the overnig
   - When `item.areas` is empty on both items, the intersection is empty — no risk appended. This is the correct behavior for items without areas.
   - `render_session_plan()` at `plan.py:231` calls `_detect_risks(selection.batches)` and renders its return value under `## Risks`. No change to the call site is needed — the function signature and return type are unchanged.
 - **Verification**: Manually verify inline (pass `list[Batch]` directly — not `SelectionResult`): construct two `Batch` objects each containing one `BacklogItem` with `areas=[]`; call `_detect_risks([batch1, batch2])` and confirm an empty list is returned (no false positives). Then construct one `Batch` containing two `BacklogItem` instances both with `areas=["overnight-runner"]`; call `_detect_risks([batch])` and confirm a non-empty list is returned (area collision detected). Run `python3 -m pytest tests/test_select_overnight_batch.py -x` to confirm existing tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -73,7 +73,7 @@ Implement the `areas:` field as a hard area-separation constraint in the overnig
   - Test 6 (detect_risks: area overlap within batch): construct a `Batch` containing 2 items with `areas=["overnight-runner"]` → `_detect_risks()` returns a non-empty list.
   - For Tests 5–6: construct `Batch` objects directly (import `Batch` from `claude.overnight.backlog`). `_detect_risks()` takes a `list[Batch]`.
 - **Verification**: `python3 -m pytest tests/test_select_overnight_batch.py -x -v` — all 6 new tests pass. Run full test suite `python3 -m pytest tests/ -x` to confirm no regressions.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -90,7 +90,7 @@ Implement the `areas:` field as a hard area-separation constraint in the overnig
   - Step 6 completion summary currently lists: `complexity`, `criticality`, `status: refined`, `spec`. Add `areas` to this list.
   - Do not change any other steps or the skill's overall structure.
 - **Verification**: Read the updated SKILL.md and confirm Step 5 shows `areas` in the write-back and Step 6 lists `areas` in the completion summary. No automated test needed.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -111,7 +111,7 @@ Implement the `areas:` field as a hard area-separation constraint in the overnig
     - **Degradation profile**: The constraint has zero effect until `areas` is populated. Protection scales with how many items in a session have the field. Pre-existing items without `areas` receive no protection.
     - **Canonical area names**: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`
 - **Verification**: Read the updated schema file and confirm the `areas` field appears with all required documentation points.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
