@@ -30,7 +30,7 @@ You are reviewing the {feature} implementation against its specification.
 {contents of lifecycle/{feature}/spec.md, or a summary with a path to read it}
 
 ## Project Requirements
-{if requirements/project.md exists: contents or summary with path; if area requirements exist for this feature: same. If none exist, omit this section.}
+{list of requirements docs loaded in §1, each on its own line with path and summary; if only project.md loaded, note 'only project.md loaded — no area docs matched tags'}
 
 ## Changed Files
 {list of files modified during implementation}
@@ -43,8 +43,6 @@ For each requirement in the specification, verify the implementation matches:
 - Check that acceptance criteria are met
 - Rate each requirement: PASS / FAIL / PARTIAL
 
-If project or area requirements were provided above, add a **Requirements Compliance** check: verify the implementation does not violate any project-level constraints or quality attributes (e.g., complexity added without clear justification, failure handling that silently skips without surfacing, artifacts that are not self-contained).
-
 If any requirement is FAIL, skip Stage 2 and write the verdict.
 
 ### Stage 2: Code Quality
@@ -53,6 +51,12 @@ Only run this stage if all requirements PASS or PARTIAL (no FAIL):
 - Error handling: appropriate for the context?
 - Test coverage: verification steps from the plan executed?
 - Pattern consistency: follows existing project conventions?
+
+### Requirements Drift
+Using the project requirements provided above, compare the implementation against stated requirements.
+Note: requirements drift does NOT influence the verdict. This is an observation only.
+- If the implementation matches all stated requirements and introduces no new behavior not reflected in them: state = none
+- If the implementation introduces behavior not captured in the requirements docs, or changes behavior in a way requirements don't reflect: state = detected; list each drifted item as a bullet; name the requirements file that needs updating
 
 ### Write Review
 Write your review to lifecycle/{feature}/review.md using the format below.
@@ -64,6 +68,14 @@ CRITICAL: The Verdict section MUST contain a JSON object with exactly these fiel
 
 Do NOT use alternative field names like "overall", "result", or "status".
 Do NOT use alternative values like "PASS", "FAIL", or "APPROVED_WITH_NOTES".
+
+Your review.md MUST include a ## Requirements Drift section using exactly this format:
+## Requirements Drift
+**State**: none | detected
+**Findings**:
+- (one bullet per drifted item, or "None" if state is none)
+**Update needed**: (path to requirements file that needs updating, or "None")
+The requirements_drift value in the verdict JSON MUST match: "none" when State is none, "detected" when State is detected.
 
 Do NOT modify any source files. This is a read-only review.
 ```
