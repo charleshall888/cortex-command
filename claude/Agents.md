@@ -24,3 +24,9 @@ These instructions apply to all projects on this machine.
 | Deciding whether to dispatch agents in parallel | `~/.claude/reference/parallel-agents.md` |
 
 When creating or editing SKILL.md files, invoke `/skill-creator`. For editing existing skills, focus on Step 4 (authoring rules + pattern check) -- not the full new-skill workflow.
+
+## Lifecycle Required for Framework Changes
+
+Any change to `skills/`, `hooks/`, `claude/`, or `lifecycle/references/` **must go through `/lifecycle`** before implementation — no direct edits. These files are shared infrastructure; skipping lifecycle loses the research and rationale that justifies the change.
+
+**Only skip if the user explicitly says so.** "This seems small" or "the spec is clear from conversation" are not valid reasons to skip — that reasoning lives only in the current session.
