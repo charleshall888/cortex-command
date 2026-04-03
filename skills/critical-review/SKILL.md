@@ -180,7 +180,7 @@ For each objection, assign one of three dispositions:
 
 **Apply** — the objection identifies a concrete problem and the correct fix is clear and unambiguous. Examples: internal inconsistency, broken logic, missing information the agent can supply, acceptance criteria that are untestable or tautological, ordering dependencies not stated. Fix these without asking.
 
-**Dismiss** — the objection is already addressed in the artifact, misreads the stated constraints, or would expand scope in a direction clearly outside the requirements. State the dismissal reason briefly.
+**Dismiss** — the objection is already addressed in the artifact, misreads the stated constraints, or would expand scope in a direction clearly outside the requirements. State the dismissal reason briefly. **Anchor check**: if your dismissal reason cannot be pointed to in the artifact text and lives only in your memory of the conversation, treat it as Ask instead — that is anchoring, not a legitimate dismissal.
 
 **Ask** — the fix is not for the orchestrator to decide unilaterally. This covers: (a) genuine preference or scope decisions — which of two valid approaches to take, whether to include or exclude something, a priority call between competing values; (b) genuine orchestrator uncertainty about which fix is correct; (c) consequential tie-breaks — two equally reasonable implementations where the choice affects scope, design direction, or is hard to reverse. Hold these for the end.
 
