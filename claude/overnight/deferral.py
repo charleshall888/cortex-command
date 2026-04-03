@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from claude.common import durable_fsync
+
 
 # Default directory for deferred question files
 DEFAULT_DEFERRED_DIR = Path("deferred")
@@ -380,6 +382,8 @@ def write_escalation(
 
     with open(escalations_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
+        f.flush()
+        durable_fsync(f.fileno())
 
 
 def _next_escalation_n(
