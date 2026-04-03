@@ -123,6 +123,7 @@ def collect_items() -> tuple[list[dict], set[int], set[int]]:
             "priority": fm.get("priority", "medium").strip(),
             "type": fm.get("type", "feature").strip(),
             "tags": _parse_inline_str_list(fm.get("tags", "[]")),
+            "areas": _parse_inline_str_list(fm.get("areas", "[]")),
             "created": fm.get("created", "").strip(),
             "updated": fm.get("updated", "").strip(),
             "blocks": _parse_inline_str_list(fm.get("blocks", "[]")),

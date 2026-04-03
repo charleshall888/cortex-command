@@ -10,6 +10,7 @@
       "morning-report",
       "dx"
     ],
+    "areas": [],
     "created": "2026-04-01",
     "updated": "2026-04-01",
     "blocks": [],
@@ -37,6 +38,7 @@
       "skills",
       "process"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -65,6 +67,7 @@
       "morning-report",
       "scheduling"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -93,6 +96,7 @@
       "harness",
       "quality"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -121,6 +125,7 @@
       "quality",
       "lifecycle"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -149,6 +154,7 @@
       "state",
       "bugs"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -177,6 +183,7 @@
       "performance",
       "quality"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -204,6 +211,7 @@
       "session-naming",
       "observability"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -225,13 +233,14 @@
   {
     "id": 12,
     "title": "Gather area requirements docs for four missing areas",
-    "status": "in_progress",
+    "status": "backlog",
     "priority": "medium",
     "type": "chore",
     "tags": [
       "requirements",
       "process"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -242,16 +251,16 @@
     "discovery_source": "research/requirements-audit/research.md",
     "plan": null,
     "uuid": "1e372778-b612-4033-b008-c95ec08a12ab",
-    "lifecycle_slug": "gather-area-requirements-docs-for-four-missing-areas",
-    "session_id": "2396956e-ac6a-4835-9066-baf623d6cfc7",
-    "lifecycle_phase": "research",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 13,
     "title": "Wire requirements drift check into lifecycle review",
-    "status": "in_progress",
+    "status": "backlog",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -259,6 +268,7 @@
       "lifecycle",
       "process"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -269,9 +279,9 @@
     "discovery_source": "research/requirements-audit/research.md",
     "plan": null,
     "uuid": "39d5d66b-3ac3-4459-a07d-601417b9f613",
-    "lifecycle_slug": "wire-requirements-drift-check-into-lifecycle-review",
-    "session_id": "24838696-c5af-4571-bce1-63d0c99eed02",
-    "lifecycle_phase": "research",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },
@@ -286,6 +296,9 @@
       "merge-conflicts",
       "scheduling",
       "backlog"
+    ],
+    "areas": [
+      "overnight-runner"
     ],
     "created": "2026-04-03",
     "updated": "2026-04-03",
@@ -315,6 +328,7 @@
       "maintenance",
       "quality"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
@@ -343,6 +357,7 @@
       "quality",
       "spike"
     ],
+    "areas": [],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],

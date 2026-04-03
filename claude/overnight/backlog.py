@@ -50,6 +50,7 @@ class BacklogItem:
         priority: Priority level (critical, high, medium, low).
         type: Item type (feature, bug, chore, spike, idea, epic).
         tags: List of string tags.
+        areas: List of area labels (e.g. ["overnight", "lifecycle"]).
         created: Date string from frontmatter (e.g. "2026-02-21").
         updated: Date string from frontmatter.
         blocks: List of backlog item IDs (strings — UUIDs or stringified integers).
@@ -73,6 +74,7 @@ class BacklogItem:
     priority: str = "medium"
     type: str = "feature"
     tags: list[str] = field(default_factory=list)
+    areas: list[str] = field(default_factory=list)
     created: str = ""
     updated: str = ""
     blocks: list[str] = field(default_factory=list)
@@ -271,6 +273,7 @@ def parse_backlog_dir(
             priority=fm.get("priority", "medium"),
             type=fm.get("type", "feature"),
             tags=_parse_inline_str_list(fm.get("tags", "[]")),
+            areas=_parse_inline_str_list(fm.get("areas", "[]")),
             created=fm.get("created", ""),
             updated=fm.get("updated", ""),
             blocks=_parse_inline_id_list(fm.get("blocks", "[]")),
@@ -312,6 +315,7 @@ def load_from_index(backlog_dir: Path = DEFAULT_BACKLOG_DIR) -> list[BacklogItem
             priority=entry["priority"],
             type=entry["type"],
             tags=entry.get("tags") or [],
+            areas=entry.get("areas") or [],
             created=entry.get("created", ""),
             updated=entry.get("updated", ""),
             blocks=entry.get("blocks") or [],
