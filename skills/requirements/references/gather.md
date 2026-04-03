@@ -40,15 +40,14 @@ Start broad:
 - What problem does it solve?
 - What distinguishes it from existing solutions?
 
-### 2. Core Feature Areas
+### 2. Feature Areas
 
-Enumerate the major feature areas at a high level. For each:
+Enumerate the major feature areas. For each area, capture a brief description (1–2 sentences) and when an agent would need to load its dedicated requirements doc. This information populates the `## Conditional Loading` trigger table in the artifact — not an inline feature area list.
 
-- What does it do?
-- Why is it essential (not nice-to-have)?
-- Any known constraints?
+- What does this area cover in one sentence?
+- What work would cause an agent to need this area's requirements doc?
 
-Do NOT go deep into any single feature here — that's what area-level requirements are for. Keep to the 30,000-foot view.
+Do NOT go deep into any single feature here — that's what area-level requirements are for.
 
 ### 3. Architectural Constraints
 
@@ -133,28 +132,28 @@ For each major requirement, establish:
 - Continue until all major areas are covered and ambiguities resolved
 - Circle back to earlier topics if later answers reveal gaps
 
-## Updating Existing Requirements
+## Re-Gather Triggers
 
-Requirements are living documents. Re-run `/requirements <scope>` to update when:
+Requirements are living documents. Re-run `/requirements <scope>` when any of these occur:
 
-- Implementation experience reveals missing or incorrect requirements
-- A lifecycle review flags requirements drift
-- Scope changes after user feedback or discovery research
-- Open questions from the original gathering now have answers
+- **Lifecycle review identifies drift**: a lifecycle review surfaces a gap between what was built and what the requirements say. Run `/requirements <area>` to update the affected area doc, or `/requirements project` if the drift is project-level.
+- **Retro surfaces unmet assumption**: a session retrospective identifies a requirement that was assumed but never documented, or a documented requirement that misled implementation.
+- **Core architectural decision changes**: e.g., the state model changes, a core subsystem is replaced, or a constraint that was "may evolve" actually evolves.
+- **Scope changes after discovery research**: a discovery epic reshapes what the project is doing in a feature area — update before refining tickets from that epic.
+- **Open questions now have answers**: requirements gathered while unknowns existed should be revisited once those unknowns are resolved.
 
 When updating (not replacing):
 
-1. Read the current requirements document
-2. Run a focused interview targeting:
-   - Requirements that have changed since last gathering
-   - New requirements discovered through implementation experience
-   - Open questions that may now have answers
-   - Architectural constraints that have been validated or invalidated
-3. Rewrite the full artifact (do not patch sections — maintain coherence)
+1. Use `/requirements {area}` to update a specific area doc without regenerating project.md — preferred for targeted drift fixes.
+2. Run a focused interview targeting only what has changed: new requirements, invalidated constraints, resolved open questions.
+3. Rewrite the full artifact (do not patch sections — maintain internal coherence).
+4. After updating an area doc, check the parent's `## Conditional Loading` trigger table. If area scope changed, update the trigger phrase for that entry.
 
 ## Artifact Formats
 
 ### Project Requirements
+
+Target length: 70–80 lines. The parent doc is always-loaded context — keep it concise. Area-specific detail belongs in area sub-docs, referenced via the Conditional Loading trigger table.
 
 ```markdown
 # Requirements: {project-name}
@@ -162,18 +161,16 @@ When updating (not replacing):
 > Last gathered: {date}
 
 ## Overview
-[1-2 paragraph project description from the interview]
+[1-2 paragraph project description: what this is, who it's for, the north star]
 
-## Core Feature Areas
-1. **{Feature Area}**: {Brief description}
-2. **{Feature Area}**: {Brief description}
-...
+## {Optional: project-specific cross-cutting sections}
+[Principles, philosophy, or behavioral guidance that applies across all areas and agents need on every task — e.g., "Philosophy of Work", "Design Principles". Omit if nothing is universally cross-cutting.]
 
 ## Architectural Constraints
 - [Strategic constraints that narrow the solution space — NOT operational details already in CLAUDE.md]
 
 ## Quality Attributes
-- [Security, reliability, scalability, accessibility requirements]
+- [Reliability, maintainability, performance, accessibility requirements]
 
 ## Project Boundaries
 
@@ -186,17 +183,22 @@ When updating (not replacing):
 ### Deferred
 - [Items intentionally deferred to later phases]
 
-## Open Questions
-- [Unresolved questions that need future answers]
+## Conditional Loading
+{trigger phrase} → requirements/{area}.md
+{trigger phrase} → requirements/{area}.md
+[One line per area doc. Trigger phrases describe the work that makes the area doc relevant.]
 ```
 
 ### Area Requirements
+
+Area sub-docs do not contain "When to Load" guidance — that belongs in the parent's `## Conditional Loading` trigger table. The parent backlink is the only required navigation element.
 
 ```markdown
 # Requirements: {area-name}
 
 > Last gathered: {date}
-> Parent: [project.md](project.md)
+
+**Parent doc**: [requirements/project.md](project.md)
 
 ## Overview
 [What this area covers and how it fits into the project]
