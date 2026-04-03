@@ -1709,6 +1709,19 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                 log_path=config.overnight_events_path,
             )
             recovery_attempts_map[name] = recovery_attempts_map.get(name, 0) + 1
+            # Persist recovery_attempts immediately so a mid-batch kill
+            # doesn't lose the increment (Bug 4).  save_state() is
+            # synchronous I/O inside an async lock; this serializes
+            # concurrent feature result accumulation but is an accepted
+            # tradeoff for typical batch sizes of ~3 features.
+            try:
+                _ra_state = load_state(config.overnight_state_path)
+                _ra_fs = _ra_state.features.get(name)
+                if _ra_fs is not None:
+                    _ra_fs.recovery_attempts = recovery_attempts_map[name]
+                    save_state(_ra_state, config.overnight_state_path)
+            except Exception:
+                pass  # Don't let state-write failure block recovery
             need_recovery = True
             # Lock will be released when we exit `async with lock:`
 
