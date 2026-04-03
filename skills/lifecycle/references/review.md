@@ -95,11 +95,12 @@ Do NOT modify any source files. This is a read-only review.
 
 ...
 
-## Requirements Compliance
-<!-- Only present if project/area requirements were loaded -->
+## Requirements Drift
 
-- **{constraint}**: {assessment}
-...
+**State**: none | detected
+**Findings**:
+- (one bullet per drifted item, or "None" if state is none)
+**Update needed**: (path to requirements file that needs updating, or "None")
 
 ## Stage 2: Code Quality
 <!-- Only present if Stage 1 has no FAIL verdicts -->
@@ -112,7 +113,7 @@ Do NOT modify any source files. This is a read-only review.
 ## Verdict
 
 ```json
-{"verdict": "APPROVED", "cycle": 1, "issues": []}
+{"verdict": "APPROVED", "cycle": 1, "issues": [], "requirements_drift": "none"}
 ```
 ```
 
