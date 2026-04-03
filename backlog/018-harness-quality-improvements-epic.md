@@ -30,3 +30,5 @@ The full research is at `research/harness-design-long-running-apps/research.md`.
 - 021 — Define evaluator rubric for software features (spike)
 - 022 — Fix non-atomic state writes in overnight runner
 - 023 — Replace spec dump with JIT loading in implement prompt
+- 024 — Reconcile judgment.md with batch-brain.md
+- 025 — Prevent agents from writing their own completion evidence
