@@ -671,6 +671,52 @@ def _read_verification_strategy(feature: str) -> str:
     return ""
 
 
+def _read_requirements_drift(feature: str) -> dict | None:
+    """Read the Requirements Drift section from a feature's review.md.
+
+    Returns:
+        None           – review.md absent or section not found.
+        {"state": "malformed", "findings": []}  – section exists but no **State**: line.
+        {"state": <value>, "findings": [<bullet strings>]}  – valid section.
+    """
+    review_path = Path(f"lifecycle/{feature}/review.md")
+    if not review_path.exists():
+        return None
+
+    text = review_path.read_text(encoding="utf-8")
+    match = re.search(
+        r"^## Requirements Drift\s*\n(.*?)(?=\n## |\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if not match:
+        return None
+
+    body = match.group(1).strip()
+
+    # Extract **State**: value
+    state_match = re.search(r"\*\*State\*\*:\s*(.+)", body)
+    if not state_match:
+        return {"state": "malformed", "findings": []}
+
+    state = state_match.group(1).strip()
+
+    # Extract **Findings**: bullet lines
+    findings: list[str] = []
+    findings_match = re.search(
+        r"\*\*Findings\*\*:\s*\n(.*?)(?=\n\*\*|\Z)",
+        body,
+        re.DOTALL,
+    )
+    if findings_match:
+        for line in findings_match.group(1).strip().splitlines():
+            line = line.strip()
+            if line.startswith("- ") and line != "- None":
+                findings.append(line[2:].strip())
+
+    return {"state": state, "findings": findings}
+
+
 def _read_recovery_log_last_entry(feature: str) -> str:
     """Read recovery-log.md and return the last entry, truncated to 400 chars.
 
