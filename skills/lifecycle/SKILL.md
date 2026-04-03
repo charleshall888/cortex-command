@@ -265,10 +265,10 @@ The Research and Spec phases are handled by the /refine delegation block above. 
 
 | Phase | Reference | Artifact Produced |
 |-------|-----------|-------------------|
-| Plan | [references/plan.md](references/plan.md) | `lifecycle/{feature}/plan.md` |
-| Implement | [references/implement.md](references/implement.md) | Source code + commits |
-| Review | [references/review.md](references/review.md) | `lifecycle/{feature}/review.md` |
-| Complete | [references/complete.md](references/complete.md) | Git workflow + summary |
+| Plan | [plan.md](${CLAUDE_SKILL_DIR}/references/plan.md) | `lifecycle/{feature}/plan.md` |
+| Implement | [implement.md](${CLAUDE_SKILL_DIR}/references/implement.md) | Source code + commits |
+| Review | [review.md](${CLAUDE_SKILL_DIR}/references/review.md) | `lifecycle/{feature}/review.md` |
+| Complete | [complete.md](${CLAUDE_SKILL_DIR}/references/complete.md) | Git workflow + summary |
 
 Read **only** the reference for the current phase. Do not preload other phases.
 
