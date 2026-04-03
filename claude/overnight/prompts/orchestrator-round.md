@@ -35,6 +35,7 @@ Read `lifecycle/escalations.jsonl`. Each line is a JSON object with a `type` fie
 ```python
 import json
 from pathlib import Path
+from claude.overnight.orchestrator_io import save_state, update_feature_status, write_escalation
 
 escalations_path = Path("lifecycle/escalations.jsonl")
 entries = []
@@ -90,15 +91,14 @@ For each entry in `to_process`, wrap the entire processing in a try/except so th
 2. Append a `promoted` entry to `lifecycle/escalations.jsonl`:
    ```python
    import datetime
-   promoted = json.dumps({
+   promoted_entry = {
        "type": "promoted",
        "escalation_id": entry["escalation_id"],
        "feature": entry["feature"],
        "promoted_by": "orchestrator",
        "ts": datetime.datetime.now(datetime.timezone.utc).isoformat()
-   })
-   with open("lifecycle/escalations.jsonl", "a") as f:
-       f.write(promoted + "\n")
+   }
+   write_escalation(promoted_entry, escalations_path)
    ```
 3. Call `write_deferral()` with the original question context from the escalation entry to create a `deferred/{feature}-q{N}.md` file for morning review.
 4. Skip to the next escalation entry.
@@ -116,32 +116,35 @@ Using the content of these files, determine whether the worker's `question` can 
   1. Write the answer to `lifecycle/{feature}/learnings/orchestrator-note.md` (overwrite the file if it already exists). Use plain prose — the worker will see this in its `{learnings}` slot.
   2. Append a `resolution` entry to `lifecycle/escalations.jsonl`:
      ```python
-     resolution = json.dumps({
+     resolution_entry = {
          "type": "resolution",
          "escalation_id": entry["escalation_id"],
          "feature": entry["feature"],
          "answer": "<your answer text>",
          "resolved_by": "orchestrator",
          "ts": datetime.datetime.now(datetime.timezone.utc).isoformat()
-     })
-     with open("lifecycle/escalations.jsonl", "a") as f:
-         f.write(resolution + "\n")
+     }
+     write_escalation(resolution_entry, escalations_path)
      ```
-  3. Update `{state_path}` to set the feature's status back to `pending` so it is re-queued for execution this or a subsequent round.
+  3. Update `{state_path}` to set the feature's status back to `pending` so it is re-queued for execution this or a subsequent round:
+     ```python
+     state_path = Path("{state_path}")
+     update_feature_status(state, entry["feature"], "pending")
+     save_state(state, state_path)
+     ```
 
 - **If not resolvable** (question requires human judgment, or `spec.md` is absent):
   1. Delete `lifecycle/{feature}/learnings/orchestrator-note.md` if it exists — this prevents a stale answer from a prior resolution from polluting the next session when the feature is retried.
   2. Append a `promoted` entry to `lifecycle/escalations.jsonl`:
      ```python
-     promoted = json.dumps({
+     promoted_entry = {
          "type": "promoted",
          "escalation_id": entry["escalation_id"],
          "feature": entry["feature"],
          "promoted_by": "orchestrator",
          "ts": datetime.datetime.now(datetime.timezone.utc).isoformat()
-     })
-     with open("lifecycle/escalations.jsonl", "a") as f:
-         f.write(promoted + "\n")
+     }
+     write_escalation(promoted_entry, escalations_path)
      ```
   3. Call `write_deferral()` with the original question context to create a `deferred/{feature}-q{N}.md` file for morning review. Do **not** re-queue the feature as `pending`.
 
@@ -274,13 +277,13 @@ plan_path, excluded = generate_batch_plan(
 
 ```python
 from claude.overnight.events import FEATURE_FAILED, log_event
+from claude.overnight.orchestrator_io import save_state, update_feature_status
 
+state_path = Path("{state_path}")
 for ex in excluded:
     # Update the feature's status to "failed" with the error in overnight state
-    state["features"][ex["name"]]["status"] = "failed"
-    state["features"][ex["name"]]["error"] = ex["error"]
-    # Write updated state back to disk
-    Path("{state_path}").write_text(json.dumps(state, indent=2))
+    update_feature_status(state, ex["name"], "failed", error=ex["error"])
+    save_state(state, state_path)
     # Log the failure event
     log_event(
         FEATURE_FAILED,
