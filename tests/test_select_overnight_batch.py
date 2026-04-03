@@ -20,11 +20,14 @@ import pytest
 
 from claude.overnight.backlog import (
     BacklogItem,
+    Batch,
     _parse_inline_id_list,
     _parse_inline_str_list,
     filter_ready,
+    group_into_batches,
     select_overnight_batch,
 )
+from claude.overnight.plan import _detect_risks
 
 
 # ---------------------------------------------------------------------------
@@ -388,3 +391,123 @@ class TestGenerateIndexParseStrList:
     def test_plain_values(self):
         result = _gen_index._parse_inline_str_list("[tag1, tag2]")
         assert result == ["tag1", "tag2"]
+
+
+# ---------------------------------------------------------------------------
+# (g) Area-separation behavior in group_into_batches
+# ---------------------------------------------------------------------------
+
+class TestAreaSeparation:
+    """Verify that items sharing an area are forced into separate batches."""
+
+    def test_overlap_forced_separation(self):
+        """Two items with the same area AND same tags must land in different batches."""
+        item_a = _make_item(
+            id=1, title="Item A", areas=["overnight-runner"], tags=["auth"],
+        )
+        item_b = _make_item(
+            id=2, title="Item B", areas=["overnight-runner"], tags=["auth"],
+        )
+        scored = [(item_a, 10.0), (item_b, 9.0)]
+        batches = group_into_batches(scored)
+
+        # Each item should be in a different batch
+        batch_ids_a = [b.batch_id for b in batches if item_a in b.items]
+        batch_ids_b = [b.batch_id for b in batches if item_b in b.items]
+        assert len(batch_ids_a) == 1
+        assert len(batch_ids_b) == 1
+        assert batch_ids_a[0] != batch_ids_b[0]
+
+    def test_silent_absence_allows_same_batch(self):
+        """Item with areas and item with empty areas may share a batch (silent absence)."""
+        item_a = _make_item(
+            id=1, title="Item A", areas=["overnight-runner"], tags=["auth"],
+        )
+        item_b = _make_item(
+            id=2, title="Item B", areas=[], tags=["auth"],
+        )
+        scored = [(item_a, 10.0), (item_b, 9.0)]
+        batches = group_into_batches(scored)
+
+        # They may land in the same batch because item_b has no areas
+        batch_ids_a = [b.batch_id for b in batches if item_a in b.items]
+        batch_ids_b = [b.batch_id for b in batches if item_b in b.items]
+        assert len(batch_ids_a) == 1
+        assert len(batch_ids_b) == 1
+        assert batch_ids_a[0] == batch_ids_b[0]
+
+    def test_no_overlap_tags_preserved(self):
+        """Items with different areas but same tags may share a batch."""
+        item_a = _make_item(
+            id=1, title="Item A", areas=["overnight-runner"], tags=["auth"],
+        )
+        item_b = _make_item(
+            id=2, title="Item B", areas=["skills"], tags=["auth"],
+        )
+        scored = [(item_a, 10.0), (item_b, 9.0)]
+        batches = group_into_batches(scored)
+
+        # No area overlap, so tag grouping can place them together
+        batch_ids_a = [b.batch_id for b in batches if item_a in b.items]
+        batch_ids_b = [b.batch_id for b in batches if item_b in b.items]
+        assert len(batch_ids_a) == 1
+        assert len(batch_ids_b) == 1
+        assert batch_ids_a[0] == batch_ids_b[0]
+
+    def test_full_serialization(self):
+        """4 items all sharing the same area produce 4 batches of 1 item each."""
+        items = [
+            _make_item(id=i, title=f"Item {i}", areas=["overnight-runner"], tags=["auth"])
+            for i in range(1, 5)
+        ]
+        scored = [(item, 10.0 - i) for i, item in enumerate(items)]
+        batches = group_into_batches(scored)
+
+        # Each item must be in its own batch
+        assert len(batches) >= 4
+        for item in items:
+            containing = [b for b in batches if item in b.items]
+            assert len(containing) == 1
+            assert len(containing[0].items) == 1
+
+
+# ---------------------------------------------------------------------------
+# (h) _detect_risks replacement: area-overlap-within-batch detection
+# ---------------------------------------------------------------------------
+
+class TestDetectRisks:
+    """Verify _detect_risks checks area overlap within batches."""
+
+    def test_no_areas_no_risks(self):
+        """Batches with items having no areas produce no risks."""
+        batch_1 = Batch(
+            items=[
+                _make_item(id=1, title="A", areas=[]),
+                _make_item(id=2, title="B", areas=[]),
+            ],
+            batch_context="no areas",
+            batch_id=1,
+        )
+        batch_2 = Batch(
+            items=[
+                _make_item(id=3, title="C", areas=[]),
+            ],
+            batch_context="no areas",
+            batch_id=2,
+        )
+        risks = _detect_risks([batch_1, batch_2])
+        assert risks == []
+
+    def test_area_overlap_within_batch_detected(self):
+        """A batch containing two items with the same area triggers a risk."""
+        batch = Batch(
+            items=[
+                _make_item(id=1, title="Item X", areas=["overnight-runner"]),
+                _make_item(id=2, title="Item Y", areas=["overnight-runner"]),
+            ],
+            batch_context="area overlap",
+            batch_id=1,
+        )
+        risks = _detect_risks([batch])
+        assert len(risks) > 0
+        assert any("overnight-runner" in r for r in risks)
