@@ -231,7 +231,7 @@
   {
     "id": 13,
     "title": "Wire requirements drift check into lifecycle review",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -246,7 +246,7 @@
     "blocked_by": [],
     "parent": "009",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/wire-requirements-drift-check-into-lifecycle-review/spec.md",
     "discovery_source": "research/requirements-audit/research.md",
     "plan": null,
     "uuid": "39d5d66b-3ac3-4459-a07d-601417b9f613",

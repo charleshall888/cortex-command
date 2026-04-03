@@ -4,7 +4,7 @@ uuid: 39d5d66b-3ac3-4459-a07d-601417b9f613
 id: 013
 title: "Wire requirements drift check into lifecycle review"
 type: chore
-status: backlog
+status: refined
 priority: medium
 parent: 009
 blocked-by: []
@@ -12,6 +12,12 @@ tags: [requirements, lifecycle, process]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/requirements-audit/research.md
+session_id: 24838696-c5af-4571-bce1-63d0c99eed02
+lifecycle_phase: research
+lifecycle_slug: wire-requirements-drift-check-into-lifecycle-review
+complexity: complex
+criticality: high
+spec: lifecycle/wire-requirements-drift-check-into-lifecycle-review/spec.md
 ---
 
 # Wire requirements drift check into lifecycle review
