@@ -13,6 +13,7 @@ Functions:
     read_criticality -- Read the most recent criticality from events.log.
     compute_dependency_batches -- Topological sort of tasks into batches.
     mark_task_done_in_plan -- Check off a task in a plan.md file.
+    durable_fsync    -- fsync with F_FULLFSYNC on macOS, os.fsync elsewhere.
     atomic_write     -- Write a file atomically via temp + os.replace.
     normalize_status -- Map legacy status values to canonical vocabulary.
 """
@@ -267,6 +268,32 @@ def mark_task_done_in_plan(plan_path: Path, task_number: int) -> None:
 
 
 # ---------------------------------------------------------------------------
+# durable_fsync
+# ---------------------------------------------------------------------------
+
+def durable_fsync(fd: int) -> None:
+    """Flush a file descriptor durably to stable storage.
+
+    On macOS, ``os.fsync()`` does **not** guarantee data reaches the
+    physical drive — it may only flush to the drive's volatile write
+    cache.  ``fcntl.fcntl(fd, fcntl.F_FULLFSYNC)`` issues a barrier
+    that waits for the drive to confirm persistence.
+
+    On all other platforms this falls back to ``os.fsync(fd)`` which is
+    sufficient on Linux (ext4/btrfs default to barrier writes).
+
+    Args:
+        fd: An open, writable file descriptor.
+    """
+    if sys.platform == "darwin":
+        import fcntl
+
+        fcntl.fcntl(fd, fcntl.F_FULLFSYNC)
+    else:
+        os.fsync(fd)
+
+
+# ---------------------------------------------------------------------------
 # atomic_write
 # ---------------------------------------------------------------------------
 
@@ -296,6 +323,7 @@ def atomic_write(
     closed = False
     try:
         os.write(fd, content.encode(encoding))
+        durable_fsync(fd)
         os.close(fd)
         closed = True
         os.replace(tmp_path, path)
