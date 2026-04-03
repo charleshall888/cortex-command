@@ -18,16 +18,19 @@ Skills are slash commands you invoke from Claude Code. Hooks wire them into the 
                                       │
  ┌────────────────────────────────────▼─────────────────────────────────────┐
  │  BACKLOG   backlog/NNN-feature.md                                        │
- │  status: draft ──► /refine ──► refined                                   │
- │                    (Clarify + Research + Spec per ticket)                │
+ │  status: draft → refined → complete                                      │
  └──────────────────────┬───────────────────────────┬───────────────────────┘
                         │ interactive               │ autonomous
-                        │                           │ /refine each draft item
-                        │                           │ in parallel to reach
-                        │                           │ status:refined
+                        │                  ┌────────▼─────────────────────┐
+                        │                  │  /refine [item] × N          │
+                        │                  │  each in a separate session  │
+                        │                  │  run in parallel per ticket  │
+                        │                  │  Clarify → Research → Spec   │
+                        │                  │  sets status:refined         │
+                        │                  └────────┬─────────────────────┘
           ┌─────────────▼────────────┐    ┌─────────▼────────────────────┐
           │  /lifecycle              │    │  /overnight                  │
-          │  one feature at a time   │    │  selects status:ready items  │
+          │  one feature at a time   │    │  selects status:refined items │
           │  human-in-the-loop       │    │  runs features in parallel   │
           └──────────────────────────┘    └───────────────┬──────────────┘
                                                           │
