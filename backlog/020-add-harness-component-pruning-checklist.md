@@ -13,7 +13,7 @@ created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/harness-design-long-running-apps/research.md
 session_id: 3285e4f8-66fe-4126-9860-d11c3786d0e4
-lifecycle_phase: research
+lifecycle_phase: plan
 lifecycle_slug: add-harness-component-pruning-checklist
 complexity: simple
 criticality: medium
