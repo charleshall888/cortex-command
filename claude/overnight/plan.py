@@ -50,15 +50,13 @@ def _detect_risks(batches: list[Batch]) -> list[str]:
     Checks for:
     - Batches with shared parent epics (items from different batches
       sharing a parent ID).
-    - Overlapping tags across batches (tags appearing in more than one
-      batch, indicating potential file overlap).
+    - Area overlap within a batch (two items in the same batch sharing
+      at least one area, indicating a possible area-separation constraint
+      violation).
     """
     risks: list[str] = []
 
-    if len(batches) < 2:
-        return risks
-
-    # Check for shared parent epics across batches
+    # Check for shared parent epics across batches (needs 2+ batches)
     parents_by_batch: list[set[int]] = []
     for batch in batches:
         parents = {item.parent for item in batch.items if item.parent is not None}
@@ -74,23 +72,21 @@ def _detect_risks(batches: list[Batch]) -> list[str]:
                     f"share parent epic(s) {ids_str} -- potential file overlap"
                 )
 
-    # Check for overlapping tags across batches
-    tags_by_batch: list[set[str]] = []
+    # Check for area overlap within each batch (area-separation constraint)
     for batch in batches:
-        tags: set[str] = set()
-        for item in batch.items:
-            tags.update(item.tags)
-        tags_by_batch.append(tags)
-
-    for i in range(len(tags_by_batch)):
-        for j in range(i + 1, len(tags_by_batch)):
-            shared = tags_by_batch[i] & tags_by_batch[j]
-            if shared:
-                tags_str = ", ".join(sorted(shared))
-                risks.append(
-                    f"Batches {batches[i].batch_id} and {batches[j].batch_id} "
-                    f"share tags [{tags_str}] -- review for dependency concerns"
-                )
+        items = batch.items
+        for i in range(len(items)):
+            for j in range(i + 1, len(items)):
+                areas_i = set(items[i].areas)
+                areas_j = set(items[j].areas)
+                shared = areas_i & areas_j
+                if shared:
+                    areas_str = ", ".join(sorted(shared))
+                    risks.append(
+                        f"Batch {batch.batch_id}: \"{items[i].title}\" and "
+                        f"\"{items[j].title}\" share area(s) [{areas_str}] "
+                        f"-- possible area-separation constraint violation"
+                    )
 
     return risks
 
