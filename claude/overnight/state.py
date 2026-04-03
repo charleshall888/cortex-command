@@ -19,6 +19,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from claude.common import durable_fsync
+
 # Lifecycle root (resolved from this file's location)
 _LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"
 
@@ -360,6 +362,7 @@ def save_state(
     closed = False
     try:
         os.write(fd, payload.encode("utf-8"))
+        durable_fsync(fd)
         os.close(fd)
         closed = True
         os.replace(tmp_path, state_path)
