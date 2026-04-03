@@ -4,13 +4,19 @@ uuid: a3b93933-ae9c-4445-978a-e9478b101e77
 id: 010
 title: "Fix skill sub-file path bug across all skills"
 type: chore
-status: backlog
+status: complete
 priority: high
 parent: 009
 tags: [requirements, skills, sandbox]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/requirements-audit/research.md
+session_id: null
+lifecycle_phase: research
+lifecycle_slug: fix-skill-sub-file-path-bug-across-all-skills
+complexity: complex
+criticality: high
+spec: lifecycle/fix-skill-sub-file-path-bug-across-all-skills/spec.md
 ---
 
 # Fix skill sub-file path bug across all skills
