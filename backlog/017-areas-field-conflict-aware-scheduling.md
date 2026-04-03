@@ -4,7 +4,7 @@ uuid: e6f7a8b9-c0d1-2345-ef01-678901234567
 id: 017
 title: "Investigate and solve conflict-aware round scheduling in overnight runner"
 type: spike
-status: backlog
+status: refined
 priority: medium
 parent: 014
 blocked-by: []
@@ -12,6 +12,13 @@ tags: [overnight, merge-conflicts, scheduling, backlog]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/overnight-merge-conflict-prevention/research.md
+session_id: 0c7d8cd9-f4ec-4e1b-bfbe-8d013d80e8d1
+lifecycle_phase: plan
+lifecycle_slug: investigate-and-solve-conflict-aware-round-scheduling-in-overnight-runner
+complexity: complex
+criticality: high
+spec: lifecycle/investigate-and-solve-conflict-aware-round-scheduling-in-overnight-runner/spec.md
+areas: [overnight-runner]
 ---
 
 # Investigate and solve conflict-aware round scheduling in overnight runner
