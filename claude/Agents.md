@@ -24,9 +24,3 @@ These instructions apply to all projects on this machine.
 | Deciding whether to dispatch agents in parallel | `~/.claude/reference/parallel-agents.md` |
 
 When creating or editing SKILL.md files, invoke `/skill-creator`. For editing existing skills, focus on Step 4 (authoring rules + pattern check) -- not the full new-skill workflow.
-
-## Editing Global Skills or Hooks Requires Lifecycle
-
-Before making any edit to a global skill (`~/.claude/skills/`) or hook (`~/.claude/hooks/`), use `/lifecycle` first — regardless of which project you're working in. These files affect every project on this machine. Skipping lifecycle loses the reasoning behind the change.
-
-**Only skip if the user explicitly says to.**

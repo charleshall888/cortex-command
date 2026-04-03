@@ -1,6 +1,6 @@
 ---
 name: lifecycle
-description: Structured feature development lifecycle with phases for research, specification, planning, implementation, review, and completion. Use when user says "/lifecycle", "start a lifecycle", "lifecycle research/specify/plan/implement/review/complete", or wants to build a non-trivial feature with structured phases. Also triggers on "start a feature lifecycle" or "lifecycle <feature-name>".
+description: Structured feature development lifecycle with phases for research, specification, planning, implementation, review, and completion. Use when user says "/lifecycle", "start a lifecycle", "lifecycle research/specify/plan/implement/review/complete", or wants to build a non-trivial feature with structured phases. Also triggers on "start a feature lifecycle" or "lifecycle <feature-name>". Required before editing any file in ~/.claude/skills/ or ~/.claude/hooks/ — skip only if the user explicitly says to.
 argument-hint: "<feature> [phase]"
 inputs:
   - "feature: string (required) — kebab-case slug of the feature to develop or resume"
@@ -211,7 +211,9 @@ If no epic context was found, skip this section entirely.
 
 The Clarify, Research, and Spec phases are delegated to `/refine`. This section determines whether delegation is needed and, if so, how to execute it.
 
-**If `lifecycle/{feature}/spec.md` already exists** (from a prior `/refine` run, or a resumed lifecycle): announce that early-phase delegation is skipped and proceed directly to the phase execution table below (Plan phase).
+**If `lifecycle/{feature}/spec.md` already exists AND `lifecycle/{feature}/research.md` also exists** (from a prior `/refine` run, or a resumed lifecycle): announce that early-phase delegation is skipped and proceed directly to the phase execution table below (Plan phase).
+
+**If `lifecycle/{feature}/spec.md` exists but `lifecycle/{feature}/research.md` does not**: warn that the lifecycle is in an inconsistent state — spec exists without research, and overnight requires both. Delegate to `/refine` normally; `/refine`'s Step 2 will detect the missing research.md and route to the research phase.
 
 **If `lifecycle/{feature}/spec.md` does not exist**: delegate to `/refine` as follows:
 
@@ -222,7 +224,7 @@ The Clarify, Research, and Spec phases are delegated to `/refine`. This section 
    - Include a `## Epic Reference` section near the top of `research.md` with a link to the epic research path and a one-sentence note on how the epic relates to this ticket
    - In `spec.md`, add a brief preamble note referencing the epic research path for broader context
 
-3. **Determine the starting point for `/refine`:** follow `/refine`'s Step 2 (Check State) normally — it will detect the resume point (Clarify if no research.md, Spec if research.md exists).
+3. **Determine the starting point for `/refine`:** follow `/refine`'s Step 2 (Check State) normally — it checks `lifecycle/{lifecycle-slug}/research.md` and `lifecycle/{lifecycle-slug}/spec.md` specifically. **Any file loaded from the backlog item's `discovery_source` or `research` frontmatter field does NOT satisfy this check** — it is background context only, regardless of path. `/refine` must still run its full Research phase to produce `lifecycle/{slug}/research.md`, even when epic research exists.
 
 4. **Event logging during delegation**: lifecycle owns `lifecycle/{feature}/events.log`. Log these events as `/refine` completes each phase:
 
