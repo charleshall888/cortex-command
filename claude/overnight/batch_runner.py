@@ -19,7 +19,7 @@ import logging
 import os
 import subprocess
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -55,7 +55,7 @@ from claude.overnight.throttle import (
     ConcurrencyManager,
     load_throttle_config,
 )
-from claude.overnight.state import load_state, save_state, transition, OvernightFeatureStatus, _normalize_repo_key
+from claude.overnight.state import load_state, save_batch_result, save_state, transition, OvernightFeatureStatus, _normalize_repo_key
 from claude.overnight.events import (
     BACKLOG_WRITE_FAILED,
     BATCH_ASSIGNED,
@@ -1967,13 +1967,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
 
     # Write batch result (include throttle stats)
     result_path = config.result_dir / f"batch-{config.batch_id}-results.json"
-    result_path.parent.mkdir(parents=True, exist_ok=True)
-    result_dict = asdict(batch_result)
-    result_dict["throttle_stats"] = manager.stats
-    result_path.write_text(
-        json.dumps(result_dict, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    save_batch_result(batch_result, result_path, extra_fields={"throttle_stats": manager.stats})
 
     overnight_log_event(
         BATCH_COMPLETE,
