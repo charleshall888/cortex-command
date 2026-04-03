@@ -21,6 +21,7 @@ Two files change: `skills/lifecycle/references/review.md` (four sequential edits
     4. If matching area docs are found, read them too. Record the full list of loaded requirements files for injection into the reviewer prompt. If no tags match or no area docs are found, load project.md only and note: "no area docs matched for tags: {tags}; drift check covers project.md only"
   - The phrase "Include a requirements compliance check in Stage 1" is removed entirely — replaced by the drift section in Task 2.
 - **Verification**: Read the updated `review.md` §1. Confirm the four-step structured loading replaces the single-line freeform scan. Confirm no mention of "requirements compliance check in Stage 1" remains. Confirm the step resolves to a list of requirements files that will be injected into the reviewer prompt.
+- **Status**: [x] complete
 
 ---
 
@@ -52,6 +53,7 @@ Two files change: `skills/lifecycle/references/review.md` (four sequential edits
     The requirements_drift value in the verdict JSON MUST match: "none" when State is none, "detected" when State is detected.
     ```
 - **Verification**: Read the updated reviewer prompt template. Confirm: (1) no "Requirements Compliance" block in Stage 1; (2) `## Project Requirements` section describes the injected file list; (3) Requirements Drift instruction block exists after Stage 2; (4) "Write Review" includes the exact drift section template.
+- **Status**: [x] complete
 
 ---
 
@@ -89,6 +91,7 @@ Two files change: `skills/lifecycle/references/review.md` (four sequential edits
     {"verdict": "APPROVED", "cycle": 1, "issues": [], "requirements_drift": "none"}
     ```
 - **Verification**: Read the updated §3 artifact format. Confirm: (1) no `## Requirements Compliance` section exists; (2) `## Requirements Drift` section is present without an optional comment guard; (3) verdict JSON includes `"requirements_drift": "none"`.
+- **Status**: [x] complete
 
 ---
 
@@ -116,6 +119,7 @@ Two files change: `skills/lifecycle/references/review.md` (four sequential edits
     | "Requirements drift is hard to assess without clear traceability" | Assess against the requirements docs loaded in §1. If uncertain, log `detected` with a note — false positives generate a morning report entry; false negatives silently hide drift. |
     | "Requirements drift should influence whether I approve the feature" | Drift is an observation only. The verdict reflects spec compliance and code quality. A feature with detected drift may still be APPROVED. |
 - **Verification**: Read the updated §4. Confirm: (1) validation step exists before index.md update; (2) review_verdict event template includes `"requirements_drift"` field; (3) two new constraints table entries exist. Then run `grep -c 'Requirements Compliance' skills/lifecycle/references/review.md` — confirm the count is 0 (cross-location consistency check across all four tasks).
+- **Status**: [x] complete
 
 ---
 
@@ -132,6 +136,7 @@ Two files change: `skills/lifecycle/references/review.md` (four sequential edits
   - Three-step internal flow: (1) resolve and existence-check the review.md path under `lifecycle/{feature}/`; (2) extract the `## Requirements Drift` section body by matching from the section header to the next `##` heading or end of file; (3) extract `**State**:` value and collect `**Findings**:` bullet lines.
   - Pattern to follow: mirrors `_read_verification_strategy()` exactly — Path check, read_text, regex section extraction, graceful return on missing data.
 - **Verification**: Unit test by creating a temp `lifecycle/test-feature/review.md` with a `## Requirements Drift` section and calling `_read_requirements_drift("test-feature")` in a Python REPL. Confirm: absent file → `None`; valid section with `none` → `{"state": "none", "findings": []}`; valid section with `detected` and findings → `{"state": "detected", "findings": ["..."]}`. Confirm malformed section (no `**State**:`) → `{"state": "malformed", "findings": []}`.
+- **Status**: [x] complete
 
 ---
 
@@ -146,6 +151,7 @@ Two files change: `skills/lifecycle/references/review.md` (four sequential edits
   - Call `_read_requirements_drift(name)` and store the result.
   - Three cases to handle: (1) `drift` is `None` or `state == "none"` — no output; (2) `state == "detected"` — append a bold header line `"**Requirements drift detected** — update required before next overnight:"`, then one bullet line per finding, then a blank line; (3) `state == "malformed"` — append a single line noting the section is malformed and requires manual review, then a blank line.
 - **Verification**: In `render_completed_features()` unit tests or via a manual dry run: create a mock `ReportData` with a merged feature, create `lifecycle/{name}/review.md` with `State: detected` and findings, call `render_completed_features(data)`, confirm "Requirements drift detected" block appears in output.
+- **Status**: [x] complete
 
 ---
 
@@ -166,6 +172,7 @@ Two files change: `skills/lifecycle/references/review.md` (four sequential edits
   - In `generate_report()` (around line 1175): insert `render_pending_drift(data),` after `render_completed_features(data),`
   - For reading events.log: follow the `read_events()` pattern from `claude.overnight.events` already imported in report.py; read `lifecycle/{feature}/events.log` if it exists, scan for phase_transition events
 - **Verification**: (1) Create lifecycle dir with detected drift for a non-merged feature in review phase; run `generate_report()`; confirm `## Requirements Drift Flags` section appears. (2) Create a second lifecycle dir simulating CHANGES_REQUESTED cycle 1 (events.log with `phase_transition to=implement` after review_verdict); confirm that feature does NOT appear in `## Requirements Drift Flags`.
+- **Status**: [x] complete
 
 ## Verification Strategy
 
