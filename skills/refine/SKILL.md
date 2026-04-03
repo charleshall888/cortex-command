@@ -6,7 +6,7 @@ inputs:
 outputs:
   - "lifecycle/{slug}/research.md — implementation-level research artifact"
   - "lifecycle/{slug}/spec.md — approved specification ready for overnight planning"
-  - "backlog/{item}.md — updated with complexity:, criticality:, status: refined, spec: path"
+  - "backlog/{item}.md — updated with complexity:, criticality:, status: refined, spec: path, areas:"
 preconditions:
   - "Run from project root"
   - "backlog/ directory exists"
@@ -156,11 +156,21 @@ After writing `spec.md`, update `lifecycle/{lifecycle-slug}/index.md`:
 
 After user approves the spec:
 
+**Infer areas**: Identify which subsystem the feature primarily modifies. Canonical area names: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs`. Use the primary subsystem only — the one where most files change. If the feature spans 4+ subsystems with no clear primary, use `areas=[]`.
+
 ```bash
 update-item {backlog-filename-slug} status=refined spec=lifecycle/{lifecycle-slug}/spec.md
 ```
 
-If `update-item` fails, surface the error and wait for the user to resolve. Do not proceed silently.
+```bash
+update-item {backlog-filename-slug} "areas=[area1,area2]"
+```
+
+For empty areas: `update-item {backlog-filename-slug} "areas=[]"`. The quoted string preserves the list format through shell argument parsing.
+
+Keep these as two separate sequential `update-item` calls — do not combine them into one invocation to avoid argument-parsing ambiguity with list values.
+
+If either `update-item` call fails, surface the error and wait for the user to resolve. Do not proceed silently.
 
 ## Step 6: Completion
 
@@ -168,7 +178,7 @@ Announce that `/refine` is complete. Summarize:
 - Backlog item: `{backlog-filename-slug}`
 - Lifecycle directory: `lifecycle/{lifecycle-slug}/`
 - Artifacts produced: research.md, spec.md
-- Backlog fields written: `complexity`, `criticality`, `status: refined`, `spec`
+- Backlog fields written: `complexity`, `criticality`, `status: refined`, `spec`, `areas`
 
 The feature is now ready for overnight execution. The overnight runner will auto-generate a plan from the spec and execute it without further input.
 
