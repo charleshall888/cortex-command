@@ -43,7 +43,6 @@ ROUND_SETUP_COMPLETE = "round_setup_complete"
 BATCH_COMPLETE = "batch_complete"
 CIRCUIT_BREAKER = "circuit_breaker"
 SESSION_COMPLETE = "session_complete"
-JUDGMENT_FAILED = "judgment_failed"
 HEARTBEAT = "heartbeat"
 STALL_TIMEOUT = "stall_timeout"
 ORCHESTRATOR_FAILED = "orchestrator_failed"
@@ -85,7 +84,6 @@ EVENT_TYPES = (
     BATCH_COMPLETE,
     CIRCUIT_BREAKER,
     SESSION_COMPLETE,
-    JUDGMENT_FAILED,
     HEARTBEAT,
     STALL_TIMEOUT,
     ORCHESTRATOR_FAILED,
