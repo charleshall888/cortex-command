@@ -13,7 +13,7 @@ Bottom-up implementation: add `durable_fsync()` to `common.py` first (the shared
 - **Complexity**: simple
 - **Context**: `claude/common.py` lines 273–312 contain `atomic_write()`. It currently uses `tempfile.mkstemp()` + `os.write()` + `os.close()` + `os.replace()` without fsync. Pattern: add `os.write(fd, data)` → `os.flush()`-equivalent → `durable_fsync(fd)` → `os.close(fd)` → `os.replace()`. **Import placement**: `import fcntl` must be inside the `if sys.platform == "darwin":` branch of `durable_fsync` — not at module level. `fcntl` does not exist on non-POSIX platforms (e.g., Windows); a top-level import would break every caller of `common.py` on those platforms.
 - **Verification**: `just test` passes. Grep `common.py` for `F_FULLFSYNC` and `durable_fsync` to confirm both are present.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Update save_state() in state.py to use durable_fsync()
 - **Files**: `claude/overnight/state.py`
@@ -22,7 +22,7 @@ Bottom-up implementation: add `durable_fsync()` to `common.py` first (the shared
 - **Complexity**: simple
 - **Context**: `claude/overnight/state.py` lines 336–376: `save_state()` uses `tempfile.mkstemp()` + `os.write(fd, payload.encode("utf-8"))` + `os.close(fd)` + `os.replace()`. Insert `durable_fsync(fd)` after `os.write()` and before `os.close()`. Import `durable_fsync` from `claude.common`.
 - **Verification**: `just test` passes. Grep `state.py` for `durable_fsync` to confirm it's present.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Extract save_batch_result() in state.py
 - **Files**: `claude/overnight/state.py`
@@ -31,7 +31,7 @@ Bottom-up implementation: add `durable_fsync()` to `common.py` first (the shared
 - **Complexity**: simple
 - **Context**: `BatchResult` is defined in `claude/overnight/batch_runner.py`. The function signature: `save_batch_result(result: BatchResult, path: Path, extra_fields: Optional[dict] = None) -> None`. **Circular import guard**: `batch_runner.py` already imports `save_state` from `state.py`, so importing `BatchResult` from `batch_runner.py` into `state.py` would create a circular dependency. Both files already have `from __future__ import annotations` (deferred annotation evaluation). Use a `TYPE_CHECKING` guard: `from typing import TYPE_CHECKING; if TYPE_CHECKING: from claude.overnight.batch_runner import BatchResult`. At runtime, `dataclasses.asdict()` does not need the `BatchResult` type — it works on any dataclass instance. Serialization: convert the dataclass to a dict via `dataclasses.asdict()`, then merge any `extra_fields` dict into that result before JSON-encoding with a trailing newline. Then apply atomic write pattern with `durable_fsync`. Add to `claude/overnight/state.py` near `save_state()`. Export from module (no `__all__` restriction currently).
 - **Verification**: `just test` passes. Grep `state.py` for `save_batch_result` to confirm presence. Manually verify function signature matches spec.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Replace batch results write in batch_runner.py
 - **Files**: `claude/overnight/batch_runner.py`
@@ -40,7 +40,7 @@ Bottom-up implementation: add `durable_fsync()` to `common.py` first (the shared
 - **Complexity**: simple
 - **Context**: Lines ~1955–1963 in `batch_runner.py`: `result_dict = asdict(batch_result)` → `result_dict["throttle_stats"] = manager.stats` → `result_path.write_text(json.dumps(result_dict, indent=2) + "\n", encoding="utf-8")`. Replace the entire block with one call to `save_batch_result`. Update the existing `save_state` import in `batch_runner.py` to also include `save_batch_result`.
 - **Verification**: `just test` passes. Grep `batch_runner.py` for `write_text` — should find zero matches near the result write site. Confirm `save_batch_result` is called with `extra_fields={"throttle_stats": manager.stats}`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Add durable_fsync to write_escalation() in deferral.py
 - **Files**: `claude/overnight/deferral.py`
@@ -49,7 +49,7 @@ Bottom-up implementation: add `durable_fsync()` to `common.py` first (the shared
 - **Complexity**: simple
 - **Context**: `write_escalation()` in `claude/overnight/deferral.py` lines 355–382 currently ends with `f.write(json.dumps(record) + "\n")` inside `with open(escalations_path, "a", encoding="utf-8") as f:`. Add `f.flush()` and `durable_fsync(f.fileno())` after the write, before the `with` block exits. Import `durable_fsync` from `claude.common`.
 - **Verification**: `just test` passes (TestWriteEscalation in `claude/overnight/tests/test_deferral.py` passes without changes). Grep `deferral.py` for `durable_fsync` confirms it's present.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Fix recovery_attempts per-feature save in batch_runner.py
 - **Files**: `claude/overnight/batch_runner.py`
@@ -58,7 +58,7 @@ Bottom-up implementation: add `durable_fsync()` to `common.py` first (the shared
 - **Complexity**: complex
 - **Context**: `batch_runner.py` structure: `async with lock:` block contains multiple branches. Test-failure recovery path: ~line 1711 increments `recovery_attempts_map[name]`; the lock exits at ~line 1714; `recover_test_failure()` is called outside the lock at ~line 1717. Save must happen at ~line 1712, inside the lock, before it exits. Pattern: `load_state(config.overnight_state_path)` → set `state.features[name].recovery_attempts = recovery_attempts_map[name]` → `save_state(state, config.overnight_state_path)`. The `state` object may already be in scope — inspect what's available at that code location. For line ~1544: inspect the `result.status != "completed"` branch to determine if it ends with a return immediately or dispatches a recovery agent.
 - **Verification**: `just test` passes. Manual trace: confirm the save call is inside `async with lock:`. Confirm `recovery_attempts` in the persisted state file reflects per-feature increments after a simulated mid-batch interruption (inspect state file after a test run).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Create orchestrator_io.py wrapper module
 - **Files**: `claude/overnight/orchestrator_io.py` (new)
@@ -67,7 +67,7 @@ Bottom-up implementation: add `durable_fsync()` to `common.py` first (the shared
 - **Complexity**: simple
 - **Context**: `save_state`, `load_state`, `update_feature_status` are exported from `claude.overnight.state`. `write_escalation` is exported from `claude.overnight.deferral`. The module is a plain Python file: re-export these four names. This is a convention module — its purpose is to provide a single audit-point import, not runtime enforcement. Add a module-level docstring noting this.
 - **Verification**: `python -c "from claude.overnight.orchestrator_io import save_state, load_state, update_feature_status, write_escalation; print('ok')"` runs without error. Grep `orchestrator_io.py` for all four function names.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Update orchestrator-round.md prompt
 - **Files**: `claude/overnight/prompts/orchestrator-round.md`
@@ -76,7 +76,7 @@ Bottom-up implementation: add `durable_fsync()` to `common.py` first (the shared
 - **Complexity**: simple
 - **Context**: `claude/overnight/prompts/orchestrator-round.md` has write_text calls at Steps 0d, 3c, and 4a for `overnight-state.json`, and escalation appends at lines 101, 128, 144. For state writes: replace pseudocode with `save_state(state, state_path)` calls, using `update_feature_status()` for feature status mutations before saving. For escalation appends: replace `open(...)` blocks with `write_escalation(entry, escalations_path)` calls.
 - **Verification**: Grep `orchestrator-round.md` for `write_text` — zero matches. Grep for `orchestrator_io` — at least one import statement present. Grep for `Path(.*).write_text` — zero matches for state file writes.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Add and update tests
 - **Files**: `claude/overnight/tests/test_overnight_state.py`, `claude/overnight/tests/test_deferral.py`, `claude/overnight/tests/test_map_results.py`, `claude/overnight/tests/test_lead_unit.py`
@@ -85,7 +85,7 @@ Bottom-up implementation: add `durable_fsync()` to `common.py` first (the shared
 - **Complexity**: complex
 - **Context**: New test for `save_batch_result`: create a `BatchResult` instance, write to a temp path with `extra_fields={"throttle_stats": {"total": 0}}`, read back and assert field presence. For Task 6 acceptance: add a test to `test_lead_unit.py` that triggers the test-failure recovery gate (simulates a feature result with test failure + recovery gate open), then reads the state file and asserts `recovery_attempts` was incremented and saved for that feature. The existing `TestRecoveryGate` mocks `save_state` away — either extend it to verify the real save occurs, or add a new test that does not mock `save_state`. `test_deferral.py` has `TestWriteEscalation` — run as-is; expect pass without changes. Check `test_map_results.py` for tests that mock the batch results file format — update if needed.
 - **Verification**: `just test` passes with 0 failures. New `save_batch_result` test is present. New or updated recovery dispatch test in `test_lead_unit.py` asserts `recovery_attempts` is persisted per-feature. No tests were silently removed.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

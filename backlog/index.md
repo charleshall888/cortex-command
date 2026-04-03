@@ -6,7 +6,6 @@
 | 9 | Requirements management overhaul | backlog | high | epic | — | — | — |
 | 18 | Improve overnight execution quality through spec improvements and harness maintainability | backlog | high | epic | — | — | — |
 | 19 | Tighten lifecycle spec template and plan.md verification requirements | refined | high | chore | — | 018 | ✓ |
-| 22 | Fix non-atomic state writes in overnight runner | refined | high | chore | — | 018 | ✓ |
 | 23 | Replace spec dump with JIT loading in implement prompt | backlog | high | chore | — | 018 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 13 | Wire requirements drift check into lifecycle review | refined | medium | chore | — | 009 | ✓ |
@@ -18,7 +17,6 @@
 ## Refined
 
 - **19** Tighten lifecycle spec template and plan.md verification requirements
-- **22** Fix non-atomic state writes in overnight runner
 - **13** Wire requirements drift check into lifecycle review
 
 ## Backlog

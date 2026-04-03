@@ -116,37 +116,6 @@
     "repo": null
   },
   {
-    "id": 22,
-    "title": "Fix non-atomic state writes in overnight runner",
-    "status": "refined",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "reliability",
-      "state",
-      "bugs"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "018",
-    "research": null,
-    "spec": "lifecycle/fix-non-atomic-state-writes-in-overnight-runner/spec.md",
-    "discovery_source": "research/harness-design-long-running-apps/research.md",
-    "plan": null,
-    "uuid": "f5a6b7c8-d9e0-1234-fab0-345678901234",
-    "lifecycle_slug": "fix-non-atomic-state-writes-in-overnight-runner",
-    "session_id": "bb7fa290-a795-47d6-a847-07ab973b1e85",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 23,
     "title": "Replace spec dump with JIT loading in implement prompt",
     "status": "backlog",

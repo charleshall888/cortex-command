@@ -4,7 +4,7 @@ uuid: f5a6b7c8-d9e0-1234-fab0-345678901234
 id: "022"
 title: "Fix non-atomic state writes in overnight runner"
 type: chore
-status: refined
+status: complete
 priority: high
 parent: "018"
 blocked-by: []
@@ -12,7 +12,7 @@ tags: [overnight, reliability, state, bugs]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/harness-design-long-running-apps/research.md
-session_id: bb7fa290-a795-47d6-a847-07ab973b1e85
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: fix-non-atomic-state-writes-in-overnight-runner
 complexity: complex
