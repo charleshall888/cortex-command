@@ -21,7 +21,7 @@ The article's primary innovation — context resets via fresh agent spawning and
    → **No formal mechanism. Morning report auto-creates follow-up backlog items for failures. Lifecycle review phase (APPROVED/CHANGES_REQUESTED/REJECTED) exists for individual features but not for harness components. No scheduled "is this scaffolding still load-bearing?" review. A lightweight ritual is feasible but costs more than S if its output is acted on — see DR-4.**
 
 5. Would an explicit evaluator agent catch failures the current system misses?
-   → **Theoretical yes, but not demonstrated. The two proposed failure modes — (a) spec-compliant but behaviorally wrong implementations that pass tests; (b) self-evaluation bias where the feature worker marks its own work complete prematurely — are imported from the article's UI domain and have not been observed in cortex-command's overnight runner history. Before adding an evaluator, the simpler question is: could the verification strategy in plan.md be tightened to encode those compliance checks as tests rather than prose?**
+   → **Partially confirmed. Failure mode (b) — self-evaluation bias — is confirmed real by instance 2 in the Deep Investigation Findings (CHANGES_REQUESTED after all tasks reported success on a spec compliance detail tests didn't encode). Failure mode (a) — spec-compliant but behaviorally wrong implementations — remains unconfirmed. The fix for instance 2 is upstream (tighter verification requirements, ticket 019), not a separate evaluator agent. The evaluator would add value only for failures that tighter tests still miss — a class not yet observed.**
 
 6. What is the blast radius of adding evaluator separation or context resets?
    → **Context resets: no change needed — already implemented. Evaluator agent: L effort — affects runner.sh (new post-batch phase), batch_runner.py (pending_evaluation status), state.py (new FeatureStatus), new evaluator prompt, plus timeout/crash handling for a new agent phase. Pre-execution spec quality gate: M effort if agent-based; S if template-based. Component pruning ritual: S to write; M-L to execute if output is acted on.**
@@ -140,7 +140,11 @@ Three concrete instances found in retros and lifecycle artifacts:
 
 3. **No-commit guard firing** (overnight batch-3-results.json): `fix-game-over-screen` reached `"status": "completed"` from the pipeline's perspective with zero new commits. The no-commit guard converted it to FEATURE_PAUSED. Without the guard, an empty feature would have merged silently.
 
-**This validates ticket 019.** Tighter verification requirements that encode compliance checks as runnable tests (rather than prose the worker self-checks) directly address the pattern observed in instance 2.
+**Instance 2 validates ticket 019.** Tighter verification requirements that encode compliance checks as runnable tests directly address that specific failure. However, the three instances do not share a common cause:
+
+- Instance 1 (self-sealing log entry) requires a provenance/permission fix — prohibiting agents from writing their own completion evidence. Tighter tests in plan.md do nothing if the agent can manufacture the artifact that satisfies those tests. This needs a separate mechanism not yet tracked.
+- Instance 2 is the one ticket 019 addresses.
+- Instance 3 (no-commit guard firing) is already solved in production — the guard caught it. Citing it as validation overstates ticket 019's scope.
 
 ### Non-atomic state writes are a real crash risk
 
@@ -157,7 +161,9 @@ Tracked in backlog ticket 022.
 
 The function reads the entire spec file unconditionally. Every task worker in a batch receives the full spec before any conversation begins — 9,600–48,000 tokens per round depending on batch size and spec length. The brain agent compounds this: `batch-brain.md` explicitly labels three inputs as "complete, untruncated," making the brain one of the highest-context agents in the system for a single three-way decision.
 
-The fix (JIT spec loading via path reference) is independently valuable from the evaluator question. Tracked in ticket 023.
+The JIT spec loading fix (path reference instead of full dump) is independently valuable and straightforward. Tracked in ticket 023.
+
+**Caution on brain truncation**: Ticket 023 also recommends capping `last_attempt_output` to the brain at ~2,000 tokens via head+tail. The "complete, untruncated" labeling in `batch-brain.md` was deliberate — it was a signal-preservation choice. In multi-step tool-use traces, the failure sequence (tool call → partial result → environment corruption → final error) often lives in the middle of output, not just the tail. Before committing to a truncation strategy, examine actual failed-run outputs to understand where diagnostic signal is distributed. The cap and strategy should be derived from that evidence, not assumed.
 
 ### `judgment.md` and `batch-brain.md` are the same prompt, badly
 
@@ -182,3 +188,5 @@ Four components confirmed load-bearing (do not prune): circuit breaker, watchdog
 - For the pruning checklist: what makes a component "no longer load-bearing"? (e.g., "this component compensated for model limitation X — if the model no longer needs compensation, remove it") — the rubric should be captured in the checklist definition.
 - If /refine adds a spec quality gate as a second pass: what makes a spec "good enough"? lifecycle.config.md has review criteria — can those be reused or adapted?
 - Should the component pruning ritual trigger on a calendar schedule or from morning report data? (Note: data-driven trigger requires morning report data to surface pruning signals — separate implementation work.)
+- **judgment.md vs batch-brain.md**: Both cover the skip/defer/pause triage decision; `judgment.md` uses materially less signal and has no stated relationship to `batch-brain.md`. Should `judgment.md` be removed, reconciled with `batch-brain.md`'s rubric, or documented as a fallback for specific invocation contexts? This needs a backlog ticket — it is a concrete prompt-level defect, not a design question.
+- **Instance 1 provenance fix**: The self-sealing log entry failure mode (agent writes its own completion evidence) requires a mechanism to prohibit agents from authoring the artifacts they check for completion. This is distinct from ticket 019 and has no current backlog item.

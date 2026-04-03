@@ -14,10 +14,10 @@
 | 021 | Define evaluator rubric for software features (spike) | low | S | 019 |
 
 ## Suggested Implementation Order
-1. **022** first — concrete crash-risk bugs, no design decisions needed.
-2. **019** and **023** in parallel — both high-value, independent. 019 improves spec quality upstream; 023 reduces context load per round.
+1. **019 and 022 in parallel** — both have no dependencies (`blocked-by: []`). Note the evidentiary asymmetry: 019 has three confirmed real failure instances; 022 is a crash-risk fix with no observed occurrence in session history. Either can go first; they do not block each other.
+2. **023** — independent of 019/022; reduces context load per round and deserves signal-distribution analysis before the brain truncation piece is implemented.
 3. **020** after — uses the load-bearing analysis from the deep investigation to populate the checklist.
-4. **021** last, after 019 has run in overnight sessions — evidence-driven. Only build the evaluator rubric once you can observe what failures 019 didn't prevent.
+4. **021** last, after 019 has run in overnight sessions — only build the evaluator rubric once you can observe what failures 019 didn't prevent.
 
 ## Created Files
 - `backlog/018-harness-quality-improvements-epic.md` — epic
