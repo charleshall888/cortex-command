@@ -240,7 +240,7 @@ Skills can declare optional contract fields in their YAML frontmatter — `input
 - **When optional**: Skills with no arguments and self-evident context (e.g., `commit`, `tmux`) can omit contracts entirely — empty fields would be noise.
 - **Validation**: Run `just validate-skills` to check all skills against the contract schema.
 
-For the full schema definition and annotated examples, read `references/contract-patterns.md` when creating or updating a skill that takes arguments or produces file artifacts.
+For the full schema definition and annotated examples, read `${CLAUDE_SKILL_DIR}/references/contract-patterns.md` when creating or updating a skill that takes arguments or produces file artifacts.
 
 ## Skill Creation Process
 
@@ -336,11 +336,11 @@ Every line must earn its place.
 
 Consult these helpful guides based on your skill's needs:
 
-- **Multi-step processes**: See references/workflows.md for sequential workflows and conditional logic
-- **Specific output formats or quality standards**: See references/output-patterns.md for template and example patterns
-- **Skills with arguments or preconditions**: See references/contract-patterns.md for contract field schema and examples
-- **Orchestrator or routing skills**: See references/orchestrator-patterns.md for intent classifier, sequential processor, and layered pipeline patterns
-- **Skills that persist state across invocations**: See references/state-patterns.md for JSONL logs, JSON state files, and phase detection patterns
+- **Multi-step processes**: See ${CLAUDE_SKILL_DIR}/references/workflows.md for sequential workflows and conditional logic
+- **Specific output formats or quality standards**: See ${CLAUDE_SKILL_DIR}/references/output-patterns.md for template and example patterns
+- **Skills with arguments or preconditions**: See ${CLAUDE_SKILL_DIR}/references/contract-patterns.md for contract field schema and examples
+- **Orchestrator or routing skills**: See ${CLAUDE_SKILL_DIR}/references/orchestrator-patterns.md for intent classifier, sequential processor, and layered pipeline patterns
+- **Skills that persist state across invocations**: See ${CLAUDE_SKILL_DIR}/references/state-patterns.md for JSONL logs, JSON state files, and phase detection patterns
 
 These files contain established best practices for effective skill design.
 
