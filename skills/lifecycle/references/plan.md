@@ -61,6 +61,7 @@ You are designing an implementation plan for the {feature} feature.
 - Error handling implementations
 - Complete test code
 - Any code that an implementer would copy-paste rather than write
+- Verification fields that consist only of prose descriptions requiring human judgment to evaluate (e.g., "confirm the feature works correctly", "verify the change looks right")
 
 ## Plan Format
 
@@ -77,7 +78,7 @@ You are designing an implementation plan for the {feature} feature.
 - **Depends on**: none
 - **Complexity**: trivial|simple|complex
 - **Context**: {file paths, function signatures, type definitions, pattern references — structural context for the implementer}
-- **Verification**: {what to test and how to confirm success}
+- **Verification**: {(a) command + expected output + pass/fail (e.g., "run `just test` — pass if exit 0, all tests pass"), OR (b) specific file/pattern check (e.g., "`grep -c 'keyword' path/file` = 1 — pass if count = 1"), OR (c) "Interactive/session-dependent: [one-sentence rationale explaining why no command is possible]"}
 - **Status**: [ ] pending
 
 [Continue with additional tasks...]
@@ -142,7 +143,7 @@ Produce `lifecycle/{feature}/plan.md` with this structure:
 - **Depends on**: none
 - **Complexity**: trivial|simple|complex
 - **Context**: {file paths, function signatures, type definitions, pattern references — structural context for the implementer}
-- **Verification**: {what to test and how to confirm success}
+- **Verification**: {(a) command + expected output + pass/fail (e.g., "run `just test` — pass if exit 0, all tests pass"), OR (b) specific file/pattern check (e.g., "`grep -c 'keyword' path/file` = 1 — pass if count = 1"), OR (c) "Interactive/session-dependent: [one-sentence rationale explaining why no command is possible]"}
 - **Status**: [ ] pending
 
 ### Task 2: {description}
@@ -151,7 +152,7 @@ Produce `lifecycle/{feature}/plan.md` with this structure:
 - **Depends on**: [1]
 - **Complexity**: trivial|simple|complex
 - **Context**: {structural context}
-- **Verification**: {verification steps}
+- **Verification**: {(a) command + expected output + pass/fail (e.g., "run `just test` — pass if exit 0, all tests pass"), OR (b) specific file/pattern check (e.g., "`grep -c 'keyword' path/file` = 1 — pass if count = 1"), OR (c) "Interactive/session-dependent: [one-sentence rationale explaining why no command is possible]"}
 - **Status**: [ ] pending
 
 ...
@@ -159,6 +160,8 @@ Produce `lifecycle/{feature}/plan.md` with this structure:
 ## Verification Strategy
 [How to verify the complete feature works end-to-end after all tasks are done]
 ```
+
+> Verification fields that consist only of prose descriptions (e.g., "confirm the feature works correctly") do not pass the P4 checklist. Use format (a), (b), or (c) from the task template above.
 
 ### Task Sizing
 
