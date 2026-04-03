@@ -498,6 +498,134 @@ def detect_settings(repo_root: Path, user_settings_path: Path) -> dict:
     }
 
 
+def apply_hooks(settings: dict, hooks_to_add: list[dict]) -> dict:
+    """Apply hook insertion algorithm for each hook spec.
+
+    For each hook spec in hooks_to_add:
+    1. Get or create the event_type array in settings["hooks"]
+    2. Find first entry whose matcher matches spec's matcher
+    3. If found: append the hook command to that entry's hooks array
+    4. If not found: create a new entry and append to the event_type array
+
+    Mutates settings in place and returns it for chaining.
+    """
+    for spec in hooks_to_add:
+        event_arr = settings.setdefault("hooks", {}).setdefault(spec["event_type"], [])
+
+        # Build the hook object to insert
+        hook_obj = {"type": "command", "command": spec["command"]}
+        if "timeout" in spec:
+            hook_obj["timeout"] = spec["timeout"]
+
+        # Find first entry with matching matcher
+        matcher = spec.get("matcher", "")
+        matched_entry = None
+        for entry in event_arr:
+            if entry.get("matcher", "") == matcher:
+                matched_entry = entry
+                break
+
+        if matched_entry is not None:
+            # Check for duplicates: don't add if command already present
+            existing_commands = [
+                h.get("command", "") for h in matched_entry.get("hooks", [])
+            ]
+            if spec["command"] not in existing_commands:
+                matched_entry.setdefault("hooks", []).append(hook_obj)
+        else:
+            # Create new entry
+            new_entry = {"hooks": [hook_obj]}
+            if matcher:
+                new_entry["matcher"] = matcher
+            event_arr.append(new_entry)
+
+    return settings
+
+
+def run_merge(
+    detect_file_path: str,
+    approved_optional_hooks: list[str],
+    approvals_dict: dict,
+) -> dict:
+    """Run merge mode: read detect tempfile, apply hooks, return modified settings.
+
+    Args:
+        detect_file_path: path to the detect tempfile JSON
+        approved_optional_hooks: list of approved optional hook script filenames
+        approvals_dict: dict of category -> bool for non-hook categories (used in Task 5)
+
+    Returns:
+        dict with the modified settings after hook insertion
+    """
+    # Read detect tempfile
+    detect_path = Path(detect_file_path)
+    if not detect_path.exists():
+        return {"error": f"detect file not found: {detect_file_path}"}
+
+    try:
+        detect_data = json.loads(detect_path.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        return {"error": f"could not read detect file: {e}"}
+
+    settings_data = detect_data.get("settings", {})
+    if "error" in settings_data:
+        return {"error": f"detect reported error: {settings_data['error']}"}
+
+    # Read the user's current settings.json
+    user_settings_path = settings_data.get("user_settings_path")
+    if not user_settings_path:
+        return {"error": "no user_settings_path in detect data"}
+
+    user_settings_file = Path(user_settings_path)
+    if user_settings_file.exists():
+        try:
+            settings = json.loads(user_settings_file.read_text())
+        except (json.JSONDecodeError, OSError) as e:
+            return {"error": f"could not read user settings: {e}"}
+    else:
+        settings = {}
+
+    # Collect hooks to add: required hooks (always) + approved optional hooks
+    hooks_to_add = []
+
+    # Required hooks from absent list — always merged
+    required_absent = settings_data.get("hooks_required", {}).get("absent", [])
+    hooks_to_add.extend(required_absent)
+
+    # Optional hooks — only approved ones
+    optional_absent = settings_data.get("hooks_optional", {}).get("absent", [])
+    for hook_spec in optional_absent:
+        # Match by script filename if present, otherwise by command substring
+        # The detect output absent list contains full hook objects with command field
+        # We need to check if this hook's script was approved
+        script_name = _extract_script_from_command(hook_spec.get("command", ""))
+        if script_name in approved_optional_hooks:
+            hooks_to_add.append(hook_spec)
+
+    # Apply hook insertion
+    apply_hooks(settings, hooks_to_add)
+
+    # Non-hook categories will be applied in Task 5
+    return {
+        "settings": settings,
+        "mtime": detect_data.get("mtime"),
+        "user_settings_path": user_settings_path,
+        "approvals": approvals_dict,
+        "detect_data": detect_data,
+    }
+
+
+def _extract_script_from_command(command: str) -> str | None:
+    """Extract the canonical script filename from a command string.
+
+    Returns the canonical name (cortex-prefixed) or None.
+    """
+    result = extract_script_filename(command)
+    if result:
+        return result[0]  # canonical_name
+    return None
+
+
 def cmd_detect(args: argparse.Namespace) -> None:
     """Run the detect subcommand: discover symlinks and settings diffs."""
     repo_root = get_repo_root(args.repo_root)
@@ -521,6 +649,31 @@ def cmd_detect(args: argparse.Namespace) -> None:
     print(str(outpath))
 
 
+def cmd_merge(args: argparse.Namespace) -> None:
+    """Run the merge subcommand: apply hooks and approved categories."""
+    # Parse optional hooks JSON array
+    try:
+        optional_hooks = json.loads(args.optional_hooks) if args.optional_hooks else []
+    except json.JSONDecodeError:
+        print(json.dumps({"error": f"invalid --optional-hooks JSON: {args.optional_hooks}"}))
+        sys.exit(1)
+
+    # Build approvals dict from CLI flags
+    approvals = {
+        "allow": args.approve_allow,
+        "deny": args.approve_deny,
+        "sandbox": args.approve_sandbox,
+        "statusLine": args.approve_statusline,
+        "plugins": args.approve_plugins,
+        "apiKeyHelper": args.approve_apikey,
+    }
+
+    result = run_merge(args.detect_file, optional_hooks, approvals)
+
+    # Output result as JSON
+    print(json.dumps(result, indent=2))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Setup-merge helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -537,10 +690,60 @@ def main() -> None:
         help="Path to user's settings.json (default: ~/.claude/settings.json)",
     )
 
+    merge_parser = subparsers.add_parser("merge", help="Merge approved categories into settings")
+    merge_parser.add_argument(
+        "--detect-file",
+        required=True,
+        help="Path to detect output tempfile",
+    )
+    merge_parser.add_argument(
+        "--optional-hooks",
+        default="[]",
+        help="JSON array of approved optional hook script filenames",
+    )
+    merge_parser.add_argument(
+        "--approve-allow",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Approve allow list merge (true/false)",
+    )
+    merge_parser.add_argument(
+        "--approve-deny",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Approve deny list merge (true/false)",
+    )
+    merge_parser.add_argument(
+        "--approve-sandbox",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Approve sandbox config merge (true/false)",
+    )
+    merge_parser.add_argument(
+        "--approve-statusline",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Approve statusLine merge (true/false)",
+    )
+    merge_parser.add_argument(
+        "--approve-plugins",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Approve plugins merge (true/false)",
+    )
+    merge_parser.add_argument(
+        "--approve-apikey",
+        type=lambda x: x.lower() == "true",
+        default=False,
+        help="Approve apiKeyHelper merge (true/false)",
+    )
+
     args = parser.parse_args()
 
     if args.command == "detect":
         cmd_detect(args)
+    elif args.command == "merge":
+        cmd_merge(args)
 
 
 if __name__ == "__main__":
