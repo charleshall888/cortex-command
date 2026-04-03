@@ -109,34 +109,6 @@
     "repo": null
   },
   {
-    "id": 16,
-    "title": "Add recovery guidance to morning report for conflicted features",
-    "status": "refined",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "merge-conflicts",
-      "morning-report",
-      "dx"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "014",
-    "research": null,
-    "spec": "lifecycle/add-recovery-guidance-to-morning-report-for-conflicted-features/spec.md",
-    "discovery_source": "research/overnight-merge-conflict-prevention/research.md",
-    "plan": null,
-    "uuid": "d5e6f7a8-b9c0-1234-def0-567890123456",
-    "lifecycle_slug": "add-recovery-guidance-to-morning-report-for-conflicted-features",
-    "session_id": "dea5ffcd-2eb5-4a1d-b9ec-351a16963c0d",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -237,9 +209,7 @@
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
-    "blocked_by": [
-      "016"
-    ],
+    "blocked_by": [],
     "parent": "014",
     "research": null,
     "spec": null,

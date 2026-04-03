@@ -6,15 +6,13 @@
 | 9 | Requirements management overhaul | backlog | high | epic | — | — | — |
 | 11 | Redesign /requirements skill and rewrite project.md | backlog | high | chore | — | 009 | — |
 | 14 | Overnight conflict prevention and visibility improvements | backlog | high | epic | — | — | — |
-| 16 | Add recovery guidance to morning report for conflicted features | refined | high | chore | — | 014 | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 12 | Gather area requirements docs for four missing areas | backlog | medium | chore | 011 | 009 | — |
 | 13 | Wire requirements drift check into lifecycle review | backlog | medium | chore | 011 | 009 | — |
-| 17 | Investigate and solve conflict-aware round scheduling in overnight runner | backlog | medium | spike | 016 | 014 | — |
+| 17 | Investigate and solve conflict-aware round scheduling in overnight runner | backlog | medium | spike | — | 014 | — |
 
 ## Refined
 
-- **16** Add recovery guidance to morning report for conflicted features
 
 ## Backlog
 
@@ -23,6 +21,7 @@
 - **11** Redesign /requirements skill and rewrite project.md
 - **14** Overnight conflict prevention and visibility improvements
 - **8** Auto-rename Claude Code session to active lifecycle feature name
+- **17** Investigate and solve conflict-aware round scheduling in overnight runner
 
 ## In-Progress
 

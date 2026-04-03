@@ -4,13 +4,19 @@ uuid: d5e6f7a8-b9c0-1234-def0-567890123456
 id: 016
 title: "Add recovery guidance to morning report for conflicted features"
 type: chore
-status: backlog
+status: complete
 priority: high
 parent: 014
 tags: [overnight, merge-conflicts, morning-report, dx]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/overnight-merge-conflict-prevention/research.md
+session_id: null
+lifecycle_phase: complete
+lifecycle_slug: add-recovery-guidance-to-morning-report-for-conflicted-features
+complexity: simple
+criticality: medium
+spec: lifecycle/add-recovery-guidance-to-morning-report-for-conflicted-features/spec.md
 ---
 
 # Add recovery guidance to morning report for conflicted features

@@ -7,7 +7,7 @@ type: spike
 status: backlog
 priority: medium
 parent: 014
-blocked-by: [015, 016]
+blocked-by: []
 tags: [overnight, merge-conflicts, scheduling, backlog]
 created: 2026-04-03
 updated: 2026-04-03
