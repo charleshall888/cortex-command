@@ -57,7 +57,7 @@ Create `skills/harness-review/SKILL.md` — a single file that contains the comp
   - If a module has no docstring: fall back to reading inline comments in the first 30 lines. If no rationale found: note "rationale undocumented" and flag.
 
 - **Verification**: `skills/harness-review/SKILL.md` exists and contains `name: harness-review` and `description:` in frontmatter. `just check-symlinks` exits 0 (symlink auto-registered). Invoke `/harness-review` from the cortex-command repo root and confirm: (a) disclaimer line appears first, (b) coverage statement appears, (c) at least one component verdict is printed, (d) "Candidates for Review" section appears at the end. Commit using `/commit`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
