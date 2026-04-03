@@ -4,7 +4,7 @@
 import pytest
 from pathlib import Path
 
-from claude.overnight.report import ReportData, render_completed_features
+from claude.overnight.report import ReportData, render_completed_features, render_failed_features
 from claude.overnight.state import OvernightFeatureStatus, OvernightState
 
 
@@ -138,4 +138,92 @@ def test_render_home_repo_group_header_regression():
     output = render_completed_features(data)
     assert f"### {expected_name}" in output, (
         f"Expected '### {expected_name}' in output, got:\n{output[:400]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tests for render_failed_features conflict rendering
+# ---------------------------------------------------------------------------
+
+def test_conflicted_feature_renders_summary_and_files() -> None:
+    """Conflicted feature renders conflict summary and conflicted files inline."""
+    features = {
+        "feature-conflict": OvernightFeatureStatus(
+            status="paused", error="merge conflict in src/foo.py"
+        ),
+    }
+    data = _pytest_make_data(features)
+    data.events = [
+        {
+            "event": "merge_conflict_classified",
+            "feature": "feature-conflict",
+            "details": {
+                "conflicted_files": ["src/foo.py", "src/bar.py"],
+                "conflict_summary": "Both branches modified the same function signature",
+            },
+        }
+    ]
+    output = render_failed_features(data)
+
+    assert "Both branches modified the same function signature" in output, (
+        f"Expected conflict summary in output, got:\n{output[:400]}"
+    )
+    assert "src/foo.py" in output, (
+        f"Expected conflicted filename 'src/foo.py' in output, got:\n{output[:400]}"
+    )
+    assert "**Conflict summary**" in output, (
+        f"Expected '**Conflict summary**' marker in output, got:\n{output[:400]}"
+    )
+    assert "**Conflicted files**" in output, (
+        f"Expected '**Conflicted files**' marker in output, got:\n{output[:400]}"
+    )
+
+
+def test_conflicted_feature_empty_files_renders_summary_only() -> None:
+    """Conflicted feature with empty conflicted_files renders summary but no files line."""
+    features = {
+        "feature-empty-files": OvernightFeatureStatus(
+            status="paused", error="merge conflict in src/baz.py"
+        ),
+    }
+    data = _pytest_make_data(features)
+    data.events = [
+        {
+            "event": "merge_conflict_classified",
+            "feature": "feature-empty-files",
+            "details": {
+                "conflicted_files": [],
+                "conflict_summary": "classification failed",
+            },
+        }
+    ]
+    output = render_failed_features(data)
+
+    assert "classification failed" in output, (
+        f"Expected conflict summary 'classification failed' in output, got:\n{output[:400]}"
+    )
+    assert "**Conflict summary**" in output, (
+        f"Expected '**Conflict summary**' marker in output, got:\n{output[:400]}"
+    )
+    assert "**Conflicted files**" not in output, (
+        f"Expected no '**Conflicted files**' line in output, got:\n{output[:400]}"
+    )
+
+
+def test_non_conflicted_paused_feature_renders_no_conflict_lines() -> None:
+    """Non-conflicted paused feature renders no conflict detail lines."""
+    features = {
+        "feature-timeout": OvernightFeatureStatus(
+            status="paused", error="timed out after 30 minutes"
+        ),
+    }
+    data = _pytest_make_data(features)
+    data.events = []
+    output = render_failed_features(data)
+
+    assert "**Conflict summary**" not in output, (
+        f"Expected no conflict summary for non-conflict pause, got:\n{output[:400]}"
+    )
+    assert "**Conflicted files**" not in output, (
+        f"Expected no conflicted files for non-conflict pause, got:\n{output[:400]}"
     )
