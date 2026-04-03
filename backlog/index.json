@@ -54,6 +54,89 @@
     "repo": null
   },
   {
+    "id": 9,
+    "title": "Requirements management overhaul",
+    "status": "backlog",
+    "priority": "high",
+    "type": "epic",
+    "tags": [
+      "requirements",
+      "skills",
+      "process"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-03",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/requirements-audit/research.md",
+    "plan": null,
+    "uuid": "dadaf6b6-431d-4c5a-92b5-6226be90d26b",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 10,
+    "title": "Fix skill sub-file path bug across all skills",
+    "status": "backlog",
+    "priority": "high",
+    "type": "chore",
+    "tags": [
+      "requirements",
+      "skills",
+      "sandbox"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-03",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "009",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/requirements-audit/research.md",
+    "plan": null,
+    "uuid": "a3b93933-ae9c-4445-978a-e9478b101e77",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 11,
+    "title": "Redesign /requirements skill and rewrite project.md",
+    "status": "backlog",
+    "priority": "high",
+    "type": "chore",
+    "tags": [
+      "requirements",
+      "skills",
+      "process"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-03",
+    "blocks": [],
+    "blocked_by": [
+      "010"
+    ],
+    "parent": "009",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/requirements-audit/research.md",
+    "plan": null,
+    "uuid": "23658633-f99e-4bfc-8da4-bff5e4f533c1",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 7,
     "title": "Build /setup-merge local skill",
     "status": "refined",
@@ -108,6 +191,63 @@
     "session_id": null,
     "lifecycle_phase": null,
     "schema_version": null,
+    "repo": null
+  },
+  {
+    "id": 12,
+    "title": "Gather area requirements docs for four missing areas",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "chore",
+    "tags": [
+      "requirements",
+      "process"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-03",
+    "blocks": [],
+    "blocked_by": [
+      "011"
+    ],
+    "parent": "009",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/requirements-audit/research.md",
+    "plan": null,
+    "uuid": "1e372778-b612-4033-b008-c95ec08a12ab",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 13,
+    "title": "Wire requirements drift check into lifecycle review",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "chore",
+    "tags": [
+      "requirements",
+      "lifecycle",
+      "process"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-03",
+    "blocks": [],
+    "blocked_by": [
+      "011"
+    ],
+    "parent": "009",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/requirements-audit/research.md",
+    "plan": null,
+    "uuid": "39d5d66b-3ac3-4459-a07d-601417b9f613",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
     "repo": null
   }
 ]
