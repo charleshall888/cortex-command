@@ -56,7 +56,7 @@
   {
     "id": 7,
     "title": "Build /setup-merge local skill",
-    "status": "backlog",
+    "status": "refined",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -66,13 +66,42 @@
       "skills"
     ],
     "created": "2026-04-02",
-    "updated": "2026-04-02",
+    "updated": "2026-04-03",
     "blocks": [],
     "blocked_by": [],
     "parent": "003",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/build-setup-merge-local-skill/spec.md",
     "discovery_source": "research/shareable-install/research.md",
+    "plan": null,
+    "uuid": null,
+    "lifecycle_slug": "build-setup-merge-local-skill",
+    "session_id": "d59acc9c-1b9a-46a8-9580-8d4deed90163",
+    "lifecycle_phase": "implement",
+    "schema_version": null,
+    "repo": null
+  },
+  {
+    "id": 8,
+    "title": "Auto-rename Claude Code session to active lifecycle feature name",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "session-naming",
+      "observability"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-03",
+    "blocks": [],
+    "blocked_by": [
+      "anthropics/claude-code#34243"
+    ],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/session-window-naming/research.md",
     "plan": null,
     "uuid": null,
     "lifecycle_slug": null,
