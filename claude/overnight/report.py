@@ -801,6 +801,7 @@ def render_failed_features(data: ReportData) -> str:
             if conflicted_files:
                 files_str = ", ".join(f"`{f}`" for f in conflicted_files)
                 lines.append(f"- **Conflicted files**: {files_str}")
+            lines.append(f"- **Recovery branch**: `pipeline/{name}`")
         lines.append(f"- Learnings: `lifecycle/{name}/learnings/progress.txt`")
         recovery_entry = _read_recovery_log_last_entry(name)
         if recovery_entry:
