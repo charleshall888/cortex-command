@@ -23,7 +23,7 @@ Topic: $ARGUMENTS (backlog item slug, title, or description). If empty, prompt u
 
 Determine the feature topic from the invocation argument.
 
-Read `skills/lifecycle/references/clarify.md` §1 (Resolve Input) and follow its protocol to identify the backlog item and input context (Context A — backlog item, or Context B — ad-hoc prompt).
+Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §1 (Resolve Input) and follow its protocol to identify the backlog item and input context (Context A — backlog item, or Context B — ad-hoc prompt).
 
 Record:
 - `backlog-filename-slug`: the backlog filename without `.md` (e.g., `119-create-refine-skill`) — used for `update_item.py` calls
@@ -51,7 +51,7 @@ If `spec.md` exists, present the offer clearly: re-running will overwrite the ex
 
 ## Step 3: Clarify Phase
 
-Read `skills/lifecycle/references/clarify.md` and follow its full protocol (§2–§7).
+Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` and follow its full protocol (§2–§7).
 
 Key outputs from Clarify (record these for use in subsequent phases):
 - Clarified intent statement
@@ -72,7 +72,7 @@ If `update-item` fails, surface the error and wait for the user to resolve befor
 
 ### Sufficiency Check
 
-If `lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `skills/lifecycle/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
+If `lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
 
 - **Sufficient**: Announce that existing research is sufficient, state which sufficiency signals were checked, and skip to Spec (Step 5).
 - **Insufficient**: State which signal(s) triggered insufficiency, then proceed to run new research.
@@ -115,7 +115,7 @@ If the `## Open Questions` section is absent from `research.md`, the gate passes
 
 ## Step 5: Spec Phase
 
-Run a structured requirements interview following the same areas as `skills/lifecycle/references/specify.md` §2 (Problem statement, Requirements, Non-requirements, Edge cases, Technical constraints). Adapt depth to what is already established — do not re-ask what Clarify already resolved.
+Run a structured requirements interview following the same areas as `${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md` §2 (Problem statement, Requirements, Non-requirements, Edge cases, Technical constraints). Adapt depth to what is already established — do not re-ask what Clarify already resolved.
 
 Write `lifecycle/{lifecycle-slug}/spec.md` using the standard spec format:
 
