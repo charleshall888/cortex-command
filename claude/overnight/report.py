@@ -558,6 +558,17 @@ def render_completed_features(data: ReportData) -> str:
             lines.append(learnings)
             lines.append("")
 
+        # Requirements drift
+        drift = _read_requirements_drift(name)
+        if drift is not None and drift["state"] == "detected":
+            lines.append("**Requirements drift detected** — update required before next overnight:")
+            for finding in drift["findings"]:
+                lines.append(f"- {finding}")
+            lines.append("")
+        elif drift is not None and drift["state"] == "malformed":
+            lines.append("**Requirements drift**: section is malformed and requires manual review.")
+            lines.append("")
+
     for repo_path in sorted_keys:
         if repo_path is None:
             group_name = home_repo_name
