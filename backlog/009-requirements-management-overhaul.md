@@ -4,7 +4,7 @@ uuid: dadaf6b6-431d-4c5a-92b5-6226be90d26b
 id: 009
 title: "Requirements management overhaul"
 type: epic
-status: backlog
+status: complete
 priority: high
 tags: [requirements, skills, process]
 created: 2026-04-03

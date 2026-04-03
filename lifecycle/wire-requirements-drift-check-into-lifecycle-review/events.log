@@ -20,3 +20,6 @@
 {"ts": "2026-04-03T01:40:00Z", "event": "batch_dispatch", "feature": "wire-requirements-drift-check-into-lifecycle-review", "batch": 3, "tasks": [4]}
 {"ts": "2026-04-03T01:45:00Z", "event": "task_complete", "feature": "wire-requirements-drift-check-into-lifecycle-review", "task": 4, "batch": 3, "status": "success"}
 {"ts": "2026-04-03T01:50:00Z", "event": "phase_transition", "feature": "wire-requirements-drift-check-into-lifecycle-review", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-03T17:00:00Z", "event": "review_verdict", "feature": "wire-requirements-drift-check-into-lifecycle-review", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-04-03T17:00:01Z", "event": "phase_transition", "feature": "wire-requirements-drift-check-into-lifecycle-review", "from": "review", "to": "complete"}
+{"ts": "2026-04-03T17:01:00Z", "event": "feature_complete", "feature": "wire-requirements-drift-check-into-lifecycle-review", "tasks_total": 7, "rework_cycles": 1}

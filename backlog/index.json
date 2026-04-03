@@ -28,34 +28,6 @@
     "repo": null
   },
   {
-    "id": 9,
-    "title": "Requirements management overhaul",
-    "status": "backlog",
-    "priority": "high",
-    "type": "epic",
-    "tags": [
-      "requirements",
-      "skills",
-      "process"
-    ],
-    "areas": [],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/requirements-audit/research.md",
-    "plan": null,
-    "uuid": "dadaf6b6-431d-4c5a-92b5-6226be90d26b",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 18,
     "title": "Improve overnight execution quality through spec improvements and harness maintainability",
     "status": "backlog",
@@ -87,7 +59,7 @@
   {
     "id": 23,
     "title": "Replace spec dump with JIT loading in implement prompt",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -107,9 +79,9 @@
     "discovery_source": "research/harness-design-long-running-apps/research.md",
     "plan": null,
     "uuid": "a6b7c8d9-e0f1-2345-abc1-456789012345",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "replace-spec-dump-with-jit-loading-in-implement-prompt",
+    "session_id": "353ab4d7-4f03-4773-8710-4d9b900709e9",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -233,37 +205,9 @@
     "repo": null
   },
   {
-    "id": 13,
-    "title": "Wire requirements drift check into lifecycle review",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "requirements",
-      "lifecycle",
-      "process"
-    ],
-    "areas": [],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "009",
-    "research": null,
-    "spec": "lifecycle/wire-requirements-drift-check-into-lifecycle-review/spec.md",
-    "discovery_source": "research/requirements-audit/research.md",
-    "plan": null,
-    "uuid": "39d5d66b-3ac3-4459-a07d-601417b9f613",
-    "lifecycle_slug": "wire-requirements-drift-check-into-lifecycle-review",
-    "session_id": "24838696-c5af-4571-bce1-63d0c99eed02",
-    "lifecycle_phase": "review",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 25,
     "title": "Prevent agents from writing their own completion evidence",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -283,16 +227,16 @@
     "discovery_source": "research/harness-design-long-running-apps/research.md",
     "plan": null,
     "uuid": "c8d9e0f1-a2b3-4567-cdef-789012345678",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "prevent-agents-from-writing-their-own-completion-evidence",
+    "session_id": "ac0748ab-a051-45e2-833e-fd67b0c0e96e",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 27,
     "title": "Fix next_question_id() race condition in deferral.py",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "bug",
     "tags": [
@@ -312,16 +256,16 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "ae7fb8f9-20a2-4563-b973-db3b96210270",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "fix-next-question-id-race-condition-in-deferral-py",
+    "session_id": "9f032731-414f-4302-843b-813ce5282784",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 28,
     "title": "Fix test_plan.py failures from worktree bootstrap changes",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "bug",
     "tags": [
@@ -341,9 +285,9 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "f5b6f15c-0942-43c1-b523-e97df19ffeeb",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "fix-test-plan-py-failures-from-worktree-bootstrap-changes",
+    "session_id": "87308a5d-875c-48bc-b1cd-9beb796b26a5",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
