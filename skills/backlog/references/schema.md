@@ -15,6 +15,7 @@ Every backlog item file uses this YAML frontmatter contract. Frontmatter must be
 | `priority` | enum | yes | `critical`, `high`, `medium`, `low` |
 | `type` | enum | yes | `feature`, `bug`, `chore`, `spike`, `idea`, `epic` (epics are non-implementable, produced by /discovery) |
 | `tags` | array | no | Inline YAML only: `[tag1, tag2]` |
+| `areas` | list[str] | no | Inline YAML only: `[overnight-runner, backlog]`. Area-separation constraint for overnight scheduling — features with overlapping areas are assigned to different rounds. Written by `/refine` at spec approval time. If absent or empty, separation constraint is silently skipped (identical to current algorithm). When all items in a session share an area, every item runs in its own single-item batch (fully serialized execution) — this is intended. Zero effect until populated; protection scales with how many items have the field. Canonical names: `overnight-runner`, `backlog`, `skills`, `lifecycle`, `hooks`, `report`, `tests`, `docs` |
 | `created` | date | yes | `YYYY-MM-DD` |
 | `updated` | date | yes | `YYYY-MM-DD` |
 | `lifecycle_slug` | string | no | Slug of associated lifecycle feature, or `null` |
@@ -27,7 +28,7 @@ Every backlog item file uses this YAML frontmatter contract. Frontmatter must be
 | `spec` | string | no | Path to lifecycle spec doc, set by /refine (lifecycle/{slug}/spec.md) |
 | `discovery_source` | string | no | Path to discovery research artifact; set by /discovery on epics and child tickets |
 
-**Inline array syntax is mandatory.** All array fields (`tags`, `blocks`, `blocked-by`) must use `[value1, value2]` form. Never use the multiline `- item` form. This keeps shell parsing tractable with a single regex pattern.
+**Inline array syntax is mandatory.** All array fields (`tags`, `areas`, `blocks`, `blocked-by`) must use `[value1, value2]` form. Never use the multiline `- item` form. This keeps shell parsing tractable with a single regex pattern.
 
 ## Enum Reference
 
@@ -48,6 +49,7 @@ status: backlog
 priority: medium
 type: feature
 tags: [relevant, tags]
+areas: []
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
 lifecycle_slug: null
