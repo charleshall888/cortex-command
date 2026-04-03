@@ -6,12 +6,14 @@ Verifies four requirements:
 (d) negative value validation.
 """
 
+import json
 import tempfile
 import pytest
 from pathlib import Path
 
 from claude.overnight.state import OvernightFeatureStatus, OvernightState
-from claude.overnight.state import save_state, load_state
+from claude.overnight.state import save_state, load_state, save_batch_result
+from claude.overnight.batch_runner import BatchResult
 from claude.overnight.interrupt import handle_interrupted_features
 
 
@@ -156,4 +158,65 @@ def test_repo_path_round_trip() -> None:
             return
         if fs.repo_path != "~/Workspaces/other-repo":
             pytest.fail(f"expected repo_path='~/Workspaces/other-repo', got {fs.repo_path!r}")
+            return
+
+
+# ---------------------------------------------------------------------------
+# Test (f): save_batch_result round-trip with extra_fields
+# ---------------------------------------------------------------------------
+
+def test_save_batch_result_fields_and_extra_fields() -> None:
+    """save_batch_result writes JSON containing all BatchResult fields and extra_fields."""
+    with tempfile.TemporaryDirectory() as tmp:
+        result_path = Path(tmp) / "batch-1-results.json"
+
+        batch = BatchResult(
+            batch_id=1,
+            features_merged=["feat-a"],
+            features_paused=[{"name": "feat-b", "error": "timeout"}],
+            features_deferred=[{"name": "feat-c", "question_count": 2}],
+            features_failed=[{"name": "feat-d", "error": "crash"}],
+            circuit_breaker_fired=False,
+            global_abort_signal=False,
+            abort_reason=None,
+            key_files_changed={"feat-a": ["src/main.py"]},
+        )
+
+        extra = {"throttle_stats": {"total": 0, "delays": []}}
+        save_batch_result(batch, result_path, extra_fields=extra)
+
+        data = json.loads(result_path.read_text(encoding="utf-8"))
+
+        # All BatchResult dataclass fields must be present
+        if data["batch_id"] != 1:
+            pytest.fail(f"expected batch_id=1, got {data['batch_id']!r}")
+            return
+        if data["features_merged"] != ["feat-a"]:
+            pytest.fail(f"expected features_merged=['feat-a'], got {data['features_merged']!r}")
+            return
+        if len(data["features_paused"]) != 1:
+            pytest.fail(f"expected 1 paused feature, got {len(data['features_paused'])}")
+            return
+        if len(data["features_deferred"]) != 1:
+            pytest.fail(f"expected 1 deferred feature, got {len(data['features_deferred'])}")
+            return
+        if len(data["features_failed"]) != 1:
+            pytest.fail(f"expected 1 failed feature, got {len(data['features_failed'])}")
+            return
+        if data["circuit_breaker_fired"] is not False:
+            pytest.fail(f"expected circuit_breaker_fired=False, got {data['circuit_breaker_fired']!r}")
+            return
+        if data["global_abort_signal"] is not False:
+            pytest.fail(f"expected global_abort_signal=False, got {data['global_abort_signal']!r}")
+            return
+        if data["key_files_changed"] != {"feat-a": ["src/main.py"]}:
+            pytest.fail(f"unexpected key_files_changed: {data['key_files_changed']!r}")
+            return
+
+        # extra_fields must be merged into the top-level JSON
+        if "throttle_stats" not in data:
+            pytest.fail("throttle_stats missing from written JSON")
+            return
+        if data["throttle_stats"] != {"total": 0, "delays": []}:
+            pytest.fail(f"unexpected throttle_stats: {data['throttle_stats']!r}")
             return

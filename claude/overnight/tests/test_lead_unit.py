@@ -282,6 +282,119 @@ class TestApplyFeatureResult(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
+class TestRecoveryDispatchPersistence(unittest.IsolatedAsyncioTestCase):
+    """Task 6 acceptance: recovery_attempts is incremented and persisted
+    in the state file inside the lock scope when the recovery path fires."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    async def test_recovery_attempts_persisted_per_feature(self):
+        """Triggering test-failure recovery increments and persists
+        recovery_attempts=1 in the on-disk state file."""
+        from claude.overnight.batch_runner import run_batch, FeatureResult
+        from claude.overnight.state import (
+            OvernightState,
+            OvernightFeatureStatus,
+            save_state,
+            load_state,
+        )
+        from claude.pipeline.merge import MergeResult, TestResult
+        from claude.pipeline.merge_recovery import MergeRecoveryResult
+
+        feat_name = "feat-persist-test"
+        tmp = self._tmpdir.name
+        state_path = Path(tmp) / "overnight-state.json"
+
+        # Write real state file with recovery_attempts=0
+        initial_state = OvernightState(
+            session_id="s-persist",
+            plan_ref="plan.md",
+            features={feat_name: OvernightFeatureStatus(recovery_attempts=0)},
+        )
+        save_state(initial_state, state_path)
+
+        mock_feature = MagicMock()
+        mock_feature.name = feat_name
+        mock_plan = MagicMock()
+        mock_plan.features = [mock_feature]
+
+        mock_worktree = MagicMock()
+        mock_worktree.path = Path(tmp) / "wt"
+        mock_worktree.branch = f"pipeline/{feat_name}"
+
+        mock_manager = MagicMock()
+        mock_manager.acquire = AsyncMock()
+        mock_manager.release = MagicMock()
+        mock_manager.stats = {}
+
+        # A test failure result (not conflict, not CI error)
+        test_failure = MergeResult(
+            success=False,
+            feature=feat_name,
+            conflict=False,
+            test_result=TestResult(passed=False, output="FAILED", return_code=1),
+            error="Tests failed (exit code 1)",
+        )
+
+        # Recovery returns success so the batch finishes cleanly
+        recovery_ok = MergeRecoveryResult(
+            success=True,
+            attempts=1,
+            paused=False,
+            flaky=False,
+            error=None,
+        )
+
+        config = BatchConfig(
+            batch_id=1,
+            plan_path=Path(tmp) / "plan.md",
+            result_dir=Path(tmp),
+            overnight_state_path=state_path,
+            overnight_events_path=Path(tmp) / "overnight.log",
+            pipeline_events_path=Path(tmp) / "pipeline.log",
+        )
+
+        with (
+            patch.object(batch_runner_module, "parse_master_plan", return_value=mock_plan),
+            patch.object(batch_runner_module, "create_worktree", return_value=mock_worktree),
+            patch.object(batch_runner_module, "load_throttle_config", return_value=MagicMock()),
+            patch.object(batch_runner_module, "ConcurrencyManager", return_value=mock_manager),
+            patch.object(
+                batch_runner_module, "execute_feature",
+                new_callable=AsyncMock,
+                return_value=FeatureResult(name=feat_name, status="completed"),
+            ),
+            patch.object(batch_runner_module, "_get_changed_files", return_value=["src/foo.py"]),
+            patch.object(batch_runner_module, "merge_feature", return_value=test_failure),
+            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "cleanup_worktree"),
+            patch.object(
+                batch_runner_module, "recover_test_failure",
+                new_callable=AsyncMock,
+                return_value=recovery_ok,
+            ) as mock_recover,
+        ):
+            await run_batch(config)
+
+        # Recovery was called (gate passed because recovery_attempts was 0)
+        mock_recover.assert_called_once()
+
+        # Read the persisted state file — recovery_attempts must be 1
+        persisted = load_state(state_path)
+        fs = persisted.features.get(feat_name)
+        if fs is None:
+            self.fail(f"{feat_name} not found in persisted state")
+        self.assertEqual(
+            fs.recovery_attempts, 1,
+            f"expected recovery_attempts=1 persisted on disk, got {fs.recovery_attempts}",
+        )
+
+
 class TestRecoveryGate(unittest.IsolatedAsyncioTestCase):
     """When recovery_attempts_map[name] >= 1, recover_test_failure is not called."""
 
