@@ -4,7 +4,7 @@ uuid: c2d3e4f5-a6b7-8901-cdef-012345678901
 id: "019"
 title: "Tighten lifecycle spec template and plan.md verification requirements"
 type: chore
-status: backlog
+status: refined
 priority: high
 parent: "018"
 blocked-by: []
@@ -12,6 +12,13 @@ tags: [overnight, specs, quality, lifecycle]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/harness-design-long-running-apps/research.md
+session_id: 12996531-b9cc-4dc1-a8a5-7cb77fc9e6a1
+lifecycle_phase: review
+lifecycle_slug: tighten-spec-template-and-plan-verification-requirements
+complexity: complex
+criticality: high
+spec: lifecycle/tighten-spec-template-and-plan-verification-requirements/spec.md
+areas: [lifecycle]
 ---
 
 # Tighten lifecycle spec template and plan.md verification requirements
