@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f5b6f15c-0942-43c1-b523-e97df19ffeeb
 title: "Fix test_plan.py failures from worktree bootstrap changes"
-status: backlog
+status: complete
 priority: medium
 type: bug
 tags: [overnight-runner, tests]
@@ -10,6 +10,12 @@ areas: [tests]
 created: 2026-04-03
 updated: 2026-04-03
 parent: "018"
+session_id: null
+lifecycle_phase: complete
+lifecycle_slug: fix-test-plan-py-failures-from-worktree-bootstrap-changes
+complexity: simple
+criticality: high
+spec: lifecycle/fix-test-plan-py-failures-from-worktree-bootstrap-changes/spec.md
 ---
 
 ## Context

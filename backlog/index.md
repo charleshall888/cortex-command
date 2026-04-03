@@ -11,7 +11,6 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 25 | Prevent agents from writing their own completion evidence | in_progress | medium | chore | — | 018 | — |
 | 27 | Fix next_question_id() race condition in deferral.py | in_progress | medium | bug | — | 018 | — |
-| 28 | Fix test_plan.py failures from worktree bootstrap changes | in_progress | medium | bug | — | 018 | — |
 | 29 | Add Playwright + HTMX test patterns to dev toolchain | backlog | medium | feature | 035 | 033 | — |
 | 30 | Investigate and fix swim-lane inline styles and layout degradation | backlog | medium | chore | 029 | 033 | — |
 | 31 | Add hover states, loading feedback, and badge micro-interactions | backlog | medium | feature | 034, 035 | 033 | — |
@@ -38,4 +37,3 @@
 - **23** Replace spec dump with JIT loading in implement prompt (in_progress)
 - **25** Prevent agents from writing their own completion evidence (in_progress)
 - **27** Fix next_question_id() race condition in deferral.py (in_progress)
-- **28** Fix test_plan.py failures from worktree bootstrap changes (in_progress)

@@ -93,7 +93,10 @@ class TestInitializeOvernightState(unittest.TestCase):
         selection = _make_selection("Feature Delta")
         _, mock_run = self._run(selection)
 
-        prune_call = call(["git", "worktree", "prune"])
+        prune_call = call(
+            ["git", "worktree", "prune", "--expire", "now"],
+            cwd=Path.cwd().resolve(),
+        )
         self.assertIn(prune_call, mock_run.call_args_list)
 
     def test_git_worktree_add_called_with_correct_args(self):
@@ -110,6 +113,7 @@ class TestInitializeOvernightState(unittest.TestCase):
                 "-b",
                 f"overnight/{state.session_id}",
             ],
+            cwd=Path.cwd().resolve(),
             check=True,
         )
         self.assertIn(expected_worktree_add, mock_run.call_args_list)
@@ -548,7 +552,7 @@ class TestInitializeOvernightState(unittest.TestCase):
         # Find cross-repo prune calls (the one with cwd kwarg)
         cross_prune_calls = [
             c for c in mock_run.call_args_list
-            if c.args and c.args[0] == ["git", "worktree", "prune"]
+            if c.args and c.args[0] == ["git", "worktree", "prune", "--expire", "now"]
             and c.kwargs.get("cwd") == cross_repo_path
         ]
         self.assertEqual(

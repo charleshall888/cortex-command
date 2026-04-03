@@ -81,7 +81,7 @@
     "uuid": "a6b7c8d9-e0f1-2345-abc1-456789012345",
     "lifecycle_slug": "replace-spec-dump-with-jit-loading-in-implement-prompt",
     "session_id": "353ab4d7-4f03-4773-8710-4d9b900709e9",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -258,36 +258,7 @@
     "uuid": "ae7fb8f9-20a2-4563-b973-db3b96210270",
     "lifecycle_slug": "fix-next-question-id-race-condition-in-deferral-py",
     "session_id": "9f032731-414f-4302-843b-813ce5282784",
-    "lifecycle_phase": "research",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 28,
-    "title": "Fix test_plan.py failures from worktree bootstrap changes",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "bug",
-    "tags": [
-      "overnight-runner",
-      "tests"
-    ],
-    "areas": [
-      "tests"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "018",
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "f5b6f15c-0942-43c1-b523-e97df19ffeeb",
-    "lifecycle_slug": "fix-test-plan-py-failures-from-worktree-bootstrap-changes",
-    "session_id": "87308a5d-875c-48bc-b1cd-9beb796b26a5",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
