@@ -121,7 +121,7 @@ Combine findings into `research/{topic}/research.md`:
 
 ### 6a. Orchestrator Review
 
-Before committing, read and follow `references/orchestrator-review.md` for the `research` phase. The orchestrator review must pass before proceeding to §6b (Critical Review).
+Before committing, read and follow `~/.claude/skills/discovery/references/orchestrator-review.md` for the `research` phase. The orchestrator review must pass before proceeding to §6b (Critical Review).
 
 ### 6b. Critical Review
 

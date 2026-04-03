@@ -124,7 +124,7 @@ Keep the SKILL.md body under 500 non-blank lines. When approaching this limit, m
 ```markdown
 ## Step 4: Write the Artifact
 
-Follow the output conventions in [references/output-patterns.md](references/output-patterns.md).
+Follow the output conventions in [output-patterns.md](~/.claude/skills/skill-creator/references/output-patterns.md).
 ```
 
 Reference links should appear at the point of use, not in a separate "References" section at the end. Agents load reference files on demand — a link at the point of use signals "read this now."

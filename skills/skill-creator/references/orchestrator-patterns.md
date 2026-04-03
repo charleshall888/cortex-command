@@ -61,7 +61,7 @@ If more phases remain, update state and announce the next phase.
 If all phases are complete, clean up ephemeral state and summarize.
 ```
 
-**State file conventions**: Use a mutable JSON file for current-phase tracking (overwritten at each checkpoint). Use a JSONL append-only log for audit history. See `references/state-patterns.md` for the canonical idioms.
+**State file conventions**: Use a mutable JSON file for current-phase tracking (overwritten at each checkpoint). Use a JSONL append-only log for audit history. See `~/.claude/skills/skill-creator/references/state-patterns.md` for the canonical idioms.
 
 **Approval gates**: Some phases require user approval before the next phase begins. Make these explicit — announce the completed phase, present the output, and wait for confirmation before advancing.
 
