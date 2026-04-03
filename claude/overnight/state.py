@@ -17,9 +17,12 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from claude.common import durable_fsync
+
+if TYPE_CHECKING:
+    from claude.overnight.batch_runner import BatchResult
 
 # Lifecycle root (resolved from this file's location)
 _LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"
@@ -366,6 +369,56 @@ def save_state(
         os.close(fd)
         closed = True
         os.replace(tmp_path, state_path)
+    except BaseException:
+        if not closed:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def save_batch_result(
+    result: BatchResult,
+    path: Path,
+    extra_fields: Optional[dict] = None,
+) -> None:
+    """Atomically write a BatchResult to a JSON file.
+
+    Serializes the dataclass via ``dataclasses.asdict()``, merges any
+    ``extra_fields`` into the resulting dict, then writes atomically
+    using the same tempfile + ``durable_fsync`` + ``os.replace`` pattern
+    as ``save_state()``.
+
+    Args:
+        result: The BatchResult dataclass instance to persist.
+        path: Destination path for the JSON file.
+        extra_fields: Optional dict of additional fields to merge into
+            the serialized result before writing.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    data = asdict(result)
+    if extra_fields:
+        data.update(extra_fields)
+    payload = json.dumps(data, indent=2, sort_keys=False) + "\n"
+
+    fd, tmp_path = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=".batch-result-",
+        suffix=".tmp",
+    )
+    closed = False
+    try:
+        os.write(fd, payload.encode("utf-8"))
+        durable_fsync(fd)
+        os.close(fd)
+        closed = True
+        os.replace(tmp_path, path)
     except BaseException:
         if not closed:
             try:
