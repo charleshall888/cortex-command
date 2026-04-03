@@ -27,7 +27,7 @@ Topic: $ARGUMENTS (if non-empty, use as research topic; if empty, self-directed 
 
 Determine the `{{topic}}` from invocation. Use lowercase-kebab-case for directory naming (e.g., `research/plugin-system/`).
 
-**If no topic was provided**: read `references/auto-scan.md` and execute the auto-scan protocol. The scan produces `{{topic}}` from user selection; once selected, continue to Step 2.
+**If no topic was provided**: read `${CLAUDE_SKILL_DIR}/references/auto-scan.md` and execute the auto-scan protocol. The scan produces `{{topic}}` from user selection; once selected, continue to Step 2.
 
 **If a topic was provided**: proceed to Step 2 directly.
 
@@ -52,9 +52,9 @@ If resuming, report the detected phase and offer to continue or restart from an 
 
 | Phase | Reference | Artifact |
 |-------|-----------|----------|
-| Clarify | [references/clarify.md](references/clarify.md) | none (conversation output only) |
-| Research | [references/research.md](references/research.md) | `research/{{topic}}/research.md` |
-| Decompose | [references/decompose.md](references/decompose.md) | Epic + backlog tickets |
+| Clarify | [clarify.md](${CLAUDE_SKILL_DIR}/references/clarify.md) | none (conversation output only) |
+| Research | [research.md](${CLAUDE_SKILL_DIR}/references/research.md) | `research/{{topic}}/research.md` |
+| Decompose | [decompose.md](${CLAUDE_SKILL_DIR}/references/decompose.md) | Epic + backlog tickets |
 
 Read **only** the reference for the current phase.
 
