@@ -4,7 +4,7 @@ uuid: 23658633-f99e-4bfc-8da4-bff5e4f533c1
 id: 011
 title: "Redesign /requirements skill and rewrite project.md"
 type: chore
-status: refined
+status: complete
 priority: high
 parent: 009
 blocked-by: []
@@ -12,7 +12,7 @@ tags: [requirements, skills, process]
 created: 2026-04-03
 updated: 2026-04-03
 discovery_source: research/requirements-audit/research.md
-session_id: 888f5706-f5d4-4b34-9462-4f44f822abd3
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: redesign-requirements-skill-and-rewrite-project-md
 complexity: simple

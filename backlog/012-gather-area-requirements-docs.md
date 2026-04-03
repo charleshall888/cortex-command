@@ -7,7 +7,7 @@ type: chore
 status: backlog
 priority: medium
 parent: 009
-blocked-by: [011]
+blocked-by: []
 tags: [requirements, process]
 created: 2026-04-03
 updated: 2026-04-03

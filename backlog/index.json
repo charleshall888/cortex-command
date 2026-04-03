@@ -54,33 +54,6 @@
     "repo": null
   },
   {
-    "id": 11,
-    "title": "Redesign /requirements skill and rewrite project.md",
-    "status": "refined",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "requirements",
-      "skills",
-      "process"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "009",
-    "research": null,
-    "spec": "lifecycle/redesign-requirements-skill-and-rewrite-project-md/spec.md",
-    "discovery_source": "research/requirements-audit/research.md",
-    "plan": null,
-    "uuid": "23658633-f99e-4bfc-8da4-bff5e4f533c1",
-    "lifecycle_slug": "redesign-requirements-skill-and-rewrite-project-md",
-    "session_id": "888f5706-f5d4-4b34-9462-4f44f822abd3",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 14,
     "title": "Overnight conflict prevention and visibility improvements",
     "status": "backlog",
@@ -206,9 +179,7 @@
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
-    "blocked_by": [
-      "011"
-    ],
+    "blocked_by": [],
     "parent": "009",
     "research": null,
     "spec": null,
@@ -235,9 +206,7 @@
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
-    "blocked_by": [
-      "011"
-    ],
+    "blocked_by": [],
     "parent": "009",
     "research": null,
     "spec": null,
@@ -253,7 +222,7 @@
   {
     "id": 17,
     "title": "Investigate and solve conflict-aware round scheduling in overnight runner",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "medium",
     "type": "spike",
     "tags": [
@@ -268,7 +237,7 @@
     "blocked_by": [],
     "parent": "014",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/investigate-and-solve-conflict-aware-round-scheduling-in-overnight-runner/spec.md",
     "discovery_source": "research/overnight-merge-conflict-prevention/research.md",
     "plan": null,
     "uuid": "e6f7a8b9-c0d1-2345-ef01-678901234567",
