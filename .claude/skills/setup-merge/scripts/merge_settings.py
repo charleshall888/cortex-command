@@ -2,10 +2,12 @@
 """Setup-merge helper: detect symlink inventory and settings diff."""
 
 import argparse
+import fnmatch
 import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -542,20 +544,167 @@ def apply_hooks(settings: dict, hooks_to_add: list[dict]) -> dict:
     return settings
 
 
+def extract_cmd(rule: str) -> str:
+    """Strip Bash( prefix and ) suffix from a permission rule.
+
+    e.g. 'Bash(git status *)' -> 'git status *'
+    If no Bash() wrapper, returns the rule as-is.
+    """
+    if rule.startswith("Bash(") and rule.endswith(")"):
+        return rule[5:-1]
+    return rule
+
+
+def check_forward_contradictions(
+    allow_entries: list[str],
+    existing_deny: list[str],
+) -> tuple[list[str], list[dict]]:
+    """Forward contradiction check: before writing allow entries, check against existing deny.
+
+    For each literal allow entry (no '*'), check if any existing deny pattern matches it.
+    Returns (non_contradicted entries, list of contradiction dicts).
+    """
+    non_contradicted = []
+    contradictions = []
+
+    for allow_entry in allow_entries:
+        allow_cmd = extract_cmd(allow_entry)
+        # Only check literal entries (no wildcard in the allow entry itself)
+        if "*" in allow_entry:
+            non_contradicted.append(allow_entry)
+            continue
+
+        blocked = False
+        for deny_pattern in existing_deny:
+            deny_cmd = extract_cmd(deny_pattern)
+            if fnmatch.fnmatch(allow_cmd, deny_cmd):
+                contradictions.append({
+                    "direction": "forward",
+                    "allow": allow_entry,
+                    "deny": deny_pattern,
+                    "message": (
+                        f"Existing deny rule `{deny_pattern}` would block "
+                        f"cortex-command allow entry `{allow_entry}`"
+                    ),
+                })
+                blocked = True
+                break
+        if not blocked:
+            non_contradicted.append(allow_entry)
+
+    return non_contradicted, contradictions
+
+
+def check_reverse_contradictions(
+    deny_entries: list[str],
+    existing_allow: list[str],
+) -> tuple[list[str], list[dict]]:
+    """Reverse contradiction check: before writing deny entries, check against existing allow.
+
+    For each proposed deny entry, check if any existing literal allow entry (no '*')
+    would be blocked by it. Returns (non_contradicted entries, list of contradiction dicts).
+    """
+    non_contradicted = []
+    contradictions = []
+
+    for deny_entry in deny_entries:
+        deny_cmd = extract_cmd(deny_entry)
+        blocked = False
+        for allow_entry in existing_allow:
+            # Only check literal allow entries (no wildcard)
+            if "*" in allow_entry:
+                continue
+            allow_cmd = extract_cmd(allow_entry)
+            if fnmatch.fnmatch(allow_cmd, deny_cmd):
+                contradictions.append({
+                    "direction": "reverse",
+                    "deny": deny_entry,
+                    "allow": allow_entry,
+                    "message": (
+                        f"Proposed deny rule `{deny_entry}` would block "
+                        f"existing allow entry `{allow_entry}`"
+                    ),
+                })
+                blocked = True
+                break
+        if not blocked:
+            non_contradicted.append(deny_entry)
+
+    return non_contradicted, contradictions
+
+
+def atomic_write(settings: dict, user_settings_path: str, expected_mtime: float) -> dict:
+    """Perform atomic write of settings with mtime guard.
+
+    Returns {"ok": True} on success, or {"error": "..."} on failure.
+    """
+    settings_path = Path(user_settings_path)
+    settings_dir = str(settings_path.parent)
+
+    # Step 1: mtime check
+    try:
+        current_mtime = os.stat(user_settings_path).st_mtime
+    except OSError:
+        # File doesn't exist yet — only valid if mtime was None from detect
+        if expected_mtime is not None:
+            return {"error": "mtime_changed"}
+        current_mtime = None
+
+    if current_mtime != expected_mtime:
+        return {"error": "mtime_changed"}
+
+    # Step 2: serialize
+    json_str = json.dumps(settings, indent=2) + "\n"
+
+    # Step 3: validate JSON before touching disk
+    try:
+        json.loads(json_str)
+    except json.JSONDecodeError:
+        return {"error": "json_invalid"}
+
+    # Step 4: write to temp file in same directory + fsync
+    tmp_fd = None
+    tmp_path = None
+    try:
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=settings_dir, suffix=".tmp")
+        os.write(tmp_fd, json_str.encode("utf-8"))
+        os.fsync(tmp_fd)
+        os.close(tmp_fd)
+        tmp_fd = None  # Mark as closed
+
+        # Step 5: atomic replace
+        os.replace(tmp_path, user_settings_path)
+        return {"ok": True}
+    except OSError as e:
+        # Clean up temp file on failure
+        if tmp_fd is not None:
+            try:
+                os.close(tmp_fd)
+            except OSError:
+                pass
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        return {"error": str(e)}
+
+
 def run_merge(
     detect_file_path: str,
     approved_optional_hooks: list[str],
     approvals_dict: dict,
 ) -> dict:
-    """Run merge mode: read detect tempfile, apply hooks, return modified settings.
+    """Run merge mode: read detect tempfile, apply approved changes atomically.
 
     Args:
         detect_file_path: path to the detect tempfile JSON
         approved_optional_hooks: list of approved optional hook script filenames
-        approvals_dict: dict of category -> bool for non-hook categories (used in Task 5)
+        approvals_dict: dict of category -> bool for non-hook categories
 
     Returns:
-        dict with the modified settings after hook insertion
+        {"ok": True, "contradictions": [...], "merged": [...]} on success,
+        or {"error": "mtime_changed"|"json_invalid"|...} on failure.
     """
     # Read detect tempfile
     detect_path = Path(detect_file_path)
@@ -605,13 +754,125 @@ def run_merge(
     # Apply hook insertion
     apply_hooks(settings, hooks_to_add)
 
-    # Non-hook categories will be applied in Task 5
+    # Track merged categories and contradictions
+    merged = []
+    all_contradictions = []
+
+    # --- Non-hook category merges ---
+
+    # permissions.allow — with forward contradiction detection
+    if approvals_dict.get("allow"):
+        allow_absent = settings_data.get("allow", {}).get("absent", [])
+        if allow_absent:
+            existing_deny = settings.get("permissions", {}).get("deny", [])
+            safe_entries, contradictions = check_forward_contradictions(
+                allow_absent, existing_deny,
+            )
+            all_contradictions.extend(contradictions)
+            if safe_entries:
+                settings.setdefault("permissions", {}).setdefault("allow", []).extend(
+                    safe_entries,
+                )
+                merged.append("allow")
+
+    # permissions.deny — with reverse contradiction detection
+    if approvals_dict.get("deny"):
+        deny_absent = settings_data.get("deny", {}).get("absent", [])
+        if deny_absent:
+            existing_allow = settings.get("permissions", {}).get("allow", [])
+            safe_entries, contradictions = check_reverse_contradictions(
+                deny_absent, existing_allow,
+            )
+            all_contradictions.extend(contradictions)
+            if safe_entries:
+                settings.setdefault("permissions", {}).setdefault("deny", []).extend(
+                    safe_entries,
+                )
+                merged.append("deny")
+
+    # sandbox config
+    if approvals_dict.get("sandbox"):
+        sandbox_absent = settings_data.get("sandbox", {}).get("absent", {})
+        if sandbox_absent:
+            sandbox_merged = False
+
+            # network.allowedDomains
+            missing_domains = sandbox_absent.get("allowedDomains", [])
+            if missing_domains:
+                settings.setdefault("sandbox", {}).setdefault(
+                    "network", {},
+                ).setdefault("allowedDomains", []).extend(missing_domains)
+                sandbox_merged = True
+
+            # network.allowUnixSockets
+            missing_sockets = sandbox_absent.get("allowUnixSockets", [])
+            if missing_sockets:
+                settings.setdefault("sandbox", {}).setdefault(
+                    "network", {},
+                ).setdefault("allowUnixSockets", []).extend(missing_sockets)
+                sandbox_merged = True
+
+            # excludedCommands
+            missing_excluded = sandbox_absent.get("excludedCommands", [])
+            if missing_excluded:
+                settings.setdefault("sandbox", {}).setdefault(
+                    "excludedCommands", [],
+                ).extend(missing_excluded)
+                sandbox_merged = True
+
+            # autoAllowBashIfSandboxed
+            auto_val = sandbox_absent.get("autoAllowBashIfSandboxed")
+            if auto_val is not None:
+                settings.setdefault("sandbox", {})["autoAllowBashIfSandboxed"] = auto_val
+                sandbox_merged = True
+
+            if sandbox_merged:
+                merged.append("sandbox")
+
+    # statusLine
+    if approvals_dict.get("statusLine"):
+        statusline_absent = settings_data.get("statusLine", {}).get("absent")
+        if statusline_absent is not None:
+            settings["statusLine"] = statusline_absent
+            merged.append("statusLine")
+
+    # plugins
+    if approvals_dict.get("plugins"):
+        plugins_absent = settings_data.get("plugins", {}).get("absent", {})
+        if plugins_absent:
+            user_plugins = settings.setdefault("enabledPlugins", {})
+            plugins_added = False
+            for key, value in plugins_absent.items():
+                if key not in user_plugins:
+                    user_plugins[key] = value
+                    plugins_added = True
+            if plugins_added:
+                merged.append("plugins")
+
+    # apiKeyHelper
+    if approvals_dict.get("apiKeyHelper"):
+        apikey_data = settings_data.get("apiKeyHelper", {})
+        if apikey_data.get("status") == "absent":
+            value = apikey_data.get("value")
+            if value is not None:
+                settings["apiKeyHelper"] = value
+                merged.append("apiKeyHelper")
+
+    # If hooks were added, track in merged list
+    if hooks_to_add:
+        merged.append("hooks")
+
+    # --- Atomic write ---
+    mtime = detect_data.get("mtime")
+    write_result = atomic_write(settings, user_settings_path, mtime)
+
+    if "error" in write_result:
+        return {"error": write_result["error"]}
+
     return {
-        "settings": settings,
-        "mtime": detect_data.get("mtime"),
-        "user_settings_path": user_settings_path,
-        "approvals": approvals_dict,
-        "detect_data": detect_data,
+        "ok": True,
+        "contradictions": all_contradictions,
+        "merged": merged,
     }
 
 
