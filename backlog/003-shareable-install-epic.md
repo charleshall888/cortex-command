@@ -2,11 +2,11 @@
 id: 003
 title: "Make cortex-command shareable without overwriting users' global Claude settings"
 type: epic
-status: backlog
+status: complete
 priority: high
 tags: [shareability, install, setup]
 created: 2026-04-02
-updated: 2026-04-02
+updated: 2026-04-03
 discovery_source: research/shareable-install/research.md
 ---
 

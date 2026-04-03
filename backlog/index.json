@@ -27,33 +27,6 @@
     "repo": null
   },
   {
-    "id": 3,
-    "title": "Make cortex-command shareable without overwriting users' global Claude settings",
-    "status": "backlog",
-    "priority": "high",
-    "type": "epic",
-    "tags": [
-      "shareability",
-      "install",
-      "setup"
-    ],
-    "created": "2026-04-02",
-    "updated": "2026-04-02",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/shareable-install/research.md",
-    "plan": null,
-    "uuid": null,
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": null,
-    "repo": null
-  },
-  {
     "id": 9,
     "title": "Requirements management overhaul",
     "status": "backlog",
@@ -83,7 +56,7 @@
   {
     "id": 10,
     "title": "Fix skill sub-file path bug across all skills",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -101,9 +74,9 @@
     "discovery_source": "research/requirements-audit/research.md",
     "plan": null,
     "uuid": "a3b93933-ae9c-4445-978a-e9478b101e77",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "fix-skill-sub-file-path-bug-across-all-skills",
+    "session_id": "4320582a-7a1b-4bcb-9180-251b7932be90",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -134,34 +107,6 @@
     "session_id": null,
     "lifecycle_phase": null,
     "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 7,
-    "title": "Build /setup-merge local skill",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "shareability",
-      "install",
-      "setup",
-      "skills"
-    ],
-    "created": "2026-04-02",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "003",
-    "research": null,
-    "spec": "lifecycle/build-setup-merge-local-skill/spec.md",
-    "discovery_source": "research/shareable-install/research.md",
-    "plan": null,
-    "uuid": null,
-    "lifecycle_slug": "build-setup-merge-local-skill",
-    "session_id": "d59acc9c-1b9a-46a8-9580-8d4deed90163",
-    "lifecycle_phase": "implement",
-    "schema_version": null,
     "repo": null
   },
   {

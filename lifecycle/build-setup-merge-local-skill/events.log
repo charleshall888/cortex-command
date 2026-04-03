@@ -1,0 +1,26 @@
+{"ts": "2026-04-02T00:00:00Z", "event": "discovery_reference", "feature": "build-setup-merge-local-skill", "epic_research": "research/shareable-install/research.md", "epic_spec": null}
+{"ts": "2026-04-02T00:01:00Z", "event": "clarify_critic", "feature": "build-setup-merge-local-skill", "findings": ["The backlog item says the skill 'handles any other skipped targets' but never defines behavior for non-settings.json skipped symlink targets (e.g., skill/hook directories the user already has in place).", "The required-vs-optional hook split is attributed to DR-2/DR-5 but the supporting reasoning is in the research doc, not the backlog item — assessment's High requirements alignment points back at the backlog item's own assertion, making it circular.", "The 'never touched' list specifies sandbox.filesystem.allowWrite but not other filesystem subkeys (denyWithinAllow, allowWithinDeny, read.denyOnly) — 'boundaries are explicit' overstates what the source defines.", "The allow-list delta computation has no defined algorithm in the source — 'High' on scope boundedness implies an implementation path but none is described for overlapping/differently-scoped patterns.", "The contradiction detection criterion ('if user's existing deny rules contradict cortex-command's allow list') uses 'contradict' without defining semantics — does a deny on 'git push *' contradict an allow on 'git push origin main'?"], "dispositions": {"apply": 0, "dismiss": 3, "ask": 2}, "applied_fixes": [], "status": "ok"}
+{"ts": "2026-04-02T00:02:00Z", "event": "lifecycle_start", "feature": "build-setup-merge-local-skill", "tier": "complex", "criticality": "high"}
+{"ts": "2026-04-02T00:02:00Z", "event": "phase_transition", "feature": "build-setup-merge-local-skill", "from": "clarify", "to": "research"}
+{"ts": "2026-04-02T00:03:00Z", "event": "phase_transition", "feature": "build-setup-merge-local-skill", "from": "research", "to": "specify"}
+{"ts": "2026-04-02T00:04:00Z", "event": "phase_transition", "feature": "build-setup-merge-local-skill", "from": "specify", "to": "plan"}
+{"ts": "2026-04-02T00:05:00Z", "event": "orchestrator_review", "feature": "build-setup-merge-local-skill", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-03T00:00:00Z", "event": "phase_transition", "feature": "build-setup-merge-local-skill", "from": "plan", "to": "implement"}
+{"ts": "2026-04-03T00:01:00Z", "event": "batch_dispatch", "feature": "build-setup-merge-local-skill", "batch": 0, "tasks": [1]}
+{"ts": "2026-04-03T00:02:00Z", "event": "task_complete", "feature": "build-setup-merge-local-skill", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-03T00:03:00Z", "event": "batch_dispatch", "feature": "build-setup-merge-local-skill", "batch": 1, "tasks": [2]}
+{"ts": "2026-04-03T00:04:00Z", "event": "task_complete", "feature": "build-setup-merge-local-skill", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-03T00:05:00Z", "event": "batch_dispatch", "feature": "build-setup-merge-local-skill", "batch": 2, "tasks": [3]}
+{"ts": "2026-04-03T00:06:00Z", "event": "task_complete", "feature": "build-setup-merge-local-skill", "task": 3, "batch": 2, "status": "success"}
+{"ts": "2026-04-03T00:07:00Z", "event": "batch_dispatch", "feature": "build-setup-merge-local-skill", "batch": 3, "tasks": [4, 6]}
+{"ts": "2026-04-03T00:08:00Z", "event": "task_complete", "feature": "build-setup-merge-local-skill", "task": 4, "batch": 3, "status": "success"}
+{"ts": "2026-04-03T00:08:00Z", "event": "task_complete", "feature": "build-setup-merge-local-skill", "task": 6, "batch": 3, "status": "success"}
+{"ts": "2026-04-03T00:09:00Z", "event": "batch_dispatch", "feature": "build-setup-merge-local-skill", "batch": 4, "tasks": [5, 7]}
+{"ts": "2026-04-03T00:10:00Z", "event": "task_complete", "feature": "build-setup-merge-local-skill", "task": 5, "batch": 4, "status": "success"}
+{"ts": "2026-04-03T00:10:00Z", "event": "task_complete", "feature": "build-setup-merge-local-skill", "task": 7, "batch": 4, "status": "success"}
+{"ts": "2026-04-03T00:11:00Z", "event": "batch_dispatch", "feature": "build-setup-merge-local-skill", "batch": 5, "tasks": [8]}
+{"ts": "2026-04-03T00:12:00Z", "event": "task_complete", "feature": "build-setup-merge-local-skill", "task": 8, "batch": 5, "status": "success"}
+{"ts": "2026-04-03T00:12:00Z", "event": "phase_transition", "feature": "build-setup-merge-local-skill", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-03T00:13:00Z", "event": "review_verdict", "feature": "build-setup-merge-local-skill", "verdict": "APPROVED", "cycle": 1}
+{"ts": "2026-04-03T00:13:00Z", "event": "phase_transition", "feature": "build-setup-merge-local-skill", "from": "review", "to": "complete"}
+{"ts": "2026-04-03T00:14:00Z", "event": "feature_complete", "feature": "build-setup-merge-local-skill", "tasks_total": 8, "rework_cycles": 0}

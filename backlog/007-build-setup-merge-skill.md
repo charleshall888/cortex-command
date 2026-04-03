@@ -2,14 +2,20 @@
 id: 007
 title: "Build /setup-merge local skill"
 type: feature
-status: backlog
+status: complete
 priority: medium
 parent: 003
 blocked-by: []
 tags: [shareability, install, setup, skills]
 created: 2026-04-02
-updated: 2026-04-02
+updated: 2026-04-03
 discovery_source: research/shareable-install/research.md
+session_id: null
+lifecycle_phase: complete
+lifecycle_slug: build-setup-merge-local-skill
+complexity: complex
+criticality: high
+spec: lifecycle/build-setup-merge-local-skill/spec.md
 ---
 
 # Build /setup-merge local skill
