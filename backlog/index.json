@@ -59,7 +59,7 @@
   {
     "id": 23,
     "title": "Replace spec dump with JIT loading in implement prompt",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -68,20 +68,22 @@
       "performance",
       "quality"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
     "blocked_by": [],
     "parent": "018",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/replace-spec-dump-with-jit-loading-in-implement-prompt/spec.md",
     "discovery_source": "research/harness-design-long-running-apps/research.md",
     "plan": null,
     "uuid": "a6b7c8d9-e0f1-2345-abc1-456789012345",
     "lifecycle_slug": "replace-spec-dump-with-jit-loading-in-implement-prompt",
     "session_id": "353ab4d7-4f03-4773-8710-4d9b900709e9",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -207,7 +209,7 @@
   {
     "id": 25,
     "title": "Prevent agents from writing their own completion evidence",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -216,27 +218,30 @@
       "verification",
       "lifecycle"
     ],
-    "areas": [],
+    "areas": [
+      "lifecycle",
+      "overnight-runner"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-03",
     "blocks": [],
     "blocked_by": [],
     "parent": "018",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/prevent-agents-from-writing-their-own-completion-evidence/spec.md",
     "discovery_source": "research/harness-design-long-running-apps/research.md",
     "plan": null,
     "uuid": "c8d9e0f1-a2b3-4567-cdef-789012345678",
     "lifecycle_slug": "prevent-agents-from-writing-their-own-completion-evidence",
     "session_id": "ac0748ab-a051-45e2-833e-fd67b0c0e96e",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 27,
     "title": "Fix next_question_id() race condition in deferral.py",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "medium",
     "type": "bug",
     "tags": [
@@ -245,20 +250,22 @@
       "deferral",
       "bugs"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner"
+    ],
     "created": "2026-04-03",
-    "updated": "2026-04-03",
+    "updated": "2026-04-04",
     "blocks": [],
     "blocked_by": [],
     "parent": "018",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/fix-next-question-id-race-condition-in-deferral-py/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "ae7fb8f9-20a2-4563-b973-db3b96210270",
     "lifecycle_slug": "fix-next-question-id-race-condition-in-deferral-py",
     "session_id": "9f032731-414f-4302-843b-813ce5282784",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

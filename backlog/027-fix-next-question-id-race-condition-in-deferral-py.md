@@ -2,13 +2,20 @@
 schema_version: "1"
 uuid: ae7fb8f9-20a2-4563-b973-db3b96210270
 title: "Fix next_question_id() race condition in deferral.py"
-status: backlog
+status: refined
 priority: medium
 type: bug
 tags: [overnight, reliability, deferral, bugs]
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-04-04
 parent: "018"
+session_id: 9f032731-414f-4302-843b-813ce5282784
+lifecycle_phase: implement
+lifecycle_slug: fix-next-question-id-race-condition-in-deferral-py
+complexity: simple
+criticality: high
+spec: lifecycle/fix-next-question-id-race-condition-in-deferral-py/spec.md
+areas: [overnight-runner]
 ---
 
 ## Context
