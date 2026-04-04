@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import tempfile
 import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -150,60 +149,72 @@ def _format_deferral_markdown(question: DeferralQuestion) -> str:
 def write_deferral(
     question: DeferralQuestion,
     deferred_dir: Path = DEFAULT_DEFERRED_DIR,
+    _max_attempts: int = 100,
 ) -> Path:
     """Write a DeferralQuestion as a structured markdown file.
 
     Creates ``deferred_dir`` if it does not exist.  If ``question.question_id``
     is 0 (the default for "not yet assigned"), the next sequential ID is
-    determined via :func:`next_question_id` and written back to the question
-    object.
+    determined via :func:`next_question_id` as a starting-point hint.
 
-    Uses an atomic write pattern (temp file + ``os.replace``) so readers
-    never see a partially-written file.
+    Uses ``O_CREAT | O_EXCL`` to atomically claim the destination filename,
+    retrying with incremented IDs on collision.  This eliminates the TOCTOU
+    race inherent in a scan-then-write pattern.
 
     Args:
         question: The deferral question to persist.
         deferred_dir: Directory to write the markdown file into.
+        _max_attempts: Maximum number of IDs to try before raising.
 
     Returns:
         Path to the written markdown file.
     """
     deferred_dir.mkdir(parents=True, exist_ok=True)
 
-    # Assign an ID if the caller didn't provide one
+    # Use the scan as a starting-point hint (avoids unnecessary retries)
     if question.question_id == 0:
-        question.question_id = next_question_id(deferred_dir, question.feature)
+        candidate_id = next_question_id(deferred_dir, question.feature)
+    else:
+        candidate_id = question.question_id
 
-    filename = f"{question.feature}-q{question.question_id:03d}.md"
-    dest = deferred_dir / filename
+    # O_EXCL loop: atomically claim the destination filename
+    for attempt in range(_max_attempts):
+        qid = candidate_id + attempt
+        filename = f"{question.feature}-q{qid:03d}.md"
+        dest = deferred_dir / filename
 
-    content = _format_deferral_markdown(question)
+        try:
+            fd = os.open(
+                str(dest),
+                os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+                0o644,
+            )
+        except FileExistsError:
+            continue
 
-    # Atomic write: write to temp file in same directory, then rename
-    fd, tmp_path = tempfile.mkstemp(
-        dir=deferred_dir,
-        prefix=".deferral-",
-        suffix=".tmp",
-    )
-    closed = False
-    try:
-        os.write(fd, content.encode("utf-8"))
-        os.close(fd)
-        closed = True
-        os.replace(tmp_path, dest)
-    except BaseException:
-        if not closed:
+        # Successfully claimed the file — write content
+        question.question_id = qid
+        content = _format_deferral_markdown(question)
+        try:
+            os.write(fd, content.encode("utf-8"))
+            os.close(fd)
+        except BaseException:
             try:
                 os.close(fd)
             except OSError:
                 pass
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
-        raise
+            try:
+                os.unlink(str(dest))
+            except OSError:
+                pass
+            raise
 
-    return dest
+        return dest
+
+    raise OSError(
+        f"Could not claim a deferral filename after {_max_attempts} attempts "
+        f"for feature {question.feature!r}"
+    )
 
 
 def _parse_deferral_file(path: Path) -> DeferralQuestion:
