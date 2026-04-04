@@ -155,6 +155,7 @@ Evaluate against `lifecycle/{feature}/plan.md`:
 | P4 | Binary-checkable verification steps | Each task's Verification field is binary-checkable in at least one of three forms: (a) a runnable command with observable output and an explicit pass/fail criterion (e.g., exit code = 0, grep count ≥ N); (b) an observable state naming the specific file path, the specific string/pattern to find, and the expected true/false result; (c) annotated "Interactive/session-dependent: [one-sentence rationale explaining why a command is not possible]" when neither (a) nor (b) applies. Prose-only Verification fields like "verify it works" or "confirm the section was added" do not pass. |
 | P5 | Code budget respected | Plan contains prose and structural context only — no function bodies, import statements, or copy-paste-ready code |
 | P6 | Files/Verification consistency | Every file implied by Verification is listed in Files; no verification step requires modifying unlisted files |
+| P7 | No self-sealing verification | For each task, cross-reference the Verification field against the Files list: does Verification reference an artifact that the same task creates? If yes, apply the operational test: if the task's stated purpose is to create that artifact (it is the primary deliverable), the self-check is benign. If the task's purpose is to verify an external condition and the artifact is a side-channel for recording that verification, the self-check is harmful — flag it as self-sealing. |
 
 ## Cycle Cap
 

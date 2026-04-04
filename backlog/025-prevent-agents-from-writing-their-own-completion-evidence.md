@@ -4,14 +4,21 @@ uuid: c8d9e0f1-a2b3-4567-cdef-789012345678
 id: "025"
 title: "Prevent agents from writing their own completion evidence"
 type: chore
-status: backlog
+status: complete
 priority: medium
 parent: "018"
 blocked-by: []
 tags: [overnight, reliability, verification, lifecycle]
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-04-04
 discovery_source: research/harness-design-long-running-apps/research.md
+session_id: null
+lifecycle_phase: implement
+lifecycle_slug: prevent-agents-from-writing-their-own-completion-evidence
+complexity: complex
+criticality: high
+spec: lifecycle/prevent-agents-from-writing-their-own-completion-evidence/spec.md
+areas: [lifecycle,overnight-runner]
 ---
 
 # Prevent agents from writing their own completion evidence

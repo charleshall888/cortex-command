@@ -207,38 +207,6 @@
     "repo": null
   },
   {
-    "id": 25,
-    "title": "Prevent agents from writing their own completion evidence",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "reliability",
-      "verification",
-      "lifecycle"
-    ],
-    "areas": [
-      "lifecycle",
-      "overnight-runner"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-04",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "018",
-    "research": null,
-    "spec": "lifecycle/prevent-agents-from-writing-their-own-completion-evidence/spec.md",
-    "discovery_source": "research/harness-design-long-running-apps/research.md",
-    "plan": null,
-    "uuid": "c8d9e0f1-a2b3-4567-cdef-789012345678",
-    "lifecycle_slug": "prevent-agents-from-writing-their-own-completion-evidence",
-    "session_id": "ac0748ab-a051-45e2-833e-fd67b0c0e96e",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 27,
     "title": "Fix next_question_id() race condition in deferral.py",
     "status": "refined",
@@ -265,7 +233,7 @@
     "uuid": "ae7fb8f9-20a2-4563-b973-db3b96210270",
     "lifecycle_slug": "fix-next-question-id-race-condition-in-deferral-py",
     "session_id": "9f032731-414f-4302-843b-813ce5282784",
-    "lifecycle_phase": "implement",
+    "lifecycle_phase": "review",
     "schema_version": "1",
     "repo": null
   },
@@ -392,6 +360,34 @@
     "discovery_source": "research/generative-ui-harness/research.md",
     "plan": null,
     "uuid": "c7d8e9f0-a1b2-3456-cdef-678901234567",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 36,
+    "title": "Address verification_passed dead code in exit reports",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "chore",
+    "tags": [
+      "overnight",
+      "reliability",
+      "verification"
+    ],
+    "areas": [],
+    "created": "2026-04-04",
+    "updated": "2026-04-04",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "783a90bb-5426-4cc3-9556-71a9405755f2",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,

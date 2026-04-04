@@ -91,6 +91,7 @@ You are implementing a single task for the {feature} feature.
 3. Verify your implementation works as described in the Verification field
 4. Commit your work using the Skill tool: `skill: "commit"`. You have full tool access including the Skill tool — do not use raw `git commit` or `git -C` commands.
 5. Report what you did and any issues encountered
+6. Do not write files or artifacts solely to satisfy your own verification check. If a verification step requires checking something you created in this task for the purpose of satisfying verification (not as the task's primary deliverable), flag it as self-sealing in your exit report rather than self-certifying.
 
 If this task references the specification, read lifecycle/{feature}/spec.md.
 Do not implement other tasks. Do not modify files not listed in this task.

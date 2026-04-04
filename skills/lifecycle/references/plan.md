@@ -62,6 +62,7 @@ You are designing an implementation plan for the {feature} feature.
 - Complete test code
 - Any code that an implementer would copy-paste rather than write
 - Verification fields that consist only of prose descriptions requiring human judgment to evaluate (e.g., "confirm the feature works correctly", "verify the change looks right")
+- Verification steps that reference artifacts (files, log entries, status fields) the executing task creates solely for the purpose of satisfying verification — this is self-sealing and passes tautologically
 
 ## Plan Format
 
@@ -215,6 +216,7 @@ Plans are prose with structural context. The line between design and implementat
 - Error handling implementations
 - Complete test code
 - Any code that an implementer would copy-paste rather than write
+- Verification steps that reference artifacts (files, log entries, status fields) the executing task creates solely for the purpose of satisfying verification — this is self-sealing and passes tautologically
 
 After writing `plan.md`, update `lifecycle/{feature}/index.md`:
 - If `"plan"` is already in the `artifacts` array, skip entirely (no-op)
@@ -262,3 +264,4 @@ Do NOT write implementation code in the plan. Plans describe WHAT each task does
 | "I'll figure out the approach as I code" | Figuring it out while coding means re-doing work when early assumptions prove wrong. Plan once, implement once. |
 | "This plan is so detailed I might as well write the code" | If you are writing function bodies, you have violated the code budget. Plans provide structure, not implementation. |
 | "The backlog item said to do it this way" | Backlog items suggest approaches — they don't prescribe them. Unless the backlog item has linked research/spec artifacts that already validated the approach, evaluate it critically and consider alternatives. |
+| "The agent can verify by checking the file it just wrote" | Verification that checks an artifact the same task creates solely for verification is self-sealing — it passes tautologically. Use test commands, pre-existing state, or prior-task outputs instead. |

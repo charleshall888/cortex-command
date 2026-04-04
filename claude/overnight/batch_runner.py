@@ -828,7 +828,14 @@ async def execute_feature(
                 f"- **Complexity**: {task.complexity}",
             ]
             plan_task = "\n".join(plan_task_lines)
-            learnings = _read_learnings(feature)
+            progress_path = Path(f"lifecycle/{feature}/learnings/progress.txt")
+            note_path = Path(f"lifecycle/{feature}/learnings/orchestrator-note.md")
+            has_progress = progress_path.exists() and progress_path.read_text(encoding="utf-8").strip()
+            has_note = note_path.exists() and note_path.read_text(encoding="utf-8").strip()
+            if has_progress or has_note:
+                learnings = _read_learnings(feature)
+            else:
+                learnings = "(No prior learnings.)"
 
             system_prompt = _render_template(IMPLEMENT_TEMPLATE, {
                 "feature": feature,

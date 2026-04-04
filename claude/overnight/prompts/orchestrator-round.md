@@ -236,6 +236,12 @@ write a complete plan to {plan_path} using the standard plan.md format (Overview
 Tasks with Files/What/Depends on/Context/Verification/Status fields,
 Verification Strategy).
 
+Prohibited in verification steps: self-sealing verification — do not write verification
+fields that check artifacts the executing task creates solely to satisfy verification
+(e.g., writing a log entry then checking for it). Verification must reference
+independently observable state: test output, pre-existing files, or artifacts from
+prior tasks.
+
 If the spec is too ambiguous to produce a concrete plan, do NOT write plan.md.
 Instead, output only this JSON on the last line of your response:
 {"status": "deferred", "reason": "<one sentence explaining what is unclear>"}
