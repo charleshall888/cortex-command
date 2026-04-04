@@ -4,7 +4,7 @@ uuid: a6b7c8d9-e0f1-2345-abc1-456789012345
 id: "023"
 title: "Replace spec dump with JIT loading in implement prompt"
 type: chore
-status: refined
+status: complete
 priority: high
 parent: "018"
 blocked-by: []
@@ -12,7 +12,7 @@ tags: [overnight, context, performance, quality]
 created: 2026-04-03
 updated: 2026-04-04
 discovery_source: research/harness-design-long-running-apps/research.md
-session_id: 353ab4d7-4f03-4773-8710-4d9b900709e9
+session_id: null
 lifecycle_phase: implement
 lifecycle_slug: replace-spec-dump-with-jit-loading-in-implement-prompt
 complexity: complex

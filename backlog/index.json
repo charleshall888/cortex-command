@@ -57,37 +57,6 @@
     "repo": null
   },
   {
-    "id": 23,
-    "title": "Replace spec dump with JIT loading in implement prompt",
-    "status": "refined",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "context",
-      "performance",
-      "quality"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-04",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "018",
-    "research": null,
-    "spec": "lifecycle/replace-spec-dump-with-jit-loading-in-implement-prompt/spec.md",
-    "discovery_source": "research/harness-design-long-running-apps/research.md",
-    "plan": null,
-    "uuid": "a6b7c8d9-e0f1-2345-abc1-456789012345",
-    "lifecycle_slug": "replace-spec-dump-with-jit-loading-in-implement-prompt",
-    "session_id": "353ab4d7-4f03-4773-8710-4d9b900709e9",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 33,
     "title": "Establish dashboard UI quality baseline",
     "status": "backlog",

@@ -4,7 +4,6 @@
 |-----|-------|--------|----------|------|------------|--------|------|
 | 2 | Morning report: surface failure root cause inline instead of pointing to log files | backlog | high | chore | — | — | — |
 | 18 | Improve overnight execution quality through spec improvements and harness maintainability | backlog | high | epic | — | — | — |
-| 23 | Replace spec dump with JIT loading in implement prompt | refined | high | chore | — | 018 | ✓ |
 | 33 | Establish dashboard UI quality baseline | backlog | high | epic | — | — | — |
 | 34 | Fix inline style violations in session_panel and feature_cards templates | backlog | high | chore | — | 033 | — |
 | 35 | Define evaluation rubric, update lifecycle spec template, create dashboard/CONTEXT.md | backlog | high | chore | — | 033 | — |
@@ -19,7 +18,6 @@
 
 ## Refined
 
-- **23** Replace spec dump with JIT loading in implement prompt
 
 ## Backlog
 
