@@ -9,7 +9,6 @@
 | 34 | Fix inline style violations in session_panel and feature_cards templates | backlog | high | chore | — | 033 | — |
 | 35 | Define evaluation rubric, update lifecycle spec template, create dashboard/CONTEXT.md | backlog | high | chore | — | 033 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
-| 27 | Fix next_question_id() race condition in deferral.py | refined | medium | bug | — | 018 | ✓ |
 | 29 | Add Playwright + HTMX test patterns to dev toolchain | backlog | medium | feature | 035 | 033 | — |
 | 30 | Investigate and fix swim-lane inline styles and layout degradation | backlog | medium | chore | 029 | 033 | — |
 | 31 | Add hover states, loading feedback, and badge micro-interactions | backlog | medium | feature | 034, 035 | 033 | — |
@@ -21,7 +20,6 @@
 ## Refined
 
 - **23** Replace spec dump with JIT loading in implement prompt
-- **27** Fix next_question_id() race condition in deferral.py
 
 ## Backlog
 
