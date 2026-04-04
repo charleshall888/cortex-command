@@ -87,13 +87,15 @@ class DeferralQuestion:
 
 
 def next_question_id(deferred_dir: Path, feature: str) -> int:
-    """Return the next sequential question ID for a feature.
+    """Return a hint for the next available question ID for a feature.
 
     Scans ``deferred_dir`` for files matching ``{feature}-q{NNN}.md`` and
     returns max(NNN) + 1.  Returns 1 when no matching files exist.
 
-    Thread-safe via filesystem — no in-memory counters.  Callers format
-    the ID into a filename with ``f"{feature}-q{id:03d}.md"``.
+    This value is used as a starting-point hint to reduce retry loops;
+    actual uniqueness is enforced by ``O_CREAT | O_EXCL`` in
+    :func:`write_deferral`, which atomically claims the destination
+    filename and retries on collision.
     """
     pattern = f"{feature}-q*.md"
     existing = list(deferred_dir.glob(pattern))
@@ -406,6 +408,18 @@ def _next_escalation_n(
 
     Counts existing ``"escalation"`` type entries in *escalations_path*
     that match *feature* and *round*, then returns count + 1.
+
+    TOCTOU note: there is a theoretical race between reading the count
+    here and appending the new entry in ``write_escalation`` — a
+    concurrent caller with the same feature+round could read the same
+    count and produce a duplicate escalation_id.  This is safe under the
+    current architecture because the overnight orchestrator dispatches at
+    most one coroutine per feature, so the same feature+round pair is
+    never processed concurrently.  The JSONL append pattern also makes
+    ``O_EXCL``-style atomic creation inapplicable (we append lines, not
+    create unique files).  If the dispatch model ever changes to allow
+    concurrent workers on the same feature+round, this function will
+    need a locking mechanism or an atomic counter.
     """
     count = 0
     if escalations_path.is_file():
