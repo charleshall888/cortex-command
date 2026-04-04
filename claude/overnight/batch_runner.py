@@ -342,16 +342,31 @@ def _render_template(template_path: Path, variables: dict[str, str]) -> str:
     return template
 
 
-def _read_spec_excerpt(feature: str, spec_path: Optional[str] = None) -> str:
-    # 1. Try the provided spec_path (e.g. batch spec from overnight state)
+def _get_spec_path(feature: str, spec_path: Optional[str] = None) -> str:
+    """Return an absolute path to the spec file for a feature.
+
+    Resolution order: explicit *spec_path* first, then the per-feature
+    lifecycle spec.  Always returns an absolute path string (even when the
+    underlying file might not exist).
+    """
     if spec_path:
         p = Path(spec_path)
         if p.exists():
-            return p.read_text(encoding="utf-8")
-    # 2. Fall back to the per-feature lifecycle spec
+            return str(p.resolve())
     lifecycle_path = Path(f"lifecycle/{feature}/spec.md")
-    if lifecycle_path.exists():
-        return lifecycle_path.read_text(encoding="utf-8")
+    return str(lifecycle_path.resolve())
+
+
+def _read_spec_content(feature: str, spec_path: Optional[str] = None) -> str:
+    """Read and return the full text of the spec file for a feature.
+
+    Uses `_get_spec_path` for resolution, then reads the file.  Returns a
+    fallback string when the resolved path does not exist on disk.
+    """
+    resolved = _get_spec_path(feature, spec_path)
+    p = Path(resolved)
+    if p.exists():
+        return p.read_text(encoding="utf-8")
     return "(No specification file found.)"
 
 
@@ -702,9 +717,10 @@ async def execute_feature(
 
                 # Repair agent path.
                 if _fs.recovery_attempts >= 1:
+                    escalations_path = Path("lifecycle/escalations.jsonl")
                     _deferral = DeferralQuestion(
                         feature=feature,
-                        question_id=_next_escalation_n(feature),
+                        question_id=_next_escalation_n(feature, config.batch_id, escalations_path),
                         severity=SEVERITY_BLOCKING,
                         context=f"Conflict recovery budget exhausted for {feature} — repair agent already attempted once",
                         question=f"Conflict recovery budget exhausted for {feature} — repair agent already attempted once",
@@ -753,9 +769,10 @@ async def execute_feature(
                         )
                     elif _repair_result.error and _repair_result.error.startswith("deferral:"):
                         _question_text = _repair_result.error[len("deferral:"):].strip()
+                        escalations_path = Path("lifecycle/escalations.jsonl")
                         _deferral = DeferralQuestion(
                             feature=feature,
-                            question_id=_next_escalation_n(feature),
+                            question_id=_next_escalation_n(feature, config.batch_id, escalations_path),
                             severity=SEVERITY_BLOCKING,
                             context=f"Repair agent for {feature} could not determine intent",
                             question=_question_text,
@@ -790,7 +807,7 @@ async def execute_feature(
             parse_error=True,
         )
 
-    spec_excerpt = _read_spec_excerpt(feature, spec_path)
+    spec_path_resolved = _get_spec_path(feature, spec_path)
     learnings_dir = Path(f"lifecycle/{feature}/learnings")
 
     try:
@@ -817,7 +834,7 @@ async def execute_feature(
                 "task_number": str(task.number),
                 "task_description": task.description,
                 "plan_task": plan_task,
-                "spec_excerpt": spec_excerpt,
+                "spec_path": spec_path_resolved,
                 "worktree_path": str(worktree_path),
                 "learnings": learnings,
                 "integration_worktree_path": str(Path.cwd()),
@@ -923,7 +940,7 @@ async def execute_feature(
                 pauses_ref = consecutive_pauses_ref if consecutive_pauses_ref is not None else [0]
                 brain_result = await _handle_failed_task(
                     feature, task, feature_plan.tasks,
-                    spec_excerpt, result, pauses_ref, manager,
+                    _read_spec_content(feature, spec_path), result, pauses_ref, manager,
                     round=config.batch_id,
                     log_path=config.overnight_events_path,
                 )
@@ -1321,9 +1338,10 @@ def _apply_feature_result(
                 )
                 context_text = "Merge blocked: CI run has a non-success conclusion (failure, cancelled, timed_out, or action_required)."
 
+            escalations_path = Path("lifecycle/escalations.jsonl")
             deferral = DeferralQuestion(
                 feature=name,
-                question_id=_next_escalation_n(name),
+                question_id=_next_escalation_n(name, config.batch_id, escalations_path),
                 severity=SEVERITY_BLOCKING,
                 context=context_text,
                 question=question_text,
@@ -1640,9 +1658,10 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                     )
                     context_text = "Merge blocked: CI run has a non-success conclusion (failure, cancelled, timed_out, or action_required)."
 
+                escalations_path = Path("lifecycle/escalations.jsonl")
                 deferral = DeferralQuestion(
                     feature=name,
-                    question_id=_next_escalation_n(name),
+                    question_id=_next_escalation_n(name, config.batch_id, escalations_path),
                     severity=SEVERITY_BLOCKING,
                     context=context_text,
                     question=question_text,
