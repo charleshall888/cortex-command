@@ -808,6 +808,7 @@ async def execute_feature(
         )
 
     spec_path_resolved = _get_spec_path(feature, spec_path)
+    spec_content = _read_spec_content(feature, spec_path)
     learnings_dir = Path(f"lifecycle/{feature}/learnings")
 
     try:
@@ -940,7 +941,7 @@ async def execute_feature(
                 pauses_ref = consecutive_pauses_ref if consecutive_pauses_ref is not None else [0]
                 brain_result = await _handle_failed_task(
                     feature, task, feature_plan.tasks,
-                    _read_spec_content(feature, spec_path), result, pauses_ref, manager,
+                    spec_content, result, pauses_ref, manager,
                     round=config.batch_id,
                     log_path=config.overnight_events_path,
                 )
