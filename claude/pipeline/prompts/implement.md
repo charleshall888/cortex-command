@@ -6,13 +6,15 @@ You are implementing a single task for the **{feature}** feature.
 
 {plan_task}
 
-## Specification Context
+## Specification Reference
 
-{spec_excerpt}
+The full specification for this feature is located at `{spec_path}`. Read it on demand when the task description alone is insufficient to disambiguate requirements or resolve ambiguity — do not read it preemptively.
+
+If the spec file is not accessible, proceed with the task description alone and note the access issue in your exit report.
 
 ## Source File Operations
 
-Your working directory is `{worktree_path}`. All source file reads and writes must stay within this directory. **Exception**: Exit reports must be written to `{integration_worktree_path}` as specified below — this is an authorized write outside your working directory and does not violate the working directory constraint.
+Your working directory is `{worktree_path}`. All source file reads and writes must stay within this directory. **Exception — exit reports**: Exit reports must be written to `{integration_worktree_path}` as specified below — this is an authorized write outside your working directory and does not violate the working directory constraint. **Exception — spec reads**: Reading the spec file at `{spec_path}` is an authorized read outside your working directory.
 
 ## Lifecycle Artifact Operations
 
@@ -21,7 +23,7 @@ Exit reports and other lifecycle artifacts must be written to the integration re
 - `{integration_worktree_path}/lifecycle/{feature}/exit-reports/{task_number}.json` when `{integration_worktree_path}` is non-empty
 - `lifecycle/{feature}/exit-reports/{task_number}.json` relative to your working directory otherwise
 
-- For source file work, do not navigate to parent directories using shell commands (e.g. `cd ..`, `cd /`, or absolute paths outside your working directory). Exit report writes to `{integration_worktree_path}` are exempt from this restriction.
+- For source file work, do not navigate to parent directories using shell commands (e.g. `cd ..`, `cd /`, or absolute paths outside your working directory). Exit report writes to `{integration_worktree_path}` and spec reads from `{spec_path}` are exempt from this restriction.
 
 ## Instructions
 
