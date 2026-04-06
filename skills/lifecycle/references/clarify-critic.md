@@ -57,13 +57,15 @@ Do not be balanced. Do not summarize what the assessment got right.
 
 ## Disposition Framework
 
-After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection with one of three dispositions. (Apply/Dismiss/Ask framework below matches `/critical-review` Step 4 — reproduced here to avoid silent drift.)
+After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection with one of three dispositions. (Apply/Dismiss/Ask framework below — including the self-resolution step — matches `/critical-review` Step 4 — reproduced here to avoid silent drift.)
 
 **Apply** — the objection identifies a concrete problem and the correct fix is clear and unambiguous. Examples: a High confidence rating is demonstrably unsupported by the source, the scope claim contradicts explicit text in the backlog item, the requirements alignment is asserted when no requirements file was loaded. Fix these without asking — revise the affected confidence dimension(s) accordingly.
 
 **Dismiss** — the objection is already addressed by the source material, misreads the stated constraints, or rests on an assumption the source material explicitly rules out. State the dismissal reason briefly.
 
 **Ask** — the fix is not for the orchestrator to decide unilaterally. This covers: (a) genuine preference or scope decisions — e.g., whether a vague phrase in the backlog item should be read narrowly or broadly; (b) genuine orchestrator uncertainty about which reading of the source is correct; (c) consequential ambiguity where either interpretation changes what gets built. Hold these for the consolidated Q&A in §4.
+
+**Before classifying as Ask, attempt self-resolution.** For each objection you are considering classifying as Ask, do a brief check — not an exhaustive search. Re-read the source material and confidence assessment, and consult any requirements context loaded in clarify §2. If the answer is supported by verifiable evidence — explicit text in the source material, a requirements constraint, or a documented project convention — resolve it and reclassify: as Apply (revising the affected confidence dimension accordingly) or as Dismiss. Do not resolve based on inferences from general principles or reasoning you already held before investigating. **Anchor check**: if your resolution relies on conclusions from your prior work on this assessment rather than new evidence found during the check, treat it as Ask — that is anchoring, not resolution. Uncertainty still defaults to Ask. Surviving Ask items flow into the Ask-to-Q&A Merge Rule as before.
 
 **Apply bar**: Apply when and only when the fix is unambiguous and confidence is high. Uncertainty is a legitimate reason to Ask — do not guess and apply. For inconsequential tie-breaks, pick one and apply. For consequential tie-breaks, Ask.
 
@@ -93,6 +95,8 @@ status: "ok"
 ```
 
 `applied_fixes` contains descriptions of the changes the orchestrator made to the confidence assessment as a result of Apply dispositions. If no Apply dispositions were made, `applied_fixes` is an empty array.
+
+Disposition counts reflect post-self-resolution values. If self-resolution reclassifies an Ask item as Apply, the logged `apply` count increases and `ask` count decreases accordingly. The `applied_fixes` array includes fixes from both initial Apply dispositions and self-resolution reclassifications.
 
 Example (YAML block format, same as other lifecycle events):
 
