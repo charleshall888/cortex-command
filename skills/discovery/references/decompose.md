@@ -27,7 +27,23 @@ For each work item, capture:
 
 Present the proposed work items to the user for review before creating tickets.
 
-### 3. Determine Grouping
+### 3. Consolidation Review
+
+Before creating tickets, review the proposed work items for over-decomposition. Combine items when either of the following signals is present:
+
+**(a) Same-file overlap**: Two or more S-sized items that modify the same set of files. These are aspects of a single change that were split unnecessarily.
+
+**(b) No-standalone-value prerequisite**: A strict sequential dependency where the predecessor has no independent deliverable value — it exists only to enable the successor. Merge the prerequisite into the item it enables.
+
+When combining, merge the descriptions and adjust size accordingly (two S items typically become one M). Update the dependency graph to reflect the combined item.
+
+The agent may also consolidate items beyond (a) and (b) when there is concrete, verifiable rationale (e.g., overlapping file sets, shared research section reference). Self-referential reasoning ("these share a thought process") is not sufficient rationale.
+
+If no consolidation candidates are found, proceed to §4 silently.
+
+When items are combined, document the consolidation decision and rationale in the Key Design Decisions section of `research/{topic}/decomposed.md` (written in §6).
+
+### 4. Determine Grouping
 
 **Single ticket**: If the research produces exactly one work item, create a single backlog ticket. No epic needed.
 
@@ -39,7 +55,7 @@ Present the proposed work items to the user for review before creating tickets.
    - Body references the research artifact
 2. Create child tickets — one per work item, each with `parent: <epic-id>`
 
-### 4. Create Backlog Tickets
+### 5. Create Backlog Tickets
 
 Follow the `/backlog add` conventions for each ticket:
 
@@ -53,7 +69,7 @@ Follow the `/backlog add` conventions for each ticket:
    - `discovery_source: research/{topic}/research.md` — enables `/lifecycle` to auto-load prior discovery context
    <!-- Note: lifecycle reads `discovery_source:` first; `research:` is recognized as a fallback for hand-authored or pre-coupling backlog items. -->
 
-### 5. Write Decomposition Record
+### 6. Write Decomposition Record
 
 Create `research/{topic}/decomposed.md` to record what was produced:
 
@@ -77,15 +93,15 @@ Create `research/{topic}/decomposed.md` to record what was produced:
 - `backlog/NNN-slug.md` — [title]
 ```
 
-### 6. Update Index
+### 7. Update Index
 
 Run `backlog/generate-index.sh` to update the backlog index.
 
-### 7. Commit
+### 8. Commit
 
 Stage and commit the new backlog files and `research/{topic}/decomposed.md` using `/commit`.
 
-### 8. Present Summary
+### 9. Present Summary
 
 Show the user:
 
