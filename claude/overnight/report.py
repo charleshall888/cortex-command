@@ -1090,6 +1090,10 @@ def _suggest_next_step(error: str) -> str:
         return "Investigate test failure, fix, retry"
     if "circuit breaker" in error_lower:
         return "Review learnings, consider spec revision"
+    if "already implemented" in error_lower or "already merged" in error_lower:
+        return "Verify prior merge on main, close backlog item if complete"
+    if "no changes produced" in error_lower:
+        return "Check agent output — agent ran but produced no diff"
     return "Review learnings, retry or investigate"
 
 

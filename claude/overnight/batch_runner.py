@@ -408,6 +408,34 @@ def _get_changed_files(feature: str, base_branch: str, branch: str | None = None
     return []
 
 
+def _classify_no_commit(feature: str, branch: str, base_branch: str) -> str:
+    """Classify why a feature completed with no new commits.
+
+    Inspects git state to determine whether the branch is stale (base has
+    moved past it) or the agent simply produced no changes.  Always returns
+    a non-empty human-readable string suitable for the morning report.
+    """
+    fallback = f"completed with no new commits (branch: {branch})"
+    try:
+        result = subprocess.run(
+            ["git", "rev-list", f"{branch}..{base_branch}", "--count"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            return fallback
+        count = int(result.stdout.strip())
+        if count > 0:
+            return (
+                f"branch appears stale — base branch ({base_branch}) has "
+                f"{count} commit(s) already merged or ahead of {branch}"
+            )
+        return f"no changes produced — {branch} is at {base_branch} HEAD with no agent commits"
+    except (subprocess.TimeoutExpired, OSError, Exception):
+        return fallback
+
+
 # ---------------------------------------------------------------------------
 # Exit-report reader
 # ---------------------------------------------------------------------------
