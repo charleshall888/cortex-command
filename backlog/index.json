@@ -91,7 +91,7 @@
   {
     "id": 34,
     "title": "Fix inline style violations in session_panel and feature_cards templates",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -100,14 +100,16 @@
       "quality",
       "css"
     ],
-    "areas": [],
+    "areas": [
+      "dashboard"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [],
     "parent": "033",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/fix-inline-style-violations-in-sessionpanel-and-featurecards-templates/spec.md",
     "discovery_source": "research/generative-ui-harness/research.md",
     "plan": null,
     "uuid": "d2e3f4a5-b6c7-8901-defa-123456789012",
@@ -213,7 +215,7 @@
   {
     "id": 30,
     "title": "Investigate and fix swim-lane inline styles and layout degradation",
-    "status": "backlog",
+    "status": "refined",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -223,7 +225,9 @@
       "css",
       "quality"
     ],
-    "areas": [],
+    "areas": [
+      "dashboard"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-06",
     "blocks": [],
@@ -232,7 +236,7 @@
     ],
     "parent": "033",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/investigate-and-fix-swim-lane-inline-styles-and-layout-degradation/spec.md",
     "discovery_source": "research/generative-ui-harness/research.md",
     "plan": null,
     "uuid": "a5b6c7d8-e9f0-1234-abcd-456789012345",
@@ -303,34 +307,6 @@
     "uuid": "c7d8e9f0-a1b2-3456-cdef-678901234567",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "specify",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 36,
-    "title": "Address verification_passed dead code in exit reports",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "reliability",
-      "verification"
-    ],
-    "areas": [],
-    "created": "2026-04-04",
-    "updated": "2026-04-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "783a90bb-5426-4cc3-9556-71a9405755f2",
-    "lifecycle_slug": "address-verification-passed-dead-code-in-exit-reports",
-    "session_id": "1f5714f4-cb21-4058-a780-e82ddfd78b60",
     "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null

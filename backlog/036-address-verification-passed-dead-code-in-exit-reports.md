@@ -2,12 +2,19 @@
 schema_version: "1"
 uuid: 783a90bb-5426-4cc3-9556-71a9405755f2
 title: "Address verification_passed dead code in exit reports"
-status: backlog
+status: complete
 priority: medium
 type: chore
 created: 2026-04-04
-updated: 2026-04-04
+updated: 2026-04-06
 tags: [overnight, reliability, verification]
+session_id: null
+lifecycle_phase: review
+lifecycle_slug: address-verification-passed-dead-code-in-exit-reports
+complexity: simple
+criticality: high
+spec: lifecycle/address-verification-passed-dead-code-in-exit-reports/spec.md
+areas: [overnight-runner]
 ---
 
 # Address verification_passed dead code in exit reports
