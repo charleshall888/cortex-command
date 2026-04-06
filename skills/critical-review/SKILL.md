@@ -184,6 +184,8 @@ For each objection, assign one of three dispositions:
 
 **Ask** — the fix is not for the orchestrator to decide unilaterally. This covers: (a) genuine preference or scope decisions — which of two valid approaches to take, whether to include or exclude something, a priority call between competing values; (b) genuine orchestrator uncertainty about which fix is correct; (c) consequential tie-breaks — two equally reasonable implementations where the choice affects scope, design direction, or is hard to reverse. Hold these for the end.
 
+**Before classifying as Ask, attempt self-resolution.** For each objection you are considering classifying as Ask, do a brief check — not an exhaustive search. Re-read the relevant artifact sections, check related codebase files, and consult any project context loaded in Step 2a. If the answer is supported by verifiable evidence — a specific file path, explicit artifact text, or documented project context — resolve it yourself and classify as Apply or Dismiss instead. Do not resolve based on inferences from general principles or reasoning you already held before investigating. **Anchor check**: if your resolution relies on conclusions from your prior work on this artifact rather than new evidence found during the check, treat it as Ask — that is anchoring, not resolution. Uncertainty still defaults to Ask.
+
 After classifying all objections:
 
 1. Re-read the artifact in full.
