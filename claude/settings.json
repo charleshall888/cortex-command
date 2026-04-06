@@ -206,7 +206,6 @@
     "ask": [],
     "defaultMode": "default"
   },
-  "model": "sonnet[1m]",
   "enableAllProjectMcpServers": false,
   "hooks": {
     "SessionStart": [

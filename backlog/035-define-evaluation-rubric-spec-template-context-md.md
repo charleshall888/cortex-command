@@ -2,53 +2,45 @@
 schema_version: "1"
 uuid: e3f4a5b6-c7d8-9012-efab-234567890123
 id: "035"
-title: "Define evaluation rubric, update lifecycle spec template, create dashboard/CONTEXT.md"
+title: "Add dashboard visual evaluation criteria to DESIGN.md"
 type: chore
-status: backlog
-priority: high
+status: refined
+priority: medium
 parent: "033"
 blocked-by: []
-tags: [dashboard, ui, quality, rubric, context-engineering, lifecycle]
+tags: [dashboard, ui, quality, evaluation]
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-04-06
 discovery_source: research/generative-ui-harness/research.md
+complexity: simple
+criticality: low
+spec: lifecycle/add-dashboard-visual-evaluation-criteria-to-designmd/spec.md
+areas: [dashboard]
 ---
 
-# Define evaluation rubric, update lifecycle spec template, create dashboard/CONTEXT.md
+# Add dashboard visual evaluation criteria to DESIGN.md
 
-## Context from discovery
+## Context
 
-Research into Anthropic's harness design article identified that the dashboard lacks any defined quality criteria for UI work. The research artifact (`research/generative-ui-harness/research.md`, sections DR-4 and RQ3) already provides the rubric draft. This ticket formalizes it into two referenceable locations.
+Research into Anthropic's harness design article identified that the dashboard lacks defined quality criteria for UI work. The existing DESIGN.md covers design tokens, composition rules, and forbidden patterns, but does not define what "good" looks like at a higher level.
 
-## Rubric (from research DR-4)
-
-Four adapted criteria and their Playwright-verifiability:
-
-| Criterion | Weight | Playwright-verifiable? |
-|-----------|--------|----------------------|
-| Information clarity | High | No — perceptual judgment |
-| Consistency | High | Partially — inline `style=` attribute absence, element presence |
-| Operational usefulness | Medium | No — perceptual + workflow judgment |
-| Purposefulness | Low | No — entirely perceptual |
-
-Only "consistency" can be partially automated. The other three require human review.
+The article's evaluator uses Playwright to screenshot running UI and Claude's vision to evaluate it. All four quality criteria are Claude-vision-evaluable — the original research's conclusion that 3 of 4 require "human review" was based on treating Playwright as a DOM assertion tool rather than as eyes for Claude.
 
 ## What to produce
 
-**1. Lifecycle spec template update**
+Add a `## Visual Evaluation Criteria` section to `claude/dashboard/DESIGN.md` with four quality dimensions adapted from the Anthropic harness rubric:
 
-Add a dashboard-feature section to the lifecycle spec template (or a dashboard-specific lifecycle config override) requiring:
-- Explicit acceptance criteria for each of the four rubric dimensions
-- Browser-level verifiable behaviors listed as a checklist (element selectors, HTMX swap behavior, no inline `style=` on new elements)
-- Clear distinction between Playwright-checkable criteria and human-review criteria
+| Criterion | Weight | What to evaluate via screenshots |
+|-----------|--------|--------------------------------|
+| Information clarity | High | Status hierarchy visually distinct, feature status scannable at a glance, operational state readable without studying labels |
+| Consistency | High | Design tokens used throughout, no visual evidence of inline styles, no mixed styling patterns, forbidden patterns absent |
+| Operational usefulness | Medium | Alerts prominent, swim-lane conveys temporal ordering, HTMX refresh produces no visible flicker, session history supports morning review |
+| Purposefulness | Low | Looks like a purpose-built monitoring tool, not a generic admin panel |
 
-**2. `claude/dashboard/CONTEXT.md`** (~300 words)
+Include brief guidance on how these criteria should be applied — during visual evaluation with Playwright MCP (ticket 029), as review criteria for dashboard PRs, or as acceptance criteria in dashboard feature specs.
 
-Right-altitude implementation guidance for agents working on dashboard features. Based on the context engineering research, this should cover:
-- Multi-file coordination rules (app.py → data.py → templates → base.html)
-- JIT retrieval sequence: read task spec → read one relevant parser function → read reference template → read patterns/ → read DESIGN.md excerpt only as needed
-- Forbidden patterns: raw hex colors, inline `style=` attributes, arbitrary spacing values
-- Tool scope: Glob bounded to `templates/` and `claude/dashboard/`, no root-level wildcards
-- Reference to evaluation rubric above
+## What NOT to produce
 
-This ticket is a prerequisite for tickets 029, 031, and 032.
+- No lifecycle spec template modifications — evaluation criteria live in DESIGN.md alongside existing design rules
+- No separate CONTEXT.md — DESIGN.md is the single source of truth for dashboard design guidance
+- No process gates or rubric infrastructure — these are reference criteria, not automation

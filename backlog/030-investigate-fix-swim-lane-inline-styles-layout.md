@@ -4,14 +4,18 @@ uuid: a5b6c7d8-e9f0-1234-abcd-456789012345
 id: "030"
 title: "Investigate and fix swim-lane inline styles and layout degradation"
 type: chore
-status: backlog
+status: refined
 priority: medium
 parent: "033"
 blocked-by: ["029"]
 tags: [dashboard, ui, swim-lane, css, quality]
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-04-06
 discovery_source: research/generative-ui-harness/research.md
+complexity: complex
+criticality: medium
+spec: lifecycle/investigate-and-fix-swim-lane-inline-styles-and-layout-degradation/spec.md
+areas: [dashboard]
 ---
 
 # Investigate and fix swim-lane inline styles and layout degradation

@@ -1,0 +1,14 @@
+- ts: 2026-04-06T14:00:00Z
+  event: clarify_critic
+  feature: add-dashboard-visual-evaluation-criteria-to-designmd
+  findings:
+    - "Guidance clause is a second deliverable with its own design decisions and a forward dependency on ticket 029."
+    - "Content being added contradicts the source research DR-4 which marked 3/4 criteria as requiring human review."
+    - "Adding evaluation criteria may be premature formalization for a dashboard that has only been worked on daytime."
+    - "Criticality rated low but downstream tickets reference DESIGN.md criteria, making reversal harder than claimed."
+  dispositions:
+    apply: 0
+    dismiss: 4
+    ask: 0
+  applied_fixes: []
+  status: ok

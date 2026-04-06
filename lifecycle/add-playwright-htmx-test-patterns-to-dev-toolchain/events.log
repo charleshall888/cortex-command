@@ -1,0 +1,15 @@
+- ts: 2026-04-06T12:00:00Z
+  event: clarify_critic
+  feature: add-playwright-htmx-test-patterns-to-dev-toolchain
+  findings:
+    - "The scope note references 'ticket 028' for the rubric but 028 is 'Fix test_plan.py failures' — an unrelated bug fix. The actual rubric is from ticket 035 or the discovery source."
+    - "'Key elements' in deliverable 5 is undefined, and deliverable 4 leaves 'script or just recipe' as a design decision — scope boundedness may be overstated."
+    - "Introducing Node.js/npx into a Python-only project potentially conflicts with the project's simplicity and ROI constraints. The assessment asserted 'no conflicts' without addressing this tension."
+    - "Blocker 035 is unfinished, meaning deliverable 5's rubric criteria reference an artifact that does not yet exist."
+  dispositions:
+    apply: 1
+    dismiss: 3
+    ask: 0
+  applied_fixes:
+    - "Revised requirements alignment to acknowledge tension between Node.js dependency and project simplicity/ROI constraints. Added research question about Python-native alternatives."
+  status: ok

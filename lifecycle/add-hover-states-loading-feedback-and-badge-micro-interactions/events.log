@@ -1,0 +1,66 @@
+- ts: 2026-04-06T12:00:00Z
+  event: clarify_critic
+  feature: add-hover-states-loading-feedback-and-badge-micro-interactions
+  findings:
+    - "Ticket body references dependency ticket numbers 027/028 but frontmatter blocked-by lists 034/035 — internal contradiction in dependency chain."
+    - "Deliverable 2's 'only when content actually changes' requirement requires application logic beyond CSS/Tailwind — HTMX replaces innerHTML on every poll with no built-in change detection."
+    - "'Subtle reveal of secondary actions on hover where applicable' is ambiguous — no definition of what constitutes secondary actions in the codebase or ticket."
+    - "Blocker 034 may leave data-driven inline styles unresolved, creating a constraint conflict with 031's 'no inline style= attributes' rule."
+    - "300ms badge CSS transitions could be interrupted by HTMX innerHTML replacement on the next 5s poll cycle."
+  dispositions:
+    apply: 1
+    dismiss: 4
+    ask: 0
+  applied_fixes:
+    - "Revised complexity from simple to complex — deliverable 2's 'only when content actually changes' requirement requires application logic beyond template markup"
+  status: ok
+
+- ts: 2026-04-06T12:01:00Z
+  event: lifecycle_start
+  feature: add-hover-states-loading-feedback-and-badge-micro-interactions
+  tier: complex
+  criticality: low
+
+- ts: 2026-04-06T12:05:00Z
+  event: orchestrator_review
+  feature: add-hover-states-loading-feedback-and-badge-micro-interactions
+  phase: research
+  verdict: flag
+  cycle: 1
+  issues:
+    - "R5: Idiomorph is a new external dependency (HTMX extension not currently in the dashboard). Research does not verify HTMX version in use, Idiomorph compatibility, or inclusion method."
+
+- ts: 2026-04-06T12:05:01Z
+  event: orchestrator_dispatch_fix
+  feature: add-hover-states-loading-feedback-and-badge-micro-interactions
+  phase: research
+  mode: fresh_subagent
+  issue: "R5: Missing Dependency Verification section for Idiomorph HTMX extension"
+
+- ts: 2026-04-06T12:06:00Z
+  event: orchestrator_review
+  feature: add-hover-states-loading-feedback-and-badge-micro-interactions
+  phase: research
+  verdict: pass
+  cycle: 2
+  issues: []
+
+- ts: 2026-04-06T12:06:01Z
+  event: phase_transition
+  feature: add-hover-states-loading-feedback-and-badge-micro-interactions
+  from: research
+  to: specify
+
+- ts: 2026-04-06T12:10:00Z
+  event: orchestrator_review
+  feature: add-hover-states-loading-feedback-and-badge-micro-interactions
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+
+- ts: 2026-04-06T12:15:00Z
+  event: phase_transition
+  feature: add-hover-states-loading-feedback-and-badge-micro-interactions
+  from: specify
+  to: plan

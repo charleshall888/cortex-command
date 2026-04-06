@@ -4,14 +4,18 @@ uuid: c7d8e9f0-a1b2-3456-cdef-678901234567
 id: "032"
 title: "Add accessibility foundations (aria-live, multi-modal severity)"
 type: chore
-status: backlog
+status: refined
 priority: medium
 parent: "033"
-blocked-by: ["035"]
+blocked-by: []
 tags: [dashboard, ui, accessibility, a11y, aria]
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-04-06
 discovery_source: research/generative-ui-harness/research.md
+complexity: complex
+criticality: medium
+spec: lifecycle/add-accessibility-foundations-aria-live-multi-modal-severity/spec.md
+areas: [dashboard]
 ---
 
 # Add accessibility foundations (aria-live, multi-modal severity)
@@ -20,7 +24,7 @@ discovery_source: research/generative-ui-harness/research.md
 
 The dashboard currently communicates state via color alone in several places (status badges, alert banner). This fails WCAG 4.1.3 and is inaccessible to color-blind users. Additionally, no live region announcements exist for dynamic content updates — screen readers receive no signal when HTMX swaps change status.
 
-The existing DESIGN.md does not cover accessibility patterns. Ticket 028 (rubric + CONTEXT.md) adds these standards as part of the evaluation rubric. This ticket implements the foundations.
+The existing DESIGN.md does not cover accessibility patterns. Ticket 035 (rubric + CONTEXT.md) adds these standards as part of the evaluation rubric. This ticket implements the foundations.
 
 ## What to produce
 
@@ -44,6 +48,6 @@ Add `aria-label` attributes to unlabeled interactive regions (agent fleet panel,
 
 ## Constraints
 
-- Implementation must reference the evaluation rubric from ticket 028 as acceptance criteria
+- Implementation must reference the evaluation rubric from ticket 035 as acceptance criteria
 - Icons should be `aria-hidden="true"` — the text label carries the accessible meaning
 - `aria-live="assertive"` is reserved for critical failures only; routine status updates use `polite`

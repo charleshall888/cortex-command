@@ -1,0 +1,17 @@
+- ts: 2026-04-06T12:00:00Z
+  event: clarify_critic
+  feature: define-evaluation-rubric-update-lifecycle-spec-template-create-dashboard-context-md
+  findings:
+    - "Assessment says 'three explicit deliverables' but enumerates two — the rubric location as a standalone artifact is ambiguous."
+    - "Spec template vs. config override is an unresolved design fork — parenthetical alternative describes two fundamentally different approaches."
+    - "DR-4 provides rubric framework but not acceptance criteria — the assessment overstates what is 'already drafted.'"
+    - "Dashboard-specific content in shared spec template may conflict with architectural separation of concerns."
+    - "Complexity rated 'simple' despite requiring a design decision the ticket explicitly defers."
+  dispositions:
+    apply: 2
+    dismiss: 2
+    ask: 1
+  applied_fixes:
+    - "Corrected deliverable count from 'three' to 'two' in intent clarity assessment."
+    - "Revised complexity from 'simple' to 'complex' — spec template is shared lifecycle infrastructure and design fork requires judgment."
+  status: ok

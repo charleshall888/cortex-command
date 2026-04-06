@@ -2,78 +2,57 @@
 schema_version: "1"
 uuid: f4a5b6c7-d8e9-0123-fabc-345678901234
 id: "029"
-title: "Add Playwright + HTMX test patterns to dev toolchain"
+title: "Add Playwright MCP for dashboard visual evaluation"
 type: feature
-status: backlog
+status: refined
 priority: medium
 parent: "033"
-blocked-by: ["035"]
-tags: [dashboard, ui, testing, playwright, htmx]
+blocked-by: []
+tags: [dashboard, ui, evaluation, playwright, mcp]
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-04-06
 discovery_source: research/generative-ui-harness/research.md
+complexity: simple
+criticality: medium
+spec: lifecycle/add-playwright-mcp-for-dashboard-visual-evaluation/spec.md
+areas: [dashboard]
 ---
 
-# Add Playwright + HTMX test patterns to dev toolchain
+# Add Playwright MCP for dashboard visual evaluation
 
-## Context from discovery
+## Context
 
-The dashboard has no browser-level tests. Unit tests check string presence in rendered HTML but cannot verify layout integrity, visual coherence, or HTMX partial swap behavior. Playwright MCP is the evaluation tool used in Anthropic's harness design article for live UI evaluation.
+Anthropic's harness design article describes an evaluator that "uses the Playwright MCP to click through the running application the way a user would, screenshotting and carefully studying the implementation before producing its assessment." Playwright MCP is a navigation and perception tool for Claude's vision — not an assertion framework. Claude's multimodal capabilities evaluate visual quality, layout coherence, and operational clarity from screenshots.
 
-Research confirmed: project-scoped configuration is supported via `.mcp.json` in the project root (not global `~/.claude/settings.json`). Package: `@playwright/mcp` (official Microsoft implementation).
+The dashboard currently has no mechanism for Claude to see its own UI output. Adding Playwright MCP gives Claude eyes on the dashboard, enabling visual evaluation of all quality criteria (information clarity, consistency, operational usefulness, purposefulness).
 
 ## What to produce
 
 **1. Project-scoped Playwright MCP configuration**
 
-Add `.mcp.json` to the project root:
-```json
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    }
-  }
-}
-```
+Add `.mcp.json` to the project root so Claude can navigate and screenshot the dashboard.
 
-Verify with: `claude mcp add --scope project playwright npx @playwright/mcp@latest`
+**2. Fixture and server setup**
 
-**2. Browser binary installation**
+Document or script the setup for visual evaluation:
+- `just dashboard-seed` generates fixture data
+- `just dashboard` starts the server at `localhost:8080`
+- Claude navigates, screenshots, and evaluates
 
-Document: `npx playwright install` must be run manually before first use. Auto-install via MCP often fails due to permissions.
+**3. Evaluation workflow documentation**
 
-**3. HTMX settlement utility**
+Brief doc on how Claude uses Playwright MCP to evaluate dashboard changes:
+- Navigate to the dashboard with seeded data
+- Screenshot key panels
+- Evaluate against quality criteria in DESIGN.md
+- Report findings with specific visual evidence
 
-Write a reusable Playwright test helper:
-```javascript
-async function htmxReady(page) {
-  await expect(
-    page.locator('.htmx-request, .htmx-settling, .htmx-swapping, .htmx-added')
-  ).toHaveCount(0);
-}
-```
+## Scope notes
 
-This waits for all in-flight HTMX requests to settle before assertions.
+- Playwright MCP is for Claude's interactive visual evaluation — not automated CI tests
+- Existing research (in lifecycle directory) identified TestClient + BeautifulSoup as the proportional approach for automated DOM regression testing — that's a separate concern and can be added independently if needed
+- This ticket does not depend on ticket 035 — Claude can evaluate visually with criteria stated in DESIGN.md or prompts
 
-**4. Fixture-setup script**
+## Prior research note
 
-Write a script (or `just` recipe) that:
-1. Runs `just dashboard-seed` to generate fixture data
-2. Starts the dashboard server (`just dashboard`)
-3. Outputs the server URL for Playwright to connect to
-
-**5. Sample DOM-structure assertion**
-
-Write one sample Playwright test demonstrating:
-- Navigation to `localhost:8080`
-- `htmxReady()` settlement check
-- Assert no inline `style=` attributes on key elements (the consistency rubric criterion)
-- Assert feature card elements present after seed data loads
-
-## Scope note
-
-Playwright verifies DOM structure only. It cannot verify: visual clarity ("readable at a glance"), animation smoothness, or temporal ordering correctness of computed layout. The rubric from ticket 028 specifies which criteria require human review vs. automated checking.
-
-Ticket 030 (swim-lane fix) depends on this ticket because DOM-structure assertions provide a regression baseline for the swim-lane refactor — even though they cannot catch all correctness failures.
+Research exists at `lifecycle/add-playwright-htmx-test-patterns-to-dev-toolchain/research.md` from the original ticket scope. That research correctly identified that @playwright/mcp is an interactive tool (not a test runner) and recommended TestClient + BeautifulSoup for automated testing. The research's core findings remain valid but were scoped around DOM assertion patterns — visual evaluation via Claude's vision was not explored. A research supplement or re-evaluation may be needed during refinement.

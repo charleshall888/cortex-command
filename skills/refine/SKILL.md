@@ -123,36 +123,16 @@ If the `## Open Questions` section is absent from `research.md`, the gate passes
 
 ## Step 5: Spec Phase
 
-Run a structured requirements interview following the same areas as `${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md` §2 (Problem statement, Requirements, Non-requirements, Edge cases, Technical constraints). Adapt depth to what is already established — do not re-ask what Clarify already resolved.
+Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md` and follow its full protocol (§1–§4) with these adaptations:
 
-Write `lifecycle/{lifecycle-slug}/spec.md` using the standard spec format:
+- **§1 (Load Context)**: Requirements context was loaded during Clarify (Step 3) and research.md was produced in Step 4. Re-read `lifecycle/{lifecycle-slug}/research.md` but skip redundant requirements loading.
+- **§2a loop-back**: If the Research Confidence Check triggers a loop-back, re-enter Step 4 (Research Phase) with the Sufficiency Check bypass described there.
+- **§3b tier detection**: Read `lifecycle/{lifecycle-slug}/events.log` for the most recent `lifecycle_start` or `complexity_override` event to determine the active tier. The caller (`/lifecycle`) may escalate the tier between Research and Spec — do not rely solely on the Clarify output.
+- **§5 (Transition)**: Skip — /refine does not log phase transitions. The caller handles transition events if applicable.
 
-```markdown
-# Specification: {feature}
+Do NOT set `status: refined` before user approval.
 
-## Problem Statement
-[One paragraph: what this solves, who benefits, why it matters]
-
-## Requirements
-1. [Requirement]: [Acceptance criteria]
-...
-
-## Non-Requirements
-- [Explicit exclusions]
-
-## Edge Cases
-- [Edge case]: [Expected behavior]
-
-## Technical Constraints
-- [Constraint from research or architecture]
-
-## Open Decisions
-- [Only when implementation-level context is required and unavailable at spec time — include a one-sentence reason why. Resolution at spec time is strongly preferred; ask the user if uncertain.]
-```
-
-Present the draft spec to the user. Use the AskUserQuestion tool to collect approval — not as plain markdown text. The user must approve before write-backs. If the user requests changes, revise and re-present. Do NOT set `status: refined` before user approval.
-
-After writing `spec.md`, update `lifecycle/{lifecycle-slug}/index.md`:
+After user approval (specify.md §4), update `lifecycle/{lifecycle-slug}/index.md`:
 - If `"spec"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"spec"` to the artifacts inline array
 - Add wikilink: `- Spec: [[{lifecycle-slug}/spec|spec.md]]`

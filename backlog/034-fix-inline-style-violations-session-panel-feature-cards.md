@@ -4,14 +4,18 @@ uuid: d2e3f4a5-b6c7-8901-defa-123456789012
 id: "034"
 title: "Fix inline style violations in session_panel and feature_cards templates"
 type: chore
-status: backlog
+status: refined
 priority: high
 parent: "033"
 blocked-by: []
 tags: [dashboard, ui, quality, css]
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-04-06
 discovery_source: research/generative-ui-harness/research.md
+complexity: simple
+criticality: medium
+spec: lifecycle/fix-inline-style-violations-in-sessionpanel-and-featurecards-templates/spec.md
+areas: [dashboard]
 ---
 
 # Fix inline style violations in session_panel and feature_cards templates

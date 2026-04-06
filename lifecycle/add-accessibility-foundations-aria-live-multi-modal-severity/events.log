@@ -1,0 +1,81 @@
+- ts: 2026-04-06T12:00:00Z
+  event: clarify_critic
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+  findings:
+    - "The prose references 'Ticket 028 (rubric + CONTEXT.md)' but 028 is a test-fix ticket; ticket 035 defines the evaluation rubric. The YAML blocked-by correctly references 035."
+    - "The four-tier severity taxonomy (Info/Warning/Error/Alerts) does not map to the dashboard's existing operational statuses (merged, running, failed, paused, pending, etc.). The ticket does not define this mapping."
+    - "Requirements alignment is asserted but requirements/observability.md says nothing about accessibility or WCAG. The motivating standard is external."
+    - "File count '4+ likely' understates the actual surface area — badge patterns, alert-banner macros, app.py badge class map, swim-lane templates with inline color."
+    - "The DOM-on-page-load requirement for aria-live containers may require restructuring HTMX swap architecture, not just additive attribute decoration."
+  dispositions:
+    apply: 2
+    dismiss: 3
+    ask: 0
+  applied_fixes:
+    - "Revised scope boundedness from High to Low — the severity taxonomy mapping to existing dashboard statuses is unspecified."
+    - "Revised requirements alignment from 'Aligned' to 'Partial alignment' — accessibility is not mentioned in any project requirements file."
+  status: ok
+
+- ts: 2026-04-06T12:05:00Z
+  event: lifecycle_start
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+  tier: complex
+  criticality: medium
+
+- ts: 2026-04-06T12:15:00Z
+  event: orchestrator_review
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+  phase: research
+  verdict: flag
+  cycle: 1
+  issues:
+    - "R4: Third Open Questions item ('Ticket 028 typo') is a known finding, not an unknown — should be in Codebase Analysis"
+
+- ts: 2026-04-06T12:16:00Z
+  event: orchestrator_dispatch_fix
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+  phase: research
+  mode: fresh_subagent
+  issue: "R4: Moved ticket 028 typo note from Open Questions to Codebase Analysis under Ticket 035 Rubric Relevance"
+
+- ts: 2026-04-06T12:17:00Z
+  event: orchestrator_review
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+  phase: research
+  verdict: pass
+  cycle: 2
+  issues: []
+
+- ts: 2026-04-06T12:18:00Z
+  event: phase_transition
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+  from: research
+  to: specify
+
+- ts: 2026-04-06T12:25:00Z
+  event: orchestrator_review
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+
+- ts: 2026-04-06T12:35:00Z
+  event: critical_review
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+  phase: specify
+  angles: 4
+  applied: 5
+  dismissed: 1
+  asked: 1
+  key_finding: "HTMX innerHTML swaps trigger redundant aria-live re-announcements — added R8 morph swap requirement"
+
+- ts: 2026-04-06T12:40:00Z
+  event: spec_approved
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+
+- ts: 2026-04-06T12:40:00Z
+  event: phase_transition
+  feature: add-accessibility-foundations-aria-live-multi-modal-severity
+  from: specify
+  to: plan

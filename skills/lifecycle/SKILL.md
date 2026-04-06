@@ -248,11 +248,7 @@ The Clarify, Research, and Spec phases are delegated to `/refine`. This section 
       {"ts": "<ISO 8601>", "event": "complexity_override", "feature": "<name>", "from": "simple", "to": "complex"}
       ```
 
-6. **Critical-review gate**: after the spec draft is written to `lifecycle/{feature}/spec.md` — and **before** presenting the spec to the user for approval — read the active tier from `lifecycle/{feature}/events.log` (applying any `complexity_override` event per Step 2).
-   - If active tier = `complex`: invoke the `critical-review` skill on `lifecycle/{feature}/spec.md`. Incorporate or present findings alongside the spec, then present spec + critical-review output for user approval together.
-   - If active tier = `simple`: skip the critical-review gate and present the spec for user approval directly.
-
-7. **Specify → Plan complexity escalation check**: after the spec is approved by the user and **before** logging the `phase_transition` event from "specify" to "plan", check whether to auto-escalate the complexity tier:
+6. **Specify → Plan complexity escalation check**: after the spec is approved by the user and **before** logging the `phase_transition` event from "specify" to "plan", check whether to auto-escalate the complexity tier:
 
    - Read the active tier from `lifecycle/{feature}/events.log` using the two-step detection in Step 2. If the active tier is already `complex`, skip this check entirely.
    - Otherwise, scan `lifecycle/{feature}/spec.md` for a `## Open Decisions` section. Count the number of bullet items (`-` or `*` lines) directly under that heading. If the section is absent or the count is fewer than 3, skip the check.

@@ -42,7 +42,7 @@
     ],
     "areas": [],
     "created": "2026-04-03",
-    "updated": "2026-04-03",
+    "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
@@ -89,37 +89,6 @@
     "repo": null
   },
   {
-    "id": 35,
-    "title": "Define evaluation rubric, update lifecycle spec template, create dashboard/CONTEXT.md",
-    "status": "backlog",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "dashboard",
-      "ui",
-      "quality",
-      "rubric",
-      "context-engineering",
-      "lifecycle"
-    ],
-    "areas": [],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "033",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/generative-ui-harness/research.md",
-    "plan": null,
-    "uuid": "e3f4a5b6-c7d8-9012-efab-234567890123",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -151,33 +120,33 @@
   },
   {
     "id": 29,
-    "title": "Add Playwright + HTMX test patterns to dev toolchain",
-    "status": "backlog",
+    "title": "Add Playwright MCP for dashboard visual evaluation",
+    "status": "refined",
     "priority": "medium",
     "type": "feature",
     "tags": [
       "dashboard",
       "ui",
-      "testing",
+      "evaluation",
       "playwright",
-      "htmx"
+      "mcp"
     ],
-    "areas": [],
+    "areas": [
+      "dashboard"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-06",
     "blocks": [],
-    "blocked_by": [
-      "035"
-    ],
+    "blocked_by": [],
     "parent": "033",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/add-playwright-mcp-for-dashboard-visual-evaluation/spec.md",
     "discovery_source": "research/generative-ui-harness/research.md",
     "plan": null,
     "uuid": "f4a5b6c7-d8e9-0123-fabc-345678901234",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -218,7 +187,7 @@
   {
     "id": 31,
     "title": "Add hover states, loading feedback, and badge micro-interactions",
-    "status": "backlog",
+    "status": "refined",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -228,30 +197,31 @@
       "ux",
       "animation"
     ],
-    "areas": [],
+    "areas": [
+      "dashboard"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [
-      "034",
-      "035"
+      "034"
     ],
     "parent": "033",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/add-hover-states-loading-feedback-and-badge-micro-interactions/spec.md",
     "discovery_source": "research/generative-ui-harness/research.md",
     "plan": null,
     "uuid": "b6c7d8e9-f0a1-2345-bcde-567890123456",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 32,
     "title": "Add accessibility foundations (aria-live, multi-modal severity)",
-    "status": "backlog",
+    "status": "refined",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -261,19 +231,50 @@
       "a11y",
       "aria"
     ],
-    "areas": [],
+    "areas": [
+      "dashboard"
+    ],
     "created": "2026-04-03",
     "updated": "2026-04-06",
     "blocks": [],
-    "blocked_by": [
-      "035"
-    ],
+    "blocked_by": [],
     "parent": "033",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/add-accessibility-foundations-aria-live-multi-modal-severity/spec.md",
     "discovery_source": "research/generative-ui-harness/research.md",
     "plan": null,
     "uuid": "c7d8e9f0-a1b2-3456-cdef-678901234567",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": "plan",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 35,
+    "title": "Add dashboard visual evaluation criteria to DESIGN.md",
+    "status": "refined",
+    "priority": "medium",
+    "type": "chore",
+    "tags": [
+      "dashboard",
+      "ui",
+      "quality",
+      "evaluation"
+    ],
+    "areas": [
+      "dashboard"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-06",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "033",
+    "research": null,
+    "spec": "lifecycle/add-dashboard-visual-evaluation-criteria-to-designmd/spec.md",
+    "discovery_source": "research/generative-ui-harness/research.md",
+    "plan": null,
+    "uuid": "e3f4a5b6-c7d8-9012-efab-234567890123",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": "plan",
