@@ -79,8 +79,6 @@ The exit report is a JSON object with the following fields:
 | Field | Type | Required | Description |
 |---|---|---|---|
 | action | string | yes | Either `"complete"` or `"question"` |
-| committed | boolean | yes | Whether a commit was made |
-| verification_passed | boolean | yes | Whether verification checks passed |
 | reason | string | no | Short explanation (max 200 chars); optional for complete, required for question |
 | question | string | conditional | The question text (max 500 chars); required when action is `"question"`, omitted otherwise |
 
@@ -91,8 +89,6 @@ The exit report is a JSON object with the following fields:
 ```json
 <example-exit-report-complete>
   "action": "complete",
-  "committed": true,
-  "verification_passed": true,
   "reason": "All tests pass and implementation matches spec"
 </example-exit-report-complete>
 ```
@@ -102,8 +98,6 @@ The exit report is a JSON object with the following fields:
 ```json
 <example-exit-report-question>
   "action": "question",
-  "committed": false,
-  "verification_passed": false,
   "reason": "Spec is ambiguous about error handling",
   "question": "Should the retry logic use exponential backoff or fixed intervals? The spec mentions both in different sections."
 </example-exit-report-question>
