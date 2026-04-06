@@ -163,7 +163,6 @@ After forking, update these files before linking anything to `~/`:
 |------|----------------|
 | `shell/zshrc` | Update the tool-loading section — keep only the tools you actually have (nvm, deno, Android SDK, etc.) and remove the rest |
 | `claude/settings.json` | Update MCP plugin permissions (`allow`/`deny` patterns) for your own tools; add your patterns and remove ones for tools you don't use |
-| `remote/SETUP.md` | Replace the hostname examples with your own Tailscale hostname |
 
 > **Customize**: `claude/settings.json` contains MCP plugin `allow`/`deny` permission patterns. These are personal — they reference specific tool names and path patterns. Review and update them for the tools you use; remove entries for tools you don't have installed.
 
