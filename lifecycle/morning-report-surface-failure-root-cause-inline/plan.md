@@ -22,7 +22,7 @@ Add a `_classify_no_commit()` helper function to `batch_runner.py` that inspects
   - Outer try/except catching `subprocess.TimeoutExpired`, `OSError`, and `Exception` → fallback string `f"completed with no new commits (branch: {branch})"`
   - Must always return a non-empty string — no code path returns None or empty
 - **Verification**: `grep -c 'def _classify_no_commit' claude/overnight/batch_runner.py` = 1 — pass if count is 1
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Wire classifier into no-commit guard
 - **Files**: `claude/overnight/batch_runner.py`
@@ -35,7 +35,7 @@ Add a `_classify_no_commit()` helper function to `batch_runner.py` that inspects
   - After the call, validate the return is truthy — if somehow empty, substitute the fallback string `f"completed with no new commits (branch: {branch_label})"`
   - The rest of the guard (lines 1283-1297: appending to features_paused, logging, write-back) stays unchanged
 - **Verification**: `grep -c 'check pipeline-events.log' claude/overnight/batch_runner.py` = 0 — pass if count is 0 (old generic string removed)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Enhance `_suggest_next_step()` patterns
 - **Files**: `claude/overnight/report.py`
@@ -49,7 +49,7 @@ Add a `_classify_no_commit()` helper function to `batch_runner.py` that inspects
     - Pattern `"no changes produced"` → suggestion like "Check agent output — agent ran but produced no diff"
   - Keep existing patterns (merge conflict, test fail, circuit breaker) unchanged
 - **Verification**: `grep -c 'already merged\|already implemented\|no changes produced' claude/overnight/report.py` ≥ 2 — pass if count is at least 2
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Write coupling test
 - **Files**: `tests/test_no_commit_classification.py`
@@ -66,7 +66,7 @@ Add a `_classify_no_commit()` helper function to `batch_runner.py` that inspects
   - The default suggestion string is `"Review learnings, retry or investigate"` — use this as the comparison value
   - Follow existing test patterns in `tests/` (pytest, standard assertions)
 - **Verification**: `just test` — pass if exit 0, all tests pass
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Verification Strategy
 

@@ -2,12 +2,12 @@
 id: 002
 title: "Morning report: surface failure root cause inline instead of pointing to log files"
 type: chore
-status: refined
+status: complete
 priority: high
 tags: [overnight, morning-report, dx]
 created: 2026-04-01
 updated: 2026-04-06
-session_id: 18d7c42b-7e01-47e2-8934-5c52914407f9
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: morning-report-surface-failure-root-cause-inline
 complexity: complex

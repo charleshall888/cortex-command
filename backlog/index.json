@@ -1,36 +1,5 @@
 [
   {
-    "id": 2,
-    "title": "Morning report: surface failure root cause inline instead of pointing to log files",
-    "status": "refined",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "morning-report",
-      "dx"
-    ],
-    "areas": [
-      "overnight-runner",
-      "report"
-    ],
-    "created": "2026-04-01",
-    "updated": "2026-04-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/morning-report-surface-failure-root-cause-inline/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": null,
-    "lifecycle_slug": "morning-report-surface-failure-root-cause-inline",
-    "session_id": "18d7c42b-7e01-47e2-8934-5c52914407f9",
-    "lifecycle_phase": "implement",
-    "schema_version": null,
-    "repo": null
-  },
-  {
     "id": 18,
     "title": "Improve overnight execution quality through spec improvements and harness maintainability",
     "status": "backlog",

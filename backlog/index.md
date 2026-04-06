@@ -2,7 +2,6 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 2 | Morning report: surface failure root cause inline instead of pointing to log files | refined | high | chore | — | — | ✓ |
 | 18 | Improve overnight execution quality through spec improvements and harness maintainability | backlog | high | epic | — | — | — |
 | 33 | Establish dashboard UI quality baseline | backlog | high | epic | — | — | — |
 | 34 | Fix inline style violations in session_panel and feature_cards templates | refined | high | chore | — | 033 | ✓ |
@@ -16,7 +15,6 @@
 
 ## Refined
 
-- **2** Morning report: surface failure root cause inline instead of pointing to log files
 - **34** Fix inline style violations in session_panel and feature_cards templates
 
 ## Backlog
