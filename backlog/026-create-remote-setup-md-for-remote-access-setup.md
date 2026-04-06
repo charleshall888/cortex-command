@@ -1,27 +1,33 @@
 ---
 schema_version: "1"
 uuid: 60388986-7df9-4e38-b274-b4736d4a906b
-title: "Create remote/SETUP.md for remote access setup"
-status: backlog
+title: "Remove dangling remote/SETUP.md references from docs/setup.md"
+status: complete
 priority: low
 type: chore
-tags: [docs, remote-access]
+tags: [docs, remote-access, cleanup]
 areas: [docs]
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-04-06
 blocks: []
 blocked-by: []
+session_id: null
+lifecycle_phase: research
+lifecycle_slug: remove-dangling-remote-setup-references
+complexity: simple
+criticality: low
+spec: lifecycle/remove-dangling-remote-setup-references/spec.md
 ---
 
-# Create remote/SETUP.md for remote access setup
+# Remove dangling remote/SETUP.md references from docs/setup.md
 
 ## Problem
 
-`docs/setup.md` references `remote/SETUP.md` in three places (lines 166, 284, 286), but the file and its parent directory have never been created. The Remote Access section of `docs/setup.md` is essentially empty — it just says "full step-by-step instructions are in `remote/SETUP.md`" with nothing to fall back on. Anyone following the setup guide hits a broken link.
+`docs/setup.md` references `remote/SETUP.md` in three places (lines 166, 284, 286), but the file was never created in this repo. Remote access setup (Tailscale, mosh, ntfy) is machine-specific infrastructure that belongs in machine-config, not cortex-command.
 
 ## Scope
 
-- Create `remote/SETUP.md` with step-by-step instructions for: Tailscale install and mesh VPN config, mosh install, ntfy.sh topic setup, `NTFY_TOPIC` env var configuration, and testing that push notifications arrive on Android
-- Include hostname customization callout (the existing `docs/setup.md` callout refers to a specific Tailscale machine name that needs to be replaced)
-- Update `docs/setup.md` line 166 to fix or remove the table entry referencing `remote/SETUP.md` if it becomes a standalone file rather than a customization target
-- No behavioral changes — documentation only
+- Remove all `remote/SETUP.md` references from `docs/setup.md`
+- Clean up the Remote Access section (lines 282–286) — either remove it entirely or replace with a brief note that remote access config lives in machine-config
+- Remove the `remote/SETUP.md` row from the customization table (line 166)
+- No behavioral changes — documentation cleanup only

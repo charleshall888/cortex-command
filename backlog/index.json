@@ -2,7 +2,7 @@
   {
     "id": 2,
     "title": "Morning report: surface failure root cause inline instead of pointing to log files",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -10,20 +10,23 @@
       "morning-report",
       "dx"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner",
+      "report"
+    ],
     "created": "2026-04-01",
-    "updated": "2026-04-01",
+    "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/morning-report-surface-failure-root-cause-inline/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": null,
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "morning-report-surface-failure-root-cause-inline",
+    "session_id": "18d7c42b-7e01-47e2-8934-5c52914407f9",
+    "lifecycle_phase": "implement",
     "schema_version": null,
     "repo": null
   },
@@ -99,7 +102,7 @@
     ],
     "areas": [],
     "created": "2026-04-03",
-    "updated": "2026-04-03",
+    "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [],
     "parent": "033",
@@ -190,7 +193,7 @@
     ],
     "areas": [],
     "created": "2026-04-03",
-    "updated": "2026-04-03",
+    "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [
       "035"
@@ -203,7 +206,7 @@
     "uuid": "f4a5b6c7-d8e9-0123-fabc-345678901234",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -222,7 +225,7 @@
     ],
     "areas": [],
     "created": "2026-04-03",
-    "updated": "2026-04-03",
+    "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [
       "029"
@@ -235,7 +238,7 @@
     "uuid": "a5b6c7d8-e9f0-1234-abcd-456789012345",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -254,7 +257,7 @@
     ],
     "areas": [],
     "created": "2026-04-03",
-    "updated": "2026-04-03",
+    "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [
       "034",
@@ -268,7 +271,7 @@
     "uuid": "b6c7d8e9-f0a1-2345-bcde-567890123456",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -287,7 +290,7 @@
     ],
     "areas": [],
     "created": "2026-04-03",
-    "updated": "2026-04-03",
+    "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [
       "035"
@@ -300,14 +303,14 @@
     "uuid": "c7d8e9f0-a1b2-3456-cdef-678901234567",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 36,
     "title": "Address verification_passed dead code in exit reports",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -317,7 +320,7 @@
     ],
     "areas": [],
     "created": "2026-04-04",
-    "updated": "2026-04-04",
+    "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
@@ -326,9 +329,9 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "783a90bb-5426-4cc3-9556-71a9405755f2",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "address-verification-passed-dead-code-in-exit-reports",
+    "session_id": "1f5714f4-cb21-4058-a780-e82ddfd78b60",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -346,7 +349,7 @@
     ],
     "areas": [],
     "created": "2026-04-03",
-    "updated": "2026-04-03",
+    "updated": "2026-04-06",
     "blocks": [],
     "blocked_by": [],
     "parent": "018",
@@ -355,38 +358,9 @@
     "discovery_source": "research/harness-design-long-running-apps/research.md",
     "plan": null,
     "uuid": "e4f5a6b7-c8d9-0123-efab-234567890123",
-    "lifecycle_slug": null,
+    "lifecycle_slug": "define-evaluator-rubric-for-software-features-spike",
     "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 26,
-    "title": "Create remote/SETUP.md for remote access setup",
-    "status": "backlog",
-    "priority": "low",
-    "type": "chore",
-    "tags": [
-      "docs",
-      "remote-access"
-    ],
-    "areas": [
-      "docs"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-03",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "60388986-7df9-4e38-b274-b4736d4a906b",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   }
