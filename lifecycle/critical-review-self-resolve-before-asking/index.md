@@ -2,7 +2,7 @@
 feature: critical-review-self-resolve-before-asking
 parent_backlog_uuid: null
 parent_backlog_id: null
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [critical-review, evaluator, autonomy]
 created: 2026-04-04
 updated: 2026-04-06
@@ -11,3 +11,4 @@ updated: 2026-04-06
 - Research: [[critical-review-self-resolve-before-asking/research|research.md]]
 - Spec: [[critical-review-self-resolve-before-asking/spec|spec.md]]
 - Plan: [[critical-review-self-resolve-before-asking/plan|plan.md]]
+- Review: [[critical-review-self-resolve-before-asking/review|review.md]]

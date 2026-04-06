@@ -18,7 +18,7 @@ Add a self-resolution paragraph to critical-review Step 4 (between the Ask defin
 
   The existing Apply bar on line 193 must remain verbatim and unchanged. The self-resolution paragraph operates alongside the Apply bar (which governs all dispositions), not as a replacement.
 - **Verification**: `grep -c 'Anchor check' skills/critical-review/SKILL.md` — pass if count = 2 (one in Dismiss, one in self-resolution). `grep -c 'brief check' skills/critical-review/SKILL.md` — pass if count ≥ 1. `grep -c 'verifiable evidence' skills/critical-review/SKILL.md` — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add adapted self-resolution to clarify-critic
 - **Files**: `skills/lifecycle/references/clarify-critic.md`
@@ -43,7 +43,7 @@ Add a self-resolution paragraph to critical-review Step 4 (between the Ask defin
 
   The existing Apply bar on line 68 must remain unchanged.
 - **Verification**: `grep -c 'self-resolution' skills/lifecycle/references/clarify-critic.md` — pass if count ≥ 3 (sync comment, paragraph, event logging note). `grep -c 'Anchor check' skills/lifecycle/references/clarify-critic.md` — pass if count ≥ 1. `grep -c 'verifiable evidence' skills/lifecycle/references/clarify-critic.md` — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Run tests and verify no regressions
 - **Files**: none (read-only verification)
@@ -52,7 +52,7 @@ Add a self-resolution paragraph to critical-review Step 4 (between the Ask defin
 - **Complexity**: trivial
 - **Context**: `just test` runs the full test suite. The Apply bar in SKILL.md (line ~195 after insertion) must still contain the exact text: "Apply when and only when the fix is unambiguous and confidence is high." The Apply bar in clarify-critic.md (line ~70 after insertion) must still contain: "Apply when and only when the fix is unambiguous and confidence is high."
 - **Verification**: `just test` — pass if exit code = 0. `grep -c 'Apply when and only when the fix is unambiguous' skills/critical-review/SKILL.md` — pass if count = 1. `grep -c 'Apply when and only when the fix is unambiguous' skills/lifecycle/references/clarify-critic.md` — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 After all tasks complete: (1) `just test` exits 0, (2) both files contain "Anchor check" in the self-resolution paragraph (grep count = 2 in SKILL.md, ≥ 1 in clarify-critic.md), (3) both files contain "verifiable evidence" (grep count ≥ 1 each), (4) Apply bar text unchanged in both files (grep confirms exact phrase present once per file).
