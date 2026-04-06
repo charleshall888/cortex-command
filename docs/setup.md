@@ -278,14 +278,6 @@ claude_notify.setup()
 
 ---
 
-## Remote Access (macOS + Android)
-
-> **Customize**: `remote/SETUP.md` contains hostname examples using a specific Tailscale machine name. Replace these with your own Tailscale hostname before following the steps.
-
-The remote setup uses Tailscale (mesh VPN) + tmux (session persistence) + mosh (resilient mobile shell) + ntfy (push notifications) to control Claude Code sessions on a Mac from an Android phone. Full step-by-step instructions are in [`remote/SETUP.md`](../remote/SETUP.md).
-
----
-
 ## OS Compatibility
 
 | Component | macOS | Linux | Windows | Notes |
