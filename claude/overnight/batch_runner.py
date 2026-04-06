@@ -1304,10 +1304,9 @@ def _apply_feature_result(
         # Guard: skip merge if feature completed with no new commits
         if not changed_files:
             branch_label = actual_branch or f"pipeline/{name}"
-            error = (
-                f"completed with no new commits — check pipeline-events.log"
-                f" task_output and task_git_state events (branch: {branch_label})"
-            )
+            error = _classify_no_commit(name, branch_label, config.base_branch)
+            if not error:
+                error = f"completed with no new commits (branch: {branch_label})"
             batch_result.features_paused.append({"name": name, "error": error})
             consecutive_pauses_ref[0] += 1
             overnight_log_event(
