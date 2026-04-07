@@ -199,7 +199,7 @@ The `hot_files` list feeds into §1b's conflict recovery trivial fast-path check
 
 ### 2. Read Session Plan
 
-Read `{plan_path}` to understand batch assignments and concurrency configuration. Identify which features are assigned to the current round.
+Read `{plan_path}` to understand batch assignments and the tier-based parallel dispatch limits. Identify which features are assigned to the current round.
 
 ### 2a. Intra-Session Dependency Gate
 
@@ -272,7 +272,6 @@ from claude.overnight.batch_plan import generate_batch_plan
 plan_path, excluded = generate_batch_plan(
     features=["feature-a", "feature-b"],
     feature_plan_paths={"feature-a": "lifecycle/actual-dir-a/plan.md", "feature-b": "lifecycle/actual-dir-b/plan.md"},
-    concurrency=2,
     test_command=None,
     base_branch=integration_branch,
     output_path=Path("{state_path}").parent / "batch-plan-round-{round_number}.md",
