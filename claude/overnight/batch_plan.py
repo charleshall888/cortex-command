@@ -17,7 +17,6 @@ from claude.pipeline.parser import parse_feature_plan, parse_master_plan
 
 def generate_batch_plan(
     features: list[str],
-    concurrency: int,
     test_command: str | None,
     output_path: Path,
     base_branch: str = "main",
@@ -31,7 +30,6 @@ def generate_batch_plan(
 
     Args:
         features: List of feature names.
-        concurrency: Maximum parallel features.
         test_command: Shell command for integration tests, or None.
         output_path: Where to write the generated plan.
         base_branch: Branch to merge into. Defaults to "main".
@@ -102,7 +100,6 @@ def generate_batch_plan(
         "",
         "| Key | Value |",
         "|-----|-------|",
-        f"| concurrency_limit | {concurrency} |",
         f"| test_command | {test_value} |",
         f"| base_branch | {base_branch} |",
         "",
