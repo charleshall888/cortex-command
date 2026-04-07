@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: a22cc91a-dffd-4dc9-b46e-79232d085226
 title: "Replace concurrency cap with conflict-aware round scheduling"
-status: refined
+status: in_progress
 priority: medium
 type: chore
 tags: [overnight, scheduling]
@@ -10,7 +10,7 @@ areas: [overnight-runner]
 blocked-by: []
 created: 2026-04-06
 updated: 2026-04-07
-session_id: 0331a1a1-f06d-411d-a00d-dcd213a32c5c
+session_id: 6528ab53-0c8f-41c8-bbe5-406c2059e326
 lifecycle_phase: implement
 lifecycle_slug: replace-concurrency-cap-with-conflict-aware-round-scheduling
 complexity: complex

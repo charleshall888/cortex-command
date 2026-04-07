@@ -13,7 +13,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: `BatchConfig` is a `@dataclass` at lines 95-119. The concurrency field is at line 113. The argparse setup is in `main()` starting at line 2047; `--concurrency` is at line 2053 and feeds into `BatchConfig(concurrency=args.concurrency)` at line 2083. The log event at line 1521 is called before `ConcurrencyManager` is created (line 1566), so `manager` is not in scope — remove the field rather than replacing.
 - **Verification**: `python3 -c "from claude.overnight.batch_runner import BatchConfig; assert not hasattr(BatchConfig, 'concurrency')"` — pass if no assertion error; `python3 -m claude.overnight.batch_runner --help 2>&1 | grep -c 'concurrency'` — pass if count is 0 (the `--concurrency` flag is gone). Note: `batch_runner.py` contains many references to `ConcurrencyManager` (imports, type annotations, docstrings) which must remain — do not use a bare `grep 'concurrency'` as verification since those legitimate references will match.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Remove generate_batch_plan concurrency parameter
 - **Files**: `claude/overnight/batch_plan.py`
@@ -22,7 +22,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: `generate_batch_plan(features, concurrency, ...)` at line 20. The table row at line 105 is `f"| concurrency_limit | {concurrency} |"`. After removal, the function should still generate the rest of the batch plan markdown table without the concurrency_limit row.
 - **Verification**: `grep -n 'concurrency' claude/overnight/batch_plan.py` — pass if no matches found
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Remove MasterPlanConfig.concurrency_limit from parser.py
 - **Files**: `claude/pipeline/parser.py`
@@ -31,7 +31,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: `MasterPlanConfig` is a `@dataclass` at lines 30-40. `_parse_config_table()` at lines 215-234 uses an `if/elif/elif` chain to parse config keys. The `concurrency_limit` branch is first. After removal, the chain starts with `test_command`. Historical batch plan files in `lifecycle/sessions/` contain `concurrency_limit` rows — they must continue parsing successfully.
 - **Verification**: `grep -n 'concurrency_limit' claude/pipeline/parser.py` — pass if no matches found
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add parser backward compatibility regression test
 - **Files**: `claude/pipeline/tests/test_parser.py` (or `claude/overnight/tests/test_parser.py` — use whichever test directory exists for parser tests)
@@ -40,7 +40,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: `parse_master_plan(path)` is the entry point in `parser.py`. It reads a markdown file and returns a `MasterPlanConfig` plus feature list. The config table format is `| key | value |` rows. The test should include a `| concurrency_limit | 2 |` row alongside valid keys like `| test_command | just test |` and verify the result has correct values for the known keys while not failing on the unknown one. Existing parser tests are in files matching `test_*parser*` or `test_map_results*`.
 - **Verification**: `just test` — pass if exit 0 and the new test appears in output
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Update smoke_test.py
 - **Files**: `claude/overnight/smoke_test.py`
@@ -49,7 +49,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: Line 256 constructs `BatchConfig(concurrency=1, ...)`. After Task 1 removes the field, this line will fail. Remove only the `concurrency=1` argument; keep all other arguments.
 - **Verification**: `grep -n 'concurrency' claude/overnight/smoke_test.py` — pass if no matches found
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Update test_batch_plan.py
 - **Files**: `claude/overnight/tests/test_batch_plan.py`
@@ -58,7 +58,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: The test file calls `generate_batch_plan(features=[...], concurrency=N, ...)` in 7 test functions. After Task 2 removes the parameter, these calls will fail. Remove only the `concurrency=N` argument from each call; keep all other arguments.
 - **Verification**: `grep -n 'concurrency' claude/overnight/tests/test_batch_plan.py` — pass if no matches found
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Update plan.py session plan rendering
 - **Files**: `claude/overnight/plan.py`
@@ -67,7 +67,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: `render_session_plan(selection, concurrency=2, time_limit_hours=6, ...)` at line 136. Line 203 writes `f"- **Concurrency**: {concurrency} features per round"`. Replace with a line like `- **Parallel dispatch**: Tier-based adaptive throttle (1-3 workers depending on API subscription tier)`. The function also has a docstring at line 144 mentioning the concurrency parameter — update it. Callers: `skills/overnight/SKILL.md` line 92 passes `concurrency=2` — that caller is updated in Task 8.
 - **Verification**: `grep -n 'concurrency' claude/overnight/plan.py` — pass if only matches are in the replacement text describing the tier system, not as a parameter or variable name
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Update overnight skill SKILL.md
 - **Files**: `skills/overnight/SKILL.md`
@@ -76,7 +76,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: The SKILL.md is the prompt template for the `/overnight` skill that orchestrates overnight sessions. It instructs the agent how to call `render_session_plan()` and `generate_batch_plan()`. After Tasks 2 and 7 remove the concurrency parameters, the SKILL.md must stop telling the agent to pass them. Six specific locations need updating (lines 7, 37, 92, 99, 203, 322).
 - **Verification**: `grep -in 'concurrency' skills/overnight/SKILL.md` — pass if remaining matches only reference the tier-based system (e.g., "tier-based adaptive throttle"), not a user-configurable concurrency parameter
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Update orchestrator round prompt
 - **Files**: `claude/overnight/prompts/orchestrator-round.md`
@@ -85,7 +85,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: This markdown file is a prompt template read by the orchestrator agent at runtime. Line 202 is an instruction telling the agent what to look for in the plan file. Line 275 is inside a code example showing how to call `generate_batch_plan()`. After Task 2, the function no longer accepts a concurrency parameter.
 - **Verification**: `grep -n 'concurrency' claude/overnight/prompts/orchestrator-round.md` — pass if no matches found
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Rewrite docs/overnight.md concurrency sections
 - **Files**: `docs/overnight.md`
@@ -94,7 +94,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: complex
 - **Context**: Read `claude/overnight/backlog.py` function `group_into_batches()` (area-separation logic at lines 946-954) to understand and accurately describe the conflict-avoidance mechanism. Read `claude/overnight/throttle.py` class `ConcurrencyManager` and `ThrottleConfig` to understand the resource-protection mechanism (tier defaults: MAX_5=1, MAX_100=2, MAX_200=3 workers). The replacement text must be accurate — this is user-facing documentation. Remove the `### Concurrency` section header and fold relevant content into the rewritten conflict section.
 - **Verification**: `grep -in 'concurrency' docs/overnight.md` — pass if no matches describe user-configurable concurrency (matches referencing `ConcurrencyManager` or the tier system are acceptable); `grep -in '\-\-concurrency' docs/overnight.md` — pass if no matches found
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Update requirements docs
 - **Files**: `requirements/multi-agent.md`, `requirements/pipeline.md`
@@ -103,7 +103,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: These are authoritative requirements documents. The semaphore IS a hard architectural constraint — it's just not user-configurable. The update clarifies the constraint, not removes it. Line 73 should read something like "The tier-based concurrency limit (1-3 workers) is a hard limit enforced by `ConcurrencyManager`; it is not overridable at runtime by agents."
 - **Verification**: `grep -in 'concurrency configuration' requirements/multi-agent.md requirements/pipeline.md` — pass if no matches found; `grep -in 'concurrency' requirements/multi-agent.md` — pass if matches only reference the tier-based semaphore system
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Update remaining references
 - **Files**: `docs/agentic-layer.md`, `skills/skill-creator/references/contract-patterns.md`
@@ -112,7 +112,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: `contract-patterns.md` has a YAML block defining `name: concurrency`, `type: integer`, `required: false`, `description: "Maximum number of features executing in parallel per round. Defaults to 2."` — this teaches the skill-creator to emit a parameter that no longer exists. Delete the entire 4-line block.
 - **Verification**: `grep -in 'concurrency' docs/agentic-layer.md` — pass if no matches for user-configurable concurrency; `grep -in 'concurrency' skills/skill-creator/references/contract-patterns.md` — pass if no matches for the overnight skill concurrency input
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Investigate inner-task parallelism
 - **Files**: `lifecycle/replace-concurrency-cap-with-conflict-aware-round-scheduling/inner-task-investigation.md`
@@ -121,7 +121,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: complex
 - **Context**: `ConcurrencyManager` in `throttle.py` (lines 107-200) gates feature-level parallelism. Within each feature, `execute_feature` runs dependency batches where tasks fire via `asyncio.gather()` without semaphore gating. The `throttled_dispatch` function exists in `throttle.py` but may be unused by the primary execution path. Check `batch_runner.py` for `throttled_dispatch` imports/calls. Check `brain.py` line 194-196 for notes about avoiding deadlock.
 - **Verification**: file exists at `lifecycle/replace-concurrency-cap-with-conflict-aware-round-scheduling/inner-task-investigation.md` with all three data points documented and a clear recommendation — `test -f lifecycle/replace-concurrency-cap-with-conflict-aware-round-scheduling/inner-task-investigation.md` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14: Codebase-wide sweep and final test
 - **Files**: none (read-only validation)
@@ -130,7 +130,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Complexity**: simple
 - **Context**: Run `grep -rn 'concurrency' --include='*.py' --include='*.md' . | grep -v throttle | grep -v node_modules | grep -v lifecycle/replace | grep -v __pycache__` and inspect results. References to `ConcurrencyManager`, the tier system, or unrelated uses of "concurrency" (e.g., asyncio patterns) are acceptable. References to `--concurrency`, `concurrency=N`, `concurrency_limit`, or prose describing user-configurable concurrency are failures.
 - **Verification**: `just test` — pass if exit 0; codebase grep returns no user-configurable concurrency references
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
