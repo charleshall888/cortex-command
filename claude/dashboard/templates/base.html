@@ -392,7 +392,7 @@
 
   <main>
     {% block page_main %}
-    <section id="alerts-banner" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="innerHTML"></section>
+    <section id="alerts-banner" role="alert" aria-live="assertive" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="innerHTML"></section>
 
     <section id="session-panel" class="section-primary" hx-get="/partials/session-panel" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
 
