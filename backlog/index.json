@@ -2,7 +2,7 @@
   {
     "id": 39,
     "title": "Fix overnight runner silent crash: signal handling, unregistered events, and batch plan path mismatch",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "critical",
     "type": "bug",
     "tags": [
@@ -23,9 +23,9 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "4f9c2260-9a67-4fa9-954e-45ef1bf4d2e1",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "fix-overnight-runner-silent-crash-signal-handling-unregistered-events-and-batch-plan-path-mismatch",
+    "session_id": "a7547f24-a3d4-430c-b36b-16cb3f0d1236",
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -245,35 +245,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 37,
-    "title": "Replace concurrency cap with conflict-aware round scheduling",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "scheduling"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-06",
-    "updated": "2026-04-07",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/replace-concurrency-cap-with-conflict-aware-round-scheduling/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "a22cc91a-dffd-4dc9-b46e-79232d085226",
-    "lifecycle_slug": "replace-concurrency-cap-with-conflict-aware-round-scheduling",
-    "session_id": "0331a1a1-f06d-411d-a00d-dcd213a32c5c",
-    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

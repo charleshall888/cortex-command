@@ -26,3 +26,6 @@
 {"ts": "2026-04-07T10:31:00Z", "event": "batch_dispatch", "feature": "replace-concurrency-cap-with-conflict-aware-round-scheduling", "batch": 2, "tasks": [14]}
 {"ts": "2026-04-07T10:35:00Z", "event": "task_complete", "feature": "replace-concurrency-cap-with-conflict-aware-round-scheduling", "task": 14, "batch": 2, "status": "success"}
 {"ts": "2026-04-07T10:36:00Z", "event": "phase_transition", "feature": "replace-concurrency-cap-with-conflict-aware-round-scheduling", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-07T11:00:00Z", "event": "review_verdict", "feature": "replace-concurrency-cap-with-conflict-aware-round-scheduling", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-07T11:01:00Z", "event": "phase_transition", "feature": "replace-concurrency-cap-with-conflict-aware-round-scheduling", "from": "review", "to": "complete"}
+{"ts": "2026-04-07T11:02:00Z", "event": "feature_complete", "feature": "replace-concurrency-cap-with-conflict-aware-round-scheduling", "tasks_total": 14, "rework_cycles": 1}
