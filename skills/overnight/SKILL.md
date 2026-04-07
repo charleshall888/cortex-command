@@ -4,7 +4,6 @@ description: Plan and launch autonomous overnight development sessions. Selects 
 disable-model-invocation: true
 inputs:
   - "time-limit: string (optional) — Maximum wall-clock duration for the overnight session (e.g. '6h'). Passed as --time-limit to the runner."
-  - "concurrency: integer (optional) — Maximum number of features executing in parallel per round. Defaults to 2."
 outputs:
   - "lifecycle/sessions/{SESSION_ID}/overnight-plan.md — selected session plan with feature list"
   - "lifecycle/sessions/{SESSION_ID}/overnight-state.json — execution state for the runner"
@@ -34,7 +33,6 @@ Validate inputs before entering any flow:
 | Input | Type | Valid Values | Error Response |
 |-------|------|-------------|----------------|
 | `time-limit` | string | `\d+(\.\d+)?h` (e.g., `6h`, `8h`, `1.5h`) | "Invalid time-limit format '{value}'. Expected hours, e.g. '6h'." → stop |
-| `concurrency` | integer | 1–8 | "Concurrency must be between 1 and 8. Got: {value}." → stop |
 
 **Precondition checks** (fail fast before any backlog reads):
 
@@ -98,14 +96,13 @@ Call `render_session_plan()` from `claude.overnight.plan` with the selection res
 ```python
 render_session_plan(
     selection=selection,
-    concurrency=2,
     time_limit_hours=6,
 )
 ```
 
 This produces a formatted markdown session plan with:
 - Selected features table (round, feature, backlog number, type, priority, pre-work status)
-- Execution strategy (rounds, concurrency limit, feature count)
+- Execution strategy (rounds, tier-based adaptive throttle, feature count)
 - Not-ready items with reasons
 - Risk assessment (file overlap, dependency concerns)
 - Stop conditions (zero progress in a round, time limit)
@@ -154,7 +151,6 @@ After all features are reviewed (and any removals re-rendered), proceed to Step 
 
 Present the rendered session plan to the user for approval. The user can adjust:
 
-- **Concurrency limit**: Default is 2 (number of features executing in parallel per round). User can increase or decrease.
 - **Time limit**: Default is 6 hours. User can adjust.
 - **Remove features**: User can exclude specific features from the plan. If features are removed, re-render the plan with the updated selection.
 
@@ -209,7 +205,7 @@ On user approval, execute these steps in order:
 
    **Error**: If `git add` or `git commit` fails, report: "Batch spec commit failed: {error}. Proceeding without committing batch spec sections — they may be extracted during runner startup." Continue — the runner can still function without the pre-commit.
 
-5. **Log session start**: Call `log_event()` from `claude.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, concurrency limit, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`).
+5. **Log session start**: Call `log_event()` from `claude.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`).
 
    **Error**: If `log_event()` fails, report: "Failed to log session start event: {error}." Continue — logging failure is non-fatal.
 
@@ -314,7 +310,7 @@ A successful `/overnight resume` satisfies:
 
 **Session ID**: overnight-2025-11-14-2230
 **Generated**: 2025-11-14 22:30:15
-**Concurrency**: 2
+**Throttle**: tier-based adaptive
 **Time Limit**: 6h
 
 ## Selected Features
@@ -328,7 +324,7 @@ A successful `/overnight resume` satisfies:
 ## Execution Strategy
 
 - **Rounds**: 2
-- **Max concurrency**: 2 features per round
+- **Throttle**: tier-based adaptive (round size determined by conflict tiers)
 - **Features**: 3 (2 in Round 1, 1 in Round 2)
 
 ## Not Ready
