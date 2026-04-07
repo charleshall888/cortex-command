@@ -26,7 +26,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 ### Feature Execution and Failure Handling
 
 - **Description**: Features within a session have their own status lifecycle. The pipeline dispatches features in rounds, handles individual failures without aborting the batch, and distinguishes recoverable pauses from permanent deferrals.
-- **Inputs**: Feature task plans, round assignments, concurrency configuration
+- **Inputs**: Feature task plans, round assignments, tier-based concurrency limit (from `ConcurrencyManager`)
 - **Outputs**: Feature status transitions; recovery attempt logs; deferral files
 - **Acceptance criteria**:
   - Feature statuses: `pending → running → merged` (success path); `running → paused` (recoverable failure); `running → deferred` (ambiguous intent, human decision required); `running → failed` (unrecoverable)
