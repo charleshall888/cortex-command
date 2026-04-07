@@ -393,13 +393,13 @@
 
   <main>
     {% block page_main %}
-    <section id="alerts-banner" role="alert" aria-live="assertive" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="innerHTML"></section>
+    <section id="alerts-banner" role="alert" aria-live="assertive" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="morph"></section>
 
-    <section id="session-panel" class="section-primary" aria-live="polite" hx-get="/partials/session-panel" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+    <section id="session-panel" class="section-primary" aria-live="polite" hx-get="/partials/session-panel" hx-trigger="load, every 5s" hx-swap="morph"><p class="empty-state">Loading...</p></section>
 
     <div class="dash-grid">
       <div class="dash-grid-main">
-        <section id="feature-cards" class="section-primary" aria-live="polite" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+        <section id="feature-cards" class="section-primary" aria-live="polite" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="morph"><p class="empty-state">Loading...</p></section>
       </div>
 
       <div class="dash-grid-side">
