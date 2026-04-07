@@ -65,6 +65,19 @@ _BADGE_CLASS_MAP = {
     "pending": "badge-gray",
 }
 
+_STATUS_ICON_MAP = {
+    "merged": "✓",
+    "spec-done": "✓",
+    "plan-done": "✓",
+    "plan-approved": "✓",
+    "running": "●",
+    "implementing": "●",
+    "failed": "✕",
+    "paused": "⚠",
+    "deferred": "⚠",
+    "pending": "○",
+}
+
 
 def _format_elapsed(iso_str: str | None) -> str:
     """Return 'Xs ago', 'Xm ago', or 'Xh Ym ago' elapsed since *iso_str* (ISO-8601) to now."""
@@ -140,6 +153,11 @@ def _badge_class(status: str | None) -> str:
     return _BADGE_CLASS_MAP.get(status or "", "badge-gray")
 
 
+def _badge_icon(status: str | None) -> str:
+    """Map a feature/pipeline status string to a semantic Unicode icon character."""
+    return _STATUS_ICON_MAP.get(status or "", "○")
+
+
 def _format_date(iso_str: str | None) -> str:
     """Parse an ISO-8601 string and return 'Feb 26 2026 · 21:29'. Returns '—' on failure."""
     if not iso_str:
@@ -156,6 +174,7 @@ templates.env.filters["format_elapsed_no_suffix"] = _format_elapsed_no_suffix
 templates.env.filters["format_duration"] = _format_duration
 templates.env.filters["format_duration_secs"] = _format_duration_secs
 templates.env.filters["badge_class"] = _badge_class
+templates.env.filters["badge_icon"] = _badge_icon
 templates.env.filters["format_date"] = _format_date
 
 # ---------------------------------------------------------------------------

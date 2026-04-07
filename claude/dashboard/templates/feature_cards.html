@@ -41,7 +41,7 @@
           <span class="phase-label">· {{ ft.get('started_at') | format_elapsed }}</span>
           {% endif %}
           {% if plan_prog %}
-          <div class="progress-bar"><div class="progress-bar-fill" style="width: {% if plan_prog[1] > 0 %}{{ (plan_prog[0] / plan_prog[1] * 100) | int }}{% else %}0{% endif %}%"></div></div>
+          <div class="progress-bar" role="progressbar" aria-valuenow="{{ plan_prog[0] }}" aria-valuemin="0" aria-valuemax="{{ plan_prog[1] }}" aria-label="Task progress"><div class="progress-bar-fill" style="width: {% if plan_prog[1] > 0 %}{{ (plan_prog[0] / plan_prog[1] * 100) | int }}{% else %}0{% endif %}%"></div></div>
           <span class="task-ratio">{{ plan_prog[0] }}/{{ plan_prog[1] }} tasks</span>
           {% endif %}
         </div>

@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Agent Dashboard{% endblock %}</title>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="https://unpkg.com/htmx-ext-idiomorph@2.0.1/idiomorph-ext.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style type="text/tailwindcss">
     @theme {
@@ -392,17 +393,17 @@
 
   <main>
     {% block page_main %}
-    <section id="alerts-banner" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="innerHTML"></section>
+    <section id="alerts-banner" role="alert" aria-live="assertive" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="morph"></section>
 
-    <section id="session-panel" class="section-primary" hx-get="/partials/session-panel" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+    <section id="session-panel" class="section-primary" aria-live="polite" hx-get="/partials/session-panel" hx-trigger="load, every 5s" hx-swap="morph"><p class="empty-state">Loading...</p></section>
 
     <div class="dash-grid">
       <div class="dash-grid-main">
-        <section id="feature-cards" class="section-primary" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+        <section id="feature-cards" class="section-primary" aria-live="polite" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="morph"><p class="empty-state">Loading...</p></section>
       </div>
 
       <div class="dash-grid-side">
-        <section id="fleet-panel" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <section id="fleet-panel" aria-label="Agent fleet" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="innerHTML">
           <h2>Agent Fleet</h2>
           <p class="empty-state">Loading...</p>
         </section>
