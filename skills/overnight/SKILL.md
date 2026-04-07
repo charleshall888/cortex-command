@@ -54,7 +54,16 @@ Call `load_state()` from `claude.overnight.state` (no arguments — uses its def
 - **If found with `complete` phase**: Treat as no active session. Proceed as new.
 - **If not found (FileNotFoundError)**: Proceed as new.
 
-### Step 2: Select Eligible Features
+### Step 2: Pre-selection Index Regeneration
+
+Regenerate the backlog index so that feature selection in Step 3 operates on up-to-date metadata.
+
+1. Run `generate-backlog-index` from the project root. If the command exits with a non-zero status, report: "Backlog index regeneration failed (exit {code}). Fix the issue and retry `/overnight`." → halt.
+2. Stage the regenerated index files: `git add backlog/index.json backlog/index.md`.
+3. If there are staged changes (i.e., the index actually changed), commit with message "Regenerate backlog index". If the commit fails, report: "Failed to commit regenerated backlog index: {error}." → halt.
+4. If there are no staged changes, skip the commit — the index is already current.
+
+### Step 3: Select Eligible Features
 
 Run `select_overnight_batch()` from `claude.overnight.backlog` on the project's backlog directory.
 
@@ -63,7 +72,7 @@ This function composes the full selection pipeline: parse backlog items, filter 
 A feature is eligible only if the following exist on disk:
 - `lifecycle/{slug}/research.md` exists on disk (slug = `item.lifecycle_slug` if set, else `slugify(item.title)`)
 - `lifecycle/{slug}/spec.md` exists on disk (produced by `/refine` or `/lifecycle`)
-- `type:` is not `epic` — epic items are non-implementable and excluded at step 3 (after blocked-by, before artifact checks); a blocked epic reports its blocking dependency, not the epic exclusion
+- `type:` is not `epic` — epic items are non-implementable and excluded at step 4 (after blocked-by, before artifact checks); a blocked epic reports its blocking dependency, not the epic exclusion
 
 If `lifecycle/{slug}/plan.md` is missing, it is generated automatically during the
 overnight session before the feature executes — no pre-run `/lifecycle plan` needed.
@@ -72,7 +81,7 @@ overnight session before the feature executes — no pre-run `/lifecycle plan` n
 
 **Error**: If `select_overnight_batch()` raises an exception (e.g., malformed backlog frontmatter), report: "Failed to parse backlog: {error}. Check backlog file frontmatter for syntax errors." → stop.
 
-### Step 3: Present Selection Summary
+### Step 4: Present Selection Summary
 
 Present the selection result summary to the user. This includes:
 
@@ -82,7 +91,7 @@ Present the selection result summary to the user. This includes:
 
 The summary string is available as `selection.summary` on the `SelectionResult` object.
 
-### Step 4: Render Session Plan
+### Step 5: Render Session Plan
 
 Call `render_session_plan()` from `claude.overnight.plan` with the selection result and default configuration:
 
@@ -103,7 +112,7 @@ This produces a formatted markdown session plan with:
 
 **Error**: If `render_session_plan()` raises an exception, report: "Failed to render session plan: {error}." → stop.
 
-### Step 5: Batch Spec Review
+### Step 6: Batch Spec Review
 
 Before presenting the final approval prompt, collect and display the specs for all selected features so the user can review them in one pass rather than approving each feature individually during execution.
 
@@ -120,7 +129,7 @@ Specs loaded for {N} feature(s). How would you like to review them?
   [2] Review per feature — step through each spec one at a time
 ```
 
-**Batch approve (option 1)**: All specs are accepted without individual review. Proceed directly to Step 6.
+**Batch approve (option 1)**: All specs are accepted without individual review. Proceed directly to Step 7.
 
 **Per-feature review (option 2)**: For each feature in selection order, display its full spec content preceded by a header:
 
@@ -134,14 +143,14 @@ Spec [{n}/{total}]: {feature_title}  (lifecycle/{slug}/spec.md)
 ```
 
 - **Approve (A)**: Feature remains in selection; advance to the next feature.
-- **Remove (R)**: Feature is dropped from selection; continue reviewing remaining features. After all reviews complete, if any features were removed re-render the plan (repeat Step 4) with the updated selection before proceeding.
+- **Remove (R)**: Feature is dropped from selection; continue reviewing remaining features. After all reviews complete, if any features were removed re-render the plan (repeat Step 5) with the updated selection before proceeding.
 - **Abort (Q)**: Stop immediately. Report "Planning aborted by user during spec review." Do not write any artifacts. Stop.
 
-After all features are reviewed (and any removals re-rendered), proceed to Step 6.
+After all features are reviewed (and any removals re-rendered), proceed to Step 7.
 
 **Error**: If `lifecycle/{slug}/spec.md` exists but cannot be decoded (e.g., binary content, encoding error), treat it the same as a missing file and offer the remove-or-abort choice.
 
-### Step 6: Final Approval
+### Step 7: Final Approval
 
 Present the rendered session plan to the user for approval. The user can adjust:
 
@@ -151,7 +160,7 @@ Present the rendered session plan to the user for approval. The user can adjust:
 
 If the user requests changes, re-render the plan with adjusted parameters and present again.
 
-### Step 7: Launch
+### Step 8: Launch
 
 On user approval, execute these steps in order:
 
@@ -176,14 +185,14 @@ On user approval, execute these steps in order:
      ```
      Then offer: "Would you like me to run `/commit` now?"
 
-     - **If user accepts**: invoke `/commit`. After it returns, re-run `git status --porcelain -- lifecycle/ backlog/`. If the output is now empty, proceed to step 2. If the output is still non-empty, display the block message again with the remaining paths and stop — do not offer `/commit` a second time.
-     - **If user declines**: stop with "Commit or stash the files above, then run `/overnight` again." Do not proceed to step 2.
+     - **If user accepts**: invoke `/commit`. After it returns, re-run `git status --porcelain -- lifecycle/ backlog/`. If the output is now empty, proceed to Launch sub-step 2. If the output is still non-empty, display the block message again with the remaining paths and stop — do not offer `/commit` a second time.
+     - **If user declines**: stop with "Commit or stash the files above, then run `/overnight` again." Do not proceed to Launch sub-step 2.
 
-   - **If output is empty**: proceed to step 2 without any message.
+   - **If output is empty**: proceed to Launch sub-step 2 without any message.
 
-   **Error**: If `git status` fails (unexpected git error), report the error and stop. In practice this cannot occur — the git repository check in Input Validation (`.git/` exists) runs before Step 7.
+   **Error**: If `git status` fails (unexpected git error), report the error and stop. In practice this cannot occur — the git repository check in Input Validation (`.git/` exists) runs before Step 8.
 
-2. **Bootstrap the session**: Call `bootstrap_session(selection, plan_content)` from `claude.overnight.plan` with the approved selection and the rendered plan string from Step 4. Returns `(state, state_dir)` with `overnight-state.json`, `overnight-plan.md`, and `session.json` already written on disk.
+2. **Bootstrap the session**: Call `bootstrap_session(selection, plan_content)` from `claude.overnight.plan` with the approved selection and the rendered plan string from Step 5. Returns `(state, state_dir)` with `overnight-state.json`, `overnight-plan.md`, and `session.json` already written on disk.
 
    This performs all initialization atomically:
    - Creates a timestamp-based session ID (`overnight-{YYYY-MM-DD}-{HHmm}`) with collision-avoidance
