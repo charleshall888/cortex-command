@@ -120,7 +120,7 @@ the readiness gate, and scores eligible items using a weighted algorithm:
 - **Type routing** — bugs, features, and chores can be separated into different batches
 
 Items are grouped into **batches** (rounds). Each batch runs as a unit; batches execute
-sequentially, and features within a batch execute in parallel up to the concurrency limit.
+sequentially, and features within a batch execute in parallel.
 
 ### 2. Present selection summary
 
@@ -134,12 +134,11 @@ The skill shows:
 The rendered plan includes:
 
 - Features table: round assignment, type, priority, pre-work status
-- Execution strategy: number of rounds, concurrency, estimated duration
+- Execution strategy: number of rounds, estimated duration
 - Risk assessment: file overlap warnings, dependency concerns
 - Stop conditions
 
 You can adjust before approving:
-- **Concurrency limit** (default 2): number of features executing in parallel per round
 - **Remove features**: exclude specific items; the plan re-renders automatically
 
 ### 4. Launch
@@ -188,7 +187,7 @@ orchestrator agent (per round)
 batch runner (python3 -m claude.overnight.batch_runner)
     → creates git worktrees (one per feature)
     → dispatches parallel pipeline workers
-    → enforces concurrency limit
+    → enforces tier-based concurrency via ConcurrencyManager
     → handles retries, deferrals, merges
     → writes batch-{N}-results.json
 
@@ -245,12 +244,6 @@ SIGINT or SIGTERM (e.g. Ctrl-C or `kill`) triggers a graceful shutdown:
 4. Archives session artifacts to `lifecycle/sessions/{id}/`
 5. Sends a push notification
 
-### Concurrency
-
-The batch runner uses a `ConcurrencyManager` from `throttle.py` to cap parallel
-workers. Default is 2. The runner scales well at higher concurrency; increase via the
-plan approval step in `/overnight`.
-
 ### Module Reference
 
 | Module | Role |
@@ -262,7 +255,7 @@ plan approval step in `/overnight`.
 | `plan.py` | Session plan renderer; writes `overnight-plan.md` |
 | `strategy.py` | Cross-round integration health tracking (`OvernightStrategy`) |
 | `batch_plan.py` | Per-batch master plan generation; maps pipeline results back to overnight state |
-| `batch_runner.py` | Batch execution: dispatches pipeline workers, enforces concurrency, handles deferrals, merges |
+| `batch_runner.py` | Batch execution: dispatches pipeline workers, handles deferrals, merges |
 | `brain.py` | Post-retry triage agent (SKIP/DEFER/PAUSE decisions via Claude API) |
 | `throttle.py` | Subscription-aware `ConcurrencyManager` with adaptive rate-limit backoff |
 | `interrupt.py` | Startup recovery: resets `running` features to `pending` with reason logging |
@@ -380,27 +373,40 @@ session end. `/morning-review` surfaces its URL so you can review and merge.
 
 The runner scales well — you can queue as many features as you like. There is no recommended upper limit.
 
-### Concurrency
+### Conflict avoidance and resource protection
 
-Keep `--concurrency 2` (the default) unless you're confident the features touch
-non-overlapping files. The `overnight-start` flags override the plan's default:
+Two orthogonal mechanisms keep parallel execution safe:
 
-```bash
-overnight-start
-```
+**1. Area-separation in `group_into_batches()` (conflict avoidance).** During planning,
+`select_overnight_batch()` groups features into rounds. When a feature shares at least
+one `areas:` tag with any feature already placed in a round, it is forced into a
+different round. This means features that touch the same part of the codebase never run
+in the same batch, eliminating the most common source of merge conflicts at dispatch
+time rather than at merge time.
 
-To override concurrency, set it during `/overnight` plan approval, not at runner launch.
+**2. Tier-based adaptive semaphore in `ConcurrencyManager` (resource protection).** The
+batch runner limits how many pipeline workers run in parallel based on your Anthropic API
+subscription tier. Defaults per tier:
 
-**How concurrency interacts with git conflict detection:** Conflicts are detected at
-merge time, not at dispatch time. When parallel features both modify the same file,
-the second feature to attempt merging its branch to the integration branch will
-encounter a conflict. On conflict, the pipeline first attempts a trivial fast-path
-resolution (`--theirs` strategy); if that fails, it calls `dispatch_repair_agent()`
-which creates an isolated repair worktree and dispatches a Claude agent (Sonnet,
-escalating to Opus on quality failure) to resolve the conflict. If the repair agent
-also fails, the feature is marked `paused` and carried to the next session. Higher
-concurrency increases the probability of two features touching the same file in the
-same round.
+| Tier | Parallel workers |
+|------|-----------------|
+| MAX_5 | 1 |
+| MAX_100 | 2 |
+| MAX_200 | 3 |
+
+The `ConcurrencyManager` (in `throttle.py`) also detects rate-limit responses and
+reduces effective concurrency dynamically — after repeated rate limits within a sliding
+window it drops by one worker, and restores after consecutive successes. This is fully
+automatic; there is no user-configurable concurrency setting.
+
+**What happens when a merge conflict still occurs:** Even with area-separation, two
+features in the same round can modify the same file if their `areas:` tags don't
+overlap (e.g., a shared utility file). Conflicts are detected at merge time. On
+conflict, the pipeline first attempts a trivial fast-path resolution (`--theirs`
+strategy); if that fails, it calls `dispatch_repair_agent()` which creates an isolated
+repair worktree and dispatches a Claude agent (Sonnet, escalating to Opus on quality
+failure) to resolve the conflict. If the repair agent also fails, the feature is marked
+`paused` and carried to the next session.
 
 ### What to prepare the night before
 
