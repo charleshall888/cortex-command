@@ -1,10 +1,12 @@
-"""Unit tests for parser.py separator tolerance.
+"""Unit tests for parser.py separator tolerance and backward compatibility.
 
 Task 6 — TestSeparatorVariants: all four separator styles parse correctly.
 Task 6 — TestEmbeddedSeparator: em dashes in task names are preserved.
 Task 6 — TestMixedSeparators: plans with mixed separator styles parse all tasks.
 Task 6 — TestNormalizationIdempotent: normalization is a no-op on correct plans.
 Task 6 — TestNormalizationPreservesBody: body text with separators is unchanged.
+037-T4 — TestMasterPlanConcurrencyLimitBackwardCompat: historical plans with
+         concurrency_limit config rows parse without error.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from pathlib import Path
 from claude.pipeline.parser import (
     FeaturePlan,
     parse_feature_plan,
+    parse_master_plan,
     _normalize_task_separators,
 )
 
@@ -199,6 +202,48 @@ class TestNormalizationPreservesBody(unittest.TestCase):
         self.assertIn("### Task 1: My task", normalized)
         # The body line with hyphen should be unchanged
         self.assertIn("Use key-value pairs - they are faster", normalized)
+
+
+class TestMasterPlanConcurrencyLimitBackwardCompat(unittest.TestCase):
+    """Historical master plans with a concurrency_limit config row parse without error.
+
+    Protects the 4 historical plans in lifecycle/sessions/ that map_results.py
+    processes. The concurrency_limit field was removed from MasterPlanConfig but
+    the parser must silently ignore it so old plans remain parseable.
+    """
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def test_concurrency_limit_row_ignored_gracefully(self):
+        """A config table with concurrency_limit parses without error."""
+        master_plan_md = (
+            "# Master Plan: legacy-batch\n\n"
+            "## Configuration\n\n"
+            "| Key | Value |\n"
+            "| --- | ----- |\n"
+            "| test_command | just test |\n"
+            "| concurrency_limit | 2 |\n"
+            "| base_branch | main |\n\n"
+            "## Features\n\n"
+            "| Priority | Feature | Complexity | Tasks | Summary |\n"
+            "| -------- | ------- | ---------- | ----- | ------- |\n"
+            "| 1 | alpha-feature | simple | 3 | First feature |\n"
+        )
+        plan_path = Path(self._tmpdir.name) / "master-plan.md"
+        plan_path.write_text(master_plan_md, encoding="utf-8")
+
+        plan = parse_master_plan(plan_path)
+
+        self.assertEqual(plan.name, "legacy-batch")
+        self.assertEqual(plan.config.test_command, "just test")
+        self.assertEqual(plan.config.base_branch, "main")
+        self.assertFalse(hasattr(plan.config, "concurrency_limit"))
+        self.assertEqual(len(plan.features), 1)
+        self.assertEqual(plan.features[0].name, "alpha-feature")
 
 
 if __name__ == "__main__":
