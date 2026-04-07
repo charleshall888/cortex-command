@@ -36,7 +36,7 @@ Implement (commits to git)
 lifecycle/{slug}/review.md  (complex tier / high / critical criticality only)
 ```
 
-You do not need to run all four skills — `/lifecycle` on a fresh feature covers the full journey. The other skills exist for partial workflows: `/discovery` when you have a vague idea, `/refine` when you want to prepare a backlog item before overnight execution, and `/interview` when you have a plan but want gap analysis before building.
+You do not need to run all three skills — `/lifecycle` on a fresh feature covers the full journey. The other skills exist for partial workflows: `/discovery` when you have a vague idea, and `/refine` when you want to prepare a backlog item before overnight execution.
 
 ---
 
@@ -169,34 +169,6 @@ This means a well-run `/discovery` session can eliminate hours of repeated resea
 
 ---
 
-## /interview — Surface Gaps in Plans
-
-`/interview` interviews you about an existing plan to surface gaps, unstated assumptions, and missing requirements before implementation begins. It is different from the Specify phase inside `/lifecycle` — it works against a plan you have already written rather than producing a new spec from scratch.
-
-### When to Use /interview
-
-Use `/interview` when:
-- You have written or imported a plan and want validation before building
-- You are about to implement a complex feature and want gap analysis
-- You want a structured challenge of your assumptions before committing to the approach
-
-### What to Expect
-
-The agent reads your plan file (from `.claude/plans/` or a path you provide) and asks probing questions across:
-- Technical implementation details and approach
-- UI/UX decisions (if applicable)
-- Edge cases and error handling
-- Trade-offs and alternatives considered
-- Security and performance implications
-
-Questions are non-obvious — the agent challenges assumptions rather than confirming stated details. Expect "why" and "what if" questions. The session continues until ambiguities are resolved, then the agent writes a refined spec incorporating your answers.
-
-### Output
-
-`/interview` produces a refined spec as conversational output. If you want it persisted, ask the agent to write it to a file. Unlike the other skills, `/interview` does not automatically write artifacts to `lifecycle/` — it is a thinking tool rather than a pipeline stage.
-
----
-
 ## Artifact Flow Diagram
 
 ```
@@ -244,6 +216,5 @@ This document describes the interactive phases as implemented in the skill files
 - `/lifecycle`: `skills/lifecycle/SKILL.md` and `skills/lifecycle/references/`
 - `/refine`: `skills/refine/SKILL.md`
 - `/discovery`: `skills/discovery/SKILL.md`
-- `/interview`: `skills/interview/SKILL.md`
 
 When a skill's phase sequence or artifact output changes, update this guide to match. The artifact flow diagram is the most likely section to drift — verify it against the skill files whenever a skill is substantially revised.

@@ -41,7 +41,6 @@ Skill count current as of this writing. `skills/` is the authoritative source �
 |-------|---------|----------|----------|---------------|
 | **critical-review** | Adversarial review from fresh agent | "pressure test this", "adversarial review" | Fresh agent critique (conversational) | Claude only |
 | **devils-advocate** | Stress-test a direction with counterargument | "challenge this", "play devil's advocate" | Coherent argument (conversational) | All agents |
-| **interview** | Interview user to surface plan gaps | `/interview` | Refined spec (conversational) | All agents |
 | **requirements** | Gather project/area-level requirements | `/requirements`, `/requirements <area>` | `requirements/project.md`, `requirements/{area}.md` | All agents |
 
 ### Session Management
@@ -49,9 +48,7 @@ Skill count current as of this writing. `skills/` is the authoritative source �
 | Skill | Purpose | Triggers | Produces | Agent support |
 |-------|---------|----------|----------|---------------|
 | **fresh** | Capture session state as resume prompt | `/fresh`, "context is full" | Resume prompt (user copies/pastes) | All agents |
-| **tmux** | Move session to tmux-backed terminal | `/tmux`, "persist this session" | Ghostty window with tmux session | Claude only |
 | **retro** | Write session problem log | `/retro`, `/retro <tag>` | `retros/YYYY-MM-DD-HHmm(-tag)?.md` | All agents |
-| **lesson** | Capture mid-session correction immediately | `/lesson <text>` | Appends to `MEMORY.md` + `retros/.session-lessons.md` | All agents |
 | **evolve** | Identify retro trends, route to improvements | `/evolve`, `/evolve N` | Routes to /discovery, /lifecycle, /backlog; `retros/.evolve-state.json` | All agents |
 
 ### UI Design Enforcement
@@ -69,7 +66,6 @@ Skill count current as of this writing. `skills/` is the authoritative source �
 
 | Skill | Purpose | Triggers | Produces | Agent support |
 |-------|---------|----------|----------|---------------|
-| **prime** | Seed session context with full project orientation | `/prime`, start of session | Four-section briefing (project, conventions, state, ready-to-help) | All agents |
 | **skill-creator** | Guide for creating new skills | "create a skill", "write a skill" | `skills/<name>/SKILL.md` | All agents |
 | **diagnose** | Systematic 4-phase debugging for skills, hooks, lifecycle, and overnight runner issues | `/diagnose`, "debug this", "why is this failing", "investigate this error" | Root cause analysis + fix + verification | Claude only |
 
@@ -181,7 +177,7 @@ Criticality is set per-feature and drives which models run at each phase and whe
 
 ## Workflow Narratives
 
-> **See also:** [Interactive Phases Guide](interactive-phases.md) — covers what questions to expect, what each phase produces, and how artifacts flow between `/lifecycle`, `/refine`, `/discovery`, and `/interview`.
+> **See also:** [Interactive Phases Guide](interactive-phases.md) — covers what questions to expect, what each phase produces, and how artifacts flow between `/lifecycle`, `/refine`, and `/discovery`.
 
 ### 1. Structured Single-Feature
 
@@ -201,7 +197,7 @@ The user has a vague topic or area of uncertainty rather than a concrete feature
 
 ### 5. Self-Improvement Loop
 
-At the end of a session, `/retro` writes a structured problem log capturing what went wrong, what was slow, and what could be improved. Mid-session corrections are captured immediately via `/lesson <text>`, which appends to both `MEMORY.md` and a running lessons file. Periodically — or after accumulating enough retro entries — `/evolve` reads the retro archive, clusters recurring themes, and routes each cluster to the appropriate fix path: `/discovery` for problems with unknown root causes, `/lifecycle` for understood fixes, `/backlog add` for simple improvements, and direct `MEMORY.md`/`CLAUDE.md` edits for configuration changes. Problems surface as improvements rather than accumulating as debt.
+At the end of a session, `/retro` writes a structured problem log capturing what went wrong, what was slow, and what could be improved. Periodically — or after accumulating enough retro entries — `/evolve` reads the retro archive, clusters recurring themes, and routes each cluster to the appropriate fix path: `/discovery` for problems with unknown root causes, `/lifecycle` for understood fixes, `/backlog add` for simple improvements, and direct `MEMORY.md`/`CLAUDE.md` edits for configuration changes. Problems surface as improvements rather than accumulating as debt.
 
 ---
 

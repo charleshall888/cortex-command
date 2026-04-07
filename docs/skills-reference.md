@@ -116,13 +116,6 @@ Stress-tests a direction, plan, or approach by arguing against it. Produces a co
 
 ---
 
-### interview
-Interview the user about their plan to surface gaps and refine requirements. Asks probing, non-obvious questions about technical details, UI/UX decisions, edge cases, and trade-offs, then writes a refined spec incorporating the answers.
-
-[skills/interview/SKILL.md](../skills/interview/SKILL.md)
-
----
-
 ### requirements
 Gather and document project-level and feature-area requirements through structured interviews. Creates a `requirements/` directory with a master project doc and area-specific docs. Downstream skills (lifecycle, discovery) consult these automatically during research, spec, and review.
 
@@ -143,20 +136,6 @@ Capture the current session state as a resume prompt you can paste into a fresh 
 Write a dated problem-only log for the current session. Captures user corrections, mistakes made, things missed, and wrong approaches — each with its consequence. Does not capture what worked; that discipline keeps retros actionable rather than celebratory.
 
 [skills/retro/SKILL.md](../skills/retro/SKILL.md)
-
----
-
-### lesson
-Capture a mid-session correction or lesson immediately. Writes the lesson to both `MEMORY.md` (for immediate durability across sessions) and the session scratch file (for inclusion in the next retro). Use during a session rather than waiting until `/retro` at the end.
-
-[skills/lesson/SKILL.md](../skills/lesson/SKILL.md)
-
----
-
-### tmux
-Move the current Claude session into a tmux-backed terminal for persistence and mobile access. Creates a named tmux session, resumes the conversation inside it, and opens a new Ghostty window attached to that session. Supports auto-numbering if no name is provided.
-
-[skills/tmux/SKILL.md](../skills/tmux/SKILL.md)
 
 ---
 
@@ -217,13 +196,6 @@ Capture a screenshot of a URL via Playwright and evaluate it against a five-crit
 Systematic 4-phase debugging for skills, hooks, lifecycle, and overnight runner issues. Finds root cause, fixes the underlying problem, and verifies the fix with a structured loop. Use when something is unexpectedly broken or not triggering as expected.
 
 [skills/diagnose/SKILL.md](../skills/diagnose/SKILL.md)
-
----
-
-### prime
-Seed Claude's context with a full project orientation. Runs `git ls-files` and `git log`, reads `CLAUDE.md`, `README.md`, `requirements/project.md`, and `backlog/index.md`, then reports project summary, conventions, current state, and what kinds of tasks are likely next.
-
-[skills/prime/SKILL.md](../skills/prime/SKILL.md)
 
 ---
 

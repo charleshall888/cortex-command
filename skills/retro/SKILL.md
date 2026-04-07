@@ -77,10 +77,6 @@ The optional `tag` argument must be validated before use:
 
 No problems recorded.
 
-## User-Taught Lessons
-
-- **Lesson**: Always check for existing tests before writing new ones. A single well-written integration test can replace five unit tests and provide better coverage.
-- **Lesson**: When refactoring, commit after each logical step, not at the end. It makes bisecting easier if a regression is found later.
 ```
 
 ## What to capture
@@ -200,14 +196,6 @@ The skill must handle the following failure modes gracefully:
 **Problem**: <description>. **Consequence**: <what happened because of it>.
 
 [one entry per problem]
-```
-
-If lessons were captured via `/lesson`, append after problems:
-
-```
-## User-Taught Lessons
-
-[entries from retros/.session-lessons.md verbatim]
 ```
 
 Do NOT include "Key Accomplishments", "What Worked", "Next Time", "Patterns to Carry Forward", or any prescriptive/positive sections.
