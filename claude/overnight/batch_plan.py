@@ -43,6 +43,8 @@ def generate_batch_plan(
         dicts with "name" and "error" keys for features whose plans
         could not be parsed.
     """
+    if not output_path.is_absolute():
+        raise ValueError(f"output_path must be absolute, got: {output_path}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Read per-feature plans to extract task count and complexity
