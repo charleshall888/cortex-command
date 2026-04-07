@@ -22,12 +22,15 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 
 # Resolve REPO_ROOT to the real repo, not a worktree, so the .venv is always found.
-_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-_GIT_COMMON="$(git -C "$_SCRIPT_DIR" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
-if [[ "$_GIT_COMMON" == */.git ]]; then
-    REPO_ROOT="${_GIT_COMMON%/.git}"
-else
-    REPO_ROOT="$(cd "$_SCRIPT_DIR/../.." && pwd)"
+# Guard: allow callers (e.g. integration tests) to pre-set REPO_ROOT to redirect writes.
+if [[ -z "${REPO_ROOT:-}" ]]; then
+    _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    _GIT_COMMON="$(git -C "$_SCRIPT_DIR" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+    if [[ "$_GIT_COMMON" == */.git ]]; then
+        REPO_ROOT="${_GIT_COMMON%/.git}"
+    else
+        REPO_ROOT="$(cd "$_SCRIPT_DIR/../.." && pwd)"
+    fi
 fi
 if [ ! -f "$REPO_ROOT/.venv/bin/activate" ]; then
     echo "Error: Python venv not found at $REPO_ROOT/.venv — run: just python-setup" >&2
