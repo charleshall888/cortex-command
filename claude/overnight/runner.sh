@@ -505,7 +505,7 @@ write_report(report, path=Path(target) / 'lifecycle' / 'morning-report.md')
     exit 130
 }
 
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM SIGHUP
 
 # ---------------------------------------------------------------------------
 # Main loop
