@@ -694,6 +694,10 @@ validate-skills:
 validate-skill-preconditions skill:
     python3 skills/skill-creator/scripts/validate-preconditions.py {{skill}}
 
+# Validate spec.md structural compliance (pre-flight before orchestrator review)
+validate-spec *args:
+    python3 bin/validate-spec {{args}}
+
 # Check that all expected symlinks are intact
 check-symlinks:
     #!/usr/bin/env bash

@@ -142,6 +142,7 @@ Evaluate against `lifecycle/{feature}/spec.md`:
 | S3 | MoSCoW classification justified | Must-have vs should-have vs won't-do distinctions are explicit, and the classification reflects actual priority rather than "everything is must-have" |
 | S4 | Non-requirements are explicit boundaries | Non-Requirements section defines concrete scope boundaries, not vague statements like "not in scope for now" |
 | S5 | Technical constraints grounded | Technical Constraints section references specific codebase patterns, ADRs, or architectural decisions — not generic best practices |
+| S6 | Behavioral changes documented | If the feature modifies, removes, or extends existing system behavior (including new additions to an existing domain), a `## Changes to Existing Behavior` section is present with specific MODIFIED/REMOVED/ADDED entries. Omission is acceptable only for pure-greenfield work in a new domain with no existing behavior to reference. |
 
 ### Post-Plan Checklist
 

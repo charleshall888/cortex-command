@@ -126,6 +126,12 @@ Omit this callout entirely when §2a passed cleanly or no loop-back occurred.
 ## Edge Cases
 - [Edge case]: [Expected behavior]
 
+## Changes to Existing Behavior
+<!-- Include when this feature modifies, removes, or extends existing system behavior — including new additions that change the behavioral surface of a domain (e.g., a new skill changes available commands). Omit only for pure-greenfield work in a new domain with no existing behavior to reference. -->
+- [MODIFIED: existing behavior] → [new behavior]
+- [REMOVED: behavior being eliminated]
+- [ADDED: new behavior extending an existing domain]
+
 ## Technical Constraints
 - [Constraint from research or architecture]
 

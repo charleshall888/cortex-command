@@ -1,0 +1,205 @@
+#!/usr/bin/env python3
+"""Validate spec.md structural compliance against the spec template.
+
+Checks heading structure, MoSCoW classification, acceptance criteria format,
+and known anti-patterns. Designed as a pre-flight before orchestrator review
+to catch structural issues early and reduce wasted review cycles.
+
+Usage:
+    validate-spec lifecycle/feature-name/spec.md
+    validate-spec lifecycle/*/spec.md          # validate all specs
+    validate-spec                               # validate all specs in lifecycle/
+
+Exit 0 if all specs pass; non-zero if any have errors.
+Warnings do not cause non-zero exit.
+"""
+
+import re
+import sys
+from pathlib import Path
+
+REQUIRED_HEADINGS = [
+    "## Problem Statement",
+    "## Requirements",
+    "## Non-Requirements",
+    "## Edge Cases",
+    "## Technical Constraints",
+]
+
+OPTIONAL_HEADINGS = [
+    "## Open Decisions",
+    "## Changes to Existing Behavior",
+]
+
+MOSCOW_PATTERN = re.compile(r"^\d+\.\s+\*\*\(([MSW])\)\s+")
+REQ_LINE_PATTERN = re.compile(r"^\d+\.\s+")
+PROSE_ANTIPATTERNS = [
+    re.compile(r"confirm (?:the |that |it )", re.IGNORECASE),
+    re.compile(r"verify (?:the |that |it )(?!.*exit code|.*grep|.*returns)", re.IGNORECASE),
+    re.compile(r"ensure (?:the |that |it )", re.IGNORECASE),
+    re.compile(r"the feature (?:works|functions) correctly", re.IGNORECASE),
+]
+BINARY_CHECKABLE_SIGNALS = [
+    re.compile(r"exit.?code", re.IGNORECASE),
+    re.compile(r"grep\s+-c", re.IGNORECASE),
+    re.compile(r"returns?\s+[≥≤>=<]\s*\d", re.IGNORECASE),
+    re.compile(r"`[^`]+`.*(?:exits?|returns?|outputs?)\s", re.IGNORECASE),
+    re.compile(r"Interactive/session-dependent:", re.IGNORECASE),
+    re.compile(r"pass if\b", re.IGNORECASE),
+]
+
+
+def extract_sections(text: str) -> dict[str, str]:
+    """Split spec into heading -> content sections."""
+    sections: dict[str, str] = {}
+    current_heading = None
+    current_lines: list[str] = []
+
+    for line in text.split("\n"):
+        if line.startswith("## "):
+            if current_heading is not None:
+                sections[current_heading] = "\n".join(current_lines)
+            current_heading = line.strip()
+            current_lines = []
+        else:
+            current_lines.append(line)
+
+    if current_heading is not None:
+        sections[current_heading] = "\n".join(current_lines)
+
+    return sections
+
+
+def validate_spec(path: Path) -> tuple[list[str], list[str]]:
+    """Validate a single spec file. Returns (errors, warnings)."""
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    text = path.read_text()
+
+    if not text.startswith("# Specification:") and not text.startswith("# "):
+        warnings.append("Missing top-level heading (expected '# Specification: ...')")
+
+    sections = extract_sections(text)
+    section_names = set(sections.keys())
+
+    # Check required headings
+    for heading in REQUIRED_HEADINGS:
+        if heading not in section_names:
+            errors.append(f"Missing required section: {heading}")
+
+    # Validate Requirements section
+    if "## Requirements" in sections:
+        req_content = sections["## Requirements"]
+        req_lines = [
+            line
+            for line in req_content.split("\n")
+            if REQ_LINE_PATTERN.match(line.strip())
+        ]
+
+        if not req_lines:
+            errors.append("## Requirements section has no numbered requirements")
+        else:
+            # Check MoSCoW classification
+            has_moscow = any(MOSCOW_PATTERN.match(line.strip()) for line in req_lines)
+            if not has_moscow:
+                warnings.append(
+                    "No MoSCoW markers found (e.g., '1. **(M) ...'). "
+                    "S3 orchestrator review will likely flag this."
+                )
+
+            # Check for binary-checkable criteria
+            for line in req_lines:
+                stripped = line.strip()
+                has_criteria_signal = any(
+                    p.search(stripped) for p in BINARY_CHECKABLE_SIGNALS
+                )
+                has_antipattern = any(
+                    p.search(stripped) for p in PROSE_ANTIPATTERNS
+                )
+
+                if has_antipattern and not has_criteria_signal:
+                    # Extract the requirement number for the message
+                    match = re.match(r"^(\d+)\.", stripped)
+                    num = match.group(1) if match else "?"
+                    warnings.append(
+                        f"Requirement {num} may have prose-only acceptance criteria. "
+                        "S1 requires binary-checkable format."
+                    )
+
+    # Check Non-Requirements is not empty
+    if "## Non-Requirements" in sections:
+        content = sections["## Non-Requirements"].strip()
+        if not content or content == "-":
+            warnings.append(
+                "## Non-Requirements section appears empty. "
+                "S4 requires explicit scope boundaries."
+            )
+
+    # Check Edge Cases is not empty
+    if "## Edge Cases" in sections:
+        content = sections["## Edge Cases"].strip()
+        if not content or content == "-":
+            warnings.append("## Edge Cases section appears empty.")
+
+    # Check Technical Constraints is not empty
+    if "## Technical Constraints" in sections:
+        content = sections["## Technical Constraints"].strip()
+        if not content or content == "-":
+            warnings.append(
+                "## Technical Constraints section appears empty. "
+                "S5 requires grounded constraints."
+            )
+
+    return errors, warnings
+
+
+def main() -> int:
+    args = sys.argv[1:]
+
+    if not args:
+        # Default: validate all specs in lifecycle/
+        specs = sorted(Path("lifecycle").glob("*/spec.md"))
+        if not specs:
+            print("No spec files found in lifecycle/")
+            return 1
+    else:
+        specs = []
+        for arg in args:
+            p = Path(arg)
+            if p.is_file():
+                specs.append(p)
+            elif p.is_dir():
+                specs.extend(sorted(p.glob("*/spec.md")))
+            else:
+                # Glob expansion already happened at shell level
+                specs.append(p)
+
+    total_errors = 0
+    total_warnings = 0
+
+    for spec in specs:
+        if not spec.exists():
+            print(f"[ERROR] {spec}: file not found")
+            total_errors += 1
+            continue
+
+        errors, warnings = validate_spec(spec)
+
+        if errors or warnings:
+            print(f"\n{spec}:")
+            for e in errors:
+                print(f"  ERROR: {e}")
+            for w in warnings:
+                print(f"  WARN:  {w}")
+            total_errors += len(errors)
+            total_warnings += len(warnings)
+        else:
+            print(f"  [OK] {spec}")
+
+    print(f"\n{len(specs)} specs checked: {total_errors} errors, {total_warnings} warnings")
+    return 1 if total_errors > 0 else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
