@@ -63,7 +63,6 @@ class TestGenerateBatchPlanPreflight(unittest.TestCase):
         self._write_valid_plan("feat-b")
         output_path, excluded = generate_batch_plan(
             features=["feat-a", "feat-b"],
-            concurrency=2,
             test_command=None,
             output_path=self._output_path(),
         )
@@ -76,7 +75,6 @@ class TestGenerateBatchPlanPreflight(unittest.TestCase):
         # feat-missing has no plan file at all (no directory created)
         output_path, excluded = generate_batch_plan(
             features=["feat-good", "feat-missing"],
-            concurrency=2,
             test_command=None,
             output_path=self._output_path(),
         )
@@ -94,7 +92,6 @@ class TestGenerateBatchPlanPreflight(unittest.TestCase):
         self._write_valid_plan("feat-ok")
         output_path, excluded = generate_batch_plan(
             features=["feat-ok"],
-            concurrency=1,
             test_command=None,
             output_path=self._output_path(),
         )
@@ -110,7 +107,6 @@ class TestGenerateBatchPlanPreflight(unittest.TestCase):
         self._write_malformed_plan("feat-bad")
         output_path, excluded = generate_batch_plan(
             features=["feat-good", "feat-bad"],
-            concurrency=2,
             test_command=None,
             output_path=self._output_path(),
         )
@@ -126,7 +122,6 @@ class TestGenerateBatchPlanPreflight(unittest.TestCase):
         self._write_malformed_plan("feat-broken")
         output_path, excluded = generate_batch_plan(
             features=["feat-broken"],
-            concurrency=1,
             test_command=None,
             output_path=self._output_path(),
         )
@@ -143,7 +138,6 @@ class TestGenerateBatchPlanPreflight(unittest.TestCase):
 
         output_path, excluded = generate_batch_plan(
             features=["feat-custom"],
-            concurrency=1,
             test_command=None,
             output_path=self._output_path(),
             feature_plan_paths={"feat-custom": str(malformed)},
@@ -156,7 +150,6 @@ class TestGenerateBatchPlanPreflight(unittest.TestCase):
     def test_return_type_is_tuple(self):
         output_path, excluded = generate_batch_plan(
             features=[],
-            concurrency=1,
             test_command=None,
             output_path=self._output_path(),
         )
