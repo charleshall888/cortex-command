@@ -58,32 +58,32 @@
     "repo": null
   },
   {
-    "id": 34,
-    "title": "Fix inline style violations in session_panel and feature_cards templates",
+    "id": 38,
+    "title": "Add index regeneration to overnight pre-flight and investigate staleness gaps",
     "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
-      "dashboard",
-      "ui",
-      "quality",
-      "css"
+      "overnight",
+      "backlog",
+      "reliability"
     ],
     "areas": [
-      "dashboard"
+      "overnight-runner",
+      "backlog"
     ],
-    "created": "2026-04-03",
-    "updated": "2026-04-06",
+    "created": "2026-04-06",
+    "updated": "2026-04-07",
     "blocks": [],
     "blocked_by": [],
-    "parent": "033",
+    "parent": null,
     "research": null,
-    "spec": "lifecycle/fix-inline-style-violations-in-session-panel-and-feature-cards-templates/spec.md",
-    "discovery_source": "research/generative-ui-harness/research.md",
+    "spec": "lifecycle/add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps/spec.md",
+    "discovery_source": null,
     "plan": null,
-    "uuid": "d2e3f4a5-b6c7-8901-defa-123456789012",
-    "lifecycle_slug": null,
-    "session_id": null,
+    "uuid": "c40893c6-e57a-4fd3-b861-3bb504ed7160",
+    "lifecycle_slug": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps",
+    "session_id": "49a80ee4-52e0-4629-974d-be02274bfe42",
     "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
@@ -219,38 +219,6 @@
     "repo": null
   },
   {
-    "id": 32,
-    "title": "Add accessibility foundations (aria-live, multi-modal severity)",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "dashboard",
-      "ui",
-      "accessibility",
-      "a11y",
-      "aria"
-    ],
-    "areas": [
-      "dashboard"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "033",
-    "research": null,
-    "spec": "lifecycle/add-accessibility-foundations-aria-live-multi-modal-severity/spec.md",
-    "discovery_source": "research/generative-ui-harness/research.md",
-    "plan": null,
-    "uuid": "c7d8e9f0-a1b2-3456-cdef-678901234567",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 35,
     "title": "Add dashboard visual evaluation criteria to DESIGN.md",
     "status": "refined",
@@ -278,6 +246,35 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": "plan",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 37,
+    "title": "Replace concurrency cap with conflict-aware round scheduling",
+    "status": "in_progress",
+    "priority": "medium",
+    "type": "chore",
+    "tags": [
+      "overnight",
+      "scheduling"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-06",
+    "updated": "2026-04-06",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "a22cc91a-dffd-4dc9-b46e-79232d085226",
+    "lifecycle_slug": "replace-concurrency-cap-with-conflict-aware-round-scheduling",
+    "session_id": "0331a1a1-f06d-411d-a00d-dcd213a32c5c",
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
