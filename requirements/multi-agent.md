@@ -37,8 +37,8 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 
 ### Parallel Dispatch
 
-- **Description**: Multiple features execute concurrently within an overnight session, subject to a configurable concurrency limit and a circuit breaker that halts dispatch when repeated failures occur.
-- **Inputs**: Feature list for the current round, concurrency configuration, circuit breaker state
+- **Description**: Multiple features execute concurrently within an overnight session, subject to the tier-based concurrency limit managed by `ConcurrencyManager` and a circuit breaker that halts dispatch when repeated failures occur.
+- **Inputs**: Feature list for the current round, tier-based concurrency limit (from `ConcurrencyManager`), circuit breaker state
 - **Outputs**: Per-feature execution results; updated session state; batch result accumulation
 - **Acceptance criteria**:
   - Features execute concurrently via `asyncio.gather()` with semaphore-based slot enforcement
@@ -70,7 +70,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 ## Architectural Constraints
 
 - Parallelism decisions are made by the overnight orchestrator, not by individual agents — agents do not spawn peer agents.
-- The concurrency cap (1–3) is a hard limit enforced by semaphore; it is not overridable at runtime by agents.
+- The tier-based concurrency limit (1–3 workers) is a hard limit enforced by `ConcurrencyManager`; it is not overridable at runtime by agents.
 - Worktrees for the default repo are created inside the repo at `.claude/worktrees/`; cross-repo worktrees go to `$TMPDIR` to avoid sandbox restrictions.
 - The escalation ladder is fixed: haiku → sonnet → opus. There is no downgrade path within a session.
 
