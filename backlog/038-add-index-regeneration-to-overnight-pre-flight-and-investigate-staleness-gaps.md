@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: c40893c6-e57a-4fd3-b861-3bb504ed7160
 title: "Add index regeneration to overnight pre-flight and investigate staleness gaps"
-status: refined
+status: complete
 priority: high
 type: chore
 tags: [overnight, backlog, reliability]
@@ -10,7 +10,7 @@ areas: [overnight-runner,backlog]
 blocked-by: []
 created: 2026-04-06
 updated: 2026-04-07
-session_id: 49a80ee4-52e0-4629-974d-be02274bfe42
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps
 complexity: complex

@@ -18,7 +18,7 @@ Insert a new pre-selection step in the overnight SKILL.md that regenerates the b
   - Step 7 sub-steps (0-8) will become Step 8 sub-steps — renumber the heading ("Step 7: Launch" → "Step 8: Launch") and all sub-step references within it
   - Technical constraint: use `generate-backlog-index` (global CLI name), not `python3 backlog/generate_index.py`
 - **Verification**: `grep -cE '(generate-backlog-index|generate_index)' skills/overnight/SKILL.md` ≥ 1 — pass if count ≥ 1. `grep -c 'Step 7: Launch' skills/overnight/SKILL.md` = 0 — pass if the old heading is gone (should now be "Step 8: Launch"). `grep -c '### Step 8: Launch' skills/overnight/SKILL.md` ≥ 1 — pass if the renamed heading exists. `grep -ci 'commit.*fail\|commit.*halt\|halt.*commit' skills/overnight/SKILL.md` ≥ 1 — pass if the commit-failure gate instruction exists in the new step.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Delete `generate-index.sh`
 - **Files**: `skills/backlog/generate-index.sh`
@@ -27,7 +27,7 @@ Insert a new pre-selection step in the overnight SKILL.md that regenerates the b
 - **Complexity**: simple
 - **Context**: File at `skills/backlog/generate-index.sh`. Already bypassed in all active code paths (`just backlog-index`, skill reindex, `update_item.py`, `create_item.py`).
 - **Verification**: `test ! -f skills/backlog/generate-index.sh` — pass if exit code 0 (file does not exist)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Update `docs/backlog.md` references to `generate-index.sh`
 - **Files**: `docs/backlog.md`
@@ -36,7 +36,7 @@ Insert a new pre-selection step in the overnight SKILL.md that regenerates the b
 - **Complexity**: simple
 - **Context**: Line 111: `Runs bash ~/.claude/skills/backlog/generate-index.sh` — replace with `generate-backlog-index`. Line 172: `Regenerates backlog/index.md via generate-index.sh` — update to reference `generate_index.py` and note it produces both `index.json` and `index.md`.
 - **Verification**: `grep -c 'generate-index\.sh' docs/backlog.md` = 0 — pass if count is 0
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Update `skills/discovery/references/decompose.md` reference to `generate-index.sh`
 - **Files**: `skills/discovery/references/decompose.md`
@@ -45,7 +45,7 @@ Insert a new pre-selection step in the overnight SKILL.md that regenerates the b
 - **Complexity**: simple
 - **Context**: Line 98: `Run backlog/generate-index.sh to update the backlog index.` — replace with `Run generate-backlog-index to update the backlog index.`
 - **Verification**: `grep -c 'generate-index\.sh' skills/discovery/references/decompose.md` = 0 — pass if count is 0
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Run full test suite and acceptance criteria
 - **Files**: (none modified — verification only)
@@ -54,7 +54,7 @@ Insert a new pre-selection step in the overnight SKILL.md that regenerates the b
 - **Complexity**: simple
 - **Context**: Acceptance criteria checks: (R1) `grep -c 'generate_index\|generate-backlog-index' skills/overnight/SKILL.md` ≥ 1; (R2) verify regeneration + commit + gate instructions exist before uncommitted-files check; (R3) `test ! -f skills/backlog/generate-index.sh` and `grep -r 'generate-index\.sh' docs/ skills/` returns empty; (R4) verify halt instruction on regeneration failure; (R5) `grep -nE 'Step [0-9]|step [0-9]' skills/overnight/SKILL.md` — all references internally consistent.
 - **Verification**: `just test` — pass if exit code 0. `grep -r 'generate-index\.sh' docs/ skills/` — pass if no output.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

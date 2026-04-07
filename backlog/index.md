@@ -2,9 +2,9 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
+| 39 | Fix overnight runner silent crash: signal handling, unregistered events, and batch plan path mismatch | backlog | critical | bug | — | — | — |
 | 18 | Improve overnight execution quality through spec improvements and harness maintainability | backlog | high | epic | — | — | — |
 | 33 | Establish dashboard UI quality baseline | backlog | high | epic | — | — | — |
-| 38 | Add index regeneration to overnight pre-flight and investigate staleness gaps | refined | high | chore | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 29 | Add Playwright MCP for dashboard visual evaluation | refined | medium | feature | — | 033 | ✓ |
 | 30 | Investigate and fix swim-lane inline styles and layout degradation | refined | medium | chore | 029 | 033 | ✓ |
@@ -15,7 +15,6 @@
 
 ## Refined
 
-- **38** Add index regeneration to overnight pre-flight and investigate staleness gaps
 - **29** Add Playwright MCP for dashboard visual evaluation
 - **31** Add hover states, loading feedback, and badge micro-interactions
 - **35** Add dashboard visual evaluation criteria to DESIGN.md
@@ -23,6 +22,7 @@
 
 ## Backlog
 
+- **39** Fix overnight runner silent crash: signal handling, unregistered events, and batch plan path mismatch
 - **18** Improve overnight execution quality through spec improvements and harness maintainability
 - **33** Establish dashboard UI quality baseline
 - **8** Auto-rename Claude Code session to active lifecycle feature name

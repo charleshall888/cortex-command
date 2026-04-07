@@ -9,3 +9,14 @@
 {"ts": "2026-04-07T00:10:01Z", "event": "orchestrator_dispatch_fix", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "phase": "plan", "mode": "same_context", "issue": "Task 1 verification replaced 'manual review' with three binary-checkable grep commands"}
 {"ts": "2026-04-07T00:11:00Z", "event": "orchestrator_review", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "phase": "plan", "verdict": "pass", "cycle": 2, "issues": []}
 {"ts": "2026-04-07T00:20:00Z", "event": "phase_transition", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "from": "plan", "to": "implement"}
+{"ts": "2026-04-07T00:21:00Z", "event": "batch_dispatch", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "batch": 0, "tasks": [1, 2, 3, 4]}
+{"ts": "2026-04-07T00:25:00Z", "event": "task_complete", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-07T00:25:01Z", "event": "task_complete", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "task": 2, "batch": 0, "status": "success"}
+{"ts": "2026-04-07T00:25:02Z", "event": "task_complete", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "task": 3, "batch": 0, "status": "success"}
+{"ts": "2026-04-07T00:25:03Z", "event": "task_complete", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "task": 4, "batch": 0, "status": "success"}
+{"ts": "2026-04-07T00:26:00Z", "event": "batch_dispatch", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "batch": 1, "tasks": [5]}
+{"ts": "2026-04-07T00:27:00Z", "event": "task_complete", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "task": 5, "batch": 1, "status": "success"}
+{"ts": "2026-04-07T00:28:00Z", "event": "phase_transition", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-07T00:35:00Z", "event": "review_verdict", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-07T00:35:01Z", "event": "phase_transition", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "from": "review", "to": "complete"}
+{"ts": "2026-04-07T00:40:00Z", "event": "feature_complete", "feature": "add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps", "tasks_total": 5, "rework_cycles": 1}
