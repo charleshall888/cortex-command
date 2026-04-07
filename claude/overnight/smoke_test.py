@@ -253,7 +253,6 @@ async def _run_smoke_test() -> None:
         config = BatchConfig(
             batch_id=99,
             plan_path=BATCH_PLAN_PATH,
-            concurrency=1,
             base_branch="main",
         )
 
