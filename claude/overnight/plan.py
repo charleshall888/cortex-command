@@ -133,7 +133,6 @@ def validate_target_repos(selection: SelectionResult) -> list[str]:
 
 def render_session_plan(
     selection: SelectionResult,
-    concurrency: int = 2,
     time_limit_hours: int = 6,
     date: str | None = None,
 ) -> str:
@@ -141,7 +140,6 @@ def render_session_plan(
 
     Args:
         selection: The SelectionResult from the backlog readiness gate.
-        concurrency: Number of features executed in parallel per round.
         time_limit_hours: Maximum wall-clock hours for the session.
         date: Date string for the plan header (YYYY-MM-DD). Defaults to
             today's date.
@@ -200,7 +198,7 @@ def render_session_plan(
     lines.append("## Execution Strategy")
     lines.append("")
     lines.append(f"- **Rounds**: {num_rounds}")
-    lines.append(f"- **Concurrency**: {concurrency} features per round")
+    lines.append("- **Parallel dispatch**: Tier-based adaptive throttle (1-3 workers depending on API subscription tier)")
     lines.append(f"- **Estimated duration**: ~{est_minutes} minutes")
     lines.append(f"- **Time limit**: {time_limit_hours} hours")
     lines.append("")
