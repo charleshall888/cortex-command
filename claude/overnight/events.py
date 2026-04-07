@@ -68,6 +68,12 @@ INTEGRATION_RECOVERY_SUCCESS = "integration_recovery_success"
 INTEGRATION_RECOVERY_FAILED = "integration_recovery_failed"
 BATCH_BUDGET_EXHAUSTED = "batch_budget_exhausted"
 SESSION_BUDGET_EXHAUSTED = "session_budget_exhausted"
+INTEGRATION_WORKTREE_MISSING = "integration_worktree_missing"
+ORCHESTRATOR_NO_PLAN = "orchestrator_no_plan"
+BATCH_RUNNER_STALLED = "batch_runner_stalled"
+ARTIFACT_COMMIT_FAILED = "artifact_commit_failed"
+PUSH_FAILED = "push_failed"
+MORNING_REPORT_COMMIT_FAILED = "morning_report_commit_failed"
 
 EVENT_TYPES = (
     SESSION_START,
@@ -109,6 +115,12 @@ EVENT_TYPES = (
     INTEGRATION_RECOVERY_FAILED,
     BATCH_BUDGET_EXHAUSTED,
     SESSION_BUDGET_EXHAUSTED,
+    INTEGRATION_WORKTREE_MISSING,
+    ORCHESTRATOR_NO_PLAN,
+    BATCH_RUNNER_STALLED,
+    ARTIFACT_COMMIT_FAILED,
+    PUSH_FAILED,
+    MORNING_REPORT_COMMIT_FAILED,
 )
 
 
