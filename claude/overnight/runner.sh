@@ -453,6 +453,8 @@ cleanup() {
     # Kill child process groups first — with set -m they won't receive our signals
     [[ -n "${CLAUDE_PID:-}" ]] && kill -- -"$CLAUDE_PID" 2>/dev/null || true
     [[ -n "${BATCH_PID:-}" ]] && kill -- -"$BATCH_PID" 2>/dev/null || true
+    [[ -n "${WATCHDOG_PID:-}" ]] && kill -- -"$WATCHDOG_PID" 2>/dev/null || true
+    [[ -n "${BATCH_WATCHDOG_PID:-}" ]] && kill -- -"$BATCH_WATCHDOG_PID" 2>/dev/null || true
     rm -f "${LOCK_FILE:-}"
     echo ""
     echo "Signal received — pausing overnight session"
@@ -612,11 +614,13 @@ while [[ $ROUND -le $MAX_ROUNDS ]]; do
         --dangerously-skip-permissions \
         --max-turns 50 2>&1 & CLAUDE_PID=$!
     set +m
+    set -m
     ( watch_events_log "$EVENTS_PATH" 1800 $CLAUDE_PID ) & WATCHDOG_PID=$!
+    set +m
     wait $CLAUDE_PID
     EXIT_CODE=$?
     CLAUDE_PID=""
-    kill $WATCHDOG_PID 2>/dev/null || true
+    kill -- -$WATCHDOG_PID 2>/dev/null || true
     wait $WATCHDOG_PID 2>/dev/null || true
     set -e
 
@@ -679,11 +683,13 @@ log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=de
             --events-path "$EVENTS_PATH" \
             --test-command "${TEST_COMMAND:-none}" & BATCH_PID=$!
         set +m
+        set -m
         ( watch_events_log "$EVENTS_PATH" 1800 $BATCH_PID ) & BATCH_WATCHDOG_PID=$!
+        set +m
         wait $BATCH_PID
         BATCH_EXIT=$?
         BATCH_PID=""
-        kill $BATCH_WATCHDOG_PID 2>/dev/null || true
+        kill -- -$BATCH_WATCHDOG_PID 2>/dev/null || true
         wait $BATCH_WATCHDOG_PID 2>/dev/null || true
         set -e
 
