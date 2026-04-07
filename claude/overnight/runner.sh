@@ -665,6 +665,14 @@ log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=de
     # Step 5: Invoke batch_runner.py (if orchestrator produced a batch plan)
     # -----------------------------------------------------------------------
     BATCH_PLAN_PATH="$SESSION_DIR/batch-plan-round-$ROUND.md"
+    if [[ ! -f "$BATCH_PLAN_PATH" ]] && [[ -n "$WORKTREE_PATH" ]]; then
+        # Fallback: orchestrator may have written the batch plan inside the worktree
+        WORKTREE_BATCH_PLAN="$WORKTREE_PATH/lifecycle/sessions/$SESSION_ID/batch-plan-round-$ROUND.md"
+        if [[ -f "$WORKTREE_BATCH_PLAN" ]]; then
+            cp "$WORKTREE_BATCH_PLAN" "$BATCH_PLAN_PATH"
+            echo "Round $ROUND: batch plan found in worktree — copied to session dir"
+        fi
+    fi
     if [[ ! -f "$BATCH_PLAN_PATH" ]]; then
         log_event "orchestrator_no_plan" "$ROUND" "{\"round\": $ROUND}"
         echo "Round $ROUND: no batch plan produced — skipping batch_runner"
