@@ -327,7 +327,7 @@ def create_followup_backlog_items(
             )
 
         item_uuid = str(uuid_mod.uuid4())
-        lifecycle_slug = slugify(title)
+        lifecycle_slug = name  # Use original feature slug, not slugify("Follow up: ...")
         frontmatter = (
             "---\n"
             f"title: {title}\n"

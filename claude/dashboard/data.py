@@ -37,7 +37,7 @@ from pathlib import Path
 
 import markdown
 
-from claude.common import detect_lifecycle_phase, normalize_status
+from claude.common import detect_lifecycle_phase, normalize_status, slugify
 
 
 def parse_overnight_state(path: Path) -> dict | None:
@@ -1042,9 +1042,9 @@ def parse_backlog_titles(backlog_dir: Path) -> dict[str, str]:
     Scans ``backlog_dir`` for files matching the pattern
     ``[0-9]*-*.md``, reads the YAML frontmatter between ``---``
     markers, and extracts the ``title`` field.  The lookup key is
-    derived by slugifying the title:
-    ``re.sub(r'[^a-z0-9\\s-]', '', title.lower())`` then
-    ``re.sub(r'[\\s-]+', '-', slug).strip('-')``.
+    derived by ``slugify(title)`` from ``claude.common`` (lowercase,
+    underscores/slashes to spaces, strip non-alphanumeric, collapse
+    whitespace/hyphens).
 
     Files with missing or malformed frontmatter are skipped silently.
 
@@ -1093,10 +1093,7 @@ def parse_backlog_titles(backlog_dir: Path) -> dict[str, str]:
         if not title:
             continue
 
-        # Slugify: lowercase → strip non-alphanumeric except hyphens/spaces
-        # → collapse runs of spaces/hyphens to single hyphen → strip edges
-        slug = re.sub(r"[^a-z0-9\s-]", "", title.lower())
-        slug = re.sub(r"[\s-]+", "-", slug).strip("-")
+        slug = slugify(title)
 
         if slug:
             titles[slug] = title

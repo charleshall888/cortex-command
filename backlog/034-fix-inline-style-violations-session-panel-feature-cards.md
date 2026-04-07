@@ -14,7 +14,7 @@ updated: 2026-04-06
 discovery_source: research/generative-ui-harness/research.md
 complexity: simple
 criticality: medium
-spec: lifecycle/fix-inline-style-violations-in-sessionpanel-and-featurecards-templates/spec.md
+spec: lifecycle/fix-inline-style-violations-in-session-panel-and-feature-cards-templates/spec.md
 areas: [dashboard]
 ---
 

@@ -91,6 +91,23 @@ class BacklogItem:
     schema_version: Optional[str] = None
     repo: Optional[str] = None
 
+    def resolve_slug(self) -> str:
+        """Derive lifecycle slug with fallback chain.
+
+        Priority: lifecycle_slug > slug extracted from spec/research path > slugify(title).
+        The spec/research paths in frontmatter point to the actual lifecycle directory,
+        so extracting the slug from them handles cases where the directory name diverges
+        from slugify(title) (e.g., underscores stripped vs hyphenated).
+        """
+        if self.lifecycle_slug:
+            return self.lifecycle_slug
+        for artifact_path in (self.spec, self.research):
+            if artifact_path:
+                parent = Path(artifact_path).parent.name
+                if parent and parent != ".":
+                    return parent
+        return slugify(self.title)
+
 
 @dataclass
 class Batch:
@@ -450,7 +467,7 @@ def filter_ready(
     # Same dual-key pattern as status_by_id.
     slug_by_id: dict[str, str] = {}
     for item in all_items:
-        item_slug = item.lifecycle_slug or slugify(item.title)
+        item_slug = item.resolve_slug()
         slug_by_id[str(item.id)] = item_slug
         slug_by_id[str(item.id).zfill(3)] = item_slug
         if item.uuid:
@@ -484,7 +501,7 @@ def filter_ready(
             continue
 
         # 4-5. Lifecycle artifact checks — derive paths from lifecycle_slug
-        slug = item.lifecycle_slug or slugify(item.title)
+        slug = item.resolve_slug()
         research_path = project_root / "lifecycle" / slug / "research.md"
         spec_path = project_root / "lifecycle" / slug / "spec.md"
 
@@ -521,7 +538,7 @@ def filter_ready(
     # Promote items whose non-terminal blockers are all in the growing
     # session-eligible set (eligible + already-promoted intra_session_blocked).
     session_eligible_slugs: set[str] = {
-        item.lifecycle_slug or slugify(item.title)
+        item.resolve_slug()
         for item in result.eligible
     }
 
@@ -558,7 +575,7 @@ def filter_ready(
                 continue
 
             # 4-5. Lifecycle artifact checks
-            item_slug = item.lifecycle_slug or slugify(item.title)
+            item_slug = item.resolve_slug()
             research_path = project_root / "lifecycle" / item_slug / "research.md"
             spec_path = project_root / "lifecycle" / item_slug / "spec.md"
 
@@ -1024,7 +1041,7 @@ def select_overnight_batch(
         slug_to_batch_id: dict[str, int] = {}
         for batch in batches:
             for item in batch.items:
-                slug_to_batch_id[item.lifecycle_slug or slugify(item.title)] = batch.batch_id
+                slug_to_batch_id[item.resolve_slug()] = batch.batch_id
 
         # Build batches_by_id for merge-into-existing-batch
         batches_by_id: dict[int, Batch] = {b.batch_id: b for b in batches}
@@ -1046,7 +1063,7 @@ def select_overnight_batch(
                         new_batch = Batch(batch_id=batch_id, items=[item])
                         batches.append(new_batch)
                         batches_by_id[batch_id] = new_batch
-                    dep_slug = item.lifecycle_slug or slugify(item.title)
+                    dep_slug = item.resolve_slug()
                     slug_to_batch_id[dep_slug] = batch_id
                     intra_session_deps[dep_slug] = blocker_slugs
                     promoted_this_round += 1

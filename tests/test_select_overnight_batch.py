@@ -511,3 +511,72 @@ class TestDetectRisks:
         risks = _detect_risks([batch])
         assert len(risks) > 0
         assert any("overnight-runner" in r for r in risks)
+
+
+# ---------------------------------------------------------------------------
+# (i) BacklogItem.resolve_slug fallback chain
+# ---------------------------------------------------------------------------
+
+class TestResolveSlug:
+    """Verify resolve_slug priority: lifecycle_slug > spec/research path > slugify(title)."""
+
+    def test_lifecycle_slug_wins(self):
+        item = _make_item(
+            lifecycle_slug="explicit-slug",
+            spec="lifecycle/different-slug/spec.md",
+            title="Yet Another Title",
+        )
+        assert item.resolve_slug() == "explicit-slug"
+
+    def test_spec_path_extraction(self):
+        item = _make_item(
+            lifecycle_slug=None,
+            spec="lifecycle/from-spec-path/spec.md",
+            title="Ignored Title",
+        )
+        assert item.resolve_slug() == "from-spec-path"
+
+    def test_research_path_extraction(self):
+        item = _make_item(
+            lifecycle_slug=None,
+            spec=None,
+            research="lifecycle/from-research/research.md",
+            title="Ignored Title",
+        )
+        assert item.resolve_slug() == "from-research"
+
+    def test_falls_through_to_slugify(self):
+        item = _make_item(
+            lifecycle_slug=None,
+            spec=None,
+            research=None,
+            title="My Feature with_underscores",
+        )
+        assert item.resolve_slug() == "my-feature-with-underscores"
+
+    def test_spec_preferred_over_research(self):
+        item = _make_item(
+            lifecycle_slug=None,
+            spec="lifecycle/spec-wins/spec.md",
+            research="lifecycle/research-loses/research.md",
+            title="Ignored",
+        )
+        assert item.resolve_slug() == "spec-wins"
+
+    def test_bare_filename_spec_falls_through(self):
+        """spec: spec.md (no directory) should fall through to slugify."""
+        item = _make_item(
+            lifecycle_slug=None,
+            spec="spec.md",
+            title="Bare Filename Feature",
+        )
+        assert item.resolve_slug() == "bare-filename-feature"
+
+    def test_underscores_become_hyphens_in_slugify_fallback(self):
+        """The bug that started it all: session_panel must become session-panel."""
+        item = _make_item(
+            lifecycle_slug=None,
+            spec=None,
+            title="Fix inline style violations in session_panel and feature_cards templates",
+        )
+        assert item.resolve_slug() == "fix-inline-style-violations-in-session-panel-and-feature-cards-templates"

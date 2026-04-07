@@ -168,7 +168,7 @@ def render_session_plan(
     slug_to_id: dict[str, str] = {}
     for batch in selection.batches:
         for item in batch.items:
-            item_slug = item.lifecycle_slug or slugify(item.title)
+            item_slug = item.resolve_slug()
             slug_to_id[item_slug] = f"#{item.id:03d}" if item.id else item_slug
 
     # Selected Features table
@@ -183,7 +183,7 @@ def render_session_plan(
 
     for batch in selection.batches:
         for item in batch.items:
-            dep_slug = item.lifecycle_slug or slugify(item.title)
+            dep_slug = item.resolve_slug()
             if dep_slug in selection.intra_session_deps:
                 blocker_ids = ", ".join(
                     slug_to_id.get(s, s)
@@ -398,7 +398,7 @@ def initialize_overnight_state(
     features: dict[str, OvernightFeatureStatus] = {}
     for batch in selection.batches:
         for item in batch.items:
-            slug = item.lifecycle_slug or slugify(item.title)
+            slug = item.resolve_slug()
             features[slug] = OvernightFeatureStatus(
                 status="pending",
                 round_assigned=batch.batch_id,

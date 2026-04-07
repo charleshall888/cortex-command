@@ -28,7 +28,7 @@ Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §1 (Resolve Input
 Record:
 - `backlog-filename-slug`: the backlog filename without `.md` (e.g., `119-create-refine-skill`) — used for `update_item.py` calls
 - `item-title`: the `title:` field from the backlog item frontmatter — used to derive the lifecycle slug
-- `lifecycle-slug`: derived from `item-title` by slugifying (lowercase, strip non-alphanumeric except hyphens/spaces, collapse runs of spaces/hyphens to single hyphen)
+- `lifecycle-slug`: derived from `item-title` using the canonical `slugify()` from `claude/common.py`: lowercase, convert underscores and slashes to spaces, strip remaining non-alphanumeric except hyphens/spaces, collapse runs of spaces/hyphens to single hyphen. Underscores become hyphens, not stripped (e.g., `session_panel` → `session-panel`, not `sessionpanel`). Leading/trailing hyphens are stripped.
 
 Example: title `"Create /refine skill (Clarify → Research → Spec)"` → lifecycle-slug `create-refine-skill-clarify-research-spec`
 

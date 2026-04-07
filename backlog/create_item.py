@@ -22,6 +22,8 @@ import subprocess
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
+
+from claude.common import slugify
 from typing import Any
 from uuid import uuid4
 
@@ -55,12 +57,7 @@ def _get_next_id() -> str:
     return f"{next_id:03d}" if next_id < 1000 else str(next_id)
 
 
-def _slugify(title: str) -> str:
-    """Convert a title to a lowercase kebab-case slug."""
-    slug = title.lower()
-    slug = re.sub(r"[^a-z0-9]+", "-", slug)
-    slug = re.sub(r"-+", "-", slug)
-    return slug.strip("-")
+_slugify = slugify  # Use canonical slugify from claude.common
 
 
 # ---------------------------------------------------------------------------
