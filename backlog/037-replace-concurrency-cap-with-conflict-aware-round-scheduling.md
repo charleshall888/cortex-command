@@ -11,7 +11,7 @@ blocked-by: []
 created: 2026-04-06
 updated: 2026-04-07
 session_id: 0331a1a1-f06d-411d-a00d-dcd213a32c5c
-lifecycle_phase: plan
+lifecycle_phase: implement
 lifecycle_slug: replace-concurrency-cap-with-conflict-aware-round-scheduling
 complexity: complex
 criticality: high
