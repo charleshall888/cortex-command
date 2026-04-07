@@ -108,7 +108,7 @@ No file is moved. The script cascades `blocked-by` cleanup across the backlog an
 
 ### `reindex`
 
-Runs `bash ~/.claude/skills/backlog/generate-index.sh` to regenerate `backlog/index.md`.
+Runs `generate-backlog-index` to regenerate `backlog/index.md` and `backlog/index.json`.
 
 ---
 
@@ -169,7 +169,7 @@ python3 backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
 **Side effects on every update:**
 - Writes the updated file atomically (write-then-rename).
 - Appends `status_changed` or `phase_changed` events to the sidecar `{stem}.events.jsonl` log.
-- Regenerates `backlog/index.md` via `generate-index.sh`.
+- Regenerates `backlog/index.json` and `backlog/index.md` via `generate_index.py`.
 
 **Additional side effects for terminal status transitions** (`complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do` — full list in `claude/common.py`):
 - Removes the closed item's ID and UUID from `blocked-by` arrays across all active backlog items.

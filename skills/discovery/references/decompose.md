@@ -95,7 +95,7 @@ Create `research/{topic}/decomposed.md` to record what was produced:
 
 ### 7. Update Index
 
-Run `backlog/generate-index.sh` to update the backlog index.
+Run `generate-backlog-index` to update the backlog index.
 
 ### 8. Commit
 
