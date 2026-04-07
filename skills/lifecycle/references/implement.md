@@ -8,10 +8,14 @@ Execute the plan by dispatching a fresh implementation sub-task per task. Each s
 
 Read `lifecycle/{feature}/plan.md` and identify pending tasks (those with `[ ]`).
 
-**Branch advisory**: If the current branch is `main` or `master`, warn the user:
-> You are on the main branch. Consider creating a feature branch before implementing. This is advisory — trunk-based workflows are valid.
+**Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion:
 
-If the user wants to create a branch, do so before proceeding.
+- **Implement on main** — trunk-based workflow, changes land directly on main
+- **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow
+
+If the user selects "Create feature branch", create and check out the branch before dispatching any tasks. All lifecycle artifacts (research, spec, plan) are already committed to main at this point, so the feature branch starts with the full artifact trail and only implementation commits diverge.
+
+If the current branch is not `main`/`master` (already on a feature branch or resumed session), skip the prompt and proceed on the current branch.
 
 **Dependency graph analysis**: Parse the `**Depends on**` field from every pending task. Build an adjacency list: for each task, record which tasks it depends on. If a cycle is detected, stop and surface the error to the user — do not dispatch any tasks.
 
