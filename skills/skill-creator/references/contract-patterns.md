@@ -196,10 +196,6 @@ inputs:
     type: string
     required: false
     description: "Maximum wall-clock duration for the overnight session (e.g. '6h'). Passed as --time-limit to the runner."
-  - name: concurrency
-    type: integer
-    required: false
-    description: "Maximum number of features executing in parallel per round. Defaults to 2."
 outputs:
   - "lifecycle/overnight-plan.md — selected session plan with feature list (active during session)"
   - "lifecycle/overnight-state.json — execution state for the runner (active during session)"
