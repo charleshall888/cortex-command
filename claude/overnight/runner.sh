@@ -365,12 +365,14 @@ print(count)
 fill_prompt() {
     local round_num="$1"
     STATE_PATH="$STATE_PATH" PLAN_PATH="$PLAN_PATH" EVENTS_PATH="$EVENTS_PATH" \
+    SESSION_DIR="$SESSION_DIR" \
     ROUND_NUM="$round_num" TIER="$TIER" TEMPLATE="$PROMPT_TEMPLATE" python3 -c "
 import os
 t = open(os.environ['TEMPLATE']).read()
 t = t.replace('{state_path}', os.environ['STATE_PATH'])
 t = t.replace('{plan_path}', os.environ['PLAN_PATH'])
 t = t.replace('{events_path}', os.environ['EVENTS_PATH'])
+t = t.replace('{session_dir}', os.environ['SESSION_DIR'])
 t = t.replace('{round_number}', os.environ['ROUND_NUM'])
 t = t.replace('{tier}', os.environ['TIER'])
 print(t, end='')
