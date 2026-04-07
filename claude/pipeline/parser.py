@@ -32,7 +32,6 @@ class MasterPlanFeature:
 class MasterPlanConfig:
     """Configuration section of the master plan."""
 
-    concurrency_limit: int = 3
     test_command: Optional[str] = None
     base_branch: str = "main"
 
@@ -220,15 +219,7 @@ def _parse_config_table(section: str, path: Path) -> MasterPlanConfig:
         key = cells[0].strip()
         value = cells[1].strip()
 
-        if key == "concurrency_limit":
-            try:
-                config.concurrency_limit = int(value)
-            except ValueError:
-                raise ValueError(
-                    f"Configuration in {path}: concurrency_limit must be an "
-                    f"integer, got {value!r}"
-                )
-        elif key == "test_command":
+        if key == "test_command":
             config.test_command = None if value.lower() == "none" else value
         elif key == "base_branch":
             config.base_branch = value
