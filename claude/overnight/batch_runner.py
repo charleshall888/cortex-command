@@ -99,7 +99,6 @@ class BatchConfig:
     Fields:
         batch_id: Round/batch number (1-based).
         plan_path: Path to the per-batch master plan markdown.
-        concurrency: Max parallel features.
         test_command: Shell command for post-merge tests, or None.
         base_branch: Branch to merge into.
         overnight_state_path: Path to overnight-state.json.
@@ -110,7 +109,6 @@ class BatchConfig:
 
     batch_id: int
     plan_path: Path
-    concurrency: int = 3
     test_command: Optional[str] = None
     base_branch: str = "main"
     overnight_state_path: Path = _LIFECYCLE_ROOT / "overnight-state.json"
@@ -1518,7 +1516,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
     overnight_log_event(
         BATCH_ASSIGNED,
         config.batch_id,
-        details={"features": feature_names, "concurrency": config.concurrency},
+        details={"features": feature_names},
         log_path=config.overnight_events_path,
     )
 
@@ -2050,7 +2048,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--plan", required=True, help="Path to batch master plan")
     p.add_argument("--batch-id", type=int, required=True, help="Batch/round number")
-    p.add_argument("--concurrency", type=int, default=3, help="Max parallel features")
     p.add_argument("--test-command", default=None, help="Post-merge test command")
     p.add_argument("--base-branch", default="main", help="Base branch for merges")
     p.add_argument(
@@ -2080,7 +2077,6 @@ def _run() -> None:
     config = BatchConfig(
         batch_id=args.batch_id,
         plan_path=Path(args.plan),
-        concurrency=args.concurrency,
         test_command=test_command,
         base_branch=args.base_branch,
         overnight_state_path=Path(args.state_path),
