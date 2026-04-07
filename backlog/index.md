@@ -10,7 +10,7 @@
 | 30 | Investigate and fix swim-lane inline styles and layout degradation | refined | medium | chore | 029 | 033 | ✓ |
 | 31 | Add hover states, loading feedback, and badge micro-interactions | refined | medium | feature | 034 | 033 | ✓ |
 | 35 | Add dashboard visual evaluation criteria to DESIGN.md | refined | medium | chore | — | 033 | ✓ |
-| 37 | Replace concurrency cap with conflict-aware round scheduling | in_progress | medium | chore | — | — | — |
+| 37 | Replace concurrency cap with conflict-aware round scheduling | refined | medium | chore | — | — | ✓ |
 | 21 | Define evaluator rubric for software features (spike) | backlog | low | spike | — | 018 | — |
 
 ## Refined
@@ -19,6 +19,7 @@
 - **29** Add Playwright MCP for dashboard visual evaluation
 - **31** Add hover states, loading feedback, and badge micro-interactions
 - **35** Add dashboard visual evaluation criteria to DESIGN.md
+- **37** Replace concurrency cap with conflict-aware round scheduling
 
 ## Backlog
 
@@ -29,4 +30,3 @@
 
 ## In-Progress
 
-- **37** Replace concurrency cap with conflict-aware round scheduling (in_progress)
