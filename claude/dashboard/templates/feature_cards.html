@@ -73,7 +73,7 @@
       {% elif feat.status == 'failed' %}
         {# Row 2: error text prominently #}
         {% if feat.error %}
-        <div class="card-row"><span style="font-size: var(--text-primary-size, 1rem); color: var(--color-error);">{{ feat.error }}</span></div>
+        <div class="card-row"><span style="font-size: var(--text-base); color: var(--color-error);">{{ feat.error }}</span></div>
         {% endif %}
         {# Row 3: recovery attempts if any #}
         {% if feat.get('recovery_attempts', 0) > 0 %}
