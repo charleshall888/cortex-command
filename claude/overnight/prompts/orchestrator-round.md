@@ -16,9 +16,8 @@ You are the overnight orchestrator agent for round {round_number}. Your job is t
 
 ## Round Procedure
 
-<!-- All artifact paths below use Path("{state_path}").parent as the session directory.
-     {state_path} is substituted by runner.sh's fill_prompt() and resolves to
-     lifecycle/sessions/{session_id}/overnight-state.json, so its .parent is the session dir. -->
+<!-- All artifact paths below use {session_dir} as the session directory.
+     {session_dir} is substituted by runner.sh's fill_prompt() and resolves to an absolute path like /path/to/lifecycle/sessions/{session_id}/. -->
 
 ### 0. Resolve Worker Escalations
 
@@ -168,7 +167,7 @@ Load the session strategy file to make `hot_files` and `round_history` available
 from claude.overnight.strategy import load_strategy
 from pathlib import Path
 
-strategy_path = Path("{state_path}").parent / "overnight-strategy.json"
+strategy_path = Path("{session_dir}") / "overnight-strategy.json"
 strategy = load_strategy(strategy_path)
 hot_files = strategy.hot_files
 round_history = strategy.round_history_notes
@@ -274,7 +273,7 @@ plan_path, excluded = generate_batch_plan(
     feature_plan_paths={"feature-a": "lifecycle/actual-dir-a/plan.md", "feature-b": "lifecycle/actual-dir-b/plan.md"},
     test_command=None,
     base_branch=integration_branch,
-    output_path=Path("{state_path}").parent / "batch-plan-round-{round_number}.md",
+    output_path=Path("{session_dir}") / "batch-plan-round-{round_number}.md",
 )
 ```
 
