@@ -1,35 +1,5 @@
 [
   {
-    "id": 39,
-    "title": "Fix overnight runner silent crash: signal handling, unregistered events, and batch plan path mismatch",
-    "status": "in_progress",
-    "priority": "critical",
-    "type": "bug",
-    "tags": [
-      "overnight",
-      "reliability",
-      "runner"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-07",
-    "updated": "2026-04-07",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "4f9c2260-9a67-4fa9-954e-45ef1bf4d2e1",
-    "lifecycle_slug": "fix-overnight-runner-silent-crash-signal-handling-unregistered-events-and-batch-plan-path-mismatch",
-    "session_id": "a7547f24-a3d4-430c-b36b-16cb3f0d1236",
-    "lifecycle_phase": "specify",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 18,
     "title": "Improve overnight execution quality through spec improvements and harness maintainability",
     "status": "backlog",

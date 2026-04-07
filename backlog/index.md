@@ -2,7 +2,6 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 39 | Fix overnight runner silent crash: signal handling, unregistered events, and batch plan path mismatch | in_progress | critical | bug | — | — | — |
 | 18 | Improve overnight execution quality through spec improvements and harness maintainability | backlog | high | epic | — | — | — |
 | 33 | Establish dashboard UI quality baseline | backlog | high | epic | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
@@ -27,4 +26,3 @@
 
 ## In-Progress
 
-- **39** Fix overnight runner silent crash: signal handling, unregistered events, and batch plan path mismatch (in_progress)
