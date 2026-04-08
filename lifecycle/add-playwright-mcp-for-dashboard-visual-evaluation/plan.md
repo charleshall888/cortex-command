@@ -16,7 +16,7 @@ No Python code, no `pyproject.toml` changes, no hook changes.
 
 ### Task 1 — Create `.mcp.json`
 
-**Files:** `.mcp.json` (new file at repo root)
+**Files:** `/Users/charlie.hall/Workspaces/cortex-command/.mcp.json` (new file)
 
 **What:** Create a project-scoped MCP configuration file at the repo root. Register `@playwright/mcp@0.0.70` with `npx -y` and `--headless`. The file must be valid JSON following Claude Code's `.mcp.json` schema.
 
@@ -35,7 +35,7 @@ No Python code, no `pyproject.toml` changes, no hook changes.
 
 **Context:** `claude/settings.json` has `"enableAllProjectMcpServers": false`, which means Claude Code will prompt for per-session approval before connecting — appropriate for an interactive-only tool. The `npx` command is already in the global `permissions.allow` list (`"Bash(npx *)"`), so no settings.json changes are needed. The MCP server runs as a Claude Code subprocess and does not interact with the Python environment or `pyproject.toml`.
 
-**Verification:** `python3 -c "import json; d=json.load(open('.mcp.json')); assert d['mcpServers']['playwright']['command']=='npx'"` exits 0 (no parse errors, correct command).
+**Verification:** `cat /Users/charlie.hall/Workspaces/cortex-command/.mcp.json` returns valid JSON with `mcpServers.playwright.command == "npx"` and args containing `"@playwright/mcp@0.0.70"` and `"--headless"`. `python3 -c "import json; json.load(open('.mcp.json'))"` exits 0 (no parse errors).
 
 **Status:** pending
 
@@ -43,7 +43,7 @@ No Python code, no `pyproject.toml` changes, no hook changes.
 
 ### Task 2 — Document in `docs/dashboard.md`
 
-**Files:** `docs/dashboard.md`
+**Files:** `/Users/charlie.hall/Workspaces/cortex-command/docs/dashboard.md`
 
 **What:** Append a new top-level section "## Visual Evaluation with Playwright MCP" after the existing "Known Limitations" section. The section must cover:
 
@@ -56,9 +56,9 @@ No Python code, no `pyproject.toml` changes, no hook changes.
 
 **Depends on:** Task 1 (the section references `.mcp.json` and its configuration).
 
-**Context:** `docs/dashboard.md` is the natural home — it already documents the dashboard dev workflow (`just dashboard`, `just dashboard-seed`), prerequisites, and known limitations. Adding a visual evaluation section extends the existing dev-workflow narrative without requiring a new file.
+**Context:** `docs/dashboard.md` is the natural home — it already documents the dashboard dev workflow (`just dashboard`, `just dashboard-seed`), prerequisites, and known limitations. Adding a visual evaluation section extends the existing dev-workflow narrative without requiring a new file. `docs/setup.md` already covers MCP servers generically under the Claude Code section; this section is dashboard-specific, not setup-generic.
 
-**Verification:** `grep -c "Visual Evaluation" docs/dashboard.md` returns `1`. The section must contain references to `just dashboard-seed`, `just dashboard`, `browser_navigate`, `browser_take_screenshot`, `ui-judge`, `ui-a11y`, and Node.js 18+.
+**Verification:** `grep "Visual Evaluation" /Users/charlie.hall/Workspaces/cortex-command/docs/dashboard.md` returns the new section heading. The section must contain references to `just dashboard-seed`, `just dashboard`, `browser_navigate`, `browser_take_screenshot`, `ui-judge`, `ui-a11y`, and Node.js 18+. `wc -l /Users/charlie.hall/Workspaces/cortex-command/docs/dashboard.md` returns a line count greater than the 96 lines present before this task.
 
 **Status:** pending
 
@@ -66,19 +66,16 @@ No Python code, no `pyproject.toml` changes, no hook changes.
 
 ## Verification Strategy
 
-Automated smoke checks (no live browser needed):
-
-```sh
-python3 -c "import json; d=json.load(open('.mcp.json')); assert d['mcpServers']['playwright']['command']=='npx'"  # exits 0
-grep -c "Visual Evaluation" docs/dashboard.md    # returns 1
-git log --oneline -1                             # shows a commit for this feature
-```
-
 End-to-end acceptance (manual, interactive session):
 
-1. Open Claude Code in the project root. Claude Code detects `.mcp.json` and prompts to approve the `playwright` MCP server.
+1. Open Claude Code in `/Users/charlie.hall/Workspaces/cortex-command`. Claude Code detects `.mcp.json` and prompts to approve the `playwright` MCP server.
 2. Approve the server. Confirm `browser_navigate` and `browser_take_screenshot` appear in the available tools list.
 3. Run `just dashboard-seed` then `just dashboard` in a terminal.
 4. In Claude Code: call `browser_navigate` to `http://localhost:8080` — no connection error.
 5. Call `browser_take_screenshot` — Claude sees an inline PNG of the dashboard in the conversation.
 6. Verify `docs/dashboard.md` renders the new section correctly (readable, no broken references).
+
+Automated smoke check (no live browser needed):
+
+- `python3 -c "import json; d=json.load(open('.mcp.json')); assert d['mcpServers']['playwright']['command']=='npx'"` — exits 0.
+- `grep -c "Visual Evaluation" docs/dashboard.md` — returns `1`.

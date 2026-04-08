@@ -11,6 +11,7 @@
 | 31 | Add hover states, loading feedback, and badge micro-interactions | refined | medium | feature | 034 | 033 | ✓ |
 | 32 | Add accessibility foundations (aria-live, multi-modal severity) | in_progress | medium | chore | — | 033 | ✓ |
 | 35 | Add dashboard visual evaluation criteria to DESIGN.md | refined | medium | chore | — | 033 | ✓ |
+| 41 | Add overnight session observability from within Claude Code sandbox | backlog | medium | chore | — | — | — |
 | 21 | Define evaluator rubric for software features (spike) | backlog | low | spike | — | 018 | — |
 
 ## Refined
@@ -23,6 +24,7 @@
 - **18** Improve overnight execution quality through spec improvements and harness maintainability
 - **33** Establish dashboard UI quality baseline
 - **8** Auto-rename Claude Code session to active lifecycle feature name
+- **41** Add overnight session observability from within Claude Code sandbox
 - **21** Define evaluator rubric for software features (spike)
 
 ## In-Progress
