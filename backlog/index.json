@@ -1,35 +1,5 @@
 [
   {
-    "id": 40,
-    "title": "Fix overnight runner resume: round restart, status overwrite, and missing round filter",
-    "status": "in_progress",
-    "priority": "critical",
-    "type": "bug",
-    "tags": [
-      "overnight",
-      "reliability",
-      "runner"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-07",
-    "updated": "2026-04-07",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "dbcc91e6-8113-4f08-bdde-9f39e4a9bd7d",
-    "lifecycle_slug": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter",
-    "session_id": "111a813d-cb94-40e1-ba6c-37f59ca6da4d",
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 18,
     "title": "Improve overnight execution quality through spec improvements and harness maintainability",
     "status": "backlog",

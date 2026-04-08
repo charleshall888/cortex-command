@@ -2,7 +2,6 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 40 | Fix overnight runner resume: round restart, status overwrite, and missing round filter | in_progress | critical | bug | — | — | — |
 | 18 | Improve overnight execution quality through spec improvements and harness maintainability | backlog | high | epic | — | — | — |
 | 33 | Establish dashboard UI quality baseline | backlog | high | epic | — | — | — |
 | 34 | Fix inline style violations in session_panel and feature_cards templates | in_progress | high | chore | — | 033 | ✓ |
@@ -28,6 +27,5 @@
 
 ## In-Progress
 
-- **40** Fix overnight runner resume: round restart, status overwrite, and missing round filter (in_progress)
 - **34** Fix inline style violations in session_panel and feature_cards templates (in_progress)
 - **32** Add accessibility foundations (aria-live, multi-modal severity) (in_progress)

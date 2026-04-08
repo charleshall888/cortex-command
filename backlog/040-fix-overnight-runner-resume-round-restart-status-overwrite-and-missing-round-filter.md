@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: dbcc91e6-8113-4f08-bdde-9f39e4a9bd7d
 title: "Fix overnight runner resume: round restart, status overwrite, and missing round filter"
-status: in_progress
+status: complete
 priority: critical
 type: bug
 tags: [overnight, reliability, runner]
@@ -10,8 +10,8 @@ areas: [overnight-runner]
 blocked-by: []
 created: 2026-04-07
 updated: 2026-04-07
-session_id: 111a813d-cb94-40e1-ba6c-37f59ca6da4d
-lifecycle_phase: plan
+session_id: null
+lifecycle_phase: complete
 lifecycle_slug: fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter
 complexity: complex
 criticality: high

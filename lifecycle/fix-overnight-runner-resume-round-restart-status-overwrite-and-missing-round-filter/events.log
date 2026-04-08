@@ -17,3 +17,7 @@
 {"ts": "2026-04-07T22:30:00Z", "event": "task_complete", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "task": 8, "batch": 1, "status": "success"}
 {"ts": "2026-04-07T22:30:00Z", "event": "batch_dispatch", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "batch": 2, "tasks": [4]}
 {"ts": "2026-04-07T22:40:00Z", "event": "task_complete", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "task": 4, "batch": 2, "status": "success"}
+{"ts": "2026-04-08T02:41:55.380412+00:00", "event": "phase_transition", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "from": "implement", "to": "review"}
+{"ts": "2026-04-08T02:45:53.843704+00:00", "event": "review_verdict", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-08T02:45:53.843704+00:00", "event": "phase_transition", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "from": "review", "to": "complete"}
+{"ts": "2026-04-08T02:46:34.266538+00:00", "event": "feature_complete", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "tasks_total": 8, "rework_cycles": 0}
