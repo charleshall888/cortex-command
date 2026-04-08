@@ -151,13 +151,28 @@ Using the content of these files, determine whether the worker's `question` can 
 
 ### 1. Read Current State
 
-Read `{state_path}` and identify features with status `pending` or `running`. Also extract:
+Read `{state_path}` and identify features with status `pending`, `running`, or `paused`. Also extract:
 
 ```python
 integration_branch = state.get("integration_branch") or "main"
 ```
 
-If no features are pending or running, exit — the session is complete.
+If no features have status `pending`, `running`, or `paused`, exit — the session is complete.
+
+**Round filter**: After reading the raw state, compute the filtered feature list for this round:
+
+```python
+current_round = {round_number}
+features_to_run = [
+    f for f in features
+    if f.get("status") == "paused"
+    or (f.get("round_assigned") or 0) <= current_round
+]
+```
+
+Paused features are always included regardless of `round_assigned` (they are in recovery and must be retried). Pending and running features are included only if their `round_assigned` is less than or equal to `current_round`. The null-guard `(f.get('round_assigned') or 0)` handles legacy state where `round_assigned` may be absent.
+
+If `features_to_run` is empty but features with `pending`, `running`, or `paused` status exist in the raw state, exit this round with no batch plan — the runner will advance ROUND and retry in the next iteration. Do NOT declare "session complete" in this case.
 
 ### 1a. Read Session Strategy
 
@@ -202,9 +217,9 @@ Read `{plan_path}` to understand batch assignments and the tier-based parallel d
 
 ### 2a. Intra-Session Dependency Gate
 
-Before proceeding to plan generation, filter the current-round feature list:
+Before proceeding to plan generation, filter `features_to_run` (from §1) for unresolved dependencies:
 
-For each feature F with `round_assigned == current_round`:
+For each feature F in `features_to_run`:
     blocked = [s for s in F.intra_session_blocked_by
                if state.features.get(s) and state.features[s].status != "merged"]
     if blocked:
