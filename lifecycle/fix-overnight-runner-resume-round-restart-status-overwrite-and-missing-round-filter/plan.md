@@ -6,7 +6,7 @@ Surgical fixes across three files (`runner.sh`, `orchestrator-round.md`, `map_re
 
 ## Tasks
 
-### Task 1: Fix `count_pending()` and `REMAINING_PENDING` to include `paused`
+### [x] Task 1: Fix `count_pending()` and `REMAINING_PENDING` to include `paused`
 - **Files**: `claude/overnight/runner.sh`
 - **What**: Two-part change to ensure sessions with only `paused` features don't exit prematurely. (a) `count_pending()` at lines 355–363 adds `'paused'` to the status filter tuple. (b) The inline `REMAINING_PENDING` query at ~line 769 (stall exit block) changes from `status == 'pending'` to `status in ('pending', 'paused')`.
 - **Depends on**: none
@@ -14,7 +14,7 @@ Surgical fixes across three files (`runner.sh`, `orchestrator-round.md`, `map_re
 - **Context**: `count_pending()` at line 360: `f.get('status') in ('pending', 'running')` → `('pending', 'running', 'paused')`. Inline REMAINING_PENDING at line 769: the one-liner `sum(1 for f in features.values() if f.get('status') == 'pending')` → `f.get('status') in ('pending', 'paused')`. These are in completely separate line ranges and do not conflict with Tasks 2–4.
 - **Verification**: `grep -n 'pending.*running.*paused\|paused.*pending.*running' claude/overnight/runner.sh` returns ≥ 1 match — pass if match count ≥ 1, fail if 0
 
-### Task 2: Fix `ROUND` initialization from `state.current_round` on resume
+### [x] Task 2: Fix `ROUND` initialization from `state.current_round` on resume
 - **Files**: `claude/overnight/runner.sh`
 - **What**: Replace the hardcoded `ROUND=1` at line 519 with a Python one-liner that reads `current_round` from the state JSON, so resumed sessions start at the correct round instead of always restarting from Round 1.
 - **Depends on**: none
@@ -38,7 +38,7 @@ Surgical fixes across three files (`runner.sh`, `orchestrator-round.md`, `map_re
 - **Context**: Remove lines 522–530 (`MERGED_BEFORE=0` declaration and the pre-loop Python block). Insert a new `MERGED_BEFORE` capture at the top of the loop body (after the Task 3 batch-file check, before line 601 `echo "--- Round $ROUND ---"`); use the same Python snippet template already at lines 749–754 (count merged features from state). The existing `MERGED_BEFORE=$MERGED_AFTER` at line 780 is retained (now redundant but harmless per spec). At line 763: `if [[ $MERGED_THIS_ROUND -eq 0 ]]; then` → `-le 0`.
 - **Verification**: `grep -c 'MERGED_BEFORE=0' claude/overnight/runner.sh` = 0 (pre-loop init gone); `grep -c 'MERGED_THIS_ROUND -le 0' claude/overnight/runner.sh` ≥ 1 — both must pass
 
-### Task 5: Add round filter code block to `orchestrator-round.md` §1 and update §2a
+### [x] Task 5: Add round filter code block to `orchestrator-round.md` §1 and update §2a
 - **Files**: `claude/overnight/prompts/orchestrator-round.md`
 - **What**: Extend §1 ("Read Current State", line 152) to filter the feature list by round, producing `features_to_run`. Also update §2a's dependency gate to operate on `features_to_run` (not raw state) and change its `== current_round` predicate to `<= current_round`. Update the §1 exit sentence to distinguish "no features for this round" from "session truly complete."
 - **Depends on**: none
@@ -49,7 +49,7 @@ Surgical fixes across three files (`runner.sh`, `orchestrator-round.md`, `map_re
   - §3 and §4 naturally receive the filtered list via §2a.
 - **Verification**: `grep -c 'round_assigned' claude/overnight/prompts/orchestrator-round.md` ≥ 2 (one in new §1 filter, one in updated §2a) — pass if ≥ 2
 
-### Task 6: Add terminal-status guard to `_map_results_to_state()` in `map_results.py`
+### [x] Task 6: Add terminal-status guard to `_map_results_to_state()` in `map_results.py`
 - **Files**: `claude/overnight/map_results.py`
 - **What**: In `_map_results_to_state()`, add `if fs.status in _TERMINAL_STATUSES: continue` before the `fs.status = ...` assignment in all three loops that can overwrite terminal status: `features_paused` (lines 97–104), `features_deferred` (lines 106–113), and `features_failed` (lines 115–122).
 - **Depends on**: none

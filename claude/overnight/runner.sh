@@ -598,6 +598,21 @@ while [[ $ROUND -le $MAX_ROUNDS ]]; do
         break
     fi
 
+    # Skip rounds whose results file already exists (resume from completed round)
+    if [[ -f "${SESSION_DIR}/batch-${ROUND}-results.json" ]]; then
+        echo "Round $ROUND: results file already exists — skipping"
+        STATE_PATH="$STATE_PATH" ROUND="$ROUND" python3 -c "
+import os
+from claude.overnight.state import load_state, save_state
+from pathlib import Path
+state = load_state(Path(os.environ['STATE_PATH']))
+state.current_round = int(os.environ['ROUND']) + 1
+save_state(state, Path(os.environ['STATE_PATH']))
+"
+        ROUND=$(( ROUND + 1 ))
+        continue
+    fi
+
     echo "--- Round $ROUND (${PENDING} features pending) ---"
     log_event "round_start" "$ROUND" "{\"pending\": $PENDING}"
 
