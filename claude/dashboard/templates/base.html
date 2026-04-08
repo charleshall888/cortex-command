@@ -216,8 +216,20 @@
         flex-direction: column;
         gap: 0.35rem;
         margin-bottom: 0.75rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
       }
       .feature-card:last-child { margin-bottom: 0; }
+      .feature-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px oklch(0 0 0 / 0.10);
+      }
+      .card-hover-reveal {
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+      .feature-card:hover .card-hover-reveal {
+        opacity: 1;
+      }
       .feature-card--running {
         border-left: 3px solid var(--color-brand-primary);
       }
@@ -353,12 +365,24 @@
         height: 8px;
         border-radius: var(--radius-full);
         background-color: var(--color-success);
-        animation: pulse 2s infinite;
         vertical-align: middle;
       }
       @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.4; }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .live-dot { animation: pulse 2s infinite; }
+      }
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(-4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .badge { transition: background-color 300ms ease-out, border-color 300ms ease-out, color 300ms ease-out; }
+        .page-loaded .htmx-added {
+          animation: fade-in 200ms ease-out both;
+        }
       }
       .dash-grid {
         display: grid;
@@ -380,7 +404,7 @@
   </style>
   {% block head %}{% endblock %}
 </head>
-<body>
+<body hx-ext="morph">
   <header>
     <h1>Agent Dashboard</h1>
     <nav>
@@ -403,19 +427,19 @@
       </div>
 
       <div class="dash-grid-side">
-        <section id="fleet-panel" aria-label="Agent fleet" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <section id="fleet-panel" aria-label="Agent fleet" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="morph">
           <h2>Agent Fleet</h2>
           <p class="empty-state">Loading...</p>
         </section>
       </div>
     </div>
 
-    <section id="swim-lane" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="innerHTML">
+    <section id="swim-lane" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="morph">
       <h2>Timeline</h2>
       <p class="empty-state">Loading...</p>
     </section>
 
-    <section id="round-history" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+    <section id="round-history" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="morph"><p class="empty-state">Loading...</p></section>
 
     <section id="pipeline-panel" class="section-primary">
       {% block pipeline_panel %}{% include "pipeline_panel.html" %}{% endblock %}
@@ -430,5 +454,9 @@
   </main>
 
   {% block body_extra %}{% endblock %}
+  <script>
+    /* Gate entry animations: add page-loaded after initial HTMX swaps settle */
+    setTimeout(function () { document.body.classList.add('page-loaded'); }, 500);
+  </script>
 </body>
 </html>
