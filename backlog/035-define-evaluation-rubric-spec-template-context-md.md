@@ -4,18 +4,19 @@ uuid: e3f4a5b6-c7d8-9012-efab-234567890123
 id: "035"
 title: "Add dashboard visual evaluation criteria to DESIGN.md"
 type: chore
-status: refined
+status: complete
 priority: medium
 parent: "033"
 blocked-by: []
 tags: [dashboard, ui, quality, evaluation]
 created: 2026-04-03
-updated: 2026-04-06
+updated: 2026-04-08
 discovery_source: research/generative-ui-harness/research.md
 complexity: simple
 criticality: low
 spec: lifecycle/add-dashboard-visual-evaluation-criteria-to-designmd/spec.md
 areas: [dashboard]
+session_id: null
 ---
 
 # Add dashboard visual evaluation criteria to DESIGN.md

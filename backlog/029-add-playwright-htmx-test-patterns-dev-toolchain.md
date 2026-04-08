@@ -4,18 +4,19 @@ uuid: f4a5b6c7-d8e9-0123-fabc-345678901234
 id: "029"
 title: "Add Playwright MCP for dashboard visual evaluation"
 type: feature
-status: refined
+status: complete
 priority: medium
 parent: "033"
 blocked-by: []
 tags: [dashboard, ui, evaluation, playwright, mcp]
 created: 2026-04-03
-updated: 2026-04-06
+updated: 2026-04-08
 discovery_source: research/generative-ui-harness/research.md
 complexity: simple
 criticality: medium
 spec: lifecycle/add-playwright-mcp-for-dashboard-visual-evaluation/spec.md
 areas: [dashboard]
+session_id: null
 ---
 
 # Add Playwright MCP for dashboard visual evaluation

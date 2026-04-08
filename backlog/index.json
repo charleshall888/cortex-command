@@ -29,66 +29,6 @@
     "repo": null
   },
   {
-    "id": 33,
-    "title": "Establish dashboard UI quality baseline",
-    "status": "backlog",
-    "priority": "high",
-    "type": "epic",
-    "tags": [
-      "dashboard",
-      "ui",
-      "quality",
-      "epic"
-    ],
-    "areas": [],
-    "created": "2026-04-03",
-    "updated": "2026-04-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/generative-ui-harness/research.md",
-    "plan": null,
-    "uuid": "c1d2e3f4-a5b6-7890-cdef-012345678901",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 34,
-    "title": "Fix inline style violations in session_panel and feature_cards templates",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "dashboard",
-      "ui",
-      "quality",
-      "css"
-    ],
-    "areas": [
-      "dashboard"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-07",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "033",
-    "research": null,
-    "spec": "lifecycle/fix-inline-style-violations-in-session-panel-and-feature-cards-templates/spec.md",
-    "discovery_source": "research/generative-ui-harness/research.md",
-    "plan": null,
-    "uuid": "d2e3f4a5-b6c7-8901-defa-123456789012",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -119,165 +59,32 @@
     "repo": null
   },
   {
-    "id": 29,
-    "title": "Add Playwright MCP for dashboard visual evaluation",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "dashboard",
-      "ui",
-      "evaluation",
-      "playwright",
-      "mcp"
-    ],
-    "areas": [
-      "dashboard"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "033",
-    "research": null,
-    "spec": "lifecycle/add-playwright-mcp-for-dashboard-visual-evaluation/spec.md",
-    "discovery_source": "research/generative-ui-harness/research.md",
-    "plan": null,
-    "uuid": "f4a5b6c7-d8e9-0123-fabc-345678901234",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 30,
-    "title": "Investigate and fix swim-lane inline styles and layout degradation",
-    "status": "refined",
+    "id": 41,
+    "title": "Add overnight session observability from within Claude Code sandbox",
+    "status": "backlog",
     "priority": "medium",
     "type": "chore",
     "tags": [
-      "dashboard",
-      "ui",
-      "swim-lane",
-      "css",
-      "quality"
+      "overnight",
+      "observability",
+      "sandbox"
     ],
     "areas": [
-      "dashboard"
+      "overnight-runner"
     ],
-    "created": "2026-04-03",
-    "updated": "2026-04-06",
-    "blocks": [],
-    "blocked_by": [
-      "029"
-    ],
-    "parent": "033",
-    "research": null,
-    "spec": "lifecycle/investigate-and-fix-swim-lane-inline-styles-and-layout-degradation/spec.md",
-    "discovery_source": "research/generative-ui-harness/research.md",
-    "plan": null,
-    "uuid": "a5b6c7d8-e9f0-1234-abcd-456789012345",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 31,
-    "title": "Add hover states, loading feedback, and badge micro-interactions",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "dashboard",
-      "ui",
-      "micro-interactions",
-      "ux",
-      "animation"
-    ],
-    "areas": [
-      "dashboard"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-06",
-    "blocks": [],
-    "blocked_by": [
-      "034"
-    ],
-    "parent": "033",
-    "research": null,
-    "spec": "lifecycle/add-hover-states-loading-feedback-and-badge-micro-interactions/spec.md",
-    "discovery_source": "research/generative-ui-harness/research.md",
-    "plan": null,
-    "uuid": "b6c7d8e9-f0a1-2345-bcde-567890123456",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 32,
-    "title": "Add accessibility foundations (aria-live, multi-modal severity)",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "dashboard",
-      "ui",
-      "accessibility",
-      "a11y",
-      "aria"
-    ],
-    "areas": [
-      "dashboard"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-07",
+    "created": "2026-04-08",
+    "updated": "2026-04-08",
     "blocks": [],
     "blocked_by": [],
-    "parent": "033",
+    "parent": null,
     "research": null,
-    "spec": "lifecycle/add-accessibility-foundations-aria-live-multi-modal-severity/spec.md",
-    "discovery_source": "research/generative-ui-harness/research.md",
+    "spec": null,
+    "discovery_source": null,
     "plan": null,
-    "uuid": "c7d8e9f0-a1b2-3456-cdef-678901234567",
+    "uuid": "d26a53bb-6dc0-4fb3-aad9-da6b153ba149",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 35,
-    "title": "Add dashboard visual evaluation criteria to DESIGN.md",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "dashboard",
-      "ui",
-      "quality",
-      "evaluation"
-    ],
-    "areas": [
-      "dashboard"
-    ],
-    "created": "2026-04-03",
-    "updated": "2026-04-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "033",
-    "research": null,
-    "spec": "lifecycle/add-dashboard-visual-evaluation-criteria-to-designmd/spec.md",
-    "discovery_source": "research/generative-ui-harness/research.md",
-    "plan": null,
-    "uuid": "e3f4a5b6-c7d8-9012-efab-234567890123",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },

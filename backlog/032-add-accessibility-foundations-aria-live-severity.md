@@ -4,13 +4,13 @@ uuid: c7d8e9f0-a1b2-3456-cdef-678901234567
 id: "032"
 title: "Add accessibility foundations (aria-live, multi-modal severity)"
 type: chore
-status: in_progress
+status: complete
 priority: medium
 parent: "033"
 blocked-by: []
 tags: [dashboard, ui, accessibility, a11y, aria]
 created: 2026-04-03
-updated: 2026-04-07
+updated: 2026-04-08
 discovery_source: research/generative-ui-harness/research.md
 complexity: complex
 criticality: medium
