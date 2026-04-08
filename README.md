@@ -73,34 +73,60 @@ You ──► Clarify ──► Research ──► Spec ──► Plan ──►
 
 ## Quick Start
 
+> **Back up first.** `just setup` creates symlinks that replace existing files in `~/.claude/`. If you already have Claude Code configured:
+> ```bash
+> cp -r ~/.claude/settings.json ~/.claude/settings.json.backup 2>/dev/null
+> cp -r ~/.claude/settings.local.json ~/.claude/settings.local.json.backup 2>/dev/null
+> cp -r ~/.claude/skills ~/.claude/skills.backup 2>/dev/null
+> cp -r ~/.claude/hooks ~/.claude/hooks.backup 2>/dev/null
+> ```
+> `just setup` does **not** touch `~/.claude/CLAUDE.md` — it deploys to `~/.claude/rules/` only.
+
 ```bash
 git clone https://github.com/charleshall888/cortex-command.git ~/cortex-command
 cd ~/cortex-command
 just setup
 ```
 
-> **Important:** Add the following to your shell profile (`.zshrc`, `.bashrc`, etc.):
->
-> ```bash
-> export CORTEX_COMMAND_ROOT="$HOME/cortex-command"
-> ```
->
-> Several components (the `jcc` wrapper, overnight runner) require this variable.
-> If you clone to a different location, update the path accordingly. The sandbox
-> `allowWrite` path is configured automatically by `just setup`.
+Then add to your shell profile (`.zshrc`, `.bashrc`, etc.):
 
-### Backup Warning
+```bash
+export CORTEX_COMMAND_ROOT="$HOME/cortex-command"
+```
 
-`just setup` creates symlinks that **replace** existing files in `~/.claude/`. If you already have Claude Code configured, back up these files first:
+Restart your shell. Run `just check-symlinks` to verify.
 
-- `~/.claude/settings.json`
-- `~/.claude/statusline.sh`
-- Any custom skills in `~/.claude/skills/`
-- Any custom hooks in `~/.claude/hooks/`
+## Authentication
 
-`just setup` does **not** create or modify `~/.claude/CLAUDE.md` — it creates new files in `~/.claude/rules/` only (`cortex-global.md` and `cortex-sandbox.md`). Your existing `CLAUDE.md` is safe. Only `just setup-force` (coming in a future release) will deploy `~/.claude/CLAUDE.md`.
+The overnight runner and some CLI utilities need API credentials. Choose based on your account type:
 
-The setup recipe will warn before overwriting non-symlink files at these locations.
+### API Key (work / Console billing)
+
+```bash
+printf '%s' 'sk-ant-api03-...' > ~/.claude/work-api-key
+chmod 600 ~/.claude/work-api-key
+```
+
+Add to `~/.claude/settings.local.json`:
+```json
+{ "apiKeyHelper": "cat ~/.claude/work-api-key" }
+```
+
+### OAuth Token (Claude Pro / Max subscription)
+
+```bash
+claude setup-token                  # opens browser, prints token (valid 1 year)
+printf '%s' 'sk-ant-oat01-...' > ~/.claude/personal-oauth-token
+chmod 600 ~/.claude/personal-oauth-token
+```
+
+The overnight runner reads this file automatically when no `apiKeyHelper` is configured.
+
+### Using Both
+
+Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth token at `~/.claude/personal-oauth-token`. The runner uses `apiKeyHelper` when present, falls back to the OAuth token when not. See [`docs/overnight.md`](docs/overnight.md#authentication) for the full precedence chain.
+
+> **Note:** OAuth tokens work with `claude -p` and the Agent SDK. Standalone utilities (`count-tokens`, `audit-doc`) call the Anthropic API directly and require an API key.
 
 ## What's Inside
 
@@ -140,7 +166,7 @@ just validate-skills       # Check skill frontmatter
 | Guide | Covers |
 |-------|--------|
 | [`docs/agentic-layer.md`](docs/agentic-layer.md) | Full skill and hook inventory, workflow diagrams, lifecycle phase map |
-| [`docs/setup.md`](docs/setup.md) | Installation, symlinks, macOS caffeinate, GPG/PAT config |
+| [`docs/setup.md`](docs/setup.md) | Installation, symlinks, authentication, customization |
 | [`docs/overnight.md`](docs/overnight.md) | Autonomous overnight runner -- planning, execution, deferral, morning review |
 | [`docs/dashboard.md`](docs/dashboard.md) | Web dashboard for monitoring overnight sessions |
 | [`docs/backlog.md`](docs/backlog.md) | Backlog YAML schema, readiness gates, overnight eligibility |

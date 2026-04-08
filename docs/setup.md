@@ -1,172 +1,148 @@
 [← Back to README](../README.md)
 
-# Machine Setup Guide
+# Setup Guide
 
-**For:** Users setting up this repo on a new machine (macOS, Windows, or Linux).  **Assumes:** Basic git and terminal familiarity; a working Claude Code installation.
+**For:** Users setting up cortex-command on a new machine.  **Assumes:** Claude Code is installed and working; basic git and terminal familiarity.
 
-Detailed setup instructions for all components in this repo, with rationale for each tool choice and callouts for sections that require per-machine customization.
+> **Machine-level config** (shell, terminal, git, starship, tmux, caffeinate) lives in the [machine-config](https://github.com/charleshall888/machine-config) repo. This guide covers only cortex-command — the agentic layer.
+
+---
+
+## Before You Start
+
+`just setup` creates symlinks that **replace** existing files in `~/.claude/`. If you already have Claude Code configured, back up these files first:
+
+```bash
+# Back up existing Claude Code config
+cp -r ~/.claude/settings.json ~/.claude/settings.json.backup 2>/dev/null
+cp -r ~/.claude/settings.local.json ~/.claude/settings.local.json.backup 2>/dev/null
+cp -r ~/.claude/statusline.sh ~/.claude/statusline.sh.backup 2>/dev/null
+cp -r ~/.claude/skills ~/.claude/skills.backup 2>/dev/null
+cp -r ~/.claude/hooks ~/.claude/hooks.backup 2>/dev/null
+```
+
+`just setup` does **not** create or modify `~/.claude/CLAUDE.md` — it deploys rules to `~/.claude/rules/` only. Your existing `CLAUDE.md` is safe.
+
+---
+
+## Quick Setup
+
+```bash
+git clone https://github.com/charleshall888/cortex-command.git ~/cortex-command
+cd ~/cortex-command
+just setup
+```
+
+Then add to your shell profile (`.zshrc`, `.bashrc`, etc.):
+
+```bash
+export CORTEX_COMMAND_ROOT="$HOME/cortex-command"
+```
+
+Restart your shell and run `just check-symlinks` to verify.
+
+---
+
+## What `just setup` Does
+
+The setup recipe deploys the full agentic layer via symlinks:
+
+| Recipe | What it deploys | Target |
+|--------|----------------|--------|
+| `deploy-bin` | CLI utilities (`jcc`, `count-tokens`, `audit-doc`, `overnight-start`, etc.) | `~/.local/bin/` |
+| `deploy-reference` | Reference docs for conditional loading | `~/.claude/reference/` |
+| `deploy-skills` | All skill directories | `~/.claude/skills/` |
+| `deploy-hooks` | Hook scripts + notification handler | `~/.claude/hooks/`, `~/.claude/notify.sh` |
+| `deploy-config` | Settings, statusline, agent rules | `~/.claude/settings.json`, `~/.claude/statusline.sh`, `~/.claude/rules/` |
+| `python-setup` | Python venv + dependencies | `.venv/` |
+
+If any target already exists and is not a symlink pointing into this repo, the recipe skips it and reports a conflict. Run `/setup-merge` in Claude Code to resolve conflicts interactively.
 
 ---
 
 ## Symlink Architecture
 
-Every piece of config in this repo is deployed via symlinks: the file lives in the repo and a symlink at the system location points back to it. Editing the repo copy changes the active config immediately. This pattern makes config version-controlled, portable, and easy to audit — there is never a question of which copy is current.
+Every config file lives in this repo and is symlinked to its system location. Editing the repo copy changes the active config immediately. This pattern keeps config version-controlled and auditable.
 
-The general pattern for every setup section below is:
-
-```bash
-ln -sf "$(pwd)/repo-file" ~/system-location
+```
+cortex-command/claude/settings.json  →  ~/.claude/settings.json
+cortex-command/skills/commit/        →  ~/.claude/skills/commit/
+cortex-command/hooks/cortex-*.sh     →  ~/.claude/hooks/cortex-*.sh
+cortex-command/bin/jcc               →  ~/.local/bin/jcc
 ```
 
-On Windows, the equivalent uses `New-Item -ItemType SymbolicLink`. When the `docs/` directory does not exist or a parent directory is missing, create it with `mkdir -p` (macOS/Linux) or `New-Item -ItemType Directory -Force` (Windows) before creating the symlink.
+Always edit the repo copy (the symlink target), never create files at the destination.
 
 ---
 
-## Shell
+## Authentication
 
-### macOS/Linux (Zsh)
+The overnight runner and some CLI utilities need API credentials. There are two modes depending on your account type.
 
-Zsh is the default shell on macOS (since Catalina) and is widely available on Linux. This config provides a consistent environment across both platforms: aliases, PATH setup, tool initialization (nvm, deno, Android SDK), and prompt integration with Starship.
+### Option A: API Key (Console / Organization billing)
 
-```bash
-ln -sf "$(pwd)/shell/zshrc" ~/.zshrc
-ln -sf "$(pwd)/shell/zprofile" ~/.zprofile
-source ~/.zshrc
-```
+For work repos billed through the Anthropic Console:
 
-> **Customize**: `shell/zshrc` contains a tool-loading section for nvm, deno, and the Android SDK. Keep only the tools you have installed and remove the rest — loading tools that are not present produces shell startup errors.
+1. Create an API key at [platform.claude.com](https://platform.claude.com)
+2. Store it securely:
+   ```bash
+   printf '%s' 'sk-ant-api03-...' > ~/.claude/work-api-key
+   chmod 600 ~/.claude/work-api-key
+   ```
+3. Add `apiKeyHelper` to `~/.claude/settings.local.json`:
+   ```json
+   {
+     "apiKeyHelper": "cat ~/.claude/work-api-key"
+   }
+   ```
 
-### Windows (PowerShell)
+This path also enables `count-tokens` and `audit-doc`, which call the Anthropic API directly.
 
-The PowerShell profile provides Windows-equivalent shell configuration. It mirrors the macOS setup where possible so the environment feels consistent across machines.
+### Option B: OAuth Token (Claude Pro / Max subscription)
 
-```powershell
-New-Item -ItemType Directory -Path (Split-Path $PROFILE) -Force
-New-Item -ItemType SymbolicLink -Path $PROFILE -Target (Resolve-Path shell\Microsoft.PowerShell_profile.ps1)
-. $PROFILE
-```
+For personal repos using your Claude subscription:
 
----
+1. Generate a long-lived token (valid 1 year):
+   ```bash
+   claude setup-token
+   ```
+   This opens a browser for OAuth authentication and prints the token.
 
-## Starship Prompt
+2. Store the token:
+   ```bash
+   printf '%s' 'sk-ant-oat01-...' > ~/.claude/personal-oauth-token
+   chmod 600 ~/.claude/personal-oauth-token
+   ```
 
-Starship is a cross-platform, minimal prompt written in Rust. It renders consistently across Zsh, Bash, Fish, and PowerShell, so the same prompt config works on macOS and Windows without translation. It is fast enough to not add perceptible shell startup latency.
+The overnight runner reads this file automatically when no `apiKeyHelper` is configured. No settings.json changes needed.
 
-### Install
+> **Note:** `CLAUDE_CODE_OAUTH_TOKEN` is recognized by Claude Code CLI (`claude -p`, Agent SDK) but **not** by the Anthropic Python SDK. Standalone utilities like `count-tokens` and `audit-doc` require an API key (Option A).
 
-```bash
-# macOS
-brew install starship
+### Using Both
 
-# Windows
-winget install Starship.Starship
-```
+If you work on both personal and work repos, configure both:
+- Set `apiKeyHelper` in the work repo's `.claude/settings.local.json`
+- Store the OAuth token at `~/.claude/personal-oauth-token`
 
-### Config (optional)
-
-```bash
-# macOS/Linux
-mkdir -p ~/.config && ln -sf "$(pwd)/starship/starship.toml" ~/.config/starship.toml
-
-# Windows
-New-Item -ItemType SymbolicLink -Path $env:USERPROFILE\.config\starship.toml -Target (Resolve-Path starship\starship.toml)
-```
-
-The current config uses defaults and serves as a template. Starship works out of the box without linking this file.
-
----
-
-## Git
-
-### Global Gitignore
-
-A global gitignore prevents editor artifacts, OS metadata, and tool-specific files from appearing as untracked files in every repository on the machine. This is preferable to adding them to each project's `.gitignore` individually.
-
-```bash
-mkdir -p ~/.config/git
-ln -sf "$(pwd)/git/ignore" ~/.config/git/ignore
-```
+The runner uses `apiKeyHelper` when present (work), and falls back to the OAuth token file when not (personal). See [docs/overnight.md](overnight.md#authentication) for the full precedence chain.
 
 ---
 
-## Ghostty Terminal (macOS)
+## Customization
 
-Ghostty is a native macOS terminal with first-class notification support and GPU-accelerated rendering. The config here sets FiraCode Nerd Font (required for Starship glyphs and skill UI symbols) and enables bell notifications — title icon, dock bounce, and border flash — so missed agent output is visually surfaced when working across windows.
+### settings.json
 
-```bash
-mkdir -p ~/Library/Application\ Support/com.mitchellh.ghostty
-ln -sf "$(pwd)/ghostty/config" ~/Library/Application\ Support/com.mitchellh.ghostty/config
-```
+`claude/settings.json` is tracked and symlinked to `~/.claude/settings.json`. After forking, review and adjust:
 
-Features enabled by this config:
-- FiraCode Nerd Font
-- Bell notifications (title icon, dock bounce, border flash)
+- **Permissions**: The `allow`/`deny` lists reference specific tool names and path patterns. Update for your tools.
+- **MCP plugins**: Add or remove plugins in `enabledPlugins`.
+- **Sandbox**: `sandbox.enabled: true` is the default. Adjust `allowWrite` paths if your projects live outside the default locations.
 
----
+Use `settings.local.json` in any project for per-machine overrides (e.g., `apiKeyHelper`) without modifying the tracked file.
 
-## Windows Terminal (Windows)
+### Adding an MCP Server
 
-Ghostty is macOS only. On Windows, configure FiraCode Nerd Font in Windows Terminal's `settings.json`:
-
-```json
-{
-  "profiles": {
-    "defaults": {
-      "font": {
-        "face": "FiraCode Nerd Font"
-      }
-    }
-  }
-}
-```
-
----
-
-## macOS Sleep Prevention (macOS only)
-
-Long-running Claude Code sessions and overnight pipeline runs are interrupted when the Mac auto-sleeps or locks the screen. This polling daemon watches for active tmux sessions or Claude processes and keeps the machine awake for the duration using `caffeinate -d -i`.
-
-`caffeinate-monitor.sh` serves two roles:
-
-1. **Symlinked binary** — linked to `~/.local/bin/caffeinate-monitor.sh` so it can be invoked directly from the command line.
-2. **Launchd service** — registered via `mac/local.caffeinate-monitor.plist` at `~/Library/LaunchAgents/`, which means it starts automatically at login with no manual intervention needed between sessions.
-
-```bash
-chmod +x "$(pwd)/mac/caffeinate-monitor.sh"
-mkdir -p ~/.local/bin
-ln -sf "$(pwd)/mac/caffeinate-monitor.sh" ~/.local/bin/caffeinate-monitor.sh
-mkdir -p ~/Library/LaunchAgents
-ln -sf "$(pwd)/mac/local.caffeinate-monitor.plist" ~/Library/LaunchAgents/local.caffeinate-monitor.plist
-launchctl load ~/Library/LaunchAgents/local.caffeinate-monitor.plist
-```
-
-### Cleanup (existing installs)
-
-If you previously used the old tmux caffeinate-check.sh approach, remove the dangling symlink and reload tmux config:
-
-```bash
-rm -f ~/.config/tmux/caffeinate-check.sh
-tmux source ~/.tmux.conf
-```
-
----
-
-## Claude Code
-
-Claude Code is the primary AI coding agent used in this setup. The configuration here provides global agent instructions, permission rules, hooks for commit validation and lifecycle state injection, a statusline integration, and symlinked skills so they are available in every project directory without per-project setup.
-
-### Customize for Your Machine
-
-After forking, update these files before linking anything to `~/`:
-
-| File | What to change |
-|------|----------------|
-| `shell/zshrc` | Update the tool-loading section — keep only the tools you actually have (nvm, deno, Android SDK, etc.) and remove the rest |
-| `claude/settings.json` | Update MCP plugin permissions (`allow`/`deny` patterns) for your own tools; add your patterns and remove ones for tools you don't use |
-
-> **Customize**: `claude/settings.json` contains MCP plugin `allow`/`deny` permission patterns. These are personal — they reference specific tool names and path patterns. Review and update them for the tools you use; remove entries for tools you don't have installed.
-
-To add an MCP server, add a `mcpServers` block to `claude/settings.json`:
+Add a `mcpServers` block to `claude/settings.json`:
 
 ```json
 {
@@ -179,182 +155,29 @@ To add an MCP server, add a `mcpServers` block to `claude/settings.json`:
 }
 ```
 
-Then add permission patterns for its tools in the `permissions.allow` list (e.g. `"mcp__server-name__*"`).
-
-### Full Setup (macOS)
-
-```bash
-# Global agent rules (non-destructive — deploys to ~/.claude/rules/, NOT ~/.claude/CLAUDE.md)
-# just setup does NOT create or modify ~/.claude/CLAUDE.md; only just setup-force does (see ticket 006)
-mkdir -p ~/.claude/rules
-ln -sf "$(pwd)/claude/rules/global-agent-rules.md" ~/.claude/rules/cortex-global.md
-ln -sf "$(pwd)/claude/rules/sandbox-behaviors.md" ~/.claude/rules/cortex-sandbox.md
-
-# Settings (includes hooks, model preferences, permissions)
-ln -sf "$(pwd)/claude/settings.json" ~/.claude/settings.json
-
-# Statusline
-ln -sf "$(pwd)/claude/statusline.sh" ~/.claude/statusline.sh
-
-# Shared hooks
-mkdir -p ~/.claude/hooks
-ln -sf "$(pwd)/hooks/cortex-validate-commit.sh" ~/.claude/hooks/cortex-validate-commit.sh
-ln -sf "$(pwd)/hooks/cortex-scan-lifecycle.sh" ~/.claude/hooks/cortex-scan-lifecycle.sh
-ln -sf "$(pwd)/hooks/cortex-notify.sh" ~/.claude/notify.sh
-brew install terminal-notifier
-
-# Claude-only hooks
-ln -sf "$(pwd)/claude/hooks/cortex-sync-permissions.py" ~/.claude/hooks/cortex-sync-permissions.py
-
-# Skills (all — symlink every skill directory)
-mkdir -p ~/.claude/skills
-for s in skills/*/; do ln -sf "$(pwd)/$s" ~/.claude/skills/$(basename "$s"); done
-```
-
-### Windows Setup
-
-```powershell
-# Statusline
-New-Item -ItemType SymbolicLink -Path $env:USERPROFILE\.claude\statusline.ps1 -Target (Resolve-Path claude\statusline.ps1)
-```
-
-Add to `%USERPROFILE%\.claude\settings.json`:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "powershell.exe -ExecutionPolicy Bypass -File %USERPROFILE%\\.claude\\statusline.ps1",
-    "padding": 0
-  }
-}
-```
-
-### macOS Permissions
-
-For notifications to work, enable in **System Settings > Notifications**:
-
-1. **terminal-notifier**: Allow notifications
-2. **Ghostty**: Allow notifications + enable "Badge app icon"
+Then add `"mcp__server-name__*"` to the `permissions.allow` list.
 
 ---
 
-## WezTerm Integration (Windows)
+## macOS Notifications
 
-WezTerm is a cross-platform GPU-accelerated terminal with a Lua configuration API. This integration provides visual notifications when Claude Code needs attention on Windows — a tab color change and screen flash that mirrors the Ghostty bell behavior on macOS. It fills the gap left by terminal-notifier, which is macOS only.
+For desktop notifications when Claude Code needs attention:
 
-| File | Description |
-|------|-------------|
-| `wezterm/claude-notify.lua` | Tab highlighting for unseen output |
-| `claude/hooks/bell.ps1` | Visual bell trigger script |
-
-### Setup (Windows)
-
-1. Copy the notification module:
-```powershell
-mkdir $env:USERPROFILE\.wezterm -Force
-Copy-Item wezterm\claude-notify.lua $env:USERPROFILE\.wezterm\
-```
-
-2. Copy the bell hook:
-```powershell
-mkdir $env:USERPROFILE\.claude\hooks -Force
-Copy-Item claude\hooks\bell.ps1 $env:USERPROFILE\.claude\hooks\
-```
-
-3. Update `.wezterm.lua` (add near top):
-```lua
-local claude_notify = require('claude-notify')
-claude_notify.setup()
-```
-
-4. Restart WezTerm to load changes.
-
-### Behavior
-
-- **Visual Bell**: Screen flashes orange when Claude needs input
-- **Tab Indicator**: Tab turns orange until focused (auto-clears)
-- **Toast Notification**: Windows toast continues working alongside
-
----
-
-## OS Compatibility
-
-| Component | macOS | Linux | Windows | Notes |
-|-----------|:-----:|:-----:|:-------:|-------|
-| Skills (`skills/`) | ✅ | ✅ | ✅ | Agent-agnostic, cross-platform |
-| `hooks/cortex-validate-commit.sh` | ✅ | ✅ | ✅ | Core hook, cross-platform |
-| `hooks/cortex-scan-lifecycle.sh` | ✅ | ✅ | ✅ | Core hook, cross-platform |
-| `claude/statusline.sh` | ✅ | ✅ | — | Shell statusline |
-| `claude/statusline.ps1` | — | — | ✅ | PowerShell statusline (Windows) |
-| Git config (`git/ignore`) | ✅ | ✅ | ✅ | Cross-platform gitignore |
-| Starship prompt | ✅ | ✅ | ✅ | Cross-platform prompt |
-| `hooks/cortex-notify.sh` | ✅ | — | — | macOS only; requires `terminal-notifier` |
-| `mac/` directory | ✅ | — | — | macOS only (launchd, caffeinate) |
-| Ghostty config (`ghostty/`) | ✅ | — | — | macOS only terminal |
-| WezTerm integration | — | — | ✅ | Windows alternative for visual notifications |
-| PowerShell profile | — | — | ✅ | Windows shell config |
-
----
-
-## Overnight Runner Authentication
-
-The overnight runner needs credentials for `claude -p` subprocesses. Choose the mode that matches your account:
-
-### API Key (Console / Organization billing)
-
-For work repos billed through the Anthropic Console:
-
-1. Create an API key at [platform.claude.com](https://platform.claude.com)
-2. Store it in a file readable only by your user:
-   ```bash
-   printf '%s' 'sk-ant-api03-...' > ~/.claude/work-api-key
-   chmod 600 ~/.claude/work-api-key
-   ```
-3. Add `apiKeyHelper` to `~/.claude/settings.local.json`:
-   ```json
-   {
-     "apiKeyHelper": "cat ~/.claude/work-api-key"
-   }
-   ```
-
-### OAuth Token (Claude Pro / Max subscription)
-
-For personal repos using your Claude subscription:
-
-1. Generate a long-lived OAuth token (valid 1 year):
-   ```bash
-   claude setup-token
-   ```
-2. Store the token:
-   ```bash
-   printf '%s' 'sk-ant-oat01-...' > ~/.claude/personal-oauth-token
-   chmod 600 ~/.claude/personal-oauth-token
-   ```
-
-The runner reads this file automatically when no `apiKeyHelper` is configured. No settings.json changes needed.
-
-### Using Both
-
-If you work on both personal and work repos, configure both:
-- Set `apiKeyHelper` in the work repo's `.claude/settings.local.json`
-- Store the OAuth token at `~/.claude/personal-oauth-token`
-
-The runner uses `apiKeyHelper` when configured (work), and falls back to the OAuth token file when not (personal).
+1. Install terminal-notifier: `brew install terminal-notifier`
+2. Enable in **System Settings > Notifications**:
+   - **terminal-notifier**: Allow notifications
+   - **Your terminal app**: Allow notifications + enable "Badge app icon"
 
 ---
 
 ## Dependencies
 
-| Tool | macOS | Windows |
-|------|-------|---------|
-| just | `brew install just` | `winget install Casey.Just` |
-| Python 3 | Pre-installed / `brew install python` | `winget install Python.Python.3` |
-| gh (GitHub CLI) | `brew install gh` | `winget install GitHub.cli` |
-| tmux | `brew install tmux` | N/A |
-| Starship | `brew install starship` | `winget install Starship.Starship` |
-| FiraCode Nerd Font | [nerdfonts.com](https://www.nerdfonts.com/font-downloads) | Same |
-| jq (optional) | `brew install jq` | `choco install jq` |
-| NVM | `brew install nvm` | [nvm-windows](https://github.com/coreybutler/nvm-windows) |
-| Deno | `brew install deno` | `irm https://deno.land/install.ps1 \| iex` |
-| terminal-notifier | `brew install terminal-notifier` | N/A |
+| Tool | Install |
+|------|---------|
+| [just](https://just.systems/) | `brew install just` |
+| Python 3.12+ | Pre-installed / `brew install python` |
+| [uv](https://docs.astral.sh/uv/) | `brew install uv` |
+| [gh](https://cli.github.com/) (GitHub CLI) | `brew install gh` |
+| tmux | `brew install tmux` |
+| terminal-notifier (macOS) | `brew install terminal-notifier` |
+| jq (optional) | `brew install jq` |
