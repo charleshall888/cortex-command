@@ -1,6 +1,6 @@
 ---
 name: overnight
-description: Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the bash runner for unattended execution. Use when user says "/overnight", "/overnight resume", "start overnight session", "overnight plan", "launch overnight", or wants to run multiple features autonomously overnight.
+description: Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the bash runner for unattended execution. Use when user says "/overnight", "/overnight resume", "/overnight status", "start overnight session", "overnight plan", "launch overnight", "overnight status", or wants to run multiple features autonomously overnight.
 disable-model-invocation: true
 inputs:
   - "time-limit: string (optional) — Maximum wall-clock duration for the overnight session (e.g. '6h'). Passed as --time-limit to the runner."
@@ -25,6 +25,7 @@ Interactive entry point for overnight autonomous orchestration. Guides the user 
 
 - `/overnight` -- start a new overnight session (select features, build plan, launch)
 - `/overnight resume` -- resume an interrupted overnight session or view results
+- `/overnight status` -- check the status of a running or recent overnight session
 
 ## Input Validation
 
@@ -38,7 +39,7 @@ Validate inputs before entering any flow:
 
 - **Git repository**: `.git/` must exist in the current directory. If missing: "Not a git repository root. Run `/overnight` from the repository root." → stop.
 - **Backlog directory**: `backlog/` must exist. If missing: "No backlog directory found. Run from the project root." → stop.
-- **Command variant**: Only `overnight` and `overnight resume` are valid. Unknown variants (e.g., `/overnight foobar`) should report: "Unknown subcommand '{variant}'. Use `/overnight` or `/overnight resume`." → stop.
+- **Command variant**: Only `overnight`, `overnight resume`, and `overnight status` are valid. Unknown variants (e.g., `/overnight foobar`) should report: "Unknown subcommand '{variant}'. Use `/overnight`, `/overnight resume`, or `/overnight status`." → stop.
 
 ## New Session Flow (`/overnight`)
 
@@ -282,6 +283,10 @@ Based on the session phase, ask the user what to do:
 - **View morning report**: Direct the user to read `lifecycle/morning-report.md` for a summary of what was accomplished, what failed, and any deferred questions.
 
 - **Address deferred questions**: Present each blocking question from `deferred/` and collect the user's answers. After answering, the user can resume execution.
+
+## Status Flow (`/overnight status`)
+
+Run `overnight-status` (the deployed script) and present its output to the user. If the command is not found, instruct the user to run `just deploy-bin` first.
 
 ## Success Criteria
 
