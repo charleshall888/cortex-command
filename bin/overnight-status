@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+# overnight-status — one-shot status report for the active overnight session.
+#
+# Reads file-based session state (no tmux needed) and produces a human-readable
+# summary of runner liveness, phase, feature progress, and recent events.
+#
+# Usage: overnight-status
+#
+# Exit codes:
+#   0 — session data found (active or last-known)
+#   1 — no session data exists at all
+
+set -euo pipefail
+
+ACTIVE_SESSION_FILE="$HOME/.local/share/overnight-sessions/active-session.json"
+REPO_ROOT="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/.."
+SESSIONS_DIR="$REPO_ROOT/lifecycle/sessions"
+
+# ---------------------------------------------------------------------------
+# Session discovery
+# ---------------------------------------------------------------------------
+
+SESSION_DIR=""
+SESSION_ID=""
+IS_LAST_KNOWN=false
+
+discover_from_active_session() {
+    if [[ ! -f "$ACTIVE_SESSION_FILE" ]]; then
+        return 1
+    fi
+
+    local state_path phase
+    state_path=$(jq -r '.state_path // empty' "$ACTIVE_SESSION_FILE" 2>/dev/null) || return 1
+    phase=$(jq -r '.phase // empty' "$ACTIVE_SESSION_FILE" 2>/dev/null) || return 1
+
+    if [[ -z "$state_path" ]]; then
+        return 1
+    fi
+
+    # If phase is complete, fall through to fallback
+    if [[ "$phase" == "complete" ]]; then
+        return 1
+    fi
+
+    # Verify the session directory actually exists on disk
+    local dir
+    dir=$(dirname "$state_path")
+    if [[ ! -d "$dir" ]]; then
+        return 1
+    fi
+
+    SESSION_DIR="$dir"
+    SESSION_ID=$(jq -r '.session_id // empty' "$ACTIVE_SESSION_FILE" 2>/dev/null) || true
+    return 0
+}
+
+discover_from_sessions_dir() {
+    if [[ ! -d "$SESSIONS_DIR" ]]; then
+        return 1
+    fi
+
+    # Find the most recent overnight-* directory (sorted by name, date-encoded)
+    local latest
+    latest=$(ls -1d "$SESSIONS_DIR"/overnight-* 2>/dev/null | sort | tail -1) || true
+
+    if [[ -z "$latest" || ! -d "$latest" ]]; then
+        return 1
+    fi
+
+    SESSION_DIR="$latest"
+    SESSION_ID=$(basename "$latest")
+    IS_LAST_KNOWN=true
+    return 0
+}
+
+if ! discover_from_active_session; then
+    if ! discover_from_sessions_dir; then
+        echo "No overnight session data found." >&2
+        exit 1
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Output header
+# ---------------------------------------------------------------------------
+
+if $IS_LAST_KNOWN; then
+    echo "Last known session: $SESSION_ID"
+else
+    echo "Session: $SESSION_ID"
+fi
+
+# ---------------------------------------------------------------------------
+# Runner liveness check
+# ---------------------------------------------------------------------------
+
+LOCK_FILE="$SESSION_DIR/.runner.lock"
+
+if [[ -f "$LOCK_FILE" ]]; then
+    LOCK_PID=$(cat "$LOCK_FILE" 2>/dev/null || echo "")
+    if [[ -n "$LOCK_PID" ]]; then
+        if kill -0 "$LOCK_PID" 2>/dev/null; then
+            echo "Runner: alive (PID $LOCK_PID)"
+        else
+            echo "Runner: dead (stale PID $LOCK_PID)"
+        fi
+    else
+        echo "Runner: no lock file"
+    fi
+else
+    echo "Runner: no lock file"
+fi
+
+# ---------------------------------------------------------------------------
+# Phase and progress from overnight-state.json
+# ---------------------------------------------------------------------------
+
+STATE_FILE="$SESSION_DIR/overnight-state.json"
+STATE_OK=false
+
+if [[ -f "$STATE_FILE" ]]; then
+    if jq empty "$STATE_FILE" 2>/dev/null; then
+        STATE_OK=true
+
+        phase=$(jq -r '.phase // "unknown"' "$STATE_FILE")
+        current_round=$(jq -r '.current_round // "?"' "$STATE_FILE")
+        echo "Phase: $phase (round $current_round)"
+
+        # Count features by status
+        pending=$(jq '[.features // {} | to_entries[] | select(.value.status == "pending")] | length' "$STATE_FILE")
+        running=$(jq '[.features // {} | to_entries[] | select(.value.status == "running")] | length' "$STATE_FILE")
+        merged=$(jq '[.features // {} | to_entries[] | select(.value.status == "merged")] | length' "$STATE_FILE")
+        failed=$(jq '[.features // {} | to_entries[] | select(.value.status == "failed")] | length' "$STATE_FILE")
+        deferred=$(jq '[.features // {} | to_entries[] | select(.value.status == "deferred")] | length' "$STATE_FILE")
+
+        echo "Features: $pending pending, $running running, $merged merged, $failed failed, $deferred deferred"
+
+        # Surface failed features with error messages
+        if [[ "$failed" -gt 0 ]]; then
+            echo ""
+            echo "FAILED Features:"
+            jq -r '
+                .features // {} | to_entries[]
+                | select(.value.status == "failed")
+                | "  FAILED: \(.key)\(.value.error // "" | if . != "" then " — \(.)" else "" end)"
+            ' "$STATE_FILE"
+        fi
+    else
+        echo "State file corrupt or unreadable"
+    fi
+else
+    echo "State file not found"
+fi
+
+# ---------------------------------------------------------------------------
+# Recent events from overnight-events.log
+# ---------------------------------------------------------------------------
+
+EVENTS_FILE="$SESSION_DIR/overnight-events.log"
+
+if [[ -f "$EVENTS_FILE" ]]; then
+    echo ""
+    echo "Recent Events:"
+    tail -5 "$EVENTS_FILE" | while IFS= read -r line; do
+        ts=$(echo "$line" | jq -r '.ts // ""' 2>/dev/null) || true
+        event=$(echo "$line" | jq -r '.event // ""' 2>/dev/null) || true
+        round=$(echo "$line" | jq -r '.round // ""' 2>/dev/null) || true
+        details=$(echo "$line" | jq -r '.details // "" | if type == "object" then to_entries | map("\(.key)=\(.value)") | join(", ") else . end' 2>/dev/null) || true
+
+        # Format timestamp: strip date portion if present, keep time
+        local_ts="$ts"
+        if [[ "$ts" == *T* ]]; then
+            local_ts="${ts#*T}"
+            local_ts="${local_ts%Z}"
+            # Truncate fractional seconds for readability
+            local_ts=$(echo "$local_ts" | sed 's/\.[0-9]*//; s/+00:00//')
+        fi
+
+        line_out="  $local_ts  $event"
+        if [[ -n "$round" && "$round" != "null" ]]; then
+            line_out="$line_out (round $round)"
+        fi
+        if [[ -n "$details" && "$details" != "null" && "$details" != "" ]]; then
+            line_out="$line_out — $details"
+        fi
+        echo "$line_out"
+    done
+fi
+
+exit 0
