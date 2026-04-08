@@ -13,7 +13,7 @@ areas: [overnight-runner]
 created: 2026-04-08
 updated: 2026-04-08
 session_id: 60ca901b-7ead-4e9e-bc45-9eb162ed5937
-lifecycle_phase: specify
+lifecycle_phase: implement
 lifecycle_slug: wire-review-phase-into-overnight-runner
 complexity: complex
 criticality: high

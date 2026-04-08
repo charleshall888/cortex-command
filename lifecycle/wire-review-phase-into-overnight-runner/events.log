@@ -6,3 +6,5 @@
 {"ts": "2026-04-08T17:00:00Z", "event": "orchestrator_review", "feature": "wire-review-phase-into-overnight-runner", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-08T17:30:00Z", "event": "orchestrator_review", "feature": "wire-review-phase-into-overnight-runner", "phase": "specify", "verdict": "pass", "cycle": 2, "issues": []}
 {"ts": "2026-04-08T17:35:00Z", "event": "phase_transition", "feature": "wire-review-phase-into-overnight-runner", "from": "specify", "to": "plan"}
+{"ts": "2026-04-08T17:50:00Z", "event": "orchestrator_review", "feature": "wire-review-phase-into-overnight-runner", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-08T18:10:00Z", "event": "phase_transition", "feature": "wire-review-phase-into-overnight-runner", "from": "plan", "to": "implement"}
