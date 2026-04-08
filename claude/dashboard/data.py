@@ -628,19 +628,11 @@ def build_swim_lane_data(
     )
     summary_mode = total_event_count > 200
 
-    _color_map = {
-        "running": "#388bfd",
-        "merged": "#3fb950",
-        "paused": "var(--color-lane-paused)",
-        "deferred": "var(--color-lane-paused)",
-        "failed": "#f85149",
-    }
     _overnight_event_types = {"feature_start", "feature_complete", "feature_paused", "feature_failed"}
 
     lanes: list[dict] = []
     for slug, feat in features.items():
         status = feat.get("status", "pending")
-        color = _color_map.get(status, "#6e7681")
 
         lane_events: list[dict] = []
 
@@ -682,7 +674,7 @@ def build_swim_lane_data(
 
         lanes.append({
             "slug": slug,
-            "color": color,
+            "status": status,
             "events": lane_events,
             "tool_tick_xs": [],  # reserved for future agent-activity integration
         })
