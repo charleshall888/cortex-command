@@ -9,7 +9,13 @@
    → **Interactive skills specify no model — all inherit Opus from the parent session.** The overnight runner has a well-defined model selection matrix in `dispatch.py`, but interactive Agent() calls in skills omit the `model` parameter entirely. This means every subagent spawned during an Opus 4.6 1M chat session also uses Opus 4.6, regardless of task complexity.
 
 3. **Is there a Claude Code setting for default subagent model?**
-   → **Yes — `CLAUDE_CODE_SUBAGENT_MODEL` environment variable.** However, the priority order between env var and per-invocation `model` param is disputed. Some sources say env var overrides per-invocation; others say per-invocation overrides env var (the conventional software pattern). GitHub issue anthropics/claude-code#10993 was filed specifically because this behavior is unclear, and Anthropic closed it without publishing a canonical resolution. No `settings.json` key exists for this. **The priority order must be empirically verified before choosing between approaches A and D.**
+   → **Yes — `CLAUDE_CODE_SUBAGENT_MODEL` environment variable.** Priority order is now **verified** via official Claude Code docs (sub-agents page, "Choose a model" section):
+   1. `CLAUDE_CODE_SUBAGENT_MODEL` env var (if set) — **highest priority, overrides everything**
+   2. Per-invocation `model` parameter
+   3. Subagent definition's `model` frontmatter
+   4. Main conversation's model (inherit)
+
+   **Implication: Do NOT set the env var.** Setting it blocks all per-invocation overrides, preventing Opus escalation for critical tasks. Use per-invocation `model` params in skill Agent() calls instead. Source: [Claude Code sub-agents docs](https://code.claude.com/docs/en/sub-agents.md). Additionally confirmed empirically: `model: "sonnet"` and `model: "opus"` per-invocation params both work correctly when env var is unset.
 
 4. **What are the actual context requirements of typical subagent tasks?**
    → **Minimal.** Subagents start with fresh context. Typical tasks (codebase exploration, research, code review, planning) consume well under 200K tokens. The 1M window is only valuable for the main chat session where conversation history accumulates over extended work.
@@ -46,7 +52,7 @@
 
 ### Override Mechanisms Available
 
-1. **`CLAUDE_CODE_SUBAGENT_MODEL=sonnet`** — Global env var. Whether it overrides or is overridden by per-invocation `model` params is disputed (see RQ3).
+1. **`CLAUDE_CODE_SUBAGENT_MODEL=sonnet`** — Global env var. **Overrides all per-invocation params** (verified). Do NOT use if per-skill Opus escalation is needed.
 2. **Per-invocation `model` param** — `Agent(model: "sonnet", ...)` in each skill's Agent() call. Granular control.
 3. **Subagent frontmatter** — `model: sonnet` in agent definition YAML. Applies to named/typed agents.
 
@@ -62,7 +68,7 @@
 
 | Approach | Effort | Risks | Prerequisites |
 |----------|--------|-------|---------------|
-| **A: Env var default** (`CLAUDE_CODE_SUBAGENT_MODEL=sonnet`) | S | If env var overrides per-invocation params: no per-task granularity. If per-invocation overrides env var: this becomes viable with full granularity. Priority order is disputed (see RQ3). | Verify priority order empirically |
+| **A: Env var default** (`CLAUDE_CODE_SUBAGENT_MODEL=sonnet`) | S | **NOT VIABLE.** Env var overrides all per-invocation params (verified). No per-task granularity — blocks Opus escalation for critical tasks. | — |
 | **B: Per-skill model params** — Add `model: "sonnet"` to Agent() calls in skills | M | Maintenance burden — every new skill needs to remember model selection. Risk of drift. | Audit all skills with Agent() calls |
 | **C: Reference doc guidance** — Add model selection rules to a conditionally-loaded reference doc that instructs Claude when to use `model: "sonnet"` vs `model: "opus"` | S | Soft enforcement — Claude may not always follow the guidance. But this matches how other cross-cutting concerns (verification mindset, parallel agents) are already handled. | Write reference doc, add conditional loading rule |
 | **D: Reference doc + per-skill model params** — A conditionally-loaded reference doc instructs Claude to default subagents to Sonnet; critical skills explicitly pass `model: "opus"` | M | Most complete solution. Reference doc catches new/unmodified skills by convention. Per-skill overrides preserve Opus where needed. No env var conflict. | Write reference doc, update critical skills |
@@ -73,16 +79,13 @@
 
 - **Context**: Need to route most interactive subagents to Sonnet while preserving Opus for the main chat session's 1M context window.
 - **Options considered**:
-  - (A) Env var only — simple. Whether per-skill overrides work depends on disputed priority order (see RQ3). If per-invocation overrides env var, A is viable with full granularity. If env var overrides per-invocation, A blocks Opus escalation.
+  - (A) Env var only — **ruled out** (env var overrides per-invocation params, blocking Opus escalation)
   - (B) Per-skill only — granular but high maintenance
   - (C) Reference doc only — soft enforcement, may not be reliable
-  - (D) Reference doc + per-skill model params — doc instructs Claude to default subagents to Sonnet; critical skills explicitly pass `model: "opus"`
-- **Recommendation**: **Conditional on priority order verification.**
-  - If per-invocation overrides env var: **Option A** (env var `CLAUDE_CODE_SUBAGENT_MODEL=sonnet`) is sufficient and strictly simpler. Per-skill `model: "opus"` overrides would work for critical tasks. A reference doc documenting the convention is still useful but not load-bearing.
-  - If env var overrides per-invocation: **Option D** (reference doc + per-skill). Skills that need Opus pass `model: "opus"` without env var interference.
-  - Either way, add model selection guidance to CLAUDE.md (not a conditionally-loaded doc — it's small enough to be always-loaded and avoids the trigger-definition problem).
-- **Verification step**: Set `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` and spawn an agent with `model: "opus"`. Check which model the agent actually uses. This resolves the recommendation definitively.
-- **Trade-offs**: Option A is simpler if priority order allows it. Option D provides the same outcome but with more moving parts. Both rely on Claude following guidance for the Opus escalation cases.
+  - (D) CLAUDE.md guidance + per-skill model params — guidance instructs Claude to default subagents to Sonnet; critical skills explicitly pass `model: "opus"`
+- **Recommendation**: **Option D** (confirmed after spike 045 verified priority order). Leave `CLAUDE_CODE_SUBAGENT_MODEL` unset. Add model selection guidance to CLAUDE.md/Agents.md. Update skill Agent() calls to pass `model: "sonnet"` for non-critical tasks. Critical implementation skills pass `model: "opus"` or omit to inherit from parent Opus session.
+- **Verified**: Per-invocation `model` params work correctly when env var is unset (empirically confirmed). Env var overrides per-invocation (confirmed via official docs).
+- **Trade-offs**: Relies on skills explicitly passing model params and Claude following CLAUDE.md guidance. But this is the only approach that preserves both the Sonnet default and Opus escalation.
 
 ### DR-2: Where Opus remains justified in interactive sessions
 
@@ -93,6 +96,6 @@
 
 ## Open Questions
 
-- **Env var priority order**: Must be empirically verified before choosing between approaches A and D. Test: set `CLAUDE_CODE_SUBAGENT_MODEL=sonnet`, spawn an agent with `model: "opus"`, check which model runs. This is a **blocker** for the final recommendation.
+- ~~**Env var priority order**~~ **Resolved (spike 045)**: Env var overrides per-invocation params (confirmed via official docs + empirical test of per-invocation params). Approach A ruled out; approach D confirmed.
 - ~~**What constraint is this solving?**~~ **Resolved**: All three — rate limits/throttling, daily usage caps, and general efficiency (Sonnet suffices for non-critical subagent work). Model routing addresses multiple binding constraints simultaneously, not just a single bottleneck.
 - **Token usage measurement**: What is the actual token usage difference between Opus and Sonnet subagents for typical tasks? Post-implementation validation, not a blocker.

@@ -4,7 +4,7 @@ uuid: 2d0b25a4-90be-407a-9121-117b72b302d5
 id: "045"
 title: "Verify CLAUDE_CODE_SUBAGENT_MODEL priority order"
 type: spike
-status: backlog
+status: complete
 priority: high
 parent: "044"
 blocked-by: []
@@ -13,9 +13,9 @@ areas: [multi-agent]
 created: 2026-04-08
 updated: 2026-04-08
 session_id: null
-lifecycle_phase: null
-lifecycle_slug: null
-complexity: trivial
+lifecycle_phase: complete
+lifecycle_slug: verify-subagent-model-env-var-priority
+complexity: simple
 criticality: high
 discovery_source: research/subagent-model-routing/research.md
 ---

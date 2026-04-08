@@ -4,7 +4,7 @@ uuid: c63938cd-ba2c-420b-bb8f-b4e2de017301
 id: "044"
 title: "Route interactive subagents to Sonnet by default"
 type: epic
-status: backlog
+status: complete
 priority: high
 parent: null
 blocked-by: []

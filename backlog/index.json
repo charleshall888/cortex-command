@@ -1,97 +1,5 @@
 [
   {
-    "id": 44,
-    "title": "Route interactive subagents to Sonnet by default",
-    "status": "backlog",
-    "priority": "high",
-    "type": "epic",
-    "tags": [
-      "model-routing",
-      "subagents",
-      "cost-optimization"
-    ],
-    "areas": [
-      "multi-agent"
-    ],
-    "created": "2026-04-08",
-    "updated": "2026-04-08",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/subagent-model-routing/research.md",
-    "plan": null,
-    "uuid": "c63938cd-ba2c-420b-bb8f-b4e2de017301",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 45,
-    "title": "Verify CLAUDE_CODE_SUBAGENT_MODEL priority order",
-    "status": "backlog",
-    "priority": "high",
-    "type": "spike",
-    "tags": [
-      "model-routing",
-      "subagents",
-      "cost-optimization"
-    ],
-    "areas": [
-      "multi-agent"
-    ],
-    "created": "2026-04-08",
-    "updated": "2026-04-08",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "044",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/subagent-model-routing/research.md",
-    "plan": null,
-    "uuid": "2d0b25a4-90be-407a-9121-117b72b302d5",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 46,
-    "title": "Implement Sonnet default for interactive subagents",
-    "status": "backlog",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "model-routing",
-      "subagents",
-      "cost-optimization"
-    ],
-    "areas": [
-      "multi-agent"
-    ],
-    "created": "2026-04-08",
-    "updated": "2026-04-08",
-    "blocks": [],
-    "blocked_by": [
-      "045"
-    ],
-    "parent": "044",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/subagent-model-routing/research.md",
-    "plan": null,
-    "uuid": "5da17a6f-62f1-4676-ad09-b7df01da1efa",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -147,7 +55,7 @@
     "uuid": "d26a53bb-6dc0-4fb3-aad9-da6b153ba149",
     "lifecycle_slug": "add-overnight-session-observability-from-within-claude-code-sandbox",
     "session_id": "12029f2f-217b-41cf-a6f9-61c93f516897",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -177,7 +85,7 @@
     "uuid": "55d26b43-7afb-41af-b7c4-a5a9eca6b17a",
     "lifecycle_slug": "investigate-overnight-morning-review-git-sync-gaps",
     "session_id": "b33cfa0b-5961-491f-b37a-d001d208332a",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -208,7 +116,31 @@
     "uuid": "d5da4a87-f3c9-4ad1-987f-b85b115379bc",
     "lifecycle_slug": "wire-review-phase-into-overnight-runner",
     "session_id": "60ca901b-7ead-4e9e-bc45-9eb162ed5937",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 47,
+    "title": "Investigate gaps in settings.json deny list",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "task",
+    "tags": [],
+    "areas": [],
+    "created": "2026-04-08",
+    "updated": "2026-04-08",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "5732add4-258e-4767-ae7e-e8d88299a8a3",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   }

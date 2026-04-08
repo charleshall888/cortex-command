@@ -166,9 +166,9 @@ Output format:
 
 ### Dispatch protocol
 
-- **3-agent count**: Dispatch agents 1, 2, 3 in parallel (three Agent tool calls in one response). No `isolation: "worktree"` — agents are read-only.
-- **4-agent count**: Dispatch agents 1, 2, 3, 4 in parallel (four Agent tool calls in one response).
-- **5-agent count**: Dispatch agents 1, 2, 3, 4 in parallel first. Wait for all four to complete. Summarize each agent's findings into a brief paragraph. Then dispatch agent 5 (Adversarial) with the summarized findings injected into its prompt.
+- **3-agent count**: Dispatch agents 1, 2, 3 in parallel (three Agent tool calls in one response). No `isolation: "worktree"` — agents are read-only. Use `model: "sonnet"` for all research agents.
+- **4-agent count**: Dispatch agents 1, 2, 3, 4 in parallel (four Agent tool calls in one response). Use `model: "sonnet"`.
+- **5-agent count**: Dispatch agents 1, 2, 3, 4 in parallel first (`model: "sonnet"`). Wait for all four to complete. Summarize each agent's findings into a brief paragraph. Then dispatch agent 5 (Adversarial) with the summarized findings injected into its prompt (`model: "sonnet"`).
 
 ## Step 4: Synthesize Findings
 

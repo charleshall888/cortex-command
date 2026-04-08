@@ -346,6 +346,7 @@ When the user requests running multiple lifecycle features in parallel (e.g., "/
 
 ```
 Agent(
+  model: "sonnet",
   isolation: "worktree",
   prompt: "/lifecycle {feature}"
 )

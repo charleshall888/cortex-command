@@ -67,7 +67,7 @@ Select angles from the following menu, picking whichever are most likely to reve
 
 ### Step 2c: Dispatch Parallel Reviewers
 
-For each angle derived in Step 2b, dispatch one general-purpose agent as a parallel Task tool sub-task. All agents run simultaneously — do not wait for one to finish before launching the next.
+For each angle derived in Step 2b, dispatch one general-purpose agent with `model: "sonnet"` as a parallel Task tool sub-task. All agents run simultaneously — do not wait for one to finish before launching the next.
 
 Each agent receives the following prompt template verbatim, with bracketed variables substituted at runtime:
 

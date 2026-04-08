@@ -4,16 +4,16 @@ uuid: 5da17a6f-62f1-4676-ad09-b7df01da1efa
 id: "046"
 title: "Implement Sonnet default for interactive subagents"
 type: feature
-status: backlog
+status: complete
 priority: high
 parent: "044"
-blocked-by: ["045"]
+blocked-by: []
 tags: [model-routing, subagents, cost-optimization]
 areas: [multi-agent]
 created: 2026-04-08
 updated: 2026-04-08
 session_id: null
-lifecycle_phase: null
+lifecycle_phase: complete
 lifecycle_slug: null
 complexity: simple
 criticality: high
