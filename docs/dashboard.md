@@ -88,6 +88,44 @@ Total state-change latency is up to approximately 7 seconds (2 s backend read + 
 
 ---
 
+## Visual Evaluation with Playwright MCP
+
+Playwright MCP gives Claude interactive browser access to the running dashboard — navigate, screenshot, and inspect the UI using Claude's multimodal vision. This closes the feedback loop between code changes and visual outcomes during interactive development.
+
+### Prerequisites
+
+- **Node.js 18+** must be installed (`node --version` to verify). All Python-based skills (`ui-judge`, `ui-a11y`) work without Node.js; only Playwright MCP requires it.
+- On first use, the MCP server automatically downloads Chromium browser binaries (~150MB). No manual setup step is required, but the first tool call will be slower while the download completes.
+
+### Per-Session Setup
+
+Before using Playwright MCP tools, start the dashboard with fixture data:
+
+```
+just dashboard-seed   # load fixture data
+just dashboard        # start dashboard server at http://localhost:8080
+```
+
+Then ask Claude to navigate and screenshot the dashboard — for example: *"Take a screenshot of the dashboard at localhost:8080 and describe what you see."*
+
+### Playwright MCP and Existing Evaluation Skills
+
+The three visual evaluation tools are complementary and serve different purposes:
+
+| Tool | Purpose | When to use |
+|------|---------|-------------|
+| `ui-judge` skill | Structured rubric-based evaluation (UICrit pattern) | Overnight sessions, automated quality gates, scoring against defined criteria |
+| `ui-a11y` skill | Accessibility checking against WCAG guidelines | Verifying accessibility compliance |
+| Playwright MCP | Ad-hoc interactive visual access | Development-time inspection, iterating on UI changes, exploratory visual debugging |
+
+Playwright MCP is a development tool for interactive sessions — it is **not** used in overnight or autonomous agent runs. Overnight evaluation uses `ui-judge` and `ui-a11y`, which produce structured output compatible with unattended execution. Playwright MCP's per-session approval prompt makes it incompatible with unattended use.
+
+### Bumping the Playwright MCP Version
+
+The MCP server is pinned to a specific version in `.mcp.json` to avoid regressions. To update, edit `.mcp.json` and change the `@playwright/mcp@<version>` string to the desired version, then restart Claude Code to pick up the change.
+
+---
+
 ## Known Limitations
 
 - No authentication layer — the server binds to `0.0.0.0` (all interfaces) and is accessible to any host on the local network. Do not expose the port beyond a trusted local or internal network. (The `127.0.0.1` address visible in `app.py` is a pre-launch port-availability probe, not the listen address.)
