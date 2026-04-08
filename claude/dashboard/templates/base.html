@@ -223,6 +223,13 @@
         transform: translateY(-2px);
         box-shadow: 0 4px 12px oklch(0 0 0 / 0.10);
       }
+      .card-hover-reveal {
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+      .feature-card:hover .card-hover-reveal {
+        opacity: 1;
+      }
       .feature-card--running {
         border-left: 3px solid var(--color-brand-primary);
       }
@@ -370,6 +377,7 @@
         to   { opacity: 1; transform: translateY(0); }
       }
       @media (prefers-reduced-motion: no-preference) {
+        .badge { transition: background-color 300ms ease-out, border-color 300ms ease-out, color 300ms ease-out; }
         .htmx-added {
           animation: fade-in 200ms ease-out both;
         }
