@@ -30,39 +30,9 @@
     "repo": null
   },
   {
-    "id": 41,
-    "title": "Add overnight session observability from within Claude Code sandbox",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "overnight",
-      "observability",
-      "sandbox"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-08",
-    "updated": "2026-04-08",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "d26a53bb-6dc0-4fb3-aad9-da6b153ba149",
-    "lifecycle_slug": "add-overnight-session-observability-from-within-claude-code-sandbox",
-    "session_id": "12029f2f-217b-41cf-a6f9-61c93f516897",
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 42,
     "title": "Investigate overnight/morning-review git sync gaps",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "medium",
     "type": "spike",
     "tags": [
@@ -71,7 +41,8 @@
       "git"
     ],
     "areas": [
-      "overnight-runner"
+      "overnight-runner",
+      "skills"
     ],
     "created": "2026-04-08",
     "updated": "2026-04-08",
@@ -79,20 +50,20 @@
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/investigate-overnight-morning-review-git-sync-gaps/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "55d26b43-7afb-41af-b7c4-a5a9eca6b17a",
     "lifecycle_slug": "investigate-overnight-morning-review-git-sync-gaps",
     "session_id": "b33cfa0b-5961-491f-b37a-d001d208332a",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 43,
     "title": "Wire review phase into overnight runner",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -110,13 +81,13 @@
     "blocked_by": [],
     "parent": "021",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/wire-review-phase-into-overnight-runner/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "d5da4a87-f3c9-4ad1-987f-b85b115379bc",
     "lifecycle_slug": "wire-review-phase-into-overnight-runner",
     "session_id": "60ca901b-7ead-4e9e-bc45-9eb162ed5937",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
