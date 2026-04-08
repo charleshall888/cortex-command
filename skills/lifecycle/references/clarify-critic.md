@@ -13,11 +13,10 @@ The orchestrator provides both inputs in the dispatch prompt. The critic does no
 
 ## Agent Dispatch
 
-Launch a fresh general-purpose agent with `model: "sonnet"`. No worktree isolation — the critic is read-only.
+Launch a fresh general-purpose agent. No worktree isolation — the critic is read-only.
 
 ```
 Agent tool:
-  model: "sonnet"
   subagent_type: "general-purpose"
   isolation: none (omit the field)
 ```

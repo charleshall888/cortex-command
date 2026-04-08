@@ -15,12 +15,6 @@ These instructions apply to all projects on this machine.
 - Global settings include: curated allow/deny list + `sandbox.autoAllowBashIfSandboxed: true`
 - Projects opt into sandbox individually; non-sandboxed projects use the allow/deny rules
 
-## Subagent Model Selection
-
-When spawning subagents via the Agent tool, use `model: "sonnet"` by default. Subagents start with fresh context and don't need the 1M window -- Sonnet is sufficient for exploration, research, review, and planning tasks. Reserve Opus (via `model: "opus"` or omitting `model` to inherit) for implementation sub-tasks on high/critical features only.
-
-Do NOT set `CLAUDE_CODE_SUBAGENT_MODEL` -- the env var overrides all per-invocation model params, preventing Opus escalation when needed.
-
 ## Conditional Loading
 
 | Trigger | Read |
