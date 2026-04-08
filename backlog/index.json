@@ -1,5 +1,35 @@
 [
   {
+    "id": 40,
+    "title": "Fix overnight runner resume: round restart, status overwrite, and missing round filter",
+    "status": "in_progress",
+    "priority": "critical",
+    "type": "bug",
+    "tags": [
+      "overnight",
+      "reliability",
+      "runner"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-07",
+    "updated": "2026-04-07",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "dbcc91e6-8113-4f08-bdde-9f39e4a9bd7d",
+    "lifecycle_slug": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter",
+    "session_id": "111a813d-cb94-40e1-ba6c-37f59ca6da4d",
+    "lifecycle_phase": "plan",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 18,
     "title": "Improve overnight execution quality through spec improvements and harness maintainability",
     "status": "backlog",
@@ -54,6 +84,37 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 34,
+    "title": "Fix inline style violations in session_panel and feature_cards templates",
+    "status": "in_progress",
+    "priority": "high",
+    "type": "chore",
+    "tags": [
+      "dashboard",
+      "ui",
+      "quality",
+      "css"
+    ],
+    "areas": [
+      "dashboard"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-07",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "033",
+    "research": null,
+    "spec": "lifecycle/fix-inline-style-violations-in-session-panel-and-feature-cards-templates/spec.md",
+    "discovery_source": "research/generative-ui-harness/research.md",
+    "plan": null,
+    "uuid": "d2e3f4a5-b6c7-8901-defa-123456789012",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -184,6 +245,38 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": "plan",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 32,
+    "title": "Add accessibility foundations (aria-live, multi-modal severity)",
+    "status": "in_progress",
+    "priority": "medium",
+    "type": "chore",
+    "tags": [
+      "dashboard",
+      "ui",
+      "accessibility",
+      "a11y",
+      "aria"
+    ],
+    "areas": [
+      "dashboard"
+    ],
+    "created": "2026-04-03",
+    "updated": "2026-04-07",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "033",
+    "research": null,
+    "spec": "lifecycle/add-accessibility-foundations-aria-live-multi-modal-severity/spec.md",
+    "discovery_source": "research/generative-ui-harness/research.md",
+    "plan": null,
+    "uuid": "c7d8e9f0-a1b2-3456-cdef-678901234567",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
