@@ -90,3 +90,16 @@ The following Jinja2 macro files exist in `templates/patterns/`:
 - `patterns/data-table.html` — round-table equivalent using Tailwind (not yet implemented)
 
 When building a new component, check for an existing `.badge`, `.feature-card`, or `.round-table` pattern first before writing new CSS.
+
+## Visual Evaluation Criteria
+
+Use these criteria when reviewing dashboard UI — via Playwright MCP, PR review, or as acceptance criteria in feature specs.
+
+| Criterion | Weight | What to evaluate |
+|-----------|--------|-----------------|
+| Information clarity | High | Status hierarchy visually distinct via color and size differentiation; feature phases scannable across cards; session info prominent in session panel |
+| Consistency | High | Design tokens used throughout; badge color meanings stable across panels; no forbidden patterns visible; spacing follows token scale |
+| Operational usefulness | Medium | Alerts prominent and not buried; swim-lane legible with no overlapping labels; no visible layout shift after HTMX refresh; session history presents completed features with outcome and duration |
+| Purposefulness | Low | Reads as purpose-built monitoring tool, not generic admin panel — relevant primarily for large visual changes |
+
+All four criteria can be assessed by Claude via Playwright MCP (ticket 029) using interactive navigation and screenshots; they also serve as review criteria for dashboard PRs and as acceptance criteria in dashboard feature specs. Evaluation reliability varies across criteria: consistency is the most mechanically verifiable, while purposefulness requires the most judgment.
