@@ -42,6 +42,12 @@ lifecycle/sessions/
 # Obsidian workspace config
 .obsidian/
 
+# Pytest temp directories
+pytest-of-*/
+
+# Debug test fixtures
+debug/test-*/
+
 # OS
 .DS_Store
 
