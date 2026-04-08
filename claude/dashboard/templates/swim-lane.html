@@ -1,5 +1,5 @@
 {% if lanes %}
-<div class="overflow-x-auto">
+<div class="overflow-x-auto" aria-label="Feature timeline">
   {% for lane in lanes %}
   <div class="flex items-center gap-3 mb-2">
     <div class="lane-label" title="{{ lane.slug }}">
@@ -7,14 +7,14 @@
     </div>
     <div class="lane-track">
       {% for event in lane.events %}
-      <div class="text-white absolute top-1 h-8 py-0.5 px-1.5 whitespace-nowrap rounded-sm text-xs z-1" style="left: {{ event.x_pct }}%; background: {{ lane.color }};"
+      <div class="lane-event lane-status-{{ lane.status }} absolute top-1 h-8 py-0.5 px-1.5 rounded-sm text-xs text-white z-1" style="left: {{ event.x_pct }}%"
            title="{{ event.tooltip }}">
         {{ event.label }}
       </div>
       {% endfor %}
       {% if not summary_mode %}
         {% for x_pct in lane.tool_tick_xs %}
-        <div class="absolute top-0 h-10 w-0.5" style="left: {{ x_pct }}%; background: rgba(255,255,255,0.3);"></div>
+        <div class="lane-tick-mark absolute top-0 h-10 w-0.5" style="left: {{ x_pct }}%"></div>
         {% endfor %}
       {% endif %}
     </div>
@@ -22,9 +22,9 @@
   {% endfor %}
 </div>
 {% if ticks %}
-<div class="lane-tick-axis" style="position: relative; height: 20px; margin-left: 200px;">
+<div class="lane-tick-axis">
   {% for tick in ticks %}
-  <span class="phase-label" style="position: absolute; left: {{ tick.x_pct }}%; transform: translateX(-50%); font-size: 0.7rem;">{{ tick.label }}</span>
+  <span class="tick-label absolute -translate-x-1/2" style="left: {{ tick.x_pct }}%">{{ tick.label }}</span>
   {% endfor %}
 </div>
 {% endif %}

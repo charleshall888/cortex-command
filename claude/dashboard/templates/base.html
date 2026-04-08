@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Agent Dashboard{% endblock %}</title>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script src="https://unpkg.com/htmx-ext-idiomorph@2.0.1/idiomorph-ext.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style type="text/tailwindcss">
     @theme {
@@ -115,10 +116,17 @@
         --color-warning-surface: oklch(0.16 0.08 75);
         /* #a06400 on white: ~4.78:1 contrast ratio — passes WCAG AA (≥4.5:1); visually distinct from dark lane-track */
         --color-lane-paused: #a06400;
+        /* Tool tick marks: light semi-transparent on dark background */
+        --color-lane-tick: rgba(255, 255, 255, 0.3);
       }
     }
 
     :root {
+      /* Swim-lane layout shared variable */
+      --lane-label-width: 200px;
+      /* Tool tick marks: dark semi-transparent on light background */
+      --color-lane-tick: rgba(0, 0, 0, 0.3);
+
       --background: var(--color-surface);
       --foreground: var(--color-text-primary);
       --primary: var(--color-brand-primary);
@@ -215,8 +223,20 @@
         flex-direction: column;
         gap: 0.35rem;
         margin-bottom: 0.75rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
       }
       .feature-card:last-child { margin-bottom: 0; }
+      .feature-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px oklch(0 0 0 / 0.10);
+      }
+      .card-hover-reveal {
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+      .feature-card:hover .card-hover-reveal {
+        opacity: 1;
+      }
       .feature-card--running {
         border-left: 3px solid var(--color-brand-primary);
       }
@@ -282,7 +302,7 @@
         gap: 0.35rem;
       }
       .lane-label {
-        width: 200px;
+        width: var(--lane-label-width);
         flex-shrink: 0;
         font-size: var(--text-xs);
         overflow: hidden;
@@ -297,6 +317,20 @@
         border-radius: var(--radius-sm);
         background-color: var(--color-surface-overlay);
       }
+      .lane-tick-axis { position: relative; height: 20px; margin-left: calc(var(--lane-label-width) + 0.75rem); }
+      .tick-label {
+        font-size: 0.7rem;
+      }
+      .lane-tick-mark {
+        background-color: var(--color-lane-tick);
+      }
+      .lane-event { background-color: var(--color-status-gray); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+      .lane-status-running  { background-color: var(--color-status-blue); }
+      .lane-status-merged   { background-color: var(--color-status-green); }
+      .lane-status-failed   { background-color: var(--color-status-red); }
+      .lane-status-paused   { background-color: var(--color-lane-paused); }
+      .lane-status-deferred { background-color: var(--color-lane-paused); }
+      .lane-status-pending  { background-color: var(--color-status-gray); }
       .empty-state {
         color: var(--color-text-secondary);
         font-size: var(--text-sm);
@@ -352,12 +386,24 @@
         height: 8px;
         border-radius: var(--radius-full);
         background-color: var(--color-success);
-        animation: pulse 2s infinite;
         vertical-align: middle;
       }
       @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.4; }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .live-dot { animation: pulse 2s infinite; }
+      }
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(-4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .badge { transition: background-color 300ms ease-out, border-color 300ms ease-out, color 300ms ease-out; }
+        .page-loaded .htmx-added {
+          animation: fade-in 200ms ease-out both;
+        }
       }
       .dash-grid {
         display: grid;
@@ -379,7 +425,7 @@
   </style>
   {% block head %}{% endblock %}
 </head>
-<body>
+<body hx-ext="morph">
   <header>
     <h1>Agent Dashboard</h1>
     <nav>
@@ -392,29 +438,29 @@
 
   <main>
     {% block page_main %}
-    <section id="alerts-banner" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="innerHTML"></section>
+    <section id="alerts-banner" role="alert" aria-live="assertive" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="morph"></section>
 
-    <section id="session-panel" class="section-primary" hx-get="/partials/session-panel" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+    <section id="session-panel" class="section-primary" aria-live="polite" hx-get="/partials/session-panel" hx-trigger="load, every 5s" hx-swap="morph"><p class="empty-state">Loading...</p></section>
 
     <div class="dash-grid">
       <div class="dash-grid-main">
-        <section id="feature-cards" class="section-primary" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+        <section id="feature-cards" class="section-primary" aria-live="polite" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="morph"><p class="empty-state">Loading...</p></section>
       </div>
 
       <div class="dash-grid-side">
-        <section id="fleet-panel" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <section id="fleet-panel" aria-label="Agent fleet" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="morph">
           <h2>Agent Fleet</h2>
           <p class="empty-state">Loading...</p>
         </section>
       </div>
     </div>
 
-    <section id="swim-lane" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="innerHTML">
+    <section id="swim-lane" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="morph">
       <h2>Timeline</h2>
       <p class="empty-state">Loading...</p>
     </section>
 
-    <section id="round-history" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+    <section id="round-history" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="morph"><p class="empty-state">Loading...</p></section>
 
     <section id="pipeline-panel" class="section-primary">
       {% block pipeline_panel %}{% include "pipeline_panel.html" %}{% endblock %}
@@ -429,5 +475,9 @@
   </main>
 
   {% block body_extra %}{% endblock %}
+  <script>
+    /* Gate entry animations: add page-loaded after initial HTMX swaps settle */
+    setTimeout(function () { document.body.classList.add('page-loaded'); }, 500);
+  </script>
 </body>
 </html>

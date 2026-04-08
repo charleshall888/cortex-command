@@ -21,6 +21,7 @@
         {% if title %}<strong>{{ title }}</strong> <span class="phase-label">{{ slug }}</span>{% else %}<strong>{{ slug }}</strong>{% endif %}
         {{ badge(status=feat.status) }}
         {% if feat.status not in ('failed', 'pending') %}
+          <span class="card-hover-reveal">
           {% set model_class = 'badge-purple' if model == 'opus' else 'badge-gray' if model == 'haiku' else 'badge-blue' %}
           {% if model %}
           {{ badge(css_class=model_class, label=model) }}
@@ -30,6 +31,7 @@
           {% if complexity %}
           {{ badge(css_class="badge-gray", label=complexity) }}
           {% endif %}
+          </span>
         {% endif %}
       </div>
       {# Status-specific rows #}
@@ -41,7 +43,7 @@
           <span class="phase-label">· {{ ft.get('started_at') | format_elapsed }}</span>
           {% endif %}
           {% if plan_prog %}
-          <div class="progress-bar"><div class="progress-bar-fill" style="width: {% if plan_prog[1] > 0 %}{{ (plan_prog[0] / plan_prog[1] * 100) | int }}{% else %}0{% endif %}%"></div></div>
+          <div class="progress-bar" role="progressbar" aria-valuenow="{{ plan_prog[0] }}" aria-valuemin="0" aria-valuemax="{{ plan_prog[1] }}" aria-label="Task progress"><div class="progress-bar-fill" style="width: {% if plan_prog[1] > 0 %}{{ (plan_prog[0] / plan_prog[1] * 100) | int }}{% else %}0{% endif %}%"></div></div>
           <span class="task-ratio">{{ plan_prog[0] }}/{{ plan_prog[1] }} tasks</span>
           {% endif %}
         </div>
@@ -73,7 +75,7 @@
       {% elif feat.status == 'failed' %}
         {# Row 2: error text prominently #}
         {% if feat.error %}
-        <div class="card-row"><span style="font-size: var(--text-primary-size, 1rem); color: var(--color-error);">{{ feat.error }}</span></div>
+        <div class="card-row"><span style="font-size: var(--text-base); color: var(--color-error);">{{ feat.error }}</span></div>
         {% endif %}
         {# Row 3: recovery attempts if any #}
         {% if feat.get('recovery_attempts', 0) > 0 %}
