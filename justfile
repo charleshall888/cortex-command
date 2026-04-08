@@ -135,6 +135,7 @@ deploy-bin:
         "$(pwd)/backlog/generate_index.py|$HOME/.local/bin/generate-backlog-index"
         "$(pwd)/bin/jcc|$HOME/.local/bin/jcc"
         "$(pwd)/bin/overnight-start|$HOME/.local/bin/overnight-start"
+        "$(pwd)/bin/overnight-status|$HOME/.local/bin/overnight-status"
     )
     conflicts=()
     for pair in "${pairs[@]}"; do
