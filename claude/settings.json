@@ -355,7 +355,8 @@
     },
     "filesystem": {
       "allowWrite": [
-        "~/cortex-command/lifecycle/sessions/"
+        "~/cortex-command/lifecycle/sessions/",
+        "~/.cache/uv"
       ]
     },
     "excludedCommands": [
@@ -366,6 +367,5 @@
   },
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
-  "skipDangerousModePermissionPrompt": true,
-  "model": "sonnet[1m]"
+  "skipDangerousModePermissionPrompt": true
 }
