@@ -216,8 +216,13 @@
         flex-direction: column;
         gap: 0.35rem;
         margin-bottom: 0.75rem;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
       }
       .feature-card:last-child { margin-bottom: 0; }
+      .feature-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px oklch(0 0 0 / 0.10);
+      }
       .feature-card--running {
         border-left: 3px solid var(--color-brand-primary);
       }
