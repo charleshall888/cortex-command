@@ -297,6 +297,53 @@ claude_notify.setup()
 
 ---
 
+## Overnight Runner Authentication
+
+The overnight runner needs credentials for `claude -p` subprocesses. Choose the mode that matches your account:
+
+### API Key (Console / Organization billing)
+
+For work repos billed through the Anthropic Console:
+
+1. Create an API key at [platform.claude.com](https://platform.claude.com)
+2. Store it in a file readable only by your user:
+   ```bash
+   printf '%s' 'sk-ant-api03-...' > ~/.claude/work-api-key
+   chmod 600 ~/.claude/work-api-key
+   ```
+3. Add `apiKeyHelper` to `~/.claude/settings.local.json`:
+   ```json
+   {
+     "apiKeyHelper": "cat ~/.claude/work-api-key"
+   }
+   ```
+
+### OAuth Token (Claude Pro / Max subscription)
+
+For personal repos using your Claude subscription:
+
+1. Generate a long-lived OAuth token (valid 1 year):
+   ```bash
+   claude setup-token
+   ```
+2. Store the token:
+   ```bash
+   printf '%s' 'sk-ant-oat01-...' > ~/.claude/personal-oauth-token
+   chmod 600 ~/.claude/personal-oauth-token
+   ```
+
+The runner reads this file automatically when no `apiKeyHelper` is configured. No settings.json changes needed.
+
+### Using Both
+
+If you work on both personal and work repos, configure both:
+- Set `apiKeyHelper` in the work repo's `.claude/settings.local.json`
+- Store the OAuth token at `~/.claude/personal-oauth-token`
+
+The runner uses `apiKeyHelper` when configured (work), and falls back to the OAuth token file when not (personal).
+
+---
+
 ## Dependencies
 
 | Tool | macOS | Windows |

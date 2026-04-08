@@ -401,6 +401,8 @@ async def dispatch_task(
     _env: dict[str, str] = {"CLAUDECODE": ""}
     if _api_key := os.environ.get("ANTHROPIC_API_KEY"):
         _env["ANTHROPIC_API_KEY"] = _api_key
+    if _oauth_token := os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        _env["CLAUDE_CODE_OAUTH_TOKEN"] = _oauth_token
 
     _allowlist_entries = [
         str(worktree_path),

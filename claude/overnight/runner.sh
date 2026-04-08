@@ -66,8 +66,22 @@ PYEOF
 )
     if [[ -n "$_API_KEY" ]]; then
         export ANTHROPIC_API_KEY="$_API_KEY"
-    else
-        echo "Warning: no apiKeyHelper configured or returned empty — overnight subagents will use subscription billing" >&2
+    elif [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+        # No apiKeyHelper and no OAuth token in env — try reading from file
+        _TOKEN_FILE="$HOME/.claude/personal-oauth-token"
+        if [[ -f "$_TOKEN_FILE" ]]; then
+            _OAUTH_TOKEN=$(tr -d '[:space:]' < "$_TOKEN_FILE")
+            if [[ -n "$_OAUTH_TOKEN" ]]; then
+                export CLAUDE_CODE_OAUTH_TOKEN="$_OAUTH_TOKEN"
+                echo "Using OAuth token from $_TOKEN_FILE" >&2
+            else
+                echo "Warning: $_TOKEN_FILE exists but is empty — claude -p will use Keychain auth if available" >&2
+            fi
+            unset _OAUTH_TOKEN
+        else
+            echo "Warning: no apiKeyHelper configured and no OAuth token file at $_TOKEN_FILE — claude -p will use Keychain auth if available" >&2
+        fi
+        unset _TOKEN_FILE
     fi
     unset _API_KEY
 fi

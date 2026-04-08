@@ -170,6 +170,9 @@ def _check_auth_pre_flight(repo: Path) -> None:
     An empty-string apiKeyHelper overrides the global API key and lets Claude
     Code fall through to subscription auth.
     """
+    if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        print("[auth] OK: CLAUDE_CODE_OAUTH_TOKEN is set — OAuth token mode")
+        return
     local_settings = repo / ".claude" / "settings.local.json"
     if not local_settings.exists():
         print("[auth] WARN: .claude/settings.local.json not found — subscription auth not configured")
@@ -247,8 +250,11 @@ async def _run_smoke_test() -> None:
         create_worktree(FEATURE_NAME, base_branch="main")
         auth_ok = _check_worktree_auth(repo)
         if not auth_ok:
-            print("FAIL: settings.local.json was not copied to worktree — subscription auth misconfigured")
-            sys.exit(1)
+            if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+                print("WARN: settings.local.json was not copied to worktree, but CLAUDE_CODE_OAUTH_TOKEN is set — OAuth auth propagates via env vars, continuing")
+            else:
+                print("FAIL: settings.local.json was not copied to worktree — subscription auth misconfigured")
+                sys.exit(1)
 
         config = BatchConfig(
             batch_id=99,

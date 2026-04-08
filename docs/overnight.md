@@ -62,6 +62,67 @@ jcc overnight-smoke-test
 
 ---
 
+## Authentication
+
+The overnight runner needs credentials to spawn `claude -p` subprocesses. There are two
+modes depending on whether you're running against a work account (API key) or a personal
+account (OAuth subscription).
+
+### Option A: API Key (work repos)
+
+Configure `apiKeyHelper` in `~/.claude/settings.local.json` to point at a script or
+command that outputs your API key:
+
+```json
+{
+  "apiKeyHelper": "cat ~/.claude/work-api-key"
+}
+```
+
+The runner reads `apiKeyHelper` from settings, executes it, and exports the result as
+`ANTHROPIC_API_KEY`. This is the standard path for Console/organization billing.
+
+### Option B: OAuth Token (personal repos)
+
+For Claude Pro/Max subscribers who don't use an API key:
+
+1. Generate a long-lived token (valid 1 year):
+   ```bash
+   claude setup-token
+   ```
+   This opens a browser for OAuth authentication and prints the token.
+
+2. Store the token:
+   ```bash
+   printf '%s' 'sk-ant-oat01-...' > ~/.claude/personal-oauth-token
+   chmod 600 ~/.claude/personal-oauth-token
+   ```
+
+3. The runner automatically reads this file and exports `CLAUDE_CODE_OAUTH_TOKEN` when
+   no `apiKeyHelper` is configured.
+
+You can also set the env var directly before launching the runner:
+```bash
+export CLAUDE_CODE_OAUTH_TOKEN="sk-ant-oat01-..."
+overnight-start ...
+```
+
+### Auth Precedence
+
+The runner resolves auth in this order:
+
+1. `ANTHROPIC_API_KEY` already in env → use it (short-circuits all resolution)
+2. `apiKeyHelper` in settings.json → execute, export as `ANTHROPIC_API_KEY`
+3. `CLAUDE_CODE_OAUTH_TOKEN` already in env → use it
+4. `~/.claude/personal-oauth-token` file → read, export as `CLAUDE_CODE_OAUTH_TOKEN`
+5. None of the above → warning; `claude -p` falls back to Keychain auth (fragile)
+
+> **Note:** `CLAUDE_CODE_OAUTH_TOKEN` is recognized by Claude Code CLI (`claude -p`,
+> Agent SDK) but not by the Anthropic Python SDK. Standalone utilities like
+> `count-tokens` and `audit-doc` still require `ANTHROPIC_API_KEY`.
+
+---
+
 ## Prerequisites — What Makes a Feature Overnight-Ready
 
 Overnight does **not** run interactive research or spec phases. Features must be fully
