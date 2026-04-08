@@ -62,7 +62,12 @@ setup-force:
     mkdir -p ~/.claude/skills
     for skill in skills/*/SKILL.md; do
         name=$(basename "$(dirname "$skill")")
-        ln -sfn "$(pwd)/skills/$name" "$HOME/.claude/skills/$name"
+        target="$HOME/.claude/skills/$name"
+        # ln -sfn can't replace a real directory — remove it first
+        if [ -d "$target" ] && [ ! -L "$target" ]; then
+            rm -rf "$target"
+        fi
+        ln -sfn "$(pwd)/skills/$name" "$target"
     done
     # --- hooks ---
     mkdir -p ~/.claude/hooks
@@ -712,7 +717,6 @@ check-symlinks:
         fi
     }
     echo "Checking symlinks..."
-    check ~/.claude/settings.json
     check ~/.claude/rules/cortex-global.md
     check ~/.claude/rules/cortex-sandbox.md
     check ~/.claude/statusline.sh

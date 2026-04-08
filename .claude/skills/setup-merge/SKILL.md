@@ -129,7 +129,17 @@ On N: skip. Count as skipped for the summary.
 
 #### conflict-file
 
-First, attempt to show a diff by running: `diff {target} {source}`
+First, check if the target is a directory by running: `test -d {target}`
+
+If it is a directory (exit code 0), display:
+
+> **Warning**: `{target}` is a real directory (not a symlink). It must be removed before the symlink can be created. Replace `{target}` with symlink to `{source}`? [Y/n]
+
+On Y: run `rm -rf {target}` then `ln {ln_flag} {source} {target}`
+
+On N: skip. Count as skipped for the summary.
+
+If it is NOT a directory, attempt to show a diff by running: `diff {target} {source}`
 
 If `diff` is not available or fails, fall back to displaying the file size and inode info by running: `ls -li {target} {source}`
 
