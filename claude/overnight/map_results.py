@@ -100,6 +100,8 @@ def _map_results_to_state(
         if name not in state.features:
             state.features[name] = OvernightFeatureStatus()
         fs = state.features[name]
+        if fs.status in _TERMINAL_STATUSES:
+            continue
         fs.status = "paused"
         fs.error = entry.get("error")
 
@@ -109,6 +111,8 @@ def _map_results_to_state(
         if name not in state.features:
             state.features[name] = OvernightFeatureStatus()
         fs = state.features[name]
+        if fs.status in _TERMINAL_STATUSES:
+            continue
         fs.status = "deferred"
         fs.deferred_questions = entry.get("question_count", 0)
 
@@ -118,6 +122,8 @@ def _map_results_to_state(
         if name not in state.features:
             state.features[name] = OvernightFeatureStatus()
         fs = state.features[name]
+        if fs.status in _TERMINAL_STATUSES:
+            continue
         fs.status = "failed"
         fs.error = entry.get("error")
 
