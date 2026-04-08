@@ -2,10 +2,10 @@
 feature: define-evaluator-rubric-for-software-features-spike
 parent_backlog_uuid: e4f5a6b7-c8d9-0123-efab-234567890123
 parent_backlog_id: 021
-artifacts: [research]
+artifacts: [research, spec, plan, review]
 tags: [overnight, evaluator, quality, spike]
 created: 2026-04-04
-updated: 2026-04-04
+updated: 2026-04-08
 ---
 
 # [[021-define-evaluator-rubric-for-software-features-spike|Define evaluator rubric for software features (spike)]]
@@ -13,3 +13,6 @@ updated: 2026-04-04
 Feature lifecycle for [[021-define-evaluator-rubric-for-software-features-spike]].
 
 - Research: [[define-evaluator-rubric-for-software-features-spike/research|research.md]]
+- Spec: [[define-evaluator-rubric-for-software-features-spike/spec|spec.md]]
+- Plan: [[define-evaluator-rubric-for-software-features-spike/plan|plan.md]]
+- Review: [[define-evaluator-rubric-for-software-features-spike/review|review.md]]

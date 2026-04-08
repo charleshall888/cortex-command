@@ -4,19 +4,21 @@ uuid: e4f5a6b7-c8d9-0123-efab-234567890123
 id: "021"
 title: "Define evaluator rubric for software features (spike)"
 type: spike
-status: backlog
+status: complete
 priority: low
 parent: "018"
 blocked-by: []
 tags: [overnight, evaluator, quality, spike]
 created: 2026-04-03
-updated: 2026-04-06
+updated: 2026-04-08
 discovery_source: research/harness-design-long-running-apps/research.md
 session_id: null
 lifecycle_phase: specify
 lifecycle_slug: define-evaluator-rubric-for-software-features-spike
 complexity: complex
 criticality: low
+spec: lifecycle/define-evaluator-rubric-for-software-features-spike/spec.md
+areas: [overnight-runner,lifecycle]
 ---
 
 # Define evaluator rubric for software features (spike)

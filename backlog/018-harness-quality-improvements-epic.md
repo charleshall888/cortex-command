@@ -4,12 +4,12 @@ uuid: b1c2d3e4-f5a6-7890-bcde-f01234567890
 id: "018"
 title: "Improve overnight execution quality through spec improvements and harness maintainability"
 type: epic
-status: backlog
+status: complete
 priority: high
 blocked-by: []
 tags: [overnight, specs, harness, quality]
 created: 2026-04-03
-updated: 2026-04-03
+updated: 2026-04-08
 discovery_source: research/harness-design-long-running-apps/research.md
 ---
 

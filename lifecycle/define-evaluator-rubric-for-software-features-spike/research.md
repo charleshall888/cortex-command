@@ -31,9 +31,22 @@ Ticket 025 (commit `c2daec5`) added self-sealing verification defenses:
 | Prompt | Orchestrator review (`orchestrator-review.md`) | S1/P4/P7 on artifacts | Skipped for low+simple; overnight Step 3b skips entirely |
 | Prompt | Brain agent (`batch-brain.md`) | SKIP/DEFER/PAUSE triage | Post-failure only — does not evaluate spec compliance |
 
-### No post-019 overnight session data exists
+### Post-019 overnight session results (April 7-8, 2026)
 
-The only overnight sessions (April 1, 2026 — runs 1650 and 2112) predate ticket 019 (merged April 3). There is **no empirical evidence** to determine whether 019's changes eliminate the spec-violation failure pattern. The backlog item anticipated this: "This spike should not begin until item 019 has been implemented and some overnight sessions have run."
+Session `overnight-2026-04-07-0008` is the first overnight run after ticket 019 (merged April 3). Results:
+
+- **6 features completed**, all merged, clean run verdict
+- **0 spec compliance failures** among the 6 newly built features
+- **0 test failures** — all features passed tests before merge
+- **4 rounds** completed over 37h 57m
+
+All 6 features had binary-checkable acceptance criteria in their specs (visible in morning report "How to try" sections). This is the direct effect of 019's S1/P4 enforcement — specs now contain runnable verification commands rather than prose descriptions.
+
+**One requirements drift flag** was raised, but for a pre-existing feature (`wire-requirements-drift-check-into-lifecycle-review`), not one built in this session. The drift flag noted that `render_pending_drift()` in `report.py` introduces a morning report section not described in `requirements/project.md`. This is scope creep in the requirements-drift-check feature itself (ironic), not a failure of the 6 features built under 019's rules.
+
+**State/batch mismatch warning**: The morning report noted "6 feature(s) show 'merged' in state but have no merge recorded in batch results." This is an operational issue in the overnight runner's state tracking, not a spec compliance concern.
+
+**Conclusion**: The central question — do spec-intent violations persist after 019? — has a provisional answer: **no, not in this sample**. One overnight session (6 features) is a small sample, but the absence of any spec violation combined with the structural improvement (binary-checkable criteria are now enforced at authoring time) supports the status quo recommendation.
 
 ### Status of the three observed failure instances
 
@@ -94,9 +107,17 @@ Best practices: per-spec generation (not fixed template), categorical integer sc
 
 A feature is `merged` when: (1) worker produces commits, (2) branch merges cleanly, (3) test command passes, (4) no CI gate blocks. Notably absent: no spec-compliance check, no acceptance-criteria verification, no scope check.
 
-### The overnight gap
+### The overnight gap — confirmed and worse than expected
 
-The lifecycle review phase verifies spec compliance with per-requirement PASS/FAIL/PARTIAL verdicts — but runs during daytime interactive work, not during overnight execution. The overnight pipeline has no equivalent. Between "tests pass" and "spec compliance verified," there is no overnight-time check.
+The lifecycle review phase verifies spec compliance with per-requirement PASS/FAIL/PARTIAL verdicts — but it **never runs during overnight execution**. Investigation of the post-019 overnight session confirmed this structurally:
+
+1. **`batch_runner.py`** merges features after implementation and marks them `status: "merged"` in overnight-state.json. It never checks the tier/criticality gating matrix and never dispatches a review agent.
+2. **Morning review skill** (`walkthrough.md` §2b) unconditionally batch-writes synthetic `review_verdict: APPROVED` events with `cycle: 0` for all merged features — no `review.md` produced, no spec compliance check performed.
+3. **3 of 6 features** in the post-019 session were complex-tier and should have been reviewed per the gating matrix in `implement.md`, but the overnight runner never consults that matrix.
+
+The gap is not just "no spec-compliance check" — the review phase is designed, documented, and referenced in the gating matrix, but **never wired into the overnight execution path**. The morning review creates the appearance of review (synthetic events in events.log) without the substance.
+
+This aligns with the Anthropic harness article's warning about self-validation: the system produces approval artifacts without an independent evaluation agent running. The early-phase evaluators (orchestrator review during research/specify) do run and catch real issues (3 flags across 4 features), but the post-implementation review — the phase designed to catch spec violations — is structurally absent.
 
 ## Tradeoffs & Alternatives
 
@@ -140,11 +161,101 @@ Verify completion evidence was not authored by the implementing agent. Runtime e
 - **Cons**: Prompt-layer version already deployed. Runtime enforcement requires file authorship tracking (M effort). One confirmed instance in project history. Explicitly scoped out of 025 spec.
 - **Coverage**: Narrow — instance 1 only.
 
-### Recommended approach
+### F: Wire review phase into overnight runner
 
-**Alternative A (status quo)**, with Alternative C as a low-cost enhancement if justified by future post-019 overnight data. Escalation path if new failures emerge: first try review rubric refinement (C, S-M effort), then evaluator agent (D, L effort) only if review-level checks are insufficient.
+Add a post-merge review dispatch to the overnight pipeline for features that qualify per the gating matrix (complex tier, or high/critical criticality). The review agent already exists (`review.md` reference); the gap is the dispatch call in the batch runner.
+
+- **Pros**: Uses existing review infrastructure. Addresses the structural gap directly. No new rubric or agent needed. M effort.
+- **Cons**: Adds API cost per reviewed feature. Needs bounding (cycle cap, timeout). Morning review synthetic events must be conditional (only for features not already reviewed).
+- **Coverage**: All complex-tier features would get independent post-implementation spec compliance review.
+
+### Recommended approach (updated April 8, 2026)
+
+**Alternative F (wire existing review into overnight)** as the primary action. The investigation revealed the review phase is designed but never dispatched — this is the highest-ROI fix. Alternative C (review rubric refinement) becomes a follow-on if the wired-in reviewer proves too positive once running. Alternative D (independent evaluator) remains the escalation path if review-level checks are insufficient.
+
+The original recommendation (Alternative A, status quo) is no longer appropriate: the "status quo" includes a structural gap where complex features bypass review entirely during overnight execution, masked by synthetic approval events.
 
 ## Open Questions
 
-- No post-019 overnight sessions have run yet. The spike's central question — do spec-intent violations persist after 019? — cannot be answered with current data. The recommended action is to run overnight sessions and revisit this spike after observing results.
-- If the review rubric refinement (Alternative C) is pursued, should it apply to all features regardless of tier/criticality, or only to features that already qualify for review? The current skip logic for simple/low creates a coverage gap that is relevant to this question.
+- ~~No post-019 overnight sessions have run yet.~~ **Resolved (April 8, 2026)**: Session `overnight-2026-04-07-0008` ran 6 features post-019 with zero spec compliance failures. Binary-checkable criteria enforcement appears effective. Sample size is small (1 session, 6 features).
+- ~~If the review rubric refinement (Alternative C) is pursued, should it apply to all features regardless of tier/criticality?~~ **Reframed**: The primary issue is not rubric quality but review dispatch. Alternative F (wire review into overnight) should respect the existing gating matrix: review runs for complex-tier features and for high/critical criticality features regardless of tier.
+- Should the morning review skill's synthetic approval events be removed entirely, or should they remain as a fallback for features where overnight review was intentionally skipped (simple/low)? Deferred: depends on implementation details of Alternative F.
+- Per the Anthropic article's second recommendation ("iteratively tune the evaluator for skepticism"), should the existing review.md criteria be calibrated after wiring in the overnight dispatch? This is Alternative C as a follow-on — worth tracking but not blocking.
+
+## Spike Conclusions
+
+Answers to the three questions posed by backlog item 021, grounded in the post-019 overnight session (`overnight-2026-04-07-0008`, 6 features, April 7-8 2026) and the review-phase investigation conducted during this spike.
+
+### Question 1: Are there overnight failures where a feature passed tests but violated spec intent?
+
+**No spec-intent violations detected in the post-019 sample.** All 6 features built in session `overnight-2026-04-07-0008` passed tests and merged without spec compliance issues. The morning report flagged one requirements drift item, but it was for a pre-existing feature (`wire-requirements-drift-check-into-lifecycle-review`), not one built in this session.
+
+However, the investigation revealed a more fundamental problem: **the post-implementation review phase never ran**. All 6 features received synthetic `review_verdict: APPROVED` events at `cycle: 0`, batch-stamped by the morning review skill (`walkthrough.md` §2b) at a single timestamp. No `review.md` files were produced. No independent review agent evaluated any feature. Three complex-tier features (accessibility, hover-states, swim-lane) that should have been reviewed per the gating matrix in `implement.md` were auto-approved without evaluation.
+
+The absence of detected spec violations cannot be treated as evidence that none occurred — the system that would detect them was not running.
+
+### Question 2: Can spec-intent failures be prevented by tighter plan.md verification requirements (019)?
+
+**019's binary-checkable criteria enforcement is working at authoring time.** All 6 overnight features had runnable verification commands in their specs (visible in the morning report's "How to try" sections). This is a direct improvement over the pre-019 era where specs contained prose acceptance criteria.
+
+But 019 addresses a different layer than the overnight gap. 019 ensures specs are well-defined; it does not ensure implementations are checked against those specs. The overnight runner's `batch_runner.py` treats a merged feature as complete (`merged → status: "complete"`) without consulting the gating matrix or dispatching a review agent. The review phase — the mechanism that would check spec compliance — is designed but never wired into the overnight execution path.
+
+**019 is necessary but not sufficient.** Good specs without post-implementation review are like well-defined test cases that are never executed.
+
+### Question 3: If an independent evaluator is warranted, what are the specific criteria?
+
+**A new evaluator is not warranted. The existing review agent has appropriate criteria — it just needs to be dispatched.**
+
+The lifecycle's review phase (`skills/lifecycle/references/review.md`) already implements:
+- **Stage 1: Spec Compliance** — per-requirement PASS/FAIL/PARTIAL verdicts grounded in the spec
+- **Stage 2: Code Quality** — naming conventions, error handling, test coverage, pattern consistency
+- **Requirements Drift detection** — flags implementation behavior not covered by requirements
+
+These criteria align with the four-axis rubric identified in web research (Spec Alignment, Integrity, Architectural Compliance, Completeness). The existing review agent is an independent evaluator with fresh context — it matches the Anthropic article's recommendation for separating generator from evaluator.
+
+The gap is not in criteria or agent design. The gap is in dispatch: `batch_runner.py` never calls the review phase after merge. The fix is **Alternative F: wire the existing review phase into the overnight runner** for features qualifying per the gating matrix (complex tier, or high/critical criticality regardless of tier). A new backlog ticket (043) has been created for this work.
+
+**Escalation path**: If future overnight sessions with review enabled reveal that the existing review criteria are insufficient (e.g., reviewer consistently approves features that fail morning review), pursue Alternative C (review rubric refinement) to tune the criteria. If review-level checks remain insufficient, escalate to Alternative D (independent evaluator agent with a per-spec generated rubric).
+
+## Skepticism Tuning Protocol
+
+> **v0 — pre-empirical.** This protocol is defined before the overnight review phase is running. It will be refined against real evaluator data after Alternative F (backlog ticket 043) ships and produces review verdicts from overnight sessions.
+
+### (a) Data to collect from evaluator runs
+
+After Alternative F wires review into the overnight runner, each reviewed feature will produce events in `lifecycle/{feature}/events.log`:
+
+- `review_verdict` events with `verdict` (APPROVED/CHANGES_REQUESTED/REJECTED), `cycle` count, and `issues` array
+- `review.md` files with per-requirement PASS/FAIL/PARTIAL verdicts, code quality findings, and requirements drift observations
+
+Collect across overnight sessions:
+- **Approval rate**: percentage of reviewed features receiving APPROVED on cycle 1
+- **Issue density**: average number of issues per reviewed feature
+- **Verdict distribution**: ratio of APPROVED vs CHANGES_REQUESTED vs REJECTED
+- **Requirements drift detection rate**: how often drift is flagged as "detected" vs "none"
+- **Morning review correlation**: whether features approved by the overnight reviewer are also accepted during morning human review, or whether the human finds issues the reviewer missed
+
+### (b) Signals indicating the evaluator is too positive
+
+- **Approval rate > 90% on first cycle** across 10+ reviewed features — the reviewer is not finding anything. Compare against the orchestrator review's flag rate during research/specify phases (currently ~50% on first cycle for the post-019 session).
+- **Zero CHANGES_REQUESTED or REJECTED** across 3+ overnight sessions — the reviewer never pushes back.
+- **Morning review finds issues in features the reviewer approved** — direct evidence of missed problems. Track as a "reviewer miss" counter.
+- **Requirements drift always "none"** — the reviewer is not checking for scope creep despite evidence that it occurs (the drift checker already flagged one instance).
+- **Issue array always empty on APPROVED verdicts** — the reviewer approves without noting anything, even minor observations.
+
+### (c) Prompt adjustments to make
+
+If positivity signals are triggered:
+
+1. **Add explicit skepticism instruction** to the review agent dispatch: "Your job is to find what is wrong, not to confirm the implementation is correct. If you approve with zero issues, explain why no issues exist."
+2. **Lower the APPROVED threshold** in `review.md` Stage 1: require PASS on all must-have requirements (currently allows PARTIAL). Make PARTIAL trigger CHANGES_REQUESTED rather than allowing approval with advisory notes.
+3. **Add a "reviewer miss" feedback loop**: when the morning review identifies an issue the overnight reviewer missed, append the miss to a `reviewer-calibration.md` file that the reviewer reads at dispatch time. This grounds future reviews in concrete prior failures (the article's "reading evaluator logs and identifying judgment gaps").
+4. **Inject adversarial framing**: change the reviewer's system prompt from neutral assessment to adversarial review — "assume the implementation has at least one problem and find it." This is the Anthropic article's core insight: tuning for skepticism is more tractable than tuning for accuracy.
+5. **Rotate review agent model**: if Sonnet consistently approves, try dispatching Opus for a subset of features to check whether a different model finds issues Sonnet missed. If Opus finds more, escalate the default review model.
+
+### (d) Review cadence
+
+- **After first 3 overnight sessions with review enabled**: initial calibration check. Are positivity signals already visible? If approval rate is already < 80%, the reviewer may be appropriately calibrated.
+- **Monthly thereafter**: scan accumulated review verdicts for drift toward positivity. Compare current-month approval rate against first-3-sessions baseline.
+- **On any reviewer miss** (morning review finds issue in overnight-approved feature): immediate tuning cycle — apply the first applicable adjustment from (c) above, then monitor the next overnight session.
+- **After 3 tuning adjustments**: if the reviewer is still too positive after 3 rounds of prompt adjustments, escalate to Alternative C (full review rubric refinement) or Alternative D (independent evaluator agent).
