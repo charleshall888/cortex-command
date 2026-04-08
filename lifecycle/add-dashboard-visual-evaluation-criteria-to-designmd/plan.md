@@ -1,4 +1,4 @@
-# Implementation Plan: Add dashboard visual evaluation criteria to DESIGN.md
+# Plan: Add dashboard visual evaluation criteria to DESIGN.md
 
 ## Overview
 

@@ -1,4 +1,4 @@
-# Implementation Plan: Add hover states, loading feedback, and badge micro-interactions
+# Plan: Add hover states, loading feedback, and badge micro-interactions
 
 ## Overview
 
@@ -35,7 +35,7 @@ The should-have requirement (req 6: hover info reveal) is implementation-determi
 - **What**:
   1. Add hover styles to `.feature-card`: on `:hover`, apply `box-shadow` for elevation lift and `transform: translateY(-2px)`. Add `transition` for `box-shadow` and `transform` (150ms ease-out). Wrap in `@media (prefers-reduced-motion: no-preference)`.
   2. For the should-have hover info reveal (req 6): identify supplementary card content that benefits from progressive disclosure. Based on card structure in `feature_cards.html`, the `phase-label` and `task-ratio` spans are secondary detail — show them at reduced opacity at rest (`opacity: 0.65`) and full opacity on card hover. Implement using `.feature-card:hover .phase-label` and `.feature-card:hover .task-ratio` CSS rules. Add `transition: opacity 150ms ease-out` to `.phase-label` and `.task-ratio` within a `prefers-reduced-motion: no-preference` block.
-- **Depends on**: none (CSS-only, independent of idiomorph)
+- **Depends on**: none
 - **Context**: The spec requires hover styling in any of `base.html`, `patterns/feature-card.html`, or `feature_cards.html`. Placing it in `base.html`'s style block keeps all CSS co-located and avoids inline styles. The `.feature-card` rule is at lines 209–219 in the current file.
 - **Verification**: `grep -c 'feature-card.*hover\|hover.*feature-card\|group-hover' claude/dashboard/templates/base.html claude/dashboard/templates/patterns/feature-card.html claude/dashboard/templates/feature_cards.html` ≥ 1
 - **Status**: pending
