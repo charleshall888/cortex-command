@@ -935,6 +935,46 @@ def cmd_merge(args: argparse.Namespace) -> None:
     print(json.dumps(result, indent=2))
 
 
+def cmd_migrate(args: argparse.Namespace) -> None:
+    """Convert settings.json from symlink to regular file atomically."""
+    p = Path(args.settings).expanduser()
+
+    if not p.is_symlink():
+        print(json.dumps({"ok": True, "action": "none", "reason": "not a symlink"}))
+        return
+
+    # Read content through symlink (fallback for broken symlinks)
+    try:
+        content = p.read_text()
+    except OSError:
+        content = "{}\n"
+
+    # Atomic write: temp file in same dir + os.replace
+    tmp_fd = None
+    tmp_path = None
+    try:
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=str(p.parent), suffix=".tmp")
+        os.write(tmp_fd, content.encode("utf-8"))
+        os.fsync(tmp_fd)
+        os.close(tmp_fd)
+        tmp_fd = None
+        os.replace(tmp_path, str(p))  # atomic: replaces symlink with regular file
+        print(json.dumps({"ok": True, "action": "migrated"}))
+    except OSError as e:
+        if tmp_fd is not None:
+            try:
+                os.close(tmp_fd)
+            except OSError:
+                pass
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        print(json.dumps({"ok": False, "error": str(e)}))
+        sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Setup-merge helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -999,12 +1039,21 @@ def main() -> None:
         help="Approve apiKeyHelper merge (true/false)",
     )
 
+    migrate_parser = subparsers.add_parser("migrate", help="Convert settings symlink to regular file")
+    migrate_parser.add_argument(
+        "--settings",
+        default="~/.claude/settings.json",
+        help="Path to user's settings.json (default: ~/.claude/settings.json)",
+    )
+
     args = parser.parse_args()
 
     if args.command == "detect":
         cmd_detect(args)
     elif args.command == "merge":
         cmd_merge(args)
+    elif args.command == "migrate":
+        cmd_migrate(args)
 
 
 if __name__ == "__main__":

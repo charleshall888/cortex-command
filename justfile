@@ -65,6 +65,7 @@ setup-force:
         target="$HOME/.claude/skills/$name"
         # ln -sfn can't replace a real directory — remove it first
         if [ -d "$target" ] && [ ! -L "$target" ]; then
+            echo "[replace]  $target (was real directory)"
             rm -rf "$target"
         fi
         ln -sfn "$(pwd)/skills/$name" "$target"
@@ -88,7 +89,8 @@ setup-force:
     # --- config ---
     mkdir -p ~/.claude
     mkdir -p ~/.claude/rules
-    ln -sf "$(pwd)/claude/settings.json" ~/.claude/settings.json
+    cp "$(pwd)/claude/settings.json" "$HOME/.claude/settings.json.tmp"
+    mv "$HOME/.claude/settings.json.tmp" "$HOME/.claude/settings.json"
     ln -sf "$(pwd)/claude/statusline.sh" ~/.claude/statusline.sh
     ln -sf "$(pwd)/claude/rules/global-agent-rules.md" ~/.claude/rules/cortex-global.md
     ln -sf "$(pwd)/claude/rules/sandbox-behaviors.md" ~/.claude/rules/cortex-sandbox.md
@@ -329,8 +331,20 @@ deploy-config:
     mkdir -p ~/.claude
     mkdir -p ~/.claude/rules/
     # Note: also update setup-force when adding new targets here.
+    # settings.json — regular file, not symlink (managed by /setup-merge for updates)
+    settings_target="$HOME/.claude/settings.json"
+    settings_source="$(pwd)/claude/settings.json"
+    if [ ! -e "$settings_target" ] && [ ! -L "$settings_target" ]; then
+        cp "$settings_source" "${settings_target}.tmp"
+        mv "${settings_target}.tmp" "$settings_target"
+        echo "[new]      $settings_target (copied)"
+    elif [ -L "$settings_target" ]; then
+        echo "[migrate]  $settings_target — symlink (run /setup-merge to convert)"
+        conflicts+=("$settings_target (symlink — run /setup-merge to convert to regular file)")
+    else
+        echo "[ok]       $settings_target (run /setup-merge to update)"
+    fi
     pairs=(
-        "$(pwd)/claude/settings.json|$HOME/.claude/settings.json"
         "$(pwd)/claude/statusline.sh|$HOME/.claude/statusline.sh"
         "$(pwd)/claude/rules/global-agent-rules.md|$HOME/.claude/rules/cortex-global.md"
         "$(pwd)/claude/rules/sandbox-behaviors.md|$HOME/.claude/rules/cortex-sandbox.md"
@@ -760,6 +774,14 @@ verify-setup:
     fail() { printf '  ✗ %s — %s\n' "$1" "$2"; errors=$((errors + 1)); }
     echo "Checking symlinks..."
     just check-symlinks || errors=$((errors + 1))
+    # settings.json should be a regular file, not a symlink
+    if [ -f ~/.claude/settings.json ] && [ ! -L ~/.claude/settings.json ]; then
+        pass "~/.claude/settings.json (regular file)"
+    elif [ -L ~/.claude/settings.json ]; then
+        fail "~/.claude/settings.json" "is a symlink — run /setup-merge to migrate"
+    elif [ ! -e ~/.claude/settings.json ]; then
+        fail "~/.claude/settings.json" "missing — run 'just setup'"
+    fi
     echo ""
     echo "Checking prerequisites..."
     # Python 3.12+

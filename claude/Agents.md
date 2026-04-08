@@ -11,7 +11,7 @@ These instructions apply to all projects on this machine.
 
 ## Settings Architecture
 
-- Global Claude Code settings live at `~/.claude/settings.json` (symlinked from `cortex-command/claude/settings.json`)
+- Global Claude Code settings live at `~/.claude/settings.json` (managed as a regular file; repo defaults merged via `/setup-merge`)
 - Global settings include: curated allow/deny list + `sandbox.autoAllowBashIfSandboxed: true`
 - Projects opt into sandbox individually; non-sandboxed projects use the allow/deny rules
 

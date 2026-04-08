@@ -25,7 +25,7 @@ Key symlinks:
 - `skills/*` -> `~/.claude/skills/*`
 - `hooks/*` -> `~/.claude/hooks/*`
 - `hooks/cortex-notify.sh` -> `~/.claude/notify.sh` (direct — settings.json references this path)
-- `claude/settings.json` -> `~/.claude/settings.json`
+- `claude/settings.json` — defaults template (copied on first install, updated via `/setup-merge`)
 - `claude/Agents.md` -> `~/.claude/CLAUDE.md` (global cross-project instructions)
 - `claude/reference/*` -> `~/.claude/reference/*`
 - `claude/statusline.sh` -> `~/.claude/statusline.sh`

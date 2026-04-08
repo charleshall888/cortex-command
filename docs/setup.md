@@ -53,7 +53,7 @@ The setup recipe deploys the full agentic layer via symlinks:
 | `deploy-reference` | Reference docs for conditional loading | `~/.claude/reference/` |
 | `deploy-skills` | All skill directories | `~/.claude/skills/` |
 | `deploy-hooks` | Hook scripts + notification handler | `~/.claude/hooks/`, `~/.claude/notify.sh` |
-| `deploy-config` | Settings, statusline, agent rules | `~/.claude/settings.json`, `~/.claude/statusline.sh`, `~/.claude/rules/` |
+| `deploy-config` | Settings (copy), statusline, agent rules | `~/.claude/settings.json` (copy), `~/.claude/statusline.sh`, `~/.claude/rules/` |
 | `python-setup` | Python venv + dependencies | `.venv/` |
 
 If any target already exists and is not a symlink pointing into this repo, the recipe skips it and reports a conflict. Run `/setup-merge` in Claude Code to resolve conflicts interactively.
@@ -62,14 +62,15 @@ If any target already exists and is not a symlink pointing into this repo, the r
 
 ## Symlink Architecture
 
-Every config file lives in this repo and is symlinked to its system location. Editing the repo copy changes the active config immediately. This pattern keeps config version-controlled and auditable.
+Config files are symlinked to their system locations. Editing the repo copy changes the active config immediately. This pattern keeps config version-controlled and auditable.
 
 ```
-cortex-command/claude/settings.json  →  ~/.claude/settings.json
 cortex-command/skills/commit/        →  ~/.claude/skills/commit/
 cortex-command/hooks/cortex-*.sh     →  ~/.claude/hooks/cortex-*.sh
 cortex-command/bin/jcc               →  ~/.local/bin/jcc
 ```
+
+Exception: `settings.json` is copied (not symlinked) so `/setup-merge` can merge repo defaults into your personalized settings. Run `/setup-merge` after pulling repo changes to update.
 
 Always edit the repo copy (the symlink target), never create files at the destination.
 
@@ -132,13 +133,13 @@ The runner uses `apiKeyHelper` when present (work), and falls back to the OAuth 
 
 ### settings.json
 
-`claude/settings.json` is tracked and symlinked to `~/.claude/settings.json`. After forking, review and adjust:
+`claude/settings.json` is tracked in the repo and copied on first install to `~/.claude/settings.json`. Run `/setup-merge` to pull updated defaults. After forking, review and adjust:
 
 - **Permissions**: The `allow`/`deny` lists reference specific tool names and path patterns. Update for your tools.
 - **MCP plugins**: Add or remove plugins in `enabledPlugins`.
 - **Sandbox**: `sandbox.enabled: true` is the default. Adjust `allowWrite` paths if your projects live outside the default locations.
 
-Use `settings.local.json` in any project for per-machine overrides (e.g., `apiKeyHelper`) without modifying the tracked file.
+Use `settings.local.json` in any project for per-machine overrides (e.g., `apiKeyHelper`).
 
 ### Adding an MCP Server
 

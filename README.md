@@ -143,7 +143,7 @@ Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth
 
 ## Customization
 
-`claude/settings.json` is tracked and symlinked to `~/.claude/settings.json`. Review and adjust the model, session retention, thinking mode, and experimental flags for your own setup. Use `settings.local.json` in any project for per-machine overrides without modifying the tracked file.
+`claude/settings.json` is the repo defaults template — `just setup` copies it to `~/.claude/settings.json` on first install. Run `/setup-merge` to pull updated repo defaults into your settings. Use `settings.local.json` for per-machine overrides.
 
 ## Commands
 
