@@ -551,6 +551,44 @@ setup-github-pat-org:
     echo "Done! The session-start hook will inject the org PAT automatically."
     echo "To use in an org repo, add a .use-org-pat file at the repo root."
 
+# Add tmux socket to sandbox allowlist so sandboxed sessions can access tmux
+setup-tmux-socket:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SETTINGS="$HOME/.claude/settings.json"
+    LOCAL_SETTINGS="$HOME/.claude/settings.local.json"
+    TMUX_SOCKET="/private/tmp/tmux-$(id -u)/default"
+    if ! command -v jq &>/dev/null; then
+        echo "Error: jq is required. Install with: brew install jq" >&2
+        exit 1
+    fi
+    if [ ! -f "$SETTINGS" ]; then
+        echo "Error: $SETTINGS not found. Run 'just setup' first." >&2
+        exit 1
+    fi
+    # Check if tmux socket is already in settings.local.json
+    if [ -f "$LOCAL_SETTINGS" ] && jq -e --arg sock "$TMUX_SOCKET" '.sandbox.network.allowUnixSockets // [] | map(select(. == $sock)) | length > 0' "$LOCAL_SETTINGS" >/dev/null 2>&1; then
+        echo "tmux socket already present in $LOCAL_SETTINGS — skipping."
+        exit 0
+    fi
+    # Read existing allowUnixSockets from settings.json (contains GPG socket etc.)
+    EXISTING_SOCKETS=$(jq -c '.sandbox.network.allowUnixSockets // []' "$SETTINGS")
+    # Build combined array: existing sockets + tmux socket, deduplicated
+    COMBINED=$(echo "$EXISTING_SOCKETS" | jq -c --arg sock "$TMUX_SOCKET" '. + [$sock] | unique')
+    # Deep-merge into settings.local.json (or create if missing)
+    if [ -f "$LOCAL_SETTINGS" ]; then
+        jq --argjson sockets "$COMBINED" '.sandbox.network.allowUnixSockets = $sockets' "$LOCAL_SETTINGS" > "$LOCAL_SETTINGS.tmp"
+        mv "$LOCAL_SETTINGS.tmp" "$LOCAL_SETTINGS"
+    else
+        mkdir -p "$(dirname "$LOCAL_SETTINGS")"
+        jq -n --argjson sockets "$COMBINED" '{"sandbox": {"network": {"allowUnixSockets": $sockets}}}' > "$LOCAL_SETTINGS"
+    fi
+    echo "Adding tmux socket access to sandbox allowlist. This grants sandboxed sessions access to ALL tmux sessions on this machine."
+    echo ""
+    echo "Socket path: $TMUX_SOCKET"
+    echo "Updated: $LOCAL_SETTINGS"
+    jq '.sandbox.network.allowUnixSockets' "$LOCAL_SETTINGS"
+
 # --- Overnight ---
 
 # Run the overnight round-loop runner
