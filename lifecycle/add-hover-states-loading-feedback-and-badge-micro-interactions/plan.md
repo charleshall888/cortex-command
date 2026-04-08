@@ -1,74 +1,107 @@
-# Plan: Add hover states, loading feedback, and badge micro-interactions
+# Implementation Plan: Add hover states, loading feedback, and badge micro-interactions
 
 ## Overview
 
-Add CSS micro-interactions to the overnight dashboard: feature card hover lift, badge color transitions, element entry animations, and prefers-reduced-motion support. The Idiomorph extension is already loaded from a prior accessibility feature but needs `hx-ext="morph"` on `<body>` and migration of the remaining three polling sections from `innerHTML` to `morph:innerHTML`. Idiomorph's DOM diffing preserves element identity across polls, enabling CSS transitions to fire only when attributes actually change. All changes are CSS-only in `base.html` and attribute additions in `base.html` and `feature-card.html` -- no server-side or JavaScript changes.
+All five must-have requirements from the spec are unimplemented. The base.html file has no Idiomorph script, no morph swap modes, no hover styles on `.feature-card`, no badge transitions, no entry animations, and no `prefers-reduced-motion` guards (including on the existing `pulse` animation). All changes land in `base.html`'s `<style type="text/tailwindcss">` block and the `<body>` / script tag area. No server-side files change.
+
+The should-have requirement (req 6: hover info reveal) is implementation-determined and will be addressed in the same task as the hover lift effect once card structure is visible.
 
 ## Tasks
 
-### Task 1: Enable idiomorph globally and migrate remaining innerHTML sections
+### Task 1: Add Idiomorph and migrate swap modes
+
 - **Files**: `claude/dashboard/templates/base.html`
-- **What**: Add `hx-ext="morph"` to the `<body>` tag (currently `<body>` at line 383 with no attributes). Change `hx-swap="innerHTML"` to `hx-swap="morph:innerHTML"` on the three remaining sections that still use innerHTML: `#fleet-panel` (line 406), `#swim-lane` (line 413), and `#round-history` (line 418). The three sections already using `hx-swap="morph"` (alerts-banner, session-panel, feature-cards) should also be updated to `hx-swap="morph:innerHTML"` for consistency with the spec's required format.
+- **What**:
+  1. Add `<script src="https://unpkg.com/idiomorph@0.7.4/dist/idiomorph-ext.min.js"></script>` after the HTMX script tag (line 8).
+  2. Add `hx-ext="morph"` attribute to the `<body>` opening tag.
+  3. Change all six `hx-swap="innerHTML"` occurrences to `hx-swap="morph:innerHTML"`. The six sections are: `#alerts-banner`, `#session-panel`, `#feature-cards`, `#fleet-panel`, `#swim-lane`, `#round-history`.
 - **Depends on**: none
-- **Context**: The idiomorph script is already loaded at line 9 (`htmx-ext-idiomorph@2.0.1`). The `hx-ext="morph"` attribute on body enables the extension globally. The spec requires zero instances of `hx-swap="innerHTML"` remaining and all six polling sections using morph. Three sections were partially migrated by the accessibility feature (using `hx-swap="morph"` shorthand); this task normalizes all six to `hx-swap="morph:innerHTML"`.
-- **Verification**: `grep -c 'hx-ext="morph"' claude/dashboard/templates/base.html` returns 1. `grep -c 'hx-swap="innerHTML"' claude/dashboard/templates/base.html` returns 0.
-- **Status**: [ ] not started
+- **Context**: Idiomorph 0.7.4 is confirmed compatible with HTMX 2.0.4 (spec §Technical Constraints). The morph swap preserves element identity across polls so CSS transitions fire only on changed attributes. The spec notes that OOB swaps in `session_panel.html` are unaffected.
+- **Verification**: `grep -c 'idiomorph' claude/dashboard/templates/base.html` ≥ 1 AND `grep -c 'hx-ext="morph"' claude/dashboard/templates/base.html` = 1 AND `grep -c 'hx-swap="innerHTML"' claude/dashboard/templates/base.html` = 0
+- **Status**: pending
 
-### Task 2: Add feature card hover lift effect
+### Task 2: Add badge status transitions
+
 - **Files**: `claude/dashboard/templates/base.html`
-- **What**: Add a CSS transition and hover transform to the `.feature-card` rule. Add `transition: transform 200ms ease, box-shadow 200ms ease;` to the existing `.feature-card` block (line 210-218). Add a new `.feature-card:hover` rule with `transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1);`. These go inside the `@layer components` block alongside the existing `.feature-card` rules.
-- **Depends on**: none
-- **Context**: The `.feature-card` class (lines 210-220) defines background, border, padding, flex layout. No transitions or transforms exist. The hover effect uses shadow elevation and vertical translate per the spec. The 200ms duration keeps the effect snappy for a monitoring tool. The transition is wrapped in a `prefers-reduced-motion` guard in Task 6.
-- **Verification**: `grep -c 'feature-card.*hover\|hover.*feature-card' claude/dashboard/templates/base.html` returns >= 1. Load the dashboard and hover over a feature card -- it should lift with a subtle shadow.
-- **Status**: [ ] not started
+- **What**: Add CSS `transition` property to the `.badge` rule in the `@layer components` block. The transition should cover `background-color`, `border-color`, and `color` at 300ms ease-out. Wrap in `@media (prefers-reduced-motion: no-preference)` to satisfy req 5.
+- **Depends on**: 1
+- **Context**: Idiomorph (added in Task 1) preserves `.badge` element identity across polls — it only patches changed attributes. This means transitions fire when a badge's status class changes but not on unchanged polls. The badge rule is at lines 191–198 in the current file.
+- **Verification**: `grep -c 'transition' claude/dashboard/templates/base.html` ≥ 1 AND `grep 'badge' claude/dashboard/templates/base.html | grep -c 'transition'` ≥ 1
+- **Status**: pending
 
-### Task 3: Add badge status transitions
+### Task 3: Add feature card hover lift effect and supplementary hover reveal
+
 - **Files**: `claude/dashboard/templates/base.html`
-- **What**: Add `transition: background-color 300ms ease-out, border-color 300ms ease-out, color 300ms ease-out;` to the `.badge` rule (lines 192-199). This goes inside the existing `.badge` declaration block.
-- **Depends on**: [1]
-- **Context**: Idiomorph preserves badge element identity across morph swaps. When a feature's status changes (e.g., pending to running), the badge's CSS classes change but the DOM element survives. The `transition` property makes the color shift animate smoothly over 300ms instead of snapping. Without morph swap, this would not work because innerHTML replacement destroys and recreates elements.
-- **Verification**: `grep 'badge' claude/dashboard/templates/base.html | grep -c 'transition'` returns >= 1.
-- **Status**: [ ] not started
+- **What**:
+  1. Add hover styles to `.feature-card`: on `:hover`, apply `box-shadow` for elevation lift and `transform: translateY(-2px)`. Add `transition` for `box-shadow` and `transform` (150ms ease-out). Wrap in `@media (prefers-reduced-motion: no-preference)`.
+  2. For the should-have hover info reveal (req 6): identify supplementary card content that benefits from progressive disclosure. Based on card structure in `feature_cards.html`, the `phase-label` and `task-ratio` spans are secondary detail — show them at reduced opacity at rest (`opacity: 0.65`) and full opacity on card hover. Implement using `.feature-card:hover .phase-label` and `.feature-card:hover .task-ratio` CSS rules. Add `transition: opacity 150ms ease-out` to `.phase-label` and `.task-ratio` within a `prefers-reduced-motion: no-preference` block.
+- **Depends on**: none (CSS-only, independent of idiomorph)
+- **Context**: The spec requires hover styling in any of `base.html`, `patterns/feature-card.html`, or `feature_cards.html`. Placing it in `base.html`'s style block keeps all CSS co-located and avoids inline styles. The `.feature-card` rule is at lines 209–219 in the current file.
+- **Verification**: `grep -c 'feature-card.*hover\|hover.*feature-card\|group-hover' claude/dashboard/templates/base.html claude/dashboard/templates/patterns/feature-card.html claude/dashboard/templates/feature_cards.html` ≥ 1
+- **Status**: pending
 
-### Task 4: Add entry animation keyframes for new elements
+### Task 4: Add entry animations for new elements and prefers-reduced-motion guards
+
 - **Files**: `claude/dashboard/templates/base.html`
-- **What**: Add a `@keyframes fadeIn` animation (`from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); }`). Add a CSS rule `.feature-card` with `animation: fadeIn 300ms ease-out;`. This animation fires when idiomorph inserts a new feature card into the DOM (e.g., a new feature appears in a subsequent poll). Place the keyframes after the existing `@keyframes pulse` block (after line 362).
-- **Depends on**: none
-- **Context**: When idiomorph processes a morph swap, newly added elements are inserted into the DOM fresh. CSS animations with `animation:` fire on insertion by default. Existing elements that idiomorph morphs in-place do not re-trigger the animation because they are not removed and re-added.
-- **Verification**: `grep -c '@keyframes.*fadeIn\|fadeIn\|fade-in' claude/dashboard/templates/base.html` returns >= 1.
-- **Status**: [ ] not started
-
-### Task 5: Gate entry animations on initial page load
-- **Files**: `claude/dashboard/templates/base.html`
-- **What**: Add a small inline script (after the idiomorph script tag, in the `<head>`) that listens for the first `htmx:afterSwap` event on the body, then adds a `data-initialized` attribute to the body. Scope the `.feature-card` animation rule to only apply when body has this attribute: `body[data-initialized] .feature-card { animation: fadeIn 300ms ease-out; }`. This prevents the fade-in animation from firing on the initial page load when all cards are inserted for the first time.
-- **Depends on**: [4]
-- **Context**: Per spec edge case: on the first HTMX response, idiomorph inserts all elements since the container has placeholder text. Entry animations should not fire on initial load. After the first swap completes, subsequent swaps that add new cards will trigger the animation. The listener uses `{ once: true }` to fire only on the first swap event. The script is minimal (3 lines) and does not interfere with any existing event handling.
-- **Verification**: Load the dashboard fresh -- cards should appear without fade animation. Wait for a subsequent poll where a new card is added (or simulate by changing state) -- the new card should fade in.
-- **Status**: [ ] not started
-
-### Task 6: Add prefers-reduced-motion support
-- **Files**: `claude/dashboard/templates/base.html`
-- **What**: Add a `@media (prefers-reduced-motion: reduce)` block that disables all animations and transitions: set `animation: none !important;` and `transition: none !important;` on `.feature-card`, `.feature-card:hover`, `.badge`, and `.live-dot`. This covers the new hover transitions (Task 2), badge transitions (Task 3), entry animations (Task 4), and the existing `.live-dot` pulse animation. Place this media query at the end of the `@layer components` block, after all other rules.
-- **Depends on**: [2, 3, 4]
-- **Context**: The spec requires at least 2 instances of `prefers-reduced-motion` or `motion-safe` references -- one for new animations and one covering the existing `.live-dot` pulse. A single `@media (prefers-reduced-motion: reduce)` block that addresses both satisfies this. The existing `.live-dot` pulse (lines 356-362) currently has no motion guard. Note: the `@media` query text itself counts as one reference per grep match; the individual selectors inside provide the second.
-- **Verification**: `grep -c 'prefers-reduced-motion' claude/dashboard/templates/base.html` returns >= 1. `grep -c 'reduced-motion' claude/dashboard/templates/base.html` returns >= 2 (the @media rule line plus at least one comment or second reference).
-- **Status**: [ ] not started
-
-### Task 7: Add feature card hover info reveal (should-have)
-- **Files**: `claude/dashboard/templates/feature_cards.html`, `claude/dashboard/templates/base.html`
-- **What**: On feature cards in the running state, the slug text (currently always visible as `.phase-label` in row 1) and the elapsed time (row 2) are always shown. Add a hover reveal for the alert badge row (row 3) on non-running cards where alerts exist but the card is in a terminal state (merged, deferred, paused). Wrap the alert badge row in a `<div class="card-detail">` container. Add CSS: `.card-detail { max-height: 0; overflow: hidden; transition: max-height 200ms ease-out, opacity 200ms ease-out; opacity: 0; }` and `.feature-card:hover .card-detail { max-height: 4rem; opacity: 1; }`. Add the `group` class to the `.feature-card` macro in `feature-card.html` to enable group-hover if needed. This reduces visual density at rest while making alert details accessible on hover.
-- **Depends on**: [2]
-- **Context**: The spec says to determine which elements benefit from progressive disclosure during implementation. For terminal-state cards (merged/deferred/paused), the alert badges are supplementary -- the primary info (title, status, duration) is always visible. For running cards and failed cards, all rows remain always visible since those are active monitoring states. The `max-height` transition technique avoids needing JavaScript for height animation.
-- **Verification**: Load the dashboard with a mix of merged and running features. Merged cards should show only title/status/duration at rest; hovering reveals alert badges. Running cards should show all rows at all times.
-- **Status**: [ ] not started
+- **What**:
+  1. Add `@keyframes fadeIn` (or `fade-in`) — fade from opacity 0 to 1 over 300ms.
+  2. Apply the animation to `.feature-card` using an `animation: fadeIn 300ms ease-out` rule, gated with `@media (prefers-reduced-motion: no-preference)`.
+  3. To prevent the entry animation from firing on the initial page load (spec edge case), gate the animation with a `.htmx-settled` class on the container or use Idiomorph's native `data-morph` attribute approach. The simplest approach: apply the `fadeIn` animation only to `.feature-list .feature-card` (cards inside the polled container), and add a CSS rule that disables the animation when the `#feature-cards` section has a `data-loaded` attribute. The Jinja template's first swap will not have this attribute; subsequent swaps will preserve Idiomorph's element identity so existing cards don't re-animate. Since Idiomorph only inserts genuinely new DOM nodes, the animation fires naturally only for new cards.
+  4. Retrofit the existing `.live-dot` `pulse` animation: wrap the `animation: pulse 2s infinite` declaration in `@media (prefers-reduced-motion: no-preference)`.
+  5. Ensure all new `@media (prefers-reduced-motion: no-preference)` blocks are in the `@layer components` section or adjacent to the rules they guard.
+- **Depends on**: 1 (Idiomorph needed for element identity preservation that makes entry animations meaningful)
+- **Context**: The spec's acceptance criteria for req 4 is `grep -c '@keyframes.*fade-in\|fadeIn\|entry' claude/dashboard/templates/base.html` ≥ 1. For req 5: `grep -c 'prefers-reduced-motion' claude/dashboard/templates/base.html` ≥ 1 AND `grep -c 'reduced-motion\|motion-safe' claude/dashboard/templates/base.html` ≥ 2. The existing `@keyframes pulse` at lines 358–361 currently has no motion guard.
+- **Verification**: `grep -c '@keyframes.*fade-in\|fadeIn\|entry' claude/dashboard/templates/base.html` ≥ 1 AND `grep -c 'prefers-reduced-motion' claude/dashboard/templates/base.html` ≥ 1 AND `grep -c 'reduced-motion\|motion-safe' claude/dashboard/templates/base.html` ≥ 2
+- **Status**: pending
 
 ## Verification Strategy
 
-1. Run `grep -c 'hx-ext="morph"' claude/dashboard/templates/base.html` -- expect 1
-2. Run `grep -c 'hx-swap="innerHTML"' claude/dashboard/templates/base.html` -- expect 0
-3. Run `grep -c 'idiomorph' claude/dashboard/templates/base.html` -- expect >= 1 (script tag)
-4. Run `grep 'feature-card' claude/dashboard/templates/base.html | grep -c 'hover'` -- expect >= 1
-5. Run `grep 'badge' claude/dashboard/templates/base.html | grep -c 'transition'` -- expect >= 1
-6. Run `grep -c '@keyframes.*fadeIn\|fadeIn' claude/dashboard/templates/base.html` -- expect >= 1
-7. Run `grep -c 'prefers-reduced-motion' claude/dashboard/templates/base.html` -- expect >= 1
-8. Start the dashboard and verify: feature cards lift on hover with shadow; badge colors transition smoothly when status changes between polls; new cards fade in on subsequent polls but not on initial load; all animations are suppressed when system prefers-reduced-motion is enabled
+Run these grep checks after all tasks complete. All must pass.
+
+**Req 2 — Idiomorph added and swap modes migrated:**
+```
+grep -c 'idiomorph' claude/dashboard/templates/base.html
+# expect: ≥ 1
+
+grep -c 'hx-ext="morph"' claude/dashboard/templates/base.html
+# expect: 1
+
+grep -c 'hx-swap="innerHTML"' claude/dashboard/templates/base.html
+# expect: 0  (all six instances migrated to morph:innerHTML)
+```
+
+**Req 3 — Badge transitions:**
+```
+grep -c 'transition' claude/dashboard/templates/base.html
+# expect: ≥ 1
+
+grep 'badge' claude/dashboard/templates/base.html | grep -c 'transition'
+# expect: ≥ 1
+```
+
+**Req 1 — Feature card hover lift:**
+```
+grep -c 'feature-card.*hover\|hover.*feature-card\|group-hover' \
+  claude/dashboard/templates/base.html \
+  claude/dashboard/templates/patterns/feature-card.html \
+  claude/dashboard/templates/feature_cards.html
+# expect: ≥ 1
+```
+
+**Req 4 — Entry animations:**
+```
+grep -c '@keyframes.*fade-in\|fadeIn\|entry' claude/dashboard/templates/base.html
+# expect: ≥ 1
+```
+
+**Req 5 — prefers-reduced-motion guards (new animations + existing pulse):**
+```
+grep -c 'prefers-reduced-motion' claude/dashboard/templates/base.html
+# expect: ≥ 1
+
+grep -c 'reduced-motion\|motion-safe' claude/dashboard/templates/base.html
+# expect: ≥ 2
+```
+
+**Req 6 — Hover info reveal (visual inspection):**
+Open the live dashboard and hover over a feature card. Confirm that secondary text (phase label, task ratio) increases in opacity on hover. No automated grep check applies.
