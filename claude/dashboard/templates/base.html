@@ -365,12 +365,14 @@
         height: 8px;
         border-radius: var(--radius-full);
         background-color: var(--color-success);
-        animation: pulse 2s infinite;
         vertical-align: middle;
       }
       @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.4; }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .live-dot { animation: pulse 2s infinite; }
       }
       @keyframes fade-in {
         from { opacity: 0; transform: translateY(-4px); }
