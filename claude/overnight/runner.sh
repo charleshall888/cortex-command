@@ -357,7 +357,7 @@ count_pending() {
 import json, os
 state = json.load(open(os.environ['STATE_PATH']))
 features = state.get('features', {})
-count = sum(1 for f in features.values() if f.get('status') in ('pending', 'running'))
+count = sum(1 for f in features.values() if f.get('status') in ('pending', 'running', 'paused'))
 print(count)
 "
 }
@@ -766,7 +766,7 @@ print(sum(1 for f in features.values() if f.get('status') == 'merged'))
         if [[ $STALL_COUNT -ge 2 ]]; then
             echo "Circuit breaker: 2 consecutive rounds with zero progress — stopping"
             log_event "circuit_breaker" "$ROUND" "{\"reason\": \"stall\", \"stall_count\": $STALL_COUNT}"
-            REMAINING_PENDING=$(STATE_PATH="$STATE_PATH" python3 -c "import json, os; state = json.load(open(os.environ['STATE_PATH'])); features = state.get('features', {}); print(sum(1 for f in features.values() if f.get('status') == 'pending'))")
+            REMAINING_PENDING=$(STATE_PATH="$STATE_PATH" python3 -c "import json, os; state = json.load(open(os.environ['STATE_PATH'])); features = state.get('features', {}); print(sum(1 for f in features.values() if f.get('status') in ('pending', 'paused')))")
             if [[ "$REMAINING_PENDING" -eq 0 ]]; then
                 ~/.claude/notify.sh "Overnight session abandoned — no progress after 2 rounds. Session: $SESSION_ID. Check morning report." || true
             fi
