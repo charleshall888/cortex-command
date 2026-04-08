@@ -21,6 +21,7 @@
         {% if title %}<strong>{{ title }}</strong> <span class="phase-label">{{ slug }}</span>{% else %}<strong>{{ slug }}</strong>{% endif %}
         {{ badge(status=feat.status) }}
         {% if feat.status not in ('failed', 'pending') %}
+          <span class="card-hover-reveal">
           {% set model_class = 'badge-purple' if model == 'opus' else 'badge-gray' if model == 'haiku' else 'badge-blue' %}
           {% if model %}
           {{ badge(css_class=model_class, label=model) }}
@@ -30,6 +31,7 @@
           {% if complexity %}
           {{ badge(css_class="badge-gray", label=complexity) }}
           {% endif %}
+          </span>
         {% endif %}
       </div>
       {# Status-specific rows #}
