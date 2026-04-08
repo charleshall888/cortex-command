@@ -22,7 +22,7 @@ Surgical fixes across three files (`runner.sh`, `orchestrator-round.md`, `map_re
 - **Context**: Line 519 is the only assignment `ROUND=1` before the main loop. Replace it with the inline Python pattern used elsewhere in runner.sh (e.g., the `PAUSED_REASON` read at ~line 729): `ROUND=$(STATE_PATH="$STATE_PATH" python3 -c "import json, os; print(json.load(open(os.environ['STATE_PATH']))['current_round'])")`. For new sessions `current_round = 1`, so behavior is unchanged. `STATE_PATH` is already set by this point in the script.
 - **Verification**: `grep -c '^ROUND=1$' claude/overnight/runner.sh` = 0 — pass if count is 0, fail otherwise
 
-### Task 3: Add `batch-N-results.json` existence check in round loop
+### [x] Task 3: Add `batch-N-results.json` existence check in round loop
 - **Files**: `claude/overnight/runner.sh`
 - **What**: Inside the `while [[ $ROUND -le $MAX_ROUNDS ]]` loop, after the `count_pending` exit check and before `fill_prompt`, add a block that detects already-completed rounds by checking for `${SESSION_DIR}/batch-${ROUND}-results.json`. If the file exists, the runner skips orchestrator spawn for that round and advances to ROUND+1.
 - **Depends on**: [2] — the skip uses `ROUND` which must come from state on resume
@@ -30,7 +30,7 @@ Surgical fixes across three files (`runner.sh`, `orchestrator-round.md`, `map_re
 - **Context**: Insertion point is after line 598 (`break` for pending=0) and before line 601 (`echo "--- Round $ROUND ---"`). Skip block: print a message ("Round $ROUND: results file already exists — skipping"), run the same `state.current_round = ROUND + 1` Python update used at line 797, increment `ROUND=$(( ROUND + 1 ))`, then `continue`. `SESSION_DIR` is already in scope. The results file path is `${SESSION_DIR}/batch-${ROUND}-results.json`.
 - **Verification**: `grep -c 'batch-.*results.json' claude/overnight/runner.sh` ≥ 1 — pass if ≥ 1, fail if 0
 
-### Task 4: Fix `MERGED_BEFORE` capture to per-round + stall check to `-le 0`
+### [x] Task 4: Fix `MERGED_BEFORE` capture to per-round + stall check to `-le 0`
 - **Files**: `claude/overnight/runner.sh`
 - **What**: Remove the pre-loop `MERGED_BEFORE` initialization block (lines 522–530, which incorrectly counts merged features before the loop runs on resume), add a per-round capture at the top of the loop body, and tighten the stall circuit breaker to catch negative values.
 - **Depends on**: [3] — `MERGED_BEFORE` capture must be placed after the batch-file skip block from Task 3 and before `fill_prompt`
@@ -57,7 +57,7 @@ Surgical fixes across three files (`runner.sh`, `orchestrator-round.md`, `map_re
 - **Context**: Guard placement: after `fs = state.features[name]` and before `fs.status = ...` in each of the three loops. Mirror exactly the pattern in `_handle_missing_results()` at lines 162–164: `if fs.status in _TERMINAL_STATUSES: continue`. `_TERMINAL_STATUSES = frozenset({"merged", "failed", "deferred"})` at line 32 — use the constant, not hardcoded strings. The `features_merged` loop (lines 89–95) must NOT receive the guard — overwriting `failed→merged` on a successful retry is correct behavior. Do not modify `features_merged`.
 - **Verification**: `grep -c '_TERMINAL_STATUSES' claude/overnight/map_results.py` ≥ 4 (1 constant definition + 1 in `_handle_missing_results` + 3 new guards) — pass if ≥ 4
 
-### Task 7: Create `tests/test_map_results.py` with terminal-status guard unit tests
+### [x] Task 7: Create `tests/test_map_results.py` with terminal-status guard unit tests
 - **Files**: `tests/test_map_results.py` (new file)
 - **What**: Unit tests that verify the three new guards in `_map_results_to_state()` and a regression test confirming retry-success still updates status correctly. Four test functions: `test_paused_result_does_not_overwrite_merged`, `test_failed_result_does_not_overwrite_merged`, `test_deferred_result_does_not_overwrite_merged`, `test_merged_result_overwrites_failed`.
 - **Depends on**: [6]
@@ -65,7 +65,7 @@ Surgical fixes across three files (`runner.sh`, `orchestrator-round.md`, `map_re
 - **Context**: Import `_map_results_to_state` from `claude.overnight.map_results` (it's a module-level function). Use `tmp_path` pytest fixture for state files. Minimal state dict structure that `load_state()` accepts: `{"session_id": "t", "phase": "executing", "plan_ref": "", "current_round": 1, "started_at": "<iso>", "updated_at": "<iso>", "features": {"feat": {"status": "<initial>"}}, "integration_branch": "main"}`. Write to `tmp_path / "overnight-state.json"` via `json.dumps`. After calling `_map_results_to_state(results, state_path, batch_id=1)`, load `overnight-state.json` from disk and assert `data["features"]["feat"]["status"]`. For guard tests: `results = {"features_paused": [{"name": "feat", "error": None}]}` etc., initial status `"merged"`, assert status is still `"merged"`. For the regression test: initial status `"failed"`, `results = {"features_merged": ["feat"]}`, assert status becomes `"merged"`. Follow import style in existing test files (e.g., `tests/test_dispatch.py`).
 - **Verification**: `just test` exits 0 and `tests/test_map_results.py` exists — pass if both conditions hold
 
-### Task 8: Create `tests/test_runner_resume.py` with `count_pending()` paused coverage
+### [x] Task 8: Create `tests/test_runner_resume.py` with `count_pending()` paused coverage
 - **Files**: `tests/test_runner_resume.py` (new file)
 - **What**: Tests for runner.sh resume behavior. Two tests: (a) `count_pending()` returns non-zero for paused-only state; (b) `count_pending()` returns 0 for merged-only state. A structural assertion verifies runner.sh actually contains `'paused'` in the `count_pending` function body.
 - **Depends on**: [1, 2]

@@ -519,15 +519,6 @@ START_TIME=$(date +%s)
 ROUND=$(STATE_PATH="$STATE_PATH" python3 -c "import json, os; print(json.load(open(os.environ['STATE_PATH']))['current_round'])")
 STALL_COUNT=0
 STALL_FLAG=$(mktemp)
-MERGED_BEFORE=0
-
-# Count already-merged features at start
-MERGED_BEFORE=$(STATE_PATH="$STATE_PATH" python3 -c "
-import json, os
-state = json.load(open(os.environ['STATE_PATH']))
-features = state.get('features', {})
-print(sum(1 for f in features.values() if f.get('status') == 'merged'))
-")
 
 echo "=== Overnight Runner ==="
 echo "  State:      $STATE_PATH"
@@ -612,6 +603,14 @@ save_state(state, Path(os.environ['STATE_PATH']))
         ROUND=$(( ROUND + 1 ))
         continue
     fi
+
+    # Capture merged count at start of round (per-round, after completed-round skip)
+    MERGED_BEFORE=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
+features = state.get('features', {})
+print(sum(1 for f in features.values() if f.get('status') == 'merged'))
+")
 
     echo "--- Round $ROUND (${PENDING} features pending) ---"
     log_event "round_start" "$ROUND" "{\"pending\": $PENDING}"
@@ -775,7 +774,7 @@ print(sum(1 for f in features.values() if f.get('status') == 'merged'))
     log_event "round_setup_start" "$ROUND"
 
     # Progress circuit breaker
-    if [[ $MERGED_THIS_ROUND -eq 0 ]]; then
+    if [[ $MERGED_THIS_ROUND -le 0 ]]; then
         STALL_COUNT=$(( STALL_COUNT + 1 ))
         echo "Warning: zero features merged this round (stall count: $STALL_COUNT/2)"
         if [[ $STALL_COUNT -ge 2 ]]; then

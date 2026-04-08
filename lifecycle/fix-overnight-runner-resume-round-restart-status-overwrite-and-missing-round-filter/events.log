@@ -12,3 +12,8 @@
 {"ts": "2026-04-07T22:10:00Z", "event": "task_complete", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "task": 5, "batch": 0, "status": "success"}
 {"ts": "2026-04-07T22:10:00Z", "event": "task_complete", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "task": 6, "batch": 0, "status": "success"}
 {"ts": "2026-04-07T22:10:00Z", "event": "batch_dispatch", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "batch": 1, "tasks": [3, 7, 8]}
+{"ts": "2026-04-07T22:30:00Z", "event": "task_complete", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "task": 3, "batch": 1, "status": "success"}
+{"ts": "2026-04-07T22:30:00Z", "event": "task_complete", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "task": 7, "batch": 1, "status": "success"}
+{"ts": "2026-04-07T22:30:00Z", "event": "task_complete", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "task": 8, "batch": 1, "status": "success"}
+{"ts": "2026-04-07T22:30:00Z", "event": "batch_dispatch", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "batch": 2, "tasks": [4]}
+{"ts": "2026-04-07T22:40:00Z", "event": "task_complete", "feature": "fix-overnight-runner-resume-round-restart-status-overwrite-and-missing-round-filter", "task": 4, "batch": 2, "status": "success"}
