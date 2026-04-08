@@ -385,7 +385,7 @@
   </style>
   {% block head %}{% endblock %}
 </head>
-<body>
+<body hx-ext="morph">
   <header>
     <h1>Agent Dashboard</h1>
     <nav>
@@ -408,19 +408,19 @@
       </div>
 
       <div class="dash-grid-side">
-        <section id="fleet-panel" aria-label="Agent fleet" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="innerHTML">
+        <section id="fleet-panel" aria-label="Agent fleet" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="morph">
           <h2>Agent Fleet</h2>
           <p class="empty-state">Loading...</p>
         </section>
       </div>
     </div>
 
-    <section id="swim-lane" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="innerHTML">
+    <section id="swim-lane" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="morph">
       <h2>Timeline</h2>
       <p class="empty-state">Loading...</p>
     </section>
 
-    <section id="round-history" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="innerHTML"><p class="empty-state">Loading...</p></section>
+    <section id="round-history" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="morph"><p class="empty-state">Loading...</p></section>
 
     <section id="pipeline-panel" class="section-primary">
       {% block pipeline_panel %}{% include "pipeline_panel.html" %}{% endblock %}
