@@ -516,7 +516,7 @@ trap cleanup SIGINT SIGTERM SIGHUP
 # ---------------------------------------------------------------------------
 
 START_TIME=$(date +%s)
-ROUND=1
+ROUND=$(STATE_PATH="$STATE_PATH" python3 -c "import json, os; print(json.load(open(os.environ['STATE_PATH']))['current_round'])")
 STALL_COUNT=0
 STALL_FLAG=$(mktemp)
 MERGED_BEFORE=0
