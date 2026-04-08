@@ -378,7 +378,7 @@
       }
       @media (prefers-reduced-motion: no-preference) {
         .badge { transition: background-color 300ms ease-out, border-color 300ms ease-out, color 300ms ease-out; }
-        .htmx-added {
+        .page-loaded .htmx-added {
           animation: fade-in 200ms ease-out both;
         }
       }
@@ -452,5 +452,9 @@
   </main>
 
   {% block body_extra %}{% endblock %}
+  <script>
+    /* Gate entry animations: add page-loaded after initial HTMX swaps settle */
+    setTimeout(function () { document.body.classList.add('page-loaded'); }, 500);
+  </script>
 </body>
 </html>
