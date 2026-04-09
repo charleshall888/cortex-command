@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: c5f3e0a4-9d6f-4a1c-b8e3-f4a5b6c7d8e9
 title: "Apply confirmed-safe permission tightening"
-status: backlog
+status: complete
 priority: high
 type: task
 tags: [permissions-audit, security, shareability]
@@ -10,6 +10,13 @@ created: 2026-04-09
 updated: 2026-04-09
 parent: 054
 discovery_source: research/permissions-audit/research.md
+session_id: null
+lifecycle_phase: review
+lifecycle_slug: apply-confirmed-safe-permission-tightening
+complexity: complex
+criticality: high
+spec: lifecycle/apply-confirmed-safe-permission-tightening/spec.md
+areas: [skills]
 ---
 
 # Apply confirmed-safe permission tightening

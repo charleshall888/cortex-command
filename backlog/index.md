@@ -5,11 +5,9 @@
 | 50 | Define output floors for interactive approval and overnight compaction | in_progress | high | feature | — | 49 | — |
 | 51 | Add hook-based preprocessing for test/build output | in_progress | high | feature | — | 49 | — |
 | 54 | Harden settings.json permissions for public distribution | backlog | high | epic | — | — | — |
-| 55 | Verify escape hatch bypass mechanism | backlog | high | spike | — | 054 | — |
-| 56 | Apply confirmed-safe permission tightening | backlog | high | task | — | 054 | — |
-| 58 | Close exfiltration channels in sandbox-excluded commands | backlog | high | task | — | 054 | — |
+| 55 | Verify escape hatch bypass mechanism | in_progress | high | spike | — | 054 | — |
+| 58 | Close exfiltration channels in sandbox-excluded commands | in_progress | high | task | — | 054 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
-| 47 | Investigate gaps in settings.json deny list | backlog | medium | task | — | — | — |
 | 49 | Improve agent output signal-to-noise ratio | refined | medium | epic | — | — | — |
 | 52 | Audit skill prompts and remove verbose instructions above the floor | draft | medium | chore | 50 | 49 | — |
 | 53 | Add subagent output format specs and compress synthesis | draft | medium | feature | 50, 52 | 49 | — |
@@ -24,13 +22,11 @@
 ## Backlog
 
 - **54** Harden settings.json permissions for public distribution
-- **55** Verify escape hatch bypass mechanism
-- **56** Apply confirmed-safe permission tightening
-- **58** Close exfiltration channels in sandbox-excluded commands
 - **8** Auto-rename Claude Code session to active lifecycle feature name
-- **47** Investigate gaps in settings.json deny list
 
 ## In-Progress
 
 - **50** Define output floors for interactive approval and overnight compaction (in_progress)
 - **51** Add hook-based preprocessing for test/build output (in_progress)
+- **55** Verify escape hatch bypass mechanism (in_progress)
+- **58** Close exfiltration channels in sandbox-excluded commands (in_progress)
