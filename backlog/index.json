@@ -52,5 +52,33 @@
     "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
+  },
+  {
+    "id": 48,
+    "title": "Trim and instrument overnight plan-gen prompt",
+    "status": "refined",
+    "priority": "low",
+    "type": "chore",
+    "tags": [
+      "overnight",
+      "orchestrator",
+      "plan-gen"
+    ],
+    "areas": [],
+    "created": "2026-04-09",
+    "updated": "2026-04-09",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-plan-building/research.md",
+    "plan": null,
+    "uuid": null,
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": null,
+    "repo": null
   }
 ]
