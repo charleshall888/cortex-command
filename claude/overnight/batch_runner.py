@@ -1695,6 +1695,9 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                         spec_path=Path(f"lifecycle/{name}/spec.md"),
                         complexity=tier,
                         criticality=criticality,
+                        base_branch=_effective_base_branch(
+                            repo_path_map.get(name), integration_branches, config.base_branch,
+                        ),
                         repo_path=_effective_merge_repo_path(repo_path_map.get(name), integration_worktrees, integration_branches, session_id),
                         log_path=config.pipeline_events_path,
                     )

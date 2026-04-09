@@ -33,7 +33,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - **Acceptance criteria**:
   - Feature statuses: `pending → running → merged` (success path); `running → paused` (recoverable failure); `running → deferred` (ambiguous intent, human decision required); `running → failed` (unrecoverable)
   - `paused` means a recoverable error (merge conflict, test failure, agent timeout) — paused features auto-retry when the session resumes
-  - `deferred` means awaiting explicit human decision — deferred features do not auto-retry
+  - `deferred` means awaiting explicit human decision — deferred features do not auto-retry. Sources: ambiguous intent (exit report `action: "question"`), CI gate block, or non-APPROVED post-merge review verdict after rework exhaustion
   - One feature's failure does not block other features in the same round (fail-forward model)
   - Per-feature recovery metadata is tracked: `recovery_attempts` and `recovery_depth` counters
 - **Priority**: must-have
@@ -50,6 +50,20 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - Repair attempt cap is a fixed architectural constraint: single escalation (Sonnet → Opus) for merge conflicts
   - If repair fails after escalation, feature is paused; in-progress merge is aborted before returning
   - Test gate runs after any resolution; on gate failure, repair branch is cleaned up
+- **Priority**: must-have
+
+### Post-Merge Review
+
+- **Description**: After a feature merges successfully, the pipeline checks whether it qualifies for spec-compliance review per the tier/criticality gating matrix. Qualifying features are reviewed by a fresh agent; non-qualifying features skip directly to completion.
+- **Inputs**: Merged feature; `lifecycle/{feature}/events.log` (tier and criticality); `lifecycle/{feature}/spec.md` (review benchmark); gating matrix
+- **Outputs**: `lifecycle/{feature}/review.md` (review artifact with verdict JSON); `review_verdict` event in per-feature events.log; deferral file if non-APPROVED after rework
+- **Acceptance criteria**:
+  - Gating matrix: complex tier at any criticality → review; simple tier at high/critical → review; simple tier at low/medium → skip
+  - Review agent dispatched via `dispatch_review()` in `claude/pipeline/review_dispatch.py`; batch_runner owns all `events.log` writes; review agent writes only `review.md`
+  - 2-cycle rework loop: CHANGES_REQUESTED cycle 1 → write feedback to `orchestrator-note.md` → dispatch fix agent → SHA circuit breaker → re-merge (`ci_check=False`) → cycle 2 review
+  - Non-APPROVED after cycle 2, REJECTED at any cycle, or review agent failure → feature status `deferred`; deferral file written for morning triage
+  - APPROVED at any cycle → `review_verdict`, `phase_transition`, and `feature_complete` events written to per-feature events.log; feature proceeds to merged flow
+  - Morning review synthetic events (`review_verdict: APPROVED, cycle: 0`) gated on the same matrix — only written for features that legitimately skip review
 - **Priority**: must-have
 
 ### Post-Merge Test Failure Recovery
