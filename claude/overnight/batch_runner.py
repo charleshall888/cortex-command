@@ -28,8 +28,11 @@ from claude.common import (
     compute_dependency_batches,
     mark_task_done_in_plan,
     read_criticality,
+    read_tier,
+    requires_review,
 )
 from claude.pipeline.dispatch import dispatch_task
+from claude.pipeline.review_dispatch import ReviewResult, dispatch_review
 from claude.pipeline.conflict import ConflictClassification, dispatch_repair_agent, resolve_trivial_conflict
 from claude.pipeline.merge import merge_feature
 from claude.pipeline.parser import FeatureTask, parse_feature_plan, parse_master_plan
@@ -1211,6 +1214,7 @@ def _apply_feature_result(
     integration_branches: dict[str, str] | None = None,
     integration_worktrees: dict[str, str] | None = None,
     session_id: str = "",
+    review_result: ReviewResult | None = None,
 ) -> None:
     """Sync status-dispatch and circuit-breaker logic extracted from _accumulate_result.
 
@@ -1333,6 +1337,31 @@ def _apply_feature_result(
         )
 
         if merge_result.success:
+            # Review gating: if review was required and deferred, handle early return
+            if review_result is not None and review_result.deferred:
+                batch_result.features_deferred.append({
+                    "name": name,
+                    "question_count": 1,
+                })
+                overnight_log_event(
+                    FEATURE_DEFERRED,
+                    config.batch_id,
+                    feature=name,
+                    details={"review_verdict": review_result.verdict, "review_cycle": review_result.cycle},
+                    log_path=config.overnight_events_path,
+                )
+                _write_back_to_backlog(
+                    name, "in_progress", config.batch_id,
+                    config.overnight_events_path,
+                    backlog_id=backlog_ids.get(name),
+                )
+                try:
+                    cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+                except Exception:
+                    pass
+                return
+
+            # review_result is None (no review needed) or approved — continue to FEATURE_COMPLETE
             batch_result.features_merged.append(name)
             consecutive_pauses_ref[0] = 0
             overnight_log_event(
@@ -1590,6 +1619,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                     integration_branches=integration_branches,
                     integration_worktrees=integration_worktrees,
                     session_id=session_id,
+                    review_result=None,
                 )
                 if result.repair_agent_used:
                     recovery_attempts_map[name] = recovery_attempts_map.get(name, 0) + 1
@@ -1637,6 +1667,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                     integration_branches=integration_branches,
                     integration_worktrees=integration_worktrees,
                     session_id=session_id,
+                    review_result=None,
                 )
                 return
 
@@ -1652,7 +1683,44 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             )
 
             if merge_result.success:
-                # Standard merged path
+                # Review gating: check if post-merge review is required
+                tier = read_tier(name)
+                criticality = read_criticality(name)
+                if requires_review(tier, criticality):
+                    rr = await dispatch_review(
+                        feature=name,
+                        worktree_path=worktree_paths.get(name, Path(f"worktrees/{name}")),
+                        branch=actual_branch or f"pipeline/{name}",
+                        spec_path=Path(f"lifecycle/{name}/spec.md"),
+                        complexity=tier,
+                        criticality=criticality,
+                        repo_path=_effective_merge_repo_path(repo_path_map.get(name), integration_worktrees, integration_branches, session_id),
+                        log_path=config.pipeline_events_path,
+                    )
+                    if rr.deferred:
+                        batch_result.features_deferred.append({
+                            "name": name,
+                            "question_count": 1,
+                        })
+                        overnight_log_event(
+                            FEATURE_DEFERRED,
+                            config.batch_id,
+                            feature=name,
+                            details={"review_verdict": rr.verdict, "review_cycle": rr.cycle},
+                            log_path=config.overnight_events_path,
+                        )
+                        _write_back_to_backlog(
+                            name, "in_progress", config.batch_id,
+                            config.overnight_events_path,
+                            backlog_id=backlog_ids.get(name),
+                        )
+                        try:
+                            cleanup_worktree(name, repo_path=repo_path_map.get(name), worktree_path=worktree_paths.get(name))
+                        except Exception:
+                            pass
+                        return
+
+                # Standard merged path (no review needed, or review approved)
                 batch_result.features_merged.append(name)
                 consecutive_pauses_ref[0] = 0
                 overnight_log_event(
@@ -1731,6 +1799,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                     integration_branches=integration_branches,
                     integration_worktrees=integration_worktrees,
                     session_id=session_id,
+                    review_result=None,
                 )
                 return
 
@@ -1746,6 +1815,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                     integration_branches=integration_branches,
                     integration_worktrees=integration_worktrees,
                     session_id=session_id,
+                    review_result=None,
                 )
                 return
 
