@@ -188,9 +188,20 @@
       "Edit(~/.zprofile)",
       "Edit(~/.ssh/**)",
       "WebFetch(domain:localhost)",
-      "WebFetch(domain:127.0.0.1)"
+      "WebFetch(domain:127.0.0.1)",
+      "Read(~/.config/gh/hosts.yml)",
+      "Read(**/*.p12)",
+      "WebFetch(domain:0.0.0.0)",
+      "Bash(crontab *)",
+      "Bash(eval *)",
+      "Bash(xargs *rm*)",
+      "Bash(find * -delete*)",
+      "Bash(find * -exec rm*)",
+      "Bash(find * -exec shred*)"
     ],
-    "ask": [],
+    "ask": [
+      "Bash(git restore *)"
+    ],
     "defaultMode": "default"
   },
   "enableAllProjectMcpServers": false,
@@ -353,7 +364,5 @@
     ]
   },
   "alwaysThinkingEnabled": true,
-  "effortLevel": "high",
-  "skipDangerousModePermissionPrompt": true,
-  "model": "opus[1m]"
+  "effortLevel": "high"
 }
