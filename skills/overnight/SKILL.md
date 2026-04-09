@@ -214,13 +214,30 @@ On user approval, execute these steps in order:
 
     **Error**: If the dashboard health check times out or the `.pid` file is unreadable, continue without failing — the dashboard is optional. Report: "Dashboard not detected at http://localhost:8080. Run `just dashboard` in a separate terminal to enable live progress monitoring."
 
-7. **Print the runner command**: Present the just command for the user to execute in a terminal:
+7. **Print the runner command**: Ask the user whether to run now or schedule for later using AskUserQuestion:
+
+    ```
+    Run now or schedule for later?
+
+      [1] Run now — launch the overnight session immediately
+      [2] Schedule for specific time — delay launch until a target time
+    ```
+
+    > **Usage context (dormant)**: No programmatic access to Claude Code's subscription usage data (remaining tokens, reset time) currently exists from within an agent context. When such access becomes available (e.g., a `/usage` API, a `usage-cache.json` file, or an environment variable), auto-display it alongside the scheduling prompt to help the user choose a launch time. Until then, no usage information is shown.
+
+    **Run now (option 1)**: Present the existing `overnight-start` command:
 
     ```
     overnight-start $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
     ```
 
-    Substitute the actual `{session_id}` and adjust the time limit (second positional arg) to match the user's approved time limit. Args are positional — do not use `--state` or `name=value` syntax. Run from any directory — the absolute path is used.
+    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Then present the `overnight-schedule` command:
+
+    ```
+    overnight-schedule <target-time> $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
+    ```
+
+    For both options, substitute the actual `{session_id}` and adjust the time limit (last positional arg) to match the user's approved time limit. Args are positional — do not use `--state` or `name=value` syntax. Run from any directory — the absolute path is used.
 
 8. **Inform the user**: The user runs this command in a terminal to start overnight execution. It launches the runner in a detached tmux session named `overnight-runner` — attach with `tmux attach -t overnight-runner` to monitor progress. The runner operates autonomously and tracks progress in the state file and event log. The user can check status at any time by reading `lifecycle/sessions/{session_id}/overnight-state.json` or resume with `/overnight resume`.
 
@@ -297,7 +314,7 @@ A successful `/overnight` invocation satisfies all of the following:
 3. **Session manifest written**: `lifecycle/sessions/{session_id}/session.json` exists with correct `session_id`, `type: overnight`, and feature slugs.
 4. **Integration branch created**: `git branch overnight/{session_id}` exists in the repository.
 5. **Symlink deferred to runner**: The `latest-overnight` symlink is updated by the runner on startup, not by the skill.
-6. **Runner command presented**: The `overnight-start` command is shown with an absolute `--state` path using `$CORTEX_COMMAND_ROOT` and the correct time limit.
+6. **Runner command presented**: Either the `overnight-start` command (run now) or the `overnight-schedule` command (scheduled) is shown with an absolute state path using `$CORTEX_COMMAND_ROOT` and the correct time limit.
 7. **Session start event logged**: `overnight-events.log` has a `SESSION_START` entry.
 
 A successful `/overnight resume` satisfies:
