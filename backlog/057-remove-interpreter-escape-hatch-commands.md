@@ -9,7 +9,7 @@ tags: [permissions-audit, security]
 created: 2026-04-09
 updated: 2026-04-09
 parent: 054
-blocked-by: [055]
+blocked-by: []
 discovery_source: research/permissions-audit/research.md
 ---
 
