@@ -2,26 +2,19 @@
 
 ## Research Questions
 
-1. **What does caveman propose?** What specific patterns does it use for brevity, and which translate to a structured harness vs. freeform prompting?
-   → **Answered.** Caveman uses graduated intensity levels (lite/full/ultra) that progressively strip articles, filler, hedging, and grammar. It claims 65-75% token reduction. The "auto-clarity" escape hatch (drop brevity for safety warnings, irreversible actions, confusion) is the most transferable concept. The blanket grammar-stripping is less applicable — it fights Claude Code's built-in output efficiency instructions and adds input tokens on every message.
+1. **What does caveman propose?** → **Answered.** Graduated intensity levels stripping linguistic fluff. The "auto-clarity" escape hatch (drop brevity for safety/confusion) is the most transferable concept. Blanket grammar-stripping fights Claude Code's built-in output instructions.
 
-2. **What has IndyDevDan covered?** What recent content addresses agent output efficiency or communication patterns?
-   → **Partially answered.** IndyDevDan's public work focuses on hook-based agent observability (real-time monitoring via event tracking), not output efficiency per se. The observability angle is relevant: measuring what agents actually output is a prerequisite to optimizing it. No specific recent video on brevity/communication patterns found.
+2. **What has IndyDevDan covered?** → **Partially answered.** Focus on hook-based agent observability, not output efficiency directly. Measuring what agents output is a prerequisite to optimizing it.
 
-3. **Where does the current harness waste output?** Which SKILL.md files, reference docs, and prompts generate the most low-signal output in interactive sessions?
-   → **Answered.** Five categories identified (see Codebase Analysis). The biggest waste: (a) subagent prompts with no brevity constraints, (b) synthesis skills reproducing all intermediate findings, (c) phase transition announcements on routine transitions with no surprises.
+3. **Where does the current harness waste output?** → **Answered.** (a) Subagent prompts with no output format guidance, (b) synthesis skills reproducing all intermediate findings, (c) phase transition announcements on routine transitions.
 
-4. **What's the subagent communication ROI?** How much of a subagent's returned context does the parent actually act on? What report format maximizes utility?
-   → **Answered.** Parents see only the subagent's final message — all intermediate tool calls and reasoning stay isolated. Three patterns: unstructured (open-ended research), structured JSON (programmatic orchestration), file-based (chaining). The key lever is specifying output format and length in the dispatch prompt. Most harness skills do neither.
+4. **What's the subagent communication ROI?** → **Answered.** Parents see only the final message. Three return patterns: unstructured, structured JSON, file-based. The key lever is specifying output format in the dispatch prompt. Most harness skills do neither.
 
-5. **What patterns in current prompts could be trimmed?** Are there redundant instructions, over-specified formats, or verbose templates?
-   → **Answered.** Only commit/pr skills have explicit "no conversational text" constraints. All synthesis skills (critical-review, research, pr-review) give subagents full artifact content with no output-length guidance. parallel-agents.md says "Expected output: Summary of what you found and fixed" but doesn't enforce brevity. Phase transition instructions use open-ended "briefly summarize" without defining what brief means.
+5. **What patterns could be trimmed?** → **Answered.** Only commit/pr have "no conversational text" constraints. All synthesis skills give subagents no output-length guidance. Phase transitions use open-ended "briefly summarize."
 
-6. **What does Claude Code's system prompt already say about output efficiency?** How does the harness layer interact with built-in output instructions?
-   → **Answered.** The system prompt includes: "Go straight to the point. Try the simplest approach first. Be extra concise." and "Keep your text output brief and direct. Lead with the answer or action, not the reasoning." Anthropic employees get numeric limits (25 words between tool calls, 100 words final response). The harness's SKILL.md files often override these defaults by mandating structured multi-section output, synthesis presentations, and phase transition summaries. The two layers can fight each other.
+6. **What does the system prompt already say?** → **Answered.** "Go straight to the point. Be extra concise." Harness SKILL.md files often override these defaults with verbose output requirements. The two layers fight each other.
 
-7. **What trade-offs exist between brevity and correctness?** When does terser output cause information loss that leads to rework?
-   → **Answered.** A March 2026 paper (arXiv 2604.00025, 31 models, 1,485 problems) found brevity constraints improved large model accuracy by 26pp on verbosity-induced errors — forcing commitment to correct answers rather than rambling into mistakes. Counter-argument from HN discussion: LLMs are autoregressive, so forcing premature answers can hurt reasoning on genuinely complex problems. The resolution: brevity helps for communication/reporting output but should not constrain internal reasoning (chain-of-thought).
+7. **What trade-offs exist between brevity and correctness?** → **Answered.** arXiv 2604.00025: brevity improved accuracy 26pp on verbosity-induced errors. Counter: LLMs reason through output. Resolution: brevity for communication/reporting, not internal reasoning.
 
 ## Codebase Analysis
 
@@ -43,232 +36,75 @@
 
 ### Pattern: Subagent Prompts Without Output Guidance
 
-From `skills/critical-review/SKILL.md` — reviewer agents receive full artifact content and detailed instructions, but no length constraint:
-```
-Return findings in this exact format:
-[structured sections listed]
-[NO LENGTH CONSTRAINT]
-```
-
-From `skills/research/SKILL.md` — 3-5 agents dispatched, each receives focused scope but no brevity directive. Agent 5 (Adversarial) receives summarized findings from agents 1-4 with no response-length guidance.
-
-From `claude/reference/parallel-agents.md`:
-```
-Expected output: Summary of what you found and fixed.
-```
-This is the closest the harness gets to output guidance — but "summary" is undefined.
+From `skills/critical-review/SKILL.md` — reviewer agents receive full artifact content but no length constraint. From `skills/research/SKILL.md` — 3-5 agents dispatched with no brevity directive. From `claude/reference/parallel-agents.md` — "Expected output: Summary of what you found and fixed" but "summary" is undefined.
 
 ### Pattern: Synthesis Skills Reproduce All Intermediate Output
 
-Critical-review, research, and pr-review all follow the same pattern:
-1. Dispatch N parallel subagents
-2. Receive all N responses
-3. Synthesize into structured output
-4. Present full synthesis to user (including per-agent sections)
-
-Even empty/failed agent findings trigger warning notes. The synthesis step adds value, but presenting both per-agent findings and synthesis creates redundancy.
+Critical-review, research, and pr-review: dispatch N subagents → receive all responses → synthesize → present full synthesis including per-agent sections. Even empty/failed agent findings trigger warning notes.
 
 ### Pattern: Phase Transitions as Status Updates
 
-Lifecycle: "announce the transition and proceed to the next phase automatically. Between phases, briefly summarize what was accomplished and what comes next."
-
-Discovery: "summarize findings, and proceed to the next phase automatically."
-
-These produce 5-6 transition announcements for a complex lifecycle feature. Some are genuinely useful (escalation to Complex tier); most are routine.
+Lifecycle and discovery produce 5-6 transition announcements for complex features. Some are genuinely useful (escalation); most are routine.
 
 ### Pattern: Verification Output Volume
 
-`verification-mindset.md` mandates "State claim WITH evidence" — this is load-bearing (prevents false completion claims) but encourages more output, not less. The pattern "Run test command → See: 34/34 pass → All tests pass" is already compressed. The risk is in verification of requirements, where agents sometimes reproduce the full checklist with per-item evidence.
-
-### Pattern: Agents.md Is Already Lean
-
-At 27 lines, the global `Agents.md` is not a source of waste. The conditional-loading table (3 entries) gates additional context behind triggers. This is well-designed — context loads only when relevant.
+`verification-mindset.md` mandates "State claim WITH evidence" — load-bearing but verbose. The risk is in requirements verification, where agents reproduce the full checklist with per-item evidence.
 
 ## Web & Documentation Research
 
-### Caveman Project (github.com/JuliusBrussee/caveman)
+### Community Approaches
 
-Core approach: graduated compression levels that strip linguistic fluff while preserving technical accuracy. Three transferable concepts:
+**Caveman** (github.com/JuliusBrussee/caveman): Transferable concepts: (1) auto-clarity escape hatch — drop brevity for safety/confusion, (2) pattern template `[thing] [action] [reason]. [next step]`, (3) boundaries — code/commits/PRs write normal. Non-transferable: grammar stripping fights system prompt.
 
-1. **Auto-clarity escape hatch**: Drop brevity for safety warnings, irreversible actions, user confusion. Resume after. This principle applies directly — certain output MUST be verbose (destructive operation confirmations, error diagnostics, ambiguous situations).
+**Claude-Token-Efficient** (github.com/drona23/claude-token-efficient): Eight behavioral rules targeting sycophancy, re-reading, whole-file rewrites. Simpler than caveman but still blanket.
 
-2. **Pattern template**: `[thing] [action] [reason]. [next step].` — A structural rule that compresses communication without losing information. More useful as a subagent reporting format than as a user-facing style.
+**Anthropic Best Practices** (code.claude.com): "Keep CLAUDE.md under 200 lines." "Bloated CLAUDE.md files cause Claude to ignore your actual instructions!" "Ruthlessly prune."
 
-3. **Boundaries**: "Code/commits/PRs: write normal." — Recognizes that code output and formal artifacts should not be compressed. Brevity applies to communication, not artifacts.
+**HN Discussion** (item 47581701): For brevity: output tokens cost 5-10x input. Against: LLMs reason through output; CLAUDE.md loads on every message so on low-output exchanges it's a net token increase. Pragmatic middle: brevity for communication, not reasoning.
 
-Non-transferable: grammar stripping (articles, fragments) fights the system prompt's own efficiency instructions and can make output harder to parse. The wenyan modes are novelty.
+**arXiv 2604.00025**: 31 models, 1,485 problems. Brevity improved accuracy 26pp on verbosity-induced errors. Caveat: applies to answer output, not chain-of-thought.
 
-### Claude-Token-Efficient (github.com/drona23/claude-token-efficient)
+### Official Anthropic Sources
 
-Eight-rule CLAUDE.md that targets: sycophantic framing, file re-reading, whole-file rewrites, unnecessary pleasantries. Claims ~63% output reduction. Simpler than caveman — focuses on behaviors rather than grammar transformation. The "answer first, reasoning after" rule has research backing (arXiv paper) but can hurt complex reasoning.
+**Caveat on Anthropic sources**: These articles are published by the vendor whose revenue scales with API token consumption. Patterns promoting more subagents and more harness complexity also increase API usage. Findings are treated as authoritative for how Claude Code works (they built it) but not as independently validated engineering research. Independent sources (arXiv paper, HN discussion, community projects) provide external perspective where noted.
 
-### Anthropic Best Practices (code.claude.com/docs/en/best-practices)
+#### Context Engineering (anthropic.com/engineering/effective-context-engineering)
 
-Key guidance relevant to this topic:
-
-- "Keep CLAUDE.md concise. For each line, ask: 'Would removing this cause Claude to make mistakes?' If not, cut it."
-- "Bloated CLAUDE.md files cause Claude to ignore your actual instructions!"
-- "Context window is the most important resource to manage."
-- Subagents recommended specifically for investigation to avoid context pollution
-- "If Claude keeps doing something you don't want despite having a rule against it, the file is probably too long and the rule is getting lost."
-- "Ruthlessly prune."
-
-### Hacker News Discussion (item 47581701)
-
-Key arguments:
-- **For brevity**: Output tokens cost 5-10x input tokens. Reducing output has direct cost and speed benefits.
-- **Against blanket brevity**: LLMs are autoregressive — "thinking is inextricably tied to output." Forcing premature answers causes premature commitment. A CLAUDE.md file loads on every message, so on low-output exchanges it's a net token increase.
-- **Pragmatic middle**: Let Claude's defaults stand for reasoning/implementation. Apply brevity constraints only to communication/reporting output.
-
-### Research Paper (arXiv 2604.00025)
-
-31 models, 1,485 problems. Brevity constraints improved large model accuracy by 26 percentage points on problems where verbosity induced errors. Mechanism: forces models to commit to the correct approach rather than rambling through multiple approaches and settling on a wrong one. Important caveat: this applies to answer output, not chain-of-thought reasoning.
-
-### Subagent Communication Patterns (morphllm.com, Claude Code docs)
-
-Three return formats:
-1. **Unstructured** — Natural language. Best for research/exploration. Parent interprets.
-2. **Structured JSON** — SDK `outputFormat` option. Best for programmatic orchestration.
-3. **File-based** — Subagent writes to file, downstream agents read. Best for chaining.
-
-Key insight: "By delegating to a subagent, verbose output stays in the subagent's context window. Only the summary returns to the parent." This isolation is the primary value of subagents for context management.
-
-Practical pattern for brevity: "instruct test runners to 'report only failures' with focused error details rather than full logs."
-
-### Official Anthropic Sources (Deep Dive)
-
-#### Effective Context Engineering for AI Agents (anthropic.com/engineering)
-
-The authoritative framing for this entire topic. Core principle: **"Find the smallest set of high-signal tokens that maximize the likelihood of some desired outcome."** This is not about less — it's about highest-signal.
+Core principle: **"Find the smallest set of high-signal tokens that maximize the likelihood of some desired outcome."**
 
 Key patterns:
-- **Sub-agents should return "condensed, distilled summary of its work (often 1,000-2,000 tokens)"** — Official guidance on subagent return size. This gives a concrete anchor: ~1,000-2,000 tokens per subagent response.
-- **"Clearing tool calls and results"** is a lightweight compaction approach — agents rarely need raw tool outputs after initial processing.
-- **Progressive disclosure / JIT loading** preferred over pre-loading context.
-- **System prompts need "the right altitude"** — specific enough to guide behavior effectively, flexible enough for "strong heuristics to guide behavior" rather than brittle hardcoded logic.
-- **"For an LLM, examples are the 'pictures' worth a thousand words"** — Diverse canonical examples portray expected behavior better than exhaustive rules. This suggests output format examples in dispatch prompts may be more effective than length caps.
+- Subagent returns should be "condensed, distilled summary of its work (often 1,000-2,000 tokens)" — **Note**: this guidance derives from web-search research subagents returning lists of companies. The harness's evidentiary subagents (code review, adversarial analysis, diagnosis) may have a structurally higher floor. Treat as a reference point from a different domain, not a universal anchor.
+- "Clearing tool calls and results" is lightweight compaction — agents rarely need raw outputs after processing.
+- Progressive disclosure / JIT loading preferred over pre-loading.
+- System prompts need "the right altitude" — specific enough to guide, flexible enough for heuristics.
+- **"For an LLM, examples are the 'pictures' worth a thousand words"** — format examples in dispatch prompts are more effective than length caps.
 
-#### How We Built Our Multi-Agent Research System (anthropic.com/engineering)
+#### Multi-Agent Research System (anthropic.com/engineering/multi-agent-research-system)
 
-Anthropic's own production multi-agent system. Directly relevant patterns:
+- **"Each subagent needs an objective, an output format, guidance on tools, and clear task boundaries"** — every dispatch prompt needs an explicit output format.
+- **Lightweight references**: Subagents "call tools to store work in external systems, then pass lightweight references back to the coordinator."
+- **"Without detailed task descriptions, agents duplicate work, leave gaps, or fail to find necessary information."**
+- **"The best prompts are not strict instructions, but frameworks for collaboration"** that define division of labor, problem-solving approaches, and effort budgets.
+- **Performance-token correlation**: "80% of performance variance is explained by token usage alone" (vendor-measured on vendor models; directionally useful but not independently validated). Token efficiency predicts quality, not just cost.
 
-- **"Each subagent needs an objective, an output format, guidance on the tools and sources to use, and clear task boundaries"** — Official guidance that EVERY dispatch prompt needs an explicit output format. This validates DR-2's direction.
-- **Lightweight references, not full data**: Subagents "call tools to store their work in external systems, then pass lightweight references back to the coordinator." A pattern we haven't used — subagents could write findings to files and return pointers instead of inline content.
-- **"Without detailed task descriptions, agents duplicate work, leave gaps, or fail to find necessary information"** — Under-specified dispatch prompts are worse than verbose ones.
-- **Synchronous execution creates bottlenecks**: "The lead agent can't steer subagents, subagents can't coordinate, and the entire system can be blocked while waiting for a single subagent to finish searching."
+#### Harness Design (anthropic.com/engineering/harness-design-long-running-apps)
 
-#### Harness Design for Long-Running Application Development (anthropic.com/engineering)
+- **"Every component in a harness encodes an assumption about what the model can't do on its own, and those assumptions are worth stress testing."** Context anxiety disappeared between Sonnet 4.5 and Opus 4.6, making context-reset scaffolding unnecessary.
+- **Self-evaluation failure**: Agents "confidently praise work — even when quality is obviously mediocre." External evaluators are more tractable.
+- **"Wording directly shapes output character"** — prompt language steers output style. Skill prompt wording directly determines output verbosity.
+- **Sprint contracts**: Explicit success criteria upfront reduce irrelevant output.
+- **File-based communication**: "One agent would write a file, another would read it." Lowest-context-cost communication pattern.
 
-The article the user referenced. Key findings beyond the surface read:
+#### Managed Agents (anthropic.com/engineering/managed-agents)
 
-- **Context resets outperform compaction** for multi-hour tasks (validated for Sonnet 4.5; Opus 4.6 largely eliminated this need). This validates the critical review's concern about compaction interaction.
-- **"Every component in a harness encodes an assumption about what the model can't do on its own, and those assumptions are worth stress testing."** — Some output constraints may be solving problems that current models handle natively. Regular auditing required.
-- **Self-evaluation failure**: Agents "confidently praise the work — even when quality is obviously mediocre." External evaluators are more tractable to tune toward skepticism. This is relevant to verification output — the agent's self-reported verification may be unreliable regardless of format.
-- **"Wording directly shapes output character"** — The specific language in prompts steers output style. Phrases like "museum quality" pushed convergence toward specific aesthetics. This means skill prompt wording directly determines output verbosity — it's not just about adding constraints, it's about how existing instructions are worded.
-- **Sprint contracts**: Explicit success criteria negotiated before work begins. Relevant to subagent dispatch — defining what "done" looks like upfront reduces irrelevant output.
+- **"The session is not Claude's context window"** — the harness decides what enters context each turn from a durable event log. Events can be transformed before reaching Claude.
 
-#### Managed Agents: Scaling (anthropic.com/engineering)
+#### Claude Code Docs: Costs and Context
 
-- **"The session is not Claude's context window"** — The session is an external append-only log. The harness decides what goes into the context window for each turn. Events can be **transformed in the harness before reaching Claude**.
-- **Harness assumptions are temporary** — As models improve, previously load-bearing scaffolding becomes unnecessary. Output constraints that compensate for model weaknesses should be periodically stress-tested.
-
-#### Building Agents with the Claude Agent SDK (anthropic.com/engineering)
-
-- **Subagents "only send relevant information back to the orchestrator, rather than their full context"** — The SDK design assumes filtered returns.
-- **Multiple search subagents should "return only the relevant excerpts"** — Not summaries of everything found, but filtered to relevant excerpts.
-- **"Folder and file structure of an agent becomes a form of context engineering"** — How you organize information IS output engineering.
-
-#### Claude Code Official Docs: Costs and Context
-
-- **"Aim to keep CLAUDE.md under 200 lines"** — Explicit official line budget for always-loaded instructions.
-- **"Move instructions from CLAUDE.md to skills"** — Specialized instructions should be on-demand (skills), not always-loaded (CLAUDE.md). Validates our approach of per-skill constraints over global rules.
-- **Hooks can preprocess data**: Official pattern shows a PreToolUse hook that filters test output to show only failures — `grep -A 5 -E '(FAIL|ERROR|error:)' | head -100`. This is a concrete mechanism for output reduction that doesn't require prompt engineering at all.
-- **Compaction behavior**: Clears older tool outputs first, then summarizes conversation. "Your requests and key code snippets are preserved; detailed instructions from early in the conversation may be lost."
-- **System prompt costs ~4,200 tokens**; auto memory loads first 200 lines or 25KB.
-- **"Delegate verbose operations to subagents"** — Official cost-reduction recommendation.
-- **Skills load on demand** — Only descriptions (~100-200 tokens each) loaded at startup; full content loads only when invoked.
-
-### Official Anthropic Sources (Deep Dive Round 2 — Quantitative Findings)
-
-#### Context Window Token Budget (from interactive simulation at code.claude.com/docs/en/context-window)
-
-Total context window: **200,000 tokens**. Startup auto-load before first prompt:
-
-| Component | Tokens | Notes |
-|-----------|--------|-------|
-| System prompt | 4,200 | Invisible, always first |
-| Auto memory (MEMORY.md) | 680 | First 200 lines or 25KB |
-| Environment info | 280 | cwd, platform, shell, git status |
-| MCP tools (deferred) | 120 | Names only; schemas load on demand |
-| Skill descriptions | 450 | **Not re-injected after /compact** — only invoked skills survive |
-| ~/.claude/CLAUDE.md | 320 | Global instructions |
-| Project CLAUDE.md | 1,800 | "Keep under 200 lines" |
-| **Total startup** | **~7,850** | ~4% of context before first prompt |
-
-Mid-session costs: file reads are 1,100-2,400 tokens each. Path-scoped rules auto-load at 290-380 tokens. A subagent's full file reads (6,100 tokens) compress to a **420-token return** — a **14:1 compression ratio**.
-
-#### Compaction Mechanics
-
-- Triggers at **~95% capacity** (override with `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`)
-- Summary retains **~12% of original** context
-- **Survives compaction**: system prompt, CLAUDE.md files, memory, MCP tools, your requests/intent, key code snippets, files examined/modified, errors and fixes, pending tasks
-- **Lost in compaction**: full tool outputs, intermediate reasoning, skill listing (only invoked skills preserved)
-- **Subagent transcripts are unaffected** by main conversation compaction (stored separately)
-
-This means: after compaction, the agent retains ~12% of what it had. If output was already compressed, that 12% has less redundancy to work with. Compaction-resilient output includes structural markers and key-finding repetition.
-
-#### Subagent Context Economics
-
-| Component | Main agent | Subagent | Savings |
-|-----------|-----------|----------|---------|
-| System prompt | 4,200 | 900 | 79% smaller |
-| CLAUDE.md | 1,800 | 1,800 | Same (loaded fresh) |
-| Auto memory | 680 | 680 | Same (first 200 lines) |
-| MCP + skills | varies | 970 | Subset of parent tools |
-| File reads | in main context | in subagent context | 100% isolated |
-| Return to parent | N/A | ~420 tokens | Only final message returns |
-
-Key insight: subagents are cheap to spin up (900 vs 4,200 system prompt) but their returns enter the parent's context without truncation. **"Running many subagents that each return detailed results can consume significant context"** — official warning.
-
-#### Performance-Token Correlation (from multi-agent research system)
-
-**"80% of performance variance is explained by token usage alone; 95% by tokens + tool calls + model choice."** This is the strongest evidence that output efficiency directly predicts agent quality — not just cost. Token waste isn't just expensive; it degrades results.
-
-Additional numbers: multi-agent systems use 4x tokens vs. chat, 15x for multi-agent vs. chat. Improved tool descriptions alone yielded a 40% decrease in task completion time. "Upgrading to Claude Sonnet 4 is a larger performance gain than doubling the token budget on Claude Sonnet 3.7."
-
-#### Prompt Design: Frameworks, Not Rules
-
-From the multi-agent research system: **"The best prompts for these agents are not just strict instructions, but frameworks for collaboration that define the division of labor, problem-solving approaches, and effort budgets."**
-
-This reframes the entire approach. Instead of adding rules about output length ("max 20 words per bullet"), dispatch prompts should be frameworks that naturally produce focused output: define the objective, specify the return format with an example, set the effort budget, and describe the collaboration contract.
-
-Anti-pattern confirmed: "We started by allowing the lead agent to give simple, short instructions like 'research the semiconductor shortage,' but found these instructions often were vague enough that subagents misinterpreted the task." Under-specified dispatch prompts produce MORE waste, not less.
-
-#### Agent-to-Agent Communication Patterns (deep findings)
-
-**File-based communication**: "One agent would write a file, another would read it and respond either within that file or with a new file" (harness design article). This is the lowest-context-cost communication pattern — zero tokens in the parent's context window.
-
-**Artifact system**: "Implement artifact systems where specialized agents can create outputs that persist independently... reduces token overhead from copying large outputs through conversation history" (multi-agent research system).
-
-**Lightweight references**: "Subagents call tools to store their work in external systems, then pass lightweight references back to the coordinator" (multi-agent research system).
-
-**Sprint contracts**: Before work begins, generator and evaluator negotiate what "done" looks like. "Sprint 3 alone had 27 criteria covering the level editor." Upfront success criteria eliminate irrelevant output by defining exactly what the consumer needs.
-
-#### Failure Modes to Avoid
-
-From the multi-agent research system:
-- **Over-spawning**: "Spawning 50 subagents for simple queries"
-- **Game of telephone**: Information loss during multi-stage processing when large outputs pass through context
-- **Wrong tool**: "An agent searching the web for context that only exists in Slack is doomed from the start"
-- **Duplication**: "One subagent explored the 2021 automotive chip crisis while 2 others duplicated work investigating current 2025 supply chains"
-- **Crosstalk**: "Distracting each other with excessive updates"
-
-From the harness design article:
-- **Self-evaluation leniency**: Agents "identify legitimate issues, then talk themselves into deciding they weren't a big deal and approve the work anyway"
-- **Feature stubs**: Generator "still liable to stub features when facing complexity"
-- **Non-linear improvement**: "I regularly saw cases where I preferred a middle iteration over the last one"
-
-Evaluator tuning method: "Read the evaluator's logs, find examples where its judgment diverged from mine, and update the prompt. It took several rounds."
+- **CLAUDE.md under 200 lines**; specialized instructions should move to skills (on-demand, not always-loaded).
+- **Hook-based preprocessing**: Official pattern filters test output to failures only — `grep -A 5 -E '(FAIL|ERROR|error:)' | head -100`. Deterministic, zero model judgment.
+- **Compaction**: Triggers at ~95% capacity, retains ~12% of original. Clears tool outputs first, then summarizes. Skill descriptions don't survive — only invoked skills preserved. Subagent transcripts unaffected.
+- **Subagent economics**: System prompt 900 tokens (vs 4,200 main). File reads stay isolated. Returns enter parent context untruncated — "running many subagents that each return detailed results can consume significant context."
 
 ## Domain & Prior Art
 
@@ -277,113 +113,86 @@ Evaluator tuning method: "Read the evaluator's logs, find examples where its jud
 | Approach | Scope | Mechanism | Trade-off |
 |----------|-------|-----------|-----------|
 | Caveman | All output | Grammar transformation | Fights system prompt; adds input tokens |
-| Claude-Token-Efficient | All output | Behavioral rules | Simpler but still blanket; can hurt reasoning |
-| Per-skill constraints | Skill output | Targeted format/length specs | Requires per-skill tuning; surgical |
-| Subagent output specs | Agent-to-agent | Prompt-specified format + examples | Most impactful for multi-agent workflows |
-| Lightweight references | Agent-to-agent | Write to files, return pointers | Anthropic's own pattern; most aggressive context isolation |
+| Per-skill constraints | Skill output | Targeted format specs | Requires per-skill tuning; surgical |
+| Subagent output specs | Agent-to-agent | Format + examples | Most impactful for multi-agent workflows |
+| Lightweight references | Agent-to-agent | Write to files, return pointers | Anthropic's own pattern; max context isolation |
 | Hook-based preprocessing | Tool output | Filter before context entry | Zero prompt engineering; deterministic |
 | System prompt defaults | All output | Built-in | Already present; harness skills override it |
 
-### The "Layers" Problem
+### The Layers Problem
 
-Claude Code's output efficiency operates in layers, each potentially fighting the others:
+Claude Code's output efficiency operates in 6 layers, each potentially fighting the others:
 
-1. **System prompt layer**: "Be extra concise. Lead with the answer."
-2. **CLAUDE.md layer**: Can add or override instructions
+1. **System prompt**: "Be extra concise. Lead with the answer."
+2. **CLAUDE.md**: Can add or override instructions
 3. **Skill layer**: SKILL.md instructions often mandate structured multi-section output
 4. **Reference doc layer**: Conditional-loaded docs add context-specific instructions
 5. **Subagent prompt layer**: Dispatch prompts can specify (or not) output expectations
-6. **Compaction layer**: Claude Code automatically summarizes prior context when approaching context limits. This is the only layer that operates *retroactively* — it rewrites prior output after the fact. Compaction interacts with brevity in a non-obvious way: redundancy in output is protective, giving the summarizer multiple anchor points to preserve a finding. Terse output that states something exactly once gives compaction a single chance to keep it or drop it. Overnight sessions are far more likely to trigger compaction (longer running), so brevity constraints may need to be *less* aggressive for overnight agents to ensure compaction-resilience.
+6. **Compaction layer**: Operates retroactively — rewrites prior output when context fills. Redundancy in output is protective (gives summarizer multiple anchor points). Terse output gets one chance to survive. Overnight sessions are most likely to trigger compaction, so overnight output may need to be *less* aggressively compressed for compaction-resilience.
 
-The harness currently has tight constraints at layers 1 and 2, but skills (layer 3) and subagent dispatch (layer 5) override them with verbose output requirements. The most impactful intervention targets layers 3 and 5 — but any intervention must account for layer 6's retroactive effect, especially for overnight sessions where compaction is most likely.
+Skills (layer 3) and subagent dispatch (layer 5) override the system prompt's efficiency instructions. Interventions should target layers 3 and 5 while accounting for layer 6.
 
-### The "Signal, Not Volume" Principle
+### Signal, Not Volume
 
-Communication quality is not about saying less — it's about conveying the important information and ensuring the receiver understood. Applied to agent output:
-
-- **User-facing output**: Should convey decisions, findings, and blockers. Should NOT convey routine status, empty-result notices, or redundant summaries.
-- **Agent-to-agent output**: Should convey actionable findings in a format the parent can use immediately. Should NOT reproduce raw data, include reasoning preamble, or leave findings unstructured.
-- **Verification output**: Should convey evidence compactly (e.g., "Tests: 34/34 pass"). Should NOT reproduce full test output unless failures exist.
+- **User-facing output**: Convey decisions, findings, blockers. Skip routine status and redundant summaries.
+- **Agent-to-agent output**: Convey actionable findings the parent can use immediately. Skip raw data and reasoning preamble.
+- **Verification output**: Convey evidence compactly ("Tests: 34/34 pass"). Skip full output unless failures exist.
 
 ## Feasibility Assessment
 
-| Approach | Effort | Risks | Prerequisites |
-|----------|--------|-------|---------------|
-| A. Add skill-specific subagent output formats with examples | M | Medium — requires per-skill calibration; too-tight constraints lose reasoning input that parent cannot recover | Audit each skill's dispatch prompts; define output budget per skill type; write canonical return examples |
-| B. Compress synthesis output (bullets not prose, skip empty agents) | S | Medium — compaction (layer 6) may further compress already-terse output, especially in overnight sessions | Modify synthesis instructions in 3 skills; consider compaction resilience |
-| C. Compress phase transition announcements to one line | S | Low — preserves transition signal while reducing volume | Edit lifecycle and discovery SKILL.md files |
-| D. Add default output guidance to parallel-agents.md | S | Low — advisory, not enforced | Edit one reference doc |
-| E. Compress verification evidence format | S | Medium — must not weaken verification discipline; compaction may drop compressed evidence | Define compressed-but-sufficient evidence format |
-| F. Blanket brevity CLAUDE.md rules (caveman-style) | S | High — fights system prompt, adds per-message overhead, may degrade reasoning | None, but may cause more problems than it solves |
-| G. Hook-based preprocessing for high-volume tool output | S | Low — deterministic, no model judgment required, filters before context entry | Shell scripting; settings.json hook configuration |
-| H. Stress-test existing skills without output constraints | S | Low — read-only audit; removes constraints that solve phantom problems | Run representative prompts through each skill; compare output with/without verbose instructions |
-| I. Lightweight references (subagents write to files, return pointers) | M | Medium — changes subagent communication pattern; parent must read files | Identify skills where subagent output consistently exceeds 2,000 tokens |
+**Critical prerequisite**: Approach H (stress-test) must run first. Its results gate whether approaches A-E are necessary. If removing verbose-by-default instructions produces acceptable output, A-E add unnecessary complexity.
+
+| Phase | Approach | Effort | Risks |
+|-------|----------|--------|-------|
+| **Gate** | H. Stress-test skills by removing verbose instructions | S | Low — read-only audit |
+| **Gate** | G. Hook-based preprocessing for high-volume tool output | S | Low — deterministic, pre-context |
+| **If H shows gaps** | A. Add skill-specific subagent output format specs | M | Medium — per-skill calibration needed |
+| **If H shows gaps** | B. Compress synthesis output (bullets, skip empty agents) | S | Medium — compaction interaction |
+| **If H shows gaps** | C. Compress phase transitions to one line | S | Low — preserves signal |
+| **If H shows gaps** | D. Add output guidance to parallel-agents.md | S | Low — advisory |
+| **If H shows gaps** | E. Compress verification evidence format | S | Medium — must not weaken discipline |
+| **Future** | I. Lightweight references (subagents write to files) | M | Medium — changes communication pattern |
 
 ## Decision Records
 
 ### DR-1: Targeted per-skill constraints vs. blanket brevity rules
 
-- **Context**: The harness needs to reduce output waste without degrading reasoning quality or fighting the system prompt. Anthropic's official guidance: "Keep CLAUDE.md under 200 lines" and "Move specialized instructions to skills." The system prompt already includes "Go straight to the point. Be extra concise." Adding global brevity rules risks redundancy with—or contradiction of—built-in instructions.
-- **Options considered**:
-  - (a) Blanket brevity rules in CLAUDE.md/Agents.md (caveman-style)
-  - (b) Targeted output constraints per skill and per subagent dispatch prompt
-  - (c) Hybrid: light global guidance + targeted skill-level constraints
-- **Recommendation**: Option (b), revised from (c). Drop the Agents.md global line entirely — it adds per-message overhead and the system prompt already covers this. Focus exclusively on targeted constraints in skill dispatch prompts and synthesis instructions. Anthropic's context engineering article validates this: system prompts need "the right altitude" — specific enough to guide, flexible enough for heuristics. Global brevity rules are the wrong altitude; skill-specific output formats are the right one.
-- **Trade-offs**: Requires per-skill editing (more work than one CLAUDE.md line), but avoids the blanket-brevity risks. The system prompt's existing efficiency instructions handle the global case; skills handle the specific cases where the harness overrides those defaults.
-- **Key Anthropic validation**: "Every component in a harness encodes an assumption about what the model can't do on its own, and those assumptions are worth stress testing." The assumption that Claude needs a global brevity reminder may not hold — the system prompt already provides one.
+- **Context**: The system prompt already says "be extra concise." Anthropic: "Keep CLAUDE.md under 200 lines" and "move specialized instructions to skills."
+- **Recommendation**: No global brevity rules. Focus on targeted constraints in skill dispatch prompts — but **only after stress-testing (H) shows which skills actually need them**. Some skills may produce acceptable output once verbose-by-default instructions are removed.
+- **Trade-offs**: Requires H to run first. Per-skill editing when needed. But avoids adding complexity before demonstrating the need.
 
 ### DR-2: Subagent output format — structured specifications per skill type
 
-- **Context**: Subagents currently receive no output-length guidance. Their responses can be arbitrarily long, all of which enters the parent's context. Subagent output is the parent's *reasoning input*, not a user-facing report — the parent cannot ask follow-up questions, so whatever is omitted is permanently lost.
-- **Options considered**:
-  - (a) Word/token caps ("Keep findings under 150 words")
-  - (b) Format specifications ("Return as: ## Findings\n- [bullet]\n## Recommendation\n[one sentence]")
-  - (c) Combined: format spec with length guidance
-  - (d) Skill-specific format specs that allocate space proportional to the skill's purpose
-  - (e) Lightweight references: subagents write findings to files and return pointers (Anthropic's own multi-agent research pattern)
-- **Recommendation**: Option (d), with option (e) as a future evolution for high-volume skills. Each skill that dispatches subagents should define a return format appropriate to that skill's information needs, anchored by Anthropic's official guidance that subagent returns should be "condensed, distilled summary of its work (often 1,000-2,000 tokens)." Use canonical examples in dispatch prompts to demonstrate expected output format — Anthropic's context engineering article notes "for an LLM, examples are the 'pictures' worth a thousand words," suggesting format examples are more effective than length caps. For high-volume returns (e.g., research agents processing many files), option (e) — writing to files and returning references — provides maximum context isolation.
-- **Trade-offs**: More per-skill editing work than a single template. Requires judgment about what each skill type needs. But avoids the self-defeating pattern of constraining subagent output length while relying on those same subagents to judge what's "critical" enough to escape the constraint.
-- **Key Anthropic validation**: "Each subagent needs an objective, an output format, guidance on the tools and sources to use, and clear task boundaries" — official guidance that every dispatch prompt requires an explicit output format. "Without detailed task descriptions, agents duplicate work, leave gaps, or fail to find necessary information."
+- **Context**: Subagents currently receive no output guidance. Their returns enter the parent's context untruncated. Subagent output is the parent's reasoning input — the parent cannot ask follow-ups.
+- **Recommendation**: **Contingent on H.** For skills where stress-testing shows subagent output is excessive, define a return format appropriate to the skill's information needs. Use canonical examples (not length caps) to demonstrate expected output — "for an LLM, examples are the pictures worth a thousand words." Critical-review needs room for evidentiary chains; research needs room for citations; diagnose needs room for error traces. Anthropic's 1,000-2,000 token guidance for web-search subagents is a reference point from a different domain, not an anchor for evidentiary subagents.
+- **Trade-offs**: Per-skill calibration work. Requires judgment about what each skill type needs.
 
 ### DR-3: Phase transition announcements — compress, don't suppress
 
-- **Context**: Lifecycle and discovery announce every phase transition with a summary. Most are routine.
-- **Options considered**:
-  - (a) Remove all transition announcements
-  - (b) Announce only on escalation, unexpected findings, or user-blocking decisions
-  - (c) Keep all but compress to one line
-- **Recommendation**: Option (c). Compress all transition announcements to a single line (e.g., "Research complete — proceeding to specify") rather than suppressing routine ones. The monitoring infrastructure cannot replace text announcements: TaskCreate/TaskUpdate are not wired into lifecycle skills, the statusline shows current state (not transitions), overnight agents are headless with no statusline or task rendering, and events.log phase_transition records have no real-time consumer. The text announcement is currently the *only* real-time signal that a phase boundary was crossed — suppressing it would make stuck features indistinguishable from progressing ones, especially in overnight contexts.
-- **Trade-offs**: Still produces per-phase output, but at ~10 words per transition vs. the current multi-sentence summary. Escalation announcements should remain verbose (explaining why the escalation happened).
+- **Context**: Phase transitions are the only real-time signal that a boundary was crossed. TaskCreate/TaskUpdate are not wired into lifecycle. Statusline shows state, not transitions. Overnight agents are headless.
+- **Recommendation**: Compress all transition announcements to one line (e.g., "Research complete — proceeding to specify"). Escalation announcements remain verbose.
+- **Trade-offs**: Still produces per-phase output (~10 words vs. current multi-sentence summary).
 
 ### DR-4: Verification output — evidence vs. verbosity
 
-- **Context**: verification-mindset.md is load-bearing but encourages verbose evidence output.
-- **Options considered**:
-  - (a) Leave as-is (correctness over efficiency)
-  - (b) Define compressed evidence format ("Tests: 34/34 pass" not full output; "Build: exit 0" not full log)
-  - (c) Evidence in verification, compressed in user-facing report
-- **Recommendation**: Option (c). Verification runs remain thorough (full output read by the agent). User-facing claims use compressed evidence format. The agent verifies fully but reports compactly.
-- **Trade-offs**: None significant. The verification discipline is about the agent's behavior, not the user-facing output. The user sees "Tests: 34/34 pass" and trusts the agent verified properly.
+- **Context**: verification-mindset.md is load-bearing (prevents false claims).
+- **Recommendation**: Verification runs remain thorough internally. User-facing claims use compressed evidence format ("Tests: 34/34 pass").
+- **Trade-offs**: None significant. Verification discipline is about agent behavior, not user-facing output.
 
-### DR-5: Hook-based output preprocessing — deterministic reduction without prompt engineering
+### DR-5: Hook-based preprocessing — deterministic reduction
 
-- **Context**: Anthropic's official cost documentation demonstrates a concrete pattern: a PreToolUse hook that intercepts test runner commands and pipes output through `grep -A 5 -E '(FAIL|ERROR|error:)' | head -100`, reducing thousands of lines to the relevant failures. This is deterministic — no prompt engineering, no model judgment, guaranteed reduction.
-- **Options considered**:
-  - (a) Rely solely on prompt-based output constraints (DR-2)
-  - (b) Add hook-based preprocessing for known high-volume tool outputs
-  - (c) Combine both — hooks for deterministic filtering, prompts for judgment-requiring formatting
-- **Recommendation**: Option (c). Hooks handle the easy cases deterministically (test output, linter output, build logs) — these don't need model judgment to filter. Prompt-based constraints handle the cases that require judgment (research findings, review analysis). This separation means prompt constraints only need to cover the hard cases, reducing the burden on subagent judgment.
-- **Trade-offs**: Hooks require shell scripting and settings.json configuration. But they provide guaranteed reduction with zero risk of information loss from model misjudgment, and they run before tokens enter the context window (unlike prompt constraints, which still produce the tokens before the model decides to compress).
+- **Context**: Anthropic's cost docs show a PreToolUse hook filtering test output to failures only. Deterministic, no model judgment, runs before tokens enter context.
+- **Recommendation**: Hooks for deterministic filtering (test output, linter output, build logs). Prompt-based constraints for judgment-requiring formatting (research findings, review analysis). This separation means prompt constraints only cover hard cases.
+- **Trade-offs**: Requires shell scripting and settings.json configuration.
 
-### DR-6: Harness component stress testing — audit output constraints against current model capabilities
+### DR-6: Stress-test before adding constraints (PREREQUISITE)
 
-- **Context**: Anthropic's harness design article: "Every component in a harness encodes an assumption about what the model can't do on its own, and those assumptions are worth stress testing." Some output constraints may be solving problems Opus 4.6 handles natively. The article found that context anxiety (premature wrap-up near context limits) disappeared between Sonnet 4.5 and Opus 4.6, making context-reset scaffolding unnecessary.
-- **Recommendation**: Before implementing new output constraints, stress-test whether the current model already produces acceptably concise output when the skill prompt doesn't actively encourage verbosity. Some skills may just need their verbose-by-default instructions *removed* rather than counterbalanced with new brevity instructions. This is cheaper and lower-risk than adding constraints.
-- **Trade-offs**: Requires empirical testing. But the alternative — adding constraints without testing whether they're needed — risks the harness growing more complex while solving phantom problems.
+- **Context**: "Every component in a harness encodes an assumption about what the model can't do on its own, and those assumptions are worth stress testing." Context anxiety disappeared between Sonnet 4.5 and Opus 4.6.
+- **Recommendation**: **This gates DR-1 and DR-2.** Before adding output constraints, stress-test each skill by removing verbose-by-default instructions and measuring whether Opus 4.6 produces acceptable output on its own. Some skills may need subtraction (removing verbose instructions), not addition (adding brevity constraints).
+- **Trade-offs**: Requires empirical testing. But the alternative — adding constraints without testing — risks growing harness complexity while solving phantom problems.
 
 ## Open Questions
 
-- **Measurement**: How do we measure whether output changes actually improve the user experience vs. just reducing tokens? Token count alone doesn't capture whether the user had to re-ask or missed important information. This is a prerequisite for validating any specific numeric constraint — without measurement, any word/bullet limit is a guess. Consider lightweight proxies: user re-ask rate, `/rewind` frequency, morning review "what happened?" follow-ups. Anthropic's multi-agent research system uses "human evaluation and LLM-based judging" to assess quality — a similar lightweight evaluation could be added to morning review.
-- **Overnight vs. interactive**: Overnight agents should almost certainly have *different* output constraints than interactive agents — and possibly *less* aggressive compression. Overnight sessions are long-running, making compaction likely. Compaction is a second lossy summarization step; if output is already compressed, compaction may drop findings entirely. Anthropic's harness design article found context resets outperform compaction for multi-hour tasks (Sonnet 4.5 era). The right question is: should overnight output be compaction-resilient (slightly redundant, key findings structurally marked) rather than maximally compressed? The managed agents article's session-as-external-log pattern offers an alternative — the harness controls what enters context each turn from a durable event log.
-- **Skill-level calibration**: Rather than a binary "verbose by design" opt-out, each skill's output constraints should be calibrated to its information needs. Critical-review exists to surface subtle problems — aggressive brevity defeats its purpose. Research exists to explore — citations and context require space. The decomposition phase should define per-skill output budgets based on what each skill actually needs to convey, not a global standard. Anthropic's guidance: "1,000-2,000 tokens" is the expected subagent return size — this is the anchor, with per-skill adjustment above or below.
-- **Subtraction before addition**: Anthropic's harness design principle — "every component encodes an assumption about model capabilities; stress test those assumptions" — suggests the first step may be *removing* verbose-by-default instructions from skills rather than adding brevity constraints. Some skills may produce acceptable output if their prompts simply stop encouraging verbosity. This is cheaper and lower-risk than adding new constraints.
+- **Measurement**: How do we verify output changes improve experience vs. just reducing tokens? Lightweight proxies: re-ask rate, `/rewind` frequency, morning review follow-ups.
+- **Overnight vs. interactive**: Overnight sessions are long-running, making compaction likely (12% retention). Overnight output may need compaction-resilience (structural markers, key-finding repetition) rather than maximum compression.
+- **Skill-level calibration**: Each skill's output constraints should match its information needs. Critical-review needs evidentiary chains; research needs citations. Define per-skill budgets empirically from H's results, not from a web-search-derived anchor.
