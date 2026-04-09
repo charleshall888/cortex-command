@@ -1,16 +1,24 @@
 """Review dispatch types and verdict parsing for overnight review gating.
 
-Provides the ReviewResult dataclass for structured review outcomes and
+Provides the ReviewResult dataclass for structured review outcomes,
 parse_verdict() for extracting the JSON verdict block from review.md files
-written by review agents.
+written by review agents, and dispatch_review() for orchestrating a single
+review cycle with verdict handling.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from claude.overnight.deferral import DeferralQuestion, write_deferral
+from claude.pipeline.dispatch import dispatch_task
+from claude.pipeline.state import log_event
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -67,3 +75,320 @@ def parse_verdict(review_path: Path) -> dict:
         return json.loads(match.group(1))
     except (json.JSONDecodeError, ValueError):
         return dict(_ERROR_RESULT)
+
+
+# ---------------------------------------------------------------------------
+# Prompt template
+# ---------------------------------------------------------------------------
+
+_PROMPT_TEMPLATE_PATH = Path(__file__).resolve().parent / "prompts" / "review.md"
+
+
+def _load_review_prompt(
+    feature: str,
+    spec_excerpt: str,
+    worktree_path: Path,
+    branch_name: str,
+) -> str:
+    """Load the review prompt template and substitute placeholders.
+
+    Args:
+        feature: Feature name for the review.
+        spec_excerpt: Specification text excerpt.
+        worktree_path: Path to the git worktree.
+        branch_name: Git branch name.
+
+    Returns:
+        Formatted prompt string.
+    """
+    template = _PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
+    return template.format(
+        feature=feature,
+        spec_excerpt=spec_excerpt,
+        worktree_path=worktree_path,
+        branch_name=branch_name,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Dispatch review
+# ---------------------------------------------------------------------------
+
+async def dispatch_review(
+    feature: str,
+    worktree_path: Path,
+    branch: str,
+    spec_path: Path,
+    complexity: str,
+    criticality: str,
+    lifecycle_base: Path = Path("lifecycle"),
+    deferred_dir: Path = Path("lifecycle/deferred"),
+    integration_branch: str = "",
+    base_branch: str = "main",
+    test_command: str | None = None,
+    repo_path: Path | None = None,
+    log_path: Path | None = None,
+) -> ReviewResult:
+    """Dispatch a review agent and handle its verdict.
+
+    Orchestrates a single review cycle: writes the phase transition from
+    implement to review, dispatches a review agent via ``dispatch_task()``,
+    then parses and handles the verdict from the review.md artifact the
+    agent writes.
+
+    Verdict handling:
+        - **APPROVED**: writes review_verdict, phase_transition
+          review->complete, and feature_complete events; returns
+          ``ReviewResult(approved=True)``.
+        - **ERROR** (agent failure or unparseable verdict): writes
+          review_verdict ERROR event; returns
+          ``ReviewResult(deferred=True)``.
+        - **REJECTED** (any cycle): writes deferral file; returns
+          ``ReviewResult(deferred=True)``.
+        - **CHANGES_REQUESTED**: stubbed as deferral path (Task 5 adds
+          the rework loop).
+
+    Args:
+        feature: Feature name.
+        worktree_path: Path to the git worktree containing the feature.
+        branch: Git branch name (e.g. ``pipeline/my-feature``).
+        spec_path: Path to the feature's spec.md file.
+        complexity: Complexity tier (``trivial``, ``simple``, ``complex``).
+        criticality: Criticality level (``low``, ``medium``, ``high``,
+            ``critical``).
+        lifecycle_base: Base directory for lifecycle data.
+        deferred_dir: Directory for deferral files.
+        integration_branch: Name of the integration branch (unused in
+            single-cycle dispatch; reserved for rework loop).
+        base_branch: Name of the base branch (default ``main``).
+        test_command: Optional test command (unused in review dispatch;
+            reserved for rework loop).
+        repo_path: Pre-computed effective merge repo path from the
+            caller (passed to ``dispatch_task`` as ``repo_root``).
+        log_path: Pipeline events log path for merge event logging
+            (passed to ``dispatch_task``).
+
+    Returns:
+        A ``ReviewResult`` describing the outcome.
+    """
+    feature_events_log = lifecycle_base / feature / "events.log"
+    review_md_path = lifecycle_base / feature / "review.md"
+
+    # (1) Write phase_transition implement -> review
+    log_event(feature_events_log, {
+        "event": "phase_transition",
+        "feature": feature,
+        "from": "implement",
+        "to": "review",
+    })
+
+    # (2) Read spec for excerpt
+    try:
+        spec_excerpt = spec_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError) as exc:
+        logger.warning(
+            "Cannot read spec for review of %s: %s — skipping review",
+            feature, exc,
+        )
+        log_event(feature_events_log, {
+            "event": "review_verdict",
+            "feature": feature,
+            "verdict": "ERROR",
+            "cycle": 0,
+            "issues": [f"spec not readable: {exc}"],
+        })
+        return ReviewResult(
+            approved=False,
+            deferred=True,
+            verdict="ERROR",
+            cycle=0,
+            issues=[f"spec not readable: {exc}"],
+        )
+
+    # (3) Load prompt template and substitute placeholders
+    try:
+        prompt = _load_review_prompt(
+            feature=feature,
+            spec_excerpt=spec_excerpt,
+            worktree_path=worktree_path,
+            branch_name=branch,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        logger.error(
+            "Cannot load review prompt template: %s", exc,
+        )
+        log_event(feature_events_log, {
+            "event": "review_verdict",
+            "feature": feature,
+            "verdict": "ERROR",
+            "cycle": 0,
+            "issues": [f"prompt template not readable: {exc}"],
+        })
+        return ReviewResult(
+            approved=False,
+            deferred=True,
+            verdict="ERROR",
+            cycle=0,
+            issues=[f"prompt template not readable: {exc}"],
+        )
+
+    # (4) Dispatch review agent
+    system_prompt = (
+        "You are a code reviewer. Read the feature implementation in the "
+        "worktree and write your review to disk as instructed. Do NOT "
+        "modify any source files — this is a read-only review."
+    )
+
+    result = await dispatch_task(
+        feature=feature,
+        task=prompt,
+        worktree_path=worktree_path,
+        complexity=complexity,
+        system_prompt=system_prompt,
+        log_path=log_path,
+        criticality=criticality,
+        repo_root=repo_path,
+    )
+
+    # (5) Parse verdict from review.md
+    verdict_dict = parse_verdict(review_md_path)
+    verdict_str = verdict_dict.get("verdict", "ERROR")
+    cycle = verdict_dict.get("cycle", 0)
+    issues = verdict_dict.get("issues", [])
+
+    # (6) Handle APPROVED
+    if verdict_str == "APPROVED":
+        log_event(feature_events_log, {
+            "event": "review_verdict",
+            "feature": feature,
+            "verdict": "APPROVED",
+            "cycle": cycle,
+            "issues": issues,
+        })
+        log_event(feature_events_log, {
+            "event": "phase_transition",
+            "feature": feature,
+            "from": "review",
+            "to": "complete",
+        })
+        log_event(feature_events_log, {
+            "event": "feature_complete",
+            "feature": feature,
+        })
+        return ReviewResult(
+            approved=True,
+            deferred=False,
+            verdict="APPROVED",
+            cycle=cycle,
+            issues=issues,
+        )
+
+    # (7) Handle ERROR (agent failure or unparseable verdict)
+    if verdict_str == "ERROR":
+        log_event(feature_events_log, {
+            "event": "review_verdict",
+            "feature": feature,
+            "verdict": "ERROR",
+            "cycle": cycle,
+            "issues": issues,
+        })
+        return ReviewResult(
+            approved=False,
+            deferred=True,
+            verdict="ERROR",
+            cycle=cycle,
+            issues=issues,
+        )
+
+    # (8) Handle REJECTED at any cycle — write deferral file
+    if verdict_str == "REJECTED":
+        log_event(feature_events_log, {
+            "event": "review_verdict",
+            "feature": feature,
+            "verdict": "REJECTED",
+            "cycle": cycle,
+            "issues": issues,
+        })
+        _write_review_deferral(feature, verdict_str, cycle, issues, deferred_dir)
+        return ReviewResult(
+            approved=False,
+            deferred=True,
+            verdict="REJECTED",
+            cycle=cycle,
+            issues=issues,
+        )
+
+    # (9) Handle CHANGES_REQUESTED — stubbed as deferral path
+    #     Task 5 replaces this with the full rework loop.
+    if verdict_str == "CHANGES_REQUESTED":
+        log_event(feature_events_log, {
+            "event": "review_verdict",
+            "feature": feature,
+            "verdict": "CHANGES_REQUESTED",
+            "cycle": cycle,
+            "issues": issues,
+        })
+        _write_review_deferral(feature, verdict_str, cycle, issues, deferred_dir)
+        return ReviewResult(
+            approved=False,
+            deferred=True,
+            verdict="CHANGES_REQUESTED",
+            cycle=cycle,
+            issues=issues,
+        )
+
+    # Unexpected verdict value — treat as ERROR
+    logger.warning(
+        "Unexpected review verdict %r for %s — treating as ERROR",
+        verdict_str, feature,
+    )
+    log_event(feature_events_log, {
+        "event": "review_verdict",
+        "feature": feature,
+        "verdict": "ERROR",
+        "cycle": cycle,
+        "issues": issues + [f"unexpected verdict value: {verdict_str}"],
+    })
+    return ReviewResult(
+        approved=False,
+        deferred=True,
+        verdict="ERROR",
+        cycle=cycle,
+        issues=issues + [f"unexpected verdict value: {verdict_str}"],
+    )
+
+
+def _write_review_deferral(
+    feature: str,
+    verdict: str,
+    cycle: int,
+    issues: list[str],
+    deferred_dir: Path,
+) -> Path:
+    """Write a deferral file for a non-APPROVED review verdict.
+
+    Args:
+        feature: Feature name.
+        verdict: The review verdict (REJECTED or CHANGES_REQUESTED).
+        cycle: Review cycle number.
+        issues: List of issue descriptions from the review.
+        deferred_dir: Directory for deferral files.
+
+    Returns:
+        Path to the written deferral file.
+    """
+    issues_text = "\n".join(f"- {issue}" for issue in issues) if issues else "- (no issues listed)"
+    question = DeferralQuestion(
+        feature=feature,
+        question_id=0,
+        severity="blocking",
+        context=f"Review cycle {cycle} returned verdict: {verdict}",
+        question=f"Feature {feature} received {verdict} during overnight review. Issues need human triage.",
+        options_considered=[
+            "Address review feedback and re-submit",
+            "Override review verdict and mark complete",
+            "Revise specification and re-implement",
+        ],
+        pipeline_attempted=f"Overnight review agent returned {verdict} at cycle {cycle}.\n\nIssues:\n{issues_text}",
+    )
+    return write_deferral(question, deferred_dir)
