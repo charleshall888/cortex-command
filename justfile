@@ -52,6 +52,7 @@ setup-force:
     ln -sf "$(pwd)/backlog/generate_index.py" ~/.local/bin/generate-backlog-index
     ln -sf "$(pwd)/bin/jcc" ~/.local/bin/jcc
     ln -sf "$(pwd)/bin/overnight-start" ~/.local/bin/overnight-start
+    ln -sf "$(pwd)/bin/overnight-schedule" ~/.local/bin/overnight-schedule
     # --- reference ---
     mkdir -p ~/.claude/reference
     ln -sf "$(pwd)/claude/reference/verification-mindset.md" ~/.claude/reference/verification-mindset.md
@@ -136,6 +137,7 @@ deploy-bin:
         "$(pwd)/bin/jcc|$HOME/.local/bin/jcc"
         "$(pwd)/bin/overnight-start|$HOME/.local/bin/overnight-start"
         "$(pwd)/bin/overnight-status|$HOME/.local/bin/overnight-status"
+        "$(pwd)/bin/overnight-schedule|$HOME/.local/bin/overnight-schedule"
         "$(pwd)/bin/git-sync-rebase.sh|$HOME/.local/bin/git-sync-rebase.sh"
     )
     conflicts=()
@@ -789,6 +791,7 @@ check-symlinks:
     check ~/.local/bin/generate-backlog-index
     check ~/.local/bin/jcc
     check ~/.local/bin/overnight-start
+    check ~/.local/bin/overnight-schedule
     for skill in skills/*/SKILL.md; do
         name=$(basename "$(dirname "$skill")")
         check ~/.claude/skills/"$name"
