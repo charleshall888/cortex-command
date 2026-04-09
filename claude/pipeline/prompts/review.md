@@ -39,11 +39,31 @@ Only perform this stage if all requirements are PASS or PARTIAL (no FAIL):
 - **Pattern consistency**: follows existing project conventions?
 - **Scope discipline**: no changes beyond what the spec requires?
 
-### Stage 3: Write Verdict
+### Requirements Drift
 
-Produce your review as structured output with the following format:
+Compare the implementation against stated project requirements.
+Note: requirements drift does NOT influence the verdict. This is an observation only.
+- If the implementation matches all stated requirements and introduces no new behavior not reflected in them: state = none
+- If the implementation introduces behavior not captured in the requirements docs, or changes behavior in a way requirements don't reflect: state = detected; list each drifted item as a bullet
+
+### Stage 3: Write Review
+
+Write your review to `lifecycle/{feature}/review.md` on disk using the format below.
+
+CRITICAL: The Verdict section MUST contain a fenced JSON code block with exactly these fields:
+- `"verdict"`: one of `"APPROVED"`, `"CHANGES_REQUESTED"`, or `"REJECTED"`
+- `"cycle"`: the review cycle number (integer)
+- `"issues"`: array of issue strings (empty array if none)
+- `"requirements_drift"`: `"none"` or `"detected"`
+
+Do NOT use alternative field names like `"overall"`, `"result"`, or `"status"`.
+Do NOT use alternative values like `"PASS"`, `"FAIL"`, or `"APPROVED_WITH_NOTES"`.
+
+Your `review.md` MUST follow this structure:
 
 ```
+# Review: {feature}
+
 ## Stage 1: Spec Compliance
 
 ### Requirement: {requirement text}
@@ -54,7 +74,15 @@ Produce your review as structured output with the following format:
 
 (repeat for each requirement)
 
+## Requirements Drift
+
+**State**: none | detected
+**Findings**:
+- (one bullet per drifted item, or "None" if state is none)
+**Update needed**: (path to requirements file that needs updating, or "None")
+
 ## Stage 2: Code Quality
+<!-- Only present if Stage 1 has no FAIL verdicts -->
 
 - **Naming conventions**: {assessment}
 - **Error handling**: {assessment}
@@ -64,14 +92,14 @@ Produce your review as structured output with the following format:
 
 ## Verdict
 
-VERDICT: {APPROVED | CHANGES_REQUESTED | REJECTED}
-
-### Rationale
-{1-3 sentences explaining the verdict}
-
-### Issues
-{bulleted list of specific issues to address, or "None" if APPROVED}
+```json
+{"verdict": "APPROVED", "cycle": 1, "issues": [], "requirements_drift": "none"}
 ```
+```
+
+The `requirements_drift` value in the verdict JSON MUST match: `"none"` when State is none, `"detected"` when State is detected.
+
+Do NOT modify any source files. This is a read-only review.
 
 ## Verdict Criteria
 
@@ -83,5 +111,5 @@ VERDICT: {APPROVED | CHANGES_REQUESTED | REJECTED}
 
 - Review what was built against what was specified. Do not suggest enhancements beyond the spec.
 - Flag scope creep (work done that the spec did not ask for) as an issue.
-- Be specific in issue descriptions — reference exact files and line ranges.
+- Be specific in issue descriptions -- reference exact files and line ranges.
 - Do not modify any files. This is a read-only review.

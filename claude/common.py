@@ -11,6 +11,8 @@ Functions:
     slugify          -- Convert a title to a kebab-case slug.
     detect_lifecycle_phase -- Determine current lifecycle phase from artifacts.
     read_criticality -- Read the most recent criticality from events.log.
+    read_tier        -- Read the most recent tier from events.log.
+    requires_review  -- Gating matrix: does this tier+criticality need review?
     compute_dependency_batches -- Topological sort of tasks into batches.
     mark_task_done_in_plan -- Check off a task in a plan.md file.
     durable_fsync    -- fsync with F_FULLFSYNC on macOS, os.fsync elsewhere.
@@ -193,6 +195,70 @@ def read_criticality(
         if "criticality" in record:
             last = record["criticality"]
     return last
+
+
+# ---------------------------------------------------------------------------
+# read_tier
+# ---------------------------------------------------------------------------
+
+def read_tier(
+    feature: str,
+    lifecycle_base: Path = Path("lifecycle"),
+) -> str:
+    """Read the most recent tier from a feature's events.log.
+
+    Scans the JSONL events log for lines containing a ``tier``
+    field and returns the value from the last such line. Defaults to
+    ``"simple"`` if the file does not exist, is empty, or contains no
+    tier entries.
+
+    Args:
+        feature: Feature slug string (e.g. "my-feature").
+        lifecycle_base: Base directory for lifecycle data.
+            Defaults to ``Path("lifecycle")``.
+
+    Returns:
+        The most recent tier string, or ``"simple"``.
+    """
+    events_path = lifecycle_base / feature / "events.log"
+    if not events_path.exists():
+        return "simple"
+
+    last = "simple"
+    for line in events_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if "tier" in record:
+            last = record["tier"]
+    return last
+
+
+# ---------------------------------------------------------------------------
+# requires_review
+# ---------------------------------------------------------------------------
+
+def requires_review(tier: str, criticality: str) -> bool:
+    """Determine whether a feature requires post-merge review.
+
+    Encodes the gating matrix:
+        - complex tier at any criticality -> review
+        - any tier at high or critical criticality -> review
+        - otherwise -> skip
+
+    Args:
+        tier: Feature tier (e.g. "simple", "complex").
+        criticality: Feature criticality (e.g. "low", "medium",
+            "high", "critical").
+
+    Returns:
+        True if the feature should go through review.
+    """
+    return tier == "complex" or criticality in ("high", "critical")
 
 
 # ---------------------------------------------------------------------------
