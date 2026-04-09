@@ -124,6 +124,8 @@ No additional user input is needed before committing — the review is authorita
 
 After the commit, locate the PR that the runner created for this session's integration branch, display it to the user, and offer to merge it to main. See `${CLAUDE_SKILL_DIR}/references/walkthrough.md` Section 6 for the full protocol.
 
+After a successful merge, Section 6a of the walkthrough handles post-merge sync: rebasing local main onto the remote and pushing to origin so that the local and remote branches are fully aligned.
+
 ## Constraints
 
 - Does not re-run or resume overnight sessions (use `/overnight resume`)
