@@ -7,3 +7,13 @@
 {"ts": "2026-04-09T00:05:00Z", "event": "phase_transition", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "from": "specify", "to": "plan"}
 {"ts": "2026-04-09T00:06:00Z", "event": "orchestrator_review", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-09T00:07:00Z", "event": "phase_transition", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "from": "plan", "to": "implement"}
+{"ts": "2026-04-09T00:08:00Z", "event": "batch_dispatch", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "batch": 0, "tasks": [1]}
+{"ts": "2026-04-09T00:09:00Z", "event": "task_complete", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-09T00:10:00Z", "event": "batch_dispatch", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "batch": 1, "tasks": [2]}
+{"ts": "2026-04-09T00:11:00Z", "event": "task_complete", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-09T00:12:00Z", "event": "batch_dispatch", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "batch": 2, "tasks": [3]}
+{"ts": "2026-04-09T00:13:00Z", "event": "task_complete", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "task": 3, "batch": 2, "status": "success"}
+{"ts": "2026-04-09T00:14:00Z", "event": "phase_transition", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-09T00:15:00Z", "event": "review_verdict", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-04-09T00:15:01Z", "event": "phase_transition", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "from": "review", "to": "complete"}
+{"ts": "2026-04-09T00:16:00Z", "event": "feature_complete", "feature": "close-exfiltration-channels-in-sandbox-excluded-commands", "tasks_total": 3, "rework_cycles": 1}

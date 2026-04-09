@@ -113,35 +113,6 @@
     "repo": null
   },
   {
-    "id": 58,
-    "title": "Close exfiltration channels in sandbox-excluded commands",
-    "status": "refined",
-    "priority": "high",
-    "type": "task",
-    "tags": [
-      "permissions-audit",
-      "security"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-09",
-    "updated": "2026-04-09",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "054",
-    "research": null,
-    "spec": "lifecycle/close-exfiltration-channels-in-sandbox-excluded-commands/spec.md",
-    "discovery_source": "research/permissions-audit/research.md",
-    "plan": null,
-    "uuid": "e7b5a2c6-1f8b-4c3e-d0a5-b6c7d8e9f0a1",
-    "lifecycle_slug": "close-exfiltration-channels-in-sandbox-excluded-commands",
-    "session_id": "c88d085e-ff48-4a92-aa58-26a0f1c4035f",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",

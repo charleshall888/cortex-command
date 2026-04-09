@@ -18,7 +18,7 @@ Edit `claude/settings.json` to narrow the allow list for sandbox-excluded comman
   - Replacement gh patterns: `Bash(gh pr view *)`, `Bash(gh pr list *)`, `Bash(gh pr diff *)`, `Bash(gh pr checks *)`, `Bash(gh repo view *)`, `Bash(gh run list *)`, `Bash(gh run view *)`
   - Replacement git remote patterns: `Bash(git remote -v)`, `Bash(git remote get-url *)`
 - **Verification**: `python3 -c "import json; d=json.load(open('claude/settings.json')); a=d['permissions']['allow']; gh=['Bash(gh pr view *)','Bash(gh pr list *)','Bash(gh pr diff *)','Bash(gh pr checks *)','Bash(gh repo view *)','Bash(gh run list *)','Bash(gh run view *)']; remote=['Bash(git remote -v)','Bash(git remote get-url *)']; checks=['WebFetch' not in a, 'Bash(gh *)' not in a, 'Bash(git remote *)' not in a, 'Bash(git remote)' in a]+[p in a for p in gh]+[p in a for p in remote]; print(all(checks), f'{sum(checks)}/{len(checks)}')"` — pass if output starts with `True`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Add deny rules for exfiltration vectors
 - **Files**: `claude/settings.json`
@@ -40,7 +40,7 @@ Edit `claude/settings.json` to narrow the allow list for sandbox-excluded comman
     - `Bash(git push * http://*)`
   - Follow existing deny list conventions: strings in double quotes, comma-separated, grouped by tool (no trailing comma after the last entry in the array)
 - **Verification**: `python3 -c "import json; d=json.load(open('claude/settings.json')); deny=d['permissions']['deny']; expected=['Bash(gh gist create *)','Bash(gh gist edit *)','Bash(git remote add *)','Bash(git remote set-url *)','Bash(git remote remove *)','Bash(git push https://*)','Bash(git push http://*)','Bash(git push * https://*)','Bash(git push * http://*)']; missing=[e for e in expected if e not in deny]; print(len(missing)==0, f'missing: {missing}' if missing else 'all present')"` — pass if output starts with `True`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Validate final settings.json
 - **Files**: (none — read-only validation)
@@ -52,7 +52,7 @@ Edit `claude/settings.json` to narrow the allow list for sandbox-excluded comman
   - Run each spec acceptance criterion from Requirements 1-6
   - Verify no unintended changes: `git diff claude/settings.json` should show only the expected modifications (allow removals/additions, deny additions)
 - **Verification**: Run all 7 Verification Strategy commands below. Pass if all output `True` or exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Verification Strategy
 

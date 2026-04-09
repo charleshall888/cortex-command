@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: e7b5a2c6-1f8b-4c3e-d0a5-b6c7d8e9f0a1
 title: "Close exfiltration channels in sandbox-excluded commands"
-status: refined
+status: complete
 priority: high
 type: task
 tags: [permissions-audit, security]
@@ -10,8 +10,8 @@ created: 2026-04-09
 updated: 2026-04-09
 parent: 054
 discovery_source: research/permissions-audit/research.md
-session_id: c88d085e-ff48-4a92-aa58-26a0f1c4035f
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: review
 lifecycle_slug: close-exfiltration-channels-in-sandbox-excluded-commands
 complexity: complex
 criticality: high
