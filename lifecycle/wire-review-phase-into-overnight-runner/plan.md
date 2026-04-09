@@ -13,7 +13,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Complexity**: simple
 - **Context**: `read_criticality(feature: str, lifecycle_base: Path = Path("lifecycle")) -> str` at line 161 of `claude/common.py` — mirror its pattern (open events.log, scan for last JSON line with target field, return value or default). The gating matrix: simple/low → skip, simple/medium → skip, complex/low → review, complex/medium → review, high/any → review, critical/any → review. Simplified: `return tier == "complex" or criticality in ("high", "critical")`.
 - **Verification**: `python -c "from claude.common import read_tier, requires_review; assert read_tier('nonexistent') == 'simple'; assert requires_review('complex', 'low') == True; assert requires_review('simple', 'medium') == False; print('ok')"` — pass if prints "ok" and exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Update pipeline review prompt template
 - **Files**: `claude/pipeline/prompts/review.md`
@@ -22,7 +22,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Complexity**: simple
 - **Context**: Current pipeline prompt (`claude/pipeline/prompts/review.md`) uses placeholders `{feature}`, `{spec_excerpt}`, `{worktree_path}`, `{branch_name}`. Currently says "Produce your review as structured output" with plaintext `VERDICT:` format. Must change to JSON verdict block: `{"verdict": "APPROVED|CHANGES_REQUESTED|REJECTED", "cycle": 1, "issues": [...], "requirements_drift": "none|detected"}`. Interactive protocol at `skills/lifecycle/references/review.md` lines 113-117 shows the expected JSON format. Keep the same 4 placeholders.
 - **Verification**: `grep -c 'review.md' claude/pipeline/prompts/review.md` >= 1 (file write instruction present). `grep -c '"cycle"' claude/pipeline/prompts/review.md` >= 1 (cycle field in verdict template). `grep -c 'requirements_drift' claude/pipeline/prompts/review.md` >= 1.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Create review_dispatch.py with types and verdict parsing
 - **Files**: `claude/pipeline/review_dispatch.py` (NEW)
@@ -31,7 +31,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Complexity**: simple
 - **Context**: The verdict JSON block in review.md is a fenced code block (` ```json ... ``` `) containing `{"verdict": "...", "cycle": N, "issues": [...], "requirements_drift": "..."}`. Use `re.search(r'```json\s*(\{.*?\})\s*```', content, re.DOTALL)` to extract. Follow the pattern in `claude/pipeline/state.py` `log_event()` (lines 288-304) for JSON handling conventions.
 - **Verification**: `python -c "from claude.pipeline.review_dispatch import ReviewResult, parse_verdict; r = ReviewResult(approved=True, deferred=False, verdict='APPROVED', cycle=1, issues=[]); print(r.verdict)"` — pass if prints "APPROVED" and exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Add dispatch_review() — single cycle + APPROVED/ERROR handling
 - **Files**: `claude/pipeline/review_dispatch.py`
@@ -40,7 +40,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Complexity**: complex
 - **Context**: Function signature: `async def dispatch_review(feature: str, worktree_path: Path, branch: str, spec_path: Path, complexity: str, criticality: str, lifecycle_base: Path = Path("lifecycle"), deferred_dir: Path = Path("lifecycle/deferred"), integration_branch: str = "", base_branch: str = "main", test_command: str | None = None, repo_path: Path | None = None, log_path: Path | None = None) -> ReviewResult`. The `branch` param is the actual git branch name (e.g. `pipeline/my-feature`), passed directly from the batch_runner caller which already knows `actual_branch`. The `repo_path` param receives the pre-computed effective merge repo path from the caller (via `_effective_merge_repo_path()`). The `log_path` param is the pipeline events log path for merge event logging. Use `dispatch_task()` from `claude.pipeline.dispatch` (accepts `task: str, system_prompt: str, complexity: str, criticality: str, worktree_path: Path`). Use `log_event()` from `claude.pipeline.state` (accepts `log_path: Path, event_dict: dict`) for per-feature events.log writes. Use `write_deferral()` from `claude.overnight.deferral` for deferral files. Read prompt template from `claude/pipeline/prompts/review.md` and substitute placeholders — Task 2 must complete first to ensure the template produces the JSON verdict format that `parse_verdict()` expects.
 - **Verification**: `python -c "from claude.pipeline.review_dispatch import dispatch_review; import inspect; sig = inspect.signature(dispatch_review); assert 'feature' in sig.parameters; assert 'branch' in sig.parameters; assert 'log_path' in sig.parameters; print('ok')"` — pass if prints "ok" and exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Add rework loop — CHANGES_REQUESTED handling
 - **Files**: `claude/pipeline/review_dispatch.py`
@@ -49,7 +49,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Complexity**: complex
 - **Context**: `merge_feature()` from `claude.pipeline.merge` — full signature: `merge_feature(feature: str, base_branch: str = "main", test_command: str = None, log_path: Path = None, ci_check: bool = True, branch: str | None = None, repo_path: Path | None = None) -> MergeResult`. For re-merge after rework, call with: `merge_feature(feature, base_branch=base_branch, test_command=test_command, log_path=log_path, ci_check=False, branch=branch, repo_path=repo_path)`. Note `ci_check=False` — re-merging after a fix should not re-gate on CI (matches `merge_recovery.py` pattern at lines 268, 370). All parameters are available from `dispatch_review()`'s own signature. For SHA circuit breaker: `subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, cwd=worktree_path)` before and after fix agent dispatch. Learnings path: `lifecycle/{feature}/learnings/orchestrator-note.md` — create `learnings/` dir if needed. Fix agent prompt should include: `## Review Feedback\n{issues from review.md}\n\n## Spec\n{spec_excerpt}\n\nFix only the flagged issues in the worktree at {worktree_path}.` Use `dispatch_task()` for fix agent dispatch. Deferral file at `lifecycle/deferred/{feature}-review.md` — use `write_deferral()` with `severity="blocking"`.
 - **Verification**: `grep -c 'orchestrator-note' claude/pipeline/review_dispatch.py` >= 1. `grep -c 'merge_feature\|before_sha\|after_sha' claude/pipeline/review_dispatch.py` >= 2.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Wire dispatch_review into batch_runner post-merge paths
 - **Files**: `claude/overnight/batch_runner.py`
@@ -61,7 +61,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
   - **`_apply_feature_result`** (line ~1200, sync function): The async **caller** of `_apply_feature_result` must call `dispatch_review()` BEFORE invoking `_apply_feature_result`, then pass the `ReviewResult` (or `None` if review not required) as a new parameter. Add `review_result: ReviewResult | None = None` to `_apply_feature_result`'s signature. The caller computes: `review_result = await dispatch_review(...) if requires_review(tier, criticality) else None`, then passes it. Inside `_apply_feature_result`, branch on `review_result`: if `None` (no review needed) or `review_result.approved`, continue to existing FEATURE_COMPLETE flow; if `review_result.deferred`, set feature status to deferred, write back to backlog as in_progress, cleanup worktree, and return.
   Import `requires_review` from `claude.common`, `dispatch_review` and `ReviewResult` from `claude.pipeline.review_dispatch`. Update all 4 existing call sites of `_apply_feature_result` (lines ~1584, ~1631, ~1725, ~1740) to pass the new `review_result` parameter (compute it in the async caller before the call).
 - **Verification**: `grep -c 'requires_review' claude/overnight/batch_runner.py` >= 2. `grep -c 'dispatch_review' claude/overnight/batch_runner.py` >= 2. `grep -c 'review_result' claude/overnight/batch_runner.py` >= 4 (parameter in signature + usage in 4 call sites).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Update morning review walkthrough for conditional synthetic events
 - **Files**: `skills/morning-review/references/walkthrough.md`
@@ -70,7 +70,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Complexity**: simple
 - **Context**: Section 2b currently starts at line ~84 of `walkthrough.md`. The existing guard checks for `"event": "feature_complete"` in events.log content. Add the tier/criticality check BEFORE the existing guard. Reference `requires_review()` from `claude.common` — the walkthrough is a skill reference doc that instructs an agent, so reference the function by name (the agent will import and call it, or replicate the logic). The `cycle: 0` marker must remain in the synthetic events for features that legitimately skip review.
 - **Verification**: `grep -c 'requires_review\|read_tier\|read_criticality' skills/morning-review/references/walkthrough.md` >= 2. `grep -c 'cycle.*0' skills/morning-review/references/walkthrough.md` >= 1.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Add tests for utility functions
 - **Files**: `tests/test_common_utils.py` (NEW), `claude/pipeline/tests/test_review_dispatch.py` (NEW)
@@ -79,7 +79,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Complexity**: simple
 - **Context**: Existing test pattern: `claude/pipeline/tests/test_dispatch.py` uses `pytest` with `tmp_path` fixture for temporary directories. Follow the same pattern. For `read_tier` tests, create temporary `lifecycle/{feature}/events.log` files with known content. For `parse_verdict` tests, create temporary `review.md` files with known verdict blocks. Test command: `just test` (from lifecycle.config.md).
 - **Verification**: `just test` — pass if exit 0, all tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Verification Strategy
 

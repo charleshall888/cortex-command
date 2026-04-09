@@ -30,37 +30,6 @@
     "repo": null
   },
   {
-    "id": 43,
-    "title": "Wire review phase into overnight runner",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "overnight",
-      "review",
-      "quality",
-      "evaluator"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-08",
-    "updated": "2026-04-08",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "021",
-    "research": null,
-    "spec": "lifecycle/wire-review-phase-into-overnight-runner/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "d5da4a87-f3c9-4ad1-987f-b85b115379bc",
-    "lifecycle_slug": "wire-review-phase-into-overnight-runner",
-    "session_id": "60ca901b-7ead-4e9e-bc45-9eb162ed5937",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 47,
     "title": "Investigate gaps in settings.json deny list",
     "status": "backlog",

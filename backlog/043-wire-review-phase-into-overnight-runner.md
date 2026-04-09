@@ -4,7 +4,7 @@ uuid: d5da4a87-f3c9-4ad1-987f-b85b115379bc
 id: "043"
 title: "Wire review phase into overnight runner"
 type: feature
-status: refined
+status: complete
 priority: medium
 parent: "021"
 blocked-by: []
@@ -12,8 +12,8 @@ tags: [overnight, review, quality, evaluator]
 areas: [overnight-runner]
 created: 2026-04-08
 updated: 2026-04-08
-session_id: 60ca901b-7ead-4e9e-bc45-9eb162ed5937
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: complete
 lifecycle_slug: wire-review-phase-into-overnight-runner
 complexity: complex
 criticality: high
