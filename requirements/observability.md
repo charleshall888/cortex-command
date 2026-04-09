@@ -1,12 +1,12 @@
 # Requirements: observability
 
-> Last gathered: 2026-04-03
+> Last gathered: 2026-04-03 (updated 2026-04-08)
 
 **Parent doc**: [requirements/project.md](project.md)
 
 ## Overview
 
-The observability area covers three subsystems that give the developer real-time visibility into active Claude sessions: the terminal statusline (in-session context and lifecycle state), the web dashboard (full overnight session monitoring), and the notification system (macOS desktop and Android push alerts). All three subsystems read from the same file-based session state; none can write to it.
+The observability area covers five subsystems that give the developer visibility into active Claude sessions: the terminal statusline (in-session context and lifecycle state), the web dashboard (full overnight session monitoring), the notification system (macOS desktop and Android push alerts), the in-session status CLI (`overnight-status` for sandbox-safe one-shot status), and optional sandbox socket access (tmux socket allowlisting for full interactive access). The first four subsystems read from the same file-based session state; none can write to it. Sandbox socket access is a configuration concern, not a runtime subsystem.
 
 ## Functional Requirements
 
@@ -51,6 +51,34 @@ The observability area covers three subsystems that give the developer real-time
   - Dashboard-triggered notifications respect the same deduplication (stall fires once; clears when resolved)
 - **Priority**: must-have
 
+### In-Session Status CLI
+
+- **Description**: A standalone bash script (`bin/overnight-status`, deployed to `~/.local/bin/overnight-status`) that produces a one-shot status report of the active overnight session from within a sandboxed Claude Code session. Also invocable as `/overnight status` via the overnight skill.
+- **Inputs**: `~/.local/share/overnight-sessions/active-session.json` (session pointer), `lifecycle/sessions/{id}/overnight-state.json`, `lifecycle/sessions/{id}/.runner.lock`, `lifecycle/sessions/{id}/overnight-events.log`
+- **Outputs**: Human-readable status report to stdout including runner liveness, session phase, feature progress, recent events, and failed-feature errors
+- **Acceptance criteria**:
+  - Exits 0 when session data found (active or last-known); exits 1 only when no session data exists at all
+  - Runner liveness reported via `kill -0` on PID from `.runner.lock` ("alive", "dead", or "no lock file")
+  - Session phase and feature counts by status (pending/running/merged/failed/deferred) from `overnight-state.json`
+  - Last 5 events from `overnight-events.log` displayed as timeline
+  - Failed features listed with error messages
+  - Falls back to most recent `lifecycle/sessions/` directory when `active-session.json` is absent or shows `phase: complete`
+  - Handles corrupt `overnight-state.json` gracefully (falls back to events-only output)
+- **Priority**: must-have
+
+### Sandbox Socket Access
+
+- **Description**: Optional tmux socket allowlisting via `just setup-tmux-socket` to restore full tmux access (`tmux has-session`, `tmux list-sessions`, `tmux attach`) from within sandboxed Claude Code sessions. Grants access to the default tmux socket at `/private/tmp/tmux-{UID}/default`.
+- **Inputs**: `~/.claude/settings.json` (existing `allowUnixSockets` array), `$(id -u)` (current UID)
+- **Outputs**: Updated `~/.claude/settings.local.json` with combined `allowUnixSockets` array (preserving existing GPG socket entry)
+- **Acceptance criteria**:
+  - `settings.local.json` contains both the tmux socket and GPG agent socket in `allowUnixSockets`
+  - Existing `sandbox.filesystem.allowWrite` entries in `settings.local.json` are preserved (arrays replace, not merge)
+  - Setup prints a clear warning about granting access to all tmux sessions
+  - Idempotent: re-running skips if tmux socket already present
+- **Priority**: should-have
+- **Note**: `settings.local.json` arrays replace (not merge with) `settings.json` arrays. The setup recipe must write a self-contained array containing all required sockets.
+
 ## Non-Functional Requirements
 
 - **Latency**: Statusline < 500ms per invocation; dashboard total refresh ≤ 7s; notification dispatch fire-and-forget with 5s curl timeout
@@ -71,6 +99,8 @@ The observability area covers three subsystems that give the developer real-time
 - **Dashboard**: Python 3, FastAPI, Jinja2, HTMX (embedded in templates); file-based session state at `lifecycle/`
 - **Notifications (macOS)**: `terminal-notifier` (installed via `brew install terminal-notifier`); Ghostty terminal
 - **Notifications (Android)**: `curl`, `jq`, `NTFY_TOPIC` env var, tmux session (`TMUX` env var), network access to ntfy.sh
+- **In-Session Status CLI**: `jq`, `bash`; file-based session state at `lifecycle/sessions/` and `~/.local/share/overnight-sessions/`
+- **Sandbox Socket Access**: `jq`, `just` (setup recipe); `~/.claude/settings.json` and `~/.claude/settings.local.json`
 
 ## Edge Cases
 
@@ -80,6 +110,11 @@ The observability area covers three subsystems that give the developer real-time
 - **ntfy.sh unreachable**: Remote notification silently times out after 5s; macOS notification unaffected
 - **NTFY_TOPIC not set**: Remote notification hook exits silently at line 10; no error raised
 - **Not running in tmux**: Remote notification hook exits silently; session name identification skipped
+
+- **Stale PID in `.runner.lock`**: Runner died but lock file not cleaned up; `kill -0` returns non-zero; status CLI reports "dead (stale PID)" rather than "alive"
+- **Corrupt `overnight-state.json`**: Truncated write during active session; status CLI falls back to events-only output
+- **`settings.local.json` array clobber**: Adding `allowUnixSockets` via naive jq write could destroy `filesystem.allowWrite`; setup recipe uses deep merge to preserve sibling keys
+- **tmux socket grants broad access**: Allowlisting the default tmux socket grants access to ALL tmux sessions, not just the overnight runner; acceptable for single-user personal tooling
 
 ## Open Questions
 
