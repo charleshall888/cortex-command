@@ -13,7 +13,6 @@
       "Ping",
       "WebSearch",
       "WebFetch",
-      "Read(~/**)",
       "Bash(git log *)",
       "Bash(git log)",
       "Bash(git show *)",
@@ -89,12 +88,6 @@
       "Bash(hostname)",
       "Bash(date *)",
       "Bash(date)",
-      "Bash(env *)",
-      "Bash(env)",
-      "Bash(printenv *)",
-      "Bash(printenv)",
-      "Bash(* --version)",
-      "Bash(* --help *)",
       "Bash(bash *)",
       "Bash(sh *)",
       "Bash(source *)",
@@ -107,7 +100,6 @@
       "Bash(git stash *)",
       "Bash(git rebase *)",
       "Bash(git cherry-pick *)",
-      "Bash(git restore *)",
       "Bash(git reset *)",
       "Bash(git ls-files *)",
       "Bash(git describe *)",
@@ -138,13 +130,7 @@
       "Bash(generate-backlog-index *)",
       "Bash(generate-backlog-index)",
       "Bash(git-sync-rebase.sh *)",
-      "Bash(tmux *)",
-      "Bash(open -na *)",
-      "Bash(pbcopy *)",
-      "Bash(pbcopy)",
-      "mcp__perplexity__*",
-      "mcp__jetbrains__*",
-      "mcp__atlassian__*"
+      "Bash(tmux *)"
     ],
     "deny": [
       "Bash(sudo *)",
@@ -368,5 +354,6 @@
   },
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
-  "skipDangerousModePermissionPrompt": true
+  "skipDangerousModePermissionPrompt": true,
+  "model": "opus[1m]"
 }
