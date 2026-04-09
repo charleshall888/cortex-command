@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: d6a4f1b5-0e7a-4b2d-c9f4-a5b6c7d8e9f0
 title: "Remove interpreter escape hatch commands"
 status: backlog
-priority: medium
+priority: high
 type: task
 tags: [permissions-audit, security]
 created: 2026-04-09
@@ -43,3 +43,11 @@ Lower priority. May still remove for defense-in-depth, but urgency drops signifi
 - If bypass confirmed: all 6 entries removed, replacements added
 - If bypass not confirmed: decision documented, ticket closed or adjusted
 - No regression in interactive workflows
+
+## Verification results
+
+Spike 055 confirmed the bypass is **OPEN**. All four test cases (bash -c, bash -c control, python3 -c, sh -c) returned ALLOW — deny rules are NOT evaluated through interpreter wrappers. The permission system matches only the top-level command token (e.g., `bash`), treating inner arguments as opaque strings. The f65 dangerous-shell-prefix classifier did not intervene. Git commands are especially vulnerable because `git:*` is also sandbox-excluded, leaving zero protection layers for `bash -c "git push --force origin main"`.
+
+Priority set to **high** per the three-tier logic: any test shows allow → high.
+
+Full test report: `lifecycle/verify-escape-hatch-bypass-mechanism/test-report.md`
