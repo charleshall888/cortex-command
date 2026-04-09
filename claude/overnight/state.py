@@ -190,6 +190,9 @@ class OvernightState:
         integration_worktrees: Keys are absolute repo paths (strings); values
             are absolute worktree paths checked out on that repo's integration
             branch. Empty for sessions created before this field existed.
+        scheduled_start: ISO 8601 timestamp indicating when a scheduled
+            overnight session is set to begin. None for sessions that were
+            started immediately (not scheduled).
     """
 
     session_id: str = ""
@@ -208,6 +211,7 @@ class OvernightState:
     worktree_path: Optional[str] = None
     project_root: Optional[str] = None
     integration_worktrees: dict[str, str] = field(default_factory=dict)
+    scheduled_start: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.phase not in PHASES:
@@ -335,6 +339,7 @@ def load_state(state_path: Path = DEFAULT_STATE_PATH) -> OvernightState:
         worktree_path=raw.get("worktree_path"),
         project_root=raw.get("project_root"),
         integration_worktrees=raw.get("integration_worktrees") or {},
+        scheduled_start=raw.get("scheduled_start"),
     )
 
 
