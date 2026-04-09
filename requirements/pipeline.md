@@ -19,7 +19,9 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - Session phases transition forward-only: `planning → executing → complete`; any phase may transition to `paused`
   - Paused sessions resume to the phase they paused from
   - All state writes are atomic (tempfile + `os.replace()`) — partial-write corruption is not possible
-  - Integration branches (`overnight/{session_id}`) persist after session completion and are not auto-deleted — they are left for manual PR creation to main
+  - Integration branches (`overnight/{session_id}`) persist after session completion and are not auto-deleted — they are left for PR creation to main
+  - Artifact commits (lifecycle files, backlog status updates, session data) land on the integration branch, not local `main` — they travel with the PR
+  - The morning report commit is the only runner commit that stays on local `main` (needed before PR merge for morning review to read)
   - Budget exhaustion transitions the session to `paused` without aborting in-flight features
 - **Priority**: must-have
 
@@ -88,6 +90,20 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - Duplicate `feature_complete` events: last one per feature is canonical
 - **Priority**: should-have
 
+### Post-Session Sync
+
+- **Description**: After morning review merges the overnight PR, local `main` diverges from remote (local has the morning report commit and review artifacts; remote has the PR merge commit). A post-merge sync step rebases local onto remote, resolves conflicts in overnight-managed files automatically, and pushes.
+- **Inputs**: `claude/overnight/sync-allowlist.conf` (glob patterns for auto-resolvable files), local `main` branch state, remote `origin/main` after PR merge
+- **Outputs**: Local `main` synced and pushed to `origin/main`; conflicts in allowlist files auto-resolved with `--theirs` (remote wins)
+- **Acceptance criteria**:
+  - After sync completes successfully, `git rev-list HEAD..origin/main --count` = 0 and `git rev-list origin/main..HEAD --count` = 0 (local and remote identical)
+  - Conflicts in files matching `sync-allowlist.conf` patterns are auto-resolved with `--theirs` (remote/overnight version is authoritative)
+  - Non-allowlist conflicts are surfaced to the user; if >3 non-allowlist files conflict or conflicts are unresolvable, the rebase is aborted
+  - Multi-pass resolution handles sequential conflicts from replaying multiple local-only commits
+  - Dirty rebase state (`.git/rebase-merge/` or `.git/rebase-apply/` from a prior crash) is detected and cleaned up before sync
+  - The `--merge` PR merge strategy is a load-bearing dependency — `--theirs` semantics during rebase depend on it
+- **Priority**: must-have
+
 ## Non-Functional Requirements
 
 - **Atomicity**: All session state writes use tempfile + `os.replace()` — no partial-write corruption
@@ -110,6 +126,8 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - `lifecycle/pipeline-events.log` — JSONL event audit log
 - `lifecycle/deferred/` — deferral question files
 - `lifecycle/escalations.jsonl` — escalation audit log
+- `claude/overnight/sync-allowlist.conf` — glob patterns for auto-resolvable files during post-merge sync
+- `bin/git-sync-rebase.sh` — post-merge sync script (deployed to `~/.local/bin/`)
 - Multi-agent orchestration (see `requirements/multi-agent.md`) — agent spawning, worktrees, model selection
 - Smoke test gate (`claude/overnight/smoke_test.py`) — post-merge verification
 
