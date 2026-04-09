@@ -2,20 +2,21 @@
 schema_version: "1"
 uuid: 55d26b43-7afb-41af-b7c4-a5a9eca6b17a
 title: "Investigate overnight/morning-review git sync gaps"
-status: in_progress
+status: complete
 priority: medium
 type: spike
 tags: [overnight-runner, morning-review, git]
-areas: [overnight-runner]
+areas: [overnight-runner,skills]
 created: 2026-04-08
 updated: 2026-04-08
 lifecycle_slug: investigate-overnight-morning-review-git-sync-gaps
-lifecycle_phase: research
-session_id: b33cfa0b-5961-491f-b37a-d001d208332a
+lifecycle_phase: review
+session_id: null
 blocks: []
 blocked-by: []
 complexity: complex
 criticality: high
+spec: lifecycle/investigate-overnight-morning-review-git-sync-gaps/spec.md
 ---
 
 # Investigate overnight/morning-review git sync gaps
