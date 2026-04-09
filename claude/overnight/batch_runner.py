@@ -32,7 +32,6 @@ from claude.common import (
     requires_review,
 )
 from claude.pipeline.dispatch import dispatch_task
-from claude.pipeline.review_dispatch import ReviewResult, dispatch_review
 from claude.pipeline.conflict import ConflictClassification, dispatch_repair_agent, resolve_trivial_conflict
 from claude.pipeline.merge import merge_feature
 from claude.pipeline.parser import FeatureTask, parse_feature_plan, parse_master_plan
@@ -1687,6 +1686,8 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                 tier = read_tier(name)
                 criticality = read_criticality(name)
                 if requires_review(tier, criticality):
+                    from claude.pipeline.review_dispatch import dispatch_review  # noqa: E402 — lazy to avoid circular import
+
                     rr = await dispatch_review(
                         feature=name,
                         worktree_path=worktree_paths.get(name, Path(f"worktrees/{name}")),
