@@ -188,6 +188,88 @@ The article the user referenced. Key findings beyond the surface read:
 - **"Delegate verbose operations to subagents"** — Official cost-reduction recommendation.
 - **Skills load on demand** — Only descriptions (~100-200 tokens each) loaded at startup; full content loads only when invoked.
 
+### Official Anthropic Sources (Deep Dive Round 2 — Quantitative Findings)
+
+#### Context Window Token Budget (from interactive simulation at code.claude.com/docs/en/context-window)
+
+Total context window: **200,000 tokens**. Startup auto-load before first prompt:
+
+| Component | Tokens | Notes |
+|-----------|--------|-------|
+| System prompt | 4,200 | Invisible, always first |
+| Auto memory (MEMORY.md) | 680 | First 200 lines or 25KB |
+| Environment info | 280 | cwd, platform, shell, git status |
+| MCP tools (deferred) | 120 | Names only; schemas load on demand |
+| Skill descriptions | 450 | **Not re-injected after /compact** — only invoked skills survive |
+| ~/.claude/CLAUDE.md | 320 | Global instructions |
+| Project CLAUDE.md | 1,800 | "Keep under 200 lines" |
+| **Total startup** | **~7,850** | ~4% of context before first prompt |
+
+Mid-session costs: file reads are 1,100-2,400 tokens each. Path-scoped rules auto-load at 290-380 tokens. A subagent's full file reads (6,100 tokens) compress to a **420-token return** — a **14:1 compression ratio**.
+
+#### Compaction Mechanics
+
+- Triggers at **~95% capacity** (override with `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`)
+- Summary retains **~12% of original** context
+- **Survives compaction**: system prompt, CLAUDE.md files, memory, MCP tools, your requests/intent, key code snippets, files examined/modified, errors and fixes, pending tasks
+- **Lost in compaction**: full tool outputs, intermediate reasoning, skill listing (only invoked skills preserved)
+- **Subagent transcripts are unaffected** by main conversation compaction (stored separately)
+
+This means: after compaction, the agent retains ~12% of what it had. If output was already compressed, that 12% has less redundancy to work with. Compaction-resilient output includes structural markers and key-finding repetition.
+
+#### Subagent Context Economics
+
+| Component | Main agent | Subagent | Savings |
+|-----------|-----------|----------|---------|
+| System prompt | 4,200 | 900 | 79% smaller |
+| CLAUDE.md | 1,800 | 1,800 | Same (loaded fresh) |
+| Auto memory | 680 | 680 | Same (first 200 lines) |
+| MCP + skills | varies | 970 | Subset of parent tools |
+| File reads | in main context | in subagent context | 100% isolated |
+| Return to parent | N/A | ~420 tokens | Only final message returns |
+
+Key insight: subagents are cheap to spin up (900 vs 4,200 system prompt) but their returns enter the parent's context without truncation. **"Running many subagents that each return detailed results can consume significant context"** — official warning.
+
+#### Performance-Token Correlation (from multi-agent research system)
+
+**"80% of performance variance is explained by token usage alone; 95% by tokens + tool calls + model choice."** This is the strongest evidence that output efficiency directly predicts agent quality — not just cost. Token waste isn't just expensive; it degrades results.
+
+Additional numbers: multi-agent systems use 4x tokens vs. chat, 15x for multi-agent vs. chat. Improved tool descriptions alone yielded a 40% decrease in task completion time. "Upgrading to Claude Sonnet 4 is a larger performance gain than doubling the token budget on Claude Sonnet 3.7."
+
+#### Prompt Design: Frameworks, Not Rules
+
+From the multi-agent research system: **"The best prompts for these agents are not just strict instructions, but frameworks for collaboration that define the division of labor, problem-solving approaches, and effort budgets."**
+
+This reframes the entire approach. Instead of adding rules about output length ("max 20 words per bullet"), dispatch prompts should be frameworks that naturally produce focused output: define the objective, specify the return format with an example, set the effort budget, and describe the collaboration contract.
+
+Anti-pattern confirmed: "We started by allowing the lead agent to give simple, short instructions like 'research the semiconductor shortage,' but found these instructions often were vague enough that subagents misinterpreted the task." Under-specified dispatch prompts produce MORE waste, not less.
+
+#### Agent-to-Agent Communication Patterns (deep findings)
+
+**File-based communication**: "One agent would write a file, another would read it and respond either within that file or with a new file" (harness design article). This is the lowest-context-cost communication pattern — zero tokens in the parent's context window.
+
+**Artifact system**: "Implement artifact systems where specialized agents can create outputs that persist independently... reduces token overhead from copying large outputs through conversation history" (multi-agent research system).
+
+**Lightweight references**: "Subagents call tools to store their work in external systems, then pass lightweight references back to the coordinator" (multi-agent research system).
+
+**Sprint contracts**: Before work begins, generator and evaluator negotiate what "done" looks like. "Sprint 3 alone had 27 criteria covering the level editor." Upfront success criteria eliminate irrelevant output by defining exactly what the consumer needs.
+
+#### Failure Modes to Avoid
+
+From the multi-agent research system:
+- **Over-spawning**: "Spawning 50 subagents for simple queries"
+- **Game of telephone**: Information loss during multi-stage processing when large outputs pass through context
+- **Wrong tool**: "An agent searching the web for context that only exists in Slack is doomed from the start"
+- **Duplication**: "One subagent explored the 2021 automotive chip crisis while 2 others duplicated work investigating current 2025 supply chains"
+- **Crosstalk**: "Distracting each other with excessive updates"
+
+From the harness design article:
+- **Self-evaluation leniency**: Agents "identify legitimate issues, then talk themselves into deciding they weren't a big deal and approve the work anyway"
+- **Feature stubs**: Generator "still liable to stub features when facing complexity"
+- **Non-linear improvement**: "I regularly saw cases where I preferred a middle iteration over the last one"
+
+Evaluator tuning method: "Read the evaluator's logs, find examples where its judgment diverged from mine, and update the prompt. It took several rounds."
+
 ## Domain & Prior Art
 
 ### The Compression Spectrum
