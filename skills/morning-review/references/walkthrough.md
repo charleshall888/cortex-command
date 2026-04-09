@@ -91,11 +91,26 @@ For each completed feature (same list as Section 2, same order):
 2. Read `lifecycle/{feature}/events.log`. If it already contains a line where
    `"event": "feature_complete"` appears → skip, report `already complete`.
 
-3. Otherwise, count the total number of checkboxes in `lifecycle/{feature}/plan.md`:
+3. Read the feature's tier and criticality from `lifecycle/{feature}/events.log`:
+   - **Tier**: scan for the last JSON line containing a `"tier"` field (from
+     `lifecycle_start` or `complexity_override` events). If none found, default to
+     `"simple"`. This mirrors `read_tier()` from `claude.common`.
+   - **Criticality**: scan for the last JSON line containing a `"criticality"` field.
+     If none found, default to `"medium"`. This mirrors `read_criticality()` from
+     `claude.common`.
+
+4. Apply the review gating check using the logic from `requires_review(tier, criticality)`
+   in `claude.common`:
+   - complex tier at any criticality → review required
+   - any tier at high or critical criticality → review required
+   - otherwise (simple/low, simple/medium) → review NOT required
+
+5. **If review is NOT required**: write synthetic events. Count the total number of
+   checkboxes in `lifecycle/{feature}/plan.md`:
    - Match all occurrences of `- [x]` and `- [ ]` (case-insensitive)
    - Sum = `tasks_total`. If `plan.md` does not exist, use `tasks_total: 0`.
 
-4. Append the following four events to `lifecycle/{feature}/events.log` (one JSON object
+   Append the following four events to `lifecycle/{feature}/events.log` (one JSON object
    per line, newline-terminated, no trailing comma). Use the current UTC time in ISO 8601
    format for all `ts` fields:
 
@@ -106,10 +121,31 @@ For each completed feature (same list as Section 2, same order):
    {"ts": "<now>", "event": "feature_complete", "feature": "<name>", "tasks_total": N, "rework_cycles": 0}
    ```
 
-5. Report one of the following per feature:
-   - `advanced → complete` — events were appended successfully
-   - `already complete` — `feature_complete` event already present
-   - `no lifecycle dir` — `lifecycle/{feature}/` does not exist
+   Report: `advanced → complete`.
+
+6. **If review IS required**: check `lifecycle/{feature}/events.log` for real review
+   events written by the batch runner (these have `cycle >= 1`):
+
+   a. **Both `review_verdict` (with `cycle >= 1`) AND `feature_complete` present**: the
+      batch runner already completed the full review lifecycle. Skip synthetic events.
+      Report: `already complete (reviewed)`.
+
+   b. **`review_verdict` (with `cycle >= 1`) present but `feature_complete` missing**:
+      partial write / crash recovery. Count checkboxes in `plan.md` as in step 5 and
+      append only the remaining events:
+
+      ```json
+      {"ts": "<now>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "complete"}
+      {"ts": "<now>", "event": "feature_complete", "feature": "<name>", "tasks_total": N, "rework_cycles": C}
+      ```
+
+      Where `C` is the cycle number from the last `review_verdict` event.
+      Report: `advanced → complete (crash recovery)`.
+
+   c. **Neither `review_verdict` (with `cycle >= 1`) nor `feature_complete` present**:
+      this feature was expected to be reviewed overnight but no review occurred. Do NOT
+      write synthetic APPROVED events. Report: `missing review — expected review but
+      none found`.
 
 Display the results as an inline summary before moving to Section 3:
 
@@ -298,7 +334,7 @@ Run after all other sections. No per-feature confirmation is needed before locat
 
 5. If yes:
    - Run: `gh pr merge {number} --merge --delete-branch`
-   - On success: report "Merged — main is now up to date. Remote branch deleted."
+   - On success: report "Merged. Remote branch deleted."
      - Read `worktree_path` from `lifecycle/sessions/latest-overnight/overnight-state.json`.
        If non-empty and the path exists, run: `git worktree remove --force {worktree_path}`
        - On success: report "Worktree removed."
@@ -307,6 +343,30 @@ Run after all other sections. No per-feature confirmation is needed before locat
    - On failure: show the error message and leave the PR open for manual resolution.
 
 6. If no: leave the PR open and note: "PR left open at {url} — merge manually when ready."
+
+After this section, proceed to Section 6a if a merge was performed.
+
+---
+
+## Section 6a — Post-merge sync
+
+Run immediately after a successful merge in Section 6 (step 5, on success path). If the
+merge was skipped, the PR was already merged, or the user declined to merge, skip this
+section entirely.
+
+After the PR merge, local main has local-only commits (morning report, review artifacts)
+while remote main has the PR merge commit. This step reconciles the two.
+
+1. Run:
+   ```
+   git-sync-rebase.sh claude/overnight/sync-allowlist.conf
+   ```
+
+2. Handle the exit code:
+
+   - **Exit 0**: report "Local main synced and pushed — fully up to date."
+   - **Exit 1**: report "Sync encountered unresolvable conflicts. Local main is diverged — resolve manually with `git pull --rebase origin main`."
+   - **Exit 2**: report "Rebase succeeded but push failed. Run `git push origin main` when network is available."
 
 After this section, the review is complete.
 
@@ -328,6 +388,11 @@ After this section, the review is complete.
 | `feature_complete` already in events.log | Report `already complete`; do not append events |
 | `lifecycle/{feature}/` dir missing | Report `no lifecycle dir`; skip advancement |
 | `plan.md` missing | Use `tasks_total: 0` in `feature_complete` event |
+| No tier in events.log | Default to `"simple"` (mirrors `read_tier()`) |
+| No criticality in events.log | Default to `"medium"` (mirrors `read_criticality()`) |
+| Review-required feature with real review_verdict + feature_complete | Report `already complete (reviewed)`; skip synthetic events |
+| Review-required feature with review_verdict but no feature_complete | Crash recovery: write remaining events to complete the lifecycle |
+| Review-required feature with no review events | Error state: report `missing review`; do NOT write synthetic APPROVED |
 | Multiple deferred files for one feature | Walk all of them in filename sort order within Section 3 |
 | Deferred file already has `## User Answer` section | Append new answer block after the last existing one |
 | `update_item.py` exits 1 (no item found) | Report "no ticket found" — not an error |
@@ -339,3 +404,7 @@ After this section, the review is complete.
 | `gh pr merge` fails | Show error, leave PR open for manual resolution |
 | `open` command fails | Run `open {url} 2>/dev/null || true` — review continues |
 | `worktree_path` in state doesn't exist on disk | Skip worktree removal silently, continue |
+| `git-sync-rebase.sh` exits 0 | Report synced and pushed — fully up to date |
+| `git-sync-rebase.sh` exits 1 (unresolvable conflicts) | Report diverged — resolve manually with `git pull --rebase origin main` |
+| `git-sync-rebase.sh` exits 2 (push failed) | Report rebase succeeded — run `git push origin main` when network available |
+| Merge was declined or skipped | Skip Section 6a entirely |

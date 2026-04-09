@@ -137,6 +137,7 @@
       "Bash(update-item *)",
       "Bash(generate-backlog-index *)",
       "Bash(generate-backlog-index)",
+      "Bash(git-sync-rebase.sh *)",
       "Bash(tmux *)",
       "Bash(open -na *)",
       "Bash(pbcopy *)",

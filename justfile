@@ -136,6 +136,7 @@ deploy-bin:
         "$(pwd)/bin/jcc|$HOME/.local/bin/jcc"
         "$(pwd)/bin/overnight-start|$HOME/.local/bin/overnight-start"
         "$(pwd)/bin/overnight-status|$HOME/.local/bin/overnight-status"
+        "$(pwd)/bin/git-sync-rebase.sh|$HOME/.local/bin/git-sync-rebase.sh"
     )
     conflicts=()
     for pair in "${pairs[@]}"; do
