@@ -11,11 +11,13 @@ from __future__ import annotations
 import json
 import logging
 import re
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from claude.overnight.deferral import DeferralQuestion, write_deferral
 from claude.pipeline.dispatch import dispatch_task
+from claude.pipeline.merge import merge_feature
 from claude.pipeline.state import log_event
 
 logger = logging.getLogger(__name__)
@@ -145,8 +147,14 @@ async def dispatch_review(
           ``ReviewResult(deferred=True)``.
         - **REJECTED** (any cycle): writes deferral file; returns
           ``ReviewResult(deferred=True)``.
-        - **CHANGES_REQUESTED**: stubbed as deferral path (Task 5 adds
-          the rework loop).
+        - **CHANGES_REQUESTED** (cycle 1): writes review feedback to
+          ``learnings/orchestrator-note.md``, dispatches a fix agent,
+          checks SHA circuit breaker, re-merges via ``merge_feature()``,
+          dispatches cycle 2 review, and handles the cycle 2 verdict.
+          Any failure along the rework path writes a deferral and returns
+          ``ReviewResult(deferred=True)``.
+        - **CHANGES_REQUESTED** (cycle 2+): writes deferral file; returns
+          ``ReviewResult(deferred=True)``.
 
     Args:
         feature: Feature name.
@@ -318,8 +326,7 @@ async def dispatch_review(
             issues=issues,
         )
 
-    # (9) Handle CHANGES_REQUESTED — stubbed as deferral path
-    #     Task 5 replaces this with the full rework loop.
+    # (9) Handle CHANGES_REQUESTED — rework loop (cycle 1 only)
     if verdict_str == "CHANGES_REQUESTED":
         log_event(feature_events_log, {
             "event": "review_verdict",
@@ -328,13 +335,223 @@ async def dispatch_review(
             "cycle": cycle,
             "issues": issues,
         })
-        _write_review_deferral(feature, verdict_str, cycle, issues, deferred_dir)
+
+        # Only attempt rework for cycle 1; later cycles fall through to deferral
+        if cycle != 1:
+            _write_review_deferral(feature, verdict_str, cycle, issues, deferred_dir)
+            return ReviewResult(
+                approved=False,
+                deferred=True,
+                verdict="CHANGES_REQUESTED",
+                cycle=cycle,
+                issues=issues,
+            )
+
+        # (9a) Write review feedback to orchestrator-note.md
+        learnings_dir = lifecycle_base / feature / "learnings"
+        learnings_dir.mkdir(parents=True, exist_ok=True)
+        orchestrator_note_path = learnings_dir / "orchestrator-note.md"
+        issues_text = "\n".join(f"- {issue}" for issue in issues) if issues else "- (no issues listed)"
+        orchestrator_note_path.write_text(
+            f"# Review Feedback (Cycle 1)\n\n{issues_text}\n",
+            encoding="utf-8",
+        )
+
+        # (9b) Capture SHA before fix agent dispatch
+        before_sha_result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=worktree_path,
+        )
+        before_sha = before_sha_result.stdout.strip()
+
+        # (9c) Dispatch fix agent with review findings + spec excerpt
+        fix_prompt = (
+            f"## Review Feedback\n{issues_text}\n\n"
+            f"## Spec\n{spec_excerpt}\n\n"
+            f"Fix only the flagged issues in the worktree at {worktree_path}."
+        )
+        fix_system_prompt = (
+            "You are a code fixer. Read the review feedback and fix only "
+            "the flagged issues. Do NOT introduce new features or refactor "
+            "beyond what is needed to address the review."
+        )
+
+        fix_result = await dispatch_task(
+            feature=feature,
+            task=fix_prompt,
+            worktree_path=worktree_path,
+            complexity=complexity,
+            system_prompt=fix_system_prompt,
+            log_path=log_path,
+            criticality=criticality,
+            repo_root=repo_path,
+        )
+
+        # Handle fix agent failure — defer with cycle 1 feedback + failure reason
+        if not fix_result.success:
+            logger.warning(
+                "Fix agent failed for %s: %s", feature, fix_result.error_detail,
+            )
+            _write_review_deferral(
+                feature, "CHANGES_REQUESTED", cycle,
+                issues + [f"Fix agent failed: {fix_result.error_detail}"],
+                deferred_dir,
+            )
+            return ReviewResult(
+                approved=False,
+                deferred=True,
+                verdict="CHANGES_REQUESTED",
+                cycle=cycle,
+                issues=issues + [f"Fix agent failed: {fix_result.error_detail}"],
+            )
+
+        # (9d) SHA circuit breaker — if before_sha == after_sha, defer immediately
+        after_sha_result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=worktree_path,
+        )
+        after_sha = after_sha_result.stdout.strip()
+
+        if before_sha == after_sha:
+            logger.warning(
+                "Fix agent made no commits for %s (SHA unchanged: %s)",
+                feature, before_sha,
+            )
+            _write_review_deferral(
+                feature, "CHANGES_REQUESTED", cycle,
+                issues + ["Fix agent made no changes (SHA unchanged)"],
+                deferred_dir,
+            )
+            return ReviewResult(
+                approved=False,
+                deferred=True,
+                verdict="CHANGES_REQUESTED",
+                cycle=cycle,
+                issues=issues + ["Fix agent made no changes (SHA unchanged)"],
+            )
+
+        # (9e) Re-merge via merge_feature (ci_check=False for post-rework merge)
+        remerge_result = merge_feature(
+            feature,
+            base_branch=base_branch,
+            test_command=test_command,
+            log_path=log_path,
+            ci_check=False,
+            branch=branch,
+            repo_path=repo_path,
+        )
+
+        if not remerge_result.success:
+            logger.warning(
+                "Re-merge failed for %s after rework: %s",
+                feature, remerge_result.error,
+            )
+            _write_review_deferral(
+                feature, "CHANGES_REQUESTED", cycle,
+                issues + [f"Re-merge failed: {remerge_result.error}"],
+                deferred_dir,
+            )
+            return ReviewResult(
+                approved=False,
+                deferred=True,
+                verdict="CHANGES_REQUESTED",
+                cycle=cycle,
+                issues=issues + [f"Re-merge failed: {remerge_result.error}"],
+            )
+
+        # (9f) Dispatch cycle 2 review
+        try:
+            cycle2_prompt = _load_review_prompt(
+                feature=feature,
+                spec_excerpt=spec_excerpt,
+                worktree_path=worktree_path,
+                branch_name=branch,
+            )
+            cycle2_prompt += (
+                "\n\nNote: This is review cycle 2. A previous review returned "
+                "CHANGES_REQUESTED and a fix agent has addressed the feedback. "
+                "Focus on whether the flagged issues were resolved."
+            )
+        except (FileNotFoundError, OSError) as exc:
+            logger.error("Cannot load review prompt for cycle 2: %s", exc)
+            _write_review_deferral(
+                feature, "CHANGES_REQUESTED", cycle,
+                issues + [f"Cycle 2 prompt template not readable: {exc}"],
+                deferred_dir,
+            )
+            return ReviewResult(
+                approved=False,
+                deferred=True,
+                verdict="CHANGES_REQUESTED",
+                cycle=cycle,
+                issues=issues + [f"Cycle 2 prompt template not readable: {exc}"],
+            )
+
+        cycle2_result = await dispatch_task(
+            feature=feature,
+            task=cycle2_prompt,
+            worktree_path=worktree_path,
+            complexity=complexity,
+            system_prompt=system_prompt,
+            log_path=log_path,
+            criticality=criticality,
+            repo_root=repo_path,
+        )
+
+        # (9g) Parse cycle 2 verdict
+        cycle2_verdict_dict = parse_verdict(review_md_path)
+        cycle2_verdict_str = cycle2_verdict_dict.get("verdict", "ERROR")
+        cycle2_cycle = cycle2_verdict_dict.get("cycle", 0)
+        cycle2_issues = cycle2_verdict_dict.get("issues", [])
+
+        # (9h) If APPROVED, return success
+        if cycle2_verdict_str == "APPROVED":
+            log_event(feature_events_log, {
+                "event": "review_verdict",
+                "feature": feature,
+                "verdict": "APPROVED",
+                "cycle": cycle2_cycle,
+                "issues": cycle2_issues,
+            })
+            log_event(feature_events_log, {
+                "event": "phase_transition",
+                "feature": feature,
+                "from": "review",
+                "to": "complete",
+            })
+            log_event(feature_events_log, {
+                "event": "feature_complete",
+                "feature": feature,
+            })
+            return ReviewResult(
+                approved=True,
+                deferred=False,
+                verdict="APPROVED",
+                cycle=cycle2_cycle,
+                issues=cycle2_issues,
+            )
+
+        # (9i) Non-APPROVED cycle 2 — write deferral and return deferred
+        log_event(feature_events_log, {
+            "event": "review_verdict",
+            "feature": feature,
+            "verdict": cycle2_verdict_str,
+            "cycle": cycle2_cycle,
+            "issues": cycle2_issues,
+        })
+        _write_review_deferral(
+            feature, cycle2_verdict_str, cycle2_cycle, cycle2_issues, deferred_dir,
+        )
         return ReviewResult(
             approved=False,
             deferred=True,
-            verdict="CHANGES_REQUESTED",
-            cycle=cycle,
-            issues=issues,
+            verdict=cycle2_verdict_str,
+            cycle=cycle2_cycle,
+            issues=cycle2_issues,
         )
 
     # Unexpected verdict value — treat as ERROR
