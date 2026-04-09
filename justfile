@@ -642,6 +642,10 @@ overnight-start state="" time-limit="6" max-rounds="10" tier="max_100":
     echo "  Watch  : tail -f lifecycle/sessions/latest-overnight/overnight-events.log"
     just overnight-status
 
+# Schedule an overnight run to start at a specific time (e.g. just overnight-schedule 23:00)
+overnight-schedule target-time state="" time-limit="6" max-rounds="10" tier="max_100":
+    overnight-schedule "{{ target-time }}" "{{ state }}" "{{ time-limit }}" "{{ max-rounds }}" "{{ tier }}"
+
 # Show a live auto-refreshing status display for the active overnight session
 overnight-status:
     #!/usr/bin/env bash
