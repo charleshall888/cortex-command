@@ -1,0 +1,2 @@
+{"ts": "2026-04-08T16:00:00Z", "event": "orchestrator_review", "feature": "overnight-plan-building", "phase": "research", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-08T16:15:00Z", "event": "critical_review", "feature": "overnight-plan-building", "phase": "research", "angles": ["state_mutation_ordering", "overstated_savings_yagni", "plan_quality_sonnet_downgrade", "agent_sdk_dispatch_gap"], "applied": 6, "dismissed": 2, "asked": 0}
