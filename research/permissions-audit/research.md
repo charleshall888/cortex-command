@@ -315,8 +315,8 @@ When `claude/settings.json` is deployed to `~/.claude/settings.json` via `just s
   2. Move `WebFetch` to `ask` in the template (prompt before fetching arbitrary URLs)
   3. Add deny rules for known dangerous patterns: `Bash(gh gist create *)`, `Bash(git remote add *)`
   4. Remove `WebFetch` from `excludedCommands` (let sandbox restrict it)
-- **Recommendation**: A combination: (a) narrow `gh *` in the allow list to safe read patterns, (b) remove `WebFetch` from `excludedCommands` so the sandbox's `allowedDomains` applies, (c) consider deny rules for `git remote add *` to prevent adding arbitrary remotes. These are meaningful security improvements because unlike the escape hatch concern, the exfiltration channels are confirmed — `excludedCommands` definitely bypasses sandbox enforcement.
-- **Trade-offs**: Narrowing `gh` means prompts for `gh gist create`, `gh pr create`, etc. Removing `WebFetch` from `excludedCommands` means the sandbox restricts which domains WebFetch can access.
+- **Recommendation (RESOLVED)**: (a) Remove `WebFetch` from the allow list — let it fall through to prompt-based approval. Keep it in `excludedCommands` so the sandbox doesn't block it when the user approves. This means each fetch is user-reviewed in interactive sessions; overnight bypasses permissions anyway. Context7 and Perplexity MCP servers handle most research needs, so direct WebFetch is rare. (b) Narrow `gh *` to safe read patterns in the allow list. (c) Consider deny rules for `git remote add *` to prevent adding arbitrary remotes. These are meaningful security improvements because the exfiltration channels are confirmed — `excludedCommands` definitely bypasses sandbox enforcement.
+- **Trade-offs**: WebFetch prompts on first use per domain in interactive sessions (low friction — most research goes through Context7/Perplexity). Narrowing `gh` means prompts for `gh gist create`, `gh pr create`, etc.
 
 ## Open Questions
 
