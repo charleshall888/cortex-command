@@ -77,6 +77,18 @@ Your review.md MUST include a ## Requirements Drift section using exactly this f
 **Update needed**: (path to requirements file that needs updating, or "None")
 The requirements_drift value in the verdict JSON MUST match: "none" when State is none, "detected" when State is detected.
 
+When drift IS detected, you MUST also include a ## Suggested Requirements Update section immediately after Requirements Drift. This section provides the exact content the orchestrator will append to the named requirements file:
+## Suggested Requirements Update
+**File**: (path to the requirements file to update, e.g. requirements/project.md)
+**Section**: (existing section heading where the content belongs, e.g. "## Quality Attributes")
+**Content**:
+```
+(exact markdown content to append — a single bullet point, constraint, or paragraph that captures the drifted concern)
+```
+Write the content as it should appear in the requirements file — not as a description of what to add. Keep it concise (1-3 lines). If drift spans multiple requirements files, include one Suggested Requirements Update section per file.
+
+When drift is NOT detected, omit the Suggested Requirements Update section entirely.
+
 Do NOT modify any source files. This is a read-only review.
 ```
 
@@ -101,6 +113,15 @@ Do NOT modify any source files. This is a read-only review.
 **Findings**:
 - (one bullet per drifted item, or "None" if state is none)
 **Update needed**: (path to requirements file that needs updating, or "None")
+
+## Suggested Requirements Update
+<!-- Only present when State is detected -->
+**File**: (path)
+**Section**: (heading)
+**Content**:
+```
+(exact content to append)
+```
 
 ## Stage 2: Code Quality
 <!-- Only present if Stage 1 has no FAIL verdicts -->
@@ -148,6 +169,29 @@ After reading the verdict from the review artifact, append a `review_verdict` ev
 
 Where `requirements_drift` is read from the `"requirements_drift"` field in the verdict JSON block.
 
+### 4a. Auto-Apply Requirements Drift
+
+After logging the `review_verdict` event, check whether `requirements_drift` is `"detected"`. If so:
+
+1. **Read the suggested update**: Parse the `## Suggested Requirements Update` section from `lifecycle/{feature}/review.md`. Extract `File`, `Section`, and `Content` fields.
+
+2. **If the section is missing or unparseable**: Skip auto-apply. Log a warning to the user: "Requirements drift detected but no suggested update was provided — manual update needed." Do not block the verdict processing.
+
+3. **Apply the update**: Read the target requirements file. Find the section heading. Append the content after the last bullet or paragraph in that section. Write the file.
+
+4. **Log the event**: Append a `requirements_updated` event to `lifecycle/{feature}/events.log`:
+   ```
+   {"ts": "<ISO 8601>", "event": "requirements_updated", "feature": "<name>", "file": "<requirements file path>", "section": "<section heading>", "content": "<one-line summary of what was added>"}
+   ```
+
+5. **Report to the user**: Display what was changed:
+   ```
+   Requirements updated: {file} → {section}
+     Added: {first line of content}
+   ```
+
+   In interactive sessions, the user sees this immediately. In overnight sessions, the `requirements_updated` event in events.log is surfaced by the morning review.
+
 ### 5. Transition
 
 - APPROVED → log the transition and proceed to Complete automatically — do not ask the user for confirmation:
@@ -171,5 +215,5 @@ Where `requirements_drift` is read from the `"requirements_drift"` field in the 
 | "I'll just fix the issues myself instead of flagging them" | The reviewer does not modify files. Flagging issues preserves separation of concerns and creates a paper trail. |
 | "Code quality issues are minor, I'll let them pass" | Minor issues compound. Flag them as PARTIAL with notes — the implementer can address them quickly. |
 | "I'll use `overall: PASS` for the verdict" | The verdict JSON must use exactly `"verdict": "APPROVED"` (or `CHANGES_REQUESTED` / `REJECTED`). State detection parses this exact field name and these exact values. |
-| "Requirements drift is hard to assess without clear traceability" | Assess against the requirements docs loaded in §1. If uncertain, log `detected` with a note — false positives generate a morning report entry; false negatives silently hide drift. |
-| "Requirements drift should influence whether I approve the feature" | Drift is an observation only. The verdict reflects spec compliance and code quality. A feature with detected drift may still be APPROVED. |
+| "Requirements drift is hard to assess without clear traceability" | Assess against the requirements docs loaded in §1. If uncertain, log `detected` with a note — false positives auto-apply a small update; false negatives silently hide drift. |
+| "Requirements drift should influence whether I approve the feature" | Drift is an observation only. The verdict reflects spec compliance and code quality. A feature with detected drift may still be APPROVED. The drift is auto-applied to requirements after the verdict. |

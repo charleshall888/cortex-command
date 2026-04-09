@@ -147,13 +147,36 @@ For each completed feature (same list as Section 2, same order):
       write synthetic APPROVED events. Report: `missing review — expected review but
       none found`.
 
-Display the results as an inline summary before moving to Section 3:
+Display the results as an inline summary before moving to Section 2c:
 
 ```
 Lifecycle updates:
   fix-hardcoded-personal-paths-and-identifiers    advanced → complete
   add-public-sharing-documentation-to-readme      advanced → complete
 ```
+
+---
+
+## Section 2c — Requirements Drift Updates
+
+After lifecycle advancement, scan each completed feature's `lifecycle/{feature}/events.log` for `requirements_updated` events. If none are found across any feature, skip this section entirely.
+
+For each `requirements_updated` event found:
+
+1. Read the event's `file`, `section`, and `content` fields.
+2. Verify the update was actually applied by checking the named file for the content. If the file doesn't contain the expected content (e.g., overnight crash before write), flag it as `not applied — manual update needed`.
+
+Display as a summary block:
+
+```
+Requirements updates (auto-applied during review):
+  close-exfiltration-channels → requirements/project.md § Quality Attributes
+    Added: Defense-in-depth for permissions...
+  add-rate-limiting → requirements/pipeline.md § Architectural Constraints
+    Added: Rate limiting for external API calls...
+```
+
+This block is informational — the updates were already applied during the review phase. The morning review surfaces them so the user is aware of changes to requirements docs.
 
 ---
 
