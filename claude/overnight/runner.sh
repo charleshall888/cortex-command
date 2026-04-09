@@ -977,20 +977,33 @@ if [[ -n "$WORKTREE_PATH" ]]; then
         cp "$SESSION_DIR/overnight-strategy.json"   "$WORKTREE_PATH/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
     fi
 
-    # Home-repo git-add subshell — always runs in both cross-repo and home-only sessions.
-    # For cross-repo sessions, batch results won't be in the home repo, but any home-repo lifecycle
-    # artifacts that changed during the session are still committed here.
+    # Copy backlog files from repo root to worktree — _write_back_to_backlog()
+    # writes status updates (e.g. status: complete) to $REPO_ROOT/backlog/, and
+    # backlog index regeneration may also write there. Bring everything across.
+    mkdir -p "$WORKTREE_PATH/backlog/"
+    cp -r "$REPO_ROOT/backlog/"* "$WORKTREE_PATH/backlog/" 2>/dev/null || true
+
+    # Copy lifecycle/pipeline-events.log if it was written to the repo root
+    # rather than the worktree CWD (batch_runner writes to session dir by
+    # default, but guard against CWD-relative writes landing in $REPO_ROOT).
+    if [[ -f "$REPO_ROOT/lifecycle/pipeline-events.log" ]]; then
+        cp "$REPO_ROOT/lifecycle/pipeline-events.log" "$WORKTREE_PATH/lifecycle/pipeline-events.log" 2>/dev/null || true
+    fi
+
+    # Worktree git-add subshell — commits artifacts to the integration branch.
+    # For cross-repo sessions, batch results won't be in the home repo, but any
+    # home-repo lifecycle artifacts that changed during the session are still
+    # committed here.
     set +e
     (
-        cd "$REPO_ROOT"
+        cd "$WORKTREE_PATH"
         git add "lifecycle/sessions/${SESSION_ID}/"            2>/dev/null || true
         git add "lifecycle/*/research.md"                      2>/dev/null || true
         git add "lifecycle/*/spec.md"                          2>/dev/null || true
         git add "lifecycle/*/plan.md"                          2>/dev/null || true
         git add "lifecycle/*/agent-activity.jsonl"             2>/dev/null || true
         git add "lifecycle/pipeline-events.log"                2>/dev/null || true
-        git add "backlog/index.md"                             2>/dev/null || true
-        git add "backlog/archive/"                             2>/dev/null || true
+        git add "backlog/"                                     2>/dev/null || true
         if ! git diff --cached --quiet; then
             if ! git commit -m "Overnight session ${SESSION_ID}: record artifacts"; then
                 log_event "artifact_commit_failed" "$(( ROUND - 1 ))" "{\"session_id\": \"$SESSION_ID\"}"
