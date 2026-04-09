@@ -203,7 +203,16 @@
       "Bash(xargs *rm*)",
       "Bash(find * -delete*)",
       "Bash(find * -exec rm*)",
-      "Bash(find * -exec shred*)"
+      "Bash(find * -exec shred*)",
+      "Bash(gh gist create *)",
+      "Bash(gh gist edit *)",
+      "Bash(git remote add *)",
+      "Bash(git remote set-url *)",
+      "Bash(git remote remove *)",
+      "Bash(git push https://*)",
+      "Bash(git push http://*)",
+      "Bash(git push * https://*)",
+      "Bash(git push * http://*)"
     ],
     "ask": [
       "Bash(git restore *)"
