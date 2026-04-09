@@ -35,7 +35,7 @@ Agentic workflow toolkit for AI-assisted software development. Defines the globa
 ### In Scope
 
 - AI workflow orchestration (skills, lifecycle, pipeline, discovery, backlog)
-- Overnight execution framework, session management, and morning reporting
+- Overnight execution framework, session management, scheduled launch, and morning reporting
 - Dashboard (~1800 LOC FastAPI): real-time web monitoring of overnight sessions
 - Conflict resolution pipeline (~2500 LOC): classifies conflicts, dispatches repair agents, retries merges
 - Remote access integration (Tailscale, mosh, tmux, Cloudflare Tunnel)
