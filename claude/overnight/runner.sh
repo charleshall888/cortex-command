@@ -971,10 +971,10 @@ if [[ -n "$WORKTREE_PATH" ]]; then
         cp "$SESSION_DIR"/batch-*-results.json      "$TARGET_INTEGRATION_WORKTREE/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
         cp "$SESSION_DIR/overnight-strategy.json"   "$TARGET_INTEGRATION_WORKTREE/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
     else
-        # Home-only session: copy artifacts to the home repo's session dir
-        mkdir -p "$REPO_ROOT/lifecycle/sessions/${SESSION_ID}/"
-        cp "$SESSION_DIR"/batch-*-results.json      "$REPO_ROOT/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
-        cp "$SESSION_DIR/overnight-strategy.json"   "$REPO_ROOT/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
+        # Home-only session: copy artifacts to the worktree's session dir
+        mkdir -p "$WORKTREE_PATH/lifecycle/sessions/${SESSION_ID}/"
+        cp "$SESSION_DIR"/batch-*-results.json      "$WORKTREE_PATH/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
+        cp "$SESSION_DIR/overnight-strategy.json"   "$WORKTREE_PATH/lifecycle/sessions/${SESSION_ID}/" 2>/dev/null || true
     fi
 
     # Home-repo git-add subshell — always runs in both cross-repo and home-only sessions.
