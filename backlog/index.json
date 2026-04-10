@@ -143,5 +143,32 @@
     "lifecycle_phase": null,
     "schema_version": null,
     "repo": null
+  },
+  {
+    "id": 59,
+    "title": "Apply Anthropic migration rewrite table to skill prompts",
+    "status": "draft",
+    "priority": "low",
+    "type": "chore",
+    "tags": [
+      "output-efficiency",
+      "skills"
+    ],
+    "areas": [],
+    "created": "2026-04-10",
+    "updated": "2026-04-10",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "49",
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "9598763c-dc24-4089-a182-073f83182d91",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
   }
 ]

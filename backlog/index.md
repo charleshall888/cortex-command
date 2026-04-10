@@ -7,6 +7,7 @@
 | 52 | Audit skill prompts and remove verbose instructions above the floor | in_progress | medium | chore | — | 49 | ✓ |
 | 53 | Add subagent output format specs and compress synthesis | draft | medium | feature | 52 | 49 | — |
 | 48 | Trim and instrument overnight plan-gen prompt | refined | low | chore | — | — | — |
+| 59 | Apply Anthropic migration rewrite table to skill prompts | draft | low | chore | — | 49 | — |
 
 ## Refined
 
