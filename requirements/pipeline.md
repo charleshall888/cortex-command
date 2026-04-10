@@ -124,6 +124,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - **Concurrency safety**: State file reads are not protected by locks; the forward-only phase transition model ensures re-reading a new state is safe (idempotent transitions)
 - **Graceful degradation**: Budget exhaustion and rate limits pause the session rather than crashing it
 - **Audit trail**: `lifecycle/pipeline-events.log` provides an append-only JSONL record of all dispatch and merge events
+- **Orchestrator rationale convention**: When the orchestrator resolves an escalation or makes a non-obvious feature selection decision (e.g., skipping a feature, reordering rounds), the relevant events.log entry should include a `rationale` field explaining the reasoning. Routine forward-progress decisions do not require this field. (Convention defined in `claude/reference/output-floors.md`; enforcement requires orchestrator prompt changes.)
 
 ## Architectural Constraints
 

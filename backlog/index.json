@@ -1,59 +1,30 @@
 [
   {
-    "id": 50,
-    "title": "Define output floors for interactive approval and overnight compaction",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "output-efficiency",
-      "context-management",
-      "overnight"
-    ],
-    "areas": [
-      "skills",
-      "lifecycle"
-    ],
-    "created": "2026-04-09",
-    "updated": "2026-04-09",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "49",
-    "research": null,
-    "spec": "lifecycle/define-output-floors-for-interactive-approval-and-overnight-compaction/spec.md",
-    "discovery_source": "research/agent-output-efficiency/research.md",
-    "plan": null,
-    "uuid": null,
-    "lifecycle_slug": "define-output-floors-for-interactive-approval-and-overnight-compaction",
-    "session_id": "608075d7-534d-4ce9-ba0f-b394d1ec58d6",
-    "lifecycle_phase": "implement",
-    "schema_version": null,
-    "repo": null
-  },
-  {
     "id": 51,
     "title": "Add hook-based preprocessing for test/build output",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
       "output-efficiency",
       "hooks"
     ],
-    "areas": [],
+    "areas": [
+      "hooks"
+    ],
     "created": "2026-04-09",
     "updated": "2026-04-09",
     "blocks": [],
     "blocked_by": [],
     "parent": "49",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/add-hook-based-preprocessing-for-test-build-output/spec.md",
     "discovery_source": "research/agent-output-efficiency/research.md",
     "plan": null,
     "uuid": null,
     "lifecycle_slug": "add-hook-based-preprocessing-for-test-build-output",
     "session_id": "f8cbe036-68f9-49c3-b24d-51a2078888d0",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": null,
     "repo": null
   },
@@ -88,7 +59,7 @@
   {
     "id": 57,
     "title": "Remove interpreter escape hatch commands",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "task",
     "tags": [
@@ -106,9 +77,9 @@
     "discovery_source": "research/permissions-audit/research.md",
     "plan": null,
     "uuid": "d6a4f1b5-0e7a-4b2d-c9f4-a5b6c7d8e9f0",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "remove-interpreter-escape-hatch-commands",
+    "session_id": "3dd2bd08-175f-4ced-84f5-6c6fa5d88231",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -184,9 +155,7 @@
     "created": "2026-04-09",
     "updated": "2026-04-09",
     "blocks": [],
-    "blocked_by": [
-      "50"
-    ],
+    "blocked_by": [],
     "parent": "49",
     "research": null,
     "spec": null,
@@ -215,7 +184,6 @@
     "updated": "2026-04-09",
     "blocks": [],
     "blocked_by": [
-      "50",
       "52"
     ],
     "parent": "49",
