@@ -217,6 +217,11 @@ ALWAYS find root cause before attempting fixes. No fixes without completing Phas
    - **Supporting evidence**: specific findings (file paths, error patterns, code behavior)
    - **Rebuttal of strongest competing theory**: with evidence
 
+   Format example:
+   ```
+   Root cause: [assertion] / Evidence: [supporting detail] / Rebuttal: [strongest objection to this hypothesis]
+   ```
+
    Enforce via `TeammateIdle` hook (exit code 2 sends feedback, keeps the teammate working)
    or by the lead sending direct messages challenging shallow or incomplete outputs.
 
