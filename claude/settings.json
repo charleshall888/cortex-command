@@ -378,7 +378,8 @@
     "excludedCommands": [
       "gh:*",
       "git:*",
-      "WebFetch"
+      "WebFetch",
+      "WebSearch"
     ]
   },
   "alwaysThinkingEnabled": true,
