@@ -44,11 +44,14 @@ Do not push. Do not create branches. Do not output conversational text — only 
 
 ### Step 5: Signing check
 
-Run this command before every commit. It prints the `GNUPGHOME=` prefix to use, or nothing:
+Run this command before every commit to detect whether sandbox GPG signing is available:
 
 ```bash
-bash -c 'if [ -f "$TMPDIR/gnupghome/S.gpg-agent" ]; then echo "GNUPGHOME=$TMPDIR/gnupghome"; fi'
+test -f "$TMPDIR/gnupghome/S.gpg-agent"
 ```
+
+- **Exit code 0** (file exists): use `GNUPGHOME=$TMPDIR/gnupghome` as a prefix on the commit command in step 6. Use the literal expanded path from `$TMPDIR` — not a shell variable.
+- **Exit code 1** (file missing): no prefix needed — commit without `GNUPGHOME`.
 
 ### Step 6: Commit
 
