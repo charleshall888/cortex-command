@@ -270,7 +270,12 @@ Read **only** the reference for the current phase. Do not preload other phases.
 
 ## Phase Transition
 
-After completing a phase artifact, announce the transition and proceed to the next phase automatically. Between phases, briefly summarize what was accomplished and what comes next.
+After completing a phase artifact, announce the transition and proceed to the next phase automatically. Between phases, include these minimum fields in the transition summary (see `~/.claude/reference/output-floors.md` for expanded definitions — when loaded, the reference doc supersedes these inline names):
+
+- **Decisions**: Key decisions made during this phase (or "None")
+- **Scope delta**: Changes to scope, approach, or plan since last phase (or "None")
+- **Blockers**: Active blockers, escalations, or deferred questions (or "None")
+- **Next**: Next phase name and what it will do
 
 If the user invokes `/lifecycle <phase>` to jump to a specific phase, honor the request but warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
 

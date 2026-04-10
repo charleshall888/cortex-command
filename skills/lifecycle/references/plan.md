@@ -240,7 +240,14 @@ After orchestrator review passes, check `lifecycle/{feature}/events.log` for the
 
 ### 4. User Approval
 
-Present the plan summary (overview + task list). The user must approve before implementation begins. If the user requests changes, revise and re-present.
+Present the plan summary (overview + task list). In addition to the overview and task list, include these approval surface fields (see `~/.claude/reference/output-floors.md` for expanded definitions):
+
+- **Produced** (one-line summary of the artifact)
+- **Trade-offs** (alternatives considered and rationale for chosen approach)
+- **Veto surface** (items the user might disagree with or want to change)
+- **Scope boundaries** (what is explicitly excluded)
+
+The user must approve before implementation begins. If the user requests changes, revise and re-present.
 
 ### 5. Transition
 

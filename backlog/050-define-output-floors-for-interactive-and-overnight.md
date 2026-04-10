@@ -1,7 +1,7 @@
 ---
 id: 50
 title: Define output floors for interactive approval and overnight compaction
-status: ready
+status: refined
 priority: high
 type: feature
 parent: 49
@@ -9,6 +9,13 @@ tags: [output-efficiency, context-management, overnight]
 created: 2026-04-09
 updated: 2026-04-09
 discovery_source: research/agent-output-efficiency/research.md
+session_id: 608075d7-534d-4ce9-ba0f-b394d1ec58d6
+lifecycle_phase: implement
+lifecycle_slug: define-output-floors-for-interactive-approval-and-overnight-compaction
+complexity: complex
+criticality: high
+spec: lifecycle/define-output-floors-for-interactive-approval-and-overnight-compaction/spec.md
+areas: [skills,lifecycle]
 ---
 
 # Define output floors for interactive approval and overnight compaction

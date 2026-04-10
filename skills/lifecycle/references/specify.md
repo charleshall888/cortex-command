@@ -153,7 +153,14 @@ After orchestrator review passes, check `lifecycle/{feature}/events.log` for the
 
 ### 4. User Approval
 
-Present the specification summary and use the AskUserQuestion tool to collect approval — not as plain markdown text. The user must approve before proceeding to Plan. If the user requests changes, revise the spec and re-present.
+Present the specification summary and use the AskUserQuestion tool to collect approval — not as plain markdown text. The summary must include these approval surface fields (see `~/.claude/reference/output-floors.md` for expanded definitions):
+
+- **Produced** (one-line summary of the artifact)
+- **Trade-offs** (alternatives considered and rationale for chosen approach)
+- **Veto surface** (items the user might disagree with or want to change)
+- **Scope boundaries** (what is explicitly excluded)
+
+The user must approve before proceeding to Plan. If the user requests changes, revise the spec and re-present.
 
 ### 5. Transition
 

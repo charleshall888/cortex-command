@@ -59,6 +59,7 @@ setup-force:
     ln -sf "$(pwd)/claude/reference/parallel-agents.md" ~/.claude/reference/parallel-agents.md
     ln -sf "$(pwd)/claude/reference/context-file-authoring.md" ~/.claude/reference/context-file-authoring.md
     ln -sf "$(pwd)/claude/reference/claude-skills.md" ~/.claude/reference/claude-skills.md
+    ln -sf "$(pwd)/claude/reference/output-floors.md" ~/.claude/reference/output-floors.md
     # --- skills ---
     mkdir -p ~/.claude/skills
     for skill in skills/*/SKILL.md; do
@@ -184,6 +185,7 @@ deploy-reference:
         "$(pwd)/claude/reference/parallel-agents.md|$HOME/.claude/reference/parallel-agents.md"
         "$(pwd)/claude/reference/context-file-authoring.md|$HOME/.claude/reference/context-file-authoring.md"
         "$(pwd)/claude/reference/claude-skills.md|$HOME/.claude/reference/claude-skills.md"
+        "$(pwd)/claude/reference/output-floors.md|$HOME/.claude/reference/output-floors.md"
     )
     conflicts=()
     for pair in "${pairs[@]}"; do
@@ -804,6 +806,7 @@ check-symlinks:
     check ~/.claude/reference/parallel-agents.md
     check ~/.claude/reference/context-file-authoring.md
     check ~/.claude/reference/claude-skills.md
+    check ~/.claude/reference/output-floors.md
     echo ""
     if [ "$errors" -eq 0 ]; then
         echo "All symlinks intact."

@@ -22,5 +22,6 @@ These instructions apply to all projects on this machine.
 | Modifying SKILL.md files, Agents.md, CLAUDE.md, or reference docs | `~/.claude/reference/context-file-authoring.md` and `~/.claude/reference/claude-skills.md` |
 | About to claim success, tests pass, build succeeds, bug fixed, or agent completed | `~/.claude/reference/verification-mindset.md` |
 | Deciding whether to dispatch agents in parallel | `~/.claude/reference/parallel-agents.md` |
+| Writing phase transition summaries, approval surfaces, or editing skill output instructions | `~/.claude/reference/output-floors.md` |
 
 When creating or editing SKILL.md files, invoke `/skill-creator`. For editing existing skills, focus on Step 4 (authoring rules + pattern check) -- not the full new-skill workflow.
