@@ -12,7 +12,7 @@ Run these checks first, before any other action. Halt immediately if either guar
 
 ### Symlink guard
 
-Run: `python3 -c "import pathlib; exit(0 if pathlib.Path('~/.claude/settings.json').expanduser().is_symlink() else 1)"`
+Run: `test -L ~/.claude/settings.json`
 
 If exit code is 0 (settings.json IS a symlink), convert it before proceeding.
 
