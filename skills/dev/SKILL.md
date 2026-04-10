@@ -84,7 +84,7 @@ Honor the user's choice immediately.
 
 ## Step 2: Criticality Pre-Assessment
 
-Before routing to `/lifecycle`, analyze the feature description for heuristic signals that suggest elevated criticality. This is a conversational suggestion — lifecycle runs its own full assessment in Step 3.
+Before routing to `/lifecycle`, analyze the feature description for heuristic signals that suggest elevated criticality.
 
 ### Heuristic Signals
 
@@ -115,7 +115,7 @@ Based on signals found (or absence of signals), suggest a criticality level:
 
 Present the suggestion conversationally:
 
-> **Criticality suggestion: `<level>`** — `<one-sentence justification>`. Lifecycle will run its own full assessment; this is just a starting point.
+> **Criticality suggestion: `<level>`** — `<one-sentence justification>`.
 
 If no heuristic signals are detected, suggest **medium** (the lifecycle default) and note that no elevated signals were found.
 
