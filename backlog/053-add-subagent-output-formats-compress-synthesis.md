@@ -5,7 +5,7 @@ status: draft
 priority: medium
 type: feature
 parent: 49
-blocked-by: [50, 52]
+blocked-by: [52]
 tags: [output-efficiency, multi-agent, skills]
 created: 2026-04-09
 updated: 2026-04-09
