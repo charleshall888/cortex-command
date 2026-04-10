@@ -3,13 +3,10 @@
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
-| 49 | Improve agent output signal-to-noise ratio | refined | medium | epic | — | — | — |
-| 53 | Add subagent output formats and apply imperative-intensity rewrites | in_progress | medium | feature | — | 49 | — |
 | 48 | Trim and instrument overnight plan-gen prompt | refined | low | chore | — | — | — |
 
 ## Refined
 
-- **49** Improve agent output signal-to-noise ratio
 - **48** Trim and instrument overnight plan-gen prompt
 
 ## Backlog
@@ -18,4 +15,3 @@
 
 ## In-Progress
 
-- **53** Add subagent output formats and apply imperative-intensity rewrites (in_progress)

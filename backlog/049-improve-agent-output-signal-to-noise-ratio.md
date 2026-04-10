@@ -1,12 +1,12 @@
 ---
 id: 49
 title: Improve agent output signal-to-noise ratio
-status: ready
+status: complete
 priority: medium
 type: epic
 tags: [output-efficiency, context-management, multi-agent]
 created: 2026-04-09
-updated: 2026-04-09
+updated: 2026-04-10
 discovery_source: research/agent-output-efficiency/research.md
 ---
 
