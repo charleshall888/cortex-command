@@ -262,6 +262,11 @@
             "type": "command",
             "command": "~/.claude/hooks/cortex-validate-commit.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/cortex-output-filter.sh",
+            "timeout": 5
           }
         ]
       }
