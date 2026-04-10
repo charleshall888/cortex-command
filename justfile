@@ -941,7 +941,7 @@ test:
     }
     run_test "test-pipeline" just test-pipeline
     run_test "test-overnight" just test-overnight
-    run_test "tests" uv run pytest tests/ -q
+    run_test "tests" .venv/bin/pytest tests/ -q
     total=$((passed + failed))
     echo ""
     echo "Test suite: $passed/$total passed"
