@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: d6a4f1b5-0e7a-4b2d-c9f4-a5b6c7d8e9f0
 title: "Remove interpreter escape hatch commands"
-status: backlog
+status: complete
 priority: high
 type: task
 tags: [permissions-audit, security]
@@ -11,6 +11,13 @@ updated: 2026-04-09
 parent: 054
 blocked-by: []
 discovery_source: research/permissions-audit/research.md
+session_id: null
+lifecycle_phase: research
+lifecycle_slug: remove-interpreter-escape-hatch-commands
+complexity: simple
+criticality: high
+spec: lifecycle/remove-interpreter-escape-hatch-commands/spec.md
+areas: [skills]
 ---
 
 # Remove interpreter escape hatch commands

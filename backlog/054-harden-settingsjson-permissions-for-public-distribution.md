@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: a3f1c8e2-7b4d-4e9a-b6c1-d2e3f4a5b6c7
 title: "Harden settings.json permissions for public distribution"
-status: backlog
+status: complete
 priority: high
 type: epic
 tags: [permissions-audit, security, shareability]

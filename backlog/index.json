@@ -1,60 +1,5 @@
 [
   {
-    "id": 54,
-    "title": "Harden settings.json permissions for public distribution",
-    "status": "backlog",
-    "priority": "high",
-    "type": "epic",
-    "tags": [
-      "permissions-audit",
-      "security",
-      "shareability"
-    ],
-    "areas": [],
-    "created": "2026-04-09",
-    "updated": "2026-04-09",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/permissions-audit/research.md",
-    "plan": null,
-    "uuid": "a3f1c8e2-7b4d-4e9a-b6c1-d2e3f4a5b6c7",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 57,
-    "title": "Remove interpreter escape hatch commands",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "task",
-    "tags": [
-      "permissions-audit",
-      "security"
-    ],
-    "areas": [],
-    "created": "2026-04-09",
-    "updated": "2026-04-09",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "054",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/permissions-audit/research.md",
-    "plan": null,
-    "uuid": "d6a4f1b5-0e7a-4b2d-c9f4-a5b6c7d8e9f0",
-    "lifecycle_slug": "remove-interpreter-escape-hatch-commands",
-    "session_id": "3dd2bd08-175f-4ced-84f5-6c6fa5d88231",
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -115,7 +60,7 @@
   {
     "id": 52,
     "title": "Audit skill prompts and remove verbose instructions above the floor",
-    "status": "draft",
+    "status": "in_progress",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -133,9 +78,9 @@
     "discovery_source": "research/agent-output-efficiency/research.md",
     "plan": null,
     "uuid": null,
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "audit-skill-prompts-and-remove-verbose-instructions-above-the-floor",
+    "session_id": "1a6d6f64-1fba-44d2-889c-07a6bf0d8bc6",
+    "lifecycle_phase": "research",
     "schema_version": null,
     "repo": null
   },
