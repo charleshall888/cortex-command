@@ -40,7 +40,7 @@ You are challenging a confidence assessment. Your job is to find where the ratin
 ## Instructions
 
 1. Read the confidence assessment and the source material carefully.
-2. Derive 3–4 challenge angles from the confidence assessment. The three dimensions you must cover are:
+2. Derive 3–4 challenge angles from the confidence assessment. The three dimensions you should cover are:
    - **Intent clarity** — is the goal unambiguous and complete as stated in the source?
    - **Scope boundedness** — are the boundaries explicit and grounded in the source, or asserted?
    - **Requirements alignment** — is the claim of alignment (or no conflict) actually supported?
