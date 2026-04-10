@@ -1,7 +1,7 @@
 ---
 id: 53
 title: Add subagent output formats and apply imperative-intensity rewrites
-status: draft
+status: in_progress
 priority: medium
 type: feature
 parent: 49
@@ -10,6 +10,11 @@ tags: [output-efficiency, multi-agent, skills, anthropic-migration]
 created: 2026-04-09
 updated: 2026-04-10
 discovery_source: research/agent-output-efficiency/research.md
+session_id: 61e1eb47-0742-47f5-a810-81525cbede7a
+lifecycle_phase: implement
+lifecycle_slug: add-subagent-output-formats-compress-synthesis
+complexity: complex
+criticality: high
 ---
 
 # Add subagent output formats and apply imperative-intensity rewrites

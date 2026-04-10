@@ -60,7 +60,7 @@
   {
     "id": 53,
     "title": "Add subagent output formats and apply imperative-intensity rewrites",
-    "status": "draft",
+    "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -80,9 +80,9 @@
     "discovery_source": "research/agent-output-efficiency/research.md",
     "plan": null,
     "uuid": null,
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "add-subagent-output-formats-compress-synthesis",
+    "session_id": "61e1eb47-0742-47f5-a810-81525cbede7a",
+    "lifecycle_phase": "implement",
     "schema_version": null,
     "repo": null
   },
