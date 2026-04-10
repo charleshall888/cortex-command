@@ -41,13 +41,39 @@ execution machinery running while you sleep, and the morning close-out.
 
 The overnight runner can be launched from any repo — not just cortex-command.
 
+### Setup: lifecycle.config.md
+
+Before running overnight in a new repo, create a `lifecycle.config.md` at the repo root. A template lives at `skills/lifecycle/assets/lifecycle.config.md` in cortex-command:
+
+```yaml
+---
+type: web-app              # web-app | cli-tool | library | game | other
+test-command: npm test      # shell command to validate merges
+skip-specify: false
+skip-review: false
+commit-artifacts: true
+---
+```
+
+The most important field is **`test-command`**. This is the shell command that runs after each feature branch merges to the integration branch during overnight execution. If tests fail, the runner attempts automated repair via a repair agent. If repair fails, the feature is paused and surfaced in the morning report.
+
+**If you don't set `test-command`**: features merge with no validation. The overnight runner assumes success and moves on. This is the most common source of broken integration branches that aren't caught until morning.
+
+Other fields:
+- **`type`**: Informs model selection heuristics and review criteria
+- **`skip-specify`** / **`skip-review`**: Skip lifecycle phases when they don't add value for this repo
+- **`commit-artifacts`**: Whether lifecycle artifacts (spec, plan, review) are committed to the repo
+
+### Launching from another repo
+
 **From the cortex-command repo:** both `overnight-start` and `just overnight-start` work. Use whichever is convenient.
 
 **From any other repo:**
 
-1. Open a Claude session in that repo's directory.
-2. Run `/overnight` — it will generate the session plan and write the state file to `lifecycle/sessions/{session_id}/overnight-state.json` inside that repo.
-3. In a terminal, launch the runner with the explicit state file path:
+1. Ensure `lifecycle.config.md` exists at the repo root with `test-command` configured.
+2. Open a Claude session in that repo's directory.
+3. Run `/overnight` — it will generate the session plan and write the state file to `lifecycle/sessions/{session_id}/overnight-state.json` inside that repo.
+4. In a terminal, launch the runner with the explicit state file path:
    ```bash
    overnight-start lifecycle/sessions/{session_id}/overnight-state.json
    ```

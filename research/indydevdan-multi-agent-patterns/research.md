@@ -136,20 +136,21 @@ Three outcomes for a stop hook:
 
 | Approach | Effort | Risks | Prerequisites |
 |----------|--------|-------|---------------|
-| **Stop-hook validation (hook + pipeline)** | M | Budget exhaustion cascade if forced continuation hits tier ceiling; 60s timeout silently allows completion with failing tests; circuit breaker may misclassify forced-continuation stagnation | Verify Stop hook stdin JSON schema includes `stop_hook_active`; add `stop_hook_block` error type to dispatch error classification; consider budget headroom for forced continuation turns |
-| **Stop-hook validation for interactive** | S | May annoy during exploratory work; interaction with lifecycle implement batch checkpoints needs investigation | Stop hook must be opt-in or context-aware (overnight vs interactive) |
+| **Post-merge test validation** | — | — | **Already implemented** via `test_command` in `BatchConfig` + `merge.py:run_tests()`. Per-repo configurable via `lifecycle.config.md` `test-command:` field. |
+| **Document test-command for new repos** | S | None | None — docs update only |
 | **Best-of-N extension beyond current use** | M | Cost multiplication; Git reconciliation for implementation; unclear selection criteria | Agent Teams or manual worktree orchestration |
 | **WebSocket event streaming** | L | New server process, new dependency (SQLite), protocol complexity for marginal latency gain | Bun or equivalent server runtime |
 | **Trust progression formalization** | S | No operational value; adds naming without changing behavior | None |
 
 ## Decision Records
 
-### DR-1: Stop-hook validation is the clear win, but requires pipeline integration
+### DR-1: Post-merge test validation already exists — stop-hook not needed
 
-- **Context**: cortex-command's overnight agents can mark features complete even when tests fail, build breaks, or acceptance criteria aren't met. The retry mechanism catches some of these cases, but only when the error classification detects them.
-- **Options considered**: (A) Stop hook with test/build validation + dispatch pipeline changes, (B) PostToolUse hook that validates after every Bash command, (C) Pre-merge validation in the conflict resolution pipeline
-- **Recommendation**: Option A — stop hook validation with error classification changes. It catches the problem at the right boundary (agent completion) without adding per-command overhead. Pre-merge validation (C) is too late — the agent has already consumed its context budget. However, the hook alone is insufficient: the dispatch pipeline needs a `stop_hook_block` error type so the retry system can distinguish forced-continuation budget exhaustion from genuine budget exhaustion, and the budget ceiling may need headroom for forced-continuation turns.
-- **Trade-offs**: Medium effort (not small) due to pipeline changes. 60s timeout means test suites must be fast — or the hook must run a targeted subset. The `stop_hook_active` escape hatch prevents hook-level loops but not pipeline-level budget cascades; the error classification change addresses that.
+- **Context**: The initial research identified stop-hook validation as a gap, but deeper investigation revealed that cortex-command already has a per-repo configurable `test_command` that runs post-merge via `merge.py:run_tests()`. This was missed because the research focused on hook-layer patterns from IndyDevDan's framework rather than tracing the existing pipeline.
+- **Options considered**: (A) Stop hook with test/build validation + dispatch pipeline changes, (B) PostToolUse hook that validates after every Bash command, (C) Pre-merge validation — **already implemented** via `test_command` in `BatchConfig`
+- **Recommendation**: No new mechanism needed. Option C is already in place: `merge_feature()` runs `test_command` after each feature merge; failures trigger the repair agent (`integration_recovery.py`); unresolvable failures pause the feature. The `test_command` is per-repo configurable via `lifecycle.config.md` frontmatter (`test-command:` field) and threaded through CLI args → batch plan → merge → review dispatch rework loop.
+- **Action taken**: Expanded `docs/overnight.md` "Per-repo Overnight" section to document `lifecycle.config.md` setup and the `test-command` field, since the existing mechanism was poorly documented for new repo onboarding.
+- **Why stop-hook was wrong**: The Stop hook fires on every response completion (dozens per session), not just at feature completion. Running tests each time is wasteful and interacts adversarially with the budget ceiling and circuit breaker. Post-merge is the correct checkpoint — it runs exactly once per feature, at the boundary where validation matters.
 
 ### DR-2: Best-of-N boundary is already correct — no change needed
 
@@ -174,7 +175,4 @@ Three outcomes for a stop hook:
 
 ## Open Questions
 
-- **Stop hook stdin schema**: Does the Stop event's stdin JSON include `stop_hook_active` and sufficient context (transcript path, session ID) to make a block/allow decision? The current Stop hooks ignore stdin. This must be verified against the Claude Code hook contract before implementation.
-- **Budget headroom for forced continuation**: If a stop hook blocks, how many additional turns does the agent typically need to fix the issue? Should the budget ceiling be increased by a margin (e.g., 20%) to accommodate stop-hook retries, or should forced-continuation budget exhaustion be handled as a distinct recovery path?
-- **Test suite timeout vs hook timeout**: The 60s hook timeout may be too short for integration tests. A hook timeout silently allows completion with failing tests — the exact failure mode being prevented. Options: run targeted fast tests in the hook, or use the "Ralph Wiggum" marker-file pattern to decouple validation from hook timeout.
-- **Opt-in vs always-on**: Should the stop-hook validator be opt-in per feature (via frontmatter flag) or always-on? Always-on is simpler but may cause friction during exploratory interactive work. Context-aware (overnight = always-on, interactive = opt-in) may be the right split.
+- None. The discovery's primary finding (stop-hook validation gap) turned out to be already addressed by the existing `test_command` post-merge mechanism. The remaining action was documentation, which has been completed in `docs/overnight.md`.
