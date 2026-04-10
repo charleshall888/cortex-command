@@ -88,9 +88,6 @@
       "Bash(hostname)",
       "Bash(date *)",
       "Bash(date)",
-      "Bash(bash *)",
-      "Bash(sh *)",
-      "Bash(source *)",
       "Bash(chmod +x *)",
       "Bash(mv *)",
       "Bash(curl *)",
@@ -103,9 +100,10 @@
       "Bash(git reset *)",
       "Bash(git ls-files *)",
       "Bash(git describe *)",
-      "Bash(python *)",
-      "Bash(python3 *)",
-      "Bash(node *)",
+      "Bash(python3 -m claude.*)",
+      "Bash(python3 -m json.tool *)",
+      "Bash(uv run *)",
+      "Bash(uv sync *)",
       "Bash(npm *)",
       "Bash(npx *)",
       "Bash(pip3 *)",
@@ -384,5 +382,6 @@
     ]
   },
   "alwaysThinkingEnabled": true,
-  "effortLevel": "high"
+  "effortLevel": "high",
+  "skipDangerousModePermissionPrompt": true
 }

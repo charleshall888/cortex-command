@@ -32,25 +32,20 @@ Locate the session to update:
 
 If a session is found with `phase == "executing"`, write `phase: "complete"` to it:
 
-```
-python3 -c "
-import json, os, tempfile, pathlib
+First, verify the phase is `"executing"`:
 
-state_path = pathlib.Path('<resolved_state_path>')
-data = json.loads(state_path.read_text())
-if data.get('phase') != 'executing':
-    exit(0)
-data['phase'] = 'complete'
-tmp = tempfile.NamedTemporaryFile(mode='w', dir=state_path.parent, delete=False, suffix='.tmp')
-json.dump(data, tmp, indent=2)
-tmp.flush()
-os.fsync(tmp.fileno())
-tmp.close()
-os.rename(tmp.name, state_path)
-"
+```
+jq -r '.phase' <resolved_state_path>
 ```
 
-After updating `overnight-state.json`, also update the pointer file's `phase` field to `"complete"` using the same atomic pattern (read → update `phase` key → write via tmp + rename). Skip pointer update if Step 0 used the fallback path (no pointer file).
+If the output is not `executing`, skip the update. Otherwise, write the updated state to a temp file and move it into place:
+
+```
+jq '.phase = "complete"' <resolved_state_path> > <resolved_state_path>.tmp
+mv <resolved_state_path>.tmp <resolved_state_path>
+```
+
+After updating `overnight-state.json`, also update the pointer file's `phase` field to `"complete"` using the same jq pattern (`jq '.phase = "complete"' <pointer_path> > <pointer_path>.tmp` then `mv`). Skip pointer update if Step 0 used the fallback path (no pointer file).
 
 Skip Step 0 entirely if no session is found or the session phase is already terminal (anything other than `"executing"`).
 
