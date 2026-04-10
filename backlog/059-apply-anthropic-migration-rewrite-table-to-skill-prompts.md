@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 9598763c-dc24-4089-a182-073f83182d91
 title: "Apply Anthropic migration rewrite table to skill prompts"
-status: draft
+status: abandoned
 priority: low
 type: chore
 created: 2026-04-10
@@ -12,36 +12,14 @@ tags: [output-efficiency,skills]
 blocked-by: []
 ---
 
-## Problem
+# Apply Anthropic migration rewrite table to skill prompts
 
-The #052 audit removed verbose-by-default instructions from skill prompts, but the DR-6 stress-test gate on Opus 4.6 showed that instruction removal alone is not sufficient to control output volume. Skills still leak prose because the remaining instructions are written in a tone that invites elaboration rather than terse action.
+## Status: absorbed into #053
 
-The Anthropic `claude-opus-4-5-migration` plugin ships a rewrite table that maps weak/suggestive phrasings to stronger imperative forms (the imperative-intensity axis). Applying that table systematically to our skill prompts is an orthogonal improvement to the #052 verbose-instruction audit and is expected to tighten output without further content removal.
+This ticket has been absorbed into **#053** ("Add subagent output formats and apply imperative-intensity rewrites"). See `backlog/053-add-subagent-output-formats-compress-synthesis.md` — the Axis B section contains the full scope originally intended for this ticket, with corrected direction.
 
-## Scope
+**Why absorbed**: Both this ticket and #053 touch the same 9 SKILL.md files and share #052's research context. Bundling avoids double-editing the same files and duplicated verification work.
 
-Apply the Anthropic migration rewrite table to all 9 skills audited under #052:
+**Important correction**: The original body of this ticket (written during #052's implementation phase) described the rewrite direction **backwards** — it said the rewrites map "weak/suggestive phrasings to stronger imperative forms." This is wrong. Anthropic's actual guidance is the opposite: **soften aggressive imperatives** (CRITICAL, You MUST, ALWAYS, NEVER) to milder forms, because aggressive imperatives cause Opus 4.5/4.6 to **overtrigger**. See #053's Axis B section for the correct direction and the full rewrite table.
 
-- `skills/lifecycle`
-- `skills/discovery`
-- `skills/critical-review`
-- `skills/research`
-- `skills/pr-review`
-- `skills/overnight`
-- `skills/dev`
-- `skills/backlog`
-- `skills/diagnose`
-
-The rewrite axis is imperative-intensity: convert hedged, descriptive, or suggestive phrasings into direct imperatives per the migration table's guidance.
-
-## Notes
-
-- This ticket is orthogonal to #050 output floor compliance and to #052 verbose-instruction removal. It targets a different failure mode (tone / imperative strength) on the same surface area.
-- The `dev` skill's DV1/DV2 sections are bonus candidates for consideration during this ticket's refine phase — they were not in scope for #052 but may benefit from the same rewrite pass.
-- Verification strategy to be resolved during refine: the DR-6 stress-test harness from #052 is one candidate, but a lighter-weight diff-based or review-based check may be appropriate given the edit is prompt-tone-only. Decide during refine.
-
-## Acceptance (draft — to firm up in refine)
-
-- All 9 skill prompts edited per the Anthropic migration rewrite table imperative-intensity guidance.
-- Verification approach chosen and executed during refine/implement.
-- No regressions in skill behavior on representative inputs.
+If future work ever splits this axis back out of #053, use #053's Axis B section as the source of truth — not this ticket's original body.
