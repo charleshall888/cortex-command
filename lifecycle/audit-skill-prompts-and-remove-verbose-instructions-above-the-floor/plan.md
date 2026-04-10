@@ -37,13 +37,13 @@ Small documentation-only plan that closes #052 as the DR-6 stress-test gate answ
   - (b) **Frontmatter fields set**: On the new file, all four of the following greps return ≥ 1:
     - `grep -cE '^type: chore' <new-file>`
     - `grep -cE '^priority: low' <new-file>`
-    - `grep -cE '^parent: 49' <new-file>`
+    - `grep -cE '^parent: "?49"?' <new-file>` (create-backlog-item writes parent values as quoted strings)
     - `grep -cE 'output-efficiency' <new-file>` (tag present — anywhere in the file is acceptable; the `update-item` call puts it in frontmatter)
   - (c) **Body content landed**: On the new file, both of these greps return ≥ 1:
     - `grep -c 'Anthropic migration rewrite table' <new-file>`
     - `grep -c 'imperative-intensity' <new-file>`
-  - (d) **Index regenerated**: `grep -c 'apply-anthropic-migration' backlog/index.md` returns ≥ 1 (the `create-backlog-item` script regenerates the index as a side effect; this confirms it ran to completion).
-- **Status**: [ ] pending
+  - (d) **Index regenerated**: `grep -c 'Apply Anthropic migration' backlog/index.md` returns ≥ 1 (the `create-backlog-item` script regenerates the index as a side effect; index.md is keyed by title, not filename slug, so we grep the title).
+- **Status**: [x] complete — created #059, commit bc5289c. Verification bugs fixed post-hoc: (b3) `^parent: "49"` quoted form; (d) grep by title not slug. All underlying state correct.
 
 ### Task 2: Write the DR-6 answer note
 - **Files**: `lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md`
@@ -66,7 +66,7 @@ Small documentation-only plan that closes #052 as the DR-6 stress-test gate answ
   - (b) **Key phrase present**: `grep -c 'zero high-confidence' lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md` returns ≥ 1. (Previously `= 1` — relaxed per critical-review finding on brittle thresholds.)
   - (c) **Both deferred candidates documented**: `grep -c 'DV1' lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md` returns ≥ 1 AND `grep -c 'DV2' lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md` returns ≥ 1. (Both must pass — the single-grep `DV1|DV2` check from the prior plan only caught one of them.)
   - (d) **Research.md pointer + exact cross-link to Task 1 filename**: `grep -c 'research\.md' lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md` returns ≥ 1 AND the filename captured during Task 1 appears verbatim in `dr6-answer.md` (checked via `grep -F "<task-1-filename-basename>" lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md` returns a non-empty result). The `-F` flag ensures exact filename matching, not regex.
-- **Status**: [ ] pending
+- **Status**: [x] complete — dr6-answer.md written, commit 259fc06. All four verifications pass.
 
 ### Task 3: Add plan and dr6-answer artifacts to lifecycle index.md
 - **Files**: `lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/index.md`
@@ -85,7 +85,7 @@ Small documentation-only plan that closes #052 as the DR-6 stress-test gate answ
   - (a) **artifacts array includes both new entries**: `grep -cE '^artifacts:.*plan.*dr6-answer|^artifacts:.*dr6-answer.*plan' lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/index.md` returns 1 (both tokens appear on the artifacts line).
   - (b) **Wikilinks present in body**: `grep -c 'plan|plan\.md' lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/index.md` returns ≥ 1 AND `grep -c 'dr6-answer|dr6-answer\.md' lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/index.md` returns ≥ 1.
   - (c) **`updated` field bumped**: `grep -c '^updated: 2026-04-10' lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/index.md` returns 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete — index.md updated with dr6-answer artifact and wikilink, commit 2e0b70e. All three verifications pass.
 
 ### Task 4: Scope compliance verification (working tree + staged + committed)
 - **Files**: (read-only — no file modifications)
@@ -100,7 +100,7 @@ Small documentation-only plan that closes #052 as the DR-6 stress-test gate answ
   - Any path outside those prefixes is a scope violation per spec R3.
   - `git status --porcelain` output format: first two characters are status codes (e.g., `??` untracked, ` M` unstaged-modified, `M ` staged-modified, `A ` staged-added), then a space, then the path. Strip the status prefix before path-matching.
 - **Verification**: `git status --porcelain | awk '{print $2}' | grep -vE '^(lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/|backlog/)' | wc -l | tr -d ' '` returns 0 — pass if the count is 0 (no out-of-scope modifications). If the count is > 0, list the offending paths by running `git status --porcelain | awk '{print $2}' | grep -vE '^(lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/|backlog/)'` and surface them to the user.
-- **Status**: [ ] pending
+- **Status**: [x] complete — verification passed inline (0 out-of-scope paths). Read-only task with no commit artifact; executed by orchestrator as the scope gate before phase transition.
 
 ## Verification Strategy
 

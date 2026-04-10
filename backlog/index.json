@@ -58,35 +58,6 @@
     "repo": null
   },
   {
-    "id": 52,
-    "title": "Audit skill prompts and remove verbose instructions above the floor",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "output-efficiency",
-      "skills"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-09",
-    "updated": "2026-04-10",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "49",
-    "research": null,
-    "spec": "lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/spec.md",
-    "discovery_source": "research/agent-output-efficiency/research.md",
-    "plan": null,
-    "uuid": null,
-    "lifecycle_slug": "audit-skill-prompts-and-remove-verbose-instructions-above-the-floor",
-    "session_id": "1a6d6f64-1fba-44d2-889c-07a6bf0d8bc6",
-    "lifecycle_phase": "implement",
-    "schema_version": null,
-    "repo": null
-  },
-  {
     "id": 53,
     "title": "Add subagent output format specs and compress synthesis",
     "status": "draft",
@@ -99,11 +70,9 @@
     ],
     "areas": [],
     "created": "2026-04-09",
-    "updated": "2026-04-09",
+    "updated": "2026-04-10",
     "blocks": [],
-    "blocked_by": [
-      "52"
-    ],
+    "blocked_by": [],
     "parent": "49",
     "research": null,
     "spec": null,
