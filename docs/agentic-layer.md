@@ -217,6 +217,7 @@ Hooks in `hooks/` are shared entry points. Hooks in `claude/hooks/` are specific
 | `claude/hooks/cortex-sync-permissions.py` | PreToolUse | Merge MCP allow/deny patterns from `settings.json` so permissions stay consistent | Claude only |
 | `claude/hooks/cortex-permission-audit-log.sh` | Notification (permission_prompt) | Append one line per permission prompt to a session-scoped log in `$TMPDIR` for sandbox tuning diagnostics | Claude only |
 | `claude/hooks/cortex-tool-failure-tracker.sh` | PostToolUse (Bash) | Track Bash tool failures by exit code; surface a warning via `additionalContext` after 3 failures for the same tool in one session | Claude only |
+| `claude/hooks/cortex-output-filter.sh` | PreToolUse (Bash) | Filter test runner output to failures/summary before context entry; patterns configured in `.claude/output-filters.conf` per project | Claude only |
 | `claude/hooks/cortex-skill-edit-advisor.sh` | PostToolUse (Write\|Edit) | Advise on skill editing best practices when a Write or Edit touches a file inside `skills/` | Claude only |
 | `claude/hooks/cortex-worktree-create.sh` | WorktreeCreate | Create a git worktree with branch isolation for parallel overnight or feature work | Claude only |
 | `claude/hooks/cortex-worktree-remove.sh` | WorktreeRemove | Clean up the worktree directory and merged branch after work completes | Claude only |
@@ -248,7 +249,9 @@ Hooks communicate their decision to Claude Code by writing JSON to **stdout**. T
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "allow" | "deny",
-    "permissionDecisionReason": "Human-readable explanation (present when denying)"
+    "permissionDecisionReason": "Human-readable explanation (present when denying)",
+    "updatedInput": { "command": "..." },
+    "additionalContext": "Extra context surfaced to the agent alongside the tool result"
   }
 }
 ```
@@ -257,6 +260,8 @@ Key rules:
 - **Exit code is always 0.** Hooks in this project block tool calls through the JSON `permissionDecision` field — not through a non-zero exit code. A non-zero exit is an unexpected error, not a deliberate block.
 - **`"allow"`** lets the tool call proceed. The `permissionDecisionReason` field may be omitted.
 - **`"deny"`** blocks the tool call. Claude Code surfaces `permissionDecisionReason` to the agent as the explanation.
+- **`"updatedInput"`** (PreToolUse only) replaces the tool's input before execution. The object must match the tool's input schema (e.g., `{"command": "..."}` for Bash). Used by `cortex-output-filter.sh` to wrap test runner commands with output-filtering pipelines so only failures and summaries enter the context window.
+- **`"additionalContext"`** appends advisory text to the tool result that the agent sees after the tool completes. Used by PostToolUse hooks (e.g., `cortex-tool-failure-tracker.sh`) and also available in PreToolUse hooks to annotate allowed calls.
 - Hooks that are purely advisory (notifications, PostToolUse advisors) may omit the `hookSpecificOutput` key entirely or write no output at all.
 
 #### Stdin Contract
