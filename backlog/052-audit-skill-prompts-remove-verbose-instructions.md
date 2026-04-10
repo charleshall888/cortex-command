@@ -1,7 +1,7 @@
 ---
 id: 52
 title: Audit skill prompts and remove verbose instructions above the floor
-status: refined
+status: in_progress
 priority: medium
 type: chore
 parent: 49
@@ -11,7 +11,7 @@ created: 2026-04-09
 updated: 2026-04-10
 discovery_source: research/agent-output-efficiency/research.md
 session_id: 1a6d6f64-1fba-44d2-889c-07a6bf0d8bc6
-lifecycle_phase: plan
+lifecycle_phase: implement
 lifecycle_slug: audit-skill-prompts-and-remove-verbose-instructions-above-the-floor
 complexity: complex
 criticality: high
