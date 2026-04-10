@@ -2,7 +2,6 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 51 | Add hook-based preprocessing for test/build output | refined | high | feature | — | 49 | ✓ |
 | 54 | Harden settings.json permissions for public distribution | backlog | high | epic | — | — | — |
 | 57 | Remove interpreter escape hatch commands | in_progress | high | task | — | 054 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
@@ -13,7 +12,6 @@
 
 ## Refined
 
-- **51** Add hook-based preprocessing for test/build output
 - **49** Improve agent output signal-to-noise ratio
 - **48** Trim and instrument overnight plan-gen prompt
 

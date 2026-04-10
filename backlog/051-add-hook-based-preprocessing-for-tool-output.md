@@ -1,7 +1,7 @@
 ---
 id: 51
 title: Add hook-based preprocessing for test/build output
-status: ready
+status: complete
 priority: high
 type: feature
 parent: 49
@@ -9,6 +9,13 @@ tags: [output-efficiency, hooks]
 created: 2026-04-09
 updated: 2026-04-09
 discovery_source: research/agent-output-efficiency/research.md
+session_id: null
+lifecycle_phase: implement
+lifecycle_slug: add-hook-based-preprocessing-for-test-build-output
+complexity: complex
+criticality: high
+spec: lifecycle/add-hook-based-preprocessing-for-test-build-output/spec.md
+areas: [hooks]
 ---
 
 # Add hook-based preprocessing for test/build output
