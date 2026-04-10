@@ -78,7 +78,7 @@ Read research/{topic}/{artifact} for the current content.
 2. Rewrite the ENTIRE artifact to address the flagged issue while maintaining all existing content that is correct
 3. Do not patch individual sections — rewrite the full file to maintain internal coherence
 4. Write the revised artifact to research/{topic}/{artifact}
-5. Report what you changed and why
+5. Report: what you changed and why. Format: changed [file path] — [one-sentence rationale].
 
 The artifact must still conform to the format defined in the {phase} phase reference.
 Do not add content beyond what the phase requires.
