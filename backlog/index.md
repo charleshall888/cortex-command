@@ -10,11 +10,13 @@
 | 61 | Sync-hook cleanup propagation mechanism | refined | medium | task | — | — | — |
 | 62 | Harden cortex-notify-remote.sh curl invocation against exfiltration | refined | medium | task | — | — | — |
 | 70 | Fix morning report accuracy when post-merge steps fail | in_progress | medium | bug | — | — | — |
+| 71 | Auto-launch demo at morning review via lifecycle.config.md demo-command | refined | medium | feature | — | — | — |
 
 ## Refined
 
 - **61** Sync-hook cleanup propagation mechanism
 - **62** Harden cortex-notify-remote.sh curl invocation against exfiltration
+- **71** Auto-launch demo at morning review via lifecycle.config.md demo-command
 
 ## Backlog
 

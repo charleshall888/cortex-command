@@ -223,7 +223,39 @@
     "uuid": "ac7c0919-1eb4-4729-98b4-0a6d39177f03",
     "lifecycle_slug": "fix-morning-report-accuracy-when-post-merge-steps-fail",
     "session_id": "e83c9b3d-125c-448e-ac50-bc8b6cced483",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 71,
+    "title": "Auto-launch demo at morning review via lifecycle.config.md demo-command",
+    "status": "refined",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "morning-review",
+      "overnight-runner",
+      "lifecycle-config",
+      "dx"
+    ],
+    "areas": [
+      "skills",
+      "overnight-runner"
+    ],
+    "created": "2026-04-11",
+    "updated": "2026-04-11",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/morning-review-demo-setup/research.md",
+    "plan": null,
+    "uuid": "4f2e8b3c-1a9d-4e7f-bc42-8d5e9f2a0c1b",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   }
