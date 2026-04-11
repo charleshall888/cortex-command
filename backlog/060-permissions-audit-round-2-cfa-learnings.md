@@ -7,10 +7,10 @@ priority: medium
 type: task
 tags: [permissions-audit, security]
 created: 2026-04-10
-updated: 2026-04-10
+updated: 2026-04-11
 parent: null
 discovery_source: "CFA Android PR #8093 permissions review session"
-session_id: afab38c1-a213-4cef-9bf0-31db5fda7fb8
+session_id: null
 lifecycle_phase: plan
 lifecycle_slug: permissions-audit-round-2-cfa-android-learnings
 complexity: complex
