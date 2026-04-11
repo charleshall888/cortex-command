@@ -43,6 +43,51 @@ Restart your shell and run `just check-symlinks` to verify.
 
 ---
 
+## Limited / Custom installation
+
+`just setup` is the default and deploys the full agentic layer. Most customization happens via `/setup-merge` after `just setup` — it prompts individually for three optional hooks (`cortex-setup-gpg-sandbox-home.sh`, `cortex-notify.sh`, `cortex-notify-remote.sh`). The one thing `/setup-merge` does NOT surface is the UI skills bundle — if you're not building UIs, those six skills are safe to skip.
+
+This section covers only the things that compose cleanly when omitted. Finer pruning isn't documented because the dependency graph between skills, hooks, bin utilities, and reference docs is too interconnected to hand-curate without reading the underlying sources.
+
+### What's safely skippable
+
+- **UI skills** (`ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup`) — self-contained frontend design enforcement stack (ESLint, Stylelint, Playwright, axe-core, Claude Vision). Skip unless you're building a UI. All six are a bundle — `/ui-check` orchestrates `/ui-lint` and `/ui-a11y`, so install all six or none.
+- **Optional hooks** (prompted individually by `/setup-merge`):
+  - `cortex-setup-gpg-sandbox-home.sh` — macOS-only sandbox commit signing. Skip on Linux/Windows or if you don't sign commits in sandboxed sessions.
+  - `cortex-notify.sh` — `terminal-notifier` desktop notifications. macOS-only (requires `brew install terminal-notifier`). Skip if you don't want attention pings.
+  - `cortex-notify-remote.sh` — Tailscale/Android remote notifications. Skip unless you have the `cortex-notify-remote` infrastructure deployed on a phone.
+
+Everything else in `just setup` is assumed required. Partial installs beyond the four items above break silently at runtime because of skill→hook, skill→bin, and skill→reference-doc dependencies that are not worth documenting exhaustively at this project's size.
+
+### Skipping the UI bundle
+
+The simplest path is to run the full install, then remove the six UI skill symlinks:
+
+```bash
+just setup
+rm ~/.claude/skills/ui-a11y ~/.claude/skills/ui-brief ~/.claude/skills/ui-check ~/.claude/skills/ui-judge ~/.claude/skills/ui-lint ~/.claude/skills/ui-setup
+```
+
+`rm` removes only the symlinks in `~/.claude/skills/`; the source files in the repo are untouched. To restore the UI skills later, re-run `just setup`.
+
+For an agent-driven version that asks before touching the UI bundle:
+
+> Run `just setup`. After it completes, ask me whether to keep the UI skills (`ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup`). If I say no, `rm` the six `~/.claude/skills/ui-*` symlinks.
+
+### Skipping optional hooks
+
+Run `/setup-merge` from Claude Code in the cortex-command directory. It iterates `OPTIONAL_HOOK_SCRIPTS` (the three hooks listed above) and prompts individually — answer `n` to each one you don't want. Re-run it any time to revisit the answers.
+
+### Skipping the three optional hooks AND the UI bundle
+
+Combine the two paths: run `just setup`, run `/setup-merge` (answering `n` to any optional hooks you don't want), then `rm` the six UI skill symlinks if applicable.
+
+### Why no finer-grained presets?
+
+An earlier version of this section documented a 4-preset dependency matrix (Minimal / Overnight / Daytime / Full) with per-component dependency columns. A critical review found the matrix drifted from the underlying code — phantom dependencies, missing dependencies, and presets that shipped skills whose own declared dependencies contradicted the preset. Keeping such a matrix accurate against evolving skills is a maintenance burden this project doesn't need at its current size. The UI skills bundle and the three optional hooks are the only components that compose cleanly when omitted, so they're all that's documented.
+
+---
+
 ## What `just setup` Does
 
 The setup recipe deploys the full agentic layer via symlinks:

@@ -96,6 +96,15 @@ export CORTEX_COMMAND_ROOT="$HOME/cortex-command"
 
 Restart your shell. Run `just check-symlinks` to verify.
 
+### Limited / custom installation
+
+`just setup` deploys the full agentic layer. Two things compose cleanly when omitted:
+
+- **UI skills** (6 frontend design enforcement skills) — run `just setup`, then `rm ~/.claude/skills/ui-{a11y,brief,check,judge,lint,setup}` if you're not building UIs.
+- **Three optional hooks** (sandbox GPG, desktop notifications, remote notifications) — run `/setup-merge` in Claude Code after `just setup` and answer `n` to the ones you don't want.
+
+Anything narrower needs reading the `justfile` and skill sources directly — see [`docs/setup.md#limited--custom-installation`](docs/setup.md#limited--custom-installation) for the rationale.
+
 ## Authentication
 
 The overnight runner and some CLI utilities need API credentials. Choose based on your account type:
