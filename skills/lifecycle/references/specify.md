@@ -156,6 +156,7 @@ After orchestrator review passes, check `lifecycle/{feature}/events.log` for the
 Present the specification summary and use the AskUserQuestion tool to collect approval — not as plain markdown text. The summary must include these approval surface fields (see `~/.claude/reference/output-floors.md` for expanded definitions):
 
 - **Produced** (one-line summary of the artifact)
+- **Value** (what problem this solves and why it's worth building now — flag weak value cases explicitly)
 - **Trade-offs** (alternatives considered and rationale for chosen approach)
 - **Veto surface** (items the user might disagree with or want to change)
 - **Scope boundaries** (what is explicitly excluded)

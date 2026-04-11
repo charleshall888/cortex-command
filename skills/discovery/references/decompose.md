@@ -20,6 +20,7 @@ For each work item, capture:
 
 - **Title**: Short imperative description
 - **Description**: What this item delivers, referencing research findings
+- **Value**: What problem this solves and why it's worth the effort. One sentence. If the value case is weak relative to size, say so — this is the moment to flag it before tickets are created.
 - **Priority**: Derived from research signals — items flagged as Low effort/Low risk in the feasibility assessment → high priority; items with High effort or High risk → lower priority unless explicitly critical in decision records
 - **Type**: Usually `feature`, but may be `chore` or `spike`
 - **Size**: S/M/L (informs ordering, not stored in backlog)

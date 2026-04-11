@@ -28,6 +28,7 @@ When presenting an artifact for user approval (spec approval, plan approval), th
 | Field | What to include |
 |-------|-----------------|
 | **Produced** | One-line summary of the artifact and its purpose. |
+| **Value** | What problem this solves and why building it now is worth the cost. One sentence. If the value case is weak or the timing is questionable, say so here — don't bury it. |
 | **Trade-offs** | Alternatives considered and rationale for the chosen approach. If no alternatives were evaluated, state why (e.g., "single obvious approach, no alternatives"). |
 | **Veto surface** | Items the user might disagree with or want to change. Design choices, scope boundaries, or priority calls that reflect judgment rather than necessity. If nothing is controversial, state "No veto-worthy items identified." |
 | **Scope boundaries** | What is explicitly excluded. Maps to the spec's Non-Requirements section. |
