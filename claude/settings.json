@@ -103,7 +103,6 @@
       "Bash(python3 -m json.tool *)",
       "Bash(uv run *)",
       "Bash(uv sync *)",
-      "Bash(npm *)",
       "Bash(npx *)",
       "Bash(deno *)",
       "Bash(go *)",
@@ -117,7 +116,6 @@
       "Bash(unzip *)",
       "Bash(gzip *)",
       "Bash(gunzip *)",
-      "Bash(brew *)",
       "Bash(gh pr view *)",
       "Bash(gh pr list *)",
       "Bash(gh pr diff *)",
@@ -215,7 +213,10 @@
     "ask": [
       "Bash(git restore *)",
       "Bash(git checkout -- *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(tee *)",
+      "Bash(npm *)",
+      "Bash(brew *)"
     ],
     "defaultMode": "default"
   },
