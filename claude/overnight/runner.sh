@@ -632,6 +632,8 @@ print(sum(1 for f in features.values() if f.get('status') == 'merged'))
     # Fill the prompt template
     FILLED_PROMPT=$(fill_prompt "$ROUND")
 
+    export LIFECYCLE_SESSION_ID="$SESSION_ID"
+
     # Spawn Claude agent for this round (background) + watchdog
     echo "Spawning orchestrator agent for round $ROUND..."
     # Clear stall flag for this round
@@ -705,7 +707,6 @@ log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=de
         log_event "orchestrator_no_plan" "$ROUND" "{\"round\": $ROUND}"
         echo "Round $ROUND: no batch plan produced — skipping batch_runner"
     else
-        export LIFECYCLE_SESSION_ID="$SESSION_ID"
         # Clear stall flag for batch_runner watchdog
         > "$STALL_FLAG"
         set +e
