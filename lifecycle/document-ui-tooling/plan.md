@@ -43,7 +43,7 @@ Create `docs/ui-tooling.md` as a single-file reference document covering the 6-s
   - `grep -c 'arXiv:2510\|insufficient accuracy' docs/ui-tooling.md` ≥ 1 — pass if count ≥ 1
   - `grep -c 'ui-judge.*human\|human.*ui-judge\|not.*automat.*ui-judge\|ui-judge.*not.*automat\|ui-judge.*direct\|must.*call.*ui-judge\|ui-judge.*must.*call\|only.*human.*ui-judge' docs/ui-tooling.md` ≥ 1 — pass if count ≥ 1
   - `grep -c 'Keeping This Document Current\|authoritative source' docs/ui-tooling.md` ≥ 1 — pass if count ≥ 1 _(section body content)_
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Add cross-reference link to `docs/agentic-layer.md`
 - **Files**: `docs/agentic-layer.md`
@@ -57,7 +57,7 @@ Create `docs/ui-tooling.md` as a single-file reference document covering the 6-s
   - Follow the phrasing style of existing cross-references in `docs/agentic-layer.md` (brief inline sentence, not a separate section)
 - **Verification**:
   - `grep -c '\[.*ui-tooling\]\|ui-tooling\.md' docs/agentic-layer.md` ≥ 1 — pass if count ≥ 1
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Verification Strategy
 After both tasks complete, run all spec acceptance criteria checks in sequence:
