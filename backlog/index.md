@@ -2,8 +2,6 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 63 | User-configurable setup: per-component opt-in and per-repo permissions scoping | backlog | high | epic | — | — | — |
-| 64 | Extend /setup-merge with dynamic per-component opt-in for skills and hooks | refined | high | feature | — | 063 | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 60 | Permissions audit round 2: CFA Android learnings | refined | medium | task | — | — | ✓ |
 | 61 | Sync-hook cleanup propagation mechanism | refined | medium | task | — | — | — |
@@ -12,7 +10,6 @@
 
 ## Refined
 
-- **64** Extend /setup-merge with dynamic per-component opt-in for skills and hooks
 - **60** Permissions audit round 2: CFA Android learnings
 - **61** Sync-hook cleanup propagation mechanism
 - **62** Harden cortex-notify-remote.sh curl invocation against exfiltration
@@ -20,7 +17,6 @@
 
 ## Backlog
 
-- **63** User-configurable setup: per-component opt-in and per-repo permissions scoping
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 
 ## In-Progress

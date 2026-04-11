@@ -1,0 +1,187 @@
+- ts: 2026-04-10T00:00:00Z
+  event: clarify_critic
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  findings:
+    - "The ticket's hook discovery rule `*.sh` in `hooks/` and `claude/hooks/` excludes `cortex-sync-permissions.py`, which research §2 lists as Band C install-floor, and may also sweep up non-hook files (`output-filters.conf`, `bell.ps1`, `setup-github-pat.sh`). The stated discovery rule is factually incomplete for the ticket's own floor definition."
+    - "`No hand-curated component manifest` is claimed alongside `install-floor items flagged as such in the UI` — knowing which items are Band C requires a hardcoded name list that the dynamic scan cannot derive from filesystem contents alone."
+    - "Deliverable #4 (`deploy-bin` reads `lifecycle.config.md` and skips bin utilities scoped to opted-out skills) is explicitly deferred to spec (`exact shape is a spec-phase decision`), and the current `deploy-bin` is a justfile recipe not currently parsing YAML frontmatter from markdown."
+    - "The ticket's install-floor list diverges from research §1.B/§2: research marks `cortex-setup-gpg-sandbox-home.sh` as Optional in §1.B but some research text places it in Band C; the ticket silently picks one interpretation without surfacing the source disagreement."
+    - "Success signal #1 (`ls reflects only their selections`) conflicts with DR-6 non-destructive behavior on re-run opt-out scenarios; ticket promises both and cannot honor both on upgrades."
+    - "Per-component prompts grouped by cluster picks one answer to research Q1, which explicitly listed per-cluster and hybrid bulk enable/disable as undecided user-call options."
+    - "CLAUDE_CONFIG_DIR interaction with ticket #065 (research Q7) is unaddressed — `/setup-merge` under shadow scope reads repo files but symlinks land in the shadow destination, with unverified behavior."
+    - "`Existing lifecycle phase readers ignore the new sections` is asserted without auditing the decentralized phase readers (research §1.E) to verify YAML tolerance for unknown top-level keys."
+    - "`Graceful empty-state behavior` justifying drop of Band B resolver is the ticket author's runtime behavior claim, not a finding in research §2."
+    - "Heavy components reframed as `out of scope, read in place` contradicts DR-4's prescription of explicit `just install-X` recipes as the install-time opt-in gate."
+  dispositions:
+    apply: 3
+    dismiss: 7
+    ask: 0
+  applied_fixes:
+    - "Added research open question for the dynamic discovery rule: must round-trip every hook in research §1.B (including `cortex-sync-permissions.py`) without sweeping up non-hook files."
+    - "Added research open question for `CLAUDE_CONFIG_DIR` interaction: verify `/setup-merge` behavior when run inside a repo with the ticket #065 direnv pattern active."
+    - "Added research open question for phase-reader tolerance of unknown top-level YAML keys in `lifecycle.config.md`."
+  status: ok
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_review
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  phase: specify
+  verdict: flag
+  cycle: 1
+  issues:
+    - "S3 MoSCoW classification implicit rather than explicit"
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_dispatch_fix
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  phase: specify
+  mode: same_context
+  issue: "S3 MoSCoW classification implicit — added explicit must-have preamble above R1 noting all requirements are must-have and won't-dos live in Non-Requirements"
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_review
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  phase: specify
+  verdict: pass
+  cycle: 2
+  issues: []
+- ts: 2026-04-10T00:00:00Z
+  event: critical_review
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  phase: specify
+  angles:
+    - multi-file-state-coherence
+    - command-string-rewriting-test-f-guards
+    - migration-ordering-and-recovery
+    - scope-integrity
+  dispositions:
+    apply: 14
+    dismiss: 4
+    ask: 0
+  applied_fixes:
+    - "R3 basename mismatch: added symlink-map resolution so cortex-notify.sh is detected from ~/.claude/notify.sh target"
+    - "R3 derivation cycle: dropped committed claude/settings.json template update; R3 operates on merged output only"
+    - "R2 derive_wired_hook_scripts helper removed; REQUIRED_HOOK_SCRIPTS stays hand-maintained 3-element constant"
+    - "R3 idempotency: rule step 4 detects existing [ -f prefix and skips re-wrapping"
+    - "R3 tokenization: rule step 2 explicit handling of interpreter+path, bare path, path+args shapes"
+    - "R3 worktree carve-out: rule step 1 detects bash -c CWD shape explicitly"
+    - "R3 unrecognized shapes: flagged as status: unguarded in detect output"
+    - "R9 CLAUDE_CONFIG_DIR honoring descoped; moved to Non-Requirements as follow-up with #065"
+    - "R7 simplified: single summary line instead of per-component diff"
+    - "R5 CLUSTER_MAP dict no longer mandated; implementation free to use inline pattern matching"
+    - "R12 integration test simplified from 6 sub-assertions to 1 end-to-end; renumbered to R9"
+    - "Explicit landing-order constraint added: R1, R2, R10 must land in same commit"
+    - "R5 worktree hooks carved out of prompt flow; listed under Worktree hooks (always enabled — follow-up) header"
+    - "Added edge case for pre-ticket settings.json migration + R3 idempotency"
+  dismissed:
+    - "R10 canonical collapse: user chose F2 per-component frontmatter in round 1 interview; not orchestrator reversal"
+    - "R8 fresh-clone missing=all-enabled fallback: intentional wholesale-deploy default"
+    - "Cross-file transactional boundary: file-based state is the project's chosen simplicity tradeoff per DR-2"
+    - "Phase reader tolerance asserted-not-tested: accepted as relied-upon constraint; testing 6 LLM readers out of scope"
+  status: ok
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_review
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  phase: specify
+  verdict: pass
+  cycle: 3
+  issues: []
+- ts: 2026-04-10T00:00:00Z
+  event: scope_descope
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  phase: specify
+  trigger: "user requested cost/benefit analysis after critical review; chose Option 2 (bugs-only foundation cleanup) after agent surfaced that R3 guards + R10 markers don't earn their place without opt-in flow"
+  from_requirements: 11
+  to_requirements: 3
+  kept:
+    - "R1 discover_symlinks covers claude/hooks/"
+    - "R2 REQUIRED/OPTIONAL reconciliation with claude/settings.json wiring (expand REQUIRED to 13, delete OPTIONAL)"
+    - "R3 remove dead optional-hook prompt step in /setup-merge SKILL.md"
+  dropped:
+    - "Per-component Y/n prompts + cluster headers (original R5)"
+    - "lifecycle.config.md skills/hooks frontmatter sections (original R6)"
+    - "Drift summary on re-run (original R7)"
+    - "deploy-bin allowlist gating (original R8)"
+    - "Integration test harness (original R9)"
+    - "install-floor frontmatter migration (original R10)"
+    - "lifecycle.config.md template examples (original R11)"
+    - "test -f guards on non-Band-C wired hooks (previous R3, now unnecessary because no hook is ever opted out)"
+    - "Narrow REQUIRED_HOOK_SCRIPTS to Band C (previous R2, reversed — now expanding to match wiring reality)"
+    - "CLAUDE_CONFIG_DIR honoring (previously dropped)"
+  rationale: "User is single maintainer and primary user. Context token savings from opt-in (~2.6k/session = <2% of context) does not justify R3 command-rewriting complexity, new state surfaces, and ongoing maintenance burden. Foundation cleanup alone fixes real latent bugs (claude/hooks/ coverage, OPTIONAL hooks being actually unconditionally wired, cortex-output-filter.sh missing from both sets) without committing to opt-in UX. If opt-in becomes valuable later, this foundation makes it cheaper, not wasted."
+  status: ok
+- ts: 2026-04-10T23:15:00Z
+  event: orchestrator_review
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+  notes: "5-task mechanical cleanup; P1-P7 all pass in single review cycle"
+- ts: 2026-04-10T23:45:00Z
+  event: critical_review
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  phase: plan
+  angles:
+    - caller-enumeration-scope
+    - verification-shallowness
+    - depends-on-semantic-misuse
+    - task5-commit-scope-punt
+  dispositions:
+    apply: 9
+    dismiss: 0
+    ask: 0
+  applied_fixes:
+    - "Collapsed 5 tasks into 1 single task to honor runner's one-task-one-commit contract while preserving spec's same-commit atomicity requirement"
+    - "Deleted fabricated 'lifecycle: prefix per project convention' claim (git log --grep confirmed zero precedent)"
+    - "Added end-to-end detect smoke test (verification step 3) that executes post-refactor detect/merge against real input — catches KeyError/NameError/TypeError bug classes that import-ok and merge --help miss"
+    - "Added spec R2 ac-4 audit (verification step 4) that cross-checks REQUIRED_HOOK_SCRIPTS against live claude/settings.json hooks wiring using extract_hooks_from_repo_settings"
+    - "Replaced len==13 check with exact set-equality check against spec enumeration (step 1) to catch typos, missing entries, extra entries"
+    - "Replaced single-file grep with whole-directory grep across .claude/skills/setup-merge/ (step 2) to catch cross-file residual references"
+    - "Replaced one-sided 'grep -c = 2' commit check with exact file-list equality (step 6) to detect commit-scope inflation from lifecycle or backlog index leakage"
+    - "Documented whole-repo caller enumeration in task Context (not just file-scoped grep) with specific evidence for each deleted symbol"
+    - "Dropped vacuous 'bell.ps1|output-filters.conf|setup-github-pat' glob-exclusion check (it passes even if task does nothing since those files never match cortex-*) and folded the check into the end-to-end detect smoke test where it has meaning"
+  dismissed: []
+  rationale: "Reviewers 3 and 4 independently cited implement.md L48/L96/L151, batch_runner.py L919-948, and git history precedent (#053, #051, #057) to prove the original 5-task-plus-ceremonial-Task-5 structure was incompatible with the runner's worktree-per-task dispatch model. Reviewer 2 enumerated 5+ bug classes in Task 3 that passed all original verifications. Reviewer 1 confirmed the caller enumeration was accidentally correct but unverified. All fixes applied proportionally: collapse the task structure, add runtime verification, tighten commit scope check."
+  status: ok
+- ts: 2026-04-10T23:46:00Z
+  event: orchestrator_review
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  phase: plan
+  verdict: pass
+  cycle: 2
+  issues: []
+  notes: "Revised plan (post-critical-review collapse) re-reviewed. P1: 1 task 2 files within 5-15min range. P2: single task Depends-on-none. P3: 13-name set enumerated + 10 sub-edits with line numbers + whole-repo caller evidence. P4: 6 runnable verification commands all binary-checkable. P5: no function bodies, verification snippets are allowed command format. P6: Files/Verification consistent. P7: no self-sealing (verifications are external observables or benign commit-product checks)."
+- ts: 2026-04-10T23:55:00Z
+  event: phase_transition
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  from: plan
+  to: implement
+  notes: "Plan approved after critical-review restructure (5 tasks → 1 task) and verification trim (6 gates → 2 gates). Single-task implementation with end-to-end detect smoke test + SKILL.md grep."
+- ts: 2026-04-10T23:58:00Z
+  event: batch_dispatch
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  batch: 0
+  tasks: [1]
+  mode: sequential
+- ts: 2026-04-11T00:05:00Z
+  event: task_complete
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  task: 1
+  batch: 0
+  status: success
+  commit: 5d747fbd6945718e389041f1c3d4f1f1d9d94864
+  gate_1: pass
+  gate_2: pass
+  off_spec_edit: "Implementer removed 'optional hooks and ' from SKILL.md Step 5 preamble (L157) not in the plan's edit list — necessary for Gate 2 to pass. Noted in exit report. Benign."
+- ts: 2026-04-11T00:05:30Z
+  event: phase_transition
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  tier: simple
+  from: implement
+  to: complete
+  notes: "Tier=simple, criticality=medium (formal defaults — no lifecycle_start event). Gating matrix → Complete phase, not Review. Task 1 passed both verification gates; single commit landed cleanly."
+- ts: 2026-04-11T00:07:00Z
+  event: feature_complete
+  feature: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
+  tasks_total: 1
+  rework_cycles: 0
+  tests: pass (3/3)
+  commit: 5d747fbd6945718e389041f1c3d4f1f1d9d94864
