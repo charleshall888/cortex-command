@@ -1,0 +1,157 @@
+- ts: 2026-04-10T00:00:00Z
+  event: lifecycle_start
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  backlog_id: "065"
+  complexity: simple
+  criticality: high
+  entry_point: refine
+  status: ok
+
+- ts: 2026-04-10T00:00:00Z
+  event: clarify_critic
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  findings:
+    - "The research DR-7 says 'hot = pause the per-repo permissions work' while the ticket says 'hot = ship docs as interim workaround.' These contradict — DR-7 instructs to pause, the ticket instructs to always ship. Intent clarity's HIGH rating buries a live contradiction."
+    - "The hot-outcome branch in the ticket narrows DR-7's three-way branch (quiet/warm/hot → proceed/size-for-retirement/pause) into a two-way branch (ship regardless, tone varies). Requirement drift the Intent assessment should have flagged."
+    - "In-scope list uses hedging language ('likely docs/per-repo-permissions.md or similar', 'if one exists', 'or a just launch recipe variant') — scope-expansion vectors glossed over by the HIGH Scope boundedness rating."
+    - "Defense-in-depth requirement is about global settings.json template being conservative. Docs teaching users to swap the entire user scope per repo is orthogonal — users can create a more-permissive shadow settings.json, which sits in tension with defense-in-depth without a direct conflict. Alignment cited without addressing the tension."
+    - "Graceful partial failure dismissed as n/a for docs. Shadow mechanism introduces silent drift failure modes (stale skills/hooks/statusline) across all user-facing infrastructure — shipping a mechanism in docs still ships the mechanism."
+    - "Criticality=medium misreads risk. Docs recommending cp -r shadowing of the entire user scope can cause silent infrastructure drift across all skills and hooks. The default for skill/lifecycle/hook/workflow changes is high."
+    - "Ticket devotes significant wordcount to re-arguing DR-8's 10 failure modes in its own body — scope seepage, suggests the author had not fully settled on closing Option D."
+    - "'Iterative improvement' requirement is about architecture tolerating exploratory development, not about deferring tooling until users complain. Citation laundered decomposition heuristic as requirement alignment."
+    - "Direnv docs and shell-alias fallbacks sit on the boundary of requirements/project.md's out-of-scope 'Dotfiles and machine configuration' clause — whether these docs belong in cortex-command or machine-config is not settled in the source."
+  dispositions:
+    apply: 3
+    dismiss: 5
+    ask: 1
+  applied_fixes:
+    - "Edited research.md DR-7 and backlog/065 body to resolve the hot-outcome contradiction in favor of a ship-minimal-under-hot framing. Research legacy 'pause' language is now explicitly noted as superseded by the collapsed docs-only plan."
+    - "Downgraded Requirements alignment from HIGH to 'Partial alignment' — noting the defense-in-depth tension (shadow scopes can be more permissive than global) without treating it as a conflict."
+    - "Upgraded Criticality from medium to high — docs instructing users to cp -r shadow the entire user scope can cause silent infrastructure drift across all skills/hooks, matching the default for skill/lifecycle/hook/workflow-affecting changes."
+  status: ok
+
+- ts: 2026-04-10T00:00:00Z
+  event: complexity_override
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  from: simple
+  to: complex
+  reason: "User chose to bundle the CLAUDE_CONFIG_DIR honoring fixes (~85 edits across 5 files: justfile 69, merge_settings.py 12, evolve/SKILL.md 2, bin/audit-doc 1, bin/count-tokens 1) with the docs ticket during spec-phase interview. Expanded scope modifies shared infrastructure (the justfile is the core deploy mechanism), touches 5+ files, and introduces cross-cutting behavioral effects (tooling must now resolve a scope via env var). Per lifecycle complexity dimensions this is now clearly complex, not simple."
+  criticality: high
+  tier: complex
+  status: ok
+
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_review
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  phase: specify
+  verdict: flag
+  cycle: 1
+  issues:
+    - "S1 req 20: self-referential acceptance criterion. The AC says 'satisfied by the spec itself listing the table' — this checks the spec authoring, not the implementation. Either remove req 20 (the failure-mode dispositions are already captured in the Changes to Existing Behavior table) or rewrite it as a docs-content check."
+    - "S3: missing explicit MoSCoW classification preamble. Repo convention (ref extend-setup-merge.../spec.md:9) is to state the classification explicitly."
+
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_dispatch_fix
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  phase: specify
+  mode: same_context
+  issue: "S1 req 20 self-referential AC + S3 missing MoSCoW classification. Deviation note: orchestrator protocol normally dispatches fixes to a fresh subagent for coherence; both fixes here are local and mechanical (single-line MoSCoW preamble + removing one requirement whose content is already captured elsewhere) so they are applied in-context to conserve tokens after a prior rate-limit interruption. Full audit trail preserved via this event."
+
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_review
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  phase: specify
+  verdict: pass
+  cycle: 2
+  issues: []
+
+- ts: 2026-04-10T00:00:00Z
+  event: critical_review
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  phase: specify
+  tier: complex
+  status: ok
+  objection_count: 12
+  load_bearing_objections:
+    - "O1: req 13 regex missed merge_settings.py's load-bearing 'home = Path.home()' pattern (agent could trivially pass AC without fixing load-bearing code at lines 96, 113, 127, 141, 142)."
+    - "O15/req 15: evolve's 2 references are in markdown prose not bash fences — the bash-block-only awk AC passes trivially even if nothing is changed."
+    - "O4/req 6: 'sed -n ADDR,+N p' is GNU-sed only; fails on macOS BSD sed with syntax error."
+    - "O8/req 5: grep -c line-count lets 11 lines all containing 'scope' satisfy the AC without covering distinct failure modes."
+    - "O6/req 18 factual error: '~/.claude/hooks/cortex-notify.sh' — justfile symlinks to ~/.claude/notify.sh at root, not under hooks/."
+    - "O3/new req 18: claude/settings.json hardcodes '~/.claude/notify.sh' in hook command strings at lines 279, 297 — notify hook always fires from host under shadow, not documented in research §4."
+    - "O7/new req 19: /setup-merge under shadow will merge cortex-command default allows into shadow's minimal allows, defeating the shadow's purpose. Needs warning/refuse safeguard."
+    - "O9/new req 23: DR-7 WARM verdict is frozen at spec time; no execution-time re-check. Docs could ship under stale framing if upstream moves."
+    - "O2/req 12: strict-zero AC forces cosmetic rewrites of comments, echo instructions, and diagnostic strings — needs carve-out."
+    - "O11/new req 24: over-aggressive find-and-replace could rewrite SKILL.md prose the spec wants preserved. Constraint: targeted Edit ops only."
+    - "O10: $(pwd) in justfile recipes means running from wrong dir breaks symlinks — pre-existing hazard, explicitly scoped out."
+    - "O12: conflicts+= / conflicts=() ordering bug in deploy-config is pre-existing — spec must instruct not to fix opportunistically."
+  resolution: "Spec rewritten from 19 reqs to 24 reqs. New reqs: 18 (notify hook shadow-compat), 19 (/setup-merge shadow safeguard), 23 (DR-7 execution-time re-check), 24 (Edit-tool-only constraint). Reqs 5, 6, 12, 13, 14, 15 rewritten with stricter ACs. Reqs 18/19 (old) renumbered 20-22, expanded from 3-symlink-spot-check to full 'just check-symlinks' + 'just verify-setup' gate. Non-Requirements added explicit exclusions for pre-existing $(pwd) hazard and unrelated bug fixes. Technical Constraints added: Edit-tool requirement, portable-shell requirement, no-unrelated-bugs requirement, commit granularity recommendation."
+
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_review
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  phase: specify
+  verdict: pass
+  cycle: 3
+  note: "post-critical-review re-check on the rewritten spec — 24 reqs, all with binary-checkable ACs, 13 edge cases, 11 non-requirements, 12 technical constraints. Cycle 3 is explicitly labeled as a post-critical-review re-check, separate from the 2-cycle cap for authoring cycles; authoring cycles were cycles 1 (flag) and 2 (pass). This cycle verifies the critical-review rewrites meet the checklist."
+  issues: []
+
+- ts: 2026-04-10T00:00:00Z
+  event: complexity_override
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  from: complex
+  to: simple
+  reason: "User-initiated descope after cost/benefit review. Triggered by (a) sibling ticket #064 collapsing from 'extend /setup-merge with dynamic per-component opt-in' to a 3-requirement foundation cleanup, setting the epic-wide pattern; (b) the new feedback memory entry 'Proactive cost/benefit on borderline features'; (c) user's explicit 'rewrite the spec and the backlog ticket so that it will be ready to be planned in a /fresh session' direction. The infrastructure fixes (85+ edits to justfile, merge_settings.py, evolve, bin/, claude/settings.json) are deferred indefinitely — foot-guns documented, not fixed. If a specific foot-gun bites in actual use, file a targeted follow-up ticket then. Final spec shape: 3 requirements, docs-only, one commit, scoped as a ~30-80 line section inside docs/setup.md."
+  criticality: high
+  tier: simple
+  status: ok
+
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_review
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  phase: specify
+  verdict: pass
+  cycle: 4
+  note: "Post-descope re-check on the minimum-viable spec — 3 reqs, all binary-checkable ACs, 8 edge cases, 10 non-requirements, 8 technical constraints. Scope matches sibling ticket #064's foundation-cleanup pattern. Complexity downgraded to simple. S1-S6 all pass: R1 uses 7 distinct grep checks covering 11 failure modes; R2 is interactive/session-dependent with written rationale; R3 bounds length via portable awk. No self-sealing verification, no GNU-only sed, no ambiguous MoSCoW (all 3 are must-have with stated rationale)."
+  issues: []
+
+- ts: 2026-04-10T00:00:00Z
+  event: orchestrator_review
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+  note: "Post-plan checklist (P1-P7) all pass. P1: 3 tasks, sized for simple tier — Task 1 is read-only pre-flight gate (0 files, ~5min), Task 2 is single-file docs authoring (1 file, ~20min target — acceptable as single cohesive unit since 30-80 line budget applies to final state), Task 3 is commit (1 file staged, ~3min). P2: dependency graph is linear 1→2→3. P3: each task has specific paths, commands, insertion points, and spec-section references. P4: Task 1 is interactive with explicit rationale, Task 2 has 16-command verification block covering all 7 R1 ACs and both R3 ACs, Task 3 checks `git log -1 --name-only`. P5: code budget respected — shell commands are verification form (a), no function bodies or imports. P6: Files lists are consistent with verification targets. P7: not self-sealing — Task 1 verifies external GitHub state, Task 2 verifies content keywords defined by the spec (not by the task authoring the content), Task 3 verifies commit state which the task creates as its primary deliverable (benign per operational test)."
+
+- ts: 2026-04-10T00:00:00Z
+  event: critical_review
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  phase: plan
+  tier: simple
+  dispatched_by: user
+  reviewer_angles: 4
+  synthesis_model: opus
+  objection_count: 11
+  load_bearing_objections:
+    - "Verification chain runs file-wide; 6 of 16 keyword checks already pass tautologically against unedited docs/setup.md (cp -R, symlink, setup-merge, just setup, notify, evolve|audit-doc|count-tokens). Fix: scope all greps to extracted section body via awk."
+    - "Seven content blocks survive adversarial keyword-stuffing. Block 4 passes while recommending cp -RL directly (spec forbids). Block 5 passes with 'cortex-command handles these for you' (spec forbids framing foot-guns as fixes). Block 6 passes with 'Note: #36172.' Fix: add negative greps (no cp -RL, no 'handles' near foot-gun keywords) and tighten positive checks (4-filename rm, literal #36172, fenced direnv code block, framing keywords 'workaround|interim' and 'at launch|relaunch')."
+    - "Cycle-2→cycle-3 stricter ACs (O8, O15) silently undone by cycle-4 24→3 req descope. Plan re-introduces intent gates via negative checks and tighter positives rather than arguing for spec re-expansion."
+    - "Task 1 halt branch had no recovery path. Fix: define plan_halt event shape, explicit instruction to leave Status pending (not complete/cancelled), no docs mutation on halt, resume via user re-invoking /lifecycle."
+    - "WARM-drift criteria judgment-laden: 'linked closing PR' and 'sustained Anthropic comment activity' are not in structured gh JSON output. Fix: narrow to state \!= OPEN, assignees non-empty, or labels matching roadmap|planned|in-progress|area/config|area/settings regex. Accepts false-negatives (missed signals) in exchange for deterministic evaluation."
+    - "Task 3 no clean-index precondition; current repo has 6 staged files from prior session state. /commit skill does not unstage pre-existing content. Fix: add explicit clean-index precondition that unstages anything not in the Files list, then asserts exactly docs/setup.md is staged before invoking /commit. Add fix-and-retry instruction for hook/GPG failures."
+    - "Line-number anchors (line 161, line 163) freeze drift hazard. Fix: deleted line numbers; heading text alone locates the insertion point."
+    - "Verification Strategy item 4 (downstream reader sanity check) is prose-only with no execution hook. Fix: deleted item 4; strengthened Task 2 verification block now covers content-quality gaps via negative checks and tighter positives."
+    - "Awk length gate counts blank lines; 30 blank lines passes the 30-80 check. Fix: switched length gate to 'grep -c [^[:space:]]' non-blank count."
+    - "40-60 inner target vs 30-80 outer enforcement contradiction. Fix: deleted the inner target from Task 2 Context. Only the spec R3 30-80 budget is enforced."
+    - "Block 4 ordering ('cp -R warning must appear first') unenforced. Fix: added awk-based line-number ordering check verifying first symlink mention appears before first setup-merge mention in the extracted section body."
+  deferred_to_user:
+    - "Task 2 sizing: split into 2a/2b/2c or keep as single task. Angle D proposed a concrete 3-way split but acknowledged length-budget interaction across subtasks. The strengthened Verification block is now substantially heavier (~25 checks + awk integrity + awk ordering + negative checks) which aggravates the P1 budget concern. Holding for user decision."
+  status: ok
+
+- ts: 2026-04-10T00:00:00Z
+  event: phase_transition
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  from: plan
+  to: implement
+  status: ok
