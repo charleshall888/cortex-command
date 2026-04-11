@@ -16,6 +16,7 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
   - Add `FEATURE_MERGED,` to the `EVENT_TYPES` tuple after `PLAN_GEN_DISPATCHED,` at line 125
   - All existing constants follow `SCREAMING_SNAKE_CASE` name → `"snake_case"` string pattern
 - **Verification**: `grep -c 'FEATURE_MERGED = "feature_merged"' claude/overnight/events.py` = 1; `grep -c 'FEATURE_MERGED,' claude/overnight/events.py` = 1 — pass if both counts equal 1
+- **Status**: [x] completed
 
 ### Task 2: Import FEATURE_MERGED and write event in _accumulate_result
 - **Files**: `claude/overnight/batch_runner.py`
@@ -30,6 +31,7 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
   - Do NOT wrap in `try/except` — absence of the event must unambiguously mean "never merged"
   - Do NOT add this event to the repair/ff-merge path in `_apply_feature_result`
 - **Verification**: `grep -c 'FEATURE_MERGED' claude/overnight/batch_runner.py` ≥ 1 — pass if count ≥ 1. Interactive/session-dependent for placement: visual inspection of the file confirms `overnight_log_event(FEATURE_MERGED, ...)` is the first statement inside `if merge_result.success:`, before `tier = read_tier(name)`
+- **Status**: [ ] pending
 
 ### Task 3: Annotate merged features in render_failed_features()
 - **Files**: `claude/overnight/report.py`
@@ -46,6 +48,7 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
     - The override replaces the value passed to `_suggest_next_step()` — or alternatively, skip the `_suggest_next_step` call and append the suggestion line directly. The simplest approach: `if name in merged_to_integration: suggestion = "<override text>"` before the suggestion append
   - `data.events` is `list[dict[str, Any]]` — already populated in `ReportData`
 - **Verification**: `just test` exits 0 — pass if exit 0. (Test assertions for this task are added in Task 6.)
+- **Status**: [x] completed
 
 ### Task 4: Annotate SEVERITY_BLOCKING deferrals in render_deferred_questions()
 - **Files**: `claude/overnight/report.py`
@@ -61,6 +64,7 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
     - Non-blocking and informational severity deferrals are never annotated (these features completed normally)
   - `SEVERITY_BLOCKING` is already imported from `claude.overnight.deferral` at line 29
 - **Verification**: `just test` exits 0 — pass if exit 0. (Test assertions for this task are added in Task 6.)
+- **Status**: [ ] pending
 
 ### Task 5: Update walkthrough.md Section 4
 - **Files**: `skills/morning-review/references/walkthrough.md`
@@ -77,6 +81,7 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
   - Insert this as a new numbered step or condition check before the existing step 4 prompt
   - Edit the repo copy at `skills/morning-review/references/walkthrough.md` (it is symlinked; the system deployment reads from this path)
 - **Verification**: `grep -c 'integration branch' skills/morning-review/references/walkthrough.md` ≥ 1 — pass if count ≥ 1
+- **Status**: [x] completed
 
 ### Task 6: Write tests for annotation behavior
 - **Files**: `tests/test_report.py` (new file)
@@ -99,6 +104,7 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
     3. `test_render_deferred_questions_annotates_merged_blocking_deferral` — asserts `"Feature is on the integration branch"` and `"overnight-events.log"` appear and `"re-run the feature"` does NOT appear
     4. `test_render_deferred_questions_no_annotation_without_merged_event` — asserts `"Answer this question and re-run the feature"` IS present (original text preserved)
 - **Verification**: `just test` exits 0 — pass if exit 0
+- **Status**: [ ] pending
 
 ## Verification Strategy
 
