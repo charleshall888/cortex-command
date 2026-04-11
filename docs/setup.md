@@ -160,6 +160,61 @@ Then add `"mcp__server-name__*"` to the `permissions.allow` list.
 
 ---
 
+## Per-repo permission scoping
+
+Claude Code's settings merge is strictly additive: `permissions.allow` arrays concatenate across all scopes, `permissions.deny` is monotonic, and there is no subtraction mechanism. If you want a repo to ignore your global allow list, layering alone cannot deliver it. The supported workaround is `CLAUDE_CONFIG_DIR`, an alternate user-scope directory Claude Code reads at launch — by launching from a repo with `CLAUDE_CONFIG_DIR` set to a shadow copy of `~/.claude`, that repo gets its own user scope. Watch upstream issues [#12962](https://github.com/anthropics/claude-code/issues/12962) and [#26489](https://github.com/anthropics/claude-code/issues/26489) for a first-class per-project permissions feature; until one of those lands, this is the recommended workaround.
+
+### How it works
+
+`CLAUDE_CONFIG_DIR` points Claude Code at an alternate user-scope directory instead of `~/.claude`. The value is read at launch time, so a relaunch is required to pick up a new value — direnv loading on `cd` does not affect an already-running session.
+
+### Setup with direnv
+
+1. Copy `~/.claude` to a shadow location: `cp -R ~/.claude ~/.claude-shadow`. Read the symlink warning below before running this.
+2. Remove the host-shared symlinks from the shadow (see the next section for the exact commands).
+3. Write `.envrc` in your repo root:
+
+   ```
+   export CLAUDE_CONFIG_DIR=$HOME/.claude-shadow
+   ```
+
+4. Run `direnv allow` once in the repo.
+5. Quit and relaunch Claude Code from the repo. direnv reloads `.envrc` on each `cd`, but Claude Code only reads `CLAUDE_CONFIG_DIR` at launch.
+
+If you don't use direnv, a shell alias (`alias cc-shadow='CLAUDE_CONFIG_DIR=$HOME/.claude-shadow claude'`) or a `./bin/claude` wrapper script work equivalently.
+
+### Limitations and foot-guns
+
+**The `cp -R` symlink trap (most severe).** On macOS, four files under `~/.claude/` are symlinks back into your cortex-command repo: `settings.json`, `statusline.sh`, `notify.sh`, and `CLAUDE.md`. `cp -R` preserves symlinks by default, so a naive shadow copy shares those four files with the host — mutating the shadow mutates the host. Immediately after `cp -R`, remove each symlink in the shadow before making any changes:
+
+```
+rm ~/.claude-shadow/settings.json
+rm ~/.claude-shadow/statusline.sh
+rm ~/.claude-shadow/notify.sh
+rm ~/.claude-shadow/CLAUDE.md
+```
+
+Then write a fresh minimal `settings.json` in the shadow (or deliberately re-symlink them to wherever you want). Do not reach for the `-L` flag on `cp` as a shortcut — dereferencing all symlinks produces a frozen snapshot that won't pick up repo updates, which is the wrong default for a living cortex-command install.
+
+**Cortex-command foot-guns.** Each of the following is a known failure mode this pattern surfaces. None of them are managed automatically — treat each as a rule to follow, not a problem the shadow resolves for you:
+
+- **`/setup-merge` hardcodes `~/.claude`**: do not run `/setup-merge` from a shadowed shell — it silently writes to the host scope, bypassing the shadow. Run it from a non-shadowed shell, then re-copy the updated files into your shadow.
+- **`just setup` hardcodes `~/.claude`**: same shape — run `just setup` from a non-shadowed shell, then refresh the shadow with `cp -R --update`.
+- **Notify hook fires from the host literal path**: `claude/settings.json` references `~/.claude/notify.sh` literally in hook commands. Under a shadow, notifications fire from the host path (or fail silently if the host install is missing). Keep a working host install alongside any shadow.
+- **Evolve, auto-memory, audit-doc, and count-tokens walk from host**: these tools fall back to `~/.claude` rather than `$CLAUDE_CONFIG_DIR`. Auto-memory under a shadow writes to the host scope. Treat their output as host-scoped.
+- **Concurrent sessions and scope confusion**: Claude Code's `/context` (an upstream bug) shows the host path even when a shadow is active, so you cannot verify the live scope from inside a session. Run `echo $CLAUDE_CONFIG_DIR` in your shell before launching each session.
+
+**Upstream Claude Code partial-support bugs.** Even with `CLAUDE_CONFIG_DIR` set, several Claude Code subsystems do not fully honor it:
+
+- [#36172](https://github.com/anthropics/claude-code/issues/36172) — skills in `$CLAUDE_CONFIG_DIR/skills/` are not reliably resolved. Most consequential for cortex-command because it undermines the "swap the entire user scope" mental model.
+- [#38641](https://github.com/anthropics/claude-code/issues/38641) — `/context` displays the host path regardless of `CLAUDE_CONFIG_DIR`.
+- [#42217](https://github.com/anthropics/claude-code/issues/42217) — MCP servers from `.mcp.json` are not loaded under a shadow.
+- [#34800](https://github.com/anthropics/claude-code/issues/34800) — IDE lock files always write to `~/.claude/ide/` regardless of the env var.
+
+For the full decision record and failure-mode inventory, see `research/user-configurable-setup/research.md`.
+
+---
+
 ## macOS Notifications
 
 For desktop notifications when Claude Code needs attention:
