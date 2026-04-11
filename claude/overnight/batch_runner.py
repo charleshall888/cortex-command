@@ -1688,40 +1688,70 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                 if requires_review(tier, criticality):
                     from claude.pipeline.review_dispatch import dispatch_review  # noqa: E402 — lazy to avoid circular import
 
-                    rr = await dispatch_review(
-                        feature=name,
-                        worktree_path=worktree_paths.get(name, Path(f"worktrees/{name}")),
-                        branch=actual_branch or f"pipeline/{name}",
-                        spec_path=Path(f"lifecycle/{name}/spec.md"),
-                        complexity=tier,
-                        criticality=criticality,
-                        base_branch=_effective_base_branch(
-                            repo_path_map.get(name), integration_branches, config.base_branch,
-                        ),
-                        repo_path=_effective_merge_repo_path(repo_path_map.get(name), integration_worktrees, integration_branches, session_id),
-                        log_path=config.pipeline_events_path,
-                    )
-                    if rr.deferred:
-                        batch_result.features_deferred.append({
-                            "name": name,
-                            "question_count": 1,
-                        })
+                    try:
+                        rr = await dispatch_review(
+                            feature=name,
+                            worktree_path=worktree_paths.get(name, Path(f"worktrees/{name}")),
+                            branch=actual_branch or f"pipeline/{name}",
+                            spec_path=Path(f"lifecycle/{name}/spec.md"),
+                            complexity=tier,
+                            criticality=criticality,
+                            base_branch=_effective_base_branch(
+                                repo_path_map.get(name), integration_branches, config.base_branch,
+                            ),
+                            repo_path=_effective_merge_repo_path(repo_path_map.get(name), integration_worktrees, integration_branches, session_id),
+                            log_path=config.pipeline_events_path,
+                        )
+                        if rr.deferred:
+                            batch_result.features_deferred.append({
+                                "name": name,
+                                "question_count": 1,
+                            })
+                            overnight_log_event(
+                                FEATURE_DEFERRED,
+                                config.batch_id,
+                                feature=name,
+                                details={"review_verdict": rr.verdict, "review_cycle": rr.cycle},
+                                log_path=config.overnight_events_path,
+                            )
+                            _write_back_to_backlog(
+                                name, "in_progress", config.batch_id,
+                                config.overnight_events_path,
+                                backlog_id=backlog_ids.get(name),
+                            )
+                            try:
+                                cleanup_worktree(name, repo_path=repo_path_map.get(name), worktree_path=worktree_paths.get(name))
+                            except Exception:
+                                pass
+                            return
+                    except Exception as exc:
                         overnight_log_event(
                             FEATURE_DEFERRED,
                             config.batch_id,
                             feature=name,
-                            details={"review_verdict": rr.verdict, "review_cycle": rr.cycle},
+                            details={"error": f"dispatch_review raised {type(exc).__name__}: {exc}", "review_dispatch_crashed": True},
                             log_path=config.overnight_events_path,
                         )
+                        escalations_path = Path("lifecycle/escalations.jsonl")
+                        deferral = DeferralQuestion(
+                            feature=name,
+                            question_id=_next_escalation_n(name, config.batch_id, escalations_path),
+                            severity=SEVERITY_BLOCKING,
+                            context=f"Feature merged successfully but post-merge review dispatch raised an unexpected exception: {type(exc).__name__}: {exc}",
+                            question=f"Feature '{name}' merged but the review dispatch crashed. Should this feature be marked complete (skipping review) or held for manual review?",
+                            options_considered=["mark complete (skip review)", "hold for manual review"],
+                            pipeline_attempted="dispatch_review() in _accumulate_result()",
+                        )
+                        write_deferral(deferral)
+                        batch_result.features_deferred.append({
+                            "name": name,
+                            "question_count": 1,
+                        })
                         _write_back_to_backlog(
                             name, "in_progress", config.batch_id,
                             config.overnight_events_path,
                             backlog_id=backlog_ids.get(name),
                         )
-                        try:
-                            cleanup_worktree(name, repo_path=repo_path_map.get(name), worktree_path=worktree_paths.get(name))
-                        except Exception:
-                            pass
                         return
 
                 # Standard merged path (no review needed, or review approved)

@@ -140,33 +140,6 @@
     "repo": null
   },
   {
-    "id": 60,
-    "title": "Permissions audit round 2: CFA Android learnings",
-    "status": "refined",
-    "priority": "medium",
-    "type": "task",
-    "tags": [
-      "permissions-audit",
-      "security"
-    ],
-    "areas": [],
-    "created": "2026-04-10",
-    "updated": "2026-04-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/permissions-audit-round-2-cfa-android-learnings/spec.md",
-    "discovery_source": "CFA Android PR #8093 permissions review session",
-    "plan": null,
-    "uuid": "f8a2b3c4-5d6e-7f8a-9b0c-1d2e3f4a5b6c",
-    "lifecycle_slug": "permissions-audit-round-2-cfa-android-learnings",
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 61,
     "title": "Sync-hook cleanup propagation mechanism",
     "status": "refined",
@@ -224,33 +197,34 @@
     "repo": null
   },
   {
-    "id": 48,
-    "title": "Trim and instrument overnight plan-gen prompt",
-    "status": "refined",
-    "priority": "low",
-    "type": "chore",
+    "id": 70,
+    "title": "Fix morning report accuracy when post-merge steps fail",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "bug",
     "tags": [
-      "overnight",
-      "orchestrator",
-      "plan-gen"
+      "overnight-runner",
+      "report",
+      "morning-review"
     ],
     "areas": [
-      "overnight-runner"
+      "overnight-runner",
+      "report"
     ],
-    "created": "2026-04-09",
+    "created": "2026-04-11",
     "updated": "2026-04-11",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": "lifecycle/trim-and-instrument-overnight-plan-gen-prompt/spec.md",
-    "discovery_source": "research/overnight-plan-building/research.md",
+    "spec": null,
+    "discovery_source": null,
     "plan": null,
-    "uuid": null,
-    "lifecycle_slug": "trim-and-instrument-overnight-plan-gen-prompt",
+    "uuid": "ac7c0919-1eb4-4729-98b4-0a6d39177f03",
+    "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
     "repo": null
   }
 ]

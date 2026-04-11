@@ -7,17 +7,14 @@
 | 68 | Suppress Dismiss-rationale leak in lifecycle clarify critic | backlog | high | feature | — | 66 | — |
 | 69 | Suppress internal narration in lifecycle specify phase | backlog | high | feature | — | 66 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
-| 60 | Permissions audit round 2: CFA Android learnings | refined | medium | task | — | — | ✓ |
 | 61 | Sync-hook cleanup propagation mechanism | refined | medium | task | — | — | — |
 | 62 | Harden cortex-notify-remote.sh curl invocation against exfiltration | refined | medium | task | — | — | — |
-| 48 | Trim and instrument overnight plan-gen prompt | refined | low | chore | — | — | ✓ |
+| 70 | Fix morning report accuracy when post-merge steps fail | backlog | medium | bug | — | — | — |
 
 ## Refined
 
-- **60** Permissions audit round 2: CFA Android learnings
 - **61** Sync-hook cleanup propagation mechanism
 - **62** Harden cortex-notify-remote.sh curl invocation against exfiltration
-- **48** Trim and instrument overnight plan-gen prompt
 
 ## Backlog
 
@@ -26,6 +23,7 @@
 - **68** Suppress Dismiss-rationale leak in lifecycle clarify critic
 - **69** Suppress internal narration in lifecycle specify phase
 - **8** Auto-rename Claude Code session to active lifecycle feature name
+- **70** Fix morning report accuracy when post-merge steps fail
 
 ## In-Progress
 

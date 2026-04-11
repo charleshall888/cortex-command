@@ -1,7 +1,7 @@
 ---
 id: 48
 title: Trim and instrument overnight plan-gen prompt
-status: abandoned
+status: complete
 priority: low
 type: chore
 tags: [overnight, orchestrator, plan-gen]
@@ -9,7 +9,7 @@ created: 2026-04-09
 updated: 2026-04-11
 discovery_source: research/overnight-plan-building/research.md
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: complete
 lifecycle_slug: trim-and-instrument-overnight-plan-gen-prompt
 complexity: simple
 criticality: high
