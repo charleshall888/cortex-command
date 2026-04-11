@@ -2,18 +2,20 @@
 schema_version: "1"
 uuid: ac7c0919-1eb4-4729-98b4-0a6d39177f03
 title: "Fix morning report accuracy when post-merge steps fail"
-status: backlog
+status: in_progress
 priority: medium
 type: bug
 tags: [overnight-runner, report, morning-review]
 areas: [overnight-runner, report]
 created: 2026-04-11
 updated: 2026-04-11
-lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+lifecycle_slug: fix-morning-report-accuracy-when-post-merge-steps-fail
+lifecycle_phase: plan
+session_id: e83c9b3d-125c-448e-ac50-bc8b6cced483
 blocks: []
 blocked-by: []
+complexity: complex
+criticality: high
 ---
 
 ## Problem
