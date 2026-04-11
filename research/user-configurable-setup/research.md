@@ -341,10 +341,11 @@ This delivers the topic statement ("only use project permissions in this repo") 
   - Presence of any Anthropic staff engagement (labels, assignees, comments).
   - Presence of any linked PRs or related closed issues suggesting work-in-progress.
   - Any recent Claude Code release notes (past 3 months) that touched settings layering, hook registration, or permission merge semantics.
-- **Audit outcomes**:
-  - **Quiet** (no recent activity, no Anthropic engagement): proceed with DR-1 Option (c) implementation.
-  - **Warm** (some activity, no commitments): proceed but size the `cortex-shadow-config` tooling for quick retirement if upstream lands the feature.
-  - **Hot** (active PR, roadmap mention, or Anthropic staff commentary): pause the per-repo permissions work, document the `CLAUDE_CONFIG_DIR` workaround as an interim hand-edit, and wait for upstream.
+- **Audit outcomes** (original 6-ticket-plan phrasing; updated below for the collapsed docs-only shape):
+  - **Quiet** (no recent activity, no Anthropic engagement): ship the full supported-pattern docs — walkthrough, fallbacks, troubleshooting. Treat `CLAUDE_CONFIG_DIR` + direnv as the primary documented mechanism.
+  - **Warm** (some activity, no commitments): ship the full docs but frame the pattern as "documented mechanism, upstream may land native support" with an explicit "watch these issues" callout in the preamble.
+  - **Hot** (active PR, roadmap mention, or Anthropic staff commentary): ship a **minimal wait-oriented page** — status paragraph foregrounding the tracking issue, a brief hand-edit snippet (<20 lines) for users who can't wait, no full walkthrough, no fallbacks section, no troubleshooting beyond one sentence. Do not mark the epic complete; revisit once upstream ships.
+  - **Note**: the original "pause the work" phrasing for hot assumed a heavier scaffolding stack (generator binary, hooks, doctor CLI) that could be paused independently of the docs. Under the collapsed docs-only plan, the docs ARE the work — so "pause" collapses to "ship the minimum useful page and don't build habits around it." DR-7's core intent (don't over-invest in a pattern that is about to become native) is preserved by the minimal-under-hot shape.
 - **Decompose impact**: The audit becomes the first ticket of the epic. Its outcome gates the rest.
 - **Trade-offs**: Adds a research step before implementation. Worth it — the cost is ~1 hour of investigation, the benefit is avoiding building scaffolding around a constraint that's about to disappear.
 

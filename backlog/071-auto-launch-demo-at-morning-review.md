@@ -2,12 +2,12 @@
 schema_version: "1"
 id: "071"
 uuid: 4f2e8b3c-1a9d-4e7f-bc42-8d5e9f2a0c1b
-title: "Auto-launch demo at morning review via lifecycle.config.md demo-command"
+title: "Agent-driven demoability assessment and validation setup at morning review"
 type: feature
 status: refined
 priority: medium
 tags: [morning-review, overnight-runner, lifecycle-config, dx]
-areas: [skills, overnight-runner]
+areas: [skills]
 created: 2026-04-11
 updated: 2026-04-11
 blocked-by: []
@@ -17,33 +17,49 @@ criticality: medium
 discovery_source: research/morning-review-demo-setup/research.md
 ---
 
-# Auto-launch demo at morning review via lifecycle.config.md demo-command
+# Agent-driven demoability assessment and validation setup at morning review
 
 ## Context from discovery
 
-The user wants to reduce morning-review friction: when the overnight runner finishes work on a project, the morning review process should automatically make the result demo-able — launching a server, game, or other runnable artifact on the overnight branch so the user can validate without manual setup.
+The user wants to reduce morning-review friction for human validation of overnight work. The original research explored static auto-launch (run `demo-command` mechanically), but the right design is smarter: the morning review agent already reads specs and feature descriptions, so it can reason about whether each completed feature is interactively testable by a human — and offer to help set up validation only when it makes sense.
 
-Key findings from research:
-- The integration worktree is **destroyed** by runner.sh at session end (`git worktree remove --force` at lines 1291–1330), before the user opens `/morning-review`. Session-end launch is not viable.
-- The overnight **branch** (`overnight/{session_id}`) persists after session end and is the durable reference to the session's code.
-- The morning review skill already reads `overnight-state.json` which contains the session ID and branch name — it has everything needed to create a fresh worktree at review time.
-- `lifecycle.config.md` in the target repo is not currently read at runtime; the morning review skill can read it directly from the repo root (no runner changes needed).
+A static `demo-command` can't know whether THIS set of overnight changes actually needs human eyeballs. The agent can. A game mechanic change needs play-testing; a refactor that passed all automated tests probably doesn't. A dashboard UI change needs visual inspection; a cron schedule tweak doesn't.
+
+Key constraints from research:
+- The integration worktree is destroyed at session end — any setup must happen at morning review time when the user is present
+- The overnight branch (`overnight/{session_id}`) persists and is the durable reference to the session's code
+- The user being present eliminates the need for background process management
 
 ## What this feature delivers
 
-1. A new `demo-command` field in the `lifecycle.config.md` schema (template at `skills/lifecycle/assets/lifecycle.config.md`).
-2. A new Step 2.5 in the morning review skill (`skills/morning-review/SKILL.md`) — runs between Executive Summary and Completed Features:
-   - Read `demo-command` from `lifecycle.config.md` in the repo root
-   - If absent: skip entirely, no prompt shown
-   - If present: create a fresh git worktree from `overnight/{session_id}` at a stable path (e.g., `lifecycle/sessions/{id}/demo-worktree/`)
-   - Launch `demo-command` with `cwd=demo_worktree_path`:
-     - Server/background type: non-blocking launch (`Popen`-style), surface port/URL to user
-     - Interactive/game type: surface command and worktree path as instructions (user runs manually or triggers from terminal)
-3. A cleanup hook at Step 6 of the morning review (after PR merge completes): stop any background process started in Step 2.5 and remove the demo worktree.
+**1. Optional `demo-command` hint in `lifecycle.config.md`**
 
-## Open questions for spec
+A new field in the schema (`skills/lifecycle/assets/lifecycle.config.md`) that tells the agent how to run the project interactively. This is a hint for the agent's reasoning, not a trigger:
 
-- Should `demo-command` be per-repo (one launch command for the whole project) or per-feature (individual features may demo at different entry points, e.g., `res://combat.tscn` vs `res://main.tscn` for a Godot game)? This shapes the schema design.
-- How is "server vs. interactive" mode determined — via the `type` field in lifecycle.config.md, a separate `demo-mode: background|interactive` field, or by whether the command has a flag/pattern indicating it's long-running?
-- What is the cleanup contract for background processes: killed automatically after PR merge, or left running for the user to stop?
-- What happens when the overnight branch no longer exists at morning review time (e.g., PR was already merged before the user ran `/morning-review`)?
+```yaml
+demo-command: godot --play res://main.tscn   # or: uv run fastapi run src/main.py
+```
+
+Absent = project has no interactive demo; agent skips validation setup entirely.
+
+**2. Demoability assessment in the morning review walkthrough**
+
+During the Completed Features section (Step 3), after displaying what was built, the agent reads the **actual diff** (`git diff main...overnight/{session_id}`) alongside each feature's spec. Both contribute equally — diff provides file-path signal (which surfaces were touched), spec provides intent signal (what the feature was meant to do). The agent assesses whether any of the completed work warrants human validation beyond what automated tests cover, considering:
+- Which files changed and whether they have a visible/interactive surface (UI scenes, gameplay scripts, user-facing endpoints)
+- Whether the automated test gate is likely to cover this class of change fully (unit behavior vs. feel/UX)
+- Whether the changes are structural/config/internal with no interactive manifestation
+
+Surfaces conclusion only, not reasoning: "Tonight's changes included UI and gameplay work — want to do a validation session before merging?"
+
+**3. Single interactive offer to set up validation**
+
+After assessing all completed features, the agent makes **one offer** for the session — if any features are judged demoable and `demo-command` is set. The user accepts or skips. No per-feature or per-group prompting.
+
+On acceptance, the agent:
+- Creates a worktree from `overnight/{session_id}` at `$TMPDIR/demo-{session_id}/` (avoids disrupting the main repo's branch state; stays within sandbox write paths)
+- Runs `demo-command` from that worktree
+- Stays present to guide what specifically to look for based on the specs
+
+The user is sitting there. No background process lifecycle, no PID tracking, no Popen management.
+
+**After PR merge (Step 6):** the agent reminds the user to close the demo if it is still running.
