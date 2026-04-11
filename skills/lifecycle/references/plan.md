@@ -160,6 +160,12 @@ Produce `lifecycle/{feature}/plan.md` with this structure:
 
 ## Verification Strategy
 [How to verify the complete feature works end-to-end after all tasks are done]
+
+## Veto Surface
+[Design choices, scope calls, or constraints the user might want to revisit before implementation begins. "None" if nothing is controversial.]
+
+## Scope Boundaries
+[What is explicitly excluded from this feature. Maps to the spec's Non-Requirements section.]
 ```
 
 > Verification fields that consist only of prose descriptions (e.g., "confirm the feature works correctly") do not pass the P4 checklist. Use format (a), (b), or (c) from the task template above.
@@ -244,8 +250,6 @@ Present the plan summary (overview + task list). In addition to the overview and
 
 - **Produced** (one-line summary of the artifact)
 - **Trade-offs** (alternatives considered and rationale for chosen approach)
-- **Veto surface** (items the user might disagree with or want to change)
-- **Scope boundaries** (what is explicitly excluded)
 
 The user must approve before implementation begins. If the user requests changes, revise and re-present.
 
