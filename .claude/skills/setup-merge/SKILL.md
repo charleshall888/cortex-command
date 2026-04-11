@@ -77,6 +77,7 @@ Display one row per settings category. For each category, show the count of entr
 | Settings Category | Status |
 |-------------------|--------|
 | Required hooks | N to add / already installed |
+| Optional hooks | N to review / already installed |
 | Allow rules | N to add / already installed |
 | Deny rules | N to add / already installed |
 | Sandbox config | N to add / already installed |
@@ -154,7 +155,7 @@ On N: skip. Count as skipped for the summary.
 
 ## Step 5: Settings Interactive Flow
 
-Process the settings categories from the detect JSON. For each category, either merge unconditionally (required hooks), prompt Y/n (per-category settings), or skip ("already installed").
+Process the settings categories from the detect JSON. For each category, either merge unconditionally (required hooks), prompt Y/n (optional hooks and per-category settings), or skip ("already installed").
 
 ### 5a. Required hooks
 
@@ -174,7 +175,36 @@ List each hook from the `absent` array showing its `event_type` and `command` fi
 
 These hooks are merged unconditionally -- do not prompt Y/n.
 
-### 5b. Per-category settings
+### 5b. Optional hooks
+
+Read `settings.hooks_optional` from the detect JSON.
+
+If `settings.hooks_optional.absent` is empty, display:
+
+> Optional hooks: already installed
+
+Otherwise, prompt for each absent optional hook individually. Use the descriptions below (from spec req 17) verbatim. Track which hook script filenames the user approves.
+
+For each absent optional hook, extract the script filename from the `command` field and display the matching prompt:
+
+**cortex-setup-gpg-sandbox-home.sh**:
+
+> `cortex-setup-gpg-sandbox-home.sh` — Sets up GPG agent for sandbox-compatible commit signing. macOS-specific. Required if you use signed commits in sandboxed sessions. Install? [Y/n]
+
+**cortex-notify.sh** (may appear as `notify.sh` in the command field):
+
+> `cortex-notify.sh` — Sends desktop notifications when Claude needs attention or completes. Requires cortex-notify infrastructure. Install? [Y/n]
+
+**cortex-notify-remote.sh**:
+
+> `cortex-notify-remote.sh` — Sends remote notifications (Tailscale/Android). Requires notify-remote infrastructure. Install? [Y/n]
+
+On Y: add the script filename to the approved optional hooks list.
+On N: skip. Count as skipped for the summary.
+
+Build a JSON array of approved optional hook canonical filenames (e.g., `["cortex-notify.sh", "cortex-notify-remote.sh"]`). Store this as `APPROVED_OPTIONAL_HOOKS`.
+
+### 5c. Per-category settings
 
 For each of the 6 settings categories, check the detect JSON for a non-empty delta. If the delta is empty, display "already installed" and skip. Otherwise, show the delta and prompt Y/n.
 
@@ -308,10 +338,11 @@ Check the `status` field:
 
   On Y: set `APPROVE_APIKEY=true`. On N: set `APPROVE_APIKEY=false`.
 
-### 5c. Check if anything to merge
+### 5d. Check if anything to merge
 
 If ALL of the following are true:
 - `settings.hooks_required.absent` is empty (no required hooks to add)
+- `APPROVED_OPTIONAL_HOOKS` is empty (no optional hooks approved)
 - All 6 `APPROVE_*` flags are false
 
 Then there is nothing to merge into settings.json. Display:
@@ -320,13 +351,14 @@ Then there is nothing to merge into settings.json. Display:
 
 Skip the merge invocation and proceed directly to Step 6 (Summary Report).
 
-### 5d. Merge Invocation
+### 5e. Merge Invocation
 
 Run the merge helper with all collected approvals:
 
 ```
 python3 ${CLAUDE_SKILL_DIR}/scripts/merge_settings.py merge \
   --detect-file "$DETECT_FILE" \
+  --optional-hooks '<APPROVED_OPTIONAL_HOOKS as JSON array string>' \
   --approve-allow <true|false> \
   --approve-deny <true|false> \
   --approve-sandbox <true|false> \
@@ -337,6 +369,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/merge_settings.py merge \
 
 Where:
 - `$DETECT_FILE` is the tempfile path captured in Step 2
+- `APPROVED_OPTIONAL_HOOKS` is the JSON array of approved optional hook canonical filenames (e.g., `'["cortex-notify.sh"]'`)
 - Each `--approve-*` flag is the literal string `true` or `false` based on the corresponding `APPROVE_*` variable
 
 ### Parse merge output
