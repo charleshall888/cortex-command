@@ -31,7 +31,7 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
   - Do NOT wrap in `try/except` — absence of the event must unambiguously mean "never merged"
   - Do NOT add this event to the repair/ff-merge path in `_apply_feature_result`
 - **Verification**: `grep -c 'FEATURE_MERGED' claude/overnight/batch_runner.py` ≥ 1 — pass if count ≥ 1. Interactive/session-dependent for placement: visual inspection of the file confirms `overnight_log_event(FEATURE_MERGED, ...)` is the first statement inside `if merge_result.success:`, before `tier = read_tier(name)`
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Annotate merged features in render_failed_features()
 - **Files**: `claude/overnight/report.py`
@@ -64,7 +64,7 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
     - Non-blocking and informational severity deferrals are never annotated (these features completed normally)
   - `SEVERITY_BLOCKING` is already imported from `claude.overnight.deferral` at line 29
 - **Verification**: `just test` exits 0 — pass if exit 0. (Test assertions for this task are added in Task 6.)
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Update walkthrough.md Section 4
 - **Files**: `skills/morning-review/references/walkthrough.md`
@@ -104,7 +104,7 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
     3. `test_render_deferred_questions_annotates_merged_blocking_deferral` — asserts `"Feature is on the integration branch"` and `"overnight-events.log"` appear and `"re-run the feature"` does NOT appear
     4. `test_render_deferred_questions_no_annotation_without_merged_event` — asserts `"Answer this question and re-run the feature"` IS present (original text preserved)
 - **Verification**: `just test` exits 0 — pass if exit 0
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Verification Strategy
 
