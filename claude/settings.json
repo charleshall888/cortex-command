@@ -90,7 +90,6 @@
       "Bash(date)",
       "Bash(chmod +x *)",
       "Bash(mv *)",
-      "Bash(curl *)",
       "Bash(git add *)",
       "Bash(git merge *)",
       "Bash(git worktree *)",
@@ -216,7 +215,8 @@
     ],
     "ask": [
       "Bash(git restore *)",
-      "Bash(git checkout -- *)"
+      "Bash(git checkout -- *)",
+      "Bash(curl *)"
     ],
     "defaultMode": "default"
   },
