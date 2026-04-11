@@ -11,24 +11,24 @@ import tempfile
 from pathlib import Path
 
 
-# Required hooks: script filename -> True. These are merged unconditionally.
+# Every hook referenced in `claude/settings.json`'s hooks block must appear in
+# this set. If you add or remove a hook in settings.json, update this set in
+# the same commit. Mismatch produces latent bugs — hooks invisible to merge
+# logic, or prompts asking about hooks that cannot actually be disabled.
 REQUIRED_HOOK_SCRIPTS = {
     "cortex-sync-permissions.py",
     "cortex-scan-lifecycle.sh",
+    "cortex-setup-gpg-sandbox-home.sh",
     "cortex-cleanup-session.sh",
     "cortex-validate-commit.sh",
-    "cortex-tool-failure-tracker.sh",
-    "cortex-skill-edit-advisor.sh",
-    "cortex-permission-audit-log.sh",
-    "cortex-worktree-create.sh",
-    "cortex-worktree-remove.sh",
-}
-
-# Optional hooks: script filename. These are prompted individually.
-OPTIONAL_HOOK_SCRIPTS = {
-    "cortex-setup-gpg-sandbox-home.sh",
+    "cortex-output-filter.sh",
     "cortex-notify.sh",
     "cortex-notify-remote.sh",
+    "cortex-permission-audit-log.sh",
+    "cortex-tool-failure-tracker.sh",
+    "cortex-skill-edit-advisor.sh",
+    "cortex-worktree-create.sh",
+    "cortex-worktree-remove.sh",
 }
 
 # Plugin keys to check
@@ -138,7 +138,10 @@ def discover_symlinks(repo_root: Path) -> list[dict]:
                     "status": classify(source, target),
                 })
 
-    # 4. hooks/cortex-* -> ~/.claude/hooks/<filename> (all files matching cortex-*; ln -sf)
+    # 4. hooks/cortex-* and claude/hooks/cortex-* -> ~/.claude/hooks/<filename>.
+    #    Hooks live in two directories by design: top-level hooks/ holds the
+    #    older shell scripts, claude/hooks/ holds newer ones added since the
+    #    claude/ tree was introduced. Both walks emit ln -sf entries.
     #    Special case: hooks/cortex-notify.sh -> ~/.claude/notify.sh (hardcoded)
     hooks_dir = repo_root / "hooks"
     if hooks_dir.is_dir():
@@ -150,6 +153,19 @@ def discover_symlinks(repo_root: Path) -> list[dict]:
                     target = home / ".claude" / "notify.sh"
                 else:
                     target = home / ".claude" / "hooks" / item.name
+                entries.append({
+                    "source": str(source),
+                    "target": str(target),
+                    "ln_flag": "-sf",
+                    "status": classify(source, target),
+                })
+
+    claude_hooks_dir = repo_root / "claude" / "hooks"
+    if claude_hooks_dir.is_dir():
+        for item in sorted(claude_hooks_dir.glob("cortex-*")):
+            if item.is_file():
+                source = item
+                target = home / ".claude" / "hooks" / item.name
                 entries.append({
                     "source": str(source),
                     "target": str(target),
@@ -275,22 +291,19 @@ def is_hook_present(spec: dict, user_settings: dict) -> bool:
 
 
 def detect_hooks(repo_settings: dict, user_settings: dict) -> dict:
-    """Detect required and optional hooks: present vs absent.
+    """Detect required hooks: present vs absent.
 
-    Returns dict with hooks_required and hooks_optional, each containing
+    Returns dict with hooks_required containing
     present (list of script filenames) and absent (list of full hook objects).
     """
     all_specs = extract_hooks_from_repo_settings(repo_settings)
 
     required_present = []
     required_absent = []
-    optional_present = []
-    optional_absent = []
 
     # Track which script filenames we've already recorded as present
     # (a script may appear in multiple event types, e.g. cortex-notify.sh in Notification + Stop)
     required_present_seen = set()
-    optional_present_seen = set()
 
     for spec in all_specs:
         filename = spec["script_filename"]
@@ -312,22 +325,11 @@ def detect_hooks(repo_settings: dict, user_settings: dict) -> dict:
                     required_present_seen.add(filename)
             else:
                 required_absent.append(hook_obj)
-        elif filename in OPTIONAL_HOOK_SCRIPTS:
-            if present:
-                if filename not in optional_present_seen:
-                    optional_present.append(filename)
-                    optional_present_seen.add(filename)
-            else:
-                optional_absent.append(hook_obj)
 
     return {
         "hooks_required": {
             "present": required_present,
             "absent": required_absent,
-        },
-        "hooks_optional": {
-            "present": optional_present,
-            "absent": optional_absent,
         },
     }
 
@@ -490,7 +492,6 @@ def detect_settings(repo_root: Path, user_settings_path: Path) -> dict:
         "mtime": mtime,
         "user_settings_path": str(user_settings_path),
         "hooks_required": hooks["hooks_required"],
-        "hooks_optional": hooks["hooks_optional"],
         "allow": {"absent": allow_delta},
         "deny": {"absent": deny_delta},
         "sandbox": {"absent": sandbox_delta},
@@ -692,14 +693,12 @@ def atomic_write(settings: dict, user_settings_path: str, expected_mtime: float)
 
 def run_merge(
     detect_file_path: str,
-    approved_optional_hooks: list[str],
     approvals_dict: dict,
 ) -> dict:
     """Run merge mode: read detect tempfile, apply approved changes atomically.
 
     Args:
         detect_file_path: path to the detect tempfile JSON
-        approved_optional_hooks: list of approved optional hook script filenames
         approvals_dict: dict of category -> bool for non-hook categories
 
     Returns:
@@ -734,22 +733,12 @@ def run_merge(
     else:
         settings = {}
 
-    # Collect hooks to add: required hooks (always) + approved optional hooks
+    # Collect hooks to add: required hooks (always merged)
     hooks_to_add = []
 
     # Required hooks from absent list — always merged
     required_absent = settings_data.get("hooks_required", {}).get("absent", [])
     hooks_to_add.extend(required_absent)
-
-    # Optional hooks — only approved ones
-    optional_absent = settings_data.get("hooks_optional", {}).get("absent", [])
-    for hook_spec in optional_absent:
-        # Match by script filename if present, otherwise by command substring
-        # The detect output absent list contains full hook objects with command field
-        # We need to check if this hook's script was approved
-        script_name = _extract_script_from_command(hook_spec.get("command", ""))
-        if script_name in approved_optional_hooks:
-            hooks_to_add.append(hook_spec)
 
     # Apply hook insertion
     apply_hooks(settings, hooks_to_add)
@@ -876,17 +865,6 @@ def run_merge(
     }
 
 
-def _extract_script_from_command(command: str) -> str | None:
-    """Extract the canonical script filename from a command string.
-
-    Returns the canonical name (cortex-prefixed) or None.
-    """
-    result = extract_script_filename(command)
-    if result:
-        return result[0]  # canonical_name
-    return None
-
-
 def cmd_detect(args: argparse.Namespace) -> None:
     """Run the detect subcommand: discover symlinks and settings diffs."""
     repo_root = get_repo_root(args.repo_root)
@@ -912,13 +890,6 @@ def cmd_detect(args: argparse.Namespace) -> None:
 
 def cmd_merge(args: argparse.Namespace) -> None:
     """Run the merge subcommand: apply hooks and approved categories."""
-    # Parse optional hooks JSON array
-    try:
-        optional_hooks = json.loads(args.optional_hooks) if args.optional_hooks else []
-    except json.JSONDecodeError:
-        print(json.dumps({"error": f"invalid --optional-hooks JSON: {args.optional_hooks}"}))
-        sys.exit(1)
-
     # Build approvals dict from CLI flags
     approvals = {
         "allow": args.approve_allow,
@@ -929,7 +900,7 @@ def cmd_merge(args: argparse.Namespace) -> None:
         "apiKeyHelper": args.approve_apikey,
     }
 
-    result = run_merge(args.detect_file, optional_hooks, approvals)
+    result = run_merge(args.detect_file, approvals)
 
     # Output result as JSON
     print(json.dumps(result, indent=2))
@@ -996,11 +967,6 @@ def main() -> None:
         "--detect-file",
         required=True,
         help="Path to detect output tempfile",
-    )
-    merge_parser.add_argument(
-        "--optional-hooks",
-        default="[]",
-        help="JSON array of approved optional hook script filenames",
     )
     merge_parser.add_argument(
         "--approve-allow",
