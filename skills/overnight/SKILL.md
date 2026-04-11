@@ -152,7 +152,7 @@ Approve this plan and specs?
 
 **Error**: If `lifecycle/{slug}/spec.md` exists but cannot be decoded (e.g., binary content, encoding error), treat it the same as a missing file and offer the remove-or-abort choice.
 
-### Step 8: Launch
+### Step 7: Launch
 
 On user approval, execute these steps in order:
 
@@ -182,7 +182,7 @@ On user approval, execute these steps in order:
 
    - **If output is empty**: proceed to Launch sub-step 2 without any message.
 
-   **Error**: If `git status` fails (unexpected git error), report the error and stop. In practice this cannot occur — the git repository check in Input Validation (`.git/` exists) runs before Step 8.
+   **Error**: If `git status` fails (unexpected git error), report the error and stop. In practice this cannot occur — the git repository check in Input Validation (`.git/` exists) runs before Step 7.
 
 2. **Bootstrap the session**: Call `bootstrap_session(selection, plan_content)` from `claude.overnight.plan` with the approved selection and the rendered plan string from Step 5. Returns `(state, state_dir)` with `overnight-state.json`, `overnight-plan.md`, and `session.json` already written on disk.
 
