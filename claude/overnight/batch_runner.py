@@ -67,6 +67,7 @@ from claude.overnight.events import (
     FEATURE_COMPLETE,
     FEATURE_DEFERRED,
     FEATURE_FAILED,
+    FEATURE_MERGED,
     FEATURE_PAUSED,
     FEATURE_START,
     HEARTBEAT,
@@ -1682,6 +1683,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             )
 
             if merge_result.success:
+                overnight_log_event(FEATURE_MERGED, config.batch_id, feature=name, details={"integration_branch": effective_branch}, log_path=config.overnight_events_path)
                 # Review gating: check if post-merge review is required
                 tier = read_tier(name)
                 criticality = read_criticality(name)
