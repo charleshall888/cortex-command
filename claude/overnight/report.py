@@ -907,6 +907,14 @@ def render_failed_features(data: ReportData) -> str:
             if feat:
                 conflict_info[feat] = details
 
+    # Collect features that successfully merged to integration
+    merged_to_integration: set[str] = set()
+    for evt in data.events:
+        if evt.get("event") == "feature_merged":
+            feat = evt.get("feature", "")
+            if feat:
+                merged_to_integration.add(feat)
+
     for name, fs in sorted(failed.items()):
         error = fs.error or "unknown error"
         lines.append(f"### {name}: {error}")
@@ -934,8 +942,23 @@ def render_failed_features(data: ReportData) -> str:
             if cost is not None:
                 lines.append(f"**Cost**: ${cost:.2f}")
 
+        # Warn if the feature successfully merged to integration
+        if name in merged_to_integration:
+            lines.append(
+                "- \u26a0\ufe0f Feature is on the integration branch \u2014 "
+                "merge succeeded but a post-merge step failed after the commit landed."
+            )
+
         # Suggested next step
-        suggestion = _suggest_next_step(error)
+        if name in merged_to_integration:
+            suggestion = (
+                "Investigate which post-merge step crashed (check overnight-events.log "
+                "for the feature_deferred event details and error field). Do NOT re-run "
+                "the feature \u2014 it is already on the integration branch. Address any "
+                "missed post-merge steps manually (e.g., trigger review, update backlog item)."
+            )
+        else:
+            suggestion = _suggest_next_step(error)
         lines.append(f"- **Suggested next step**: {suggestion}")
 
         # Last worker output snippet
