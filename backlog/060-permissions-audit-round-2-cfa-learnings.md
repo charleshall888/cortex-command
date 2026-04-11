@@ -2,15 +2,15 @@
 schema_version: "1"
 uuid: f8a2b3c4-5d6e-7f8a-9b0c-1d2e3f4a5b6c
 title: "Permissions audit round 2: CFA Android learnings"
-status: refined
+status: abandoned
 priority: medium
 type: task
 tags: [permissions-audit, security]
 created: 2026-04-10
-updated: 2026-04-10
+updated: 2026-04-11
 parent: null
 discovery_source: "CFA Android PR #8093 permissions review session"
-session_id: afab38c1-a213-4cef-9bf0-31db5fda7fb8
+session_id: null
 lifecycle_phase: plan
 lifecycle_slug: permissions-audit-round-2-cfa-android-learnings
 complexity: complex
