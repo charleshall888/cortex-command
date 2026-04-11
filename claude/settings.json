@@ -108,7 +108,6 @@
       "Bash(deno *)",
       "Bash(go *)",
       "Bash(claude *)",
-      "Bash(tee *)",
       "Bash(less *)",
       "Bash(more *)",
       "Bash(test *)",
