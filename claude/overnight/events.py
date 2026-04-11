@@ -75,6 +75,7 @@ ARTIFACT_COMMIT_FAILED = "artifact_commit_failed"
 PUSH_FAILED = "push_failed"
 MORNING_REPORT_COMMIT_FAILED = "morning_report_commit_failed"
 PLAN_GEN_DISPATCHED = "plan_gen_dispatched"
+FEATURE_MERGED = "feature_merged"
 
 EVENT_TYPES = (
     SESSION_START,
@@ -123,6 +124,7 @@ EVENT_TYPES = (
     PUSH_FAILED,
     MORNING_REPORT_COMMIT_FAILED,
     PLAN_GEN_DISPATCHED,
+    FEATURE_MERGED,
 )
 
 
