@@ -155,3 +155,57 @@
   from: plan
   to: implement
   status: ok
+
+- ts: 2026-04-11T00:00:00Z
+  event: task_complete
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  task: 1
+  batch: 0
+  status: success
+  note: "DR-7 audit proceed verdict. Both issues OPEN, no assignees, labels do not match halt regex."
+
+- ts: 2026-04-11T00:00:00Z
+  event: task_complete
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  task: 2
+  batch: 1
+  status: success
+  note: "Section authored at 35 non-blank lines. All 25+ verification checks pass including section-scoped content checks, negative checks (cp -RL absent, no handles-near-footguns), ordering, 4-filename rm coverage, literal #36172."
+
+- ts: 2026-04-11T00:00:00Z
+  event: task_complete
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  task: 3
+  batch: 2
+  status: success
+  commit: 77602c9
+  note: "Single-file commit scope verified: docs/setup.md only."
+
+- ts: 2026-04-11T00:00:00Z
+  event: phase_transition
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  tier: simple
+  criticality: high
+  from: implement
+  to: review
+  note: "Criticality=high forces Review regardless of tier per gating matrix."
+
+- ts: 2026-04-11T00:00:00Z
+  event: review_verdict
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  verdict: APPROVED
+  cycle: 1
+  requirements_drift: none
+
+- ts: 2026-04-11T00:00:00Z
+  event: phase_transition
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  from: review
+  to: complete
+
+- ts: 2026-04-11T00:00:00Z
+  event: feature_complete
+  feature: document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping
+  tasks_total: 3
+  rework_cycles: 0
+  note: "All 3 tasks complete, review APPROVED cycle 1, test suite 3/3 pass."

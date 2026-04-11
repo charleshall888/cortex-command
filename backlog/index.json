@@ -1,35 +1,5 @@
 [
   {
-    "id": 65,
-    "title": "Document CLAUDE_CONFIG_DIR + direnv pattern for per-repo permissions scoping",
-    "status": "backlog",
-    "priority": "critical",
-    "type": "feature",
-    "tags": [
-      "setup",
-      "configurability",
-      "user-configurable-setup",
-      "permissions",
-      "docs"
-    ],
-    "areas": [],
-    "created": "2026-04-10",
-    "updated": "2026-04-10",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "063",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/user-configurable-setup/research.md",
-    "plan": null,
-    "uuid": "48bd525d-6a38-49ef-b7d2-2d2e6301f168",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 63,
     "title": "User-configurable setup: per-component opt-in and per-repo permissions scoping",
     "status": "backlog",
@@ -60,7 +30,7 @@
   {
     "id": 64,
     "title": "Extend /setup-merge with dynamic per-component opt-in for skills and hooks",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -69,20 +39,22 @@
       "user-configurable-setup",
       "setup-merge"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-04-10",
     "updated": "2026-04-10",
     "blocks": [],
     "blocked_by": [],
     "parent": "063",
-    "research": null,
-    "spec": null,
+    "research": "lifecycle/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/research.md",
+    "spec": "lifecycle/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/spec.md",
     "discovery_source": "research/user-configurable-setup/research.md",
     "plan": null,
     "uuid": "237dcafa-b9e4-4eaa-a090-d7c1dba28b9e",
-    "lifecycle_slug": null,
+    "lifecycle_slug": "extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks",
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

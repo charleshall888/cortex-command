@@ -2,12 +2,12 @@
 schema_version: "1"
 uuid: 48bd525d-6a38-49ef-b7d2-2d2e6301f168
 title: "Document CLAUDE_CONFIG_DIR + direnv pattern for per-repo permissions scoping"
-status: in_progress
+status: complete
 priority: critical
 type: feature
 tags: [setup, configurability, user-configurable-setup, permissions, docs]
 created: 2026-04-10
-updated: 2026-04-10
+updated: 2026-04-11
 parent: "063"
 blocked-by: []
 discovery_source: research/user-configurable-setup/research.md
@@ -15,8 +15,8 @@ complexity: simple
 criticality: high
 spec: lifecycle/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/spec.md
 areas: [docs]
-session_id: 7580c9d0-5890-49ec-adf3-64a42754e275
-lifecycle_phase: plan
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Document CLAUDE_CONFIG_DIR + direnv pattern for per-repo permissions scoping

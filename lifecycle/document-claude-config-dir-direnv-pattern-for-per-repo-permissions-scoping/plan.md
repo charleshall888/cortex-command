@@ -47,7 +47,7 @@ Add a single top-level "Per-repo permission scoping" section to `docs/setup.md` 
   4. Report to the user: summarize which halt criterion fired, quote the relevant `gh` JSON fields, note that re-invoking `/lifecycle 65` will re-run Task 1.
 
 - **Verification**: Interactive/session-dependent — the task is a conditional branch on external GitHub state against structured JSON fields. On halt, verify with `grep -c 'event: plan_halt' lifecycle/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/events.log` = 1 and `git status docs/setup.md` clean. On proceed, `grep -c 'event: plan_halt' ...` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add "Per-repo permission scoping" section to `docs/setup.md`
 - **Files**: `docs/setup.md`
@@ -86,22 +86,20 @@ Add a single top-level "Per-repo permission scoping" section to `docs/setup.md` 
   **Length discipline**: section body between the new heading and the next top-level `## ` heading must be 30–80 **non-blank** lines inclusive. Non-blank = at least one non-whitespace character on the line.
 - **Verification**: Run this block — extracts the section body once and runs all checks against the extracted body, so pre-existing content elsewhere in `docs/setup.md` cannot mask omissions.
 
+  Run as a single `bash` invocation (heredoc). In a sandboxed environment the temp file must live under `$TMPDIR/claude/`, not `/tmp/`, to satisfy sandbox write rules:
   ```bash
+  bash <<'VERIFY'
   set -e
-  # Extract section body (between new heading and next top-level ##)
-  awk '/^## .*[Pp]er-repo permission/{flag=1; next} flag && /^## /{exit} flag' docs/setup.md > /tmp/section-body-$$
-  BODY=/tmp/section-body-$$
-  # Non-empty section exists
+  BODY="$TMPDIR/claude/section-body-$$"
+  mkdir -p "$(dirname "$BODY")"
+  awk '/^## .*[Pp]er-repo permission/{flag=1; next} flag && /^## /{exit} flag' docs/setup.md > "$BODY"
   test -s "$BODY" && echo "section exists"
-  # Length: 30-80 non-blank lines
   len=$(grep -c '[^[:space:]]' "$BODY")
   test "$len" -ge 30 -a "$len" -le 80 && echo "length ok: $len non-blank lines"
-  # Content presence (all scoped to section body)
   grep -q 'issues/12962' "$BODY" && echo "12962 ok"
   grep -q 'issues/26489' "$BODY" && echo "26489 ok"
   test $(grep -c '\.envrc' "$BODY") -ge 2 && echo "envrc ok"
   test $(grep -c 'CLAUDE_CONFIG_DIR' "$BODY") -ge 4 && echo "var ok"
-  # cp -R warning with 4 filenames + 4 rm invocations
   test $(grep -cE 'cp -[rR]' "$BODY") -ge 1 && echo "cp ok"
   grep -q 'settings.json' "$BODY" && echo "settings.json ok"
   grep -q 'statusline.sh' "$BODY" && echo "statusline.sh ok"
@@ -109,32 +107,27 @@ Add a single top-level "Per-repo permission scoping" section to `docs/setup.md` 
   grep -q 'CLAUDE.md' "$BODY" && echo "CLAUDE.md ok"
   test $(grep -cE 'rm [^[:space:]]+' "$BODY") -ge 4 && echo "rm count ok"
   test $(grep -c 'symlink' "$BODY") -ge 2 && echo "symlink ok"
-  # NEGATIVE: cp -RL must not appear
-  ! grep -q 'cp -RL' "$BODY" && echo "cp -RL absent ok"
-  # NEGATIVE: 'handles' must not appear within 80 chars of any foot-gun keyword
-  ! grep -E 'handles.{0,80}(setup-merge|just setup|notify|evolve|auto-memory|audit-doc|count-tokens|concurrent|shadow)' "$BODY" > /dev/null && echo "no-handles-lie ok"
-  ! grep -E '(setup-merge|just setup|notify|evolve|auto-memory|audit-doc|count-tokens|concurrent|shadow).{0,80}handles' "$BODY" > /dev/null && echo "no-handles-lie-reverse ok"
-  # Foot-gun keywords
+  # Negative checks use if-then form because bare `! grep` is parsed as history-expansion in some shells
+  if grep -q 'cp -RL' "$BODY"; then echo "FAIL: cp -RL present"; exit 1; else echo "cp -RL absent ok"; fi
+  if grep -E 'handles.{0,80}(setup-merge|just setup|notify|evolve|auto-memory|audit-doc|count-tokens|concurrent|shadow)' "$BODY" > /dev/null; then echo "FAIL: handles-lie forward"; exit 1; else echo "no-handles-lie ok"; fi
+  if grep -E '(setup-merge|just setup|notify|evolve|auto-memory|audit-doc|count-tokens|concurrent|shadow).{0,80}handles' "$BODY" > /dev/null; then echo "FAIL: handles-lie reverse"; exit 1; else echo "no-handles-lie-reverse ok"; fi
   grep -qi 'setup-merge' "$BODY" && echo "setup-merge ok"
   grep -qi 'just setup' "$BODY" && echo "just setup ok"
   grep -qi 'notify' "$BODY" && echo "notify ok"
   grep -qiE 'evolve|auto-memory|audit-doc|count-tokens' "$BODY" && echo "tools ok"
   grep -qiE 'concurrent|multiple sessions|scope confusion|which scope' "$BODY" && echo "scope ok"
-  # Ordering: first symlink mention must appear before first setup-merge mention
   sym_line=$(grep -n 'symlink' "$BODY" | head -1 | cut -d: -f1)
   sm_line=$(grep -in 'setup-merge' "$BODY" | head -1 | cut -d: -f1)
-  test -n "$sym_line" -a -n "$sm_line" && test "$sym_line" -lt "$sm_line" && echo "ordering ok: symlink before setup-merge"
-  # Upstream bug literal (tightened from spec disjunction)
+  test -n "$sym_line" -a -n "$sm_line" && test "$sym_line" -lt "$sm_line" && echo "ordering ok"
   grep -q '#36172' "$BODY" && echo "36172 ok"
-  # Background link
   grep -q 'research/user-configurable-setup/research.md' "$BODY" && echo "research ok"
-  # Anti-creation: no new file
   test ! -f docs/per-repo-permissions.md && echo "no new file ok"
   rm -f "$BODY"
   echo "all checks passed"
+  VERIFY
   ```
-  Pass if `all checks passed` prints and `set -e` did not short-circuit. If any check fails, fix the section and re-run.
-- **Status**: [ ] pending
+  Pass if `all checks passed` prints and the script did not exit early via `set -e` or an explicit `exit 1` from a negative check.
+- **Status**: [x] complete
 
 ### Task 3: Commit the docs change
 - **Files**: `docs/setup.md` (staged; no new files)
@@ -169,7 +162,7 @@ Add a single top-level "Per-repo permission scoping" section to `docs/setup.md` 
   test "$(echo "$files" | grep -c .)" -eq 1 && test "$(echo "$files" | tr -d '[:space:]')" = "docs/setup.md" && echo "commit scope ok"
   ```
   Pass if `commit scope ok` prints. Fail if the commit touches anything other than `docs/setup.md` — rollback via `git reset --soft HEAD~1`, re-clean the index, and retry.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
