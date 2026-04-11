@@ -110,52 +110,47 @@ This produces a formatted markdown session plan with:
 
 **Error**: If `render_session_plan()` raises an exception, report: "Failed to render session plan: {error}." → stop.
 
-### Step 6: Batch Spec Review
+### Step 6: Unified Plan + Spec Review
 
-Before presenting the final approval prompt, collect and display the specs for all selected features so the user can review them in one pass rather than approving each feature individually during execution.
+Collect specs for all selected features, display the session plan with specs inline, and get a single approval covering both.
 
 **Collect specs**: For each selected feature (in round-then-priority order), attempt to read `lifecycle/{slug}/spec.md`.
 
-- **If a spec file is missing or unreadable**: Report "Cannot read spec for {feature_title}: {error}." Offer two choices: (a) remove the feature from the selection and continue, or (b) abort planning so the user can fix the spec. If the user chooses remove, update the selection and skip that feature in the review below.
+- **If a spec file is missing or unreadable**: Report "Cannot read spec for {feature_title}: {error}." Offer two choices: (a) remove the feature from the selection and continue, or (b) abort planning so the user can fix the spec. If the user chooses remove, update the selection and skip that feature in the display below.
 
-**Present the batch review prompt**:
-
-```
-Specs loaded for {N} feature(s). How would you like to review them?
-
-  [1] Approve all — accept all specs as-is and proceed to final approval
-  [2] Review per feature — step through each spec one at a time
-```
-
-**Batch approve (option 1)**: All specs are accepted without individual review. Proceed directly to Step 7.
-
-**Per-feature review (option 2)**: For each feature in selection order, display its full spec content preceded by a header:
+**Display plan + specs**: Present the rendered session plan from Step 5, then immediately display each feature's spec content inline:
 
 ```
+{rendered session plan}
+
 ─────────────────────────────────────────
-Spec [{n}/{total}]: {feature_title}  (lifecycle/{slug}/spec.md)
+Spec [1/{total}]: {feature_title}  (lifecycle/{slug}/spec.md)
 ─────────────────────────────────────────
 {spec content}
+
 ─────────────────────────────────────────
-[A] Approve  [R] Remove from session  [Q] Abort planning
+Spec [2/{total}]: {feature_title}  (lifecycle/{slug}/spec.md)
+─────────────────────────────────────────
+{spec content}
 ```
 
-- **Approve (A)**: Feature remains in selection; advance to the next feature.
-- **Remove (R)**: Feature is dropped from selection; continue reviewing remaining features. After all reviews complete, if any features were removed re-render the plan (repeat Step 5) with the updated selection before proceeding.
-- **Abort (Q)**: Stop immediately. Report "Planning aborted by user during spec review." Do not write any artifacts. Stop.
+**Approval prompt**: After all specs are shown, present a single approval:
 
-After all features are reviewed (and any removals re-rendered), proceed to Step 7.
+```
+Approve this plan and specs?
+
+  [A] Approve — proceed to launch
+  [R] Remove a feature — specify which to exclude, then re-display
+  [T] Adjust time limit — change from the default 6h
+  [Q] Abort — stop planning
+```
+
+- **Approve (A)**: Proceed to Step 7.
+- **Remove (R)**: Ask which feature to remove. Drop it from the selection, re-render the plan (repeat Step 5), reload specs for remaining features, and re-display everything before prompting again.
+- **Adjust time limit (T)**: Ask for the new time limit. Re-render the plan with the new limit and re-display before prompting again.
+- **Abort (Q)**: Stop immediately. Report "Planning aborted." Do not write any artifacts. Stop.
 
 **Error**: If `lifecycle/{slug}/spec.md` exists but cannot be decoded (e.g., binary content, encoding error), treat it the same as a missing file and offer the remove-or-abort choice.
-
-### Step 7: Final Approval
-
-Present the rendered session plan to the user for approval. The user can adjust:
-
-- **Time limit**: Default is 6 hours. User can adjust.
-- **Remove features**: User can exclude specific features from the plan. If features are removed, re-render the plan with the updated selection.
-
-If the user requests changes, re-render the plan with adjusted parameters and present again.
 
 ### Step 8: Launch
 
@@ -214,7 +209,7 @@ On user approval, execute these steps in order:
 
     **Error**: If the dashboard health check times out or the `.pid` file is unreadable, continue without failing — the dashboard is optional. Report: "Dashboard not detected at http://localhost:8080. Run `just dashboard` in a separate terminal to enable live progress monitoring."
 
-7. **Print the runner command**: Ask the user whether to run now or schedule for later using AskUserQuestion:
+7. **Execute the runner command**: Ask the user whether to run now or schedule for later using AskUserQuestion:
 
     ```
     Run now or schedule for later?
@@ -225,21 +220,27 @@ On user approval, execute these steps in order:
 
     > **Usage context (dormant)**: No programmatic access to Claude Code's subscription usage data (remaining tokens, reset time) currently exists from within an agent context. When such access becomes available (e.g., a `/usage` API, a `usage-cache.json` file, or an environment variable), auto-display it alongside the scheduling prompt to help the user choose a launch time. Until then, no usage information is shown.
 
-    **Run now (option 1)**: Present the existing `overnight-start` command:
+    **Run now (option 1)**: Execute via Bash tool (substitute actual `{session_id}` and time limit):
 
     ```
     overnight-start $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
     ```
 
-    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Then present the `overnight-schedule` command:
+    Args are positional — do not use `--flag=value` syntax. `overnight-start` creates a detached tmux session named `overnight-runner` and returns immediately.
+
+    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool (substitute actual `{session_id}`, target time, and time limit):
 
     ```
     overnight-schedule <target-time> $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
     ```
 
-    For both options, substitute the actual `{session_id}` and adjust the time limit (last positional arg) to match the user's approved time limit. Args are positional — do not use `--state` or `name=value` syntax. Run from any directory — the absolute path is used.
+    `overnight-schedule` creates a waiting tmux session that launches the runner at the target time and returns immediately.
 
-8. **Inform the user**: The user runs this command in a terminal to start overnight execution. It launches the runner in a detached tmux session named `overnight-runner` — attach with `tmux attach -t overnight-runner` to monitor progress. The runner operates autonomously and tracks progress in the state file and event log. The user can check status at any time by reading `lifecycle/sessions/{session_id}/overnight-state.json` or resume with `/overnight resume`.
+8. **Inform the user**: After the Bash tool returns successfully, report the outcome:
+    - **Run now**: "Overnight session launched. Attach with `tmux attach -t overnight-runner` to monitor progress."
+    - **Scheduled**: Report the scheduled time and tmux session name from the command output. The user can attach before that time to monitor the countdown.
+
+    The runner operates autonomously and tracks progress in the state file and event log. Resume at any time with `/overnight resume`.
 
 ## Resume Flow (`/overnight resume`)
 
@@ -289,13 +290,13 @@ Based on the session phase, ask the user what to do:
 
 ### Step 5: Act on User Choice
 
-- **Resume execution**: Print the just command for the user to execute:
+- **Resume execution**: Execute via Bash tool (substitute actual `{session_id}` from the loaded state):
 
   ```
   overnight-start $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
   ```
 
-  Substitute the actual `{session_id}` from the loaded state. Run from any directory — the absolute path is used. The runner resumes from where it left off, skipping already-merged features. This launches in a detached tmux session — attach with `tmux attach -t overnight-runner` to monitor.
+  The runner resumes from where it left off, skipping already-merged features. After the Bash tool returns, report: "Overnight session resumed. Attach with `tmux attach -t overnight-runner` to monitor progress."
 
 - **View morning report**: Direct the user to read `lifecycle/morning-report.md` for a summary of what was accomplished, what failed, and any deferred questions.
 
@@ -314,7 +315,7 @@ A successful `/overnight` invocation satisfies all of the following:
 3. **Session manifest written**: `lifecycle/sessions/{session_id}/session.json` exists with correct `session_id`, `type: overnight`, and feature slugs.
 4. **Integration branch created**: `git branch overnight/{session_id}` exists in the repository.
 5. **Symlink deferred to runner**: The `latest-overnight` symlink is updated by the runner on startup, not by the skill.
-6. **Runner command presented**: Either the `overnight-start` command (run now) or the `overnight-schedule` command (scheduled) is shown with an absolute state path using `$CORTEX_COMMAND_ROOT` and the correct time limit.
+6. **Runner command executed**: Either `overnight-start` (run now) or `overnight-schedule` (scheduled) was executed via Bash tool with an absolute state path using `$CORTEX_COMMAND_ROOT` and the correct time limit.
 7. **Session start event logged**: `overnight-events.log` has a `SESSION_START` entry.
 
 A successful `/overnight resume` satisfies:
