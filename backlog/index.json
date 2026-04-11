@@ -197,39 +197,8 @@
     "repo": null
   },
   {
-    "id": 70,
-    "title": "Fix morning report accuracy when post-merge steps fail",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "bug",
-    "tags": [
-      "overnight-runner",
-      "report",
-      "morning-review"
-    ],
-    "areas": [
-      "overnight-runner",
-      "report"
-    ],
-    "created": "2026-04-11",
-    "updated": "2026-04-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "ac7c0919-1eb4-4729-98b4-0a6d39177f03",
-    "lifecycle_slug": "fix-morning-report-accuracy-when-post-merge-steps-fail",
-    "session_id": "e83c9b3d-125c-448e-ac50-bc8b6cced483",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 71,
-    "title": "Auto-launch demo at morning review via lifecycle.config.md demo-command",
+    "title": "Agent-driven demoability assessment and validation setup at morning review",
     "status": "refined",
     "priority": "medium",
     "type": "feature",
@@ -240,8 +209,7 @@
       "dx"
     ],
     "areas": [
-      "skills",
-      "overnight-runner"
+      "skills"
     ],
     "created": "2026-04-11",
     "updated": "2026-04-11",

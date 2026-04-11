@@ -9,14 +9,13 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 61 | Sync-hook cleanup propagation mechanism | refined | medium | task | — | — | — |
 | 62 | Harden cortex-notify-remote.sh curl invocation against exfiltration | refined | medium | task | — | — | — |
-| 70 | Fix morning report accuracy when post-merge steps fail | in_progress | medium | bug | — | — | — |
-| 71 | Auto-launch demo at morning review via lifecycle.config.md demo-command | refined | medium | feature | — | — | — |
+| 71 | Agent-driven demoability assessment and validation setup at morning review | refined | medium | feature | — | — | — |
 
 ## Refined
 
 - **61** Sync-hook cleanup propagation mechanism
 - **62** Harden cortex-notify-remote.sh curl invocation against exfiltration
-- **71** Auto-launch demo at morning review via lifecycle.config.md demo-command
+- **71** Agent-driven demoability assessment and validation setup at morning review
 
 ## Backlog
 
@@ -28,4 +27,3 @@
 
 ## In-Progress
 
-- **70** Fix morning report accuracy when post-merge steps fail (in_progress)
