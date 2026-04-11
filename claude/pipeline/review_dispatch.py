@@ -104,12 +104,14 @@ def _load_review_prompt(
         Formatted prompt string.
     """
     template = _PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
-    return template.format(
-        feature=feature,
-        spec_excerpt=spec_excerpt,
-        worktree_path=worktree_path,
-        branch_name=branch_name,
-    )
+    for key, value in {
+        "feature": feature,
+        "spec_excerpt": spec_excerpt,
+        "worktree_path": str(worktree_path),
+        "branch_name": branch_name,
+    }.items():
+        template = template.replace(f"{{{key}}}", value)
+    return template
 
 
 # ---------------------------------------------------------------------------
