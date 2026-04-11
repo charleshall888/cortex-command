@@ -235,7 +235,27 @@ For each feature to execute this round, read its `plan_path` and `spec_path` fro
 
 **Step 3a — Hard-fail on missing spec**: If a feature's `spec_path` is `null` or the file does not exist on disk, mark it as `failed` in overnight state with an error message and exclude it from this round. Do not attempt plan generation without a spec.
 
-**Step 3b — Generate missing plans**: For each remaining feature whose `plan_path` file does not exist on disk, dispatch a Task sub-agent to generate it. Dispatch all such features in parallel. Each sub-agent receives:
+**Step 3b — Generate missing plans**: For each remaining feature whose `plan_path` file does not exist on disk, dispatch a Task sub-agent to generate it. Dispatch all such features in parallel. Before dispatching, emit a `PLAN_GEN_DISPATCHED` event:
+
+```python
+from pathlib import Path
+from claude.overnight.events import PLAN_GEN_DISPATCHED, log_event
+
+missing = [f for f in features_to_run if not Path(f["plan_path"]).exists()]
+log_event(
+    PLAN_GEN_DISPATCHED,
+    round={round_number},
+    details={
+        "features": [f["slug"] for f in missing],
+        "reason": "missing_plan_path",
+        "spec_paths": {f["slug"]: f["spec_path"] for f in missing},
+        "plan_paths": {f["slug"]: f["plan_path"] for f in missing},
+    },
+    log_path=Path("{events_path}"),
+)
+```
+
+Each sub-agent receives:
 
 ```
 You are generating an implementation plan for the overnight feature "{feature}".

@@ -1,7 +1,7 @@
 ---
 id: 48
 title: Trim and instrument overnight plan-gen prompt
-status: refined
+status: abandoned
 priority: low
 type: chore
 tags: [overnight, orchestrator, plan-gen]

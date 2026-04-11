@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f8a2b3c4-5d6e-7f8a-9b0c-1d2e3f4a5b6c
 title: "Permissions audit round 2: CFA Android learnings"
-status: refined
+status: abandoned
 priority: medium
 type: task
 tags: [permissions-audit, security]
