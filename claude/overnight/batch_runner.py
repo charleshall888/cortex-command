@@ -1105,7 +1105,7 @@ _OVERNIGHT_TO_BACKLOG: dict[str, dict[str, Any]] = {
         "session_id": None,
     },
     "failed": {
-        "status": "abandoned",
+        "status": "refined",
         "session_id": None,
     },
     "deferred": {
