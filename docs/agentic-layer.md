@@ -322,7 +322,7 @@ Four markdown files in `claude/reference/` that agents load on-demand based on t
 
 ## UI Design Enforcement
 
-The UI skills form a separate sub-system for frontend projects. They are layered enforcement tools rather than general development workflow components — relevant only when a project has a UI layer with design tokens and accessibility requirements. Run `/ui-brief` once at project setup to establish the design foundation; run `/ui-check` as part of any PR or review cycle to enforce it.
+The UI skills form a separate sub-system for frontend projects. They are layered enforcement tools rather than general development workflow components — relevant only when a project has a UI layer with design tokens and accessibility requirements. Run `/ui-brief` once at project setup to establish the design foundation; run `/ui-check` as part of any PR or review cycle to enforce it. See [UI Tooling Reference](ui-tooling.md) for the full reference including Playwright MCP, Claude in Chrome, and design rationale.
 
 ```
 /ui-brief  -->  DESIGN.md + @theme tokens   (run once at project setup)
