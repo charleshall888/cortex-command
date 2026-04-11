@@ -265,13 +265,33 @@ For each failed feature (in the order listed in the report):
 1. Display the feature name as a heading.
 2. Display the error summary from the report.
 3. Display the suggested next step from the report (if present).
-4. Ask the user:
+4. **Check for the integration branch annotation.** If the feature's report entry
+   contains the text `Feature is on the integration branch`, this feature was
+   successfully merged before a post-merge step failed — it is already on the
+   integration branch. In this case:
+
+   - State that the feature is already on the integration branch and was merged
+     successfully.
+   - Do **not** ask about creating an investigation or re-run ticket for the
+     feature itself — creating one would duplicate work that already landed.
+   - Instead, instruct the user to:
+     - Verify the feature is present on the integration branch.
+     - Identify which post-merge step failed by checking
+       `lifecycle/sessions/latest-overnight/overnight-events.log`.
+     - Address the missed step manually (e.g., trigger review, update the
+       backlog item).
+     - Advance the lifecycle manually to reflect the correct state.
+
+   Then move on to the next failed feature — skip steps 5–7 below.
+
+5. Otherwise (the feature is not annotated as on the integration branch), ask
+   the user:
 
    ```
    Create a backlog investigation item for this failure? [yes / skip]
    ```
 
-5. If the user says yes (or any affirmative), invoke `/backlog add` prefilled with:
+6. If the user says yes (or any affirmative), invoke `/backlog add` prefilled with:
    - **Title**: `Investigate failure: {feature-name}`
    - **Description**: the error summary and suggested next step from the report
    - **Tags**: `overnight-failure`, `investigation`
@@ -279,7 +299,7 @@ For each failed feature (in the order listed in the report):
    Present the prefilled values to the user and let the `/backlog add` skill handle
    confirmation and file creation.
 
-6. If the user says skip, move on without creating a backlog item.
+7. If the user says skip, move on without creating a backlog item.
 
 ---
 
