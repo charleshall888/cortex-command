@@ -158,8 +158,6 @@ Present the specification summary and use the AskUserQuestion tool to collect ap
 - **Produced** (one-line summary of the artifact)
 - **Value** (what problem this solves and why it's worth building now — flag weak value cases explicitly)
 - **Trade-offs** (alternatives considered and rationale for chosen approach)
-- **Veto surface** (items the user might disagree with or want to change)
-- **Scope boundaries** (what is explicitly excluded)
 
 The user must approve before proceeding to Plan. If the user requests changes, revise the spec and re-present.
 
