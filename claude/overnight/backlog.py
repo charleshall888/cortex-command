@@ -11,12 +11,18 @@ key-value pairs with optional inline arrays like ``[tag1, tag2]``.
 
 from __future__ import annotations
 
+import collections
 import json
 import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+
+# Named tuple for ineligible items — supports both attribute access (.item, .reason)
+# and tuple unpacking/indexing for backward compatibility.
+IneligibleItem = collections.namedtuple('IneligibleItem', ['item', 'reason'])
 
 from claude.common import TERMINAL_STATUSES, normalize_status, slugify
 
@@ -124,6 +130,11 @@ class Batch:
     batch_context: str = ""
     batch_id: int = 0
 
+    @property
+    def batch_number(self) -> int:
+        """Alias for batch_id — the 1-based sequential batch identifier."""
+        return self.batch_id
+
 
 @dataclass
 class SelectionResult:
@@ -141,6 +152,11 @@ class SelectionResult:
     ineligible: list[tuple[BacklogItem, str]] = field(default_factory=list)
     summary: str = ""
     intra_session_deps: dict[str, list[str]] = field(default_factory=dict)
+
+    @property
+    def ineligible_items(self) -> list[tuple[BacklogItem, str]]:
+        """Alias for ineligible — items that failed readiness checks with reasons."""
+        return self.ineligible
 
 
 @dataclass
@@ -482,7 +498,7 @@ def filter_ready(
     for item in items:
         # 1. Status check
         if item.status not in ELIGIBLE_STATUSES:
-            result.ineligible.append((item, f"status: {item.status}"))
+            result.ineligible.append(IneligibleItem(item, f"status: {item.status}"))
             continue
 
         # 2. Blocked check (preliminary) — collect non-terminal blocker IDs
@@ -497,7 +513,7 @@ def filter_ready(
 
         # 3. Type check — epics are non-implementable
         if item.type == "epic":
-            result.ineligible.append((item, "epic is non-implementable"))
+            result.ineligible.append(IneligibleItem(item, "epic is non-implementable"))
             continue
 
         # 4-5. Lifecycle artifact checks — derive paths from lifecycle_slug
@@ -506,27 +522,27 @@ def filter_ready(
         spec_path = project_root / "lifecycle" / slug / "spec.md"
 
         if not research_path.exists():
-            result.ineligible.append(
-                (item, f"research file not found: lifecycle/{slug}/research.md")
-            )
+            result.ineligible.append(IneligibleItem(
+                item, f"research file not found: lifecycle/{slug}/research.md"
+            ))
             continue
 
         # 5. Spec coverage: per-feature lifecycle spec.md must exist.
         #    plan.md is not required — it is generated during the overnight
         #    session if missing.
         if not spec_path.exists():
-            result.ineligible.append(
-                (item, f"spec file not found: lifecycle/{slug}/spec.md")
-            )
+            result.ineligible.append(IneligibleItem(
+                item, f"spec file not found: lifecycle/{slug}/spec.md"
+            ))
             continue
 
         # 6. Pipeline branch merge check — exclude items whose pipeline branches
         #    are already fully merged into main, regardless of backlog status.
         #    Fails open (treats as eligible) if no branch exists or on errors.
         if _is_pipeline_branch_merged(slug, project_root):
-            result.ineligible.append(
-                (item, "pipeline branch already merged into main")
-            )
+            result.ineligible.append(IneligibleItem(
+                item, "pipeline branch already merged into main"
+            ))
             continue
 
         # All checks passed
@@ -570,7 +586,7 @@ def filter_ready(
 
             # 3. Type check — epics are non-implementable
             if item.type == "epic":
-                result.ineligible.append((item, "epic is non-implementable"))
+                result.ineligible.append(IneligibleItem(item, "epic is non-implementable"))
                 promoted = True  # item resolved (removed from pending)
                 continue
 
@@ -580,16 +596,16 @@ def filter_ready(
             spec_path = project_root / "lifecycle" / item_slug / "spec.md"
 
             if not research_path.exists():
-                result.ineligible.append(
-                    (item, f"research file not found: lifecycle/{item_slug}/research.md")
-                )
+                result.ineligible.append(IneligibleItem(
+                    item, f"research file not found: lifecycle/{item_slug}/research.md"
+                ))
                 promoted = True
                 continue
 
             if not spec_path.exists():
-                result.ineligible.append(
-                    (item, f"spec file not found: lifecycle/{item_slug}/spec.md")
-                )
+                result.ineligible.append(IneligibleItem(
+                    item, f"spec file not found: lifecycle/{item_slug}/spec.md"
+                ))
                 promoted = True
                 continue
 
@@ -612,7 +628,7 @@ def filter_ready(
             bid.zfill(3) if bid.isdigit() else bid
             for bid in blocking_ids
         )
-        result.ineligible.append((item, f"blocked by {ids_str} (not in session)"))
+        result.ineligible.append(IneligibleItem(item, f"blocked by {ids_str} (not in session)"))
 
     return result
 
@@ -1073,7 +1089,7 @@ def select_overnight_batch(
             if promoted_this_round == 0:
                 # No progress — all remaining items are in a dependency cycle
                 for item, _blocker_slugs in next_queue:
-                    readiness.ineligible.append((item, "circular dependency"))
+                    readiness.ineligible.append(IneligibleItem(item, "circular dependency"))
                 break
 
             queue = next_queue
