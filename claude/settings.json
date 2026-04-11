@@ -106,11 +106,8 @@
       "Bash(uv sync *)",
       "Bash(npm *)",
       "Bash(npx *)",
-      "Bash(pip3 *)",
       "Bash(deno *)",
       "Bash(go *)",
-      "Bash(docker *)",
-      "Bash(make *)",
       "Bash(claude *)",
       "Bash(tee *)",
       "Bash(less *)",
@@ -196,6 +193,11 @@
       "Read(~/.config/gh/hosts.yml)",
       "Read(**/*.p12)",
       "WebFetch(domain:0.0.0.0)",
+      "WebFetch(domain:169.254.169.254)",
+      "WebFetch(domain:169.254.170.2)",
+      "WebFetch(domain:metadata.google.internal)",
+      "WebFetch(domain:api.metadata.cloud.ibm.com)",
+      "WebFetch(domain:instance-data.ec2.internal)",
       "Bash(crontab *)",
       "Bash(eval *)",
       "Bash(xargs *rm*)",
@@ -213,7 +215,8 @@
       "Bash(git push * http://*)"
     ],
     "ask": [
-      "Bash(git restore *)"
+      "Bash(git restore *)",
+      "Bash(git checkout -- *)"
     ],
     "defaultMode": "default"
   },
