@@ -848,6 +848,14 @@ def render_deferred_questions(data: ReportData) -> str:
         key=lambda d: (severity_order.get(d.severity, 9), d.feature, d.question_id),
     )
 
+    # Collect features that successfully merged to integration
+    merged_to_integration: set[str] = set()
+    for evt in data.events:
+        if evt.get("event") == "feature_merged":
+            feat = evt.get("feature", "")
+            if feat:
+                merged_to_integration.add(feat)
+
     for dq in sorted_deferrals:
         lines.append(f"### {dq.feature}: {dq.question} [{dq.severity}]")
         lines.append(f"> {dq.question}")
@@ -855,7 +863,14 @@ def render_deferred_questions(data: ReportData) -> str:
         lines.append(f"> Full details: `deferred/{dq.feature}-q{dq.question_id:03d}.md`")
 
         if dq.severity == SEVERITY_BLOCKING:
-            action = "Answer this question and re-run the feature"
+            if dq.feature in merged_to_integration:
+                action = (
+                    "Feature is on the integration branch — do NOT re-run. "
+                    "Investigate the post-merge failure (see error details above and overnight-events.log). "
+                    "Address missed post-merge steps manually (review dispatch, backlog write-back)."
+                )
+            else:
+                action = "Answer this question and re-run the feature"
         elif dq.severity == SEVERITY_NON_BLOCKING:
             action = "Validate the default choice made during implementation"
         else:
