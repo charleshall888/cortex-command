@@ -111,7 +111,48 @@ Skip Section 2a if `$SSH_CONNECTION` is set and non-empty. This catches both SSH
 
 Skip Section 2a if `git rev-parse --verify {integration_branch}` exits non-zero, where `{integration_branch}` is read from `lifecycle/sessions/latest-overnight/overnight-state.json` using the same jq pattern as Section 6 step 1 (`jq -r '.integration_branch' lifecycle/sessions/latest-overnight/overnight-state.json`). If `overnight-state.json` is missing or `integration_branch` is absent from it, also skip.
 
-<!-- SECTION-2A-CONTENT-INSERT: Task 5 appends the active-flow content here. -->
+### Demo offer
+
+If all three guards above pass, ask the user a single yes/no question and take no further input from this section:
+
+> Spin up a demo worktree of `{integration_branch}` at `$TMPDIR/demo-{session_id}-{timestamp}` and print the launch command? [y / n]
+
+On `n` or any unparseable input, advance to Section 2b. On `y`, proceed to the worktree creation step below. Section 2a must not ask any follow-up questions.
+
+### Worktree creation
+
+On `y`:
+
+1. Resolve the temp directory: `realpath "$TMPDIR"` and capture the output as `{resolved-tmpdir}`.
+2. Build the target path: `{resolved-tmpdir}/demo-{session_id}-{timestamp}`, where `{timestamp}` is produced by `$(date -u +%Y%m%dT%H%M%SZ)`.
+3. Run exactly this command (the double-quotes around the placeholders are literal in the skill text — they protect paths with spaces at runtime):
+
+       git -c core.hooksPath=/dev/null worktree add "{target-path}" "{integration_branch}"
+
+   The `git -c core.hooksPath=/dev/null` prefix is mandatory — it neutralizes any tracked `post-checkout` hook (e.g., husky or lefthook) on the overnight branch. This is a plain `git worktree add` invocation with the hook-neutralizing prefix; do NOT use --force. Do NOT use `git -C` (uppercase); `git -c` (lowercase) is a distinct, allowed flag.
+4. On non-zero exit, print the captured stderr and advance to Section 2b. Do not retry. Do not invoke any cleanup.
+
+### Print template
+
+After a successful worktree-add, print exactly this block, substituting `{resolved-target-path}` with the absolute path from the previous step and `{demo-command}` with the verbatim value extracted from `lifecycle.config.md` (already validated by the config check above to contain no control characters):
+
+```
+Demo worktree created at: {resolved-target-path}
+
+To start the demo, run this in a separate terminal or shell:
+    {demo-command}
+
+When you're done, close the demo and remove the worktree:
+    git worktree remove {resolved-target-path}
+```
+
+### Auto-advance
+
+After this section completes (skipped, declined, or accepted), proceed immediately to Section 2b. Do not wait for the user to report demo completion.
+
+### Security boundary
+
+The agent MUST NOT execute the demo-command itself; it is printed for the user to run manually in a separate terminal session.
 
 ---
 
