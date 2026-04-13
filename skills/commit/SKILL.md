@@ -47,7 +47,7 @@ Do not push. Do not create branches. Do not output conversational text — only 
 Run this command before every commit to detect whether sandbox GPG signing is available:
 
 ```bash
-test -f "$TMPDIR/gnupghome/S.gpg-agent"
+test -f "$TMPDIR/gnupghome/S.gpg-agent" && echo "GNUPGHOME=$TMPDIR/gnupghome"
 ```
 
 - **Exit code 0** (file exists): use `GNUPGHOME=$TMPDIR/gnupghome` as a prefix on the commit command in step 6. Use the literal expanded path from `$TMPDIR` — not a shell variable.
