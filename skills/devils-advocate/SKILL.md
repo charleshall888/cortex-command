@@ -1,6 +1,6 @@
 ---
 name: devils-advocate
-description: Inline devil's advocate — argues against the current direction from the current agent's context (no fresh agent). Use when the user says "challenge this", "poke holes", "devil's advocate", "argue against this", "what could go wrong", or "stress-test this". Works in any phase — no lifecycle required.
+description: The inline devil's advocate — argues against the current direction from the current agent's context (no fresh agent), and applies clear-cut fixes with Apply/Dismiss/Ask dispositions when invoked on a lifecycle artifact. Use when the user says "challenge this", "poke holes", "devil's advocate", "argue against this", "what could go wrong", or "stress-test this". Works in any phase — no lifecycle required.
 ---
 
 # Devil's Advocate
