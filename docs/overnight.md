@@ -49,6 +49,12 @@ Before running overnight in a new repo, create a `lifecycle.config.md` at the re
 ---
 type: web-app              # web-app | cli-tool | library | game | other
 test-command: npm test      # shell command to validate merges
+# demo-command:             # e.g., godot res://main.tscn, uv run fastapi run src/main.py
+# demo-commands:
+#   - label: "Godot gameplay"
+#     command: "godot res://main.tscn"
+#   - label: "FastAPI dashboard"
+#     command: "uv run fastapi run src/main.py"
 skip-specify: false
 skip-review: false
 commit-artifacts: true
@@ -61,6 +67,7 @@ The most important field is **`test-command`**. This is the shell command that r
 
 Other fields:
 - **`type`**: Informs model selection heuristics and review criteria
+- **`demo-command`** / **`demo-commands`**: Optional. When `demo-command:` is set to a single string, the morning-review walkthrough (Section 2a) offers to spin up a demo worktree from the overnight integration branch and print that launch command. The agent prints the command for you to run manually — it never executes it. Only offered when the session is local (no `$SSH_CONNECTION`) and the overnight branch exists. Examples: `godot res://main.tscn`, `uv run fastapi run src/main.py`, `npm start`. Alternatively, `demo-commands:` may be configured as a list of `label:` / `command:` entries; the morning-review agent reasons from the completed-feature context (Section 2 "Key files changed") to select the most relevant entry and offer it. If none is relevant to the completed feature, the section is skipped silently.
 - **`skip-specify`** / **`skip-review`**: Skip lifecycle phases when they don't add value for this repo
 - **`commit-artifacts`**: Whether lifecycle artifacts (spec, plan, review) are committed to the repo
 
