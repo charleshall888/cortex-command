@@ -106,64 +106,10 @@ For overnight sessions, merges target an integration branch `overnight/{session_
 
 ## Recovery Procedures
 
-### Inspecting State Manually
-
-```bash
-# What phase is the execution in?
-python3 -c "
-import json
-state = json.load(open('lifecycle/pipeline-state.json'))
-print('phase:', state['phase'])
-for name, f in state['features'].items():
-    print(f['status'].ljust(12), name)
-"
-
-# What events have fired?
-python3 -c "
-import json
-for line in open('lifecycle/pipeline-events.log'):
-    e = json.loads(line)
-    print(e['ts'][:19], e['event'])
-"
-```
-
-### Recovery: Feature Stuck in `executing`
-
-If the overnight runner process was killed hard (OOM, power loss) rather than receiving a
-signal, a feature may be stuck in `executing` with no live process. To reset manually:
-
-```python
-from pathlib import Path
-from claude.pipeline.state import load_state, save_state
-
-p = Path("lifecycle/pipeline-state.json")
-state = load_state(p)
-for name, f in state.features.items():
-    if f.status == "executing":
-        print("resetting:", name)
-        f.status = "pending"
-        f.last_error = "reset from stuck-executing after crash"
-save_state(state, p)
-```
-
-Then restart the overnight runner via `/overnight resume`.
-
-### Recovery: Merge Conflict on Feature Branch
-
-If a feature fails with a merge conflict (visible in the morning report as `failed` with
-a merge error), the integration branch is left at the last clean merge point — `merge.py`
-aborts a conflicted merge automatically. Options:
-
-1. **Resolve and retry**: Checkout the feature branch, fix the conflict, commit, then
-   restart the overnight runner (the feature will be retried from `pending`).
-2. **Skip the feature**: Leave it as `failed`. It will appear in the morning report as
-   carried over. Open a manual PR for it later.
-3. **If the integration branch has a partial state**: Verify with `git log --oneline main | head -5`
-   that no half-merged commit exists. If a revert is needed, `merge.py`'s `revert_merge()`
-   handles it — run it via `python3 -c "from claude.pipeline.merge import revert_merge; revert_merge('my-feature')"`.
-   `revert_merge()` (defined in `claude/pipeline/merge.py`) performs `git revert -m 1 HEAD`
-   on `base_branch`, which defaults to `main`. Pass `base_branch=` explicitly if your
-   integration branch differs.
+Orchestrator-perspective recovery flow (inspecting state, resetting stuck features, resolving
+merge conflicts, post-merge recovery) is documented in
+[docs/overnight-operations.md](overnight-operations.md). This document retains only the
+pipeline-module internals summarized in the module reference table above.
 
 ---
 
