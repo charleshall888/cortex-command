@@ -73,6 +73,8 @@ The dashboard reads directly from files written by the overnight runner — no s
 - `backlog/*.md` — feature titles and frontmatter status fields
 - `metrics.json` — API cost data
 
+For the schemas, state machine, and lifecycle of these files, see [overnight-operations.md](overnight-operations.md).
+
 ### Polling Intervals
 
 The dashboard uses two polling layers:

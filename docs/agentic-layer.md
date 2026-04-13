@@ -298,6 +298,8 @@ Four markdown files in `claude/reference/` that agents load on-demand based on t
 | `parallel-agents.md` | Protocol for dispatching parallel agents safely | Deciding whether to run agents in parallel |
 | `verification-mindset.md` | Verification discipline — evidence before claims, no speculation | Before claiming success, tests pass, or bug fixed |
 
+For overnight runner operations and architecture (state schemas, recovery, allowed-tool allow-list, dispatch matrix), see [overnight-operations.md](overnight-operations.md).
+
 ---
 
 ## Integration Points

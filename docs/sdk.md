@@ -8,6 +8,8 @@ The project uses the SDK in two structurally different ways: direct `Agent` tool
 
 > For a full analysis of current SDK usage patterns and evaluated trade-offs, see [`research/claude-code-sdk-usage/research.md`](../research/claude-code-sdk-usage/research.md).
 
+> For overnight runner operations and architecture, see [overnight-operations.md](overnight-operations.md).
+
 ---
 
 ## Path A: Interactive — Agent Tool in Skills
