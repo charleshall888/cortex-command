@@ -127,7 +127,8 @@
       "Bash(generate-backlog-index *)",
       "Bash(generate-backlog-index)",
       "Bash(git-sync-rebase.sh *)",
-      "Bash(tmux *)"
+      "Bash(tmux *)",
+      "Read(~/.claude/skills/**)"
     ],
     "deny": [
       "Bash(sudo *)",
@@ -220,6 +221,7 @@
     ],
     "defaultMode": "default"
   },
+  "model": "sonnet",
   "enableAllProjectMcpServers": false,
   "hooks": {
     "SessionStart": [
@@ -387,6 +389,5 @@
   },
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
-  "skipDangerousModePermissionPrompt": true,
-  "model": "sonnet"
+  "skipDangerousModePermissionPrompt": true
 }
