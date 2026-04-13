@@ -195,36 +195,5 @@
     "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
-  },
-  {
-    "id": 71,
-    "title": "Agent-driven demoability assessment and validation setup at morning review",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "morning-review",
-      "overnight-runner",
-      "lifecycle-config",
-      "dx"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-11",
-    "updated": "2026-04-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/agent-driven-demoability-assessment-and-validation-setup-at-morning-review/spec.md",
-    "discovery_source": "research/morning-review-demo-setup/research.md",
-    "plan": null,
-    "uuid": "4f2e8b3c-1a9d-4e7f-bc42-8d5e9f2a0c1b",
-    "lifecycle_slug": "agent-driven-demoability-assessment-and-validation-setup-at-morning-review",
-    "session_id": "ea67f33a-9c0b-4edd-9e67-67172c99e912",
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
   }
 ]
