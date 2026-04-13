@@ -110,7 +110,7 @@ Derives 3-4 challenge angles from the artifact and project context, then dispatc
 ---
 
 ### devils-advocate
-Stress-tests a direction, plan, or approach by arguing against it. Produces a coherent narrative covering the strongest failure mode, unexamined alternatives, a fragile hidden assumption, and a tradeoff blindspot. Works in any phase — no lifecycle required.
+Stress-tests a direction, plan, or approach by arguing against it. Produces a coherent narrative covering the strongest failure mode, unexamined alternatives, a fragile hidden assumption, and a tradeoff blindspot. Works in any phase — no lifecycle required. In lifecycle mode, also applies clear-cut fixes and surfaces tie-breaks via Apply/Dismiss/Ask dispositions; conversation mode unchanged.
 
 [skills/devils-advocate/SKILL.md](../skills/devils-advocate/SKILL.md)
 

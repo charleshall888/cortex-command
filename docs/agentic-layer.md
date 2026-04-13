@@ -40,7 +40,7 @@ Skill count current as of this writing. `skills/` is the authoritative source â€
 | Skill | Purpose | Triggers | Produces | Agent support |
 |-------|---------|----------|----------|---------------|
 | **critical-review** | Adversarial review from fresh agent | "pressure test this", "adversarial review" | Fresh agent critique (conversational) | Claude only |
-| **devils-advocate** | Stress-test a direction with counterargument | "challenge this", "play devil's advocate" | Coherent argument (conversational) | All agents |
+| **devils-advocate** | Stress-test a direction with counterargument | "challenge this", "play devil's advocate" | Coherent argument; applies clear-cut fixes + Apply/Dismiss/Ask dispositions summary in lifecycle mode | All agents |
 | **requirements** | Gather project/area-level requirements | `/requirements`, `/requirements <area>` | `requirements/project.md`, `requirements/{area}.md` | All agents |
 
 ### Session Management

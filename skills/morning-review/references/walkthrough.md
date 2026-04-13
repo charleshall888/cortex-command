@@ -73,15 +73,92 @@ Parse the response:
   verified, rest skipped. Fuzzy matching is acceptable (prefix or substring,
   case-insensitive).
 
-Record verified/skipped status per feature, then proceed immediately to Section 2b.
+Record verified/skipped status per feature, then proceed immediately to Section 2a (which may be skipped — see its guard clauses; if skipped, advance directly to Section 2b).
 Verified/skipped statuses are for reporting context only — they do not gate lifecycle
 advancement.
 
 ---
 
+## Section 2a — Demo Setup
+
+Skip this section entirely if any of the following hold:
+
+### Guard 1 — `demo-command` is not configured
+
+Skip Section 2a silently if ANY of the following hold:
+
+- `lifecycle.config.md` at the project root is missing.
+- `lifecycle.config.md` exists but a non-commented `demo-command:` line is absent.
+- The `demo-command:` value is empty (whitespace-only after trimming).
+- The `demo-command:` value contains any control character (byte < 0x20 except `\t`).
+
+Parsing rules for the `demo-command:` field (apply these in order):
+
+1. Read the file. For each non-blank line, strip leading whitespace.
+2. If the stripped line begins with `#`, ignore it (comment line).
+3. If the stripped line begins with `demo-command:`, extract everything after the first `:` character, then strip leading and trailing whitespace from the extracted value.
+4. Reject the value if it contains any control character (byte < 0x20 except `\t`); treat as if the field were unset.
+5. If no matching line was found, or the extracted value is empty, treat the field as unset.
+6. Do NOT strip inline `#` comments from the value. Shell commands may legitimately contain `#`; there is no shell parser available at this layer to distinguish comment from literal. Users are responsible for keeping `demo-command` values free of trailing inline `#` comments.
+
+> Implementer note (not user-facing): extract the value with `sed -n 's/^[[:space:]]*demo-command:[[:space:]]*//p'` or equivalent. Do NOT use `awk -F: '{print $2}'` — it discards everything after the second `:` and breaks on values like `godot res://main.tscn` (returning `//` instead of the verbatim command).
+
+### Guard 2 — remote session
+
+Skip Section 2a if `$SSH_CONNECTION` is set and non-empty. This catches both SSH and mosh sessions (mosh inherits `$SSH_CONNECTION` from the underlying SSH handshake).
+
+### Guard 3 — overnight branch is missing
+
+Skip Section 2a if `git rev-parse --verify {integration_branch}` exits non-zero, where `{integration_branch}` is read from `lifecycle/sessions/latest-overnight/overnight-state.json` using the same jq pattern as Section 6 step 1 (`jq -r '.integration_branch' lifecycle/sessions/latest-overnight/overnight-state.json`). If `overnight-state.json` is missing or `integration_branch` is absent from it, also skip.
+
+### Demo offer
+
+If all three guards above pass, ask the user a single yes/no question and take no further input from this section:
+
+> Spin up a demo worktree of `{integration_branch}` at `$TMPDIR/demo-{session_id}-{timestamp}` and print the launch command? [y / n]
+
+On `n` or any unparseable input, advance to Section 2b. On `y`, proceed to the worktree creation step below. Section 2a must not ask any follow-up questions.
+
+### Worktree creation
+
+On `y`:
+
+1. Resolve the temp directory: `realpath "$TMPDIR"` and capture the output as `{resolved-tmpdir}`.
+2. Build the target path: `{resolved-tmpdir}/demo-{session_id}-{timestamp}`, where `{timestamp}` is produced by `$(date -u +%Y%m%dT%H%M%SZ)`.
+3. Run exactly this command (the double-quotes around the placeholders are literal in the skill text — they protect paths with spaces at runtime):
+
+       git -c core.hooksPath=/dev/null worktree add "{target-path}" "{integration_branch}"
+
+   The `git -c core.hooksPath=/dev/null` prefix is mandatory — it neutralizes any tracked `post-checkout` hook (e.g., husky or lefthook) on the overnight branch. This is a plain `git worktree add` invocation with the hook-neutralizing prefix; do NOT use --force. Do NOT use `git -C` (uppercase); `git -c` (lowercase) is a distinct, allowed flag.
+4. On non-zero exit, print the captured stderr and advance to Section 2b. Do not retry. Do not invoke any cleanup.
+
+### Print template
+
+After a successful worktree-add, print exactly this block, substituting `{resolved-target-path}` with the absolute path from the previous step and `{demo-command}` with the verbatim value extracted from `lifecycle.config.md` (already validated by the config check above to contain no control characters):
+
+```
+Demo worktree created at: {resolved-target-path}
+
+To start the demo, run this in a separate terminal or shell:
+    {demo-command}
+
+When you're done, close the demo and remove the worktree:
+    git worktree remove {resolved-target-path}
+```
+
+### Auto-advance
+
+After this section completes (skipped, declined, or accepted), proceed immediately to Section 2b. Do not wait for the user to report demo completion.
+
+### Security boundary
+
+The agent MUST NOT execute the demo-command itself; it is printed for the user to run manually in a separate terminal session.
+
+---
+
 ## Section 2b — Lifecycle Advancement
 
-Run immediately after the batch verification response. No additional user input is needed.
+Run immediately after Section 2a (or after the batch verification response if Section 2a was skipped). No additional user input is needed.
 
 For each completed feature (same list as Section 2, same order):
 
@@ -382,6 +459,7 @@ Run after all other sections. No per-feature confirmation is needed before locat
        If non-empty and the path exists, run: `git worktree remove --force {worktree_path}`
        - On success: report "Worktree removed."
        - On failure: report the error but do not fail the review.
+       - If you spun up a demo earlier in this review, close the demo and remove its worktree using the `git worktree remove` command printed at the time.
        - If `worktree_path` is absent, empty, or the path does not exist: skip removal silently.
    - On failure: show the error message and leave the PR open for manual resolution.
 
@@ -455,3 +533,17 @@ After this section, the review is complete.
 | Dirty `.git/rebase-merge/` detected | Script auto-aborts stale rebase, warns user, proceeds with sync |
 | Push fails after rebase | Report error, note local main is clean but not pushed |
 | All conflicts auto-resolved | Report "N files auto-resolved via allowlist" |
+| lifecycle.config.md missing at project root | Skip Section 2a entirely |
+| `lifecycle.config.md` present but `demo-command` absent or commented out | Skip Section 2a entirely |
+| `lifecycle.config.md` present but `demo-command` value is empty | Skip Section 2a entirely |
+| `demo-command` value contains control characters / ANSI escapes | Skip Section 2a entirely; treat as malformed |
+| `$SSH_CONNECTION` set (running over SSH or mosh) | Skip Section 2a entirely |
+| `git rev-parse --verify {integration_branch}` exits non-zero | Skip Section 2a entirely |
+| Overnight branch already checked out by another worktree | `git worktree add` fails with "already checked out"; print stderr; advance |
+| User declines the demo offer | Print no further output; advance |
+| `git worktree add` fails on accept (any other reason) | Print git's stderr; advance without retry |
+| Agent crashes between worktree creation and command print | Worktree exists with no record for user; next sweep retries |
+| Stale demo worktree from prior session in `$TMPDIR` | Removed by Step 0 garbage sweep on next morning-review (if clean) |
+| Stale demo worktree from prior session contains user edits | Sweep's `git worktree remove` (no `--force`) fails; stderr printed; user can rescue manually |
+| Demo worktree created but user closes session before Section 6 reminder | No cleanup until next morning-review's Step 0 sweep |
+| User abandons the repo entirely (no future morning-review for it) | Stale worktrees and admin entries persist until manual cleanup or OS reboot |

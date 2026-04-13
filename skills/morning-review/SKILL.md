@@ -47,6 +47,32 @@ mv <resolved_state_path>.tmp <resolved_state_path>
 
 After updating `overnight-state.json`, also update the pointer file's `phase` field to `"complete"` using the same jq pattern (`jq '.phase = "complete"' <pointer_path> > <pointer_path>.tmp` then `mv`). Skip pointer update if Step 0 used the fallback path (no pointer file).
 
+#### Garbage sweep: stale demo worktrees
+
+After marking the session complete, sweep stale demo worktrees left behind by prior overnight sessions. The sweep is intentionally narrow — it only touches worktrees under `$TMPDIR` whose path matches the canonical demo-worktree pattern created by Section 2a of the walkthrough, so it cannot collide with unrelated user worktrees.
+
+Implementation notes for the path-matching regex used in step 4 below:
+
+- The regex is POSIX ERE. Match it via `grep -E`, `awk` (ERE by default), or a Bash `[[ "$path" =~ ... ]]` test (also ERE). Do NOT use plain `grep` without `-E` (BRE `{n}` quantifier semantics differ), and do NOT use a `case` glob (no ERE character-class support).
+- The `{resolved_tmpdir}` placeholder is a shell-variable substitution performed at sweep-script construction time, not an ERE group. The `{n}` quantifiers (e.g., `[0-9]{4}`) are ERE syntax. Build the regex by string concatenation to avoid confusion, e.g.:
+
+  ```
+  prefix="$(realpath "$TMPDIR")/demo-overnight-"
+  if [[ "$path" =~ ^${prefix}[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}-[0-9]{8}T[0-9]{6}Z$ ]]; then
+    # candidate for removal — check session-ID exclusion, then invoke the remove command with no `--force`
+  fi
+  ```
+
+Skip this sweep sub-step silently if `$TMPDIR` is unset or `realpath` fails.
+
+Perform the following steps in order. The ordering between steps 4 and 5 is load-bearing: the prune call must run AFTER all per-worktree removals complete, not before and not interleaved.
+
+1. Read the current session ID (already resolved by Step 0 from `overnight-state.json`).
+2. Resolve `$TMPDIR` via `realpath "$TMPDIR"` and store it as `resolved_tmpdir`.
+3. Run `git worktree list --porcelain`. For each line beginning with `worktree `, extract the path.
+4. For each path matching the ERE regex `^{resolved_tmpdir}/demo-overnight-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}-[0-9]{8}T[0-9]{6}Z$`: if the path does NOT begin with `{resolved_tmpdir}/demo-{current_session_id}-`, run `git worktree remove "{path}"` (no `--force`). On failure (dirty worktree, locked worktree, etc.), print the stderr and continue with the next path — do not abort the sweep.
+5. **AFTER all per-worktree removals in step 4 have finished** (not before, not interleaved): run `git worktree prune` to clean orphaned admin metadata. Errors are non-fatal — log and continue.
+
 Skip Step 0 entirely if no session is found or the session phase is already terminal (anything other than `"executing"`).
 
 ### Step 1: Locate Report
@@ -72,9 +98,10 @@ Read the morning report located in Step 1. Extract and display the Executive Sum
 Work through the report sections in sequence. Delegate the per-section interaction protocol to `${CLAUDE_SKILL_DIR}/references/walkthrough.md`:
 
 1. **Completed Features** — display all features at once (grouped by round, enriched with overnight metadata), ask a single batch verification question
-2. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `lifecycle/{feature}/events.log`
-3. **Deferred Questions** — display each question and collect a user answer; write the answer back to the corresponding `deferred/` file
-4. **Failed Features** — display error summary and suggested next step; offer to create a backlog investigation item (should-have)
+2. **Demo Setup** — if `demo-command` is configured and the session is local, offer to spin up a demo worktree from the overnight branch.
+3. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `lifecycle/{feature}/events.log`
+4. **Deferred Questions** — display each question and collect a user answer; write the answer back to the corresponding `deferred/` file
+5. **Failed Features** — display error summary and suggested next step; offer to create a backlog investigation item (should-have)
 
 Skip any section that has no entries — do not display a placeholder or empty heading.
 

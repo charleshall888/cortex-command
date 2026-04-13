@@ -16,7 +16,7 @@
 4. **What repo types are in play and what does "demo-ready" mean for each?**
    → Two confirmed types:
    - **Dashboard / web-app** (cortex-command): `uv run python -m claude.overnight.dashboard` — a FastAPI server that can run in background and stay up while the user validates
-   - **Game** (wild-light): `godot --play res://main.tscn` — requires interactive user present; must be launched at morning review time, not pre-launched
+   - **Game** (wild-light): `godot res://main.tscn` — requires interactive user present; must be launched at morning review time, not pre-launched
    → Both types require the same core operation: create a fresh worktree from the overnight branch at morning review time, run the `demo-command` from that worktree's directory.
 
 5. **Where does the overnight session end?**
