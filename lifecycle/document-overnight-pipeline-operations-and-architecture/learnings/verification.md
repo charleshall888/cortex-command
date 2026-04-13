@@ -22,3 +22,15 @@ One row per spec requirement (13 total). Results are either `pass` (automatable 
 
 - `grep -c '^| Req' lifecycle/document-overnight-pipeline-operations-and-architecture/learnings/verification.md` must be ≥ 13.
 - Every row's Result column contains either `pass`, `manual-ok`, or `to verify in PR` (Req 8 only) — no failing rows.
+
+## Manual Review Pass (Task 15)
+
+Author's reviewer-judgment pass per spec Non-Requirement ("No automated gap-coverage checker"). PR reviewer performs the same pass independently.
+
+| Check | Result | Observation |
+|-------|--------|-------------|
+| pipeline.md no-duplication | manual-ok | `docs/pipeline.md` L107-112 ("Recovery Procedures") is a 2-sentence cross-link deferring orchestrator recovery (inspecting state, resetting stuck features, resolving merge conflicts, post-merge recovery) to `overnight-operations.md`; no behavioral claim about post-merge review or recovery appears in both files — pipeline.md retains only module-internals (state schema, plan structure, integration branch naming) and explicitly names overnight-operations.md as the recovery source of truth. |
+| 5 anchor spot-checks | manual-ok | Randomly picked 5 anchored cross-references and confirmed each resolves to a real heading in `docs/overnight-operations.md`: `#architecture` → L13 `## Architecture`; `#code-layout` → L218 `## Code Layout`; `#strategy-file-overnight-strategyjson-schema` → L369 `### Strategy File (overnight-strategy.json) schema`; `#conflict-recovery-trivial-fast-path-and-repair-fallback` → L149 `### Conflict Recovery (trivial fast-path and repair fallback)`; `#repair-caps` → L280 `### Repair caps`. All 5 hit their intended H2/H3. |
+| brain.py disambiguation lede | manual-ok | The brain.py subsection (L133-147) opens ``` `claude/overnight/brain.py` is **not a repair agent**. It does not re-attempt the failed task, re-dispatch a worker, or touch the worktree.``` — disambiguation is the literal first sentence, preceding Files/Inputs and the SKIP/DEFER/PAUSE enumeration, and the "no RETRY action by design" load-bearing omission is called out in the same paragraph. |
+| progressive-disclosure rationale | manual-ok | The preamble paragraph at `docs/overnight-operations.md` L9 contains 5 sentences of rationale (≥3): names the generalization from agent skill loading to human-facing docs, names both reader access patterns ("how do I run overnight tonight?" via README vs. "something broke at 2am" via stack trace/retro), explains which doc each reader hits first, and cross-links the CLAUDE.md Conventions source-of-truth rule — generalization is explicit, not a term-drop. |
+| retros mining coherence | manual-ok | `retros-mining.md` scans 10 dated retros (most recent first, 2026-04-13 → 2026-04-10), cites the spec req 8 regex explicitly, surfaces the single genuine hit (worktree-dispatch spec retro line 11), and dismisses it with a specific rationale (pain-point is lifecycle-phase detection in worktree-dispatch scope, not overnight operator docs) — scan list and findings are coherent, disposition rationale is sensible, and the PR-body summary line matches the req 8 regex format. |
