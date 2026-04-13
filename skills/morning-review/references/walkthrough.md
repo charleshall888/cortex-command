@@ -459,6 +459,7 @@ Run after all other sections. No per-feature confirmation is needed before locat
        If non-empty and the path exists, run: `git worktree remove --force {worktree_path}`
        - On success: report "Worktree removed."
        - On failure: report the error but do not fail the review.
+       - If you spun up a demo earlier in this review, close the demo and remove its worktree using the `git worktree remove` command printed at the time.
        - If `worktree_path` is absent, empty, or the path does not exist: skip removal silently.
    - On failure: show the error message and leave the PR open for manual resolution.
 
