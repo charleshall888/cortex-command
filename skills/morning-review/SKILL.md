@@ -98,7 +98,7 @@ Read the morning report located in Step 1. Extract and display the Executive Sum
 Work through the report sections in sequence. Delegate the per-section interaction protocol to `${CLAUDE_SKILL_DIR}/references/walkthrough.md`:
 
 1. **Completed Features** — display all features at once (grouped by round, enriched with overnight metadata), ask a single batch verification question
-2. **Demo Setup** — if `demo-command` is configured and the session is local, offer to spin up a demo worktree from the overnight branch.
+2. **Demo Setup** — if `demo-commands:` (list) or `demo-command:` (single string) is configured and the session is local, offer to spin up a demo worktree from the overnight branch; for `demo-commands:`, the agent reasons from Section 2 context to select the most relevant entry (or skips if none is relevant).
 3. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `lifecycle/{feature}/events.log`
 4. **Deferred Questions** — display each question and collect a user answer; write the answer back to the corresponding `deferred/` file
 5. **Failed Features** — display error summary and suggested next step; offer to create a backlog investigation item (should-have)
