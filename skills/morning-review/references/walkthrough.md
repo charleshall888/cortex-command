@@ -611,3 +611,9 @@ After this section, the review is complete.
 | Stale demo worktree from prior session contains user edits | Sweep's `git worktree remove` (no `--force`) fails; stderr printed; user can rescue manually |
 | Demo worktree created but user closes session before Section 6 reminder | No cleanup until next morning-review's Step 0 sweep |
 | User abandons the repo entirely (no future morning-review for it) | Stale worktrees and admin entries persist until manual cleanup or OS reboot |
+| `demo-commands:` present but all entries rejected (control chars / empty command) | Fall through to `demo-command:` single-string check |
+| `demo-commands:` and `demo-command:` both configured | `demo-commands:` takes precedence; `demo-command:` is ignored on this path |
+| Single entry in `demo-commands:` | Agent may still reason "none relevant" and skip silently; one entry does not guarantee an offer |
+| Zero features with `"status": "merged"` in `overnight-state.json` | Guard 3 zero-merged check fires; skip Section 2a silently |
+| `overnight-state.json` missing `features` key (older state format) | Treat as zero merged features; skip Section 2a silently |
+| Section 2 context showed features but agent has poor context on what they changed | Agent selects "none relevant" and skips silently; correct graceful degradation |
