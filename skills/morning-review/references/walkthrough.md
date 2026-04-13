@@ -83,11 +83,28 @@ advancement.
 
 Skip this section entirely if any of the following hold:
 
-### Guard 1 — `demo-command` is not configured
+### Guard 1 — Route between `demo-commands:` list and `demo-command:` single-string paths
 
-Skip Section 2a silently if ANY of the following hold:
+This guard determines which of two configuration schemas is active in `lifecycle.config.md` and routes the rest of Section 2a accordingly. If `lifecycle.config.md` at the project root is missing, skip Section 2a silently. Otherwise, try the `demo-commands:` list path first; if it yields no valid entries, fall back to the `demo-command:` single-string path; if neither is configured, skip Section 2a silently.
 
-- `lifecycle.config.md` at the project root is missing.
+#### `demo-commands:` list path (tried first)
+
+Parsing rules for the `demo-commands:` list (apply these in order):
+
+1. Read the file. Scan for the first non-commented line that, after stripping leading whitespace, exactly matches `demo-commands:` (the bare key with no inline value).
+2. If found, collect the subsequent indented entries of the form `- label: "..."` / `command: "..."` as list entries, stopping at the first non-indented, non-blank line. (This "stopping at the first non-indented, non-blank line" rule is load-bearing — it is what terminates the list.)
+3. For each entry, extract the `label:` and `command:` values using first-colon extraction: take everything after the first `:` character on the line, then trim leading and trailing whitespace. (The "after the first" colon rule matters because shell commands may legitimately contain additional `:` characters — e.g. `godot res://main.tscn`.)
+4. Reject any entry whose `command:` value contains a control character (byte < 0x20 except `\t`); silently discard that entry.
+5. Reject any entry whose `command:` value is empty or whitespace-only after trimming; silently discard that entry. (An empty `command:` is never a valid list entry.)
+6. Do NOT strip inline `#` comments from `command:` values. Shell commands may legitimately contain `#`; there is no shell parser available at this layer to distinguish comment from literal. Users are responsible for keeping list `command:` values free of trailing inline `#` comments.
+7. If at least one valid entry remains, the active path is `demo-commands:` list. Proceed to Guard 2, then Guard 3, then the demo-commands: list flow below.
+
+If `demo-commands:` was absent, or was present but yielded no valid entries, fall through to the `demo-command:` single-string check below.
+
+#### `demo-command:` single-string path (fallback)
+
+Skip this path (and therefore Section 2a, if the list path also did not activate — i.e. no valid entries and fall through to demo-command check also yields nothing) silently if ANY of the following hold:
+
 - `lifecycle.config.md` exists but a non-commented `demo-command:` line is absent.
 - The `demo-command:` value is empty (whitespace-only after trimming).
 - The `demo-command:` value contains any control character (byte < 0x20 except `\t`).
@@ -100,6 +117,8 @@ Parsing rules for the `demo-command:` field (apply these in order):
 4. Reject the value if it contains any control character (byte < 0x20 except `\t`); treat as if the field were unset.
 5. If no matching line was found, or the extracted value is empty, treat the field as unset.
 6. Do NOT strip inline `#` comments from the value. Shell commands may legitimately contain `#`; there is no shell parser available at this layer to distinguish comment from literal. Users are responsible for keeping `demo-command` values free of trailing inline `#` comments.
+
+If a non-empty, control-character-free value is found, the active path is `demo-command:` single-string. Proceed to Guard 2, then Guard 3, then the existing single-string flow. If neither the list path nor the single-string path is active (i.e. no valid entries on the list path and no valid value on the single-string path), skip Section 2a silently.
 
 > Implementer note (not user-facing): extract the value with `sed -n 's/^[[:space:]]*demo-command:[[:space:]]*//p'` or equivalent. Do NOT use `awk -F: '{print $2}'` — it discards everything after the second `:` and breaks on values like `godot res://main.tscn` (returning `//` instead of the verbatim command).
 
