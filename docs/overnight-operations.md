@@ -195,7 +195,23 @@ The reset is conservative: `interrupt.py` never changes features in `complete`, 
 
 ### Runner Lock (.runner.lock)
 
+`claude/overnight/runner.sh` writes its own PID to `$SESSION_DIR/.runner.lock` (i.e. `lifecycle/sessions/{id}/.runner.lock`) before entering the round loop, and relies on it to serialize runners against the same session.
+
+**Files**: `claude/overnight/runner.sh` (the "Concurrency guard" block that sets `LOCK_FILE`).
+
+**Inputs**: `$SESSION_DIR` derived from the resolved state path.
+
+Behavior: at startup, if `.runner.lock` already exists, `runner.sh` reads the PID and runs `kill -0 $LOCK_PID` to test liveness. A live PID causes an immediate abort with a message pointing at `tmux attach -t overnight-runner`; a dead PID (orphaned after SIGKILL, crash, or reboot) is treated as stale, logged, and overwritten. The file content is just the bare PID — no JSON, no timestamp — so `cat .runner.lock` is the debugging move. The lock is not removed on clean exit; a fresh startup always overwrites whatever PID is there, which means a stale lock never blocks the next session and the check exists only to prevent *two concurrent* runners, not to assert cleanup hygiene.
+
 ### Scheduled Launch subsystem
+
+`bin/overnight-schedule` is the delayed-start wrapper that defers invocation of `overnight-start` until a specific wall-clock time, so operators can queue an overnight from the evening for a late-night kickoff without leaving a shell open.
+
+**Files**: `bin/overnight-schedule` (user-facing setup path + internal `__launch` path), `bin/overnight-start` (invoked via `exec` when the delay elapses).
+
+**Inputs**: target time as `HH:MM` or `YYYY-MM-DDTHH:MM`, plus the same positional args `overnight-start` accepts (state path, time limit, max rounds, tier).
+
+Behavior: the setup path validates the target time (rejects past times, caps delay at 7 days, rolls `HH:MM` forward to tomorrow if today has passed), writes `scheduled_start` into the state file for dashboard visibility, and spawns a detached `tmux` session named `overnight-scheduled[-N]` that re-execs itself with a `__launch` argument. Inside `__launch`, the script runs `caffeinate -i sleep $DELAY` to keep the Mac awake through the wait, clears `scheduled_start` from the state file, and `exec`s `overnight-start` with the forwarded args. There is no dedicated log file — the tmux pane is the log; `tmux attach -t overnight-scheduled` is the only way to see what it is doing before the handoff to `overnight-start`.
 
 ---
 
@@ -426,7 +442,23 @@ All five are append-only JSONL and safe to `tail -f` live. The first four are wr
 
 ### Dashboard Polling and dashboard state
 
+The dashboard is a pull-based observer — it never shares memory with the runner, it just re-reads state files on fixed intervals.
+
+**Files**: `claude/dashboard/poller.py` (`_poll_state_files`, `_poll_jsonl_events`, `_poll_slow`, `_poll_alerts`), `claude/dashboard/data.py` (parse helpers).
+
+**Inputs**: `lifecycle/sessions/{id}/overnight-state.json`, `lifecycle/sessions/latest-pipeline/pipeline-state.json`, `lifecycle/sessions/{id}/overnight-events.log` (incremental JSONL tail via byte offset), per-feature `lifecycle/{feature}/events.log` and `agent-activity.jsonl`, `backlog/`.
+
+Polling cadence: state files every 2s, `overnight-events.log` every 1s (offset-tracked so already-seen events are never re-emitted), backlog counts every 30s, alert evaluation every 5s. The TOCTOU concern (what if the writer updates a file mid-read?) is resolved by convention at the write side: the overnight runner writes all state JSON via tempfile + `os.replace()`, which is atomic on the same filesystem, so the poller's `json.loads(path.read_text())` either sees the old bytes or the new bytes — never a torn mix. Append-only JSONL logs (`overnight-events.log`, `agent-activity.jsonl`) are tailed by byte offset, which means a write partway through a line will be re-read on the next tick once the line is complete. The practical consequence: a momentarily-stale dashboard is normal, an internally-inconsistent dashboard view is not.
+
 ### Session Hooks (SessionStart, SessionEnd, notification hooks)
+
+Claude Code fires lifecycle hooks at session boundaries and on specific tool/notification events; `claude/settings.json` wires these to shell scripts in `hooks/` (symlinked to `~/.claude/hooks/`).
+
+**Files**: `claude/settings.json` (`hooks` key), `hooks/cortex-scan-lifecycle.sh` (SessionStart — injects `LIFECYCLE_SESSION_ID` + lifecycle state into context), `hooks/cortex-cleanup-session.sh` (SessionEnd — removes `.session` marker unless reason is `clear`), `hooks/cortex-notify.sh` and `hooks/cortex-notify-remote.sh` (Notification matcher `permission_prompt` and Stop events — local macOS toast + ntfy.sh push), plus `cortex-validate-commit.sh` (PreToolUse Bash), `cortex-tool-failure-tracker.sh` (PostToolUse Bash), and `cortex-skill-edit-advisor.sh` (PostToolUse Write|Edit).
+
+**Inputs**: JSON payload on stdin from Claude Code (`session_id`, `cwd`, `reason`, `tool_name`, etc.); environment (`NTFY_TOPIC`, `TMUX`, `CLAUDE_ENV_FILE`).
+
+Debugging note: hooks exit 0 unconditionally and **have no log mechanism** — per `requirements/remote-access.md`, notification and session-management failures are silent by design so that hook bugs never block the Claude session. This is acceptable for personal use but means "I didn't get a notification" has no breadcrumb trail; diagnose by running the hook script manually with a synthetic JSON payload on stdin, not by searching logs. The same silence applies to SessionStart/SessionEnd hooks: if `cortex-scan-lifecycle.sh` fails to inject `LIFECYCLE_SESSION_ID`, the session starts anyway and downstream tooling silently loses session identity.
 
 ---
 
