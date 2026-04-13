@@ -130,13 +130,40 @@ Skip Section 2a if `$SSH_CONNECTION` is set and non-empty. This catches both SSH
 
 Skip Section 2a if `git rev-parse --verify {integration_branch}` exits non-zero, where `{integration_branch}` is read from `lifecycle/sessions/latest-overnight/overnight-state.json` using the same jq pattern as Section 6 step 1 (`jq -r '.integration_branch' lifecycle/sessions/latest-overnight/overnight-state.json`). If `overnight-state.json` is missing or `integration_branch` is absent from it, also skip.
 
+**If on the `demo-commands:` list path only (this third check does NOT apply to the `demo-command:` single-string path):** additionally read the `features` map from `lifecycle/sessions/latest-overnight/overnight-state.json` and count entries whose `"status"` equals `"merged"`. If there are zero merged features (i.e. `"status".*merged` matches no entry — no merged features, no completed features), skip Section 2a silently. If `overnight-state.json` is missing the `features` key entirely, treat this as zero merged features and skip. This guard suppresses the demo offer when no overnight work actually landed on the integration branch — there is nothing meaningful to demo.
+
+### Agent Reasoning
+
+**If on the `demo-commands:` list path and all three guards above pass:** reason about which configured `demo-commands:` entry is most contextually relevant to the night's merged features, then either select one entry and proceed to the Demo offer, or skip Section 2a silently.
+
+Constraints and inputs for the reasoning step:
+
+1. **No additional git commands are run for this step.** The input is the completed-features list already in context from Section 2, including each feature's **Key files changed** data (which was already processed in Section 2 when computing the "Files changed" count). Do NOT re-read `git log`, `git diff`, or any file tree — everything needed is already in context.
+2. Consider each configured entry's `label:` and `command:` alongside the merged features' names and **Key files changed** paths. A `demo-commands:` entry whose label or command clearly maps to the area the night's work touched is a candidate.
+3. If a single entry is clearly the most relevant winner, select it and proceed to the Demo offer (`demo-commands:` list path variant) using that entry's `label` as `{selected-label}` and its `command` as `{selected-command}`.
+4. If no entry is clearly relevant — the night's work does not map cleanly onto any configured demo — **skip Section 2a silently**. This suppression is absolute: do NOT fall back to the `demo-command:` single-string path even if that field is also configured in the same `lifecycle.config.md`. The list path, once active, owns the decision; the single-string fallback does not fire when the `demo-commands:` list path is active.
+
 ### Demo offer
 
-If all three guards above pass, ask the user a single yes/no question and take no further input from this section:
+If all guards above pass, ask the user a single yes/no question and take no further input from this section. The exact wording of the offer depends on which path is active — use the variant matching the active path and ignore the other.
+
+#### `demo-commands:` list path variant
+
+**Use this variant only if the active path is `demo-commands:` list and the Agent Reasoning step selected an entry.** Ask:
+
+> Run `{selected-label}` demo (`{selected-command}`) from `{integration_branch}` in a fresh worktree? [y / n]
+
+Substitute `{selected-label}` with the chosen entry's `label:` value and `{selected-command}` with its `command:` value. Paraphrasing of the prose around the placeholders is acceptable; the `{selected-label}` and `{selected-command}` placeholders themselves are load-bearing.
+
+#### `demo-command:` single-string path variant
+
+**Use this variant only if the active path is `demo-command:` single-string.** Ask (preserved unchanged from the pre-list-path wording):
 
 > Spin up a demo worktree of `{integration_branch}` at `$TMPDIR/demo-{session_id}-{timestamp}` and print the launch command? [y / n]
 
-On `n` or any unparseable input, advance to Section 2b. On `y`, proceed to the worktree creation step below. Section 2a must not ask any follow-up questions.
+---
+
+For both variants: on `n` or any unparseable input, advance to Section 2b. On `y`, proceed to the shared worktree creation step below. Section 2a must not ask any follow-up questions.
 
 ### Worktree creation
 
@@ -153,7 +180,11 @@ On `y`:
 
 ### Print template
 
-After a successful worktree-add, print exactly this block, substituting `{resolved-target-path}` with the absolute path from the previous step and `{demo-command}` with the verbatim value extracted from `lifecycle.config.md` (already validated by the config check above to contain no control characters):
+After a successful worktree-add, print the block matching the active path. `{resolved-target-path}` is the absolute path from the Worktree creation step.
+
+#### `demo-command:` single-string path variant
+
+**Use this variant only if the active path is `demo-command:` single-string.** Print exactly this block, substituting `{resolved-target-path}` with the absolute path from the previous step and `{demo-command}` with the verbatim value extracted from `lifecycle.config.md` (already validated by the config check above to contain no control characters):
 
 ```
 Demo worktree created at: {resolved-target-path}
@@ -165,13 +196,27 @@ When you're done, close the demo and remove the worktree:
     git worktree remove {resolved-target-path}
 ```
 
+#### `demo-commands:` list path variant
+
+**Use this variant only if the active path is `demo-commands:` list and the Agent Reasoning step selected an entry.** Print exactly this block, substituting `{resolved-target-path}` with the absolute path from the Worktree creation step, `{selected-label}` with the chosen entry's `label:` value, and `{selected-command}` with its `command:` value (both already validated by the list parsing rules above to contain no control characters):
+
+```
+Demo worktree created at: {resolved-target-path}
+
+To start the demo ({selected-label}), run this in a separate terminal or shell:
+    {selected-command}
+
+When you're done, close the demo and remove the worktree:
+    git worktree remove {resolved-target-path}
+```
+
 ### Auto-advance
 
 After this section completes (skipped, declined, or accepted), proceed immediately to Section 2b. Do not wait for the user to report demo completion.
 
 ### Security boundary
 
-The agent MUST NOT execute the demo-command itself; it is printed for the user to run manually in a separate terminal session.
+The agent MUST NOT execute the **selected command** (or the `demo-command:` value) itself; it is printed for the user to run manually in a separate terminal session.
 
 ---
 
