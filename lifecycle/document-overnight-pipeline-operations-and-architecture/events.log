@@ -58,3 +58,48 @@
   feature: document-overnight-pipeline-operations-and-architecture
   from: specify
   to: plan
+- ts: 2026-04-13T15:44:10Z
+  event: orchestrator_review
+  feature: document-overnight-pipeline-operations-and-architecture
+  phase: plan
+  verdict: flag
+  cycle: 1
+  issues:
+    - "P1: Tasks 4 (~45 min), 6 (~45 min), and 8 (~30-45 min) exceeded 15-min sizing target despite complex marker."
+    - "P6: Task 15 Files field read '(none modified)' but task writes to verification.md."
+- ts: 2026-04-13T15:44:10Z
+  event: orchestrator_dispatch_fix
+  feature: document-overnight-pipeline-operations-and-architecture
+  phase: plan
+  mode: same_context
+  issue: "Split Task 4 into 4a/4b and Task 6 into 6a/6b along subsection boundaries to reduce per-task size to ~20 min. Fix Task 15 Files to list verification.md. Task 8 retained at full size (caller enumeration is inherently bundled across all affected docs) with Veto Surface rationale noted."
+- ts: 2026-04-13T15:44:10Z
+  event: orchestrator_review
+  feature: document-overnight-pipeline-operations-and-architecture
+  phase: plan
+  verdict: pass
+  cycle: 2
+  issues: []
+- ts: 2026-04-13T15:52:34Z
+  event: critical_review
+  feature: document-overnight-pipeline-operations-and-architecture
+  phase: plan
+  angles: 3
+  angles_names: ["Task 8 refactor fragility", "Pytest validity - drift test semantics", "Verification completeness"]
+  applied_fixes:
+    - "Task 1: fixed off-by-one on ≥3 retros scanned check"
+    - "Task 2: per-keyword grep for all 21 required strings (was heading-count-only)"
+    - "Task 7: added ≥3-sentence rationale verification for progressive-disclosure paragraph"
+    - "Task 8: expanded caller-enumeration scope to full caller surface; removed line-number refs; added slug-inference rule"
+    - "Task 11: pytest now parses doc markdown at runtime following tests/test_events_contract.py precedent (catches doc-drift AND code-drift)"
+    - "Task 14: added explicit Req 7 row (was missing); differentiated from Req 10"
+    - "Veto Surface: updated Task 11 description to match runtime parsing"
+  dismissed:
+    - "Shallow-stub detection (user declined semantic quality gate in spec Q3)"
+    - "Task 14 manual-ok escape hatch (user accepted reviewer judgment in spec Q3)"
+    - "Req 5 mechanical dedup tripwire (same rationale)"
+- ts: 2026-04-13T16:00:00Z
+  event: phase_transition
+  feature: document-overnight-pipeline-operations-and-architecture
+  from: plan
+  to: implement
