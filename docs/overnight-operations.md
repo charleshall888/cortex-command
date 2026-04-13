@@ -181,6 +181,18 @@ This keeps a stuck worker from consuming budget round after round on the same qu
 
 ### Test Gate and integration_health
 
+The test gate runs in `runner.sh` after `batch_runner.py` has merged all passing features onto the integration branch and before the PR is pushed — it is a branch-level gate, not a per-feature gate. The gate is only armed when `--test-command` is passed; if absent, the runner skips straight to PR creation. Per-feature CI signal is separate (`ci_check` inside `merge_feature()`) and covered under [Post-Merge Review](#post-merge-review-review_dispatch); this subsection covers only the integration-branch gate.
+
+**Files**: `claude/overnight/runner.sh` (the "Integration gate" block around the post-merge PR-prep stage), `claude/overnight/integration_recovery.py`, `claude/overnight/strategy.py` (`integration_health` field).
+
+**Inputs**: `$TEST_COMMAND` (from `--test-command`), the integration worktree path, and the current `overnight-strategy.json` (read to update `integration_health` on failure).
+
+Flow on pass: the gate runs `bash -c "$TEST_COMMAND"` inside the integration worktree, captures stdout/stderr to `$INTEGRATION_TEST_OUTPUT`, and on exit 0 proceeds to PR creation with no state change.
+
+Flow on fail: a non-zero exit invokes `python3 -m claude.overnight.integration_recovery` with the same `--test-command`, the worktree path, and a truncated 20-line head of the test output for the repair agent's context. Recovery dispatch itself obeys the 2-attempt cap documented under [Repair caps](#repair-caps). If recovery succeeds, the runner proceeds to PR creation normally. If recovery fails, three things happen in order: (1) `INTEGRATION_DEGRADED=true` is set in the runner's shell env; (2) `integration_health` is flipped to `"degraded"` in `overnight-strategy.json` via `load_strategy`/`save_strategy`, so subsequent rounds' conflict-recovery decisions can treat the branch with more caution (see [Strategy File mutators](#strategy-file-overnight-strategyjson--mutators-and-consumers)); (3) a warning block containing the first 20 lines of the failing test output is prepended to the PR body so a human reviewer sees it before merging. The PR is still pushed — successful merges are not rolled back by a gate failure.
+
+For tunable surfaces (`--test-command` choice, the unconditional-repair rule, `integration_health` semantics) see [Test Gate and integration_health tuning](#test-gate-and-integration_health-tuning) under Tuning.
+
 ### Startup Recovery (interrupt.py)
 
 `claude/overnight/interrupt.py` runs once at session startup to reconcile state that a prior crash or SIGKILL may have left in an inconsistent shape. It is invoked as `python3 -m claude.overnight.interrupt [state_path]` from `runner.sh` before the round loop begins.
@@ -286,8 +298,6 @@ The runner has **two distinct repair caps** with different numbers. They are int
 
 Do not describe these as "the repair cap" in prose — collapsing them to one number misleads readers at 2am when observed behavior does not match.
 
-### lifecycle.config.md fields and absence behavior
-
 ### overnight-strategy.json contents and mutators
 
 The field-by-field writer and reader map is documented under [Strategy File (overnight-strategy.json) — mutators and consumers](#strategy-file-overnight-strategyjson--mutators-and-consumers) in the Architecture section; see [Strategy File (overnight-strategy.json) schema](#strategy-file-overnight-strategyjson-schema) in Observability for the JSON shape. From a tuning perspective, the tunable surfaces are:
@@ -315,7 +325,7 @@ Every overnight session persists state as files under `lifecycle/`. The runner r
 | `lifecycle/{feature}/agent-activity.jsonl` | `claude/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
 | `lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
 | `lifecycle/morning-report.md` | `claude/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). |
-| `lifecycle/.runner.lock` | `runner.sh` | PID lock preventing concurrent overnight sessions. See [Runner Lock](#runner-lock-runner-lock). |
+| `lifecycle/.runner.lock` | `runner.sh` | PID lock preventing concurrent overnight sessions. See [Runner Lock](#runner-lock-runnerlock). |
 | `deferred/*.md` | `claude/overnight/deferral.py` (`write_deferral`) | Blocking human-decision questions filed during the session. |
 
 State file reads are not lock-protected by design — forward-only phase transitions and atomic replace writes make torn reads impossible. A reader either sees the pre-write state or the post-write state, never a partial record.
