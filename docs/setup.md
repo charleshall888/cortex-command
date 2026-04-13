@@ -45,7 +45,7 @@ Restart your shell and run `just check-symlinks` to verify.
 
 ## Limited / Custom installation
 
-`just setup` is the default and deploys the full agentic layer. Most customization happens via `/setup-merge` after `just setup` — it prompts individually for three optional hooks (`cortex-setup-gpg-sandbox-home.sh`, `cortex-notify.sh`, `cortex-notify-remote.sh`). The one thing `/setup-merge` does NOT surface is the UI skills bundle — if you're not building UIs, those six skills are safe to skip.
+`just setup` is the default and deploys the full agentic layer. Most customization happens via `/setup-merge` after `just setup` — it prompts individually for two optional hooks (`cortex-notify.sh`, `cortex-notify-remote.sh`). The one thing `/setup-merge` does NOT surface is the UI skills bundle — if you're not building UIs, those six skills are safe to skip.
 
 This section covers only the things that compose cleanly when omitted. Finer pruning isn't documented because the dependency graph between skills, hooks, bin utilities, and reference docs is too interconnected to hand-curate without reading the underlying sources.
 
@@ -53,7 +53,6 @@ This section covers only the things that compose cleanly when omitted. Finer pru
 
 - **UI skills** (`ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup`) — self-contained frontend design enforcement stack (ESLint, Stylelint, Playwright, axe-core, Claude Vision). Skip unless you're building a UI. All six are a bundle — `/ui-check` orchestrates `/ui-lint` and `/ui-a11y`, so install all six or none.
 - **Optional hooks** (prompted individually by `/setup-merge`):
-  - `cortex-setup-gpg-sandbox-home.sh` — macOS-only sandbox commit signing. Skip on Linux/Windows or if you don't sign commits in sandboxed sessions.
   - `cortex-notify.sh` — `terminal-notifier` desktop notifications. macOS-only (requires `brew install terminal-notifier`). Skip if you don't want attention pings.
   - `cortex-notify-remote.sh` — Tailscale/Android remote notifications. Skip unless you have the `cortex-notify-remote` infrastructure deployed on a phone.
 

@@ -187,10 +187,6 @@ Otherwise, prompt for each absent optional hook individually. Use the descriptio
 
 For each absent optional hook, extract the script filename from the `command` field and display the matching prompt:
 
-**cortex-setup-gpg-sandbox-home.sh**:
-
-> `cortex-setup-gpg-sandbox-home.sh` — Sets up GPG agent for sandbox-compatible commit signing. macOS-specific. Required if you use signed commits in sandboxed sessions. Install? [Y/n]
-
 **cortex-notify.sh** (may appear as `notify.sh` in the command field):
 
 > `cortex-notify.sh` — Sends desktop notifications when Claude needs attention or completes. Requires cortex-notify infrastructure. Install? [Y/n]

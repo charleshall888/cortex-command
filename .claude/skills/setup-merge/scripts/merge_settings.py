@@ -34,7 +34,6 @@ REQUIRED_HOOK_SCRIPTS = {
 # via deploy-hooks; OPTIONAL only gates whether the hook command lands in
 # the user's settings.json hooks block.
 OPTIONAL_HOOK_SCRIPTS = {
-    "cortex-setup-gpg-sandbox-home.sh",
     "cortex-notify.sh",
     "cortex-notify-remote.sh",
 }

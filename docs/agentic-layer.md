@@ -213,7 +213,6 @@ Hooks in `hooks/` are shared entry points. Hooks in `claude/hooks/` are specific
 | `hooks/cortex-notify-remote.sh` | Stop, Notification | Push notifications to Android via ntfy.sh HTTP API when Claude needs attention in a tmux session | Claude only |
 | `hooks/cortex-cleanup-session.sh` | SessionEnd | Remove `.session` lock files from `lifecycle/*/` when a Claude Code session ends (skips on `/clear`) | Claude only |
 | `claude/hooks/setup-github-pat.sh` | SessionStart | Read GitHub PATs from `~/.config/claude-code-secrets/` and write to `/tmp/claude/` so skills can authenticate `gh` inside the sandbox | Claude only |
-| `claude/hooks/cortex-setup-gpg-sandbox-home.sh` | SessionStart | Create minimal GNUPGHOME in `$TMPDIR` so GPG signing works inside the Claude sandbox | Claude only |
 | `claude/hooks/cortex-sync-permissions.py` | PreToolUse | Merge MCP allow/deny patterns from `settings.json` so permissions stay consistent | Claude only |
 | `claude/hooks/cortex-permission-audit-log.sh` | Notification (permission_prompt) | Append one line per permission prompt to a session-scoped log in `$TMPDIR` for sandbox tuning diagnostics | Claude only |
 | `claude/hooks/cortex-tool-failure-tracker.sh` | PostToolUse (Bash) | Track Bash tool failures by exit code; surface a warning via `additionalContext` after 3 failures for the same tool in one session | Claude only |

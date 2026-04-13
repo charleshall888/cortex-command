@@ -423,49 +423,7 @@ python-setup:
 upgrade-deps:
     uv sync --upgrade
 
-# --- GPG / PAT ---
-
-# Configure gpg-agent extra socket for Claude Code sandbox signing
-setup-gpg-sandbox:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    SIGNING_KEY=$(git config --global user.signingkey 2>/dev/null || true)
-    if [ -z "$SIGNING_KEY" ]; then
-        echo "user.signingkey is not set in git config."
-        echo "Run: git config --global user.signingkey <your-key-id>"
-        exit 1
-    fi
-    SOCKET_DIR="$HOME/.local/share/gnupg"
-    AGENT_CONF="$HOME/.gnupg/gpg-agent.conf"
-    EXTRA_LINE="extra-socket $HOME/.local/share/gnupg/S.gpg-agent.sandbox"
-    if [ -d "$SOCKET_DIR" ]; then
-        echo "Directory already exists: $SOCKET_DIR"
-    else
-        mkdir -p "$SOCKET_DIR"
-        echo "Created directory: $SOCKET_DIR"
-    fi
-    if [ \! -f "$AGENT_CONF" ]; then
-        echo "$EXTRA_LINE" > "$AGENT_CONF"
-        echo "Created $AGENT_CONF with extra-socket line"
-    elif grep -q "extra-socket" "$AGENT_CONF"; then
-        echo "extra-socket already configured in $AGENT_CONF"
-    else
-        echo "$EXTRA_LINE" >> "$AGENT_CONF"
-        echo "Appended extra-socket line to $AGENT_CONF"
-    fi
-    gpg --export "$SIGNING_KEY" > "$SOCKET_DIR/signing-key.pgp"
-    chmod 0600 "$SOCKET_DIR/signing-key.pgp"
-    KEYBYTES=$(wc -c < "$SOCKET_DIR/signing-key.pgp")
-    if [ "$KEYBYTES" -eq 0 ]; then
-        echo "Error: signing-key.pgp is empty — gpg --export produced no output."
-        echo "Check that key $SIGNING_KEY exists in ~/.gnupg and is accessible."
-        exit 1
-    fi
-    echo "Exported signing key to $SOCKET_DIR/signing-key.pgp ($KEYBYTES bytes)"
-    echo ""
-    echo "Run: gpgconf --kill gpg-agent"
-    echo "The agent will auto-restart on next use with the new config."
-    echo "signing-key.pgp contains the public key for sandbox GPG import."
+# --- PAT ---
 
 # Store a GitHub PAT in macOS Keychain for sandbox-safe gh operations
 setup-github-pat:
@@ -785,7 +743,6 @@ check-symlinks:
     check ~/.claude/notify.sh
     check ~/.claude/hooks/cortex-validate-commit.sh
     check ~/.claude/hooks/cortex-scan-lifecycle.sh
-    check ~/.claude/hooks/cortex-setup-gpg-sandbox-home.sh
     check ~/.claude/hooks/cortex-sync-permissions.py
     check ~/.claude/hooks/cortex-tool-failure-tracker.sh
     check ~/.claude/hooks/cortex-skill-edit-advisor.sh

@@ -37,11 +37,8 @@
       "Bash(git fetch)",
       "Bash(git --version)",
       "Bash(git commit *)",
-      "Bash(GNUPGHOME=* git commit *)",
       "Bash(git checkout *)",
       "Bash(git switch *)",
-      "Bash(git push *)",
-      "Bash(git push)",
       "Bash(git blame *)",
       "Bash(git shortlog *)",
       "Bash(git reflog *)",
@@ -221,7 +218,6 @@
     ],
     "defaultMode": "default"
   },
-  "model": "sonnet",
   "enableAllProjectMcpServers": false,
   "hooks": {
     "SessionStart": [
@@ -237,11 +233,6 @@
             "type": "command",
             "command": "~/.claude/hooks/cortex-scan-lifecycle.sh",
             "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/cortex-setup-gpg-sandbox-home.sh",
-            "timeout": 10
           }
         ]
       }
@@ -370,9 +361,7 @@
         "registry.npmjs.org",
         "*.anthropic.com"
       ],
-      "allowUnixSockets": [
-        "~/.local/share/gnupg/S.gpg-agent.sandbox"
-      ]
+      "allowUnixSockets": []
     },
     "filesystem": {
       "allowWrite": [

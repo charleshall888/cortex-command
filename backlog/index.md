@@ -10,8 +10,7 @@
 | 75 | Extract feature_executor module from batch_runner | backlog | high | feature | 080 | 074 | — |
 | 76 | Extract outcome_router module from batch_runner | backlog | high | feature | 075 | 074 | — |
 | 77 | Rename batch_runner to orchestrator and add integration tests | backlog | high | feature | 076 | 074 | — |
-| 80 | Add characterization tests for batch_runner pre-extraction | backlog | high | chore | — | 074 | — |
-| 81 | Fix GPG sandbox signing with stable gnupghome path and read-only options | refined | high | feature | — | — | — |
+| 80 | Add characterization tests for batch_runner pre-extraction | in_progress | high | chore | — | 074 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 61 | Sync-hook cleanup propagation mechanism | refined | medium | task | — | — | — |
 | 62 | Harden cortex-notify-remote.sh curl invocation against exfiltration | refined | medium | task | — | — | — |
@@ -20,7 +19,6 @@
 
 ## Refined
 
-- **81** Fix GPG sandbox signing with stable gnupghome path and read-only options
 - **61** Sync-hook cleanup propagation mechanism
 - **62** Harden cortex-notify-remote.sh curl invocation against exfiltration
 
@@ -31,8 +29,8 @@
 - **68** Suppress Dismiss-rationale leak in lifecycle clarify critic
 - **69** Suppress internal narration in lifecycle specify phase
 - **74** Decompose batch_runner and enable daytime autonomous-worktree pipeline
-- **80** Add characterization tests for batch_runner pre-extraction
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 
 ## In-Progress
 
+- **80** Add characterization tests for batch_runner pre-extraction (in_progress)
