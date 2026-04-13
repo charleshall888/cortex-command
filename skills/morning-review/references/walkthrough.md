@@ -83,7 +83,35 @@ advancement.
 
 Skip this section entirely if any of the following hold:
 
-<!-- SECTION-2A-PLACEHOLDER: Task 4 replaces this comment with the guard sub-blocks (R3, R4, R5). Task 5 appends the active-flow content (R6-R10) after Task 4's guards. -->
+### Guard 1 — `demo-command` is not configured
+
+Skip Section 2a silently if ANY of the following hold:
+
+- `lifecycle.config.md` at the project root is missing.
+- `lifecycle.config.md` exists but a non-commented `demo-command:` line is absent.
+- The `demo-command:` value is empty (whitespace-only after trimming).
+- The `demo-command:` value contains any control character (byte < 0x20 except `\t`).
+
+Parsing rules for the `demo-command:` field (apply these in order):
+
+1. Read the file. For each non-blank line, strip leading whitespace.
+2. If the stripped line begins with `#`, ignore it (comment line).
+3. If the stripped line begins with `demo-command:`, extract everything after the first `:` character, then strip leading and trailing whitespace from the extracted value.
+4. Reject the value if it contains any control character (byte < 0x20 except `\t`); treat as if the field were unset.
+5. If no matching line was found, or the extracted value is empty, treat the field as unset.
+6. Do NOT strip inline `#` comments from the value. Shell commands may legitimately contain `#`; there is no shell parser available at this layer to distinguish comment from literal. Users are responsible for keeping `demo-command` values free of trailing inline `#` comments.
+
+> Implementer note (not user-facing): extract the value with `sed -n 's/^[[:space:]]*demo-command:[[:space:]]*//p'` or equivalent. Do NOT use `awk -F: '{print $2}'` — it discards everything after the second `:` and breaks on values like `godot res://main.tscn` (returning `//` instead of the verbatim command).
+
+### Guard 2 — remote session
+
+Skip Section 2a if `$SSH_CONNECTION` is set and non-empty. This catches both SSH and mosh sessions (mosh inherits `$SSH_CONNECTION` from the underlying SSH handshake).
+
+### Guard 3 — overnight branch is missing
+
+Skip Section 2a if `git rev-parse --verify {integration_branch}` exits non-zero, where `{integration_branch}` is read from `lifecycle/sessions/latest-overnight/overnight-state.json` using the same jq pattern as Section 6 step 1 (`jq -r '.integration_branch' lifecycle/sessions/latest-overnight/overnight-state.json`). If `overnight-state.json` is missing or `integration_branch` is absent from it, also skip.
+
+<!-- SECTION-2A-CONTENT-INSERT: Task 5 appends the active-flow content here. -->
 
 ---
 
