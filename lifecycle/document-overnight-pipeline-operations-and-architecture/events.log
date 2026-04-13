@@ -103,3 +103,36 @@
   feature: document-overnight-pipeline-operations-and-architecture
   from: plan
   to: implement
+{"ts":"2026-04-13T16:01:00Z","event":"batch_dispatch","feature":"document-overnight-pipeline-operations-and-architecture","batch":0,"tasks":[1,10]}
+{"ts":"2026-04-13T16:05:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":1,"batch":0,"status":"success"}
+{"ts":"2026-04-13T16:05:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":10,"batch":0,"status":"success"}
+{"ts":"2026-04-13T16:05:00Z","event":"batch_dispatch","feature":"document-overnight-pipeline-operations-and-architecture","batch":1,"tasks":[2]}
+{"ts":"2026-04-13T16:08:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":2,"batch":1,"status":"success"}
+{"ts":"2026-04-13T16:08:00Z","event":"batch_dispatch","feature":"document-overnight-pipeline-operations-and-architecture","batch":2,"tasks":[3]}
+{"ts":"2026-04-13T16:10:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":3,"batch":2,"status":"success"}
+{"ts":"2026-04-13T16:10:00Z","event":"batch_dispatch","feature":"document-overnight-pipeline-operations-and-architecture","batch":3,"tasks":["4a",5,"6a",7]}
+{"ts":"2026-04-13T16:20:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":"4a","batch":3,"status":"success"}
+{"ts":"2026-04-13T16:20:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":5,"batch":3,"status":"success"}
+{"ts":"2026-04-13T16:20:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":"6a","batch":3,"status":"success"}
+{"ts":"2026-04-13T16:20:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":7,"batch":3,"status":"success"}
+{"ts":"2026-04-13T16:20:00Z","event":"batch_dispatch","feature":"document-overnight-pipeline-operations-and-architecture","batch":4,"tasks":["4b","6b",11,12]}
+{"ts":"2026-04-13T17:30:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":"4b","batch":4,"status":"success","note":"orphaned-recovery: agent hit token limit; committed staged work after session resume"}
+{"ts":"2026-04-13T17:30:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":"6b","batch":4,"status":"success","note":"split into brain.py first pass + follow-on agent for 4 remaining subsections"}
+{"ts":"2026-04-13T17:30:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":11,"batch":4,"status":"success"}
+{"ts":"2026-04-13T17:30:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":12,"batch":4,"status":"success"}
+{"ts":"2026-04-13T17:30:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":13,"batch":5,"status":"success","note":"no-files task: just test returned 3/3 passed"}
+{"ts":"2026-04-13T17:31:00Z","event":"batch_dispatch","feature":"document-overnight-pipeline-operations-and-architecture","batch":5,"tasks":[8]}
+{"ts":"2026-04-13T17:45:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":8,"batch":5,"status":"success"}
+{"ts":"2026-04-13T17:45:00Z","event":"batch_dispatch","feature":"document-overnight-pipeline-operations-and-architecture","batch":6,"tasks":[9]}
+{"ts":"2026-04-13T17:55:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":9,"batch":6,"status":"success"}
+{"ts":"2026-04-13T17:55:00Z","event":"batch_dispatch","feature":"document-overnight-pipeline-operations-and-architecture","batch":7,"tasks":[14]}
+{"ts":"2026-04-13T18:10:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":14,"batch":7,"status":"success"}
+{"ts":"2026-04-13T18:10:00Z","event":"batch_dispatch","feature":"document-overnight-pipeline-operations-and-architecture","batch":8,"tasks":[15]}
+{"ts":"2026-04-13T18:15:00Z","event":"task_complete","feature":"document-overnight-pipeline-operations-and-architecture","task":15,"batch":8,"status":"success"}
+{"ts":"2026-04-13T18:15:00Z","event":"phase_transition","feature":"document-overnight-pipeline-operations-and-architecture","tier":"complex","from":"implement","to":"review"}
+{"ts":"2026-04-13T18:30:00Z","event":"review_verdict","feature":"document-overnight-pipeline-operations-and-architecture","verdict":"CHANGES_REQUESTED","cycle":1,"requirements_drift":"none"}
+{"ts":"2026-04-13T18:30:00Z","event":"phase_transition","feature":"document-overnight-pipeline-operations-and-architecture","from":"review","to":"implement"}
+{"ts":"2026-04-13T18:45:00Z","event":"phase_transition","feature":"document-overnight-pipeline-operations-and-architecture","tier":"complex","from":"implement","to":"review"}
+{"ts":"2026-04-13T19:00:00Z","event":"review_verdict","feature":"document-overnight-pipeline-operations-and-architecture","verdict":"APPROVED","cycle":2,"requirements_drift":"none"}
+{"ts":"2026-04-13T19:00:00Z","event":"phase_transition","feature":"document-overnight-pipeline-operations-and-architecture","from":"review","to":"complete"}
+{"ts":"2026-04-13T19:05:00Z","event":"feature_complete","feature":"document-overnight-pipeline-operations-and-architecture","tasks_total":17,"rework_cycles":2}

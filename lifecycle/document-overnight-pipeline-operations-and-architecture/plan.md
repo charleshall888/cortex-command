@@ -13,7 +13,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: `retros/` contains dated problem-only logs; `ls retros/*.md | sort -r | head -10` yields the scan set. Search terms per spec req 8: "2am", "couldn't find", "unclear", "surprising", "stuck". Output format: a `## Scanned retros` section listing each retro filename scanned (one per line); a `## Findings` table `| source-retro | quote | disposition (added|filed|dismissed) | target subsection or rationale |`.
 - **Verification**: (b) file exists AND `awk '/^## Scanned retros/,/^## /' learnings/retros-mining.md | grep -cE '^- retros/' ≥ 3` (at least 3 retros scanned per spec req 8 floor) AND `grep -c '^| ' learnings/retros-mining.md` ≥ 2 (table header + separator, findings section present even if empty); pass if both counts meet thresholds.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Content outline (all 21 gaps slotted)
 - **Files**: `lifecycle/document-overnight-pipeline-operations-and-architecture/learnings/outline.md` (new)
@@ -22,7 +22,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Use the extraction table from `lifecycle/{feature}/research.md` §Sections to move and the 21-keyword list from `lifecycle/{feature}/spec.md` req 2. Output is a heading tree with one-line purpose per subsection. Keywords must appear in heading text to satisfy req 2's grep check.
 - **Verification**: (b) every one of the 21 spec req 2 keyword strings appears in a heading line of the outline. Checked by the shell loop `ok=1; for kw in "review_dispatch" "allowed_tools" "pipeline/prompts" "overnight/prompts" "escalations.jsonl" "overnight-strategy.json" "Conflict Recovery" "Cycle-breaking" "Test Gate" "--tier" "brain.py" "lifecycle.config.md" "apiKeyHelper" "orchestrator_io" ".runner.lock" "report.py" "agent-activity.jsonl" "Dashboard Polling" "Session Hooks" "Scheduled Launch" "interrupt.py"; do grep -q -iE "^#.*$kw" learnings/outline.md || { echo MISSING $kw; ok=0; }; done; exit $((1-ok))` — pass if exit code = 0. Each regex uses case-insensitive and allows the keyword OR a documented synonym from spec req 2 (e.g., "Post-Merge Review" for review_dispatch) in the heading.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Create `docs/overnight-operations.md` skeleton
 - **Files**: `docs/overnight-operations.md` (new)
@@ -31,7 +31,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Mirror the breadcrumb/audience/jump-nav pattern from `docs/overnight.md` line 1–15, `docs/pipeline.md` line 1–15. H2 sections: `## Architecture`, `## Tuning`, `## Observability`, `## Security and Trust Boundaries`, `## Internal APIs` (orchestrator_io + lifecycle.config.md). Optional H2: `## Code Layout` for prompts-dir split if outline puts it at H2.
 - **Verification**: (b) `test -f docs/overnight-operations.md && grep -c '^## ' docs/overnight-operations.md` ≥ 5 — pass if count ≥ 5.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4a: Write Architecture (dispatch + escalation half)
 - **Files**: `docs/overnight-operations.md`
@@ -40,7 +40,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: complex
 - **Context**: Research.md Codebase Analysis items 1–4, 7. Preserve exact-phrase constraints from spec Technical Constraints (forward-only phases, atomic writes). Follow `**Files**` / `**Inputs**` bolded run-in head pattern. No line numbers in code cross-refs. `_ALLOWED_TOOLS` list is documented literally (req 10).
 - **Verification**: (b) `grep -c -E "review_dispatch|Post-Merge Review" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "allowed_tools|Per-Task Agent Capabilit" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "pipeline/prompts" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "overnight/prompts" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "escalations\.jsonl|Escalation System" docs/overnight-operations.md` ≥ 1 AND `grep -c -i "cycle-breaking" docs/overnight-operations.md` ≥ 1 — pass if every count is ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4b: Write Architecture (strategy + recovery + loop half)
 - **Files**: `docs/overnight-operations.md`
@@ -49,7 +49,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: complex
 - **Context**: Research.md Codebase Analysis items 5, 6 + the round-loop/breakers/signals/modules content from `docs/overnight.md` lines 299-362 (extracted per task 8). Preserve exact-phrase constraints from spec Technical Constraints (repair cap numbers — do NOT unify). Module reference table uses `| Module | Role |` two-column format matching existing docs.
 - **Verification**: (b) `grep -c -E "overnight-strategy\.json|Strategy File" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "Conflict Recovery|trivial fast-path" docs/overnight-operations.md` ≥ 1 AND `grep -c "interrupt\.py" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "Round Loop" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "Circuit Breaker" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "Module Reference|\| Module \| Role \|" docs/overnight-operations.md` ≥ 1 — pass if every count is ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Write Tuning section
 - **Files**: `docs/overnight-operations.md`
@@ -58,7 +58,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Research.md Codebase Analysis items 8, 9. Model selection matrix should point to `docs/sdk.md` for detailed SDK model config (source-of-truth rule — req 6); this doc owns tier × criticality → role dispatch only. Repair caps: "single Sonnet→Opus escalation for merge conflicts" vs. "max 2 attempts for test-failure repair" — keep them as two distinct items with one-sentence rationale each.
 - **Verification**: (b) `grep -c -E "\-\-tier|Concurrency Tuning" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "Test Gate|integration_health" docs/overnight-operations.md` ≥ 1 — pass if each ≥ 1. Manual reviewer-check during task 15 confirms the two repair caps are documented as distinct with no unifying language.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6a: Write Observability (state files + schemas + report + logs)
 - **Files**: `docs/overnight-operations.md`
@@ -67,7 +67,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Research.md Codebase Analysis items for state files + the adversarial-identified gaps related to logs. Log disambiguation table: for each log, one-sentence "grep this when X." Schemas use fenced `json` blocks per existing doc convention.
 - **Verification**: (b) `grep -c -E "report\.py|Morning Report Generation" docs/overnight-operations.md` ≥ 1 AND `grep -c "agent-activity\.jsonl" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "Log Disambiguation" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "State File" docs/overnight-operations.md` ≥ 1 — pass if every count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6b: Write Observability (lock + hooks + scheduled + dashboard + brain)
 - **Files**: `docs/overnight-operations.md`
@@ -76,7 +76,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: `brain.py` subsection's opening must disambiguate it from a "repair" agent before any other content — spec req 12. Dashboard polling: call out `claude/dashboard/poller.py` read-vs-atomic-replace behavior (research.md adversarial). Hooks: note the silent-failure mode (no log mechanism) per requirements/remote-access.md.
 - **Verification**: (b) `grep -c -E "\.runner\.lock|Runner Lock" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "Dashboard Polling|dashboard state" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "Session Hooks|SessionStart|notification hooks" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "Scheduled Launch|scheduled-launch" docs/overnight-operations.md` ≥ 1 AND `grep -c "brain\.py" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "SKIP/DEFER/PAUSE" docs/overnight-operations.md` ≥ 1 — pass if every count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Write Security, Internal APIs, and progressive-disclosure rationale
 - **Files**: `docs/overnight-operations.md`
@@ -85,7 +85,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Security section: one bullet per boundary, one-sentence threat model each, no scattered safety notes elsewhere. Internal APIs: `orchestrator_io` documented as a POINTER ("see `__all__` for sanctioned surface"), NOT an enumeration — spec Edge Cases "Appendix is justified only when the content is a reference lookup." `lifecycle.config.md`: document absence behavior per consumer (morning-review skips Section 2a; lifecycle complete skips test step). `apiKeyHelper`: the 4-step fallback from research.md. Progressive-disclosure paragraph: must contain the phrase "progressive disclosure" AND ≥3 sentences of rationale explaining how the agent-loading concept generalizes to human reader access patterns — spec req 13 (b). If placed in CLAUDE.md (per task 10 coordination), leave a one-line cross-link in the operations doc preamble and satisfy the ≥3 sentences in CLAUDE.md.
 - **Verification**: (b) `grep -c "^## Security" docs/overnight-operations.md` = 1 AND `grep -c "orchestrator_io" docs/overnight-operations.md` ≥ 1 AND `grep -c "lifecycle\.config\.md" docs/overnight-operations.md` ≥ 1 AND `grep -c -E "apiKeyHelper|Auth Resolution" docs/overnight-operations.md` ≥ 1 AND the progressive-disclosure paragraph has ≥3 sentences (checked via `python3 -c "import re,sys; t=open('docs/overnight-operations.md').read()+open('CLAUDE.md').read(); m=re.search(r'(?is)progressive disclosure.{0,2000}', t); sys.exit(0 if m and m.group().count('.') >= 3 else 1)"` — pass if exit 0) — pass if every check holds.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Refactor `docs/overnight.md` (extraction + pointer paragraph + caller update)
 - **Files**: `docs/overnight.md`, `README.md`, `docs/pipeline.md`, `docs/dashboard.md`, `docs/agentic-layer.md`, `CLAUDE.md`, any caller discovered by the comprehensive grep below
@@ -94,7 +94,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: complex
 - **Context**: Extraction targets per research.md §Sections to move. Comprehensive caller enumeration: `grep -rn "overnight.md#" README.md CLAUDE.md docs/ skills/ retros/ backlog/ lifecycle/ requirements/ claude/reference/ claude/rules/ .github/ bin/ 2>/dev/null | grep -v "overnight-operations"`. Old anchors that disappear: `#authentication`, `#the-execution-phase`, `#the-round-loop`, `#circuit-breakers`, `#signal-handling`, `#module-reference`, `#state-files-and-artifacts`, `#conflict-avoidance-and-resource-protection`, `#recovery-corrupt-or-inconsistent-state`, `#recovery-merge-conflict-on-integration-branch`. For each hit, determine the new target slug by reading the corresponding heading in `docs/overnight-operations.md` (slug is GitHub-style: lowercase, spaces→hyphens, drop punctuation). If a new heading has merged or split versus the old (e.g., Round Loop + Circuit Breakers under one H3), exercise judgment to route the old anchor to the most specific match.
 - **Verification**: (b) three conditions: (i) `grep -cE "^## Authentication|^## State Files|^### Module Reference|^### The Round Loop|^### Circuit Breakers|^### Signal Handling|^## The Execution Phase|^### Recovery: corrupt|^### Recovery: merge conflict|^### Conflict avoidance" docs/overnight.md` = 0; (ii) `grep -c "overnight-operations.md" docs/overnight.md` ≥ 1; (iii) `grep -rnE "overnight\.md#(authentication|the-execution-phase|the-round-loop|circuit-breakers|signal-handling|module-reference|state-files|conflict-avoidance|recovery-corrupt|recovery-merge)" README.md CLAUDE.md docs/ skills/ retros/ backlog/ lifecycle/ requirements/ claude/reference/ claude/rules/ .github/ bin/ 2>/dev/null | grep -v "overnight-operations" | wc -l` = 0 — pass if all three conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Trim `docs/pipeline.md` deduplication
 - **Files**: `docs/pipeline.md`
@@ -103,7 +103,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Keep the module reference table intact. The replaced content is orchestrator-perspective recovery flow; the retained content is pipeline-module internals. Source-of-truth rule per spec req 6.
 - **Verification**: (b) `grep -c "overnight-operations.md" docs/pipeline.md` ≥ 1 — pass if count ≥ 1. Manual check during task 15 confirms no behavioral claim about post-merge review or recovery appears in both pipeline.md and overnight-operations.md.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Add source-of-truth rule to `CLAUDE.md`
 - **Files**: `CLAUDE.md`
@@ -112,7 +112,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Insert under the existing `## Conventions` subsection near the bottom of `CLAUDE.md`. Keep it concise — one sentence naming the three docs, one sentence stating the rule, optional one-sentence rationale. Progressive-disclosure paragraph (req 13) can live here or in the operations doc preamble — task 7 chose one home; this task references it if that was CLAUDE.md.
 - **Verification**: (b) `grep -F "overnight-operations.md" CLAUDE.md` returns ≥1 match AND `grep -Fi "source of truth" CLAUDE.md` returns ≥1 match — pass if both hold. Interactive/session-dependent manual check: the two greps match lines within the same paragraph or bullet.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Add pytest guarding `_ALLOWED_TOOLS` drift (doc ↔ code)
 - **Files**: `tests/test_dispatch_allowed_tools.py` (new or equivalent name — author's choice if `tests/` has a different convention), `docs/overnight-operations.md` (read at test runtime to extract the documented snippet)
@@ -121,7 +121,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Existing precedent: `tests/test_events_contract.py` reads a prompt markdown file, regex-extracts constants, and asserts against a Python module. Follow that pattern. Extraction method: the documented list appears in a fenced Python list literal (e.g., ```` ```python\n_ALLOWED_TOOLS = ["Read", ...]\n``` ````) or a bulleted list under a specific H3. Author chooses format during task 4a and documents the extraction regex here. Test reads `docs/overnight-operations.md` via a module-level constant path, extracts the list, and compares to `from claude.pipeline.dispatch import _ALLOWED_TOOLS`. The test fails loudly with a diff if either side drifts. Include a `test -f` style precondition so a missing doc file produces a clear error rather than a silent pass.
 - **Verification**: (a) `just test` — pass if exit code = 0 and the new test is reported as passed in output. The test itself is reviewer-auditable: its source shows that the doc file is opened/parsed, not a test-file literal.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Add cross-links from adjacent docs to operations doc
 - **Files**: `docs/sdk.md`, `docs/dashboard.md`, `docs/agentic-layer.md`
@@ -130,7 +130,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Places to add: `docs/sdk.md` near the overnight-pointer (exists around line 263 in overnight.md currently); `docs/dashboard.md` in its dependencies/reference section; `docs/agentic-layer.md:~290` reference list (research.md flagged this location).
 - **Verification**: (b) `grep -c "overnight-operations.md" docs/sdk.md docs/dashboard.md docs/agentic-layer.md` ≥ 3 — pass if count ≥ 3.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Run full test suite
 - **Files**: (none modified)
@@ -139,7 +139,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: Test command per `lifecycle.config.md:test-command: just test`.
 - **Verification**: (a) `just test` — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14: Final verification sweep (per-requirement)
 - **Files**: (none modified — verification only)
@@ -161,7 +161,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
   - Req 12: manual disambiguation lede review
   - Req 13: two greps + ≥3-sentence rationale check (per task 7 verification)
 - **Verification**: (b) `lifecycle/document-overnight-pipeline-operations-and-architecture/learnings/verification.md` contains a result row for each of the 13 requirements — `grep -c '^| Req' lifecycle/document-overnight-pipeline-operations-and-architecture/learnings/verification.md` ≥ 13 — pass if count ≥ 13 and every row's result column contains "pass" or "manual-ok".
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 15: Manual review pass (reviewer-judged items)
 - **Files**: `lifecycle/document-overnight-pipeline-operations-and-architecture/learnings/verification.md` (appended)
@@ -170,7 +170,7 @@ Produce `docs/overnight-operations.md` in writing-order (outline → skeleton �
 - **Complexity**: simple
 - **Context**: This is the reviewer-judgment gate the spec accepts in lieu of automated coverage (Non-Requirement: "No automated gap-coverage checker"). Author approves own work before PR; PR reviewer performs the same pass independently.
 - **Verification**: Interactive/session-dependent: reviewer-judgment items cannot be machine-verified; verification.md rows for these items read "manual-ok" with a one-sentence observation.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

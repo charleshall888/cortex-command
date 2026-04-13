@@ -12,16 +12,14 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 61 | Sync-hook cleanup propagation mechanism | refined | medium | task | — | — | — |
 | 62 | Harden cortex-notify-remote.sh curl invocation against exfiltration | refined | medium | task | — | — | — |
-| 73 | Document overnight pipeline operations and architecture | refined | medium | task | — | — | ✓ |
 | 74 | Decompose batch_runner and enable daytime autonomous-worktree pipeline | backlog | medium | epic | — | — | — |
-| 78 | Build daytime pipeline module and CLI | backlog | medium | feature | 077 | 074 | — |
+| 78 | Build daytime pipeline module and CLI | backlog | medium | feature | 076 | 074 | — |
 | 79 | Integrate autonomous worktree option into lifecycle pre-flight | backlog | medium | feature | 078 | 074 | — |
 
 ## Refined
 
 - **61** Sync-hook cleanup propagation mechanism
 - **62** Harden cortex-notify-remote.sh curl invocation against exfiltration
-- **73** Document overnight pipeline operations and architecture
 
 ## Backlog
 

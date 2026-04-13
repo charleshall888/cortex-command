@@ -291,36 +291,6 @@
     "repo": null
   },
   {
-    "id": 73,
-    "title": "Document overnight pipeline operations and architecture",
-    "status": "refined",
-    "priority": "medium",
-    "type": "task",
-    "tags": [
-      "overnight-runner",
-      "docs",
-      "observability"
-    ],
-    "areas": [
-      "docs"
-    ],
-    "created": "2026-04-13",
-    "updated": "2026-04-13",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/document-overnight-pipeline-operations-and-architecture/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "8c6f0f95-2773-4e8a-adb3-4efff532a56b",
-    "lifecycle_slug": "document-overnight-pipeline-operations-and-architecture",
-    "session_id": "7100419d-06d9-4a1b-b64a-58319ab35478",
-    "lifecycle_phase": "review",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 74,
     "title": "Decompose batch_runner and enable daytime autonomous-worktree pipeline",
     "status": "backlog",
@@ -375,7 +345,7 @@
     "updated": "2026-04-13",
     "blocks": [],
     "blocked_by": [
-      "077"
+      "076"
     ],
     "parent": "074",
     "research": null,
