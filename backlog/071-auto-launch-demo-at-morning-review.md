@@ -37,7 +37,7 @@ Key constraints from research:
 A new field in the schema (`skills/lifecycle/assets/lifecycle.config.md`) that tells the agent how to run the project interactively. This is a hint for the agent's reasoning, not a trigger:
 
 ```yaml
-demo-command: godot --play res://main.tscn   # or: uv run fastapi run src/main.py
+demo-command: godot res://main.tscn   # or: uv run fastapi run src/main.py
 ```
 
 Absent = project has no interactive demo; agent skips validation setup entirely.
