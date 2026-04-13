@@ -109,6 +109,49 @@ The two directories are kept separate because their audiences differ: `pipeline/
 
 ### --tier concurrency (Concurrency Tuning)
 
+The `--tier` CLI flag on `batch_runner.py` selects a throttle profile. Accepted values: `max_5`, `max_100`, `max_200`. Default (flag omitted or unrecognized) is `max_100`.
+
+| Tier | Runners | Workers |
+|------|---------|---------|
+| `max_5` | 1 | 1 |
+| `max_100` | 2 | 2 |
+| `max_200` | 3 | 3 |
+
+Defaults live in `claude/overnight/throttle.py` (`load_throttle_config`); the tier value is wired through `BatchConfig.throttle_tier` and consumed by `ConcurrencyManager`. The limit is a hard ceiling — agents cannot raise it at runtime (orchestrator owns parallelism; agents never spawn peer agents).
+
+Adaptive downshift: `report_rate_limit()` prunes a 300-second sliding window; after 3 rate-limit events the effective concurrency drops by 1 (floor of 1). `report_success()` restores the shift after 10 consecutive successes. The escalation ladder itself (haiku → sonnet → opus) does not downgrade.
+
+Tune by matching your API plan's parallelism ceiling to the tier. Picking `max_200` on a plan only capable of `max_5` throughput starves into the adaptive downshift before the first round finishes.
+
+### Test Gate and integration_health tuning
+
+The [Test Gate and integration_health](#test-gate-and-integration_health) subsection under Architecture documents the flow; this subsection calls out the *tunable surfaces*:
+
+- **`--test-command`** (passed to `runner.sh` / `batch_runner.py`). This is the command run after every merge onto the integration branch — a non-zero exit invokes `python3 -m claude.overnight.integration_recovery`. Choosing a slow or flaky command multiplies every round's wall-clock cost; choosing a fast-but-shallow command narrows what the gate catches before repair dispatch.
+- **`integration_health` in `overnight-strategy.json`**. `healthy` is the implicit baseline; `degraded` is set by `runner.sh` when `integration_recovery` fails (alongside `INTEGRATION_DEGRADED=true` and a warning file prepended to the PR body). Downstream rounds consult this field in conflict-recovery decisions.
+- **Repair dispatch is unconditional** on gate failure — there is no suppression flag. If you need to skip repair, skip the gate (set `--test-command` to a no-op) rather than trying to gate the repair.
+
+### Model selection matrix (tier × criticality → role)
+
+This document owns tier × criticality → role *dispatch*; detailed per-role SDK model configuration lives in [sdk.md](sdk.md) — that file is the source of truth for model IDs, fallback chains, and `ClaudeAgentOptions` plumbing.
+
+| Tier | Criticality | Review required? | Repair role |
+|------|-------------|------------------|-------------|
+| `simple` | `low`, `medium` | No | Sonnet (first attempt) |
+| `simple` | `high`, `critical` | Yes | Sonnet → Opus on escalation |
+| `complex` | any | Yes | Sonnet → Opus on escalation |
+
+Review gating is implemented by `requires_review(tier, criticality)` in `claude/common.py`: review runs when `tier == "complex" or criticality in ("high", "critical")`. The escalation ladder is one-directional (haiku → sonnet → opus, no downgrade); see [sdk.md](sdk.md) for the concrete model IDs wired into each role.
+
+### Repair caps
+
+The runner has **two distinct repair caps** with different numbers. They are intentionally *not unified* — the codepaths, artifacts, and recovery semantics differ enough that a single number would hide the divergence.
+
+- **Merge-conflict repair: single Sonnet→Opus escalation.** One attempt at Sonnet, then one escalation to Opus, then give up and defer. Rationale: merge-conflict repair operates on a git-index snapshot; a second Sonnet attempt on the same snapshot is unlikely to succeed where the first failed, so the cap spends its second slot climbing the model ladder rather than retrying at the same tier. Codepath: `claude/pipeline/conflict.py` and `claude/pipeline/merge_recovery.py`.
+- **Test-failure repair: max 2 attempts.** Two full repair cycles for the integration test gate. Rationale: test failures often expose a different error on the second attempt (the first fix unblocks the next assertion), so a retry at the same tier has meaningful information gain that a merge-conflict retry does not. Codepath: `claude/overnight/integration_recovery.py`.
+
+Do not describe these as "the repair cap" in prose — collapsing them to one number misleads readers at 2am when observed behavior does not match.
+
 ### lifecycle.config.md fields and absence behavior
 
 ### overnight-strategy.json contents and mutators
