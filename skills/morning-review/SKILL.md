@@ -72,9 +72,10 @@ Read the morning report located in Step 1. Extract and display the Executive Sum
 Work through the report sections in sequence. Delegate the per-section interaction protocol to `${CLAUDE_SKILL_DIR}/references/walkthrough.md`:
 
 1. **Completed Features** — display all features at once (grouped by round, enriched with overnight metadata), ask a single batch verification question
-2. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `lifecycle/{feature}/events.log`
-3. **Deferred Questions** — display each question and collect a user answer; write the answer back to the corresponding `deferred/` file
-4. **Failed Features** — display error summary and suggested next step; offer to create a backlog investigation item (should-have)
+2. **Demo Setup** — if `demo-command` is configured and the session is local, offer to spin up a demo worktree from the overnight branch.
+3. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `lifecycle/{feature}/events.log`
+4. **Deferred Questions** — display each question and collect a user answer; write the answer back to the corresponding `deferred/` file
+5. **Failed Features** — display error summary and suggested next step; offer to create a backlog investigation item (should-have)
 
 Skip any section that has no entries — do not display a placeholder or empty heading.
 
