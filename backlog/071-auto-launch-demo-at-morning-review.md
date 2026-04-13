@@ -4,7 +4,7 @@ id: "071"
 uuid: 4f2e8b3c-1a9d-4e7f-bc42-8d5e9f2a0c1b
 title: "Agent-driven demoability assessment and validation setup at morning review"
 type: feature
-status: refined
+status: in_progress
 priority: medium
 tags: [morning-review, overnight-runner, lifecycle-config, dx]
 areas: [skills]
@@ -12,9 +12,13 @@ created: 2026-04-11
 updated: 2026-04-11
 blocked-by: []
 blocks: []
-complexity: simple
-criticality: medium
+complexity: complex
+criticality: high
 discovery_source: research/morning-review-demo-setup/research.md
+session_id: ea67f33a-9c0b-4edd-9e67-67172c99e912
+lifecycle_phase: plan
+lifecycle_slug: agent-driven-demoability-assessment-and-validation-setup-at-morning-review
+spec: lifecycle/agent-driven-demoability-assessment-and-validation-setup-at-morning-review/spec.md
 ---
 
 # Agent-driven demoability assessment and validation setup at morning review

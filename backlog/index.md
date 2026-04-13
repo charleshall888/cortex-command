@@ -9,13 +9,12 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 61 | Sync-hook cleanup propagation mechanism | refined | medium | task | — | — | — |
 | 62 | Harden cortex-notify-remote.sh curl invocation against exfiltration | refined | medium | task | — | — | — |
-| 71 | Agent-driven demoability assessment and validation setup at morning review | refined | medium | feature | — | — | — |
+| 71 | Agent-driven demoability assessment and validation setup at morning review | in_progress | medium | feature | — | — | ✓ |
 
 ## Refined
 
 - **61** Sync-hook cleanup propagation mechanism
 - **62** Harden cortex-notify-remote.sh curl invocation against exfiltration
-- **71** Agent-driven demoability assessment and validation setup at morning review
 
 ## Backlog
 
@@ -27,3 +26,4 @@
 
 ## In-Progress
 
+- **71** Agent-driven demoability assessment and validation setup at morning review (in_progress)
