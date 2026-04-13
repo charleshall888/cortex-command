@@ -160,11 +160,145 @@ Do not describe these as "the repair cap" in prose — collapsing them to one nu
 
 ## Observability
 
-### Log Disambiguation (events.log, pipeline-events.log, agent-activity.jsonl)
+### State File Locations
+
+Every overnight session persists state as files under `lifecycle/`. The runner resolves a per-session directory (`lifecycle/sessions/{id}/`) and symlinks the canonical top-level paths into it so tools that hard-code `lifecycle/overnight-state.json` keep working mid-session. The table below names the canonical path (what readers use), the on-disk writer, and what the file represents.
+
+| Path | Writer | Role |
+|------|--------|------|
+| `lifecycle/overnight-state.json` | `claude/overnight/state.py` (`save_state` — atomic tempfile + `os.replace`) | Session state: phase, per-feature status, round counter. Source of truth for "is this session still running." |
+| `lifecycle/overnight-events.log` | `claude/overnight/events.py` (`log_event`) | Append-only JSONL event stream at the session level (round boundaries, feature lifecycle, circuit breakers). |
+| `lifecycle/sessions/{id}/pipeline-events.log` | `claude/pipeline/events.py` via `batch_runner` | Append-only JSONL of per-task dispatch/merge/test events inside each feature. |
+| `lifecycle/sessions/{id}/overnight-strategy.json` | `claude/overnight/strategy.py` (`save_strategy` — atomic tempfile + `os.replace`) | Cross-round strategy: `hot_files`, `integration_health`, `recovery_log_summary`, `round_history_notes`. |
+| `lifecycle/escalations.jsonl` | `claude/overnight/deferral.py` (`write_escalation`) | Append-only JSONL of worker escalations, orchestrator resolutions, and cycle-break promotions. |
+| `lifecycle/{feature}/events.log` | `claude/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/lifecycle resume` and `/morning-review`. |
+| `lifecycle/{feature}/agent-activity.jsonl` | `claude/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
+| `lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
+| `lifecycle/morning-report.md` | `claude/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). |
+| `lifecycle/.runner.lock` | `runner.sh` | PID lock preventing concurrent overnight sessions. See [Runner Lock](#runner-lock-runner-lock). |
+| `deferred/*.md` | `claude/overnight/deferral.py` (`write_deferral`) | Blocking human-decision questions filed during the session. |
+
+State file reads are not lock-protected by design — forward-only phase transitions and atomic replace writes make torn reads impossible. A reader either sees the pre-write state or the post-write state, never a partial record.
 
 ### Escalation System (escalations.jsonl)
 
+`lifecycle/escalations.jsonl` is the worker-to-orchestrator side channel. Writer is `write_escalation()` in `claude/overnight/deferral.py` (re-exported from `claude/overnight/orchestrator_io.py`); readers include the orchestrator prompt (Steps 0a–0d) and `_next_escalation_n()` in the same module. Records are one JSON object per line with a `type` discriminator.
+
+**Worker-raised escalation** (`"type": "escalation"`), appended by `write_escalation()`:
+
+```json
+{
+  "type": "escalation",
+  "escalation_id": "{feature}-{round}-q{N}",
+  "feature": "my-feature",
+  "round": 3,
+  "question": "Should the API return 404 or 204 on empty result?",
+  "context": "Worker was implementing Task 4 of my-feature and hit an undocumented edge case in the spec.",
+  "ts": "2026-04-12T02:17:44Z"
+}
+```
+
+**Orchestrator resolution** (`"type": "resolution"`), appended inline from `orchestrator-round.md` Step 0d when the orchestrator answers a prior escalation and writes the feedback into `lifecycle/{feature}/learnings/orchestrator-note.md`:
+
+```json
+{
+  "type": "resolution",
+  "escalation_id": "{feature}-{round}-q{N}",
+  "feature": "my-feature",
+  "round": 3,
+  "resolution": "Return 204 — matches the existing convention in endpoints/foo.py.",
+  "ts": "2026-04-12T02:18:02Z"
+}
+```
+
+**Cycle-break promotion** (`"type": "promoted"`), appended when the orchestrator detects a repeat escalation and promotes the question to a blocking deferral — see [Cycle-breaking for repeated escalations](#cycle-breaking-for-repeated-escalations).
+
+```json
+{
+  "type": "promoted",
+  "escalation_id": "{feature}-{round}-q{N}",
+  "feature": "my-feature",
+  "round": 4,
+  "reason": "Worker re-asked after resolution at round 3; promoting to deferral.",
+  "ts": "2026-04-12T02:45:11Z"
+}
+```
+
+`escalation_id` format is `{feature}-{round}-q{N}`. N comes from `_next_escalation_n()`, which counts existing `"escalation"` entries for the same feature+round; the TOCTOU race is acknowledged in code and is safe under the per-feature single-coroutine dispatch invariant.
+
+### Strategy File (overnight-strategy.json) schema
+
+The `OvernightStrategy` dataclass in `claude/overnight/strategy.py` serializes to `lifecycle/sessions/{id}/overnight-strategy.json` via atomic tempfile + `os.replace`. Field semantics and mutators are covered under [overnight-strategy.json contents and mutators](#overnight-strategyjson-contents-and-mutators); the on-disk shape is:
+
+```json
+{
+  "hot_files": ["src/app.py", "src/router.py"],
+  "integration_health": "healthy",
+  "recovery_log_summary": "",
+  "round_history_notes": [
+    "Round 1: merged feature-a clean.",
+    "Round 2: feature-b hit a conflict in src/app.py; trivial resolve succeeded."
+  ]
+}
+```
+
+`load_strategy()` tolerates missing files, invalid JSON, and unexpected shapes by returning a default instance — safe to grep or `cat` at any time without crashing the reader.
+
 ### Morning Report Generation (report.py)
+
+`claude/overnight/report.py` (`generate_and_write_report`) is invoked by `runner.sh` after the orchestration loop completes. It collects state + events + deferrals, renders the Markdown report, and atomically writes `lifecycle/morning-report.md`.
+
+**Inputs**:
+
+- `lifecycle/overnight-state.json` — phase, per-feature status, round counter (`load_state`).
+- `lifecycle/overnight-events.log` — event stream (`read_events`).
+- `deferred/*.md` — blocking questions filed during the session.
+- Per-feature artifacts under `lifecycle/{feature}/`: `events.log`, `learnings/orchestrator-note.md`, `review.md`, `requirements-drift.md`, recovery log entries.
+- Per-session results directory for tool-failure mining (`collect_tool_failures`).
+
+**Assembly**: `generate_report()` concatenates `render_executive_summary`, `render_completed_features`, `render_pending_drift`, `render_deferred_questions`, `render_failed_features`, `render_new_backlog_items`, `render_action_checklist`, `render_run_statistics`, and — when any exist — `render_tool_failures`. Each renderer is a pure function of `ReportData`.
+
+**Output**: `lifecycle/morning-report.md`. `write_report()` uses tempfile + `os.replace()` so the report is never observed half-written. `notify()` then fires `~/.claude/notify.sh` so the operator knows overnight is done.
+
+The morning-report commit is the only runner commit that stays on local `main`; all other artifact commits travel on the integration branch.
+
+### agent-activity.jsonl
+
+`lifecycle/{feature}/agent-activity.jsonl` is a per-feature append-only breadcrumb trail of a dispatched agent's tool interactions during a single run. Writer is `_write_activity_event()` in `claude/pipeline/dispatch.py`; writes are fire-and-forget and swallow exceptions — activity logging never blocks or interrupts the agent. Each line is one JSON object discriminated by `event`.
+
+**Tool call** (as the agent requests a tool):
+
+```json
+{"event": "tool_call", "tool": "Edit", "input_summary": "src/router.py"}
+```
+
+**Tool result** (after the tool returns):
+
+```json
+{"event": "tool_result", "tool": "Edit", "success": true}
+```
+
+**Turn complete** (after the model's response completes):
+
+```json
+{"event": "turn_complete", "turn": 12, "cost_usd": 0.0341}
+```
+
+`input_summary` is a best-effort one-line preview from `_extract_input_summary()` — typically a path for file tools or a truncated command for `Bash`. Grep this log when you need to reconstruct what a worker actually did in a feature, as opposed to what the orchestrator thought it did.
+
+### Log Disambiguation
+
+Overnight writes several JSONL logs at different scopes. Pick the one that matches your symptom:
+
+| Log file | Grep this when |
+|----------|----------------|
+| `lifecycle/overnight-events.log` | Investigating round boundaries, session-level circuit breakers, or feature-start/feature-complete markers — anything that needs a chronological view across all features in one session. |
+| `lifecycle/sessions/{id}/pipeline-events.log` | Investigating dispatch/merge/test outcomes for individual tasks within a feature (`dispatch_start`, `dispatch_complete`, `merge_start`, `merge_success`, `task_idempotency_skip`). |
+| `lifecycle/{feature}/events.log` | Investigating phase transitions, review verdicts, and completion for one feature — what `/lifecycle resume` and `/morning-review` read. |
+| `lifecycle/{feature}/agent-activity.jsonl` | Investigating what tools an agent actually invoked inside a dispatch and whether they succeeded — the "what did the worker really do" log. |
+| `lifecycle/escalations.jsonl` | Investigating which features blocked on questions, how the orchestrator answered, and which were cycle-break-promoted to deferrals. |
+
+All five are append-only JSONL and safe to `tail -f` live. The first four are written by four different modules — session events by `claude/overnight/events.py`, pipeline events by `claude/pipeline/events.py`, per-feature lifecycle by `claude/pipeline/batch_runner.py`, and agent activity by `claude/pipeline/dispatch.py` — so ownership drift is contained. A symptom that spans "did the orchestrator try to merge?" plus "what did the merge agent do?" requires grepping both `pipeline-events.log` and the feature's `agent-activity.jsonl`.
 
 ### Dashboard Polling and dashboard state
 
