@@ -57,7 +57,7 @@ Single-file skill edit plus description change plus two doc updates. Task 1 adds
   - `grep -c "Don't negotiate or defend your position" skills/devils-advocate/SKILL.md` ≥ 1
   - `grep -c 'Not a blocker' skills/devils-advocate/SKILL.md` ≥ 1
   - "What This Isn't" paragraph verbatim check: `awk '/^## What This Isn't/,/^##/' skills/devils-advocate/SKILL.md | grep -c 'Not a blocker. The user might hear the case against and proceed anyway'` ≥ 1 — anchors the opening-sentence glue text, not just isolated phrases. Interactive/session-dependent: the full paragraph can be diff'd against the pre-change version at review time; this grep catches glue-text rewrites that the individual phrase greps miss.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Update frontmatter description in skills/devils-advocate/SKILL.md
 
@@ -75,7 +75,7 @@ Single-file skill edit plus description change plus two doc updates. Task 1 adds
   - `grep 'description:' skills/devils-advocate/SKILL.md` returns a line containing at least one of: "apply", "fix", "dispositions", "clear-cut"
   - Interactive/session-dependent: confirm no phrase appears verbatim in both `grep 'description:' skills/devils-advocate/SKILL.md` and `grep 'description:' skills/critical-review/SKILL.md` — requires human comparison because a phrase-level diff has no single-command form.
   - `grep -c '"challenge this"' skills/devils-advocate/SKILL.md` ≥ 1, `grep -c '"poke holes"' skills/devils-advocate/SKILL.md` ≥ 1, `grep -c "\"devil's advocate\"" skills/devils-advocate/SKILL.md` ≥ 1, `grep -c '"argue against this"' skills/devils-advocate/SKILL.md` ≥ 1, `grep -c '"what could go wrong"' skills/devils-advocate/SKILL.md` ≥ 1, `grep -c '"stress-test this"' skills/devils-advocate/SKILL.md` ≥ 1 — all six trigger phrases preserved
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Update /devils-advocate entry in docs/skills-reference.md
 
@@ -89,7 +89,7 @@ Single-file skill edit plus description change plus two doc updates. Task 1 adds
   - Do NOT change the skill's other listed behaviors — only add the note.
 - **Verification**:
   - Entry-scope grep using awk boundaries: `awk '/^[^#]*\/devils-advocate/,/^[^#]*\/[a-z]/' docs/skills-reference.md | grep -cE 'Apply|Dismiss|Ask|dispositions|apply loop|clear-cut' ` ≥ 1. Awk extracts the block starting at the /devils-advocate entry and ending at the next skill entry; the grep then confirms the behavioral-change keyword appears within that bounded scope. The naive whole-file grep passes trivially because "Ask" likely appears in other skill entries; this bounded form catches the actual change. Interactive/session-dependent: the awk range pattern depends on the file's structure — verify the boundaries match the entry layout before relying on the check alone.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Update /devils-advocate entry in docs/agentic-layer.md
 
@@ -102,7 +102,7 @@ Single-file skill edit plus description change plus two doc updates. Task 1 adds
   - If the row has a "Produces" column showing "Coherent argument (conversational)", update to reflect the new lifecycle-mode behavior — e.g., "Coherent argument; applies clear-cut fixes + dispositions summary in lifecycle mode".
 - **Verification**:
   - Row-scope grep: run `grep -n '/devils-advocate' docs/agentic-layer.md` to locate the row (should be line ~43). Then confirm the update is on THAT row: `sed -n '${N}p' docs/agentic-layer.md | grep -cE 'Apply|Dismiss|Ask|dispositions|apply loop|clear-cut'` ≥ 1 where `${N}` is the line number found in the first command. Interactive/session-dependent: the row number may shift; confirm the grep targets the actual `/devils-advocate` table row and not an adjacent row or header.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
