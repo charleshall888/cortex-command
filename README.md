@@ -133,7 +133,7 @@ The overnight runner reads this file automatically when no `apiKeyHelper` is con
 
 ### Using Both
 
-Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth token at `~/.claude/personal-oauth-token`. The runner uses `apiKeyHelper` when present, falls back to the OAuth token when not. See [`docs/overnight.md`](docs/overnight.md#authentication) for the full precedence chain.
+Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth token at `~/.claude/personal-oauth-token`. The runner uses `apiKeyHelper` when present, falls back to the OAuth token when not. See [`docs/overnight-operations.md`](docs/overnight-operations.md#auth-resolution-apikeyhelper-and-env-var-fallback-order) for the full precedence chain.
 
 > **Note:** OAuth tokens work with `claude -p` and the Agent SDK. Standalone utilities (`count-tokens`, `audit-doc`) call the Anthropic API directly and require an API key.
 

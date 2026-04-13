@@ -170,7 +170,7 @@ If you work on both personal and work repos, configure both:
 - Set `apiKeyHelper` in the work repo's `.claude/settings.local.json`
 - Store the OAuth token at `~/.claude/personal-oauth-token`
 
-The runner uses `apiKeyHelper` when present (work), and falls back to the OAuth token file when not (personal). See [docs/overnight.md](overnight.md#authentication) for the full precedence chain.
+The runner uses `apiKeyHelper` when present (work), and falls back to the OAuth token file when not (personal). See [docs/overnight-operations.md](overnight-operations.md#auth-resolution-apikeyhelper-and-env-var-fallback-order) for the full precedence chain.
 
 ---
 
