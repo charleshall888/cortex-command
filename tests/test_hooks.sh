@@ -179,25 +179,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# cortex-setup-gpg-sandbox-home.sh tests
-# ---------------------------------------------------------------------------
-
-GPG_HOOK="$REPO_ROOT/claude/hooks/cortex-setup-gpg-sandbox-home.sh"
-GPG_FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/setup-gpg-sandbox-home"
-
-# --- Test: non-sandbox-env — early exit when TMPDIR does not match claude pattern ---
-
-output=$(TMPDIR="/tmp/non-sandbox-$$" bash "$GPG_HOOK" \
-  < "$GPG_FIXTURE_DIR/non-sandbox-env.json" 2>/dev/null)
-exit_code=$?
-
-if [[ $exit_code -eq 0 ]]; then
-  pass "setup-gpg-sandbox-home/non-sandbox-exit-0"
-else
-  fail "setup-gpg-sandbox-home/non-sandbox-exit-0" "expected exit 0, got $exit_code"
-fi
-
-# ---------------------------------------------------------------------------
 # cortex-worktree-create.sh tests
 # ---------------------------------------------------------------------------
 
@@ -209,8 +190,8 @@ mkdir -p "$WT_TMPDIR"
 # --- Test: valid-input — creates worktree, prints path to stdout ---
 
 # Set up a minimal git repo with main branch so `git worktree add ... main` works.
-# Pass GNUPGHOME and user config inline — this is a test fixture repo, not a
-# user commit, so bypassing the global signing config is intentional here.
+# Pass commit.gpgsign=false and user config inline — this is a test fixture repo,
+# not a user commit, so bypassing the global signing config is intentional here.
 (cd "$WT_TMPDIR" \
   && git init >/dev/null 2>&1 \
   && git symbolic-ref HEAD refs/heads/main >/dev/null 2>&1 \

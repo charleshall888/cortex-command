@@ -88,7 +88,6 @@ Actual files read from `~/` (not within the repo):
 - `~/.claude/hooks/*`, `~/.claude/skills/*/SKILL.md`, `~/.claude/reference/*` (all symlinked from repo)
 - `~/.local/bin/*` (deployed CLI tools)
 - `~/.config/claude-code-secrets/github-pat` (GitHub auth fallback)
-- `~/.local/share/gnupg/S.gpg-agent.sandbox` (GPG socket)
 
 Note: `Read(~/**)` is NOT needed for any of these — they are either symlinks to the repo, or specific paths that could be individually allowed.
 

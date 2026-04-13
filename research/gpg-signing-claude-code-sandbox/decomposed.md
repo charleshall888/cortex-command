@@ -1,5 +1,7 @@
 # Decomposition: gpg-signing-claude-code-sandbox
 
+> **Correction (2026-04-13):** #081 was closed without implementing the decomposition below. The premise was wrong — `sandbox.excludedCommands` in `claude/settings.json` already excluded `git:*` from Seatbelt, so `git commit -S` always reached `~/.gnupg/` via the standard socket. The entire signing scaffolding was dead code and got deleted instead. See `research.md` top-of-file correction note for full context. The suggestions below describe the abandoned fix approach and should not be acted on.
+
 ## Single Ticket (no epic)
 
 | ID | Title | Priority | Size | Depends On |
