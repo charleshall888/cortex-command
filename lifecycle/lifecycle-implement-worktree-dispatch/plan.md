@@ -14,7 +14,7 @@ Modify two skill reference files (`skills/lifecycle/SKILL.md`, `skills/lifecycle
 - **Complexity**: simple
 - **Context**: Read the existing `.gitignore` first — it already has `lifecycle/`-related entries (e.g., for `.session`), so match the existing comment/grouping style. Use `lifecycle/*/.dispatching` (single-star) rather than `**/.dispatching` (too broad).
 - **Verification**: (a) `grep -c 'lifecycle/.*/\.dispatching' /Users/charlie.hall/Workspaces/cortex-command/.gitignore` returns ≥ 1 — pass if count ≥ 1. AND (b) `cd /Users/charlie.hall/Workspaces/cortex-command && git check-ignore lifecycle/nonexistent-feature/.dispatching` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Update implement.md — add §1 third option AND §1a Worktree Dispatch section (single atomic edit)
 
@@ -66,7 +66,7 @@ Modify two skill reference files (`skills/lifecycle/SKILL.md`, `skills/lifecycle
     - `grep -c "cycle 1 CHANGES_REQUESTED" /tmp/claude/wt-dispatch-section.md` ≥ 1
     - `grep -c '"outcome"' /tmp/claude/wt-dispatch-section.md` ≥ 1
     - The load-bearing literal strings appear inside the section, not only in prose outside it. This pass passes if every extracted-block grep matches.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Update SKILL.md Step 2 with marker check, worktree-aware phase detection, and branch-based skip conditions
 
@@ -86,7 +86,7 @@ Modify two skill reference files (`skills/lifecycle/SKILL.md`, `skills/lifecycle
   - `grep -cn "^## Step 2"` = 1 (sanity: Step 2 heading still intact)
   - Visual ordering: the marker check appears before the artifact-based phase detection block (the reverse-order `if no lifecycle.*directory exists` prose). Verifiable by running `grep -n "\.dispatching" SKILL.md` vs `grep -n "if no lifecycle" SKILL.md` — the former's line number must be less than the latter's.
   - Skip-condition placement: the `^worktree/agent-` skip appears in both "Register session" and "Backlog Write-Back" sub-sections (verifiable by extracting each sub-section and grepping within).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Run acceptance verification against all 14 requirements
 
@@ -96,7 +96,7 @@ Modify two skill reference files (`skills/lifecycle/SKILL.md`, `skills/lifecycle
 - **Complexity**: simple
 - **Context**: The exact grep commands are listed verbatim in each requirement's Acceptance block in `lifecycle/lifecycle-implement-worktree-dispatch/spec.md` (R1 through R14). For R10's diff check, run `cd /Users/charlie.hall/Workspaces/cortex-command && git diff HEAD -- skills/lifecycle/references/complete.md` — expected output is empty. For R13's check, run `cd /Users/charlie.hall/Workspaces/cortex-command && git check-ignore lifecycle/test-feature/.dispatching` — expected exit 0. For the R14 ordering check, use `grep -n` to locate the marker-check and artifact-based phase detection blocks in SKILL.md and confirm the former's line number is less. For Task 2's scope-checked pass, extract §1a using `awk '/^### 1a\. Worktree Dispatch/,/^### [^1]/' skills/lifecycle/references/implement.md` and run the Pass-2 greps from Task 2's verification block against the extracted content. Report format: one row per requirement: `Rn: PASS|FAIL — <actual grep output if FAIL>`. Pass criterion: all 14 rows report PASS. Exit with FAIL status if any row fails and do NOT mark this task's plan checkbox `[x]` until all pass.
 - **Verification**: Report has explicit PASS/FAIL per requirement. Pass if all 14 rows report PASS. Verification output is written to stdout only — do not create a report file in the repo.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
