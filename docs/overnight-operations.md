@@ -6,6 +6,8 @@
 
 > **Jump to:** [Architecture](#architecture) | [Code Layout](#code-layout) | [Tuning](#tuning) | [Observability](#observability) | [Security and Trust Boundaries](#security-and-trust-boundaries) | [Internal APIs](#internal-apis)
 
+This doc applies the **progressive disclosure** model from `claude/reference/claude-skills.md` to human-facing docs rather than to agent skill loading. `docs/overnight.md` stays compact for a reader whose access pattern is "how do I run overnight tonight?" — landing via the README, a peer recommendation, or a getting-started cross-link — and they get Quick-Start plus a one-paragraph pointer here. `docs/overnight-operations.md` is the single source of truth for mechanics, debugging, and recovery for a reader whose access pattern is "something broke at 2am" — landing via a stack trace, a retro back-reference, or a deep cross-link from `pipeline.md` — and they find the complete picture in one file rather than bouncing between two. The split optimizes which doc each reader hits first: new operators hit `overnight.md`; debuggers hit this file. See `CLAUDE.md` under `## Conventions` for the source-of-truth rule that partitions overnight mechanics, pipeline internals, and SDK mechanics across docs.
+
 ---
 
 ## Architecture
@@ -129,18 +131,50 @@ The two directories are kept separate because their audiences differ: `pipeline/
 
 ## Security and Trust Boundaries
 
-### --dangerously-skip-permissions and sandbox surface
+Overnight runs autonomously against a live working tree on a developer workstation. The trust boundaries below are enumerated once here; safety notes are not scattered elsewhere in this doc.
 
-### Tool bound at the SDK level (_ALLOWED_TOOLS)
-
-### Dashboard binds 0.0.0.0, unauthenticated
-
-### Keychain prompt as session-blocking failure mode
-
-### Auth Resolution (apiKeyHelper and env-var fallback order)
+- **`--dangerously-skip-permissions`.** Overnight launches `claude` subprocesses with this flag, which disables the permission-prompt layer entirely. Threat model: any tool the subprocess is allowed to invoke runs without confirmation against the local filesystem and shell — sandbox configuration (the filesystem/network allowlist applied to the subprocess) becomes the critical security surface for autonomous execution.
+- **`_ALLOWED_TOOLS` — SDK-level tool bound.** Task agents dispatched by `claude/pipeline/dispatch.py` are bound to `_ALLOWED_TOOLS` at the SDK layer, orthogonal to `--dangerously-skip-permissions`. Threat model: a compromised or confused task agent cannot reach `WebFetch`, `WebSearch`, `Agent`, `Task`, or `AskUserQuestion` — they are not loaded, not merely denied — so it cannot spawn peer agents or exfiltrate via the web even under skipped permissions.
+- **Dashboard binds `0.0.0.0`, unauthenticated, by design.** The dashboard is read-only and listens on all interfaces without auth. Threat model: anyone on the same layer-2 broadcast domain can read session state, feature names, and log excerpts; do not expose to the public internet and do not treat "local network" as equivalent to "home network" — hotel Wi-Fi, coworking Wi-Fi, and shared office VLANs are all "local" to the dashboard and are not trusted peers.
+- **macOS keychain prompt as a session-blocking failure mode.** If authentication resolution (see [Internal APIs — Auth Resolution](#auth-resolution-apikeyhelper-and-env-var-fallback-order)) falls through to keychain-backed credentials, the first subprocess spawn may trigger a macOS keychain-access dialog. Threat model: the "runs while you sleep" premise breaks silently — the prompt blocks subprocess spawn until acknowledged, the round stalls, and no notification fires because the failure is pre-notification. Resolve by setting `ANTHROPIC_API_KEY` or configuring `apiKeyHelper` before the session starts.
+- **"Local network" ≠ "home network".** This is a corollary of the dashboard boundary but is called out as its own item because the framing trap bites at 2am. Threat model: a reader who conflates the two will expose session state to whatever shared network they happen to be on; the dashboard's design assumes a trusted L2 peer set, which is only true on a network the operator controls end-to-end.
 
 ---
 
 ## Internal APIs
 
 ### orchestrator_io re-export surface
+
+`claude/overnight/orchestrator_io.py` is the sanctioned import boundary for orchestrator-callable I/O primitives. The module itself holds no logic — it re-exports a small, deliberately curated set of functions from `claude.overnight.state` and `claude.overnight.deferral` so the orchestrator prompt's Step 0 file-I/O calls can be imported from one module rather than reaching into internals. See `__all__` in `claude/overnight/orchestrator_io.py` for the sanctioned surface; do not enumerate it here because the list is expected to grow and a doc-side enumeration would rot on the next addition.
+
+**Files**: `claude/overnight/orchestrator_io.py` (source of truth — `__all__`), consumed by `claude/overnight/prompts/orchestrator-round.md`.
+
+Convention: any new orchestrator-callable I/O primitive is added here rather than imported directly from `claude.overnight.state` or `claude.overnight.deferral` by the orchestrator. This keeps the orchestrator's blast radius for internal refactors bounded to one file.
+
+### lifecycle.config.md consumers and absence behavior
+
+`lifecycle.config.md` is a per-project config file (template at `skills/lifecycle/assets/lifecycle.config.md`). There is no centralized Python loader — each consumer reads it directly — so the contract is "template is source of truth for fields; each consumer decides its own absence behavior." Fields include `type`, `test-command`, `demo-command` / `demo-commands`, `default-tier`, `default-criticality`, `skip-specify`, `skip-review`, and `commit-artifacts`.
+
+**Files**: `skills/lifecycle/assets/lifecycle.config.md` (template — source of truth for the field list), plus the consumers in `skills/lifecycle/`, `skills/critical-review/`, and `skills/morning-review/`.
+
+Absence behavior per consumer (what happens when the project has no `lifecycle.config.md`):
+
+- **morning-review**: skips Section 2a (the demo-commands walkthrough) and continues the rest of the review.
+- **lifecycle complete**: skips the test step with a note that no `test-command` was configured.
+- **critical-review**: omits the `## Project Context` section of the generated review.
+- **lifecycle specify/plan**: reads optional defaults (`default-tier`, `default-criticality`, `skip-specify`, `skip-review`) and falls back to skill-level defaults when absent.
+
+Because field drift across consumers is possible, the template is the one place to check before assuming a field exists; do not enumerate fields in more than one doc.
+
+### Auth Resolution (apiKeyHelper and env-var fallback order)
+
+`runner.sh` resolves Anthropic authentication in a strict 4-step fallback order before spawning any subprocess. Each step short-circuits on success.
+
+1. **`ANTHROPIC_API_KEY` already in the environment** — use it as-is and stop. This is the common CI/dev path.
+2. **`apiKeyHelper` configured in `~/.claude/settings.json` or `~/.claude/settings.local.json`** — execute the helper command and export its stdout as `ANTHROPIC_API_KEY`. This is the recommended path for machines that keep the key out of shell profiles.
+3. **No helper AND no `CLAUDE_CODE_OAUTH_TOKEN`** — try `~/.claude/personal-oauth-token`; if non-empty, export its contents as `CLAUDE_CODE_OAUTH_TOKEN`. This covers OAuth-style authentication for `claude -p` / SDK usage.
+4. **Fall through to keychain-backed auth** — print a warning and proceed; the first subprocess spawn may block on a macOS keychain-access prompt (see [Security and Trust Boundaries](#security-and-trust-boundaries)).
+
+**Files**: `claude/overnight/runner.sh` (the fallback logic), `claude/pipeline/dispatch.py` (re-exports both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` into SDK subprocesses).
+
+Propagation: `dispatch.py` forwards both variables into SDK subprocesses. Note the asymmetry — `CLAUDE_CODE_OAUTH_TOKEN` works only for `claude -p` and the SDK; standalone tools (including most scripts invoked from within a task) still need `ANTHROPIC_API_KEY`. If a worker subprocess reports auth errors but the orchestrator is fine, inspect which variable is reaching it.
