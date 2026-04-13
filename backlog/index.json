@@ -110,6 +110,41 @@
     "repo": null
   },
   {
+    "id": 74,
+    "title": "Decompose batch_runner and enable daytime autonomous-worktree pipeline",
+    "status": "backlog",
+    "priority": "high",
+    "type": "epic",
+    "tags": [
+      "lifecycle",
+      "overnight-runner",
+      "worktrees",
+      "multi-agent",
+      "refactor",
+      "modularization"
+    ],
+    "areas": [
+      "lifecycle",
+      "skills",
+      "overnight-runner"
+    ],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
+    "plan": null,
+    "uuid": "7ed502f8-399b-40c1-8cde-603c9cbf82fd",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 75,
     "title": "Extract feature_executor module from batch_runner",
     "status": "backlog",
@@ -126,7 +161,9 @@
     "created": "2026-04-13",
     "updated": "2026-04-13",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "080"
+    ],
     "parent": "074",
     "research": null,
     "spec": null,
@@ -197,6 +234,37 @@
     "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
     "plan": null,
     "uuid": "077bf623-337c-476a-88c9-30a625fa86a3",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 80,
+    "title": "Add characterization tests for batch_runner pre-extraction",
+    "status": "backlog",
+    "priority": "high",
+    "type": "chore",
+    "tags": [
+      "overnight-runner",
+      "refactor",
+      "modularization",
+      "tests"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "074",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
+    "plan": null,
+    "uuid": "efce9b8c-daca-4f01-b15c-929825d64a91",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -284,41 +352,6 @@
     "discovery_source": "Spec #060 Non-Requirements — notify-hook curl channel flagged for follow-up",
     "plan": null,
     "uuid": "abd4c43c-02dc-4f12-86e5-dc80b56cf02e",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 74,
-    "title": "Decompose batch_runner and enable daytime autonomous-worktree pipeline",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "epic",
-    "tags": [
-      "lifecycle",
-      "overnight-runner",
-      "worktrees",
-      "multi-agent",
-      "refactor",
-      "modularization"
-    ],
-    "areas": [
-      "lifecycle",
-      "skills",
-      "overnight-runner"
-    ],
-    "created": "2026-04-13",
-    "updated": "2026-04-13",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
-    "plan": null,
-    "uuid": "7ed502f8-399b-40c1-8cde-603c9cbf82fd",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,

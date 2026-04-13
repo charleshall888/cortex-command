@@ -42,6 +42,21 @@ tests for `orchestrator.run_batch`.
   `asyncio.run(run_batch(config))`
 - `build_parser()` and `_run()` preserved for CLI contract
 
+## Parallelism note
+
+#077 does not block #078. The daytime pipeline (#078) consumes
+`feature_executor.execute_feature` and `outcome_router.apply_feature_result`
+directly — it does not import from `orchestrator.py` or `batch_runner.py`.
+After #076 lands, #077 (rename + integration tests) and #078 (daytime
+CLI) can run in parallel.
+
+## `consecutive_pauses_ref` / `recovery_attempts_map` cleanup
+
+If #076 left the shared-mutable plumbing as-is, #077 may opportunistically
+convert `consecutive_pauses_ref` into a small `CircuitBreakerState`
+dataclass and `recovery_attempts_map` into a named object passed through
+the orchestrator seam. Not mandatory; decide during spec.
+
 ## Acceptance
 
 - CLI invocation (`python3 -m claude.overnight.batch_runner --plan …

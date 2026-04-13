@@ -14,25 +14,49 @@ its natural seams for overnight's own maintainability.
 
 | ID  | Title                                                                          | Priority | Size | Depends On |
 |-----|--------------------------------------------------------------------------------|----------|------|------------|
-| 075 | Extract feature_executor module from batch_runner                              | high     | M    | —          |
-| 076 | Extract outcome_router module from batch_runner                                | high     | M–L  | 075        |
+| 080 | Add characterization tests for batch_runner pre-extraction                     | high     | S–M  | —          |
+| 075 | Extract feature_executor module from batch_runner                              | high     | M    | 080        |
+| 076 | Extract outcome_router module from batch_runner                                | high     | L    | 075        |
 | 077 | Rename batch_runner to orchestrator and add integration tests                  | high     | S–M  | 076        |
-| 078 | Build daytime pipeline module and CLI                                          | medium   | M    | 077        |
+| 078 | Build daytime pipeline module and CLI                                          | medium   | M    | 076        |
 | 079 | Integrate autonomous worktree option into lifecycle pre-flight                 | medium   | M    | 078        |
+
+## Dependency graph
+
+```
+080 → 075 → 076 → 077 ─┐
+                └─ 078 → 079
+```
+
+#080 establishes the regression oracle (golden-master characterization
+tests) before the first extraction lands. Without it the only
+regression gate is a multi-hour stochastic overnight run, which is not
+PR-reviewable.
+
+After #076 lands, #077 (rename + CLI wrap + integration tests) and
+#078 (daytime pipeline module + CLI) can run in parallel — #078 does
+not depend on orchestrator.py existing, only on feature_executor +
+outcome_router being importable.
 
 ## Suggested Implementation Order
 
-Sequential (each blocks the next). Recommended sequencing note: #073
-(overnight docs) should land before #075 if scheduling allows, so the
-architectural descriptions reference the target module shape rather
-than being rewritten afterwards. Not a hard blocker.
-
-1. #075 — feature_executor extraction (tests land alongside)
-2. #076 — outcome_router extraction (tests land alongside)
-3. #077 — orchestrator rename + CLI wrap + integration tests (final
-   regression gate for the three-phase refactor)
-4. #078 — daytime pipeline module + CLI (standalone CLI works)
+1. #080 — characterization tests; pins current behavior of
+   `execute_feature`, `_apply_feature_result`, `_accumulate_result`
+   outcome routing, and conflict-recovery branching
+2. #075 — feature_executor extraction; reviewer runs #080 fixtures as
+   before/after oracle
+3. #076 — outcome_router extraction; same oracle (larger than
+   originally estimated — includes inline outcome-routing in
+   `_accumulate_result`, not only `_apply_feature_result`)
+4. #077 and #078 in parallel:
+   - #077 — orchestrator rename + CLI wrap + integration tests
+   - #078 — daytime pipeline module + CLI
 5. #079 — lifecycle skill pre-flight integration (user-facing)
+
+Recommended sequencing note: #073 (overnight docs) should land before
+#080 if scheduling allows, so the architectural descriptions reference
+the target module shape rather than being rewritten afterwards. Not a
+hard blocker.
 
 ## Key Design Decisions (from research)
 
@@ -52,11 +76,32 @@ than being rewritten afterwards. Not a hard blocker.
 
 ## Consolidation Review
 
-No consolidation candidates found. WI1–WI3 all touch `batch_runner.py`
-but each has independent deliverable value (own module, own test
-surface, own regression gate). WI4 can be manually tested via CLI
-without WI5. No same-file S+S merges, no no-standalone-value
-prerequisites.
+No consolidation candidates found. #075–#077 all touch
+`batch_runner.py` but each has a non-overlapping slice of responsibility
+(feature-executor extract / outcome-router extract / rename + CLI wrap).
+#078 can be manually tested via CLI without #079.
+
+**Known same-file coordination points** (identified during critical
+review):
+
+- `_run_one` is edited by #075 (import swap for execute_feature),
+  #076 (collapse inline outcome-routing), and #077 (relocate to
+  orchestrator.py). Each edit is non-overlapping but all three tickets
+  touch the same function; PR authors coordinate via reference to this
+  document.
+- Shared helpers (`_next_escalation_n`, `_get_changed_files`,
+  `_classify_no_commit`, `_effective_base_branch`,
+  `_effective_merge_repo_path`) stay in batch_runner.py /
+  orchestrator.py and both new modules import from there.
+- `FeatureResult` is treated as a frozen API between feature_executor
+  and outcome_router; any restructuring lands before #075.
+- The `status="repair_completed"` flow spans #075 (execute_feature
+  produces the repair branch) and #076 (apply_feature_result
+  fast-forward-merges it); coordinated via the frozen FeatureResult
+  contract.
+- `consecutive_pauses_ref` and `recovery_attempts_map` continue as
+  mutable parameters across module boundaries; opportunistic
+  conversion to dataclasses happens in #077 if desired.
 
 ## Created Files
 
@@ -65,8 +110,12 @@ prerequisites.
 - `backlog/077-rename-batch-runner-to-orchestrator-and-add-integration-tests.md`
 - `backlog/078-build-daytime-pipeline-module-and-cli.md`
 - `backlog/079-integrate-autonomous-worktree-option-into-lifecycle-pre-flight.md`
+- `backlog/080-add-characterization-tests-for-batch-runner-pre-extraction.md`
+  (added after critical review to close the regression-oracle gap
+  before extraction begins)
 
 ## Updated Files
 
 - `backlog/074-implement-in-autonomous-worktree-overnight-component-reuse.md` —
-  title updated, framing reworked, children enumerated
+  title updated, framing reworked, children enumerated, priority
+  raised to high (reflects the must-do refactor half)

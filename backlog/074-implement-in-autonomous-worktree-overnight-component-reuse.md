@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 7ed502f8-399b-40c1-8cde-603c9cbf82fd
 title: "Decompose batch_runner and enable daytime autonomous-worktree pipeline"
 status: backlog
-priority: medium
+priority: high
 type: epic
 tags: [lifecycle, overnight-runner, worktrees, multi-agent, refactor, modularization]
 areas: [lifecycle, skills, overnight-runner]
@@ -36,16 +36,25 @@ See `research/implement-in-autonomous-worktree-overnight-component-reuse/researc
 for the full analysis, responsibility map, decision records, and
 alternatives considered.
 
-## Children (5 phases)
+## Children (6 tickets)
 
+0. **#080** — Add characterization tests for batch_runner
+   pre-extraction (blocker for #075; establishes regression oracle)
 1. **#075** — Extract `feature_executor.py` from batch_runner.py
+   (blocked-by 080)
 2. **#076** — Extract `outcome_router.py` from batch_runner.py
    (blocked-by 075)
 3. **#077** — Rename batch_runner.py → `orchestrator.py`, thin CLI
    wrapper, integration tests (blocked-by 076)
-4. **#078** — Build daytime pipeline module + CLI (blocked-by 077)
+4. **#078** — Build daytime pipeline module + CLI (blocked-by 076;
+   can run in parallel with #077)
 5. **#079** — Integrate autonomous worktree option into lifecycle
    pre-flight (blocked-by 078)
+
+```
+080 → 075 → 076 → 077 ─┐
+                └─ 078 → 079
+```
 
 ## Original problem (preserved for context)
 

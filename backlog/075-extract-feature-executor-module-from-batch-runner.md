@@ -8,6 +8,7 @@ type: feature
 created: 2026-04-13
 updated: 2026-04-13
 parent: "074"
+blocked-by: ["080"]
 tags: [overnight-runner, refactor, modularization]
 areas: [overnight-runner]
 discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
@@ -37,8 +38,40 @@ Phase 1 of the three-phase batch_runner decomposition.
 
 - Session-level orchestration (`run_batch`, `_run_one`, heartbeat, final
   state write-back)
-- Result dispatch (`_apply_feature_result`) — that's Phase 2
+- Result dispatch (`_apply_feature_result` AND the outcome-routing
+  portions of `_accumulate_result`) — that's Phase 2 (#076)
 - Concurrency management, circuit breaker
+- Shared helpers (`_next_escalation_n`, `_get_changed_files`,
+  `_classify_no_commit`, `_effective_base_branch`,
+  `_effective_merge_repo_path`) — used by both #075 and #076; both
+  import from orchestrator layer
+
+## `_run_one` editing protocol
+
+`_run_one` is touched by #075 (signature adaptation when
+`execute_feature` is imported from the new module), #076 (collapse
+inline outcome routing), and #077 (relocate to orchestrator.py). Each
+ticket edits it in non-overlapping ways; document the expected post-
+#075 shape in the PR to reduce merge-conflict risk with #076.
+
+## FeatureResult contract
+
+`FeatureResult` today is a data bag with 10+ conditional fields whose
+meaning depends on `status` (e.g., `repair_branch`, `trivial_resolved`,
+`resolved_files`, `repair_agent_used`, `deferred_question_count`,
+`parse_error`, `error_type`). Before extraction, this ticket freezes
+the field inventory and documents the status-to-field mapping in
+`feature_executor.py` (or a small shared types module). Any subsequent
+restructuring is a follow-up.
+
+## Repair-branch coordination
+
+The `status="repair_completed"` flow spans both #075 (conflict recovery
+produces the repair branch in execute_feature) and #076 (outcome
+router fast-forward-merges the repair branch via
+`_apply_feature_result`). Field contract (see above) is the
+coordination boundary; any change to repair-path fields requires
+matching updates in both tickets.
 
 ## Acceptance
 
