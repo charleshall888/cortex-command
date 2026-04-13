@@ -8,16 +8,98 @@ Execute the plan by dispatching a fresh implementation sub-task per task. Each s
 
 Read `lifecycle/{feature}/plan.md` and identify pending tasks (those with `[ ]`).
 
-**Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion:
+**Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with three options:
 
-- **Implement on main** — trunk-based workflow, changes land directly on main
-- **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow
+- **Implement in worktree** (recommended) — dispatch the remainder of the lifecycle (implement → review → complete) to an `Agent(isolation: "worktree")` so the main session stays on `main`. Other parallel Claude sessions in this repo are unaffected. PR-based workflow is preserved via the worktree branch `worktree/agent-{lifecycle-slug}`.
+- **Implement on main** — trunk-based workflow, changes land directly on main.
+- **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
-If the user selects "Create feature branch", create and check out the branch before dispatching any tasks. All lifecycle artifacts (research, spec, plan) are already committed to main at this point, so the feature branch starts with the full artifact trail and only implementation commits diverge.
+Dispatch by selection:
+- If the user selects **"Implement in worktree"**, proceed to §1a (the Worktree Dispatch alternate path below) — §1a replaces §2–§4 for the main session.
+- If the user selects **"Implement on main"**, remain on the current branch and proceed to §2 Task Dispatch.
+- If the user selects **"Create feature branch"**, create and check out `feature/{lifecycle-slug}` before dispatching any tasks. All lifecycle artifacts (research, spec, plan) are already committed to main at this point, so the feature branch starts with the full artifact trail and only implementation commits diverge. Then proceed to §2 Task Dispatch.
 
 If the current branch is not `main`/`master` (already on a feature branch or resumed session), skip the prompt and proceed on the current branch.
 
 **Dependency graph analysis**: Parse the `**Depends on**` field from every pending task. Build an adjacency list: for each task, record which tasks it depends on. If a cycle is detected, stop and surface the error to the user — do not dispatch any tasks.
+
+### 1a. Worktree Dispatch (Alternate Path)
+
+This section runs **only** when the user selected "Implement in worktree" in §1. It **replaces §2–§4 for the main session**: the main session does not run Task Dispatch, Rework, or Transition directly. Instead, it dispatches an `Agent(isolation: "worktree")` to run the full implement → review → complete cycle autonomously inside the worktree, waits for the agent to return, surfaces the result, and exits /lifecycle.
+
+**i. Write `.dispatching` marker atomically.** Before dispatching, the main session creates `lifecycle/{feature}/.dispatching` using bash `set -C` (noclobber) so concurrent dispatchers cannot both claim the dispatch:
+
+```bash
+(set -C; printf '%s\n%s\n%s\n' "$$" "$LIFECYCLE_SESSION_ID" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > lifecycle/{feature}/.dispatching) 2>/dev/null
+```
+
+The marker contains exactly three lines: the dispatching shell's PID (`$$`), the dispatching session's `LIFECYCLE_SESSION_ID`, and an ISO 8601 UTC timestamp. **On collision** (the redirect fails because the file already exists): surface the error to the user ("another session claimed this dispatch first; aborting") and exit /lifecycle without dispatching.
+
+**ii. Log `implementation_dispatch` event.** Append to `lifecycle/{feature}/events.log`:
+
+```
+{"ts": "<ISO 8601>", "event": "implementation_dispatch", "feature": "<name>", "mode": "worktree"}
+```
+
+**iii. Dispatch the Agent.** Invoke:
+
+```
+Agent(isolation: "worktree", name: "agent-{lifecycle-slug}", model: <sonnet|opus>, prompt: <template below>)
+```
+
+**Model selection**: use `sonnet` for `low` and `medium` criticality, `opus` for `high` and `critical` criticality. Read criticality from the most recent `lifecycle_start` or `criticality_override` event in `events.log` (default `medium` if absent).
+
+**iv. Verbatim prompt template** (pass this string as the `prompt` parameter with `{feature}` and `{lifecycle-slug}` substituted):
+
+```
+You are the dispatched lifecycle agent for feature {feature}. The main session has dispatched you via Agent(isolation: "worktree") to run the full implement → review → complete cycle autonomously inside worktree branch worktree/agent-{lifecycle-slug}. The main session remains on main and will not act on this feature again until you return.
+
+State-write boundaries:
+- You MUST skip SKILL.md Step 2 "Register session" and Step 2 "Backlog Write-Back". The main session that dispatched you owns those state writes for this feature. SKILL.md Step 2 detects your branch prefix (`worktree/agent-`) and skips both automatically; do not override that behavior.
+
+Interactivity boundary:
+- Do NOT call AskUserQuestion at any point. Use the documented non-interactive fallback at every decision point in the lifecycle phase references. If no fallback is documented for a specific decision, STOP and return the escalation context to the main session — do not prompt the user.
+
+Task dispatch mechanics (when you reach implement.md §2 Task Dispatch):
+- Use sequential inline per-task dispatch. Each task is implemented inline in YOUR OWN context using Read/Write/Edit/Bash directly.
+- There are no nested `Agent(isolation: "worktree")` calls per task. Do NOT launch per-task sub-Agents at all — every task runs in your own conversation.
+- Do NOT create per-task sub-branches (no `worktree/{task-name}` branches). After implementing each task, invoke the `/commit` skill to commit directly to worktree/agent-{lifecycle-slug} — your outer worktree branch.
+- Tasks within a batch run one at a time (within-batch concurrency from §2b is forfeited). Batches still respect the dependency-graph topological grouping from §2 — batch N waits for batch N-1's commits to land before batch N starts.
+- Skip §2e Worktree Integration entirely — you have no per-task sub-branches to merge back. §2d's "Sequential dispatch" checkpoint (`git log --oneline -N`) is your verification path.
+- The builder prompt template at implement.md lines 83-103 still applies per-task (read the task, implement what it specifies, commit via /commit, report), but each task is executed by you directly rather than dispatched as a sub-Agent.
+
+Review/complete autonomy:
+- Run implement → review → complete autonomously. cycle 1 CHANGES_REQUESTED from review is normal flow — re-enter implement and address the feedback.
+- STOP and return escalation context (do not prompt the user) on any of: cycle 2+ CHANGES_REQUESTED, REJECTED verdict, test failure in complete.md, PR creation failure, or any other non-recoverable state.
+
+Completion:
+- On success, complete.md §4 Git Workflow pushes worktree/agent-{lifecycle-slug} and opens a PR (the branch is not main/master, so the existing binary check routes to the push+PR path automatically).
+- Report the PR URL in your final response so the main session can surface it to the user.
+```
+
+**v. Wait for the Agent to return.** The main session blocks on the Agent call. Do not dispatch further work while waiting.
+
+**vi. Surface the agent's summary.** When the Agent returns:
+- **On success**: display the agent's final summary including the PR URL to the user.
+- **On escalation**: display the agent's escalation context (which cycle, which phase, what failed) to the user so they can decide whether to continue the work manually from the worktree.
+
+**vii. Remove the `.dispatching` marker.** Run `rm -f lifecycle/{feature}/.dispatching` to remove the .dispatching marker regardless of outcome (success or escalation).
+
+**viii. Log `dispatch_complete` event.** Append to `lifecycle/{feature}/events.log`:
+
+```
+{"ts": "<ISO 8601>", "event": "dispatch_complete", "feature": "<name>", "outcome": "complete|escalated", "pr_url": "<url>|null"}
+```
+
+Set `"outcome"` to `"complete"` if the agent finished cleanly with a PR URL, or `"escalated"` if it stopped at a non-recoverable state. Set `"pr_url"` to the PR URL string on success, or the JSON literal `null` on escalation.
+
+**ix. Exit /lifecycle entirely.** Do not transition to any further phase. The worktree agent has already run the full lifecycle; the main session's role is done.
+
+**Known Limitations:**
+- **AskUserQuestion sharp edge**: The inner agent is technically able to call `AskUserQuestion` despite the prompt instruction forbidding it. If it does, the prompt MAY surface in the main session's terminal (the Agent tool may propagate inner-agent prompts to the parent). The prompt explicitly forbids this and Claude is expected to follow, but the tool boundary does not enforce it.
+- **Events.log divergence (TC8)**: Main's `events.log` captures only `implementation_dispatch` and `dispatch_complete` for this feature. The inner agent's `phase_transition`, `task_complete`, `review_verdict`, and `feature_complete` events live in the worktree's copy of `events.log` and land on main only when the PR merges. Tooling that inspects "recent feature_complete events" from main's checkout may under-count completed features during the window between dispatch and PR merge.
+
+**Cleanup:** The main session does **no manual cleanup** of the dispatched worktree. Do not remove the worktree or delete the branch as part of this dispatch flow. The existing `hooks/cortex-cleanup-session.sh` handles the `worktree/agent-*` branches and `.claude/worktrees/agent-*` directories on session exit (the hook internally runs git worktree removal and branch deletion — those are cleanup-hook implementation details, not orchestrator instructions).
 
 ### 2. Task Dispatch
 
