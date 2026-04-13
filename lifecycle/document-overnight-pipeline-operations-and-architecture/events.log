@@ -1,0 +1,60 @@
+- ts: 2026-04-13T14:02:40Z
+  event: clarify_critic
+  feature: document-overnight-pipeline-operations-and-architecture
+  findings:
+    - "Intent clarity HIGH is undersupported — the ticket lists 13 gaps but the three-section Deliverable outline does not map each gap to a section; items like the claude/pipeline vs claude/overnight split, orchestrator_io, env var fallback, and repair agent SKIP/DEFER/PAUSE are not explicitly slotted."
+    - "The user-facing vs. how-it-works split is a slogan, not a rule — the ticket flags lifecycle.config.md defaults as 'beyond what's already in docs/overnight.md', which means the existing doc has partial content and the ticket does not specify whether to leave, move, duplicate, or expand it."
+    - "Scope HIGH rests on 'by implication' rather than explicit source text — a reader could infer capability-constraint gap warrants code comments in dispatch.py."
+    - "Requirements alignment HIGH asserted without quotations from requirements/pipeline.md or requirements/observability.md."
+    - "Complexity 'simple' conflates single output file with cognitive complexity — synthesizing behavior across batch_runner/review_dispatch/merge/dispatch/brain/runner.sh is multi-file archaeology."
+    - "Criticality 'medium' treats reversibility of file as reversibility of harm — misleading debugging docs have asymmetric failure mode at 2am."
+    - "'Follows existing docs pattern' is agent assertion, not source text."
+  dispositions:
+    apply: 2
+    dismiss: 3
+    ask: 2
+  applied_fixes:
+    - "Revised complexity from simple to complex — deliverable requires accurate synthesis across 4+ source files."
+    - "Revised criticality from medium to high — documentation of overnight runner behavior is agentic-layer infrastructure whose errors mislead future debuggers; high is the default per clarify §5."
+  status: ok
+- ts: 2026-04-13T14:08:51Z
+  event: lifecycle_start
+  feature: document-overnight-pipeline-operations-and-architecture
+  tier: complex
+  criticality: high
+- ts: 2026-04-13T14:08:51Z
+  event: phase_transition
+  feature: document-overnight-pipeline-operations-and-architecture
+  from: clarify
+  to: research
+- ts: 2026-04-13T14:22:28Z
+  event: phase_transition
+  feature: document-overnight-pipeline-operations-and-architecture
+  from: research
+  to: specify
+- ts: 2026-04-13T15:07:29Z
+  event: orchestrator_review
+  feature: document-overnight-pipeline-operations-and-architecture
+  phase: specify
+  verdict: flag
+  cycle: 1
+  issues:
+    - "S1: Reqs 4, 8, 12 relied on 'manual review' / 'PR description' / 'manual' without the annotated 'Interactive/session-dependent: [rationale]' format required when neither (a) a runnable command nor (b) an observable state check applies."
+- ts: 2026-04-13T15:07:29Z
+  event: orchestrator_dispatch_fix
+  feature: document-overnight-pipeline-operations-and-architecture
+  phase: specify
+  mode: same_context
+  issue: "Reformat reqs 4, 8, 12 acceptance criteria to use either clause (a)/(b) binary-check form or the annotated 'Interactive/session-dependent:' format. Fix applied in-conversation (trivial phrasing change; fresh subagent disproportionate)."
+- ts: 2026-04-13T15:07:29Z
+  event: orchestrator_review
+  feature: document-overnight-pipeline-operations-and-architecture
+  phase: specify
+  verdict: pass
+  cycle: 2
+  issues: []
+- ts: 2026-04-13T15:29:21Z
+  event: phase_transition
+  feature: document-overnight-pipeline-operations-and-architecture
+  from: specify
+  to: plan
