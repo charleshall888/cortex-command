@@ -110,6 +110,100 @@
     "repo": null
   },
   {
+    "id": 75,
+    "title": "Extract feature_executor module from batch_runner",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "refactor",
+      "modularization"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "074",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
+    "plan": null,
+    "uuid": "6d1b3bfb-cec8-4cc9-9788-03052b97249d",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 76,
+    "title": "Extract outcome_router module from batch_runner",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "refactor",
+      "modularization"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [
+      "075"
+    ],
+    "parent": "074",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
+    "plan": null,
+    "uuid": "925f1d1f-6ba3-4daa-b4b1-037aa0785457",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 77,
+    "title": "Rename batch_runner to orchestrator and add integration tests",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "refactor",
+      "modularization"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [
+      "076"
+    ],
+    "parent": "074",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
+    "plan": null,
+    "uuid": "077bf623-337c-476a-88c9-30a625fa86a3",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -190,6 +284,138 @@
     "discovery_source": "Spec #060 Non-Requirements — notify-hook curl channel flagged for follow-up",
     "plan": null,
     "uuid": "abd4c43c-02dc-4f12-86e5-dc80b56cf02e",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 73,
+    "title": "Document overnight pipeline operations and architecture",
+    "status": "refined",
+    "priority": "medium",
+    "type": "task",
+    "tags": [
+      "overnight-runner",
+      "docs",
+      "observability"
+    ],
+    "areas": [
+      "docs"
+    ],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": "lifecycle/document-overnight-pipeline-operations-and-architecture/spec.md",
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "8c6f0f95-2773-4e8a-adb3-4efff532a56b",
+    "lifecycle_slug": "document-overnight-pipeline-operations-and-architecture",
+    "session_id": "7100419d-06d9-4a1b-b64a-58319ab35478",
+    "lifecycle_phase": "review",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 74,
+    "title": "Decompose batch_runner and enable daytime autonomous-worktree pipeline",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "epic",
+    "tags": [
+      "lifecycle",
+      "overnight-runner",
+      "worktrees",
+      "multi-agent",
+      "refactor",
+      "modularization"
+    ],
+    "areas": [
+      "lifecycle",
+      "skills",
+      "overnight-runner"
+    ],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
+    "plan": null,
+    "uuid": "7ed502f8-399b-40c1-8cde-603c9cbf82fd",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 78,
+    "title": "Build daytime pipeline module and CLI",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "overnight-runner",
+      "daytime-pipeline",
+      "autonomous-worktree"
+    ],
+    "areas": [
+      "lifecycle",
+      "overnight-runner"
+    ],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [
+      "077"
+    ],
+    "parent": "074",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
+    "plan": null,
+    "uuid": "fe080031-8f44-4b19-8681-63f9b54accc0",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 79,
+    "title": "Integrate autonomous worktree option into lifecycle pre-flight",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "skills",
+      "autonomous-worktree"
+    ],
+    "areas": [
+      "lifecycle",
+      "skills"
+    ],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [
+      "078"
+    ],
+    "parent": "074",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
+    "plan": null,
+    "uuid": "e68ca237-c75d-42fd-830b-ac2fd2245e27",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
