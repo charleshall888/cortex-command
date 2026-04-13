@@ -5,6 +5,7 @@ worktrees/
 # Lifecycle ephemeral session files
 lifecycle/*/.session
 lifecycle/*/.session-owner
+lifecycle/*/.dispatching
 lifecycle/.fresh-resume
 
 # Retros ephemeral files
