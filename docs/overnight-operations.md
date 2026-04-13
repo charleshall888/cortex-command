@@ -132,6 +132,20 @@ See [Security and Trust Boundaries](#security-and-trust-boundaries) for how `_AL
 
 ### brain.py — post-retry triage (SKIP/DEFER/PAUSE)
 
+`claude/overnight/brain.py` is **not a repair agent**. It does not re-attempt the failed task, re-dispatch a worker, or touch the worktree. By the time `brain.py` runs, retries have already been exhausted upstream — this module is the post-retry *triage* step that decides what happens to a task the pipeline cannot complete on its own. Its decision space is `SKIP / DEFER / PAUSE`, and there is no `RETRY` action by design: a RETRY would re-enter the caller that just gave up, so the omission is load-bearing, not an oversight.
+
+**Files**: `claude/overnight/brain.py` (`request_brain_decision`, `BrainAction`, `_parse_brain_response`, `_default_decision`), `claude/overnight/prompts/batch-brain.md` (triage prompt rendered with `{feature, task_description, retry_count, learnings, spec_excerpt, has_dependents, last_attempt_output}`).
+
+**Inputs**: the exhausted task's feature slug, task description, retry count, accumulated learnings, relevant spec excerpt, a `has_dependents` flag, and the last attempt's output. `request_brain_decision` calls `dispatch_task` directly and is **not** throttled — the caller already holds a concurrency slot, so re-acquiring one here would deadlock.
+
+The three dispositions `brain.py` surfaces:
+
+- **SKIP** — the task is non-blocking and session progress should continue without it. Safe when downstream features do not depend on this one.
+- **DEFER** — a human decision is needed before work can proceed. Requires both a `question` and a `severity` in the response; a `DeferralQuestion` is filed to `deferred/*.md` for morning review.
+- **PAUSE** — the session itself is too uncertain to continue safely; halt overnight execution and wait for the operator. This is also the `_default_decision()` fallback (confidence 0.3) when `_parse_brain_response()` cannot extract a valid action from the triage agent's output.
+
+`_parse_brain_response()` validates that the returned JSON has `action ∈ {skip, defer, pause}` and a non-empty `reasoning`; DEFER responses additionally require `question` and `severity`. A malformed response never crashes the round — it falls through to the PAUSE default so the operator gets a chance to inspect rather than the session silently skipping work.
+
 ### Conflict Recovery (trivial fast-path and repair fallback)
 
 When a feature branch fails to merge cleanly, `batch_runner.execute_feature()` chooses between a trivial fast-path and a full repair dispatch based on the set of conflicted files and the session's `hot_files` list. The policy is declared in the orchestrator prompt at `claude/overnight/prompts/orchestrator-round.md` (the "Conflict Recovery" step) and implemented in `batch_runner.execute_feature()`.
