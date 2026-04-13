@@ -533,3 +533,17 @@ After this section, the review is complete.
 | Dirty `.git/rebase-merge/` detected | Script auto-aborts stale rebase, warns user, proceeds with sync |
 | Push fails after rebase | Report error, note local main is clean but not pushed |
 | All conflicts auto-resolved | Report "N files auto-resolved via allowlist" |
+| lifecycle.config.md missing at project root | Skip Section 2a entirely |
+| `lifecycle.config.md` present but `demo-command` absent or commented out | Skip Section 2a entirely |
+| `lifecycle.config.md` present but `demo-command` value is empty | Skip Section 2a entirely |
+| `demo-command` value contains control characters / ANSI escapes | Skip Section 2a entirely; treat as malformed |
+| `$SSH_CONNECTION` set (running over SSH or mosh) | Skip Section 2a entirely |
+| `git rev-parse --verify {integration_branch}` exits non-zero | Skip Section 2a entirely |
+| Overnight branch already checked out by another worktree | `git worktree add` fails with "already checked out"; print stderr; advance |
+| User declines the demo offer | Print no further output; advance |
+| `git worktree add` fails on accept (any other reason) | Print git's stderr; advance without retry |
+| Agent crashes between worktree creation and command print | Worktree exists with no record for user; next sweep retries |
+| Stale demo worktree from prior session in `$TMPDIR` | Removed by Step 0 garbage sweep on next morning-review (if clean) |
+| Stale demo worktree from prior session contains user edits | Sweep's `git worktree remove` (no `--force`) fails; stderr printed; user can rescue manually |
+| Demo worktree created but user closes session before Section 6 reminder | No cleanup until next morning-review's Step 0 sweep |
+| User abandons the repo entirely (no future morning-review for it) | Stale worktrees and admin entries persist until manual cleanup or OS reboot |
