@@ -36,7 +36,45 @@ Determine the feature name from the invocation. Use lowercase-kebab-case for dir
 
 ## Step 2: Check for Existing State
 
-Scan for `lifecycle/{feature}/` at the project root. Determine the current phase by checking artifacts in reverse order:
+Scan for `lifecycle/{feature}/` at the project root.
+
+### Dispatching Marker Check
+
+**This is the FIRST action inside Step 2**, run immediately after confirming the `lifecycle/{feature}/` directory exists and before any artifact-based phase detection below. It prevents double-dispatch when a prior `/lifecycle` invocation has launched a worktree agent that is still working.
+
+Check for `lifecycle/{feature}/.dispatching`:
+
+1. If the marker file does not exist, skip this sub-section and continue.
+2. If the marker exists, read line 1 of the file — it contains the PID of the dispatching process.
+3. Run `ps -p $PID` to check whether that process is still alive:
+   - **Alive**: refuse to proceed. Report the PID explicitly ("A dispatching process (PID $PID) is still running for this feature") and tell the user to either wait for it to complete or manually run `rm lifecycle/{feature}/.dispatching` if they are certain it is stale. Exit Step 2.
+   - **Dead**: prompt the user via `AskUserQuestion` with the default option to **clean the marker and proceed** (removing `lifecycle/{feature}/.dispatching` before continuing). The alternative is **exit** without changes. On "clean + proceed", `rm` the marker and fall through to the rest of Step 2.
+
+### Worktree-Aware Phase Detection
+
+**This block runs BEFORE the artifact-based phase detection below.** It handles the case where the main-branch session is resuming after a successful worktree dispatch — main's on-disk `lifecycle/{feature}/` artifacts are stale (the real work continued in the worktree branch), so plain artifact inspection would misreport the phase.
+
+1. Read `lifecycle/{feature}/events.log` on the current branch. Find the most recent terminal event. If the most recent terminal event is `dispatch_complete` AND there is no subsequent `feature_complete` event, the lifecycle is parked awaiting a return from the worktree agent. Otherwise, skip this block.
+2. Check whether the worktree branch still exists:
+   ```bash
+   git show-ref --verify --quiet refs/heads/worktree/agent-{feature}
+   ```
+3. If the branch exists, read the lifecycle artifacts from the worktree branch (not the stale main copies) using `git show`:
+   ```bash
+   git show worktree/agent-{feature}:lifecycle/{feature}/events.log
+   git show worktree/agent-{feature}:lifecycle/{feature}/plan.md
+   git show worktree/agent-{feature}:lifecycle/{feature}/review.md
+   ```
+   Apply the reverse-order phase detection logic against those worktree-branch values rather than main's on-disk files.
+4. Present the following three options via `AskUserQuestion`:
+   - **continue-in-worktree** (recommended): instruct the user to `cd .claude/worktrees/agent-{feature}/` and re-invoke `/lifecycle` from inside the worktree so the session operates against the live artifacts.
+   - **dispatch-fresh**: surface a manual cleanup command block the user can run to remove the worktree branch, worktree directory, and stale marker before re-dispatching. Do not execute the cleanup automatically.
+   - **exit**: leave state untouched.
+5. If the branch does NOT exist (worktree was already cleaned up), fall through to the artifact-based detection below — main's on-disk state is now authoritative.
+
+### Artifact-Based Phase Detection
+
+Determine the current phase by checking artifacts in reverse order:
 
 ```
 if no lifecycle/{feature}/ directory exists:
@@ -70,6 +108,8 @@ else:
 ```
 echo $LIFECYCLE_SESSION_ID > lifecycle/{feature}/.session
 ```
+
+**Skip condition**: if the current branch (via `git branch --show-current`) matches `^worktree/agent-`, skip this write. Rationale: the dispatching main session owns the `.session` file; a worktree agent running `/lifecycle` inside its own branch must not overwrite main's session registration.
 
 If resuming from a previous session, report the detected phase and offer to continue or restart from an earlier phase.
 
@@ -142,6 +182,8 @@ If no matching backlog item was found, omit the heading and body line entirely.
 `artifacts: []` must always use inline YAML array notation — never block notation.
 
 ### Backlog Write-Back (Lifecycle Start)
+
+**Skip condition**: if the current branch (via `git branch --show-current`) matches `^worktree/agent-`, skip this entire sub-section. Rationale: the dispatching main session owns backlog write-backs; a worktree agent must not double-write `status`, `session_id`, or `lifecycle_slug` onto the backlog item.
 
 After registering the session, attempt to write the lifecycle start back to the originating backlog item. Scan for a matching backlog file:
 
