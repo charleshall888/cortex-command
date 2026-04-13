@@ -11,6 +11,7 @@
 | 76 | Extract outcome_router module from batch_runner | backlog | high | feature | 075 | 074 | — |
 | 77 | Rename batch_runner to orchestrator and add integration tests | backlog | high | feature | 076 | 074 | — |
 | 80 | Add characterization tests for batch_runner pre-extraction | backlog | high | chore | — | 074 | — |
+| 81 | Fix GPG sandbox signing with stable gnupghome path and read-only options | refined | high | feature | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 61 | Sync-hook cleanup propagation mechanism | refined | medium | task | — | — | — |
 | 62 | Harden cortex-notify-remote.sh curl invocation against exfiltration | refined | medium | task | — | — | — |
@@ -19,6 +20,7 @@
 
 ## Refined
 
+- **81** Fix GPG sandbox signing with stable gnupghome path and read-only options
 - **61** Sync-hook cleanup propagation mechanism
 - **62** Harden cortex-notify-remote.sh curl invocation against exfiltration
 

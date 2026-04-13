@@ -272,6 +272,35 @@
     "repo": null
   },
   {
+    "id": 81,
+    "title": "Fix GPG sandbox signing with stable gnupghome path and read-only options",
+    "status": "refined",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "gpg",
+      "sandbox",
+      "hooks",
+      "signing"
+    ],
+    "areas": [],
+    "created": "2026-04-13",
+    "updated": "2026-04-13",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/gpg-signing-claude-code-sandbox/research.md",
+    "plan": null,
+    "uuid": null,
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": null,
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
