@@ -65,7 +65,7 @@ Task dispatch mechanics (when you reach implement.md §2 Task Dispatch):
 - There are no nested `Agent(isolation: "worktree")` calls per task. Do NOT launch per-task sub-Agents at all — every task runs in your own conversation.
 - Do NOT create per-task sub-branches (no `worktree/{task-name}` branches). After implementing each task, invoke the `/commit` skill to commit directly to worktree/agent-{lifecycle-slug} — your outer worktree branch.
 - Tasks within a batch run one at a time (within-batch concurrency from §2b is forfeited). Batches still respect the dependency-graph topological grouping from §2 — batch N waits for batch N-1's commits to land before batch N starts.
-- Skip §2e Worktree Integration entirely — you have no per-task sub-branches to merge back. §2d's "Sequential dispatch" checkpoint (`git log --oneline -N`) is your verification path.
+- skip §2e Worktree Integration entirely — you have no per-task sub-branches to merge back. §2d's "Sequential dispatch" checkpoint (`git log --oneline -N`) is your verification path.
 - The builder prompt template at implement.md lines 83-103 still applies per-task (read the task, implement what it specifies, commit via /commit, report), but each task is executed by you directly rather than dispatched as a sub-Agent.
 
 Review/complete autonomy:
