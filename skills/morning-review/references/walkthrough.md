@@ -73,15 +73,23 @@ Parse the response:
   verified, rest skipped. Fuzzy matching is acceptable (prefix or substring,
   case-insensitive).
 
-Record verified/skipped status per feature, then proceed immediately to Section 2b.
+Record verified/skipped status per feature, then proceed immediately to Section 2a (which may be skipped — see its guard clauses; if skipped, advance directly to Section 2b).
 Verified/skipped statuses are for reporting context only — they do not gate lifecycle
 advancement.
 
 ---
 
+## Section 2a — Demo Setup
+
+Skip this section entirely if any of the following hold:
+
+<!-- SECTION-2A-PLACEHOLDER: Task 4 replaces this comment with the guard sub-blocks (R3, R4, R5). Task 5 appends the active-flow content (R6-R10) after Task 4's guards. -->
+
+---
+
 ## Section 2b — Lifecycle Advancement
 
-Run immediately after the batch verification response. No additional user input is needed.
+Run immediately after Section 2a (or after the batch verification response if Section 2a was skipped). No additional user input is needed.
 
 For each completed feature (same list as Section 2, same order):
 
