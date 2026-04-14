@@ -300,5 +300,145 @@ class TestHandleFailedTask(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mock_request_brain.call_count, 0)
 
 
+# ---------------------------------------------------------------------------
+# TestHandleFailedTaskBrainActions: SKIP / DEFER / PAUSE action dispatch
+# ---------------------------------------------------------------------------
+
+
+class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
+    """Tests for _handle_failed_task() brain-decision action dispatch (SKIP/DEFER/PAUSE)."""
+
+    def _start_patch(self, *args, **kwargs):
+        p = patch(*args, **kwargs)
+        mock = p.start()
+        self.addCleanup(p.stop)
+        return mock
+
+    def _make_task(self):
+        return FeatureTask(
+            number=1,
+            description="desc",
+            depends_on=[],
+            files=[],
+            complexity="simple",
+        )
+
+    async def test_skip_action_marks_task_done_and_returns_none(self):
+        """SKIP action → returns None and mark_task_done_in_plan was called."""
+        task = self._make_task()
+        retry_result = MagicMock(attempts=1, final_output="err")
+
+        mock_request_brain = self._start_patch(
+            "claude.overnight.batch_runner.request_brain_decision",
+            new_callable=AsyncMock,
+        )
+        mock_request_brain.return_value = BrainDecision(
+            action=BrainAction.SKIP, reasoning="r", confidence=0.9
+        )
+        self._start_patch("claude.overnight.batch_runner.overnight_log_event")
+        mock_mark_done = self._start_patch(
+            "claude.overnight.batch_runner.mark_task_done_in_plan"
+        )
+        mock_write_deferral = self._start_patch(
+            "claude.overnight.batch_runner.write_deferral"
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner._read_learnings",
+            return_value="(No prior learnings.)",
+        )
+
+        result = await _handle_failed_task(
+            feature="test-feat",
+            task=task,
+            all_tasks=[],
+            spec_excerpt="s",
+            retry_result=retry_result,
+            consecutive_pauses_ref=[0],
+            manager=None,
+        )
+
+        self.assertIsNone(result)
+        mock_mark_done.assert_called_once()
+        mock_write_deferral.assert_not_called()
+
+    async def test_defer_action_writes_deferral_and_returns_deferred_result(self):
+        """DEFER action → returns FeatureResult(status='deferred') and write_deferral was called."""
+        task = self._make_task()
+        retry_result = MagicMock(attempts=1, final_output="err")
+
+        mock_request_brain = self._start_patch(
+            "claude.overnight.batch_runner.request_brain_decision",
+            new_callable=AsyncMock,
+        )
+        mock_request_brain.return_value = BrainDecision(
+            action=BrainAction.DEFER, reasoning="r", confidence=0.9
+        )
+        self._start_patch("claude.overnight.batch_runner.overnight_log_event")
+        mock_mark_done = self._start_patch(
+            "claude.overnight.batch_runner.mark_task_done_in_plan"
+        )
+        mock_write_deferral = self._start_patch(
+            "claude.overnight.batch_runner.write_deferral"
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner._read_learnings",
+            return_value="(No prior learnings.)",
+        )
+
+        result = await _handle_failed_task(
+            feature="test-feat",
+            task=task,
+            all_tasks=[],
+            spec_excerpt="s",
+            retry_result=retry_result,
+            consecutive_pauses_ref=[0],
+            manager=None,
+        )
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result.status, "deferred")
+        self.assertEqual(result.deferred_question_count, 1)
+        mock_write_deferral.assert_called_once()
+        mock_mark_done.assert_not_called()
+
+    async def test_pause_action_returns_none_without_side_effects(self):
+        """PAUSE action → returns None and neither mark_task_done_in_plan nor write_deferral was called."""
+        task = self._make_task()
+        retry_result = MagicMock(attempts=1, final_output="err")
+
+        mock_request_brain = self._start_patch(
+            "claude.overnight.batch_runner.request_brain_decision",
+            new_callable=AsyncMock,
+        )
+        mock_request_brain.return_value = BrainDecision(
+            action=BrainAction.PAUSE, reasoning="r", confidence=0.9
+        )
+        self._start_patch("claude.overnight.batch_runner.overnight_log_event")
+        mock_mark_done = self._start_patch(
+            "claude.overnight.batch_runner.mark_task_done_in_plan"
+        )
+        mock_write_deferral = self._start_patch(
+            "claude.overnight.batch_runner.write_deferral"
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner._read_learnings",
+            return_value="(No prior learnings.)",
+        )
+
+        result = await _handle_failed_task(
+            feature="test-feat",
+            task=task,
+            all_tasks=[],
+            spec_excerpt="s",
+            retry_result=retry_result,
+            consecutive_pauses_ref=[0],
+            manager=None,
+        )
+
+        self.assertIsNone(result)
+        mock_mark_done.assert_not_called()
+        mock_write_deferral.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
