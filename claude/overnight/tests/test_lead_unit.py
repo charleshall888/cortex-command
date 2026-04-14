@@ -25,6 +25,7 @@ from claude.overnight.batch_runner import (
     _apply_feature_result,
     _effective_merge_repo_path,
     _read_learnings,
+    execute_feature,
 )
 from claude.overnight.events import (
     FEATURE_COMPLETE,
@@ -33,6 +34,8 @@ from claude.overnight.events import (
     FEATURE_PAUSED,
     REPAIR_AGENT_RESOLVED,
 )
+from claude.pipeline.parser import FeaturePlan, FeatureTask
+from claude.pipeline.retry import RetryResult
 
 
 # ---------------------------------------------------------------------------
@@ -1000,6 +1003,184 @@ class TestConsecutivePausesSequence(unittest.TestCase):
 
         self.assertTrue(batch.circuit_breaker_fired)
         self.assertEqual(pauses[0], CIRCUIT_BREAKER_THRESHOLD)
+
+
+# ---------------------------------------------------------------------------
+# Task 4: execute_feature() — happy path + brain-triage return-value handling
+# ---------------------------------------------------------------------------
+
+
+class TestExecuteFeature(unittest.IsolatedAsyncioTestCase):
+    """Characterization tests for execute_feature() covering R1 (happy path)
+    and R2 (brain-triage return-value dispatch: SKIP/DEFER/PAUSE).
+
+    The merge-conflict recovery block at the top of execute_feature is
+    skipped by mocking load_state with side_effect=Exception, which sets
+    _skip_repair=True. SKIP and PAUSE are structurally identical at the
+    execute_feature return boundary (both mock _handle_failed_task -> None
+    and both expect status="paused"); DEFER returns a FeatureResult from
+    _handle_failed_task which execute_feature propagates unchanged.
+    """
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        tmp = self._tmpdir.name
+        self._tmp = Path(tmp)
+        self._config = BatchConfig(
+            batch_id=1,
+            plan_path=self._tmp / "plan.md",
+            overnight_events_path=self._tmp / "overnight.log",
+            pipeline_events_path=self._tmp / "pipeline.log",
+            overnight_state_path=self._tmp / "state.json",
+        )
+        self._feature_plan = FeaturePlan(
+            feature="test-feat",
+            overview="",
+            tasks=[
+                FeatureTask(
+                    number=1,
+                    description="do something",
+                    depends_on=[],
+                    files=["test.py"],
+                    complexity="simple",
+                )
+            ],
+        )
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _base_patches(self, retry_result, exit_report=("complete", None, None)):
+        """Return a list of patch context managers covering the non-brain-triage
+        surface used by both happy-path and failure-path tests."""
+        return [
+            patch.object(batch_runner_module, "load_state", side_effect=Exception("skip repair")),
+            patch.object(batch_runner_module, "parse_feature_plan", return_value=self._feature_plan),
+            patch.object(batch_runner_module, "retry_task", new=AsyncMock(return_value=retry_result)),
+            patch.object(batch_runner_module, "_read_exit_report", return_value=exit_report),
+            patch.object(batch_runner_module, "mark_task_done_in_plan"),
+            patch.object(batch_runner_module, "pipeline_log_event"),
+            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(batch_runner_module, "read_criticality", return_value="high"),
+            patch.object(batch_runner_module, "_render_template", return_value="stub system prompt"),
+            patch.object(
+                subprocess,
+                "run",
+                return_value=MagicMock(returncode=0, stdout="0\n", stderr=""),
+            ),
+        ]
+
+    async def test_happy_path_single_task_completes(self):
+        """R1: execute_feature returns FeatureResult(status='completed') when
+        the single task succeeds and the exit report is 'complete'."""
+        retry_result = RetryResult(
+            success=True,
+            attempts=1,
+            final_output="done",
+            paused=False,
+            idempotency_skipped=False,
+        )
+        patches = self._base_patches(retry_result)
+        with patches[0], patches[1], patches[2], patches[3], patches[4], \
+             patches[5], patches[6], patches[7], patches[8], patches[9]:
+            result = await execute_feature(
+                feature="test-feat",
+                worktree_path=self._tmp,
+                config=self._config,
+            )
+
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.name, "test-feat")
+
+    async def test_execute_feature_brain_triage_skip_returns_paused(self):
+        """R2 SKIP: _handle_failed_task returns None → execute_feature falls
+        through to return FeatureResult(status='paused')."""
+        retry_result = RetryResult(
+            success=False,
+            attempts=2,
+            final_output="task failed",
+            paused=False,
+            idempotency_skipped=False,
+        )
+        patches = self._base_patches(retry_result)
+        with patches[0], patches[1], patches[2], patches[3], patches[4], \
+             patches[5], patches[6], patches[7], patches[8], patches[9], \
+             patch.object(
+                 batch_runner_module,
+                 "_handle_failed_task",
+                 new=AsyncMock(return_value=None),
+             ):
+            result = await execute_feature(
+                feature="test-feat",
+                worktree_path=self._tmp,
+                config=self._config,
+            )
+
+        self.assertEqual(result.status, "paused")
+        self.assertEqual(result.name, "test-feat")
+
+    async def test_execute_feature_brain_triage_defer_returns_deferred(self):
+        """R2 DEFER: _handle_failed_task returns FeatureResult(status='deferred')
+        → execute_feature propagates it unchanged."""
+        retry_result = RetryResult(
+            success=False,
+            attempts=2,
+            final_output="task failed",
+            paused=False,
+            idempotency_skipped=False,
+        )
+        deferred_result = FeatureResult(
+            name="test-feat",
+            status="deferred",
+            deferred_question_count=1,
+        )
+        patches = self._base_patches(retry_result)
+        with patches[0], patches[1], patches[2], patches[3], patches[4], \
+             patches[5], patches[6], patches[7], patches[8], patches[9], \
+             patch.object(
+                 batch_runner_module,
+                 "_handle_failed_task",
+                 new=AsyncMock(return_value=deferred_result),
+             ):
+            result = await execute_feature(
+                feature="test-feat",
+                worktree_path=self._tmp,
+                config=self._config,
+            )
+
+        self.assertEqual(result.status, "deferred")
+        self.assertEqual(result.name, "test-feat")
+
+    async def test_execute_feature_brain_triage_pause_returns_paused(self):
+        """R2 PAUSE: _handle_failed_task returns None → execute_feature falls
+        through to return FeatureResult(status='paused').
+
+        Structurally identical to the SKIP test at the execute_feature return
+        boundary. SKIP-specific side effects (mark_task_done_in_plan) live in
+        _handle_failed_task and are covered by test_brain.py (Task 2)."""
+        retry_result = RetryResult(
+            success=False,
+            attempts=2,
+            final_output="task failed",
+            paused=False,
+            idempotency_skipped=False,
+        )
+        patches = self._base_patches(retry_result)
+        with patches[0], patches[1], patches[2], patches[3], patches[4], \
+             patches[5], patches[6], patches[7], patches[8], patches[9], \
+             patch.object(
+                 batch_runner_module,
+                 "_handle_failed_task",
+                 new=AsyncMock(return_value=None),
+             ):
+            result = await execute_feature(
+                feature="test-feat",
+                worktree_path=self._tmp,
+                config=self._config,
+            )
+
+        self.assertEqual(result.status, "paused")
+        self.assertEqual(result.name, "test-feat")
 
 
 if __name__ == "__main__":
