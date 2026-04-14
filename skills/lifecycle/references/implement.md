@@ -105,6 +105,74 @@ Set `"outcome"` to `"complete"` if the agent finished cleanly with a PR URL, or 
 
 **Cleanup:** The main session does **no manual cleanup** of the dispatched worktree. Do not remove the worktree or delete the branch as part of this dispatch flow. The existing `hooks/cortex-cleanup-session.sh` handles the `worktree/agent-*` branches and `.claude/worktrees/agent-*` directories on session exit (the hook internally runs git worktree removal and branch deletion — those are cleanup-hook implementation details, not orchestrator instructions).
 
+### 1b. Daytime Dispatch (Alternate Path)
+
+This section runs **only** when the user selected "Implement in autonomous worktree" in §1. It **replaces §2–§4 for the main session**: the main session does not run Task Dispatch, Rework, or Transition directly. Instead, it launches the daytime pipeline as a background subprocess, polls for progress, surfaces the final outcome, and exits /lifecycle.
+
+Unlike §1a, there is **no `.dispatching` noclobber marker** — the existing `$$`-based mechanism is unsuitable for a detached background subprocess (the dispatching shell's PID `$$` dies milliseconds after the Bash call returns). The `daytime.pid` guard below is sufficient to prevent double-dispatch.
+
+**i. Plan.md prerequisite check.** Before any guards or subprocess launch, verify `lifecycle/{feature}/plan.md` exists. If absent: surface to the user "plan.md not found — cannot launch autonomous worktree. Run /lifecycle plan first." and exit §1b. Do NOT proceed to the guards or the subprocess launch.
+
+**ii. Double-dispatch guard.** Two separate Bash calls (no compound commands):
+
+1. Read PID file: `cat lifecycle/{feature}/daytime.pid 2>/dev/null`
+2. Liveness check on the PID (if the file was non-empty): `kill -0 $pid 2>/dev/null`
+
+If `kill -0` exits 0 (process alive): reject with "Autonomous daytime run already in progress (PID {pid}) — wait for it to complete or check events.log" and exit §1b. If the exit code is non-zero or the file was empty/absent: proceed.
+
+**iii. Overnight concurrent guard.** Four separate Bash calls (no compound commands):
+
+1. Read active session descriptor: `cat ~/.local/share/overnight-sessions/active-session.json 2>/dev/null`. If absent or empty: proceed normally (no overnight session active).
+2. Parse `repo_path`, `phase`, and `state_path` fields from the JSON. If `repo_path` does not equal the current working directory, **or** `phase` is not `"executing"`: proceed normally.
+3. Derive the session directory as the parent directory of `state_path` (i.e., `Path(state_path).parent`). `state_path` is the full path to the session's state JSON file (e.g., `lifecycle/sessions/{id}/overnight-state.json`); the session directory is the containing directory. This matches the detection pattern used by `bin/overnight-status`. Read the runner lock file: `cat {session_dir}/.runner.lock 2>/dev/null` and extract the runner PID.
+4. Liveness check: `kill -0 $runner_pid 2>/dev/null`. If the runner is alive (exit 0): reject with "Overnight runner is active (PID {pid}) — wait for it to complete before launching a daytime run." and exit §1b. If the runner is dead (non-zero exit): emit warning "overnight state shows executing but no live runner found — may be stale; proceeding" and continue.
+
+**iv. Background subprocess launch.** Single Bash call with `run_in_background: true`:
+
+```
+python3 -m claude.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
+```
+
+The subprocess is responsible for writing `lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID file — it only reads it.
+
+**v. Log `implementation_dispatch` event.** Immediately after the background launch, a separate Bash call appends to `lifecycle/{feature}/events.log`:
+
+```
+{"ts": "<ISO 8601>", "event": "implementation_dispatch", "feature": "<name>", "mode": "daytime"}
+```
+
+**vi. Polling loop.** Sequential Bash calls only — no compound commands.
+
+**Initial wait**: issue a `sleep 10` Bash call with `timeout: 15000` (15 seconds — ample margin over the 10-second sleep). This follows a background launch, so it is not a blocking subprocess wait; it gives the subprocess time to write its PID file.
+
+**After initial wait**: read the PID file with `cat lifecycle/{feature}/daytime.pid 2>/dev/null`. If the file is absent: this is a startup failure — skip the polling loop and go directly to result surfacing (§vii) using the content of `daytime.log`.
+
+**Per-iteration steps** (each a separate Bash call):
+- (a) Liveness: `kill -0 $pid 2>/dev/null`. Non-zero exit means the process has exited — break out of the polling loop and proceed to result surfacing.
+- (b) Progress tail: `tail -n 5 lifecycle/{feature}/events.log` and surface a brief summary of the 5 most recent events to the user. The tail is capped at 5 (not 20) to limit context accumulation over long runs.
+- (c) Inter-iteration sleep: `sleep 120` Bash call with `timeout: 130000` (130 seconds — ample margin over the 120-second sleep).
+
+**Termination bound**: 120 iterations (~4 hours). Context window exhaustion — not iteration count — is the practical binding constraint for long runs. At **30 iterations (~1 hour)**, pause and offer the user the option to suspend polling: "Subprocess still running after 30 iterations (~1 hour). Continue polling or stop? (The process continues in background — monitor `lifecycle/{feature}/daytime.log` and `events.log` directly.)" If the user chooses to stop, exit the polling loop (the subprocess keeps running; skip result surfacing and log `dispatch_complete` with outcome `"paused"` only if the subprocess is still alive — otherwise surface results normally). On reaching 120 iterations without the subprocess exiting: surface "Polling timeout — subprocess may still be running (PID {pid}). Check `lifecycle/{feature}/daytime.log` directly for status." and exit the polling loop.
+
+**vii. Result surfacing.** Read the last non-empty line of `lifecycle/{feature}/daytime.log` that begins with `"Feature "`. Apply first-match-wins in this exact order:
+
+1. Line contains `"merged successfully"` → **success**: display the line to the user; scan the full `daytime.log` for a GitHub PR URL matching the pattern `https://github.com/[^/]+/[^/]+/pull/[0-9]+` and display it if found.
+2. Line contains `"deferred"` → **deferred**: display the line; read the most recently modified file in `lifecycle/{feature}/deferred/` (by modification time) and display its content; if multiple files exist, note the count.
+3. Line contains `"paused"` → **paused**: display the line; instruct the user to check `events.log` for details and re-run when ready.
+4. No `"Feature "` line is found, or the line matches none of the above → **failed**: display the last 20 lines of `daytime.log`; instruct the user to check `lifecycle/{feature}/daytime.log` for full details.
+
+This ordered detection is intentional: a failure message containing "paused" as a substring (e.g. `"Feature X failed: subprocess paused unexpectedly"`) still classifies as failed because "merged successfully" and "deferred" are checked first, and "paused" would only match at step 3, which is reached only if steps 1 and 2 did not match. The ordering ensures substring accidents do not misclassify.
+
+**viii. Log `dispatch_complete` event.** After result surfacing, a separate Bash call appends to `lifecycle/{feature}/events.log`:
+
+```
+{"ts": "<ISO 8601>", "event": "dispatch_complete", "feature": "<name>", "mode": "daytime", "outcome": "complete|deferred|paused|failed", "pr_url": "<url>|null"}
+```
+
+The `outcome` field maps from the result-surfacing classification: "merged successfully" → `"complete"`, "deferred" → `"deferred"`, "paused" → `"paused"`, other / no-match → `"failed"`. The `pr_url` field is the PR URL string if one was found during success surfacing, or the JSON literal `null` otherwise.
+
+**ix. Exit /lifecycle entirely.** Do not transition to any further phase. The daytime pipeline has already run the full lifecycle; the main session's role is done.
+
 ### 2. Task Dispatch
 
 Compute batches from the dependency graph using topological level grouping:
