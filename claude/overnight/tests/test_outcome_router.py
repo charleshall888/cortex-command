@@ -12,7 +12,7 @@ import asyncio
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
 from claude.overnight.outcome_router import OutcomeContext, apply_feature_result
@@ -270,6 +270,155 @@ class TestApplyFeatureResultCircuitBreaker(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(ctx.consecutive_pauses_ref[0], CIRCUIT_BREAKER_THRESHOLD)
         self.assertTrue(ctx.batch_result.circuit_breaker_fired)
+
+
+class TestApplyFeatureResultReviewGating(unittest.IsolatedAsyncioTestCase):
+    """Review gating and recovery-path coverage for apply_feature_result."""
+
+    async def test_review_gated_dispatches_review_once(self):
+        """requires_review=True + merged → dispatch_review called once with
+        the correct feature and branch args."""
+        ctx = _make_ctx(pauses=[0])
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+        )
+        review_result = MagicMock(deferred=False, verdict="approved", cycle=1)
+
+        with (
+            patch(
+                "claude.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "claude.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "claude.overnight.outcome_router.requires_review",
+                return_value=True,
+            ),
+            patch(
+                "claude.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(return_value=review_result),
+            ) as m_dispatch,
+            patch("claude.overnight.outcome_router.read_tier", return_value="M"),
+            patch(
+                "claude.overnight.outcome_router.read_criticality",
+                return_value="high",
+            ),
+            patch("claude.overnight.outcome_router._write_back_to_backlog"),
+            patch("claude.overnight.outcome_router.overnight_log_event"),
+            patch("claude.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_dispatch.assert_awaited_once()
+        kwargs = m_dispatch.await_args.kwargs
+        self.assertEqual(kwargs["feature"], "feat-a")
+        self.assertEqual(kwargs["branch"], "pipeline/feat-a")
+
+    async def test_review_ungated_skips_dispatch(self):
+        """requires_review=False → dispatch_review NOT called; merged path
+        proceeds normally."""
+        ctx = _make_ctx(pauses=[0])
+
+        merge_result = MagicMock(
+            success=True, error=None, conflict=False, test_result=None,
+        )
+
+        with (
+            patch(
+                "claude.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "claude.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "claude.overnight.outcome_router.requires_review",
+                return_value=False,
+            ),
+            patch(
+                "claude.overnight.outcome_router.dispatch_review",
+                new=AsyncMock(),
+            ) as m_dispatch,
+            patch("claude.overnight.outcome_router.read_tier", return_value="S"),
+            patch(
+                "claude.overnight.outcome_router.read_criticality",
+                return_value="low",
+            ),
+            patch("claude.overnight.outcome_router._write_back_to_backlog"),
+            patch("claude.overnight.outcome_router.overnight_log_event"),
+            patch("claude.overnight.outcome_router.cleanup_worktree"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_dispatch.assert_not_awaited()
+        self.assertIn("feat-a", ctx.batch_result.features_merged)
+
+    async def test_recovery_path_awaits_recover_and_increments_attempts(self):
+        """merge_feature returns success=False with a test_result (test
+        failure indicator) → recover_test_failure awaited once; and
+        ctx.recovery_attempts_map[name] is incremented to 1 BEFORE the
+        recovery dispatch."""
+        ctx = _make_ctx(pauses=[0])
+        ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
+
+        test_result = MagicMock(output="FAILED: test_foo")
+        merge_result = MagicMock(
+            success=False,
+            error="test_failure",
+            conflict=False,
+            test_result=test_result,
+        )
+
+        observed_attempts: list[int] = []
+
+        async def _fake_recover(**kwargs):
+            # Capture recovery_attempts_map state at the moment of the call
+            observed_attempts.append(ctx.recovery_attempts_map.get("feat-a", 0))
+            return MagicMock(status="paused", repair_branch=None)
+
+        with (
+            patch(
+                "claude.overnight.outcome_router._get_changed_files",
+                return_value=["src/a.py"],
+            ),
+            patch(
+                "claude.overnight.outcome_router.merge_feature",
+                return_value=merge_result,
+            ),
+            patch(
+                "claude.overnight.outcome_router.recover_test_failure",
+                new=AsyncMock(side_effect=_fake_recover),
+            ) as m_recover,
+            patch("claude.overnight.outcome_router._write_back_to_backlog"),
+            patch("claude.overnight.outcome_router.overnight_log_event"),
+            patch("claude.overnight.outcome_router.load_state"),
+            patch("claude.overnight.outcome_router.save_state"),
+            patch("claude.overnight.outcome_router._apply_feature_result"),
+        ):
+            await apply_feature_result(
+                "feat-a",
+                FeatureResult(name="feat-a", status="completed"),
+                ctx,
+            )
+
+        m_recover.assert_awaited_once()
+        # Increment happens BEFORE dispatch — observed at call site == 1.
+        self.assertEqual(observed_attempts, [1])
+        self.assertEqual(ctx.recovery_attempts_map["feat-a"], 1)
 
 
 if __name__ == "__main__":
