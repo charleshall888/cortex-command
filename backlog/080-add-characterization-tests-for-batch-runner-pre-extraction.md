@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: efce9b8c-daca-4f01-b15c-929825d64a91
 title: "Add characterization tests for batch_runner pre-extraction"
-status: backlog
+status: complete
 priority: high
 type: chore
 created: 2026-04-13
@@ -11,6 +11,11 @@ parent: "074"
 tags: [overnight-runner, refactor, modularization, tests]
 areas: [overnight-runner]
 discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+session_id: null
+lifecycle_phase: research
+lifecycle_slug: add-characterization-tests-for-batch-runner-pre-extraction
+complexity: complex
+criticality: high
 ---
 
 ## Scope

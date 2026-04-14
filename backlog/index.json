@@ -161,9 +161,7 @@
     "created": "2026-04-13",
     "updated": "2026-04-13",
     "blocks": [],
-    "blocked_by": [
-      "080"
-    ],
+    "blocked_by": [],
     "parent": "074",
     "research": null,
     "spec": null,
@@ -237,37 +235,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 80,
-    "title": "Add characterization tests for batch_runner pre-extraction",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "overnight-runner",
-      "refactor",
-      "modularization",
-      "tests"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-13",
-    "updated": "2026-04-13",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "074",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
-    "plan": null,
-    "uuid": "efce9b8c-daca-4f01-b15c-929825d64a91",
-    "lifecycle_slug": "add-characterization-tests-for-batch-runner-pre-extraction",
-    "session_id": "7db1afd0-e00d-46d0-b279-579efaeca4d9",
-    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
