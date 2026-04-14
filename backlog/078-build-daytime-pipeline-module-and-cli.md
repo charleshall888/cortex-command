@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: fe080031-8f44-4b19-8681-63f9b54accc0
 title: "Build daytime pipeline module and CLI"
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-04-13
@@ -12,6 +12,12 @@ blocked-by: []
 tags: [lifecycle, overnight-runner, daytime-pipeline, autonomous-worktree]
 areas: [lifecycle, overnight-runner]
 discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+session_id: 1ffe30d2-b484-4e27-9181-5f7a095d8140
+lifecycle_phase: plan
+lifecycle_slug: build-daytime-pipeline-module-and-cli
+complexity: complex
+criticality: high
+spec: lifecycle/build-daytime-pipeline-module-and-cli/spec.md
 ---
 
 ## Scope
