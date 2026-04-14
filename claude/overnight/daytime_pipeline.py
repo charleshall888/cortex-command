@@ -4,29 +4,36 @@ Thin async CLI driver for daytime (foreground) execution of a single
 feature via the existing overnight execution pipeline
 (``execute_feature`` -> ``apply_feature_result`` -> ``cleanup_worktree``).
 
-This module (Task 3 of the build-daytime-pipeline-module-and-cli feature)
-provides startup-layer helpers only: a CWD guard, PID file I/O and
-liveness check, a SIGKILL recovery sequence, and a ``build_config``
-factory that constructs a ``BatchConfig`` pointing at per-feature paths
-and writes the initial ``daytime-state.json``. The async execution
-driver (``run_daytime``) and CLI entry point are added in Task 4.
+Provides startup-layer helpers (CWD guard, PID file I/O and liveness
+check, SIGKILL recovery sequence, ``build_config`` factory) and the
+async execution driver (``run_daytime``) plus CLI entry point
+(``build_parser``, ``_run``).
 """
 
 from __future__ import annotations
 
+import argparse
+import asyncio
 import errno
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
 from claude.overnight.batch_runner import BatchConfig
+from claude.overnight.deferral import DEFAULT_DEFERRED_DIR
+from claude.overnight.feature_executor import execute_feature
+from claude.overnight.orchestrator import BatchResult
+from claude.overnight.outcome_router import OutcomeContext, apply_feature_result
 from claude.overnight.state import (
     OvernightFeatureStatus,
     OvernightState,
     save_state,
 )
+from claude.overnight.types import CircuitBreakerState
+from claude.pipeline.worktree import cleanup_worktree, create_worktree
 
 
 def _check_cwd() -> None:
@@ -213,3 +220,154 @@ def build_config(feature: str, cwd: Path, session_id: str) -> BatchConfig:
     (cwd / f"lifecycle/{feature}/deferred").mkdir(parents=True, exist_ok=True)
 
     return config
+
+
+async def _orphan_guard(feature: str, pid_path: Path) -> None:
+    """Background guard that cleans up if the process is orphaned.
+
+    Loops indefinitely, sleeping 1 second between iterations. On each
+    wake, checks whether the process has been orphaned (parent PID is
+    1); if orphaned, calls ``cleanup_worktree(feature)``, removes
+    ``pid_path``, then calls ``os._exit(1)``.
+
+    Uses ``os._exit`` — not ``sys.exit`` — because ``sys.exit`` inside a
+    coroutine raises ``SystemExit`` only within the task; the main
+    coroutine would continue unaffected.
+    """
+    while True:
+        await asyncio.sleep(1)
+        if os.getppid() == 1:
+            try:
+                cleanup_worktree(feature)
+            finally:
+                pid_path.unlink(missing_ok=True)
+                os._exit(1)
+
+
+async def run_daytime(feature: str) -> int:
+    """Orchestrate the full daytime lifecycle for a single feature.
+
+    Steps: startup checks -> PID write -> worktree create -> execute ->
+    route -> cleanup. Includes an orphan-prevention background task.
+
+    Returns the process exit code (0 on merge success, 1 otherwise).
+    """
+    _check_cwd()
+
+    plan_path = Path(f"lifecycle/{feature}/plan.md")
+    if not plan_path.exists():
+        sys.stderr.write(
+            f"error: plan.md not found at `lifecycle/{feature}/plan.md`\n"
+        )
+        return 1
+
+    cwd = Path.cwd()
+    pid_path = _pid_path(feature)
+
+    existing_pid = _read_pid(pid_path)
+    if existing_pid is not None:
+        if _is_alive(existing_pid):
+            sys.stderr.write(
+                f"error: daytime already running for {feature} "
+                f"(PID {existing_pid})\n"
+            )
+            return 1
+        # Stale PID — recover.
+        _recover_stale(feature, _worktree_path(feature))
+        pid_path.unlink(missing_ok=True)
+
+    _write_pid(pid_path)
+
+    session_id = os.environ.get("LIFECYCLE_SESSION_ID") or (
+        f"daytime-{feature}-{int(time.time())}"
+    )
+    config = build_config(feature, cwd, session_id)
+    deferred_dir = cwd / f"lifecycle/{feature}/deferred"
+
+    worktree_info = create_worktree(feature)
+
+    ctx = OutcomeContext(
+        batch_result=BatchResult(batch_id=1),
+        lock=asyncio.Lock(),
+        cb_state=CircuitBreakerState(),
+        recovery_attempts_map={feature: 0},
+        worktree_paths={feature: worktree_info.path},
+        worktree_branches={feature: worktree_info.branch},
+        repo_path_map={feature: None},
+        integration_worktrees={},
+        integration_branches={},
+        session_id=session_id,
+        backlog_ids={feature: None},
+        feature_names=[feature],
+        config=config,
+    )
+
+    _orphan_task = asyncio.create_task(_orphan_guard(feature, pid_path))
+
+    try:
+        result = await execute_feature(
+            feature, worktree_info.path, config, deferred_dir=deferred_dir
+        )
+        await apply_feature_result(
+            feature, result, ctx, deferred_dir=deferred_dir
+        )
+    except Exception as e:
+        sys.stderr.write(f"error: daytime pipeline failed: {e}\n")
+        return 1
+    finally:
+        _orphan_task.cancel()
+        cleanup_worktree(feature)
+        pid_path.unlink(missing_ok=True)
+
+    br = ctx.batch_result
+    if feature in br.features_merged:
+        print(f"Feature {feature} merged successfully.")
+        return 0
+    if any(d.get("name") == feature for d in br.features_deferred):
+        deferral_file = next(deferred_dir.glob("*.md"), None)
+        if deferral_file is not None:
+            print(str(deferral_file))
+        else:
+            print(
+                f"Feature {feature} deferred — check "
+                f"lifecycle/{feature}/deferred/ for details."
+            )
+        return 1
+    if any(d.get("name") == feature for d in br.features_paused):
+        print(
+            f"Feature {feature} paused — worktree cleaned; "
+            f"check events.log for details."
+        )
+        return 1
+    # failed or unrecognized
+    failed = next(
+        (d for d in br.features_failed if d.get("name") == feature),
+        None,
+    )
+    if failed is not None and failed.get("error"):
+        print(f"Feature {feature} failed: {failed['error']}")
+    else:
+        print(f"Feature {feature} did not complete successfully.")
+    return 1
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser."""
+    p = argparse.ArgumentParser(
+        prog="python3 -m claude.overnight.daytime_pipeline"
+    )
+    p.add_argument(
+        "--feature",
+        required=True,
+        help="Feature slug to execute (e.g. my-feature)",
+    )
+    return p
+
+
+def _run() -> None:
+    args = build_parser().parse_args()
+    sys.exit(asyncio.run(run_daytime(args.feature)))
+
+
+if __name__ == "__main__":
+    _run()
