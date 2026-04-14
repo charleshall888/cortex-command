@@ -20,12 +20,30 @@ if TYPE_CHECKING:
     from claude.overnight.batch_runner import BatchResult, BatchConfig
 
 from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from claude.overnight.deferral import (
+    SEVERITY_BLOCKING,
+    DeferralQuestion,
+    _next_escalation_n,
+    write_deferral,
+)
 from claude.overnight.events import (
     BACKLOG_WRITE_FAILED,
+    CIRCUIT_BREAKER,
+    FEATURE_COMPLETE,
+    FEATURE_DEFERRED,
+    FEATURE_FAILED,
+    FEATURE_PAUSED,
+    REPAIR_AGENT_RESOLVED,
+    TRIVIAL_CONFLICT_RESOLVED,
     log_event as overnight_log_event,
 )
 from claude.overnight.state import _normalize_repo_key
 from claude.overnight.types import FeatureResult
+from claude.pipeline.merge import merge_feature
+from claude.pipeline.worktree import cleanup_worktree
+
+if TYPE_CHECKING:
+    from claude.pipeline.review_dispatch import ReviewResult  # noqa: F401
 
 
 logger = logging.getLogger(__name__)
@@ -392,4 +410,331 @@ def _write_back_to_backlog(
             feature=feature,
             details={"error": str(exc)},
             log_path=log_path,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Sync outcome dispatcher: _apply_feature_result
+# ---------------------------------------------------------------------------
+
+
+def _apply_feature_result(
+    name: str,
+    result: FeatureResult,
+    ctx: OutcomeContext,
+) -> None:
+    """Sync status-dispatch and circuit-breaker logic extracted from _accumulate_result.
+
+    Called inside ``_accumulate_result``'s ``async with lock:`` block so that
+    the counter/status branching is directly unit-testable without driving the
+    full async ``run_batch()`` call chain (see batch runner).
+
+    ``ctx.worktree_branches`` maps feature name to the actual pipeline branch used
+    by the worker (e.g. ``pipeline/feat-2``). When provided, the no-commit
+    guard and merge both target the correct suffixed branch.
+    """
+    repo_path = ctx.repo_path_map.get(name)
+    worktree_path = ctx.worktree_paths.get(name)
+    review_result: "ReviewResult | None" = None
+    if result.status == "repair_completed":
+        # Fast-forward merge the repair branch into base_branch.
+        repo = Path.cwd()
+        subprocess.run(
+            ["git", "checkout", ctx.config.base_branch],
+            cwd=repo,
+            capture_output=True,
+        )
+        ff_result = subprocess.run(
+            ["git", "merge", "--ff-only", result.repair_branch],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+        )
+        if ff_result.returncode == 0:
+            ctx.batch_result.features_merged.append(name)
+            ctx.consecutive_pauses_ref[0] = 0
+            if result.trivial_resolved:
+                overnight_log_event(
+                    TRIVIAL_CONFLICT_RESOLVED,
+                    ctx.config.batch_id,
+                    feature=name,
+                    details={
+                        "resolved_files": result.resolved_files,
+                        "strategy": "trivial_fast_path",
+                    },
+                    log_path=ctx.config.overnight_events_path,
+                )
+            else:
+                overnight_log_event(
+                    REPAIR_AGENT_RESOLVED,
+                    ctx.config.batch_id,
+                    feature=name,
+                    details={"repair_branch": result.repair_branch},
+                    log_path=ctx.config.overnight_events_path,
+                )
+            _write_back_to_backlog(
+                name, "merged", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+            )
+            # Delete repair branch.
+            subprocess.run(
+                ["git", "branch", "-d", result.repair_branch],
+                cwd=repo,
+                capture_output=True,
+            )
+            # Clean up the stale prior-round worktree (failed merge left it intact).
+            try:
+                cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+            except Exception:
+                pass
+        else:
+            error = f"repair_ff_merge_failed: {ff_result.stderr.strip()}"
+            ctx.batch_result.features_paused.append({"name": name, "error": error})
+            ctx.consecutive_pauses_ref[0] += 1
+            overnight_log_event(
+                FEATURE_PAUSED,
+                ctx.config.batch_id,
+                feature=name,
+                details={"error": error},
+                log_path=ctx.config.overnight_events_path,
+            )
+            _write_back_to_backlog(
+                name, "paused", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+            )
+
+    elif result.status == "completed":
+        actual_branch = (ctx.worktree_branches or {}).get(name)
+        # Collect changed files before merge
+        changed_files = _get_changed_files(name, ctx.config.base_branch, branch=actual_branch)
+        ctx.batch_result.key_files_changed[name] = changed_files
+
+        # Guard: skip merge if feature completed with no new commits
+        if not changed_files:
+            branch_label = actual_branch or f"pipeline/{name}"
+            error = _classify_no_commit(name, branch_label, ctx.config.base_branch)
+            if not error:
+                error = f"completed with no new commits (branch: {branch_label})"
+            ctx.batch_result.features_paused.append({"name": name, "error": error})
+            ctx.consecutive_pauses_ref[0] += 1
+            overnight_log_event(
+                FEATURE_PAUSED,
+                ctx.config.batch_id,
+                feature=name,
+                details={"error": error, "no_commit_guard": True},
+                log_path=ctx.config.overnight_events_path,
+            )
+            _write_back_to_backlog(
+                name, "paused", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+            )
+            return
+
+        # Auto-merge to main
+        effective_branch = _effective_base_branch(repo_path, ctx.integration_branches, ctx.config.base_branch)
+        merge_result = merge_feature(
+            feature=name,
+            base_branch=effective_branch,
+            test_command=ctx.config.test_command,
+            log_path=ctx.config.pipeline_events_path,
+            branch=actual_branch,
+            repo_path=_effective_merge_repo_path(repo_path, ctx.integration_worktrees, ctx.integration_branches, ctx.session_id),
+        )
+
+        if merge_result.success:
+            # Review gating: if review was required and deferred, handle early return
+            if review_result is not None and review_result.deferred:
+                ctx.batch_result.features_deferred.append({
+                    "name": name,
+                    "question_count": 1,
+                })
+                overnight_log_event(
+                    FEATURE_DEFERRED,
+                    ctx.config.batch_id,
+                    feature=name,
+                    details={"review_verdict": review_result.verdict, "review_cycle": review_result.cycle},
+                    log_path=ctx.config.overnight_events_path,
+                )
+                _write_back_to_backlog(
+                    name, "in_progress", ctx.config.batch_id,
+                    ctx.config.overnight_events_path,
+                    backlog_id=ctx.backlog_ids.get(name),
+                )
+                try:
+                    cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+                except Exception:
+                    pass
+                return
+
+            # review_result is None (no review needed) or approved — continue to FEATURE_COMPLETE
+            ctx.batch_result.features_merged.append(name)
+            ctx.consecutive_pauses_ref[0] = 0
+            overnight_log_event(
+                FEATURE_COMPLETE,
+                ctx.config.batch_id,
+                feature=name,
+                details={"files_changed": changed_files},
+                log_path=ctx.config.overnight_events_path,
+            )
+            _write_back_to_backlog(
+                name, "merged", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+            )
+            # Clean up worktree
+            try:
+                cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+            except Exception:
+                pass
+        elif merge_result.error in ("ci_pending", "ci_failing"):
+            # CI gate blocked the merge — write a deferral question so the
+            # human reviewer can decide whether to force-merge in the morning.
+            ci_error = merge_result.error
+            if ci_error == "ci_pending":
+                question_text = (
+                    f"Feature '{name}' has a CI run in progress or queued. "
+                    "Should this feature be force-merged once CI completes, "
+                    "or should it remain deferred for manual review?"
+                )
+                context_text = "Merge blocked: CI run is pending (in_progress or queued)."
+            else:
+                question_text = (
+                    f"Feature '{name}' has a failing CI run. "
+                    "Should this feature be force-merged despite CI failures, "
+                    "or should it remain deferred for manual review?"
+                )
+                context_text = "Merge blocked: CI run has a non-success conclusion (failure, cancelled, timed_out, or action_required)."
+
+            escalations_path = Path("lifecycle/escalations.jsonl")
+            deferral = DeferralQuestion(
+                feature=name,
+                question_id=_next_escalation_n(name, ctx.config.batch_id, escalations_path),
+                severity=SEVERITY_BLOCKING,
+                context=context_text,
+                question=question_text,
+                options_considered=["force-merge after CI resolves", "leave deferred for manual review"],
+                pipeline_attempted="ci_check in merge_feature()",
+            )
+            write_deferral(deferral)
+            ctx.batch_result.features_deferred.append({
+                "name": name,
+                "question_count": 1,
+            })
+            overnight_log_event(
+                FEATURE_DEFERRED,
+                ctx.config.batch_id,
+                feature=name,
+                details={"error": ci_error, "question_count": 1},
+                log_path=ctx.config.overnight_events_path,
+            )
+            _write_back_to_backlog(
+                name, "deferred", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+            )
+        else:
+            error = merge_result.error or "merge failed"
+            ctx.batch_result.features_paused.append({"name": name, "error": error})
+            ctx.consecutive_pauses_ref[0] += 1
+            if merge_result.conflict and merge_result.classification is not None:
+                overnight_log_event(
+                    "merge_conflict_classified",
+                    ctx.config.batch_id,
+                    feature=name,
+                    details={
+                        "conflicted_files": merge_result.classification.conflicted_files,
+                        "conflict_summary": merge_result.classification.conflict_summary,
+                    },
+                    log_path=ctx.config.overnight_events_path,
+                )
+            overnight_log_event(
+                FEATURE_PAUSED,
+                ctx.config.batch_id,
+                feature=name,
+                details={"error": error, "conflict": merge_result.conflict},
+                log_path=ctx.config.overnight_events_path,
+            )
+            _write_back_to_backlog(
+                name, "paused", ctx.config.batch_id,
+                ctx.config.overnight_events_path,
+                backlog_id=ctx.backlog_ids.get(name),
+            )
+
+    elif result.status == "deferred":
+        ctx.batch_result.features_deferred.append({
+            "name": name,
+            "question_count": result.deferred_question_count,
+        })
+        overnight_log_event(
+            FEATURE_DEFERRED,
+            ctx.config.batch_id,
+            feature=name,
+            details={"question_count": result.deferred_question_count},
+            log_path=ctx.config.overnight_events_path,
+        )
+        _write_back_to_backlog(
+            name, "deferred", ctx.config.batch_id,
+            ctx.config.overnight_events_path,
+            backlog_id=ctx.backlog_ids.get(name),
+        )
+
+    elif result.status == "failed":
+        ctx.batch_result.features_failed.append({
+            "name": name,
+            "error": result.error or "unknown failure",
+        })
+        if not result.parse_error:
+            ctx.consecutive_pauses_ref[0] += 1
+        overnight_log_event(
+            FEATURE_FAILED,
+            ctx.config.batch_id,
+            feature=name,
+            details={"error": result.error},
+            log_path=ctx.config.overnight_events_path,
+        )
+        _write_back_to_backlog(
+            name, "failed", ctx.config.batch_id,
+            ctx.config.overnight_events_path,
+            backlog_id=ctx.backlog_ids.get(name),
+        )
+
+    else:  # paused
+        ctx.batch_result.features_paused.append({
+            "name": name,
+            "error": result.error or "task paused",
+        })
+        ctx.consecutive_pauses_ref[0] += 1
+        overnight_log_event(
+            FEATURE_PAUSED,
+            ctx.config.batch_id,
+            feature=name,
+            details={"error": result.error},
+            log_path=ctx.config.overnight_events_path,
+        )
+        _write_back_to_backlog(
+            name, "paused", ctx.config.batch_id,
+            ctx.config.overnight_events_path,
+            backlog_id=ctx.backlog_ids.get(name),
+        )
+
+    if ctx.consecutive_pauses_ref[0] >= CIRCUIT_BREAKER_THRESHOLD:
+        ctx.batch_result.circuit_breaker_fired = True
+        overnight_log_event(
+            CIRCUIT_BREAKER,
+            ctx.config.batch_id,
+            feature=name,
+            details={
+                "reason": "batch circuit breaker: 3 consecutive pauses",
+                "remaining_features": [
+                    n for n in ctx.feature_names
+                    if n not in ctx.batch_result.features_merged
+                    and not any(d["name"] == n for d in ctx.batch_result.features_paused)
+                    and not any(d["name"] == n for d in ctx.batch_result.features_deferred)
+                    and not any(d["name"] == n for d in ctx.batch_result.features_failed)
+                ],
+            },
+            log_path=ctx.config.overnight_events_path,
         )
