@@ -36,6 +36,7 @@ from claude.pipeline.state import log_event as pipeline_log_event
 
 from claude.overnight.brain import BrainAction, BrainContext, request_brain_decision
 from claude.overnight.deferral import (
+    DEFAULT_DEFERRED_DIR,
     SEVERITY_BLOCKING,
     DeferralQuestion,
     EscalationEntry,
@@ -187,6 +188,8 @@ async def _handle_failed_task(
     manager: Optional[ConcurrencyManager] = None,
     round: int = 0,
     log_path: Path = Path("lifecycle/overnight-events.log"),
+    *,
+    deferred_dir: Path = DEFAULT_DEFERRED_DIR,
 ) -> Optional[FeatureResult]:
     """Handle a failed task via brain agent triage.
 
@@ -247,7 +250,7 @@ async def _handle_failed_task(
             options_considered=[],
             pipeline_attempted="brain agent triage",
         )
-        write_deferral(deferral)
+        write_deferral(deferral, deferred_dir=deferred_dir)
         return FeatureResult(
             name=feature,
             status="deferred",
@@ -351,6 +354,8 @@ async def execute_feature(
     consecutive_pauses_ref: Optional[list[int]] = None,
     repo_path: Path | None = None,
     integration_branches: dict[str, str] | None = None,
+    *,
+    deferred_dir: Path = DEFAULT_DEFERRED_DIR,
 ) -> FeatureResult:
     """Execute all tasks for a single feature through its plan.
 
@@ -439,7 +444,7 @@ async def execute_feature(
                         options_considered=["resolve manually", "skip feature"],
                         pipeline_attempted="conflict_recovery_policy",
                     )
-                    write_deferral(_deferral)
+                    write_deferral(_deferral, deferred_dir=deferred_dir)
                     return FeatureResult(
                         name=feature,
                         status="deferred",
@@ -494,7 +499,7 @@ async def execute_feature(
                             options_considered=["resolve manually", "skip feature"],
                             pipeline_attempted="dispatch_repair_agent()",
                         )
-                        write_deferral(_deferral)
+                        write_deferral(_deferral, deferred_dir=deferred_dir)
                         return FeatureResult(
                             name=feature,
                             status="deferred",
@@ -666,6 +671,7 @@ async def execute_feature(
                     spec_content, result, pauses_ref, manager,
                     round=config.batch_id,
                     log_path=config.overnight_events_path,
+                    deferred_dir=deferred_dir,
                 )
                 if brain_result:
                     return brain_result
