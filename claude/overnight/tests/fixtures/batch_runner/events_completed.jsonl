@@ -1,0 +1,3 @@
+{"event": "task_output", "feature": "feature-completed"}
+{"event": "task_git_state", "feature": "feature-completed"}
+{"event": "feature_complete", "feature": "feature-completed"}
