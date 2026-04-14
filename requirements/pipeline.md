@@ -12,7 +12,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 
 ### Session Orchestration
 
-- **Description**: The overnight runner (`batch_runner.py`) manages session-level state, schedules features into rounds, dispatches them concurrently, and transitions the session through completion.
+- **Description**: The overnight runner (`orchestrator.py`) manages session-level state, schedules features into rounds, dispatches them concurrently, and transitions the session through completion.
 - **Inputs**: `lifecycle/overnight-state.json` (session phase, feature statuses), `lifecycle/master-plan.md` (round assignments), per-feature `lifecycle/{feature}/plan.md`
 - **Outputs**: Updated `overnight-state.json`, `pipeline-events.log` (JSONL append log), per-feature commits on integration branch `overnight/{session_id}`
 - **Acceptance criteria**:
