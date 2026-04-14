@@ -145,36 +145,6 @@
     "repo": null
   },
   {
-    "id": 77,
-    "title": "Rename batch_runner to orchestrator and add integration tests",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "overnight-runner",
-      "refactor",
-      "modularization"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-13",
-    "updated": "2026-04-14",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "074",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
-    "plan": null,
-    "uuid": "077bf623-337c-476a-88c9-30a625fa86a3",
-    "lifecycle_slug": "rename-batch-runner-to-orchestrator-and-add-integration-tests",
-    "session_id": "1afe2479-59c0-4edb-ae08-5c7060d56879",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",

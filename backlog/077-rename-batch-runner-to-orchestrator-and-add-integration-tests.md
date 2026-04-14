@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 077bf623-337c-476a-88c9-30a625fa86a3
 title: "Rename batch_runner to orchestrator and add integration tests"
-status: backlog
+status: complete
 priority: high
 type: feature
 created: 2026-04-13
@@ -12,6 +12,11 @@ blocked-by: []
 tags: [overnight-runner, refactor, modularization]
 areas: [overnight-runner]
 discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+session_id: null
+lifecycle_phase: complete
+lifecycle_slug: rename-batch-runner-to-orchestrator-and-add-integration-tests
+complexity: complex
+criticality: high
 ---
 
 ## Scope
