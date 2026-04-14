@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from claude.pipeline.merge import TestResult
-    from claude.overnight.batch_runner import BatchConfig
+    from claude.overnight.orchestrator import BatchConfig
 
 from claude.pipeline.dispatch import dispatch_task
 from claude.pipeline.merge_recovery import write_recovery_log_entry

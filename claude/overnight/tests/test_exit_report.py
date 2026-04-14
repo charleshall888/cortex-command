@@ -15,7 +15,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from claude.overnight.batch_runner import BatchConfig, execute_feature
+from claude.overnight.orchestrator import BatchConfig
+from claude.overnight.feature_executor import execute_feature
 from claude.overnight.feature_executor import _read_exit_report
 from claude.overnight.events import (
     FEATURE_DEFERRED,

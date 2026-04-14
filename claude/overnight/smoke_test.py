@@ -17,7 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from claude.overnight.batch_runner import BatchConfig, run_batch
+from claude.overnight.orchestrator import BatchConfig, run_batch
 from claude.pipeline.worktree import cleanup_worktree, create_worktree
 
 # ---------------------------------------------------------------------------

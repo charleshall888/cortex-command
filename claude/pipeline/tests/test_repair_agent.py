@@ -20,7 +20,7 @@ from claude.pipeline.conflict import (
     RepairResult,
     dispatch_repair_agent,
 )
-from claude.overnight.batch_runner import execute_feature
+from claude.overnight.feature_executor import execute_feature
 
 
 # ---------------------------------------------------------------------------

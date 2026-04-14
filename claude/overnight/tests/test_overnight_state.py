@@ -13,7 +13,7 @@ from pathlib import Path
 
 from claude.overnight.state import OvernightFeatureStatus, OvernightState
 from claude.overnight.state import save_state, load_state, save_batch_result
-from claude.overnight.batch_runner import BatchResult
+from claude.overnight.orchestrator import BatchResult
 from claude.overnight.interrupt import handle_interrupted_features
 
 

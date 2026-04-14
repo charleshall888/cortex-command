@@ -39,7 +39,7 @@ from claude.overnight.batch_plan import (  # noqa: F401
     generate_batch_plan,
     map_pipeline_results,
 )
-from claude.overnight.batch_runner import (  # noqa: F401
+from claude.overnight.orchestrator import (  # noqa: F401
     BatchConfig,
     BatchResult,
     run_batch,

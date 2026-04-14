@@ -29,7 +29,7 @@ from claude.pipeline.conflict import (
     ConflictResolutionResult,
     resolve_trivial_conflict,
 )
-from claude.overnight.batch_runner import execute_feature
+from claude.overnight.feature_executor import execute_feature
 
 
 # ---------------------------------------------------------------------------

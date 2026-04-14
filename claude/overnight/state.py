@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Optional
 from claude.common import durable_fsync
 
 if TYPE_CHECKING:
-    from claude.overnight.batch_runner import BatchResult
+    from claude.overnight.orchestrator import BatchResult
 
 # Lifecycle root (resolved from this file's location)
 _LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"
