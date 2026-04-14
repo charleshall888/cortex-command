@@ -29,3 +29,10 @@ class FeatureResult:
     repair_agent_used: bool = False
     parse_error: bool = False
     resolved_files: list[str] = field(default_factory=list)
+
+
+@dataclass
+class CircuitBreakerState:
+    """Tracks circuit breaker state across feature executions."""
+
+    consecutive_pauses: int = 0
