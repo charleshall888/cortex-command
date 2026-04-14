@@ -8,14 +8,18 @@ Execute the plan by dispatching a fresh implementation sub-task per task. Each s
 
 Read `lifecycle/{feature}/plan.md` and identify pending tasks (those with `[ ]`).
 
-**Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with three options:
+**Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with four options:
 
-- **Implement in worktree** (recommended) — dispatch the remainder of the lifecycle (implement → review → complete) to an `Agent(isolation: "worktree")` so the main session stays on `main`. Other parallel Claude sessions in this repo are unaffected. PR-based workflow is preserved via the worktree branch `worktree/agent-{lifecycle-slug}`.
-- **Implement on main** — trunk-based workflow, changes land directly on main.
-- **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
+- **Implement in worktree** (recommended) — dispatch the remainder of the lifecycle (implement → review → complete) to an `Agent(isolation: "worktree")` so the main session stays on `main`. Other parallel Claude sessions in this repo are unaffected. PR-based workflow is preserved via the worktree branch `worktree/agent-{lifecycle-slug}`. **When to pick**: small/live-steerable features where you want to remain available to answer AskUserQuestion prompts and steer the single agent interactively.
+- **Implement in autonomous worktree** — dispatch to the daytime pipeline (`python3 -m claude.overnight.daytime_pipeline`) which runs the full implement → review → complete cycle headlessly in the background without requiring live steering. **When to pick**: medium/many-task/no-live-steering-needed features where you want to kick off a longer autonomous run and move on. Proceeds to §1b below.
+- **Implement on main** — trunk-based workflow, changes land directly on main. **When to pick**: tiny, trunk-safe changes where a branch would be overhead.
+- **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
+
+**Worktree-agent context guard**: Immediately before the `AskUserQuestion` call, check the current branch with `git branch --show-current`. If it matches `^worktree/agent-` (the dispatcher is itself running inside a worktree agent context), exclude the **Implement in autonomous worktree** option from the list presented to the user and note "autonomous worktree unavailable from within a worktree agent context" alongside the prompt. The remaining three options (worktree, main, feature branch) are still presented.
 
 Dispatch by selection:
 - If the user selects **"Implement in worktree"**, proceed to §1a (the Worktree Dispatch alternate path below) — §1a replaces §2–§4 for the main session.
+- If the user selects **Implement in autonomous worktree**, proceed to §1b (Daytime Dispatch alternate path below).
 - If the user selects **"Implement on main"**, remain on the current branch and proceed to §2 Task Dispatch.
 - If the user selects **"Create feature branch"**, create and check out `feature/{lifecycle-slug}` before dispatching any tasks. All lifecycle artifacts (research, spec, plan) are already committed to main at this point, so the feature branch starts with the full artifact trail and only implementation commits diverge. Then proceed to §2 Task Dispatch.
 
