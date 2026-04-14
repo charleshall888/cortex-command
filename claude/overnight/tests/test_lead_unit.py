@@ -1363,5 +1363,288 @@ class TestConflictRecoveryBranching(unittest.IsolatedAsyncioTestCase):
         deferral_mock.assert_called_once()
 
 
+# ---------------------------------------------------------------------------
+# Task 6 (R7, R9, R10): TestAccumulateResultViaBatch — CI deferral,
+# budget abort, multi-feature recovery
+# ---------------------------------------------------------------------------
+
+
+class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
+    """Characterization tests that drive ``run_batch`` end-to-end to exercise
+    ``_accumulate_result`` branches without refactoring it out.
+
+    Covers:
+      (R7) CI deferral for ``ci_pending`` and ``ci_failing`` merge errors →
+           ``batch_result.features_deferred`` contains the feature.
+      (R9) ``budget_exhausted`` global abort signal propagates to
+           ``batch_result.global_abort_signal == True``.
+      (R10) Multi-feature batch: Feature A triggers test-failure recovery
+            while Feature B does not — ``recover_test_failure`` called
+            exactly once, Feature B ends up in ``features_merged``.
+    """
+
+    def setUp(self):
+        from claude.overnight.state import OvernightFeatureStatus, OvernightState
+
+        self._tmpdir = tempfile.TemporaryDirectory()
+        tmp = self._tmpdir.name
+        self._tmp = Path(tmp)
+
+        self._config = BatchConfig(
+            batch_id=1,
+            plan_path=self._tmp / "plan.md",
+            overnight_events_path=self._tmp / "overnight.log",
+            pipeline_events_path=self._tmp / "pipeline.log",
+            overnight_state_path=self._tmp / "state.json",
+            result_dir=self._tmp,
+        )
+        self._OvernightState = OvernightState
+        self._OvernightFeatureStatus = OvernightFeatureStatus
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _start_patch(self, *args, **kwargs):
+        p = patch(*args, **kwargs)
+        mock = p.start()
+        self.addCleanup(p.stop)
+        return mock
+
+    def _make_plan(self, feature_names):
+        features = []
+        for n in feature_names:
+            f = MagicMock()
+            f.name = n
+            features.append(f)
+        plan = MagicMock()
+        plan.features = features
+        return plan
+
+    def _make_worktree_info(self, name):
+        info = MagicMock()
+        info.path = self._tmp / f"wt-{name}"
+        info.branch = f"pipeline/{name}"
+        return info
+
+    def _make_state(self, feature_names):
+        return self._OvernightState(
+            session_id="s1",
+            plan_ref="plan.md",
+            features={
+                n: self._OvernightFeatureStatus(recovery_attempts=0)
+                for n in feature_names
+            },
+        )
+
+    def _install_common_patches(self, *, feature_names, execute_return, merge_side_effect):
+        """Install all common patches required for run_batch-level tests.
+
+        Returns a dict of the mocks that callers typically need to assert on.
+        """
+        from claude.overnight.batch_runner import FeatureResult as _FR
+
+        self._start_patch.__self__  # sanity — ensure method is bound
+
+        self._start_patch(
+            "claude.overnight.batch_runner.parse_master_plan",
+            return_value=self._make_plan(feature_names),
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.create_worktree",
+            side_effect=lambda name, *a, **kw: self._make_worktree_info(name),
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.load_state",
+            return_value=self._make_state(feature_names),
+        )
+        self._start_patch("claude.overnight.batch_runner.save_state")
+        self._start_patch(
+            "claude.overnight.batch_runner.load_throttle_config",
+            return_value=MagicMock(),
+        )
+        mock_manager = MagicMock()
+        mock_manager.acquire = AsyncMock()
+        mock_manager.release = MagicMock()
+        mock_manager.stats = {}
+        self._start_patch(
+            "claude.overnight.batch_runner.ConcurrencyManager",
+            return_value=mock_manager,
+        )
+
+        # execute_feature: allow dict-keyed or single return
+        if isinstance(execute_return, dict):
+            async def _exec_side(feature, *args, **kwargs):
+                return execute_return[feature]
+            exec_mock = self._start_patch(
+                "claude.overnight.batch_runner.execute_feature",
+                new=AsyncMock(side_effect=_exec_side),
+            )
+        else:
+            exec_mock = self._start_patch(
+                "claude.overnight.batch_runner.execute_feature",
+                new=AsyncMock(return_value=execute_return),
+            )
+
+        self._start_patch(
+            "claude.overnight.batch_runner._get_changed_files",
+            return_value=["src/foo.py"],
+        )
+        if merge_side_effect is not None:
+            merge_mock = self._start_patch(
+                "claude.overnight.batch_runner.merge_feature",
+                side_effect=merge_side_effect,
+            )
+        else:
+            merge_mock = None
+
+        self._start_patch("claude.overnight.batch_runner.overnight_log_event")
+        self._start_patch("claude.overnight.batch_runner._write_back_to_backlog")
+        self._start_patch("claude.overnight.batch_runner.cleanup_worktree")
+        recovery_mock = self._start_patch(
+            "claude.overnight.batch_runner.recover_test_failure",
+            new=AsyncMock(),
+        )
+        self._start_patch("claude.overnight.batch_runner.save_batch_result")
+
+        return {
+            "execute_feature": exec_mock,
+            "merge_feature": merge_mock,
+            "recover_test_failure": recovery_mock,
+            "manager": mock_manager,
+            "_FeatureResult": _FR,
+        }
+
+    # --- R7: CI deferral for ci_pending and ci_failing ---
+
+    async def test_ci_pending_defers_feature(self):
+        """R7 (ci_pending): merge_feature returns error='ci_pending' →
+        batch_result.features_deferred contains the feature."""
+        from claude.pipeline.merge import MergeResult
+
+        merge_result = MergeResult(
+            success=False,
+            feature="feat-a",
+            conflict=False,
+            error="ci_pending",
+        )
+        mocks = self._install_common_patches(
+            feature_names=["feat-a"],
+            execute_return=FeatureResult(name="feat-a", status="completed"),
+            merge_side_effect=lambda **kw: merge_result,
+        )
+        self._start_patch("claude.overnight.batch_runner.write_deferral")
+
+        from claude.overnight.batch_runner import run_batch
+
+        batch_result = await run_batch(self._config)
+
+        self.assertEqual(len(batch_result.features_deferred), 1)
+        self.assertEqual(batch_result.features_deferred[0]["name"], "feat-a")
+        # Sanity: recovery wasn't triggered for a CI-deferral path.
+        mocks["recover_test_failure"].assert_not_awaited()
+
+    async def test_ci_failing_defers_feature(self):
+        """R7 (ci_failing): merge_feature returns error='ci_failing' →
+        batch_result.features_deferred contains the feature."""
+        from claude.pipeline.merge import MergeResult
+
+        merge_result = MergeResult(
+            success=False,
+            feature="feat-a",
+            conflict=False,
+            error="ci_failing",
+        )
+        mocks = self._install_common_patches(
+            feature_names=["feat-a"],
+            execute_return=FeatureResult(name="feat-a", status="completed"),
+            merge_side_effect=lambda **kw: merge_result,
+        )
+        self._start_patch("claude.overnight.batch_runner.write_deferral")
+
+        from claude.overnight.batch_runner import run_batch
+
+        batch_result = await run_batch(self._config)
+
+        self.assertEqual(len(batch_result.features_deferred), 1)
+        self.assertEqual(batch_result.features_deferred[0]["name"], "feat-a")
+        mocks["recover_test_failure"].assert_not_awaited()
+
+    # --- R9: budget_exhausted global abort signal ---
+
+    async def test_budget_exhausted_sets_global_abort_signal(self):
+        """R9: execute_feature returns paused with error='budget_exhausted'
+        → batch_result.global_abort_signal == True."""
+        self._install_common_patches(
+            feature_names=["feat-a"],
+            execute_return=FeatureResult(
+                name="feat-a",
+                status="paused",
+                error="budget_exhausted",
+            ),
+            merge_side_effect=None,  # non-completed features skip merge
+        )
+        self._start_patch("claude.overnight.batch_runner.transition")
+
+        from claude.overnight.batch_runner import run_batch
+
+        batch_result = await run_batch(self._config)
+
+        self.assertTrue(batch_result.global_abort_signal)
+        self.assertEqual(batch_result.abort_reason, "budget_exhausted")
+
+    # --- R10: multi-feature recovery — A recovers, B merges clean ---
+
+    async def test_multi_feature_only_failing_feature_triggers_recovery(self):
+        """R10: Two features — A fails tests on merge, B merges clean.
+        recover_test_failure called exactly once; feat-b in features_merged."""
+        from claude.pipeline.merge import MergeResult, TestResult
+        from claude.pipeline.merge_recovery import MergeRecoveryResult
+
+        feat_a_fail = MergeResult(
+            success=False,
+            feature="feat-a",
+            conflict=False,
+            test_result=TestResult(passed=False, output="FAILED", return_code=1),
+            error="Tests failed (exit code 1)",
+        )
+        feat_b_ok = MergeResult(success=True, feature="feat-b", conflict=False)
+
+        def merge_side_effect(**kwargs):
+            return feat_a_fail if kwargs.get("feature") == "feat-a" else feat_b_ok
+
+        mocks = self._install_common_patches(
+            feature_names=["feat-a", "feat-b"],
+            execute_return={
+                "feat-a": FeatureResult(name="feat-a", status="completed"),
+                "feat-b": FeatureResult(name="feat-b", status="completed"),
+            },
+            merge_side_effect=merge_side_effect,
+        )
+        mocks["recover_test_failure"].return_value = MergeRecoveryResult(
+            success=True,
+            attempts=1,
+            paused=False,
+            flaky=False,
+            error=None,
+        )
+        # requires_review is invoked on the merge-success path for feat-b.
+        self._start_patch(
+            "claude.overnight.batch_runner.requires_review",
+            return_value=False,
+        )
+        self._start_patch("claude.overnight.batch_runner.read_tier", return_value="S")
+        self._start_patch(
+            "claude.overnight.batch_runner.read_criticality",
+            return_value="low",
+        )
+
+        from claude.overnight.batch_runner import run_batch
+
+        batch_result = await run_batch(self._config)
+
+        self.assertEqual(mocks["recover_test_failure"].await_count, 1)
+        self.assertIn("feat-b", set(batch_result.features_merged))
+
+
 if __name__ == "__main__":
     unittest.main()
