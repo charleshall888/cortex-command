@@ -2,16 +2,21 @@
 schema_version: "1"
 uuid: e68ca237-c75d-42fd-830b-ac2fd2245e27
 title: "Integrate autonomous worktree option into lifecycle pre-flight"
-status: backlog
+status: complete
 priority: medium
 type: feature
 created: 2026-04-13
-updated: 2026-04-13
+updated: 2026-04-14
 parent: "074"
-blocked-by: ["078"]
+blocked-by: []
 tags: [lifecycle, skills, autonomous-worktree]
 areas: [lifecycle, skills]
 discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+session_id: null
+lifecycle_phase: research
+lifecycle_slug: integrate-autonomous-worktree-option-into-lifecycle-pre-flight
+complexity: complex
+criticality: high
 ---
 
 ## Scope

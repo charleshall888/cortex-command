@@ -2,13 +2,13 @@
 schema_version: "1"
 uuid: 7ed502f8-399b-40c1-8cde-603c9cbf82fd
 title: "Decompose batch_runner and enable daytime autonomous-worktree pipeline"
-status: backlog
+status: complete
 priority: high
 type: epic
 tags: [lifecycle, overnight-runner, worktrees, multi-agent, refactor, modularization]
 areas: [lifecycle, skills, overnight-runner]
 created: 2026-04-13
-updated: 2026-04-13
+updated: 2026-04-14
 discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
 ---
 
