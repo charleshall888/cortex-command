@@ -26,7 +26,7 @@ from claude.overnight.orchestrator import (
     BatchConfig,
 )
 from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
-from claude.overnight.types import FeatureResult
+from claude.overnight.types import CircuitBreakerState, FeatureResult
 from claude.overnight.feature_executor import execute_feature
 from claude.overnight.outcome_router import (
     OutcomeContext,
@@ -60,10 +60,16 @@ def _make_outcome_ctx(
     name = feature_names[0] if feature_names else None
     repo_path_map = {name: repo_path} if name is not None else {}
     worktree_paths = {name: worktree_path} if (name is not None and worktree_path is not None) else {}
+    if isinstance(pauses_ref, CircuitBreakerState):
+        cb_state_arg = pauses_ref
+    elif isinstance(pauses_ref, list):
+        cb_state_arg = CircuitBreakerState(consecutive_pauses=pauses_ref[0])
+    else:
+        cb_state_arg = CircuitBreakerState(consecutive_pauses=int(pauses_ref))
     return OutcomeContext(
         batch_result=batch_result,
         lock=asyncio.Lock(),
-        consecutive_pauses_ref=pauses_ref,
+        cb_state=cb_state_arg,
         recovery_attempts_map=recovery_attempts_map if recovery_attempts_map is not None else {},
         worktree_paths=worktree_paths,
         worktree_branches=worktree_branches if worktree_branches is not None else {},
@@ -162,83 +168,83 @@ class TestApplyFeatureResult(unittest.TestCase):
     def test_three_deferred_no_circuit_breaker(self):
         """Deferred results do not increment the pause counter."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
-            self._call("feat-a", "deferred", batch, pauses, deferred_question_count=1)
-            self._call("feat-b", "deferred", batch, pauses, deferred_question_count=1)
-            self._call("feat-c", "deferred", batch, pauses, deferred_question_count=1)
+            self._call("feat-a", "deferred", batch, cb_state, deferred_question_count=1)
+            self._call("feat-b", "deferred", batch, cb_state, deferred_question_count=1)
+            self._call("feat-c", "deferred", batch, cb_state, deferred_question_count=1)
 
         self.assertFalse(batch.circuit_breaker_fired)
-        self.assertEqual(pauses[0], 0)
+        self.assertEqual(cb_state.consecutive_pauses, 0)
         self.assertEqual(len(batch.features_deferred), 3)
 
     def test_three_paused_fires_circuit_breaker(self):
         """Three consecutive paused results trip the circuit breaker."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
-            self._call("feat-a", "paused", batch, pauses, error="task failed")
-            self._call("feat-b", "paused", batch, pauses, error="task failed")
-            self._call("feat-c", "paused", batch, pauses, error="task failed")
+            self._call("feat-a", "paused", batch, cb_state, error="task failed")
+            self._call("feat-b", "paused", batch, cb_state, error="task failed")
+            self._call("feat-c", "paused", batch, cb_state, error="task failed")
 
         self.assertTrue(batch.circuit_breaker_fired)
-        self.assertEqual(pauses[0], 3)
+        self.assertEqual(cb_state.consecutive_pauses, 3)
 
     def test_two_paused_one_deferred_no_circuit_breaker(self):
         """Two paused then one deferred: counter stays at 2, no breaker."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
-            self._call("feat-a", "paused", batch, pauses, error="fail")
-            self._call("feat-b", "paused", batch, pauses, error="fail")
-            self._call("feat-c", "deferred", batch, pauses, deferred_question_count=1)
+            self._call("feat-a", "paused", batch, cb_state, error="fail")
+            self._call("feat-b", "paused", batch, cb_state, error="fail")
+            self._call("feat-c", "deferred", batch, cb_state, deferred_question_count=1)
 
         self.assertFalse(batch.circuit_breaker_fired)
-        self.assertEqual(pauses[0], 2)
+        self.assertEqual(cb_state.consecutive_pauses, 2)
 
     def test_one_failed_increments_counter(self):
         """Failed result increments the consecutive-pause counter."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
-            self._call("feat-a", "failed", batch, pauses, error="error msg")
+            self._call("feat-a", "failed", batch, cb_state, error="error msg")
 
         self.assertFalse(batch.circuit_breaker_fired)
-        self.assertEqual(pauses[0], 1)
+        self.assertEqual(cb_state.consecutive_pauses, 1)
         self.assertEqual(len(batch.features_failed), 1)
 
     def test_completed_no_files_increments_counter(self):
         """Completed with no changed files falls into the paused guard path."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
             patch.object(outcome_router_module, "_get_changed_files", return_value=[]),
             patch.object(outcome_router_module, "merge_feature"),
         ):
-            self._call("feat-a", "completed", batch, pauses)
+            self._call("feat-a", "completed", batch, cb_state)
 
         self.assertFalse(batch.circuit_breaker_fired)
-        self.assertEqual(pauses[0], 1)
+        self.assertEqual(cb_state.consecutive_pauses, 1)
         self.assertEqual(len(batch.features_paused), 1)
 
     def test_completed_with_suffixed_branch_uses_actual_branch(self):
         """_get_changed_files is called with the actual suffixed branch when worktree_branches is set."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         worktree_branches = {"feat-a": "pipeline/feat-a-2"}
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
@@ -248,7 +254,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         ):
             result = FeatureResult(name="feat-a", status="completed")
             ctx = _make_outcome_ctx(
-                self._config, batch, pauses, ["feat-a"],
+                self._config, batch, cb_state, ["feat-a"],
                 worktree_branches=worktree_branches,
             )
             _apply_feature_result("feat-a", result, ctx)
@@ -257,12 +263,12 @@ class TestApplyFeatureResult(unittest.TestCase):
         mock_merge.assert_called_once()
         merge_kwargs = mock_merge.call_args.kwargs
         self.assertEqual(merge_kwargs.get("branch"), "pipeline/feat-a-2")
-        self.assertEqual(pauses[0], 0)
+        self.assertEqual(cb_state.consecutive_pauses, 0)
 
     def test_completed_suffixed_branch_no_commits_fires_guard(self):
         """No-commit guard fires correctly when the suffixed branch has no new commits."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         worktree_branches = {"feat-a": "pipeline/feat-a-2"}
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
@@ -272,13 +278,13 @@ class TestApplyFeatureResult(unittest.TestCase):
         ):
             result = FeatureResult(name="feat-a", status="completed")
             ctx = _make_outcome_ctx(
-                self._config, batch, pauses, ["feat-a"],
+                self._config, batch, cb_state, ["feat-a"],
                 worktree_branches=worktree_branches,
             )
             _apply_feature_result("feat-a", result, ctx)
 
         mock_gcf.assert_called_once_with("feat-a", self._config.base_branch, branch="pipeline/feat-a-2")
-        self.assertEqual(pauses[0], 1)
+        self.assertEqual(cb_state.consecutive_pauses, 1)
         self.assertEqual(len(batch.features_paused), 1)
         # Error message should reference the actual branch
         error_msg = batch.features_paused[0]["error"]
@@ -287,50 +293,50 @@ class TestApplyFeatureResult(unittest.TestCase):
     def test_parse_errors_do_not_increment_counter(self):
         """Five consecutive failed results with parse_error=True leave counter at 0."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
             for i in range(5):
-                self._call(f"feat-{i}", "failed", batch, pauses,
+                self._call(f"feat-{i}", "failed", batch, cb_state,
                            error="parse error", parse_error=True)
 
         self.assertFalse(batch.circuit_breaker_fired)
-        self.assertEqual(pauses[0], 0)
+        self.assertEqual(cb_state.consecutive_pauses, 0)
         self.assertEqual(len(batch.features_failed), 5)
 
     def test_parse_error_then_operational_failure_increments_once(self):
         """A parse_error failure followed by a paused failure increments counter to 1."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
-            self._call("feat-a", "failed", batch, pauses,
+            self._call("feat-a", "failed", batch, cb_state,
                         error="parse error", parse_error=True)
-            self._call("feat-b", "paused", batch, pauses,
+            self._call("feat-b", "paused", batch, cb_state,
                         error="task failed")
 
         self.assertFalse(batch.circuit_breaker_fired)
-        self.assertEqual(pauses[0], 1)
+        self.assertEqual(cb_state.consecutive_pauses, 1)
         self.assertEqual(len(batch.features_failed), 1)
         self.assertEqual(len(batch.features_paused), 1)
 
     def test_failed_with_parse_error_false_increments_counter(self):
         """Failed result with parse_error=False (default) increments the counter."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
-            self._call("feat-a", "failed", batch, pauses, error="error msg",
+            self._call("feat-a", "failed", batch, cb_state, error="error msg",
                         parse_error=False)
 
         self.assertFalse(batch.circuit_breaker_fired)
-        self.assertEqual(pauses[0], 1)
+        self.assertEqual(cb_state.consecutive_pauses, 1)
         self.assertEqual(len(batch.features_failed), 1)
 
 
@@ -575,7 +581,7 @@ class TestBudgetExhaustionSignal(unittest.TestCase):
         features_paused without setting global_abort_signal (that is
         _accumulate_result's responsibility)."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        pauses = 0
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
@@ -781,7 +787,7 @@ class TestApplyFeatureResultWorktreePaths(unittest.TestCase):
         )
 
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        pauses = 0
 
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
@@ -843,7 +849,7 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
         from claude.pipeline.merge import MergeResult
 
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        pauses = 0
         merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
@@ -862,7 +868,7 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
     def test_failed_populates_features_failed(self):
         """failed → features_failed, FEATURE_FAILED event fires."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        pauses = 0
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(outcome_router_module, "overnight_log_event") as mock_log,
@@ -878,7 +884,7 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
     def test_paused_populates_features_paused(self):
         """paused → features_paused, FEATURE_PAUSED event fires."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        pauses = 0
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(outcome_router_module, "overnight_log_event") as mock_log,
@@ -894,7 +900,7 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
     def test_deferred_populates_features_deferred(self):
         """deferred → features_deferred, FEATURE_DEFERRED event fires."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        pauses = 0
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(outcome_router_module, "overnight_log_event") as mock_log,
@@ -911,7 +917,7 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
         """repair_completed + ff-merge success → features_merged,
         REPAIR_AGENT_RESOLVED event fires."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        pauses = 0
         ff_ok = MagicMock(returncode=0, stdout="", stderr="")
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
@@ -975,59 +981,59 @@ class TestConsecutivePausesSequence(unittest.TestCase):
             _apply_feature_result(name, result, ctx)
 
     def test_pause_then_merge_resets_counter(self):
-        """pause increments consecutive_pauses_ref to 1; successful merge
-        resets consecutive_pauses_ref[0] back to 0."""
+        """pause increments consecutive_pauses to 1; successful merge
+        resets consecutive_pauses back to 0."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
 
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
-            self._call("feat-a", "paused", batch, pauses, error="fail")
-        self.assertEqual(pauses[0], 1)
+            self._call("feat-a", "paused", batch, cb_state, error="fail")
+        self.assertEqual(cb_state.consecutive_pauses, 1)
 
-        self._call_completed_success("feat-b", batch, pauses)
-        self.assertEqual(pauses[0], 0)
+        self._call_completed_success("feat-b", batch, cb_state)
+        self.assertEqual(cb_state.consecutive_pauses, 0)
         self.assertFalse(batch.circuit_breaker_fired)
 
     def test_pause_merge_pause_sequence(self):
-        """pause / merge / pause drives consecutive_pauses_ref[0] 1 → 0 → 1
+        """pause / merge / pause drives consecutive_pauses 1 → 0 → 1
         with no circuit breaker."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
 
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
-            self._call("feat-a", "paused", batch, pauses, error="fail")
-        self.assertEqual(pauses[0], 1)
+            self._call("feat-a", "paused", batch, cb_state, error="fail")
+        self.assertEqual(cb_state.consecutive_pauses, 1)
 
-        self._call_completed_success("feat-b", batch, pauses)
-        self.assertEqual(pauses[0], 0)
+        self._call_completed_success("feat-b", batch, cb_state)
+        self.assertEqual(cb_state.consecutive_pauses, 0)
 
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
-            self._call("feat-c", "paused", batch, pauses, error="fail again")
-        self.assertEqual(pauses[0], 1)
+            self._call("feat-c", "paused", batch, cb_state, error="fail again")
+        self.assertEqual(cb_state.consecutive_pauses, 1)
         self.assertFalse(batch.circuit_breaker_fired)
 
     def test_threshold_consecutive_pauses_fires_circuit_breaker(self):
         """CIRCUIT_BREAKER_THRESHOLD consecutive pauses trips the breaker."""
         batch = BatchResult(batch_id=1)
-        pauses = [0]
+        cb_state = CircuitBreakerState()
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(orchestrator_module, "overnight_log_event"),
         ):
             for i in range(CIRCUIT_BREAKER_THRESHOLD):
-                self._call(f"feat-{i}", "paused", batch, pauses, error="fail")
+                self._call(f"feat-{i}", "paused", batch, cb_state, error="fail")
 
         self.assertTrue(batch.circuit_breaker_fired)
-        self.assertEqual(pauses[0], CIRCUIT_BREAKER_THRESHOLD)
+        self.assertEqual(cb_state.consecutive_pauses, CIRCUIT_BREAKER_THRESHOLD)
 
 
 # ---------------------------------------------------------------------------

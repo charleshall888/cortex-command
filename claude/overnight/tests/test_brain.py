@@ -24,6 +24,7 @@ from claude.overnight.brain import (
     request_brain_decision,
 )
 from claude.overnight.feature_executor import _handle_failed_task
+from claude.overnight.types import CircuitBreakerState
 from claude.pipeline.dispatch import DispatchResult
 from claude.pipeline.parser import FeatureTask
 
@@ -292,7 +293,7 @@ class TestHandleFailedTask(unittest.IsolatedAsyncioTestCase):
                 all_tasks=[],
                 spec_excerpt="s",
                 retry_result=retry_result,
-                consecutive_pauses_ref=[2],
+                cb_state=CircuitBreakerState(consecutive_pauses=2),
                 manager=None,
             )
 
@@ -353,7 +354,7 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
             all_tasks=[],
             spec_excerpt="s",
             retry_result=retry_result,
-            consecutive_pauses_ref=[0],
+            cb_state=CircuitBreakerState(),
             manager=None,
         )
 
@@ -391,7 +392,7 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
             all_tasks=[],
             spec_excerpt="s",
             retry_result=retry_result,
-            consecutive_pauses_ref=[0],
+            cb_state=CircuitBreakerState(),
             manager=None,
         )
 
@@ -431,7 +432,7 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
             all_tasks=[],
             spec_excerpt="s",
             retry_result=retry_result,
-            consecutive_pauses_ref=[0],
+            cb_state=CircuitBreakerState(),
             manager=None,
         )
 
