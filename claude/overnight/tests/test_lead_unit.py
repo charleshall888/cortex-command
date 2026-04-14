@@ -1645,6 +1645,152 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mocks["recover_test_failure"].await_count, 1)
         self.assertIn("feat-b", set(batch_result.features_merged))
 
+    # --- R8: review-gating paths ---
+
+    async def test_review_not_required(self):
+        """R8 (a): requires_review=False → feature merged; dispatch_review not called."""
+        from claude.pipeline.merge import MergeResult
+
+        merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
+        self._install_common_patches(
+            feature_names=["feat-a"],
+            execute_return=FeatureResult(name="feat-a", status="completed"),
+            merge_side_effect=lambda **kw: merge_result,
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.requires_review",
+            return_value=False,
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.read_tier",
+            return_value="S",
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.read_criticality",
+            return_value="low",
+        )
+        dispatch_mock = self._start_patch(
+            "claude.pipeline.review_dispatch.dispatch_review",
+            new_callable=AsyncMock,
+        )
+
+        from claude.overnight.batch_runner import run_batch
+
+        batch_result = await run_batch(self._config)
+
+        self.assertIn("feat-a", set(batch_result.features_merged))
+        dispatch_mock.assert_not_awaited()
+
+    async def test_review_approved(self):
+        """R8 (b): requires_review=True and dispatch_review returns
+        deferred=False, verdict='APPROVED' → feature merged."""
+        from claude.pipeline.merge import MergeResult
+
+        merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
+        self._install_common_patches(
+            feature_names=["feat-a"],
+            execute_return=FeatureResult(name="feat-a", status="completed"),
+            merge_side_effect=lambda **kw: merge_result,
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.requires_review",
+            return_value=True,
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.read_tier",
+            return_value="L",
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.read_criticality",
+            return_value="high",
+        )
+        self._start_patch(
+            "claude.pipeline.review_dispatch.dispatch_review",
+            new_callable=AsyncMock,
+            return_value=MagicMock(deferred=False, verdict="APPROVED", cycle=1),
+        )
+
+        from claude.overnight.batch_runner import run_batch
+
+        batch_result = await run_batch(self._config)
+
+        self.assertIn("feat-a", set(batch_result.features_merged))
+
+    async def test_review_deferred(self):
+        """R8 (c): requires_review=True and dispatch_review returns
+        deferred=True → feature in features_deferred."""
+        from claude.pipeline.merge import MergeResult
+
+        merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
+        self._install_common_patches(
+            feature_names=["feat-a"],
+            execute_return=FeatureResult(name="feat-a", status="completed"),
+            merge_side_effect=lambda **kw: merge_result,
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.requires_review",
+            return_value=True,
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.read_tier",
+            return_value="L",
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.read_criticality",
+            return_value="high",
+        )
+        self._start_patch(
+            "claude.pipeline.review_dispatch.dispatch_review",
+            new_callable=AsyncMock,
+            return_value=MagicMock(
+                deferred=True,
+                verdict="DEFERRED_FOR_REVIEW",
+                cycle=1,
+            ),
+        )
+
+        from claude.overnight.batch_runner import run_batch
+
+        batch_result = await run_batch(self._config)
+
+        self.assertEqual(len(batch_result.features_deferred), 1)
+
+    async def test_review_raises(self):
+        """R8 (d): requires_review=True and dispatch_review raises →
+        feature in features_deferred (crash path writes a deferral)."""
+        from claude.pipeline.merge import MergeResult
+
+        merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
+        self._install_common_patches(
+            feature_names=["feat-a"],
+            execute_return=FeatureResult(name="feat-a", status="completed"),
+            merge_side_effect=lambda **kw: merge_result,
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.requires_review",
+            return_value=True,
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.read_tier",
+            return_value="L",
+        )
+        self._start_patch(
+            "claude.overnight.batch_runner.read_criticality",
+            return_value="high",
+        )
+        self._start_patch(
+            "claude.pipeline.review_dispatch.dispatch_review",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("crash"),
+        )
+        self._start_patch("claude.overnight.batch_runner.write_deferral")
+
+        from claude.overnight.batch_runner import run_batch
+
+        batch_result = await run_batch(self._config)
+
+        self.assertEqual(len(batch_result.features_deferred), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
