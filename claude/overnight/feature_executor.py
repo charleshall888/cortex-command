@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from claude.overnight.batch_runner import BatchConfig
+    from claude.overnight.orchestrator import BatchConfig
 
 from claude.common import (
     compute_dependency_batches,
@@ -55,7 +55,7 @@ from claude.overnight.events import (
 )
 from claude.overnight.state import load_state, save_state
 from claude.overnight.throttle import ConcurrencyManager
-from claude.overnight.types import FeatureResult
+from claude.overnight.types import CircuitBreakerState, FeatureResult
 from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
 
 logger = logging.getLogger(__name__)
@@ -184,7 +184,7 @@ async def _handle_failed_task(
     all_tasks: list[FeatureTask],
     spec_excerpt: str,
     retry_result: object,
-    consecutive_pauses_ref: list[int],
+    cb_state: CircuitBreakerState,
     manager: Optional[ConcurrencyManager] = None,
     round: int = 0,
     log_path: Path = Path("lifecycle/overnight-events.log"),
@@ -200,7 +200,7 @@ async def _handle_failed_task(
     """
     # R5: Pre-dispatch circuit breaker soft check — skip brain call if
     # we're one pause away from tripping the circuit breaker.
-    if consecutive_pauses_ref[0] >= CIRCUIT_BREAKER_THRESHOLD - 1:
+    if cb_state.consecutive_pauses >= CIRCUIT_BREAKER_THRESHOLD - 1:
         return None  # PAUSE outcome — caller handles as paused
 
     # Compute has_dependents: any task whose depends_on contains this task
@@ -351,7 +351,7 @@ async def execute_feature(
     config: BatchConfig,
     spec_path: Optional[str] = None,
     manager: Optional[ConcurrencyManager] = None,
-    consecutive_pauses_ref: Optional[list[int]] = None,
+    cb_state: Optional[CircuitBreakerState] = None,
     repo_path: Path | None = None,
     integration_branches: dict[str, str] | None = None,
     *,
@@ -665,10 +665,10 @@ async def execute_feature(
                     )
 
                 # Brain agent triage for failed/paused tasks
-                pauses_ref = consecutive_pauses_ref if consecutive_pauses_ref is not None else [0]
+                cb_state_eff = cb_state if cb_state is not None else CircuitBreakerState()
                 brain_result = await _handle_failed_task(
                     feature, task, feature_plan.tasks,
-                    spec_content, result, pauses_ref, manager,
+                    spec_content, result, cb_state_eff, manager,
                     round=config.batch_id,
                     log_path=config.overnight_events_path,
                     deferred_dir=deferred_dir,
