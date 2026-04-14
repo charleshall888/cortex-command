@@ -20,10 +20,18 @@ import claude.overnight.batch_runner as batch_runner_module
 from claude.overnight.batch_runner import (
     BatchResult,
     BatchConfig,
+    CIRCUIT_BREAKER_THRESHOLD,
     FeatureResult,
     _apply_feature_result,
     _effective_merge_repo_path,
     _read_learnings,
+)
+from claude.overnight.events import (
+    FEATURE_COMPLETE,
+    FEATURE_DEFERRED,
+    FEATURE_FAILED,
+    FEATURE_PAUSED,
+    REPAIR_AGENT_RESOLVED,
 )
 
 
@@ -753,6 +761,245 @@ class TestApplyFeatureResultWorktreePaths(unittest.TestCase):
         mock_cleanup.assert_called_once()
         cleanup_kwargs = mock_cleanup.call_args.kwargs
         self.assertEqual(cleanup_kwargs["repo_path"], live_repo)
+
+
+# ---------------------------------------------------------------------------
+# Task 3 (R4): TestApplyFeatureResultVariants — per-status dispatch coverage
+# ---------------------------------------------------------------------------
+
+
+class TestApplyFeatureResultVariants(unittest.TestCase):
+    """One test per status variant asserting BatchResult population and the
+    matching overnight_log_event constant fires."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        tmp = self._tmpdir.name
+        self._config = BatchConfig(
+            batch_id=1,
+            plan_path=Path(tmp) / "plan.md",
+            overnight_events_path=Path(tmp) / "overnight.log",
+            pipeline_events_path=Path(tmp) / "pipeline.log",
+        )
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _event_constants(self, mock_log_event) -> list[str]:
+        return [c.args[0] for c in mock_log_event.call_args_list]
+
+    def test_completed_with_files_populates_features_merged(self):
+        """completed + non-empty changed files + merge success → features_merged,
+        FEATURE_COMPLETE event fires."""
+        from claude.pipeline.merge import MergeResult
+
+        batch = BatchResult(batch_id=1)
+        pauses = [0]
+        merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
+            patch.object(batch_runner_module, "_get_changed_files", return_value=["src/foo.py"]),
+            patch.object(batch_runner_module, "merge_feature", return_value=merge_result),
+            patch.object(batch_runner_module, "cleanup_worktree"),
+        ):
+            result = FeatureResult(name="feat-a", status="completed")
+            _apply_feature_result(
+                "feat-a", result, batch, pauses,
+                self._config, {}, ["feat-a"],
+                review_result=None,
+            )
+
+        self.assertEqual(batch.features_merged, ["feat-a"])
+        self.assertIn(FEATURE_COMPLETE, self._event_constants(mock_log))
+
+    def test_failed_populates_features_failed(self):
+        """failed → features_failed, FEATURE_FAILED event fires."""
+        batch = BatchResult(batch_id=1)
+        pauses = [0]
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
+        ):
+            result = FeatureResult(name="feat-a", status="failed", error="boom")
+            _apply_feature_result(
+                "feat-a", result, batch, pauses,
+                self._config, {}, ["feat-a"],
+                review_result=None,
+            )
+
+        self.assertEqual(len(batch.features_failed), 1)
+        self.assertEqual(batch.features_failed[0]["name"], "feat-a")
+        self.assertIn(FEATURE_FAILED, self._event_constants(mock_log))
+
+    def test_paused_populates_features_paused(self):
+        """paused → features_paused, FEATURE_PAUSED event fires."""
+        batch = BatchResult(batch_id=1)
+        pauses = [0]
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
+        ):
+            result = FeatureResult(name="feat-a", status="paused", error="task paused")
+            _apply_feature_result(
+                "feat-a", result, batch, pauses,
+                self._config, {}, ["feat-a"],
+                review_result=None,
+            )
+
+        self.assertEqual(len(batch.features_paused), 1)
+        self.assertEqual(batch.features_paused[0]["name"], "feat-a")
+        self.assertIn(FEATURE_PAUSED, self._event_constants(mock_log))
+
+    def test_deferred_populates_features_deferred(self):
+        """deferred → features_deferred, FEATURE_DEFERRED event fires."""
+        batch = BatchResult(batch_id=1)
+        pauses = [0]
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
+        ):
+            result = FeatureResult(name="feat-a", status="deferred", deferred_question_count=2)
+            _apply_feature_result(
+                "feat-a", result, batch, pauses,
+                self._config, {}, ["feat-a"],
+                review_result=None,
+            )
+
+        self.assertEqual(len(batch.features_deferred), 1)
+        self.assertEqual(batch.features_deferred[0]["name"], "feat-a")
+        self.assertIn(FEATURE_DEFERRED, self._event_constants(mock_log))
+
+    def test_repair_completed_populates_features_merged(self):
+        """repair_completed + ff-merge success → features_merged,
+        REPAIR_AGENT_RESOLVED event fires."""
+        batch = BatchResult(batch_id=1)
+        pauses = [0]
+        ff_ok = MagicMock(returncode=0, stdout="", stderr="")
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
+            patch.object(subprocess, "run", return_value=ff_ok),
+            patch.object(batch_runner_module, "cleanup_worktree"),
+        ):
+            result = FeatureResult(name="feat-a", status="repair_completed")
+            result.repair_branch = "repair/feat-a"
+            result.trivial_resolved = False
+            _apply_feature_result(
+                "feat-a", result, batch, pauses,
+                self._config, {}, ["feat-a"],
+                review_result=None,
+            )
+
+        self.assertEqual(batch.features_merged, ["feat-a"])
+        self.assertIn(REPAIR_AGENT_RESOLVED, self._event_constants(mock_log))
+
+
+# ---------------------------------------------------------------------------
+# Task 3 (R5): TestConsecutivePausesSequence — counter increment/reset
+# ---------------------------------------------------------------------------
+
+
+class TestConsecutivePausesSequence(unittest.TestCase):
+    """Drive alternating pause/non-pause sequences through _apply_feature_result
+    and verify consecutive_pauses_ref increments on pause, resets on a
+    successful merge, and fires the circuit breaker at threshold."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        tmp = self._tmpdir.name
+        self._config = BatchConfig(
+            batch_id=1,
+            plan_path=Path(tmp) / "plan.md",
+            overnight_events_path=Path(tmp) / "overnight.log",
+            pipeline_events_path=Path(tmp) / "pipeline.log",
+        )
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _call(self, name, status, batch_result, pauses_ref, **result_kwargs):
+        """Helper: call _apply_feature_result with standard mocks (non-merge paths)."""
+        result = FeatureResult(name=name, status=status, **result_kwargs)
+        _apply_feature_result(
+            name, result, batch_result, pauses_ref,
+            self._config, {}, [name],
+            review_result=None,
+        )
+
+    def _call_completed_success(self, name, batch_result, pauses_ref):
+        """Helper: drive a completed + successful merge through _apply_feature_result."""
+        from claude.pipeline.merge import MergeResult
+
+        merge_result = MergeResult(success=True, feature=name, conflict=False)
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(batch_runner_module, "_get_changed_files", return_value=["src/foo.py"]),
+            patch.object(batch_runner_module, "merge_feature", return_value=merge_result),
+            patch.object(batch_runner_module, "cleanup_worktree"),
+        ):
+            result = FeatureResult(name=name, status="completed")
+            _apply_feature_result(
+                name, result, batch_result, pauses_ref,
+                self._config, {}, [name],
+                review_result=None,
+            )
+
+    def test_pause_then_merge_resets_counter(self):
+        """pause increments consecutive_pauses_ref to 1; successful merge
+        resets consecutive_pauses_ref[0] back to 0."""
+        batch = BatchResult(batch_id=1)
+        pauses = [0]
+
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event"),
+        ):
+            self._call("feat-a", "paused", batch, pauses, error="fail")
+        self.assertEqual(pauses[0], 1)
+
+        self._call_completed_success("feat-b", batch, pauses)
+        self.assertEqual(pauses[0], 0)
+        self.assertFalse(batch.circuit_breaker_fired)
+
+    def test_pause_merge_pause_sequence(self):
+        """pause / merge / pause drives consecutive_pauses_ref[0] 1 → 0 → 1
+        with no circuit breaker."""
+        batch = BatchResult(batch_id=1)
+        pauses = [0]
+
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event"),
+        ):
+            self._call("feat-a", "paused", batch, pauses, error="fail")
+        self.assertEqual(pauses[0], 1)
+
+        self._call_completed_success("feat-b", batch, pauses)
+        self.assertEqual(pauses[0], 0)
+
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event"),
+        ):
+            self._call("feat-c", "paused", batch, pauses, error="fail again")
+        self.assertEqual(pauses[0], 1)
+        self.assertFalse(batch.circuit_breaker_fired)
+
+    def test_threshold_consecutive_pauses_fires_circuit_breaker(self):
+        """CIRCUIT_BREAKER_THRESHOLD consecutive pauses trips the breaker."""
+        batch = BatchResult(batch_id=1)
+        pauses = [0]
+        with (
+            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(batch_runner_module, "overnight_log_event"),
+        ):
+            for i in range(CIRCUIT_BREAKER_THRESHOLD):
+                self._call(f"feat-{i}", "paused", batch, pauses, error="fail")
+
+        self.assertTrue(batch.circuit_breaker_fired)
+        self.assertEqual(pauses[0], CIRCUIT_BREAKER_THRESHOLD)
 
 
 if __name__ == "__main__":
