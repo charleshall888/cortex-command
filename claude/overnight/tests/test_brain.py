@@ -23,7 +23,7 @@ from claude.overnight.brain import (
     _parse_brain_response,
     request_brain_decision,
 )
-from claude.overnight.batch_runner import _handle_failed_task
+from claude.overnight.feature_executor import _handle_failed_task
 from claude.pipeline.dispatch import DispatchResult
 from claude.pipeline.parser import FeatureTask
 
@@ -284,7 +284,7 @@ class TestHandleFailedTask(unittest.IsolatedAsyncioTestCase):
         retry_result = MagicMock(attempts=1, final_output="err")
 
         with patch(
-            "claude.overnight.batch_runner.request_brain_decision", new_callable=AsyncMock
+            "claude.overnight.feature_executor.request_brain_decision", new_callable=AsyncMock
         ) as mock_request_brain:
             result = await _handle_failed_task(
                 feature="test-feat",
@@ -329,21 +329,21 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
         retry_result = MagicMock(attempts=1, final_output="err")
 
         mock_request_brain = self._start_patch(
-            "claude.overnight.batch_runner.request_brain_decision",
+            "claude.overnight.feature_executor.request_brain_decision",
             new_callable=AsyncMock,
         )
         mock_request_brain.return_value = BrainDecision(
             action=BrainAction.SKIP, reasoning="r", confidence=0.9
         )
-        self._start_patch("claude.overnight.batch_runner.overnight_log_event")
+        self._start_patch("claude.overnight.feature_executor.overnight_log_event")
         mock_mark_done = self._start_patch(
-            "claude.overnight.batch_runner.mark_task_done_in_plan"
+            "claude.overnight.feature_executor.mark_task_done_in_plan"
         )
         mock_write_deferral = self._start_patch(
-            "claude.overnight.batch_runner.write_deferral"
+            "claude.overnight.feature_executor.write_deferral"
         )
         self._start_patch(
-            "claude.overnight.batch_runner._read_learnings",
+            "claude.overnight.feature_executor._read_learnings",
             return_value="(No prior learnings.)",
         )
 
@@ -367,21 +367,21 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
         retry_result = MagicMock(attempts=1, final_output="err")
 
         mock_request_brain = self._start_patch(
-            "claude.overnight.batch_runner.request_brain_decision",
+            "claude.overnight.feature_executor.request_brain_decision",
             new_callable=AsyncMock,
         )
         mock_request_brain.return_value = BrainDecision(
             action=BrainAction.DEFER, reasoning="r", confidence=0.9
         )
-        self._start_patch("claude.overnight.batch_runner.overnight_log_event")
+        self._start_patch("claude.overnight.feature_executor.overnight_log_event")
         mock_mark_done = self._start_patch(
-            "claude.overnight.batch_runner.mark_task_done_in_plan"
+            "claude.overnight.feature_executor.mark_task_done_in_plan"
         )
         mock_write_deferral = self._start_patch(
-            "claude.overnight.batch_runner.write_deferral"
+            "claude.overnight.feature_executor.write_deferral"
         )
         self._start_patch(
-            "claude.overnight.batch_runner._read_learnings",
+            "claude.overnight.feature_executor._read_learnings",
             return_value="(No prior learnings.)",
         )
 
@@ -407,21 +407,21 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
         retry_result = MagicMock(attempts=1, final_output="err")
 
         mock_request_brain = self._start_patch(
-            "claude.overnight.batch_runner.request_brain_decision",
+            "claude.overnight.feature_executor.request_brain_decision",
             new_callable=AsyncMock,
         )
         mock_request_brain.return_value = BrainDecision(
             action=BrainAction.PAUSE, reasoning="r", confidence=0.9
         )
-        self._start_patch("claude.overnight.batch_runner.overnight_log_event")
+        self._start_patch("claude.overnight.feature_executor.overnight_log_event")
         mock_mark_done = self._start_patch(
-            "claude.overnight.batch_runner.mark_task_done_in_plan"
+            "claude.overnight.feature_executor.mark_task_done_in_plan"
         )
         mock_write_deferral = self._start_patch(
-            "claude.overnight.batch_runner.write_deferral"
+            "claude.overnight.feature_executor.write_deferral"
         )
         self._start_patch(
-            "claude.overnight.batch_runner._read_learnings",
+            "claude.overnight.feature_executor._read_learnings",
             return_value="(No prior learnings.)",
         )
 

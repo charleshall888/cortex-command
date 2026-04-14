@@ -145,36 +145,6 @@
     "repo": null
   },
   {
-    "id": 75,
-    "title": "Extract feature_executor module from batch_runner",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "overnight-runner",
-      "refactor",
-      "modularization"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-13",
-    "updated": "2026-04-13",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "074",
-    "research": null,
-    "spec": "lifecycle/extract-feature-executor-module-from-batch-runner/spec.md",
-    "discovery_source": "research/implement-in-autonomous-worktree-overnight-component-reuse/research.md",
-    "plan": null,
-    "uuid": "6d1b3bfb-cec8-4cc9-9788-03052b97249d",
-    "lifecycle_slug": "extract-feature-executor-module-from-batch-runner",
-    "session_id": "cc8a5677-ab5c-44be-8a50-d195df45f54a",
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 76,
     "title": "Extract outcome_router module from batch_runner",
     "status": "backlog",

@@ -15,11 +15,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from claude.overnight.batch_runner import (
-    BatchConfig,
-    execute_feature,
-    _read_exit_report,
-)
+from claude.overnight.batch_runner import BatchConfig, execute_feature
+from claude.overnight.feature_executor import _read_exit_report
 from claude.overnight.events import (
     FEATURE_DEFERRED,
     WORKER_MALFORMED_EXIT_REPORT,
@@ -161,34 +158,34 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
     def _apply_common_mocks(self):
         """Install all mocks shared across all 5 scenarios."""
         mock_parse = self._start_patch(
-            "claude.overnight.batch_runner.parse_feature_plan",
+            "claude.overnight.feature_executor.parse_feature_plan",
             return_value=self._stub_plan,
         )
         retry_result = MagicMock(success=True, paused=False, attempts=1, final_output="", idempotency_skipped=False)
         mock_retry = self._start_patch(
-            "claude.overnight.batch_runner.retry_task",
+            "claude.overnight.feature_executor.retry_task",
             new_callable=AsyncMock,
         )
         mock_retry.return_value = retry_result
 
-        mock_pipeline_log = self._start_patch("claude.overnight.batch_runner.pipeline_log_event")
+        mock_pipeline_log = self._start_patch("claude.overnight.feature_executor.pipeline_log_event")
         self._start_patch(
-            "claude.overnight.batch_runner.subprocess.run",
+            "claude.overnight.feature_executor.subprocess.run",
             side_effect=OSError("not a git repo"),
         )
         self._start_patch(
-            "claude.overnight.batch_runner._render_template",
+            "claude.overnight.feature_executor._render_template",
             return_value="stub prompt",
         )
         self._start_patch(
-            "claude.overnight.batch_runner.read_criticality",
+            "claude.overnight.feature_executor.read_criticality",
             return_value="normal",
         )
-        mock_overnight_log = self._start_patch("claude.overnight.batch_runner.overnight_log_event")
-        mock_mark_done = self._start_patch("claude.overnight.batch_runner.mark_task_done_in_plan")
-        mock_write_esc = self._start_patch("claude.overnight.batch_runner.write_escalation")
+        mock_overnight_log = self._start_patch("claude.overnight.feature_executor.overnight_log_event")
+        mock_mark_done = self._start_patch("claude.overnight.feature_executor.mark_task_done_in_plan")
+        mock_write_esc = self._start_patch("claude.overnight.feature_executor.write_escalation")
         mock_next_n = self._start_patch(
-            "claude.overnight.batch_runner._next_escalation_n", return_value=1
+            "claude.overnight.feature_executor._next_escalation_n", return_value=1
         )
         return {
             "parse": mock_parse,
@@ -209,7 +206,7 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
         """No exit report written by worker — logs WORKER_NO_EXIT_REPORT."""
         mocks = self._apply_common_mocks()
         self._start_patch(
-            "claude.overnight.batch_runner._read_exit_report",
+            "claude.overnight.feature_executor._read_exit_report",
             return_value=(None, None, None),
         )
         # Do NOT patch Path.is_file — file genuinely absent in temp cwd.
@@ -230,7 +227,7 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
         """Worker declared complete — no anomaly events, task marked done."""
         mocks = self._apply_common_mocks()
         self._start_patch(
-            "claude.overnight.batch_runner._read_exit_report",
+            "claude.overnight.feature_executor._read_exit_report",
             return_value=("complete", "all done", None),
         )
 
@@ -250,7 +247,7 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
         """Worker declared a question — feature deferred, escalation written."""
         mocks = self._apply_common_mocks()
         self._start_patch(
-            "claude.overnight.batch_runner._read_exit_report",
+            "claude.overnight.feature_executor._read_exit_report",
             return_value=("question", "need input", "Is X correct?"),
         )
 
@@ -271,7 +268,7 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
         """Exit report file exists but is unparseable — logs WORKER_MALFORMED."""
         mocks = self._apply_common_mocks()
         self._start_patch(
-            "claude.overnight.batch_runner._read_exit_report",
+            "claude.overnight.feature_executor._read_exit_report",
             return_value=(None, None, None),
         )
         # File present but unparseable: patch is_file() to True so the
@@ -294,7 +291,7 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
         """Worker set action=question but omitted the question field — malformed."""
         mocks = self._apply_common_mocks()
         self._start_patch(
-            "claude.overnight.batch_runner._read_exit_report",
+            "claude.overnight.feature_executor._read_exit_report",
             return_value=("question", "some reason", None),
         )
         # action="question" with no question falls into the malformed branch;

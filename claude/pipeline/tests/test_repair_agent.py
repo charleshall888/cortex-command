@@ -364,10 +364,10 @@ def test_execute_feature_dispatches_repair_on_conflict_event(tmp_path: Path) -> 
     )
 
     with (
-        patch("claude.overnight.batch_runner.load_state", return_value=mock_state),
-        patch("claude.overnight.batch_runner.save_state"),
+        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("claude.overnight.feature_executor.save_state"),
         patch(
-            "claude.overnight.batch_runner.dispatch_repair_agent",
+            "claude.overnight.feature_executor.dispatch_repair_agent",
             new=AsyncMock(return_value=repair_result),
         ),
     ):

@@ -17,6 +17,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import claude.overnight.batch_runner as batch_runner_module
+import claude.overnight.feature_executor as feature_executor_module
 from claude.overnight.batch_runner import (
     BatchResult,
     BatchConfig,
@@ -24,9 +25,9 @@ from claude.overnight.batch_runner import (
     FeatureResult,
     _apply_feature_result,
     _effective_merge_repo_path,
-    _read_learnings,
     execute_feature,
 )
+from claude.overnight.feature_executor import _read_learnings
 from claude.overnight.events import (
     FEATURE_COMPLETE,
     FEATURE_DEFERRED,
@@ -1054,15 +1055,15 @@ class TestExecuteFeature(unittest.IsolatedAsyncioTestCase):
         """Return a list of patch context managers covering the non-brain-triage
         surface used by both happy-path and failure-path tests."""
         return [
-            patch.object(batch_runner_module, "load_state", side_effect=Exception("skip repair")),
-            patch.object(batch_runner_module, "parse_feature_plan", return_value=self._feature_plan),
-            patch.object(batch_runner_module, "retry_task", new=AsyncMock(return_value=retry_result)),
-            patch.object(batch_runner_module, "_read_exit_report", return_value=exit_report),
-            patch.object(batch_runner_module, "mark_task_done_in_plan"),
-            patch.object(batch_runner_module, "pipeline_log_event"),
-            patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "read_criticality", return_value="high"),
-            patch.object(batch_runner_module, "_render_template", return_value="stub system prompt"),
+            patch.object(feature_executor_module, "load_state", side_effect=Exception("skip repair")),
+            patch.object(feature_executor_module, "parse_feature_plan", return_value=self._feature_plan),
+            patch.object(feature_executor_module, "retry_task", new=AsyncMock(return_value=retry_result)),
+            patch.object(feature_executor_module, "_read_exit_report", return_value=exit_report),
+            patch.object(feature_executor_module, "mark_task_done_in_plan"),
+            patch.object(feature_executor_module, "pipeline_log_event"),
+            patch.object(feature_executor_module, "overnight_log_event"),
+            patch.object(feature_executor_module, "read_criticality", return_value="high"),
+            patch.object(feature_executor_module, "_render_template", return_value="stub system prompt"),
             patch.object(
                 subprocess,
                 "run",
@@ -1106,7 +1107,7 @@ class TestExecuteFeature(unittest.IsolatedAsyncioTestCase):
         with patches[0], patches[1], patches[2], patches[3], patches[4], \
              patches[5], patches[6], patches[7], patches[8], patches[9], \
              patch.object(
-                 batch_runner_module,
+                 feature_executor_module,
                  "_handle_failed_task",
                  new=AsyncMock(return_value=None),
              ):
@@ -1138,7 +1139,7 @@ class TestExecuteFeature(unittest.IsolatedAsyncioTestCase):
         with patches[0], patches[1], patches[2], patches[3], patches[4], \
              patches[5], patches[6], patches[7], patches[8], patches[9], \
              patch.object(
-                 batch_runner_module,
+                 feature_executor_module,
                  "_handle_failed_task",
                  new=AsyncMock(return_value=deferred_result),
              ):
@@ -1169,7 +1170,7 @@ class TestExecuteFeature(unittest.IsolatedAsyncioTestCase):
         with patches[0], patches[1], patches[2], patches[3], patches[4], \
              patches[5], patches[6], patches[7], patches[8], patches[9], \
              patch.object(
-                 batch_runner_module,
+                 feature_executor_module,
                  "_handle_failed_task",
                  new=AsyncMock(return_value=None),
              ):
@@ -1255,21 +1256,21 @@ class TestConflictRecoveryBranching(unittest.IsolatedAsyncioTestCase):
         repair_mock = AsyncMock()
 
         with (
-            patch.object(batch_runner_module, "load_state", return_value=state),
+            patch.object(feature_executor_module, "load_state", return_value=state),
             patch.object(
-                batch_runner_module,
+                feature_executor_module,
                 "read_events",
                 MagicMock(return_value=iter([event])),
             ),
-            patch.object(batch_runner_module, "resolve_trivial_conflict", new=trivial_mock),
-            patch.object(batch_runner_module, "dispatch_repair_agent", new=repair_mock),
-            patch.object(batch_runner_module, "save_state"),
-            patch.object(batch_runner_module, "write_deferral"),
-            patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "pipeline_log_event"),
-            patch.object(batch_runner_module, "_render_template", return_value="stub"),
-            patch.object(batch_runner_module, "read_criticality", return_value="high"),
-            patch.object(batch_runner_module, "parse_feature_plan"),
+            patch.object(feature_executor_module, "resolve_trivial_conflict", new=trivial_mock),
+            patch.object(feature_executor_module, "dispatch_repair_agent", new=repair_mock),
+            patch.object(feature_executor_module, "save_state"),
+            patch.object(feature_executor_module, "write_deferral"),
+            patch.object(feature_executor_module, "overnight_log_event"),
+            patch.object(feature_executor_module, "pipeline_log_event"),
+            patch.object(feature_executor_module, "_render_template", return_value="stub"),
+            patch.object(feature_executor_module, "read_criticality", return_value="high"),
+            patch.object(feature_executor_module, "parse_feature_plan"),
         ):
             result = await execute_feature(
                 feature="feat-a",
@@ -1297,21 +1298,21 @@ class TestConflictRecoveryBranching(unittest.IsolatedAsyncioTestCase):
         ))
 
         with (
-            patch.object(batch_runner_module, "load_state", return_value=state),
+            patch.object(feature_executor_module, "load_state", return_value=state),
             patch.object(
-                batch_runner_module,
+                feature_executor_module,
                 "read_events",
                 MagicMock(return_value=iter([event])),
             ),
-            patch.object(batch_runner_module, "resolve_trivial_conflict", new=trivial_mock),
-            patch.object(batch_runner_module, "dispatch_repair_agent", new=repair_mock),
-            patch.object(batch_runner_module, "save_state"),
-            patch.object(batch_runner_module, "write_deferral"),
-            patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "pipeline_log_event"),
-            patch.object(batch_runner_module, "_render_template", return_value="stub"),
-            patch.object(batch_runner_module, "read_criticality", return_value="high"),
-            patch.object(batch_runner_module, "parse_feature_plan"),
+            patch.object(feature_executor_module, "resolve_trivial_conflict", new=trivial_mock),
+            patch.object(feature_executor_module, "dispatch_repair_agent", new=repair_mock),
+            patch.object(feature_executor_module, "save_state"),
+            patch.object(feature_executor_module, "write_deferral"),
+            patch.object(feature_executor_module, "overnight_log_event"),
+            patch.object(feature_executor_module, "pipeline_log_event"),
+            patch.object(feature_executor_module, "_render_template", return_value="stub"),
+            patch.object(feature_executor_module, "read_criticality", return_value="high"),
+            patch.object(feature_executor_module, "parse_feature_plan"),
         ):
             result = await execute_feature(
                 feature="feat-a",
@@ -1335,21 +1336,21 @@ class TestConflictRecoveryBranching(unittest.IsolatedAsyncioTestCase):
         deferral_mock = MagicMock()
 
         with (
-            patch.object(batch_runner_module, "load_state", return_value=state),
+            patch.object(feature_executor_module, "load_state", return_value=state),
             patch.object(
-                batch_runner_module,
+                feature_executor_module,
                 "read_events",
                 MagicMock(return_value=iter([event])),
             ),
-            patch.object(batch_runner_module, "resolve_trivial_conflict", new=trivial_mock),
-            patch.object(batch_runner_module, "dispatch_repair_agent", new=repair_mock),
-            patch.object(batch_runner_module, "save_state"),
-            patch.object(batch_runner_module, "write_deferral", new=deferral_mock),
-            patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "pipeline_log_event"),
-            patch.object(batch_runner_module, "_render_template", return_value="stub"),
-            patch.object(batch_runner_module, "read_criticality", return_value="high"),
-            patch.object(batch_runner_module, "parse_feature_plan"),
+            patch.object(feature_executor_module, "resolve_trivial_conflict", new=trivial_mock),
+            patch.object(feature_executor_module, "dispatch_repair_agent", new=repair_mock),
+            patch.object(feature_executor_module, "save_state"),
+            patch.object(feature_executor_module, "write_deferral", new=deferral_mock),
+            patch.object(feature_executor_module, "overnight_log_event"),
+            patch.object(feature_executor_module, "pipeline_log_event"),
+            patch.object(feature_executor_module, "_render_template", return_value="stub"),
+            patch.object(feature_executor_module, "read_criticality", return_value="high"),
+            patch.object(feature_executor_module, "parse_feature_plan"),
         ):
             result = await execute_feature(
                 feature="feat-a",

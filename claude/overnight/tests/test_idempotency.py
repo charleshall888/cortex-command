@@ -17,7 +17,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from claude.overnight.batch_runner import (
+from claude.overnight.feature_executor import (
     _check_task_completed,
     _compute_plan_hash,
     _make_idempotency_token,

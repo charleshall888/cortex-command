@@ -2,7 +2,7 @@
 feature: extract-feature-executor-module-from-batch-runner
 parent_backlog_uuid: 6d1b3bfb-cec8-4cc9-9788-03052b97249d
 parent_backlog_id: 075
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "implementation"]
 tags: [overnight-runner, refactor, modularization]
 created: 2026-04-13
 updated: 2026-04-13

@@ -283,10 +283,10 @@ def test_execute_feature_routes_trivial_when_eligible(tmp_path: Path) -> None:
     repair_mock = AsyncMock()
 
     with (
-        patch("claude.overnight.batch_runner.load_state", return_value=mock_state),
-        patch("claude.overnight.batch_runner.save_state"),
-        patch("claude.overnight.batch_runner.resolve_trivial_conflict", resolve_mock),
-        patch("claude.overnight.batch_runner.dispatch_repair_agent", repair_mock),
+        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("claude.overnight.feature_executor.save_state"),
+        patch("claude.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
+        patch("claude.overnight.feature_executor.dispatch_repair_agent", repair_mock),
     ):
         result = asyncio.run(execute_feature(
             feature=feature,
@@ -333,10 +333,10 @@ def test_execute_feature_routes_repair_agent_when_hot_file(tmp_path: Path) -> No
     repair_mock = AsyncMock(return_value=repair_result)
 
     with (
-        patch("claude.overnight.batch_runner.load_state", return_value=mock_state),
-        patch("claude.overnight.batch_runner.save_state"),
-        patch("claude.overnight.batch_runner.resolve_trivial_conflict", resolve_mock),
-        patch("claude.overnight.batch_runner.dispatch_repair_agent", repair_mock),
+        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("claude.overnight.feature_executor.save_state"),
+        patch("claude.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
+        patch("claude.overnight.feature_executor.dispatch_repair_agent", repair_mock),
     ):
         result = asyncio.run(execute_feature(
             feature=feature,
@@ -372,11 +372,11 @@ def test_execute_feature_budget_exhausted_deferral(tmp_path: Path) -> None:
     deferral_mock = MagicMock()
 
     with (
-        patch("claude.overnight.batch_runner.load_state", return_value=mock_state),
-        patch("claude.overnight.batch_runner.resolve_trivial_conflict", resolve_mock),
-        patch("claude.overnight.batch_runner.dispatch_repair_agent", repair_mock),
-        patch("claude.overnight.batch_runner.write_deferral", deferral_mock),
-        patch("claude.overnight.batch_runner._next_escalation_n", return_value=1),
+        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("claude.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
+        patch("claude.overnight.feature_executor.dispatch_repair_agent", repair_mock),
+        patch("claude.overnight.feature_executor.write_deferral", deferral_mock),
+        patch("claude.overnight.feature_executor._next_escalation_n", return_value=1),
     ):
         result = asyncio.run(execute_feature(
             feature=feature,
@@ -422,10 +422,10 @@ def test_execute_feature_trivial_fallthrough_to_repair_agent(tmp_path: Path) -> 
     repair_mock = AsyncMock(return_value=repair_result)
 
     with (
-        patch("claude.overnight.batch_runner.load_state", return_value=mock_state),
-        patch("claude.overnight.batch_runner.save_state"),
-        patch("claude.overnight.batch_runner.resolve_trivial_conflict", resolve_mock),
-        patch("claude.overnight.batch_runner.dispatch_repair_agent", repair_mock),
+        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("claude.overnight.feature_executor.save_state"),
+        patch("claude.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
+        patch("claude.overnight.feature_executor.dispatch_repair_agent", repair_mock),
     ):
         result = asyncio.run(execute_feature(
             feature=feature,
