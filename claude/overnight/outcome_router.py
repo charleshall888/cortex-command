@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from claude.overnight.batch_runner import BatchResult, BatchConfig
+    from claude.overnight.orchestrator import BatchResult, BatchConfig
 
 from claude.common import (
     read_criticality,
@@ -49,7 +49,7 @@ from claude.overnight.events import (
     log_event as overnight_log_event,
 )
 from claude.overnight.state import _normalize_repo_key, load_state, save_state
-from claude.overnight.types import FeatureResult
+from claude.overnight.types import CircuitBreakerState, FeatureResult
 from claude.pipeline.merge import merge_feature
 from claude.pipeline.merge_recovery import recover_test_failure
 from claude.pipeline.review_dispatch import dispatch_review
@@ -66,7 +66,7 @@ logger = logging.getLogger(__name__)
 class OutcomeContext:
     batch_result: BatchResult
     lock: asyncio.Lock
-    consecutive_pauses_ref: list[int]
+    cb_state: CircuitBreakerState
     recovery_attempts_map: dict[str, int]
     worktree_paths: dict[str, Path]
     worktree_branches: dict[str, str]
@@ -466,7 +466,7 @@ def _apply_feature_result(
         )
         if ff_result.returncode == 0:
             ctx.batch_result.features_merged.append(name)
-            ctx.consecutive_pauses_ref[0] = 0
+            ctx.cb_state.consecutive_pauses = 0
             if result.trivial_resolved:
                 overnight_log_event(
                     TRIVIAL_CONFLICT_RESOLVED,
@@ -505,7 +505,7 @@ def _apply_feature_result(
         else:
             error = f"repair_ff_merge_failed: {ff_result.stderr.strip()}"
             ctx.batch_result.features_paused.append({"name": name, "error": error})
-            ctx.consecutive_pauses_ref[0] += 1
+            ctx.cb_state.consecutive_pauses += 1
             overnight_log_event(
                 FEATURE_PAUSED,
                 ctx.config.batch_id,
@@ -532,7 +532,7 @@ def _apply_feature_result(
             if not error:
                 error = f"completed with no new commits (branch: {branch_label})"
             ctx.batch_result.features_paused.append({"name": name, "error": error})
-            ctx.consecutive_pauses_ref[0] += 1
+            ctx.cb_state.consecutive_pauses += 1
             overnight_log_event(
                 FEATURE_PAUSED,
                 ctx.config.batch_id,
@@ -585,7 +585,7 @@ def _apply_feature_result(
 
             # review_result is None (no review needed) or approved — continue to FEATURE_COMPLETE
             ctx.batch_result.features_merged.append(name)
-            ctx.consecutive_pauses_ref[0] = 0
+            ctx.cb_state.consecutive_pauses = 0
             overnight_log_event(
                 FEATURE_COMPLETE,
                 ctx.config.batch_id,
@@ -652,7 +652,7 @@ def _apply_feature_result(
         else:
             error = merge_result.error or "merge failed"
             ctx.batch_result.features_paused.append({"name": name, "error": error})
-            ctx.consecutive_pauses_ref[0] += 1
+            ctx.cb_state.consecutive_pauses += 1
             if merge_result.conflict and merge_result.classification is not None:
                 overnight_log_event(
                     "merge_conflict_classified",
@@ -701,7 +701,7 @@ def _apply_feature_result(
             "error": result.error or "unknown failure",
         })
         if not result.parse_error:
-            ctx.consecutive_pauses_ref[0] += 1
+            ctx.cb_state.consecutive_pauses += 1
         overnight_log_event(
             FEATURE_FAILED,
             ctx.config.batch_id,
@@ -720,7 +720,7 @@ def _apply_feature_result(
             "name": name,
             "error": result.error or "task paused",
         })
-        ctx.consecutive_pauses_ref[0] += 1
+        ctx.cb_state.consecutive_pauses += 1
         overnight_log_event(
             FEATURE_PAUSED,
             ctx.config.batch_id,
@@ -734,7 +734,7 @@ def _apply_feature_result(
             backlog_id=ctx.backlog_ids.get(name),
         )
 
-    if ctx.consecutive_pauses_ref[0] >= CIRCUIT_BREAKER_THRESHOLD:
+    if ctx.cb_state.consecutive_pauses >= CIRCUIT_BREAKER_THRESHOLD:
         ctx.batch_result.circuit_breaker_fired = True
         overnight_log_event(
             CIRCUIT_BREAKER,
@@ -908,7 +908,7 @@ async def apply_feature_result(
 
             # Standard merged path (no review needed, or review approved)
             ctx.batch_result.features_merged.append(name)
-            ctx.consecutive_pauses_ref[0] = 0
+            ctx.cb_state.consecutive_pauses = 0
             overnight_log_event(
                 FEATURE_COMPLETE,
                 ctx.config.batch_id,
@@ -1045,7 +1045,7 @@ async def apply_feature_result(
                     log_path=ctx.config.overnight_events_path,
                 )
                 ctx.batch_result.features_merged.append(name)
-                ctx.consecutive_pauses_ref[0] = 0
+                ctx.cb_state.consecutive_pauses = 0
                 _write_back_to_backlog(
                     name, "merged", ctx.config.batch_id,
                     ctx.config.overnight_events_path,
@@ -1064,7 +1064,7 @@ async def apply_feature_result(
                     log_path=ctx.config.overnight_events_path,
                 )
                 ctx.batch_result.features_merged.append(name)
-                ctx.consecutive_pauses_ref[0] = 0
+                ctx.cb_state.consecutive_pauses = 0
                 _write_back_to_backlog(
                     name, "merged", ctx.config.batch_id,
                     ctx.config.overnight_events_path,
@@ -1091,7 +1091,7 @@ async def apply_feature_result(
                     "name": name,
                     "error": f"merge recovery failed: {error}",
                 })
-                ctx.consecutive_pauses_ref[0] += 1
+                ctx.cb_state.consecutive_pauses += 1
                 _write_back_to_backlog(
                     name, "paused", ctx.config.batch_id,
                     ctx.config.overnight_events_path,
@@ -1099,7 +1099,7 @@ async def apply_feature_result(
                 )
 
                 # Check circuit breaker after pause (site 2 of 2)
-                if ctx.consecutive_pauses_ref[0] >= CIRCUIT_BREAKER_THRESHOLD:
+                if ctx.cb_state.consecutive_pauses >= CIRCUIT_BREAKER_THRESHOLD:
                     ctx.batch_result.circuit_breaker_fired = True
                     overnight_log_event(
                         CIRCUIT_BREAKER,
