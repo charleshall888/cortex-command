@@ -16,10 +16,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
 from claude.overnight.outcome_router import OutcomeContext, apply_feature_result
-from claude.overnight.types import FeatureResult
+from claude.overnight.types import CircuitBreakerState, FeatureResult
 
 
-def _make_ctx(pauses: list[int] | None = None) -> OutcomeContext:
+def _make_ctx(pauses: int | None = None) -> OutcomeContext:
     """Factory: build an OutcomeContext with real Lock, MagicMock batch_result
     and config, and empty dicts for path maps."""
     batch_result = MagicMock()
@@ -44,7 +44,7 @@ def _make_ctx(pauses: list[int] | None = None) -> OutcomeContext:
     return OutcomeContext(
         batch_result=batch_result,
         lock=asyncio.Lock(),
-        consecutive_pauses_ref=pauses if pauses is not None else [0],
+        cb_state=CircuitBreakerState(consecutive_pauses=pauses if pauses is not None else 0),
         recovery_attempts_map={},
         worktree_paths={},
         worktree_branches={},
@@ -63,8 +63,8 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
 
     async def test_merged_path_resets_pauses_and_writes_back(self):
         """status='completed' with successful merge → merge_feature called,
-        _write_back_to_backlog called, consecutive_pauses_ref[0] reset to 0."""
-        ctx = _make_ctx(pauses=[2])
+        _write_back_to_backlog called, cb_state.consecutive_pauses reset to 0."""
+        ctx = _make_ctx(pauses=2)
         merge_result = MagicMock(
             success=True, error=None, conflict=False, test_result=None,
         )
@@ -101,14 +101,14 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
 
         m_merge.assert_called_once()
         self.assertTrue(m_wb.called)
-        self.assertEqual(ctx.consecutive_pauses_ref[0], 0)
+        self.assertEqual(ctx.cb_state.consecutive_pauses, 0)
         self.assertIn("feat-a", ctx.batch_result.features_merged)
 
     async def test_paused_increments_counter_and_skips_merge(self):
         """status='paused' → merge_feature NOT called; pauses counter
         incremented; _write_back_to_backlog NOT called for the paused
         branch's early-return (batch_result not abort-signaled)."""
-        ctx = _make_ctx(pauses=[0])
+        ctx = _make_ctx(pauses=0)
         # Prevent budget_exhausted branch side effects from firing
         ctx.batch_result.global_abort_signal = True  # short-circuit that guard
 
@@ -138,14 +138,14 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
             args = call_args.args
             if len(args) >= 2:
                 self.assertNotEqual(args[1], "merged")
-        self.assertEqual(ctx.consecutive_pauses_ref[0], 1)
+        self.assertEqual(ctx.cb_state.consecutive_pauses, 1)
 
     async def test_deferred_calls_write_deferral_wrapper(self):
         """status='deferred' → deferral recorded on batch_result; counter
         incremented. (The sync dispatcher for status='deferred' does not
         invoke write_deferral directly — it appends to features_deferred
         and calls _write_back_to_backlog with 'deferred'.)"""
-        ctx = _make_ctx(pauses=[0])
+        ctx = _make_ctx(pauses=0)
 
         with (
             patch("claude.overnight.outcome_router.merge_feature") as m_merge,
@@ -174,15 +174,15 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
         # Deferred status increments the pause counter (same as paused/failed).
         # Note: the sync dispatcher does NOT increment for 'deferred' —
         # only paused/failed/no-commit-guard. So counter stays 0.
-        self.assertEqual(ctx.consecutive_pauses_ref[0], 0)
+        self.assertEqual(ctx.cb_state.consecutive_pauses, 0)
         # write_deferral is patched but not invoked by the 'deferred' sync
         # branch itself (it's invoked by CI-deferral / review-crash paths).
         m_write_def.assert_not_called()
 
     async def test_failed_increments_counter_and_skips_merge(self):
-        """status='failed' (parse_error=False) → consecutive_pauses_ref[0]
+        """status='failed' (parse_error=False) → cb_state.consecutive_pauses
         incremented; merge_feature NOT called."""
-        ctx = _make_ctx(pauses=[1])
+        ctx = _make_ctx(pauses=1)
 
         with (
             patch("claude.overnight.outcome_router.merge_feature") as m_merge,
@@ -199,13 +199,13 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
             )
 
         m_merge.assert_not_called()
-        self.assertEqual(ctx.consecutive_pauses_ref[0], 2)
+        self.assertEqual(ctx.cb_state.consecutive_pauses, 2)
 
     async def test_repair_completed_routes_through_merged_path(self):
         """status='repair_completed' → sync dispatcher fast-forward merges
         the repair branch and routes through the merged path (features_merged
         appended, counter reset)."""
-        ctx = _make_ctx(pauses=[1])
+        ctx = _make_ctx(pauses=1)
 
         ff_proc = MagicMock(returncode=0, stderr="")
         checkout_proc = MagicMock(returncode=0, stderr="")
@@ -238,7 +238,7 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
         # At least the checkout + ff-merge subprocess calls must have happened.
         self.assertGreaterEqual(m_sp.call_count, 2)
         # Routes through the merged path: counter reset, features_merged has it.
-        self.assertEqual(ctx.consecutive_pauses_ref[0], 0)
+        self.assertEqual(ctx.cb_state.consecutive_pauses, 0)
         self.assertIn("feat-a", ctx.batch_result.features_merged)
         # And _write_back_to_backlog was invoked with 'merged' status.
         merged_wbs = [
@@ -252,9 +252,9 @@ class TestApplyFeatureResultCircuitBreaker(unittest.IsolatedAsyncioTestCase):
     """Circuit breaker: one pause at THRESHOLD-1 trips the breaker."""
 
     async def test_circuit_breaker_fires_at_threshold(self):
-        """consecutive_pauses_ref[0] = THRESHOLD-1 → a single paused
+        """cb_state.consecutive_pauses = THRESHOLD-1 → a single paused
         outcome tips the counter to THRESHOLD and fires the breaker."""
-        ctx = _make_ctx(pauses=[CIRCUIT_BREAKER_THRESHOLD - 1])
+        ctx = _make_ctx(pauses=CIRCUIT_BREAKER_THRESHOLD - 1)
         ctx.batch_result.global_abort_signal = True  # short-circuit budget branch
 
         with (
@@ -268,7 +268,7 @@ class TestApplyFeatureResultCircuitBreaker(unittest.IsolatedAsyncioTestCase):
                 ctx,
             )
 
-        self.assertEqual(ctx.consecutive_pauses_ref[0], CIRCUIT_BREAKER_THRESHOLD)
+        self.assertEqual(ctx.cb_state.consecutive_pauses, CIRCUIT_BREAKER_THRESHOLD)
         self.assertTrue(ctx.batch_result.circuit_breaker_fired)
 
 
@@ -278,7 +278,7 @@ class TestApplyFeatureResultReviewGating(unittest.IsolatedAsyncioTestCase):
     async def test_review_gated_dispatches_review_once(self):
         """requires_review=True + merged → dispatch_review called once with
         the correct feature and branch args."""
-        ctx = _make_ctx(pauses=[0])
+        ctx = _make_ctx(pauses=0)
         ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
 
         merge_result = MagicMock(
@@ -326,7 +326,7 @@ class TestApplyFeatureResultReviewGating(unittest.IsolatedAsyncioTestCase):
     async def test_review_ungated_skips_dispatch(self):
         """requires_review=False → dispatch_review NOT called; merged path
         proceeds normally."""
-        ctx = _make_ctx(pauses=[0])
+        ctx = _make_ctx(pauses=0)
 
         merge_result = MagicMock(
             success=True, error=None, conflict=False, test_result=None,
@@ -372,7 +372,7 @@ class TestApplyFeatureResultReviewGating(unittest.IsolatedAsyncioTestCase):
         failure indicator) → recover_test_failure awaited once; and
         ctx.recovery_attempts_map[name] is incremented to 1 BEFORE the
         recovery dispatch."""
-        ctx = _make_ctx(pauses=[0])
+        ctx = _make_ctx(pauses=0)
         ctx.worktree_branches["feat-a"] = "pipeline/feat-a"
 
         test_result = MagicMock(output="FAILED: test_foo")
