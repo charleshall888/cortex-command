@@ -33,7 +33,6 @@ from claude.overnight.deferral import (
 )
 from claude.overnight.events import (
     BACKLOG_WRITE_FAILED,
-    BATCH_BUDGET_EXHAUSTED,
     CIRCUIT_BREAKER,
     FEATURE_COMPLETE,
     FEATURE_DEFERRED,
@@ -785,31 +784,6 @@ async def apply_feature_result(
             _apply_feature_result(name, result, ctx)
             if result.repair_agent_used:
                 ctx.recovery_attempts_map[name] = ctx.recovery_attempts_map.get(name, 0) + 1
-
-            # Detect budget_exhausted and set global abort signal
-            if (
-                result.status == "paused"
-                and result.error == "budget_exhausted"
-                and not ctx.batch_result.global_abort_signal
-            ):
-                ctx.batch_result.global_abort_signal = True
-                ctx.batch_result.abort_reason = "budget_exhausted"
-                try:
-                    _state = load_state(ctx.config.overnight_state_path)
-                    _fs = _state.features.get(name)
-                    if _fs is not None:
-                        _fs.status = "paused"
-                        _fs.error = "budget_exhausted"
-                        save_state(_state, ctx.config.overnight_state_path)
-                except Exception:
-                    pass  # Don't let state-write failure abort the batch
-                overnight_log_event(
-                    BATCH_BUDGET_EXHAUSTED,
-                    ctx.config.batch_id,
-                    feature=name,
-                    details={"abort_reason": "budget_exhausted"},
-                    log_path=ctx.config.overnight_events_path,
-                )
 
             return
 
