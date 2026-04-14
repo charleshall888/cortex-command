@@ -6,9 +6,9 @@ status: backlog
 priority: medium
 type: feature
 created: 2026-04-13
-updated: 2026-04-13
+updated: 2026-04-14
 parent: "074"
-blocked-by: ["076"]
+blocked-by: []
 tags: [lifecycle, overnight-runner, daytime-pipeline, autonomous-worktree]
 areas: [lifecycle, overnight-runner]
 discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md

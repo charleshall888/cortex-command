@@ -2,16 +2,21 @@
 schema_version: "1"
 uuid: 925f1d1f-6ba3-4daa-b4b1-037aa0785457
 title: "Extract outcome_router module from batch_runner"
-status: backlog
+status: complete
 priority: high
 type: feature
 created: 2026-04-13
-updated: 2026-04-13
+updated: 2026-04-14
 parent: "074"
 blocked-by: ["075"]
 tags: [overnight-runner, refactor, modularization]
 areas: [overnight-runner]
 discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+session_id: null
+lifecycle_phase: plan
+lifecycle_slug: extract-outcome-router-module-from-batch-runner
+complexity: complex
+criticality: high
 ---
 
 ## Scope
