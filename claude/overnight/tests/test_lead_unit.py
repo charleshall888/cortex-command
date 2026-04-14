@@ -1183,5 +1183,185 @@ class TestExecuteFeature(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.name, "test-feat")
 
 
+# ---------------------------------------------------------------------------
+# Task 5 (R6): TestConflictRecoveryBranching — trivial / repair-agent / budget
+# ---------------------------------------------------------------------------
+
+
+class TestConflictRecoveryBranching(unittest.IsolatedAsyncioTestCase):
+    """Characterization tests for the conflict-recovery block at the top of
+    execute_feature (batch_runner.py lines 679–825).
+
+    Three branches are covered:
+      (a) trivial-eligible: <=3 conflicted files, none in hot-files →
+          resolve_trivial_conflict is invoked; returns repair_completed with
+          trivial_resolved=True.
+      (b) non-trivial (>3 files): trivial path skipped, dispatch_repair_agent
+          is invoked; returns repair_completed with repair_agent_used=True.
+      (c) budget exhausted (recovery_attempts>=1): neither repair function
+          is invoked; write_deferral is called and status='deferred'.
+    """
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+        tmp = self._tmpdir.name
+        self._tmp = Path(tmp)
+        self._config = BatchConfig(
+            batch_id=1,
+            plan_path=self._tmp / "plan.md",
+            overnight_events_path=self._tmp / "overnight.log",
+            pipeline_events_path=self._tmp / "pipeline.log",
+            overnight_state_path=self._tmp / "state.json",
+        )
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _make_state(self, *, recovery_depth: int = 0, recovery_attempts: int = 0):
+        from claude.overnight.state import OvernightFeatureStatus, OvernightState
+
+        return OvernightState(
+            session_id="s1",
+            plan_ref="plan.md",
+            features={
+                "feat-a": OvernightFeatureStatus(
+                    recovery_depth=recovery_depth,
+                    recovery_attempts=recovery_attempts,
+                )
+            },
+        )
+
+    def _conflict_event(self, conflicted_files):
+        return {
+            "event": "merge_conflict_classified",
+            "feature": "feat-a",
+            "details": {
+                "conflicted_files": conflicted_files,
+                "conflict_summary": "conflict",
+            },
+        }
+
+    async def test_trivial_eligible_conflict_resolves_via_trivial_path(self):
+        """(a) <=3 conflicted files, no hot files → resolve_trivial_conflict
+        is invoked and returns success; dispatch_repair_agent is NOT called."""
+        state = self._make_state(recovery_depth=0, recovery_attempts=0)
+        event = self._conflict_event(["f.py"])
+
+        trivial_mock = AsyncMock(return_value=MagicMock(
+            success=True,
+            repair_branch="repair/feat-a",
+            resolved_files=["f.py"],
+        ))
+        repair_mock = AsyncMock()
+
+        with (
+            patch.object(batch_runner_module, "load_state", return_value=state),
+            patch.object(
+                batch_runner_module,
+                "read_events",
+                MagicMock(return_value=iter([event])),
+            ),
+            patch.object(batch_runner_module, "resolve_trivial_conflict", new=trivial_mock),
+            patch.object(batch_runner_module, "dispatch_repair_agent", new=repair_mock),
+            patch.object(batch_runner_module, "save_state"),
+            patch.object(batch_runner_module, "write_deferral"),
+            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(batch_runner_module, "pipeline_log_event"),
+            patch.object(batch_runner_module, "_render_template", return_value="stub"),
+            patch.object(batch_runner_module, "read_criticality", return_value="high"),
+            patch.object(batch_runner_module, "parse_feature_plan"),
+        ):
+            result = await execute_feature(
+                feature="feat-a",
+                worktree_path=self._tmp,
+                config=self._config,
+            )
+
+        self.assertEqual(result.status, "repair_completed")
+        self.assertTrue(result.trivial_resolved)
+        trivial_mock.assert_awaited_once()
+        repair_mock.assert_not_awaited()
+
+    async def test_non_trivial_conflict_dispatches_repair_agent(self):
+        """(b) >3 conflicted files, recovery_depth=0, recovery_attempts=0 →
+        trivial path skipped; dispatch_repair_agent is invoked and returns
+        success with repair_agent_used=True."""
+        state = self._make_state(recovery_depth=0, recovery_attempts=0)
+        event = self._conflict_event(["a.py", "b.py", "c.py", "d.py"])
+
+        trivial_mock = AsyncMock()
+        repair_mock = AsyncMock(return_value=MagicMock(
+            success=True,
+            repair_branch="repair/feat-a",
+            error=None,
+        ))
+
+        with (
+            patch.object(batch_runner_module, "load_state", return_value=state),
+            patch.object(
+                batch_runner_module,
+                "read_events",
+                MagicMock(return_value=iter([event])),
+            ),
+            patch.object(batch_runner_module, "resolve_trivial_conflict", new=trivial_mock),
+            patch.object(batch_runner_module, "dispatch_repair_agent", new=repair_mock),
+            patch.object(batch_runner_module, "save_state"),
+            patch.object(batch_runner_module, "write_deferral"),
+            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(batch_runner_module, "pipeline_log_event"),
+            patch.object(batch_runner_module, "_render_template", return_value="stub"),
+            patch.object(batch_runner_module, "read_criticality", return_value="high"),
+            patch.object(batch_runner_module, "parse_feature_plan"),
+        ):
+            result = await execute_feature(
+                feature="feat-a",
+                worktree_path=self._tmp,
+                config=self._config,
+            )
+
+        self.assertEqual(result.status, "repair_completed")
+        self.assertTrue(result.repair_agent_used)
+        trivial_mock.assert_not_awaited()
+        repair_mock.assert_awaited_once()
+
+    async def test_recovery_budget_exhausted_returns_deferred(self):
+        """(c) recovery_attempts>=1 with recovery_depth<1 → neither repair
+        function called; write_deferral invoked; status='deferred'."""
+        state = self._make_state(recovery_depth=0, recovery_attempts=1)
+        event = self._conflict_event(["a.py", "b.py", "c.py", "d.py"])
+
+        trivial_mock = AsyncMock()
+        repair_mock = AsyncMock()
+        deferral_mock = MagicMock()
+
+        with (
+            patch.object(batch_runner_module, "load_state", return_value=state),
+            patch.object(
+                batch_runner_module,
+                "read_events",
+                MagicMock(return_value=iter([event])),
+            ),
+            patch.object(batch_runner_module, "resolve_trivial_conflict", new=trivial_mock),
+            patch.object(batch_runner_module, "dispatch_repair_agent", new=repair_mock),
+            patch.object(batch_runner_module, "save_state"),
+            patch.object(batch_runner_module, "write_deferral", new=deferral_mock),
+            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(batch_runner_module, "pipeline_log_event"),
+            patch.object(batch_runner_module, "_render_template", return_value="stub"),
+            patch.object(batch_runner_module, "read_criticality", return_value="high"),
+            patch.object(batch_runner_module, "parse_feature_plan"),
+        ):
+            result = await execute_feature(
+                feature="feat-a",
+                worktree_path=self._tmp,
+                config=self._config,
+            )
+
+        self.assertEqual(result.status, "deferred")
+        trivial_mock.assert_not_awaited()
+        repair_mock.assert_not_awaited()
+        deferral_mock.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()
