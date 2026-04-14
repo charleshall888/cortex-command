@@ -19,3 +19,5 @@
 {"ts": "2026-04-14T12:05:00Z", "event": "task_complete", "feature": "build-daytime-pipeline-module-and-cli", "task": 4, "batch": 1, "status": "success"}
 {"ts": "2026-04-14T12:05:01Z", "event": "batch_dispatch", "feature": "build-daytime-pipeline-module-and-cli", "batch": 2, "tasks": [5]}
 {"ts": "2026-04-14T12:10:00Z", "event": "task_complete", "feature": "build-daytime-pipeline-module-and-cli", "task": 5, "batch": 2, "status": "success"}
+{"ts": "2026-04-14T12:15:00Z", "event": "phase_transition", "feature": "build-daytime-pipeline-module-and-cli", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T18:00:00Z", "event": "feature_complete", "feature": "build-daytime-pipeline-module-and-cli", "tasks_total": 5, "rework_cycles": 1}
