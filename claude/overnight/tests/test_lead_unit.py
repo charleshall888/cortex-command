@@ -16,18 +16,65 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
+import asyncio
+
 import claude.overnight.batch_runner as batch_runner_module
 import claude.overnight.feature_executor as feature_executor_module
+import claude.overnight.outcome_router as outcome_router_module
 from claude.overnight.batch_runner import (
     BatchResult,
     BatchConfig,
     CIRCUIT_BREAKER_THRESHOLD,
     FeatureResult,
-    _apply_feature_result,
-    _effective_merge_repo_path,
     execute_feature,
 )
+from claude.overnight.outcome_router import (
+    OutcomeContext,
+    _apply_feature_result,
+    _effective_merge_repo_path,
+)
 from claude.overnight.feature_executor import _read_learnings
+
+
+def _make_outcome_ctx(
+    config,
+    batch_result,
+    pauses_ref,
+    feature_names,
+    *,
+    worktree_branches=None,
+    repo_path=None,
+    worktree_path=None,
+    integration_worktrees=None,
+    integration_branches=None,
+    session_id="s1",
+    recovery_attempts_map=None,
+    backlog_ids=None,
+):
+    """Build an OutcomeContext for direct _apply_feature_result() call sites.
+
+    Adapter for tests that originally called _apply_feature_result with the
+    pre-Task 8 positional-argument signature. Mirrors the context constructed
+    by batch_runner's _accumulate_result shim.
+    """
+    name = feature_names[0] if feature_names else None
+    repo_path_map = {name: repo_path} if name is not None else {}
+    worktree_paths = {name: worktree_path} if (name is not None and worktree_path is not None) else {}
+    return OutcomeContext(
+        batch_result=batch_result,
+        lock=asyncio.Lock(),
+        consecutive_pauses_ref=pauses_ref,
+        recovery_attempts_map=recovery_attempts_map if recovery_attempts_map is not None else {},
+        worktree_paths=worktree_paths,
+        worktree_branches=worktree_branches if worktree_branches is not None else {},
+        repo_path_map=repo_path_map,
+        integration_worktrees=integration_worktrees if integration_worktrees is not None else {},
+        integration_branches=integration_branches if integration_branches is not None else {},
+        session_id=session_id,
+        backlog_ids=backlog_ids if backlog_ids is not None else {},
+        feature_names=list(feature_names),
+        config=config,
+    )
 from claude.overnight.events import (
     FEATURE_COMPLETE,
     FEATURE_DEFERRED,
@@ -109,17 +156,15 @@ class TestApplyFeatureResult(unittest.TestCase):
     def _call(self, name, status, batch_result, pauses_ref, **result_kwargs):
         """Helper: call _apply_feature_result with standard mocks."""
         result = FeatureResult(name=name, status=status, **result_kwargs)
-        _apply_feature_result(
-            name, result, batch_result, pauses_ref,
-            self._config, {}, [name],
-        )
+        ctx = _make_outcome_ctx(self._config, batch_result, pauses_ref, [name])
+        _apply_feature_result(name, result, ctx)
 
     def test_three_deferred_no_circuit_breaker(self):
         """Deferred results do not increment the pause counter."""
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-a", "deferred", batch, pauses, deferred_question_count=1)
@@ -135,7 +180,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-a", "paused", batch, pauses, error="task failed")
@@ -150,7 +195,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-a", "paused", batch, pauses, error="fail")
@@ -165,7 +210,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-a", "failed", batch, pauses, error="error msg")
@@ -179,10 +224,10 @@ class TestApplyFeatureResult(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "_get_changed_files", return_value=[]),
-            patch.object(batch_runner_module, "merge_feature"),
+            patch.object(outcome_router_module, "_get_changed_files", return_value=[]),
+            patch.object(outcome_router_module, "merge_feature"),
         ):
             self._call("feat-a", "completed", batch, pauses)
 
@@ -196,17 +241,17 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         worktree_branches = {"feat-a": "pipeline/feat-a-2"}
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "_get_changed_files", return_value=["some/file.py"]) as mock_gcf,
-            patch.object(batch_runner_module, "merge_feature") as mock_merge,
+            patch.object(outcome_router_module, "_get_changed_files", return_value=["some/file.py"]) as mock_gcf,
+            patch.object(outcome_router_module, "merge_feature") as mock_merge,
         ):
             result = FeatureResult(name="feat-a", status="completed")
-            _apply_feature_result(
-                "feat-a", result, batch, pauses,
-                self._config, {}, ["feat-a"],
+            ctx = _make_outcome_ctx(
+                self._config, batch, pauses, ["feat-a"],
                 worktree_branches=worktree_branches,
             )
+            _apply_feature_result("feat-a", result, ctx)
 
         mock_gcf.assert_called_once_with("feat-a", self._config.base_branch, branch="pipeline/feat-a-2")
         mock_merge.assert_called_once()
@@ -220,17 +265,17 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         worktree_branches = {"feat-a": "pipeline/feat-a-2"}
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "_get_changed_files", return_value=[]) as mock_gcf,
-            patch.object(batch_runner_module, "merge_feature"),
+            patch.object(outcome_router_module, "_get_changed_files", return_value=[]) as mock_gcf,
+            patch.object(outcome_router_module, "merge_feature"),
         ):
             result = FeatureResult(name="feat-a", status="completed")
-            _apply_feature_result(
-                "feat-a", result, batch, pauses,
-                self._config, {}, ["feat-a"],
+            ctx = _make_outcome_ctx(
+                self._config, batch, pauses, ["feat-a"],
                 worktree_branches=worktree_branches,
             )
+            _apply_feature_result("feat-a", result, ctx)
 
         mock_gcf.assert_called_once_with("feat-a", self._config.base_branch, branch="pipeline/feat-a-2")
         self.assertEqual(pauses[0], 1)
@@ -244,7 +289,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             for i in range(5):
@@ -260,7 +305,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-a", "failed", batch, pauses,
@@ -278,7 +323,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-a", "failed", batch, pauses, error="error msg",
@@ -380,13 +425,13 @@ class TestRecoveryDispatchPersistence(unittest.IsolatedAsyncioTestCase):
                 new_callable=AsyncMock,
                 return_value=FeatureResult(name=feat_name, status="completed"),
             ),
-            patch.object(batch_runner_module, "_get_changed_files", return_value=["src/foo.py"]),
-            patch.object(batch_runner_module, "merge_feature", return_value=test_failure),
+            patch.object(outcome_router_module, "_get_changed_files", return_value=["src/foo.py"]),
+            patch.object(outcome_router_module, "merge_feature", return_value=test_failure),
             patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "cleanup_worktree"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "cleanup_worktree"),
             patch.object(
-                batch_runner_module, "recover_test_failure",
+                outcome_router_module, "recover_test_failure",
                 new_callable=AsyncMock,
                 return_value=recovery_ok,
             ) as mock_recover,
@@ -466,12 +511,12 @@ class TestRecoveryGate(unittest.IsolatedAsyncioTestCase):
                 new_callable=AsyncMock,
                 return_value=FeatureResult(name=feat_name, status="completed"),
             ),
-            patch.object(batch_runner_module, "_get_changed_files", return_value=["src/foo.py"]),
-            patch.object(batch_runner_module, "merge_feature", return_value=test_failure),
-            patch.object(batch_runner_module, "_apply_feature_result"),
+            patch.object(outcome_router_module, "_get_changed_files", return_value=["src/foo.py"]),
+            patch.object(outcome_router_module, "merge_feature", return_value=test_failure),
+            patch.object(outcome_router_module, "_apply_feature_result"),
             patch.object(batch_runner_module, "overnight_log_event"),
             patch.object(
-                batch_runner_module, "recover_test_failure",
+                outcome_router_module, "recover_test_failure",
                 new_callable=AsyncMock,
             ) as mock_recover,
         ):
@@ -511,10 +556,8 @@ class TestBudgetExhaustionSignal(unittest.TestCase):
     def _call(self, name, status, batch_result, pauses_ref, **result_kwargs):
         """Helper: call _apply_feature_result with standard mocks."""
         result = FeatureResult(name=name, status=status, **result_kwargs)
-        _apply_feature_result(
-            name, result, batch_result, pauses_ref,
-            self._config, {}, [name],
-        )
+        ctx = _make_outcome_ctx(self._config, batch_result, pauses_ref, [name])
+        _apply_feature_result(name, result, ctx)
 
     # (b) BatchResult default values for the two new fields
     def test_batch_result_defaults(self):
@@ -532,7 +575,7 @@ class TestBudgetExhaustionSignal(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-budget", "paused", batch, pauses,
@@ -739,22 +782,22 @@ class TestApplyFeatureResultWorktreePaths(unittest.TestCase):
         pauses = [0]
 
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "_get_changed_files", return_value=["src/foo.py"]),
-            patch.object(batch_runner_module, "merge_feature", return_value=merge_result) as mock_merge,
-            patch.object(batch_runner_module, "cleanup_worktree") as mock_cleanup,
+            patch.object(outcome_router_module, "_get_changed_files", return_value=["src/foo.py"]),
+            patch.object(outcome_router_module, "merge_feature", return_value=merge_result) as mock_merge,
+            patch.object(outcome_router_module, "cleanup_worktree") as mock_cleanup,
         ):
             result = FeatureResult(name="feat-a", status="completed")
-            _apply_feature_result(
-                "feat-a", result, batch, pauses,
-                self._config, {}, ["feat-a"],
+            ctx = _make_outcome_ctx(
+                self._config, batch, pauses, ["feat-a"],
                 repo_path=live_repo,
                 worktree_path=worktree_path_for_cleanup,
                 integration_worktrees=integration_worktrees,
                 integration_branches=integration_branches,
                 session_id="s1",
             )
+            _apply_feature_result("feat-a", result, ctx)
 
         # merge_feature must receive the worktree path (not the live repo)
         mock_merge.assert_called_once()
@@ -801,18 +844,15 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
         pauses = [0]
         merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
-            patch.object(batch_runner_module, "_get_changed_files", return_value=["src/foo.py"]),
-            patch.object(batch_runner_module, "merge_feature", return_value=merge_result),
-            patch.object(batch_runner_module, "cleanup_worktree"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "overnight_log_event") as mock_log,
+            patch.object(outcome_router_module, "_get_changed_files", return_value=["src/foo.py"]),
+            patch.object(outcome_router_module, "merge_feature", return_value=merge_result),
+            patch.object(outcome_router_module, "cleanup_worktree"),
         ):
             result = FeatureResult(name="feat-a", status="completed")
-            _apply_feature_result(
-                "feat-a", result, batch, pauses,
-                self._config, {}, ["feat-a"],
-                review_result=None,
-            )
+            ctx = _make_outcome_ctx(self._config, batch, pauses, ["feat-a"])
+            _apply_feature_result("feat-a", result, ctx)
 
         self.assertEqual(batch.features_merged, ["feat-a"])
         self.assertIn(FEATURE_COMPLETE, self._event_constants(mock_log))
@@ -822,15 +862,12 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "overnight_log_event") as mock_log,
         ):
             result = FeatureResult(name="feat-a", status="failed", error="boom")
-            _apply_feature_result(
-                "feat-a", result, batch, pauses,
-                self._config, {}, ["feat-a"],
-                review_result=None,
-            )
+            ctx = _make_outcome_ctx(self._config, batch, pauses, ["feat-a"])
+            _apply_feature_result("feat-a", result, ctx)
 
         self.assertEqual(len(batch.features_failed), 1)
         self.assertEqual(batch.features_failed[0]["name"], "feat-a")
@@ -841,15 +878,12 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "overnight_log_event") as mock_log,
         ):
             result = FeatureResult(name="feat-a", status="paused", error="task paused")
-            _apply_feature_result(
-                "feat-a", result, batch, pauses,
-                self._config, {}, ["feat-a"],
-                review_result=None,
-            )
+            ctx = _make_outcome_ctx(self._config, batch, pauses, ["feat-a"])
+            _apply_feature_result("feat-a", result, ctx)
 
         self.assertEqual(len(batch.features_paused), 1)
         self.assertEqual(batch.features_paused[0]["name"], "feat-a")
@@ -860,15 +894,12 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "overnight_log_event") as mock_log,
         ):
             result = FeatureResult(name="feat-a", status="deferred", deferred_question_count=2)
-            _apply_feature_result(
-                "feat-a", result, batch, pauses,
-                self._config, {}, ["feat-a"],
-                review_result=None,
-            )
+            ctx = _make_outcome_ctx(self._config, batch, pauses, ["feat-a"])
+            _apply_feature_result("feat-a", result, ctx)
 
         self.assertEqual(len(batch.features_deferred), 1)
         self.assertEqual(batch.features_deferred[0]["name"], "feat-a")
@@ -881,19 +912,16 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
         pauses = [0]
         ff_ok = MagicMock(returncode=0, stdout="", stderr="")
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event") as mock_log,
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "overnight_log_event") as mock_log,
             patch.object(subprocess, "run", return_value=ff_ok),
-            patch.object(batch_runner_module, "cleanup_worktree"),
+            patch.object(outcome_router_module, "cleanup_worktree"),
         ):
             result = FeatureResult(name="feat-a", status="repair_completed")
             result.repair_branch = "repair/feat-a"
             result.trivial_resolved = False
-            _apply_feature_result(
-                "feat-a", result, batch, pauses,
-                self._config, {}, ["feat-a"],
-                review_result=None,
-            )
+            ctx = _make_outcome_ctx(self._config, batch, pauses, ["feat-a"])
+            _apply_feature_result("feat-a", result, ctx)
 
         self.assertEqual(batch.features_merged, ["feat-a"])
         self.assertIn(REPAIR_AGENT_RESOLVED, self._event_constants(mock_log))
@@ -925,11 +953,8 @@ class TestConsecutivePausesSequence(unittest.TestCase):
     def _call(self, name, status, batch_result, pauses_ref, **result_kwargs):
         """Helper: call _apply_feature_result with standard mocks (non-merge paths)."""
         result = FeatureResult(name=name, status=status, **result_kwargs)
-        _apply_feature_result(
-            name, result, batch_result, pauses_ref,
-            self._config, {}, [name],
-            review_result=None,
-        )
+        ctx = _make_outcome_ctx(self._config, batch_result, pauses_ref, [name])
+        _apply_feature_result(name, result, ctx)
 
     def _call_completed_success(self, name, batch_result, pauses_ref):
         """Helper: drive a completed + successful merge through _apply_feature_result."""
@@ -937,18 +962,15 @@ class TestConsecutivePausesSequence(unittest.TestCase):
 
         merge_result = MergeResult(success=True, feature=name, conflict=False)
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
-            patch.object(batch_runner_module, "_get_changed_files", return_value=["src/foo.py"]),
-            patch.object(batch_runner_module, "merge_feature", return_value=merge_result),
-            patch.object(batch_runner_module, "cleanup_worktree"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "overnight_log_event"),
+            patch.object(outcome_router_module, "_get_changed_files", return_value=["src/foo.py"]),
+            patch.object(outcome_router_module, "merge_feature", return_value=merge_result),
+            patch.object(outcome_router_module, "cleanup_worktree"),
         ):
             result = FeatureResult(name=name, status="completed")
-            _apply_feature_result(
-                name, result, batch_result, pauses_ref,
-                self._config, {}, [name],
-                review_result=None,
-            )
+            ctx = _make_outcome_ctx(self._config, batch_result, pauses_ref, [name])
+            _apply_feature_result(name, result, ctx)
 
     def test_pause_then_merge_resets_counter(self):
         """pause increments consecutive_pauses_ref to 1; successful merge
@@ -957,7 +979,7 @@ class TestConsecutivePausesSequence(unittest.TestCase):
         pauses = [0]
 
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-a", "paused", batch, pauses, error="fail")
@@ -974,7 +996,7 @@ class TestConsecutivePausesSequence(unittest.TestCase):
         pauses = [0]
 
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-a", "paused", batch, pauses, error="fail")
@@ -984,7 +1006,7 @@ class TestConsecutivePausesSequence(unittest.TestCase):
         self.assertEqual(pauses[0], 0)
 
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             self._call("feat-c", "paused", batch, pauses, error="fail again")
@@ -996,7 +1018,7 @@ class TestConsecutivePausesSequence(unittest.TestCase):
         batch = BatchResult(batch_id=1)
         pauses = [0]
         with (
-            patch.object(batch_runner_module, "_write_back_to_backlog"),
+            patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(batch_runner_module, "overnight_log_event"),
         ):
             for i in range(CIRCUIT_BREAKER_THRESHOLD):
@@ -1487,22 +1509,22 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             )
 
         self._start_patch(
-            "claude.overnight.batch_runner._get_changed_files",
+            "claude.overnight.outcome_router._get_changed_files",
             return_value=["src/foo.py"],
         )
         if merge_side_effect is not None:
             merge_mock = self._start_patch(
-                "claude.overnight.batch_runner.merge_feature",
+                "claude.overnight.outcome_router.merge_feature",
                 side_effect=merge_side_effect,
             )
         else:
             merge_mock = None
 
         self._start_patch("claude.overnight.batch_runner.overnight_log_event")
-        self._start_patch("claude.overnight.batch_runner._write_back_to_backlog")
-        self._start_patch("claude.overnight.batch_runner.cleanup_worktree")
+        self._start_patch("claude.overnight.outcome_router._write_back_to_backlog")
+        self._start_patch("claude.overnight.outcome_router.cleanup_worktree")
         recovery_mock = self._start_patch(
-            "claude.overnight.batch_runner.recover_test_failure",
+            "claude.overnight.outcome_router.recover_test_failure",
             new=AsyncMock(),
         )
         self._start_patch("claude.overnight.batch_runner.save_batch_result")
@@ -1533,7 +1555,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             execute_return=FeatureResult(name="feat-a", status="completed"),
             merge_side_effect=lambda **kw: merge_result,
         )
-        self._start_patch("claude.overnight.batch_runner.write_deferral")
+        self._start_patch("claude.overnight.outcome_router.write_deferral")
 
         from claude.overnight.batch_runner import run_batch
 
@@ -1560,7 +1582,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             execute_return=FeatureResult(name="feat-a", status="completed"),
             merge_side_effect=lambda **kw: merge_result,
         )
-        self._start_patch("claude.overnight.batch_runner.write_deferral")
+        self._start_patch("claude.overnight.outcome_router.write_deferral")
 
         from claude.overnight.batch_runner import run_batch
 
@@ -1630,12 +1652,12 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         )
         # requires_review is invoked on the merge-success path for feat-b.
         self._start_patch(
-            "claude.overnight.batch_runner.requires_review",
+            "claude.overnight.outcome_router.requires_review",
             return_value=False,
         )
-        self._start_patch("claude.overnight.batch_runner.read_tier", return_value="S")
+        self._start_patch("claude.overnight.outcome_router.read_tier", return_value="S")
         self._start_patch(
-            "claude.overnight.batch_runner.read_criticality",
+            "claude.overnight.outcome_router.read_criticality",
             return_value="low",
         )
 
@@ -1659,19 +1681,19 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             merge_side_effect=lambda **kw: merge_result,
         )
         self._start_patch(
-            "claude.overnight.batch_runner.requires_review",
+            "claude.overnight.outcome_router.requires_review",
             return_value=False,
         )
         self._start_patch(
-            "claude.overnight.batch_runner.read_tier",
+            "claude.overnight.outcome_router.read_tier",
             return_value="S",
         )
         self._start_patch(
-            "claude.overnight.batch_runner.read_criticality",
+            "claude.overnight.outcome_router.read_criticality",
             return_value="low",
         )
         dispatch_mock = self._start_patch(
-            "claude.pipeline.review_dispatch.dispatch_review",
+            "claude.overnight.outcome_router.dispatch_review",
             new_callable=AsyncMock,
         )
 
@@ -1694,19 +1716,19 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             merge_side_effect=lambda **kw: merge_result,
         )
         self._start_patch(
-            "claude.overnight.batch_runner.requires_review",
+            "claude.overnight.outcome_router.requires_review",
             return_value=True,
         )
         self._start_patch(
-            "claude.overnight.batch_runner.read_tier",
+            "claude.overnight.outcome_router.read_tier",
             return_value="L",
         )
         self._start_patch(
-            "claude.overnight.batch_runner.read_criticality",
+            "claude.overnight.outcome_router.read_criticality",
             return_value="high",
         )
         self._start_patch(
-            "claude.pipeline.review_dispatch.dispatch_review",
+            "claude.overnight.outcome_router.dispatch_review",
             new_callable=AsyncMock,
             return_value=MagicMock(deferred=False, verdict="APPROVED", cycle=1),
         )
@@ -1729,19 +1751,19 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             merge_side_effect=lambda **kw: merge_result,
         )
         self._start_patch(
-            "claude.overnight.batch_runner.requires_review",
+            "claude.overnight.outcome_router.requires_review",
             return_value=True,
         )
         self._start_patch(
-            "claude.overnight.batch_runner.read_tier",
+            "claude.overnight.outcome_router.read_tier",
             return_value="L",
         )
         self._start_patch(
-            "claude.overnight.batch_runner.read_criticality",
+            "claude.overnight.outcome_router.read_criticality",
             return_value="high",
         )
         self._start_patch(
-            "claude.pipeline.review_dispatch.dispatch_review",
+            "claude.overnight.outcome_router.dispatch_review",
             new_callable=AsyncMock,
             return_value=MagicMock(
                 deferred=True,
@@ -1768,23 +1790,23 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             merge_side_effect=lambda **kw: merge_result,
         )
         self._start_patch(
-            "claude.overnight.batch_runner.requires_review",
+            "claude.overnight.outcome_router.requires_review",
             return_value=True,
         )
         self._start_patch(
-            "claude.overnight.batch_runner.read_tier",
+            "claude.overnight.outcome_router.read_tier",
             return_value="L",
         )
         self._start_patch(
-            "claude.overnight.batch_runner.read_criticality",
+            "claude.overnight.outcome_router.read_criticality",
             return_value="high",
         )
         self._start_patch(
-            "claude.pipeline.review_dispatch.dispatch_review",
+            "claude.overnight.outcome_router.dispatch_review",
             new_callable=AsyncMock,
             side_effect=RuntimeError("crash"),
         )
-        self._start_patch("claude.overnight.batch_runner.write_deferral")
+        self._start_patch("claude.overnight.outcome_router.write_deferral")
 
         from claude.overnight.batch_runner import run_batch
 

@@ -1,6 +1,6 @@
 """Coupling test: _classify_no_commit() error strings match _suggest_next_step() patterns.
 
-Ensures the classification strings produced by batch_runner._classify_no_commit
+Ensures the classification strings produced by outcome_router._classify_no_commit
 contain substrings that _suggest_next_step in report.py recognises, preventing
 silent drift between the two modules.
 """
@@ -12,7 +12,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from claude.overnight.batch_runner import _classify_no_commit
+from claude.overnight.outcome_router import _classify_no_commit
 from claude.overnight.report import _suggest_next_step
 
 DEFAULT_SUGGESTION = "Review learnings, retry or investigate"
@@ -28,7 +28,7 @@ class TestNoCommitClassificationCoupling:
         mock_result.returncode = 0
         mock_result.stdout = "5\n"
 
-        with patch("claude.overnight.batch_runner.subprocess.run", return_value=mock_result):
+        with patch("claude.overnight.outcome_router.subprocess.run", return_value=mock_result):
             result = _classify_no_commit("feat-x", "feat-x-branch", "main")
 
         assert "already merged" in result
@@ -41,7 +41,7 @@ class TestNoCommitClassificationCoupling:
         mock_result.returncode = 0
         mock_result.stdout = "0\n"
 
-        with patch("claude.overnight.batch_runner.subprocess.run", return_value=mock_result):
+        with patch("claude.overnight.outcome_router.subprocess.run", return_value=mock_result):
             result = _classify_no_commit("feat-y", "feat-y-branch", "main")
 
         assert "no changes produced" in result
@@ -55,7 +55,7 @@ class TestNoCommitClassificationCoupling:
         mock_result.stderr = "fatal: Not a valid object name"
         mock_result.stdout = ""
 
-        with patch("claude.overnight.batch_runner.subprocess.run", return_value=mock_result):
+        with patch("claude.overnight.outcome_router.subprocess.run", return_value=mock_result):
             result = _classify_no_commit("feat-z", "feat-z-branch", "main")
 
         assert result  # non-empty
@@ -65,7 +65,7 @@ class TestNoCommitClassificationCoupling:
     def test_subprocess_timeout_returns_fallback(self):
         """TimeoutExpired produces a fallback string containing the branch name."""
         with patch(
-            "claude.overnight.batch_runner.subprocess.run",
+            "claude.overnight.outcome_router.subprocess.run",
             side_effect=subprocess.TimeoutExpired(cmd="git", timeout=30),
         ):
             result = _classify_no_commit("feat-t", "feat-t-branch", "main")
