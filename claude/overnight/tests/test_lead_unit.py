@@ -18,16 +18,16 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import asyncio
 
-import claude.overnight.batch_runner as batch_runner_module
+import claude.overnight.orchestrator as orchestrator_module
 import claude.overnight.feature_executor as feature_executor_module
 import claude.overnight.outcome_router as outcome_router_module
-from claude.overnight.batch_runner import (
+from claude.overnight.orchestrator import (
     BatchResult,
     BatchConfig,
-    CIRCUIT_BREAKER_THRESHOLD,
-    FeatureResult,
-    execute_feature,
 )
+from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from claude.overnight.types import FeatureResult
+from claude.overnight.feature_executor import execute_feature
 from claude.overnight.outcome_router import (
     OutcomeContext,
     _apply_feature_result,
@@ -165,7 +165,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-a", "deferred", batch, pauses, deferred_question_count=1)
             self._call("feat-b", "deferred", batch, pauses, deferred_question_count=1)
@@ -181,7 +181,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-a", "paused", batch, pauses, error="task failed")
             self._call("feat-b", "paused", batch, pauses, error="task failed")
@@ -196,7 +196,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-a", "paused", batch, pauses, error="fail")
             self._call("feat-b", "paused", batch, pauses, error="fail")
@@ -211,7 +211,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-a", "failed", batch, pauses, error="error msg")
 
@@ -225,7 +225,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
             patch.object(outcome_router_module, "_get_changed_files", return_value=[]),
             patch.object(outcome_router_module, "merge_feature"),
         ):
@@ -242,7 +242,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         worktree_branches = {"feat-a": "pipeline/feat-a-2"}
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
             patch.object(outcome_router_module, "_get_changed_files", return_value=["some/file.py"]) as mock_gcf,
             patch.object(outcome_router_module, "merge_feature") as mock_merge,
         ):
@@ -266,7 +266,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         worktree_branches = {"feat-a": "pipeline/feat-a-2"}
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
             patch.object(outcome_router_module, "_get_changed_files", return_value=[]) as mock_gcf,
             patch.object(outcome_router_module, "merge_feature"),
         ):
@@ -290,7 +290,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             for i in range(5):
                 self._call(f"feat-{i}", "failed", batch, pauses,
@@ -306,7 +306,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-a", "failed", batch, pauses,
                         error="parse error", parse_error=True)
@@ -324,7 +324,7 @@ class TestApplyFeatureResult(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-a", "failed", batch, pauses, error="error msg",
                         parse_error=False)
@@ -352,7 +352,8 @@ class TestRecoveryDispatchPersistence(unittest.IsolatedAsyncioTestCase):
     async def test_recovery_attempts_persisted_per_feature(self):
         """Triggering test-failure recovery increments and persists
         recovery_attempts=1 in the on-disk state file."""
-        from claude.overnight.batch_runner import run_batch, FeatureResult
+        from claude.overnight.orchestrator import run_batch
+        from claude.overnight.types import FeatureResult
         from claude.overnight.state import (
             OvernightState,
             OvernightFeatureStatus,
@@ -416,18 +417,18 @@ class TestRecoveryDispatchPersistence(unittest.IsolatedAsyncioTestCase):
         )
 
         with (
-            patch.object(batch_runner_module, "parse_master_plan", return_value=mock_plan),
-            patch.object(batch_runner_module, "create_worktree", return_value=mock_worktree),
-            patch.object(batch_runner_module, "load_throttle_config", return_value=MagicMock()),
-            patch.object(batch_runner_module, "ConcurrencyManager", return_value=mock_manager),
+            patch.object(orchestrator_module, "parse_master_plan", return_value=mock_plan),
+            patch.object(orchestrator_module, "create_worktree", return_value=mock_worktree),
+            patch.object(orchestrator_module, "load_throttle_config", return_value=MagicMock()),
+            patch.object(orchestrator_module, "ConcurrencyManager", return_value=mock_manager),
             patch.object(
-                batch_runner_module, "execute_feature",
+                orchestrator_module, "execute_feature",
                 new_callable=AsyncMock,
                 return_value=FeatureResult(name=feat_name, status="completed"),
             ),
             patch.object(outcome_router_module, "_get_changed_files", return_value=["src/foo.py"]),
             patch.object(outcome_router_module, "merge_feature", return_value=test_failure),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
             patch.object(outcome_router_module, "_write_back_to_backlog"),
             patch.object(outcome_router_module, "cleanup_worktree"),
             patch.object(
@@ -457,7 +458,8 @@ class TestRecoveryGate(unittest.IsolatedAsyncioTestCase):
 
     async def test_gate_blocks_recovery_when_exhausted(self):
         """Feature with recovery_attempts=1 in state falls through to paused without calling recovery."""
-        from claude.overnight.batch_runner import run_batch, FeatureResult
+        from claude.overnight.orchestrator import run_batch
+        from claude.overnight.types import FeatureResult
         from claude.overnight.state import OvernightState, OvernightFeatureStatus
         from claude.pipeline.merge import MergeResult, TestResult
 
@@ -500,21 +502,21 @@ class TestRecoveryGate(unittest.IsolatedAsyncioTestCase):
         )
 
         with (
-            patch.object(batch_runner_module, "parse_master_plan", return_value=mock_plan),
-            patch.object(batch_runner_module, "load_state", return_value=mock_state),
-            patch.object(batch_runner_module, "save_state"),
-            patch.object(batch_runner_module, "create_worktree", return_value=mock_worktree),
-            patch.object(batch_runner_module, "load_throttle_config", return_value=MagicMock()),
-            patch.object(batch_runner_module, "ConcurrencyManager", return_value=mock_manager),
+            patch.object(orchestrator_module, "parse_master_plan", return_value=mock_plan),
+            patch.object(orchestrator_module, "load_state", return_value=mock_state),
+            patch.object(orchestrator_module, "save_state"),
+            patch.object(orchestrator_module, "create_worktree", return_value=mock_worktree),
+            patch.object(orchestrator_module, "load_throttle_config", return_value=MagicMock()),
+            patch.object(orchestrator_module, "ConcurrencyManager", return_value=mock_manager),
             patch.object(
-                batch_runner_module, "execute_feature",
+                orchestrator_module, "execute_feature",
                 new_callable=AsyncMock,
                 return_value=FeatureResult(name=feat_name, status="completed"),
             ),
             patch.object(outcome_router_module, "_get_changed_files", return_value=["src/foo.py"]),
             patch.object(outcome_router_module, "merge_feature", return_value=test_failure),
             patch.object(outcome_router_module, "_apply_feature_result"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
             patch.object(
                 outcome_router_module, "recover_test_failure",
                 new_callable=AsyncMock,
@@ -576,7 +578,7 @@ class TestBudgetExhaustionSignal(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-budget", "paused", batch, pauses,
                         error="budget_exhausted")
@@ -783,7 +785,7 @@ class TestApplyFeatureResultWorktreePaths(unittest.TestCase):
 
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
             patch.object(outcome_router_module, "_get_changed_files", return_value=["src/foo.py"]),
             patch.object(outcome_router_module, "merge_feature", return_value=merge_result) as mock_merge,
             patch.object(outcome_router_module, "cleanup_worktree") as mock_cleanup,
@@ -980,7 +982,7 @@ class TestConsecutivePausesSequence(unittest.TestCase):
 
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-a", "paused", batch, pauses, error="fail")
         self.assertEqual(pauses[0], 1)
@@ -997,7 +999,7 @@ class TestConsecutivePausesSequence(unittest.TestCase):
 
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-a", "paused", batch, pauses, error="fail")
         self.assertEqual(pauses[0], 1)
@@ -1007,7 +1009,7 @@ class TestConsecutivePausesSequence(unittest.TestCase):
 
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             self._call("feat-c", "paused", batch, pauses, error="fail again")
         self.assertEqual(pauses[0], 1)
@@ -1019,7 +1021,7 @@ class TestConsecutivePausesSequence(unittest.TestCase):
         pauses = [0]
         with (
             patch.object(outcome_router_module, "_write_back_to_backlog"),
-            patch.object(batch_runner_module, "overnight_log_event"),
+            patch.object(orchestrator_module, "overnight_log_event"),
         ):
             for i in range(CIRCUIT_BREAKER_THRESHOLD):
                 self._call(f"feat-{i}", "paused", batch, pauses, error="fail")
@@ -1464,25 +1466,25 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
 
         Returns a dict of the mocks that callers typically need to assert on.
         """
-        from claude.overnight.batch_runner import FeatureResult as _FR
+        from claude.overnight.types import FeatureResult as _FR
 
         self._start_patch.__self__  # sanity — ensure method is bound
 
         self._start_patch(
-            "claude.overnight.batch_runner.parse_master_plan",
+            "claude.overnight.orchestrator.parse_master_plan",
             return_value=self._make_plan(feature_names),
         )
         self._start_patch(
-            "claude.overnight.batch_runner.create_worktree",
+            "claude.overnight.orchestrator.create_worktree",
             side_effect=lambda name, *a, **kw: self._make_worktree_info(name),
         )
         self._start_patch(
-            "claude.overnight.batch_runner.load_state",
+            "claude.overnight.orchestrator.load_state",
             return_value=self._make_state(feature_names),
         )
-        self._start_patch("claude.overnight.batch_runner.save_state")
+        self._start_patch("claude.overnight.orchestrator.save_state")
         self._start_patch(
-            "claude.overnight.batch_runner.load_throttle_config",
+            "claude.overnight.orchestrator.load_throttle_config",
             return_value=MagicMock(),
         )
         mock_manager = MagicMock()
@@ -1490,7 +1492,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         mock_manager.release = MagicMock()
         mock_manager.stats = {}
         self._start_patch(
-            "claude.overnight.batch_runner.ConcurrencyManager",
+            "claude.overnight.orchestrator.ConcurrencyManager",
             return_value=mock_manager,
         )
 
@@ -1499,12 +1501,12 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             async def _exec_side(feature, *args, **kwargs):
                 return execute_return[feature]
             exec_mock = self._start_patch(
-                "claude.overnight.batch_runner.execute_feature",
+                "claude.overnight.orchestrator.execute_feature",
                 new=AsyncMock(side_effect=_exec_side),
             )
         else:
             exec_mock = self._start_patch(
-                "claude.overnight.batch_runner.execute_feature",
+                "claude.overnight.orchestrator.execute_feature",
                 new=AsyncMock(return_value=execute_return),
             )
 
@@ -1520,14 +1522,14 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         else:
             merge_mock = None
 
-        self._start_patch("claude.overnight.batch_runner.overnight_log_event")
+        self._start_patch("claude.overnight.orchestrator.overnight_log_event")
         self._start_patch("claude.overnight.outcome_router._write_back_to_backlog")
         self._start_patch("claude.overnight.outcome_router.cleanup_worktree")
         recovery_mock = self._start_patch(
             "claude.overnight.outcome_router.recover_test_failure",
             new=AsyncMock(),
         )
-        self._start_patch("claude.overnight.batch_runner.save_batch_result")
+        self._start_patch("claude.overnight.orchestrator.save_batch_result")
 
         return {
             "execute_feature": exec_mock,
@@ -1557,7 +1559,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         )
         self._start_patch("claude.overnight.outcome_router.write_deferral")
 
-        from claude.overnight.batch_runner import run_batch
+        from claude.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1584,7 +1586,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         )
         self._start_patch("claude.overnight.outcome_router.write_deferral")
 
-        from claude.overnight.batch_runner import run_batch
+        from claude.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1606,9 +1608,9 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             ),
             merge_side_effect=None,  # non-completed features skip merge
         )
-        self._start_patch("claude.overnight.batch_runner.transition")
+        self._start_patch("claude.overnight.orchestrator.transition")
 
-        from claude.overnight.batch_runner import run_batch
+        from claude.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1661,7 +1663,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             return_value="low",
         )
 
-        from claude.overnight.batch_runner import run_batch
+        from claude.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1697,7 +1699,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             new_callable=AsyncMock,
         )
 
-        from claude.overnight.batch_runner import run_batch
+        from claude.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1733,7 +1735,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             return_value=MagicMock(deferred=False, verdict="APPROVED", cycle=1),
         )
 
-        from claude.overnight.batch_runner import run_batch
+        from claude.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1772,7 +1774,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             ),
         )
 
-        from claude.overnight.batch_runner import run_batch
+        from claude.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1808,7 +1810,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         )
         self._start_patch("claude.overnight.outcome_router.write_deferral")
 
-        from claude.overnight.batch_runner import run_batch
+        from claude.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
