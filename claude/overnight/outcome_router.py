@@ -26,6 +26,7 @@ from claude.common import (
 )
 from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
 from claude.overnight.deferral import (
+    DEFAULT_DEFERRED_DIR,
     SEVERITY_BLOCKING,
     DeferralQuestion,
     _next_escalation_n,
@@ -434,6 +435,7 @@ def _apply_feature_result(
     name: str,
     result: FeatureResult,
     ctx: OutcomeContext,
+    deferred_dir: Path = DEFAULT_DEFERRED_DIR,
 ) -> None:
     """Sync status-dispatch and circuit-breaker logic extracted from _accumulate_result.
 
@@ -630,7 +632,7 @@ def _apply_feature_result(
                 options_considered=["force-merge after CI resolves", "leave deferred for manual review"],
                 pipeline_attempted="ci_check in merge_feature()",
             )
-            write_deferral(deferral)
+            write_deferral(deferral, deferred_dir=deferred_dir)
             ctx.batch_result.features_deferred.append({
                 "name": name,
                 "question_count": 1,
@@ -761,6 +763,8 @@ async def apply_feature_result(
     name: str,
     result: FeatureResult,
     ctx: OutcomeContext,
+    *,
+    deferred_dir: Path = DEFAULT_DEFERRED_DIR,
 ) -> None:
     """Async public entry point for routing a feature result.
 
@@ -781,7 +785,7 @@ async def apply_feature_result(
     async with ctx.lock:
         if result.status != "completed":
             # Non-completed: delegate entirely to _apply_feature_result
-            _apply_feature_result(name, result, ctx)
+            _apply_feature_result(name, result, ctx, deferred_dir=deferred_dir)
             if result.repair_agent_used:
                 ctx.recovery_attempts_map[name] = ctx.recovery_attempts_map.get(name, 0) + 1
 
@@ -794,7 +798,7 @@ async def apply_feature_result(
 
         if not changed_files:
             # No commits — fall through to _apply_feature_result (no-commit guard)
-            _apply_feature_result(name, result, ctx)
+            _apply_feature_result(name, result, ctx, deferred_dir=deferred_dir)
             return
 
         # Attempt merge
@@ -890,7 +894,7 @@ async def apply_feature_result(
                         options_considered=["mark complete (skip review)", "hold for manual review"],
                         pipeline_attempted="dispatch_review() in apply_feature_result()",
                     )
-                    write_deferral(deferral)
+                    write_deferral(deferral, deferred_dir=deferred_dir)
                     ctx.batch_result.features_deferred.append({
                         "name": name,
                         "question_count": 1,
@@ -954,7 +958,7 @@ async def apply_feature_result(
                 options_considered=["force-merge after CI resolves", "leave deferred for manual review"],
                 pipeline_attempted="ci_check in merge_feature()",
             )
-            write_deferral(deferral)
+            write_deferral(deferral, deferred_dir=deferred_dir)
             ctx.batch_result.features_deferred.append({
                 "name": name,
                 "question_count": 1,
@@ -975,13 +979,13 @@ async def apply_feature_result(
 
         if merge_result.conflict:
             # Conflict — fall through to _apply_feature_result
-            _apply_feature_result(name, result, ctx)
+            _apply_feature_result(name, result, ctx, deferred_dir=deferred_dir)
             return
 
         # --- Test failure (not success, not conflict, not CI error) ---
         if ctx.recovery_attempts_map.get(name, 0) >= 1:
             # Gate does not pass — fall through to standard paused path
-            _apply_feature_result(name, result, ctx)
+            _apply_feature_result(name, result, ctx, deferred_dir=deferred_dir)
             return
 
         # Gate passes — prepare for recovery
