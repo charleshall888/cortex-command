@@ -7,7 +7,7 @@
 | 68 | Suppress Dismiss-rationale leak in lifecycle clarify critic | backlog | high | feature | — | 66 | — |
 | 69 | Suppress internal narration in lifecycle specify phase | backlog | high | feature | — | 66 | — |
 | 74 | Decompose batch_runner and enable daytime autonomous-worktree pipeline | backlog | high | epic | — | — | — |
-| 75 | Extract feature_executor module from batch_runner | backlog | high | feature | — | 074 | — |
+| 75 | Extract feature_executor module from batch_runner | refined | high | feature | — | 074 | ✓ |
 | 76 | Extract outcome_router module from batch_runner | backlog | high | feature | 075 | 074 | — |
 | 77 | Rename batch_runner to orchestrator and add integration tests | backlog | high | feature | 076 | 074 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
@@ -18,6 +18,7 @@
 
 ## Refined
 
+- **75** Extract feature_executor module from batch_runner
 - **61** Sync-hook cleanup propagation mechanism
 - **62** Harden cortex-notify-remote.sh curl invocation against exfiltration
 
@@ -28,7 +29,6 @@
 - **68** Suppress Dismiss-rationale leak in lifecycle clarify critic
 - **69** Suppress internal narration in lifecycle specify phase
 - **74** Decompose batch_runner and enable daytime autonomous-worktree pipeline
-- **75** Extract feature_executor module from batch_runner
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 
 ## In-Progress
