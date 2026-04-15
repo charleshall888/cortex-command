@@ -96,11 +96,26 @@ export CORTEX_COMMAND_ROOT="$HOME/cortex-command"
 
 Restart your shell. Run `just check-symlinks` to verify.
 
+### Optional plugins
+
+UI design skills and PR-review automation are available as opt-in Claude Code plugins in a companion repo:
+
+```bash
+claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins
+```
+
+Then enable per project in `.claude/settings.json`:
+
+```json
+{ "enabledPlugins": { "cortex-ui-extras": true } }
+```
+
+See [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) for the full skill list and install instructions.
+
 ### Limited / custom installation
 
-`just setup` deploys the full agentic layer. Two things compose cleanly when omitted:
+`just setup` deploys the full agentic layer. One thing composes cleanly when omitted:
 
-- **UI skills** (6 frontend design enforcement skills) — run `just setup`, then `rm ~/.claude/skills/ui-{a11y,brief,check,judge,lint,setup}` if you're not building UIs.
 - **Three optional hooks** (sandbox GPG, desktop notifications, remote notifications) — run `/setup-merge` in Claude Code after `just setup` and answer `n` to the ones you don't want.
 
 Anything narrower needs reading the `justfile` and skill sources directly — see [`docs/setup.md#limited--custom-installation`](docs/setup.md#limited--custom-installation) for the rationale.
