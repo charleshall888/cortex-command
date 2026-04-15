@@ -41,7 +41,6 @@ Skill count current as of this writing. `skills/` is the authoritative source â€
 | Skill | Purpose | Triggers | Produces | Agent support |
 |-------|---------|----------|----------|---------------|
 | **critical-review** | Adversarial review from fresh agent | "pressure test this", "adversarial review" | Fresh agent critique (conversational) | Claude only |
-| **devils-advocate** | Stress-test a direction with counterargument | "challenge this", "play devil's advocate" | Coherent argument (conversational) | All agents |
 | **requirements** | Gather project/area-level requirements | `/requirements`, `/requirements <area>` | `requirements/project.md`, `requirements/{area}.md` | All agents |
 
 ### Session Management
@@ -54,13 +53,12 @@ Skill count current as of this writing. `skills/` is the authoritative source â€
 
 ### UI Design Enforcement
 
-The six UI skills (`ui-brief`, `ui-lint`, `ui-a11y`, `ui-check`, `ui-judge`, `ui-setup`) have been extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace as the `cortex-ui-extras` plugin. Install via `claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins`. For the full UI tooling reference, see [docs/ui-tooling.md in cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins/blob/main/docs/ui-tooling.md).
+Several optional skills have been extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace: `cortex-ui-extras` (UI skills), `cortex-pr-review` (`pr-review`), and `cortex-dev-extras` (`skill-creator`, `devils-advocate`). Install via `claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins`. For the full UI tooling reference, see [docs/ui-tooling.md in cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins/blob/main/docs/ui-tooling.md).
 
 ### Utilities
 
 | Skill | Purpose | Triggers | Produces | Agent support |
 |-------|---------|----------|----------|---------------|
-| **skill-creator** | Guide for creating new skills | "create a skill", "write a skill" | `skills/<name>/SKILL.md` | All agents |
 | **diagnose** | Systematic 4-phase debugging for skills, hooks, lifecycle, and overnight runner issues | `/diagnose`, "debug this", "why is this failing", "investigate this error" | Root cause analysis + fix + verification | Claude only |
 
 > **Note on `pipeline`:** `pipeline` is not a user-facing skill and has no entry in `skills/`. It is an internal Python orchestration module (`claude/pipeline/`, `claude/overnight/`) invoked automatically by `/overnight` to manage multi-feature batch execution. Use `/overnight` to trigger pipeline behavior; do not invoke `pipeline` directly.

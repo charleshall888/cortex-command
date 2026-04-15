@@ -7,7 +7,7 @@
 
 A grouped inventory of the skills in this repo. Each entry shows what the skill does and links to its full SKILL.md for trigger phrases, inputs, outputs, and implementation details.
 
-See also [Optional Plugins](#optional-plugins) below for UI skills and `pr-review`, which now live in the separate `cortex-command-plugins` repo.
+See also [Optional Plugins](#optional-plugins) below for UI skills, `pr-review`, `skill-creator`, and `devils-advocate`, which now live in the separate `cortex-command-plugins` repo.
 
 ---
 
@@ -104,13 +104,6 @@ Derives 3-4 challenge angles from the artifact and project context, then dispatc
 
 ---
 
-### devils-advocate
-Stress-tests a direction, plan, or approach by arguing against it. Produces a coherent narrative covering the strongest failure mode, unexamined alternatives, a fragile hidden assumption, and a tradeoff blindspot. Works in any phase — no lifecycle required.
-
-[skills/devils-advocate/SKILL.md](../skills/devils-advocate/SKILL.md)
-
----
-
 ### requirements
 Gather and document project-level and feature-area requirements through structured interviews. Creates a `requirements/` directory with a master project doc and area-specific docs. Downstream skills (lifecycle, discovery) consult these automatically during research, spec, and review.
 
@@ -143,7 +136,13 @@ Identify recurring problems across retro logs and route each trend to the approp
 
 ## Optional Plugins
 
-The UI design enforcement skills (`ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup`) and `pr-review` have been extracted into a separate Claude Code plugin marketplace: [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins).
+Several skills have been extracted into the separate [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace:
+
+| Plugin | Skills |
+|--------|--------|
+| `cortex-ui-extras` | `ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup` |
+| `cortex-pr-review` | `pr-review` |
+| `cortex-dev-extras` | `skill-creator`, `devils-advocate` |
 
 Install via Claude Code's plugin system:
 
@@ -151,7 +150,7 @@ Install via Claude Code's plugin system:
 claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins
 ```
 
-Then enable the desired plugin (e.g. `cortex-ui-extras` for the UI stack, or the `pr-review` plugin). See the `cortex-command-plugins` repo for the authoritative list of plugins and their install commands.
+Then enable the desired plugin per project in `.claude/settings.json`. See the `cortex-command-plugins` repo for the full skill list and install instructions.
 
 ### Project-local: harness-review
 
@@ -165,13 +164,6 @@ Then enable the desired plugin (e.g. `cortex-ui-extras` for the UI stack, or the
 Systematic 4-phase debugging for skills, hooks, lifecycle, and overnight runner issues. Finds root cause, fixes the underlying problem, and verifies the fix with a structured loop. Use when something is unexpectedly broken or not triggering as expected.
 
 [skills/diagnose/SKILL.md](../skills/diagnose/SKILL.md)
-
----
-
-### skill-creator
-Guide for creating effective skills. Covers the full creation process: understanding the skill with concrete examples, planning reusable resources (scripts, references, assets), initializing via `init_skill.py`, writing the SKILL.md, and packaging for distribution. Also useful for updating existing skills.
-
-[skills/skill-creator/SKILL.md](../skills/skill-creator/SKILL.md)
 
 ---
 
