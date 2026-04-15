@@ -8,7 +8,6 @@ outputs:
   - "ui-check-results/summary.json — layered pass/fail summary"
 preconditions:
   - "Run from project root"
-  - "/ui-lint skill must be available (~/.claude/skills/ui-lint/SKILL.md)"
   - "ui-check-results/ directory will be created if absent"
 ---
 
@@ -71,9 +70,7 @@ If no server is found: set `a11y.status = "skipped"`, `a11y.reason = "no server 
 
 **If server found:**
 
-Check whether `/ui-a11y` skill is available (`~/.claude/skills/ui-a11y/SKILL.md` exists). If not available: set `a11y.status = "skipped"`, `a11y.reason = "ui-a11y not yet available (ticket 093)"`. Skip to Output.
-
-If available: invoke `/ui-a11y`. Read `ui-check-results/a11y.json`. Set `a11y.status = "passed"` or `"failed"` from results. If `"failed"`, exit non-zero after Output.
+Invoke `/ui-a11y`. Read `ui-check-results/a11y.json`. Set `a11y.status = "passed"` or `"failed"` from results. If `"failed"`, exit non-zero after Output.
 
 ## Output
 
