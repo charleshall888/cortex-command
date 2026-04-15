@@ -15,6 +15,8 @@ This skill provides guidance for creating effective skills.
 
 **Routing triage:** Creating a new skill → full 6-step workflow below. Editing an existing skill → focus on Step 4 (read authoring rules, check patterns) rather than invoking the full creation pipeline.
 
+**Behavioral change requests** (e.g., "make it try to self-resolve before asking", "don't stop at phase boundaries"): start with the simplest prompt-level edit — a sentence or short paragraph added to the SKILL.md body with the right guardrails. Only escalate to new agent dispatch, rubrics, or infrastructure changes if a prompt edit demonstrably fails after observation.
+
 ## About Skills
 
 Skills are modular, self-contained packages that extend an agent's capabilities by providing

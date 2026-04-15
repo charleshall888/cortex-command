@@ -16,3 +16,16 @@
 ## Git Commits: Sandbox Constraints
 
 - Do NOT use `$(cat <<'EOF' ... EOF)` for commit messages -- it creates temp files that fail in sandboxed environments
+
+## Global Allow List: Keep Minimal
+
+- The `settings.json` allow list applies across ALL projects on this machine — don't auto-allow write operations that other projects' users may not want
+- Read-only allows (git log, gh pr view) are safe globally; write operations (gh pr create, git push) should fall through to prompt
+- Overnight runs with `--dangerously-skip-permissions`, so the allow list only affects interactive sessions
+
+## Excluded Commands Run Fully Unsandboxed
+
+- `sandbox.excludedCommands` in `claude/settings.json` is `["gh:*", "git:*", "WebFetch", "WebSearch"]` — these tools and all their child processes bypass the Seatbelt sandbox entirely
+- When git runs a commit hook, the hook and anything it spawns (e.g., `gpg`) all have host-level access; their `TMPDIR` is the host `/var/folders/...`, not the sandbox TMPDIR
+- Direct Bash invocations (`gpg ...`, `cat ~/.gnupg/...`) ARE sandboxed — this asymmetry can mislead diagnosis: git children are NOT sandboxed even though isolated Bash calls are
+- Before diagnosing "sandbox blocks git X": check `excludedCommands` first; do NOT design workarounds (redirect schemes, proxied sockets, `GNUPGHOME=$TMPDIR/...`) that assume git children are sandboxed

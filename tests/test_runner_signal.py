@@ -156,8 +156,8 @@ def test_sighup_triggers_cleanup(runner_env: dict):
     proc = subprocess.Popen(
         runner_env["proc_args"],
         env=runner_env["env"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
         # Start in its own process group so we can signal it cleanly
         preexec_fn=os.setsid,
     )

@@ -4,6 +4,9 @@ test-command: just test
 skip-specify: false
 skip-review: false
 commit-artifacts: true
+demo-commands:
+  - label: "Dashboard"
+    command: "just dashboard"
 ---
 
 # Lifecycle Configuration

@@ -1,0 +1,42 @@
+{"ts": "2026-04-14T14:20:50.783460+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:20:50.783645+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:20:50.800244+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:20:50.800484+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:20:50.810312+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:20:50.812681+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:20:56.671369+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:20:56.671644+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:20:56.689013+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:20:56.689335+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:20:56.699493+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:20:56.699717+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:00.802171+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:00.802419+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:00.818824+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:00.819092+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:00.828983+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:00.829201+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:05.758041+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:05.758321+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:05.775366+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:05.775665+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:05.785796+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:05.786018+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:10.837539+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:10.837807+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:10.854403+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:10.854663+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:10.864626+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:10.864833+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:16.407874+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:16.408145+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:16.425001+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:16.425252+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:16.435352+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:16.435572+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:20.738755+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:20.738988+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:20.755866+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:20.756145+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
+{"ts": "2026-04-14T14:21:20.766137+00:00", "event": "phase_transition", "feature": "feat-a", "from": "implement", "to": "review"}
+{"ts": "2026-04-14T14:21:20.766361+00:00", "event": "review_verdict", "feature": "feat-a", "verdict": "ERROR", "cycle": 0, "issues": ["spec not readable: [Errno 2] No such file or directory: 'lifecycle/feat-a/spec.md'"]}
