@@ -6,7 +6,7 @@
 
 The agentic layer is the workflow orchestration system built on top of Claude Code skills. It coordinates how development work flows from a vague idea through research, specification, planning, implementation, and review — across single features, parallel batches, or fully autonomous overnight sessions. Skills are the primitive units; hooks wire them into the development environment at the right moments; and state files let the system resume across sessions and tool invocations.
 
-This document is a reference for the full skill inventory, the main workflow diagrams, and the lifecycle phase map. It covers all 29 skills organized by functional group, both ASCII diagrams showing how they connect, and the tier/criticality model that governs model selection and review requirements. Start with the diagrams for an orientation, then consult the skill table for individual trigger and output details.
+This document is a reference for the full skill inventory, the main workflow diagrams, and the lifecycle phase map. It covers the core skills organized by functional group, both ASCII diagrams showing how they connect, and the tier/criticality model that governs model selection and review requirements. Start with the diagrams for an orientation, then consult the skill table for individual trigger and output details. Optional skills (UI design enforcement, `pr-review`) are extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace.
 
 ---
 
@@ -33,7 +33,8 @@ Skill count current as of this writing. `skills/` is the authoritative source �
 |-------|---------|----------|----------|---------------|
 | **commit** | Create well-formatted git commits | `/commit`, "commit these changes" | Git commit (signed) | All agents |
 | **pr** | Create GitHub pull requests | `/pr`, "create a pr" | GitHub PR via `gh pr create` | All agents |
-| **pr-review** | Multi-agent PR review pipeline | `/pr-review`, `/pr-review <num>` | Structured verdict (APPROVE/REQUEST_CHANGES/REJECT) | Claude only |
+
+> **Note:** `pr-review` has been extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace. Install via `claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins`.
 
 ### Thinking Tools
 
@@ -53,14 +54,7 @@ Skill count current as of this writing. `skills/` is the authoritative source �
 
 ### UI Design Enforcement
 
-| Skill | Purpose | Triggers | Produces | Agent support |
-|-------|---------|----------|----------|---------------|
-| **ui-brief** | Generate DESIGN.md + theme tokens | `/ui-brief` | `DESIGN.md` + `globals.css` @theme block | All agents |
-| **ui-lint** | ESLint + Stylelint auto-fix-then-report | `/ui-lint` | `ui-check-results/lint.json` | All agents |
-| **ui-a11y** | axe-core WCAG 2.1 AA audit via Playwright | `/ui-a11y` | `ui-check-results/a11y.json` | All agents |
-| **ui-check** | Full UI design enforcement pipeline (3 layers) | `/ui-check` | `ui-check-results/summary.json` | All agents |
-| **ui-judge** | Visual quality scorecard via Claude Vision | `/ui-judge` | `ui-check-results/judge.json` | Claude only |
-| **ui-setup** | One-time UI toolchain setup checklist | `/ui-setup` | Checklist with install commands | All agents |
+The six UI skills (`ui-brief`, `ui-lint`, `ui-a11y`, `ui-check`, `ui-judge`, `ui-setup`) have been extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace as the `cortex-ui-extras` plugin. Install via `claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins`. For the full UI tooling reference, see [docs/ui-tooling.md in cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins/blob/main/docs/ui-tooling.md).
 
 ### Utilities
 
@@ -323,27 +317,7 @@ For overnight runner operations and architecture (state schemas, recovery, allow
 
 ## UI Design Enforcement
 
-The UI skills form a separate sub-system for frontend projects. They are layered enforcement tools rather than general development workflow components — relevant only when a project has a UI layer with design tokens and accessibility requirements. Run `/ui-brief` once at project setup to establish the design foundation; run `/ui-check` as part of any PR or review cycle to enforce it. See [UI Tooling Reference](ui-tooling.md) for the full reference including Playwright MCP, Claude in Chrome, and design rationale.
-
-```
-/ui-brief  -->  DESIGN.md + @theme tokens   (run once at project setup)
-    |
-    v
-/ui-check  (orchestrates layers 1-3)
-    |-- Layer 1: /ui-lint    (ESLint + Stylelint, blocking)
-    |-- Layer 2: /ui-a11y   (axe-core WCAG 2.1 AA, conditional)
-    +-- Layer 3: /ui-judge  (Vision scorecard, advisory only)
-```
-
-- **`/ui-brief`** interviews the user about design intent and generates two outputs: a `DESIGN.md` describing the visual language (palette, typography, spacing, component conventions) and a `globals.css` `@theme` block with the concrete design tokens. Run this once when starting a frontend project or when overhauling the design system.
-
-- **`/ui-lint`** (Layer 1) runs ESLint and Stylelint against the codebase, attempts auto-fixes, and writes a structured `lint.json` report. This layer is blocking — failures stop `/ui-check` from proceeding unless forced.
-
-- **`/ui-a11y`** (Layer 2) launches Playwright to render pages and runs axe-core against them for WCAG 2.1 AA compliance. Conditional on lint passing. Results go to `a11y.json`.
-
-- **`/ui-judge`** (Layer 3) takes Playwright screenshots and submits them to Claude Vision twice — once for a design quality scorecard and once for cross-check — producing a `judge.json` advisory report. This layer always exits 0 and never blocks.
-
-- **`/ui-check`** orchestrates all three layers in sequence and produces a consolidated `summary.json`. Run `/ui-check` for standard enforcement. Run individual skills (`/ui-lint`, `/ui-a11y`, `/ui-judge`) when you need a specific layer's output without running the full pipeline, or when debugging a failing layer.
+The UI skills have been extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace (`cortex-ui-extras` plugin). Install via `claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins`. Full reference — including the three-layer pipeline, Playwright MCP, Claude in Chrome, and design rationale — lives at [docs/ui-tooling.md in that repo](https://github.com/charleshall888/cortex-command-plugins/blob/main/docs/ui-tooling.md).
 
 ---
 

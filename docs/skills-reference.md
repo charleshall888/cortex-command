@@ -5,7 +5,9 @@
 **For:** All users — quick reference to find the right skill for the job.
 **Assumes:** Claude Code is set up and skills are symlinked.
 
-A grouped inventory of all 29 skills. Each entry shows what the skill does and links to its full SKILL.md for trigger phrases, inputs, outputs, and implementation details.
+A grouped inventory of the skills in this repo. Each entry shows what the skill does and links to its full SKILL.md for trigger phrases, inputs, outputs, and implementation details.
+
+See also [Optional Plugins](#optional-plugins) below for UI skills and `pr-review`, which now live in the separate `cortex-command-plugins` repo.
 
 ---
 
@@ -93,13 +95,6 @@ Create GitHub pull requests with well-crafted titles and descriptions. Detects t
 
 ---
 
-### pr-review
-Review a GitHub pull request using a multi-agent pipeline. Runs a Haiku triage agent followed by four parallel Sonnet reviewers (conventions, bugs, git history, prior feedback) and an Opus synthesis agent. Issues a verdict of APPROVE, REQUEST CHANGES, or REJECT.
-
-[skills/pr-review/SKILL.md](../skills/pr-review/SKILL.md)
-
----
-
 ## Thinking Tools
 
 ### critical-review
@@ -146,47 +141,21 @@ Identify recurring problems across retro logs and route each trend to the approp
 
 ---
 
-## UI Design Enforcement
+## Optional Plugins
 
-### ui-brief
-Generate a `DESIGN.md` constraint document and a Tailwind v4 `@theme` semantic token starter for a new project. This is Layer 0 of the design enforcement stack — run once at project setup to establish the design system before any UI components are built.
+The UI design enforcement skills (`ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup`) and `pr-review` have been extracted into a separate Claude Code plugin marketplace: [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins).
 
-[skills/ui-brief/SKILL.md](../skills/ui-brief/SKILL.md)
+Install via Claude Code's plugin system:
 
----
+```
+claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins
+```
 
-### ui-setup
-One-time project setup guide for the UI design enforcement toolchain. Reads `package.json`, detects what's installed, and outputs a checklist with exact install commands and config snippets for ESLint, Stylelint, Prettier, Husky, shadcn, and Playwright.
+Then enable the desired plugin (e.g. `cortex-ui-extras` for the UI stack, or the `pr-review` plugin). See the `cortex-command-plugins` repo for the authoritative list of plugins and their install commands.
 
-[skills/ui-setup/SKILL.md](../skills/ui-setup/SKILL.md)
+### Project-local: harness-review
 
----
-
-### ui-check
-Run the full UI design enforcement pipeline — Layer 0 (DESIGN.md + shadcn presence check, warns only) → Layer 1 (`/ui-lint`, blocks on failures) → Layer 2 (`/ui-a11y` if a dev server is reachable, skips if not). Writes `ui-check-results/summary.json` after every run.
-
-[skills/ui-check/SKILL.md](../skills/ui-check/SKILL.md)
-
----
-
-### ui-lint
-Run ESLint and Stylelint in auto-fix-then-report mode and write results to `ui-check-results/lint.json`. Layer 1 of the design enforcement stack — enforces Tailwind token conformance, no-arbitrary-value rules, and jsx-a11y accessibility rules at the static analysis level.
-
-[skills/ui-lint/SKILL.md](../skills/ui-lint/SKILL.md)
-
----
-
-### ui-a11y
-Run axe-core via Playwright against the project's running dev server, targeting WCAG 2.1 AA. Layer 2 of the design enforcement stack — runtime accessibility verification that catches rendered issues static JSX analysis cannot, such as color contrast on real renders and ARIA in context.
-
-[skills/ui-a11y/SKILL.md](../skills/ui-a11y/SKILL.md)
-
----
-
-### ui-judge
-Capture a screenshot of a URL via Playwright and evaluate it against a five-criterion visual quality rubric using Claude Vision (two-call UICrit pattern). Layer 3 of the design enforcement stack — human-triggered advisory scorecard, never a CI gate. Always exits 0.
-
-[skills/ui-judge/SKILL.md](../skills/ui-judge/SKILL.md)
+`harness-review` is a project-local skill that lives in `.claude/skills/` inside the cortex-command repo. It is specific to cortex-command's overnight runner inventory and is not published as a plugin or symlinked globally.
 
 ---
 
