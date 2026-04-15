@@ -1,0 +1,145 @@
+- ts: 2026-04-15T13:08:00Z
+  event: clarify_critic
+  feature: extract-optional-skills-to-plugin
+  findings:
+    - "Intent rated HIGH papers over a contradiction in the source — the prompt opens with 'move to a new public repo' and later says 'don't mind if these belong in this repo' and 'separate repo also fine.' Three different answers to 'where do these skills live' in one paragraph."
+    - "Intent HIGH rests on an unverified assumption — that Claude Code plugins actually avoid contributing skill descriptions to the system reminder when installed-but-disabled. The user asserted this; the assessment inherited it uncritically. If false, the value collapses and this re-runs #064."
+    - "Scope LOW undersells the gap — 'audit which skills are not referenced by lifecycle/overnight/discovery/requirements' is a procedure, not a criterion. 'Referenced' could mean invoked programmatically, listed as a trigger, documented, or 'I use this when doing X' — each yields a different candidate set."
+    - "'UI skills' is treated as anchoring a category, but nothing in the source defines the category. statusline is a shell script; insights is analytical. The example may have been gestural ('things like the UI skills'), not categorical."
+    - "Requirements HIGH rests on an unquantified value case — #064 established ~2.6k tokens (<2% of context) saved. The assessment treats plugins as a qualitative game-changer without re-quantifying savings under the plugin mechanism."
+    - "Assessment imports #064's framing but does not confront direct tension — #064's rationale cited multi-file state coherence as the cost, which is a property of the skills themselves (cross-references, workflow assumptions), not the loading mechanism. Moving skills into a plugin does not dissolve cross-skill references."
+    - "The same-repo-plugin vs. separate-repo decision is filed as one of four equivalent ambiguities, but it has downstream architectural consequences (just setup, symlink architecture, /setup-merge responsibilities, fork onboarding) that the list-of-items questions do not."
+  dispositions:
+    apply: 2
+    dismiss: 1
+    ask: 4
+  applied_fixes:
+    - "Added to Research open questions: does the Claude Code plugin system actually gate skill-description loading from the session system reminder, or only gate invocation? (load-bearing for the entire value case)"
+    - "Added to Research open questions: does plugin extraction require unwinding cross-skill references in SKILL.md bodies, hook code, or workflow docs, or can plugins coexist with cross-references intact?"
+  status: ok
+- ts: 2026-04-15T13:12:00Z
+  event: lifecycle_start
+  feature: extract-optional-skills-to-plugin
+  tier: complex
+  criticality: high
+- ts: 2026-04-15T13:14:00Z
+  event: phase_transition
+  feature: extract-optional-skills-to-plugin
+  from: clarify
+  to: research
+- ts: 2026-04-15T13:45:00Z
+  event: research_complete
+  feature: extract-optional-skills-to-plugin
+  artifact: lifecycle/extract-optional-skills-to-plugin/research.md
+  agent_count: 5
+  open_questions: 6
+  all_questions_deferred_with_rationale: true
+- ts: 2026-04-15T13:48:00Z
+  event: phase_transition
+  feature: extract-optional-skills-to-plugin
+  from: research
+  to: specify
+- ts: 2026-04-15T13:58:00Z
+  event: orchestrator_review
+  feature: extract-optional-skills-to-plugin
+  phase: specify
+  verdict: flag
+  cycle: 1
+  issues:
+    - "S3: MoSCoW classification not explicit — requirements are implicitly all must-have"
+- ts: 2026-04-15T13:58:30Z
+  event: orchestrator_dispatch_fix
+  feature: extract-optional-skills-to-plugin
+  phase: specify
+  mode: same_context
+  issue: "Add [MUST] / [SHOULD] tags to each requirement; tighten R10 acceptance to greppable form"
+- ts: 2026-04-15T13:59:00Z
+  event: orchestrator_review
+  feature: extract-optional-skills-to-plugin
+  phase: specify
+  verdict: pass
+  cycle: 2
+  issues: []
+- ts: 2026-04-15T14:05:00Z
+  event: critical_review
+  feature: extract-optional-skills-to-plugin
+  phase: specify
+  findings: 10
+  dispositions:
+    apply: 8
+    dismiss: 0
+    ask: 1
+    defer: 1
+  applied_fixes:
+    - "R1: removed 'must use namespaced form' claim; bare name is correct per plugin-dev reference"
+    - "R5: changed from idempotent print to conditional (marketplace sentinel check); tightened acceptance to two-state"
+    - "R6: extended to include REQUIRED_PLUGIN_KEYS update + parity test"
+    - "R8: specified replacement behavior (skill-registry availability, graceful a11y skip)"
+    - "R9: reframed check-symlinks acceptance to affirmative verification"
+    - "R10: promoted [SHOULD] -> [MUST] with 1500-token abort threshold"
+    - "Changes to Existing Behavior: added merge_settings.py, just setup state branch, enabledPlugins block growth"
+    - "Edge Cases: worktree wording (per-branch); harness-review cross-repo; marketplace refresh; .claude/skills collision check"
+  deferred:
+    - "CI canary for upstream #40789 regression (already in Non-Requirements with revisit note)"
+  asked:
+    - "Finding 3: cortex-dev-extras seeded with just pr-review — accept as seed, defer bundle until 2nd skill, or single-purpose cortex-pr-review?"
+- ts: 2026-04-15T14:20:00Z
+  event: scope_pivot
+  feature: extract-optional-skills-to-plugin
+  from: "in-repo plugin structure (plugins/cortex-ui-extras/, plugins/cortex-pr-review/, .claude-plugin/marketplace.json at root, claude/settings.json template entries, REQUIRED_PLUGIN_KEYS update, just setup marketplace-sentinel notice, plugin-cache deviation docs)"
+  to: "separate public repo (cortex-command-plugins) hosting both plugins and a marketplace manifest; this repo only removes the extracted skills, rewrites ui-check FS probes, demotes harness-review, and updates docs to point at the new repo"
+  rationale: "User approved the simplification tradeoff after complexity/value gate. Separate-repo approach shrinks THIS repo's spec from 12 requirements to ~7 by removing in-repo plugin infrastructure. Cross-repo maintenance burden is acceptable for this single-maintainer personal toolkit; these skills rarely need coordinated changes with core. Research's prior rejection of Option B was calibrated for team-product contexts; does not apply here."
+  requirements_dropped:
+    - "R4 in-repo .claude-plugin/marketplace.json"
+    - "R5 just setup conditional marketplace notice"
+    - "R6 REQUIRED_PLUGIN_KEYS update + parity test"
+    - "R9's plugins/*/skills/ walker extensions (no plugins in this repo)"
+    - "R12 CLAUDE.md plugin-cache deviation note"
+  requirements_retained:
+    - "ui-check FS-probe rewrite (orthogonal)"
+    - "harness-review demotion (orthogonal, context-efficiency theme)"
+    - "R10 token-savings benchmark with abort threshold"
+    - "Docs update (pointer to new repo instead of catalog restructure)"
+  requirements_added:
+    - "Create new repo cortex-command-plugins with scaffolding, README, marketplace.json, 2 plugins"
+- ts: 2026-04-15T14:28:00Z
+  event: orchestrator_review
+  feature: extract-optional-skills-to-plugin
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+  note: "Re-run after scope pivot; new spec is ~80 lines with 8 requirements vs prior 12"
+- ts: 2026-04-15T14:50:00Z
+  event: critical_review
+  feature: extract-optional-skills-to-plugin
+  phase: specify
+  findings: 6
+  dispositions:
+    apply: 2
+    dismiss: 2
+    ask: 2
+  applied_fixes:
+    - "R7 measurement methodology fully specified: scope = system-reminder skills block only; token estimation via /context + 1:4 char-to-token ratio; per-skill char counts + proxy-ratio projection instead of × 7 linear multiplier; 1500-token threshold rationale documented as ~60% of #064's 2.6k"
+    - "R9/R10 added: frontmatter validator + GitHub Actions workflow + ui-check FS-probe guard in the new repo — closes the test-coverage evaporation gap"
+  dismissed:
+    - "Obj 6 (R7 one-time doc gate / no CI canary): canary was explicitly rejected in earlier interview (user chose to accept manual observation) — not re-litigated here"
+    - "Concern: git history stops at delete — accepted trade per Non-Requirements"
+  asked:
+    - "Obj 2 & 3 (pivot arithmetic / Option C dominance): user chose to stay with Option B; Apply #1/#4 and proceed"
+    - "Obj 5 (harness-review orthogonal): not split in this ticket; staying coupled per user choice"
+  note: "cycle 2 — first critical_review ran during specify; this is the second triggered by /critical-review invocation post-scope-pivot"
+- ts: 2026-04-15T15:05:00Z
+  event: spec_revision
+  feature: extract-optional-skills-to-plugin
+  phase: specify
+  reason: "User audit caught documentation gap: docs/ui-tooling.md (127 lines, dedicated UI-tooling reference) was not covered; docs/setup.md UI-bundle instructions were not covered; docs/dashboard.md ui-judge/ui-a11y references were not covered; per-skill references/ subdirs were implicitly covered by 'full subtree' move but not called out explicitly."
+  changes:
+    - "R1: explicit enumeration of per-skill references/ subtrees moving with skills; docs/ui-tooling.md added to new repo contents; acceptance criteria extended"
+    - "R8: promoted [SHOULD] -> [MUST]; expanded to cover docs/setup.md, docs/dashboard.md, docs/ui-tooling.md removal; tightened acceptance criteria"
+    - "Changes to Existing Behavior: REMOVED section expanded to name docs/ui-tooling.md explicitly; MODIFIED section adds docs/setup.md and docs/dashboard.md"
+- ts: 2026-04-15T15:10:00Z
+  event: phase_transition
+  feature: extract-optional-skills-to-plugin
+  from: specify
+  to: plan
