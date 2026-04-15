@@ -189,3 +189,6 @@
     - "Task 12: rewrote What and Verification to handle glob-based justfile case — task may be a no-op; verification conditioned on actual recipe type"
     - "Task 14: reordered checklist to run before initial commit; added explicit gate note for T11"
 {"ts": "2026-04-15T16:00:00Z", "event": "phase_transition", "feature": "extract-optional-skills-to-plugin", "from": "plan", "to": "implement"}
+{"ts": "2026-04-15T16:01:00Z", "event": "batch_dispatch", "feature": "extract-optional-skills-to-plugin", "batch": 0, "tasks": [1]}
+{"ts": "2026-04-15T16:10:00Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-15T16:10:00Z", "event": "lifecycle_abort", "feature": "extract-optional-skills-to-plugin", "reason": "R7 abort gate triggered: expected_savings_tokens=656 < abort_threshold=1500", "root_cause": "candidate set narrowed to 7 skills during specify/scope-pivot; threshold was calibrated for ~14-skill extraction", "fallback": "Option C (gitignored opt-in symlinks) or accept current state"}

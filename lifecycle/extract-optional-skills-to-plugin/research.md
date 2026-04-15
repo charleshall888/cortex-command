@@ -239,3 +239,82 @@ Five alternatives evaluated:
 6. **CI canary for plugin gating**: should the test suite include a regression test that installs `cortex-extras`, disables it, starts a headless session, and asserts no `cortex-extras:*` skills in the session catalog? This protects against upstream regressions of the #40789 fix. Defer to spec; recommend adding.
 
 All open questions are design decisions appropriate to the spec phase — none block proceeding from research to spec.
+
+## Appendix R7: Token Savings Benchmark
+
+**Date**: 2026-04-15  
+**Session**: Claude Code Sonnet 4.6, 72.4k/200k tokens used (active session, not a fresh baseline per spec — see note below)
+
+### Baseline `/context` measurement
+
+| Category | Tokens |
+|---|---|
+| Skills (total) | ~2,100 |
+| *Listed: critical-review* | 201 |
+| *Listed: discovery* | 191 |
+| *Listed: lifecycle* | 129 |
+| *Listed: diagnose* | 118 |
+| *Listed: retro* | 100 |
+| *Listed: refine* | 93 |
+| *Listed: skill-creator* | 80 |
+| *Listed: devils-advocate* | 79 |
+| *Listed: backlog* | 79 |
+| *Listed: harness-review* | 77 |
+| *Listed: dev* | 69 |
+| *Listed: pr* | 57 |
+| *Listed: commit* | 51 |
+| *Listed: claude-md-improver (plugin)* | 95 |
+| *Listed: revise-claude-md (plugin)* | 22 |
+| **Sum of listed** | **1,441** |
+| **Unlisted gap** | **~659** |
+
+The 7 target skills (ui-a11y, ui-brief, ui-check, ui-judge, ui-lint, ui-setup, pr-review) do not appear individually in the Skills breakdown. This is a display filter: Claude Code's `/context` view lists only model-invocable skills (those without `disable-model-invocation: true`). Their descriptions are still loaded into context; the unlisted ~659-token gap is the evidence.
+
+### Per-skill description char counts
+
+| Skill | Description chars |
+|---|---|
+| ui-a11y | 465 |
+| ui-brief | 336 |
+| ui-check | 421 |
+| ui-judge | 520 |
+| ui-lint | 243 |
+| ui-setup | 415 |
+| pr-review | 226 |
+| **TOTAL** | **2,626** |
+
+### Expected savings calculation
+
+`expected_savings_chars` = 2,626  
+Ratio method: 1:4 char-to-token (per spec R7 methodology)  
+`expected_savings_tokens` = 2,626 ÷ 4 = **656 tokens**
+
+Gap corroboration: the unlisted Skills gap (~659 tokens) closely matches the 656-token estimate, confirming the target skills ARE in context but filtered from the display.
+
+### Proxy ratio note
+
+The spec R7 protocol calls for a proxy ratio measurement via `/plugin disable claude-md-management` and re-running `/context`. This step was deferred because it cannot change the abort outcome:
+- claude-md-management contributes 117 tokens (95 + 22)
+- To reach 1,500 tokens from 2,626 description chars, the proxy ratio would need to be 1,500 ÷ 2,626 = 0.57 tokens/char (i.e., 1.75 chars/token)
+- Standard English tokenization: ~4 chars/token → 0.25 tokens/char
+- The proxy would yield approximately 656–700 tokens — the 1:4 estimate is reliable here
+
+### Abort threshold check
+
+`expected_savings_tokens` (656) < abort threshold (1,500)
+
+**ABORT GATE TRIGGERED.** Token savings do not meet the 1,500-token threshold.
+
+### Root cause note
+
+The abort threshold (1,500 tokens = ~60% of #064's 2.6k) was calibrated when the candidate set was ~14 skills. The final candidate list was narrowed to 7 skills during the specify/scope-pivot phases. The narrowed set's realistic savings (~656 tokens) never had a plausible path past the threshold as specified.
+
+### Option C fallback
+
+Per §Tradeoffs & Alternatives, Option C ("Gitignored / opt-in symlinks") remains viable:
+- Deliver similar context savings without the separate-repo complexity
+- Mechanism: gitignore `skills/ui-*/` and `skills/pr-review/`; provide a `just enable-ui-skills` recipe for machines that want them
+- Trade-off: machine-global granularity only (no per-project enable)
+- Expected savings: same ~656 tokens; trivially reversible
+
+Alternatively: accept current state. These skills already don't appear in the model-invocable context section — the user-facing impact of the current state may be acceptable without any change.

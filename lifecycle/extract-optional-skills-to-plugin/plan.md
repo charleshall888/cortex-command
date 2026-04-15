@@ -13,7 +13,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: 7 skills to measure: `ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup`, `pr-review`. Measurement steps per spec R7: (1) baseline `/context` in fresh session, (2) per-skill description char count from `description:` field in each `skills/<name>/SKILL.md`, (3) disable `claude-md-management` via `/plugin`, record new `/context` delta as the proxy ratio, (4) compute `expected_savings_chars = sum(description chars for 7 skills)`, convert via proxy ratio. Abort threshold: 1500 tokens. R7 acceptance: `grep -cE '[0-9]+\s*tokens?' lifecycle/extract-optional-skills-to-plugin/research.md` ≥ 1 AND `grep -c 'expected_savings_tokens' lifecycle/extract-optional-skills-to-plugin/research.md` ≥ 1 AND `grep -c 'abort threshold' lifecycle/extract-optional-skills-to-plugin/research.md` ≥ 1.
 - **Verification**: Interactive/session-dependent: requires `/context` in a live Claude Code session — no shell command equivalent. After appending: `grep -c 'abort threshold' lifecycle/extract-optional-skills-to-plugin/research.md` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete — abort gate triggered (656 tokens < 1500 threshold)
 
 ### Task 2: Rewrite ui-check FS probes (commit in cortex-command before move)
 - **Files**: `skills/ui-check/SKILL.md`
