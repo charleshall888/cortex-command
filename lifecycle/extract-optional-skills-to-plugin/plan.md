@@ -22,7 +22,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: Research.md §Adversarial Review Finding 3 identifies the two probe locations. Both probes use FS paths under `~/.claude/skills/` that cease to exist after extraction. Within the plugin, both `ui-lint` and `ui-a11y` are always co-deployed with `ui-check` — no availability check is needed for either. Remove both probes. The graceful-skip path for ui-a11y (set `a11y.status = "skipped"`) becomes dead code within the plugin context and should be removed with the probe. Read lines 1–100 of `skills/ui-check/SKILL.md` before editing to understand the full structure.
 - **Verification**: `grep -c '~/.claude/skills/ui-' skills/ui-check/SKILL.md` = 0 — pass if count = 0 (covers both probes).
-- **Status**: [ ] pending
+- **Status**: [x] complete — both FS probes removed, committed 8d0f3ec
 
 ### Task 3: Scaffold `cortex-command-plugins` repo
 - **Files** (all in `~/Workspaces/cortex-command-plugins/` — new directory outside this repo):
@@ -36,7 +36,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: complex
 - **Context**: `marketplace.json` structure: `{"plugins": [{"name": "cortex-ui-extras", "source": "./plugins/cortex-ui-extras"}, {"name": "cortex-pr-review", "source": "./plugins/cortex-pr-review"}]}`. `plugin.json` structure: `{"name": "cortex-ui-extras"}` and `{"name": "cortex-pr-review"}`. The README references `docs/ui-tooling.md` as the in-repo UI reference (that file arrives in Task 7). Copy `LICENSE` verbatim from cortex-command root.
 - **Verification**: `jq '.plugins | length' ~/Workspaces/cortex-command-plugins/.claude-plugin/marketplace.json` = 2 — pass if output is `2`. `jq -r .name ~/Workspaces/cortex-command-plugins/plugins/cortex-ui-extras/.claude-plugin/plugin.json` = `cortex-ui-extras` — pass if name matches.
-- **Status**: [ ] pending
+- **Status**: [x] complete — repo scaffolded at ~/Workspaces/cortex-command-plugins/; no commit yet (T14 creates initial commit)
 
 ### Task 4: Copy 4 SKILL.md-only UI skills into new repo
 - **Files** (all in `~/Workspaces/cortex-command-plugins/`):
@@ -49,7 +49,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: Research.md §Codebase Analysis confirms `ui-a11y`, `ui-judge`, `ui-lint`, and `ui-setup` are SKILL.md-only — no subtrees. After this task, `ls plugins/cortex-ui-extras/skills/` has 4 entries; ui-brief arrives in Task 5, ui-check in Task 6.
 - **Verification**: `ls ~/Workspaces/cortex-command-plugins/plugins/cortex-ui-extras/skills/ | wc -l` = 4 — pass if count = 4. Each of `ui-a11y`, `ui-judge`, `ui-lint`, `ui-setup` must appear in that listing.
-- **Status**: [ ] pending
+- **Status**: [x] complete — all 4 SKILL.md files copied verbatim, count verified = 4
 
 ### Task 5: Copy ui-brief with its references/ subtree into new repo
 - **Files** (all in `~/Workspaces/cortex-command-plugins/`):
@@ -61,7 +61,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: Research.md §Codebase Analysis confirms `ui-brief` has `SKILL.md` + `references/` with `design-md-template.md` and `theme-template.md`. After this task, `ls plugins/cortex-ui-extras/skills/` has 5 entries (ui-check arrives in Task 6).
 - **Verification**: `ls ~/Workspaces/cortex-command-plugins/plugins/cortex-ui-extras/skills/ui-brief/references/` lists `design-md-template.md` and `theme-template.md` — pass if both files exist. `ls ~/Workspaces/cortex-command-plugins/plugins/cortex-ui-extras/skills/ | wc -l` = 5 — pass if count = 5.
-- **Status**: [ ] pending
+- **Status**: [x] complete — SKILL.md + both reference files copied, count verified = 5
 
 ### Task 6: Copy ui-check (post-rewrite) into new repo
 - **Files** (in `~/Workspaces/cortex-command-plugins/`):
@@ -71,7 +71,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: After this task, `ls plugins/cortex-ui-extras/skills/ | wc -l` = 6. Confirm the copied file passes the R5 acceptance check before proceeding to Task 9.
 - **Verification**: `ls ~/Workspaces/cortex-command-plugins/plugins/cortex-ui-extras/skills/ | wc -l` = 6 — pass if count = 6. `grep -c '~/.claude/skills/ui-' ~/Workspaces/cortex-command-plugins/plugins/cortex-ui-extras/skills/ui-check/SKILL.md` = 0 — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete — ui-check copied, count = 6, probe check = 0
 
 ### Task 7: Copy pr-review into new repo
 - **Files** (in `~/Workspaces/cortex-command-plugins/`):
@@ -82,7 +82,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: Research.md confirms: `pr-review` has `SKILL.md` + `references/`. Spec R3 acceptance: `ls plugins/cortex-pr-review/skills/` = `pr-review`; `jq -r .name plugins/cortex-pr-review/.claude-plugin/plugin.json` = `cortex-pr-review`.
 - **Verification**: `ls ~/Workspaces/cortex-command-plugins/plugins/cortex-pr-review/skills/` = `pr-review` only — pass if single entry. `ls ~/Workspaces/cortex-command-plugins/plugins/cortex-pr-review/skills/pr-review/references/protocol.md` exists — pass if file found.
-- **Status**: [ ] pending
+- **Status**: [x] complete — SKILL.md + references/protocol.md copied, both verifications pass
 
 ### Task 8: Copy docs/ui-tooling.md to new repo and update back-link
 - **Files**:
@@ -92,7 +92,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: The back-link is a relative markdown link that would be broken in the new repo since `agentic-layer.md` doesn't exist there. The replacement must be either an absolute GitHub URL or removed. Spec R1 says "Update its back-link from ... to a GitHub link back to cortex-command/docs/agentic-layer.md (or remove the back-link — implementation-time choice)." Choose whichever is cleaner; the critical acceptance is that no bare `(agentic-layer.md)` relative link remains.
 - **Verification**: `ls ~/Workspaces/cortex-command-plugins/docs/ui-tooling.md` exists — pass if file found. `grep -c '(agentic-layer.md)' ~/Workspaces/cortex-command-plugins/docs/ui-tooling.md` = 0 — pass if no bare relative link remains.
-- **Status**: [ ] pending
+- **Status**: [x] complete — copied, back-link replaced with GitHub absolute URL
 
 ### Task 9: Add validation infrastructure and ui-check probe guard to new repo
 - **Files** (in `~/Workspaces/cortex-command-plugins/`):
@@ -103,7 +103,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: `validate-skill.py` accepts a directory path and walks `*/SKILL.md` files in that dir, checking `name` + `description` frontmatter, YAML parse, `{{variable}}` consistency. The GH Actions workflow should use `actions/checkout@v4` and `actions/setup-python@v5` (or current equivalents at implementation time). The probe guard inverts the grep exit code: grep returns 0 if found (bad), 1 if not found (good) — so negate it. R10 acceptance: running the guard against a clean ui-check.SKILL.md returns 0 (no matches = pass); introducing a `~/.claude/skills/ui-lint/SKILL.md` reference makes the guard return non-zero (fail). Verify R9/R10 acceptance locally before Task 14.
 - **Verification**: `python3 ~/Workspaces/cortex-command-plugins/scripts/validate-skill.py ~/Workspaces/cortex-command-plugins/plugins/cortex-ui-extras/skills` exits 0 — pass if exit code = 0. `grep -c 'validate-skill.py' ~/Workspaces/cortex-command-plugins/.github/workflows/validate.yml` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete — validator exit 0 (6 skills, 3 warnings, 0 errors); workflow written with probe guard
 
 ### Task 10: Demote harness-review to project-local scope
 - **Files** (in cortex-command):
@@ -114,7 +114,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: Existing precedent: `.claude/skills/setup-merge/` is a project-local skill in this repo — harness-review follows the same pattern. Research.md (Codebase Analysis) confirms: `harness-review` has `SKILL.md` only, no subtrees. If `validate-skills` uses a `skills/*/SKILL.md` glob (not an explicit list), no change is needed there for harness-review — the glob won't pick up `.claude/skills/`. Confirm the recipe pattern before editing.
 - **Verification**: `ls .claude/skills/harness-review/SKILL.md` exists — pass if file found. `ls skills/harness-review 2>/dev/null` is empty — pass if directory gone. `readlink ~/.claude/skills/harness-review 2>/dev/null` is empty — pass if no global symlink.
-- **Status**: [ ] pending
+- **Status**: [x] complete — moved to .claude/skills/, global symlink removed, justfile unchanged (glob-based), committed 9066193
 
 ### Task 11: Delete the 7 extracted skill directories from cortex-command
 - **Files** (in cortex-command — all deleted):
@@ -130,7 +130,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: complex
 - **Context**: Research.md (Codebase Analysis) confirms all 7 skill subtrees. Run `just check-symlinks` (or equivalent) after deletion to confirm no broken symlink warnings for the 7 names. The deploy recipes still reference these names until Task 12 removes them, so run the symlink check before editing the justfile.
 - **Verification**: `ls skills/ | grep -cE '^(ui-a11y|ui-brief|ui-check|ui-judge|ui-lint|ui-setup|pr-review)$'` = 0 — pass if count = 0. `readlink ~/.claude/skills/ui-lint 2>/dev/null` is empty — pass if symlink gone.
-- **Status**: [ ] pending
+- **Status**: [x] complete — all 7 dirs deleted, all 7 global symlinks removed, committed 9ae4a85
 
 ### Task 12: Verify and update justfile deploy recipes
 - **Files** (in cortex-command):
@@ -140,7 +140,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: Research.md (Codebase Analysis) identifies justfile skill-iteration at `setup-force` (~L64–73), `deploy-skills` (~L224–261), `verify-setup`/`check-symlinks` (~L758–762), `validate-skills` (~L716, ~L839). If those recipes use `skills/*/SKILL.md` glob patterns (not explicit name lists), this task is a no-op — the glob naturally excludes deleted directories. Determine which case applies before deciding whether to edit or skip.
 - **Verification**: Read the four recipes first. If explicit names were present and removed: `grep -cE 'skills/(ui-a11y|ui-brief|ui-check|ui-judge|ui-lint|ui-setup|pr-review)/' justfile` = 0 — pass if count = 0 (more targeted than a bare name match). If recipes are glob-based and no edits were made: `readlink ~/.claude/skills/ui-lint 2>/dev/null` is empty — pass if symlink gone (confirms Task 11's cleanup held).
-- **Status**: [ ] pending
+- **Status**: [x] complete — no-op; all 4 recipes use `skills/*/SKILL.md` glob, no hardcoded names, no commit needed
 
 ### Task 13: Update cortex-command documentation
 - **Files** (in cortex-command):
@@ -160,7 +160,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: complex
 - **Context**: Research.md reports: `docs/skills-reference.md` has 27 occurrences of extracted skill names; `docs/agentic-layer.md` has 14 occurrences. Spec R8 acceptance: `grep -c 'cortex-command-plugins' docs/skills-reference.md` ≥ 1 AND `grep -c 'install all six or none' docs/setup.md` = 0 AND `ls docs/ui-tooling.md 2>/dev/null` empty AND `grep -cE '\[.*\]\(ui-tooling\.md\)' docs/agentic-layer.md` = 0.
 - **Verification**: `grep -c 'cortex-command-plugins' docs/skills-reference.md` ≥ 1 — pass if count ≥ 1. `grep -c 'install all six or none' docs/setup.md` = 0 — pass if count = 0. `ls docs/ui-tooling.md 2>/dev/null` empty — pass if file absent.
-- **Status**: [ ] pending
+- **Status**: [x] complete — all 5 docs updated, ui-tooling.md deleted, committed e84eda6
 
 ### Task 14: Initial commit of cortex-command-plugins and acceptance checklist
 - **Files** (in `~/Workspaces/cortex-command-plugins/`):
@@ -170,7 +170,7 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 - **Complexity**: simple
 - **Context**: This task operates in `~/Workspaces/cortex-command-plugins/`. Use plain `git commit -m "..."` (not `/commit` skill — that skill is for cortex-command). Suggested commit message: `"Add cortex-ui-extras and cortex-pr-review plugins with validation"`. Run full acceptance: `jq '.plugins | length' .claude-plugin/marketplace.json` = 2; `ls plugins/cortex-ui-extras/skills/ | wc -l` = 6; `python3 scripts/validate-skill.py plugins/cortex-ui-extras/skills` exits 0; `python3 scripts/validate-skill.py plugins/cortex-pr-review/skills` exits 0; `grep -c '~/.claude/skills/ui-' plugins/cortex-ui-extras/skills/ui-check/SKILL.md` = 0.
 - **Verification**: `git -C ~/Workspaces/cortex-command-plugins log --oneline | head -1` is non-empty — pass if a commit exists. `python3 ~/Workspaces/cortex-command-plugins/scripts/validate-skill.py ~/Workspaces/cortex-command-plugins/plugins/cortex-ui-extras/skills` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete — all 6 acceptance checks passed; committed 70ce5ce (18 files, 2141 insertions)
 
 ## Verification Strategy
 

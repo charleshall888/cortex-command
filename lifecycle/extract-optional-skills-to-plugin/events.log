@@ -193,3 +193,28 @@
 {"ts": "2026-04-15T16:10:00Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 1, "batch": 0, "status": "success"}
 {"ts": "2026-04-15T16:10:00Z", "event": "lifecycle_abort", "feature": "extract-optional-skills-to-plugin", "reason": "R7 abort gate triggered: expected_savings_tokens=656 < abort_threshold=1500", "root_cause": "candidate set narrowed to 7 skills during specify/scope-pivot; threshold was calibrated for ~14-skill extraction", "fallback": "Option C (gitignored opt-in symlinks) or accept current state"}
 {"ts": "2026-04-15T16:20:00Z", "event": "spec_revision", "feature": "extract-optional-skills-to-plugin", "reason": "abort gate removed per user decision — threshold was miscalibrated for narrowed 7-skill scope; 656 tokens is acceptable savings", "changes": ["R7: removed abort threshold paragraph and abort-threshold acceptance criterion", "plan T1: removed halt-on-threshold language", "plan Veto Surface: updated abort gate entry to reflect threshold removal"]}
+{"ts": "2026-04-15T17:06:02Z", "event": "batch_dispatch", "feature": "extract-optional-skills-to-plugin", "batch": 1, "tasks": [2, 3, 10]}
+{"ts": "2026-04-15T17:10:09Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-15T17:10:09Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 3, "batch": 1, "status": "success"}
+{"ts": "2026-04-15T17:10:09Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 10, "batch": 1, "status": "success"}
+{"ts": "2026-04-15T17:11:11Z", "event": "batch_dispatch", "feature": "extract-optional-skills-to-plugin", "batch": 2, "tasks": [4, 5, 7, 8]}
+{"ts": "2026-04-15T17:14:12Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 4, "batch": 2, "status": "success"}
+{"ts": "2026-04-15T17:14:12Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 5, "batch": 2, "status": "success"}
+{"ts": "2026-04-15T17:14:12Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 7, "batch": 2, "status": "success"}
+{"ts": "2026-04-15T17:14:12Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 8, "batch": 2, "status": "success"}
+{"ts": "2026-04-15T17:14:54Z", "event": "batch_dispatch", "feature": "extract-optional-skills-to-plugin", "batch": 3, "tasks": [6]}
+{"ts": "2026-04-15T17:15:55Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 6, "batch": 3, "status": "success"}
+{"ts": "2026-04-15T17:15:55Z", "event": "batch_dispatch", "feature": "extract-optional-skills-to-plugin", "batch": 4, "tasks": [9]}
+{"ts": "2026-04-15T17:17:06Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 9, "batch": 4, "status": "success"}
+{"ts": "2026-04-15T17:19:12Z", "event": "batch_dispatch", "feature": "extract-optional-skills-to-plugin", "batch": 5, "tasks": [14]}
+{"ts": "2026-04-15T17:20:10Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 14, "batch": 5, "status": "success"}
+{"ts": "2026-04-15T17:23:45Z", "event": "batch_dispatch", "feature": "extract-optional-skills-to-plugin", "batch": 6, "tasks": [11]}
+{"ts": "2026-04-15T17:26:42Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 11, "batch": 6, "status": "success"}
+{"ts": "2026-04-15T17:26:42Z", "event": "batch_dispatch", "feature": "extract-optional-skills-to-plugin", "batch": 7, "tasks": [12]}
+{"ts": "2026-04-15T17:27:26Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 12, "batch": 7, "status": "success"}
+{"ts": "2026-04-15T17:27:26Z", "event": "batch_dispatch", "feature": "extract-optional-skills-to-plugin", "batch": 8, "tasks": [13]}
+{"ts": "2026-04-15T17:31:05Z", "event": "task_complete", "feature": "extract-optional-skills-to-plugin", "task": 13, "batch": 8, "status": "success"}
+{"ts": "2026-04-15T17:34:21Z", "event": "phase_transition", "feature": "extract-optional-skills-to-plugin", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-15T17:37:43Z", "event": "review_verdict", "feature": "extract-optional-skills-to-plugin", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-15T17:37:43Z", "event": "phase_transition", "feature": "extract-optional-skills-to-plugin", "from": "review", "to": "complete"}
+{"ts": "2026-04-15T17:38:17Z", "event": "feature_complete", "feature": "extract-optional-skills-to-plugin", "tasks_total": 14, "rework_cycles": 0}
