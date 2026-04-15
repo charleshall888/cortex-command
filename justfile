@@ -713,11 +713,11 @@ validate-commit msg="Test commit message":
 
 # Validate prompt contract frontmatter across all skills
 validate-skills:
-    python3 skills/skill-creator/scripts/validate-skill.py skills/
+    python3 scripts/validate-skill.py skills/
 
 # Validate preconditions for a specific skill
 validate-skill-preconditions skill:
-    python3 skills/skill-creator/scripts/validate-preconditions.py {{skill}}
+    python3 scripts/validate-preconditions.py {{skill}}
 
 # Validate spec.md structural compliance (pre-flight before orchestrator review)
 validate-spec *args:
@@ -836,7 +836,7 @@ verify-setup-full:
 test-skill-contracts:
     #!/usr/bin/env bash
     set -euo pipefail
-    python3 skills/skill-creator/scripts/validate-skill.py skills/
+    python3 scripts/validate-skill.py skills/
     uv run pytest tests/test_skill_contracts.py -q
 
 # Run commit hook regression tests

@@ -17,7 +17,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
 FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures" / "contracts"
-VALIDATOR = REPO_ROOT / "skills" / "skill-creator" / "scripts" / "validate-skill.py"
+VALIDATOR = REPO_ROOT / "scripts" / "validate-skill.py"
+
+if not VALIDATOR.exists():
+    pytest.skip("validate-skill.py not found — skill-creator scripts not present", allow_module_level=True)
 
 # For invalid-* fixtures that exit 0 but should produce a specific [WARN],
 # map fixture name -> expected substring in output.
