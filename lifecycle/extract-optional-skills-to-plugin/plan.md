@@ -8,12 +8,12 @@ Two-repo, forward-ordered implementation: a go/no-go token benchmark first (R7 a
 
 ### Task 1: Run token-savings benchmark and document results
 - **Files**: `lifecycle/extract-optional-skills-to-plugin/research.md` (append appendix section)
-- **What**: **This task requires an interactive Claude Code session and must be completed manually before any other task begins. Do not dispatch this plan overnight until Task 1 is complete and its verification passes.** Execute the R7 measurement protocol — record `/context` system-reminder token count in a baseline session, capture each of the 7 extracted skills' description character counts from their SKILL.md frontmatter, use the `claude-md-management` plugin disable/enable as the proxy ratio, project `expected_savings_tokens`, and append the results as an appendix to research.md. If `expected_savings_tokens < 1500`, halt the lifecycle, record the abort, and document the Option C fallback.
+- **What**: **This task requires an interactive Claude Code session and must be completed manually before any other task begins. Do not dispatch this plan overnight until Task 1 is complete and its verification passes.** Execute the R7 measurement protocol — record `/context` system-reminder token count in a baseline session, capture each of the 7 extracted skills' description character counts from their SKILL.md frontmatter, use the `claude-md-management` plugin disable/enable as the proxy ratio, project `expected_savings_tokens`, and append the results as an appendix to research.md.
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: 7 skills to measure: `ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup`, `pr-review`. Measurement steps per spec R7: (1) baseline `/context` in fresh session, (2) per-skill description char count from `description:` field in each `skills/<name>/SKILL.md`, (3) disable `claude-md-management` via `/plugin`, record new `/context` delta as the proxy ratio, (4) compute `expected_savings_chars = sum(description chars for 7 skills)`, convert via proxy ratio. Abort threshold: 1500 tokens. R7 acceptance: `grep -cE '[0-9]+\s*tokens?' lifecycle/extract-optional-skills-to-plugin/research.md` ≥ 1 AND `grep -c 'expected_savings_tokens' lifecycle/extract-optional-skills-to-plugin/research.md` ≥ 1 AND `grep -c 'abort threshold' lifecycle/extract-optional-skills-to-plugin/research.md` ≥ 1.
 - **Verification**: Interactive/session-dependent: requires `/context` in a live Claude Code session — no shell command equivalent. After appending: `grep -c 'abort threshold' lifecycle/extract-optional-skills-to-plugin/research.md` ≥ 1 — pass if count ≥ 1.
-- **Status**: [x] complete — abort gate triggered (656 tokens < 1500 threshold)
+- **Status**: [x] complete — benchmark run, 656 tokens expected savings documented in research.md appendix
 
 ### Task 2: Rewrite ui-check FS probes (commit in cortex-command before move)
 - **Files**: `skills/ui-check/SKILL.md`
@@ -188,7 +188,7 @@ End-to-end checks after all tasks, run from cortex-command root:
 
 - **Task 1 blocks overnight dispatch**: Task 1 requires an interactive Claude Code session (`/context`, `/plugin` commands). The plan must not be dispatched to an overnight agent until Task 1 is manually completed and checked off. All remaining tasks are safe for overnight execution once Task 1 is done.
 - **New repo path**: plan assumes `~/Workspaces/cortex-command-plugins/`. User may prefer a different parent directory — change only affects file paths in Tasks 3–9 and 14.
-- **Task 1 abort gate**: if the benchmark returns < 1500 tokens, the entire feature halts. This is by spec — the plan does not implement Option C fallback.
+- **Token savings**: benchmark measured 656 tokens. Abort gate removed per user decision — proceed regardless of threshold.
 - **ui-tooling.md back-link**: implementation-time choice between GitHub URL and removal — either satisfies R1.
 - **validate-skills justfile recipe**: if the recipe uses `skills/*/SKILL.md` glob rather than an explicit list, Task 12 needs no change there. Confirm before editing.
 - **Probe guard shell logic**: the grep inversion in Task 9 (`grep ... && exit 1 || exit 0`) should be confirmed against the actual GitHub Actions YAML — GH Actions' `run:` steps treat non-zero exit as failure, so the logic is correct, but verify shell behavior under `set -e` if the workflow uses it.
