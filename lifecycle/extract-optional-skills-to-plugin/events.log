@@ -143,3 +143,49 @@
   feature: extract-optional-skills-to-plugin
   from: specify
   to: plan
+- ts: 2026-04-15T15:15:00Z
+  event: orchestrator_review
+  feature: extract-optional-skills-to-plugin
+  phase: plan
+  verdict: flag
+  cycle: 1
+  issues:
+    - "P1: Task 4 has 7 files (ui-a11y, ui-brief + 2 references, ui-judge, ui-lint, ui-setup) — exceeds 5-file bound; split into two tasks"
+    - "P1: Task 10 has 8 affected paths (7 skill dirs + justfile) — exceeds 5-file bound; split into delete-dirs and justfile-update tasks"
+    - "P2: Task 12 depends on [8, 11] but T11 is cortex-command-only (not a new-repo prereq) and T6, T7 are missing from the dependency chain; should be [6, 7, 8]"
+- ts: 2026-04-15T15:15:30Z
+  event: orchestrator_dispatch_fix
+  feature: extract-optional-skills-to-plugin
+  phase: plan
+  mode: fresh_subagent
+  issue: "P1 task sizing violations (T4: 7 files, T10: 8 paths) and P2 dependency error (T12 missing T6/T7, incorrectly depending on T11)"
+- ts: 2026-04-15T15:20:00Z
+  event: orchestrator_review
+  feature: extract-optional-skills-to-plugin
+  phase: plan
+  verdict: flag
+  cycle: 2
+  issues:
+    - "P2: Task 14 (initial new-repo commit) lists Depends on: [6, 7, 9] — missing T8 (docs/ui-tooling.md copy); T8 is not in T9's transitive dep chain, so ui-tooling.md may not be in the new repo when T14 commits"
+- ts: 2026-04-15T15:20:30Z
+  event: orchestrator_dispatch_fix
+  feature: extract-optional-skills-to-plugin
+  phase: plan
+  mode: same_context
+  issue: "T14 Depends on missing T8 — added T8 to T14 dep list inline (mechanical renumbering error, not a reasoning failure; escalation bypassed per judgment)"
+- ts: 2026-04-15T15:30:00Z
+  event: critical_review
+  feature: extract-optional-skills-to-plugin
+  phase: plan
+  findings: 5
+  dispositions:
+    apply: 5
+    dismiss: 0
+    ask: 0
+  applied_fixes:
+    - "Task 1: added explicit overnight-incompatibility warning — must be completed interactively before dispatch"
+    - "Task 2: removed a11y graceful-skip requirement — within plugin, ui-a11y is always co-deployed; removed both probes identically; fixed pre-passing verification"
+    - "Task 11: changed Depends on from [6,7,9,10] to [10,14] — T14 must commit and pass checklist before T11 deletes from cortex-command"
+    - "Task 12: rewrote What and Verification to handle glob-based justfile case — task may be a no-op; verification conditioned on actual recipe type"
+    - "Task 14: reordered checklist to run before initial commit; added explicit gate note for T11"
+{"ts": "2026-04-15T16:00:00Z", "event": "phase_transition", "feature": "extract-optional-skills-to-plugin", "from": "plan", "to": "implement"}
