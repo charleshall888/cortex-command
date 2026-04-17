@@ -52,7 +52,7 @@ After the interview concludes, evaluate whether the research from `research.md` 
 
 > **Note**: This checklist does NOT re-evaluate the four clarify.md §6 staleness signals (scope mismatch, files missing, empty/generic analysis, requirements drift). Those were evaluated at Research phase entry and are not re-checked here.
 
-**If all three signals pass**: proceed to §3. No event is logged.
+**If all three signals pass**: proceed to §3. No event is logged. Do not emit any acknowledgment to the user.
 
 **Cycle count**: `current_cycle = (count of existing confidence_check events in lifecycle/{feature}/events.log) + 1`. On the first pass with zero existing confidence_check events, current_cycle = 1.
 
