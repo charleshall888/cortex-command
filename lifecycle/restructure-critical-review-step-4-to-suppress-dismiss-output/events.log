@@ -1,0 +1,29 @@
+{"ts": "2026-04-17T19:24:20Z", "event": "discovery_reference", "feature": "restructure-critical-review-step-4-to-suppress-dismiss-output", "epic_research": "research/audit-interactive-phase-output-for-decision-signal/research.md", "epic_spec": null}
+- ts: 2026-04-17T19:30:12Z
+  event: clarify_critic
+  feature: restructure-critical-review-step-4-to-suppress-dismiss-output
+  findings:
+    - "Scope boundedness HIGH is asserted on inheritance at one named site (lifecycle specify §3b) but /critical-review is invoked from three sites: specify §3b, plan §3b, and discovery research §6b. The ticket does not enumerate all three."
+    - "Intent clarity HIGH treats 'bullet list of what changed, not the objections that triggered each change' as unambiguous, but the current SKILL.md already says 'one line per fix' and the new distinction is not operationalized with examples."
+    - "Requirements alignment HIGH does not acknowledge the tension with Step 4's Anchor check, which requires the orchestrator to 'State the dismissal reason briefly' — removing Dismiss from the output surface removes the only external record that the anchor check was performed."
+    - "Complexity 'simple' does not reflect execution risk — DR-4 (cited by ticket) says output-shaping instructions are unreliable for in-context orchestrator work, yet the Apply restructuring is itself an output-shaping instruction."
+    - "DR-2 and DR-4 are cited as validated but not quoted in the ticket body; the confidence assessment relies on them without verifying."
+  dispositions:
+    apply: 5
+    dismiss: 0
+    ask: 0
+  applied_fixes:
+    - "Revised scope description — /critical-review is invoked from three sites (specify §3b, plan §3b, discovery research §6b), not one; research and spec must enumerate to avoid silent scope narrowing. Scope boundedness rating HIGH preserved because the code change is uniform in Step 4."
+    - "Added open research question on Apply bullet format operationalization (examples needed)."
+    - "Added open research question on where Dismiss rationale should be recorded (in-agent reasoning only vs events.log precedent from clarify-critic)."
+    - "Verified DR-4 compatibility — Apply restructuring is a requirement-level change (what the instruction requires), not a be-briefer instruction; DR-2 option (b) directly recommends this approach. Complexity rating 'simple' preserved because lifecycle complexity assesses implementation surface, not behavioral execution risk; execution risk is recorded as an open research question."
+    - "Read research/audit-interactive-phase-output-for-decision-signal/research.md and confirmed DR-2 and DR-4 support the intent. Intent clarity HIGH preserved."
+  status: ok
+{"ts": "2026-04-17T19:30:22Z", "event": "lifecycle_start", "feature": "restructure-critical-review-step-4-to-suppress-dismiss-output", "tier": "simple", "criticality": "high"}
+{"ts": "2026-04-17T19:30:22Z", "event": "phase_transition", "feature": "restructure-critical-review-step-4-to-suppress-dismiss-output", "from": "clarify", "to": "research"}
+{"ts": "2026-04-17T19:43:24Z", "event": "complexity_override", "feature": "restructure-critical-review-step-4-to-suppress-dismiss-output", "from": "simple", "to": "complex"}
+{"ts": "2026-04-17T19:43:24Z", "event": "phase_transition", "feature": "restructure-critical-review-step-4-to-suppress-dismiss-output", "from": "research", "to": "specify"}
+{"ts": "2026-04-17T21:07:29Z", "event": "orchestrator_review", "feature": "restructure-critical-review-step-4-to-suppress-dismiss-output", "phase": "specify", "verdict": "flag", "cycle": 1, "issues": ["S1: R4's second acceptance criterion uses prose inspection ('Verified by: inspect the block') rather than a binary-checkable command", "S3: MoSCoW classification not explicit — spec treats all requirements as must-have without stating it"]}
+{"ts": "2026-04-17T21:07:29Z", "event": "orchestrator_dispatch_fix", "feature": "restructure-critical-review-step-4-to-suppress-dismiss-output", "phase": "specify", "mode": "fresh_subagent", "issue": "Tighten R4's second acceptance criterion to binary-checkable form (awk + grep on Step 4 block) and add explicit MoSCoW classification to all requirements"}
+{"ts": "2026-04-17T21:08:46Z", "event": "orchestrator_review", "feature": "restructure-critical-review-step-4-to-suppress-dismiss-output", "phase": "specify", "verdict": "pass", "cycle": 2, "issues": []}
+{"ts": "2026-04-17T21:21:56Z", "event": "phase_transition", "feature": "restructure-critical-review-step-4-to-suppress-dismiss-output", "from": "specify", "to": "plan"}
