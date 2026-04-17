@@ -100,10 +100,15 @@ dispositions:
   dismiss: <count>
   ask: <count>
 applied_fixes: <array of strings describing changes made to the confidence assessment>
+dismissals: <array of {finding_index, rationale} objects — one per Dismiss disposition>
 status: "ok"
 ```
 
 `applied_fixes` contains descriptions of the changes the orchestrator made to the confidence assessment as a result of Apply dispositions. If no Apply dispositions were made, `applied_fixes` is an empty array.
+
+`dismissals` is the Dismiss-disposition counterpart to `applied_fixes`. Each entry is `{finding_index: <int>, rationale: <prose>}`: `finding_index` is the zero-based position of the dismissed objection in the `findings` array; `rationale` is the orchestrator's reason for dismissing that objection.
+
+If no Dismiss dispositions were made, `dismissals` is an empty array. The invariant `len(dismissals) == dispositions.dismiss` must hold for every success-path event.
 
 Disposition counts reflect post-self-resolution values. If self-resolution reclassifies an Ask item as Apply, the logged `apply` count increases and `ask` count decreases accordingly. The `applied_fixes` array includes fixes from both initial Apply dispositions and self-resolution reclassifications.
 
