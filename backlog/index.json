@@ -56,36 +56,6 @@
     "repo": null
   },
   {
-    "id": 68,
-    "title": "Suppress Dismiss-rationale leak in lifecycle clarify critic",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "output-signal-noise",
-      "lifecycle",
-      "clarify"
-    ],
-    "areas": [
-      "lifecycle"
-    ],
-    "created": "2026-04-11",
-    "updated": "2026-04-17",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "66",
-    "research": null,
-    "spec": "lifecycle/suppress-dismiss-rationale-leak-in-lifecycle-clarify-critic/spec.md",
-    "discovery_source": "research/audit-interactive-phase-output-for-decision-signal/research.md",
-    "plan": null,
-    "uuid": null,
-    "lifecycle_slug": "suppress-dismiss-rationale-leak-in-lifecycle-clarify-critic",
-    "session_id": "e25511c6-f24d-4b92-aea7-6020c60f8b56",
-    "lifecycle_phase": "complete",
-    "schema_version": null,
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
