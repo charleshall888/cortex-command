@@ -95,7 +95,10 @@ Read lifecycle/{feature}/{artifact} for the current content.
 2. Rewrite the ENTIRE artifact to address the flagged issue while maintaining all existing content that is correct
 3. Do not patch individual sections — rewrite the full file to maintain internal coherence
 4. Write the revised artifact to lifecycle/{feature}/{artifact}
-5. Report: what you changed and why. Format: changed [file path] — [one-sentence rationale].
+5. End your return with a YAML-style envelope using these three fields, and emit no prose before or after it:
+   verdict: revised | failed
+   files_changed: [<path>, ...]
+   rationale: <≤15 words>
 
 The artifact must still conform to the format defined in the {phase} phase reference.
 Do not add content beyond what the phase requires.
