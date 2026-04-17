@@ -78,15 +78,15 @@ Present the signals flagged in §2a's Research Confidence Check as a bulleted li
 
 ### 2b. Pre-Write Checks
 
-Before drafting §3, run two checks:
+Before drafting §3, run the checks below. All checks are silent on pass: if every check passes, proceed to §3 with no output. On failure, surface only the specific failing claim or unresolved item as a single terse bullet (≤15 words) — no preamble, no restatement of the check, no pass-side narration.
 
-**Verification check**: For any claim the spec will make about code behavior, verify it against actual code before writing it. Common failure modes:
+**Verification check**: For any claim the spec will make about code behavior, verify it against actual code before writing it. Perform all four sub-checks; on failure, surface only the specific failing claim. Common failure modes:
 - **Git command syntax**: If the spec references a `git diff` command, confirm whether two-dot (`A..B`) or three-dot (`A...B`) semantics are correct for the intended comparison. These are not interchangeable — two-dot produces an empty diff when one ref is an ancestor of the other.
 - **Function behavior**: Before asserting what a function does, accepts, or returns — read it. Do not infer from its name or call sites alone.
 - **File paths**: Before referencing a file path in a requirement, verify the file exists at that path.
 - **State ownership**: Before asserting that a function writes or persists a value, confirm which function owns that write and when it runs. A function that increments a counter in memory may have its write silently overwritten if another function owns the writeback at end-of-batch.
 
-**Research cross-check**: Re-read `lifecycle/{feature}/research.md` in full. For each explicit behavioral requirement, constraint, guard, or edge case documented in research — confirm it appears in the spec's Requirements, Edge Cases, or Technical Constraints. A requirement present in research but absent from the spec is a silent omission, not a scope decision. If an omission is intentional, note it explicitly in Non-Requirements or Open Decisions.
+**Research cross-check**: Re-read `lifecycle/{feature}/research.md` in full. For each explicit behavioral requirement, constraint, guard, or edge case documented in research — verify it appears in the spec's Requirements, Edge Cases, or Technical Constraints. A requirement present in research but absent from the spec is a silent omission, not a scope decision. On failure, surface only the specific omitted item. If an omission is intentional, note it explicitly in Non-Requirements or Open Decisions.
 
 **Open Decision Resolution**: Before adding any item to `## Open Decisions`, attempt to resolve it using this order:
 
@@ -94,7 +94,7 @@ Before drafting §3, run two checks:
 2. Ask the user directly — the user is present during spec; implementation may run overnight without them.
 3. Defer to `## Open Decisions` only if the decision requires implementation-level context that cannot be obtained without writing or reading the actual code (e.g., choosing between two patterns that are only distinguishable once in the codebase).
 
-Any item that IS deferred must include a one-sentence reason why it cannot be resolved at spec time.
+Any item that IS deferred must include a one-sentence reason why it cannot be resolved at spec time. No output on pass; on failure, surface only the specific unresolved item as a terse bullet.
 
 ### 3. Write Specification Artifact
 
