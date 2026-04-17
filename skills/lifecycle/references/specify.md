@@ -58,7 +58,8 @@ After the interview concludes, evaluate whether the research from `research.md` 
 
 **If any signal is flagged AND current_cycle = 1**:
 
-1. Announce the flagged signals to the user, explaining why Research must be re-run.
+1. Present the signals flagged in §2a's Research Confidence Check as a bulleted list — one bullet per flagged signal, ≤15 words per bullet, no prose expansion outside the bullets. Then state that Research must be re-run. Example: a bullet of acceptable terseness might read:
+   - `C2: spec needs read of hooks/commit-msg.sh — not in research.md`
 2. Append a `confidence_check` event to `lifecycle/{feature}/events.log`:
    ```
    {"ts": "<ISO 8601>", "event": "confidence_check", "feature": "<name>", "cycle": 1, "signals": ["<C1|C2|C3 with description>", ...], "action": "loop_back"}
@@ -67,7 +68,7 @@ After the interview concludes, evaluate whether the research from `research.md` 
 
 **If any signal is flagged AND current_cycle ≥ 2**:
 
-Present the flagged signals to the user and ask (via AskUserQuestion) whether to loop back to Research or proceed to §3 anyway.
+Present the signals flagged in §2a's Research Confidence Check as a bulleted list — one bullet per flagged signal, ≤15 words per bullet, no prose expansion outside the bullets. Then ask (via AskUserQuestion) whether to loop back to Research or proceed to §3 anyway.
 
 - If the user chooses to loop back: repeat the cycle 1 loop-back procedure above (announce, log event with the current cycle number and `"action": "loop_back"`, re-run Research bypassing Sufficiency Check).
 - If the user chooses to proceed: append a `confidence_check` event with `"action": "declined"` and continue to §3.
