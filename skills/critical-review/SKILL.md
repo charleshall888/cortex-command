@@ -212,6 +212,15 @@ After classifying all objections:
 
 1. Re-read the artifact in full.
 2. Write the updated artifact with all "Apply" fixes incorporated. Preserve everything not touched by an accepted objection.
-3. Present a compact summary: what was changed (one line per fix), what was dismissed and why, and — only if any remain — ask about "Ask" items in a single consolidated message.
+3. Present a compact summary in the following format:
+
+   - **Apply bullets describe the direction of the change**, not the objection text. Use one of these verbs as the first word of each bullet: strengthened, narrowed, clarified, added, removed, inverted.
+   - **Dismiss: N objections** — a single count line. Omit the Dismiss line when N = 0.
+   - **Ask items consolidate into a single message when any remain.**
+
+   Worked examples:
+   - Compliant: R10 strengthened from SHOULD to MUST.
+   - Compliant: R3 narrowed from "all endpoints" to "payment endpoints".
+   - Non-compliant: R10 updated. (No direction verb; restates the artifact change as prose.)
 
 **Apply bar**: Apply when and only when the fix is unambiguous and confidence is high. Uncertainty is a legitimate reason to Ask — do not guess and apply. For inconsequential tie-breaks between equally reasonable implementations, pick one and apply. For consequential tie-breaks, Ask. Do not Ask to seek approval for things the orchestrator can determine — keep questions tightly scoped to genuine decisions or genuine uncertainty.
