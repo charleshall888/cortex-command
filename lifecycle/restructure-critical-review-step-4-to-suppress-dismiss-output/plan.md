@@ -47,7 +47,7 @@ Single-file edit to `skills/critical-review/SKILL.md` Step 4's compact-summary b
   - R9b: `grep -c "^## Step 4: Apply Feedback$" skills/critical-review/SKILL.md` — output is `1`.
   - R10a: `awk '/^## Step 4:/,/^## Step [^4]/' skills/critical-review/SKILL.md | grep -c "Present a compact summary in the following format:"` — output ≥ `1`.
   - R10b: `awk '/Present a compact summary in the following format:/{s=NR} s && NR-s<=40 && /Non-compliant:/{print "ok"; exit}' skills/critical-review/SKILL.md` — output is `ok`.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Commit the Step 4 restructure via /commit and re-assert scope against HEAD
 
@@ -66,7 +66,7 @@ Single-file edit to `skills/critical-review/SKILL.md` Step 4's compact-summary b
   - Scope re-assertion (matches spec R7 literal): `git diff --name-only main.. -- skills/` — output is exactly the single line `skills/critical-review/SKILL.md`. (Same caveat as R7: if running on `main`, output is empty; see Veto Surface.)
   - R1 re-assertion against committed tree: `grep -c "what was dismissed and why" skills/critical-review/SKILL.md` — output is `0`.
   - R10a re-assertion against committed tree: `awk '/^## Step 4:/,/^## Step [^4]/' skills/critical-review/SKILL.md | grep -c "Present a compact summary in the following format:"` — output ≥ `1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Verification Strategy
 

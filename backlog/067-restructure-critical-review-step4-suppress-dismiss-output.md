@@ -2,14 +2,14 @@
 id: 67
 title: "Restructure critical-review Step 4 to suppress Dismiss output"
 type: feature
-status: refined
+status: complete
 priority: high
 parent: 66
 tags: [output-signal-noise, critical-review]
 discovery_source: research/audit-interactive-phase-output-for-decision-signal/research.md
 created: 2026-04-11
 updated: 2026-04-17
-session_id: 09713255-a17d-40cf-95b4-95d204e63d0c
+session_id: null
 lifecycle_phase: implement
 lifecycle_slug: restructure-critical-review-step-4-to-suppress-dismiss-output
 complexity: complex
