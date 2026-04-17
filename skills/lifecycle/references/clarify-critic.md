@@ -130,12 +130,19 @@ Example (YAML block format, same as other lifecycle events):
   findings:
     - "The High rating for intent clarity is not grounded in the backlog item body — the item says 'improve the workflow' with no further elaboration."
     - "Scope boundedness is rated High but the item mentions both the CLI and the web UI without distinguishing them."
+    - "Requirements alignment asserts 'no conflicts' but no requirements file was actually loaded."
+    - "Complexity rated simple despite four distinct subsystems named in the body."
   dispositions:
     apply: 1
-    dismiss: 0
+    dismiss: 2
     ask: 1
   applied_fixes:
     - "Revised intent clarity from High to Low — the goal phrase is genuinely ambiguous."
+  dismissals:
+    - finding_index: 1  # initial Dismiss disposition — source material explicitly distinguishes the two UIs later in the body
+      rationale: "The body's second paragraph distinguishes CLI and web UI; the scope claim is grounded, not asserted."
+    - finding_index: 3  # Ask→Dismiss self-resolution reclassification — resolved against a documented project convention
+      rationale: "Reclassified from Ask to Dismiss during self-resolution: the four subsystems are orchestration layers within one bounded context per project convention in requirements/project.md; the simple rating holds."
   status: ok
 ```
 
