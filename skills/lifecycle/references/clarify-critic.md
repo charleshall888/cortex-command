@@ -150,7 +150,7 @@ Example (YAML block format, same as other lifecycle events):
 
 If the critic agent fails, errors, or times out:
 
-1. Write a `clarify_critic` event with `status: "failed"` and empty `findings`, `applied_fixes`, and zero counts in `dispositions`.
+1. Write a `clarify_critic` event with `status: "failed"` and empty `findings`, `applied_fixes`, `dismissals`, and zero counts in `dispositions`.
 2. Proceed to §4 as if the critic had not run — cover all original low-confidence dimensions in the Q&A. Do not skip questions because the critic was supposed to run.
 3. Do not surface the failure as a blocking error. Note it silently in the event log.
 
