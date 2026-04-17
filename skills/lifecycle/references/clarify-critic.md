@@ -164,3 +164,4 @@ If the critic agent fails, errors, or times out:
 | "The critic should read files or gather additional context" | The critic receives exactly two inputs: the confidence assessment and the source material. It reads nothing else. |
 | "The orchestrator should write the event before reading critic output" | The orchestrator writes the `clarify_critic` event after the critic returns and dispositions are applied — not before. |
 | "applied_fixes should summarize the critic's suggestions" | `applied_fixes` contains descriptions of changes the orchestrator actually made. If the orchestrator dismissed or asked about an objection, it does not appear in `applied_fixes`. |
+| "Surface Dismiss rationales to the user so they can see the critic's work" | Dismiss rationales go to the `dismissals` array in `events.log` only; the user-facing response surface is reserved for §4 Ask merge and silent Apply confidence revisions. |
