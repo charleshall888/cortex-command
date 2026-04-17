@@ -2,13 +2,20 @@
 id: 69
 title: "Suppress internal narration in lifecycle specify phase"
 type: feature
-status: open
+status: refined
 priority: high
 parent: 66
 tags: [output-signal-noise, lifecycle, specify]
 discovery_source: research/audit-interactive-phase-output-for-decision-signal/research.md
 created: 2026-04-11
-updated: 2026-04-11
+updated: 2026-04-17
+session_id: 79678702-95fc-4080-b566-90ff52f2658f
+lifecycle_phase: research
+lifecycle_slug: suppress-internal-narration-in-lifecycle-specify-phase
+complexity: simple
+criticality: high
+spec: lifecycle/suppress-internal-narration-in-lifecycle-specify-phase/spec.md
+areas: [lifecycle]
 ---
 
 Four noise locations in the specify phase have no suppress or format constraint:
