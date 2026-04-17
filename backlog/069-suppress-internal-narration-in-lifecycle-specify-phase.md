@@ -2,14 +2,14 @@
 id: 69
 title: "Suppress internal narration in lifecycle specify phase"
 type: feature
-status: refined
+status: complete
 priority: high
 parent: 66
 tags: [output-signal-noise, lifecycle, specify]
 discovery_source: research/audit-interactive-phase-output-for-decision-signal/research.md
 created: 2026-04-11
 updated: 2026-04-17
-session_id: 79678702-95fc-4080-b566-90ff52f2658f
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: suppress-internal-narration-in-lifecycle-specify-phase
 complexity: simple

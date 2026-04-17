@@ -19,7 +19,7 @@ Edit two lifecycle skill-reference files (`skills/lifecycle/references/specify.m
   - No `confidence_check` pass event is added (preserves invariant; cycle counting at line 57 unchanged).
   - Editing tool: `Edit` with `old_string`/`new_string` for precise replacement.
 - **Verification**: `grep -cE 'proceed to §3\. No event is logged\. Do not (emit|announce|surface)' skills/lifecycle/references/specify.md` — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Edit §2a failure-path (cycle-1 and cycle≥2) (R2 + R3)
 
@@ -41,7 +41,7 @@ Edit two lifecycle skill-reference files (`skills/lifecycle/references/specify.m
   - (R2.3) `awk '/current_cycle = 1/,/current_cycle ≥ 2/' skills/lifecycle/references/specify.md | grep -cE '(Example:|e\.g\.,)'` ≥ 1
   - (R3.1) `awk '/current_cycle ≥ 2/,/### 2b\. Pre-Write Checks/' skills/lifecycle/references/specify.md | grep -c '≤15 words'` ≥ 1
   - (R3.2) `awk '/current_cycle ≥ 2/,/### 2b\. Pre-Write Checks/' skills/lifecycle/references/specify.md | grep -c 'signals flagged in §2a'` ≥ 1
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Restructure §2b Pre-Write Checks (R4)
 
@@ -63,7 +63,7 @@ Edit two lifecycle skill-reference files (`skills/lifecycle/references/specify.m
 - **Verification**:
   - (R4.1) `grep -cE '(continue to §3 with no output|proceed to §3 with no output|no output on pass)' skills/lifecycle/references/specify.md` ≥ 1
   - (R4.2, closes the silent-gap from critical-review): `awk '/### 2b\. Pre-Write Checks/,/### 3\. Write Specification Artifact/' skills/lifecycle/references/specify.md | grep -cEi '(summarize|announce|confirm) passing'` = 0. The `awk` bounds §2b exactly; the grep catches any residual phrasing that asks the orchestrator to narrate on pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Rewrite Fix Agent Prompt Template envelope (R5)
 
@@ -88,7 +88,7 @@ Edit two lifecycle skill-reference files (`skills/lifecycle/references/specify.m
   - (R5.2) `grep -c 'files_changed' skills/lifecycle/references/orchestrator-review.md` ≥ 1
   - (R5.3) `grep -c 'rationale' skills/lifecycle/references/orchestrator-review.md` ≥ 1
   - (R5.4) `grep -c 'Report: what you changed and why' skills/lifecycle/references/orchestrator-review.md` = 0
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Add Step 5 orchestrator disposition instruction (R6 + R7)
 
@@ -109,7 +109,7 @@ Edit two lifecycle skill-reference files (`skills/lifecycle/references/specify.m
 - **Verification**:
   - (R6) `awk '/^### 5\. Fix Dispatch$/,/^### 6\./' skills/lifecycle/references/orchestrator-review.md | grep -c -E '(do not relay|never relay|not surfaced to the user)'` ≥ 1
   - (R7) `awk '/^### 5\. Fix Dispatch$/,/^### 6\./' skills/lifecycle/references/orchestrator-review.md | grep -c 'orchestrator_review'` ≥ 1
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Full acceptance-sweep verification
 
@@ -136,7 +136,7 @@ Edit two lifecycle skill-reference files (`skills/lifecycle/references/specify.m
   - Report one line per assertion with the observed count and pass/fail result. Any single failure halts the task and surfaces the specific failing assertion for rework.
   - This task does NOT modify any file. Both files in the Files list are read-only dependencies (P6 clause 1 satisfied; clause 2 trivially satisfied because nothing is modified).
 - **Verification**: Every assertion above returns the required count; task passes only when all 14 assertions hold. If any assertion fails, the task is flagged with the failing assertion name (e.g., "R5.4 failed: 'Report: what you changed and why' count = 1, expected 0"). Pass criterion: zero failing assertions across the R1–R7 set.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

@@ -2,7 +2,7 @@
 feature: suppress-internal-narration-in-lifecycle-specify-phase
 parent_backlog_uuid: null
 parent_backlog_id: 69
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [output-signal-noise, lifecycle, specify]
 created: 2026-04-17
 updated: 2026-04-17
@@ -15,3 +15,4 @@ Feature lifecycle for [[069-suppress-internal-narration-in-lifecycle-specify-pha
 - Research: [[suppress-internal-narration-in-lifecycle-specify-phase/research|research.md]]
 - Spec: [[suppress-internal-narration-in-lifecycle-specify-phase/spec|spec.md]]
 - Plan: [[suppress-internal-narration-in-lifecycle-specify-phase/plan|plan.md]]
+- Review: [[suppress-internal-narration-in-lifecycle-specify-phase/review|review.md]]
