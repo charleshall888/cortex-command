@@ -76,6 +76,8 @@ Fix agents rewrite the full artifact, not section patches. A full rewrite mainta
 
 After all fixes complete, return to step 2 (Execute Review) and increment the cycle counter. The re-review evaluates the revised artifact against the same checklist.
 
+After the fix-agent returns its envelope, the orchestrator reads the envelope and does not relay it to the user. The orchestrator proceeds to step 2 (Execute Review) and writes the per-cycle `orchestrator_review` event per step 3 as part of the re-review (preserving the cycle-cap logic in the Cycle Cap section). Only the pass/fail verdict from the re-review surfaces to the user; the fix-agent envelope itself is never relayed.
+
 #### Fix Agent Prompt Template
 
 ```
