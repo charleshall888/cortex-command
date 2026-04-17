@@ -70,13 +70,22 @@ After the critic agent returns its list of objections, the orchestrator (not the
 
 **Apply** — the objection identifies a concrete problem and the correct fix is clear and unambiguous. Examples: a High confidence rating is demonstrably unsupported by the source, the scope claim contradicts explicit text in the backlog item, the requirements alignment is asserted when no requirements file was loaded. Fix these without asking — revise the affected confidence dimension(s) accordingly.
 
-**Dismiss** — the objection is already addressed by the source material, misreads the stated constraints, or rests on an assumption the source material explicitly rules out. State the dismissal reason briefly.
+**Dismiss** — the objection is already addressed by the source material, misreads the stated constraints, or rests on an assumption the source material explicitly rules out.
 
 **Ask** — the fix is not for the orchestrator to decide unilaterally. This covers: (a) genuine preference or scope decisions — e.g., whether a vague phrase in the backlog item should be read narrowly or broadly; (b) genuine orchestrator uncertainty about which reading of the source is correct; (c) consequential ambiguity where either interpretation changes what gets built. Hold these for the consolidated Q&A in §4.
 
 **Before classifying as Ask, attempt self-resolution.** For each objection you are considering classifying as Ask, do a brief check — not an exhaustive search. Re-read the source material and confidence assessment, and consult any requirements context loaded in clarify §2. If the answer is supported by verifiable evidence — explicit text in the source material, a requirements constraint, or a documented project convention — resolve it and reclassify: as Apply (revising the affected confidence dimension accordingly) or as Dismiss. Do not resolve based on inferences from general principles or reasoning you already held before investigating. **Anchor check**: if your resolution relies on conclusions from your prior work on this assessment rather than new evidence found during the check, treat it as Ask — that is anchoring, not resolution. Uncertainty still defaults to Ask. Surviving Ask items flow into the Ask-to-Q&A Merge Rule as before.
 
 **Apply bar**: Apply when and only when the fix is unambiguous and confidence is high. Uncertainty is a legitimate reason to Ask — do not guess and apply. For inconsequential tie-breaks, pick one and apply. For consequential tie-breaks, Ask.
+
+### Dispositioning Output Contract
+
+After classifying every objection, the dispositioning step produces one structured artifact and nothing else. That artifact is the `clarify_critic` event itself — a YAML payload matching the schema defined in `## Event Logging` below, including the `dismissals` array.
+
+- The **sole output** of the dispositioning step is the structured YAML artifact. It is not free-form prose.
+- The orchestrator writes this YAML **verbatim** to `lifecycle/{feature}/events.log` as the `clarify_critic` event.
+- The user-facing response following the dispositioning step is scoped to (a) the §4 Ask-merge invocation (per Ask-to-Q&A Merge Rule below), and (b) silent application of Apply dispositions to the confidence assessment.
+- Dismiss rationales appear only in `dismissals[].rationale` inside the event — never in the user-facing response surface. Because the dispositioning step's only output channel is the structured artifact, there is no prose surface in which a Dismiss rationale could appear.
 
 ## Ask-to-Q&A Merge Rule
 
