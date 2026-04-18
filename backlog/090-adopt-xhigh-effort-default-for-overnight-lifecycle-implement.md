@@ -10,14 +10,14 @@ updated: 2026-04-18
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [88, 89]
+blocked-by: [89, 92]
 ---
 
 # Adopt xhigh effort default for overnight lifecycle implement
 
 ## Motivation
 
-Wave 2 capability adoption from DR-3. Per Anthropic's migration guide, `xhigh` is "the best setting for most coding and agentic use cases." Once #089 quantifies the cost delta and #088 has completed scaffolding-removal measurement, adoption becomes an informed choice.
+Wave 2 capability adoption from DR-3. Per Anthropic's migration guide, `xhigh` is "the best setting for most coding and agentic use cases." Once #089 quantifies the cost delta and #092 has completed scaffolding removal (whose baseline lives in #088), adoption becomes an informed choice.
 
 ## Research context
 
@@ -32,7 +32,7 @@ From `research/opus-4-7-harness-adaptation/research.md` DR-3 Wave 2 and Open Que
 
 ## Dependencies
 
-- Blocked by #088 (progress-update scaffolding removal must complete so effort-level change isn't compounded)
+- Blocked by #092 (scaffolding removal must complete so effort-level change isn't compounded). #092 transitively depends on #088 (baseline).
 - Blocked by #089 (cost-delta measurement informs whether this is worth shipping)
 
 ## Scope bounds

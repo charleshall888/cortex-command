@@ -9,10 +9,11 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | — | 82 | — |
 | 87 | Instrument events.log aggregation for turns and cost per tier | backlog | medium | feature | — | 82 | — |
-| 88 | Collect 4.7 baseline rounds then remove progress-update scaffolding | backlog | medium | feature | 87 | 82 | — |
+| 88 | Collect 4.7 baseline rounds and snapshot the aggregated data | backlog | medium | feature | 87 | 82 | — |
+| 92 | Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1) | backlog | medium | feature | 88 | 82 | — |
 | 89 | Measure xhigh vs high effort cost delta on representative task | backlog | low | spike | 87 | 82 | — |
-| 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 88, 89 | 82 | — |
-| 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 83, 84, 85 | 82 | — |
+| 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 89, 92 | 82 | — |
+| 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
 
 ## Refined
 

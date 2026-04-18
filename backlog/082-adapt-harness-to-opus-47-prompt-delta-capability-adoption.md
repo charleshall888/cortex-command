@@ -29,7 +29,8 @@ Nine child tickets across three tracks.
 
 **Instrumentation and capability adoption** (DR-3 Wave 1 and Wave 2, gated on DR-4 baseline):
 - #087 — instrument `events.log` aggregation for `num_turns` and `cost_usd` per tier
-- #088 — collect 2–3 overnight baseline rounds on 4.7, then remove progress-update scaffolding (DR-3 Wave 1)
+- #088 — collect 2–3 overnight 4.7 baseline rounds and commit snapshot artifact (step 2 of DR-4)
+- #092 — remove progress-update scaffolding (step 3 of DR-4, blocked by #088)
 - #089 — measure `xhigh` vs `high` effort cost delta on representative task
 - #090 — adopt `xhigh` effort default for overnight lifecycle implement (Wave 2)
 - #091 — decide and document post-4.7 policy settings (`MUST`-escalation norm, tone regression)
@@ -48,7 +49,8 @@ Nine child tickets across three tracks.
 2. #085 runs after both spikes complete
 3. #086 can run in parallel with #085 (different surface)
 4. #087 runs independently (any time)
-5. #088 requires #087's baseline window (2–3 overnight rounds)
-6. #089 requires #087's instrumentation
-7. #090 requires #088 and #089
-8. #091 runs after spikes and audit surface concrete evidence for the policy questions
+5. #088 requires #087's instrumentation; commits the baseline snapshot artifact
+6. #092 requires #088's snapshot (step 3 of DR-4)
+7. #089 requires #087's instrumentation; runs in parallel with #092
+8. #090 requires #089 and #092
+9. #091 runs after #085 provides OQ3 calibration evidence. OQ6 (tone) needs no evidence but stays consolidated in #091

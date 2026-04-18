@@ -195,7 +195,7 @@
   },
   {
     "id": 88,
-    "title": "Collect 4.7 baseline rounds then remove progress-update scaffolding",
+    "title": "Collect 4.7 baseline rounds and snapshot the aggregated data",
     "status": "backlog",
     "priority": "medium",
     "type": "feature",
@@ -216,6 +216,35 @@
     "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
     "plan": null,
     "uuid": "e7f9b367-c3d5-414b-8de4-dd813cdf3908",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 92,
+    "title": "Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "opus-4-7-harness-adaptation",
+      "capability-adoption"
+    ],
+    "areas": [],
+    "created": "2026-04-18",
+    "updated": "2026-04-18",
+    "blocks": [],
+    "blocked_by": [
+      "88"
+    ],
+    "parent": "82",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
+    "plan": null,
+    "uuid": "0a2f1fee-dd42-49ff-b393-bd16d1fa5607",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -266,8 +295,8 @@
     "updated": "2026-04-18",
     "blocks": [],
     "blocked_by": [
-      "88",
-      "89"
+      "89",
+      "92"
     ],
     "parent": "82",
     "research": null,
@@ -296,8 +325,6 @@
     "updated": "2026-04-18",
     "blocks": [],
     "blocked_by": [
-      "83",
-      "84",
       "85"
     ],
     "parent": "82",

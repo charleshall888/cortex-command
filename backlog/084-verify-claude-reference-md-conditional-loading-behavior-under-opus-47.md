@@ -26,7 +26,7 @@ Open Question 5 from discovery:
 
 ## Deliverable
 
-A one-page report answering:
+A one-page report committed to `research/opus-4-7-harness-adaptation/reference-loading-verification.md` (exact path — #085 consumes this) answering:
 - Do the five reference files (`claude-skills.md`, `context-file-authoring.md`, `output-floors.md`, `parallel-agents.md`, `verification-mindset.md`) load when their triggers fire under 4.7?
 - Does 4.7's stricter instruction-following change their behavior in ways that matter (e.g., over-triggering on the Red Flags `STOP` header, all-or-nothing refusal on `parallel-agents.md`'s "Don't use when" list)?
 - If semantics changed, which reference files need patterns P3 (negation-only) or similar remediation added to #085's scope?

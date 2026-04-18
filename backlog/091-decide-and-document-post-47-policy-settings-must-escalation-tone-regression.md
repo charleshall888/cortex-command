@@ -10,7 +10,7 @@ updated: 2026-04-18
 parent: "82"
 tags: [opus-4-7-harness-adaptation, policy]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [83, 84, 85]
+blocked-by: [85]
 ---
 
 # Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
@@ -31,7 +31,7 @@ Short written policy entries, likely in `CLAUDE.md` or a new/existing `claude/re
 
 ## Dependencies
 
-- Blocked by #083, #084, #085 — concrete evidence from those helps calibrate the right policy (e.g., if the audit reveals many sites where `MUST` would mask a real problem, the OQ3 answer tilts toward "normalize and re-observe")
+- Blocked by #085 only. The audit is the sole source of OQ3-relevant evidence (sites where `MUST` might be masking a real problem). Previously also listed #083 and #084; those were removed after critical review flagged them as evidence-mismatched blockers — #083 produces migration automation diff and #084 produces reference-loading semantics, neither of which calibrates the MUST-escalation policy. OQ6 (tone regression) needs no evidence; it's a user-preference decision that could ship independently, but stays in this consolidated ticket.
 
 ## Scope
 

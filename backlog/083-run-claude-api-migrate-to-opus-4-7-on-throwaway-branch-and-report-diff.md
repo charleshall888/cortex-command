@@ -26,7 +26,7 @@ Open Question 1 from discovery:
 
 ## Deliverable
 
-A written report (committed to `research/opus-4-7-harness-adaptation/claude-api-migrate-results.md` or similar) covering:
+A written report committed to `research/opus-4-7-harness-adaptation/claude-api-migrate-results.md` (exact path — #085 consumes this) covering:
 - Which files the command touched (SKILL.md prompts? Python SDK code? both?)
 - What kinds of changes it made (model ID updates, parameter removals, prefill migration, prompt rewrites?)
 - Whether its output is usable as-is for #085, partially usable, or irrelevant to the prompt-audit scope
