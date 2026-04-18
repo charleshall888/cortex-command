@@ -1,0 +1,5 @@
+{"ts": "2026-04-17T00:00:00Z", "event": "orchestrator_review", "feature": "opus-4-7-harness-adaptation", "phase": "research", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-18T00:00:00Z", "event": "critical_review_dispatch", "feature": "opus-4-7-harness-adaptation", "phase": "research", "angles": ["DR-1 single-source weakness", "DR-5 binary-test under-specification", "DR-3/DR-4 asymmetric evidence", "DR-6 over-generalization"]}
+{"ts": "2026-04-18T00:00:00Z", "event": "critical_review_synthesis", "feature": "opus-4-7-harness-adaptation", "phase": "research", "objections_count": 4, "applied": 4, "dismissed": 0, "ask": 2}
+{"ts": "2026-04-18T00:00:00Z", "event": "user_decision", "feature": "opus-4-7-harness-adaptation", "phase": "research", "ask_id": "Ask-1", "resolution": "Gate on DR-4 baseline"}
+{"ts": "2026-04-18T00:00:00Z", "event": "user_decision", "feature": "opus-4-7-harness-adaptation", "phase": "research", "ask_id": "Ask-2", "resolution": "Fold into DR-2"}
