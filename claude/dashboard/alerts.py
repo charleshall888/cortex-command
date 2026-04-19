@@ -3,8 +3,8 @@
 Evaluates running overnight session features for four alertable conditions:
 stall (no activity for > 5 minutes), circuit breaker (CIRCUIT_BREAKER event
 in overnight_events), deferred (feature status == "deferred"), and high rework
-(rework_cycles >= 2). Fires notify.sh / cortex-notify-remote.sh subprocesses on first
-trigger and deduplicates subsequent fires.
+(rework_cycles >= 2). Fires cortex-notify.sh subprocess on first trigger and
+deduplicates subsequent fires.
 
 Functions:
     evaluate_alerts   -- detect/clear conditions, mutate state.alerts in place
@@ -96,20 +96,18 @@ def evaluate_alerts(state: "DashboardState", root: Path, lifecycle_dir: Path) ->
 
 
 async def fire_notifications(state: "DashboardState", root: Path) -> None:  # type: ignore[name-defined]
-    """Fire notify.sh / cortex-notify-remote.sh for each new unnotified alert.
+    """Fire cortex-notify.sh for each new unnotified alert.
 
     Called every 5 seconds after ``evaluate_alerts``. For each alert entry
-    with ``notified == False``, launches both notification scripts via
+    with ``notified == False``, launches the notification script via
     ``asyncio.create_subprocess_shell`` (fire-and-forget). Subprocess failures
     are logged at WARNING and do not propagate.
 
     Args:
         state: Shared ``DashboardState`` instance (mutated in place).
-        root: Project root path — notify scripts at ``root/hooks/cortex-notify.sh``
-            and ``root/hooks/cortex-notify-remote.sh``.
+        root: Project root path — notify script at ``root/hooks/cortex-notify.sh``.
     """
     notify_sh = root / "hooks" / "cortex-notify.sh"
-    notify_remote_sh = root / "hooks" / "cortex-notify-remote.sh"
 
     async def _fire(script: Path, message: str) -> None:
         try:
@@ -138,12 +136,10 @@ async def fire_notifications(state: "DashboardState", root: Path) -> None:  # ty
             message = f"\u26a0 {slug}: {condition}"
 
         asyncio.create_task(_fire(notify_sh, message))
-        asyncio.create_task(_fire(notify_remote_sh, message))
         entry["notified"] = True
 
     # Circuit breaker (once per session)
     if state.circuit_breaker_active and not state.circuit_breaker_notified:
         message = "\U0001f504 circuit breaker fired"
         asyncio.create_task(_fire(notify_sh, message))
-        asyncio.create_task(_fire(notify_remote_sh, message))
         state.circuit_breaker_notified = True

@@ -1,0 +1,37 @@
+{"ts":"2026-04-18T14:54:05Z","event":"discovery_reference","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","epic_research":"research/opus-4-7-harness-adaptation/research.md","epic_spec":null}
+- ts: 2026-04-18T14:58:04Z
+  event: clarify_critic
+  feature: verify-claude-reference-md-conditional-loading-behavior-under-opus-47
+  findings:
+    - "The HIGH intent-clarity rating glosses over what 'load' operationally means — the first deliverable question doesn't distinguish (a) the agent reading the file, (b) applying its instructions, or (c) applying them with same fidelity as 4.5/4.6."
+    - "Scope HIGH conflates 'no file edits' with 'knows what to do' — the source offers 'interactive or scripted Claude Code invocation' as alternatives, leaving probe methodology unspecified, and methodology design for behavioral characterization is itself a non-trivial open problem."
+    - "Requirements alignment HIGH is asserted but cites no evidence of inspecting multi-agent.md or other area docs — a negative claim made without inspection."
+    - "Criticality medium ignores that the source explicitly says DR-1 is 'provisional on OQ5'; a false negative in this report could mis-scope #085's remediation epic, with errors only surfacing in production."
+    - "Complexity simple conflates output-artifact size (one .md file) with investigative difficulty; designing probes that distinguish didn't-load from trigger-mismatch from didn't-apply is non-trivial methodology work, and the report's leverage over downstream epic scope is a cross-cutting behavioral effect."
+    - "The five named reference files are treated as a complete and stable scope, but the deliverable's third question presumes the five are the universe of conditional-loading entries — transitive references or other table entries could exist."
+  dispositions:
+    apply: 2
+    dismiss: 4
+    ask: 0
+  applied_fixes:
+    - "Escalated criticality from medium to high — the source's 'provisional on OQ5' framing means a false negative shifts #085's audit surface, which is a high-blast-radius outcome."
+    - "Escalated complexity from simple to complex — probe-methodology design and the cross-cutting effect on #085's scope qualify as judgment calls about design trade-offs and downstream behavioral effects per the Complex criteria."
+  dismissals:
+    - finding_index: 0
+      rationale: "The deliverable's three questions distinguish loading (Q1: 'do they load when triggers fire'), behavioral firing (Q2: 'does 4.7's stricter following change behavior'), and remediation scoping (Q3); the operational meaning is not undefined when read across all three questions."
+    - finding_index: 1
+      rationale: "Probe methodology design is Research's responsibility per the lifecycle phase split (Clarify gates intent/scope/alignment; Research designs investigation approach). The source bounding scope to 'these five files, no edits, exact output path' is sufficient at the Clarify stage."
+    - finding_index: 2
+      rationale: "Orchestrator inspected requirements/project.md and requirements/multi-agent.md before assessing alignment; the negative claim is supported by direct file reads, not assertion."
+    - finding_index: 5
+      rationale: "Verified against ~/.claude/CLAUDE.md loaded in conversation context: the conditional-loading table contains exactly five entries, matching the five files named in the ticket. The deliverable's Q3 framing is grounded, not assertion."
+  status: ok
+{"ts":"2026-04-18T14:58:04Z","event":"lifecycle_start","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","tier":"complex","criticality":"high"}
+{"ts":"2026-04-18T14:58:43Z","event":"phase_transition","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","from":"clarify","to":"research"}
+{"ts":"2026-04-18T16:10:12Z","event":"phase_transition","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","from":"research","to":"specify"}
+{"ts":"2026-04-18T21:09:48Z","event":"orchestrator_review","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","phase":"specify","verdict":"pass","cycle":1,"issues":[]}
+{"ts":"2026-04-18T21:34:14Z","event":"phase_transition","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","from":"specify","to":"plan"}
+{"ts":"2026-04-18T21:39:23Z","event":"orchestrator_review","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","phase":"plan","verdict":"flag","cycle":1,"issues":["P1: Task 5 (18+ claude -p probe runs across 3 epic-flagged files) substantially exceeds 5-15 min target. Split per-file into Task 5a (verification-mindset.md), 5b (parallel-agents.md), 5c (output-floors.md)."]}
+{"ts":"2026-04-18T21:39:23Z","event":"orchestrator_dispatch_fix","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","phase":"plan","mode":"fresh_subagent","issue":"P1: Task 5 oversized (18+ probes); split per-file into 5a/5b/5c."}
+{"ts":"2026-04-18T21:43:13Z","event":"orchestrator_review","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","phase":"plan","verdict":"pass","cycle":2,"issues":[]}
+{"ts":"2026-04-19T00:17:12Z","event":"phase_transition","feature":"verify-claude-reference-md-conditional-loading-behavior-under-opus-47","from":"plan","to":"implement"}

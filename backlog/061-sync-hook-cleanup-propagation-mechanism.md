@@ -2,12 +2,12 @@
 schema_version: "1"
 uuid: c564f51c-494a-4071-b02e-6885c8fe5cc6
 title: "Sync-hook cleanup propagation mechanism"
-status: ready
+status: abandoned
 priority: medium
 type: task
 tags: [permissions-audit, security, hooks]
 created: 2026-04-10
-updated: 2026-04-10
+updated: 2026-04-18
 parent: null
 discovery_source: "Spec #060 Non-Requirements — sync-hook propagation ratchet flagged for follow-up"
 ---

@@ -45,17 +45,16 @@ Restart your shell and run `just check-symlinks` to verify.
 
 ## Limited / Custom installation
 
-`just setup` is the default and deploys the full agentic layer. Most customization happens via `/setup-merge` after `just setup` — it prompts individually for two optional hooks (`cortex-notify.sh`, `cortex-notify-remote.sh`).
+`just setup` is the default and deploys the full agentic layer. Most customization happens via `/setup-merge` after `just setup` — it prompts individually for the optional `cortex-notify.sh` hook.
 
 This section covers only the things that compose cleanly when omitted. Finer pruning isn't documented because the dependency graph between skills, hooks, bin utilities, and reference docs is too interconnected to hand-curate without reading the underlying sources.
 
 ### What's safely skippable
 
-- **Optional hooks** (prompted individually by `/setup-merge`):
+- **Optional hook** (prompted individually by `/setup-merge`):
   - `cortex-notify.sh` — `terminal-notifier` desktop notifications. macOS-only (requires `brew install terminal-notifier`). Skip if you don't want attention pings.
-  - `cortex-notify-remote.sh` — Tailscale/Android remote notifications. Skip unless you have the `cortex-notify-remote` infrastructure deployed on a phone.
 
-Everything else in `just setup` is assumed required. Partial installs beyond the two items above break silently at runtime because of skill→hook, skill→bin, and skill→reference-doc dependencies that are not worth documenting exhaustively at this project's size.
+Everything else in `just setup` is assumed required. Partial installs beyond this item break silently at runtime because of skill→hook, skill→bin, and skill→reference-doc dependencies that are not worth documenting exhaustively at this project's size.
 
 ### UI skills and pr-review (opt-in plugins)
 

@@ -191,14 +191,10 @@ For each absent optional hook, extract the script filename from the `command` fi
 
 > `cortex-notify.sh` — Sends desktop notifications when Claude needs attention or completes. Requires cortex-notify infrastructure. Install? [Y/n]
 
-**cortex-notify-remote.sh**:
-
-> `cortex-notify-remote.sh` — Sends remote notifications (Tailscale/Android). Requires notify-remote infrastructure. Install? [Y/n]
-
 On Y: add the script filename to the approved optional hooks list.
 On N: skip. Count as skipped for the summary.
 
-Build a JSON array of approved optional hook canonical filenames (e.g., `["cortex-notify.sh", "cortex-notify-remote.sh"]`). Store this as `APPROVED_OPTIONAL_HOOKS`.
+Build a JSON array of approved optional hook canonical filenames (e.g., `["cortex-notify.sh"]`). Store this as `APPROVED_OPTIONAL_HOOKS`.
 
 ### 5c. Per-category settings
 

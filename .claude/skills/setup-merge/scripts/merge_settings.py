@@ -35,7 +35,6 @@ REQUIRED_HOOK_SCRIPTS = {
 # the user's settings.json hooks block.
 OPTIONAL_HOOK_SCRIPTS = {
     "cortex-notify.sh",
-    "cortex-notify-remote.sh",
 }
 
 # Plugin keys to check

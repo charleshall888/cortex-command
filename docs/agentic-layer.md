@@ -202,7 +202,6 @@ Hooks in `hooks/` are shared entry points. Hooks in `claude/hooks/` are specific
 | `hooks/cortex-validate-commit.sh` | PreToolUse | Validate commit message: imperative mood, ≤72 chars subject, no trailing period, blank line before body | Claude only |
 | `hooks/cortex-scan-lifecycle.sh` | SessionStart | Inject `LIFECYCLE_SESSION_ID`, active feature state, overnight execution state, and fresh-resume prompts into context | Claude only |
 | `hooks/cortex-notify.sh` | Stop, Notification | Desktop notifications via terminal-notifier when Claude needs input or completes (macOS) | Claude only |
-| `hooks/cortex-notify-remote.sh` | Stop, Notification | Push notifications to Android via ntfy.sh HTTP API when Claude needs attention in a tmux session | Claude only |
 | `hooks/cortex-cleanup-session.sh` | SessionEnd | Remove `.session` lock files from `lifecycle/*/` when a Claude Code session ends (skips on `/clear`) | Claude only |
 | `claude/hooks/setup-github-pat.sh` | SessionStart | Read GitHub PATs from `~/.config/claude-code-secrets/` and write to `/tmp/claude/` so skills can authenticate `gh` inside the sandbox | Claude only |
 | `claude/hooks/cortex-sync-permissions.py` | PreToolUse | Merge MCP allow/deny patterns from `settings.json` so permissions stay consistent | Claude only |

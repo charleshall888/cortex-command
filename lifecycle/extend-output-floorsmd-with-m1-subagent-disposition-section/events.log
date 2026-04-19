@@ -1,0 +1,59 @@
+- ts: 2026-04-18T16:02:52Z
+  event: discovery_reference
+  feature: extend-output-floorsmd-with-m1-subagent-disposition-section
+  epic_research: research/opus-4-7-harness-adaptation/research.md
+  epic_spec: null
+  status: ok
+
+- ts: 2026-04-18T16:07:31Z
+  event: clarify_critic
+  feature: extend-output-floorsmd-with-m1-subagent-disposition-section
+  findings:
+    - "Intent clarity claims HIGH on the basis of a settled deliverable/mechanism/file/scope/applicability/form, but the backlog is silent on placement (where in output-floors.md the new section lands), whether the section needs its own floor-style table, whether worked examples should be full prompt snippets or paraphrased summaries, and whether the normative vocabulary is the backlog's enumerated list (log-only, silent re-run, absorb and surface pass/fail, emit only Ask items, etc.) or DR-6's narrower M1 phrasings (silent re-run surface pass/fail, absorb into internal state emit nothing)."
+    - "The enumerated disposition list in the backlog (log-only, silent re-run, absorb and surface pass/fail, emit only Ask items, etc.) invites scope drift from M1 (audience/routing) into M2 (length-calibration) or M3 (output-gating) territory — 'emit only Ask items' looks more like length/content than routing, 'absorb and surface pass/fail' arguably straddles M1 and M3. The author has to make the M1/M2/M3 distinction while writing with no source guidance, yet scope discipline forbids M2/M3."
+    - "Scope boundedness asserts single-file change, but the new section's access path through Agents.md's conditional-loading table is load-bearing and not covered. If the existing trigger ('Writing phase transition summaries, approval surfaces, or editing skill output instructions') doesn't match subagent-dispatch authoring, skill authors won't be prompted to load the reference — defeating the codification purpose. Similarly, output-floors.md's Downstream Consumption section names current consumers (#052, #053); whether a new entry is required is unaddressed."
+    - "Requirements alignment conflates two distinct conditional-loading mechanisms: requirements/project.md's table (project.md → observability/pipeline/etc.) and Agents.md's table (Agents.md → reference/*.md). The backlog's deliverable concerns the latter, not the former, so 'consistent with requirements/project.md's conditional-loading pattern' borrows credibility from an unrelated pattern. The 'Complexity must earn its place' cite is generic and does not constitute evidence of alignment specifically."
+    - "Criticality rated medium on the assumption that downstream skill loading is unaffected until a skill actively cites the new section. This contradicts the epic research's finding that reference/*.md files are globally loaded via Agents.md's conditional-loading table into high-traffic triggers (phase transitions, approval surfaces, skill output instructions). OQ5 in the epic research explicitly flags unresolved conditional-loading semantics under 4.7 — a known risk the medium rating does not reflect."
+    - "Complexity rated 'simple' with reasoning that the new section 'follows the existing Applicability pattern,' but the backlog's claimed applicability ('lifecycle and discovery skills, matching output-floors.md's existing scope') mismatches DR-6's narrower framing ('dispatch-skill scope only'). Either the new section duplicates the existing document-level Applicability block (redundant) or introduces sub-scoping (new pattern). Neither is grounded in the source — a real structural question the simple rating glosses."
+    - "Worked examples are claimed well-bounded because they cite three specific tickets, but #067/#068/#069 were 'in-flight remediation tickets' in the epic research, not completed artifacts. If #086 runs before those remediations converge, the worked examples cite a moving target; the backlog does not address sequencing or whether to cite pre- or post-fix phrasing."
+  dispositions:
+    apply: 5
+    dismiss: 2
+    ask: 0
+  applied_fixes:
+    - "Added open question for research: 'What precisely distinguishes M1 (audience/routing) from M2 (length-calibration) and M3 (output-gating)? Which of the backlog's enumerated dispositions (log-only, silent re-run, absorb and surface pass/fail, emit only Ask items, etc.) fall within M1, and which should be excluded as M2/M3?' (from critic finding 1)"
+    - "Added open question for research: 'Does the new section require updating Agents.md's conditional-loading trigger row (currently: Writing phase transition summaries, approval surfaces, or editing skill output instructions) to explicitly cover subagent-dispatch authoring? Does output-floors.md's Downstream Consumption section need a new entry for #067/#068/#069 or a follow-up skill?' (from critic finding 2)"
+    - "Added open question for research: 'Should the new section inherit output-floors.md's document-level Applicability (lifecycle and discovery skills) or narrow to dispatch-skill scope only per DR-6? How to express narrower scope without duplicating or silently modifying the existing Applicability block?' (from critic finding 5)"
+    - "Revised requirements alignment note from 'Aligned with requirements/project.md conditional-loading pattern' to 'Partial alignment: no requirements/*.md file governs reference-doc content. Alignment is to the epic research DR-6 decision (extend rather than create new file) and to project.md's general simplicity principle (Complexity must earn its place).' (from critic finding 3)"
+    - "Escalated criticality from medium to high. Rationale: reference/*.md is conditionally loaded via Agents.md into high-traffic agent surfaces (phase transitions, approval surfaces, skill output instructions); epic research OQ5 flags unresolved conditional-loading semantics under 4.7, where adjacent text affects how agents frame unrelated outputs. (from critic finding 4)"
+  dismissals:
+    - finding_index: 0
+      rationale: "Placement within output-floors.md, floor-table format, snippet-vs-paraphrase choice, and normative-vocabulary wording are spec-phase authoring decisions, not clarify-phase concerns. Clarify aims research; research and spec determine implementation form. The vocabulary/scope-drift portion of this finding is already captured separately as finding 1 and routed to research via an open question."
+    - finding_index: 6
+      rationale: "Tickets #067, #068, and #069 all have status:complete on disk (verified: grep '^status:' backlog/067-*.md backlog/068-*.md backlog/069-*.md). The epic research described them as in-flight at write time, but they have since landed — worked examples will cite stable post-fix phrasing rather than a moving target. No sequencing dependency remains."
+  status: ok
+
+- ts: 2026-04-18T16:08:45Z
+  event: lifecycle_start
+  feature: extend-output-floorsmd-with-m1-subagent-disposition-section
+  backlog_id: "086"
+  tier: simple
+  criticality: high
+  entry_point: refine
+  status: ok
+
+- ts: 2026-04-18T16:08:45Z
+  event: phase_transition
+  feature: extend-output-floorsmd-with-m1-subagent-disposition-section
+  from: clarify
+  to: research
+  status: ok
+
+- ts: 2026-04-18T19:02:47Z
+  event: feature_deferred
+  feature: extend-output-floorsmd-with-m1-subagent-disposition-section
+  phase_reached: research
+  rationale: "Research surfaced coherence problems that belong upstream: (1) M1 taxonomy may not be a clean category — two of three DR-6 phrasings mix routing with gating/length; (2) the worked-example shape most cleanly matching M1 lives in critical-review/SKILL.md, which output-floors.md's Applicability excludes; (3) Agents.md trigger row likely under-fires for subagent-dispatch authoring under 4.7. Harm already prevented at the three observed sites (#067/#068/#069 complete). Simpler-is-correct applies (requirements/project.md). Deferred behind sibling ticket #085, whose dispatch-skill audit is expected to produce empirical evidence on whether M1 is a clean category before codification."
+  revisit_trigger: "after #085 completes"
+  blocked_by: [85]
+  status: ok

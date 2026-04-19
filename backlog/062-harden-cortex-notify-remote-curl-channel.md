@@ -2,12 +2,12 @@
 schema_version: "1"
 uuid: abd4c43c-02dc-4f12-86e5-dc80b56cf02e
 title: "Harden cortex-notify-remote.sh curl invocation against exfiltration"
-status: ready
+status: abandoned
 priority: medium
 type: task
 tags: [permissions-audit, security, hooks, notifications]
 created: 2026-04-10
-updated: 2026-04-10
+updated: 2026-04-17
 parent: null
 discovery_source: "Spec #060 Non-Requirements — notify-hook curl channel flagged for follow-up"
 ---

@@ -170,8 +170,8 @@ class TestEvaluateAlerts(unittest.TestCase):
 class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
     """Tests for fire_notifications async subprocess dispatch."""
 
-    async def test_fires_both_scripts_for_unnotified_alert(self):
-        """Two subprocess calls (notify.sh + cortex-notify-remote.sh) per unnotified alert."""
+    async def test_fires_notify_script_for_unnotified_alert(self):
+        """One subprocess call (cortex-notify.sh) per unnotified alert."""
         state = _make_state()
         state.alerts[("feat-a", "stall")] = {
             "first_seen": datetime.now(timezone.utc),
@@ -194,7 +194,7 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
             # Allow spawned tasks to run
             await asyncio.sleep(0)
 
-        self.assertEqual(call_count, 2)
+        self.assertEqual(call_count, 1)
 
     async def test_does_not_refire_when_already_notified(self):
         """No subprocess calls when alert is already notified."""
@@ -253,7 +253,7 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
             await fire_notifications(state, root)
             await asyncio.sleep(0)
 
-        self.assertEqual(call_count, 2)
+        self.assertEqual(call_count, 1)
         self.assertTrue(state.circuit_breaker_notified)
 
         # Second call should not fire again

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f90dd3eb-bd20-4f98-98db-63377b8b40a6
 title: "Extend output-floors.md with M1 Subagent Disposition section"
-status: backlog
+status: blocked
 priority: medium
 type: feature
 created: 2026-04-18
@@ -10,6 +10,12 @@ updated: 2026-04-18
 parent: "82"
 tags: [opus-4-7-harness-adaptation, reference-docs]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
+session_id: null
+lifecycle_phase: null
+lifecycle_slug: extend-output-floorsmd-with-m1-subagent-disposition-section
+complexity: simple
+criticality: high
+blocked-by: [85]
 ---
 
 # Extend output-floors.md with M1 Subagent Disposition section
@@ -43,3 +49,16 @@ Extend `claude/reference/output-floors.md` with a new section — scoped via the
 ## Not blocked
 
 Can run in parallel with #085 — different files, different intent.
+
+## Deferred (2026-04-18)
+
+Deferred behind #085 after a lifecycle research pass surfaced coherence problems that belong upstream of this ticket:
+
+1. **M1 taxonomy may not be a clean category.** Two of DR-6's three canonical phrasings (`silent re-run, surface pass/fail`; `absorb into internal state, emit nothing`) mix routing with gating/length (M3 territory). The "60% of failures are M1" figure depends on that collapse.
+2. **Applicability scope gap.** The worked-example most cleanly shaped by M1 (#067) lives in `critical-review/SKILL.md`. `output-floors.md`'s document-level Applicability block excludes `critical-review`. Either the Applicability block must be revised (scope expansion beyond this ticket) or #067 cannot be a worked example.
+3. **Agents.md trigger likely under-fires.** Line 25's trigger ("Writing phase transition summaries, approval surfaces, or editing skill output instructions") plausibly does not match subagent-dispatch authoring under 4.7's literal reading. Updating the trigger is outside this ticket's current deliverables.
+4. **Harm already prevented.** #067/#068/#069 have all landed (`status: complete`). Codification here is preventive for a hypothetical future dispatch-skill site. `requirements/project.md` favors simpler-when-in-doubt.
+
+**Revisit trigger**: after #085 completes. #085's dispatch-skill audit (Passes 1–3, including P1 pattern classification) is expected to produce empirical evidence on whether M1 is a clean category. If #085 finds coherent M1 patterns across the existing dispatch surface, #086 resumes with a sharper source of truth. If #085 finds M1/M3 blur as suspected, #086 either reopens DR-6 upstream or closes naturally.
+
+Lifecycle artifacts preserved at `lifecycle/extend-output-floorsmd-with-m1-subagent-disposition-section/` — see `research.md` for full research output and the 8 open questions.

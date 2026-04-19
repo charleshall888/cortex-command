@@ -464,9 +464,9 @@ Polling cadence: state files every 2s, `overnight-events.log` every 1s (offset-t
 
 Claude Code fires lifecycle hooks at session boundaries and on specific tool/notification events; `claude/settings.json` wires these to shell scripts in `hooks/` (symlinked to `~/.claude/hooks/`).
 
-**Files**: `claude/settings.json` (`hooks` key), `hooks/cortex-scan-lifecycle.sh` (SessionStart — injects `LIFECYCLE_SESSION_ID` + lifecycle state into context), `hooks/cortex-cleanup-session.sh` (SessionEnd — removes `.session` marker unless reason is `clear`), `hooks/cortex-notify.sh` and `hooks/cortex-notify-remote.sh` (Notification matcher `permission_prompt` and Stop events — local macOS toast + ntfy.sh push), plus `cortex-validate-commit.sh` (PreToolUse Bash), `cortex-tool-failure-tracker.sh` (PostToolUse Bash), and `cortex-skill-edit-advisor.sh` (PostToolUse Write|Edit).
+**Files**: `claude/settings.json` (`hooks` key), `hooks/cortex-scan-lifecycle.sh` (SessionStart — injects `LIFECYCLE_SESSION_ID` + lifecycle state into context), `hooks/cortex-cleanup-session.sh` (SessionEnd — removes `.session` marker unless reason is `clear`), `hooks/cortex-notify.sh` (Notification matcher `permission_prompt` and Stop events — local macOS toast), plus `cortex-validate-commit.sh` (PreToolUse Bash), `cortex-tool-failure-tracker.sh` (PostToolUse Bash), and `cortex-skill-edit-advisor.sh` (PostToolUse Write|Edit).
 
-**Inputs**: JSON payload on stdin from Claude Code (`session_id`, `cwd`, `reason`, `tool_name`, etc.); environment (`NTFY_TOPIC`, `TMUX`, `CLAUDE_ENV_FILE`).
+**Inputs**: JSON payload on stdin from Claude Code (`session_id`, `cwd`, `reason`, `tool_name`, etc.); environment (`CLAUDE_ENV_FILE`).
 
 Debugging note: hooks exit 0 unconditionally and **have no log mechanism** — per `requirements/remote-access.md`, notification and session-management failures are silent by design so that hook bugs never block the Claude session. This is acceptable for personal use but means "I didn't get a notification" has no breadcrumb trail; diagnose by running the hook script manually with a synthetic JSON payload on stdin, not by searching logs. The same silence applies to SessionStart/SessionEnd hooks: if `cortex-scan-lifecycle.sh` fails to inject `LIFECYCLE_SESSION_ID`, the session starts anyway and downstream tooling silently loses session identity.
 

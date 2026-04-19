@@ -6,7 +6,7 @@
 
 ## Overview
 
-The remote-access area covers the capabilities that allow development work to continue from a remote location — specifically, persistent terminal sessions that survive network interruptions, remote session reattachment, and mobile push alerting when Claude needs attention. The current implementation uses tmux for session persistence, but the requirement is defined at the capability level: the specific tool providing persistence is subject to change.
+The remote-access area covers the capabilities that allow development work to continue from a remote location — specifically, persistent terminal sessions that survive network interruptions and remote session reattachment. The current implementation uses tmux for session persistence, but the requirement is defined at the capability level: the specific tool providing persistence is subject to change.
 
 ## Functional Requirements
 
@@ -34,46 +34,26 @@ The remote-access area covers the capabilities that allow development work to co
   - The Tailscale VPN provides the secure channel; no port forwarding required
 - **Priority**: should-have
 
-### Mobile Push Alerting
-
-- **Description**: When Claude Code needs attention (permission required, session idle, session complete), a push notification is delivered to the developer's Android device via ntfy.sh.
-- **Inputs**: Claude Code Stop/Notification hook events; `NTFY_TOPIC` env var; session running in tmux
-- **Outputs**: Android push notification with session name, event type, and priority
-- **Acceptance criteria**:
-  - Notifications are delivered within network propagation delay of the triggering event
-  - Notification type is correct (permission = lock, idle = hourglass, complete = checkmark)
-  - Subagent sessions are suppressed (no notification when spawned agent stops)
-  - Notification failure is silent and does not affect the Claude session
-  - When `NTFY_TOPIC` is not set, the hook exits silently with no error
-- **Priority**: should-have
-
 ## Non-Functional Requirements
 
-- **Failure transparency**: All notification and session management failures are silent by default; no mechanism currently surfaces failures to a log. This is acceptable for personal use where the primary signal is presence/absence of a notification.
-- **Timeout**: Remote notification curl timeout is 5 seconds; session reattachment depends on network latency
-- **Platform**: macOS is the primary and only supported platform for session persistence (Ghostty dependency). Android is the primary mobile alert target (ntfy.sh). Linux/Windows are not supported.
+- **Failure transparency**: Session management failures are silent by default; no mechanism currently surfaces failures to a log. This is acceptable for personal use.
+- **Timeout**: Session reattachment depends on network latency
+- **Platform**: macOS is the primary and only supported platform for session persistence (Ghostty dependency). Linux/Windows are not supported.
 
 ## Architectural Constraints
 
 - Session persistence depends on a macOS terminal that supports persistent container processes (currently Ghostty).
-- Mobile alerting requires: `NTFY_TOPIC` env var set, `TMUX` env var set (session must be inside tmux), `curl` and `jq` available in PATH, network access to `https://ntfy.sh`.
-- If any prerequisite is absent, the notification hook exits silently — remote alerting degrades gracefully to no-op without crashing the session.
-- All notification hooks exit 0 unconditionally — delivery failure never blocks Claude.
 
 ## Dependencies
 
 - **Session persistence**: tmux (current implementation, subject to change); Ghostty terminal (macOS)
 - **Remote connection**: Tailscale (mesh VPN), mosh (resilient mobile shell)
-- **Mobile alerting**: ntfy.sh HTTP API, `NTFY_TOPIC` env var, `curl`, `jq`
 - **Local notifications**: `terminal-notifier` (macOS), Ghostty (for click-to-activate)
 
 ## Edge Cases
 
-- **NTFY_TOPIC not set**: Remote notifications silently disabled; no error raised; local macOS notifications unaffected
-- **Not running in tmux**: Remote notification hook exits silently; session cannot be identified by name
 - **Ghostty not installed**: Session persistence mechanism fails at window creation; error message suggests installation
 - **Tailscale/mosh not installed**: Remote connection fails at the client; Claude session on host continues unaffected
-- **Network unavailable**: Remote notification times out after 5s; session unaffected
 
 ## Open Questions
 

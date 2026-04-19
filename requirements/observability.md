@@ -40,12 +40,11 @@ The observability area covers five subsystems that give the developer visibility
 
 ### Notifications
 
-- **Description**: Two notification scripts deliver alerts through different channels: macOS desktop notifications via `terminal-notifier` (`hooks/cortex-notify.sh`), and Android push notifications via ntfy.sh HTTP API (`hooks/cortex-notify-remote.sh`).
-- **Inputs**: Claude Code Stop/Notification hook JSON; dashboard alert evaluation; `NTFY_TOPIC` environment variable; `TMUX` environment variable
-- **Outputs**: macOS desktop notification; Android push via `https://ntfy.sh/$NTFY_TOPIC`; terminal bell
+- **Description**: macOS desktop notifications via `terminal-notifier` (`hooks/cortex-notify.sh`) deliver alerts on Stop/Notification events.
+- **Inputs**: Claude Code Stop/Notification hook JSON; dashboard alert evaluation
+- **Outputs**: macOS desktop notification; terminal bell
 - **Acceptance criteria**:
   - macOS notification fires on session stop with correct type label (permission / idle / complete)
-  - Android notification fires when `NTFY_TOPIC` is set and session is running in tmux
   - Subagent sessions are suppressed (no notification when `agent_id` is present in hook JSON)
   - Notification delivery failure is silent (hook exits 0; session is not blocked)
   - Dashboard-triggered notifications respect the same deduplication (stall fires once; clears when resolved)
@@ -98,7 +97,6 @@ The observability area covers five subsystems that give the developer visibility
 - **Statusline**: `jq` (with pure-bash fallback), `git`
 - **Dashboard**: Python 3, FastAPI, Jinja2, HTMX (embedded in templates); file-based session state at `lifecycle/`
 - **Notifications (macOS)**: `terminal-notifier` (installed via `brew install terminal-notifier`); Ghostty terminal
-- **Notifications (Android)**: `curl`, `jq`, `NTFY_TOPIC` env var, tmux session (`TMUX` env var), network access to ntfy.sh
 - **In-Session Status CLI**: `jq`, `bash`; file-based session state at `lifecycle/sessions/` and `~/.local/share/overnight-sessions/`
 - **Sandbox Socket Access**: `jq`, `just` (setup recipe); `~/.claude/settings.json` and `~/.claude/settings.local.json`
 
@@ -107,9 +105,6 @@ The observability area covers five subsystems that give the developer visibility
 - **No active session**: Statusline renders git state only; dashboard hides Session and Fleet panels
 - **Session directory rotation**: Dashboard resets event offset to 0 on session ID change and re-reads from scratch; possible duplicate alerts on first poll after reset
 - **jq unavailable**: Statusline falls back to pure-bash regex parsing; may fail on complex JSON
-- **ntfy.sh unreachable**: Remote notification silently times out after 5s; macOS notification unaffected
-- **NTFY_TOPIC not set**: Remote notification hook exits silently at line 10; no error raised
-- **Not running in tmux**: Remote notification hook exits silently; session name identification skipped
 
 - **Stale PID in `.runner.lock`**: Runner died but lock file not cleaned up; `kill -0` returns non-zero; status CLI reports "dead (stale PID)" rather than "alive"
 - **Corrupt `overnight-state.json`**: Truncated write during active session; status CLI falls back to events-only output

@@ -837,7 +837,8 @@ test-skill-contracts:
     #!/usr/bin/env bash
     set -euo pipefail
     python3 scripts/validate-skill.py skills/
-    uv run pytest tests/test_skill_contracts.py -q
+    python3 scripts/validate-callgraph.py skills/ .claude/skills/
+    uv run pytest tests/test_skill_contracts.py tests/test_skill_callgraph.py -q
 
 # Run commit hook regression tests
 test-hook-commit:

@@ -218,7 +218,7 @@
     ],
     "defaultMode": "default"
   },
-  "model": "sonnet",
+  "model": "opus[1m]",
   "enableAllProjectMcpServers": false,
   "hooks": {
     "SessionStart": [
@@ -276,10 +276,6 @@
           },
           {
             "type": "command",
-            "command": "~/.claude/hooks/cortex-notify-remote.sh permission"
-          },
-          {
-            "type": "command",
             "command": "~/.claude/hooks/cortex-permission-audit-log.sh"
           }
         ]
@@ -291,10 +287,6 @@
           {
             "type": "command",
             "command": "~/.claude/notify.sh complete"
-          },
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/cortex-notify-remote.sh complete"
           }
         ]
       }
@@ -379,5 +371,6 @@
   },
   "alwaysThinkingEnabled": true,
   "effortLevel": "high",
-  "skipDangerousModePermissionPrompt": true
+  "skipDangerousModePermissionPrompt": true,
+  "skipAutoPermissionPrompt": true
 }

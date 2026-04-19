@@ -16,7 +16,6 @@ outputs:
 preconditions:
   - "Run from project root"
 argument-hint: "topic=\"<topic>\" [lifecycle-slug=<slug>] [tier=simple|complex] [criticality=low|medium|high|critical]"
-disable-model-invocation: true
 ---
 
 # /research
