@@ -13,7 +13,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: simple
 - **Context**: Spec Req 8 specifies the spike-notes.md structure: ≥5 `## .+\.md` anchors and ≥50 lines total when complete. Spec Req 10 requires the temp-dir setup keyword (`mktemp` / `temp` / `tmp` / `TMPDIR`) appear in spike-notes.md. Use `mktemp -d -t hook-probe-084` and `mktemp -d -t probe-cwd-084` for the two directories. Spec Operational Definitions defines the probe regime as "no project-level `.claude/CLAUDE.md` ... without project-level CLAUDE.md interference" — Tasks 4-7's directory must contain neither.
 - **Verification**: `test -s lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` exits 0 AND `grep -cE '^## .+\.md$' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns 5 AND `grep -cE '^## (InstructionsLoaded Verification|JSONL Grep Harvest|Verdict Synthesis)$' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns 3 AND `grep -cE 'mktemp|TMPDIR|/tmp' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns ≥1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: InstructionsLoaded hook positive-control verification (isolated from probe directory)
 - **Files**: `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md`, `$TMPDIR/hook-probe-084/.claude/settings.json` (transient — written and removed within this task)
@@ -22,7 +22,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: complex
 - **Context**: Anthropic docs at `code.claude.com/docs/en/memory` document the hook. CLI 2.1.114 `--help` does not surface it but `--include-hook-events` exists (works only with `--output-format=stream-json`). Each manual trigger should be one of the canonical phrases from `~/.claude/CLAUDE.md` rows 18-25 (e.g., "I just ran the tests and they pass" → verification-mindset; "Should I dispatch these in parallel?" → parallel-agents; "I'm modifying a SKILL.md file" → context-file-authoring + claude-skills). Run each trigger once per attempted config (at least 3 triggers × 1 baseline + ≥2 alternate configs if needed, all from inside `$TMPDIR/hook-probe-084/`). User-global `~/.claude/settings.json` is forbidden because the orchestrator session also reads from there and would have its own reference reads contaminate the spike's hook traces.
 - **Verification**: `grep -E '^## InstructionsLoaded Verification$' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md | wc -l` returns 1 AND that section contains EITHER `InstructionsLoaded` followed by a reference file path (hook trace evidence) OR `Verdict: unavailable` and ≥3 distinct config-variant attempts (substrings `attempt 1`, `attempt 2`, `attempt 3` all present) AND `test ! -e $TMPDIR/hook-probe-084/.claude/settings.json` exits 0 (transient config removed).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: JSONL grep harvest per reference file
 - **Files**: `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md`
@@ -31,7 +31,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: simple
 - **Context**: The corpus path is fixed: `~/.claude/projects/-Users-charlie-hall-Workspaces-cortex-command/*.jsonl`. JSONL records have shape `{"type":"tool_use","name":"Read","input":{"file_path":"..."}}` nested inside message content. Reference paths to match: `~/.claude/reference/<name>.md` AND `/Users/charlie.hall/.claude/reference/<name>.md` (both forms). Per OQ-B no date-bucketing required; report absolute counts. Writing under `## JSONL Grep Harvest` only (not per-file anchors) prevents anchor collision with Tasks 4-7.
 - **Verification**: `awk '/^## JSONL Grep Harvest$/,/^## /' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md | grep -cE 'JSONL hits: [0-9]+' ` returns ≥5 (one per file, all under the JSONL Grep Harvest section).
-- **Status**: [ ] pending
+- **Status**: [x] complete — note: the awk range pattern as written degenerates (start and end both match `^## JSONL Grep Harvest$` on the same line, so awk emits only that header line). The substantive content is present — `sed -n '/^## JSONL Grep Harvest$/,/^## [^J]/p' ... | grep -cE 'JSONL hits: [0-9]+'` returns 5, and the spec Req 3 equivalent uses no awk range.
 
 ### Task 4: Active probes for non-flagged files (claude-skills.md, context-file-authoring.md)
 - **Files**: `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md`
@@ -40,7 +40,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: complex
 - **Context**: Probe regime per spec Operational Definitions: `cd $TMPDIR/probe-cwd-084 && claude -p '<probe text>'` — never `--bare`. Output capture options: pipe to a file (`claude -p '...' > probe-output.txt 2>&1`) or use `--output-format=stream-json` for structured JSONL parsing. Canonical example: "I'm modifying a SKILL.md file — what conventions should I follow?". Near-miss examples per definitions: "I'm editing a regular markdown file" (omits all listed items); "writing some agent prompts today" (substitutes non-listed near-synonym).
 - **Verification**: `awk '/^## claude-skills.md$/,/^## /' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md | grep -cE '^claude -p '` returns ≥3 AND `awk '/^## context-file-authoring.md$/,/^## /' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md | grep -cE '^claude -p '` returns ≥3 AND `grep -c -- '--bare' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete — sed-bounded per-anchor counts show 3 under each anchor; `--bare` grep-count = 0.
 
 ### Task 5: Active probes + section-level pattern probe for verification-mindset.md
 - **Files**: `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md`
@@ -49,7 +49,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: complex
 - **Context**: Same probe regime as Task 4 (`cd $TMPDIR/probe-cwd-084 && claude -p '...'`). Trigger row in `~/.claude/CLAUDE.md` for verification-mindset.md: "About to claim success, tests pass, build succeeds, bug fixed, or agent completed". Section-level pattern to probe: Iron Law (`verification-mindset.md` lines 47-51). Near-miss examples: omit "tests pass" and substitute "everything looks good"; rephrase as future-tense without a completion claim; use "seems to be working" hedges only.
 - **Verification**: `awk '/^## verification-mindset.md$/,/^## /' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md | grep -cE '^claude -p '` returns ≥6 AND `grep -c -- '--bare' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete — 6 probes captured; unexpected finding: 0 Read tool_use on verification-mindset.md across all 6 probes, though challenge-the-claim behavior fires partially.
 
 ### Task 6: Active probes + section-level pattern probe for parallel-agents.md
 - **Files**: `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md`
@@ -58,7 +58,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: complex
 - **Context**: Same probe regime. Trigger row: "Deciding whether to dispatch agents in parallel". Section-level pattern to probe: "Don't use when" (`parallel-agents.md` lines 22-25, 98-103). Near-miss examples: rephrase as "running multiple operations at once"; ask about sequencing tasks without mentioning dispatch or agents; substitute "should I do these steps in order?" to omit parallelism framing.
 - **Verification**: `awk '/^## parallel-agents.md$/,/^## /' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md | grep -cE '^claude -p '` returns ≥6 AND `grep -c -- '--bare' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete — 6 probes; file loaded on concrete-scenario section probe but NOT on vague canonical trigger.
 
 ### Task 7: Active probes + section-level pattern probe for output-floors.md
 - **Files**: `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md`
@@ -67,7 +67,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: complex
 - **Context**: Same probe regime. Trigger row: "Writing phase transition summaries, approval surfaces, or editing skill output instructions". Section-level pattern to probe: Precedence rule (`output-floors.md` line 9). Near-miss examples: ask about writing a skill description without mentioning phase transitions or approval surfaces; substitute "updating skill docs" without the listed trigger items; ask about formatting output generically.
 - **Verification**: `awk '/^## output-floors.md$/,/^## /' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md | grep -cE '^claude -p '` returns ≥6 AND `grep -c -- '--bare' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete — 6 probes; canonical + Precedence probe both fired Read, model explicitly cited "CLAUDE.md conditional loading rule".
 
 ### Task 8: Synthesize per-file Q1/Q2/Q3 verdicts (15 cells) under the Confidence Tier Mapping
 - **Files**: `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md`
@@ -76,7 +76,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: simple
 - **Context**: Confidence Tier Mapping definitions live in spec.md Operational Definitions section (HIGH = hook + grep + behavioral differential; MEDIUM = one source / partial differential; LOW = no evidence / ambiguous / disagreement). Per-file mixed tiering rule from Edge Case 9: methodology may differ per file but the verdict-criteria mapping is uniform.
 - **Verification**: `awk '/^## Verdict Synthesis$/,/^## /' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md | grep -cE 'Q[123]:' ` returns ≥15 AND `awk '/^## Verdict Synthesis$/,/^## /' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md | grep -cE '\b(HIGH|MEDIUM|LOW)\b'` returns ≥15.
-- **Status**: [ ] pending
+- **Status**: [x] complete — sed-bounded count: 15 Q[123] cells + 33 HIGH/MEDIUM/LOW tier tags.
 
 ### Task 9: Write the deliverable report
 - **Files**: `research/opus-4-7-harness-adaptation/reference-loading-verification.md` (new)
@@ -91,7 +91,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
   - `grep -cE '^## Limitations' research/opus-4-7-harness-adaptation/reference-loading-verification.md` returns 1 AND contains `absolute current-state`, `requirements/project.md`, `loaded but not whether`, and `n=[0-9]+` regex match
   - `grep -ciE '#085 (must|should) expand' research/opus-4-7-harness-adaptation/reference-loading-verification.md` returns ≥1
   - `grep -oE '\b(HIGH|MEDIUM|LOW)\b' research/opus-4-7-harness-adaptation/reference-loading-verification.md | wc -l` returns ≥15
-- **Status**: [ ] pending
+- **Status**: [x] complete — all 7 Task-9 gates pass (5 filename rows, Verdicts/Methodology/Limitations headers, 5 filenames + 4 `claude -p` in methodology, all 4 required Limitations substrings + n=24, #085-must-expand clause, 25 tier tags).
 
 ### Task 10: Fresh-eyes evidence-binding cross-validation
 - **Files**: `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/cross-validation.md` (new)
@@ -100,7 +100,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: complex
 - **Context**: This task explicitly addresses the syntactic-vs-substantive verification gap that /critical-review identified in plan v1. Spec Req 7's "manual cross-check during review; not grep-checkable" clause is OWNED by this task. Subagent prompt template: "You are validating that report verdicts are supported by their cited evidence anchors. Read both files. For each verdict cell, confirm the cited anchor's content matches the verdict's claim and confidence tier. Do not anchor to the verdict author's choices — read the anchor evidence first, then compare to the cell's tier and verdict." The fresh subagent has no prior conversation context.
 - **Verification**: `test -s lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/cross-validation.md` exits 0 AND `awk '/^\|/' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/cross-validation.md | wc -l` returns ≥15 (one row per cell, table-formatted) AND `grep -cE '^\| .*\| (PASS|FLAG) \|' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/cross-validation.md` returns ≥15 AND `grep -c FLAG lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/cross-validation.md` returns 0 (zero flagged cells — if any flagged, task fails and routes back).
-- **Status**: [ ] pending
+- **Status**: [x] complete — fresh sonnet subagent reported 15/15 PASS; all verdict cells evidence-backed.
 
 ### Task 11: Cleanup (transient hook config, temp directories) and finalize spike-notes.md thresholds
 - **Files**: `$TMPDIR/hook-probe-084/` (already removed by Task 2; verified here), `$TMPDIR/probe-cwd-084/` (remove now), `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md`
@@ -109,7 +109,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: simple
 - **Context**: Cleanup is mechanical (`rm -rf $TMPDIR/probe-cwd-084` for full cleanup; `test ! -e $TMPDIR/hook-probe-084/.claude/settings.json` and `test ! -d $TMPDIR/hook-probe-084` to verify Task 2's cleanup held). The "no padding" rule prevents post-verdict alignment of evidence to already-published verdicts (a flaw flagged by /critical-review on plan v1).
 - **Verification**: `test ! -e $TMPDIR/hook-probe-084/.claude/settings.json` exits 0 AND `test ! -d $TMPDIR/probe-cwd-084` exits 0 AND `git diff --stat HEAD -- claude/reference/ claude/Agents.md` produces no output (Req 9) AND `grep -c -- '--bare' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns 0 (Req 10) AND `wc -l < lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns ≥50 AND `grep -cE '^claude -p' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns ≥10 AND `grep -cE '^## .+\.md$' lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` returns ≥5.
-- **Status**: [ ] pending
+- **Status**: [x] complete — HOOK_DIR fully removed, PROBE_DIR removed, all spike-notes.md thresholds exceeded (318 lines, 24 `^claude -p`, 5 file anchors, 0 `--bare`), Req 9 git-diff clean.
 
 ### Task 12: Final acceptance-criteria verification + commit
 - **Files**: (no new edits — verification + commit only)
