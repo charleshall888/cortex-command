@@ -22,7 +22,7 @@ from pathlib import Path
 import anthropic
 
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = "claude-opus-4-7"
 
 
 def resolve_api_key() -> None:

@@ -69,7 +69,7 @@ def resolve_api_key() -> None:
     sys.exit(1)
 
 
-def count_tokens(text: str, model: str = "claude-sonnet-4-6") -> int:
+def count_tokens(text: str, model: str = "claude-opus-4-7") -> int:
     """
     Count tokens in text using the Anthropic count_tokens API.
     Counts include minimal message-envelope overhead (~5-15 tokens) from wrapping
@@ -112,8 +112,8 @@ Examples:
 
     parser.add_argument(
         '-m', '--model',
-        default='claude-sonnet-4-6',
-        help='Claude model to use for token counting (default: claude-sonnet-4-6)'
+        default='claude-opus-4-7',
+        help='Claude model to use for token counting (default: claude-opus-4-7)'
     )
 
     args = parser.parse_args()
