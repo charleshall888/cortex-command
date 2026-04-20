@@ -1,17 +1,22 @@
 """Tests for claude/pipeline/metrics.py.
 
-Covers: discover_pipeline_event_logs, pair_dispatch_events
+Covers: discover_pipeline_event_logs, pair_dispatch_events, filter_events_since
 """
 
 from __future__ import annotations
 
+import argparse
 import unittest
 import warnings
+from datetime import datetime, timezone
 from pathlib import Path
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 PIPELINE_LOGS_FIXTURE = FIXTURES_DIR / "pipeline_logs"
+DISPATCH_SINCE_BOUNDARY_FIXTURE = FIXTURES_DIR / "dispatch_since_boundary.jsonl"
+
+UTC = timezone.utc
 
 
 class TestDiscoverPipelineEventLogs(unittest.TestCase):
@@ -280,6 +285,81 @@ class TestPairDispatchEvents(unittest.TestCase):
         self.assertEqual(rec["tier"], "simple")
         self.assertEqual(rec["model"], "sonnet")
         self.assertFalse(rec["untiered"])
+
+
+class TestSinceFlag(unittest.TestCase):
+    """Tests for filter_events_since and _parse_since."""
+
+    def _filter(self, events, since):
+        from claude.pipeline.metrics import filter_events_since
+        return filter_events_since(events, since)
+
+    def _parse_since(self, s):
+        from claude.pipeline.metrics import _parse_since
+        return _parse_since(s)
+
+    def _load_boundary_events(self):
+        """Load events from dispatch_since_boundary.jsonl fixture."""
+        import json
+        events = []
+        for line in DISPATCH_SINCE_BOUNDARY_FIXTURE.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                events.append(json.loads(line))
+        return events
+
+    # ------------------------------------------------------------------
+    # (a) Boundary: since=2026-04-18 filters out the 23:59:59 event,
+    #     keeps 00:00:00 and 00:00:01 events.
+    # ------------------------------------------------------------------
+
+    def test_since_flag_boundary(self):
+        """since=2026-04-18 UTC: event at 23:59:59 filtered out, 00:00:00
+        and 00:00:01 events retained."""
+        events = self._load_boundary_events()
+        since = datetime(2026, 4, 18, tzinfo=UTC)
+
+        result = self._filter(events, since)
+
+        # The 23:59:59 pair (2 events) should be excluded; 4 events remain.
+        self.assertEqual(len(result), 4)
+        ts_values = [e["ts"] for e in result]
+        self.assertNotIn("2026-04-17T23:59:59Z", ts_values)
+        self.assertIn("2026-04-18T00:00:00Z", ts_values)
+        self.assertIn("2026-04-18T00:00:01Z", ts_values)
+
+    # ------------------------------------------------------------------
+    # (b) None passthrough: all events returned unchanged.
+    # ------------------------------------------------------------------
+
+    def test_since_flag_none_passthrough(self):
+        """since=None returns all events unchanged."""
+        events = self._load_boundary_events()
+
+        result = self._filter(events, None)
+
+        self.assertEqual(result, events)
+
+    # ------------------------------------------------------------------
+    # (c) Unparseable ts raises ValueError.
+    # ------------------------------------------------------------------
+
+    def test_since_flag_unparseable_ts_raises_value_error(self):
+        """An event with an unparseable ts raises ValueError."""
+        events = [{"ts": "not-a-timestamp", "event": "dispatch_start", "feature": "feat-x"}]
+        since = datetime(2026, 4, 18, tzinfo=UTC)
+
+        with self.assertRaises(ValueError):
+            self._filter(events, since)
+
+    # ------------------------------------------------------------------
+    # (d) _parse_since("yesterday") raises ArgumentTypeError.
+    # ------------------------------------------------------------------
+
+    def test_parse_since_invalid_format_raises_argument_type_error(self):
+        """_parse_since with a non-YYYY-MM-DD string raises ArgumentTypeError."""
+        with self.assertRaises(argparse.ArgumentTypeError):
+            self._parse_since("yesterday")
 
 
 if __name__ == "__main__":

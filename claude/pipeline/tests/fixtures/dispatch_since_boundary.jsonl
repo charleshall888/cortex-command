@@ -1,0 +1,6 @@
+{"ts": "2026-04-17T23:59:59Z", "event": "dispatch_start", "feature": "feat-before", "complexity": "simple", "criticality": "low", "model": "sonnet", "effort": "low", "max_turns": 10, "max_budget_usd": 5.0}
+{"ts": "2026-04-17T23:59:59Z", "event": "dispatch_complete", "feature": "feat-before", "cost_usd": 0.10, "duration_ms": 1000, "num_turns": 2}
+{"ts": "2026-04-18T00:00:00Z", "event": "dispatch_start", "feature": "feat-boundary", "complexity": "simple", "criticality": "low", "model": "sonnet", "effort": "low", "max_turns": 10, "max_budget_usd": 5.0}
+{"ts": "2026-04-18T00:00:00Z", "event": "dispatch_complete", "feature": "feat-boundary", "cost_usd": 0.20, "duration_ms": 2000, "num_turns": 3}
+{"ts": "2026-04-18T00:00:01Z", "event": "dispatch_start", "feature": "feat-after", "complexity": "simple", "criticality": "low", "model": "sonnet", "effort": "low", "max_turns": 10, "max_budget_usd": 5.0}
+{"ts": "2026-04-18T00:00:01Z", "event": "dispatch_complete", "feature": "feat-after", "cost_usd": 0.30, "duration_ms": 3000, "num_turns": 4}

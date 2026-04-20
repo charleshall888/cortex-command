@@ -98,6 +98,33 @@ def parse_events(path: Path) -> list[dict[str, Any]]:
     return events
 
 
+def filter_events_since(
+    events: list[dict[str, Any]],
+    since: datetime | None,
+) -> list[dict[str, Any]]:
+    """Filter events to those with timestamp >= *since*.
+
+    Args:
+        events: List of event dicts, each containing a ``ts`` field.
+        since: UTC datetime lower bound (inclusive).  When ``None``, all
+            events are returned unchanged.
+
+    Returns:
+        Filtered list of event dicts.
+
+    Raises:
+        ValueError: If an event's ``ts`` field cannot be parsed as ISO 8601.
+    """
+    if since is None:
+        return events
+    result: list[dict[str, Any]] = []
+    for evt in events:
+        ts = _parse_ts(evt["ts"])
+        if ts >= since:
+            result.append(evt)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Per-feature metric extraction
 # ---------------------------------------------------------------------------
@@ -667,6 +694,26 @@ def compute_calibration(
 # Pipeline orchestration and CLI
 # ---------------------------------------------------------------------------
 
+def _parse_since(s: str) -> datetime:
+    """Argparse type callable: parse *s* as ``YYYY-MM-DD`` → UTC midnight.
+
+    Args:
+        s: Date string in ``YYYY-MM-DD`` format.
+
+    Returns:
+        A timezone-aware datetime at midnight UTC on that date.
+
+    Raises:
+        argparse.ArgumentTypeError: If *s* does not match ``YYYY-MM-DD``.
+    """
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"Invalid date format {s!r}: expected YYYY-MM-DD"
+        )
+
+
 def main(argv: list[str] | None = None) -> None:
     """Run the full metrics pipeline: discover, parse, extract, aggregate,
     calibrate, and write ``lifecycle/metrics.json``.
@@ -683,6 +730,12 @@ def main(argv: list[str] | None = None) -> None:
         type=Path,
         default=Path.cwd(),
         help="Project root directory (default: current working directory)",
+    )
+    parser.add_argument(
+        "--since",
+        type=_parse_since,
+        default=None,
+        help="Filter dispatch events to those on or after YYYY-MM-DD (UTC midnight). Does not affect per-feature metrics.",
     )
     args = parser.parse_args(argv)
 
