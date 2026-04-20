@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 7e43f9c7-b4ce-4e39-b5fc-5299e8bcc483
 title: "Instrument events.log aggregation for turns and cost per tier"
-status: in_progress
+status: complete
 priority: medium
 type: feature
 created: 2026-04-18
@@ -10,7 +10,7 @@ updated: 2026-04-20
 parent: "82"
 tags: [opus-4-7-harness-adaptation, instrumentation]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-session_id: 04606665-8548-4bdf-8a52-e0b33b18c048
+session_id: null
 lifecycle_phase: implement
 lifecycle_slug: instrument-eventslog-aggregation-for-turns-and-cost-per-tier
 complexity: complex

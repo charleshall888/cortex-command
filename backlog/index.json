@@ -57,7 +57,7 @@
   {
     "id": 85,
     "title": "Audit dispatch-skill prompts and reference docs for 4.7 at-risk patterns",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -77,9 +77,9 @@
     "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
     "plan": null,
     "uuid": "f3b4b249-b40c-4d70-a06c-f3e95030ba21",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns",
+    "session_id": "0807d4ab-1191-4d06-b82e-85d0470608d2",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -271,33 +271,6 @@
     "repo": null
   },
   {
-    "id": 87,
-    "title": "Instrument events.log aggregation for turns and cost per tier",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "opus-4-7-harness-adaptation",
-      "instrumentation"
-    ],
-    "areas": [],
-    "created": "2026-04-18",
-    "updated": "2026-04-18",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "82",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
-    "plan": null,
-    "uuid": "7e43f9c7-b4ce-4e39-b5fc-5299e8bcc483",
-    "lifecycle_slug": "instrument-eventslog-aggregation-for-turns-and-cost-per-tier",
-    "session_id": "712dc6f9-657a-4972-9224-488a22e08da4",
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 88,
     "title": "Collect 4.7 baseline rounds and snapshot the aggregated data",
     "status": "backlog",
@@ -309,11 +282,9 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-18",
+    "updated": "2026-04-20",
     "blocks": [],
-    "blocked_by": [
-      "87"
-    ],
+    "blocked_by": [],
     "parent": "82",
     "research": null,
     "spec": null,
@@ -401,11 +372,9 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-18",
+    "updated": "2026-04-20",
     "blocks": [],
-    "blocked_by": [
-      "87"
-    ],
+    "blocked_by": [],
     "parent": "82",
     "research": null,
     "spec": null,
@@ -471,6 +440,36 @@
     "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
     "plan": null,
     "uuid": "7e6b212e-f74e-4f48-9fd6-30152c27b872",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 98,
+    "title": "Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release",
+    "status": "backlog",
+    "priority": "low",
+    "type": "feature",
+    "tags": [
+      "cleanup",
+      "overnight",
+      "throttle"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-20",
+    "updated": "2026-04-20",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "4337b723-4a50-4d3e-811f-ef2709f4a26e",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,

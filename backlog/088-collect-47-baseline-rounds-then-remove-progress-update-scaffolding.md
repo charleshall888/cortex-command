@@ -6,11 +6,11 @@ status: backlog
 priority: medium
 type: feature
 created: 2026-04-18
-updated: 2026-04-18
+updated: 2026-04-20
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [87]
+blocked-by: []
 ---
 
 # Collect 4.7 baseline rounds and snapshot the aggregated data

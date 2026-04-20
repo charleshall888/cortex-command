@@ -58,7 +58,7 @@ Extend `claude/pipeline/metrics.py` with stdlib-only functions that discover and
 - **Complexity**: simple
 - **Context**: Use f-string column formatting, no external library. Iterate `sorted(model_tier_dispatch_aggregates.items())` for deterministic output. Untiered bucket (if present) prints last with `budget_cap_usd="—"` and `over_cap_rate="—"`. Window header and orphan banner both go to stdout (not stderr) — this is the spec's "explicit warning surfaced in the CLI output" (spec Edge Cases). Tests under `TestReportTierDispatch`: (a) populated aggregates → captured stdout contains `(estimated)` and each bucket key; (b) empty aggregates → stdout contains `No dispatch data found` and exit 0; (c) `--since 2099-01-01` → stdout contains `No dispatch data found after 2099-01-01`; (d) populated + `--since 2026-04-18` → stdout contains the window header line; (e) aggregates with 2 untiered records → stdout contains `"⚠ 2 dispatches had no matching dispatch_start"`; (f) bucket with errors → `error_counts_summary` column renders the condensed string.
 - **Verification**: `python3 -m claude.pipeline.metrics --report tier-dispatch | grep -q '(estimated)'` — pass if exit 0 AND `pytest claude/pipeline/tests/test_metrics.py -k report_tier_dispatch` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ## Verification Strategy
 

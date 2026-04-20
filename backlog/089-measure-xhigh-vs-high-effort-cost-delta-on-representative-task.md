@@ -6,11 +6,11 @@ status: backlog
 priority: low
 type: spike
 created: 2026-04-18
-updated: 2026-04-18
+updated: 2026-04-20
 parent: "82"
 tags: [opus-4-7-harness-adaptation, spike]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [87]
+blocked-by: []
 ---
 
 # Measure xhigh vs high effort cost delta on representative task
