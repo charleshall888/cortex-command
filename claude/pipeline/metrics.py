@@ -16,6 +16,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import re
 import sys
@@ -253,6 +254,156 @@ def discover_pipeline_event_logs(lifecycle_dir: Path) -> list[Path]:
         logs.append(root_log)
     logs.extend(sorted(lifecycle_dir.glob("sessions/*/pipeline-events.log")))
     return sorted(logs)
+
+
+# ---------------------------------------------------------------------------
+# Dispatch event pairing
+# ---------------------------------------------------------------------------
+
+#: Fields whose presence identifies a daytime-schema ``dispatch_complete``
+#: event (lifecycle-skill dispatches, not overnight pipeline dispatches).
+#: These records must be skipped entirely — not treated as untiered.
+_DAYTIME_DISPATCH_FIELDS = frozenset({"mode", "outcome", "pr_url"})
+
+#: Event types processed by the pairing walker.
+_DISPATCH_PAIRABLE = frozenset({"dispatch_start", "dispatch_complete", "dispatch_error"})
+
+#: Sort priority within a single timestamp: starts before completes/errors.
+_DISPATCH_PRIORITY: dict[str, int] = {
+    "dispatch_start": 0,
+    "dispatch_complete": 1,
+    "dispatch_error": 1,
+}
+
+
+def pair_dispatch_events(events: list[dict]) -> list[dict]:
+    """Pair ``dispatch_start`` events to their matching ``dispatch_complete``
+    or ``dispatch_error`` events within a single pipeline log's event list.
+
+    Pairing is FIFO per feature: each completion/error is matched to the
+    *oldest* unmatched preceding ``dispatch_start`` for the same feature.
+    This handles same-feature concurrent retry storms correctly.
+
+    Events are sorted by ``(ts, event_priority)`` before processing so that
+    two events sharing the same timestamp are processed in start-before-
+    complete order.
+
+    Daytime-schema ``dispatch_complete`` events (identified by the presence of
+    ``mode``, ``outcome``, or ``pr_url`` fields) are skipped entirely.
+    ``dispatch_progress``, ``dispatch_retry``, and any other ``dispatch_*``
+    event types not in ``{dispatch_start, dispatch_complete, dispatch_error}``
+    are also silently skipped.
+
+    Orphan completions/errors (no preceding unmatched start for the feature)
+    emit a record with ``tier=None``, ``model=None``, and ``untiered=True``,
+    and raise a ``UserWarning`` via ``warnings.warn``.
+
+    Args:
+        events: All parsed events from **one** pipeline log file, in any order.
+
+    Returns:
+        List of paired dispatch records.  Each record has the shape::
+
+            {
+                "ts": str,
+                "feature": str,
+                "model": str | None,
+                "tier": str | None,
+                "outcome": "complete" | "error",
+                "cost_usd": float | None,
+                "num_turns": int | None,
+                "error_type": str | None,
+                "untiered": bool,
+            }
+    """
+    # Filter to the three pairable event types then sort deterministically.
+    pairable = [
+        e for e in events
+        if e.get("event") in _DISPATCH_PAIRABLE
+    ]
+    pairable.sort(key=lambda e: (e.get("ts", ""), _DISPATCH_PRIORITY.get(e.get("event", ""), 1)))
+
+    # Per-feature FIFO queue of unmatched dispatch_start events.
+    unmatched_starts: dict[str, collections.deque[dict]] = defaultdict(collections.deque)
+
+    results: list[dict] = []
+
+    for evt in pairable:
+        event_type = evt.get("event")
+        feature = evt.get("feature", "")
+
+        if event_type == "dispatch_start":
+            unmatched_starts[feature].append(evt)
+
+        elif event_type == "dispatch_complete":
+            # Skip daytime-schema completions (positive field check).
+            if _DAYTIME_DISPATCH_FIELDS & evt.keys():
+                continue
+
+            queue = unmatched_starts.get(feature)
+            if queue:
+                start = queue.popleft()
+                results.append({
+                    "ts": evt.get("ts", ""),
+                    "feature": feature,
+                    "model": start.get("model"),
+                    "tier": start.get("complexity"),
+                    "outcome": "complete",
+                    "cost_usd": evt.get("cost_usd"),
+                    "num_turns": evt.get("num_turns"),
+                    "error_type": None,
+                    "untiered": False,
+                })
+            else:
+                warnings.warn(
+                    f"pair_dispatch_events: orphan dispatch_complete for feature "
+                    f"{feature!r} at ts={evt.get('ts')!r} — no matching start"
+                )
+                results.append({
+                    "ts": evt.get("ts", ""),
+                    "feature": feature,
+                    "model": None,
+                    "tier": None,
+                    "outcome": "complete",
+                    "cost_usd": evt.get("cost_usd"),
+                    "num_turns": evt.get("num_turns"),
+                    "error_type": None,
+                    "untiered": True,
+                })
+
+        elif event_type == "dispatch_error":
+            queue = unmatched_starts.get(feature)
+            if queue:
+                start = queue.popleft()
+                results.append({
+                    "ts": evt.get("ts", ""),
+                    "feature": feature,
+                    "model": start.get("model"),
+                    "tier": start.get("complexity"),
+                    "outcome": "error",
+                    "cost_usd": None,
+                    "num_turns": None,
+                    "error_type": evt.get("error_type"),
+                    "untiered": False,
+                })
+            else:
+                warnings.warn(
+                    f"pair_dispatch_events: orphan dispatch_error for feature "
+                    f"{feature!r} at ts={evt.get('ts')!r} — no matching start"
+                )
+                results.append({
+                    "ts": evt.get("ts", ""),
+                    "feature": feature,
+                    "model": None,
+                    "tier": None,
+                    "outcome": "error",
+                    "cost_usd": None,
+                    "num_turns": None,
+                    "error_type": evt.get("error_type"),
+                    "untiered": True,
+                })
+
+    return results
 
 
 def extract_all_feature_metrics(

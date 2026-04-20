@@ -13,7 +13,7 @@ Extend `claude/pipeline/metrics.py` with stdlib-only functions that discover and
 - **Complexity**: simple
 - **Context**: Existing discovery pattern at `claude/pipeline/metrics.py:217-229` (`discover_event_logs`). Globs to combine: `lifecycle_dir / "pipeline-events.log"` (single-file candidate, included only if exists) + `sorted(lifecycle_dir.glob("sessions/*/pipeline-events.log"))`. Return deterministic sort. No sharing with existing `discover_event_logs` — that function's per-feature glob is a different input set and must be preserved. New test `test_metrics.py::TestDiscoverPipelineEventLogs::test_pipeline_events_sources` points `discover_pipeline_event_logs` at the fixture tree, asserts it returns all three paths in sorted order, and that the empty-dir case returns `[]`. Python version assertion lives alongside existing imports at module top; message: `"claude/pipeline/metrics.py requires Python 3.11+ for datetime.fromisoformat offset handling"`.
 - **Verification**: `pytest claude/pipeline/tests/test_metrics.py -k pipeline_events_sources` — pass if exit 0
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 2: Implement pair_dispatch_events() with per-file, FIFO-queue semantics
 - **Files**: `claude/pipeline/metrics.py`, `claude/pipeline/tests/test_metrics.py`

@@ -11,3 +11,6 @@
 {"ts":"2026-04-20T11:39:24Z","event":"orchestrator_review","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","phase":"plan","verdict":"pass","cycle":2,"issues":[]}
 {"ts":"2026-04-20T11:48:51Z","event":"critical_review","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","phase":"plan","objections_applied":5,"concerns_applied":4,"concerns_dismissed":1,"task_count_before":7,"task_count_after":6}
 {"ts":"2026-04-20T11:58:28Z","event":"phase_transition","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","from":"plan","to":"implement"}
+{"ts":"2026-04-20T11:59:20Z","event":"batch_dispatch","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","batch":0,"tasks":[1]}
+{"ts":"2026-04-20T12:02:15Z","event":"task_complete","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","task":1,"batch":0,"status":"success"}
+{"ts":"2026-04-20T12:02:30Z","event":"batch_dispatch","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","batch":1,"tasks":[2,4]}
