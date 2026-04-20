@@ -18,9 +18,11 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
 import re
 import statistics
 import sys
+import tempfile
 import warnings
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -1099,10 +1101,17 @@ def main(argv: list[str] | None = None) -> None:
         output["untiered_count"] = untiered_count
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(output, indent=2) + "\n",
+    with tempfile.NamedTemporaryFile(
+        mode="w",
         encoding="utf-8",
-    )
+        dir=output_path.parent,
+        prefix=f".{output_path.name}.",
+        suffix=".tmp",
+        delete=False,
+    ) as tf:
+        tf.write(json.dumps(output, indent=2) + "\n")
+        tmp_path = tf.name
+    os.replace(tmp_path, output_path)
     print(f"  Wrote {output_path}")
 
     # ---- Optional human-readable report ----

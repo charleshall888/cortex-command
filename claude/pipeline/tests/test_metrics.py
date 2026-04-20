@@ -546,6 +546,29 @@ class TestModelTierAggregates(unittest.TestCase):
     # (g) Untiered bucket
     # ------------------------------------------------------------------
 
+    def test_error_type_frequency_novel_strings_passthrough(self):
+        """Novel error_type strings pass through under their raw value
+        without erroring. error_counts is keyed by the raw error_type string
+        — no enum whitelist, no case-folding — so an aggregator run over
+        logs containing never-before-seen error types produces correct
+        frequency counts rather than dropping or coercing them.
+        """
+        paired = [
+            self._make_error("sonnet", "simple", "cosmic_ray_flip", feature="f1"),
+            self._make_error("sonnet", "simple", "cosmic_ray_flip", feature="f2"),
+            self._make_error("sonnet", "simple", "quantum_tunneling", feature="f3"),
+            self._make_error("sonnet", "simple", "API-Misuse", feature="f4"),
+        ]
+        result = self._fn(paired)
+
+        self.assertIn("sonnet,simple", result)
+        bucket = result["sonnet,simple"]
+        self.assertEqual(bucket["n_errors"], 4)
+        self.assertEqual(
+            bucket["error_counts"],
+            {"cosmic_ray_flip": 2, "quantum_tunneling": 1, "API-Misuse": 1},
+        )
+
     def test_untiered_bucket(self):
         """Untiered records bucket under 'untiered,untiered' with
         is_untiered=True, budget_cap_usd=None, over_cap_rate=None."""
