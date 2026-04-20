@@ -885,6 +885,134 @@ def _parse_since(s: str) -> datetime:
         )
 
 
+def _format_tier_dispatch_report(metrics_data: dict[str, Any], since: datetime | None) -> str:
+    """Format the tier-dispatch report as a human-readable fixed-width table.
+
+    Args:
+        metrics_data: The parsed contents of ``metrics.json``.
+        since: The ``--since`` datetime if provided, else ``None``.
+
+    Returns:
+        A multi-line string containing headers, optional window/orphan banners,
+        and the formatted table.
+    """
+    aggregates: dict[str, dict] = metrics_data.get("model_tier_dispatch_aggregates", {})
+    lines: list[str] = []
+
+    # Window header (when --since was supplied).
+    if since is not None:
+        since_str = since.strftime("%Y-%m-%d")
+        lines.append(
+            f"Window: since {since_str} (per-dispatch aggregates only; per-feature metrics are all-time)"
+        )
+
+    # Orphan banner (when untiered records exist).
+    untiered_count: int = metrics_data.get("untiered_count", 0)
+    if untiered_count > 0:
+        lines.append(
+            f"\u26a0 {untiered_count} dispatches had no matching dispatch_start (bucketed as untiered)"
+        )
+
+    # Empty aggregates case.
+    if not aggregates:
+        if since is not None:
+            since_str = since.strftime("%Y-%m-%d")
+            lines.append(f"No dispatch data found after {since_str}")
+        else:
+            lines.append("No dispatch data found")
+        return "\n".join(lines)
+
+    # Column headers — cost columns include "(estimated)" suffix per spec.
+    col_headers = [
+        "(model, tier)",
+        "n_completes",
+        "n_errors",
+        "mean_turns",
+        "p95_turns",
+        "mean_cost_usd (estimated)",
+        "median_cost_usd (estimated)",
+        "max_cost_usd (estimated)",
+        "budget_cap_usd",
+        "over_cap_rate",
+        "error_counts_summary",
+    ]
+
+    def _fmt_float(v: float | None, decimals: int = 2) -> str:
+        if v is None:
+            return "—"
+        return f"{v:.{decimals}f}"
+
+    def _fmt_rate(v: float | None) -> str:
+        if v is None:
+            return "—"
+        return f"{v:.2%}"
+
+    def _fmt_p95_turns(bucket: dict) -> str:
+        if bucket.get("p95_suppressed"):
+            max_obs = bucket.get("max_turns_observed")
+            if max_obs is None:
+                return "— [n<30]"
+            return f"{max_obs} [n<30]"
+        p95 = bucket.get("num_turns_p95")
+        if p95 is None:
+            return "—"
+        return f"{p95:.1f}"
+
+    def _fmt_error_counts(error_counts: dict) -> str:
+        if not error_counts:
+            return "-"
+        return ",".join(f"{k}:{v}" for k, v in sorted(error_counts.items()))
+
+    # Build rows: sorted keys, with untiered bucket last.
+    sorted_keys = sorted(k for k in aggregates if k != "untiered,untiered")
+    if "untiered,untiered" in aggregates:
+        sorted_keys.append("untiered,untiered")
+
+    rows: list[list[str]] = []
+    for key in sorted_keys:
+        bucket = aggregates[key]
+        is_untiered = bucket.get("is_untiered", False)
+
+        # Format the (model, tier) display key.
+        if "," in key:
+            model_part, tier_part = key.split(",", 1)
+        else:
+            model_part, tier_part = key, key
+        display_key = f"({model_part}, {tier_part})"
+
+        row = [
+            display_key,
+            str(bucket.get("n_completes", 0)),
+            str(bucket.get("n_errors", 0)),
+            _fmt_float(bucket.get("num_turns_mean"), 1),
+            _fmt_p95_turns(bucket),
+            _fmt_float(bucket.get("estimated_cost_usd_mean")),
+            _fmt_float(bucket.get("estimated_cost_usd_median")),
+            _fmt_float(bucket.get("estimated_cost_usd_max")),
+            "—" if is_untiered else _fmt_float(bucket.get("budget_cap_usd")),
+            "—" if is_untiered else _fmt_rate(bucket.get("over_cap_rate")),
+            _fmt_error_counts(bucket.get("error_counts", {})),
+        ]
+        rows.append(row)
+
+    # Compute column widths.
+    col_widths = [len(h) for h in col_headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            if len(cell) > col_widths[i]:
+                col_widths[i] = len(cell)
+
+    def _fmt_row(cells: list[str]) -> str:
+        return "  ".join(cell.ljust(col_widths[i]) for i, cell in enumerate(cells))
+
+    lines.append(_fmt_row(col_headers))
+    lines.append("  ".join("-" * w for w in col_widths))
+    for row in rows:
+        lines.append(_fmt_row(row))
+
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> None:
     """Run the full metrics pipeline: discover, parse, extract, aggregate,
     calibrate, and write ``lifecycle/metrics.json``.
@@ -907,6 +1035,12 @@ def main(argv: list[str] | None = None) -> None:
         type=_parse_since,
         default=None,
         help="Filter dispatch events to those on or after YYYY-MM-DD (UTC midnight). Does not affect per-feature metrics.",
+    )
+    parser.add_argument(
+        "--report",
+        choices=["tier-dispatch"],
+        default=None,
+        help="After writing metrics.json, print a human-readable report to stdout.",
     )
     args = parser.parse_args(argv)
 
@@ -970,6 +1104,12 @@ def main(argv: list[str] | None = None) -> None:
         encoding="utf-8",
     )
     print(f"  Wrote {output_path}")
+
+    # ---- Optional human-readable report ----
+    if args.report == "tier-dispatch":
+        metrics_data = json.loads(output_path.read_text(encoding="utf-8"))
+        report_str = _format_tier_dispatch_report(metrics_data, args.since)
+        print(report_str)
 
 
 if __name__ == "__main__":

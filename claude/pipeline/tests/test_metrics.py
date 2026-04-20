@@ -573,5 +573,297 @@ class TestModelTierAggregates(unittest.TestCase):
         self.assertEqual(bucket["n_completes"], 1)
 
 
+class TestReportTierDispatch(unittest.TestCase):
+    """Tests for the --report tier-dispatch CLI output."""
+
+    def _run_report(self, argv: list[str], root: "Path | None" = None):
+        """Run main() with the given argv, capturing stdout.
+
+        Returns the captured stdout string.
+        """
+        import io
+        import sys
+        from claude.pipeline.metrics import main
+
+        captured = io.StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = captured
+        try:
+            main(argv)
+        finally:
+            sys.stdout = old_stdout
+        return captured.getvalue()
+
+    def _make_root_with_aggregates(
+        self,
+        tmp_path: Path,
+        paired_records: list[dict],
+        since: "datetime | None" = None,
+    ) -> tuple[Path, str]:
+        """Write a minimal lifecycle dir with pipeline-events.log for the given
+        paired records.
+
+        The paired records are converted back to raw dispatch_start /
+        dispatch_complete events so the main pipeline can parse them.
+
+        Returns ``(root, lifecycle_dir_as_str)``.
+        """
+        lifecycle_dir = tmp_path / "lifecycle"
+        lifecycle_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write raw events from paired records so main() can pair them.
+        import json as _json
+        raw_events = []
+        for rec in paired_records:
+            if rec.get("untiered"):
+                # orphan: write only a dispatch_complete (no matching start)
+                raw_events.append({
+                    "event": "dispatch_complete",
+                    "ts": rec.get("ts", "2026-04-01T00:01:00Z"),
+                    "feature": rec["feature"],
+                    "cost_usd": rec.get("cost_usd"),
+                    "num_turns": rec.get("num_turns"),
+                    "duration_ms": 1000,
+                })
+            elif rec.get("outcome") == "error":
+                start_ts = "2026-04-01T00:00:00Z"
+                raw_events.append({
+                    "event": "dispatch_start",
+                    "ts": start_ts,
+                    "feature": rec["feature"],
+                    "complexity": rec.get("tier", "simple"),
+                    "criticality": "high",
+                    "model": rec.get("model", "sonnet"),
+                    "effort": "high",
+                    "max_turns": 20,
+                    "max_budget_usd": 10.0,
+                })
+                raw_events.append({
+                    "event": "dispatch_error",
+                    "ts": rec.get("ts", "2026-04-01T00:01:00Z"),
+                    "feature": rec["feature"],
+                    "error_type": rec.get("error_type", "unknown"),
+                    "error_detail": "test error",
+                })
+            else:
+                start_ts = "2026-04-01T00:00:00Z"
+                raw_events.append({
+                    "event": "dispatch_start",
+                    "ts": start_ts,
+                    "feature": rec["feature"],
+                    "complexity": rec.get("tier", "simple"),
+                    "criticality": "high",
+                    "model": rec.get("model", "sonnet"),
+                    "effort": "high",
+                    "max_turns": 20,
+                    "max_budget_usd": 10.0,
+                })
+                raw_events.append({
+                    "event": "dispatch_complete",
+                    "ts": rec.get("ts", "2026-04-01T00:01:00Z"),
+                    "feature": rec["feature"],
+                    "cost_usd": rec.get("cost_usd"),
+                    "num_turns": rec.get("num_turns"),
+                    "duration_ms": 1000,
+                })
+
+        log_path = lifecycle_dir / "pipeline-events.log"
+        log_path.write_text(
+            "\n".join(_json.dumps(e) for e in raw_events) + "\n",
+            encoding="utf-8",
+        )
+        return tmp_path
+
+    # ------------------------------------------------------------------
+    # (a) Populated aggregates → stdout contains "(estimated)" and each
+    #     bucket key
+    # ------------------------------------------------------------------
+
+    def test_report_tier_dispatch_populated_aggregates(self):
+        """Populated aggregates: stdout contains '(estimated)' header and
+        each bucket key in some form."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = self._make_root_with_aggregates(
+                Path(tmpdir),
+                [
+                    {
+                        "feature": "feat-a",
+                        "model": "sonnet",
+                        "tier": "simple",
+                        "outcome": "complete",
+                        "cost_usd": 1.5,
+                        "num_turns": 5,
+                        "ts": "2026-04-01T00:01:00Z",
+                    },
+                ],
+            )
+            output = self._run_report(
+                ["--root", str(root), "--report", "tier-dispatch"]
+            )
+        self.assertIn("(estimated)", output)
+        self.assertIn("sonnet", output)
+        self.assertIn("simple", output)
+
+    # ------------------------------------------------------------------
+    # (b) Empty aggregates → stdout contains "No dispatch data found"
+    #     and exit 0
+    # ------------------------------------------------------------------
+
+    def test_report_tier_dispatch_empty_aggregates(self):
+        """Empty aggregates (no pipeline-events.log): stdout contains
+        'No dispatch data found'."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            lifecycle_dir = root / "lifecycle"
+            lifecycle_dir.mkdir(parents=True, exist_ok=True)
+            output = self._run_report(
+                ["--root", str(root), "--report", "tier-dispatch"]
+            )
+        self.assertIn("No dispatch data found", output)
+
+    # ------------------------------------------------------------------
+    # (c) --since 2099-01-01 → stdout contains "No dispatch data found
+    #     after 2099-01-01"
+    # ------------------------------------------------------------------
+
+    def test_report_tier_dispatch_future_since(self):
+        """--since 2099-01-01 (far future): stdout contains
+        'No dispatch data found after 2099-01-01'."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            lifecycle_dir = root / "lifecycle"
+            lifecycle_dir.mkdir(parents=True, exist_ok=True)
+            output = self._run_report(
+                ["--root", str(root), "--report", "tier-dispatch", "--since", "2099-01-01"]
+            )
+        self.assertIn("No dispatch data found after 2099-01-01", output)
+
+    # ------------------------------------------------------------------
+    # (d) Populated + --since 2026-04-18 → stdout contains the window
+    #     header line
+    # ------------------------------------------------------------------
+
+    def test_report_tier_dispatch_since_window_header(self):
+        """--since 2026-04-18 with populated aggregates: stdout contains
+        the window header."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = self._make_root_with_aggregates(
+                Path(tmpdir),
+                [
+                    {
+                        "feature": "feat-a",
+                        "model": "sonnet",
+                        "tier": "simple",
+                        "outcome": "complete",
+                        "cost_usd": 1.0,
+                        "num_turns": 4,
+                        "ts": "2026-04-18T01:00:00Z",
+                    },
+                ],
+            )
+            output = self._run_report(
+                ["--root", str(root), "--report", "tier-dispatch", "--since", "2026-04-18"]
+            )
+        self.assertIn("Window: since 2026-04-18", output)
+        self.assertIn("per-dispatch aggregates only; per-feature metrics are all-time", output)
+
+    # ------------------------------------------------------------------
+    # (e) Aggregates with 2 untiered records → stdout contains
+    #     "⚠ 2 dispatches had no matching dispatch_start"
+    # ------------------------------------------------------------------
+
+    def test_report_tier_dispatch_untiered_orphan_banner(self):
+        """2 untiered records: stdout contains the orphan banner with
+        the correct count."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = self._make_root_with_aggregates(
+                Path(tmpdir),
+                [
+                    {
+                        "feature": "feat-orphan-1",
+                        "model": None,
+                        "tier": None,
+                        "outcome": "complete",
+                        "cost_usd": 1.0,
+                        "num_turns": 3,
+                        "ts": "2026-04-01T00:01:00Z",
+                        "untiered": True,
+                    },
+                    {
+                        "feature": "feat-orphan-2",
+                        "model": None,
+                        "tier": None,
+                        "outcome": "complete",
+                        "cost_usd": 2.0,
+                        "num_turns": 5,
+                        "ts": "2026-04-01T00:02:00Z",
+                        "untiered": True,
+                    },
+                ],
+            )
+            output = self._run_report(
+                ["--root", str(root), "--report", "tier-dispatch"]
+            )
+        self.assertIn("2 dispatches had no matching dispatch_start", output)
+
+    # ------------------------------------------------------------------
+    # (f) Bucket with errors → error_counts_summary column renders
+    #     the condensed string
+    # ------------------------------------------------------------------
+
+    def test_report_tier_dispatch_error_counts_summary(self):
+        """Bucket with errors: error_counts_summary column shows condensed
+        string like 'timeout:3,rate_limit:1'."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = self._make_root_with_aggregates(
+                Path(tmpdir),
+                [
+                    {
+                        "feature": "feat-e1",
+                        "model": "sonnet",
+                        "tier": "simple",
+                        "outcome": "error",
+                        "error_type": "timeout",
+                        "ts": "2026-04-01T00:01:00Z",
+                    },
+                    {
+                        "feature": "feat-e2",
+                        "model": "sonnet",
+                        "tier": "simple",
+                        "outcome": "error",
+                        "error_type": "timeout",
+                        "ts": "2026-04-01T00:01:01Z",
+                    },
+                    {
+                        "feature": "feat-e3",
+                        "model": "sonnet",
+                        "tier": "simple",
+                        "outcome": "error",
+                        "error_type": "timeout",
+                        "ts": "2026-04-01T00:01:02Z",
+                    },
+                    {
+                        "feature": "feat-e4",
+                        "model": "sonnet",
+                        "tier": "simple",
+                        "outcome": "error",
+                        "error_type": "rate_limit",
+                        "ts": "2026-04-01T00:01:03Z",
+                    },
+                ],
+            )
+            output = self._run_report(
+                ["--root", str(root), "--report", "tier-dispatch"]
+            )
+        self.assertIn("timeout:3", output)
+        self.assertIn("rate_limit:1", output)
+
+
 if __name__ == "__main__":
     unittest.main()

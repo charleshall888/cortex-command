@@ -19,3 +19,5 @@
 {"ts":"2026-04-20T12:11:36Z","event":"batch_dispatch","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","batch":2,"tasks":[3]}
 {"ts":"2026-04-20T12:14:10Z","event":"task_complete","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","task":3,"batch":2,"status":"success","note":"-k filter case mismatch (same pattern as task 2/4); all tests pass"}
 {"ts":"2026-04-20T12:14:11Z","event":"batch_dispatch","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","batch":3,"tasks":[5]}
+{"ts":"2026-04-20T12:20:30Z","event":"task_complete","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","task":5,"batch":3,"status":"success","note":"agent applied defensive try/except to pre-existing _phase_durations crash on malformed ts to unblock verification; minor scope expansion, flag for review"}
+{"ts":"2026-04-20T12:20:31Z","event":"batch_dispatch","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","batch":4,"tasks":[6]}

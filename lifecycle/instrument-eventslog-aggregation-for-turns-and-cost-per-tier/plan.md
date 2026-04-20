@@ -49,7 +49,7 @@ Extend `claude/pipeline/metrics.py` with stdlib-only functions that discover and
 - **Complexity**: simple
 - **Context**: Insertion point `claude/pipeline/metrics.py:534-547` (the `output` dict assembly). Preserve existing key order: append new keys after `calibration`. Atomic-write pattern at `metrics.py:542-546` is unchanged. Per-file invocation of `pair_dispatch_events` is the architectural fix for the file-local pairing invariant — a single concatenation across files before pairing would allow a `dispatch_complete` in session B to pair to a `dispatch_start` in session A if the latter's session rotated out mid-dispatch.
 - **Verification**: `python3 -m claude.pipeline.metrics` — pass if exit 0 AND `python3 -c "import json, pathlib; d = json.loads(pathlib.Path('lifecycle/metrics.json').read_text()); assert all(k in d for k in ['generated_at','features','aggregates','calibration','model_tier_dispatch_aggregates'])"` exits 0 AND `pytest claude/dashboard/tests/test_data.py::TestParseMetrics::test_valid_json_returns_dict_unchanged -v` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 6: Add --report tier-dispatch CLI output with window and orphan banners
 - **Files**: `claude/pipeline/metrics.py`, `claude/pipeline/tests/test_metrics.py`
