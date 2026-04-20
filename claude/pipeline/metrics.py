@@ -25,6 +25,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+assert sys.version_info >= (3, 11), (
+    "claude/pipeline/metrics.py requires Python 3.11+ for datetime.fromisoformat offset handling"
+)
+
 # ---------------------------------------------------------------------------
 # Backfill detection
 # ---------------------------------------------------------------------------
@@ -227,6 +231,28 @@ def discover_event_logs(lifecycle_dir: Path) -> list[Path]:
         return []
     logs = sorted(lifecycle_dir.glob("*/events.log"))
     return logs
+
+
+def discover_pipeline_event_logs(lifecycle_dir: Path) -> list[Path]:
+    """Find all ``pipeline-events.log`` files under *lifecycle_dir*.
+
+    Returns the root-level ``pipeline-events.log`` (if present) plus all
+    ``sessions/*/pipeline-events.log`` files, in sorted order.
+
+    Args:
+        lifecycle_dir: The ``lifecycle/`` directory at the repo root.
+
+    Returns:
+        Sorted list of paths to ``pipeline-events.log`` files.
+    """
+    if not lifecycle_dir.is_dir():
+        return []
+    logs: list[Path] = []
+    root_log = lifecycle_dir / "pipeline-events.log"
+    if root_log.exists():
+        logs.append(root_log)
+    logs.extend(sorted(lifecycle_dir.glob("sessions/*/pipeline-events.log")))
+    return sorted(logs)
 
 
 def extract_all_feature_metrics(
