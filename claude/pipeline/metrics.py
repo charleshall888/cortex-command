@@ -19,6 +19,7 @@ import argparse
 import collections
 import json
 import re
+import statistics
 import sys
 import warnings
 from collections import defaultdict
@@ -431,6 +432,173 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                 })
 
     return results
+
+
+def compute_model_tier_dispatch_aggregates(paired: list[dict]) -> dict[str, dict]:
+    """Group paired dispatch records by (model, tier) and compute per-bucket aggregates.
+
+    Paired records are the output of :func:`pair_dispatch_events`.  Each bucket
+    accumulates ``outcome="complete"`` records for cost/turn statistics and
+    ``outcome="error"`` records for error counts.
+
+    Bucket keys are formatted as ``"<model>,<tier>"`` strings for JSON
+    compatibility.  Records with ``untiered=True`` (orphaned dispatches with
+    unknown model/tier) are grouped under the literal key ``"untiered,untiered"``
+    with ``is_untiered=True``.
+
+    Statistical rules:
+
+    * When ``n_completes >= 30``: ``num_turns_p95`` is the 95th percentile
+      (``statistics.quantiles`` with ``n=100, method='inclusive'``),
+      ``p95_suppressed=False``, ``max_turns_observed=None``.
+    * When ``0 < n_completes < 30``: ``num_turns_p95=None``,
+      ``p95_suppressed=True``, ``max_turns_observed=max(turns)``.
+    * When ``n_completes == 0``: all cost/turn stats are ``None``,
+      ``p95_suppressed=False``.
+
+    ``budget_cap_usd`` and ``turn_cap_observed_rate`` are looked up from
+    :data:`TIER_CONFIG` via the tier key.  The ``"untiered,untiered"`` bucket
+    emits ``None`` for those fields.
+
+    ``over_cap_rate`` is computed when ``n_completes > 0`` and ``budget_cap_usd``
+    is not ``None``.
+
+    Args:
+        paired: List of paired dispatch records from :func:`pair_dispatch_events`.
+
+    Returns:
+        Dict mapping ``"<model>,<tier>"`` string keys to per-bucket aggregate
+        dicts.  Each bucket contains:
+
+        ``n_completes``, ``n_errors``, ``num_turns_mean``, ``num_turns_median``,
+        ``num_turns_p95``, ``max_turns_observed``, ``p95_suppressed``,
+        ``estimated_cost_usd_mean``, ``estimated_cost_usd_median``,
+        ``estimated_cost_usd_max``, ``budget_cap_usd``, ``over_cap_rate``,
+        ``turn_cap_observed_rate``, ``error_counts``, ``is_untiered``.
+    """
+    from claude.pipeline.dispatch import TIER_CONFIG
+
+    # Group records by bucket key.
+    completes_by_bucket: dict[str, list[dict]] = defaultdict(list)
+    errors_by_bucket: dict[str, list[dict]] = defaultdict(list)
+    is_untiered_bucket: set[str] = set()
+
+    for rec in paired:
+        if rec.get("untiered"):
+            key = "untiered,untiered"
+            is_untiered_bucket.add(key)
+        else:
+            model = rec.get("model") or "unknown"
+            tier = rec.get("tier") or "unknown"
+            key = f"{model},{tier}"
+
+        outcome = rec.get("outcome")
+        if outcome == "complete":
+            completes_by_bucket[key].append(rec)
+        elif outcome == "error":
+            errors_by_bucket[key].append(rec)
+
+    # Collect all bucket keys seen across both sides.
+    all_keys = set(completes_by_bucket.keys()) | set(errors_by_bucket.keys())
+
+    result: dict[str, dict] = {}
+
+    for key in sorted(all_keys):
+        completes = completes_by_bucket.get(key, [])
+        errors = errors_by_bucket.get(key, [])
+        n_completes = len(completes)
+        n_errors = len(errors)
+        is_untiered = key in is_untiered_bucket
+
+        # -- Cost / turn stats from completes --
+        turns = [r["num_turns"] for r in completes if r.get("num_turns") is not None]
+        costs = [r["cost_usd"] for r in completes if r.get("cost_usd") is not None]
+
+        if n_completes == 0:
+            num_turns_mean: float | None = None
+            num_turns_median: float | None = None
+            num_turns_p95: float | None = None
+            max_turns_observed: int | None = None
+            p95_suppressed = False
+            estimated_cost_usd_mean: float | None = None
+            estimated_cost_usd_median: float | None = None
+            estimated_cost_usd_max: float | None = None
+        else:
+            num_turns_mean = statistics.fmean(turns) if turns else None
+            num_turns_median = statistics.median(turns) if turns else None
+            if n_completes >= 30:
+                num_turns_p95 = statistics.quantiles(turns, n=100, method="inclusive")[94] if turns else None
+                p95_suppressed = False
+                max_turns_observed = None
+            else:
+                num_turns_p95 = None
+                p95_suppressed = True
+                max_turns_observed = max(turns) if turns else None
+            estimated_cost_usd_mean = statistics.fmean(costs) if costs else None
+            estimated_cost_usd_median = statistics.median(costs) if costs else None
+            estimated_cost_usd_max = max(costs) if costs else None
+
+        # -- Tier config lookup --
+        if is_untiered:
+            budget_cap_usd: float | None = None
+            over_cap_rate: float | None = None
+            turn_cap_observed_rate: float | None = None
+        else:
+            # Extract the tier portion of the key (second element after comma).
+            tier_part = key.split(",", 1)[1] if "," in key else key
+            tier_cfg = TIER_CONFIG.get(tier_part)
+            if tier_cfg is not None:
+                budget_cap_usd = tier_cfg.get("max_budget_usd")
+                max_turns_cfg = tier_cfg.get("max_turns")
+            else:
+                budget_cap_usd = None
+                max_turns_cfg = None
+
+            # over_cap_rate: fraction of completes whose cost exceeds the cap.
+            if n_completes > 0 and budget_cap_usd is not None:
+                over_cap_count = sum(
+                    1 for r in completes
+                    if r.get("cost_usd") is not None and r["cost_usd"] > budget_cap_usd
+                )
+                over_cap_rate = over_cap_count / n_completes
+            else:
+                over_cap_rate = None
+
+            # turn_cap_observed_rate: fraction of completes that hit the turn cap.
+            if n_completes > 0 and max_turns_cfg is not None:
+                at_cap_count = sum(
+                    1 for r in completes
+                    if r.get("num_turns") is not None and r["num_turns"] >= max_turns_cfg
+                )
+                turn_cap_observed_rate = at_cap_count / n_completes
+            else:
+                turn_cap_observed_rate = None
+
+        # -- Error counts --
+        error_counts: dict[str, int] = {}
+        for err_rec in errors:
+            etype = err_rec.get("error_type") or "unknown"
+            error_counts[etype] = error_counts.get(etype, 0) + 1
+
+        result[key] = {
+            "n_completes": n_completes,
+            "n_errors": n_errors,
+            "num_turns_mean": num_turns_mean,
+            "num_turns_median": num_turns_median,
+            "num_turns_p95": num_turns_p95,
+            "max_turns_observed": max_turns_observed,
+            "p95_suppressed": p95_suppressed,
+            "estimated_cost_usd_mean": estimated_cost_usd_mean,
+            "estimated_cost_usd_median": estimated_cost_usd_median,
+            "estimated_cost_usd_max": estimated_cost_usd_max,
+            "budget_cap_usd": budget_cap_usd,
+            "over_cap_rate": over_cap_rate,
+            "turn_cap_observed_rate": turn_cap_observed_rate,
+            "error_counts": error_counts,
+            "is_untiered": is_untiered,
+        }
+
+    return result
 
 
 def extract_all_feature_metrics(

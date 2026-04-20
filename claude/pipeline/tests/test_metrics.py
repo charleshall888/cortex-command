@@ -362,5 +362,216 @@ class TestSinceFlag(unittest.TestCase):
             self._parse_since("yesterday")
 
 
+DISPATCH_OVER_CAP_FIXTURE = FIXTURES_DIR / "dispatch_over_cap.jsonl"
+
+
+class TestModelTierAggregates(unittest.TestCase):
+    """Tests for compute_model_tier_dispatch_aggregates."""
+
+    def _fn(self, paired):
+        from claude.pipeline.metrics import compute_model_tier_dispatch_aggregates
+        return compute_model_tier_dispatch_aggregates(paired)
+
+    def _make_complete(self, model, tier, cost_usd, num_turns, feature="feat-x", ts="2026-04-01T00:01:00Z"):
+        return {
+            "ts": ts,
+            "feature": feature,
+            "model": model,
+            "tier": tier,
+            "outcome": "complete",
+            "cost_usd": cost_usd,
+            "num_turns": num_turns,
+            "error_type": None,
+            "untiered": False,
+        }
+
+    def _make_error(self, model, tier, error_type, feature="feat-x", ts="2026-04-01T00:01:00Z"):
+        return {
+            "ts": ts,
+            "feature": feature,
+            "model": model,
+            "tier": tier,
+            "outcome": "error",
+            "cost_usd": None,
+            "num_turns": None,
+            "error_type": error_type,
+            "untiered": False,
+        }
+
+    # ------------------------------------------------------------------
+    # (a) n=3 bucket: p95_suppressed=True, max_turns_observed set,
+    #     num_turns_p95=None
+    # ------------------------------------------------------------------
+
+    def test_small_bucket_p95_suppressed(self):
+        """n=3 complete bucket: p95_suppressed=True, max_turns_observed
+        equals the maximum num_turns, num_turns_p95=None."""
+        paired = [
+            self._make_complete("sonnet", "simple", cost_usd=1.0, num_turns=5),
+            self._make_complete("sonnet", "simple", cost_usd=2.0, num_turns=10),
+            self._make_complete("sonnet", "simple", cost_usd=3.0, num_turns=15),
+        ]
+        result = self._fn(paired)
+
+        self.assertIn("sonnet,simple", result)
+        bucket = result["sonnet,simple"]
+        self.assertEqual(bucket["n_completes"], 3)
+        self.assertTrue(bucket["p95_suppressed"])
+        self.assertEqual(bucket["max_turns_observed"], 15)
+        self.assertIsNone(bucket["num_turns_p95"])
+
+    # ------------------------------------------------------------------
+    # (b) n=100 bucket: num_turns_p95 computed, p95_suppressed=False
+    # ------------------------------------------------------------------
+
+    def test_large_bucket_p95_computed(self):
+        """n=100 complete bucket: num_turns_p95 equals the 95th percentile
+        via statistics.quantiles, p95_suppressed=False."""
+        import statistics as _stats
+        paired = [
+            self._make_complete("sonnet", "simple", cost_usd=i * 0.5, num_turns=i,
+                                feature=f"feat-{i}", ts="2026-04-01T00:01:00Z")
+            for i in range(100)
+        ]
+        result = self._fn(paired)
+
+        self.assertIn("sonnet,simple", result)
+        bucket = result["sonnet,simple"]
+        self.assertEqual(bucket["n_completes"], 100)
+        self.assertFalse(bucket["p95_suppressed"])
+        self.assertIsNone(bucket["max_turns_observed"])
+
+        turns = list(range(100))
+        expected_p95 = _stats.quantiles(turns, n=100, method="inclusive")[94]
+        self.assertAlmostEqual(bucket["num_turns_p95"], expected_p95)
+
+    # ------------------------------------------------------------------
+    # (c) over_cap_rate: fixture with 4 opus/complex dispatches, 2 over cap
+    # ------------------------------------------------------------------
+
+    def test_over_cap_rate_from_fixture(self):
+        """dispatch_over_cap.jsonl: 4 opus/complex dispatches where 2 exceed
+        the $50 cap → over_cap_rate == 0.5."""
+        import json
+        events = []
+        for line in DISPATCH_OVER_CAP_FIXTURE.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                events.append(json.loads(line))
+
+        from claude.pipeline.metrics import pair_dispatch_events
+        paired = pair_dispatch_events(events)
+        result = self._fn(paired)
+
+        self.assertIn("opus,complex", result)
+        bucket = result["opus,complex"]
+        self.assertEqual(bucket["n_completes"], 4)
+        self.assertAlmostEqual(bucket["over_cap_rate"], 0.5)
+
+    # ------------------------------------------------------------------
+    # (d) Mixed complete + error records in same bucket
+    # ------------------------------------------------------------------
+
+    def test_mixed_complete_and_errors(self):
+        """2 complete + 3 error records (mix of agent_timeout and
+        api_rate_limit): n_completes=2, n_errors=3,
+        error_counts={agent_timeout: 2, api_rate_limit: 1},
+        num_turns_mean computed from the 2 completes."""
+        paired = [
+            self._make_complete("sonnet", "simple", cost_usd=1.0, num_turns=4, feature="f1"),
+            self._make_complete("sonnet", "simple", cost_usd=2.0, num_turns=6, feature="f2"),
+            self._make_error("sonnet", "simple", "agent_timeout", feature="f3"),
+            self._make_error("sonnet", "simple", "agent_timeout", feature="f4"),
+            self._make_error("sonnet", "simple", "api_rate_limit", feature="f5"),
+        ]
+        result = self._fn(paired)
+
+        self.assertIn("sonnet,simple", result)
+        bucket = result["sonnet,simple"]
+        self.assertEqual(bucket["n_completes"], 2)
+        self.assertEqual(bucket["n_errors"], 3)
+        self.assertEqual(bucket["error_counts"], {"agent_timeout": 2, "api_rate_limit": 1})
+        self.assertAlmostEqual(bucket["num_turns_mean"], 5.0)
+
+    # ------------------------------------------------------------------
+    # (e) All-error bucket: 0 complete + 2 errors
+    # ------------------------------------------------------------------
+
+    def test_all_errors_no_completes(self):
+        """0 complete + 2 error records: n_completes=0,
+        error_counts={agent_timeout: 2}, all cost/turn stats None."""
+        paired = [
+            self._make_error("sonnet", "simple", "agent_timeout", feature="f1"),
+            self._make_error("sonnet", "simple", "agent_timeout", feature="f2"),
+        ]
+        result = self._fn(paired)
+
+        self.assertIn("sonnet,simple", result)
+        bucket = result["sonnet,simple"]
+        self.assertEqual(bucket["n_completes"], 0)
+        self.assertEqual(bucket["error_counts"], {"agent_timeout": 2})
+        self.assertIsNone(bucket["num_turns_mean"])
+        self.assertIsNone(bucket["num_turns_median"])
+        self.assertIsNone(bucket["num_turns_p95"])
+        self.assertIsNone(bucket["max_turns_observed"])
+        self.assertIsNone(bucket["estimated_cost_usd_mean"])
+        self.assertIsNone(bucket["estimated_cost_usd_median"])
+        self.assertIsNone(bucket["estimated_cost_usd_max"])
+
+    # ------------------------------------------------------------------
+    # (f) Two distinct buckets are independent
+    # ------------------------------------------------------------------
+
+    def test_distinct_bucket_independence(self):
+        """(sonnet, simple) and (opus, complex) buckets are computed
+        independently; each has correct n_completes."""
+        paired = [
+            self._make_complete("sonnet", "simple", cost_usd=1.0, num_turns=5, feature="s1"),
+            self._make_complete("sonnet", "simple", cost_usd=2.0, num_turns=8, feature="s2"),
+            self._make_complete("opus", "complex", cost_usd=40.0, num_turns=20, feature="o1"),
+        ]
+        result = self._fn(paired)
+
+        self.assertIn("sonnet,simple", result)
+        self.assertIn("opus,complex", result)
+        self.assertEqual(result["sonnet,simple"]["n_completes"], 2)
+        self.assertEqual(result["opus,complex"]["n_completes"], 1)
+        # Buckets don't bleed into each other
+        self.assertNotEqual(
+            result["sonnet,simple"]["estimated_cost_usd_mean"],
+            result["opus,complex"]["estimated_cost_usd_mean"],
+        )
+
+    # ------------------------------------------------------------------
+    # (g) Untiered bucket
+    # ------------------------------------------------------------------
+
+    def test_untiered_bucket(self):
+        """Untiered records bucket under 'untiered,untiered' with
+        is_untiered=True, budget_cap_usd=None, over_cap_rate=None."""
+        paired = [
+            {
+                "ts": "2026-04-01T00:01:00Z",
+                "feature": "feat-orphan",
+                "model": None,
+                "tier": None,
+                "outcome": "complete",
+                "cost_usd": 5.0,
+                "num_turns": 3,
+                "error_type": None,
+                "untiered": True,
+            }
+        ]
+        result = self._fn(paired)
+
+        self.assertIn("untiered,untiered", result)
+        bucket = result["untiered,untiered"]
+        self.assertTrue(bucket["is_untiered"])
+        self.assertIsNone(bucket["budget_cap_usd"])
+        self.assertIsNone(bucket["over_cap_rate"])
+        self.assertIsNone(bucket["turn_cap_observed_rate"])
+        self.assertEqual(bucket["n_completes"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
