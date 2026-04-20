@@ -55,33 +55,6 @@
     "repo": null
   },
   {
-    "id": 84,
-    "title": "Verify claude/reference/*.md conditional-loading behavior under Opus 4.7",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "spike",
-    "tags": [
-      "opus-4-7-harness-adaptation",
-      "spike"
-    ],
-    "areas": [],
-    "created": "2026-04-18",
-    "updated": "2026-04-18",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "82",
-    "research": null,
-    "spec": "lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spec.md",
-    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
-    "plan": null,
-    "uuid": "496e9d2e-a44b-4b12-9622-289b75561442",
-    "lifecycle_slug": "verify-claude-reference-md-conditional-loading-behavior-under-opus-47",
-    "session_id": "93c2885a-5c82-4a0b-96bf-845a92a14fbd",
-    "lifecycle_phase": "complete",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 85,
     "title": "Audit dispatch-skill prompts and reference docs for 4.7 at-risk patterns",
     "status": "backlog",
@@ -93,11 +66,10 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-18",
+    "updated": "2026-04-20",
     "blocks": [],
     "blocked_by": [
-      "83",
-      "84"
+      "83"
     ],
     "parent": "82",
     "research": null,

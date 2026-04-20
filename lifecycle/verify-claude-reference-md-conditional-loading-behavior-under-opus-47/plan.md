@@ -118,7 +118,7 @@ Decomposed-per-question verification spike, **fully serialized** to eliminate ra
 - **Complexity**: simple
 - **Context**: Spec.md Requirements 1-11 each have a binary-checkable acceptance criterion — the executable checks are inlined in each requirement. Task 10's cross-validation.md provides the substantive evidence-binding check that complements Task 12's syntactic checks. `/commit` skill handles message formatting; commit subject should reference #084 and the spike's deliverable.
 - **Verification**: All 11 acceptance criteria from spec.md pass (each runs the inline check from its Acceptance line) AND Task 10's cross-validation.md shows zero FLAG entries AND `git log -1 --oneline` references #084 or "spike" or "reference-loading-verification" in the subject.
-- **Status**: [ ] pending
+- **Status**: [x] complete — all 33 inline sub-checks under the 11 Reqs passed; commit `bf6d2f7` "Verify reference-file conditional loading under Opus 4.7 (#084)".
 
 ## Verification Strategy
 

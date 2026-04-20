@@ -4,8 +4,7 @@
 |-----|-------|--------|----------|------|------------|--------|------|
 | 82 | Adapt harness to Opus 4.7 (prompt delta + capability adoption) | backlog | high | epic | — | — | — |
 | 83 | Run /claude-api migrate to opus-4-7 on throwaway branch and report diff | refined | high | spike | — | 82 | ✓ |
-| 84 | Verify claude/reference/*.md conditional-loading behavior under Opus 4.7 | in_progress | high | spike | — | 82 | ✓ |
-| 85 | Audit dispatch-skill prompts and reference docs for 4.7 at-risk patterns | backlog | high | feature | 83, 84 | 82 | — |
+| 85 | Audit dispatch-skill prompts and reference docs for 4.7 at-risk patterns | backlog | high | feature | 83 | 82 | — |
 | 93 | Modernize lifecycle implement-phase pre-flight options | backlog | high | epic | — | — | — |
 | 94 | Fix daytime pipeline worktree atomicity and stderr logging | backlog | high | feature | — | 93 | — |
 | 95 | Replace daytime log-sentinel classification with structured result file | backlog | high | feature | — | 93 | — |
@@ -35,5 +34,4 @@
 
 ## In-Progress
 
-- **84** Verify claude/reference/*.md conditional-loading behavior under Opus 4.7 (in_progress)
 - **87** Instrument events.log aggregation for turns and cost per tier (in_progress)
