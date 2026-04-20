@@ -153,8 +153,11 @@ def _phase_durations(
         if is_backfilled(curr["ts"]) or is_backfilled(nxt["ts"]):
             secs: float | None = None
         else:
-            dt = _parse_ts(nxt["ts"]) - _parse_ts(curr["ts"])
-            secs = dt.total_seconds()
+            try:
+                dt = _parse_ts(nxt["ts"]) - _parse_ts(curr["ts"])
+                secs = dt.total_seconds()
+            except ValueError:
+                secs = None
 
         durations.append({
             "from": curr.get("to", curr.get("from")),
@@ -929,13 +932,37 @@ def main(argv: list[str] | None = None) -> None:
     # ---- Compute calibration insights ----
     calibration = compute_calibration(aggregates)
 
+    # ---- Dispatch aggregation pipeline (file-local pairing) ----
+    all_paired: list[dict] = []
+    for log_path in discover_pipeline_event_logs(lifecycle_dir):
+        events = parse_events(log_path)
+        if not events:
+            continue
+        filtered = filter_events_since(events, args.since)
+        paired = pair_dispatch_events(filtered)
+        all_paired.extend(paired)
+
+    model_tier_dispatch_aggregates = compute_model_tier_dispatch_aggregates(all_paired)
+    print(f"  Dispatch aggregation: {len(all_paired)} paired record(s), {len(model_tier_dispatch_aggregates)} bucket(s)")
+
     # ---- Assemble and write output ----
-    output = {
+    output: dict[str, Any] = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "features": features_out,
         "aggregates": aggregates,
         "calibration": calibration,
+        "model_tier_dispatch_aggregates": model_tier_dispatch_aggregates,
     }
+
+    if args.since is not None:
+        output["model_tier_dispatch_aggregates_window"] = {
+            "since": args.since.strftime("%Y-%m-%d"),
+            "note": "per-dispatch aggregates only; per-feature metrics are all-time",
+        }
+
+    untiered_count = sum(1 for r in all_paired if r.get("untiered"))
+    if untiered_count > 0:
+        output["untiered_count"] = untiered_count
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(

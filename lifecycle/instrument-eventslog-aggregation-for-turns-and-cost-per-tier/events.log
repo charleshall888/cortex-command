@@ -17,3 +17,5 @@
 {"ts":"2026-04-20T12:08:20Z","event":"task_complete","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","task":2,"batch":1,"status":"success","note":"verification -k filter in plan does not match TestPairDispatchEvents (no lowercase pair_dispatch_events in test names); agent ran tests successfully via full file path"}
 {"ts":"2026-04-20T12:11:35Z","event":"task_complete","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","task":4,"batch":1,"status":"success","note":"-k since_flag in plan matches 3/4 tests (test_parse_since_invalid_format lacks substring); all tests pass via -k since"}
 {"ts":"2026-04-20T12:11:36Z","event":"batch_dispatch","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","batch":2,"tasks":[3]}
+{"ts":"2026-04-20T12:14:10Z","event":"task_complete","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","task":3,"batch":2,"status":"success","note":"-k filter case mismatch (same pattern as task 2/4); all tests pass"}
+{"ts":"2026-04-20T12:14:11Z","event":"batch_dispatch","feature":"instrument-eventslog-aggregation-for-turns-and-cost-per-tier","batch":3,"tasks":[5]}
