@@ -77,7 +77,7 @@
     "uuid": "496e9d2e-a44b-4b12-9622-289b75561442",
     "lifecycle_slug": "verify-claude-reference-md-conditional-loading-behavior-under-opus-47",
     "session_id": "93c2885a-5c82-4a0b-96bf-845a92a14fbd",
-    "lifecycle_phase": "implement",
+    "lifecycle_phase": "complete",
     "schema_version": "1",
     "repo": null
   },
@@ -105,6 +105,134 @@
     "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
     "plan": null,
     "uuid": "f3b4b249-b40c-4d70-a06c-f3e95030ba21",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 93,
+    "title": "Modernize lifecycle implement-phase pre-flight options",
+    "status": "backlog",
+    "priority": "high",
+    "type": "epic",
+    "tags": [
+      "lifecycle",
+      "daytime-pipeline",
+      "worktree",
+      "preflight"
+    ],
+    "areas": [
+      "lifecycle",
+      "skills",
+      "pipeline"
+    ],
+    "created": "2026-04-20",
+    "updated": "2026-04-20",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/revisit-lifecycle-implement-preflight-options/research.md",
+    "plan": null,
+    "uuid": "16067c99-27ab-4c9f-ad0b-a968cc27af95",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 94,
+    "title": "Fix daytime pipeline worktree atomicity and stderr logging",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "daytime-pipeline",
+      "worktree",
+      "reliability"
+    ],
+    "areas": [
+      "pipeline"
+    ],
+    "created": "2026-04-20",
+    "updated": "2026-04-20",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "93",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/revisit-lifecycle-implement-preflight-options/research.md",
+    "plan": null,
+    "uuid": "c5f87db4-a25a-4fdb-a133-debdf84564e0",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 95,
+    "title": "Replace daytime log-sentinel classification with structured result file",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "daytime-pipeline",
+      "observability",
+      "output-contract"
+    ],
+    "areas": [
+      "pipeline",
+      "skills",
+      "lifecycle"
+    ],
+    "created": "2026-04-20",
+    "updated": "2026-04-20",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "93",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/revisit-lifecycle-implement-preflight-options/research.md",
+    "plan": null,
+    "uuid": "7e7ecade-3fa3-4d9c-841f-8ed6141c4da8",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 96,
+    "title": "Add uncommitted-changes guard to lifecycle implement-phase pre-flight",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "preflight",
+      "trunk-safety"
+    ],
+    "areas": [
+      "lifecycle",
+      "skills"
+    ],
+    "created": "2026-04-20",
+    "updated": "2026-04-20",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "93",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/revisit-lifecycle-implement-preflight-options/research.md",
+    "plan": null,
+    "uuid": "ceb58ab0-8e34-447d-89ae-dd881c627ab7",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -193,7 +321,7 @@
     "uuid": "7e43f9c7-b4ce-4e39-b5fc-5299e8bcc483",
     "lifecycle_slug": "instrument-eventslog-aggregation-for-turns-and-cost-per-tier",
     "session_id": "712dc6f9-657a-4972-9224-488a22e08da4",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -249,6 +377,40 @@
     "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
     "plan": null,
     "uuid": "0a2f1fee-dd42-49ff-b393-bd16d1fa5607",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 97,
+    "title": "Remove single-agent worktree dispatch and flip recommended default to current branch",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "preflight",
+      "worktree",
+      "cleanup"
+    ],
+    "areas": [
+      "lifecycle",
+      "skills"
+    ],
+    "created": "2026-04-20",
+    "updated": "2026-04-20",
+    "blocks": [],
+    "blocked_by": [
+      "96"
+    ],
+    "parent": "93",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/revisit-lifecycle-implement-preflight-options/research.md",
+    "plan": null,
+    "uuid": "b6555b1a-1b0b-402f-b821-38e9e7cfa466",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
