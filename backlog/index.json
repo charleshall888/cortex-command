@@ -1,5 +1,128 @@
 [
   {
+    "id": 126,
+    "title": "Eliminate home-repo-vs-worktree context drift in overnight runner",
+    "status": "backlog",
+    "priority": "critical",
+    "type": "epic",
+    "tags": [
+      "overnight-runner",
+      "worktree",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/orchestrator-worktree-escape/research.md",
+    "plan": null,
+    "uuid": "2cbcf121-190a-468a-b8d3-3fb38dec6be6",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 127,
+    "title": "Disambiguate orchestrator prompt tokens to stop lexical-priming escape",
+    "status": "backlog",
+    "priority": "critical",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "orchestrator",
+      "prompt",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "126",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/orchestrator-worktree-escape/research.md",
+    "plan": null,
+    "uuid": "65cbc5a4-ae71-4763-9a9c-f5cf4847480d",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 128,
+    "title": "Install pre-commit hook rejecting main commits during overnight sessions",
+    "status": "backlog",
+    "priority": "critical",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "git-hook",
+      "enforcement",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "126",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/orchestrator-worktree-escape/research.md",
+    "plan": null,
+    "uuid": "9064c10e-38ba-494a-9783-3bf12aca8a6c",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 129,
+    "title": "Un-silence morning-report commit and backfill 4 historical reports",
+    "status": "backlog",
+    "priority": "critical",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "morning-report",
+      "gitignore",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "126",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/orchestrator-worktree-escape/research.md",
+    "plan": null,
+    "uuid": "503f9a80-0ec5-4d12-b7b1-3e56b2b5e879",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 82,
     "title": "Adapt harness to Opus 4.7 (prompt delta + capability adoption)",
     "status": "backlog",
@@ -365,7 +488,7 @@
   {
     "id": 112,
     "title": "Migrate overnight-schedule to a LaunchAgent-based scheduler",
-    "status": "in_progress",
+    "status": "backlog",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -379,7 +502,9 @@
     "created": "2026-04-21",
     "updated": "2026-04-21",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "113"
+    ],
     "parent": null,
     "research": null,
     "spec": null,
@@ -387,8 +512,8 @@
     "plan": null,
     "uuid": "3565ffe8-5041-4c2b-9f91-d14fa9d4c1cd",
     "lifecycle_slug": "migrate-overnight-schedule-to-a-launchagent-based-scheduler",
-    "session_id": "3e2b9498-638f-4763-a39b-37749ef77a43",
-    "lifecycle_phase": "research",
+    "session_id": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -455,7 +580,7 @@
     "uuid": "9b5c4931-763b-4112-b261-a111119cb99f",
     "lifecycle_slug": "build-cortex-cli-skeleton-with-uv-tool-install-entry-point",
     "session_id": "ae3e25d3-0483-408e-967b-19d3a758065f",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -726,6 +851,37 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "4ed319f6-98e0-48ff-ace6-8e1023b1cfbb",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 130,
+    "title": "Route Python-layer backlog writes through worktree checkout",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "backlog",
+      "worktree",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "126",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/orchestrator-worktree-escape/research.md",
+    "plan": null,
+    "uuid": "a98f7141-94ee-4479-85b3-75187deff6d9",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -1192,6 +1348,36 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "29c04548-afdd-4a84-a50f-7b973065f9c0",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 131,
+    "title": "Gate overnight PR creation on merged>0 (draft on zero-merge)",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "pr",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/orchestrator-worktree-escape/research.md",
+    "plan": null,
+    "uuid": "5e103f2e-fd3d-4890-84a5-c67d6adac785",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
