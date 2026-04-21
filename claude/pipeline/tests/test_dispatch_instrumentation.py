@@ -308,5 +308,78 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(log_path.exists())
 
 
+class TestDispatchCompleteModelResolved(unittest.IsolatedAsyncioTestCase):
+    """dispatch_complete events carry model_resolved (first-observed AssistantMessage.model)."""
+
+    async def test_model_resolved_emitted_on_dispatch_complete(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "events.jsonl"
+
+            assistant_msg = AssistantMessage(content=[], model="claude-opus-4-7-test")
+            result_msg = ResultMessage(
+                subtype="success",
+                duration_ms=100,
+                duration_api_ms=80,
+                is_error=False,
+                num_turns=1,
+                session_id="sess-mr-1",
+                total_cost_usd=0.02,
+            )
+
+            async def mock_query(**kwargs):
+                async for m in _async_gen(assistant_msg, result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="test-feat",
+                    task="do something",
+                    worktree_path=Path(tmp),
+                    complexity="simple",
+                    system_prompt="",
+                    log_path=log_path,
+                )
+
+            events = _read_jsonl(log_path)
+            complete = [e for e in events if e.get("event") == "dispatch_complete"]
+            self.assertEqual(len(complete), 1)
+            self.assertEqual(complete[0]["model_resolved"], "claude-opus-4-7-test")
+
+    async def test_model_resolved_uses_first_assistant_message(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "events.jsonl"
+
+            first_msg = AssistantMessage(content=[], model="first-model-id")
+            second_msg = AssistantMessage(content=[], model="second-model-id")
+            result_msg = ResultMessage(
+                subtype="success",
+                duration_ms=100,
+                duration_api_ms=80,
+                is_error=False,
+                num_turns=2,
+                session_id="sess-mr-2",
+                total_cost_usd=0.03,
+            )
+
+            async def mock_query(**kwargs):
+                async for m in _async_gen(first_msg, second_msg, result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="test-feat",
+                    task="do something",
+                    worktree_path=Path(tmp),
+                    complexity="simple",
+                    system_prompt="",
+                    log_path=log_path,
+                )
+
+            events = _read_jsonl(log_path)
+            complete = [e for e in events if e.get("event") == "dispatch_complete"]
+            self.assertEqual(len(complete), 1)
+            self.assertEqual(complete[0]["model_resolved"], "first-model-id")
+
+
 if __name__ == "__main__":
     unittest.main()
