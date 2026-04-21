@@ -2,15 +2,22 @@
 schema_version: "1"
 uuid: f3b4b249-b40c-4d70-a06c-f3e95030ba21
 title: "Audit dispatch-skill prompts and reference docs for 4.7 at-risk patterns"
-status: backlog
+status: refined
 priority: high
 type: feature
 created: 2026-04-18
-updated: 2026-04-18
+updated: 2026-04-21
 parent: "82"
 tags: [opus-4-7-harness-adaptation, skills]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [83, 84]
+blocked-by: [83]
+session_id: 0807d4ab-1191-4d06-b82e-85d0470608d2
+lifecycle_phase: specify
+lifecycle_slug: audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns
+complexity: complex
+criticality: high
+spec: lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/spec.md
+areas: [skills]
 ---
 
 # Audit dispatch-skill prompts and reference docs for 4.7 at-risk patterns
@@ -39,7 +46,7 @@ The M frontmatter size is provisional and likely undersized. Baseline comparison
 This ticket stacks three methodologies that share the same surface but have different execution logic. Plan phase should treat them as separate passes:
 
 - **Pass 1 — Pattern-grep audit** (P1–P6 on the 12 surfaces). Mostly grep-amenable with per-site judgment at flagged matches. Pattern-bucketed commits recommended (one commit per pattern across all files), matching #053's verification strategy.
-- **Pass 2 — Reference-file negation-only remediation** (P3 subclass, 5 reference files). `verification-mindset.md` Red Flags section and `parallel-agents.md` "Don't use when" list specifically flagged by Agent A in research. May require different remediation than SKILL.md sites (reference files are globally loaded, higher blast radius).
+- **Pass 2 — Reference-file negation-only remediation** (P3 subclass). Scope narrowed post-#084 spike: 4 of 5 reference files (`claude-skills.md`, `context-file-authoring.md`, `parallel-agents.md`, `output-floors.md`) verified to load reliably under 4.7 and need no P3 remediation. Pass 2 is now scoped to `verification-mindset.md` alone, whose Q1 LOW verdict (15 historical JSONL hits but 0 probe-time Reads across 6 probes) requires validation before any rewrite. Per #084's reopener clause, #085 must run at least one validation probe from an actual git repo with a recent "tests pass" claim — to distinguish "behavior internalized from training" from "file not loading at all" — before designing remediation. If the validation probe shows loading does fire in real-task context, Pass 2 closes with a documentation note and no rewrite.
 - **Pass 3 — `consider`-hedge audit (P7)**. Requires `git blame` against #053's commit hashes to identify sites #053 specifically introduced via its `think about → consider` rewrite row. Three-category classification per site: (a) conditional requirement, (b) genuinely optional, (c) polite imperative. Scope may shrink to zero after blame filter — actual `\b[Cc]onsider\b` occurrences in `skills/` are ~9, subset introduced by #053 is unknown.
 
 ## At-risk patterns to audit
@@ -54,12 +61,12 @@ This ticket stacks three methodologies that share the same surface but have diff
 
 ## Dependencies and pre-lifecycle scope re-derivation
 
-- **Before starting this ticket's lifecycle**: re-read the deliverables from #083 (`research/opus-4-7-harness-adaptation/claude-api-migrate-results.md`) and #084 (one-page report on reference-file loading semantics). If the spike results materially change the audit surface or patterns, update this ticket's body and propose a size/priority change before entering Clarify. Blocked-by alone does not feed spike outputs into this ticket's scope — a human or Clarify-phase read is required.
-- **Spike outcome branches**:
-  - If #083 reports "automation rewrites SKILL.md prompts": scope shrinks significantly; may drop to XS (verify + gap fill).
-  - If #083 reports "SDK-only, no prompt changes": scope unchanged.
-  - If #084 reports "reference files load reliably under 4.7": Pass 2 scope unchanged.
-  - If #084 reports "reference files stop loading or fire incorrectly": Pass 2 scope expands to include restructuring; ticket may grow to L.
+**Pre-lifecycle read complete (2026-04-20).** Both spike deliverables were reviewed before entering Clarify:
+
+- **#083** (`research/opus-4-7-harness-adaptation/claude-api-migrate-results.md`): `/claude-api migrate` touched only `bin/count-tokens` and `bin/audit-doc` (3-line model-ID swap). No SKILL.md, `claude/reference/*.md`, `Agents.md`, hooks, or settings mutated. Matches the "SDK-only, no prompt changes" branch → **Passes 1, 2, 3 surface unchanged.**
+- **#084** (`research/opus-4-7-harness-adaptation/reference-loading-verification.md`): 4/5 reference files verified to load reliably under 4.7 (no P3 work); `verification-mindset.md` is the lone outlier with Q1 LOW verdict. Outcome sits between the ticket's original binary branches → **Pass 2 narrowed (see Pass 2 above); Passes 1 and 3 unchanged.**
+
+Net scope delta: Pass 2 shrinks from ~5 files × P3 to 1 file + one validation probe. Passes 1 and 3 dominate the workload (~72+ work cells across 12 surfaces × 6 patterns for Pass 1 alone). Size frontmatter remains M; Plan phase is still expected to confirm Complex tier and recommend per-pass decomposition.
 
 ## Scope exclusions
 

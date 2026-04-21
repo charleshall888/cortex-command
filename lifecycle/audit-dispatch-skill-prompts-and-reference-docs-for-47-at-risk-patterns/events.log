@@ -1,0 +1,45 @@
+{"ts": "2026-04-20T11:32:43Z", "event": "discovery_reference", "feature": "audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns", "epic_research": "research/opus-4-7-harness-adaptation/research.md", "epic_spec": null}
+- ts: 2026-04-20T15:41:24Z
+  event: clarify_critic
+  feature: audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns
+  findings:
+    - "Intent clarity HIGH assumes a single-ticket deliverable, but the ticket itself says Plan phase may recommend decomposition into per-pass tickets — deliverable shape is deferred."
+    - "Intent clarity HIGH on Pass 2 treats the branch outcome (rewrite vs documentation-note) as defined, but the branch is gated on a validation probe whose result is unknown at assessment time."
+    - "Intent clarity HIGH on Pass 3 treats it as defined work, but the ticket says 'scope may shrink to zero after blame filter' — the pass may produce nothing."
+    - "Scope boundedness HIGH conflates bounded surface (12 surfaces) with bounded decision work; per-site P1–P7 judgment across 84 cells is not itself bounded by the one-line pattern glosses."
+    - "Out-of-scope 'explicitly listed' includes 10 anchored preservation decisions that live in the ticket by reference only; the critic saw a summary that said 'omitted for brevity'."
+    - "Requirements alignment is asserted against 'complexity must earn its place' but the remediation (positive routing) typically ADDS textual volume, which is not engaged."
+    - "Requirements alignment dismisses multi-agent.md/pipeline.md/observability.md/remote-access.md in a parenthetical without evidence that none of them constrain prompt content."
+    - "Criticality HIGH rationale leans on procedural default and #053 precedent, not on substantive blast-radius reasoning for THIS ticket's surface."
+    - "Complexity 'complex' is treated as settled, but the ticket marks sizing as a Plan-phase decision with decomposition possible — rating presumes a one-ticket structure the ticket hasn't committed to."
+    - "Spike outcomes are reported as if they resolve scope, but #084's validation probe hasn't executed and the ticket's blocked-by frontmatter still names #83."
+  dispositions:
+    apply: 2
+    dismiss: 8
+    ask: 0
+  applied_fixes:
+    - "Tightened requirements alignment note: reframed as within-scope maintenance of agentic workflow prompts adapting to Opus 4.7 literalism, with explicit acknowledgment that positive routing typically increases prompt volume and that per-site judgment must weigh verbosity cost against correctness gain. Assessment stays HIGH but with grounded rationale."
+    - "Strengthened criticality HIGH rationale with substantive blast-radius reasoning: edits to dispatch skills propagate through every agent the skill spawns (every research, critical-review, overnight subagent) and incorrect edits risk silent regression across the agentic workflow; reference files (Pass 2) are globally loaded via CLAUDE.md across all sessions. Procedural-default and #053-precedent reasoning retained as corroboration, not sole basis."
+  dismissals:
+    - finding_index: 0
+      rationale: "Dismissed — Intent Clarity in Clarify sense is about 'what is being built and why', which is unambiguous: audit 7 named dispatch skills + 5 named reference files for 7 named patterns. The work-product shape (single PR, decomposed tickets, commit strategy) is a Plan-phase concern, not a Clarify-gate concern."
+    - finding_index: 1
+      rationale: "Dismissed — Pass 2's conditional branch is explicit and both outcomes are well-defined. 'Run probe, then rewrite OR write documentation note' is bounded intent. Conditionality with defined branches is compatible with HIGH Intent Clarity."
+    - finding_index: 2
+      rationale: "Dismissed — Pass 3's method (git-blame filter + three-category classification) is defined; the result magnitude (how many sites qualify) is an empirical outcome of executing the method. Zero-result outcomes are valid deliverables for an audit."
+    - finding_index: 3
+      rationale: "Dismissed — Pattern definitions anchor to epic research at research/opus-4-7-harness-adaptation/research.md §'Six at-risk patterns not covered by #053', which contains a richer per-pattern table with hypothesis-level decision anchors (file:line exemplars and a '4.7 hypothesis' column). Per-site judgment is constrained by the per-pattern hypothesis, not unbounded."
+    - finding_index: 4
+      rationale: "Dismissed — the 10 anchored preservation decisions are in the actual ticket body (lines 79–89 of the source file); the critic was shown a summary with 'omitted for brevity'. The assessment was made against the full source where the boundary is explicit."
+    - finding_index: 6
+      rationale: "Dismissed — multi-agent.md, pipeline.md, observability.md, and remote-access.md were read or scanned; none speak to prompt content. multi-agent.md covers spawning/isolation/concurrency/model selection; pipeline.md covers orchestrator mechanics; observability.md covers statusline/notifications; remote-access.md covers tmux/mosh. None of them constrain P1–P7 pattern remediation."
+    - finding_index: 8
+      rationale: "Dismissed — complexity assessment is for THIS ticket as-is. If Plan decomposes it into child tickets, each child gets its own assessment. Evaluating the parent as 'complex' is correct regardless of decomposition outcome."
+    - finding_index: 9
+      rationale: "Dismissed — #084's validation probe is explicitly scoped as a Pass 2 research-phase action, not a Clarify-phase gate; the ticket body documents this. blocked-by: [83] in frontmatter is bookkeeping lag (user manually reduced from [83, 84] to [83] today); #83's deliverables are reported and usable per today's pre-lifecycle read. Neither affects Clarify intent."
+  status: ok
+{"ts": "2026-04-20T15:42:12Z", "event": "lifecycle_start", "feature": "audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns", "tier": "complex", "criticality": "high"}
+{"ts": "2026-04-20T15:42:12Z", "event": "phase_transition", "feature": "audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns", "from": "clarify", "to": "research"}
+{"ts": "2026-04-21T01:34:39Z", "event": "phase_transition", "feature": "audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns", "from": "research", "to": "specify"}
+{"ts": "2026-04-21T01:39:08Z", "event": "orchestrator_review", "feature": "audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-21T10:55:17Z", "event": "phase_transition", "feature": "audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns", "from": "specify", "to": "plan"}
