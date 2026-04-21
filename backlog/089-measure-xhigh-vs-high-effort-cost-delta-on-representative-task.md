@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 84821b29-13db-4677-bd07-0c66465ca5e8
 title: "Measure xhigh vs high effort cost delta on representative task"
-status: backlog
+status: wontfix
 priority: low
 type: spike
 created: 2026-04-18
@@ -11,6 +11,11 @@ parent: "82"
 tags: [opus-4-7-harness-adaptation, spike]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
 blocked-by: []
+session_id: null
+lifecycle_phase: complete
+lifecycle_slug: measure-xhigh-vs-high-effort-cost-delta-on-representative-task
+complexity: complex
+criticality: high
 ---
 
 # Measure xhigh vs high effort cost delta on representative task
