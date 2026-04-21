@@ -34,6 +34,10 @@ lifecycle/*/agent-activity.jsonl
 lifecycle/overnight-events-*.log
 lifecycle/*/learnings/recovery-log.md
 
+# Abandoned tempfiles from interrupted atomic writes in daytime pipeline
+lifecycle/*/.daytime-result-*.tmp
+lifecycle/*/.daytime-dispatch-*.tmp
+
 # Backlog audit logs
 backlog/*.events.jsonl
 
