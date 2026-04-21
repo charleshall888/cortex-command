@@ -730,18 +730,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
 
             result = self._read_result(td, feature)
 
-        # failed classification: terminated_via="classification", error=None
-        # (error is only set for exception/startup_failure paths; the
-        # classification "failed" path does not set _top_exc).
         self.assertEqual(rc, 1)
         self.assertEqual(result["outcome"], "failed")
         self.assertEqual(result["terminated_via"], "classification")
-        # In the classification path the error field is None (no exception was
-        # raised; the error detail was only printed to stdout). The spec
-        # description says "error='msg' (or the full formatted message)"; the
-        # Task-2 implementation sets error only for exception/startup_failure.
-        # We assert what the code actually does.
-        self.assertIsNone(result["error"])
+        self.assertEqual(result["error"], fail_msg)
 
     # ------------------------------------------------------------------
     # Exception-in-body path (terminated_via="exception")
