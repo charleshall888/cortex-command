@@ -14,6 +14,7 @@ areas: [skills]
 complexity: simple
 criticality: high
 spec: lifecycle/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/spec.md
+session_id: null
 ---
 
 # Add uncommitted-changes guard to lifecycle implement-phase pre-flight

@@ -14,6 +14,7 @@ areas: [pipeline]
 complexity: complex
 criticality: high
 spec: lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/spec.md
+session_id: null
 ---
 
 # Fix daytime pipeline worktree atomicity and stderr logging

@@ -14,6 +14,7 @@ areas: [overnight-runner]
 complexity: complex
 criticality: high
 spec: lifecycle/replace-daytime-log-sentinel-classification-with-structured-result-file/spec.md
+session_id: null
 ---
 
 # Replace daytime log-sentinel classification with structured result file
