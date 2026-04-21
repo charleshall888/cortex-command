@@ -53,6 +53,16 @@ REPO_ROOT="$(pwd)"
 tmux new-session -d -s "$SESSION" -c "$REPO_ROOT" \
     "bash $RUNNER $STATE_FLAG --time-limit $TIME_LIMIT --max-rounds $MAX_ROUNDS --tier $TIER"
 
+# tmux new-session -d can report success even when the server failed to start
+# (e.g., socket dir unwritable under a restrictive sandbox). Verify the session
+# is actually live before telling the caller the runner is running.
+if ! tmux has-session -t "=$SESSION" 2>/dev/null; then
+    echo "Error: tmux reported success but session '$SESSION' is not live." >&2
+    echo "Check tmux errors above — common cause: socket dir is not writable." >&2
+    echo "Socket dir: \${TMUX_TMPDIR:-/tmp}/tmux-\$UID/" >&2
+    exit 1
+fi
+
 echo "Overnight runner started in tmux session '$SESSION'"
 echo "  Attach : tmux attach -t $SESSION"
 echo "  Watch  : tail -f lifecycle/sessions/latest-overnight/overnight-events.log"

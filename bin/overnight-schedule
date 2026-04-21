@@ -184,6 +184,16 @@ done
 tmux new-session -d -s "$SESSION" \
     "$SELF __launch $DELAY_SECONDS $STATE_PATH $TARGET_ISO ${OVERNIGHT_ARGS[*]}"
 
+# tmux new-session -d can report success even when the server failed to start
+# (e.g., socket dir unwritable under a restrictive sandbox). Verify the session
+# is actually live before telling the caller the run is scheduled.
+if ! tmux has-session -t "=$SESSION" 2>/dev/null; then
+    echo "Error: tmux reported success but session '$SESSION' is not live." >&2
+    echo "Check tmux errors above — common cause: socket dir is not writable." >&2
+    echo "Socket dir: \${TMUX_TMPDIR:-/tmp}/tmux-\$UID/" >&2
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
 # Confirmation output
 # ---------------------------------------------------------------------------
