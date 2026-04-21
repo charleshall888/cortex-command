@@ -139,13 +139,21 @@ def create_worktree(
 
     worktree_path.parent.mkdir(parents=True, exist_ok=True)
 
-    subprocess.run(
+    result = subprocess.run(
         ["git", "worktree", "add", str(worktree_path), "-b", branch, base_branch],
         capture_output=True,
         text=True,
-        check=True,
         cwd=str(repo),
     )
+    if result.returncode != 0:
+        subprocess.run(
+            ["git", "branch", "-D", branch],
+            capture_output=True,
+            text=True,
+            cwd=str(repo),
+        )
+        stderr_text = (result.stderr or "").strip() or "(no stderr)"
+        raise ValueError(f"worktree_creation_failed: {stderr_text}")
 
     # Copy project-local settings (gitignored) so the CLI resolves auth
     # the same way in worktrees as in the source repo.
