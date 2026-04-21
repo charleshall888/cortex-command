@@ -16,9 +16,12 @@ import argparse
 import asyncio
 import errno
 import os
+import re
 import subprocess
 import sys
 import time
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -28,12 +31,20 @@ from claude.overnight.feature_executor import execute_feature
 from claude.overnight.orchestrator import BatchResult
 from claude.overnight.outcome_router import OutcomeContext, apply_feature_result
 from claude.overnight.state import (
+    DaytimeResult,
     OvernightFeatureStatus,
     OvernightState,
+    save_daytime_result,
     save_state,
 )
 from claude.overnight.types import CircuitBreakerState
 from claude.pipeline.worktree import cleanup_worktree, create_worktree
+
+# Compiled regex for PR URL scanning (used by _scan_pr_url).
+_PR_URL_RE = re.compile(r"https://github\.com/[^/\s]+/[^/\s]+/pull/[0-9]+")
+
+# Compiled regex for validating DAYTIME_DISPATCH_ID format.
+_DISPATCH_ID_RE = re.compile(r"^[a-f0-9]{32}$")
 
 
 def _check_cwd() -> None:
@@ -244,6 +255,48 @@ async def _orphan_guard(feature: str, pid_path: Path) -> None:
                 os._exit(1)
 
 
+def _check_dispatch_id() -> str:
+    """Read and validate the DAYTIME_DISPATCH_ID environment variable.
+
+    Returns the env value if it matches ``^[a-f0-9]{32}$``. On missing or
+    malformed value, generates a fresh uuid4 hex and logs a warning to
+    stderr so the caller can still produce a valid result file.
+    """
+    raw = os.environ.get("DAYTIME_DISPATCH_ID", "")
+    if raw and _DISPATCH_ID_RE.match(raw):
+        return raw
+    fresh = uuid.uuid4().hex
+    if not raw:
+        sys.stderr.write(
+            "warning: DAYTIME_DISPATCH_ID not set; "
+            f"using generated dispatch_id={fresh}\n"
+        )
+    else:
+        sys.stderr.write(
+            f"warning: DAYTIME_DISPATCH_ID value {raw!r} does not match "
+            f"^[a-f0-9]{{32}}$; using generated dispatch_id={fresh}\n"
+        )
+    return fresh
+
+
+def _scan_pr_url(daytime_log_path: Path) -> Optional[str]:
+    """Scan ``daytime_log_path`` line-by-line for a GitHub PR URL.
+
+    Uses the compiled regex ``_PR_URL_RE`` and short-circuits on the first
+    match. Returns the first match or ``None`` if the file is absent,
+    unreadable, or contains no matching URL.
+    """
+    try:
+        with open(daytime_log_path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                m = _PR_URL_RE.search(line)
+                if m:
+                    return m.group(0)
+    except (FileNotFoundError, OSError):
+        pass
+    return None
+
+
 async def run_daytime(feature: str) -> int:
     """Orchestrate the full daytime lifecycle for a single feature.
 
@@ -254,101 +307,190 @@ async def run_daytime(feature: str) -> int:
     """
     _check_cwd()
 
-    plan_path = Path(f"lifecycle/{feature}/plan.md")
-    if not plan_path.exists():
-        sys.stderr.write(
-            f"error: plan.md not found at `lifecycle/{feature}/plan.md`\n"
-        )
-        return 1
+    # Capture per-dispatch identity and start time before anything can fail.
+    start_ts = datetime.now(timezone.utc).isoformat()
+    dispatch_id = _check_dispatch_id()
 
-    cwd = Path.cwd()
-    pid_path = _pid_path(feature)
+    # Result-file tracking state — updated by each code path.
+    _top_exc: Optional[Exception] = None
+    _terminated_via: str = "exception"
+    _outcome: str = "unknown"
+    _startup_phase: bool = True
 
-    existing_pid = _read_pid(pid_path)
-    if existing_pid is not None:
-        if _is_alive(existing_pid):
-            sys.stderr.write(
-                f"error: daytime already running for {feature} "
-                f"(PID {existing_pid})\n"
-            )
-            return 1
-        # Stale PID — recover.
-        _recover_stale(feature, _worktree_path(feature))
-        pid_path.unlink(missing_ok=True)
-
-    _write_pid(pid_path)
-
-    session_id = os.environ.get("LIFECYCLE_SESSION_ID") or (
-        f"daytime-{feature}-{int(time.time())}"
-    )
-    config = build_config(feature, cwd, session_id)
-    deferred_dir = cwd / f"lifecycle/{feature}/deferred"
-
-    worktree_info = create_worktree(feature)
-
-    ctx = OutcomeContext(
-        batch_result=BatchResult(batch_id=1),
-        lock=asyncio.Lock(),
-        cb_state=CircuitBreakerState(),
-        recovery_attempts_map={feature: 0},
-        worktree_paths={feature: worktree_info.path},
-        worktree_branches={feature: worktree_info.branch},
-        repo_path_map={feature: None},
-        integration_worktrees={},
-        integration_branches={},
-        session_id=session_id,
-        backlog_ids={feature: None},
-        feature_names=[feature],
-        config=config,
-    )
-
-    _orphan_task = asyncio.create_task(_orphan_guard(feature, pid_path))
+    # Alias for the daytime log path used by the PR-URL scanner.
+    daytime_log_path = Path(f"lifecycle/{feature}/daytime.log")
 
     try:
-        result = await execute_feature(
-            feature, worktree_info.path, config, deferred_dir=deferred_dir
+        plan_path = Path(f"lifecycle/{feature}/plan.md")
+        if not plan_path.exists():
+            sys.stderr.write(
+                f"error: plan.md not found at `lifecycle/{feature}/plan.md`\n"
+            )
+            _top_exc = FileNotFoundError(
+                f"plan.md not found at lifecycle/{feature}/plan.md"
+            )
+            _terminated_via = "startup_failure"
+            _outcome = "failed"
+            return 1
+
+        cwd = Path.cwd()
+        pid_path = _pid_path(feature)
+
+        existing_pid = _read_pid(pid_path)
+        if existing_pid is not None:
+            if _is_alive(existing_pid):
+                msg = (
+                    f"daytime already running for {feature} "
+                    f"(pid {existing_pid})"
+                )
+                sys.stderr.write(f"error: {msg}\n")
+                _top_exc = RuntimeError(msg)
+                _terminated_via = "startup_failure"
+                _outcome = "failed"
+                return 1
+            # Stale PID — recover.
+            _recover_stale(feature, _worktree_path(feature))
+            pid_path.unlink(missing_ok=True)
+
+        _write_pid(pid_path)
+
+        session_id = os.environ.get("LIFECYCLE_SESSION_ID") or (
+            f"daytime-{feature}-{int(time.time())}"
         )
-        await apply_feature_result(
-            feature, result, ctx, deferred_dir=deferred_dir
+        config = build_config(feature, cwd, session_id)
+        deferred_dir = cwd / f"lifecycle/{feature}/deferred"
+
+        worktree_info = create_worktree(feature)
+
+        ctx = OutcomeContext(
+            batch_result=BatchResult(batch_id=1),
+            lock=asyncio.Lock(),
+            cb_state=CircuitBreakerState(),
+            recovery_attempts_map={feature: 0},
+            worktree_paths={feature: worktree_info.path},
+            worktree_branches={feature: worktree_info.branch},
+            repo_path_map={feature: None},
+            integration_worktrees={},
+            integration_branches={},
+            session_id=session_id,
+            backlog_ids={feature: None},
+            feature_names=[feature],
+            config=config,
         )
+
+        # Flip startup phase flag before creating the orphan task — any
+        # exception from here onward is "exception" not "startup_failure".
+        _startup_phase = False
+        _orphan_task = asyncio.create_task(_orphan_guard(feature, pid_path))
+
+        try:
+            result = await execute_feature(
+                feature, worktree_info.path, config, deferred_dir=deferred_dir
+            )
+            await apply_feature_result(
+                feature, result, ctx, deferred_dir=deferred_dir
+            )
+        except Exception as e:
+            sys.stderr.write(f"error: daytime pipeline failed: {e}\n")
+            _top_exc = e
+            _terminated_via = "exception"
+            _outcome = "failed"
+            return 1
+        finally:
+            _orphan_task.cancel()
+            cleanup_worktree(feature)
+            pid_path.unlink(missing_ok=True)
+
+        # Classification branches — all set _terminated_via / _outcome before
+        # returning so the outer finally can write the correct result file.
+        br = ctx.batch_result
+        if feature in br.features_merged:
+            _terminated_via = "classification"
+            _outcome = "merged"
+            print(f"Feature {feature} merged successfully.", flush=True)
+            return 0
+        if any(d.get("name") == feature for d in br.features_deferred):
+            _terminated_via = "classification"
+            _outcome = "deferred"
+            deferral_file = next(deferred_dir.glob("*.md"), None)
+            if deferral_file is not None:
+                print(str(deferral_file), flush=True)
+            else:
+                print(
+                    f"Feature {feature} deferred — check "
+                    f"lifecycle/{feature}/deferred/ for details.",
+                    flush=True,
+                )
+            return 1
+        if any(d.get("name") == feature for d in br.features_paused):
+            _terminated_via = "classification"
+            _outcome = "paused"
+            print(
+                f"Feature {feature} paused — worktree cleaned; "
+                f"check events.log for details.",
+                flush=True,
+            )
+            return 1
+        # failed or unrecognized
+        _terminated_via = "classification"
+        _outcome = "failed"
+        failed = next(
+            (d for d in br.features_failed if d.get("name") == feature),
+            None,
+        )
+        if failed is not None and failed.get("error"):
+            print(f"Feature {feature} failed: {failed['error']}", flush=True)
+        else:
+            print(f"Feature {feature} did not complete successfully.", flush=True)
+        return 1
+
     except Exception as e:
+        _top_exc = e
+        if _startup_phase:
+            _terminated_via = "startup_failure"
+        else:
+            _terminated_via = "exception"
+        _outcome = "failed"
         sys.stderr.write(f"error: daytime pipeline failed: {e}\n")
         return 1
-    finally:
-        _orphan_task.cancel()
-        cleanup_worktree(feature)
-        pid_path.unlink(missing_ok=True)
 
-    br = ctx.batch_result
-    if feature in br.features_merged:
-        print(f"Feature {feature} merged successfully.")
-        return 0
-    if any(d.get("name") == feature for d in br.features_deferred):
-        deferral_file = next(deferred_dir.glob("*.md"), None)
-        if deferral_file is not None:
-            print(str(deferral_file))
+    finally:
+        # Compute deferred file paths.
+        deferred_glob_dir = Path(f"lifecycle/{feature}/deferred")
+        if deferred_glob_dir.is_dir():
+            deferred_files = [
+                str(p) for p in sorted(deferred_glob_dir.glob("*.md"))
+            ]
         else:
-            print(
-                f"Feature {feature} deferred — check "
-                f"lifecycle/{feature}/deferred/ for details."
-            )
-        return 1
-    if any(d.get("name") == feature for d in br.features_paused):
-        print(
-            f"Feature {feature} paused — worktree cleaned; "
-            f"check events.log for details."
+            deferred_files = []
+
+        # Determine error text.
+        error_text: Optional[str] = (
+            str(_top_exc)
+            if _terminated_via in ("exception", "startup_failure")
+            else None
         )
-        return 1
-    # failed or unrecognized
-    failed = next(
-        (d for d in br.features_failed if d.get("name") == feature),
-        None,
-    )
-    if failed is not None and failed.get("error"):
-        print(f"Feature {feature} failed: {failed['error']}")
-    else:
-        print(f"Feature {feature} did not complete successfully.")
-    return 1
+
+        result_obj = DaytimeResult(
+            schema_version=1,
+            dispatch_id=dispatch_id,
+            feature=feature,
+            start_ts=start_ts,
+            end_ts=datetime.now(timezone.utc).isoformat(),
+            outcome=_outcome,
+            terminated_via=_terminated_via,
+            deferred_files=deferred_files,
+            error=error_text,
+            pr_url=_scan_pr_url(daytime_log_path),
+        )
+
+        result_path = Path(f"lifecycle/{feature}/daytime-result.json")
+        try:
+            save_daytime_result(result_obj, result_path)
+        except Exception as write_err:
+            sys.stderr.write(
+                f"warning: failed to write daytime-result.json: {write_err}\n"
+            )
 
 
 def build_parser() -> argparse.ArgumentParser:
