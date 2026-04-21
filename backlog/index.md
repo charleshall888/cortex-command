@@ -14,7 +14,17 @@
 | 103 | Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7) | backlog | high | feature | — | 101 | — |
 | 104 | Instrument skill-name on dispatch_start for per-skill pipeline aggregates | backlog | high | feature | — | 101 | — |
 | 105 | Extract /commit preflight into bin/commit-preflight | backlog | high | feature | 102, 103 | 101 | — |
-| 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | backlog | high | feature | — | — | — |
+| 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | — |
+| 113 | Distribute cortex-command as cortex CLI + plugin marketplace | backlog | high | epic | — | — | — |
+| 114 | Build cortex CLI skeleton with uv tool install entry point | backlog | high | feature | — | 113 | — |
+| 115 | Port overnight runner into cortex CLI | backlog | high | feature | 114 | 113 | — |
+| 116 | Build MCP control-plane server with versioned runner IPC contract | backlog | high | feature | 115 | 113 | — |
+| 117 | Build cortex setup subcommand and retire shareable-install scaffolding | backlog | high | feature | 114 | 113 | — |
+| 118 | Ship curl | sh bootstrap installer for cortex-command | backlog | high | feature | 114, 117 | 113 | — |
+| 120 | Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities) | backlog | high | feature | 114, 117 | 113 | — |
+| 121 | Publish cortex-overnight-integration plugin (overnight skill + runner hooks) | backlog | high | feature | 120 | 113 | — |
+| 122 | Publish plugin marketplace manifest for cortex-command | backlog | high | feature | 120, 121 | 113 | — |
+| 123 | Lifecycle skill gracefully degrades autonomous-worktree option when runner absent | backlog | high | feature | 120 | 113 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | 85 | 82 | — |
 | 88 | Collect 4.7 baseline rounds and snapshot the aggregated data | refined | medium | feature | 99 | 82 | ✓ |
@@ -28,9 +38,12 @@
 | 109 | Extract /refine resolution into bin/resolve-backlog-item with bailout | backlog | medium | feature | 102, 103 | 101 | — |
 | 110 | Unify lifecycle phase detection around claude.common with statusline exception | backlog | medium | feature | 102, 103 | 101 | — |
 | 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | 104 | 101 | — |
+| 119 | Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements | backlog | medium | feature | 114 | 113 | — |
+| 124 | Migration guide + script for existing symlink-based installs | backlog | medium | chore | 118, 121, 122 | 113 | — |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
+| 125 | Homebrew tap as thin wrapper around the curl installer | backlog | low | feature | 118 | 113 | — |
 
 ## Refined
 
@@ -46,7 +59,8 @@
 - **102** Ship DR-5 SKILL.md-to-bin parity linter with zero existing violations
 - **103** Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7)
 - **104** Instrument skill-name on dispatch_start for per-skill pipeline aggregates
-- **112** Migrate overnight-schedule to a LaunchAgent-based scheduler
+- **113** Distribute cortex-command as cortex CLI + plugin marketplace
+- **114** Build cortex CLI skeleton with uv tool install entry point
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 - **99** Operator gate: #088 baseline measurement window is complete
 - **101** Extract deterministic tool-call sequences into agent-invokable scripts
@@ -54,3 +68,4 @@
 
 ## In-Progress
 
+- **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)

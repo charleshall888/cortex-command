@@ -359,7 +359,7 @@
   {
     "id": 112,
     "title": "Migrate overnight-schedule to a LaunchAgent-based scheduler",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -380,6 +380,336 @@
     "discovery_source": "research/overnight-runner-sandbox-launch/research.md",
     "plan": null,
     "uuid": "3565ffe8-5041-4c2b-9f91-d14fa9d4c1cd",
+    "lifecycle_slug": "migrate-overnight-schedule-to-a-launchagent-based-scheduler",
+    "session_id": "3e2b9498-638f-4763-a39b-37749ef77a43",
+    "lifecycle_phase": "research",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 113,
+    "title": "Distribute cortex-command as cortex CLI + plugin marketplace",
+    "status": "backlog",
+    "priority": "high",
+    "type": "epic",
+    "tags": [
+      "distribution",
+      "plugin",
+      "cli",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install",
+      "overnight-runner",
+      "skills"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "3f12ca5d-0eef-480a-804d-fcbe2dd57223",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 114,
+    "title": "Build cortex CLI skeleton with uv tool install entry point",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "cli",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "9b5c4931-763b-4112-b261-a111119cb99f",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 115,
+    "title": "Port overnight runner into cortex CLI",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "cli",
+      "overnight-runner",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "114"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "e8311326-418f-47db-b3f4-852efc3ef192",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 116,
+    "title": "Build MCP control-plane server with versioned runner IPC contract",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "mcp",
+      "overnight-runner",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "115"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "e327a6e7-fabb-47f5-b99e-35a30c995ab0",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 117,
+    "title": "Build cortex setup subcommand and retire shareable-install scaffolding",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "cli",
+      "install",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "114"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "d07b577f-e72f-4246-b0bd-19a9e36f1f08",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 118,
+    "title": "Ship curl | sh bootstrap installer for cortex-command",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "install",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "114",
+      "117"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "db742018-cb3e-488d-8084-688cd575e241",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 120,
+    "title": "Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities)",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "plugin",
+      "skills",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "skills"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "114",
+      "117"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "4d7e4c7d-fbd9-41ad-8df9-205c55ffe429",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 121,
+    "title": "Publish cortex-overnight-integration plugin (overnight skill + runner hooks)",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "plugin",
+      "overnight-runner",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "skills",
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "120"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "86a87121-2737-4b2a-8505-3ed605721d0f",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 122,
+    "title": "Publish plugin marketplace manifest for cortex-command",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "plugin",
+      "marketplace",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "120",
+      "121"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "7a291fcc-a9c8-4df2-97e2-81e0c01c5016",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 123,
+    "title": "Lifecycle skill gracefully degrades autonomous-worktree option when runner absent",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "plugin",
+      "lifecycle",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "skills"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "120"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "4ed319f6-98e0-48ff-ace6-8e1023b1cfbb",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -783,6 +1113,73 @@
     "repo": null
   },
   {
+    "id": 119,
+    "title": "Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "cli",
+      "scaffolding",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "114"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "e2f12538-0606-44ca-a64c-9677389083af",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 124,
+    "title": "Migration guide + script for existing symlink-based installs",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "chore",
+    "tags": [
+      "distribution",
+      "migration",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "118",
+      "121",
+      "122"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "29c04548-afdd-4a84-a50f-7b973065f9c0",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 90,
     "title": "Adopt xhigh effort default for overnight lifecycle implement",
     "status": "backlog",
@@ -864,6 +1261,38 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "4337b723-4a50-4d3e-811f-ef2709f4a26e",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 125,
+    "title": "Homebrew tap as thin wrapper around the curl installer",
+    "status": "backlog",
+    "priority": "low",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "homebrew",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "118"
+    ],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "8ca55836-e562-400e-952b-1d91b23fe2f8",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
