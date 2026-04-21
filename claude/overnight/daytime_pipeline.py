@@ -316,6 +316,7 @@ async def run_daytime(feature: str) -> int:
     _terminated_via: str = "exception"
     _outcome: str = "unknown"
     _startup_phase: bool = True
+    _orphan_task: Optional[asyncio.Task] = None
 
     # Alias for the daytime log path used by the PR-URL scanner.
     daytime_log_path = Path(f"lifecycle/{feature}/daytime.log")
@@ -381,7 +382,7 @@ async def run_daytime(feature: str) -> int:
         # Flip startup phase flag before creating the orphan task — any
         # exception from here onward is "exception" not "startup_failure".
         _startup_phase = False
-        _orphan_task = asyncio.create_task(_orphan_guard(feature, pid_path))
+        _orphan_task = asyncio.create_task(_orphan_guard(feature, pid_path))  # noqa: assigned to outer scope
 
         try:
             result = await execute_feature(
@@ -455,21 +456,43 @@ async def run_daytime(feature: str) -> int:
         return 1
 
     finally:
-        # Compute deferred file paths.
+        # Spec Edge Case §line 129: first statement must cancel the orphan guard
+        # so it cannot fire after the outer finally begins executing.
+        if _orphan_task is not None:
+            _orphan_task.cancel()
+
+        # Compute deferred file paths as absolute paths (spec R2, line 21).
         deferred_glob_dir = Path(f"lifecycle/{feature}/deferred")
         if deferred_glob_dir.is_dir():
             deferred_files = [
-                str(p) for p in sorted(deferred_glob_dir.glob("*.md"))
+                str(p.resolve()) for p in sorted(deferred_glob_dir.glob("*.md"))
             ]
         else:
             deferred_files = []
 
         # Determine error text.
-        error_text: Optional[str] = (
-            str(_top_exc)
-            if _terminated_via in ("exception", "startup_failure")
-            else None
-        )
+        # For exception/startup_failure paths: use the captured exception.
+        # For the classification-failed path: extract from features_failed
+        # (spec R2 line 76). For other classification outcomes: None.
+        error_text: Optional[str]
+        if _terminated_via in ("exception", "startup_failure"):
+            error_text = str(_top_exc) if _top_exc is not None else None
+        elif _terminated_via == "classification" and _outcome == "failed":
+            # Extract error from batch_result.features_failed if available.
+            try:
+                br = ctx.batch_result  # type: ignore[name-defined]
+                failed_entry = next(
+                    (d for d in br.features_failed if d.get("name") == feature),
+                    None,
+                )
+                error_text = (
+                    failed_entry.get("error") if failed_entry is not None else None
+                )
+            except NameError:
+                # ctx not yet defined (startup failure before ctx was created).
+                error_text = None
+        else:
+            error_text = None
 
         result_obj = DaytimeResult(
             schema_version=1,
