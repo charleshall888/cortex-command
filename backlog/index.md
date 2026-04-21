@@ -3,16 +3,15 @@
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
 | 126 | Eliminate home-repo-vs-worktree context drift in overnight runner | backlog | critical | epic | — | — | — |
-| 127 | Disambiguate orchestrator prompt tokens to stop lexical-priming escape | backlog | critical | feature | — | 126 | — |
-| 128 | Install pre-commit hook rejecting main commits during overnight sessions | backlog | critical | feature | — | 126 | — |
-| 129 | Un-silence morning-report commit and backfill 4 historical reports | backlog | critical | feature | — | 126 | — |
+| 127 | Disambiguate orchestrator prompt tokens to stop lexical-priming escape | in_progress | critical | feature | — | 126 | — |
+| 128 | Install pre-commit hook rejecting main commits during overnight sessions | in_progress | critical | feature | — | 126 | — |
+| 129 | Un-silence morning-report commit and backfill 4 historical reports | in_progress | critical | feature | — | 126 | — |
 | 82 | Adapt harness to Opus 4.7 (prompt delta + capability adoption) | backlog | high | epic | — | — | — |
 | 83 | Run /claude-api migrate to opus-4-7 on throwaway branch and report diff | refined | high | spike | — | 82 | ✓ |
 | 85 | Audit dispatch-skill prompts and reference docs for 4.7 at-risk patterns | refined | high | feature | 83 | 82 | ✓ |
 | 93 | Modernize lifecycle implement-phase pre-flight options | backlog | high | epic | — | — | — |
-| 94 | Fix daytime pipeline worktree atomicity and stderr logging | refined | high | feature | — | 93 | ✓ |
-| 95 | Replace daytime log-sentinel classification with structured result file | refined | high | feature | — | 93 | ✓ |
-| 96 | Add uncommitted-changes guard to lifecycle implement-phase pre-flight | refined | high | feature | — | 93 | ✓ |
+| 95 | Replace daytime log-sentinel classification with structured result file | in_progress | high | feature | — | 93 | ✓ |
+| 96 | Add uncommitted-changes guard to lifecycle implement-phase pre-flight | in_progress | high | feature | — | 93 | ✓ |
 | 100 | Rewrite verification-mindset.md to positive-routing structure under 4.7 literalism | backlog | high | feature | 88 | 82 | — |
 | 102 | Ship DR-5 SKILL.md-to-bin parity linter with zero existing violations | backlog | high | feature | 115 | 101 | — |
 | 103 | Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7) | backlog | high | feature | 115 | 101 | — |
@@ -29,7 +28,7 @@
 | 121 | Publish cortex-overnight-integration plugin (overnight skill + runner hooks) | backlog | high | feature | 115, 116, 120 | 113 | — |
 | 122 | Publish plugin marketplace manifest for cortex-command | backlog | high | feature | 115, 116, 117, 120, 121 | 113 | — |
 | 123 | Lifecycle skill gracefully degrades autonomous-worktree option when runner absent | backlog | high | feature | 120 | 113 | — |
-| 130 | Route Python-layer backlog writes through worktree checkout | backlog | high | feature | — | 126 | — |
+| 130 | Route Python-layer backlog writes through worktree checkout | in_progress | high | feature | — | 126 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | 85 | 82 | — |
 | 88 | Collect 4.7 baseline rounds and snapshot the aggregated data | refined | medium | feature | 99 | 82 | ✓ |
@@ -45,7 +44,7 @@
 | 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | 104 | 101 | — |
 | 119 | Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements | backlog | medium | feature | 114 | 113 | — |
 | 124 | Migration guide + script for existing symlink-based installs | backlog | medium | chore | 115, 116, 117, 118, 121, 122 | 113 | — |
-| 131 | Gate overnight PR creation on merged>0 (draft on zero-merge) | backlog | medium | feature | — | — | — |
+| 131 | Gate overnight PR creation on merged>0 (draft on zero-merge) | in_progress | medium | feature | — | — | — |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
@@ -54,26 +53,25 @@
 ## Refined
 
 - **83** Run /claude-api migrate to opus-4-7 on throwaway branch and report diff
-- **94** Fix daytime pipeline worktree atomicity and stderr logging
-- **95** Replace daytime log-sentinel classification with structured result file
-- **96** Add uncommitted-changes guard to lifecycle implement-phase pre-flight
 
 ## Backlog
 
 - **126** Eliminate home-repo-vs-worktree context drift in overnight runner
-- **127** Disambiguate orchestrator prompt tokens to stop lexical-priming escape
-- **128** Install pre-commit hook rejecting main commits during overnight sessions
-- **129** Un-silence morning-report commit and backfill 4 historical reports
 - **82** Adapt harness to Opus 4.7 (prompt delta + capability adoption)
 - **93** Modernize lifecycle implement-phase pre-flight options
 - **113** Distribute cortex-command as cortex CLI + plugin marketplace
-- **130** Route Python-layer backlog writes through worktree checkout
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 - **99** Operator gate: #088 baseline measurement window is complete
 - **101** Extract deterministic tool-call sequences into agent-invokable scripts
-- **131** Gate overnight PR creation on merged>0 (draft on zero-merge)
 - **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release
 
 ## In-Progress
 
+- **127** Disambiguate orchestrator prompt tokens to stop lexical-priming escape (in_progress)
+- **128** Install pre-commit hook rejecting main commits during overnight sessions (in_progress)
+- **129** Un-silence morning-report commit and backfill 4 historical reports (in_progress)
+- **95** Replace daytime log-sentinel classification with structured result file (in_progress)
+- **96** Add uncommitted-changes guard to lifecycle implement-phase pre-flight (in_progress)
 - **114** Build cortex CLI skeleton with uv tool install entry point (in_progress)
+- **130** Route Python-layer backlog writes through worktree checkout (in_progress)
+- **131** Gate overnight PR creation on merged>0 (draft on zero-merge) (in_progress)

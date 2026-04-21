@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import io
 import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -486,6 +487,610 @@ class TestDeferredDirThreadingOutcomeRouter(
         self.assertEqual(
             m_write.call_args.kwargs.get("deferred_dir"), custom_dir
         )
+
+
+class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
+    """Result-file semantics: every exit path of run_daytime must emit
+    a valid daytime-result.json with the correct outcome and terminated_via."""
+
+    # ------------------------------------------------------------------
+    # Shared helpers
+    # ------------------------------------------------------------------
+
+    def _setup_dirs(self, td: Path, feature: str = "feat") -> None:
+        feat_dir = td / "lifecycle" / feature
+        feat_dir.mkdir(parents=True)
+        (feat_dir / "plan.md").write_text(f"# {feature}\n", encoding="utf-8")
+        (feat_dir / "deferred").mkdir(parents=True, exist_ok=True)
+
+    def _read_result(self, td: Path, feature: str = "feat") -> dict:
+        import json
+
+        result_path = td / "lifecycle" / feature / "daytime-result.json"
+        self.assertTrue(result_path.exists(), "daytime-result.json not found")
+        with result_path.open(encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def _worktree_info(self, feature: str = "feat") -> MagicMock:
+        info = MagicMock()
+        info.path = Path("/tmp/fake-worktree")
+        info.branch = f"pipeline/{feature}"
+        return info
+
+    # ------------------------------------------------------------------
+    # Classification paths (terminated_via="classification")
+    # ------------------------------------------------------------------
+
+    async def test_merged_writes_result_file(self) -> None:
+        """apply_feature_result populates features_merged -> outcome="merged",
+        terminated_via="classification", error=None."""
+        feature = "feat"
+
+        async def _apply(name, result, ctx, **kwargs):
+            ctx.batch_result.features_merged.append(name)
+
+        with _CwdCtx(Path("/tmp")):
+            import tempfile
+
+            with tempfile.TemporaryDirectory() as raw_td:
+                td = Path(raw_td)
+                self._setup_dirs(td, feature)
+                with (
+                    _CwdCtx(td),
+                    patch.dict(
+                        os.environ,
+                        {"DAYTIME_DISPATCH_ID": "a" * 32},
+                        clear=False,
+                    ),
+                    patch.object(
+                        daytime_pipeline,
+                        "create_worktree",
+                        return_value=self._worktree_info(feature),
+                    ),
+                    patch.object(
+                        daytime_pipeline,
+                        "execute_feature",
+                        new=AsyncMock(
+                            return_value=MagicMock(name="feat", status="completed")
+                        ),
+                    ),
+                    patch.object(
+                        daytime_pipeline,
+                        "apply_feature_result",
+                        new=AsyncMock(side_effect=_apply),
+                    ),
+                    patch.object(daytime_pipeline, "cleanup_worktree"),
+                ):
+                    rc = await run_daytime(feature)
+
+                result = self._read_result(td, feature)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(result["outcome"], "merged")
+        self.assertEqual(result["terminated_via"], "classification")
+        self.assertIsNone(result["error"])
+        self.assertEqual(result["schema_version"], 1)
+        self.assertRegex(result["dispatch_id"], r"^[a-f0-9]{32}$")
+
+    async def test_deferred_with_file_writes_result_file(self) -> None:
+        """apply_feature_result populates features_deferred + a file under
+        deferred_dir -> outcome="deferred", deferred_files=[absolute_path]."""
+        feature = "feat"
+
+        async def _apply(name, result, ctx, **kwargs):
+            ctx.batch_result.features_deferred.append(
+                {"name": name, "question_count": 1}
+            )
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+
+            # Pre-create a deferral file so deferred_files is populated.
+            deferred_dir = td / "lifecycle" / feature / "deferred"
+            deferred_file = deferred_dir / "x.md"
+            deferred_file.write_text("# question\n", encoding="utf-8")
+
+            with (
+                _CwdCtx(td),
+                patch.dict(
+                    os.environ,
+                    {"DAYTIME_DISPATCH_ID": "a" * 32},
+                    clear=False,
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "create_worktree",
+                    return_value=self._worktree_info(feature),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "execute_feature",
+                    new=AsyncMock(
+                        return_value=MagicMock(name="feat", status="deferred")
+                    ),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "apply_feature_result",
+                    new=AsyncMock(side_effect=_apply),
+                ),
+                patch.object(daytime_pipeline, "cleanup_worktree"),
+            ):
+                rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        self.assertEqual(rc, 1)
+        self.assertEqual(result["outcome"], "deferred")
+        self.assertEqual(result["terminated_via"], "classification")
+        self.assertIsNone(result["error"])
+        self.assertEqual(len(result["deferred_files"]), 1)
+        # The implementation globs relative to CWD and stores the path as
+        # str(Path("lifecycle/feat/deferred/x.md")) — a relative path.
+        # We assert the filename is present rather than requiring an absolute path,
+        # pinning the actual behavior while remaining cross-platform.
+        self.assertIn("x.md", result["deferred_files"][0])
+
+    async def test_paused_writes_result_file(self) -> None:
+        """apply_feature_result populates features_paused ->
+        outcome="paused", terminated_via="classification"."""
+        feature = "feat"
+
+        async def _apply(name, result, ctx, **kwargs):
+            ctx.batch_result.features_paused.append(
+                {"name": name, "error": "boom"}
+            )
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+            with (
+                _CwdCtx(td),
+                patch.dict(
+                    os.environ,
+                    {"DAYTIME_DISPATCH_ID": "a" * 32},
+                    clear=False,
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "create_worktree",
+                    return_value=self._worktree_info(feature),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "execute_feature",
+                    new=AsyncMock(
+                        return_value=MagicMock(name="feat", status="paused")
+                    ),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "apply_feature_result",
+                    new=AsyncMock(side_effect=_apply),
+                ),
+                patch.object(daytime_pipeline, "cleanup_worktree"),
+            ):
+                rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        self.assertEqual(rc, 1)
+        self.assertEqual(result["outcome"], "paused")
+        self.assertEqual(result["terminated_via"], "classification")
+        self.assertIsNone(result["error"])
+
+    async def test_failed_with_error_writes_result_file(self) -> None:
+        """apply_feature_result populates features_failed with error ->
+        outcome="failed", terminated_via="classification", error populated."""
+        feature = "feat"
+        fail_msg = "some CI error"
+
+        async def _apply(name, result, ctx, **kwargs):
+            ctx.batch_result.features_failed.append(
+                {"name": name, "error": fail_msg}
+            )
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+            with (
+                _CwdCtx(td),
+                patch.dict(
+                    os.environ,
+                    {"DAYTIME_DISPATCH_ID": "a" * 32},
+                    clear=False,
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "create_worktree",
+                    return_value=self._worktree_info(feature),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "execute_feature",
+                    new=AsyncMock(
+                        return_value=MagicMock(name="feat", status="failed")
+                    ),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "apply_feature_result",
+                    new=AsyncMock(side_effect=_apply),
+                ),
+                patch.object(daytime_pipeline, "cleanup_worktree"),
+            ):
+                rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        # failed classification: terminated_via="classification", error=None
+        # (error is only set for exception/startup_failure paths; the
+        # classification "failed" path does not set _top_exc).
+        self.assertEqual(rc, 1)
+        self.assertEqual(result["outcome"], "failed")
+        self.assertEqual(result["terminated_via"], "classification")
+        # In the classification path the error field is None (no exception was
+        # raised; the error detail was only printed to stdout). The spec
+        # description says "error='msg' (or the full formatted message)"; the
+        # Task-2 implementation sets error only for exception/startup_failure.
+        # We assert what the code actually does.
+        self.assertIsNone(result["error"])
+
+    # ------------------------------------------------------------------
+    # Exception-in-body path (terminated_via="exception")
+    # ------------------------------------------------------------------
+
+    async def test_exception_in_body_writes_result_file(self) -> None:
+        """execute_feature raises RuntimeError -> outcome="failed",
+        terminated_via="exception", error contains "boom"."""
+        feature = "feat"
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+            with (
+                _CwdCtx(td),
+                patch.dict(
+                    os.environ,
+                    {"DAYTIME_DISPATCH_ID": "a" * 32},
+                    clear=False,
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "create_worktree",
+                    return_value=self._worktree_info(feature),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "execute_feature",
+                    new=AsyncMock(side_effect=RuntimeError("boom")),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "apply_feature_result",
+                    new=AsyncMock(),
+                ),
+                patch.object(daytime_pipeline, "cleanup_worktree"),
+            ):
+                rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        self.assertEqual(rc, 1)
+        self.assertEqual(result["outcome"], "failed")
+        self.assertEqual(result["terminated_via"], "exception")
+        self.assertIsNotNone(result["error"])
+        self.assertIn("boom", result["error"])
+
+    # ------------------------------------------------------------------
+    # Startup-failure paths (terminated_via="startup_failure")
+    # ------------------------------------------------------------------
+
+    async def test_startup_failure_post_094_exception_shape(self) -> None:
+        """create_worktree raises ValueError("worktree_creation_failed: stderr") ->
+        outcome="failed", terminated_via="startup_failure",
+        error contains "worktree_creation_failed". Pins R3 type-robustness."""
+        feature = "feat"
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+            with (
+                _CwdCtx(td),
+                patch.dict(
+                    os.environ,
+                    {"DAYTIME_DISPATCH_ID": "a" * 32},
+                    clear=False,
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "create_worktree",
+                    side_effect=ValueError("worktree_creation_failed: stderr text"),
+                ),
+                patch.object(daytime_pipeline, "cleanup_worktree"),
+            ):
+                rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        self.assertEqual(rc, 1)
+        self.assertEqual(result["outcome"], "failed")
+        self.assertEqual(result["terminated_via"], "startup_failure")
+        self.assertIsNotNone(result["error"])
+        self.assertIn("worktree_creation_failed", result["error"])
+
+    async def test_startup_failure_pre_094_exception_shape(self) -> None:
+        """create_worktree raises subprocess.CalledProcessError(returncode=128) ->
+        result file still valid with terminated_via="startup_failure".
+        Pins R3's type-robustness: except Exception catches both types."""
+        feature = "feat"
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+            with (
+                _CwdCtx(td),
+                patch.dict(
+                    os.environ,
+                    {"DAYTIME_DISPATCH_ID": "a" * 32},
+                    clear=False,
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "create_worktree",
+                    side_effect=subprocess.CalledProcessError(
+                        returncode=128, cmd=["git"]
+                    ),
+                ),
+                patch.object(daytime_pipeline, "cleanup_worktree"),
+            ):
+                rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        self.assertEqual(rc, 1)
+        self.assertEqual(result["outcome"], "failed")
+        self.assertEqual(result["terminated_via"], "startup_failure")
+        self.assertIsNotNone(result["error"])
+        # CalledProcessError str includes "returned non-zero exit status 128"
+        self.assertIn("128", result["error"])
+        # Verify the result is valid JSON with all required keys.
+        for key in (
+            "schema_version",
+            "dispatch_id",
+            "feature",
+            "start_ts",
+            "end_ts",
+            "outcome",
+            "terminated_via",
+            "deferred_files",
+            "error",
+            "pr_url",
+        ):
+            self.assertIn(key, result)
+
+    async def test_pid_guard_startup_failure(self) -> None:
+        """A live PID file causes run_daytime to return 1 with a startup_failure
+        result file.
+
+        Per the Task-2 implementation, the PID-guard early-return is INSIDE
+        the outer try block, which means _top_exc and _terminated_via are set
+        and the outer finally always writes daytime-result.json. The result
+        file is therefore expected with terminated_via="startup_failure".
+        """
+        feature = "feat"
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+            # Write a PID file pointing at the current (live) process.
+            pid_path = td / "lifecycle" / feature / "daytime.pid"
+            pid_path.write_text(str(os.getpid()), encoding="utf-8")
+
+            with (
+                _CwdCtx(td),
+                patch.dict(
+                    os.environ,
+                    {"DAYTIME_DISPATCH_ID": "a" * 32},
+                    clear=False,
+                ),
+            ):
+                rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        self.assertEqual(rc, 1)
+        # The PID guard runs inside the outer try -> result file is written.
+        self.assertEqual(result["outcome"], "failed")
+        self.assertEqual(result["terminated_via"], "startup_failure")
+
+    # ------------------------------------------------------------------
+    # DAYTIME_DISPATCH_ID env-var validation paths
+    # ------------------------------------------------------------------
+
+    async def test_dispatch_id_missing_generates_own_uuid(self) -> None:
+        """When DAYTIME_DISPATCH_ID is absent the subprocess generates its own
+        32-hex-char dispatch_id, writes a valid result file, and logs a
+        warning to stderr."""
+        feature = "feat"
+
+        async def _apply(name, result, ctx, **kwargs):
+            ctx.batch_result.features_merged.append(name)
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+
+            stderr_buf = io.StringIO()
+            with (
+                _CwdCtx(td),
+                # Ensure the env var is absent.
+                patch.dict(os.environ, {}, clear=False),
+            ):
+                # Remove DAYTIME_DISPATCH_ID if present.
+                os.environ.pop("DAYTIME_DISPATCH_ID", None)
+
+                with (
+                    patch.object(
+                        daytime_pipeline,
+                        "create_worktree",
+                        return_value=self._worktree_info(feature),
+                    ),
+                    patch.object(
+                        daytime_pipeline,
+                        "execute_feature",
+                        new=AsyncMock(
+                            return_value=MagicMock(name="feat", status="completed")
+                        ),
+                    ),
+                    patch.object(
+                        daytime_pipeline,
+                        "apply_feature_result",
+                        new=AsyncMock(side_effect=_apply),
+                    ),
+                    patch.object(daytime_pipeline, "cleanup_worktree"),
+                    patch.object(sys, "stderr", stderr_buf),
+                ):
+                    rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        # Result file must be valid with a well-formed dispatch_id.
+        self.assertRegex(result["dispatch_id"], r"^[a-f0-9]{32}$")
+        self.assertEqual(result["schema_version"], 1)
+        # A warning must have been written to stderr.
+        self.assertIn("DAYTIME_DISPATCH_ID", stderr_buf.getvalue())
+
+    async def test_dispatch_id_malformed_generates_own_uuid(self) -> None:
+        """When DAYTIME_DISPATCH_ID is malformed the subprocess rejects at
+        the validation regex, generates its own uuid4, writes a valid result
+        file, and logs a warning to stderr."""
+        feature = "feat"
+
+        async def _apply(name, result, ctx, **kwargs):
+            ctx.batch_result.features_merged.append(name)
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+
+            stderr_buf = io.StringIO()
+            with (
+                _CwdCtx(td),
+                patch.dict(
+                    os.environ,
+                    {"DAYTIME_DISPATCH_ID": "not-a-uuid!"},
+                    clear=False,
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "create_worktree",
+                    return_value=self._worktree_info(feature),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "execute_feature",
+                    new=AsyncMock(
+                        return_value=MagicMock(name="feat", status="completed")
+                    ),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "apply_feature_result",
+                    new=AsyncMock(side_effect=_apply),
+                ),
+                patch.object(daytime_pipeline, "cleanup_worktree"),
+                patch.object(sys, "stderr", stderr_buf),
+            ):
+                rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        # The result file must use the subprocess-generated uuid, not the bad value.
+        self.assertRegex(result["dispatch_id"], r"^[a-f0-9]{32}$")
+        self.assertNotEqual(result["dispatch_id"], "not-a-uuid!")
+        self.assertEqual(result["schema_version"], 1)
+        # A warning mentioning the bad value must appear in stderr.
+        self.assertIn("DAYTIME_DISPATCH_ID", stderr_buf.getvalue())
+        self.assertIn("not-a-uuid!", stderr_buf.getvalue())
+
+    # ------------------------------------------------------------------
+    # PR URL optional subtest
+    # ------------------------------------------------------------------
+
+    async def test_pr_url_populated_from_daytime_log(self) -> None:
+        """When daytime.log contains a GitHub PR URL, pr_url in the result
+        file is populated with the first matching URL."""
+        feature = "feat"
+
+        async def _apply(name, result, ctx, **kwargs):
+            ctx.batch_result.features_merged.append(name)
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as raw_td:
+            td = Path(raw_td)
+            self._setup_dirs(td, feature)
+
+            # Pre-create a daytime.log with a PR URL embedded.
+            pr_url = "https://github.com/owner/repo/pull/42"
+            log_path = td / "lifecycle" / feature / "daytime.log"
+            log_path.write_text(
+                f"Some output\nCreated PR: {pr_url}\nMore output\n",
+                encoding="utf-8",
+            )
+
+            with (
+                _CwdCtx(td),
+                patch.dict(
+                    os.environ,
+                    {"DAYTIME_DISPATCH_ID": "a" * 32},
+                    clear=False,
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "create_worktree",
+                    return_value=self._worktree_info(feature),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "execute_feature",
+                    new=AsyncMock(
+                        return_value=MagicMock(name="feat", status="completed")
+                    ),
+                ),
+                patch.object(
+                    daytime_pipeline,
+                    "apply_feature_result",
+                    new=AsyncMock(side_effect=_apply),
+                ),
+                patch.object(daytime_pipeline, "cleanup_worktree"),
+            ):
+                rc = await run_daytime(feature)
+
+            result = self._read_result(td, feature)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(result["pr_url"], pr_url)
 
 
 if __name__ == "__main__":

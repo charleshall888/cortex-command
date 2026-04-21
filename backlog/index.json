@@ -32,7 +32,7 @@
   {
     "id": 127,
     "title": "Disambiguate orchestrator prompt tokens to stop lexical-priming escape",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "critical",
     "type": "feature",
     "tags": [
@@ -54,16 +54,16 @@
     "discovery_source": "research/orchestrator-worktree-escape/research.md",
     "plan": null,
     "uuid": "65cbc5a4-ae71-4763-9a9c-f5cf4847480d",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape",
+    "session_id": "a6e2f2ae-1b89-4134-a060-4fff1ddec651",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 128,
     "title": "Install pre-commit hook rejecting main commits during overnight sessions",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "critical",
     "type": "feature",
     "tags": [
@@ -85,16 +85,16 @@
     "discovery_source": "research/orchestrator-worktree-escape/research.md",
     "plan": null,
     "uuid": "9064c10e-38ba-494a-9783-3bf12aca8a6c",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions",
+    "session_id": "39f0f893-bc5c-4c58-bfae-adadaa098a59",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 129,
     "title": "Un-silence morning-report commit and backfill 4 historical reports",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "critical",
     "type": "feature",
     "tags": [
@@ -116,9 +116,9 @@
     "discovery_source": "research/orchestrator-worktree-escape/research.md",
     "plan": null,
     "uuid": "503f9a80-0ec5-4d12-b7b1-3e56b2b5e879",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "un-silence-morning-report-commit-and-backfill-4-historical-reports",
+    "session_id": "f288b456-c5bf-4d90-be05-06779840035d",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -242,40 +242,9 @@
     "repo": null
   },
   {
-    "id": 94,
-    "title": "Fix daytime pipeline worktree atomicity and stderr logging",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "lifecycle",
-      "daytime-pipeline",
-      "worktree",
-      "reliability"
-    ],
-    "areas": [
-      "pipeline"
-    ],
-    "created": "2026-04-20",
-    "updated": "2026-04-21",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "93",
-    "research": null,
-    "spec": "lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/spec.md",
-    "discovery_source": "research/revisit-lifecycle-implement-preflight-options/research.md",
-    "plan": null,
-    "uuid": "c5f87db4-a25a-4fdb-a133-debdf84564e0",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 95,
     "title": "Replace daytime log-sentinel classification with structured result file",
-    "status": "refined",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -298,7 +267,7 @@
     "plan": null,
     "uuid": "7e7ecade-3fa3-4d9c-841f-8ed6141c4da8",
     "lifecycle_slug": null,
-    "session_id": null,
+    "session_id": "7a5f4773-2090-4906-9904-38f2860d2db2",
     "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
@@ -306,7 +275,7 @@
   {
     "id": 96,
     "title": "Add uncommitted-changes guard to lifecycle implement-phase pre-flight",
-    "status": "refined",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -328,7 +297,7 @@
     "plan": null,
     "uuid": "ceb58ab0-8e34-447d-89ae-dd881c627ab7",
     "lifecycle_slug": null,
-    "session_id": null,
+    "session_id": "ff03c625-a1b7-4efd-9283-60b09ee5d098",
     "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
@@ -580,7 +549,7 @@
     "uuid": "9b5c4931-763b-4112-b261-a111119cb99f",
     "lifecycle_slug": "build-cortex-cli-skeleton-with-uv-tool-install-entry-point",
     "session_id": "ae3e25d3-0483-408e-967b-19d3a758065f",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -860,7 +829,7 @@
   {
     "id": 130,
     "title": "Route Python-layer backlog writes through worktree checkout",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -882,9 +851,9 @@
     "discovery_source": "research/orchestrator-worktree-escape/research.md",
     "plan": null,
     "uuid": "a98f7141-94ee-4479-85b3-75187deff6d9",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "route-python-layer-backlog-writes-through-worktree-checkout",
+    "session_id": "547b59d6-60b1-4acb-a597-881c3009d82a",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -1357,7 +1326,7 @@
   {
     "id": 131,
     "title": "Gate overnight PR creation on merged>0 (draft on zero-merge)",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -1378,9 +1347,9 @@
     "discovery_source": "research/orchestrator-worktree-escape/research.md",
     "plan": null,
     "uuid": "5e103f2e-fd3d-4890-84a5-c67d6adac785",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "gate-overnight-pr-creation-on-merged-over-zero",
+    "session_id": "630241c7-2780-4e62-bf16-a32f171e9a45",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
