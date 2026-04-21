@@ -14,6 +14,7 @@
 | 103 | Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7) | backlog | high | feature | — | 101 | — |
 | 104 | Instrument skill-name on dispatch_start for per-skill pipeline aggregates | backlog | high | feature | — | 101 | — |
 | 105 | Extract /commit preflight into bin/commit-preflight | backlog | high | feature | 102, 103 | 101 | — |
+| 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | backlog | high | feature | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | 85 | 82 | — |
 | 88 | Collect 4.7 baseline rounds and snapshot the aggregated data | refined | medium | feature | 99 | 82 | ✓ |
@@ -45,6 +46,7 @@
 - **102** Ship DR-5 SKILL.md-to-bin parity linter with zero existing violations
 - **103** Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7)
 - **104** Instrument skill-name on dispatch_start for per-skill pipeline aggregates
+- **112** Migrate overnight-schedule to a LaunchAgent-based scheduler
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 - **99** Operator gate: #088 baseline measurement window is complete
 - **101** Extract deterministic tool-call sequences into agent-invokable scripts

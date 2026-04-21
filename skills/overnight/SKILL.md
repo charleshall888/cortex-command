@@ -220,7 +220,7 @@ On user approval, execute these steps in order:
 
     > **Usage context (dormant)**: No programmatic access to Claude Code's subscription usage data (remaining tokens, reset time) currently exists from within an agent context. When such access becomes available (e.g., a `/usage` API, a `usage-cache.json` file, or an environment variable), auto-display it alongside the scheduling prompt to help the user choose a launch time. Until then, no usage information is shown.
 
-    **Run now (option 1)**: Execute via Bash tool (substitute actual `{session_id}` and time limit):
+    **Run now (option 1)**: Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and time limit):
 
     ```
     overnight-start $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
@@ -228,7 +228,7 @@ On user approval, execute these steps in order:
 
     Args are positional — do not use `--flag=value` syntax. `overnight-start` creates a detached tmux session named `overnight-runner` and returns immediately.
 
-    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool (substitute actual `{session_id}`, target time, and time limit):
+    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}`, target time, and time limit):
 
     ```
     overnight-schedule <target-time> $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
@@ -290,7 +290,7 @@ Based on the session phase, ask the user what to do:
 
 ### Step 5: Act on User Choice
 
-- **Resume execution**: Execute via Bash tool (substitute actual `{session_id}` from the loaded state):
+- **Resume execution**: Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` from the loaded state):
 
   ```
   overnight-start $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h

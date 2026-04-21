@@ -357,6 +357,36 @@
     "repo": null
   },
   {
+    "id": 112,
+    "title": "Migrate overnight-schedule to a LaunchAgent-based scheduler",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "overnight",
+      "scheduler",
+      "sandbox"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-runner-sandbox-launch/research.md",
+    "plan": null,
+    "uuid": "3565ffe8-5041-4c2b-9f91-d14fa9d4c1cd",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",

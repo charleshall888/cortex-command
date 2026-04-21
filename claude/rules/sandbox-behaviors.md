@@ -29,3 +29,11 @@
 - When git runs a commit hook, the hook and anything it spawns (e.g., `gpg`) all have host-level access; their `TMPDIR` is the host `/var/folders/...`, not the sandbox TMPDIR
 - Direct Bash invocations (`gpg ...`, `cat ~/.gnupg/...`) ARE sandboxed — this asymmetry can mislead diagnosis: git children are NOT sandboxed even though isolated Bash calls are
 - Before diagnosing "sandbox blocks git X": check `excludedCommands` first; do NOT design workarounds (redirect schemes, proxied sockets, `GNUPGHOME=$TMPDIR/...`) that assume git children are sandboxed
+
+## `excludedCommands` Contract: What Belongs
+
+- `excludedCommands` is for short-lived, transactional infrastructure tools whose children complete within seconds (git operations, API queries, single `launchctl` invocations)
+- Do NOT add long-lived-subtree tools (`tmux`, `nohup`, `screen`, runners, daemons) — they keep children alive for hours and permanently exempt the entire descendant tree from the sandbox
+- For a long-running subtree that needs unsandboxed access, use one of:
+  - **Per-call bypass**: `dangerouslyDisableSandbox: true` on the specific Bash tool call — prompt-gated, logged in session transcript
+  - **LaunchAgent handoff**: `launchctl bootstrap` a plist — spawned job runs clean (launchd parent, no seatbelt inheritance) and survives reboot
