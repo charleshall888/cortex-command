@@ -57,29 +57,31 @@
   {
     "id": 85,
     "title": "Audit dispatch-skill prompts and reference docs for 4.7 at-risk patterns",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
       "opus-4-7-harness-adaptation",
       "skills"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-04-18",
-    "updated": "2026-04-20",
+    "updated": "2026-04-21",
     "blocks": [],
     "blocked_by": [
       "83"
     ],
     "parent": "82",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/spec.md",
     "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
     "plan": null,
     "uuid": "f3b4b249-b40c-4d70-a06c-f3e95030ba21",
     "lifecycle_slug": "audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns",
     "session_id": "0807d4ab-1191-4d06-b82e-85d0470608d2",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -212,6 +214,35 @@
     "repo": null
   },
   {
+    "id": 100,
+    "title": "Rewrite verification-mindset.md to positive-routing structure under 4.7 literalism",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "opus-4-7-harness-adaptation",
+      "skills"
+    ],
+    "areas": [],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [
+      "88"
+    ],
+    "parent": "82",
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "279717cb-b00f-46aa-8180-bbad65e7eb4c",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -273,27 +304,31 @@
   {
     "id": 88,
     "title": "Collect 4.7 baseline rounds and snapshot the aggregated data",
-    "status": "backlog",
+    "status": "refined",
     "priority": "medium",
     "type": "feature",
     "tags": [
       "opus-4-7-harness-adaptation",
       "capability-adoption"
     ],
-    "areas": [],
+    "areas": [
+      "pipeline"
+    ],
     "created": "2026-04-18",
-    "updated": "2026-04-20",
+    "updated": "2026-04-21",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "99"
+    ],
     "parent": "82",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/collect-47-baseline-rounds-and-snapshot-the-aggregated-data/spec.md",
     "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
     "plan": null,
     "uuid": "e7f9b367-c3d5-414b-8de4-dd813cdf3908",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "collect-47-baseline-rounds-and-snapshot-the-aggregated-data",
+    "session_id": "fab20d9b-3f4d-439e-8ed9-65d1976cfd3f",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -361,26 +396,28 @@
     "repo": null
   },
   {
-    "id": 89,
-    "title": "Measure xhigh vs high effort cost delta on representative task",
+    "id": 99,
+    "title": "Operator gate: #088 baseline measurement window is complete",
     "status": "backlog",
-    "priority": "low",
-    "type": "spike",
+    "priority": "medium",
+    "type": "task",
     "tags": [
       "opus-4-7-harness-adaptation",
-      "spike"
+      "operator-gate"
     ],
-    "areas": [],
-    "created": "2026-04-18",
-    "updated": "2026-04-20",
+    "areas": [
+      "pipeline"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
     "blocks": [],
     "blocked_by": [],
     "parent": "82",
     "research": null,
     "spec": null,
-    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
+    "discovery_source": null,
     "plan": null,
-    "uuid": "84821b29-13db-4677-bd07-0c66465ca5e8",
+    "uuid": "8e3f7a21-5c9b-4d62-8e1a-6f2b4c9e7d33",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -399,10 +436,9 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-18",
+    "updated": "2026-04-20",
     "blocks": [],
     "blocked_by": [
-      "89",
       "92"
     ],
     "parent": "82",

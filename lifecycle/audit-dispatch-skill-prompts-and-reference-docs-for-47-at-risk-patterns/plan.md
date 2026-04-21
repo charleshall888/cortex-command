@@ -18,14 +18,14 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 
 ## Tasks
 
-### Task 1: Create Pass 2 child backlog ticket
+### Task 1: Create Pass 2 child backlog ticket [x]
 - **Files**: `backlog/*-rewrite-verification-mindset-md-to-positive-routing-structure-under-4-7-literalism.md` (new)
 - **What**: Create a new backlog item titled exactly `"Rewrite verification-mindset.md to positive-routing structure under 4.7 literalism"` under epic #82. Body copies `research.md` §"verification-mindset.md structural inventory" verbatim under a `## Starting Context` heading; includes Scope, Non-requirement, and Acceptance sections from spec R7.
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Use `/backlog` skill with `add` action. Frontmatter must include `parent: "82"`, `tags: [opus-4-7-harness-adaptation, skills]`, `blocked-by: [88]`, `priority: high`, `type: feature`. Do NOT set `lifecycle_phase` or `lifecycle_slug` on the child — it is a fresh backlog item. Source content for `## Starting Context` is at `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/research.md` §"verification-mindset.md structural inventory" (copy verbatim, do not link — line numbers may drift).
 - **Verification**: `ls backlog/*-rewrite-verification-mindset-md-to-positive-routing-structure-under-4-7-literalism.md` exits 0 AND the file's frontmatter satisfies `parent == "82"` AND `88 in blocked-by` AND `"opus-4-7-harness-adaptation" in tags` (check with a Python YAML parse). Pass if both checks succeed.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Gate check — verify #088 baseline readiness (with overnight-defer branch)
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/events.log` (append on escalation or defer)
