@@ -15,7 +15,7 @@ No prior recovery-log history exists for this feature; this is a first-pass impl
 - **Complexity**: simple
 - **Context**: Existing reference at `claude/overnight/state.py:390-437` for `save_batch_result()` is the direct template — same file, same module, same `durable_fsync` from `claude.common`. Follow the existing fd-closed-flag pattern (`closed = False` → set to `True` after `os.close(fd)` → inspect in `except BaseException` handler). Place the new dataclass alongside other dataclasses in the module (near `BatchResult` import area). Place `save_daytime_result()` immediately after `save_batch_result()`. Field ordering in the dataclass must match the spec's 10-field list so `asdict()` produces the expected JSON key order. No changes to `BatchResult` or `OvernightState`. `schema_version` defaults to `1`; callers pass the rest explicitly.
 - **Verification**: `just test` passes. `python -c "from claude.overnight.state import DaytimeResult, save_daytime_result; r = DaytimeResult(schema_version=1, dispatch_id='a'*32, feature='x', start_ts='t', end_ts='t', outcome='merged', terminated_via='classification', deferred_files=[], error=None, pr_url=None); import json, tempfile, pathlib; p = pathlib.Path(tempfile.mkdtemp()) / 'r.json'; save_daytime_result(r, p); print(json.load(open(p))['schema_version'])"` prints `1`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Refactor run_daytime() with top-level try/except/finally and result-file emission
 - **Files**: `claude/overnight/daytime_pipeline.py`
@@ -37,7 +37,7 @@ No prior recovery-log history exists for this feature; this is a first-pass impl
 - **Complexity**: complex
 - **Context**: The current structure at `claude/overnight/daytime_pipeline.py:247-351` must be restructured while preserving all existing behavior. Critical invariants per spec R3: (a) `_check_cwd()` stays outside the top-level try (it calls `sys.exit(1)` which cannot be meaningfully caught); (b) the catch clause uses `except Exception` (broad) to catch both current `subprocess.CalledProcessError` from `create_worktree` AND the post-#094 `ValueError` per spec Edge Cases; (c) the inner try/finally at line 307/317 must survive intact for orphan-task-cancel / worktree-cleanup / pid-unlink. Imports needed: `uuid`, `re`, `datetime` (already imported), and `DaytimeResult`/`save_daytime_result` from `claude.overnight.state`. The helper `_check_dispatch_id()` and `_scan_pr_url()` should be module-level functions, not nested inside `run_daytime`. PR-URL regex: `https://github\.com/[^/\s]+/[^/\s]+/pull/[0-9]+` — use `re.compile()` at module scope, iterate file line-by-line with `open(..., encoding="utf-8", errors="replace")`, short-circuit on first match. The daytime-log path for PR scan is `Path(f"lifecycle/{feature}/daytime.log")` — if the file doesn't exist or is unreadable, return `None` gracefully. Ensure `flush=True` is applied to all six classification print sites (spec R5 says ≥ 5; six exist in the source). Consider extracting the outcome-determination logic into a small helper `_classify_outcome(ctx, feature) -> tuple[str, str]` returning `(outcome, print_message)` — but this is optional if the inline branches are more readable. The startup_phase boolean is the simplest way to discriminate startup-failure from exception-in-body without restructuring the try into two nested tries.
 - **Verification**: `just test` passes. `grep -nE 'except Exception' claude/overnight/daytime_pipeline.py` returns ≥ 1 hit inside `run_daytime`. `grep -c 'flush=True' claude/overnight/daytime_pipeline.py` returns ≥ 5. `grep -n 'DAYTIME_DISPATCH_ID' claude/overnight/daytime_pipeline.py` returns ≥ 1 hit. `grep -n '_check_dispatch_id\|_scan_pr_url' claude/overnight/daytime_pipeline.py` returns ≥ 2 hits. `grep -n 'save_daytime_result' claude/overnight/daytime_pipeline.py` returns ≥ 1 hit.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Add .gitignore coverage for abandoned tempfiles
 - **Files**: `.gitignore`
@@ -46,7 +46,7 @@ No prior recovery-log history exists for this feature; this is a first-pass impl
 - **Complexity**: simple
 - **Context**: Spec R8 explicitly calls out `lifecycle/*/.daytime-result-*.tmp` as required. The dispatch-file tempfile pattern `.daytime-dispatch-*.tmp` is also per the spec's Technical Constraints: "Same pattern for `daytime-dispatch.json` (skill-side)." Inspect the existing `.gitignore` to choose the correct section.
 - **Verification**: `grep -n '\.daytime-result-' .gitignore` returns ≥ 1 match. `grep -n '\.daytime-dispatch-' .gitignore` returns ≥ 1 match.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Update implement.md §1b to mint DAYTIME_DISPATCH_ID and replace classifier with 3-tier reader
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -64,7 +64,7 @@ No prior recovery-log history exists for this feature; this is a first-pass impl
 - **Complexity**: complex
 - **Context**: The current §1b vii is at `skills/lifecycle/references/implement.md:157-164`; the `dispatch_complete` event template is at line ~169. Atomic-write pattern for the skill (Bash-invoked): use a `python3 -c` heredoc-safe one-liner, e.g., `python3 -c 'import json, os, sys, tempfile; d = sys.argv[1]; data = {"schema_version": 1, "dispatch_id": sys.argv[2], "feature": sys.argv[3], "start_ts": sys.argv[4], "pid": None}; fd, tmp = tempfile.mkstemp(dir=d, prefix=".daytime-dispatch-", suffix=".tmp"); os.write(fd, (json.dumps(data, indent=2) + "\n").encode()); os.fsync(fd); os.close(fd); os.replace(tmp, os.path.join(d, "daytime-dispatch.json"))'`. The Bash call template should avoid shell metacharacter ambiguity by passing UUID as a quoted positional arg. When the skill re-enters after compaction, it reads `daytime-dispatch.json` to recover `dispatch_id` — document this in §1b vii as "the skill MAY cache the UUID in conversation memory for speed, but the disk file is authoritative." Deletion of `daytime-dispatch.json` after tier-1 success is a single `rm lifecycle/{slug}/daytime-dispatch.json` Bash call. The three tier-3 discriminated messages per spec R6 must each appear verbatim in §1b vii. Acceptance requires `grep -c 'unknown' skills/lifecycle/references/implement.md` ≥ 3.
 - **Verification**: `grep -c 'unknown' skills/lifecycle/references/implement.md` returns ≥ 3. `grep 'PYTHONUNBUFFERED' skills/lifecycle/references/implement.md` returns no match. `grep -n 'daytime-result.json' skills/lifecycle/references/implement.md` returns ≥ 2 hits (§1b vii). `grep -n 'daytime-dispatch.json' skills/lifecycle/references/implement.md` returns ≥ 3 hits (§1b iv, §1b vii). `grep -n 'DAYTIME_DISPATCH_ID' skills/lifecycle/references/implement.md` returns ≥ 1 hit (§1b iv). `grep -n 'schema_version' skills/lifecycle/references/implement.md` returns ≥ 1 hit.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Add subprocess-side tests for every exit path in test_daytime_pipeline.py
 - **Files**: `claude/overnight/tests/test_daytime_pipeline.py`
@@ -84,7 +84,7 @@ No prior recovery-log history exists for this feature; this is a first-pass impl
 - **Complexity**: complex
 - **Context**: Existing test class `TestRunDaytimeRouting` at `claude/overnight/tests/test_daytime_pipeline.py` already demonstrates the mocking pattern for `execute_feature`, `apply_feature_result`, `create_worktree`, and `cleanup_worktree`. Use `asyncio.run(run_daytime(...))` or `pytest-asyncio` to invoke the coroutine. Use `monkeypatch.setenv("DAYTIME_DISPATCH_ID", "a" * 32)` for tests that want a deterministic dispatch id; capture stderr via `capsys`. For the PR-URL field, most tests can pass an empty or missing `daytime.log` (resulting in `pr_url=None`); optionally add one subtest that pre-creates a `daytime.log` containing a GitHub PR URL and asserts `pr_url` is populated. For the CalledProcessError test, import `subprocess` and construct `subprocess.CalledProcessError(128, ["git"])`. Wrap all tests in `pytest.mark.asyncio` as appropriate.
 - **Verification**: `just test` passes. The new test class `TestDaytimeResultFile` exists in the test file. `python -m pytest claude/overnight/tests/test_daytime_pipeline.py::TestDaytimeResultFile -v` reports all subtests passing.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Add skill-side reader tests for 3-tier fallback
 - **Files**: `claude/overnight/tests/test_daytime_result_reader.py` (new)
@@ -105,7 +105,7 @@ No prior recovery-log history exists for this feature; this is a first-pass impl
 - **Complexity**: complex
 - **Context**: This task creates a small parallel surface (`daytime_result_reader.py`) that the skill's Bash in §1b vii may optionally invoke. The helper's purpose is to give the classification logic a unit-test boundary — otherwise the 3-tier design is only validated by integration, which is expensive and fragile. The helper signature: `def classify_result(feature_slug: str, lifecycle_root: Path = None) -> dict` returning `{"outcome": str, "terminated_via": Optional[str], "message": str, "source_tier": int, "pr_url": Optional[str], "deferred_files": list[str], "error": Optional[str], "log_tail": Optional[str]}`. The skill can call this via `python3 -m claude.overnight.daytime_result_reader --feature {slug}` in a Bash call during §1b vii, simplifying the skill markdown. Log-tail is read from `lifecycle/{slug}/daytime.log` when tier-3 is reached. Return-type is a dict (JSON-serializable) so the skill can `jq` or directly display fields. This helper consolidates the spec R6/R7 schema-version check, freshness-token validation, phase discrimination, and log-tail reading in one audit-point.
 - **Verification**: `just test` passes. `python -m pytest claude/overnight/tests/test_daytime_result_reader.py -v` reports all subtests passing. `python -c "from claude.overnight.daytime_result_reader import classify_result; print('ok')"` succeeds.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Update implement.md §1b vii to invoke the daytime_result_reader helper
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -114,7 +114,7 @@ No prior recovery-log history exists for this feature; this is a first-pass impl
 - **Complexity**: simple
 - **Context**: Adjust §1b vii's structure so the skill reads a single JSON blob from the helper rather than coordinating three tiers inline. The helper's dict output fields directly map to the user-surfaced message components: `outcome`, `message`, `pr_url`, `deferred_files`, `log_tail`. The skill still interprets `outcome` (for success / paused / deferred / failed / unknown) and formats the display. The `dispatch_complete` event's `outcome` field is populated from the helper's `outcome` field directly.
 - **Verification**: `grep -n 'daytime_result_reader' skills/lifecycle/references/implement.md` returns ≥ 1 match (if the helper approach is used). `grep -n 'python3 -m claude.overnight.daytime_result_reader' skills/lifecycle/references/implement.md` returns ≥ 1 match. Skill markdown remains internally consistent with Task 4's §1b iv protocol (dispatch file written pre-launch; env var passed on launch).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
