@@ -127,13 +127,39 @@ If `kill -0` exits 0 (process alive): reject with "Autonomous daytime run alread
 3. Derive the session directory as the parent directory of `state_path` (i.e., `Path(state_path).parent`). `state_path` is the full path to the session's state JSON file (e.g., `lifecycle/sessions/{id}/overnight-state.json`); the session directory is the containing directory. This matches the detection pattern used by `bin/overnight-status`. Read the runner lock file: `cat {session_dir}/.runner.lock 2>/dev/null` and extract the runner PID.
 4. Liveness check: `kill -0 $runner_pid 2>/dev/null`. If the runner is alive (exit 0): reject with "Overnight runner is active (PID {pid}) — wait for it to complete before launching a daytime run." and exit §1b. If the runner is dead (non-zero exit): emit warning "overnight state shows executing but no live runner found — may be stale; proceeding" and continue.
 
-**iv. Background subprocess launch.** Single Bash call with `run_in_background: true`:
+**iv. Background subprocess launch.** Three preparatory Bash calls before the launch, then one launch call, then one post-launch update call — five calls total (no compound commands):
+
+**Step 1 — Mint dispatch UUID.** Single Bash call:
 
 ```
-python3 -m claude.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
+python3 -c 'import uuid; print(uuid.uuid4().hex)'
+```
+
+Stash the printed 32-char lowercase hex string into conversation memory as the active `dispatch_id` for the current feature.
+
+**Step 2 — Write `daytime-dispatch.json` atomically.** Single Bash call (before the subprocess launch):
+
+```
+python3 -c 'import json, os, sys, tempfile; d = sys.argv[1]; data = {"schema_version": 1, "dispatch_id": sys.argv[2], "feature": sys.argv[3], "start_ts": sys.argv[4], "pid": None}; fd, tmp = tempfile.mkstemp(dir=d, prefix=".daytime-dispatch-", suffix=".tmp"); os.write(fd, (json.dumps(data, indent=2) + "\n").encode()); os.fsync(fd); os.close(fd); os.replace(tmp, os.path.join(d, "daytime-dispatch.json"))' lifecycle/{feature} {uuid} {slug} $(date -u +%Y-%m-%dT%H:%M:%SZ)
+```
+
+This writes `lifecycle/{feature}/daytime-dispatch.json` with `pid: null` using the same tempfile + `os.replace` atomic-write pattern as `save_batch_result()`. The dispatch file is the on-disk authoritative source for `dispatch_id` — it survives main-session compaction and allows a re-entered skill to recover the active dispatch identity without trusting in-memory state.
+
+**Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed:
+
+```
+DAYTIME_DISPATCH_ID={uuid} python3 -m claude.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
 ```
 
 The subprocess is responsible for writing `lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID file — it only reads it.
+
+**Step 4 — Update `daytime-dispatch.json` with subprocess PID.** After the background launch Bash call returns and after the PID file has been written (following the initial-wait in §vi), issue a single Bash call that performs a second atomic write updating the `pid` field to the subprocess PID. Re-read `daytime-dispatch.json`, mutate the `pid` field to the integer PID, then atomically overwrite:
+
+```
+python3 -c 'import json, os, tempfile; p = "lifecycle/{feature}/daytime-dispatch.json"; d = os.path.dirname(p); data = json.load(open(p)); data["pid"] = {pid}; fd, tmp = tempfile.mkstemp(dir=d, prefix=".daytime-dispatch-", suffix=".tmp"); os.write(fd, (json.dumps(data, indent=2) + "\n").encode()); os.fsync(fd); os.close(fd); os.replace(tmp, p)'
+```
+
+This ensures the on-disk dispatch file reflects the actual subprocess PID for liveness monitoring.
 
 **v. Log `implementation_dispatch` event.** Immediately after the background launch, a separate Bash call appends to `lifecycle/{feature}/events.log`:
 
@@ -154,22 +180,56 @@ The subprocess is responsible for writing `lifecycle/{feature}/daytime.pid` at i
 
 **Termination bound**: 120 iterations (~4 hours). Context window exhaustion — not iteration count — is the practical binding constraint for long runs. At **30 iterations (~1 hour)**, pause and offer the user the option to suspend polling: "Subprocess still running after 30 iterations (~1 hour). Continue polling or stop? (The process continues in background — monitor `lifecycle/{feature}/daytime.log` and `events.log` directly.)" If the user chooses to stop, exit the polling loop (the subprocess keeps running; skip result surfacing and log `dispatch_complete` with outcome `"paused"` only if the subprocess is still alive — otherwise surface results normally). On reaching 120 iterations without the subprocess exiting: surface "Polling timeout — subprocess may still be running (PID {pid}). Check `lifecycle/{feature}/daytime.log` directly for status." and exit the polling loop.
 
-**vii. Result surfacing.** Read the last non-empty line of `lifecycle/{feature}/daytime.log` that begins with `"Feature "`. Apply first-match-wins in this exact order:
+**vii. Result surfacing.** Use a 3-tier reader to classify the outcome. All Bash calls are separate (no compound commands).
 
-1. Line contains `"merged successfully"` → **success**: display the line to the user; scan the full `daytime.log` for a GitHub PR URL matching the pattern `https://github.com/[^/]+/[^/]+/pull/[0-9]+` and display it if found.
-2. Line contains `"deferred"` → **deferred**: display the line; read the most recently modified file in `lifecycle/{feature}/deferred/` (by modification time) and display its content; if multiple files exist, note the count.
-3. Line contains `"paused"` → **paused**: display the line; instruct the user to check `events.log` for details and re-run when ready.
-4. No `"Feature "` line is found, or the line matches none of the above → **failed**: display the last 20 lines of `daytime.log`; instruct the user to check `lifecycle/{feature}/daytime.log` for full details.
+**Tier 1 — `daytime-result.json`.**
 
-This ordered detection is intentional: a failure message containing "paused" as a substring (e.g. `"Feature X failed: subprocess paused unexpectedly"`) still classifies as failed because "merged successfully" and "deferred" are checked first, and "paused" would only match at step 3, which is reached only if steps 1 and 2 did not match. The ordering ensures substring accidents do not misclassify.
+Issue a Bash call: `cat lifecycle/{feature}/daytime-result.json`. If the file is absent, the `cat` exits non-zero — fall to Tier 2. If present, parse the JSON:
+
+- If malformed JSON → fall to Tier 2.
+- If `schema_version` is not exactly `1` (hard equality check — `schema_version == 1`; no "greater than" branch; any other value including missing, null, or a future version falls through) → fall to Tier 2.
+- Read `dispatch_id` from `daytime-dispatch.json` for the freshness check. The skill MAY cache the UUID in conversation memory for speed, but the disk file is authoritative — a re-entered skill after compaction or process restart reads `daytime-dispatch.json` first. Issue a separate Bash call: `cat lifecycle/{feature}/daytime-dispatch.json`. If `daytime-dispatch.json` is absent or malformed → tier-1 cannot validate freshness → fall to Tier 2. If `dispatch_id` in the result file does not match `dispatch_id` in `daytime-dispatch.json` (stale prior-run file) → fall to Tier 2.
+- On all checks passing (**Tier 1 success**): classify from `outcome` + `terminated_via` + `error` + `pr_url` + `deferred_files` fields. Map outcomes:
+  - `outcome: "merged"` → display success; surface `pr_url` if non-null.
+  - `outcome: "deferred"` → display deferred; list `deferred_files`; display content of the most recently modified deferred file.
+  - `outcome: "paused"` → display paused; instruct the user to check `events.log` for details and re-run when ready.
+  - `outcome: "failed"` → display failed; show `error` if non-null; show last 20 lines of `daytime.log`.
+  - `outcome: "unknown"` (or any unrecognised value) → treat as tier-3 outcome (see below).
+- After a successful Tier 1 read and validation, delete `daytime-dispatch.json` to mark the dispatch as consumed: `rm lifecycle/{feature}/daytime-dispatch.json`.
+
+**Tier 2 — `daytime-state.json` as discrimination context.**
+
+Tier 2 does NOT classify the outcome — it reads context to discriminate the Tier-3 message. Issue a Bash call: `cat lifecycle/{feature}/daytime-state.json`. Read the top-level `phase` field:
+
+- `phase == "complete"` (terminal) → discrimination: **terminal**
+- `phase == "executing"` or any other non-terminal value → discrimination: **non-terminal**
+- File absent or unreadable → discrimination: **absent**
+
+**Tier 3 — surface `outcome: "unknown"` with discriminated message.**
+
+Display the appropriate discriminated message to the user (verbatim per spec R6):
+
+- Discrimination **terminal**: "Subprocess likely completed but its result file is missing or invalid. Check `lifecycle/{slug}/daytime.log` for the final outcome."
+- Discrimination **non-terminal**: "Subprocess did not complete (still running, killed, or crashed mid-execution). Check `lifecycle/{slug}/daytime.log`."
+- Discrimination **absent**: "Subprocess never started (pre-flight failure). Check `lifecycle/{slug}/daytime.log`."
+
+In all three Tier-3 cases, also display the last 20 lines of `lifecycle/{feature}/daytime.log`. The classification that flows into §1b viii's `dispatch_complete` event is `outcome: "unknown"`. Do NOT silently classify as `"failed"`.
 
 **viii. Log `dispatch_complete` event.** After result surfacing, a separate Bash call appends to `lifecycle/{feature}/events.log`:
 
 ```
-{"ts": "<ISO 8601>", "event": "dispatch_complete", "feature": "<name>", "mode": "daytime", "outcome": "complete|deferred|paused|failed", "pr_url": "<url>|null"}
+{"ts": "<ISO 8601>", "event": "dispatch_complete", "feature": "<name>", "mode": "daytime", "outcome": "complete|deferred|paused|failed|unknown", "pr_url": "<url>|null"}
 ```
 
-The `outcome` field maps from the result-surfacing classification: "merged successfully" → `"complete"`, "deferred" → `"deferred"`, "paused" → `"paused"`, other / no-match → `"failed"`. The `pr_url` field is the PR URL string if one was found during success surfacing, or the JSON literal `null` otherwise.
+The `outcome` field maps from the result-surfacing classification:
+
+- Tier-1 `outcome: "merged"` → `"complete"`
+- Tier-1 `outcome: "deferred"` → `"deferred"`
+- Tier-1 `outcome: "paused"` → `"paused"`
+- Tier-1 `outcome: "failed"` → `"failed"`
+- Tier-3 surface (all discrimination variants) → `"unknown"`
+
+The `pr_url` field is the PR URL string if one was surfaced from the result file during Tier-1 success (merged outcome), or the JSON literal `null` otherwise.
 
 **ix. Exit /lifecycle entirely.** Do not transition to any further phase. The daytime pipeline has already run the full lifecycle; the main session's role is done.
 
