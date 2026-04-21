@@ -324,8 +324,8 @@ def test_skill_contracts() -> None:
           in §1b (guard ordering)
       (d) `"mode": "daytime"` appears at least twice in §1b
           (implementation_dispatch + dispatch_complete)
-      (e) "merged successfully" before "deferred" before "paused" in §1b
-          (first-match-wins outcome ordering)
+      (e) §1b.vii invokes the daytime_result_reader helper and documents the
+          full outcome enumeration (merged/deferred/paused/failed/unknown)
     """
     implement_md = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
     text = implement_md.read_text()
@@ -379,25 +379,19 @@ def test_skill_contracts() -> None:
         f"(implementation_dispatch + dispatch_complete events); found {mode_count}"
     )
 
-    # (e) outcome-detection ordering: merged → deferred → paused
-    # The first-match-wins ordering lives in the §vii Result Surfacing
-    # sub-step. Other occurrences of these strings appear earlier in §1b
-    # (e.g. the Termination bound paragraph in §vi mentions "paused", and
-    # the dispatch_complete event schema in §viii enumerates all four
-    # outcomes) — those are narrative/schema references, not the ordered
-    # detection logic this check targets. Narrow to the §vii region.
+    # (e) §1b.vii invokes the structured-result-file reader helper (the
+    # ticket-095 replacement for log-sentinel substring classification) and
+    # documents the full outcome enumeration. Narrow to the §vii region.
     vii_start = section.find("**vii.")
     assert vii_start != -1, "§1b must contain a §vii step marker"
     vii_end_marker = section.find("**viii.", vii_start)
     vii_section = section[vii_start:vii_end_marker] if vii_end_marker != -1 else section[vii_start:]
 
-    merged_idx = vii_section.find("merged successfully")
-    deferred_idx = vii_section.find("deferred")
-    paused_idx = vii_section.find("paused")
-    assert merged_idx != -1, '§1b.vii must mention "merged successfully"'
-    assert deferred_idx != -1, '§1b.vii must mention "deferred"'
-    assert paused_idx != -1, '§1b.vii must mention "paused"'
-    assert merged_idx < deferred_idx < paused_idx, (
-        "first-match-wins outcome ordering must be preserved in §1b.vii: "
-        "merged successfully → deferred → paused"
+    reader_invocation = "python3 -m claude.overnight.daytime_result_reader"
+    assert reader_invocation in vii_section, (
+        f"§1b.vii must invoke the reader helper {reader_invocation!r}"
     )
+    for outcome in ("merged", "deferred", "paused", "failed", "unknown"):
+        assert outcome in vii_section, (
+            f'§1b.vii must document the {outcome!r} outcome branch'
+        )
