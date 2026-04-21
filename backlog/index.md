@@ -29,6 +29,7 @@
 | 122 | Publish plugin marketplace manifest for cortex-command | backlog | high | feature | 115, 116, 117, 120, 121 | 113 | — |
 | 123 | Lifecycle skill gracefully degrades autonomous-worktree option when runner absent | backlog | high | feature | 120 | 113 | — |
 | 130 | Route Python-layer backlog writes through worktree checkout | in_progress | high | feature | — | 126 | — |
+| 132 | Classify /critical-review findings by class and add B-class action surface | refined | high | feature | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | 85 | 82 | — |
 | 88 | Collect 4.7 baseline rounds and snapshot the aggregated data | refined | medium | feature | 99 | 82 | ✓ |
@@ -53,6 +54,7 @@
 ## Refined
 
 - **83** Run /claude-api migrate to opus-4-7 on throwaway branch and report diff
+- **132** Classify /critical-review findings by class and add B-class action surface
 
 ## Backlog
 
