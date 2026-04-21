@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: c5f87db4-a25a-4fdb-a133-debdf84564e0
 title: "Fix daytime pipeline worktree atomicity and stderr logging"
-status: backlog
+status: refined
 priority: high
 type: feature
 created: 2026-04-20
-updated: 2026-04-20
+updated: 2026-04-21
 parent: "93"
 tags: [lifecycle, daytime-pipeline, worktree, reliability]
 discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
 areas: [pipeline]
+complexity: complex
+criticality: high
+spec: lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/spec.md
 ---
 
 # Fix daytime pipeline worktree atomicity and stderr logging

@@ -1,0 +1,57 @@
+- ts: 2026-04-21T00:00:00Z
+  event: clarify_critic
+  feature: add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight
+  findings:
+    - "Intent clarity rating of HIGH is supported by reasoning that calls out 'three exact behaviors (run git status, demote via description warning + not-recommended, non-blocking)' as settled, but the source material explicitly defers the warning text and the meaning of 'demote' to Spec. Calling intent 'precise' while two of three behavioral dimensions are open spec decisions inflates the rating."
+    - "The source material is internally inconsistent about whether the demoted option is 'Implement on current branch' (per acceptance criteria) or 'Implement on main' (per Findings section quoting option 3 text). The assessment does not flag this inconsistency."
+    - "Scope boundedness HIGH is asserted on explicit in/out lists and enumerated spec-phase decisions, but enumerating open spec questions defers scope rather than bounding it. The two spec decisions (warning text, meaning of 'demote') together determine whether the implementation touches ordering logic, recommended-default logic, description strings, or all three."
+    - "The claim that this ticket 'reuses the pattern' in skills/pr/SKILL.md ignores that pr/SKILL.md uses a blocking pre-flight check while this ticket requires a non-blocking demotion inside an AskUserQuestion — structurally different control flow."
+    - "Requirements alignment HIGH is reached without loading any lifecycle-area or skills-area requirements doc, despite the ticket's own `areas: [lifecycle, skills]` frontmatter."
+    - "The cited project.md phrases ('Complexity: must earn its place', 'simpler solution is correct') are paraphrases, not file-read quotes, and the reasoning pattern 'change is small therefore aligned' is tautological rather than alignment to a specific requirement."
+    - "Criticality=high is justified by citing 'clarify §5 default' without quoting §5 or reconciling with the ticket's own framing of a non-blocking UX nudge with zero trunk-safety incidents in the retro corpus."
+    - "Complexity 'simple (1–2 files)' asserts file count that the source does not enumerate — only implement.md is named; spec-phase decisions about 'demote' may pull in helper logic or additional skill files."
+    - "#097 is claimed cleanly out-of-scope but the acceptance 'not the recommended default for this invocation (even after #097 lands)' means this ticket must encode recommended-default logic that interacts with #097 — shared code paths, not a clean boundary."
+  dispositions:
+    apply: 3
+    dismiss: 6
+    ask: 0
+  applied_fixes:
+    - "Narrowed intent clarity reasoning: HIGH rating stands on the behavioral contract (non-blocking, warning present, not recommended) which the acceptance criteria lock, but acknowledge that exact warning text and exact form of 'demote' are spec-phase decisions rather than overclaiming them as settled."
+    - "Revised requirements alignment wording from 'Aligned with project.md...' to 'Consistent with project.md's preference for minimal, targeted fixes; no conflict detected; no lifecycle-area or skills-area requirements doc exists.'"
+    - "Added open question for research/spec: how should the guard's 'not recommended' logic compose with #097's default-flip to avoid shared-code-path conflicts?"
+  dismissals:
+    - finding_index: 1
+      rationale: "Pre-flight in implement.md §1 only fires when the current branch is main, so 'Implement on current branch' and 'Implement on main' refer to the same option in today's code. The acceptance uses forward-looking language consistent with #097's planned rename; no real inconsistency."
+    - finding_index: 2
+      rationale: "The acceptance criteria lock the behavioral contract (warning prefix, not recommended, non-blocking). Spec decides form (exact text, ordering vs recommended-flag), but form is a presentation layer that lives within one section of one file. Scope is bounded by the acceptance criteria, not by the open presentation questions."
+    - finding_index: 3
+      rationale: "The reuse is of the git status --porcelain detection pattern, not the downstream disposition. Noted as a precision point but does not change the confidence rating on intent or scope."
+    - finding_index: 4
+      rationale: "Self-resolved against requirements/ directory listing: only project.md, observability.md, pipeline.md, multi-agent.md, and remote-access.md exist. No lifecycle-area or skills-area doc exists to load. Alignment note revised per applied_fixes[1] to reflect this factually."
+    - finding_index: 6
+      rationale: "Clarify §5 explicitly states 'Default to `high` for skill/lifecycle/hook/workflow changes... this is the appropriate default for most skill and agentic layer changes.' The lifecycle implement skill is shared workflow infrastructure every lifecycle invocation depends on; a bug in the guard would surface in every implement pre-flight. Default rating holds."
+    - finding_index: 7
+      rationale: "Self-resolved by reading skills/lifecycle/references/implement.md: the entire §1 pre-flight sits in one file. All 'demote' interpretations (warning prefix in description, recommended-flag change, ordering in AskUserQuestion options) operate inside that one section. 1-file estimate holds."
+  status: ok
+- ts: 2026-04-21T00:00:00Z
+  event: orchestrator_review
+  feature: add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight
+  phase: specify
+  verdict: flag
+  cycle: 1
+  issues:
+    - "S1: R1, R2, R6, R7, R8, R9 use 'Verify by reading the prose' without required 'Interactive/session-dependent: [rationale]' annotation or a grep-based command check"
+    - "S3: Requirements are not explicitly MoSCoW-classified; no statement that all 9 are must-haves"
+- ts: 2026-04-21T00:00:00Z
+  event: orchestrator_dispatch_fix
+  feature: add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight
+  phase: specify
+  mode: fresh_subagent
+  issue: "Tighten S1 acceptance criteria (R1/R2/R6/R7/R8/R9) and add explicit S3 MoSCoW statement"
+- ts: 2026-04-21T00:00:00Z
+  event: orchestrator_review
+  feature: add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight
+  phase: specify
+  verdict: pass
+  cycle: 2
+  issues: []

@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: ceb58ab0-8e34-447d-89ae-dd881c627ab7
 title: "Add uncommitted-changes guard to lifecycle implement-phase pre-flight"
-status: backlog
+status: refined
 priority: high
 type: feature
 created: 2026-04-20
-updated: 2026-04-20
+updated: 2026-04-21
 parent: "93"
 tags: [lifecycle, preflight, trunk-safety]
 discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
-areas: [lifecycle, skills]
+areas: [skills]
+complexity: simple
+criticality: high
+spec: lifecycle/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/spec.md
 ---
 
 # Add uncommitted-changes guard to lifecycle implement-phase pre-flight

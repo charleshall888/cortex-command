@@ -1,0 +1,35 @@
+- ts: 2026-04-21T13:42:49Z
+  event: clarify_critic
+  feature: fix-daytime-pipeline-worktree-atomicity-and-stderr-logging
+  findings:
+    - "The acceptance criterion for surfacing stderr offers an either/or choice — 'surfaces git's stderr in the exception message (or in a structured log line to daytime.log)' — which are materially different implementations with different downstream effects (exception text vs. logger output, different test shapes, different behavior for callers that catch the exception). Intent clarity rated HIGH ignores that the ticket punts on this choice."
+    - "The atomicity acceptance criterion does not specify how to detect 'branch created by this call' vs. 'branch already existed' — yet the assessment rates intent HIGH. Multiple failure modes (stale worktree dir, locked worktree) could mean the branch was NOT created by this invocation, and blind cleanup could delete a pre-existing branch."
+    - "Scope boundedness HIGH rests on a three-item 'Out of scope' list, but several decisions are unaddressed: whether cleanup_worktree should also be changed (the existing best-effort pattern), whether stderr surfacing applies to other subprocess calls in the module, whether the try/except should be narrow or broad. Absence of explicit prohibition is treated as explicit boundedness."
+    - "Requirements alignment cites requirements/pipeline.md's 'Atomicity: All session state writes use tempfile + os.replace()' NFR, but that NFR is about state file writes, not git branch/worktree creation atomicity. The word-match is reaching rather than a genuine alignment demonstration."
+    - "Complexity 'simple' contradicts the either/or logging approach (not '1 obvious approach'), and test-authoring — simulating git worktree add -b creating a branch and failing at checkout — requires either a real git harness or careful subprocess mocking distinguishing partial success from total failure."
+    - "'No cross-cutting behavioral effects — internal' assumes the exception-enrichment path. If the log-line-to-daytime.log path is chosen, operators and log consumers see new structured entries — that IS cross-cutting."
+    - "Criticality HIGH rests on 'default for pipeline infrastructure,' but the observed impact is a recoverable nuisance (operator manually deletes pipeline/{feature} before retry) on a single reproduction — and _resolve_branch_name fallback 'should make retries work automatically.' The assessment reaches for a default rationale rather than engaging with observed severity."
+  dispositions:
+    apply: 2
+    dismiss: 4
+    ask: 1
+  applied_fixes:
+    - "Revised requirements alignment note: cite 'Graceful partial failure' Quality Attribute from requirements/project.md (individual tasks may fail; system should retry and fail gracefully) rather than the state-file atomicity NFR from requirements/pipeline.md — the latter is a category mismatch."
+    - "Revised complexity from 'simple' to 'complex' — change is in shared pipeline infrastructure, the either/or stderr-surfacing decision affects caller behavior, and test authoring requires non-trivial subprocess mocking. When in doubt, prefer complex."
+  dismissals:
+    - finding_index: 1
+      rationale: "_resolve_branch_name in claude/pipeline/worktree.py:51-62 picks a unique branch name before git worktree add -b is invoked — so the branch being cleaned up is by construction one this call just attempted to create. Disambiguation is a narrow implementation detail, not a scope decision."
+    - finding_index: 2
+      rationale: "The acceptance criteria explicitly scope the fix to create_worktree and to the git worktree add -b call; narrow vs. broad try/except placement is an implementation choice. Other subprocess calls in the module are out of scope by virtue of not being named in the acceptance criteria."
+    - finding_index: 5
+      rationale: "This objection is contingent on the exception-vs-log-line decision that is already being surfaced as an Ask (finding_index 0). Once that choice is made, whether the change is 'internal' or 'cross-cutting' resolves with it — the objection does not stand independently."
+    - finding_index: 6
+      rationale: "clarify.md §5 explicitly designates high as the default for pipeline/workflow infrastructure changes: 'Default to high for skill/lifecycle/hook/workflow changes.' The rating is the documented default; observed severity in a single reproduction does not override the default applied to shared infrastructure whose reliability other overnight features depend on."
+  status: ok
+- ts: 2026-04-21T14:58:48Z
+  event: orchestrator_review
+  feature: fix-daytime-pipeline-worktree-atomicity-and-stderr-logging
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []

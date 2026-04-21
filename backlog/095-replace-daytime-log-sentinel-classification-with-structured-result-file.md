@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: 7e7ecade-3fa3-4d9c-841f-8ed6141c4da8
 title: "Replace daytime log-sentinel classification with structured result file"
-status: backlog
+status: refined
 priority: high
 type: feature
 created: 2026-04-20
-updated: 2026-04-20
+updated: 2026-04-21
 parent: "93"
 tags: [lifecycle, daytime-pipeline, observability, output-contract]
 discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
-areas: [pipeline, skills, lifecycle]
+areas: [overnight-runner]
+complexity: complex
+criticality: high
+spec: lifecycle/replace-daytime-log-sentinel-classification-with-structured-result-file/spec.md
 ---
 
 # Replace daytime log-sentinel classification with structured result file

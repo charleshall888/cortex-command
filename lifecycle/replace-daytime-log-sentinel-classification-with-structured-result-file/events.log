@@ -1,0 +1,36 @@
+- ts: 2026-04-21T14:35:20Z
+  event: clarify_critic
+  feature: replace-daytime-log-sentinel-classification-with-structured-result-file
+  findings:
+    - "Intent clarity is rated HIGH on the basis that the ticket names a structured result file (lifecycle/{slug}/daytime-result.json) written atomically as the replacement. The ticket itself defers the exact schema to the spec phase and lists only a minimum field set with 'at least'. The freshness token format is explicitly listed as undecided, meaning the skill-side check depends on a decision the ticket has not made."
+    - "Intent clarity is treated as a single clear outcome because the opening sentence names one replacement. The Acceptance list actually contains four distinct outcomes — a new file format, a three-tier fallback chain in the skill, a stdout buffering fix in the subprocess, and a freshness-token validator in the skill. The buffering discipline is itself an either/or the ticket does not resolve."
+    - "Scope boundedness is rated HIGH because an Out-of-scope list and a Spec-phase decisions list are both present. The Out-of-scope entry 'bin/daytime-status CLI (optional — decide in spec)' contradicts itself — out of scope but also a spec-phase decision. Additionally, the fallback chain 'falls back to log tail (current behavior) as last resort' keeps the very classifier the ticket sets out to replace."
+    - "Requirements alignment is rated HIGH with citations to requirements/project.md, requirements/pipeline.md, and requirements/observability.md. The ticket body itself does not reference any of them. The quoted fragments are generic enough that almost any state-file ticket would 'align'. 'No conflicts detected' is asserted, not demonstrated."
+    - "Requirements alignment cites bin/overnight-status as 'direct in-repo prior art'. Prior art is not a requirement. A precedent binary existing is not the same as a requirements document mandating this pattern."
+    - "The assessment does not address complexity or criticality at all. This ticket touches a live subprocess protocol, a skill that reads it, a new on-disk schema, a fallback chain with three tiers, a freshness token whose format is undecided, and stdout-buffering behavior across SIGKILL/OOM paths."
+  dispositions:
+    apply: 0
+    dismiss: 6
+    ask: 0
+  applied_fixes: []
+  dismissals:
+    - finding_index: 0
+      rationale: "Ticket explicitly separates intent from Spec-phase decisions; 'Exact daytime-result.json schema' and 'Freshness token format' are deferred to spec by design. Intent is 'replace log-sentinel with structured-file + freshness token + buffering discipline' — the exact schema and token format are within-intent micro-decisions that specify.md will resolve."
+    - finding_index: 1
+      rationale: "The Acceptance bundle is causally unified around a single failure story (stdout buffering → SIGKILL → missing sentinel → misclassification → need freshness token and fallback chain). flush=True vs PYTHONUNBUFFERED=1 is a minor implementation detail spec resolves."
+    - finding_index: 2
+      rationale: "Self-resolution against research.md DR-2: the three-tier fallback is a graceful-degradation design — the log tail in tier 3 is a *display* mechanism (shows last 20 lines), not a re-instatement of the classifier. bin/daytime-status is congruent across the two lists: Out-of-scope means 'not required', Spec-phase means 'may be chosen'."
+    - finding_index: 3
+      rationale: "Verified against pipeline.md §Non-Functional Requirements: 'All session state writes use tempfile + os.replace() — no partial-write corruption'. This is a direct, specific match for the ticket's approach, not a generic fragment."
+    - finding_index: 4
+      rationale: "The requirements-alignment gate checks for conflicts, not for affirmative mandates. No conflict exists; the bin/overnight-status reference is supporting evidence, not the basis of alignment."
+    - finding_index: 5
+      rationale: "Complexity and criticality are §5 outputs, not §3 dimensions. Will be produced in §5: complex (4+ files, shared infrastructure, new on-disk contract) and high (changes to shared skill/pipeline infrastructure that other capabilities depend on)."
+  status: ok
+- ts: 2026-04-21T15:02:23Z
+  event: orchestrator_review
+  feature: replace-daytime-log-sentinel-classification-with-structured-result-file
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
