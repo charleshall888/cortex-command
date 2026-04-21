@@ -4,155 +4,185 @@
 
 Identify places in the agentic harness (skills, hooks, pipeline prompts, lifecycle flows) where the Claude agent executes sequences of deterministic tool calls that could collapse into a single agent-invokable script. Goal: save tokens, reduce wall-clock latency, and increase determinism where the logic has no model judgment between steps.
 
+> **Revision history**:
+> - **Round 1**: inventoried C1–C10 across skills / hooks / pipeline prompts.
+> - **Critical review 1**: flagged classification looseness, savings inflation, 3-way phase-detection triad. Applied.
+> - **Round 2**: deepened on quantification, linter spec, C2+C3 semantic diff, C5 ambiguity sample, missed-candidate sweep (added C11–C15).
+> - **Critical review 2**: found that (a) a *fourth* phase-detection implementation lives in `claude/statusline.sh` that can't subprocess to Python; (b) drift is not just hypothetical — commit `5026ee7` deleted `skills/backlog/generate-index.sh` and rewired callers; (c) PR-level enforcement barely exists in this repo (3 PRs ever); (d) runtime-adoption signal is missing and a third failure mode (written-but-unused at runtime) is not addressed; (e) C5's bailout design makes its ship-gate telemetry non-load-bearing. Applied below.
+
 ## Research Questions
 
-1. **Inventory.** Where does the agent execute ≥3 deterministic tool calls in sequence? → **Answered.** ~10 viable candidates surfaced across skills, hooks, and pipeline prompts. Hot paths: `/commit` preflight reads, `/lifecycle` phase detection (both SessionStart hook and `/lifecycle` Step 2), `/dev` epic-map parse, `/refine` backlog-item resolution, lifecycle daytime polling loop, orchestrator-round state reader. Full list in §Codebase Analysis.
+1. **Inventory.** Where does the agent execute ≥3 deterministic tool calls in sequence? → **Answered.** 15 viable candidates (C1–C15). See §Codebase Analysis.
 
-2. **Determinism axis.** Which are MECHANICAL vs JUDGMENT-AT-ENDPOINTS vs JUDGMENT-INTERLEAVED? → **Answered, with narrower scoping than the initial pass.** Classification now annotates the specific sub-range of each skill that is actually mechanical, rather than applying the label to the whole candidate row. Several candidates previously tagged "MECHANICAL" are really "mechanical parse + judgment decision downstream" — extraction replaces only the parse. See §Codebase Analysis.
+2. **Determinism axis.** → **Answered, with narrowed sub-range scoping.** C1, C4, C5 are "mechanical parse + judgment downstream."
 
-3. **Cost.** Per-invocation token and latency cost of current sequences vs collapsed call? → **Partially answered.** The pipeline logs per-turn tool calls into `agent-activity.jsonl` (`claude/pipeline/dispatch.py:485-528`) and per-dispatch turn/cost in `pipeline-events.log`. Per-`(model, tier)` aggregates exist (`python3 -m claude.pipeline.metrics --report tier-dispatch`). **Gap**: skill name is not recorded in `dispatch_start` (dispatch.py:445), so per-skill tool-call averages are not computable today. **Parallel-call caveat**: several candidates run tool calls in parallel within one agent turn (e.g., `/commit` preflight). Collapsing N parallel calls into 1 script call saves ~1 turn, not N calls-worth. The Candidate Inventory's "Calls" column is serial-equivalent turns, not raw tool-call count. Precise ROI numbers are estimates, not measurements. Hook-based and SessionStart sequences have no log at all.
+3. **Cost.** Per-invocation token and latency? → **Partially answered.**
+   - **C8 (pipeline-observable)**: ~500–800 tokens saved + ~1 turn per round.
+   - **C1 (/commit)**: ~1 turn saved per commit (3 parallel → 1 serial).
+   - **C4, C7, C11, C13, C15**: no telemetry. Per-invocation ~0.3–1 turn. Ranked by frequency-heuristic.
+   - **Gap**: skill name not logged on `dispatch_start` (addressed by ticket 109, but see Q5 — this only helps pipeline).
 
-4. **Existing scripts as models.** What in `bin/`, `backlog/`, `hooks/` already works well? → **Answered, with adoption caveats.** `bin/` convention is kebab-case single-purpose CLIs with distinct exit codes. `overnight-status`, `overnight-start`, `overnight-schedule`, `git-sync-rebase.sh` are structurally good AND well-adopted (each has ≥1 SKILL.md direct reference). `validate-spec`, `count-tokens`, `audit-doc`, `create-backlog-item` are structurally good but **not adopted** — no SKILL.md invokes them. The structural template is a necessary but not sufficient predictor of adoption. See §Decision Record DR-2.
+4. **Existing scripts as models — adoption failure root cause.** → **Mixed picture, not a clean "day-one only" story.**
+   - **Day-one wiring failures** (caught by static lint): `bin/validate-spec`, `bin/count-tokens`, `bin/audit-doc` — never referenced by any SKILL.md.
+   - **Hidden behind module abstraction** (not linter-catchable without heuristic): `create-backlog-item`, `update-item` — wired through Python module invocation, not direct CLI reference. Static linter scanning for `bin/foo` or bare `foo` misses these.
+   - **Confirmed drift in this repo**: commit `5026ee7` (Apr 7 2026) deleted `skills/backlog/generate-index.sh` (238-line shell); follow-up `8ba65c3` rewired `skills/discovery/references/decompose.md`. Script-reference *replacement* has happened — small example, but evidence that drift is real.
+   - **Sample caveat**: N=5 scripts across a 7-day window is not a basis for generalizing. Day-one failures dominate the known sample; drift and module-abstraction substitution are additional failure modes.
 
-5. **Discoverability & adoption.** How does an agent find out a script exists? → **Answered, and this is the load-bearing finding.** Adoption is set by SKILL.md references at the point of use and decays as SKILL.md files are re-authored without re-audit. Four deployed-but-unused scripts is direct evidence that one-shot extraction without ongoing enforcement produces script accretion, not adoption. See DR-5.
+5. **Discoverability & runtime adoption.** → **Three failure modes, not one.**
+   - (a) Day-one missing reference (static-lint catchable).
+   - (b) Drift (reference removed/replaced over time — static lint on every commit mitigates if the linter actually runs on that commit; see DR-5).
+   - (c) **Written-but-unused at runtime**: SKILL.md references the script but the surrounding prose makes the agent prefer Read+Grep / Bash / a Python module. Static lint cannot catch this. No runtime signal exists for interactive sessions. See DR-7.
 
-6. **Transparency trade-off.** When does collapsing hurt? → **Answered.** Collapsing is safe when (a) the sequence is pure data-gathering whose output the agent inspects as a unit anyway, (b) exit codes + short structured output make the agent's next-step decision equivalent, AND (c) the downstream agent work is not a re-read of what the script collapsed (e.g., `/commit` Step 4 composes the message *from the diff content*, so a script that summarizes the diff forces a re-read — negating the saving). It hurts when any of those fail.
+6. **Transparency trade-off.** → **Answered.** Collapsing is safe when (a) output is inspected as a unit, (b) exit codes preserve branching, (c) downstream work doesn't re-read the collapsed data.
 
-7. **Ranked candidates.** → **Answered** in §Feasibility Assessment, with scope narrowed per Q2 and cost framing corrected per Q3.
+7. **Ranked candidates.** → **Answered** in §Feasibility Assessment.
 
 ## Codebase Analysis
 
 ### Candidate Inventory
 
-Ranked by (frequency × extractable-surface-size × determinism clarity). Hot = every session. Warm = per-phase/per-feature. Cool = occasional. **Calls column** is serial-equivalent turns within the extractable region — parallel calls in the same turn count once.
+Heat: hot = every session; warm = per-phase; cool = occasional. **Turns** = serial-equivalent turns in extractable region.
 
 | # | Candidate | Heat | Turns | Class | Location | Extractable scope |
 |---|-----------|------|-------|-------|----------|-------------------|
-| C1 | `/commit` preflight (`git status` + `git diff HEAD` + `git log --oneline -10`) | Hot | 1 (3 parallel calls) | MECHANICAL-PARSE, JUDGMENT-DOWNSTREAM | `skills/commit/SKILL.md:12-14` | Preflight reads only. Steps 3–5 (stage / compose / commit) stay inline — staging is judgment, message composition reads the diff. Saving: 1 turn + prompt-level clarity. |
-| C2 | Lifecycle phase detector (SessionStart hook) | Hot | ~7 | MECHANICAL-PARSE + FORMATTING | `hooks/cortex-scan-lifecycle.sh:170-417` | Only the ~20-line reverse-order file-existence ladder is shared with C3. Surrounding logic (tier metric computation, morning-review suppression, session migration, worktree awareness, status-line formatting) is hook-specific and not co-extractable. |
-| C3 | `/lifecycle` Step 2 artifact-based phase detection | Hot | 4-7 | MECHANICAL-PARSE + JUDGMENT-DOWNSTREAM | `skills/lifecycle/SKILL.md:41-100` | The reverse-order ladder (shared with C2). The `.dispatching` marker check, worktree-aware phase detection, and criticality/tier-override scan are skill-specific and stay inline. |
-| C4 | `/dev` epic-map parse (Step 3a/3b) | Warm | 4-5 | MECHANICAL-PARSE, JUDGMENT-DOWNSTREAM | `skills/dev/SKILL.md:135-166` | Parent-field normalization (quotes / UUID skip / integer match) and the flat-list dedup extract. Step 3c's ~60-line workflow-recommendation decision tree stays inline and may grow because DR-2 requires the script's output schema to be documented at point of use. |
-| C5 | `/refine` Step 1 backlog-item resolution | Warm | 3-4 | MECHANICAL-PARSE on happy path | `skills/refine/SKILL.md:22-35` | Happy-path only: unambiguous fuzzy match, three-slug derivation (`backlog-filename-slug`, `item-title`, `lifecycle-slug` — "often different"). Ambiguous-input path bails via exit code; agent redoes disambiguation inline — savings conditional on happy-path rate, which is unestimated. |
-| C6 | Lifecycle daytime polling loop | Warm | ~3 × N iterations | MECHANICAL | `skills/lifecycle/references/implement.md:144-155` | Full loop. See Open Question re: ticket #94 obsolescence. |
-| C7 | `/backlog pick` index→filter→table | Warm | 3-4 | JUDGMENT-AT-ENDPOINTS | `skills/backlog/SKILL.md:82-94` | Filter + sort + render; selection itself is agent judgment. |
-| C8 | Orchestrator-round state read (overnight prompt) | Warm | 6-8 | MECHANICAL | `claude/overnight/prompts/orchestrator-round.md:22-176` | Pure file-read aggregation. **Data-rankable today** — runs inside the pipeline where `agent-activity.jsonl` already exists. |
-| C9 | Plan-gen dispatch + result collection | Cool | ~8 | JUDGMENT-AT-ENDPOINTS | `claude/overnight/prompts/orchestrator-round.md:237-294` | Mechanical middle, judgment at endpoints. |
+| C1 | `/commit` preflight | Hot | 1 (3 parallel) | MECHANICAL-PARSE + judgment downstream | `skills/commit/SKILL.md:12-14` | Preflight reads only. |
+| C2+C3 | Lifecycle phase detection across hook + skill + `claude.common` + **`claude/statusline.sh`** (4 implementations, not 3) | Hot | 4–7 per caller | MECHANICAL-CORE + inter-component contract | See below | Promote `claude.common` for hook + skill. Statusline stays bash. See DR-6 revision. |
+| C4 | `/dev` epic-map parse | Warm | 4-5 | MECHANICAL-PARSE, judgment downstream | `skills/dev/SKILL.md:135-166` | Parent-normalization + dedup. |
+| C5 | `/refine` Step 1 resolution | Warm | 3-4 | MECHANICAL-PARSE on happy path | `skills/refine/SKILL.md:22-35` | Ship with bailout exit code — Pareto improvement regardless of ambiguity rate. See Feasibility. |
+| C6 | Lifecycle daytime polling loop | Warm | ~3 × N iter | MECHANICAL | `skills/lifecycle/references/implement.md:144-155` | Blocked on ticket #94. |
+| C7 | `/backlog pick` index→filter→table | Warm | 3-4 | JUDGMENT-AT-ENDPOINTS | `skills/backlog/SKILL.md:82-94` | Filter + sort + render. |
+| C8 | Orchestrator-round state read | Warm | 6-8 | MECHANICAL | `claude/overnight/prompts/orchestrator-round.md:22-176` | Data-rankable today. |
+| C9 | Plan-gen dispatch + result collection | Cool | ~8 | JUDGMENT-AT-ENDPOINTS | `claude/overnight/prompts/orchestrator-round.md:237-294` | Revisit after 109 data. |
 | C10 | Merge-conflict classify + dispatch | Cool | ~8 | JUDGMENT-INTERLEAVED | `claude/overnight/feature_executor.py` | Out of scope. |
+| C11 | Morning-review session completion + state update | Warm | 4 | MECHANICAL | `skills/morning-review/SKILL.md:23-48` | |
+| C12 | Morning-review stale worktree GC | Cool | 4+ | MECHANICAL | `skills/morning-review/SKILL.md:50-75` | |
+| C13 | Morning-review backlog-closure loop | Warm | 3 × N (parallelizable) | MECHANICAL | `skills/morning-review/SKILL.md:109-128` | |
+| C14 | Morning-review git preflight sync | Warm | 3 serial | MECHANICAL | `skills/morning-review/SKILL.md:132-138` | Fold into `git-sync-rebase.sh`. |
+| C15 | Backlog-index regeneration fallback chain | Hot | 5-6 | MECHANICAL | `skills/lifecycle/references/complete.md:42-71`, `skills/morning-review/SKILL.md:130-151` | |
 
-**C2+C3 caveat**: beyond the two callers named, a third copy of phase-detection logic lives at `claude.common.detect_lifecycle_phase`, cross-referenced in `hooks/cortex-scan-lifecycle.sh:168` ("Mirrors claude.common.detect_lifecycle_phase — keep in sync if phase model changes"). Any unification must **retire** old implementations, not just add a new shared script — otherwise the count goes 3 → 4, not 3 → 1. See DR-6.
+### C2+C3 — Four implementations, inter-component contract
 
-### Existing scripts — adoption audit
+| # | Location | Output format | Constraint |
+|---|----------|---------------|------------|
+| 1 | `hooks/cortex-scan-lifecycle.sh:170-207` | `implement:N/M` / `implement-rework:N` / `complete` | Bash; subprocess-to-Python acceptable |
+| 2 | `skills/lifecycle/SKILL.md:41-100` | `implement` / `plan` / etc. | Agent-interpreted pseudo-code |
+| 3 | `claude/common.py:detect_lifecycle_phase()` | `"implement"` (discards N/M counts it computes internally at 137-145) | Canonical for Python callers |
+| 4 | `claude/statusline.sh:377-402` (**missed by Round 2**) | Re-implements ladder in bash for per-prompt refresh | **Cannot** subprocess to Python (~100ms latency per prompt is too expensive) |
 
-| Script | Structural shape | Adopted? | Wired by |
-|--------|------------------|----------|----------|
-| `bin/overnight-status` | Single-shot state read, human-readable | Yes | morning-review |
-| `bin/overnight-start`, `overnight-schedule` | tmux launcher, positional args | Yes | overnight, morning-review |
-| `bin/git-sync-rebase.sh` | Distinct exit codes, stderr logs | Yes | morning-review walkthrough |
-| `bin/validate-spec` | Defaults to `lifecycle/*/spec.md`, non-zero on error | **No** — no SKILL.md wires it | none |
-| `bin/count-tokens` | Simple file scanner + SDK token count | **No** | none |
-| `bin/audit-doc` | Token + noise ratio report | **No** | none |
-| `backlog/create_item.py` (deployed as `create-backlog-item`) | Atomic frontmatter + sidecar event log | **No** — skill uses Python module indirectly | none (only CLAUDE.md mention) |
-| `backlog/update_item.py` (deployed as `update-item`) | Frontmatter update with side-effects | **No direct wire** — mentioned in CLAUDE.md | none |
-| `backlog/generate_index.py` (deployed as `generate-backlog-index`) | JSON + md output | Yes (invoked by other scripts and `/dev`) | dev |
+**Inter-component contract**: statusline parses `implement:N/M` at lines 535-546 into a progress bar. So the hook's format is not "wrapping" — it's an API the statusline reads. Canonical `claude.common` is strictly less expressive than consumers 1 and 4 need.
 
-Five of nine "good-shape" scripts are under-adopted. The structural template is necessary but not sufficient. See DR-5.
+**Consumer audit** (Round 2 + CR2): dashboard and backlog-index call `claude.common` in Python (free). Hook can subprocess if we pay ~cold-start cost per SessionStart (acceptable). Statusline cannot. The statusline's inline copy is structural, not accidental.
 
-### Observability floor
+**Consequence for ticket 108 effort**: L, not M. See §Feasibility.
 
-- Per-turn tool calls: logged in `lifecycle/{feature}/agent-activity.jsonl` by `claude/pipeline/dispatch.py:485-528`.
-- Per-dispatch turns + cost: logged in `lifecycle/sessions/{id}/pipeline-events.log`.
-- Per-`(model, tier)` aggregates: `python3 -m claude.pipeline.metrics --report tier-dispatch`.
-- **Not logged**: which skill initiated the dispatch. Adding skill-name to `dispatch_start` is an S-effort change in `dispatch.py:445`.
-- **Not logged at all**: daytime interactive sequences (the `/commit`, `/dev`, `/lifecycle` candidates live here). The agent-activity recorder is pipeline-scoped.
+### Existing scripts — adoption audit (CR2-corrected)
 
-Consequence: the interactive candidates (C1, C3, C4, C5, C7) cannot be ranked by data today without new instrumentation that doesn't exist. C8 (pipeline-prompt) **can** be ranked today using the existing aggregator; C9 could be ranked with skill-name added to `dispatch_start`.
+| Script | Shipped | SKILL.md reference? | Failure mode |
+|--------|---------|---------------------|---------------|
+| `bin/validate-spec` | 024cb6f, Apr 7 2026 | No | Day-one missing |
+| `bin/count-tokens` | 428e54e, Apr 1 2026 | No | Day-one missing |
+| `bin/audit-doc` | 428e54e, Apr 1 2026 | No | Day-one missing |
+| `create-backlog-item` | 428e54e, Apr 1 2026 | Indirect (Python module) | Hidden behind abstraction; linter heuristic would need to recognize `backlog.create_item` as equivalent |
+| `update-item` | 428e54e, Apr 1 2026 | Indirect (Python module) | Same |
+| `skills/backlog/generate-index.sh` | (deleted 2026-04-07) | Was referenced, then removed and rewired to `generate-backlog-index` | **Drift — replaced** |
+
+Positive controls (well-wired): `overnight-status`, `overnight-start`, `overnight-schedule`, `git-sync-rebase.sh`, `generate-backlog-index`. All explicitly named in SKILL.md.
+
+**Timing pattern** (CR2): every successful wiring happened within minutes of ship or not at all. Implication: a linter not invoked during the ship session won't catch the omission unless the developer re-runs it against the whole tree (not just staged files). See DR-5 enforcement revision.
+
+### Observability floor (CR2-expanded)
+
+- **Pipeline, per-turn**: `lifecycle/{feature}/agent-activity.jsonl` (`dispatch.py:485-528`).
+- **Pipeline, per-dispatch**: `lifecycle/sessions/{id}/pipeline-events.log`.
+- **Pipeline aggregates**: `python3 -m claude.pipeline.metrics --report tier-dispatch`.
+- **Gap — skill name on dispatch**: `dispatch.py:445` doesn't record which skill triggered the sub-agent dispatch. Addressed by ticket 109 — but this only covers pipeline sub-agent dispatches, NOT tool calls the agent makes inside an interactive SKILL.md flow. 109 is orthogonal to interactive adoption.
+- **Gap — interactive tool calls**: daytime Claude Code sessions have no tool-call log. Candidates C1, C3, C4, C5, C7, C11–C15 all live here.
+- **Unused infrastructure**: `claude/settings.json:252-267` already wires PreToolUse Bash hooks (`cortex-validate-commit.sh`, `cortex-output-filter.sh`) that receive `{"tool_name": "Bash", "tool_input": {"command": "..."}}`. A third matcher grepping for `bin/*` invocations and appending to a rolling JSONL would produce real interactive-session adoption telemetry at trivial cost. See DR-7.
+
+### Repo workflow reality (CR2)
+
+- **PR activity**: `gh pr list --state all --limit 10` returns 3 PRs ever. Both merged PRs are "Overnight session:" batch landings. The dominant pattern is direct-to-main commits.
+- **Implication for DR-5**: "CI check" as enforcement is effectively dead wiring — no PRs to gate. Pre-commit hook is the real enforcement point, with known gaps (`--no-verify`, staged-files-only scope, overnight-runner commits may bypass). See DR-5 enforcement revision.
 
 ## Web & Documentation Research
 
-Skipped. Internal topic, no external dependencies.
-
-Adjacent internal references:
-- Completed ticket #51 (hook-based preprocessing for test/build output) — filter pattern for tool *output*.
-- `research/agent-output-efficiency/research.md` — subagent output-format + "1,000-2,000 token condensed return" anchor.
+Skipped. Internal topic.
 
 ## Domain & Prior Art
 
-- **MCP / tool-calling convention**: prefer single tools with structured output over multi-step protocols. Our agent-invokable scripts are a poor-man's MCP tool — more flexible, less discoverable.
-- **Anthropic harness-design**: scaffolding encodes assumptions about what the model can't do. Under Opus 4.7, some in-prompt scaffolding is removable (ticket #88). Script extraction is the orthogonal direction: keep the scaffolding, move it out of the agent's context window.
+- MCP / tool-calling convention, Anthropic harness-design — see prior revision. No change.
 
 ## Feasibility Assessment
 
 | # | Candidate | Script shape | Effort | Risks | Prerequisites |
 |---|-----------|--------------|--------|-------|---------------|
-| C1 | `bin/commit-preflight` → `{status, diff, recent_log}` | S | Savings are ~1 turn (3 parallel → 1 serial), not ~3 calls. Diff must be emitted in full — any summary forces the agent to re-read. Staging and message composition stay inline. | DR-5 enforcement committed. |
-| C2+C3 | `bin/detect-lifecycle-phase` → `{phase, slug, has_artifacts}`; hook and skill call, keep their divergent surrounding logic inline | **L (not M)** — scope unbounded until prerequisites complete | Only ~20 lines are common between hook and skill. Script becomes a superset of hook needs (tier-override scan) OR subset (re-introducing divergent logic). Third implementation at `claude.common.detect_lifecycle_phase` must be retired in the same change, or count goes 3 → 4. DR-2's "keep schemas flat" is in tension with the multi-field output shape — mitigate by narrowing the script's output to the minimum both callers need; put derived fields (tier, criticality) in whichever caller needs them. | (a) Audit hook output usage + determine whether status-line formatting is still needed (promoted from Open Question to prerequisite). (b) Enumerate all three current implementations and commit to a retirement plan. (c) DR-5 enforcement committed. |
-| C4 | `bin/build-epic-map` → `{epic_id: {children, status, refined}}` | S | Parent-field normalization extracts; `/dev` Step 3c workflow-recommendation decision tree stays inline and grows under DR-2's "output format at point of use." Net SKILL.md line count may not decrease. | DR-5 enforcement committed. |
-| C5 | `bin/resolve-backlog-item <fuzzy>` — exit codes for unambiguous / ambiguous / no-match | S | Savings only on happy path. Ambiguous rate is unmeasured — if <50%, extraction pays for itself only marginally. Three-slug derivation must match `claude/common.py:slugify()` exactly. | Sample recent `/refine` invocations to estimate ambiguous-input rate. DR-5 enforcement committed. |
-| C6 | `bin/poll-daytime-subprocess <feature>` — batch polling, exit-coded checkpoints | M | Changes user-facing UX at iter 30 (offer-to-stop). | **Block on ticket #94 resolution** — subprocess-lifecycle may be restructured; extraction before that is likely wasted. |
-| C7 | `bin/backlog-ready` → priority-grouped ready items | S | None material. | DR-5 enforcement committed. |
-| C8 | Extend `claude/overnight/map_results.py`; new CLI `bin/orchestrator-context` | M | Orchestrator prompt rewrite + mid-round resume risk. | **Instrument first**: add skill-name to `dispatch_start` + secondary aggregator over `agent-activity.jsonl`, then rank C8/C9 with data before committing. |
-| C9 | — | — | Judgment-at-endpoints; revisit after C8 data. | — |
-| C10 | — | — | Judgment-interleaved; out of scope. | — |
+| C1 | `bin/commit-preflight` → `{status, diff, recent_log}` | S | ~1 turn saved. Diff emitted in full. Stage/compose stay inline. | 102 + 113 (DR-7). |
+| C2+C3 | Promote `claude.common.detect_lifecycle_phase()` to canonical + extend to return `{phase, checked, total, cycle}`; expose `python3 -m claude.common detect-phase <dir>` CLI; hook subprocesses to it. **Statusline stays bash** (structural constraint). Retire hook's 38-line ladder; retire skill's 22-line pseudo-ladder. `.dispatching` + worktree overrides in skill stay (they're phase *overrides*, not detection). | **L (reverted from M)** | Statusline keeps bash ladder — document that it is a known second source that cannot be unified under current constraints (DR-6). Net drift: 4→3. `claude.common` return type grows — acknowledge DR-2 tension. | 102 + documented statusline exception in DR-6. |
+| C4 | `bin/build-epic-map` → `{epic_id: {children, status, refined}}` | S | Step 3c decision tree stays inline. | 102 + 113. |
+| C5 | `bin/resolve-backlog-item` with distinct exit codes for unambiguous / ambiguous / no-match | S | **Ship unconditionally.** Bailout design = Pareto improvement: happy path faster, unhappy path unchanged (agent re-reads SKILL.md Step 1 guidance as today). Telemetry is post-ship validation (see 113), not a ship gate. | 102 + 113. |
+| C6 | — | — | Blocked on ticket #94. | — |
+| C7 | `bin/backlog-ready` → priority-grouped ready items | S | None material. | 102 + 113. |
+| C8 | New CLI `bin/orchestrator-context`; extend `claude/overnight/map_results.py` | M | Orchestrator prompt rewrite + mid-round resume risk. | 109 closed; ROI confirmed with pipeline data. |
+| C9 | — | — | Revisit after 109 data. | — |
+| C10 | — | — | Out of scope. | — |
+| C11 | `bin/morning-review-complete-session` | S | | 102 + 113. |
+| C12 | New `bin/worktree-gc` or fold into `git-sync-rebase.sh` | S | Low. | 102 + 113. |
+| C13 | `bin/close-completed-features` (parallel `update-item` calls) | S | Closes update-item adoption gap. | 102 + 113. |
+| C14 | Fold preflight mode into `bin/git-sync-rebase.sh`; may be SKILL.md edit only | S | Minor. | 102 + 113. |
+| C15 | Simplify fallback chain to single call with PATH requirement | S | Existing fallback is defensive against deployment-state unknowns; simplifying requires `just setup` guarantees. | 102 + 113. |
 
-**Rollup**: 4 S-effort (C1, C4, C5, C7), 1 M (C6, blocked), 1 L (C2+C3, scope unbounded pending prerequisites), 1 M-after-instrumentation (C8). The M-or-lower clean wins are C1, C4, C7. C5 wins iff ambiguous rate is low. C2+C3 should not ship until its prerequisites close.
+**Rollup**: 9 S-effort, 1 L (C2+C3 reverted), 1 M (C8), 1 blocked (C6), 2 OOS (C9, C10). Remaining scaffolding (override blocks, inter-component contracts, caller-specific wrapping) is NOT free — effort estimates assume only the extractable region is in scope, not the post-extraction cleanup.
 
 ## Decision Records
 
 ### DR-1: Extract-first vs. instrument-first — three-way split
 
-- **Context**: Candidates differ in whether existing observability can rank them.
-- **Options**:
-  - (a) Instrument everything first (add skill-name to `dispatch_start`, build secondary aggregator, wait for sample), then rank and extract.
-  - (b) Extract all by inspection now.
-  - (c) **Split**: inspection-ship the interactive candidates where no data is feasible (C1, C3/C4/C5, C7); instrument-first for pipeline-side (C8, C9) where data exists or is one small schema change away.
-- **Recommendation**: (c). Interactive candidates' structural determinism + every-session frequency is a sufficient (if noisy) signal. Pipeline candidates must use the aggregator that already exists. The two halves have different data environments and deserve different gates.
-- **Trade-offs**: The heuristic for the interactive half is not validated (DR-5 acknowledges this). (c) doesn't fix that — DR-5's standing enforcement does.
+- Interactive uses inspection; pipeline uses existing aggregator + ticket 109.
+- **CR2 correction**: DR-5 (static linter) and ticket 109 (pipeline dispatch tagging) do NOT close the interactive runtime-adoption gap. DR-7 adds the missing runtime signal via PreToolUse hook matcher.
 
 ### DR-2: Script convention
 
-- **Context**: Shared shape so agent invocation is uniform.
-- **Recommendation**:
-  - **Location**: `bin/` for cross-skill; `skills/<skill>/bin/` for skill-local.
-  - **Naming**: kebab-case verb-noun.
-  - **Output**: JSON for multi-field; plain text for single-value. **Narrow**, not fat — include only fields ≥2 callers need. Derived/caller-specific fields stay in the caller.
-  - **Exit codes**: 0 = success; distinct non-zero per failure class the agent can branch on.
-  - **Flags**: POSIX `--flag value`.
-  - **Good-shape examples**: `overnight-status`, `overnight-start`, `overnight-schedule`, `git-sync-rebase.sh`. (Structural template — see DR-5 re: adoption.)
-- **Trade-offs**: Schema versioning discipline required; small-and-flat mitigates silent breakage.
+- Location: `bin/`. Naming: kebab-case. Output: JSON for multi-field, plain text for single-value. **Narrow** schemas except where an inter-component contract forces wider shape (C2+C3 is the known exception — `claude.common` return type must include N/M for the hook/statusline consumers). Exit codes: 0 success, distinct non-zero per failure class. POSIX `--flag value`.
 
 ### DR-3: Interactive vs pipeline-prompt split into two epics
 
-- **Context**: Interactive candidates' savings accrue to interactive cost + user latency; pipeline candidates' accrue to overnight budget/turn caps.
-- **Recommendation**: Two epics. Interactive ships first (no session-resume complications). Pipeline-prompt batches with other 4.7 prompt-simplification work (tickets #88, #92).
-- **Trade-offs**: Two review cycles; matches the natural seam.
+- Interactive ships first. Pipeline batches with 4.7 prompt-simplification work.
 
-### DR-4: Per-extraction discoverability hygiene (INSUFFICIENT WITHOUT DR-5)
+### DR-4: Per-extraction discoverability hygiene (INSUFFICIENT WITHOUT DR-5 + DR-7)
 
-- **Context**: Script exists + SKILL.md references it = day-one adoption. That's not enough over time.
-- **Recommendation**: Every extraction ticket must (a) replace the SKILL.md step with a direct script reference at point of use; (b) run a replayable test case against the prior transcript to confirm the agent invokes the script; (c) audit for stale "do this with tool calls" guidance.
-- **Trade-offs**: Point-in-time verification only. Does not detect drift after a future SKILL.md edit. DR-5 handles the drift axis.
+- Point-in-time verification at extraction ticket close. Covers (a) SKILL.md script reference, (b) replay test, (c) stale-guidance audit.
 
-### DR-5 (NEW): Standing SKILL.md ↔ bin/ parity enforcement is a prerequisite, not a follow-up
+### DR-5: Standing SKILL.md ↔ bin/ parity — pre-commit first, with scope caveats
 
-- **Context**: Four of nine good-shape bin/ scripts are deployed but not referenced by any SKILL.md: `validate-spec`, `count-tokens`, `audit-doc`, `create-backlog-item`. Direct evidence that DR-4's per-ticket verification does not hold across subsequent skill edits. Shipping more scripts without a standing signal ensures the under-used pile grows.
-- **Options considered**:
-  - (a) Ship per-ticket hygiene (DR-4) and hope.
-  - (b) Add a lint/CI check that every `bin/` entry is referenced by ≥1 SKILL.md (or an explicit allowlist of scripts intended for user-only / orchestrator-only use).
-  - (c) Add agent-invocation telemetry (log every Bash call whose first word matches a `bin/` entry) so post-ship non-adoption is observable.
-- **Recommendation**: (b) as a prerequisite to further extraction. (c) is a follow-up — telemetry requires instrumentation infra the interactive surface lacks.
-- **Trade-offs**: (b) requires a small linter and an allowlist for intentionally-not-wired scripts. The alternative — "keep shipping, keep accumulating" — has a measured failure rate of 4/9.
+- **Evidence of need**: 3 day-one-missing cases + 2 hidden-behind-abstraction cases + 1 confirmed drift replacement. Multiple failure modes, not one.
+- **Enforcement mechanism** (CR2-revised):
+  - Tool: `bin/check-parity`. Also installable as `just check-parity` for full-tree scan (not staged-only).
+  - **Primary enforcement: `just check-parity` as manual recipe + pre-commit hook on SKILL.md/bin/justfile changes.** Not CI-gated; this repo has ~3 PRs ever.
+  - **Known limits**: `--no-verify` bypass is possible. Overnight-runner commits may skip hooks. Staged-files-only scope means an orphaned script checked in without matching SKILL.md edit may never re-trigger. Mitigation: periodic `just check-parity` as part of retro/morning-review protocol (add as a new bullet).
+- **Scan scope**: all `skills/**/*.md`, `CLAUDE.md`, `claude/reference/`, `requirements/`.
+- **Script inventory** (deploy-path aware): dynamic scan of `bin/` + justfile `deploy-bin` extraction for `backlog/*.py` deployed names **+** enumerate other deploy mechanisms: `hooks/cortex-notify.sh` → `~/.claude/notify.sh`, any other symlink-deploy patterns in justfile or setup scripts.
+- **Signal detection**: three categories — literal `bin/foo` mentions, bare `foo` invocations in shell code blocks, path-qualified `~/.local/bin/foo`. **Known gap**: indirect invocation via `just <recipe>` is handled by recognizing `just ` patterns and cross-referencing the recipe's body. Indirect via Python module (e.g., `create-backlog-item` through `backlog.create_item`) requires a heuristic map from deployed-name → module path; this is acknowledged as a linter heuristic edge case that may need manual tuning.
+- **Allowlist**: `bin/.parity-exceptions.md` with `{script: {reason, audience: user-only | orchestrator-only | module-shim}}`.
+- **Failure modes acknowledged, not all solved**: the linter cannot detect "SKILL.md references the script but agent uses a different tool at runtime" — that's DR-7's scope.
 
-### DR-6 (NEW): Unification candidates must include retirement plan for all prior copies
+### DR-6: Unification candidates enumerate ALL current implementations (including bash hot-path mirrors)
 
-- **Context**: The `/lifecycle` phase-detection logic already exists in three places: `hooks/cortex-scan-lifecycle.sh`, `skills/lifecycle/SKILL.md`, and `claude.common.detect_lifecycle_phase`. A new `bin/detect-lifecycle-phase` that is "consumed by both [hook and skill]" without retirement of the prior copies takes the count from 3 to 4.
-- **Recommendation**: Any unification ticket must enumerate all current implementations (not just the two the feature request mentions), specify which get retired in the same change, and specify what the retirement looks like (deleted, reduced to a thin wrapper, kept only for backward-compat with named sunset).
-- **Trade-offs**: Larger per-ticket scope, but the alternative has produced the current triad and is not trending better.
+- **Rule (reinforced)**: any unification ticket must enumerate every current implementation, including those that cannot be unified due to structural constraints (e.g., statusline-style bash hot-path).
+- **C2+C3 specific**: `claude.common.detect_lifecycle_phase()` is canonical for Python callers; hook subprocesses to it; skill references it; **statusline continues its bash ladder** as a documented exception. Net drift 4→3, not 4→1. The comment at `hooks/cortex-scan-lifecycle.sh:168` ("Mirrors claude.common.detect_lifecycle_phase — keep in sync") becomes: "Subprocess-delegates to claude.common; statusline is a separate bash-only mirror, see DR-6."
+
+### DR-7 (NEW): Runtime adoption telemetry via PreToolUse Bash hook matcher
+
+- **Context**: DR-5 catches static non-wiring. It does NOT catch the third failure mode — SKILL.md references a script but the agent doesn't invoke it. Interactive sessions have no tool-call log.
+- **Mechanism**: add a PreToolUse Bash matcher in `claude/settings.json` (infrastructure already present; pattern proven by `cortex-validate-commit.sh` and `cortex-output-filter.sh`). The matcher greps the command for known `bin/*` names (inventory extracted at runtime from `just deploy-bin`), logs to a rolling JSONL (e.g., `~/.claude/bin-invocations.jsonl`) with timestamp, script name, skill context if available.
+- **Usage**: weekly (or on-demand) aggregator reports per-script invocation count. A wired-but-never-invoked script is a DR-7-detectable failure.
+- **Ship order**: 113 (DR-7 telemetry) ships alongside 102 (DR-5 static lint). Both S-effort; together they cover day-one + drift + runtime failure modes.
+- **Trade-offs**: adds one more hook (mild overhead on every Bash tool call — but hooks already exist for other purposes). Log file hygiene needs a size cap or rotation.
 
 ## Open Questions
 
-- **C5 ambiguous-input rate**: sample recent `/refine` invocations (events logs or conversation transcripts). If ambiguous rate ≥50%, C5's savings evaporate and it drops below the ship bar.
-- **DR-5 allowlist**: which scripts are legitimately user-only / orchestrator-only (never wired from a SKILL.md)? Candidate allowlist: `overnight-start`, `overnight-schedule`, `audit-doc` (if kept as human-only governance), the `just` recipes under Development/Testing.
-- **C8 instrumentation**: add skill-name to `dispatch_start` event in `claude/pipeline/dispatch.py:445` + secondary aggregator over `agent-activity.jsonl`. This is a blocker for the pipeline-side epic, not a follow-up.
-- **C6 blocking on ticket #94**: check whether daytime subprocess-lifecycle is being restructured before investing in C6.
-- **Should `update-item` / `create-item` get thin skill-invoked wrappers** to close their adoption gap alongside new extractions? Probably yes — they're the lowest-risk test case for DR-5's enforcement.
-- **Subagent dispatch in `/research`, `/critical-review`, `/discovery` research phase**: mechanical shell around judgment synthesis. Possible future candidate; not in this decomposition.
+- **DR-5 allowlist scope**: `audit-doc` — governance-only or retrofit-wired into a doc-review skill?
+- **C11–C15 bundling**: single ticket vs several? Same-file overlap in `morning-review/SKILL.md` supports bundling, but C14 touches `bin/git-sync-rebase.sh` (different file) and C15 touches `skills/lifecycle/references/complete.md` (different file). Acceptable consolidation or over-decomposed M?
+- **DR-2 narrow-schema exception**: `claude.common.detect_lifecycle_phase()` returning `{phase, checked, total, cycle}` violates "narrow" — document as a known inter-component-contract exception or seek an alternative (e.g., separate `detect-phase-progress` CLI that returns just counts)?
+- **DR-7 privacy/log-size**: how aggressive is JSONL rotation? Weekly archive? Auto-purge old entries?
+- **DR-5 scope for non-bin deploy paths**: `hooks/cortex-notify.sh` → `~/.claude/notify.sh` is a different deploy mechanism. Should the linter enumerate all such paths or stay scoped to `bin/`?
+- **Subagent dispatch in `/research`, `/critical-review`, `/discovery`** — mechanical shell around judgment. Future candidate after first wave lands.

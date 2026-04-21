@@ -1,1 +1,2 @@
 {"ts": "2026-04-21T14:51:56Z", "event": "orchestrator_review", "feature": "extract-scripts-from-agent-tool-sequences", "phase": "research", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-21T15:13:40Z", "event": "research_round_2", "feature": "extract-scripts-from-agent-tool-sequences", "phase": "research", "note": "Five parallel deep-dive agents: quantification, DR-5 linter design + root cause, C2+C3 semantic diff, C5 ambiguity rate, missed-candidate sweep. Added C11–C15; downgraded C2+C3 effort L→M; reframed C5 ship gate as telemetry-first."}
