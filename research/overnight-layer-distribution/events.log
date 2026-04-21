@@ -1,2 +1,3 @@
 {"ts": "2026-04-21T15:17:32Z", "event": "orchestrator_review", "feature": "overnight-layer-distribution", "phase": "research", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-21T18:25:51Z", "event": "critical_review", "feature": "overnight-layer-distribution", "phase": "research", "verdict": "pass", "cycle": 1, "objections_applied": 10, "asks_resolved": 7}
+{"ts": "2026-04-21T19:28:25Z", "event": "critical_review", "feature": "overnight-layer-distribution", "phase": "decompose", "verdict": "pass", "cycle": 1, "objections_applied": 10, "asks_resolved": 1}

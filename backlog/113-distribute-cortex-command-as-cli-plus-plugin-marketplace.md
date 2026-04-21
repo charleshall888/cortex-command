@@ -12,7 +12,7 @@ updated: 2026-04-21
 lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
-blocks: []
+blocks: [102, 103, 104]
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 ---
@@ -50,17 +50,25 @@ This epic repackages the system as two plugins (`cortex-interactive`, `cortex-ov
 
 See `research/overnight-layer-distribution/research.md` for full findings, feasibility assessment, and decision records (DR-1 through DR-10). The Decision inventory table in the Summary section lists every consequential call and its resolution.
 
+## Epic size note
+
+Post-decomposition critical review quantified 115 at XL (not L as originally sized) — 1,362 lines of bash + ~17K non-test LOC of Python + ~13K LOC of tests, with 50 inline Python snippets and 23 `REPO_ROOT` sites in runner.sh alone. 115 is ~10× the surface of 117 + 119 combined and is the critical-path bottleneck for 6 of 12 children. Epic-level: realistically XL-XXL for a single maintainer. The epic's own scope lists 5 new owned components (CLI, MCP server, setup subcommand, plugin marketplace, scaffolder) and is more honestly described as a rebuild of the distribution layer than as a packaging change.
+
 ## Children
 
 - 114: `cortex` CLI skeleton
-- 115: Port overnight runner into the CLI
+- 115: **Rebuild** overnight runner under the CLI (XL, gated on 117)
 - 116: MCP control-plane server + runner IPC contract
 - 117: `cortex setup` subcommand + retire #006/#007 code
 - 118: Bootstrap installer (`curl | sh`)
 - 119: `cortex init` per-repo scaffolder
 - 120: `cortex-interactive` plugin
-- 121: `cortex-overnight-integration` plugin
-- 122: Plugin marketplace manifest + install docs
+- 121: `cortex-overnight-integration` plugin (gated on 115, 116, 120)
+- 122: Plugin marketplace manifest + install docs (gated on 115, 116, 117, 120, 121)
 - 123: Lifecycle autonomous-worktree graceful degrade
-- 124: Migration guide + script for existing users
+- 124: Migration guide + script for existing users (gated on full CLI being functional)
 - 125: Homebrew tap (optional)
+
+## Downstream epic coordination
+
+This epic explicitly blocks tickets #102, #103, #104 (children of #101 scripts epic). Those tickets target `bin/` layout and `just deploy-*` recipes that #115 and #117 retire; landing them first would produce throwaway work. #112 (LaunchAgent scheduler) is an open question — it is currently `in_progress` with an active lifecycle session; user decision pending on whether to gate it on #114 retroactively.

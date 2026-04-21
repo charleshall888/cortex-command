@@ -1,7 +1,7 @@
 ---
 schema_version: "1"
 uuid: e8311326-418f-47db-b3f4-852efc3ef192
-title: "Port overnight runner into cortex CLI"
+title: "Rebuild overnight runner under cortex CLI"
 status: backlog
 priority: high
 type: feature
@@ -14,28 +14,42 @@ lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
 blocks: []
-blocked-by: [114]
+blocked-by: [114, 117]
 discovery_source: research/overnight-layer-distribution/research.md
 ---
 
-# Port overnight runner into cortex CLI
+# Rebuild overnight runner under cortex CLI
 
 ## Context from discovery
 
-The codebase report identified ~92 files (5.3 MB) that must ship together as the overnight bundle: `claude/overnight/runner.sh`, `claude/overnight/*.py`, `claude/pipeline/*.py`, `claude/pipeline/prompts/*.md`, `claude/overnight/prompts/*.md`, `claude/common.py`, plus the `bin/overnight-{start,status,schedule}` entry points. Tight coupling today includes hardcoded paths, process-group management (`set -m` for watchdog), signal handling, atomic tempfile+os.replace writes, and prompt template substitution.
+**Framed as a rebuild, not a port.** Critical review of the decomposition surfaced that the original "port runner.sh under a Python entry point" framing understated scope by ~2.3×. Quantified surface:
 
-This ticket migrates that bundle under the `cortex overnight` subcommand family so `cortex overnight start` / `status` / `cancel` / `logs` are first-class, replacing today's `bin/overnight-{start,status,schedule}` scripts.
+- `claude/overnight/runner.sh` is **1,362 lines** (codebase report claimed 600+)
+- `claude/overnight/*.py` is **~10,400 LOC across 22 modules**
+- `claude/pipeline/*.py` is **~5,500 LOC across 10 modules**
+- Tests: **~13,300 LOC across `claude/overnight/tests/` + `claude/pipeline/tests/`**
+- **50** inline Python snippets in runner.sh (grep for `python3 -c|python3 <<|python3 -m`)
+- **23** `REPO_ROOT` occurrences in runner.sh alone
+- **25** atomic-write sites (`os.replace | NamedTemporaryFile`) across 7 files
+- **4** `set -m` process-group sites (lines 644, 649, 715, 725) with `kill -- -$PID` watchdog at `trap cleanup` (line 526)
+
+This is a rebuild of the orchestration layer. Wrapping 1,362 lines of bash + 50 inline Python snippets + 10 process-group/trap hooks under a Python entry point is not wrapping — it is either rewriting the orchestration layer in Python or keeping bash as a launched subprocess (which introduces its own packaging problems since `uv tool install -e` ships Python entry points, not bash scripts). That design choice is part of this ticket's scope.
+
+Shared contracts with 117 (`cortex setup`): runner.sh hard-codes `~/.claude/notify.sh` at **13 call sites** (lines 522, 675, 750, 800, 1012, 1072, 1097, 1130, 1257, 1267, 1287, 1289 + design comment at 846) and reads `~/.claude/settings.json` for `apiKeyHelper` at lines 50-66. 117 owns the deploy-to-home pipeline that creates those paths. This ticket is now explicitly gated on 117 (`blocked-by: [114, 117]`) so the new `~/.claude/*` surface is in place before the runner's path-literal sites are updated.
 
 ## Scope
 
-- `cortex overnight start` — wraps today's `runner.sh` logic, invoked via `uv tool install -e .`'s entry point
+- `cortex overnight start` — replaces today's `runner.sh` entry point, invoked via `uv tool install -e .`'s entry point
 - `cortex overnight status <session-id>` — structured status output (JSON and human)
 - `cortex overnight cancel <session-id>` — signals runner's process group; see ticket 116 for PID/PGID persistence
-- `cortex overnight logs <session-id> [--tail] [--since <cursor>]` — append-only log streaming
-- Preserve today's load-bearing guarantees: atomic state writes, process-group management, signal-based graceful shutdown
-- Update all hardcoded `$REPO_ROOT`, `CORTEX_COMMAND_ROOT`, `$PYTHONPATH` assumptions to work under `uv tool install -e` semantics
-- Update prompt template substitution to load from package resources, not filesystem paths
-- Retire `bin/overnight-start`, `bin/overnight-status`, `bin/overnight-schedule` shim scripts (or have them delegate to the CLI for one release to ease migration)
+- `cortex overnight logs <session-id> [--tail] [--since <cursor>]` — append-only log streaming with cursor protocol
+- Preserve today's load-bearing guarantees: atomic state writes (all 25 call sites), process-group management (the 4 `set -m` sites + `kill -- -$PID` watchdog), signal-based graceful shutdown at `trap cleanup SIGINT SIGTERM SIGHUP`
+- Update all 23 `REPO_ROOT` sites + `CORTEX_COMMAND_ROOT` + `$PYTHONPATH` assumptions to work under `uv tool install -e` semantics; decide whether bash remains as a subprocess or the orchestration layer becomes pure Python
+- Update the 50 inline Python snippets — each reads from `os.environ['REPO_ROOT']` or literal `~/.claude/...` paths that must be ported to package-resource semantics
+- **Unresolved design question for planning**: prompt template substitution at runner.sh:379-393 reads `$REPO_ROOT/claude/overnight/prompts/orchestrator-round.md` and does 6 `t.replace('{...}', ...)` calls with absolute paths. The prompt is handed to `claude -p` as stdin, so the paths it contains must still resolve on the host side (state, plan, events, session_dir). Which paths are "package-internal" (load via `importlib.resources`) vs. "user-repo-internal" (absolute paths on host filesystem)? The planning phase must answer this.
+- Update the 13 `~/.claude/notify.sh` call sites to use the deploy-resolution shape 117 establishes
+- Retire `bin/overnight-start`, `bin/overnight-status`, `bin/overnight-schedule` shim scripts (coordinate with 117's `just deploy-bin` retirement — these are linked call sites)
+- Test migration: ~13,300 LOC of tests in `claude/overnight/tests/` and `claude/pipeline/tests/` must stay green through the rebuild
 
 ## Out of scope
 

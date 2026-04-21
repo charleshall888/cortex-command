@@ -255,7 +255,9 @@
     "created": "2026-04-21",
     "updated": "2026-04-21",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "115"
+    ],
     "parent": "101",
     "research": null,
     "spec": null,
@@ -284,7 +286,9 @@
     "created": "2026-04-21",
     "updated": "2026-04-21",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "115"
+    ],
     "parent": "101",
     "research": null,
     "spec": null,
@@ -312,7 +316,9 @@
     "created": "2026-04-21",
     "updated": "2026-04-21",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "115"
+    ],
     "parent": "101",
     "research": null,
     "spec": null,
@@ -405,7 +411,11 @@
     ],
     "created": "2026-04-21",
     "updated": "2026-04-21",
-    "blocks": [],
+    "blocks": [
+      "102",
+      "103",
+      "104"
+    ],
     "blocked_by": [],
     "parent": null,
     "research": null,
@@ -422,7 +432,7 @@
   {
     "id": 114,
     "title": "Build cortex CLI skeleton with uv tool install entry point",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -443,15 +453,15 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "9b5c4931-763b-4112-b261-a111119cb99f",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "build-cortex-cli-skeleton-with-uv-tool-install-entry-point",
+    "session_id": "ae3e25d3-0483-408e-967b-19d3a758065f",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 115,
-    "title": "Port overnight runner into cortex CLI",
+    "title": "Rebuild overnight runner under cortex CLI",
     "status": "backlog",
     "priority": "high",
     "type": "feature",
@@ -468,7 +478,8 @@
     "updated": "2026-04-21",
     "blocks": [],
     "blocked_by": [
-      "114"
+      "114",
+      "117"
     ],
     "parent": "113",
     "research": null,
@@ -635,6 +646,8 @@
     "updated": "2026-04-21",
     "blocks": [],
     "blocked_by": [
+      "115",
+      "116",
       "120"
     ],
     "parent": "113",
@@ -668,6 +681,9 @@
     "updated": "2026-04-21",
     "blocks": [],
     "blocked_by": [
+      "115",
+      "116",
+      "117",
       "120",
       "121"
     ],
@@ -1163,6 +1179,9 @@
     "updated": "2026-04-21",
     "blocks": [],
     "blocked_by": [
+      "115",
+      "116",
+      "117",
       "118",
       "121",
       "122"

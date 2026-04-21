@@ -6,7 +6,7 @@ status: backlog
 priority: high
 type: feature
 parent: "101"
-blocked-by: []
+blocked-by: [115]
 tags: [harness, scripts, discoverability, enforcement]
 created: 2026-04-21
 updated: 2026-04-21

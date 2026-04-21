@@ -2,19 +2,21 @@
 schema_version: "1"
 uuid: 3565ffe8-5041-4c2b-9f91-d14fa9d4c1cd
 title: Migrate overnight-schedule to a LaunchAgent-based scheduler
-status: backlog
+status: in_progress
 priority: high
 type: feature
 tags: [overnight, scheduler, sandbox]
 areas: [overnight-runner]
 created: 2026-04-21
 updated: 2026-04-21
-lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+lifecycle_slug: migrate-overnight-schedule-to-a-launchagent-based-scheduler
+lifecycle_phase: research
+session_id: 3e2b9498-638f-4763-a39b-37749ef77a43
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-runner-sandbox-launch/research.md
+complexity: complex
+criticality: high
 ---
 
 # Migrate overnight-schedule to a LaunchAgent-based scheduler
@@ -58,3 +60,11 @@ The planning phase should consider:
 - Run-now launch path (`overnight-start`) — already handled via per-call `dangerouslyDisableSandbox: true`
 - Revisiting sandbox-on-runner for non-scheduled paths (DR-2 in the research; deferred)
 - Reboot-recovery of in-flight sessions — out of scope per the runner's existing "don't auto-restart mid-session" semantics
+
+## Coordination with epic #113
+
+Epic #113 (`overnight-layer-distribution`) will retire `bin/overnight-start` and `bin/overnight-schedule` in favor of `cortex overnight start` and `cortex overnight schedule`. DR-10 of `research/overnight-layer-distribution/research.md` governs ordering: distribution first by default; #112 lands on the new CLI shape via `ProgramArguments=[cortex, overnight, start]` in the generated plist.
+
+**Escape clause (from DR-10)**: if the current `caffeinate + tmux` scheduler starts failing in practice (lid-close sleep breaking scheduled runs is the present-tense defect), ship #112 against today's `bin/overnight-schedule` as a correctness fix. Re-pathing the plist later is mechanical (~30 min of path updates when #115 retires `bin/overnight-start`).
+
+`blocked-by: []` is intentional — it preserves the escape clause. The coordination is manual: pause or land against old shape based on whether correctness pressure demands it.
