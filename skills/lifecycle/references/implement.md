@@ -180,40 +180,32 @@ This ensures the on-disk dispatch file reflects the actual subprocess PID for li
 
 **Termination bound**: 120 iterations (~4 hours). Context window exhaustion — not iteration count — is the practical binding constraint for long runs. At **30 iterations (~1 hour)**, pause and offer the user the option to suspend polling: "Subprocess still running after 30 iterations (~1 hour). Continue polling or stop? (The process continues in background — monitor `lifecycle/{feature}/daytime.log` and `events.log` directly.)" If the user chooses to stop, exit the polling loop (the subprocess keeps running; skip result surfacing and log `dispatch_complete` with outcome `"paused"` only if the subprocess is still alive — otherwise surface results normally). On reaching 120 iterations without the subprocess exiting: surface "Polling timeout — subprocess may still be running (PID {pid}). Check `lifecycle/{feature}/daytime.log` directly for status." and exit the polling loop.
 
-**vii. Result surfacing.** Use a 3-tier reader to classify the outcome. All Bash calls are separate (no compound commands).
+**vii. Result surfacing.** Invoke the `daytime_result_reader` helper module — the canonical classification logic — via a single Bash call:
 
-**Tier 1 — `daytime-result.json`.**
+```
+python3 -m claude.overnight.daytime_result_reader --feature {slug}
+```
 
-Issue a Bash call: `cat lifecycle/{feature}/daytime-result.json`. If the file is absent, the `cat` exits non-zero — fall to Tier 2. If present, parse the JSON:
+The helper implements the full 3-tier fallback (Tier 1: `daytime-result.json` + freshness check against `daytime-dispatch.json`; Tier 2: `daytime-state.json` phase discrimination; Tier 3: `outcome: "unknown"` with discriminated message) and prints a JSON dict to stdout. The skill MAY cache the dispatch UUID in conversation memory for speed, but `daytime-dispatch.json` on disk is authoritative — the helper reads it directly, so a re-entered skill after compaction or process restart recovers the active dispatch identity without trusting in-memory state.
 
-- If malformed JSON → fall to Tier 2.
-- If `schema_version` is not exactly `1` (hard equality check — `schema_version == 1`; no "greater than" branch; any other value including missing, null, or a future version falls through) → fall to Tier 2.
-- Read `dispatch_id` from `daytime-dispatch.json` for the freshness check. The skill MAY cache the UUID in conversation memory for speed, but the disk file is authoritative — a re-entered skill after compaction or process restart reads `daytime-dispatch.json` first. Issue a separate Bash call: `cat lifecycle/{feature}/daytime-dispatch.json`. If `daytime-dispatch.json` is absent or malformed → tier-1 cannot validate freshness → fall to Tier 2. If `dispatch_id` in the result file does not match `dispatch_id` in `daytime-dispatch.json` (stale prior-run file) → fall to Tier 2.
-- On all checks passing (**Tier 1 success**): classify from `outcome` + `terminated_via` + `error` + `pr_url` + `deferred_files` fields. Map outcomes:
-  - `outcome: "merged"` → display success; surface `pr_url` if non-null.
-  - `outcome: "deferred"` → display deferred; list `deferred_files`; display content of the most recently modified deferred file.
-  - `outcome: "paused"` → display paused; instruct the user to check `events.log` for details and re-run when ready.
-  - `outcome: "failed"` → display failed; show `error` if non-null; show last 20 lines of `daytime.log`.
-  - `outcome: "unknown"` (or any unrecognised value) → treat as tier-3 outcome (see below).
-- After a successful Tier 1 read and validation, delete `daytime-dispatch.json` to mark the dispatch as consumed: `rm lifecycle/{feature}/daytime-dispatch.json`.
+Parse the JSON output. The returned dict has fields: `outcome`, `terminated_via`, `message`, `source_tier`, `pr_url`, `deferred_files`, `error`, `log_tail`.
 
-**Tier 2 — `daytime-state.json` as discrimination context.**
+Surface the result to the user based on `source_tier` + `outcome`:
 
-Tier 2 does NOT classify the outcome — it reads context to discriminate the Tier-3 message. Issue a Bash call: `cat lifecycle/{feature}/daytime-state.json`. Read the top-level `phase` field:
+**Tier 1 success** (`source_tier == 1`): the helper validated `schema_version == 1` (hard equality — no "greater than" branch; missing, null, or any value other than `1` falls to tier 2), matched `dispatch_id` against `daytime-dispatch.json` (stale prior-run files with mismatched `dispatch_id` fall to tier 2), and classified from the result file. Map `outcome`:
 
-- `phase == "complete"` (terminal) → discrimination: **terminal**
-- `phase == "executing"` or any other non-terminal value → discrimination: **non-terminal**
-- File absent or unreadable → discrimination: **absent**
+- `outcome: "merged"` → display the `message` field; surface `pr_url` if non-null.
+- `outcome: "deferred"` → display the `message` field; list each path in `deferred_files`; display content of the most recently modified deferred file.
+- `outcome: "paused"` → display the `message` field; instruct the user to check `events.log` for details and re-run when ready.
+- `outcome: "failed"` → display the `message` field; show the `error` field if non-null.
 
-**Tier 3 — surface `outcome: "unknown"` with discriminated message.**
+After displaying a tier-1 result, issue a separate Bash call to delete `daytime-dispatch.json` and mark the dispatch as consumed:
 
-Display the appropriate discriminated message to the user (verbatim per spec R6):
+```
+rm lifecycle/{feature}/daytime-dispatch.json
+```
 
-- Discrimination **terminal**: "Subprocess likely completed but its result file is missing or invalid. Check `lifecycle/{slug}/daytime.log` for the final outcome."
-- Discrimination **non-terminal**: "Subprocess did not complete (still running, killed, or crashed mid-execution). Check `lifecycle/{slug}/daytime.log`."
-- Discrimination **absent**: "Subprocess never started (pre-flight failure). Check `lifecycle/{slug}/daytime.log`."
-
-In all three Tier-3 cases, also display the last 20 lines of `lifecycle/{feature}/daytime.log`. The classification that flows into §1b viii's `dispatch_complete` event is `outcome: "unknown"`. Do NOT silently classify as `"failed"`.
+**Tier 3 surface** (`source_tier == 3`, `outcome: "unknown"`): the helper fell through tiers 1 and 2 and produced a discriminated message. Display the `message` field (one of three verbatim messages per spec R6: "Subprocess likely completed but its result file is missing or invalid…", "Subprocess did not complete…", or "Subprocess never started…") and display the `log_tail` field (last 20 lines of `daytime.log`). The classification that flows into §1b viii's `dispatch_complete` event is `outcome: "unknown"`. Do NOT silently classify as `"failed"`.
 
 **viii. Log `dispatch_complete` event.** After result surfacing, a separate Bash call appends to `lifecycle/{feature}/events.log`:
 
