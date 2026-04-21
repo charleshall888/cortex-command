@@ -59,6 +59,39 @@ def _normalize_repo_key(path_str: str) -> str:
 
 
 @dataclass
+class DaytimeResult:
+    """Result of a single daytime pipeline dispatch.
+
+    Fields:
+        schema_version: Schema version; always 1 for this version.
+        dispatch_id: 32-char lowercase hex uuid4 freshness token, from
+            the DAYTIME_DISPATCH_ID environment variable.
+        feature: Feature slug being dispatched.
+        start_ts: ISO 8601 timestamp captured at run_daytime() entry.
+        end_ts: ISO 8601 timestamp captured at write time.
+        outcome: Terminal outcome of the dispatch.
+        terminated_via: How the dispatch reached its terminal state.
+        deferred_files: Absolute paths under lifecycle/{slug}/deferred/,
+            empty if none.
+        error: Populated when terminated_via is "exception" or
+            "startup_failure"; null otherwise.
+        pr_url: First GitHub pull-request URL found in daytime.log;
+            null if none.
+    """
+
+    schema_version: int = 1
+    dispatch_id: str = ""
+    feature: str = ""
+    start_ts: str = ""
+    end_ts: str = ""
+    outcome: str = "unknown"
+    terminated_via: str = "exception"
+    deferred_files: list = field(default_factory=list)
+    error: Optional[str] = None
+    pr_url: Optional[str] = None
+
+
+@dataclass
 class OvernightFeatureStatus:
     """Tracks the status of a single feature within an overnight session.
 
@@ -415,6 +448,47 @@ def save_batch_result(
     fd, tmp_path = tempfile.mkstemp(
         dir=path.parent,
         prefix=".batch-result-",
+        suffix=".tmp",
+    )
+    closed = False
+    try:
+        os.write(fd, payload.encode("utf-8"))
+        durable_fsync(fd)
+        os.close(fd)
+        closed = True
+        os.replace(tmp_path, path)
+    except BaseException:
+        if not closed:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def save_daytime_result(result: DaytimeResult, path: Path) -> None:
+    """Atomically write a DaytimeResult to a JSON file.
+
+    Serializes the dataclass via ``dataclasses.asdict()``, then writes
+    atomically using tempfile + ``durable_fsync`` + ``os.replace``,
+    mirroring ``save_batch_result()``.
+
+    Args:
+        result: The DaytimeResult dataclass instance to persist.
+        path: Destination path for the JSON file.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    data = asdict(result)
+    payload = json.dumps(data, indent=2, sort_keys=False) + "\n"
+
+    fd, tmp_path = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=".daytime-result-",
         suffix=".tmp",
     )
     closed = False
