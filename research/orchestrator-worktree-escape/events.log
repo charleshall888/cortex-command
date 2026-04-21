@@ -1,0 +1,2 @@
+{"ts": "2026-04-21T19:18:51Z", "event": "orchestrator_review", "feature": "orchestrator-worktree-escape", "phase": "research", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-21T19:30:15Z", "event": "critical_review", "feature": "orchestrator-worktree-escape", "phase": "research", "angles": 4, "objections_applied": 8, "objections_dismissed": 0, "asks": 0}
