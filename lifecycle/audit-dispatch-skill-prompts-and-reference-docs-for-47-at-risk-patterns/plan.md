@@ -27,7 +27,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: `ls backlog/*-rewrite-verification-mindset-md-to-positive-routing-structure-under-4-7-literalism.md` exits 0 AND the file's frontmatter satisfies `parent == "82"` AND `88 in blocked-by` AND `"opus-4-7-harness-adaptation" in tags` (check with a Python YAML parse). Pass if both checks succeed.
 - **Status**: [x] complete
 
-### Task 2: Gate check — verify #088 baseline readiness (with overnight-defer branch)
+### Task 2: Gate check — verify #088 baseline readiness (with overnight-defer branch) [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/events.log` (append on escalation or defer)
 - **What**: Verify `research/opus-4-7-harness-adaptation/4-7-baseline-snapshot.md` exists with frontmatter `rounds_included >= 2`. Branch by execution mode and readiness:
   - **Baseline ready**: task passes; proceed to Task 3.
@@ -42,25 +42,25 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
   - `{"ts": "<ISO8601>", "event": "scheduling_defer", "feature": "...", "days_since_plan_approval": <int>, "reason": "interactive-required|staleness-threshold-exceeded"}`
   - Session-mode detection: check whether `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` or equivalent overnight-indicator env var is set, OR defer to the runner's mode flag. Fallback: if the task cannot determine mode, assume interactive.
 - **Verification**: Pass if ANY of: (a) baseline file exists with `rounds_included >= 2`, (b) events.log has a `scheduling_escalate` event with `action in {proceed_without_baseline, rescope}`, (c) events.log has a `scheduling_defer` event (clean halt — downstream tasks remain pending, not marked failed).
-- **Status**: [ ] pending
+- **Status**: [x] complete — resolved via (b): #088 closed wontfix 2026-04-21; `scheduling_escalate` event with `action: proceed_without_baseline` logged.
 
-### Task 3: Create candidates.md skeleton
+### Task 3: Create candidates.md skeleton [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` (new)
 - **What**: Create the candidates artifact with header (12-surface list from spec R1), 7 pattern sections (`## Pattern P1 — double-negation suppression` through `## Pattern P7 — [Cc]onsider hedge`), and auxiliary sections `## Preservation exclusions`, `## Null-pattern log`, `## Incidental findings`, `## Escalations`. Each pattern section contains an empty markdown table with columns `file:line | site excerpt | classification | M-label | commit SHA | notes`.
 - **Depends on**: [1, 2]
 - **Complexity**: simple
 - **Context**: Pattern section headings must match the exact regex `^## Pattern P[1-7]` (for acceptance checks). No-emoji convention per `claude/reference/claude-skills.md`. Structure follows #053 precedent (`lifecycle/addendum-softening-aggressive-imperatives-in-skill-md-files/axis-b-candidates.md`).
 - **Verification**: `grep -c '^## Pattern P[1-7]' lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` = 7 — pass if count = 7.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
-### Task 4: Implement-entry full-surface pattern rescan
+### Task 4: Implement-entry full-surface pattern rescan [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md`, `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/events.log`
 - **What**: Unconditionally re-run every locked pattern signature (spec Technical Constraints) against the 12-surface audit scope (spec R1) at Implement entry. Populate candidates.md pattern sections with the current file:line positions for every hit (this becomes the authoritative per-task starting state — downstream tasks work from this fresh baseline, not from research.md). Record a `candidates_refresh` event with per-pattern hit counts and the list of all current hits. This closes both drift windows (research→plan-approval AND plan-approval→implement-entry).
 - **Depends on**: [3]
 - **Complexity**: simple
 - **Context**: Pattern signatures (verbatim from spec Technical Constraints — do not redefine here to avoid spec drift): P1, P2, P3, P5, P6, P7 are regex-based; P4 is judgment-only. Reference spec §"Technical Constraints" for the regex text. 12-surface scope from spec R1. Event schema: `{"ts": "<ISO8601>", "event": "candidates_refresh", "feature": "...", "per_pattern_hit_counts": {"P1": N, "P2": N, ...}, "total_hits_recorded_in_candidates_md": N}`. For P4 (judgment-only, no regex): enumerate natural-language conditional blocks ≥10 lines manually per spec definition; do not attempt to auto-populate.
 - **Verification**: Every regex-pattern-signature hit across the 12 surfaces at Task 4 completion time must appear as a `file:line` entry in candidates.md. Binary cross-check: for each of P1, P2, P3, P5, P6, P7, compute `grep -nE '<signature>' <each surface>` result count, then assert candidates.md's corresponding P[N] section contains a row for every one of those file:line positions. Pass if every hit is recorded; fail if any missing.
-- **Status**: [ ] pending
+- **Status**: [x] complete — 29 hits recorded (P1:5, P2:5, P3:6, P4:0 (judgment-only), P5:3, P6:1, P7:9 (3 in R1 + 6 out-of-R1)); `candidates_refresh` event logged
 
 ### Task 5: Pass 1 / P1 — double-negation suppression audit and remediation
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` (P1 section), files among the 12-surface audit scope that contain qualifying P1 sites (dynamic — enumerated from Task 4's rescan).
