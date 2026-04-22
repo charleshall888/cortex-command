@@ -1178,18 +1178,47 @@ count = sum(
 )
 print(count)
 ")
-    if [[ "$INTEGRATION_DEGRADED" == "true" ]] && [[ -f "$INTEGRATION_WARNING_FILE" ]]; then
-        cat "$INTEGRATION_WARNING_FILE" > "$PR_BODY_FILE"
-        echo "Overnight session $SESSION_ID: $MC_MERGED_COUNT features merged. See morning-report.md for details." >> "$PR_BODY_FILE"
+    # Fixture-driven degraded-flag override: Task 8's test harness drives
+    # $INTEGRATION_DEGRADED via the state fixture's `integration_degraded`
+    # field. Defensive `.get(..., False)` means absent field is a no-op —
+    # live sessions keep whatever the upstream integration-test-gate set.
+    INTEGRATION_DEGRADED=$(STATE_PATH="$STATE_PATH" INTEGRATION_DEGRADED="$INTEGRATION_DEGRADED" python3 -c "import json, os; print('true' if json.load(open(os.environ['STATE_PATH'])).get('integration_degraded', False) else os.environ['INTEGRATION_DEGRADED'])")
+    if [[ "$MC_MERGED_COUNT" -eq 0 ]]; then
+        DRAFT_FLAG="--draft"
+        PR_TITLE="[ZERO PROGRESS] Overnight session: $INTEGRATION_BRANCH"
+        if [[ "$INTEGRATION_DEGRADED" == "true" ]] && [[ -f "$INTEGRATION_WARNING_FILE" ]]; then
+            cat "$INTEGRATION_WARNING_FILE" > "$PR_BODY_FILE"
+            echo "**ZERO PROGRESS** — Overnight session $SESSION_ID merged 0 features. See \`lifecycle/sessions/${SESSION_ID}/morning-report.md\` for failure analysis." >> "$PR_BODY_FILE"
+        else
+            echo "**ZERO PROGRESS** — Overnight session $SESSION_ID merged 0 features. See \`lifecycle/sessions/${SESSION_ID}/morning-report.md\` for failure analysis." > "$PR_BODY_FILE"
+        fi
     else
-        echo "Overnight session $SESSION_ID: $MC_MERGED_COUNT features merged. See morning-report.md for details." > "$PR_BODY_FILE"
+        DRAFT_FLAG=""
+        PR_TITLE="Overnight session: $INTEGRATION_BRANCH"
+        if [[ "$INTEGRATION_DEGRADED" == "true" ]] && [[ -f "$INTEGRATION_WARNING_FILE" ]]; then
+            cat "$INTEGRATION_WARNING_FILE" > "$PR_BODY_FILE"
+            echo "Overnight session $SESSION_ID: $MC_MERGED_COUNT features merged. See morning-report.md for details." >> "$PR_BODY_FILE"
+        else
+            echo "Overnight session $SESSION_ID: $MC_MERGED_COUNT features merged. See morning-report.md for details." > "$PR_BODY_FILE"
+        fi
     fi
-    MC_PR_URL=$(gh pr create \
-        --title "Overnight session: $INTEGRATION_BRANCH" \
-        --base main \
-        --head "$INTEGRATION_BRANCH" \
-        --body-file "$PR_BODY_FILE" \
-        2>/dev/null)
+    if [[ "$DRY_RUN" == "true" ]]; then
+        dry_run_echo "gh pr create" gh pr create \
+            $DRAFT_FLAG \
+            --title "$PR_TITLE" \
+            --base main \
+            --head "$INTEGRATION_BRANCH" \
+            --body-file "$PR_BODY_FILE"
+        MC_PR_URL=""
+    else
+        MC_PR_URL=$(gh pr create \
+            $DRAFT_FLAG \
+            --title "$PR_TITLE" \
+            --base main \
+            --head "$INTEGRATION_BRANCH" \
+            --body-file "$PR_BODY_FILE" \
+            2>/dev/null)
+    fi
     MC_PR_EXIT=$?
     if [[ $MC_PR_EXIT -ne 0 ]] || [[ "$MC_PR_URL" != https://* ]]; then
         MC_PR_URL=$(gh pr view --head "$INTEGRATION_BRANCH" --json url --jq .url 2>/dev/null || echo "")
@@ -1215,8 +1244,10 @@ f.write_text(json.dumps(data))
 fi
 
 # Generate morning report (after all PR creation so URLs are available)
-MR_STDERR=$(mktemp -p "${TMPDIR:-/tmp}")
+# Dry-run gate: skip silently per spec Req 7 (no stdout echo).
 report_gen_rc=0
+if [[ "$DRY_RUN" != "true" ]]; then
+MR_STDERR=$(mktemp -p "${TMPDIR:-/tmp}")
 if [[ -n "$TARGET_INTEGRATION_WORKTREE" ]]; then
     PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" TARGET_INTEGRATION_WORKTREE="$TARGET_INTEGRATION_WORKTREE" SESSION_ID="$SESSION_ID" ROUND="$ROUND" python3 -c "
 import json, os, hashlib
@@ -1323,6 +1354,7 @@ print(json.dumps({'status': 'failed', 'stderr_tail': tail}))
     }
 fi
 rm -f "$MR_STDERR"
+fi
 
 # Commit followup backlog items (success-guarded per spec R4).
 if [[ "$report_gen_rc" -eq 0 ]]; then
