@@ -90,6 +90,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 - **TMPDIR cleared between sessions**: Stale git tracking for cross-repo worktrees is detected and pruned on next access
 - **All features in a round pause**: Circuit breaker fires; session halts; morning report surfaces the reason
 - **Feature blocked by unmerged dependency**: Excluded from round; reconsidered in next round if blockers merge
+- **Silent isolation failure of `Agent(isolation: "worktree")`**: `anthropics/claude-code` issue #39886 reports that `Agent(isolation: "worktree")` may silently fail to create the isolated worktree, returning "success" while the agent in fact runs against the parent CWD. Surviving callers (SKILL.md Parallel Execution block per-feature dispatch; `skills/lifecycle/references/implement.md` §2b per-task batch isolation) remain susceptible. No mitigation is in place; tracking ticket TBD.
 
 ## Open Questions
 

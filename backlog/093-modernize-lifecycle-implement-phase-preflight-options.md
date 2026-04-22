@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 16067c99-27ab-4c9f-ad0b-a968cc27af95
 title: "Modernize lifecycle implement-phase pre-flight options"
-status: backlog
+status: complete
 priority: high
 type: epic
 created: 2026-04-20
-updated: 2026-04-20
+updated: 2026-04-22
 tags: [lifecycle, daytime-pipeline, worktree, preflight]
 discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
 areas: [lifecycle, skills, pipeline]
