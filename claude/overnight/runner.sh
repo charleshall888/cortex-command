@@ -1324,14 +1324,34 @@ target = [b for k, b in branches.items() if os.path.realpath(k) != repo_root]
 print(target[0] if target else '')
 ")
     if [[ -n "$TARGET_INTEGRATION_BRANCH" ]]; then
+        MR_TARGET_STATUS_FILE=$(mktemp -p "${TMPDIR:-/tmp}")
+        MR_TARGET_SHA_FILE=$(mktemp -p "${TMPDIR:-/tmp}")
         (
             cd "$TARGET_INTEGRATION_WORKTREE"
             git add "lifecycle/sessions/${SESSION_ID}/morning-report.md"       2>/dev/null || true
             git add "lifecycle/sessions/${SESSION_ID}/batch-"*"-results.json"  2>/dev/null || true
             git add "lifecycle/sessions/${SESSION_ID}/overnight-strategy.json" 2>/dev/null || true
             git add "lifecycle/morning-report.md"                              2>/dev/null || true
-            git diff --cached --quiet || git commit -m "Overnight session ${SESSION_ID}: add morning report and session artifacts"
+            if git diff --cached --quiet; then
+                echo "no_changes" > "$MR_TARGET_STATUS_FILE"
+                : > "$MR_TARGET_SHA_FILE"
+            elif git commit -m "Overnight session ${SESSION_ID}: add morning report and session artifacts"; then
+                echo "committed" > "$MR_TARGET_STATUS_FILE"
+                git rev-parse HEAD > "$MR_TARGET_SHA_FILE"
+            else
+                echo "failed" > "$MR_TARGET_STATUS_FILE"
+                : > "$MR_TARGET_SHA_FILE"
+            fi
         )
+        MR_TARGET_STATUS=$(cat "$MR_TARGET_STATUS_FILE")
+        MR_TARGET_SHA=$(cat "$MR_TARGET_SHA_FILE")
+        rm -f "$MR_TARGET_STATUS_FILE" "$MR_TARGET_SHA_FILE"
+        MR_TARGET_DETAILS=$(MR_TARGET_STATUS="$MR_TARGET_STATUS" MR_TARGET_SHA="$MR_TARGET_SHA" TARGET_PROJECT_ROOT="$TARGET_PROJECT_ROOT" python3 -c "
+import json, os
+sha = os.environ.get('MR_TARGET_SHA', '').strip() or None
+print(json.dumps({'status': os.environ['MR_TARGET_STATUS'], 'commit_sha': sha, 'target': os.environ.get('TARGET_PROJECT_ROOT', '')}))
+" 2>/dev/null || echo '{"status": "failed", "commit_sha": null, "target": ""}')
+        log_event "morning_report_commit_result" "$ROUND" "$MR_TARGET_DETAILS" || true
     fi
 fi
 
