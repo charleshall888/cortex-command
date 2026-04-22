@@ -1,0 +1,41 @@
+- ts: 2026-04-21T21:58:00Z
+  event: clarify_critic
+  feature: rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism
+  findings:
+    - "Intent clarity rated HIGH with 'single outcome contour' language, but the ticket has not decided between one-section, multi-section, and whole-file rewrite; outcome is ambiguous, not clear."
+    - "Probe methodology claimed 'explicitly defined' via #084's reopener clause, but pass/fail criterion for P3 failure mode, trial count, and what constitutes observation of a failure are undefined in the source."
+    - "Gate Function 'ring-fence' is weaker than claimed — 'Preserve the 5-step structure' permits rewriting the surrounding Iron Law preamble and framing while technically keeping the 5-step list intact."
+    - "Non-requirement clause was treated as a clean out-of-scope carve-out, but it actually permits the scope to expand up to a whole-file rewrite based on a Research document that does not yet exist — the upper bound is elastic."
+    - "Requirements alignment HIGH quoted only the evidence-before-claims half of project.md's quality bar and ignored the ROI half, which pressures against probe-first workflow on a file the author has already structurally inventoried."
+    - "'No conflicts detected' asserted without surveying downstream consumers (skills/hooks/reference docs) that may quote verification-mindset.md's specific negation phrasings directly."
+    - "Complexity 'simple' claims M1 positive-routing is mechanical and follows exemplars, but no exemplar is named; the file is universal verification safety rail with cross-cutting effects."
+    - "Criticality 'high' invokes the clarify §5 default without surfacing the source-specific self-referential hazard: the rewrite's success is verified by the remediated verification mechanism itself."
+    - "Acceptance bullets 2 and 3 ('Remediated sections structurally positive-routed' and 'Ring-fenced Gate Function intact') are not independently verifiable without operational definitions the source does not supply."
+  dispositions:
+    apply: 5
+    dismiss: 2
+    ask: 2
+  applied_fixes:
+    - "Escalated Complexity from 'simple' to 'complex' — shared infrastructure (global-symlinked reference file), cross-cutting behavioral effects on every session's verification gate, and judgment calls about which sections fail and how to positive-route meet the clarify §5 complex-tier criteria."
+    - "Revised Scope boundedness from HIGH to MEDIUM — the upper bound of the rewrite is evidence-parametric (probe-driven) and acceptance bullets 2–3 lack operational definitions, so boundaries are not fully explicit in both directions."
+    - "Added Research open question: probe design — pass/fail criterion for 'P3 failure mode' under 4.7, trial count and config, whether Read tool_use observation vs. behavioral differential is the signal."
+    - "Added Research open question: downstream consumer audit — enumerate skills, hooks, reference docs, and CLAUDE.md files that quote or pattern-match verification-mindset.md's specific phrasings before rewrite."
+    - "Added Research open question: operational definition of 'positive-routed' — concrete exemplar from within the repo (or Anthropic's 4.7 guidance) to anchor remediation style, and a before/after comparison criterion for the remediation acceptance."
+  dismissals:
+    - finding_index: 0
+      rationale: "The outcome ambiguity the critic flags is by-design — the probe is the decision procedure, and 'remediate only the failing sections' is a deterministic function of probe evidence. Probe design gaps are properly Research-phase questions, not Clarify-phase intent ambiguity; they are addressed by the three open questions added above."
+    - finding_index: 4
+      rationale: "The ROI pressure the critic cites is a legitimate concern, but it fires in the Spec §4 complexity/value gate (which runs after the spec is written), not in Clarify requirements alignment. The ticket was already scope-reduced from '#85 Pass 2 whole-file rewrite' to 'probe-driven remediation' — an ROI-conscious reduction. Project alignment remains HIGH."
+  status: ok
+{"ts": "2026-04-22T00:15:00Z", "event": "lifecycle_start", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "tier": "complex", "criticality": "critical"}
+{"ts": "2026-04-22T00:15:00Z", "event": "phase_transition", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "from": "clarify", "to": "research"}
+{"ts": "2026-04-22T00:45:00Z", "event": "phase_transition", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "from": "research", "to": "specify"}
+{"ts": "2026-04-22T01:25:00Z", "event": "orchestrator_review", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-22T02:15:00Z", "event": "critical_review", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "phase": "specify", "reviewers": 4, "applied": 13, "dismissed": 0, "asked": 0}
+{"ts": "2026-04-22T02:18:00Z", "event": "orchestrator_review", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "phase": "specify", "verdict": "pass", "cycle": 2, "issues": []}
+{"ts": "2026-04-22T02:25:00Z", "event": "phase_transition", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "from": "specify", "to": "plan"}
+{"ts": "2026-04-22T16:34:31Z", "event": "orchestrator_review", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-22T16:52:49Z", "event": "critical_review", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "phase": "plan", "reviewers": 4, "applied": 12, "dismissed": 0, "asked": 0}
+{"ts": "2026-04-22T21:10:53Z", "event": "phase_transition", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "from": "plan", "to": "implement"}
+{"ts": "2026-04-22T21:12:00Z", "event": "batch_dispatch", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "batch": 0, "tasks": [1]}
+{"ts": "2026-04-22T21:18:00Z", "event": "task_complete", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "task": 1, "batch": 0, "status": "success"}
