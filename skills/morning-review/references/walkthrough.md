@@ -492,7 +492,7 @@ Run after all other sections. No per-feature confirmation is needed before locat
 
 2. Run:
    ```
-   gh pr list --head {integration_branch} --json number,url,state,title
+   gh pr list --head {integration_branch} --json number,url,state,title,isDraft
    ```
    Parse the JSON array.
    - If empty (no PR found): inform the user —
@@ -511,12 +511,29 @@ Run after all other sections. No per-feature confirmation is needed before locat
 
    Then run `open {url} 2>/dev/null || true` to open the PR in the default browser.
 
-4. Ask the user:
+4. If `isDraft` is true, inform the user:
+   ```
+   PR is in DRAFT state (zero-progress session means the overnight runner produced no merged features). Direct merge will fail because GitHub blocks draft-PR merges. Choose one: mark as ready and merge, close the PR, or skip for manual follow-up.
+   ```
+
+   Then ask the user to choose one of:
+   - **mark as ready and merge**: run `gh pr ready {number}`, then `gh pr merge {number} --merge --delete-branch` (follow the success/failure handling in step 6 below).
+   - **close the PR**: run `gh pr close {number}`, then display the warning:
+     ```
+     WARNING: the integration branch {integration_branch} and its worktree are NOT automatically deleted when you choose "close". Run `git push origin --delete {integration_branch}` and check `git worktree list` for orphan worktrees manually.
+     ```
+   - **skip for manual follow-up**: note in the morning-review summary: "PR left open as draft at {url} — manual follow-up required."
+
+   After handling the draft case, skip steps 5 and 6 (merge prompt and merge action) and proceed to Section 6a only if a merge was performed via the "mark as ready and merge" option.
+
+   If `isDraft` is false, proceed to step 5.
+
+5. Ask the user:
    ```
    Merge this PR to main? [yes / no]
    ```
 
-5. If yes:
+6. If yes:
    - Run: `gh pr merge {number} --merge --delete-branch`
    - On success: report "Merged. Remote branch deleted."
      - Read `worktree_path` from `lifecycle/sessions/latest-overnight/overnight-state.json`.
@@ -527,7 +544,7 @@ Run after all other sections. No per-feature confirmation is needed before locat
        - If `worktree_path` is absent, empty, or the path does not exist: skip removal silently.
    - On failure: show the error message and leave the PR open for manual resolution.
 
-6. If no: leave the PR open and note: "PR left open at {url} — merge manually when ready."
+7. If no: leave the PR open and note: "PR left open at {url} — merge manually when ready."
 
 After this section, proceed to Section 6a if a merge was performed.
 
@@ -586,6 +603,7 @@ After this section, the review is complete.
 | `gh pr list` returns empty array | Inform user, suggest `/pr` to create manually |
 | PR state is MERGED | Report already merged, skip merge prompt |
 | PR state is CLOSED | Report closed without merging, skip merge prompt |
+| PR state is DRAFT | Prompt user with mark-ready/close/skip options per the new sub-step |
 | `gh pr merge` fails | Show error, leave PR open for manual resolution |
 | `open` command fails | Run `open {url} 2>/dev/null || true` — review continues |
 | `worktree_path` in state doesn't exist on disk | Skip worktree removal silently, continue |
