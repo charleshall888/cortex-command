@@ -98,6 +98,7 @@ PROMPT_TEMPLATE="$REPO_ROOT/claude/overnight/prompts/orchestrator-round.md"
 EVENTS_PATH=""  # set after session ID read
 PLAN_PATH=""    # set after session ID read
 TEST_COMMAND=""
+DRY_RUN=""
 INTEGRATION_DEGRADED=false
 INTEGRATION_WARNING_FILE="$TMPDIR/overnight-integration-warning.txt"
 INTEGRATION_TEST_OUTPUT="$TMPDIR/overnight-integration-test-output.txt"
@@ -109,6 +110,10 @@ INTEGRATION_TEST_OUTPUT="$TMPDIR/overnight-integration-test-output.txt"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --state)
+            STATE_PATH="$2"
+            shift 2
+            ;;
+        --state-path)
             STATE_PATH="$2"
             shift 2
             ;;
@@ -127,6 +132,10 @@ while [[ $# -gt 0 ]]; do
         --test-command)
             TEST_COMMAND="$2"
             shift 2
+            ;;
+        --dry-run)
+            DRY_RUN="true"
+            shift 1
             ;;
         *)
             echo "Unknown option: $1" >&2
@@ -607,6 +616,10 @@ fi
 while [[ $ROUND -le $MAX_ROUNDS ]]; do
     # Check for pending features
     PENDING=$(count_pending)
+    if [[ "$DRY_RUN" == "true" ]] && [[ "$PENDING" -gt 0 ]]; then
+        echo "--dry-run requires a state file with all features in terminal states (merged/failed); found $PENDING pending" >&2
+        exit 1
+    fi
     if [[ "$PENDING" -eq 0 ]]; then
         echo "Round $ROUND: No pending features — all done"
         break
@@ -1032,6 +1045,22 @@ fi
 # with at least one merged feature. Collect PR URLs in a temp JSON file for
 # the morning report.
 # ---------------------------------------------------------------------------
+
+# Dry-run helper: prints "DRY-RUN <label> <args...>" when $DRY_RUN == "true"
+# and returns 0 without executing; otherwise executes the passed command.
+# Use for single-line gh / notify.sh / git push calls. For multi-line
+# python3 -c state-write or event-append blocks, use an inline bash if-guard
+# directly (see Task 5 sites).
+dry_run_echo() {
+    local label="$1"
+    shift
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "DRY-RUN $label $*"
+        return 0
+    fi
+    "$@"
+}
+
 PR_URLS_FILE="$TMPDIR/overnight-pr-urls.json"
 echo '{}' > "$PR_URLS_FILE"
 PUSH_FAILED_REPOS_FILE="$TMPDIR/overnight-push-failed-repos.txt"
