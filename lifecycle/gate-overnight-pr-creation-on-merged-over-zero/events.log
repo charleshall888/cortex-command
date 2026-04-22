@@ -9,3 +9,9 @@
 {"ts": "2026-04-22T00:05:00Z", "event": "orchestrator_review", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-22T00:45:00Z", "event": "spec_revision", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "phase": "plan", "reason": "critical-review Q1/Q2 resolution: distinguish transient vs persistent gh pr ready failures; neutral log phrasing on marker-true branch", "affected_requirements": [5, 8], "test_count": {"before": 10, "after": 11}}
 {"ts": "2026-04-22T00:50:00Z", "event": "phase_transition", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "from": "plan", "to": "implement"}
+{"ts": "2026-04-22T12:40:00Z", "event": "batch_dispatch", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "batch": 0, "tasks": [1, 2, 7]}
+{"ts": "2026-04-22T12:50:00Z", "event": "task_complete", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T12:50:00Z", "event": "task_complete", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "task": 2, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T12:50:00Z", "event": "task_complete", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "task": 7, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T13:00:00Z", "event": "batch_dispatch", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "batch": 1, "tasks": [3]}
+{"ts": "2026-04-22T13:20:00Z", "event": "task_complete", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "task": 3, "batch": 1, "status": "success", "note": "runner.sh diff commingled into fe58fac (straddle-case fixture commit) due to parallel-session collision; code correct in HEAD"}

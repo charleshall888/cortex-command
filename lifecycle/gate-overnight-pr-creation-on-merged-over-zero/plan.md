@@ -14,7 +14,7 @@ Gate the home-repo integration-branch PR on `MC_MERGED_COUNT` in `claude/overnig
 - **Complexity**: simple
 - **Context**: Arg-parsing block at `runner.sh:108-131` uses `case "$1" in ... shift 2 ...`. Defaults block at lines 89-103 declares the other CLI-option variables. The round loop begins at `runner.sh:598` (`while [[ $ROUND -le $MAX_ROUNDS ]]`). `count_pending` at line 600 returns 0 when all features are in terminal states (`merged`|`failed`|`skipped`) per `count_pending()`'s filter (`status in ('pending', 'running', 'paused')`, see `runner.sh:count_pending` and `tests/test_runner_resume.py`). Under `set -euo pipefail`, `DRY_RUN` must be initialized at the defaults block (not inline within the end-of-session block) to avoid unbound-variable crashes on live sessions (Req 9 guards this). Spec Req 7's other "skip silently" items (state-writes, event-appends, morning-report generation, symlink swaps) are gated inside Task 3 (morning-report) and Task 5 (state marker, event append) using the if-guard pattern defined above — Task 1 only ships the helpers and the rejection guard.
 - **Verification**: (a) `bash claude/overnight/runner.sh --dry-run; echo "exit=$?"` — pass if exit code is non-zero AND stderr contains the substring `dry-run`. (a) `bash claude/overnight/runner.sh --dry-run --state-path tests/fixtures/state-zero-merge.json; echo "exit=$?"` — pass if exit 0 (fixture has all terminal features → round loop breaks → PR block runs under dry-run echoing). This positive-path assertion validates the skip mechanism; the negative-path assertion validates the rejection guard.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Create four test fixture state files
 
@@ -24,7 +24,7 @@ Gate the home-repo integration-branch PR on `MC_MERGED_COUNT` in `claude/overnig
 - **Complexity**: simple
 - **Context**: Existing fixture-shape reference: `tests/test_runner_resume.py:31-43` `_write_state` helper (current_round=1, phase=executing, started_at/updated_at set). `MC_MERGED_COUNT` filter at `runner.sh:1137-1141` (status=='merged' AND repo_path is None). Zero-commit fixture: the runner reads `integration_branch` from state and calls `git rev-list --count main..$INTEGRATION_BRANCH` (Task 4); the test harness (Task 8) pre-creates a local branch with zero commits past main using a conftest fixture or `git branch <name> main` before invoking runner.sh. `INTEGRATION_WARNING_FILE` for the degraded fixture: Task 8's test harness writes a sentinel warning text to a tmp file and sets `INTEGRATION_WARNING_FILE=<path>` as a shell variable via a wrapper script before subprocess invocation (env inheritance via `subprocess.run`'s `env=`) — the fixture JSON itself does not carry the warning text.
 - **Verification**: (b) All 4 files exist at their listed paths AND each parses as valid JSON: `python3 -c "import json,sys; [json.load(open(p)) for p in sys.argv[1:]]" tests/fixtures/state-zero-merge.json tests/fixtures/state-nonzero-merge.json tests/fixtures/state-zero-merge-zero-commits.json tests/fixtures/state-nonzero-merge-degraded.json` exits 0 AND each fixture contains (via `jq -e`) the required fields `session_id`, `current_round`, `phase`, `started_at`, `updated_at`, `features`, `integration_branch`, `integration_branches`, `integration_worktrees`, `worktree_path`.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Conditional draft + zero-progress title/body + fixture-driven degraded flag + morning-report gate (Req 1, 2, 3, 7)
 
@@ -37,7 +37,7 @@ Gate the home-repo integration-branch PR on `MC_MERGED_COUNT` in `claude/overnig
 - **Complexity**: simple
 - **Context**: Implementation pattern in research.md:54-82 (recommended bash structure). Zero-progress body text from spec.md Req 2: the literal string `**ZERO PROGRESS** — Overnight session $SESSION_ID merged 0 features. See \`lifecycle/sessions/${SESSION_ID}/morning-report.md\` for failure analysis.`. Non-zero body unchanged from current `runner.sh:1144-1148`. Req 3 precedence rule: when `INTEGRATION_DEGRADED==true` AND `MC_MERGED_COUNT==0`, title is `[ZERO PROGRESS] …` (not combined with any `[GATE FAILED]` marker); body's first line is `cat $INTEGRATION_WARNING_FILE` followed by the zero-progress template. `$DRAFT_FLAG` expansion pattern already used elsewhere in the script. The `integration_degraded` state-field read is defensive-only (uses `.get('integration_degraded', False)` so absent field is a no-op).
 - **Verification**: (a) `bash claude/overnight/runner.sh --dry-run --state-path tests/fixtures/state-zero-merge.json 2>&1 | grep -cE 'DRY-RUN gh pr create.*--draft.*\[ZERO PROGRESS\]'` — pass if ≥ 1. (a) `bash claude/overnight/runner.sh --dry-run --state-path tests/fixtures/state-nonzero-merge.json 2>&1` — pass if stdout contains `DRY-RUN gh pr create` AND does not contain `--draft` AND does not contain `[ZERO PROGRESS]` AND does not contain a morning-report file-path string (e.g., `lifecycle/sessions/<sid>/morning-report.md` written on disk post-invocation).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Zero-commit integration-branch pre-check (Req 4)
 
@@ -77,7 +77,7 @@ Gate the home-repo integration-branch PR on `MC_MERGED_COUNT` in `claude/overnig
 - **Complexity**: simple
 - **Context**: Exact insertion points and message strings from spec.md Req 6. Operator-facing prompt text must match verbatim ("PR is in DRAFT state (zero-progress session means the overnight runner produced no merged features). Direct merge will fail because GitHub blocks draft-PR merges. Choose one: mark as ready and merge, close the PR, or skip for manual follow-up."). The orphan-state warning text is mandatory — spec validates it via grep.
 - **Verification**: (a) `grep -c 'isDraft' skills/morning-review/references/walkthrough.md` ≥ 3 AND `grep -c 'mark as ready' skills/morning-review/references/walkthrough.md` ≥ 1 AND `grep -c 'NOT automatically deleted' skills/morning-review/references/walkthrough.md` ≥ 1. Pass if all three.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 8: Pytest regression suite for PR gating (Req 8)
 
