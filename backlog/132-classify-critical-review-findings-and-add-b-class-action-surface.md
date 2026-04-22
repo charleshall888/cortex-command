@@ -2,19 +2,22 @@
 schema_version: "1"
 uuid: 4451ab84-0143-46d9-ba83-958165b2fb32
 title: "Classify /critical-review findings by class and add B-class action surface"
-status: ready
+status: refined
 priority: high
 type: feature
 tags: [critical-review, scope-expansion-bias, skills]
 areas: [skills]
 created: 2026-04-21
-updated: 2026-04-21
-session_id: null
+updated: 2026-04-22
+session_id: 551b268d-873e-4d05-ab32-d2a129ba654d
 blocks: []
 blocked-by: []
 discovery_source: research/critical-review-scope-expansion-bias/research.md
 complexity: complex
 criticality: medium
+lifecycle_phase: plan
+lifecycle_slug: classify-critical-review-findings-by-class-and-add-b-class-action-surface
+spec: lifecycle/classify-critical-review-findings-by-class-and-add-b-class-action-surface/spec.md
 ---
 
 # Classify /critical-review findings by class and add B-class action surface
