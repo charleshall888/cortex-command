@@ -1,0 +1,2 @@
+a19d649aaee912513a13b3f509a05a5181e0d9f9a6dd1d8dfa8c2ff2d16ba0f3  claude/reference/verification-mindset.md
+72246609a6e8311e91c07abb40fbb9abbb19c69c848308728f3269026bd74e6e  claude/reference/context-file-authoring.md
