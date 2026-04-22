@@ -46,3 +46,5 @@ Round-2 semantic diff confirmed all four agree on the phase model. `claude.commo
 
 - Statusline migration to Python (structural constraint).
 - Overhaul of `.dispatching` or worktree-override logic (they are override signals, not phase detection).
+
+> **2026-04-22 (ticket #097) — scope amendment.** The `.dispatching` marker check and Worktree-Aware Phase Detection override have been deleted in full from SKILL.md Step 2. The "retain `.dispatching` marker check and worktree-aware override" language above (line 41) and the "Overhaul of `.dispatching` or worktree-override logic" out-of-scope entry (line 48) no longer apply — neither override exists in post-#097 SKILL.md. `/refine` should re-evaluate scope against the reduced surface before planning.
