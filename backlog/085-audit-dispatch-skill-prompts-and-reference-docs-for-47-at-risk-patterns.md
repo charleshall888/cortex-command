@@ -10,7 +10,7 @@ updated: 2026-04-21
 parent: "82"
 tags: [opus-4-7-harness-adaptation, skills]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [83]
+blocked-by: []
 session_id: 0807d4ab-1191-4d06-b82e-85d0470608d2
 lifecycle_phase: specify
 lifecycle_slug: audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns

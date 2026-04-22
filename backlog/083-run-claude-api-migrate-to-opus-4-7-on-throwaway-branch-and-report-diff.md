@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: c9e64818-a84e-4d6f-96d4-bd2c86f12d39
 title: "Run /claude-api migrate to opus-4-7 on throwaway branch and report diff"
-status: refined
+status: complete
 priority: high
 type: spike
 created: 2026-04-18
-updated: 2026-04-18
+updated: 2026-04-21
 parent: "82"
 tags: [opus-4-7-harness-adaptation, spike]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
