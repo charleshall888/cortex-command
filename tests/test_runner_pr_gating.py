@@ -147,6 +147,10 @@ def _build_env(
     # Don't inherit prior GH_STUB_* unless tests set them
     env.pop("GH_STUB_SCENARIO", None)
     env.pop("GH_STUB_READY_MODE", None)
+    # notify.sh reads stdin via `cat` when stdin isn't a TTY (see ~/.claude/notify.sh).
+    # subprocess.run's default stdin is a pipe that never closes, causing a hang.
+    # SKIP_NOTIFICATIONS=1 short-circuits notify.sh before the cat call.
+    env["SKIP_NOTIFICATIONS"] = "1"
     if extra:
         env.update(extra)
     return env
@@ -160,6 +164,7 @@ def _run_runner(state_path: Path, env: dict[str, str]) -> subprocess.CompletedPr
         env=env,
         capture_output=True,
         text=True,
+        stdin=subprocess.DEVNULL,
         timeout=120,
     )
 

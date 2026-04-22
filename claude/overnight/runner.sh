@@ -274,10 +274,13 @@ data = {
     'started_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
     'phase': 'executing',
 }
-with tempfile.NamedTemporaryFile(mode='w', dir=str(pointer_dir), delete=False, suffix='.tmp') as f:
-    json.dump(data, f)
-    tmp_path = f.name
-os.replace(tmp_path, pointer_path)
+try:
+    with tempfile.NamedTemporaryFile(mode='w', dir=str(pointer_dir), delete=False, suffix='.tmp') as f:
+        json.dump(data, f)
+        tmp_path = f.name
+    os.replace(tmp_path, pointer_path)
+except Exception:
+    pass
 " || true
 
 # For cross-repo sessions, the overnight skill writes overnight-plan.md to

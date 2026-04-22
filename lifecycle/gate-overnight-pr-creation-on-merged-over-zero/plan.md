@@ -67,7 +67,7 @@ Gate the home-repo integration-branch PR on `MC_MERGED_COUNT` in `claude/overnig
 - **Complexity**: simple
 - **Context**: Line numbers will have shifted after Tasks 3, 4, and 5 land; anchor the insertions by content (cross-repo: immediately before `if [[ "$MERGED_COUNT" -eq 0 ]]; then`; home-repo: immediately before the conditional that sets `DRAFT_FLAG`/`PR_TITLE`). Comments are bash `#`-prefixed, multi-line. Task 5 also modifies the home-repo PR block (recovery path); Task 6 runs after all three to avoid being stepped on.
 - **Verification**: (a) `grep -c 'ticket 131' claude/overnight/runner.sh` — pass if count ≥ 2.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 7: Surface draft PR state in morning-review walkthrough (Req 6)
 
@@ -87,7 +87,7 @@ Gate the home-repo integration-branch PR on `MC_MERGED_COUNT` in `claude/overnig
 - **Complexity**: complex
 - **Context**: Pattern from `tests/test_runner_resume.py` (subprocess + env injection). The stub script dispatches on `$1` (`pr`) and `$2` (`view`|`ready`), reads `GH_STUB_SCENARIO` to pick canned output, writes to stdout (view) or stderr + non-zero exit (ready failure). For the failure-classification subtest, stub prints `HTTP 429` to stderr and exits 1. Tests run from the repo root with `cwd=tests/../` (see `REAL_REPO_ROOT` at `test_runner_resume.py:17`). `tmp_path` fixture is pytest's built-in; use `shutil.copy(source_fixture, tmp_path / "state.json")` and pass `str(tmp_path / "state.json")` to the runner. Test isolation: each test gets its own `tmp_path`, so LOCK_FILE, session events, and interrupt mutations are isolated per test.
 - **Verification**: (a) `pytest tests/test_runner_pr_gating.py -v` — pass if exit 0 AND summary shows 11 passed.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 9: Live-path non-regression check (Req 9)
 
@@ -97,7 +97,7 @@ Gate the home-repo integration-branch PR on `MC_MERGED_COUNT` in `claude/overnig
 - **Complexity**: simple
 - **Context**: Under `set -euo pipefail` (declared at `runner.sh:18`), any reference to `$DRY_RUN` before initialization crashes the live session. Task 1 initializes `DRY_RUN=""` in the defaults block at lines 89-103 to prevent this; Task 9 verifies no other regression slipped in.
 - **Verification**: (a) `pytest tests/test_runner_resume.py tests/test_runner_signal.py -v` — pass if exit 0 with all existing tests green and zero test modifications required.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Verification Strategy
 
