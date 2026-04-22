@@ -1275,6 +1275,25 @@ print('true' if state.get('integration_pr_flipped_once', False) else 'false')
                         dry_run_echo "gh pr ready" gh pr ready "$MC_PR_URL" 2>"$MC_PR_READY_ERR"
                     fi
                     MC_PR_READY_EXIT=$?
+                    # Test-only failure simulation for --dry-run (ticket 131,
+                    # Req 8 failure-classification subtests). When DRY_RUN_GH_READY_SIMULATE
+                    # is "transient" or "persistent", force non-zero exit with a
+                    # canned stderr payload so the classification branch below
+                    # fires deterministically. Live sessions never set this var
+                    # and take the real gh pr ready exit code above. Gate on
+                    # DRY_RUN=true so this hook cannot affect live runs.
+                    if [[ "$DRY_RUN" == "true" ]]; then
+                        case "${DRY_RUN_GH_READY_SIMULATE:-}" in
+                            transient)
+                                echo "HTTP 429: rate limit exceeded" > "$MC_PR_READY_ERR"
+                                MC_PR_READY_EXIT=1
+                                ;;
+                            persistent)
+                                echo "HTTP 401: unauthorized" > "$MC_PR_READY_ERR"
+                                MC_PR_READY_EXIT=1
+                                ;;
+                        esac
+                    fi
                     if [[ $MC_PR_READY_EXIT -eq 0 ]]; then
                         # Success — set marker atomically.
                         if [[ "$DRY_RUN" == "true" ]]; then
