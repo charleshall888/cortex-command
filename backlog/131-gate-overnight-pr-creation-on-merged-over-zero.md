@@ -2,19 +2,22 @@
 schema_version: "1"
 uuid: 5e103f2e-fd3d-4890-84a5-c67d6adac785
 title: "Gate overnight PR creation on merged>0 (draft on zero-merge)"
-status: backlog
+status: in_progress
 priority: medium
 type: feature
 tags: [overnight-runner, pr, orchestrator-worktree-escape]
 areas: [overnight-runner]
 created: 2026-04-21
-updated: 2026-04-21
-lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+updated: 2026-04-22
+lifecycle_slug: gate-overnight-pr-creation-on-merged-over-zero
+lifecycle_phase: plan
+session_id: 22641279-0269-4938-9811-01c410aa381c
 blocks: []
 blocked-by: []
 discovery_source: research/orchestrator-worktree-escape/research.md
+complexity: simple
+criticality: high
+spec: lifecycle/gate-overnight-pr-creation-on-merged-over-zero/spec.md
 ---
 
 # Gate overnight PR creation on merged>0 (draft on zero-merge)
