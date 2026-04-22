@@ -324,7 +324,7 @@ Every overnight session persists state as files under `lifecycle/`. The runner r
 | `lifecycle/{feature}/events.log` | `claude/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/lifecycle resume` and `/morning-review`. |
 | `lifecycle/{feature}/agent-activity.jsonl` | `claude/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
 | `lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
-| `lifecycle/morning-report.md` | `claude/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). |
+| `lifecycle/morning-report.md` | `claude/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). Runner emits `morning_report_generate_result` and `morning_report_commit_result` events to `overnight-events.log` around the write + commit so the operator can confirm the file landed on `main`. |
 | `lifecycle/.runner.lock` | `runner.sh` | PID lock preventing concurrent overnight sessions. See [Runner Lock](#runner-lock-runnerlock). |
 | `deferred/*.md` | `claude/overnight/deferral.py` (`write_deferral`) | Blocking human-decision questions filed during the session. |
 
@@ -408,9 +408,9 @@ The `OvernightStrategy` dataclass in `claude/overnight/strategy.py` serializes t
 
 **Assembly**: `generate_report()` concatenates `render_executive_summary`, `render_completed_features`, `render_pending_drift`, `render_deferred_questions`, `render_failed_features`, `render_new_backlog_items`, `render_action_checklist`, `render_run_statistics`, and — when any exist — `render_tool_failures`. Each renderer is a pure function of `ReportData`.
 
-**Output**: `lifecycle/morning-report.md`. `write_report()` uses tempfile + `os.replace()` so the report is never observed half-written. `notify()` then fires `~/.claude/notify.sh` so the operator knows overnight is done.
+**Output**: `lifecycle/morning-report.md`. `write_report()` uses tempfile + `os.replace()` so the report is never observed half-written. After the write, `runner.sh` emits a `morning_report_generate_result` event (per-session and latest-copy sha256s + byte counts) and then a `morning_report_commit_result` event recording whether the commit landed on `main`. `notify()` then fires `~/.claude/notify.sh` so the operator knows overnight is done.
 
-The morning-report commit is the only runner commit that stays on local `main`; all other artifact commits travel on the integration branch.
+The morning-report commit is the only runner commit that stays on local `main`; all other artifact commits travel on the integration branch. (Historical reports from 2026-04-07, 2026-04-11, and 2026-04-21 were backfilled retroactively under commits whose subject lines end with `(backfill)`.)
 
 ### agent-activity.jsonl
 

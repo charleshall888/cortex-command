@@ -81,7 +81,7 @@ Check for the morning report in order:
 
 1. `$CORTEX_COMMAND_ROOT/lifecycle/sessions/latest-overnight/morning-report.md` — the MC session directory (new-style worktree sessions).
 2. `lifecycle/sessions/latest-overnight/morning-report.md` — reachable via a project-local `latest-overnight` symlink (if one exists)
-3. `lifecycle/morning-report.md` — exists as a file or symlink (old-style sessions)
+3. `lifecycle/morning-report.md` — regular file overwritten by each overnight session's writer.
 
 Use whichever path resolves first. If none exist, report that no morning report was found. Tell the user that no overnight session has been run yet, or the report was not generated. Suggest running `python3 -m claude.overnight.report` to generate one. Stop.
 
