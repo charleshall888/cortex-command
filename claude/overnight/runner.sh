@@ -384,7 +384,7 @@ fill_prompt() {
 import os
 t = open(os.environ['TEMPLATE']).read()
 t = t.replace('{state_path}', os.environ['STATE_PATH'])
-t = t.replace('{plan_path}', os.environ['PLAN_PATH'])
+t = t.replace('{session_plan_path}', os.environ['PLAN_PATH'])
 t = t.replace('{events_path}', os.environ['EVENTS_PATH'])
 t = t.replace('{session_dir}', os.environ['SESSION_DIR'])
 t = t.replace('{round_number}', os.environ['ROUND_NUM'])

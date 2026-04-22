@@ -11,7 +11,7 @@ You are the overnight orchestrator agent for round {round_number}. Your job is t
 ## State Files
 
 - **Overnight state**: `{state_path}`
-- **Session plan**: `{plan_path}`
+- **Session plan**: `{session_plan_path}`
 - **Events log**: `{events_path}`
 
 ## Round Procedure
@@ -107,7 +107,7 @@ For each entry in `to_process`, wrap the entire processing in a try/except so th
 Read up to three files for context:
 - `lifecycle/{feature}/spec.md` — if this file does not exist, the escalation is not resolvable. Jump to the promotion path below.
 - `lifecycle/{feature}/plan.md` — read if it exists; skip gracefully if not.
-- `{plan_path}` — the session overnight plan.
+- `{session_plan_path}` — the session overnight plan.
 
 Using the content of these files, determine whether the worker's `question` can be answered:
 
@@ -213,7 +213,7 @@ The `hot_files` list feeds into §1b's conflict recovery trivial fast-path check
 
 ### 2. Read Session Plan
 
-Read `{plan_path}` to understand batch assignments and the tier-based parallel dispatch limits. Identify which features are assigned to the current round.
+Read `{session_plan_path}` to understand batch assignments and the tier-based parallel dispatch limits. Identify which features are assigned to the current round.
 
 ### 2a. Intra-Session Dependency Gate
 
@@ -257,16 +257,22 @@ log_event(
 
 Each sub-agent receives:
 
+<substitution_contract>
+CRITICAL: YOU MUST substitute the per-feature tokens {{feature_slug}}, {{feature_spec_path}}, and {{feature_plan_path}} in the dispatch template below with concrete values read from state.features[<slug>] before sending the prompt to the sub-agent. These double-brace placeholders are the ONLY tokens YOU substitute.
+
+Session-level single-brace tokens (for example {session_plan_path}, {state_path}, {events_path}, {session_dir}) are already pre-filled by fill_prompt() before you receive this prompt — their values already appear as concrete absolute paths in the text above. YOU MUST NOT re-substitute them, invent replacement values, or copy the absolute-path pattern from earlier in this prompt when filling in per-feature double-brace tokens. Treat {{feature_X}} as distinct placeholders to be filled from state.features[<slug>] at dispatch time; do not carry the session-level path literal into the per-feature slot.
+</substitution_contract>
+
 ```
-You are generating an implementation plan for the overnight feature "{feature}".
+You are generating an implementation plan for the overnight feature "{{feature_slug}}".
 
 Read the following files:
-- Spec: {spec_path}
-- Research: lifecycle/{slug}/research.md (if it exists — skip gracefully if not)
-- Recovery history: lifecycle/{slug}/learnings/recovery-log.md (if it exists — skip gracefully if not; if present, note in the plan what was previously tried and why it failed so the new plan avoids repeating those approaches)
+- Spec: {{feature_spec_path}}
+- Research: lifecycle/{{feature_slug}}/research.md (if it exists — skip gracefully if not)
+- Recovery history: lifecycle/{{feature_slug}}/learnings/recovery-log.md (if it exists — skip gracefully if not; if present, note in the plan what was previously tried and why it failed so the new plan avoids repeating those approaches)
 
 Follow the lifecycle plan phase protocol: design an implementation approach, then
-write a complete plan to {plan_path} using the standard plan.md format (Overview,
+write a complete plan to {{feature_plan_path}} using the standard plan.md format (Overview,
 Tasks with Files/What/Depends on/Context/Verification/Status fields,
 Verification Strategy).
 
@@ -288,7 +294,7 @@ On success, output only this JSON on the last line of your response:
 
 - For each sub-agent that returned `{"status": "ok"}`: plan.md was written — proceed normally.
 - For each sub-agent that returned `{"status": "deferred", "reason": "..."}`:
-  1. Write a deferral file at `deferred/{slug}-plan-q001.md` with the reason
+  1. Write a deferral file at `deferred/{{feature_slug}}-plan-q001.md` with the reason
   2. Mark the feature `deferred` in overnight state
   3. Exclude it from this round
 - For each sub-agent that crashed or produced no status line: mark the feature `failed` with error "plan generation sub-agent did not complete"
