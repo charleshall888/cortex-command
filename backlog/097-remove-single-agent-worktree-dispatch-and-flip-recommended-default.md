@@ -2,16 +2,22 @@
 schema_version: "1"
 uuid: b6555b1a-1b0b-402f-b821-38e9e7cfa466
 title: "Remove single-agent worktree dispatch and flip recommended default to current branch"
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-04-20
-updated: 2026-04-21
+updated: 2026-04-22
 parent: "93"
 blocked-by: []
 tags: [lifecycle, preflight, worktree, cleanup]
 discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
-areas: [lifecycle, skills]
+areas: [skills,lifecycle,hooks]
+session_id: 0a9a2798-939a-401c-8175-f9d2de6bc64c
+lifecycle_phase: research
+lifecycle_slug: remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch
+complexity: complex
+criticality: high
+spec: lifecycle/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/spec.md
 ---
 
 # Remove single-agent worktree dispatch and flip recommended default to current branch
