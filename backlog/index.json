@@ -50,12 +50,12 @@
     "blocked_by": [],
     "parent": "126",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape/spec.md",
     "discovery_source": "research/orchestrator-worktree-escape/research.md",
     "plan": null,
     "uuid": "65cbc5a4-ae71-4763-9a9c-f5cf4847480d",
     "lifecycle_slug": "disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape",
-    "session_id": "a6e2f2ae-1b89-4134-a060-4fff1ddec651",
+    "session_id": "db9e18aa-35ac-43fe-818f-9b9254ff219e",
     "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
@@ -86,8 +86,8 @@
     "plan": null,
     "uuid": "503f9a80-0ec5-4d12-b7b1-3e56b2b5e879",
     "lifecycle_slug": "un-silence-morning-report-commit-and-backfill-4-historical-reports",
-    "session_id": "f288b456-c5bf-4d90-be05-06779840035d",
-    "lifecycle_phase": "research",
+    "session_id": "065fbf97-c7f6-4d73-8db9-bbb14068d0c9",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -224,9 +224,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-21",
     "blocks": [],
-    "blocked_by": [
-      "88"
-    ],
+    "blocked_by": [],
     "parent": "82",
     "research": null,
     "spec": null,
@@ -761,7 +759,7 @@
     "uuid": "a98f7141-94ee-4479-85b3-75187deff6d9",
     "lifecycle_slug": "route-python-layer-backlog-writes-through-worktree-checkout",
     "session_id": "547b59d6-60b1-4acb-a597-881c3009d82a",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -790,8 +788,8 @@
     "plan": null,
     "uuid": "4451ab84-0143-46d9-ba83-958165b2fb32",
     "lifecycle_slug": "classify-critical-review-findings-by-class-and-add-b-class-action-surface",
-    "session_id": "75f4632d-6610-47f2-a8ab-4f7f80ef7174",
-    "lifecycle_phase": "research",
+    "session_id": "551b268d-873e-4d05-ab32-d2a129ba654d",
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -855,37 +853,6 @@
     "repo": null
   },
   {
-    "id": 88,
-    "title": "Collect 4.7 baseline rounds and snapshot the aggregated data",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "opus-4-7-harness-adaptation",
-      "capability-adoption"
-    ],
-    "areas": [
-      "pipeline"
-    ],
-    "created": "2026-04-18",
-    "updated": "2026-04-21",
-    "blocks": [],
-    "blocked_by": [
-      "99"
-    ],
-    "parent": "82",
-    "research": null,
-    "spec": "lifecycle/collect-47-baseline-rounds-and-snapshot-the-aggregated-data/spec.md",
-    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
-    "plan": null,
-    "uuid": "e7f9b367-c3d5-414b-8de4-dd813cdf3908",
-    "lifecycle_slug": "collect-47-baseline-rounds-and-snapshot-the-aggregated-data",
-    "session_id": "fab20d9b-3f4d-439e-8ed9-65d1976cfd3f",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 92,
     "title": "Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)",
     "status": "backlog",
@@ -897,11 +864,9 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-18",
+    "updated": "2026-04-21",
     "blocks": [],
-    "blocked_by": [
-      "88"
-    ],
+    "blocked_by": [],
     "parent": "82",
     "research": null,
     "spec": null,
@@ -917,7 +882,7 @@
   {
     "id": 97,
     "title": "Remove single-agent worktree dispatch and flip recommended default to current branch",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -940,38 +905,9 @@
     "discovery_source": "research/revisit-lifecycle-implement-preflight-options/research.md",
     "plan": null,
     "uuid": "b6555b1a-1b0b-402f-b821-38e9e7cfa466",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 99,
-    "title": "Operator gate: #088 baseline measurement window is complete",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "task",
-    "tags": [
-      "opus-4-7-harness-adaptation",
-      "operator-gate"
-    ],
-    "areas": [
-      "pipeline"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-21",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "82",
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "8e3f7a21-5c9b-4d62-8e1a-6f2b4c9e7d33",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch",
+    "session_id": "0a9a2798-939a-401c-8175-f9d2de6bc64c",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },

@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: e7f9b367-c3d5-414b-8de4-dd813cdf3908
 title: "Collect 4.7 baseline rounds and snapshot the aggregated data"
-status: backlog
+status: wontfix
 priority: medium
 type: feature
 created: 2026-04-18
-updated: 2026-04-20
+updated: 2026-04-21
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
@@ -14,6 +14,10 @@ blocked-by: []
 ---
 
 # Collect 4.7 baseline rounds and snapshot the aggregated data
+
+## Closure note (2026-04-21)
+
+Closed as wontfix. At n<30 per bucket this baseline is directional only — not conclusive enough to attribute prompt-change regressions to the prompt rather than variance. The 2–3 rounds of operator attention plus prompt-freeze discipline is not justified unless we plan to execute #092 and #090 with rigorous before/after comparison, which we're not currently prioritizing. Commit A (pipeline instrumentation + lifecycle artifacts + marker item #099) was reverted in `2b88932`. If we later want real measurement, re-open with a larger sample plan or a different comparison design.
 
 ## Motivation
 
