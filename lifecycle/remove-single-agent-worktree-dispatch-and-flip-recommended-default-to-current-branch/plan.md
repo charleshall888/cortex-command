@@ -39,7 +39,7 @@ Remove the single-agent `Agent(isolation: "worktree")` implement-phase dispatch 
     - `grep -c 'Worktree-agent context guard' skills/lifecycle/references/implement.md` = 0
     - `grep -c 'Unlike §1a' skills/lifecycle/references/implement.md` = 0
     - `grep -cE 'no `?\.dispatching`? (noclobber )?marker' skills/lifecycle/references/implement.md` ≥ 1
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Clean up SKILL.md worktree scaffolding (four deletions)
 - **Files**: `skills/lifecycle/SKILL.md`
@@ -60,7 +60,7 @@ Remove the single-agent `Agent(isolation: "worktree")` implement-phase dispatch 
     - `grep -c 'Worktree-Aware Phase Detection' skills/lifecycle/SKILL.md` = 0
     - `grep -c 'Skip condition.*worktree/agent' skills/lifecycle/SKILL.md` = 0
     - `grep -c 'worktree/agent' skills/lifecycle/SKILL.md` = 0
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Remove cleanup-session.sh worktree-prune block
 - **Files**: `hooks/cortex-cleanup-session.sh`
@@ -78,7 +78,7 @@ Remove the single-agent `Agent(isolation: "worktree")` implement-phase dispatch 
     - `grep -c 'worktree/agent' hooks/cortex-cleanup-session.sh` = 0
     - `grep -c 'Prune stale agent isolation' hooks/cortex-cleanup-session.sh` = 0
     - `bash -n hooks/cortex-cleanup-session.sh` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Annotate DR-2 reversal in decomposed.md
 - **Files**: `research/implement-in-autonomous-worktree-overnight-component-reuse/decomposed.md`
@@ -104,7 +104,7 @@ Remove the single-agent `Agent(isolation: "worktree")` implement-phase dispatch 
     - `grep -c 'DR-2 reversed' research/implement-in-autonomous-worktree-overnight-component-reuse/decomposed.md` ≥ 1
     - `grep -cE '^> \*\*2026-04-22' research/implement-in-autonomous-worktree-overnight-component-reuse/decomposed.md` ≥ 1
     - Confirm by file read: the annotation appears between the DR-2 bullet (lines 65–67 pre-edit) and the DR-3 bullet.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Annotate scope amendment on backlog/110
 - **Files**: `backlog/110-unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception.md`
@@ -125,7 +125,7 @@ Remove the single-agent `Agent(isolation: "worktree")` implement-phase dispatch 
 - **Verification**:
     - `grep -cE '^> \*\*2026-04-22 \(ticket #097\)' backlog/110-unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception.md` ≥ 1
     - Confirm by file read: the annotation appears inside or immediately below the `## Out of scope` section.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Annotate scope amendment on backlog/123
 - **Files**: `backlog/123-lifecycle-autonomous-worktree-graceful-degrade.md`
@@ -147,7 +147,7 @@ Remove the single-agent `Agent(isolation: "worktree")` implement-phase dispatch 
     - `grep -cE '^> \*\*2026-04-22 \(ticket #097\)' backlog/123-lifecycle-autonomous-worktree-graceful-degrade.md` ≥ 1
     - `grep -c 'three options' backlog/123-lifecycle-autonomous-worktree-graceful-degrade.md` ≥ 1
     - `grep -c 'two options' backlog/123-lifecycle-autonomous-worktree-graceful-degrade.md` ≥ 1
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Backfill feature_complete event in devils-advocate events.log
 - **Files**: `lifecycle/devils-advocate-smart-feedback-application/events.log`
@@ -179,7 +179,7 @@ Remove the single-agent `Agent(isolation: "worktree")` implement-phase dispatch 
 - **Verification**:
     - `grep -c '"event":"feature_complete"' lifecycle/devils-advocate-smart-feedback-application/events.log` ≥ 1 (matches no-space NDJSON convention used throughout the file)
     - `python3 -c 'from pathlib import Path; from claude.common import detect_lifecycle_phase; p = detect_lifecycle_phase(Path("lifecycle/devils-advocate-smart-feedback-application")); assert p == "complete", p'` exits 0 (Path argument required: `detect_lifecycle_phase` signature is `(feature_dir: Path) -> str`; passing `str` raises `TypeError: unsupported operand type(s) for /: 'str' and 'str'` at `claude/common.py:113`)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Update tests/test_daytime_preflight.py §1b regex to §1a
 - **Files**: `tests/test_daytime_preflight.py`
@@ -199,7 +199,7 @@ Remove the single-agent `Agent(isolation: "worktree")` implement-phase dispatch 
     - `grep -c '### 1a\\.' tests/test_daytime_preflight.py` ≥ 1
     - `grep -c 'Locate §1a section' tests/test_daytime_preflight.py` ≥ 1
     - `pytest tests/test_daytime_preflight.py` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Run cross-file verification sweep (final gate)
 - **Files**: none (read-only verification task — no file modifications; no commit)
@@ -217,7 +217,7 @@ Remove the single-agent `Agent(isolation: "worktree")` implement-phase dispatch 
     4. **Full test suite**: `just test` → exit 0. Covers Task 8's pytest plus any adjacent tests that observe implement.md / SKILL.md / cleanup-session.sh changes.
     5. **Symlink health**: `just check-symlinks` → exit 0. Confirms the deployed `skills/*` and `hooks/*` symlinks resolve correctly after the file rewrites.
     6. **Bash lint on cleanup hook**: `bash -n hooks/cortex-cleanup-session.sh` → exit 0. Redundant with Task 3's verification; final seatbelt.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Verification Strategy
 
