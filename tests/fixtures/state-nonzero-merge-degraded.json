@@ -1,0 +1,23 @@
+{
+  "session_id": "test-nonzero-merge-degraded",
+  "plan_ref": "",
+  "current_round": 1,
+  "phase": "executing",
+  "started_at": "2026-04-22T00:00:00+00:00",
+  "updated_at": "2026-04-22T00:00:00+00:00",
+  "features": {
+    "feat-a": {
+      "status": "merged",
+      "repo_path": null
+    },
+    "feat-b": {
+      "status": "merged",
+      "repo_path": null
+    }
+  },
+  "integration_branch": "overnight/test-nonzero-merge-degraded",
+  "integration_branches": {},
+  "integration_worktrees": {},
+  "worktree_path": "",
+  "integration_degraded": true
+}
