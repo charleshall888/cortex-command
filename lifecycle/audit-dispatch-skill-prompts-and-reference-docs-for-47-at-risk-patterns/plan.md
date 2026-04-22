@@ -134,7 +134,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: `just test` exits 0. Additionally: if the P7 table has ≥1 classification-(a) row with non-null SHA, at least one parametrized test case runs (binary check on pytest collection output: `just test 2>&1 | grep -c 'test_p7_regression' >= 1`). If zero such rows, the skip-logged-with-reason behavior is observable in test output. Pass if both conditions hold.
 - **Status**: [ ] pending
 
-### Task 13: Commit candidates.md and events.log updates via `/commit`
+### Task 13: Commit candidates.md and events.log updates via `/commit` [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md`, `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/events.log`
 - **What**: Stage and commit the final candidates.md and events.log state via `/commit`. Commit message: `Land #85 candidates.md and audit event log`. `lifecycle/` is not in #088's freeze path list, so safe during the measurement window.
 - **Depends on**: [12]
