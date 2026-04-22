@@ -884,6 +884,60 @@ def render_deferred_questions(data: ReportData) -> str:
     return "\n".join(lines)
 
 
+def render_critical_review_residue(data: ReportData) -> str:
+    """Render the critical review residue section from lifecycle residue files."""
+    residue_paths = sorted((_LIFECYCLE_ROOT).glob("*/critical-review-residue.json"))
+    total = len(residue_paths)
+    lines: list[str] = [f"## Critical Review Residue ({total})", ""]
+
+    if total == 0:
+        lines.append(
+            "No residue files this cycle. Absence may indicate: zero B-class findings, "
+            "no lifecycle-context runs, or total reviewer failure (which does not write a residue file)."
+        )
+        lines.append("")
+        return "\n".join(lines)
+
+    for path in residue_paths:
+        slug = path.parent.name
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            lines.append(f"Feature {slug}: residue file malformed, skipped.")
+            lines.append("")
+            continue
+
+        feature = payload.get("feature", slug)
+        findings = payload.get("findings", [])
+        synthesis_status = payload.get("synthesis_status", "unknown")
+        reviewers = payload.get("reviewers", {})
+        completed = reviewers.get("completed", None)
+        dispatched = reviewers.get("dispatched", None)
+
+        lines.append(f"### {feature} ({len(findings)})")
+
+        # Degraded annotations
+        if synthesis_status != "ok":
+            lines.append("> ⚠ degraded: synthesis failed")
+        if (
+            completed is not None
+            and dispatched is not None
+            and completed < dispatched
+        ):
+            lines.append(f"> ⚠ degraded: partial reviewer coverage ({completed} of {dispatched})")
+
+        lines.append("")
+
+        for finding in findings:
+            reviewer_angle = finding.get("reviewer_angle", "unknown")
+            finding_text = finding.get("finding", "")
+            lines.append(f"- {reviewer_angle}: {finding_text}")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def render_failed_features(data: ReportData) -> str:
     """Render the failed/paused features section."""
     if data.state is None:
@@ -1341,6 +1395,7 @@ def generate_report(data: ReportData) -> str:
         render_completed_features(data),
         render_pending_drift(data),
         render_deferred_questions(data),
+        render_critical_review_residue(data),
         render_failed_features(data),
         render_new_backlog_items(data),
         render_action_checklist(data),
