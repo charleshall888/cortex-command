@@ -1287,12 +1287,31 @@ rm -f "$MR_STDERR"
 # Commit morning report
 # ---------------------------------------------------------------------------
 set +e
+MR_COMMIT_STATUS_FILE=$(mktemp -p "${TMPDIR:-/tmp}")
+MR_COMMIT_SHA_FILE=$(mktemp -p "${TMPDIR:-/tmp}")
 (
     cd "$REPO_ROOT"
-    git add "lifecycle/sessions/${SESSION_ID}/morning-report.md" 2>/dev/null || true
-    git add "lifecycle/morning-report.md"                        2>/dev/null || true
-    git diff --cached --quiet || git commit -m "Overnight session ${SESSION_ID}: add morning report"
+    git add "lifecycle/morning-report.md" 2>/dev/null || true
+    if git diff --cached --quiet; then
+        echo "no_changes" > "$MR_COMMIT_STATUS_FILE"
+        : > "$MR_COMMIT_SHA_FILE"
+    elif git commit -m "Overnight session ${SESSION_ID}: add morning report"; then
+        echo "committed" > "$MR_COMMIT_STATUS_FILE"
+        git rev-parse HEAD > "$MR_COMMIT_SHA_FILE"
+    else
+        echo "failed" > "$MR_COMMIT_STATUS_FILE"
+        : > "$MR_COMMIT_SHA_FILE"
+    fi
 )
+MR_COMMIT_STATUS=$(cat "$MR_COMMIT_STATUS_FILE")
+MR_COMMIT_SHA=$(cat "$MR_COMMIT_SHA_FILE")
+rm -f "$MR_COMMIT_STATUS_FILE" "$MR_COMMIT_SHA_FILE"
+MR_COMMIT_DETAILS=$(MR_COMMIT_STATUS="$MR_COMMIT_STATUS" MR_COMMIT_SHA="$MR_COMMIT_SHA" python3 -c "
+import json, os
+sha = os.environ.get('MR_COMMIT_SHA', '').strip() or None
+print(json.dumps({'status': os.environ['MR_COMMIT_STATUS'], 'commit_sha': sha}))
+" 2>/dev/null || echo '{"status": "failed", "commit_sha": null}')
+log_event "morning_report_commit_result" "$ROUND" "$MR_COMMIT_DETAILS" || true
 
 # Commit morning report in target project (cross-repo sessions only)
 if [[ -n "$TARGET_INTEGRATION_WORKTREE" ]]; then
