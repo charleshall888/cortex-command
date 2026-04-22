@@ -65,6 +65,9 @@ hard blocker.
 - **Co-exist, not replace** for worktree pre-flight options (DR-2).
   Single-agent "Implement in worktree" retains live-steerability
   property the subprocess path cannot replicate.
+
+> **2026-04-22 (ticket #097) — DR-2 reversed.** Option 1 ("Implement in worktree") was removed from the implement-phase pre-flight in full; this reverses the co-exist stance recorded above. Thin usage evidence is now also in doubt: `anthropics/claude-code` issue #39886 describes `Agent(isolation: "worktree")` silently failing to create isolation, so the single observed success may not have delivered its intended behavior.
+
 - **Events.log written to main repo CWD, not daytime worktree** (DR-3).
   Avoids the TC8 staleness pattern.
 - **Per-feature `lifecycle/{feature}/deferred/`** (DR-4). Avoids
