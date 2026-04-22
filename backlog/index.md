@@ -37,6 +37,9 @@
 | 124 | Migration guide + script for existing symlink-based installs | backlog | medium | chore | 115, 116, 117, 118, 121, 122 | 113 | — |
 | 131 | Gate overnight PR creation on merged>0 (draft on zero-merge) | in_progress | medium | feature | — | — | ✓ |
 | 134 | Clean up active-session.json when overnight session transitions to phase:complete | backlog | medium | bug | — | — | — |
+| 137 | Harden /discovery citation grounding and external-endorsement value gating | backlog | medium | epic | — | — | — |
+| 138 | Codify citation norm and premise-as-verification in /discovery research phase | backlog | medium | chore | — | 137 | — |
+| 139 | Add vendor-endorsement value gating to /discovery decompose phase | backlog | medium | chore | 138 | 137 | — |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
@@ -61,6 +64,8 @@
 - **92** Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)
 - **101** Extract deterministic tool-call sequences into agent-invokable scripts
 - **134** Clean up active-session.json when overnight session transitions to phase:complete
+- **137** Harden /discovery citation grounding and external-endorsement value gating
+- **138** Codify citation norm and premise-as-verification in /discovery research phase
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
 - **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release
 - **133** Evaluate implement.md:180 progress-tail narration under Opus 4.7
