@@ -1464,14 +1464,7 @@ def generate_and_write_report(
             if project_root is not None
             else _LIFECYCLE_ROOT / "morning-report.md"
         )
-        try:
-            write_report(report, path=latest_copy_path)
-        except Exception as exc:  # noqa: BLE001
-            print(
-                f"warning: failed to write latest-copy to "
-                f"{latest_copy_path}: {exc}",
-                file=sys.stderr,
-            )
+        write_report(report, path=latest_copy_path)
 
         if data.pr_urls:
             pr_lines = "\n".join(data.pr_urls.values())
