@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f3b4b249-b40c-4d70-a06c-f3e95030ba21
 title: "Audit dispatch-skill prompts and reference docs for 4.7 at-risk patterns"
-status: refined
+status: complete
 priority: high
 type: feature
 created: 2026-04-18
@@ -11,8 +11,8 @@ parent: "82"
 tags: [opus-4-7-harness-adaptation, skills]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
 blocked-by: []
-session_id: 0807d4ab-1191-4d06-b82e-85d0470608d2
-lifecycle_phase: specify
+session_id: null
+lifecycle_phase: review
 lifecycle_slug: audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns
 complexity: complex
 criticality: high
