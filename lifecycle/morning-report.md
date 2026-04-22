@@ -1,187 +1,211 @@
-# Morning Report: 2026-04-01
+# Morning Report: 2026-04-07
 
 ## Executive Summary
 
-**Verdict**: Significant issues
-- Features completed: 6/8
-- Features deferred: 1 (questions need answers)
-- Features failed: 1 (paused, need investigation)
-- Rounds completed: 3
-- Duration: 0h 36m
+**Verdict**: Clean run
+- Features completed: 6/6
+- Features deferred: 0 (questions need answers)
+- Features failed: 0 (paused, need investigation)
+- Rounds completed: 4
+- Duration: 37h 57m
+- **Warning**: 6 feature(s) show 'merged' in state but have no merge recorded in batch results — possible concurrent runner or state/batch mismatch: add-accessibility-foundations-aria-live-multi-modal-severity, add-dashboard-visual-evaluation-criteria-to-designmd, add-hover-states-loading-feedback-and-badge-micro-interactions, add-playwright-mcp-for-dashboard-visual-evaluation, fix-inline-style-violations-in-session-panel-and-feature-cards-templates, investigate-and-fix-swim-lane-inline-styles-and-layout-degradation
 
 ## Completed Features
 
-### wild-light
+### cortex-command
 
-#### node-reference-cleanup-erase-freed-players-from-autoload-dicts
-
-**Key files changed:**
-- CLAUDE.md
-
-**Cost**: $4.02
-
-**How to try:**
-1. **Lint and format**: Run `gdlint autoloads/ scripts/core/` and `gdformat autoloads/ scripts/core/` — both pass with no errors.
-
-2. **Unit tests**: Run the full test suite:
-   ```
-   godot --headless -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests
-   ```
-   All existing snapshot manager tests must pass. The new `test_serialize_skips_freed_player_node` test must also pass.
-
-3. **Launch probe**: Run `uv run scripts/tools/validate_project.py` — all gates pass.
-
-4. **Game probe**: Run `uv run scripts/tools/run_game_probe.py --expect-game-state=PLAYING --expect-wave=1 --expect-enemies-gt=0 --expect-no-peer` — game starts and reaches wave 1 with enemies.
-
-5. **Multiplayer probe** (conditional — `game_manager.gd` and `snapshot_manager.gd` are in the trigger list): Confirm no new `@rpc` violations introduced.
-
-6. **Manual inspection checklist**:
-   - `AudioManager._players` has a `player_disconnected` connection in `_connect_combat_signals()`.
-   - `CameraShake._ready()` connects to both `player_disconnected` and `returned_to_menu`.
-   - `SnapshotManager.serialize()` loop body contains `is_instance_valid()` guard before property access.
-   - `CLAUDE.md` contains `### Node Reference Cleanup` subsection.
-
-#### type-all-dictionary-declarations (backlog #097)
+#### fix-inline-style-violations-in-session-panel-and-feature-cards-templates
 
 **Key files changed:**
-- .pre-commit-config.yaml
-- autoloads/audio_manager.gd
-- autoloads/game_manager.gd
-- autoloads/network_manager.gd
-- autoloads/save_manager.gd
-
-**Cost**: $4.09
+- (file list not available)
 
 **How to try:**
-The feature is complete when all of the following pass:
+After all tasks complete, run the spec's acceptance criteria:
+1. `grep -c 'font-weight: 600' claude/dashboard/templates/session_panel.html` -- must output `0`
+2. `grep -c 'text-primary-size' claude/dashboard/templates/feature_cards.html` -- must output `0`
+3. Visual spot-check: both `--font-weight-semibold` (= 600) and `--text-base` (= 1rem) resolve to the same values as the originals, so no visual regression is expected
 
-1. **Grep AC1** — member var check:
-   `grep -rP 'var\s+\w+\s*:\s*Dictionary\s*=' autoloads/` returns zero matches (all
-   bare `Dictionary` member vars have been typed).
-
-2. **Grep AC2** — function param check:
-   `grep -rP '\(.*:\s*Dictionary\s*[,)]' autoloads/` returns zero matches except for
-   intentionally-untyped RPC params, each of which must have a `# untyped: ...` inline
-   comment explaining the Godot limitation.
-
-3. **Grep AC3** — return type check:
-   `grep -rP '->\s*Dictionary\s*:' autoloads/` returns zero matches.
-
-4. **Launch probe** — `uv run scripts/tools/validate_project.py` exits 0 (no parse errors
-   or GDScript warnings introduced by the typed declarations).
-
-5. **Test suite** — full test suite passes with no regressions.
-
-6. **Game probe** — `uv run scripts/tools/run_game_probe.py --expect-game-state=PLAYING
-   --expect-wave=1 --expect-enemies-gt=0 --expect-no-peer` passes (typed declarations
-   cause no runtime failures at external data boundaries).
-
-### Expected boundary decisions (summary)
-
-| Site | Declared type | Reason |
-|------|--------------|--------|
-| `_levels` in audio_manager | `Dictionary[String, Variant]` | JSON parse returns Variant; widest safe type |
-| `load_game` return in save_manager | `Dictionary[String, Variant]` | JSON parse boundary |
-| `init_result` in network_manager | `Dictionary` (untyped fallback) | `steam.call()` returns Variant |
-| `_register_player(data)` param | `Dictionary` (untyped) | RPC deserialization |
-| `_send_player_info(info)` param | `Dictionary` (untyped) | RPC deserialization |
-| `restore(snapshot)` param | `Dictionary` (untyped) | RPC deserialization via `_receive_snapshot` |
-| `_receive_snapshot(snapshot)` param | `Dictionary` (untyped) | RPC deserialization |
-| `restore_for_migration(snapshot, ...)` snapshot param | `Dictionary` (untyped) | RPC origin |
-| `restore_for_migration(..., peer_steam_id_map)` | `Dictionary[int, int]` | Passed internally |
-| Inner dicts in `player_info`, `steam_id_to_entry` | `Dictionary` (untyped inner) | Godot doesn't support nested typed dicts |
-
-#### cache-player-array-eliminate-per-frame-group-lookup (backlog #098)
+#### add-accessibility-foundations-aria-live-multi-modal-severity
 
 **Key files changed:**
-- autoloads/event_bus.gd
-- autoloads/game_manager.gd
-- scripts/entities/simple_enemy.gd
-
-**Cost**: $1.49
+- (file list not available)
 
 **How to try:**
-1. Run `gdlint autoloads/event_bus.gd autoloads/game_manager.gd scripts/entities/simple_enemy.gd` — all files must pass with no new errors.
-2. Confirm `get_nodes_in_group` does not appear in `scripts/entities/simple_enemy.gd` or `scripts/entities/simple_player.gd`.
-3. Confirm `enemies` dict, `_on_enemy_spawned`, `_on_enemy_killed`, and `get_all_enemies()` are present in `autoloads/game_manager.gd`.
-4. Confirm `EventBus.enemy_spawned.emit(self)` is present in `simple_enemy.gd` `_ready()`.
-5. Run `uv run scripts/tools/validate_project.py` — must exit 0.
-6. Run `uv run scripts/tools/run_game_probe.py --expect-game-state=PLAYING --expect-wave=1 --expect-enemies-gt=0 --expect-no-peer` — must pass all assertions, confirming enemies still spawn and move correctly.
-7. Run the full GdUnit4 test suite (`godot --headless -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests`) — all tests must pass, including `test_gameplay.gd` enemy movement and combat tests.
+1. Start the dashboard (`just dashboard` or `python -m claude.dashboard.app`) and load it in a browser
+2. View page source and confirm: `role="alert"` and `aria-live="assertive"` on `#alerts-banner`; `aria-live="polite"` on `#session-panel` and `#feature-cards`; `hx-swap="morph"` on all three aria-live sections; `aria-label="Agent fleet"` on `#fleet-panel`
+3. Inspect `round_history.html` partial (via `/partials/round-history`) for `aria-label="Round history"` on the table
+4. Inspect `swim-lane.html` partial for `aria-label="Feature timeline"` on the container
+5. Confirm status badges show icons (checkmark for merged, circle for running, etc.) while model/count badges do not
+6. Confirm progress bars in running feature cards have `role="progressbar"` with correct `aria-valuenow`/`aria-valuemax` values
+7. Use a screen reader (VoiceOver on macOS: Cmd+F5) to verify alerts are announced assertively and status changes are announced politely
+8. Observe DevTools Elements panel during poll cycles: only changed nodes should flash (morph swap), not entire section contents
 
-#### move-detection-ranges-to-constantsgd
+#### add-dashboard-visual-evaluation-criteria-to-designmd
 
 **Key files changed:**
-- scripts/core/constants.gd
-- tests/unit/test_constants_detection_ranges.gd
-
-**Cost**: $2.07
+- (file list not available)
 
 **How to try:**
-1. After Task 1: Read `scripts/core/constants.gd` and confirm the three constants are present with correct values and placement (after Gameplay, before Physics layers).
-2. After Task 2: Read `scripts/entities/simple_enemy.gd` and confirm `CONTACT_RANGE` local const is gone and the usage site references `Constants.ENEMY_CONTACT_RANGE`. Run `gdlint` on the file.
-3. After Task 3: Run the new test file in isolation to confirm all 6 assertions pass.
-4. Full suite: Run `uv run scripts/tools/validate_project.py` to confirm no parse or lint errors across the project.
-5. Search for remaining raw literals: Grep `scripts/entities/` for `16\.0` and `32\.0` to confirm no detection-range literals remain in GDScript entity files (the only surviving `16.0` should be `TILE_SIZE`-adjacent or unrelated constants like `PIXEL_SCALE`).
+After Tasks 1 and 2 complete, run these commands from the repo root:
 
-#### switch-spawn-scene-loading-to-preload (backlog #100)
+```sh
+grep -c '## Visual Evaluation Criteria' claude/dashboard/DESIGN.md        # must be 1
+grep -Ec 'Information clarity|Consistency|Operational usefulness|Purposefulness' claude/dashboard/DESIGN.md  # must be 4
+grep -c 'Playwright' claude/dashboard/DESIGN.md                            # must be >= 1
+wc -l < claude/dashboard/DESIGN.md                                         # must be > 93
+git log --oneline -1                                                        # must show a commit for this change
+```
+
+All five checks must pass. Then read the end of `claude/dashboard/DESIGN.md` to confirm style matches the rest of the file: `##` heading, table for structured data, terse prose, no verbose explanations.
+
+#### add-hover-states-loading-feedback-and-badge-micro-interactions
 
 **Key files changed:**
-- scripts/core/main.gd
-
-**Cost**: $0.78
+- (file list not available)
 
 **How to try:**
-1. Run `gdlint scripts/core/main.gd` — must exit 0 with no style warnings
-2. Run `uv run scripts/tools/validate_project.py` — launch probe must exit 0
-3. Run `uv run scripts/tools/run_game_probe.py --expect-game-state=PLAYING --expect-wave=1 --expect-enemies-gt=0 --expect-no-peer` — game probe must exit 0 confirming enemies and player spawn correctly
-4. Run `godot --headless -s addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode -a res://tests` — full test suite must exit 0
+1. Run `grep -c 'hx-ext="morph"' claude/dashboard/templates/base.html` -- expect 1
+2. Run `grep -c 'hx-swap="innerHTML"' claude/dashboard/templates/base.html` -- expect 0
+3. Run `grep -c 'idiomorph' claude/dashboard/templates/base.html` -- expect >= 1 (script tag)
+4. Run `grep 'feature-card' claude/dashboard/templates/base.html | grep -c 'hover'` -- expect >= 1
+5. Run `grep 'badge' claude/dashboard/templates/base.html | grep -c 'transition'` -- expect >= 1
+6. Run `grep -c '@keyframes.*fadeIn\|fadeIn' claude/dashboard/templates/base.html` -- expect >= 1
+7. Run `grep -c 'prefers-reduced-motion' claude/dashboard/templates/base.html` -- expect >= 1
+8. Start the dashboard and verify: feature cards lift on hover with shadow; badge colors transition smoothly when status changes between polls; new cards fade in on subsequent polls but not on initial load; all animations are suppressed when system prefers-reduced-motion is enabled
 
-#### arena-bounds-tests-verify-player-enemy-containment
+#### add-playwright-mcp-for-dashboard-visual-evaluation
 
 **Key files changed:**
-- tests/integration/test_arena_containment.gd
-
-**Cost**: $3.98
+- (file list not available)
 
 **How to try:**
-1. **Source reading first** (Task 1): Exact node paths for walls and entity collision properties must be verified before writing tests. Incorrect node paths silently pass (node not found returns null).
+Automated smoke checks (no live browser needed):
 
-2. **Bitwise collision checks** (Task 2): Use `& LAYER_WORLD != 0` — not equality — so future mask additions don't break tests.
+```sh
+python3 -c "import json; d=json.load(open('.mcp.json')); assert d['mcpServers']['playwright']['command']=='npx'"  # exits 0
+grep -c "Visual Evaluation" docs/dashboard.md    # returns 1
+git log --oneline -1                             # shows a commit for this feature
+```
 
-3. **Direct velocity for enemy** (Task 3): Do not use `move_toward` or AI chase. Set velocity directly to ensure deterministic wall approach direction.
+End-to-end acceptance (manual, interactive session):
 
-4. **Frame budget** (Task 3): 80 frames is conservative. If tests are slow, reduce to 60. If the entity doesn't reach the wall in 60–80 frames, the test will still pass (entity won't have exited), but won't cover the containment behavior. Pick a starting position close to the wall.
+1. Open Claude Code in the project root. Claude Code detects `.mcp.json` and prompts to approve the `playwright` MCP server.
+2. Approve the server. Confirm `browser_navigate` and `browser_take_screenshot` appear in the available tools list.
+3. Run `just dashboard-seed` then `just dashboard` in a terminal.
+4. In Claude Code: call `browser_navigate` to `http://localhost:8080` — no connection error.
+5. Call `browser_take_screenshot` — Claude sees an inline PNG of the dashboard in the conversation.
+6. Verify `docs/dashboard.md` renders the new section correctly (readable, no broken references).
 
-5. **Regression gate**: All 5 tests fail against pre-078 collision defaults. This is the key acceptance criterion.
+#### investigate-and-fix-swim-lane-inline-styles-and-layout-degradation
+
+**Key files changed:**
+- (file list not available)
+
+**How to try:**
+After all three tasks are complete, run the following checks to confirm compliance:
+
+**Acceptance criteria (from spec):**
+
+```sh
+# Req 1: No inline styles remain except those containing only left: {{ ... }}%
+grep 'style=' claude/dashboard/templates/swim-lane.html | grep -v 'left:.*%' | wc -l
+# Expected: 0
+
+# Req 2: Tick labels no longer combine phase-label class with multi-property inline style
+grep 'phase-label.*style=' claude/dashboard/templates/swim-lane.html | wc -l
+# Expected: 0
+
+# Req 3a: No raw rgba() values remain in swim-lane template
+grep 'rgba' claude/dashboard/templates/swim-lane.html | wc -l
+# Expected: 0
+
+# Req 3b: --color-lane-tick defined in base.html
+grep -c '\-\-color-lane-tick' claude/dashboard/templates/base.html
+# Expected: >= 1
+
+# Req 4a: _color_map removed from data.py
+grep '_color_map' claude/dashboard/data.py | wc -l
+# Expected: 0
+
+# Req 4b: Template no longer references lane.color
+grep 'lane\.color' claude/dashboard/templates/swim-lane.html | wc -l
+# Expected: 0
+
+# Req 4c: Six lane-status-* classes defined in base.html
+grep -c 'lane-status-' claude/dashboard/templates/base.html
+# Expected: >= 6
+
+# Req 4d: .lane-event base rule includes fallback background-color
+grep 'lane-event' claude/dashboard/templates/base.html | grep -c 'color-status-gray'
+# Expected: >= 1
+
+# Req 5: --lane-label-width appears at least 3 times (definition + 2 usages)
+grep -c '\-\-lane-label-width' claude/dashboard/templates/base.html
+# Expected: >= 3
+
+# Req 5 (calc check): .lane-tick-axis uses calc()
+grep 'lane-tick-axis' claude/dashboard/templates/base.html | grep -c 'calc'
+# Expected: >= 1
+
+# Req 6: Three new CSS classes defined in base.html
+grep -c '\.lane-tick-axis' claude/dashboard/templates/base.html
+# Expected: >= 1
+grep -c '\.tick-label' claude/dashboard/templates/base.html
+# Expected: >= 1
+grep -c '\.lane-event' claude/dashboard/templates/base.html
+# Expected: >= 1
+
+# Req 7: .lane-event class applied to event boxes in template
+grep 'lane-event' claude/dashboard/templates/swim-lane.html | wc -l
+# Expected: >= 1
+
+# Req 7: whitespace-nowrap removed from template
+grep 'whitespace-nowrap' claude/dashboard/templates/swim-lane.html | wc -l
+# Expected: 0
+
+# Req 8: Exactly 3 inline style attributes remain (all data-driven positional left only)
+grep -c 'style="left:' claude/dashboard/templates/swim-lane.html
+# Expected: 3
+```
+
+**Python syntax check:**
+```sh
+python3 -m py_compile claude/dashboard/data.py
+# Expected: exit 0, no output
+```
+
+**Manual visual check (if Playwright MCP is available):**
+- Navigate to the live dashboard; confirm swim lane renders with correct status colors.
+- Confirm tick axis aligns with lane tracks (no longer 12px left of track start).
+- Confirm long event labels are truncated with ellipsis rather than overflowing.
+- Confirm tool tick marks render correctly (currently always empty, so no visible change expected).
+
+## Requirements Drift Flags
+
+### wire-requirements-drift-check-into-lifecycle-review
+
+- The `render_pending_drift()` function (lines 598-659 of report.py) introduces a new top-level morning report section `## Requirements Drift Flags` that is not described in `requirements/project.md`. This is new morning reporting behavior (scanning non-completed features for drift) that extends the overnight execution framework's reporting capabilities beyond what project requirements currently document.
 
 ## Deferred Questions (0)
 
 No questions were deferred — all ambiguities were resolved by the pipeline.
 
-## Failed Features (1)
+## Failed Features (0)
 
-### fix-game-over-screen-escape-doesnt-return-to-menu-re-enables-e-key-restart: completed with no new commits — check pipeline-events.log task_output and task_git_state events (branch: pipeline/fix-game-over-screen-escape-doesnt-return-to-menu-re-enables-e-key-restart)
-- Retry attempts: 0
-- Circuit breaker: not triggered
-- Learnings: `lifecycle/fix-game-over-screen-escape-doesnt-return-to-menu-re-enables-e-key-restart/learnings/progress.txt`
-- **Suggested next step**: Review learnings, retry or investigate
+All features completed or were deferred with questions.
 
 ## New Backlog Items
 
-- **#122** [feature] Retry deferred: backlog-status-reconciliation-fix-archived-complete-discrepancies — deferred
-- **#123** [chore] Follow up: fix-game-over-screen-escape-doesnt-return-to-menu-re-enables-e-key-restart — failed
+No new backlog items created.
 
 ## What to Do Next
 
-1. [ ] Try completed features: node-reference-cleanup-erase-freed-players-from-autoload-dicts, type-all-dictionary-declarations, cache-player-array-eliminate-per-frame-group-lookup, move-detection-ranges-to-constantsgd, switch-spawn-scene-loading-to-preload, arena-bounds-tests-verify-player-enemy-containment
-2. [ ] Investigate 1 failed feature
-3. [ ] Run integration tests
+1. [ ] Try completed features: fix-inline-style-violations-in-session-panel-and-feature-cards-templates, add-accessibility-foundations-aria-live-multi-modal-severity, add-dashboard-visual-evaluation-criteria-to-designmd, add-hover-states-loading-feedback-and-badge-micro-interactions, add-playwright-mcp-for-dashboard-visual-evaluation, investigate-and-fix-swim-lane-inline-styles-and-layout-degradation
+2. [ ] Run integration tests
 
 ## Run Statistics
 
-- Rounds completed: 3
-- Per-round timing: Round 1: 11m, Round 2: 11m, Round 3: 8m
+- Rounds completed: 4
+- Per-round timing: Round 1: 0m, Round 2: 8m, Round 3: 6m, Round 4: 7m
 - Circuit breaker activations: 0
-- Total features processed: 8
-- Total session cost: $18.87
+- Total features processed: 6
