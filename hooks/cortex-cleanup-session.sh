@@ -33,30 +33,4 @@ for session_file in "$LIFECYCLE_DIR"/*/.session; do
   fi
 done
 
-# --- Prune stale agent isolation worktrees and branches ---
-(
-  cd "$CWD"
-  git rev-parse --show-toplevel > /dev/null 2>&1 || exit 0
-  # Remove physical agent worktrees (directory + git registration)
-  while IFS= read -r wt_path; do
-    [[ -n "$wt_path" ]] || continue
-    git worktree remove --force "$wt_path" 2>/dev/null \
-      || echo "Warning: could not remove worktree $wt_path" >&2
-  done < <(git worktree list --porcelain 2>/dev/null \
-    | awk '/^worktree/ && $2 ~ /\.claude\/worktrees\/agent-/ { print $2 }' \
-    || { echo "Warning: git worktree list failed" >&2; })
-  git worktree prune 2>/dev/null \
-    || echo "Warning: git worktree prune failed" >&2
-  ACTIVE_BRANCHES=$(git worktree list --porcelain 2>/dev/null \
-    | awk '/^branch/ { print $2 }')
-  while IFS= read -r branch; do
-    [[ -n "$branch" ]] || continue
-    if ! echo "$ACTIVE_BRANCHES" | grep -qF "refs/heads/$branch"; then
-      git branch -D "$branch" 2>/dev/null \
-        && echo "Deleted agent worktree branch: $branch" \
-        || echo "Warning: could not delete branch $branch" >&2
-    fi
-  done < <(git branch --list 'worktree/agent-*' --format='%(refname:short)' 2>/dev/null)
-) || true
-
 exit 0
