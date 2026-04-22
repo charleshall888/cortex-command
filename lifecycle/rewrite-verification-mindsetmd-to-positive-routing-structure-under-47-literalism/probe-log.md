@@ -6,9 +6,12 @@ must append to the designated section and not reorder headings.
 
 ## Baseline
 
-<!-- Populated by the baseline-capture task. Records the pre-rewrite commit
-     SHA, rail file paths, and any additional environment notes needed so
-     ring-fence byte-identity diffs resolve deterministically. -->
+- baseline_sha: 4fd4d8e9081294d65ab159e6a707fb4b6cd8a828
+- verification-mindset_lines: 105
+- context-file-authoring_lines: 96
+- verification-mindset_h2_count: 7
+- verification-mindset_forbidden_heading_count: 0
+- verification-mindset_procedural_heading_count: 0
 
 ## Pre-R1 Rail Hash
 
