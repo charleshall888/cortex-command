@@ -27,7 +27,7 @@ Composition plan: the plan is a single edit landing one paragraph and two option
   - `grep -c 'Warning: uncommitted changes in working tree' skills/lifecycle/references/implement.md` returns exactly 1 (Requirement 3, fixed warning text).
   - `grep -c 'uncommitted-changes guard skipped: git status failed' skills/lifecycle/references/implement.md` returns exactly 1 (Requirement 7, fallback diagnostic).
   - `grep -c 'fallback' skills/lifecycle/references/implement.md` returns at least 1 (Requirement 7, fallback continuation prose).
-- **Status**: [ ] not started
+- **Status**: [x] complete — commit 8af5a14
 
 ### Task 2: Add static dirt-behavior caveat to "Implement in autonomous worktree" option description
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -37,7 +37,7 @@ Composition plan: the plan is a single edit landing one paragraph and two option
 - **Verification**:
   - `grep -c 'uncommitted changes remain on main' skills/lifecycle/references/implement.md` returns exactly 1 (Requirement 4).
   - `grep -c 'Implement in autonomous worktree' skills/lifecycle/references/implement.md` returns at least 2 (option label on line 14 plus routing block on line 22 — both unchanged).
-- **Status**: [ ] not started
+- **Status**: [x] complete — commit 3d6c20c
 
 ### Task 3: Confirm routing labels and option-removal safety remain intact
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -50,7 +50,7 @@ Composition plan: the plan is a single edit landing one paragraph and two option
   - `grep -c '"Implement in worktree"' skills/lifecycle/references/implement.md` returns at least 1 (routing label intact).
   - `grep -c '"Create feature branch"' skills/lifecycle/references/implement.md` returns at least 1 (routing label intact).
   - Read lines 11–26 of `skills/lifecycle/references/implement.md` and visually confirm: (a) four option bullets are present in positions 1–4; (b) the new Uncommitted-changes guard paragraph sits adjacent to the Worktree-agent context guard (not inside it, not before the option list); (c) no new AskUserQuestion call, no `exit /lifecycle`, no halt/abort/early-return prose appears tied to the dirty-tree condition; (d) the `Dispatch by selection:` routing block at lines 20–24 is structurally unchanged — same four `If the user selects ...` branches, same canonical substrings.
-- **Status**: [ ] not started
+- **Status**: [x] complete — verification-only, all 14 grep assertions pass and structural read of lines 11–28 confirms (a)-(d)
 
 ## Verification Strategy
 

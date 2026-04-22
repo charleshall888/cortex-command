@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: ceb58ab0-8e34-447d-89ae-dd881c627ab7
 title: "Add uncommitted-changes guard to lifecycle implement-phase pre-flight"
-status: refined
+status: complete
 priority: high
 type: feature
 created: 2026-04-20
@@ -14,6 +14,8 @@ areas: [skills]
 complexity: simple
 criticality: high
 spec: lifecycle/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/spec.md
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Add uncommitted-changes guard to lifecycle implement-phase pre-flight

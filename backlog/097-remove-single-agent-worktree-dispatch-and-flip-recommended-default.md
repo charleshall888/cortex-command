@@ -6,9 +6,9 @@ status: backlog
 priority: medium
 type: feature
 created: 2026-04-20
-updated: 2026-04-20
+updated: 2026-04-21
 parent: "93"
-blocked-by: [96]
+blocked-by: []
 tags: [lifecycle, preflight, worktree, cleanup]
 discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
 areas: [lifecycle, skills]
