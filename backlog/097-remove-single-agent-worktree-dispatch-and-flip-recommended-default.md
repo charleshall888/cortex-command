@@ -13,11 +13,12 @@ tags: [lifecycle, preflight, worktree, cleanup]
 discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
 areas: [skills,lifecycle,hooks]
 session_id: 0a9a2798-939a-401c-8175-f9d2de6bc64c
-lifecycle_phase: research
+lifecycle_phase: implement
 lifecycle_slug: remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch
 complexity: complex
 criticality: high
 spec: lifecycle/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/spec.md
+plan: lifecycle/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/plan.md
 ---
 
 # Remove single-agent worktree dispatch and flip recommended default to current branch
