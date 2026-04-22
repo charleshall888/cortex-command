@@ -1,0 +1,25 @@
+{
+  "fixture_type": "pure_b",
+  "concerns": [
+    {
+      "id": "reprocess-endpoint-orphaned",
+      "expected_class": "B",
+      "description": "The plan deletes OrderPollingService but the adjacent POST /internal/orders/reprocess admin endpoint still calls the poller's internal reprocess logic. That endpoint is explicitly deferred, leaving it pointing at deleted code and silently breaking operational runbooks that depend on it."
+    },
+    {
+      "id": "consumer-lag-metric-gap",
+      "expected_class": "B",
+      "description": "The plan introduces a Kafka consumer group but defers monitoring dashboards. Without a consumer-lag metric and alert threshold, the ops team has no visibility into whether the ingestion-v2 group is keeping up — a lagging consumer is invisible until fulfillment SLAs breach."
+    },
+    {
+      "id": "migration-window-backfill-gap",
+      "expected_class": "B",
+      "description": "The plan explicitly defers backfilling orders that arrived during the migration window, but provides no cutover protocol specifying when the poller is disabled relative to when the Kafka consumer goes live. A gap between the two leaves in-flight pending orders neither polled nor consumed."
+    },
+    {
+      "id": "trigger-schema-contract-undocumented",
+      "expected_class": "B",
+      "description": "The BEFORE INSERT trigger publishes an event whose payload schema is not versioned or documented in the plan. Downstream consumers of orders-inbound other than the new OrderEventConsumer — such as analytics pipelines or audit log subscribers — will encounter schema changes without a migration path or compatibility guarantee."
+    }
+  ]
+}
