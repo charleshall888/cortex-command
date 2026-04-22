@@ -15,3 +15,5 @@
 {"ts": "2026-04-22T12:50:00Z", "event": "task_complete", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "task": 7, "batch": 0, "status": "success"}
 {"ts": "2026-04-22T13:00:00Z", "event": "batch_dispatch", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "batch": 1, "tasks": [3]}
 {"ts": "2026-04-22T13:20:00Z", "event": "task_complete", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "task": 3, "batch": 1, "status": "success", "note": "runner.sh diff commingled into fe58fac (straddle-case fixture commit) due to parallel-session collision; code correct in HEAD"}
+{"ts": "2026-04-22T13:30:00Z", "event": "batch_dispatch", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "batch": 2, "tasks": [4]}
+{"ts": "2026-04-22T13:45:00Z", "event": "task_complete", "feature": "gate-overnight-pr-creation-on-merged-over-zero", "task": 4, "batch": 2, "status": "success"}

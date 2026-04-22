@@ -47,7 +47,7 @@ Gate the home-repo integration-branch PR on `MC_MERGED_COUNT` in `claude/overnig
 - **Complexity**: simple
 - **Context**: The push at `runner.sh:1126` runs before this pre-check, so remote is up to date, but `git rev-list` reads local refs which suffice. Notify pattern: existing calls in the block (e.g., `runner.sh:1072, 1097, 1130`) use `~/.claude/notify.sh "<msg>" || true`. Under dry-run, the helper emits `DRY-RUN notify.sh "<msg>"`. The pre-check must run for both zero-merge and non-zero-merge paths (a non-zero merge with zero commits is also a pathological case, but far rarer — spec.md Edge Cases lists only the zero-merge case explicitly; the pre-check shared across both paths handles both).
 - **Verification**: (a) `bash claude/overnight/runner.sh --dry-run --state-path tests/fixtures/state-zero-merge-zero-commits.json 2>&1` — pass if stdout contains NO `DRY-RUN gh pr create` line AND contains a line matching `DRY-RUN notify.sh.*Zero-progress session with no branch commits` AND exit code is 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Resume-flow recovery path with isDraft + state + once-per-PR marker (Req 5)
 
