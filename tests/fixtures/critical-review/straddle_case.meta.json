@@ -1,0 +1,15 @@
+{
+  "fixture_type": "straddle",
+  "concerns": [
+    {
+      "id": "429-not-excluded-from-4xx-skip",
+      "expected_class": "A",
+      "description": "The fix blanket-excludes all 4xx errors including HTTP 429 (Too Many Requests), which is a transient rate-limit signal that the SDK is designed to retry. Skipping retries on 429 eliminates the one category of 4xx that can recover, making the fix actively harmful for rate-limited calls."
+    },
+    {
+      "id": "auth-error-silent-fail",
+      "expected_class": "B",
+      "description": "401 Unauthorized errors are also 4xx and will be silently swallowed after the first attempt with no operator alert, despite representing a credential failure that requires human intervention. The fix does not distinguish 401 from other 4xx codes, leaving operators without a signal that authentication has broken."
+    }
+  ]
+}
