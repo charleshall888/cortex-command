@@ -1,5 +1,67 @@
 [
   {
+    "id": 128,
+    "title": "Install pre-commit hook rejecting main commits during overnight sessions",
+    "status": "backlog",
+    "priority": "critical",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "git-hook",
+      "enforcement",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "126",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/orchestrator-worktree-escape/research.md",
+    "plan": null,
+    "uuid": "9064c10e-38ba-494a-9783-3bf12aca8a6c",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 129,
+    "title": "Un-silence morning-report commit and backfill 4 historical reports",
+    "status": "backlog",
+    "priority": "critical",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "morning-report",
+      "gitignore",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-21",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "126",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/orchestrator-worktree-escape/research.md",
+    "plan": null,
+    "uuid": "503f9a80-0ec5-4d12-b7b1-3e56b2b5e879",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 82,
     "title": "Adapt harness to Opus 4.7 (prompt delta + capability adoption)",
     "status": "backlog",
@@ -28,28 +90,28 @@
   {
     "id": 100,
     "title": "Rewrite verification-mindset.md to positive-routing structure under 4.7 literalism",
-    "status": "in_progress",
+    "status": "backlog",
     "priority": "high",
     "type": "feature",
     "tags": [
       "opus-4-7-harness-adaptation",
       "skills"
     ],
-    "areas": [
-      "skills"
-    ],
+    "areas": [],
     "created": "2026-04-21",
-    "updated": "2026-04-22",
+    "updated": "2026-04-21",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "88"
+    ],
     "parent": "82",
     "research": null,
-    "spec": "lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/spec.md",
+    "spec": null,
     "discovery_source": null,
     "plan": null,
     "uuid": "279717cb-b00f-46aa-8180-bbad65e7eb4c",
-    "lifecycle_slug": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism",
-    "session_id": "69121b90-c109-49ec-9e13-6277e7623ed4",
+    "lifecycle_slug": null,
+    "session_id": null,
     "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
@@ -180,7 +242,7 @@
   {
     "id": 112,
     "title": "Migrate overnight-schedule to a LaunchAgent-based scheduler",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -194,9 +256,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-21",
     "blocks": [],
-    "blocked_by": [
-      "113"
-    ],
+    "blocked_by": [],
     "parent": null,
     "research": null,
     "spec": null,
@@ -204,7 +264,7 @@
     "plan": null,
     "uuid": "3565ffe8-5041-4c2b-9f91-d14fa9d4c1cd",
     "lifecycle_slug": "migrate-overnight-schedule-to-a-launchagent-based-scheduler",
-    "session_id": null,
+    "session_id": "3e2b9498-638f-4763-a39b-37749ef77a43",
     "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
@@ -249,7 +309,7 @@
   {
     "id": 114,
     "title": "Build cortex CLI skeleton with uv tool install entry point",
-    "status": "in_progress",
+    "status": "backlog",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -270,9 +330,9 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "9b5c4931-763b-4112-b261-a111119cb99f",
-    "lifecycle_slug": "build-cortex-cli-skeleton-with-uv-tool-install-entry-point",
-    "session_id": "ae3e25d3-0483-408e-967b-19d3a758065f",
-    "lifecycle_phase": "plan",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },
@@ -580,6 +640,30 @@
     "repo": null
   },
   {
+    "id": 135,
+    "title": "Shared git index race between parallel Claude sessions causes wrong files to land in commits",
+    "status": "backlog",
+    "priority": "high",
+    "type": "bug",
+    "tags": [],
+    "areas": [],
+    "created": "2026-04-22",
+    "updated": "2026-04-22",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "ebdcac83-1152-4caa-9aae-7499771961c1",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -621,9 +705,11 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-21",
+    "updated": "2026-04-18",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "85"
+    ],
     "parent": "82",
     "research": null,
     "spec": null,
@@ -633,6 +719,33 @@
     "lifecycle_slug": "extend-output-floorsmd-with-m1-subagent-disposition-section",
     "session_id": null,
     "lifecycle_phase": "specify",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 92,
+    "title": "Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "opus-4-7-harness-adaptation",
+      "capability-adoption"
+    ],
+    "areas": [],
+    "created": "2026-04-18",
+    "updated": "2026-04-21",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "82",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
+    "plan": null,
+    "uuid": "0a2f1fee-dd42-49ff-b393-bd16d1fa5607",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": "complete",
     "schema_version": "1",
     "repo": null
   },
@@ -945,8 +1058,32 @@
     "plan": null,
     "uuid": "5e103f2e-fd3d-4890-84a5-c67d6adac785",
     "lifecycle_slug": "gate-overnight-pr-creation-on-merged-over-zero",
-    "session_id": "a6561053-7638-4dc0-b98d-077de554af3e",
+    "session_id": "22641279-0269-4938-9811-01c410aa381c",
     "lifecycle_phase": "implement",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 134,
+    "title": "Clean up active-session.json when overnight session transitions to phase:complete",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "bug",
+    "tags": [],
+    "areas": [],
+    "created": "2026-04-22",
+    "updated": "2026-04-22",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "ec141696-e5f5-4a7f-b1a8-06f5bf9411b2",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },
@@ -962,9 +1099,11 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-22",
+    "updated": "2026-04-20",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "92"
+    ],
     "parent": "82",
     "research": null,
     "spec": null,
@@ -989,9 +1128,11 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-21",
+    "updated": "2026-04-18",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "85"
+    ],
     "parent": "82",
     "research": null,
     "spec": null,
