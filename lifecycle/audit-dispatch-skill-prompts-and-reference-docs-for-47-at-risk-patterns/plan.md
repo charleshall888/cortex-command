@@ -62,7 +62,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: Every regex-pattern-signature hit across the 12 surfaces at Task 4 completion time must appear as a `file:line` entry in candidates.md. Binary cross-check: for each of P1, P2, P3, P5, P6, P7, compute `grep -nE '<signature>' <each surface>` result count, then assert candidates.md's corresponding P[N] section contains a row for every one of those file:line positions. Pass if every hit is recorded; fail if any missing.
 - **Status**: [x] complete — 29 hits recorded (P1:5, P2:5, P3:6, P4:0 (judgment-only), P5:3, P6:1, P7:9 (3 in R1 + 6 out-of-R1)); `candidates_refresh` event logged
 
-### Task 5: Pass 1 / P1 — double-negation suppression audit and remediation
+### Task 5: Pass 1 / P1 — double-negation suppression audit and remediation [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` (P1 section), files among the 12-surface audit scope that contain qualifying P1 sites (dynamic — enumerated from Task 4's rescan).
 - **What**: For each P1 hit recorded in candidates.md by Task 4, apply per-site judgment against epic research.md's P1 hypothesis (double-negation likely skipped by 4.7; positive routing recovers intent). Update candidates.md P1 rows with `classification` in {qualifying, preservation-excluded, not-a-failure-mode}. For preservation-excluded hits, cite the preservation rule in the `notes` column. For qualifying hits, apply M1 (positive routing) by default, M4 (negation + rationale) where output-channel-directive overlap prevents pure positive framing. **Post-remediation path check**: if any modified file is in `claude/reference/*.md` or `claude/Agents.md`, halt pre-commit, stage edits, open PR via `gh pr create`, wait for interactive self-review; else commit direct-to-main via `/commit` as `Remediate P1 double-negation across <file list>`. If zero qualifying sites after exclusion: log a null entry in `## Null-pattern log` with the form `P1 — N sites audited, M preservation-excluded, 0 qualifying. Reason: <summary>.` — no commit.
 - **Depends on**: [4]
@@ -71,7 +71,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: Every P1 row in candidates.md with `classification: qualifying` AND non-null `commit SHA` must satisfy: (a) the SHA exists on main (`git cat-file -e <sha>` exits 0), (b) the SHA's diff touches the file named in the row (`git diff --name-only <sha>^..<sha> | grep -qF <file>` exits 0), (c) the pattern signature no longer matches at the recorded file:line post-commit. For rows with `classification: preservation-excluded`, the `notes` column names a preservation rule from spec R10 (one of the 7 categories or 10 anchored decisions). For `classification: routed-to-pass-2-child` rows, no further check. If the P1 section produced a null entry, assert the entry cites the site count audited and the exclusion count. Pass if all rows in P1 satisfy their classification's check.
 - **Status**: [ ] pending
 
-### Task 6: Pass 1 / P2 — ambiguous conditional bypass audit and remediation
+### Task 6: Pass 1 / P2 — ambiguous conditional bypass audit and remediation [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` (P2 section), files with qualifying P2 sites (dynamic from Task 4).
 - **What**: For each P2 hit from Task 4's rescan, classify whether the path-guard scope requires explicit control-flow framing under 4.7. Qualifying sites default to M2 (explicit format spec — convert prose guard to structured control-flow statement). Post-remediation path check + commit workflow same as Task 5. Commit message: `Remediate P2 ambiguous-conditional-bypass across <file list>`. Null case: `P2 — N sites audited, 0 qualifying. Reason: <summary>.` in `## Null-pattern log`.
 - **Depends on**: [4]
@@ -80,7 +80,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: Every P2 row with `classification: qualifying` AND non-null `commit SHA` satisfies the (a)(b)(c) triplet from Task 5's Verification. Preservation-excluded rows cite a rule. Null case asserts audited-count and rationale. Pass if all rows satisfy their classification's check.
 - **Status**: [ ] pending
 
-### Task 7: Pass 1 / P3 — negation-only prohibition audit and remediation
+### Task 7: Pass 1 / P3 — negation-only prohibition audit and remediation [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` (P3 section), files with qualifying P3 sites (dynamic from Task 4, excluding `verification-mindset.md`).
 - **What**: For each P3 hit from Task 4's rescan, classify per spec R10 preservation + per-site judgment. `verification-mindset.md` hits are READ-ONLY in #85 — record with `classification: routed-to-pass-2-child`, no edit. Non-verification-mindset qualifying sites default to M1 (positive routing); M4 only when negation is load-bearing with documented rationale. Commit workflow same as Task 5. Commit message: `Remediate P3 negation-only prohibition across <file list>`.
 - **Depends on**: [4]
@@ -89,7 +89,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: Every P3 row satisfies classification's check per Task 5 format. Anchored preservation rows list the specific anchor string matched. Routed-to-pass-2-child rows need no further check beyond row presence. Pass if all rows satisfy their classification's check.
 - **Status**: [ ] pending
 
-### Task 8: Pass 1 / P4 — multi-condition gate audit and remediation
+### Task 8: Pass 1 / P4 — multi-condition gate audit and remediation [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` (P4 section), files with qualifying P4 sites (dynamic — judgment-enumerated at Task 4).
 - **What**: For each P4 candidate block (judgment-enumerated in Task 4 per spec definition: natural-language conditional blocks ≥10 lines without explicit control structure), judge whether the block's implicit short-circuit logic is at risk under 4.7 literalism. Qualifying blocks default to M2 (convert to explicit numbered-step control structure with `if / then / else` framing). Commit workflow same as Task 5. Commit message: `Remediate P4 multi-condition-gate across <file list>`.
 - **Depends on**: [4]
@@ -98,7 +98,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: Every P4 row satisfies classification's check per Task 5 format. Since P4 is judgment-only, the `file:line` range in each row must still contain the described conditional block structure post-commit (`wc -l` of the named line range matches the row's expected line count, or the row is annotated with post-commit range). Pass if all rows satisfy their classification's check.
 - **Status**: [ ] pending
 
-### Task 9: Pass 1 / P5 — procedural-order dependency audit and remediation
+### Task 9: Pass 1 / P5 — procedural-order dependency audit and remediation [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` (P5 section), files with qualifying P5 sites (dynamic — expected subset of the 3 known verbatim-contract sites; Pass 1 may surface additional non-verbatim sites).
 - **What**: For each P5 hit from Task 4's rescan, classify: (a) verbatim-substitution contract for subagent-dispatch template (SKIP per R11 default — spec Non-Req #2), or (b) non-verbatim-contract site (M4 — explicit rationale for the negation). Commit workflow same as Task 5. Commit message (if any non-verbatim qualifying site): `Remediate P5 procedural-order across <file list>`. Null case: `P5 — N sites audited, M verbatim-SKIP, 0 qualifying. Reason: <summary>.` in `## Null-pattern log`.
 - **Depends on**: [4]
@@ -107,7 +107,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: Every P5 row satisfies classification's check per Task 5 format. SKIP rows must cite `verbatim-contract-preservation` rationale in notes. Pass if all rows satisfy their classification's check.
 - **Status**: [ ] pending
 
-### Task 10: Pass 1 / P6 — examples-as-exhaustive-list audit and remediation
+### Task 10: Pass 1 / P6 — examples-as-exhaustive-list audit and remediation [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` (P6 section), files with qualifying P6 sites (dynamic from Task 4).
 - **What**: For each P6 hit from Task 4's rescan, classify: menu-as-exhaustive (qualifying), menu-as-authoritative (preservation — e.g., angle-menu), or example-list-with-clear-non-exhaustive-framing (skip). Qualifying sites default to M1 with explicit "not exhaustive" framing added. Commit workflow same as Task 5. Commit message: `Remediate P6 examples-as-exhaustive across <file list>`.
 - **Depends on**: [4]
@@ -116,7 +116,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: Every P6 row satisfies classification's check per Task 5 format. Pass if all rows satisfy their classification's check.
 - **Status**: [ ] pending
 
-### Task 11: Pass 3 / P7 — [Cc]onsider hedge audit and remediation
+### Task 11: Pass 3 / P7 — [Cc]onsider hedge audit and remediation [x]
 - **Files**: `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/candidates.md` (P7 section), files among the P7 sites within R1 scope with qualifying classification (a).
 - **What**: Use the P7 hits from Task 4's rescan (authoritative — `grep -rn '\b[Cc]onsider\b' skills/` at Task 4 time). Classify each site: (a) conditional-requirement, (b) genuinely optional, (c) polite imperative. Record every hit as a row in candidates.md P7 table, regardless of classification. Only (a) sites within R1's 12-surface scope are remediation candidates — default M1 (positive routing replacing "consider X" with unambiguous phrasing); M4 where removing the softening loses load-bearing rationale. Sites outside R1's 12-surface scope (e.g., `skills/pr/`, `skills/morning-review/`) are recorded with classification but `M-label: out-of-scope-of-R1` and produce no edit. Commit workflow same as Task 5. Commit message: `Remediate P7 consider-hedge across <file list>`.
 - **Depends on**: [4]
@@ -125,7 +125,7 @@ Each Pass 1 task performs a **post-remediation path check before commit**: if an
 - **Verification**: Every P7 row satisfies classification's check per Task 5 format. Specifically: out-of-scope rows list `out-of-scope-of-R1` in M-label. Rows with classification (a) in R1 scope have either a commit SHA or a preservation rule citation. The P7 table's row count equals Task 4's recorded P7 hit count from the rescan (no hard-coded row count — dynamic). Pass if all rows satisfy their classification's check and row count equals rescan count.
 - **Status**: [ ] pending
 
-### Task 12: Add P7 grep-regression test
+### Task 12: Add P7 grep-regression test [x]
 - **Files**: `tests/test_p7_regression.py` (new)
 - **What**: Add a pytest test module that, for every P7 candidates.md row with classification (a) AND non-null commit SHA AND `M-label in {M1, M4}`, asserts `\bconsider\b` does not appear at the remediated file:line post-commit. Test parametrizes dynamically by parsing candidates.md. If zero qualifying rows exist (entire P7 work skipped or produced no remediation), the test module logs an explicit skip with reason, which does NOT count as pass — `just test` must still exit 0, but a test runner summary flag surfaces that P7 regression coverage is vacuous.
 - **Depends on**: [5, 6, 7, 8, 9, 10, 11]
