@@ -1090,6 +1090,7 @@ for fs in data.get('features', {}).values():
 print(count)
 ")
 
+    # Cross-repo: skip PR creation on MERGED_COUNT==0. Cross-repo targets are opt-in per-feature — a repo with zero merges did not participate in the session. See lifecycle/gate-overnight-pr-creation-on-merged-over-zero/spec.md (ticket 131) for the home-repo/cross-repo asymmetry rationale.
     if [[ "$MERGED_COUNT" -eq 0 ]]; then
         echo "Skipping $REPO_NAME — no merged features"
         continue
@@ -1194,6 +1195,7 @@ print(count)
         dry_run_echo "notify.sh" ~/.claude/notify.sh "Zero-progress session with no branch commits — no PR created. Session: $SESSION_ID" || true
         MC_PR_URL=""
     else
+        # Home-repo: ALWAYS create a PR. When MC_MERGED_COUNT==0, create as --draft with [ZERO PROGRESS] title (self-enforcing merge block). Home-repo is always-a-participant (integration branch is always created + is the morning-review entry point), so asymmetry with cross-repo skip is intentional. See lifecycle/gate-overnight-pr-creation-on-merged-over-zero/spec.md (ticket 131).
         if [[ "$MC_MERGED_COUNT" -eq 0 ]]; then
             DRAFT_FLAG="--draft"
             PR_TITLE="[ZERO PROGRESS] Overnight session: $INTEGRATION_BRANCH"
