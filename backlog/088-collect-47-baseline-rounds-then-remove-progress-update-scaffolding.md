@@ -2,22 +2,15 @@
 schema_version: "1"
 uuid: e7f9b367-c3d5-414b-8de4-dd813cdf3908
 title: "Collect 4.7 baseline rounds and snapshot the aggregated data"
-status: refined
+status: backlog
 priority: medium
 type: feature
 created: 2026-04-18
-updated: 2026-04-21
+updated: 2026-04-20
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [99]
-session_id: fab20d9b-3f4d-439e-8ed9-65d1976cfd3f
-lifecycle_phase: implement
-lifecycle_slug: collect-47-baseline-rounds-and-snapshot-the-aggregated-data
-complexity: complex
-criticality: high
-spec: lifecycle/collect-47-baseline-rounds-and-snapshot-the-aggregated-data/spec.md
-areas: [pipeline]
+blocked-by: []
 ---
 
 # Collect 4.7 baseline rounds and snapshot the aggregated data

@@ -453,7 +453,6 @@ async def dispatch_task(
 
     output_parts: list[str] = []
     cost_usd: float | None = None
-    resolved_model: str | None = None
     _tool_name_map: dict[str, str] = {}
     _budget_exhausted: bool = False
     _budget_subtype: str = ""
@@ -464,9 +463,6 @@ async def dispatch_task(
                 for block in message.content:
                     if isinstance(block, TextBlock):
                         output_parts.append(block.text)
-
-                if resolved_model is None:
-                    resolved_model = getattr(message, "model", None)
 
                 if log_path:
                     progress_event: dict = {
@@ -517,7 +513,6 @@ async def dispatch_task(
                         "cost_usd": cost_usd,
                         "duration_ms": message.duration_ms,
                         "num_turns": message.num_turns,
-                        "model_resolved": resolved_model,
                     })
 
                 if activity_log_path is not None:
