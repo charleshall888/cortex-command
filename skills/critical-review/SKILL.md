@@ -27,7 +27,7 @@ The orchestrator (in main conversation context) derives 3-4 challenge angles fro
 
 #### Angle Menu
 
-Select angles from the following menu, picking whichever are most likely to reveal real problems for this specific artifact. If domain context was loaded in Step 2a, weight domain-specific examples more heavily — but domain detection is optional, not required for angle derivation.
+The menu below lists representative angle examples — not an exhaustive set. Pick angles most likely to reveal real problems for this specific artifact, choosing from the menu or inventing new angles that fit the artifact better. If domain context was loaded in Step 2a, weight domain-specific examples more heavily — but domain detection is optional, not required for angle derivation.
 
 **General examples:**
 - Architectural risk
