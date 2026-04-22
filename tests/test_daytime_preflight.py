@@ -330,9 +330,9 @@ def test_skill_contracts() -> None:
     implement_md = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
     text = implement_md.read_text()
 
-    # Locate §1b section: text between "### 1b." and the next "### " heading.
-    match = re.search(r"### 1b\..*?(?=\n### )", text, flags=re.DOTALL)
-    assert match is not None, "could not locate §1b section in implement.md"
+    # Locate §1a section: text between "### 1a." and the next "### " heading.
+    match = re.search(r"### 1a\..*?(?=\n### )", text, flags=re.DOTALL)
+    assert match is not None, "could not locate §1a section in implement.md"
     full_section = match.group(0)
 
     # Ordering checks (c) and (e) compare document positions of strings that
