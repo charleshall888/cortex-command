@@ -1232,12 +1232,133 @@ print(count)
         fi
         MC_PR_EXIT=$?
         if [[ $MC_PR_EXIT -ne 0 ]] || [[ "$MC_PR_URL" != https://* ]]; then
-            MC_PR_URL=$(gh pr view --head "$INTEGRATION_BRANCH" --json url --jq .url 2>/dev/null || echo "")
+            # Recovery path: PR already exists. Read url/isDraft/state and
+            # apply Req 5's decision matrix (see spec revision for Req 5).
+            MC_PR_VIEW_JSON=$(gh pr view --head "$INTEGRATION_BRANCH" --json url,isDraft,state 2>/dev/null || echo "")
+            MC_PR_URL=$(echo "$MC_PR_VIEW_JSON" | jq -r '.url // ""' 2>/dev/null || echo "")
+            MC_PR_IS_DRAFT=$(echo "$MC_PR_VIEW_JSON" | jq -r 'if has("isDraft") then .isDraft else "" end' 2>/dev/null || echo "")
+            MC_PR_STATE=$(echo "$MC_PR_VIEW_JSON" | jq -r '.state // ""' 2>/dev/null || echo "")
             if [[ "$MC_PR_URL" != https://* ]]; then
                 echo "Warning: PR creation failed (branch may already have a PR)"
                 MC_PR_URL=""
             else
                 echo "PR already exists for $INTEGRATION_BRANCH: $MC_PR_URL"
+
+                # Read once-per-PR marker from session state (default false).
+                MC_FLIPPED_ONCE=$(STATE_PATH="$STATE_PATH" python3 -c "
+import json, os
+state = json.load(open(os.environ['STATE_PATH']))
+print('true' if state.get('integration_pr_flipped_once', False) else 'false')
+")
+
+                # Intended draft state: true when zero merges, false otherwise.
+                if [[ "$MC_MERGED_COUNT" -eq 0 ]]; then
+                    MC_INTENDED_DRAFT="true"
+                else
+                    MC_INTENDED_DRAFT="false"
+                fi
+
+                # Decision matrix (Req 5):
+                if [[ "$MC_FLIPPED_ONCE" == "true" ]]; then
+                    echo "PR previously handled by runner — deferring to human state"
+                elif [[ "$MC_PR_STATE" == "MERGED" ]] || [[ "$MC_PR_STATE" == "CLOSED" ]]; then
+                    echo "PR already $MC_PR_STATE — runner yielding to human action"
+                elif [[ "$MC_PR_STATE" == "OPEN" ]] && [[ "$MC_PR_IS_DRAFT" == "$MC_INTENDED_DRAFT" ]]; then
+                    : # no action — state already matches intended
+                elif [[ "$MC_PR_STATE" == "OPEN" ]]; then
+                    # isDraft mismatched — invoke gh pr ready (with --undo when
+                    # intended=draft, i.e., need to convert ready → draft).
+                    MC_PR_READY_ERR="$TMPDIR/mc-pr-ready-err.txt"
+                    if [[ "$MC_INTENDED_DRAFT" == "true" ]]; then
+                        dry_run_echo "gh pr ready --undo" gh pr ready --undo "$MC_PR_URL" 2>"$MC_PR_READY_ERR"
+                    else
+                        dry_run_echo "gh pr ready" gh pr ready "$MC_PR_URL" 2>"$MC_PR_READY_ERR"
+                    fi
+                    MC_PR_READY_EXIT=$?
+                    if [[ $MC_PR_READY_EXIT -eq 0 ]]; then
+                        # Success — set marker atomically.
+                        if [[ "$DRY_RUN" == "true" ]]; then
+                            echo "DRY-RUN state-write integration_pr_flipped_once: true"
+                        else
+                            STATE_PATH="$STATE_PATH" python3 -c "
+import json, os, tempfile
+sp = os.environ['STATE_PATH']
+with open(sp) as f:
+    data = json.load(f)
+data['integration_pr_flipped_once'] = True
+d = os.path.dirname(sp) or '.'
+fd, tmp = tempfile.mkstemp(prefix='.overnight-state-', suffix='.json', dir=d)
+try:
+    with os.fdopen(fd, 'w') as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, sp)
+except Exception:
+    try:
+        os.unlink(tmp)
+    except OSError:
+        pass
+    raise
+"
+                        fi
+                    else
+                        # Classify failure: transient (429/rate limit) vs persistent.
+                        MC_PR_READY_STDERR=$(cat "$MC_PR_READY_ERR" 2>/dev/null || echo "")
+                        if echo "$MC_PR_READY_STDERR" | grep -qiE 'HTTP 429|rate limit'; then
+                            MC_READY_REASON="transient"
+                        else
+                            MC_READY_REASON="persistent"
+                        fi
+                        echo "Warning: gh pr ready failed (reason=$MC_READY_REASON): $MC_PR_READY_STDERR"
+                        # Append pr_ready_failed event to pipeline-events.log.
+                        if [[ "$DRY_RUN" == "true" ]]; then
+                            echo "DRY-RUN event pr_ready_failed reason=$MC_READY_REASON"
+                        else
+                            REPO_ROOT="$REPO_ROOT" SESSION_ID="$SESSION_ID" MC_PR_URL="$MC_PR_URL" MC_INTENDED_DRAFT="$MC_INTENDED_DRAFT" MC_READY_REASON="$MC_READY_REASON" python3 -c "
+import os
+from pathlib import Path
+from claude.pipeline.state import log_event
+log_event(
+    Path(os.environ['REPO_ROOT']) / 'lifecycle' / 'pipeline-events.log',
+    {
+        'event': 'pr_ready_failed',
+        'session_id': os.environ['SESSION_ID'],
+        'reason': os.environ['MC_READY_REASON'],
+        'pr_url': os.environ['MC_PR_URL'],
+        'intended_is_draft': os.environ['MC_INTENDED_DRAFT'] == 'true',
+    },
+)
+"
+                        fi
+                        # On persistent failure, set the marker (terminal —
+                        # no more retries; operator surfaces via morning-review).
+                        # On transient failure, leave marker false (natural retry).
+                        if [[ "$MC_READY_REASON" == "persistent" ]]; then
+                            if [[ "$DRY_RUN" == "true" ]]; then
+                                echo "DRY-RUN state-write integration_pr_flipped_once: true"
+                            else
+                                STATE_PATH="$STATE_PATH" python3 -c "
+import json, os, tempfile
+sp = os.environ['STATE_PATH']
+with open(sp) as f:
+    data = json.load(f)
+data['integration_pr_flipped_once'] = True
+d = os.path.dirname(sp) or '.'
+fd, tmp = tempfile.mkstemp(prefix='.overnight-state-', suffix='.json', dir=d)
+try:
+    with os.fdopen(fd, 'w') as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, sp)
+except Exception:
+    try:
+        os.unlink(tmp)
+    except OSError:
+        pass
+    raise
+"
+                            fi
+                        fi
+                    fi
+                fi
             fi
         else
             echo "PR created from $INTEGRATION_BRANCH to main: $MC_PR_URL"
