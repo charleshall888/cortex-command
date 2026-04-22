@@ -226,6 +226,20 @@ class OvernightState:
         scheduled_start: ISO 8601 timestamp indicating when a scheduled
             overnight session is set to begin. None for sessions that were
             started immediately (not scheduled).
+        integration_pr_flipped_once: Once-per-PR marker for the home-repo
+            integration-branch state-flip recovery in runner.sh (spec Req 5
+            of ticket 131). Set to True after the runner either successfully
+            flips a resumed PR's draft state via `gh pr ready [--undo]` or
+            gives up on a persistent failure. Preserves deliberate operator
+            `gh pr ready`/`gh pr close` actions across subsequent resumes.
+            Default False for backward-compatible sessions.
+        integration_degraded: Fixture-driven override for the runner's
+            `$INTEGRATION_DEGRADED` shell variable (ticket 131, Req 3). Set
+            to True in test fixtures to simulate an upstream
+            integration-test-gate failure; persisted across save_state so
+            the PR block's body-warning branch fires deterministically in
+            --dry-run sessions. Live sessions leave it False and rely on the
+            shell variable set during recovery.
     """
 
     session_id: str = ""
@@ -245,6 +259,8 @@ class OvernightState:
     project_root: Optional[str] = None
     integration_worktrees: dict[str, str] = field(default_factory=dict)
     scheduled_start: Optional[str] = None
+    integration_pr_flipped_once: bool = False
+    integration_degraded: bool = False
 
     def __post_init__(self) -> None:
         if self.phase not in PHASES:
@@ -373,6 +389,8 @@ def load_state(state_path: Path = DEFAULT_STATE_PATH) -> OvernightState:
         project_root=raw.get("project_root"),
         integration_worktrees=raw.get("integration_worktrees") or {},
         scheduled_start=raw.get("scheduled_start"),
+        integration_pr_flipped_once=raw.get("integration_pr_flipped_once", False),
+        integration_degraded=raw.get("integration_degraded", False),
     )
 
 
