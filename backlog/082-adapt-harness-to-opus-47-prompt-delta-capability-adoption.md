@@ -27,10 +27,13 @@ Nine child tickets across three tracks.
 - #085 — audit 7 dispatch-skill prompts + `claude/reference/*.md` for patterns P1–P6 and `consider` hedges
 - #086 — extend `claude/reference/output-floors.md` with M1 Subagent Disposition section (dispatch-skill scope)
 
-**Instrumentation and capability adoption** (DR-3 Wave 1 and Wave 2, gated on DR-4 baseline):
+**Instrumentation and capability adoption** (DR-3 Wave 1 and Wave 2):
+
+> **Update 2026-04-21**: #088 (baseline rounds) closed as wontfix. DR-4's "collect baseline → then ship Wave 1" ordering is no longer enforced. Downstream tickets #092 and #090 must decide individually whether to ship without before/after measurement or defer. See #088 closure note for rationale.
+
 - #087 — instrument `events.log` aggregation for `num_turns` and `cost_usd` per tier
-- #088 — collect 2–3 overnight 4.7 baseline rounds and commit snapshot artifact (step 2 of DR-4)
-- #092 — remove progress-update scaffolding (step 3 of DR-4, blocked by #088)
+- ~~#088 — collect 2–3 overnight 4.7 baseline rounds and commit snapshot artifact (step 2 of DR-4)~~ — closed wontfix 2026-04-21
+- #092 — remove progress-update scaffolding (step 3 of DR-4; originally blocked by #088, now unblocked but ships without baseline comparison)
 - #089 — measure `xhigh` vs `high` effort cost delta on representative task
 - #090 — adopt `xhigh` effort default for overnight lifecycle implement (Wave 2)
 - #091 — decide and document post-4.7 policy settings (`MUST`-escalation norm, tone regression)
@@ -49,8 +52,8 @@ Nine child tickets across three tracks.
 2. #085 runs after both spikes complete
 3. #086 can run in parallel with #085 (different surface)
 4. #087 runs independently (any time)
-5. #088 requires #087's instrumentation; commits the baseline snapshot artifact
-6. #092 requires #088's snapshot (step 3 of DR-4)
+5. ~~#088 requires #087's instrumentation; commits the baseline snapshot artifact~~ — closed wontfix 2026-04-21
+6. #092 originally required #088's snapshot (step 3 of DR-4); with #088 closed, ships without baseline comparison
 7. #089 requires #087's instrumentation; runs in parallel with #092
 8. #090 requires #089 and #092
 9. #091 runs after #085 provides OQ3 calibration evidence. OQ6 (tone) needs no evidence but stays consolidated in #091

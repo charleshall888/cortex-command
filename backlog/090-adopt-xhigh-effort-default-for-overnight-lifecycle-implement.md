@@ -47,7 +47,7 @@ DR-3 Wave 2's framing ("lifecycle implement phase") argues against option (1). O
 
 ## Dependencies
 
-- Blocked by #092 (scaffolding removal must complete so effort-level change isn't compounded). #092 transitively depends on #088 (baseline).
+- Blocked by #092 (scaffolding removal must complete so effort-level change isn't compounded). #088 (baseline snapshot) was closed as wontfix on 2026-04-21, so #092's own DR-4 blocker is gone; #092 now ships (or doesn't) on its own terms — see #092's status-update section. The rollback trigger below continues to reference a local pre-flip baseline captured at flip time, which is independent of #088.
 
 ## Scope bounds
 

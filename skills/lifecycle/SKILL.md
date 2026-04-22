@@ -266,7 +266,9 @@ The Clarify, Research, and Spec phases are delegated to `/refine`. This section 
    - Include a `## Epic Reference` section near the top of `research.md` with a link to the epic research path and a one-sentence note on how the epic relates to this ticket
    - In `spec.md`, add a brief preamble note referencing the epic research path for broader context
 
-3. **Determine the starting point for `/refine`:** follow `/refine`'s Step 2 (Check State) normally — it checks `lifecycle/{lifecycle-slug}/research.md` and `lifecycle/{lifecycle-slug}/spec.md` specifically. **Any file loaded from the backlog item's `discovery_source` or `research` frontmatter field does NOT satisfy this check** — it is background context only, regardless of path. `/refine` must still run its full Research phase to produce `lifecycle/{slug}/research.md`, even when epic research exists.
+3. **Determine the starting point for `/refine`:** `/refine`'s Step 2 (Check State) checks for `lifecycle/{lifecycle-slug}/research.md` and `lifecycle/{lifecycle-slug}/spec.md` at those exact paths. Rules:
+   - If both files exist at those exact paths: Step 2 proceeds normally.
+   - If a backlog item's `discovery_source` or `research` frontmatter field points to epic research at a different path: that epic file is background context for the Clarify phase, not a substitute for the lifecycle research artifact. `/refine` must still run its full Research phase to produce `lifecycle/{slug}/research.md`.
 
 4. **Event logging during delegation**: lifecycle owns `lifecycle/{feature}/events.log`. Log these events as `/refine` completes each phase:
 

@@ -6,14 +6,25 @@ status: backlog
 priority: medium
 type: feature
 created: 2026-04-18
-updated: 2026-04-18
+updated: 2026-04-21
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [88]
+blocked-by: []
 ---
 
 # Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)
+
+## Status update (2026-04-21)
+
+#088 closed as wontfix — the baseline snapshot this ticket was designed to compare against will not be produced. `blocked-by: [88]` was auto-cleared when #088 reached terminal status.
+
+Two paths forward:
+
+1. **Ship without baseline comparison**: trust Anthropic's 4.7 guidance that built-in progress updates supersede explicit scaffolding; remove the scaffolding, run a couple of overnight rounds to catch loud regressions by inspection, and accept that subtle regressions won't be attributable with evidence. This is the pragmatic path if the scaffolding feels obviously outdated.
+2. **Defer to match #088**: close this as wontfix too, on the reasoning that without measurement the DR-3 Wave 1 premise ("scaffolding becomes counterproductive — verify by comparing") can't be validated.
+
+The Deliverable and Dependencies sections below describe the original measurement-gated plan and are historical — they need revision before this ticket starts if path (1) is chosen.
 
 ## Motivation
 
