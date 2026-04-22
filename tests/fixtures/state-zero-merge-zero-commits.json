@@ -1,0 +1,18 @@
+{
+  "session_id": "test-zero-merge-zero-commits",
+  "plan_ref": "",
+  "current_round": 1,
+  "phase": "executing",
+  "started_at": "2026-04-22T00:00:00+00:00",
+  "updated_at": "2026-04-22T00:00:00+00:00",
+  "features": {
+    "feat-a": {
+      "status": "failed",
+      "repo_path": null
+    }
+  },
+  "integration_branch": "overnight/test-zero-merge-zero-commits",
+  "integration_branches": {},
+  "integration_worktrees": {},
+  "worktree_path": ""
+}
