@@ -1177,16 +1177,18 @@ f.write_text(json.dumps(data))
 fi
 
 # Generate morning report (after all PR creation so URLs are available)
+MR_STDERR=$(mktemp -p "${TMPDIR:-/tmp}")
 if [[ -n "$TARGET_INTEGRATION_WORKTREE" ]]; then
-    PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" TARGET_INTEGRATION_WORKTREE="$TARGET_INTEGRATION_WORKTREE" SESSION_ID="$SESSION_ID" python3 -c "
-import json, os
+    PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" TARGET_INTEGRATION_WORKTREE="$TARGET_INTEGRATION_WORKTREE" SESSION_ID="$SESSION_ID" ROUND="$ROUND" python3 -c "
+import json, os, hashlib
 from pathlib import Path
 from claude.overnight.report import generate_and_write_report
+from claude.overnight.events import log_event
 pr_urls_file = Path(os.environ['PR_URLS_FILE'])
 pr_urls = json.loads(pr_urls_file.read_text()) if pr_urls_file.exists() else {}
 sid = os.environ['SESSION_ID']
 tiw = os.environ['TARGET_INTEGRATION_WORKTREE']
-generate_and_write_report(
+per_session_path = generate_and_write_report(
     state_path=Path(os.environ['STATE_PATH']),
     events_path=Path(os.environ['EVENTS_PATH']),
     deferred_dir=Path(os.environ['HOME_PROJECT_ROOT']) / 'lifecycle' / 'deferrals',
@@ -1195,24 +1197,91 @@ generate_and_write_report(
     results_dir=Path(tiw) / 'lifecycle' / 'sessions' / sid,
     project_root=Path(tiw),
 )
-" || echo "Warning: morning report generation failed"
-else
-    PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" REPO_ROOT="$REPO_ROOT" SESSION_ID="$SESSION_ID" python3 -c "
+latest_copy_path = Path(tiw) / 'lifecycle' / 'morning-report.md'
+ps_data = Path(per_session_path).read_bytes()
+lc_data = Path(latest_copy_path).read_bytes()
+log_event(
+    'morning_report_generate_result',
+    int(os.environ['ROUND']),
+    details={
+        'status': 'success',
+        'per_session_path': os.path.realpath(str(per_session_path)),
+        'latest_copy_path': os.path.realpath(str(latest_copy_path)),
+        'per_session_sha256': hashlib.sha256(ps_data).hexdigest(),
+        'latest_copy_sha256': hashlib.sha256(lc_data).hexdigest(),
+        'per_session_bytes': len(ps_data),
+        'latest_copy_bytes': len(lc_data),
+    },
+    log_path=Path(os.environ['EVENTS_PATH']),
+)
+" 2>"$MR_STDERR" || {
+        MR_DETAILS=$(MR_STDERR="$MR_STDERR" python3 -c "
 import json, os
+try:
+    size = os.path.getsize(os.environ['MR_STDERR'])
+    with open(os.environ['MR_STDERR'], 'rb') as f:
+        if size > 500:
+            f.seek(-500, 2)
+        tail = f.read().decode('utf-8', errors='replace')
+except OSError:
+    tail = ''
+print(json.dumps({'status': 'failed', 'stderr_tail': tail}))
+" 2>/dev/null || echo '{"status": "failed", "stderr_tail": "<payload assembly failed>"}')
+        log_event "morning_report_generate_result" "$ROUND" "$MR_DETAILS" || true
+        true
+    }
+else
+    PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" REPO_ROOT="$REPO_ROOT" SESSION_ID="$SESSION_ID" ROUND="$ROUND" python3 -c "
+import json, os, hashlib
 from pathlib import Path
 from claude.overnight.report import generate_and_write_report
+from claude.overnight.state import _LIFECYCLE_ROOT
+from claude.overnight.events import log_event
 pr_urls_file = Path(os.environ['PR_URLS_FILE'])
 pr_urls = json.loads(pr_urls_file.read_text()) if pr_urls_file.exists() else {}
 sid = os.environ['SESSION_ID']
-generate_and_write_report(
+per_session_path = generate_and_write_report(
     state_path=Path(os.environ['STATE_PATH']),
     events_path=Path(os.environ['EVENTS_PATH']),
     deferred_dir=Path(os.environ['HOME_PROJECT_ROOT']) / 'lifecycle' / 'deferrals',
     pr_urls=pr_urls,
     report_dir=Path(os.environ['REPO_ROOT']) / 'lifecycle' / 'sessions' / sid,
 )
-" || echo "Warning: morning report generation failed"
+latest_copy_path = _LIFECYCLE_ROOT / 'morning-report.md'
+ps_data = Path(per_session_path).read_bytes()
+lc_data = Path(latest_copy_path).read_bytes()
+log_event(
+    'morning_report_generate_result',
+    int(os.environ['ROUND']),
+    details={
+        'status': 'success',
+        'per_session_path': os.path.realpath(str(per_session_path)),
+        'latest_copy_path': os.path.realpath(str(latest_copy_path)),
+        'per_session_sha256': hashlib.sha256(ps_data).hexdigest(),
+        'latest_copy_sha256': hashlib.sha256(lc_data).hexdigest(),
+        'per_session_bytes': len(ps_data),
+        'latest_copy_bytes': len(lc_data),
+    },
+    log_path=Path(os.environ['EVENTS_PATH']),
+)
+" 2>"$MR_STDERR" || {
+        MR_DETAILS=$(MR_STDERR="$MR_STDERR" python3 -c "
+import json, os
+try:
+    size = os.path.getsize(os.environ['MR_STDERR'])
+    with open(os.environ['MR_STDERR'], 'rb') as f:
+        if size > 500:
+            f.seek(-500, 2)
+        tail = f.read().decode('utf-8', errors='replace')
+except OSError:
+    tail = ''
+print(json.dumps({'status': 'failed', 'stderr_tail': tail}))
+" 2>/dev/null || echo '{"status": "failed", "stderr_tail": "<payload assembly failed>"}')
+        log_event "morning_report_generate_result" "$ROUND" "$MR_DETAILS" || true
+        true
+    }
 fi
+rm -f "$MR_STDERR"
 
 # ---------------------------------------------------------------------------
 # Commit morning report
