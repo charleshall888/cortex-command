@@ -1183,53 +1183,65 @@ print(count)
     # field. Defensive `.get(..., False)` means absent field is a no-op —
     # live sessions keep whatever the upstream integration-test-gate set.
     INTEGRATION_DEGRADED=$(STATE_PATH="$STATE_PATH" INTEGRATION_DEGRADED="$INTEGRATION_DEGRADED" python3 -c "import json, os; print('true' if json.load(open(os.environ['STATE_PATH'])).get('integration_degraded', False) else os.environ['INTEGRATION_DEGRADED'])")
-    if [[ "$MC_MERGED_COUNT" -eq 0 ]]; then
-        DRAFT_FLAG="--draft"
-        PR_TITLE="[ZERO PROGRESS] Overnight session: $INTEGRATION_BRANCH"
-        if [[ "$INTEGRATION_DEGRADED" == "true" ]] && [[ -f "$INTEGRATION_WARNING_FILE" ]]; then
-            cat "$INTEGRATION_WARNING_FILE" > "$PR_BODY_FILE"
-            echo "**ZERO PROGRESS** — Overnight session $SESSION_ID merged 0 features. See \`lifecycle/sessions/${SESSION_ID}/morning-report.md\` for failure analysis." >> "$PR_BODY_FILE"
-        else
-            echo "**ZERO PROGRESS** — Overnight session $SESSION_ID merged 0 features. See \`lifecycle/sessions/${SESSION_ID}/morning-report.md\` for failure analysis." > "$PR_BODY_FILE"
-        fi
-    else
-        DRAFT_FLAG=""
-        PR_TITLE="Overnight session: $INTEGRATION_BRANCH"
-        if [[ "$INTEGRATION_DEGRADED" == "true" ]] && [[ -f "$INTEGRATION_WARNING_FILE" ]]; then
-            cat "$INTEGRATION_WARNING_FILE" > "$PR_BODY_FILE"
-            echo "Overnight session $SESSION_ID: $MC_MERGED_COUNT features merged. See morning-report.md for details." >> "$PR_BODY_FILE"
-        else
-            echo "Overnight session $SESSION_ID: $MC_MERGED_COUNT features merged. See morning-report.md for details." > "$PR_BODY_FILE"
-        fi
-    fi
-    if [[ "$DRY_RUN" == "true" ]]; then
-        dry_run_echo "gh pr create" gh pr create \
-            $DRAFT_FLAG \
-            --title "$PR_TITLE" \
-            --base main \
-            --head "$INTEGRATION_BRANCH" \
-            --body-file "$PR_BODY_FILE"
+    # Zero-commit integration-branch pre-check (spec Req 4): if the integration
+    # branch has no commits ahead of main, skip PR creation entirely. Missing
+    # ref is treated as zero commits — a non-existent branch cannot support a
+    # PR anyway, and `gh pr create` would fail downstream. Runs for both
+    # zero-merge and non-zero-merge paths (a non-zero merge with zero commits
+    # is pathological but the shared pre-check handles it cleanly).
+    MC_INTEGRATION_COMMIT_COUNT=$(git rev-list --count "main..$INTEGRATION_BRANCH" 2>/dev/null || echo 0)
+    if [[ "$MC_INTEGRATION_COMMIT_COUNT" -eq 0 ]]; then
+        dry_run_echo "notify.sh" ~/.claude/notify.sh "Zero-progress session with no branch commits — no PR created. Session: $SESSION_ID" || true
         MC_PR_URL=""
     else
-        MC_PR_URL=$(gh pr create \
-            $DRAFT_FLAG \
-            --title "$PR_TITLE" \
-            --base main \
-            --head "$INTEGRATION_BRANCH" \
-            --body-file "$PR_BODY_FILE" \
-            2>/dev/null)
-    fi
-    MC_PR_EXIT=$?
-    if [[ $MC_PR_EXIT -ne 0 ]] || [[ "$MC_PR_URL" != https://* ]]; then
-        MC_PR_URL=$(gh pr view --head "$INTEGRATION_BRANCH" --json url --jq .url 2>/dev/null || echo "")
-        if [[ "$MC_PR_URL" != https://* ]]; then
-            echo "Warning: PR creation failed (branch may already have a PR)"
+        if [[ "$MC_MERGED_COUNT" -eq 0 ]]; then
+            DRAFT_FLAG="--draft"
+            PR_TITLE="[ZERO PROGRESS] Overnight session: $INTEGRATION_BRANCH"
+            if [[ "$INTEGRATION_DEGRADED" == "true" ]] && [[ -f "$INTEGRATION_WARNING_FILE" ]]; then
+                cat "$INTEGRATION_WARNING_FILE" > "$PR_BODY_FILE"
+                echo "**ZERO PROGRESS** — Overnight session $SESSION_ID merged 0 features. See \`lifecycle/sessions/${SESSION_ID}/morning-report.md\` for failure analysis." >> "$PR_BODY_FILE"
+            else
+                echo "**ZERO PROGRESS** — Overnight session $SESSION_ID merged 0 features. See \`lifecycle/sessions/${SESSION_ID}/morning-report.md\` for failure analysis." > "$PR_BODY_FILE"
+            fi
+        else
+            DRAFT_FLAG=""
+            PR_TITLE="Overnight session: $INTEGRATION_BRANCH"
+            if [[ "$INTEGRATION_DEGRADED" == "true" ]] && [[ -f "$INTEGRATION_WARNING_FILE" ]]; then
+                cat "$INTEGRATION_WARNING_FILE" > "$PR_BODY_FILE"
+                echo "Overnight session $SESSION_ID: $MC_MERGED_COUNT features merged. See morning-report.md for details." >> "$PR_BODY_FILE"
+            else
+                echo "Overnight session $SESSION_ID: $MC_MERGED_COUNT features merged. See morning-report.md for details." > "$PR_BODY_FILE"
+            fi
+        fi
+        if [[ "$DRY_RUN" == "true" ]]; then
+            dry_run_echo "gh pr create" gh pr create \
+                $DRAFT_FLAG \
+                --title "$PR_TITLE" \
+                --base main \
+                --head "$INTEGRATION_BRANCH" \
+                --body-file "$PR_BODY_FILE"
             MC_PR_URL=""
         else
-            echo "PR already exists for $INTEGRATION_BRANCH: $MC_PR_URL"
+            MC_PR_URL=$(gh pr create \
+                $DRAFT_FLAG \
+                --title "$PR_TITLE" \
+                --base main \
+                --head "$INTEGRATION_BRANCH" \
+                --body-file "$PR_BODY_FILE" \
+                2>/dev/null)
         fi
-    else
-        echo "PR created from $INTEGRATION_BRANCH to main: $MC_PR_URL"
+        MC_PR_EXIT=$?
+        if [[ $MC_PR_EXIT -ne 0 ]] || [[ "$MC_PR_URL" != https://* ]]; then
+            MC_PR_URL=$(gh pr view --head "$INTEGRATION_BRANCH" --json url --jq .url 2>/dev/null || echo "")
+            if [[ "$MC_PR_URL" != https://* ]]; then
+                echo "Warning: PR creation failed (branch may already have a PR)"
+                MC_PR_URL=""
+            else
+                echo "PR already exists for $INTEGRATION_BRANCH: $MC_PR_URL"
+            fi
+        else
+            echo "PR created from $INTEGRATION_BRANCH to main: $MC_PR_URL"
+        fi
     fi
     if [[ -n "$MC_PR_URL" ]]; then
         PR_URLS_FILE="$PR_URLS_FILE" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" MC_PR_URL="$MC_PR_URL" python3 -c "
