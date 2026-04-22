@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 65cbc5a4-ae71-4763-9a9c-f5cf4847480d
 title: "Disambiguate orchestrator prompt tokens to stop lexical-priming escape"
-status: in_progress
+status: complete
 priority: critical
 type: feature
 parent: 126
@@ -12,7 +12,7 @@ created: 2026-04-21
 updated: 2026-04-22
 lifecycle_slug: disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape
 lifecycle_phase: implement
-session_id: db9e18aa-35ac-43fe-818f-9b9254ff219e
+session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/orchestrator-worktree-escape/research.md

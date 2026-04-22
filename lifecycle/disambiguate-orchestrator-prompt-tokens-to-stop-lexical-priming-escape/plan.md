@@ -32,7 +32,7 @@ Test-first mechanical repair across two files. Write a unit test that invokes th
     - (7h, plan-level hardening beyond spec R7) `{slug}` not in output AND `{spec_path}` not in output AND `"{feature}"` not in output — negative assertions that catch a partial rename where one or more single-brace tokens survive. Critical review surfaced that R7e's positive-only check can pass green while 3–4 sites still hold the pre-rename shape; these negative assertions close that gap.
   - Python-helper copy of the substitution logic is prohibited per R7a — the test must exercise the real shell function body.
 - **Verification**: `.venv/bin/pytest tests/test_fill_prompt.py -q` — the test module must import and invoke cleanly (no collection or subprocess errors); assertion failures are expected at this stage and gated by Task 6.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -48,7 +48,7 @@ Test-first mechanical repair across two files. Write a unit test that invokes th
   - Line 216: `Read \`{plan_path}\` to understand batch assignments...` → `Read \`{session_plan_path}\` to understand batch assignments...`
   - After this task, line 269's `{plan_path}` remains — Task 3 handles it.
 - **Verification**: `grep -c '{plan_path}' claude/overnight/prompts/orchestrator-round.md` → `1` (only line 269 remains, per-feature). `grep -c '{session_plan_path}' claude/overnight/prompts/orchestrator-round.md` → `3`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -71,7 +71,7 @@ Test-first mechanical repair across two files. Write a unit test that invokes th
   - `grep -c '{plan_path}' claude/overnight/prompts/orchestrator-round.md` → `0` (the last single-brace occurrence is gone)
   - `grep -c '{spec_path}' claude/overnight/prompts/orchestrator-round.md` → `0`
   - **Negative assertions (added from critical review)**: `grep -c '{slug}' claude/overnight/prompts/orchestrator-round.md` → `0` (catches line 291 and any missed dispatch-block occurrence); `grep -cF '"{feature}"' claude/overnight/prompts/orchestrator-round.md` → `0` (catches line 261's quoted `{feature}` specifically; the unquoted `entry["feature"]` dict-access occurrences are not matched because they lack the outer quotes around `{feature}`).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -98,7 +98,7 @@ Test-first mechanical repair across two files. Write a unit test that invokes th
   - `awk '/<substitution_contract>/,/<\/substitution_contract>/' claude/overnight/prompts/orchestrator-round.md | grep -cE 'YOU (MUST )?substitute'` → `≥1`
   - `awk '/<substitution_contract>/,/<\/substitution_contract>/' claude/overnight/prompts/orchestrator-round.md | grep -c 'state.features'` → `≥1`
   - First line of the block matches `^(CRITICAL|IMPORTANT|YOU MUST):` — verify by reading the line immediately after the opening tag.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -116,7 +116,7 @@ Test-first mechanical repair across two files. Write a unit test that invokes th
 - **Verification**:
   - `grep -c "'{session_plan_path}'" claude/overnight/runner.sh` → `≥1`
   - `grep -c "'{plan_path}'" claude/overnight/runner.sh` → `0`
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
@@ -141,7 +141,7 @@ Test-first mechanical repair across two files. Write a unit test that invokes th
   - `just test` exits 0 (step 1 output).
   - `ls ~/.local/share/overnight-sessions/active-session.json 2>/dev/null` returns no output (step 2 output).
   - `git diff --name-only --cached` output, captured after step 3 and before step 5, equals exactly the three target paths (step 4 output).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ---
 
