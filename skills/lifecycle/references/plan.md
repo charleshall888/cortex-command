@@ -274,5 +274,5 @@ Do NOT write implementation code in the plan. Plans describe WHAT each task does
 | "The requirements are clear enough to skip planning" | Clear requirements still need a task breakdown. Planning is about HOW to decompose the work, not WHAT to build. |
 | "I'll figure out the approach as I code" | Figuring it out while coding means re-doing work when early assumptions prove wrong. Plan once, implement once. |
 | "This plan is so detailed I might as well write the code" | If you are writing function bodies, you have violated the code budget. Plans provide structure, not implementation. |
-| "The backlog item said to do it this way" | Backlog items suggest approaches — they don't prescribe them. Unless the backlog item has linked research/spec artifacts that already validated the approach, evaluate it critically and consider alternatives. |
+| "The backlog item said to do it this way" | Backlog items suggest approaches — they don't prescribe them. Unless the backlog item has linked research/spec artifacts that already validated the approach, evaluate it critically and weigh alternatives. |
 | "The agent can verify by checking the file it just wrote" | Verification that checks an artifact the same task creates solely for verification is self-sealing — it passes tautologically. Use test commands, pre-existing state, or prior-task outputs instead. |
