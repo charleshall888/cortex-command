@@ -39,6 +39,8 @@ The plugin-split decision (DR-2) keeps `lifecycle` in `cortex-interactive` to pr
 - Other skills that might have similar runner dependencies (`critical-review`, `morning-review`) — handled in ticket 120's codebase-check step
 - Re-probing mid-session (users who install the runner mid-lifecycle are an edge case not worth handling here)
 
+> **2026-04-22 (ticket #097) — scope amendment.** The lifecycle implement-phase menu is now three options (post-#097: "Implement on current branch" / "Implement in autonomous worktree" / "Create feature branch"), not four. The "four execution modes" framing above (line 25) and the "show all four options as today" probe-success branch (line 33) are superseded — the post-probe-success state shows three options. On the degrade path, hiding "Implement in autonomous worktree" now leaves **two** options ("Implement on current branch" / "Create feature branch"), not three. `/refine` must re-evaluate whether the two-option graceful-degrade still meets the UX intent of this ticket.
+
 ## Research
 
 See `research/overnight-layer-distribution/research.md` — DR-2 dependency matrix row for autonomous-worktree, Risks Acknowledged ("Autonomous-worktree graceful degrade is a new runtime behavior the lifecycle skill must learn"). Current implementation at `skills/lifecycle/references/implement.md:14` documents the autonomous-worktree option.
