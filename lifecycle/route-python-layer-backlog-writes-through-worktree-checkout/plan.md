@@ -19,7 +19,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - Caller-audit result: `grep -n "BACKLOG_DIR" backlog/update_item.py backlog/create_item.py backlog/generate_index.py claude/overnight/backlog.py` confirmed NO external importer uses `backlog.update_item.BACKLOG_DIR`; `generate_index.py` has its own independent `BACKLOG_DIR` constant at `:26`, and `claude/overnight/backlog.py` uses `DEFAULT_BACKLOG_DIR` (different symbol). Removing the module-level binding is safe.
   - Atomic-write discipline: all writes go through `claude/common.py:382`'s `atomic_write()` — no direct `Path.write_text` calls.
 - **Verification**: `grep -n "BACKLOG_DIR" backlog/update_item.py` — pass if the only remaining match is inside the `main()` function body (run `grep -n "def main\|BACKLOG_DIR" backlog/update_item.py` and confirm every `BACKLOG_DIR` line number is strictly greater than the `def main` line number).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Refactor `backlog/create_item.py` internal API to thread `backlog_dir` explicitly
 - **Files**: `backlog/create_item.py`
@@ -31,7 +31,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - `create_item` takes a dict-of-fields as its primary payload today; `backlog_dir` is an additional required kwarg positional-or-keyword.
   - Caller-audit: confirmed no external importer uses `backlog.create_item.BACKLOG_DIR` (see Task 1's audit). The `BACKLOG_DIR` usages at `:37, :40, :53, :110` are all internal to `create_item.py`.
 - **Verification**: `grep -n "BACKLOG_DIR" backlog/create_item.py` — pass if the only remaining match is inside the `main()` function body (strictly after `def main`).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Refactor `create_followup_backlog_items()` signature, session_id attribution, and in-file callers in `report.py`
 - **Files**: `claude/overnight/report.py`
@@ -43,7 +43,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - Pattern reference: `claude/overnight/outcome_router.py:409` and `backlog/update_item.py:358` already use `os.environ.get("LIFECYCLE_SESSION_ID", "manual")`; match that exact form for consistency.
   - The two call sites at `:1435` and `:1525` are inside different outer functions — inspect each to find the state variable name in scope. They differ in context (home-repo session vs target-project session paths in report generation).
 - **Verification**: `grep -cn 'create_followup_backlog_items(' claude/overnight/report.py` equals 3 (one def + two calls); AND `grep -n "LIFECYCLE_SESSION_ID" claude/overnight/report.py` returns at least one match inside `create_followup_backlog_items`; AND `sed -n '272,360p' claude/overnight/report.py | grep -c 'session_id.*null'` equals 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Fix `orchestrator.py:143` to source `set_backlog_dir` from `worktree_path`
 - **Files**: `claude/overnight/orchestrator.py`
@@ -56,7 +56,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - Scope boundary: this call lives INSIDE the `try:` block at `:137`. On any exception in lines 139-149 (not just `load_state` failures), `set_backlog_dir` is bypassed and `_backlog_dir` remains None, activating the `:360` silent-fallback per spec R6 scope. Closing this structural bypass is NOT in scope for this task — see the Ask item in the Veto Surface.
   - `outcome_router.set_backlog_dir()` is declared at `outcome_router.py:316` — takes a single `Path`.
 - **Verification**: `grep -n "set_backlog_dir" claude/overnight/orchestrator.py` shows the line references `worktree_path` (not `integration_branches`) — pass if the single match includes the substring `worktree_path`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Add `state_load_failed` telemetry to the `orchestrator.py` state-load exception handler
 - **Files**: `claude/overnight/orchestrator.py`
@@ -69,7 +69,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - The `subsequent_writes_target` field is the observability connection that spec R6 requires: it tells an operator reading the event log exactly where backlog writes will land during this session — closing the gap where `state_load_failed` alone would not signal write misdirection.
   - Do NOT change the `except Exception:` clause's fallthrough behavior — the event emission is purely additive.
 - **Verification**: `grep -n 'state_load_failed' claude/overnight/orchestrator.py` returns exactly one match inside the except-block (between the line containing `except Exception` and the next `def`/`class` after `:156`); AND `grep -n 'subsequent_writes_target' claude/overnight/orchestrator.py` returns exactly one match inside the same block.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Thread `backlog_dir` through `_write_back_to_backlog` and `_find_backlog_item_path` call sites in `outcome_router.py`
 - **Files**: `claude/overnight/outcome_router.py`
@@ -86,7 +86,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - `_find_backlog_item_path` already has the local `backlog_dir` variable at `:360` — reuse it for the `:378` call (no new resolution needed). `_write_back_to_backlog` does NOT have a local `backlog_dir` today — add one mirroring the `:360` pattern.
   - The existing `_PROJECT_ROOT / "backlog"` silent fallback at `:360` is NOT changed — that is the spec R6 accepted latent path and must survive this ticket.
 - **Verification**: `grep -n "_backlog_update_item\|_backlog_find_item" claude/overnight/outcome_router.py` — every matching call-site (excluding the imports at `:322-323`) includes `backlog_dir=backlog_dir` in its argument list. Additionally, `grep -c 'if _backlog_dir is not None else _PROJECT_ROOT / "backlog"' claude/overnight/outcome_router.py` returns 2 (one at `:360`, one newly added inside `_write_back_to_backlog`) — confirms the local-fallback expression exists in both surrounding functions.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Update the SIGINT trap in `runner.sh` to pass `backlog_dir` to `create_followup_backlog_items` and add the trap-path second-commit block
 - **Files**: `claude/overnight/runner.sh`
@@ -102,7 +102,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - Pattern reference for commit block: nominal-flow artifact commit at `runner.sh:1001-1014` shows the subshell + `git diff --cached --quiet || git commit` pattern.
   - The `|| true` after the subshell ensures the trap itself exits cleanly even if the commit fails — we don't want a trap-time commit failure to mask the original interrupt.
 - **Verification**: `awk '/^trap_sigint\(\)/,/^}/' claude/overnight/runner.sh | grep -c "record followup"` equals 1 (the commit block exists inside the trap function). AND `awk '/^trap_sigint\(\)/,/^}/' claude/overnight/runner.sh | grep -c 'WORKTREE_PATH="$WORKTREE_PATH"'` equals 1 (env prefix includes WORKTREE_PATH). AND `awk '/^trap_sigint\(\)/,/^}/' claude/overnight/runner.sh | grep -c "backlog_dir="` equals 1 (trap's python call passes backlog_dir).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Add the nominal-flow second-commit block and `followup_commit_skipped` event to `runner.sh` (set-e-safe)
 - **Files**: `claude/overnight/runner.sh`
@@ -122,7 +122,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - `log_event` function: exists at `runner.sh:355` as a shell function — takes event name, round number, and JSON payload.
   - Pattern reference for session-id-qualified commit message: nominal-flow artifact commit at `runner.sh:1001-1014`.
 - **Verification**: `grep -cn 'Overnight session.*record followup' claude/overnight/runner.sh` equals 2 (one nominal + one trap from Task 7). AND `grep -cn 'followup_commit_skipped' claude/overnight/runner.sh` equals 1. AND `grep -cn '|| report_gen_rc=\$?\|report_gen_rc=$?' claude/overnight/runner.sh` returns at least 2 matches (one per branch's `||` compound).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Integration test — simulated failed session routes backlog writes through worktree
 - **Files**: `tests/test_runner_signal.py` (existing — extend) or `tests/test_worktree.py` (existing — extend); add `tests/fixtures/failed-session/` if new fixtures are needed
@@ -136,7 +136,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - Fixture isolation: use a tmpdir-backed fake home-repo + worktree so the test can `git status` against the fixture without affecting the real repo. Pattern: `tests/fixtures/` already contains pre-built scenarios.
   - Two cases to exercise inside this single test task: (1) nominal flow path where `generate_and_write_report` succeeds and the second-commit block fires; (2) trap path where SIGINT interrupts the round loop and the trap's commit block fires. Use parametrize or two test functions in the same file.
 - **Verification**: Run `just test` (or the narrower `uv run pytest tests/test_worktree.py tests/test_runner_signal.py -v`) — pass if exit 0 and the newly-added test function(s) are listed as PASSED.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 10: Integration test — `state_load_failed` event logged on state corruption
 - **Files**: `tests/test_events_contract.py` (existing — extend) or `tests/test_events.py` (existing — extend)
@@ -148,7 +148,7 @@ Thread an explicit `backlog_dir` argument through the Python-layer backlog-write
   - Fixture: write the corrupted state to a tmpdir path and pass it via `STATE_PATH` env or equivalent — do NOT mutate the real `lifecycle/overnight-state.json`.
   - Assertion on `subsequent_writes_target`: must equal `str(outcome_router._PROJECT_ROOT / "backlog")` — the spec R6 silent-misdirection target that the telemetry surfaces.
 - **Verification**: Run `uv run pytest tests/test_events_contract.py tests/test_events.py -v` — pass if exit 0 and the new test function is listed as PASSED.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Verification Strategy
 

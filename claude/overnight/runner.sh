@@ -504,13 +504,13 @@ if pointer_path.exists():
         pass
 " || true
     log_event "circuit_breaker" "$ROUND" "{\"reason\": \"signal\"}"
-    STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" TARGET_PROJECT_ROOT="$TARGET_PROJECT_ROOT" REPO_ROOT="$REPO_ROOT" SESSION_ID="$SESSION_ID" python3 -c "
+    STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" TARGET_PROJECT_ROOT="$TARGET_PROJECT_ROOT" REPO_ROOT="$REPO_ROOT" SESSION_ID="$SESSION_ID" WORKTREE_PATH="$WORKTREE_PATH" python3 -c "
 import os
 from pathlib import Path
 from datetime import datetime, timezone
 from claude.overnight.report import collect_report_data, create_followup_backlog_items, generate_report, write_report
 data = collect_report_data(state_path=Path(os.environ['STATE_PATH']), events_path=Path(os.environ['EVENTS_PATH']))
-data.new_backlog_items = create_followup_backlog_items(data)
+data.new_backlog_items = create_followup_backlog_items(data, backlog_dir=Path(os.environ['WORKTREE_PATH']) / 'backlog')
 report = generate_report(data)
 ts = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 report = f'> **Interrupted Session** — partial report generated at {ts}\n\n' + report
@@ -519,6 +519,15 @@ sid = os.environ['SESSION_ID']
 write_report(report, path=Path(target) / 'lifecycle' / 'sessions' / sid / 'morning-report.md')
 write_report(report, path=Path(target) / 'lifecycle' / 'morning-report.md')
 " || true
+    if [[ -n "$WORKTREE_PATH" ]]; then
+        (
+            cd "$WORKTREE_PATH"
+            git add "backlog/" 2>/dev/null || true
+            if ! git diff --cached --quiet; then
+                git commit -m "Overnight session ${SESSION_ID}: record followup backlog items" || true
+            fi
+        ) || true
+    fi
     ~/.claude/notify.sh "Overnight session killed — partial report in lifecycle/sessions/${SESSION_ID}/. Session: $SESSION_ID" || true
     exit 130
 }
@@ -1178,6 +1187,7 @@ fi
 
 # Generate morning report (after all PR creation so URLs are available)
 MR_STDERR=$(mktemp -p "${TMPDIR:-/tmp}")
+report_gen_rc=0
 if [[ -n "$TARGET_INTEGRATION_WORKTREE" ]]; then
     PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" TARGET_INTEGRATION_WORKTREE="$TARGET_INTEGRATION_WORKTREE" SESSION_ID="$SESSION_ID" ROUND="$ROUND" python3 -c "
 import json, os, hashlib
@@ -1215,6 +1225,7 @@ log_event(
     log_path=Path(os.environ['EVENTS_PATH']),
 )
 " 2>"$MR_STDERR" || {
+        report_gen_rc=$?
         MR_DETAILS=$(MR_STDERR="$MR_STDERR" python3 -c "
 import json, os
 try:
@@ -1265,6 +1276,7 @@ log_event(
     log_path=Path(os.environ['EVENTS_PATH']),
 )
 " 2>"$MR_STDERR" || {
+        report_gen_rc=$?
         MR_DETAILS=$(MR_STDERR="$MR_STDERR" python3 -c "
 import json, os
 try:
@@ -1282,6 +1294,21 @@ print(json.dumps({'status': 'failed', 'stderr_tail': tail}))
     }
 fi
 rm -f "$MR_STDERR"
+
+# Commit followup backlog items (success-guarded per spec R4).
+if [[ "$report_gen_rc" -eq 0 ]]; then
+    if [[ -n "$WORKTREE_PATH" ]]; then
+        (
+            cd "$WORKTREE_PATH"
+            git add "backlog/" 2>/dev/null || true
+            if ! git diff --cached --quiet; then
+                git commit -m "Overnight session ${SESSION_ID}: record followup backlog items" || true
+            fi
+        ) || true
+    fi
+else
+    log_event "followup_commit_skipped" "$ROUND" "{\"session_id\": \"$SESSION_ID\", \"reason\": \"report_gen_failed\"}" || true
+fi
 
 # ---------------------------------------------------------------------------
 # Commit morning report

@@ -375,7 +375,7 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
             return candidates[0]
 
     # 3. Fallback: substring match via update_item's finder
-    result = _backlog_find_item(feature)
+    result = _backlog_find_item(feature, backlog_dir=backlog_dir)
     return result
 
 
@@ -414,7 +414,10 @@ def _write_back_to_backlog(
             else:
                 fields[key] = value
 
-        _backlog_update_item(item_path, fields, session_id=session_id)
+        backlog_dir = _backlog_dir if _backlog_dir is not None else _PROJECT_ROOT / "backlog"
+        _backlog_update_item(
+            item_path, fields, backlog_dir=backlog_dir, session_id=session_id
+        )
 
     except Exception as exc:
         overnight_log_event(

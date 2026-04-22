@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: a98f7141-94ee-4479-85b3-75187deff6d9
 title: "Route Python-layer backlog writes through worktree checkout"
-status: refined
+status: complete
 priority: high
 type: feature
 parent: 126
@@ -12,7 +12,7 @@ created: 2026-04-21
 updated: 2026-04-22
 lifecycle_slug: route-python-layer-backlog-writes-through-worktree-checkout
 lifecycle_phase: research
-session_id: 547b59d6-60b1-4acb-a597-881c3009d82a
+session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/orchestrator-worktree-escape/research.md

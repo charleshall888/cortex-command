@@ -35,13 +35,16 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from claude.common import TERMINAL_STATUSES, atomic_write  # noqa: E402
 
-BACKLOG_DIR = Path.cwd() / "backlog"
-ARCHIVE_DIR = BACKLOG_DIR / "archive"
 
-# Prefer project-local generate_index.py; fall back to the globally-deployed ~/.local/bin/ version.
-_local_py = BACKLOG_DIR / "generate_index.py"
-_skill_py = Path.home() / ".local" / "bin" / "generate-backlog-index"
-GENERATE_INDEX = _local_py if _local_py.exists() else _skill_py
+def _resolve_generate_index(backlog_dir: Path) -> Path:
+    """Return the generate_index.py script path for the given backlog_dir.
+
+    Prefers the project-local script; falls back to the globally-deployed
+    ``~/.local/bin/generate-backlog-index``.
+    """
+    local_py = backlog_dir / "generate_index.py"
+    skill_py = Path.home() / ".local" / "bin" / "generate-backlog-index"
+    return local_py if local_py.exists() else skill_py
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +127,7 @@ def _parse_inline_str_list(val: str) -> list[str]:
 # Lookup
 # ---------------------------------------------------------------------------
 
-def _find_item(slug_or_uuid: str) -> Path | None:
+def _find_item(slug_or_uuid: str, backlog_dir: Path) -> Path | None:
     """Find a backlog item by slug substring or UUID prefix.
 
     Search order:
@@ -132,11 +135,13 @@ def _find_item(slug_or_uuid: str) -> Path | None:
       2. Exact numeric prefix match (pure-digit queries) or substring match (slug queries)
       3. UUID field match (prefix or full)
     """
-    if not BACKLOG_DIR.is_dir():
+    if backlog_dir is None:
+        raise TypeError("backlog_dir is required")
+    if not backlog_dir.is_dir():
         return None
 
     # Try exact filename match first
-    for p in sorted(BACKLOG_DIR.glob("[0-9]*-*.md")):
+    for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
         # Strip the .md extension and compare
         stem = p.stem  # e.g. "030-cf-tunnel-fallback-polish"
         if stem == slug_or_uuid:
@@ -145,17 +150,17 @@ def _find_item(slug_or_uuid: str) -> Path | None:
     # For pure-numeric queries, match the exact ID prefix to avoid "100" matching
     # "1000-foo.md" when "100-foo.md" has been archived.
     if slug_or_uuid.isdigit():
-        for p in sorted(BACKLOG_DIR.glob("[0-9]*-*.md")):
+        for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
             if p.stem.startswith(f"{slug_or_uuid}-"):
                 return p
     else:
         # Try filename substring match for slug queries
-        for p in sorted(BACKLOG_DIR.glob("[0-9]*-*.md")):
+        for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
             if slug_or_uuid in p.stem:
                 return p
 
     # Try UUID match (reading frontmatter)
-    for p in sorted(BACKLOG_DIR.glob("[0-9]*-*.md")):
+    for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
         text = p.read_text()
         uuid_val = _get_frontmatter_value(text, "uuid")
         if uuid_val and uuid_val.startswith(slug_or_uuid):
@@ -202,6 +207,7 @@ def _remove_uuid_from_blocked_by(
     closed_uuid: str | None,
     closed_id: str | None,
     today: str,
+    backlog_dir: Path,
 ) -> None:
     """Remove the closed item's UUID (or numeric ID) from ``blocked-by``
     arrays in all active backlog items.
@@ -209,7 +215,9 @@ def _remove_uuid_from_blocked_by(
     Handles both UUID strings and legacy integer IDs for backward
     compatibility during migration.
     """
-    if not BACKLOG_DIR.is_dir():
+    if backlog_dir is None:
+        raise TypeError("backlog_dir is required")
+    if not backlog_dir.is_dir():
         return
     if not closed_uuid and not closed_id:
         return
@@ -219,7 +227,7 @@ def _remove_uuid_from_blocked_by(
         re.MULTILINE,
     )
 
-    for p in sorted(BACKLOG_DIR.glob("[0-9]*-*.md")):
+    for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
         text = p.read_text()
         m = pattern.search(text)
         if not m:
@@ -251,12 +259,19 @@ def _remove_uuid_from_blocked_by(
         atomic_write(p, updated)
 
 
-def _check_and_close_parent(item_path: Path, today: str) -> Path | None:
+def _check_and_close_parent(
+    item_path: Path, today: str, backlog_dir: Path
+) -> Path | None:
     """If the item has a ``parent`` field and all siblings are terminal,
     auto-close the parent.
 
     Returns the parent path if it was closed, ``None`` otherwise.
     """
+    if backlog_dir is None:
+        raise TypeError("backlog_dir is required")
+
+    archive_dir = backlog_dir / "archive"
+
     text = item_path.read_text()
     parent_val = _get_frontmatter_value(text, "parent")
     if not parent_val:
@@ -269,12 +284,12 @@ def _check_and_close_parent(item_path: Path, today: str) -> Path | None:
     try:
         parent_id = int(parent_val)
         parent_id_padded = str(parent_id).zfill(3)
-        candidates = sorted(BACKLOG_DIR.glob(f"{parent_id_padded}-*.md"))
+        candidates = sorted(backlog_dir.glob(f"{parent_id_padded}-*.md"))
         if candidates:
             parent_path = candidates[0]
     except ValueError:
         # Might be a UUID — search by UUID field
-        for p in sorted(BACKLOG_DIR.glob("[0-9]*-*.md")):
+        for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
             t = p.read_text()
             uuid_val = _get_frontmatter_value(t, "uuid")
             if uuid_val and uuid_val == parent_val:
@@ -295,7 +310,7 @@ def _check_and_close_parent(item_path: Path, today: str) -> Path | None:
 
     # Collect sibling statuses from both active and archive dirs
     sibling_statuses: list[str] = []
-    for search_dir in [BACKLOG_DIR, ARCHIVE_DIR]:
+    for search_dir in [backlog_dir, archive_dir]:
         if not search_dir.is_dir():
             continue
         for p in sorted(search_dir.glob("[0-9]*-*.md")):
@@ -336,6 +351,7 @@ def _check_and_close_parent(item_path: Path, today: str) -> Path | None:
 def update_item(
     item_path: Path,
     fields: dict[str, Any],
+    backlog_dir: Path,
     session_id: str | None = None,
 ) -> None:
     """Update a backlog item's frontmatter fields atomically in place.
@@ -348,9 +364,14 @@ def update_item(
         item_path: Path to the backlog item ``.md`` file.
         fields: Dict of frontmatter keys to new values.
             Use ``None`` for null/empty values.
+        backlog_dir: Path to the backlog directory. Required — callers must
+            route explicitly through the correct worktree's backlog.
         session_id: Session ID for event attribution. Defaults to
             ``LIFECYCLE_SESSION_ID`` env var or ``"manual"``.
     """
+    if backlog_dir is None:
+        raise TypeError("backlog_dir is required")
+
     today = date.today().isoformat()
     text = item_path.read_text()
 
@@ -401,15 +422,16 @@ def update_item(
 
     # Cascade for terminal status changes
     if new_status is not None and str(new_status) in TERMINAL_STATUSES:
-        _remove_uuid_from_blocked_by(item_uuid, item_id, today)
-        parent_closed = _check_and_close_parent(item_path, today)
+        _remove_uuid_from_blocked_by(item_uuid, item_id, today, backlog_dir)
+        parent_closed = _check_and_close_parent(item_path, today, backlog_dir)
         if parent_closed:
             print(f"Parent epic also closed: {parent_closed}")
 
     # Regenerate index (non-fatal)
-    if GENERATE_INDEX.exists():
+    generate_index = _resolve_generate_index(backlog_dir)
+    if generate_index.exists():
         result = subprocess.run(
-            [sys.executable, str(GENERATE_INDEX)],
+            [sys.executable, str(generate_index)],
             capture_output=True,
         )
         if result.returncode != 0:
@@ -433,6 +455,10 @@ def main() -> None:
         )
         sys.exit(1)
 
+    # CLI-layer cwd resolution — internal callers must pass backlog_dir
+    # explicitly (see spec R3 / update_item signature).
+    BACKLOG_DIR = Path.cwd() / "backlog"
+
     slug_or_uuid = sys.argv[1]
     field_args = sys.argv[2:]
 
@@ -450,12 +476,12 @@ def main() -> None:
             fields[key] = value
 
     # Find the item
-    item_path = _find_item(slug_or_uuid)
+    item_path = _find_item(slug_or_uuid, BACKLOG_DIR)
     if item_path is None:
         print(f"Item not found: {slug_or_uuid}", file=sys.stderr)
         sys.exit(1)
 
-    update_item(item_path, fields)
+    update_item(item_path, fields, BACKLOG_DIR)
     print(f"Updated: {item_path}")
 
 

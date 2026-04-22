@@ -2,13 +2,13 @@
 schema_version: "1"
 uuid: 2cbcf121-190a-468a-b8d3-3fb38dec6be6
 title: "Eliminate home-repo-vs-worktree context drift in overnight runner"
-status: backlog
+status: complete
 priority: critical
 type: epic
 tags: [overnight-runner, worktree, orchestrator-worktree-escape]
 areas: [overnight-runner]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-22
 lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
@@ -40,7 +40,7 @@ This epic lands 4 fixes that together restore the invariant *"overnight runner o
 ## Child tickets
 
 - **#127** Disambiguate orchestrator prompt tokens to stop lexical-priming escape
-- **#128** Install `pre-commit` hook rejecting main commits during overnight sessions
+- **~~#128~~** ~~Install `pre-commit` hook rejecting main commits during overnight sessions~~ — closed `wontfix` 2026-04-21. DR-3 under-priced costs (session-id predicate leaks into interactive sessions, morning-report commit conflict, new git-hook install infrastructure) surfaced during `/lifecycle` clarify. Rely on #127 as the upstream cause fix; reassess defense-in-depth only if residual escape classes appear after #127 lands. See ticket body for full rationale.
 - **#129** Un-silence morning-report commit and backfill 4 historical reports
 - **#130** Route Python-layer backlog writes (followup + frontmatter) through worktree checkout
 

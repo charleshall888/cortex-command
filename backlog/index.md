@@ -2,7 +2,6 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 126 | Eliminate home-repo-vs-worktree context drift in overnight runner | backlog | critical | epic | — | — | — |
 | 82 | Adapt harness to Opus 4.7 (prompt delta + capability adoption) | backlog | high | epic | — | — | — |
 | 100 | Rewrite verification-mindset.md to positive-routing structure under 4.7 literalism | in_progress | high | feature | — | 82 | ✓ |
 | 102 | Ship DR-5 SKILL.md-to-bin parity linter with zero existing violations | backlog | high | feature | 115 | 101 | — |
@@ -20,7 +19,6 @@
 | 121 | Publish cortex-overnight-integration plugin (overnight skill + runner hooks) | backlog | high | feature | 115, 116, 120 | 113 | — |
 | 122 | Publish plugin marketplace manifest for cortex-command | backlog | high | feature | 115, 116, 117, 120, 121 | 113 | — |
 | 123 | Lifecycle skill gracefully degrades autonomous-worktree option when runner absent | backlog | high | feature | 120 | 113 | — |
-| 130 | Route Python-layer backlog writes through worktree checkout | refined | high | feature | — | 126 | ✓ |
 | 132 | Classify /critical-review findings by class and add B-class action surface | refined | high | feature | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | — | 82 | — |
@@ -42,12 +40,10 @@
 
 ## Refined
 
-- **130** Route Python-layer backlog writes through worktree checkout
 - **132** Classify /critical-review findings by class and add B-class action surface
 
 ## Backlog
 
-- **126** Eliminate home-repo-vs-worktree context drift in overnight runner
 - **82** Adapt harness to Opus 4.7 (prompt delta + capability adoption)
 - **113** Distribute cortex-command as cortex CLI + plugin marketplace
 - **8** Auto-rename Claude Code session to active lifecycle feature name

@@ -1,35 +1,5 @@
 [
   {
-    "id": 126,
-    "title": "Eliminate home-repo-vs-worktree context drift in overnight runner",
-    "status": "backlog",
-    "priority": "critical",
-    "type": "epic",
-    "tags": [
-      "overnight-runner",
-      "worktree",
-      "orchestrator-worktree-escape"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-21",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/orchestrator-worktree-escape/research.md",
-    "plan": null,
-    "uuid": "2cbcf121-190a-468a-b8d3-3fb38dec6be6",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 82,
     "title": "Adapt harness to Opus 4.7 (prompt delta + capability adoption)",
     "status": "backlog",
@@ -576,37 +546,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 130,
-    "title": "Route Python-layer backlog writes through worktree checkout",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "overnight-runner",
-      "backlog",
-      "worktree",
-      "orchestrator-worktree-escape"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-22",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "126",
-    "research": null,
-    "spec": "lifecycle/route-python-layer-backlog-writes-through-worktree-checkout/spec.md",
-    "discovery_source": "research/orchestrator-worktree-escape/research.md",
-    "plan": null,
-    "uuid": "a98f7141-94ee-4479-85b3-75187deff6d9",
-    "lifecycle_slug": "route-python-layer-backlog-writes-through-worktree-checkout",
-    "session_id": "547b59d6-60b1-4acb-a597-881c3009d82a",
-    "lifecycle_phase": "complete",
     "schema_version": "1",
     "repo": null
   },

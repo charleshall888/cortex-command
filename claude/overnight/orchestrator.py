@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Optional
 
 from claude.pipeline.parser import parse_master_plan
+from claude.pipeline.state import log_event as pipeline_log_event
 from claude.pipeline.worktree import create_worktree
 
 from claude.overnight.throttle import (
@@ -139,15 +140,30 @@ async def run_batch(config: BatchConfig) -> BatchResult:
         session_id = overnight_state.session_id
         integration_branches = overnight_state.integration_branches
         integration_worktrees = overnight_state.integration_worktrees
-        if integration_branches:
-            outcome_router.set_backlog_dir(Path(next(iter(integration_branches))) / "backlog")
+        if overnight_state.worktree_path:
+            outcome_router.set_backlog_dir(Path(overnight_state.worktree_path) / "backlog")
         for name in feature_names:
             fs = overnight_state.features.get(name, OvernightFeatureStatus())
             spec_paths[name] = fs.spec_path if fs else None
             backlog_ids[name] = fs.backlog_id if fs else None
             recovery_attempts_map[name] = fs.recovery_attempts
             repo_path_map[name] = Path(fs.repo_path).expanduser() if fs.repo_path else None
-    except Exception:
+    except Exception as exc:
+        try:
+            pipeline_log_event(
+                config.pipeline_events_path,
+                {
+                    "event": "state_load_failed",
+                    "exception_type": type(exc).__name__,
+                    "exception_message": str(exc),
+                    "state_path": str(config.overnight_state_path),
+                    "subsequent_writes_target": str(
+                        outcome_router._PROJECT_ROOT / "backlog"
+                    ),
+                },
+            )
+        except Exception:
+            pass
         spec_paths = {name: None for name in feature_names}
         backlog_ids = {name: None for name in feature_names}
         recovery_attempts_map = {name: 0 for name in feature_names}

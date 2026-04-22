@@ -271,7 +271,7 @@ def collect_tool_failures(session_id: str) -> dict[str, dict]:
 
 def create_followup_backlog_items(
     data: ReportData,
-    backlog_dir: Path = Path("backlog"),
+    backlog_dir: Path,
 ) -> list[NewBacklogItem]:
     """Create backlog items for failed, paused, and deferred features.
 
@@ -281,13 +281,16 @@ def create_followup_backlog_items(
 
     Args:
         data: Aggregated report data.
-        backlog_dir: Directory to write new backlog files into.
+        backlog_dir: Directory to write new backlog files into. Required —
+            callers must route explicitly through the session's worktree.
 
     Returns:
         List of NewBacklogItem descriptors for each file written.
     """
     if data.state is None:
         return []
+
+    session_id = os.environ.get("LIFECYCLE_SESSION_ID", "manual")
 
     backlog_dir.mkdir(parents=True, exist_ok=True)
     result: list[NewBacklogItem] = []
@@ -342,7 +345,7 @@ def create_followup_backlog_items(
             f"schema_version: \"1\"\n"
             f"uuid: {item_uuid}\n"
             f"lifecycle_slug: {lifecycle_slug}\n"
-            f"session_id: null\n"
+            f"session_id: {session_id}\n"
             "---\n"
         )
         content = frontmatter + "\n" + body + "\n"
@@ -1432,7 +1435,13 @@ def generate_and_write_report(
         results_dir=results_dir,
     )
     data.pr_urls = pr_urls or {}
-    data.new_backlog_items = create_followup_backlog_items(data)
+    if data.state and data.state.worktree_path:
+        followup_backlog_dir = Path(data.state.worktree_path) / "backlog"
+    else:
+        followup_backlog_dir = _LIFECYCLE_ROOT.parent / "backlog"
+    data.new_backlog_items = create_followup_backlog_items(
+        data, backlog_dir=followup_backlog_dir
+    )
     report = generate_report(data)
 
     # Determine report output path
@@ -1515,7 +1524,13 @@ if __name__ == "__main__":
         )
     else:
         data = collect_report_data()
-    data.new_backlog_items = create_followup_backlog_items(data)
+    if data.state and data.state.worktree_path:
+        followup_backlog_dir = Path(data.state.worktree_path) / "backlog"
+    else:
+        followup_backlog_dir = _LIFECYCLE_ROOT.parent / "backlog"
+    data.new_backlog_items = create_followup_backlog_items(
+        data, backlog_dir=followup_backlog_dir
+    )
     report = generate_report(data)
 
     if args.interrupted:

@@ -34,23 +34,23 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from claude.common import atomic_write  # noqa: E402
 
-BACKLOG_DIR = Path.cwd() / "backlog"
 
-# Prefer project-local generate_index.py; fall back to the shared skill copy.
-_local_py = BACKLOG_DIR / "generate_index.py"
-_skill_py = Path.home() / ".claude" / "skills" / "backlog" / "generate_index.py"
-GENERATE_INDEX = _local_py if _local_py.exists() else _skill_py
+def _resolve_generate_index(backlog_dir: Path) -> Path:
+    """Return the generate_index.py script path for the given backlog_dir."""
+    local_py = backlog_dir / "generate_index.py"
+    skill_py = Path.home() / ".claude" / "skills" / "backlog" / "generate_index.py"
+    return local_py if local_py.exists() else skill_py
 
 
 # ---------------------------------------------------------------------------
 # ID and slug helpers
 # ---------------------------------------------------------------------------
 
-def _get_next_id() -> str:
+def _get_next_id(backlog_dir: Path) -> str:
     """Return the next available numeric ID (no zero-padding for IDs > 999)."""
     ids = [
         int(m.group(1))
-        for p in BACKLOG_DIR.glob("[0-9]*-*.md")
+        for p in backlog_dir.glob("[0-9]*-*.md")
         if (m := re.match(r"^(\d+)-", p.name))
     ]
     next_id = (max(ids) + 1) if ids else 1
@@ -97,17 +97,21 @@ def create_item(
     title: str,
     status: str,
     item_type: str,
+    backlog_dir: Path,
     priority: str = "low",
     rework_of: str | None = None,
     parent: str | None = None,
 ) -> Path:
     """Create a new backlog item atomically and return its path."""
+    if backlog_dir is None:
+        raise TypeError("backlog_dir is required")
+
     today = date.today().isoformat()
     item_uuid = str(uuid4())
-    nnn = _get_next_id()
+    nnn = _get_next_id(backlog_dir)
     slug = _slugify(title)
     filename = f"{nnn}-{slug}.md"
-    item_path = BACKLOG_DIR / filename
+    item_path = backlog_dir / filename
 
     session_id = os.environ.get("LIFECYCLE_SESSION_ID", "manual")
 
@@ -139,8 +143,9 @@ def create_item(
         details={"from": None, "to": status},
     )
 
-    if GENERATE_INDEX.exists():
-        subprocess.run([sys.executable, str(GENERATE_INDEX)], check=False)
+    generate_index = _resolve_generate_index(backlog_dir)
+    if generate_index.exists():
+        subprocess.run([sys.executable, str(generate_index)], check=False)
 
     return item_path
 
@@ -163,11 +168,16 @@ def main() -> None:
     parser.add_argument("--parent", default=None, help="Parent epic ID")
     args = parser.parse_args()
 
+    # CLI-layer cwd resolution — internal callers must pass backlog_dir
+    # explicitly (see spec R3 / create_item signature).
+    BACKLOG_DIR = Path.cwd() / "backlog"
+
     try:
         item_path = create_item(
             title=args.title,
             status=args.status,
             item_type=args.item_type,
+            backlog_dir=BACKLOG_DIR,
             priority=args.priority,
             rework_of=args.rework_of,
             parent=args.parent,
