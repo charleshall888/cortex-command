@@ -1,13 +1,13 @@
-# Morning Report: 2026-04-11
+# Morning Report: 2026-04-21
 
 ## Executive Summary
 
 **Verdict**: Significant issues
-- Features completed: 0/2
+- Features completed: 0/3
 - Features deferred: 0 (questions need answers)
-- Features failed: 2 (paused, need investigation)
-- Rounds completed: 2
-- Duration: 0h 20m
+- Features failed: 3 (paused, need investigation)
+- Rounds completed: 1
+- Duration: 0h 5m
 
 ## Completed Features
 
@@ -23,6 +23,12 @@ No features completed in this run.
 
 - The `bin/overnight-status` script and `/overnight status` subcommand add a new observability tool for overnight sessions (file-based status reporting from within the sandbox). This capability is not reflected in `requirements/observability.md`, which covers the statusline, dashboard, and notification subsystems but does not mention a CLI-based session status tool.
 - The `setup-tmux-socket` recipe adds tmux socket allowlisting to enable sandboxed sessions to access tmux. This sandbox configuration capability is not captured in any requirements document.
+
+### build-daytime-pipeline-module-and-cli
+
+- The `requirements/pipeline.md` Deferral System section (line 87-92) specifies deferral files at `lifecycle/deferred/{feature}-q{NNN}.md` (repo-root-level `deferred/` directory). The new per-feature deferral path (`lifecycle/{feature}/deferred/`) introduced by this implementation is an intentional behavioral change — per-feature deferral isolation — but `requirements/pipeline.md` still describes the old repo-root path. The Outputs field reads: "Deferral file at `lifecycle/deferred/{feature}-q{NNN}.md`".
+- The `requirements/pipeline.md` Dependencies section (line 144) lists `lifecycle/deferred/` as a dependency, which is now superceded for daytime runs by `lifecycle/{feature}/deferred/`.
+- Neither `requirements/project.md` nor `requirements/multi-agent.md` requires updating — the daytime pipeline is additive and consistent with the existing autonomy/worktree model.
 
 ### close-exfiltration-channels-in-sandbox-excluded-commands
 
@@ -65,33 +71,40 @@ No features completed in this run.
 
 No questions were deferred — all ambiguities were resolved by the pipeline.
 
-## Failed Features (2)
+## Failed Features (3)
 
-### permissions-audit-round-2-cfa-android-learnings: unexpected exception: 'requirement text'
+### add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/plan.md'
 - Retry attempts: 0
 - Circuit breaker: not triggered
-- Learnings: `lifecycle/permissions-audit-round-2-cfa-android-learnings/learnings/progress.txt`
+- Learnings: `lifecycle/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/learnings/progress.txt`
 - **Suggested next step**: Review learnings, retry or investigate
 
-### trim-and-instrument-overnight-plan-gen-prompt: unexpected exception: 'requirement text'
+### fix-daytime-pipeline-worktree-atomicity-and-stderr-logging: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/plan.md'
 - Retry attempts: 0
 - Circuit breaker: not triggered
-- Learnings: `lifecycle/trim-and-instrument-overnight-plan-gen-prompt/learnings/progress.txt`
+- Learnings: `lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/learnings/progress.txt`
+- **Suggested next step**: Review learnings, retry or investigate
+
+### replace-daytime-log-sentinel-classification-with-structured-result-file: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/replace-daytime-log-sentinel-classification-with-structured-result-file/plan.md'
+- Retry attempts: 0
+- Circuit breaker: not triggered
+- Learnings: `lifecycle/replace-daytime-log-sentinel-classification-with-structured-result-file/learnings/progress.txt`
 - **Suggested next step**: Review learnings, retry or investigate
 
 ## New Backlog Items
 
-- **#070** [chore] Follow up: permissions-audit-round-2-cfa-android-learnings — failed
-- **#071** [chore] Follow up: trim-and-instrument-overnight-plan-gen-prompt — failed
+- **#101** [chore] Follow up: add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight — failed
+- **#102** [chore] Follow up: fix-daytime-pipeline-worktree-atomicity-and-stderr-logging — failed
+- **#103** [chore] Follow up: replace-daytime-log-sentinel-classification-with-structured-result-file — failed
 
 ## What to Do Next
 
-1. [ ] Investigate 2 failed features
+1. [ ] Investigate 3 failed features
 2. [ ] Run integration tests
 
 ## Run Statistics
 
-- Rounds completed: 2
-- Per-round timing: Round 1: 6m, Round 2: 7m
-- Circuit breaker activations: 1
-- Total features processed: 2
+- Rounds completed: 1
+- Per-round timing: Round 1: 5m
+- Circuit breaker activations: 0
+- Total features processed: 3
