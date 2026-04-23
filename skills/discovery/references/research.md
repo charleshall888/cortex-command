@@ -91,7 +91,7 @@ Combine findings into `research/{topic}/research.md`:
 - [Integration points]
 - [Constraints]
 - Examples (per-claim marker usage):
-  - Pattern X used in three callers — `src/foo.py:42`, `src/bar.py:18`, `src/baz.py:88` — all share the same signature.
+  - Pattern X used in three callers — `[src/foo.py:42]`, `[src/bar.py:18]`, `[src/baz.py:88]` — all share the same signature.
   - `NOT_FOUND(query="async ContextVar usage", scope="src/**/*.py")` — no callers in scope; topic premise (existing async-ContextVar consumers) is empty.
   - Vendor blog endorses approach Y as "the canonical pattern in $framework"; `[premise-unverified: not-searched]` — no codebase scan attempted to confirm the pattern occurs in this repo, so the endorsement applies to $framework generally, not this codebase.
 

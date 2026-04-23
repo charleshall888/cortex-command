@@ -9,16 +9,16 @@ The `/discovery` research protocol does not require that codebase-pointing claim
 ## Requirements
 
 1. **Citation-or-marker rule added to `## Constraints` table at file bottom**. A new row is added to the existing Constraints table at `skills/discovery/references/research.md:134-138` stating: "Citations: codebase-pointing claims must carry an inline `[file:line]` citation traceable to codebase-agent findings, OR an explicit inline `[premise-unverified: not-searched]` marker when the author did not investigate the claim."
-   - **Acceptance**: `awk '/^## Constraints/,/^##[^#]|\Z/' skills/discovery/references/research.md | grep -c "Citations"` = 1.
+   - **Acceptance**: `awk '/^## Constraints$/{p=1; next} p && /^## /{exit} p' skills/discovery/references/research.md | grep -c "Citations"` = 1.
 
 2. **Empty-corpus reporting rule added to `## Constraints` table**. A second new row is added stating: "Empty-corpus reporting: searches that returned no results must be reported inline as `NOT_FOUND(query=<search-string>, scope=<path-or-glob>)` — distinct from the `premise-unverified: not-searched` marker used when no investigation was attempted."
-   - **Acceptance**: `awk '/^## Constraints/,/^##[^#]|\Z/' skills/discovery/references/research.md | grep -c "Empty-corpus reporting"` = 1.
+   - **Acceptance**: `awk '/^## Constraints$/{p=1; next} p && /^## /{exit} p' skills/discovery/references/research.md | grep -c "Empty-corpus reporting"` = 1.
 
 3. **Prerequisites-retargeting instruction added to §5**. The §5 Feasibility Assessment narrative (between lines 66-73) adds an author instruction: "Prerequisites entries describing codebase-state checks (e.g., 'Identify pattern X in {file}') must be resolved during §2 Codebase Analysis — findings move to §2 with citations, or are reported as `NOT_FOUND(query, scope)`. Entries remaining in the §5 Prerequisites column are implementation-sequencing only (work to be done after the approach is committed)." The Prerequisites column structure in the template (research.md:104-107) is unchanged.
    - **Acceptance**: `grep -cF "implementation-sequencing only" skills/discovery/references/research.md` = 1.
 
 4. **Template examples updated in §6 — demonstrate classification judgment, not just syntax**. The `## Codebase Analysis` block inside the §6 Write Research Artifact template (`skills/discovery/references/research.md:79-120`) includes at least three example bullets demonstrating: (a) a grounded claim with a `[file:line]` citation; (b) an empty-corpus finding reported as `NOT_FOUND(query=..., scope=...)`; (c) a claim that could be inferred from external endorsement without codebase evidence (the #092 pattern: a web-endorsed locator not verified in the codebase), correctly flagged with `[premise-unverified: not-searched]` rather than a fabricated citation. The third example teaches the classification heuristic the rule depends on, not merely the marker syntax.
-   - **Acceptance**: `awk '/^## Codebase Analysis/,/^##[^#]/' skills/discovery/references/research.md | grep -cE "\[[^]]+:[0-9]+\]|NOT_FOUND\(|premise-unverified"` ≥ 3.
+   - **Acceptance**: `awk '/^## Codebase Analysis$/{p=1; next} p && /^## /{exit} p' skills/discovery/references/research.md | grep -cE "\[[^]]+:[0-9]+\]|NOT_FOUND\(|premise-unverified"` ≥ 3.
 
 5. **Signal-format contract section added**. A concise format-definition section is added immediately following the two new Constraints rows (or immediately adjacent to the Constraints table), titled `### Signal formats` or inlined into the Constraints rows, defining three literal markers and their allowed values:
    - `[file:line]` — inline citation, e.g., `[skills/discovery/references/research.md:42]`

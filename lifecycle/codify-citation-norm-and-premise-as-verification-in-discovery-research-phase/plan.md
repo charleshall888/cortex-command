@@ -19,9 +19,9 @@ Five additive prose edits to a single file (`skills/discovery/references/researc
   - Bullet style follows the existing pattern: `- **Label**: prose.`
   - Do not introduce a markdown table — the existing structure is a bullet list (the spec uses the word "table" loosely).
 - **Verification**:
-  - `awk '/^## Constraints/,/^##[^#]|\Z/' skills/discovery/references/research.md | grep -c "Citations"` — pass if output = `1`.
-  - `awk '/^## Constraints/,/^##[^#]|\Z/' skills/discovery/references/research.md | grep -c "Empty-corpus reporting"` — pass if output = `1`.
-- **Status**: [x] complete (commit a7692f2 — note: spec awk regex broken on BSD awk; replaced with bare `grep -c "Citations"` = 1 and `grep -c "Empty-corpus reporting"` = 1)
+  - `awk '/^## Constraints$/{p=1; next} p && /^## /{exit} p' skills/discovery/references/research.md | grep -c "Citations"` — pass if output = `1`.
+  - `awk '/^## Constraints$/{p=1; next} p && /^## /{exit} p' skills/discovery/references/research.md | grep -c "Empty-corpus reporting"` — pass if output = `1`.
+- **Status**: [x] complete (commit a7692f2; awk regex later fixed post-completion)
 
 ### Task 2: Add `### Signal formats` subsection following Constraints [x]
 
@@ -83,9 +83,9 @@ Five additive prose edits to a single file (`skills/discovery/references/researc
   - The third example is the load-bearing one: it teaches the classification heuristic that distinguishes a fabricated `[file:line]` from an honest `[premise-unverified: not-searched]`. Critical-review R4 explicitly requires this judgment-not-syntax demonstration.
   - The bullets live INSIDE the markdown code fence (between the ` ```markdown ` open at line 79 and the closing ` ``` ` at line 120). Do not add a code fence around the new bullets; they are part of the surrounding fenced block.
 - **Verification**:
-  - `awk '/^## Codebase Analysis/,/^##[^#]/' skills/discovery/references/research.md | grep -cE "\[[^]]+:[0-9]+\]|NOT_FOUND\(|premise-unverified"` — pass if output ≥ `3`.
+  - `awk '/^## Codebase Analysis$/{p=1; next} p && /^## /{exit} p' skills/discovery/references/research.md | grep -cE "\[[^]]+:[0-9]+\]|NOT_FOUND\(|premise-unverified"` — pass if output ≥ `3`.
   - The three matches must include at least one `[file:line]`, one `NOT_FOUND(`, and one `premise-unverified` (verify visually since the awk slice covers the only `## Codebase Analysis` heading in the file, which is inside the §6 template).
-- **Status**: [x] complete (commit 58f7c4b — fell back to bare grep due to spec awk regex defect)
+- **Status**: [x] complete (commit 58f7c4b; awk regex + grounded-claim example later fixed post-completion to match bracket-form contract)
 
 ## Verification Strategy
 
