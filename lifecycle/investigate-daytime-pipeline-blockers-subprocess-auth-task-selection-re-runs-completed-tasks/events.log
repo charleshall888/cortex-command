@@ -1,0 +1,54 @@
+- ts: 2026-04-23T00:45:12Z
+  event: clarify_critic
+  feature: investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks
+  findings:
+    - "Intent clarity rated High citing 'root-cause both, land fixes or follow-up tickets,' but the source leaves fix-vs-ticket per-finding with no decision rule (no complexity threshold, no time-box, no coupling criterion). Intent is conditional on an un-specified executor judgment."
+    - "Intent clarity reinforced by 'exact reproduction given,' but only Problem 2 has a reproduction recipe. Problem 1 has a bug restatement ('reproduces on any pipeline run from an interactive session without explicit auth env propagation'), not a repro procedure — no command, no expected-vs-actual contract."
+    - "Scope boundedness rated High, but 'enumerated in-scope' overstates the source: in-scope is two bullets (one a negative constraint), with no bounds on which subsystems may be touched — runner.sh modifications, SDK-internal forks, CLI-flag additions, and credentials.json handling are all undetermined."
+    - "'Bounded per-finding decision, not a scope gap' is the orchestrator's gloss, not the source's claim. Without a decision rule, every finding's fix-vs-ticket routing is a mini-scope question — bounded choices are not the same as bounded criteria."
+    - "Requirements alignment High rests on multi-agent.md:84 naming ANTHROPIC_API_KEY, but the ticket itself lists that key as one of three 'possible lines of investigation' — the source frames the auth vector as open. A requirements line naming a variable does not make alignment 'High'; it establishes topic relevance only."
+    - "'requirements/pipeline.md covers dispatch / task selection' is asserted without line reference or quoted passage. pipeline.md talks about feature-level statuses (pending/running/merged/paused), not task-level [x] checkbox semantics. 'Covers' is topic overlap, not normative alignment."
+    - "Complexity rated 'complex' treats Problem 2 as a single unit, but the source presents three alternative hypotheses ('not calling _parse_field_status at all,' 'calling it but ignoring done result,' 'stale or different plan.md') with radically different fix profiles. The rating doesn't acknowledge the variance the source itself telegraphs."
+    - "Criticality 'high' cites 'shared harness infrastructure,' but the source notes the overnight runner works and lifecycle 100 'can be hand-finished by invoking probe-apparatus.sh directly' — a documented manual workaround. The daytime pipeline is one mode among several; 'blocks the core dispatch path' overstates severity."
+  dispositions:
+    apply: 3
+    dismiss: 3
+    ask: 2
+  applied_fixes:
+    - "Revised scope boundedness from High to Medium — source does not enumerate which subsystems may be modified and provides no decision rule for fix-vs-follow-up routing; scope-boundedness is Medium against the source, not High."
+    - "Revised requirements alignment from High to Partial — multi-agent.md:84 and pipeline.md provide topic coverage but no normative constraint on the auth vector or the [x]-skip task-selection contract; alignment is topic-relevant, not normative."
+  dismissals:
+    - finding_index: 1
+      rationale: "Conflates research readiness with intent clarity. Problem 1's reproduction gap is a research-phase concern; the intent statement ('fix subprocess auth propagation in the daytime pipeline so SDK-spawned agents inherit the parent session's auth') is clear without an executable repro recipe. Research can instrument a pipeline run to reproduce."
+    - finding_index: 6
+      rationale: "Complexity tier is an upper-bound gate for Plan/Review scaling. Even if Problem 2's true cause is the simplest hypothesis (one-line wiring fix), the combined two-subsystem investigation (SDK auth path + pipeline task-selection path) plus cross-cutting behavioral effects satisfy clarify.md §5 complex-tier criteria. Tier holds."
+    - finding_index: 7
+      rationale: "Clarify.md §5: 'Default to high for skill/lifecycle/hook/workflow changes. Default to medium only for clearly isolated, easily-reverted tooling changes.' The daytime pipeline is shared workflow infrastructure under active iteration, not an isolated tweak; probe-apparatus.sh is a per-lifecycle manual workaround, not a systemic fallback. The High default holds."
+  status: ok
+{"ts": "2026-04-23T00:50:36Z", "event": "lifecycle_start", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "tier": "complex", "criticality": "high"}
+{"ts": "2026-04-23T00:50:36Z", "event": "phase_transition", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "from": "clarify", "to": "research"}
+{"ts": "2026-04-23T01:08:02Z", "event": "phase_transition", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "from": "research", "to": "specify"}
+{"ts": "2026-04-23T01:25:38Z", "event": "orchestrator_review", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-23T01:43:59Z", "event": "phase_transition", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "from": "specify", "to": "plan"}
+{"ts": "2026-04-23T03:24:00Z", "event": "orchestrator_review", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-22T00:00:00Z", "event": "plan_approved", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "by": "user"}
+{"ts": "2026-04-22T00:00:00Z", "event": "phase_transition", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "from": "plan", "to": "implement"}
+{"ts": "2026-04-22T13:00:00Z", "event": "batch_dispatch", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "batch": 0, "tasks": [1, 7, 8, 10]}
+{"ts": "2026-04-22T13:05:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T13:05:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 7, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T13:05:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 8, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T13:05:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 10, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T13:05:00Z", "event": "batch_dispatch", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "batch": 1, "tasks": [2, 3, 5, 9]}
+{"ts": "2026-04-22T13:15:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-22T13:15:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 3, "batch": 1, "status": "success"}
+{"ts": "2026-04-22T13:15:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 5, "batch": 1, "status": "success"}
+{"ts": "2026-04-22T13:15:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 9, "batch": 1, "status": "success"}
+{"ts": "2026-04-22T13:15:00Z", "event": "batch_dispatch", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "batch": 2, "tasks": [4, 6]}
+{"ts": "2026-04-22T13:20:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 4, "batch": 2, "status": "success"}
+{"ts": "2026-04-22T13:20:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 6, "batch": 2, "status": "success"}
+{"ts": "2026-04-22T13:20:00Z", "event": "batch_dispatch", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "batch": 3, "tasks": [11]}
+{"ts": "2026-04-22T13:25:00Z", "event": "task_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "task": 11, "batch": 3, "status": "success"}
+{"ts": "2026-04-22T13:30:00Z", "event": "phase_transition", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-22T13:40:00Z", "event": "review_verdict", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-22T13:40:00Z", "event": "phase_transition", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "from": "review", "to": "complete"}
+{"ts": "2026-04-22T13:45:00Z", "event": "feature_complete", "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks", "tasks_total": 11, "rework_cycles": 1}
