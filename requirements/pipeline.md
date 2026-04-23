@@ -23,6 +23,8 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - Artifact commits (lifecycle files, backlog status updates, session data) land on the integration branch, not local `main` — they travel with the PR
   - The morning report commit is the only runner commit that stays on local `main` (needed before PR merge for morning review to read)
   - Budget exhaustion transitions the session to `paused` without aborting in-flight features
+  - Home-repo integration PR is always created (home-repo is an always-participant); cross-repo PRs are opt-in per-feature and skip when the repo contributed zero merges. On zero-merge home-repo sessions the PR is opened as a draft with a `[ZERO PROGRESS]` title prefix to block accidental merge; `integration_pr_flipped_once` (session-scoped marker in `overnight-state.json`) gates the resume-flow state-flip so the runner defers to human action after the first flip or a persistent `gh pr ready` failure
+  - `runner.sh --dry-run` is a supported test-affordance mode that echoes (instead of executing) PR-side-effect calls (`gh pr create`, `gh pr ready`, `git push`, `notify.sh`) and assertable state writes; it rejects invocation when any feature is still pending. Regression coverage lives in `tests/test_runner_pr_gating.py`
 - **Priority**: must-have
 
 ### Feature Execution and Failure Handling

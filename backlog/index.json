@@ -112,7 +112,7 @@
     "uuid": "279717cb-b00f-46aa-8180-bbad65e7eb4c",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -1034,36 +1034,6 @@
     "repo": null
   },
   {
-    "id": 131,
-    "title": "Gate overnight PR creation on merged>0 (draft on zero-merge)",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "overnight-runner",
-      "pr",
-      "orchestrator-worktree-escape"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-22",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/gate-overnight-pr-creation-on-merged-over-zero/spec.md",
-    "discovery_source": "research/orchestrator-worktree-escape/research.md",
-    "plan": null,
-    "uuid": "5e103f2e-fd3d-4890-84a5-c67d6adac785",
-    "lifecycle_slug": "gate-overnight-pr-creation-on-merged-over-zero",
-    "session_id": "22641279-0269-4938-9811-01c410aa381c",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 134,
     "title": "Clean up active-session.json when overnight session transitions to phase:complete",
     "status": "backlog",
@@ -1120,7 +1090,7 @@
   {
     "id": 138,
     "title": "Codify citation norm and premise-as-verification in /discovery research phase",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -1141,9 +1111,9 @@
     "discovery_source": "research/audit-and-improve-discovery-skill-rigor/research.md",
     "plan": null,
     "uuid": "72f5acad-4544-46b2-8070-dfd1257d69b9",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "codify-citation-norm-and-premise-as-verification-in-discovery-research-phase",
+    "session_id": "7c8876dd-75d4-4a7a-a13e-f1f57fd1d2b8",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
