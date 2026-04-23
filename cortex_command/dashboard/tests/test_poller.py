@@ -14,7 +14,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from claude.dashboard.poller import DashboardState, run_polling
+from cortex_command.dashboard.poller import DashboardState, run_polling
 
 
 class TestDashboardStateDefaults(unittest.TestCase):

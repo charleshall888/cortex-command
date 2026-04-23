@@ -24,14 +24,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from claude.pipeline.dispatch import (
+from cortex_command.pipeline.dispatch import (
     dispatch_task,
     ERROR_RECOVERY,
     MODEL_ESCALATION_LADDER,
     resolve_model,
 )
-from claude.pipeline.state import log_event
-from claude.pipeline.worktree import cleanup_stale_lock
+from cortex_command.pipeline.state import log_event
+from cortex_command.pipeline.worktree import cleanup_stale_lock
 
 
 # ---------------------------------------------------------------------------

@@ -7,14 +7,14 @@
 - **Expected**: The silent try/except at `claude/overnight/report.py:1467-1474` is removed or rewritten so any `write_report(..., path=latest_copy_path)` exception propagates (or is re-raised after logging). No more `warning: failed to write latest-copy` swallow.
 - **Actual**: The file now has a naked `write_report(report, path=latest_copy_path)` at line 1467 with no surrounding try/except. The function relies on `write_report`'s own atomic-write tempfile cleanup (lines 1369–1384) and propagates exceptions naturally to the runner's Python block.
   - `grep -c 'warning: failed to write latest-copy' claude/overnight/report.py` = 0 (PASS).
-  - AST check: `python3 -c "import claude.overnight.report as r; import inspect, ast; ..."` exits 0 (PASS).
+  - AST check: `python3 -c "import cortex_command.overnight.report as r; import inspect, ast; ..."` exits 0 (PASS).
 - **Verdict**: PASS
 - **Notes**: Simplest fix — delete the wrapper. The caller (runner.sh) handles the non-zero exit via the new failure-path fallback in Req 3.
 
 ### Requirement 2: Register new event names in events.py:EVENT_TYPES
 
 - **Expected**: `MORNING_REPORT_GENERATE_RESULT = "morning_report_generate_result"` and `MORNING_REPORT_COMMIT_RESULT = "morning_report_commit_result"` declared as constants and included in the `EVENT_TYPES` tuple.
-- **Actual**: `claude/overnight/events.py:77-78` declares both constants; `events.py:128-129` adds them to the tuple. `grep -c '^MORNING_REPORT_GENERATE_RESULT\|^MORNING_REPORT_COMMIT_RESULT' claude/overnight/events.py` = 2 (PASS). Python import check `from claude.overnight.events import EVENT_TYPES; assert ...` exits 0 (PASS).
+- **Actual**: `claude/overnight/events.py:77-78` declares both constants; `events.py:128-129` adds them to the tuple. `grep -c '^MORNING_REPORT_GENERATE_RESULT\|^MORNING_REPORT_COMMIT_RESULT' claude/overnight/events.py` = 2 (PASS). Python import check `from cortex_command.overnight.events import EVENT_TYPES; assert ...` exits 0 (PASS).
 - **Verdict**: PASS
 - **Notes**: Task 2 commit `443deff` is the ancestor of all three emission commits (`b2fc28f`, `b1dfb78`, `5f90d73`), verified via `git merge-base --is-ancestor` (all exit 0). Order constraint honored — no branch state with runner.sh emission but without the EVENT_TYPES registry entry.
 
@@ -139,9 +139,9 @@
 | Command | Exit | Result |
 |---|---|---|
 | `grep -c 'warning: failed to write latest-copy' claude/overnight/report.py` | 0 | PASS (=0) |
-| `python3 -c "import claude.overnight.report as r; ...AST check..."` | 0 | PASS |
+| `python3 -c "import cortex_command.overnight.report as r; ...AST check..."` | 0 | PASS |
 | `grep -c '^MORNING_REPORT_GENERATE_RESULT\|^MORNING_REPORT_COMMIT_RESULT' claude/overnight/events.py` | 0 | PASS (=2) |
-| `python3 -c "from claude.overnight.events import EVENT_TYPES; assert ..."` | 0 | PASS |
+| `python3 -c "from cortex_command.overnight.events import EVENT_TYPES; assert ..."` | 0 | PASS |
 | `grep -c 'git add "lifecycle/sessions/.*morning-report.md"' claude/overnight/runner.sh` | 0 | PASS (=1) |
 | `grep -c '^lifecycle/sessions/\*/morning-report\.md$' claude/overnight/sync-allowlist.conf` | 0 | PASS (=0) |
 | `grep -c '^lifecycle/morning-report\.md$' claude/overnight/sync-allowlist.conf` | 0 | PASS (=1) |

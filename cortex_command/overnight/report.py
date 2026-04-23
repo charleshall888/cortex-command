@@ -22,9 +22,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from claude.common import atomic_write, slugify
+from cortex_command.common import atomic_write, slugify
 
-from claude.overnight.deferral import (
+from cortex_command.overnight.deferral import (
     DEFAULT_DEFERRED_DIR,
     SEVERITY_BLOCKING,
     SEVERITY_INFORMATIONAL,
@@ -32,8 +32,8 @@ from claude.overnight.deferral import (
     DeferralQuestion,
     read_deferrals,
 )
-from claude.overnight.events import DEFAULT_LOG_PATH, read_events
-from claude.overnight.state import DEFAULT_STATE_PATH, OvernightState, _LIFECYCLE_ROOT, load_state, session_dir
+from cortex_command.overnight.events import DEFAULT_LOG_PATH, read_events
+from cortex_command.overnight.state import DEFAULT_STATE_PATH, OvernightState, _LIFECYCLE_ROOT, load_state, session_dir
 
 
 # ---------------------------------------------------------------------------
@@ -1465,7 +1465,7 @@ def generate_and_write_report(
     """Convenience entry point: collect data, generate, write, and notify.
 
     Called by the bash runner post-loop:
-        python3 -c "from claude.overnight.report import generate_and_write_report; generate_and_write_report()"
+        python3 -c "from cortex_command.overnight.report import generate_and_write_report; generate_and_write_report()"
 
     Args:
         pr_urls: Optional mapping of os.path.realpath(repo_path) -> PR URL.

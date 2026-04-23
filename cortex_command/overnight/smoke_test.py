@@ -17,8 +17,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from claude.overnight.orchestrator import BatchConfig, run_batch
-from claude.pipeline.worktree import cleanup_worktree, create_worktree
+from cortex_command.overnight.orchestrator import BatchConfig, run_batch
+from cortex_command.pipeline.worktree import cleanup_worktree, create_worktree
 
 # ---------------------------------------------------------------------------
 # Constants

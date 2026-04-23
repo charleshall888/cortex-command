@@ -9,7 +9,7 @@ import tempfile
 import pytest
 from pathlib import Path
 
-from claude.overnight.backlog import (
+from cortex_command.overnight.backlog import (
     BacklogItem,
     filter_ready,
     group_into_batches,
@@ -786,7 +786,7 @@ def test_intra_session_round_assignment() -> None:
             for item in batch.items:
                 slug_to_batch_id[item.lifecycle_slug or item.title] = batch.batch_id
 
-        from claude.overnight.backlog import Batch as _Batch
+        from cortex_command.overnight.backlog import Batch as _Batch
         batches_by_id: dict[int, _Batch] = {b.batch_id: b for b in batches}
 
         intra_session_deps: dict[str, list[str]] = {}

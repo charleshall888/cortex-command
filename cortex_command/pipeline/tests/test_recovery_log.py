@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from claude.pipeline.merge_recovery import write_recovery_log_entry
+from cortex_command.pipeline.merge_recovery import write_recovery_log_entry
 
 
 # ---------------------------------------------------------------------------

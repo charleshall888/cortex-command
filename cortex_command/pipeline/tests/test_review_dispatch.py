@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from claude.pipeline.review_dispatch import parse_verdict
+from cortex_command.pipeline.review_dispatch import parse_verdict
 
 
 class TestParseVerdict:

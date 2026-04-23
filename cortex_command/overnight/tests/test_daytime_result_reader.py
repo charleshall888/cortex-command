@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from claude.overnight.daytime_result_reader import (
+from cortex_command.overnight.daytime_result_reader import (
     _MSG_ABSENT,
     _MSG_NON_TERMINAL,
     _MSG_TERMINAL,

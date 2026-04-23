@@ -18,9 +18,9 @@ from unittest.mock import patch
 
 # conftest.py runs before this module under pytest and installs the SDK stub.
 # Under plain unittest, we call _install_sdk_stub() directly here.
-from claude.pipeline.tests.conftest import _install_sdk_stub
+from cortex_command.pipeline.tests.conftest import _install_sdk_stub
 _install_sdk_stub()
-import claude.pipeline.dispatch as _dispatch_module
+import cortex_command.pipeline.dispatch as _dispatch_module
 
 # Pull stub types from the installed stub module so isinstance checks in
 # dispatch.py and the types used in test message construction match exactly.

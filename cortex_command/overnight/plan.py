@@ -18,9 +18,9 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from claude.common import atomic_write, slugify
-from claude.overnight.backlog import BacklogItem, Batch, SelectionResult
-from claude.overnight.state import OvernightFeatureStatus, OvernightState, save_state, session_dir
+from cortex_command.common import atomic_write, slugify
+from cortex_command.overnight.backlog import BacklogItem, Batch, SelectionResult
+from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState, save_state, session_dir
 
 _LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"
 

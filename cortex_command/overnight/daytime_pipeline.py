@@ -26,21 +26,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from claude.overnight.auth import ensure_sdk_auth
-from claude.overnight.batch_runner import BatchConfig
-from claude.overnight.deferral import DEFAULT_DEFERRED_DIR
-from claude.overnight.feature_executor import execute_feature
-from claude.overnight.orchestrator import BatchResult
-from claude.overnight.outcome_router import OutcomeContext, apply_feature_result
-from claude.overnight.state import (
+from cortex_command.overnight.auth import ensure_sdk_auth
+from cortex_command.overnight.batch_runner import BatchConfig
+from cortex_command.overnight.deferral import DEFAULT_DEFERRED_DIR
+from cortex_command.overnight.feature_executor import execute_feature
+from cortex_command.overnight.orchestrator import BatchResult
+from cortex_command.overnight.outcome_router import OutcomeContext, apply_feature_result
+from cortex_command.overnight.state import (
     DaytimeResult,
     OvernightFeatureStatus,
     OvernightState,
     save_daytime_result,
     save_state,
 )
-from claude.overnight.types import CircuitBreakerState
-from claude.pipeline.worktree import cleanup_worktree, create_worktree
+from cortex_command.overnight.types import CircuitBreakerState
+from cortex_command.pipeline.worktree import cleanup_worktree, create_worktree
 
 # Compiled regex for PR URL scanning (used by _scan_pr_url).
 _PR_URL_RE = re.compile(r"https://github\.com/[^/\s]+/[^/\s]+/pull/[0-9]+")

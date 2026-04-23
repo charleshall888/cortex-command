@@ -19,8 +19,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from claude.overnight.backlog import BacklogItem, Batch, SelectionResult
-from claude.overnight.plan import initialize_overnight_state
+from cortex_command.overnight.backlog import BacklogItem, Batch, SelectionResult
+from cortex_command.overnight.plan import initialize_overnight_state
 
 
 def _make_selection_with_repos(repos: list[str | None]) -> SelectionResult:

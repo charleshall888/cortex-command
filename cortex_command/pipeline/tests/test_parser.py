@@ -15,7 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from claude.pipeline.parser import (
+from cortex_command.pipeline.parser import (
     FeaturePlan,
     parse_feature_plan,
     parse_master_plan,

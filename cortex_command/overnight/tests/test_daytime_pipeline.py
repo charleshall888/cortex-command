@@ -18,16 +18,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from claude.overnight import daytime_pipeline
-from claude.overnight.brain import BrainAction, BrainDecision
-from claude.overnight.daytime_pipeline import run_daytime
-from claude.overnight.feature_executor import execute_feature
-from claude.overnight.orchestrator import BatchResult
-from claude.overnight.outcome_router import (
+from cortex_command.overnight import daytime_pipeline
+from cortex_command.overnight.brain import BrainAction, BrainDecision
+from cortex_command.overnight.daytime_pipeline import run_daytime
+from cortex_command.overnight.feature_executor import execute_feature
+from cortex_command.overnight.orchestrator import BatchResult
+from cortex_command.overnight.outcome_router import (
     OutcomeContext,
     apply_feature_result,
 )
-from claude.overnight.types import CircuitBreakerState, FeatureResult
+from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
 
 
 def _make_ctx(feature: str = "feat") -> OutcomeContext:
@@ -331,8 +331,8 @@ class TestDeferredDirThreadingFeatureExecutor(
     async def test_execute_feature_forwards_deferred_dir_to_write_deferral(
         self,
     ) -> None:
-        from claude.pipeline.parser import FeaturePlan, FeatureTask
-        from claude.pipeline.retry import RetryResult
+        from cortex_command.pipeline.parser import FeaturePlan, FeatureTask
+        from cortex_command.pipeline.retry import RetryResult
 
         feature = "feat"
         custom_dir = Path("/custom")

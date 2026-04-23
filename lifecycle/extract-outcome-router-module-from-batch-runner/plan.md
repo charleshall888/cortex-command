@@ -14,12 +14,12 @@ Build `outcome_router.py` fully alongside `batch_runner.py` (Tasks 1–4 — no 
 - **Context**:
   - Follow `claude/overnight/feature_executor.py` lines 1–25 as the structural pattern for module header and TYPE_CHECKING guard.
   - `from __future__ import annotations` must be the very first line.
-  - TYPE_CHECKING guard: `if TYPE_CHECKING: from claude.overnight.batch_runner import BatchResult, BatchConfig` — same pattern as `feature_executor.py` lines 20–21.
+  - TYPE_CHECKING guard: `if TYPE_CHECKING: from cortex_command.overnight.batch_runner import BatchResult, BatchConfig` — same pattern as `feature_executor.py` lines 20–21.
   - `OutcomeContext` is a `@dataclass` with these 13 fields: `batch_result: BatchResult`, `lock: asyncio.Lock`, `consecutive_pauses_ref: list[int]`, `recovery_attempts_map: dict[str, int]`, `worktree_paths: dict[str, Path]`, `worktree_branches: dict[str, str]`, `repo_path_map: dict[str, Path | None]`, `integration_worktrees: dict[str, Path]`, `integration_branches: dict[str, str]`, `session_id: str`, `backlog_ids: dict[str, int | None]`, `feature_names: list[str]`, `config: BatchConfig`.
   - `FeatureResult` is imported from `claude.overnight.types` (runtime import — not under TYPE_CHECKING).
   - `CIRCUIT_BREAKER_THRESHOLD` from `claude.overnight.constants`. `asyncio`, `Path`, `dataclasses.dataclass`, `typing.TYPE_CHECKING` are stdlib.
 - **Verification**:
-  - `python3 -c "from claude.overnight import outcome_router"` — pass if exit 0
+  - `python3 -c "from cortex_command.overnight import outcome_router"` — pass if exit 0
   - `grep 'from __future__ import annotations' claude/overnight/outcome_router.py` — pass if exit 0
   - `grep -c 'class OutcomeContext' claude/overnight/outcome_router.py` = 1
 
@@ -42,7 +42,7 @@ Build `outcome_router.py` fully alongside `batch_runner.py` (Tasks 1–4 — no 
   - **Whole-function copy**: copy each function from the `def` line through the last line of the function body — not just the `def` line.
 - **Verification**:
   - `grep -c 'def _effective_base_branch\|def _effective_merge_repo_path\|def _get_changed_files\|def _classify_no_commit\|def _find_backlog_item_path\|def _write_back_to_backlog' claude/overnight/outcome_router.py` = 6
-  - `python3 -c "from claude.overnight import outcome_router"` — pass if exit 0
+  - `python3 -c "from cortex_command.overnight import outcome_router"` — pass if exit 0
 
 ---
 
@@ -61,7 +61,7 @@ Build `outcome_router.py` fully alongside `batch_runner.py` (Tasks 1–4 — no 
 - **Verification**:
   - `grep -c 'def _apply_feature_result' claude/overnight/outcome_router.py` = 1
   - `grep -c 'CIRCUIT_BREAKER_THRESHOLD' claude/overnight/outcome_router.py` ≥ 1
-  - `python3 -c "from claude.overnight import outcome_router"` — pass if exit 0
+  - `python3 -c "from cortex_command.overnight import outcome_router"` — pass if exit 0
 
 ---
 
@@ -78,13 +78,13 @@ Build `outcome_router.py` fully alongside `batch_runner.py` (Tasks 1–4 — no 
     2. After block exits, check `need_recovery` flag set inside the block.
     3. If `need_recovery`: increment `ctx.recovery_attempts_map[name]` (before dispatch, ~line 1169), then call `await recover_test_failure(...)` outside the lock.
     4. Second `async with ctx.lock:` — route recovery result; second circuit-breaker check site belongs here (~line 1266, site 2 of 2).
-  - `dispatch_review` import: top-level `from claude.pipeline.review_dispatch import dispatch_review` (no lazy import needed — no circular dependency).
+  - `dispatch_review` import: top-level `from cortex_command.pipeline.review_dispatch import dispatch_review` (no lazy import needed — no circular dependency).
   - `requires_review`, `read_tier`, `read_criticality`, `write_deferral`: find their import sources in `batch_runner.py`'s module-level imports and replicate.
   - After this task `CIRCUIT_BREAKER_THRESHOLD` must appear ≥ 2 times total in `outcome_router.py`.
 - **Verification**:
   - `grep -c 'async def apply_feature_result' claude/overnight/outcome_router.py` = 1
   - `grep -c 'CIRCUIT_BREAKER_THRESHOLD' claude/overnight/outcome_router.py` — pass if result ≥ 2
-  - `python3 -c "import claude.overnight.batch_runner"` — pass if exit 0 (no circular import)
+  - `python3 -c "import cortex_command.overnight.batch_runner"` — pass if exit 0 (no circular import)
 
 ---
 
@@ -146,7 +146,7 @@ Build `outcome_router.py` fully alongside `batch_runner.py` (Tasks 1–4 — no 
 
 ### [x] Task 8: Remove moved functions + collapse `_accumulate_result` shim in `batch_runner.py`
 - **Files**: `claude/overnight/batch_runner.py`
-- **What**: Delete the 7 helpers and `_apply_feature_result` from `batch_runner.py` (each function entirely — `def` line + full body); replace the `_accumulate_result` closure body with the ~40-line shim; add `from claude.overnight import outcome_router` and `from claude.overnight.outcome_router import OutcomeContext` to imports; remove now-dead imports.
+- **What**: Delete the 7 helpers and `_apply_feature_result` from `batch_runner.py` (each function entirely — `def` line + full body); replace the `_accumulate_result` closure body with the ~40-line shim; add `from cortex_command.overnight import outcome_router` and `from cortex_command.overnight.outcome_router import OutcomeContext` to imports; remove now-dead imports.
 - **Depends on**: [4]
 - **Complexity**: complex
 - **Context**:
@@ -161,7 +161,7 @@ Build `outcome_router.py` fully alongside `batch_runner.py` (Tasks 1–4 — no 
   - **"Entirely" means**: from the `def` line through the last line of the function body (the last line that is indented as part of the function). After deletion, run `python3 -m py_compile claude/overnight/batch_runner.py` to confirm no syntax errors from orphaned indented code.
   - **Now-dead imports to remove** (verify each against remaining code — do not remove if still referenced):
     - `import hashlib` (~line 16) — only used by `_get_changed_files`
-    - `from claude.pipeline.conflict import ConflictClassification, dispatch_repair_agent, resolve_trivial_conflict` (~line 35) — only used by the deleted helpers
+    - `from cortex_command.pipeline.conflict import ConflictClassification, dispatch_repair_agent, resolve_trivial_conflict` (~line 35) — only used by the deleted helpers
     - The `from backlog.update_item import ...` imports (~lines 392–393) — only used by `_find_backlog_item_path` / `_write_back_to_backlog`
     - The `_OVERNIGHT_TO_BACKLOG` dict (~lines 398–419), `_backlog_dir` global, and `sys.path` mutation block (~lines 376–379) — only used by deleted helpers
     - `set_backlog_dir` function (~line 386) — only writes `_backlog_dir` which is now unused; also delete its call site in `run_batch` (~line 866)
@@ -186,15 +186,15 @@ Build `outcome_router.py` fully alongside `batch_runner.py` (Tasks 1–4 — no 
 - **Depends on**: [8]
 - **Complexity**: complex
 - **Context**:
-  - **`test_no_commit_classification.py`**: This file imports `_classify_no_commit` directly from `batch_runner` (now deleted). Update the import to `from claude.overnight.outcome_router import _classify_no_commit`.
+  - **`test_no_commit_classification.py`**: This file imports `_classify_no_commit` directly from `batch_runner` (now deleted). Update the import to `from cortex_command.overnight.outcome_router import _classify_no_commit`.
   - **`test_lead_unit.py` — top-level name-bound imports (~lines 21–29)**:
-    The file contains `from claude.overnight.batch_runner import _apply_feature_result, _effective_merge_repo_path, ...` (and possibly other moved symbols). These name-bound imports resolve to functions that no longer exist in `batch_runner`. Update them: add `from claude.overnight.outcome_router import _apply_feature_result, _effective_merge_repo_path` (and any other moved symbols imported here). Direct call sites like `_apply_feature_result(...)` at ~lines 112, 205, 229, 514, 749, 811, 829, 848, 867, 892, 928, 947 and `_effective_merge_repo_path(...)` at ~lines 592, 611, 631, 666, 684 will continue to work correctly once the import is updated.
-  - **`test_lead_unit.py` — `TestApplyFeatureResult` family (~lines 93, 699, 775, 907)**: Add `import claude.overnight.outcome_router as outcome_router_module` alongside the existing `batch_runner_module` binding. Replace `patch.object(batch_runner_module, '<symbol>', ...)` → `patch.object(outcome_router_module, '<symbol>', ...)` for all moved symbols: `_apply_feature_result`, `_write_back_to_backlog`, `_get_changed_files`, `merge_feature`, `recover_test_failure`, `requires_review`, `read_tier`, `read_criticality`, `write_deferral`, `_effective_base_branch`, `_effective_merge_repo_path`. `dispatch_review` is already patched at `claude.pipeline.review_dispatch.dispatch_review` — do NOT change.
+    The file contains `from cortex_command.overnight.batch_runner import _apply_feature_result, _effective_merge_repo_path, ...` (and possibly other moved symbols). These name-bound imports resolve to functions that no longer exist in `batch_runner`. Update them: add `from cortex_command.overnight.outcome_router import _apply_feature_result, _effective_merge_repo_path` (and any other moved symbols imported here). Direct call sites like `_apply_feature_result(...)` at ~lines 112, 205, 229, 514, 749, 811, 829, 848, 867, 892, 928, 947 and `_effective_merge_repo_path(...)` at ~lines 592, 611, 631, 666, 684 will continue to work correctly once the import is updated.
+  - **`test_lead_unit.py` — `TestApplyFeatureResult` family (~lines 93, 699, 775, 907)**: Add `import cortex_command.overnight.outcome_router as outcome_router_module` alongside the existing `batch_runner_module` binding. Replace `patch.object(batch_runner_module, '<symbol>', ...)` → `patch.object(outcome_router_module, '<symbol>', ...)` for all moved symbols: `_apply_feature_result`, `_write_back_to_backlog`, `_get_changed_files`, `merge_feature`, `recover_test_failure`, `requires_review`, `read_tier`, `read_criticality`, `write_deferral`, `_effective_base_branch`, `_effective_merge_repo_path`. `dispatch_review` is already patched at `claude.pipeline.review_dispatch.dispatch_review` — do NOT change.
   - **`test_lead_unit.py` — `TestAccumulateResultViaBatch._install_common_patches` (~line 1449)**: Migrate 8 patch strings: `'claude.overnight.batch_runner.merge_feature'` → `'claude.overnight.outcome_router.merge_feature'` (and same for `recover_test_failure`, `_write_back_to_backlog`, `_get_changed_files`, `requires_review`, `read_tier`, `read_criticality`, `write_deferral`). Symbols that stay at `batch_runner.*`: `parse_master_plan`, `create_worktree`, `load_state`, `save_state`, `load_throttle_config`, `ConcurrencyManager`, `execute_feature`, `cleanup_worktree`, `save_batch_result`, `overnight_log_event`, `transition`.
   - Scan the full file for any other `batch_runner` references to moved symbols not covered above.
 - **Verification**:
   - `grep 'batch_runner_module\|batch_runner\.' claude/overnight/tests/test_lead_unit.py | grep -c '_apply_feature_result\|_write_back_to_backlog\|merge_feature\|recover_test_failure'` = 0
-  - `grep -c 'from claude.overnight.batch_runner import _classify_no_commit' claude/overnight/tests/test_no_commit_classification.py` = 0
+  - `grep -c 'from cortex_command.overnight.batch_runner import _classify_no_commit' claude/overnight/tests/test_no_commit_classification.py` = 0
   - `just test` — pass if exit 0
 
 ---
@@ -202,7 +202,7 @@ Build `outcome_router.py` fully alongside `batch_runner.py` (Tasks 1–4 — no 
 ## Verification Strategy
 
 After all tasks complete, `just test` must exit 0 with no new failures (Task 9's gate). Spot-checks:
-1. `python3 -c "import claude.overnight.batch_runner; import claude.overnight.outcome_router"` — no circular import
+1. `python3 -c "import cortex_command.overnight.batch_runner; import cortex_command.overnight.outcome_router"` — no circular import
 2. `grep -c 'def _apply_feature_result\|def _write_back_to_backlog' claude/overnight/batch_runner.py` = 0
 3. `grep -c 'CIRCUIT_BREAKER_THRESHOLD' claude/overnight/outcome_router.py` ≥ 2
 4. `python3 -m claude.overnight.batch_runner --help` exits 0

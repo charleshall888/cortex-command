@@ -16,8 +16,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from claude.overnight.events import INTERRUPTED, events_log_path, log_event
-from claude.overnight.state import load_state, save_state, update_feature_status
+from cortex_command.overnight.events import INTERRUPTED, events_log_path, log_event
+from cortex_command.overnight.state import load_state, save_state, update_feature_status
 
 
 def _worktree_path(feature: str) -> Path:

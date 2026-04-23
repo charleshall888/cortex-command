@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from claude.overnight import events
-from claude.overnight.events import EVENT_TYPES, log_event
+from cortex_command.overnight import events
+from cortex_command.overnight.events import EVENT_TYPES, log_event
 
 REPO_ROOT = Path(__file__).parent.parent
 

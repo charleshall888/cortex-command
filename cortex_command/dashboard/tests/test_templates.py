@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import unittest
 
-from claude.dashboard.app import templates
-from claude.dashboard.poller import DashboardState
+from cortex_command.dashboard.app import templates
+from cortex_command.dashboard.poller import DashboardState
 
 
 def _make_overnight_fixture() -> dict:

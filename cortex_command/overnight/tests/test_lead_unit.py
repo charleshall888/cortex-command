@@ -18,22 +18,22 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import asyncio
 
-import claude.overnight.orchestrator as orchestrator_module
-import claude.overnight.feature_executor as feature_executor_module
-import claude.overnight.outcome_router as outcome_router_module
-from claude.overnight.orchestrator import (
+import cortex_command.overnight.orchestrator as orchestrator_module
+import cortex_command.overnight.feature_executor as feature_executor_module
+import cortex_command.overnight.outcome_router as outcome_router_module
+from cortex_command.overnight.orchestrator import (
     BatchResult,
     BatchConfig,
 )
-from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
-from claude.overnight.types import CircuitBreakerState, FeatureResult
-from claude.overnight.feature_executor import execute_feature
-from claude.overnight.outcome_router import (
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
+from cortex_command.overnight.feature_executor import execute_feature
+from cortex_command.overnight.outcome_router import (
     OutcomeContext,
     _apply_feature_result,
     _effective_merge_repo_path,
 )
-from claude.overnight.feature_executor import _read_learnings
+from cortex_command.overnight.feature_executor import _read_learnings
 
 
 def _make_outcome_ctx(
@@ -81,15 +81,15 @@ def _make_outcome_ctx(
         feature_names=list(feature_names),
         config=config,
     )
-from claude.overnight.events import (
+from cortex_command.overnight.events import (
     FEATURE_COMPLETE,
     FEATURE_DEFERRED,
     FEATURE_FAILED,
     FEATURE_PAUSED,
     REPAIR_AGENT_RESOLVED,
 )
-from claude.pipeline.parser import FeaturePlan, FeatureTask
-from claude.pipeline.retry import RetryResult
+from cortex_command.pipeline.parser import FeaturePlan, FeatureTask
+from cortex_command.pipeline.retry import RetryResult
 
 
 # ---------------------------------------------------------------------------
@@ -358,16 +358,16 @@ class TestRecoveryDispatchPersistence(unittest.IsolatedAsyncioTestCase):
     async def test_recovery_attempts_persisted_per_feature(self):
         """Triggering test-failure recovery increments and persists
         recovery_attempts=1 in the on-disk state file."""
-        from claude.overnight.orchestrator import run_batch
-        from claude.overnight.types import FeatureResult
-        from claude.overnight.state import (
+        from cortex_command.overnight.orchestrator import run_batch
+        from cortex_command.overnight.types import FeatureResult
+        from cortex_command.overnight.state import (
             OvernightState,
             OvernightFeatureStatus,
             save_state,
             load_state,
         )
-        from claude.pipeline.merge import MergeResult, TestResult
-        from claude.pipeline.merge_recovery import MergeRecoveryResult
+        from cortex_command.pipeline.merge import MergeResult, TestResult
+        from cortex_command.pipeline.merge_recovery import MergeRecoveryResult
 
         feat_name = "feat-persist-test"
         tmp = self._tmpdir.name
@@ -464,10 +464,10 @@ class TestRecoveryGate(unittest.IsolatedAsyncioTestCase):
 
     async def test_gate_blocks_recovery_when_exhausted(self):
         """Feature with recovery_attempts=1 in state falls through to paused without calling recovery."""
-        from claude.overnight.orchestrator import run_batch
-        from claude.overnight.types import FeatureResult
-        from claude.overnight.state import OvernightState, OvernightFeatureStatus
-        from claude.pipeline.merge import MergeResult, TestResult
+        from cortex_command.overnight.orchestrator import run_batch
+        from cortex_command.overnight.types import FeatureResult
+        from cortex_command.overnight.state import OvernightState, OvernightFeatureStatus
+        from cortex_command.pipeline.merge import MergeResult, TestResult
 
         feat_name = "feat-gate-test"
 
@@ -767,7 +767,7 @@ class TestApplyFeatureResultWorktreePaths(unittest.TestCase):
     def test_merge_receives_worktree_path_cleanup_receives_live_path(self):
         """Completed feature: merge_feature gets the integration worktree path,
         cleanup_worktree gets the original live repo path."""
-        from claude.pipeline.merge import MergeResult
+        from cortex_command.pipeline.merge import MergeResult
 
         live_repo = Path(self._tmpdir.name) / "live-repo"
         live_repo.mkdir()
@@ -846,7 +846,7 @@ class TestApplyFeatureResultVariants(unittest.TestCase):
     def test_completed_with_files_populates_features_merged(self):
         """completed + non-empty changed files + merge success → features_merged,
         FEATURE_COMPLETE event fires."""
-        from claude.pipeline.merge import MergeResult
+        from cortex_command.pipeline.merge import MergeResult
 
         batch = BatchResult(batch_id=1)
         pauses = 0
@@ -966,7 +966,7 @@ class TestConsecutivePausesSequence(unittest.TestCase):
 
     def _call_completed_success(self, name, batch_result, pauses_ref):
         """Helper: drive a completed + successful merge through _apply_feature_result."""
-        from claude.pipeline.merge import MergeResult
+        from cortex_command.pipeline.merge import MergeResult
 
         merge_result = MergeResult(success=True, feature=name, conflict=False)
         with (
@@ -1249,7 +1249,7 @@ class TestConflictRecoveryBranching(unittest.IsolatedAsyncioTestCase):
         self._tmpdir.cleanup()
 
     def _make_state(self, *, recovery_depth: int = 0, recovery_attempts: int = 0):
-        from claude.overnight.state import OvernightFeatureStatus, OvernightState
+        from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
 
         return OvernightState(
             session_id="s1",
@@ -1415,7 +1415,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
     """
 
     def setUp(self):
-        from claude.overnight.state import OvernightFeatureStatus, OvernightState
+        from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
 
         self._tmpdir = tempfile.TemporaryDirectory()
         tmp = self._tmpdir.name
@@ -1472,7 +1472,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
 
         Returns a dict of the mocks that callers typically need to assert on.
         """
-        from claude.overnight.types import FeatureResult as _FR
+        from cortex_command.overnight.types import FeatureResult as _FR
 
         self._start_patch.__self__  # sanity — ensure method is bound
 
@@ -1550,7 +1550,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
     async def test_ci_pending_defers_feature(self):
         """R7 (ci_pending): merge_feature returns error='ci_pending' →
         batch_result.features_deferred contains the feature."""
-        from claude.pipeline.merge import MergeResult
+        from cortex_command.pipeline.merge import MergeResult
 
         merge_result = MergeResult(
             success=False,
@@ -1565,7 +1565,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         )
         self._start_patch("claude.overnight.outcome_router.write_deferral")
 
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1577,7 +1577,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
     async def test_ci_failing_defers_feature(self):
         """R7 (ci_failing): merge_feature returns error='ci_failing' →
         batch_result.features_deferred contains the feature."""
-        from claude.pipeline.merge import MergeResult
+        from cortex_command.pipeline.merge import MergeResult
 
         merge_result = MergeResult(
             success=False,
@@ -1592,7 +1592,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         )
         self._start_patch("claude.overnight.outcome_router.write_deferral")
 
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1616,7 +1616,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         )
         self._start_patch("claude.overnight.orchestrator.transition")
 
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1628,8 +1628,8 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
     async def test_multi_feature_only_failing_feature_triggers_recovery(self):
         """R10: Two features — A fails tests on merge, B merges clean.
         recover_test_failure called exactly once; feat-b in features_merged."""
-        from claude.pipeline.merge import MergeResult, TestResult
-        from claude.pipeline.merge_recovery import MergeRecoveryResult
+        from cortex_command.pipeline.merge import MergeResult, TestResult
+        from cortex_command.pipeline.merge_recovery import MergeRecoveryResult
 
         feat_a_fail = MergeResult(
             success=False,
@@ -1669,7 +1669,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             return_value="low",
         )
 
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1680,7 +1680,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
 
     async def test_review_not_required(self):
         """R8 (a): requires_review=False → feature merged; dispatch_review not called."""
-        from claude.pipeline.merge import MergeResult
+        from cortex_command.pipeline.merge import MergeResult
 
         merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
         self._install_common_patches(
@@ -1705,7 +1705,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             new_callable=AsyncMock,
         )
 
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1715,7 +1715,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
     async def test_review_approved(self):
         """R8 (b): requires_review=True and dispatch_review returns
         deferred=False, verdict='APPROVED' → feature merged."""
-        from claude.pipeline.merge import MergeResult
+        from cortex_command.pipeline.merge import MergeResult
 
         merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
         self._install_common_patches(
@@ -1741,7 +1741,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             return_value=MagicMock(deferred=False, verdict="APPROVED", cycle=1),
         )
 
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1750,7 +1750,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
     async def test_review_deferred(self):
         """R8 (c): requires_review=True and dispatch_review returns
         deferred=True → feature in features_deferred."""
-        from claude.pipeline.merge import MergeResult
+        from cortex_command.pipeline.merge import MergeResult
 
         merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
         self._install_common_patches(
@@ -1780,7 +1780,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             ),
         )
 
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 
@@ -1789,7 +1789,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
     async def test_review_raises(self):
         """R8 (d): requires_review=True and dispatch_review raises →
         feature in features_deferred (crash path writes a deferral)."""
-        from claude.pipeline.merge import MergeResult
+        from cortex_command.pipeline.merge import MergeResult
 
         merge_result = MergeResult(success=True, feature="feat-a", conflict=False)
         self._install_common_patches(
@@ -1816,7 +1816,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         )
         self._start_patch("claude.overnight.outcome_router.write_deferral")
 
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         batch_result = await run_batch(self._config)
 

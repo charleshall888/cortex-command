@@ -32,7 +32,7 @@ import sys
 # Re-export the pipeline timestamp source so auth_bootstrap events byte-match
 # existing log_event output. Both emission paths call the same function, which
 # keeps the R7 byte-equivalence test monkey-patchable from a single site.
-from claude.pipeline.state import _now_iso
+from cortex_command.pipeline.state import _now_iso
 
 __all__ = ["ensure_sdk_auth", "resolve_auth_for_shell"]
 

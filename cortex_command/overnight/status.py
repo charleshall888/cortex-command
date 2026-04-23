@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from claude.overnight.state import (
+from cortex_command.overnight.state import (
     _LIFECYCLE_ROOT,
     latest_symlink_path,
     load_state,

@@ -35,7 +35,7 @@ try:
 except ImportError:
     _SDK_AVAILABLE = False
 
-from claude.pipeline.state import log_event
+from cortex_command.pipeline.state import log_event
 
 logger = logging.getLogger(__name__)
 

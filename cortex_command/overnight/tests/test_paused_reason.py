@@ -15,8 +15,8 @@ from pathlib import Path
 
 import pytest
 
-from claude.overnight.interrupt import handle_interrupted_features
-from claude.overnight.state import OvernightFeatureStatus, OvernightState, load_state, save_state
+from cortex_command.overnight.interrupt import handle_interrupted_features
+from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState, load_state, save_state
 
 
 # ---------------------------------------------------------------------------

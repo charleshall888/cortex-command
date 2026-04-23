@@ -481,7 +481,7 @@ def compute_model_tier_dispatch_aggregates(paired: list[dict]) -> dict[str, dict
         ``estimated_cost_usd_max``, ``budget_cap_usd``, ``over_cap_rate``,
         ``turn_cap_observed_rate``, ``error_counts``, ``is_untiered``.
     """
-    from claude.pipeline.dispatch import TIER_CONFIG
+    from cortex_command.pipeline.dispatch import TIER_CONFIG
 
     # Group records by bucket key.
     completes_by_bucket: dict[str, list[dict]] = defaultdict(list)

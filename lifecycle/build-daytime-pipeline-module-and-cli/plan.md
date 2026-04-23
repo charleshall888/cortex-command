@@ -66,7 +66,7 @@ Thread `deferred_dir` backward-compatibly through six call sites in `feature_exe
     - Also calls `(cwd / f"lifecycle/{feature}/deferred").mkdir(parents=True, exist_ok=True)` to pre-create the deferred directory
     - Returns `config`
   - Required imports: `asyncio`, `os`, `subprocess`, `sys`, `time` from stdlib; `Path` from `pathlib`; `Optional` from `typing`; `BatchConfig`, `BatchResult` from `claude.overnight.batch_runner`; `OvernightState`, `OvernightFeatureStatus`, `save_state` from `claude.overnight.state`; `create_worktree`, `cleanup_worktree` from `claude.pipeline.worktree`; `execute_feature` from `claude.overnight.feature_executor`; `apply_feature_result`, `OutcomeContext` from `claude.overnight.outcome_router`; `DEFAULT_DEFERRED_DIR` from `claude.overnight.deferral`
-- **Verification**: `python3 -c "from claude.overnight.daytime_pipeline import _check_cwd, _read_pid, _is_alive, _write_pid, _recover_stale, build_config; print('ok')"` — pass if output is `ok` and exit 0
+- **Verification**: `python3 -c "from cortex_command.overnight.daytime_pipeline import _check_cwd, _read_pid, _is_alive, _write_pid, _recover_stale, build_config; print('ok')"` — pass if output is `ok` and exit 0
 
 ---
 

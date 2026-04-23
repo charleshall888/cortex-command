@@ -23,7 +23,7 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from claude.common import slugify
+from cortex_command.common import slugify
 from typing import Any
 from uuid import uuid4
 
@@ -32,7 +32,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from claude.common import atomic_write  # noqa: E402
+from cortex_command.common import atomic_write  # noqa: E402
 
 
 def _resolve_generate_index(backlog_dir: Path) -> Path:
@@ -57,7 +57,7 @@ def _get_next_id(backlog_dir: Path) -> str:
     return f"{next_id:03d}" if next_id < 1000 else str(next_id)
 
 
-_slugify = slugify  # Use canonical slugify from claude.common
+_slugify = slugify  # Use canonical slugify from cortex_command.common
 
 
 # ---------------------------------------------------------------------------

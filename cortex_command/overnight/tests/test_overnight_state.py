@@ -11,10 +11,10 @@ import tempfile
 import pytest
 from pathlib import Path
 
-from claude.overnight.state import OvernightFeatureStatus, OvernightState
-from claude.overnight.state import save_state, load_state, save_batch_result
-from claude.overnight.orchestrator import BatchResult
-from claude.overnight.interrupt import handle_interrupted_features
+from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
+from cortex_command.overnight.state import save_state, load_state, save_batch_result
+from cortex_command.overnight.orchestrator import BatchResult
+from cortex_command.overnight.interrupt import handle_interrupted_features
 
 
 # ---------------------------------------------------------------------------

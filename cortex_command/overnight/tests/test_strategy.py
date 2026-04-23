@@ -7,7 +7,7 @@ import dataclasses
 import json
 from pathlib import Path
 
-from claude.overnight.strategy import OvernightStrategy, load_strategy, save_strategy
+from cortex_command.overnight.strategy import OvernightStrategy, load_strategy, save_strategy
 
 
 # ---------------------------------------------------------------------------

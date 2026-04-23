@@ -14,11 +14,11 @@ All 10 requirements are must-have. This ticket has high criticality and complex 
 
 1. **Unmask silent write failures in report.py**: Replace the try/except at `claude/overnight/report.py:1467-1474` so that any exception from `write_report(report, path=latest_copy_path)` is either re-raised after event logging OR propagates freely. The exception must be observable outside stderr.
    - Acceptance: `grep -c 'warning: failed to write latest-copy' claude/overnight/report.py` = 0.
-   - Acceptance: `python3 -c "import claude.overnight.report as r; import inspect, ast; src = inspect.getsource(r.generate_and_write_report); tree = ast.parse(src); tries = [n for n in ast.walk(tree) if isinstance(n, ast.Try)]; assert all(any(isinstance(h.body[-1], ast.Raise) for h in t.handlers) or not t.handlers for t in tries)"` exits 0.
+   - Acceptance: `python3 -c "import cortex_command.overnight.report as r; import inspect, ast; src = inspect.getsource(r.generate_and_write_report); tree = ast.parse(src); tries = [n for n in ast.walk(tree) if isinstance(n, ast.Try)]; assert all(any(isinstance(h.body[-1], ast.Raise) for h in t.handlers) or not t.handlers for t in tries)"` exits 0.
 
 2. **Register new event names in `events.py:EVENT_TYPES`**: Add two constants to `claude/overnight/events.py` and include them in the `EVENT_TYPES` tuple so that `log_event` does not raise `ValueError` when the runner emits them: `MORNING_REPORT_GENERATE_RESULT = "morning_report_generate_result"` and `MORNING_REPORT_COMMIT_RESULT = "morning_report_commit_result"`.
    - Acceptance: `grep -c '^MORNING_REPORT_GENERATE_RESULT\|^MORNING_REPORT_COMMIT_RESULT' claude/overnight/events.py` = 2.
-   - Acceptance: `python3 -c "from claude.overnight.events import EVENT_TYPES; assert 'morning_report_generate_result' in EVENT_TYPES and 'morning_report_commit_result' in EVENT_TYPES"` exits 0.
+   - Acceptance: `python3 -c "from cortex_command.overnight.events import EVENT_TYPES; assert 'morning_report_generate_result' in EVENT_TYPES and 'morning_report_commit_result' in EVENT_TYPES"` exits 0.
 
 3. **Structured generate-result event**: Emit a `morning_report_generate_result` event to `lifecycle/sessions/{sid}/overnight-events.log` after the Python `generate_and_write_report` invocation at `runner.sh:1180-1214` completes (both branches). Event fires on success and on failure:
    - On success, `details` = `{"status": "success", "per_session_path": "<abs>", "latest_copy_path": "<abs>", "per_session_sha256": "<hex>", "latest_copy_sha256": "<hex>", "per_session_bytes": <int>, "latest_copy_bytes": <int>}`.

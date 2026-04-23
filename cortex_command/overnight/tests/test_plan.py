@@ -16,8 +16,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
-from claude.overnight.backlog import BacklogItem, Batch, SelectionResult
-from claude.overnight.plan import initialize_overnight_state, validate_target_repos
+from cortex_command.overnight.backlog import BacklogItem, Batch, SelectionResult
+from cortex_command.overnight.plan import initialize_overnight_state, validate_target_repos
 
 
 def _make_selection(*titles: str) -> SelectionResult:

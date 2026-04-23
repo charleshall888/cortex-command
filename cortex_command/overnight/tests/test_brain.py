@@ -14,8 +14,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import claude.overnight.brain as brain_module
-from claude.overnight.brain import (
+import cortex_command.overnight.brain as brain_module
+from cortex_command.overnight.brain import (
     BrainAction,
     BrainContext,
     BrainDecision,
@@ -23,10 +23,10 @@ from claude.overnight.brain import (
     _parse_brain_response,
     request_brain_decision,
 )
-from claude.overnight.feature_executor import _handle_failed_task
-from claude.overnight.types import CircuitBreakerState
-from claude.pipeline.dispatch import DispatchResult
-from claude.pipeline.parser import FeatureTask
+from cortex_command.overnight.feature_executor import _handle_failed_task
+from cortex_command.overnight.types import CircuitBreakerState
+from cortex_command.pipeline.dispatch import DispatchResult
+from cortex_command.pipeline.parser import FeatureTask
 
 
 # ---------------------------------------------------------------------------

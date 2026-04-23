@@ -96,7 +96,7 @@
 
 ### Requirement R19: Historical events.log feature_complete backfill
 - **Expected**: backfilled `feature_complete` event in `lifecycle/devils-advocate-smart-feedback-application/events.log`; `detect_lifecycle_phase()` returns "complete"; cross-file sweep returns no other cases.
-- **Actual**: Line 13 of the events.log contains `{"ts":"2026-04-12T20:09:01Z","event":"feature_complete","feature":"devils-advocate-smart-feedback-application"}` — matches the no-space NDJSON convention used elsewhere in the file, uses dispatch_complete ts + 1s, and omits `tasks_total`/`rework_cycles` per spec. `python3 -c 'from claude.common import detect_lifecycle_phase; ...'` returns `"complete"` (assertion passes). Cross-file sweep `for f in lifecycle/*/events.log; ... && echo` returns empty — no additional historical cases needing backfill.
+- **Actual**: Line 13 of the events.log contains `{"ts":"2026-04-12T20:09:01Z","event":"feature_complete","feature":"devils-advocate-smart-feedback-application"}` — matches the no-space NDJSON convention used elsewhere in the file, uses dispatch_complete ts + 1s, and omits `tasks_total`/`rework_cycles` per spec. `python3 -c 'from cortex_command.common import detect_lifecycle_phase; ...'` returns `"complete"` (assertion passes). Cross-file sweep `for f in lifecycle/*/events.log; ... && echo` returns empty — no additional historical cases needing backfill.
 - **Verdict**: PASS
 
 ## Requirements Drift

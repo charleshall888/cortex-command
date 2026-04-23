@@ -18,14 +18,14 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from claude.overnight.state import (
+from cortex_command.overnight.state import (
     OvernightFeatureStatus,
     RoundSummary,
     load_state,
     save_state,
 )
-from claude.overnight.strategy import load_strategy, save_strategy
-from claude.pipeline.parser import parse_master_plan
+from cortex_command.overnight.strategy import load_strategy, save_strategy
+from cortex_command.pipeline.parser import parse_master_plan
 
 
 # Terminal statuses that the missing-results fallback will not overwrite.

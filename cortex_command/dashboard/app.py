@@ -27,13 +27,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 
-from claude.dashboard.data import (
+from cortex_command.dashboard.data import (
     build_swim_lane_data,
     parse_last_session,
     parse_session_detail,
     parse_session_list,
 )
-from claude.dashboard.poller import DashboardState, run_polling
+from cortex_command.dashboard.poller import DashboardState, run_polling
 
 # ---------------------------------------------------------------------------
 # Module-level singletons: created at import time so routes can reference them

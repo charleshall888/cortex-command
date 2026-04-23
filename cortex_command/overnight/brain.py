@@ -18,8 +18,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from claude.pipeline.dispatch import DispatchResult, dispatch_task
-from claude.pipeline.state import log_event as pipeline_log_event
+from cortex_command.pipeline.dispatch import DispatchResult, dispatch_task
+from cortex_command.pipeline.state import log_event as pipeline_log_event
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ async def request_brain_decision(
         A BrainDecision (always; never raises).
     """
     # Lazy import to avoid circular dependency at module level
-    from claude.overnight.throttle import ConcurrencyManager as _CM
+    from cortex_command.overnight.throttle import ConcurrencyManager as _CM
 
     try:
         rendered_prompt = _render_template(_BRAIN_TEMPLATE, {

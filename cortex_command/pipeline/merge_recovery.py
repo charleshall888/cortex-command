@@ -220,8 +220,8 @@ async def recover_test_failure(
         MergeRecoveryResult with recovery outcome details.
     """
     try:
-        from claude.pipeline.merge import merge_feature
-        from claude.pipeline.dispatch import dispatch_task
+        from cortex_command.pipeline.merge import merge_feature
+        from cortex_command.pipeline.dispatch import dispatch_task
 
         # --- Dirty-base check ---
         try:

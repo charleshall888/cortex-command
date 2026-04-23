@@ -3,7 +3,7 @@
 Tests may import these for fixture reuse rather than constructing inline.
 """
 
-from claude.overnight.types import FeatureResult
+from cortex_command.overnight.types import FeatureResult
 
 COMPLETED = FeatureResult(name="feature-completed", status="completed")
 FAILED = FeatureResult(name="feature-failed", status="failed", error="task failed")

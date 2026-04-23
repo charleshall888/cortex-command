@@ -12,8 +12,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from claude.overnight.outcome_router import _classify_no_commit
-from claude.overnight.report import _suggest_next_step
+from cortex_command.overnight.outcome_router import _classify_no_commit
+from cortex_command.overnight.report import _suggest_next_step
 
 DEFAULT_SUGGESTION = "Review learnings, retry or investigate"
 

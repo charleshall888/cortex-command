@@ -12,7 +12,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: `read_criticality(feature: str, lifecycle_base: Path = Path("lifecycle")) -> str` at line 161 of `claude/common.py` — mirror its pattern (open events.log, scan for last JSON line with target field, return value or default). The gating matrix: simple/low → skip, simple/medium → skip, complex/low → review, complex/medium → review, high/any → review, critical/any → review. Simplified: `return tier == "complex" or criticality in ("high", "critical")`.
-- **Verification**: `python -c "from claude.common import read_tier, requires_review; assert read_tier('nonexistent') == 'simple'; assert requires_review('complex', 'low') == True; assert requires_review('simple', 'medium') == False; print('ok')"` — pass if prints "ok" and exits 0.
+- **Verification**: `python -c "from cortex_command.common import read_tier, requires_review; assert read_tier('nonexistent') == 'simple'; assert requires_review('complex', 'low') == True; assert requires_review('simple', 'medium') == False; print('ok')"` — pass if prints "ok" and exits 0.
 - **Status**: [x] done
 
 ### Task 2: Update pipeline review prompt template
@@ -30,7 +30,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: The verdict JSON block in review.md is a fenced code block (` ```json ... ``` `) containing `{"verdict": "...", "cycle": N, "issues": [...], "requirements_drift": "..."}`. Use `re.search(r'```json\s*(\{.*?\})\s*```', content, re.DOTALL)` to extract. Follow the pattern in `claude/pipeline/state.py` `log_event()` (lines 288-304) for JSON handling conventions.
-- **Verification**: `python -c "from claude.pipeline.review_dispatch import ReviewResult, parse_verdict; r = ReviewResult(approved=True, deferred=False, verdict='APPROVED', cycle=1, issues=[]); print(r.verdict)"` — pass if prints "APPROVED" and exits 0.
+- **Verification**: `python -c "from cortex_command.pipeline.review_dispatch import ReviewResult, parse_verdict; r = ReviewResult(approved=True, deferred=False, verdict='APPROVED', cycle=1, issues=[]); print(r.verdict)"` — pass if prints "APPROVED" and exits 0.
 - **Status**: [x] done
 
 ### Task 4: Add dispatch_review() — single cycle + APPROVED/ERROR handling
@@ -39,7 +39,7 @@ Add post-merge review dispatch to the overnight batch runner by creating a `revi
 - **Depends on**: [1, 2, 3]
 - **Complexity**: complex
 - **Context**: Function signature: `async def dispatch_review(feature: str, worktree_path: Path, branch: str, spec_path: Path, complexity: str, criticality: str, lifecycle_base: Path = Path("lifecycle"), deferred_dir: Path = Path("lifecycle/deferred"), integration_branch: str = "", base_branch: str = "main", test_command: str | None = None, repo_path: Path | None = None, log_path: Path | None = None) -> ReviewResult`. The `branch` param is the actual git branch name (e.g. `pipeline/my-feature`), passed directly from the batch_runner caller which already knows `actual_branch`. The `repo_path` param receives the pre-computed effective merge repo path from the caller (via `_effective_merge_repo_path()`). The `log_path` param is the pipeline events log path for merge event logging. Use `dispatch_task()` from `claude.pipeline.dispatch` (accepts `task: str, system_prompt: str, complexity: str, criticality: str, worktree_path: Path`). Use `log_event()` from `claude.pipeline.state` (accepts `log_path: Path, event_dict: dict`) for per-feature events.log writes. Use `write_deferral()` from `claude.overnight.deferral` for deferral files. Read prompt template from `claude/pipeline/prompts/review.md` and substitute placeholders — Task 2 must complete first to ensure the template produces the JSON verdict format that `parse_verdict()` expects.
-- **Verification**: `python -c "from claude.pipeline.review_dispatch import dispatch_review; import inspect; sig = inspect.signature(dispatch_review); assert 'feature' in sig.parameters; assert 'branch' in sig.parameters; assert 'log_path' in sig.parameters; print('ok')"` — pass if prints "ok" and exits 0.
+- **Verification**: `python -c "from cortex_command.pipeline.review_dispatch import dispatch_review; import inspect; sig = inspect.signature(dispatch_review); assert 'feature' in sig.parameters; assert 'branch' in sig.parameters; assert 'log_path' in sig.parameters; print('ok')"` — pass if prints "ok" and exits 0.
 - **Status**: [x] done
 
 ### Task 5: Add rework loop — CHANGES_REQUESTED handling

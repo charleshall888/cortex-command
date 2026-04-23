@@ -15,12 +15,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from claude.pipeline.conflict import (
+from cortex_command.pipeline.conflict import (
     ConflictClassification,
     RepairResult,
     dispatch_repair_agent,
 )
-from claude.overnight.feature_executor import execute_feature
+from cortex_command.overnight.feature_executor import execute_feature
 
 
 # ---------------------------------------------------------------------------

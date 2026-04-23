@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from claude.overnight.batch_plan import generate_batch_plan
+from cortex_command.overnight.batch_plan import generate_batch_plan
 
 
 def test_relative_output_path_raises_value_error():

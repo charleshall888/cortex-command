@@ -14,10 +14,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 # Install the SDK stub before importing dispatch.
-from claude.tests._stubs import _install_sdk_stub
+from cortex_command.tests._stubs import _install_sdk_stub
 _install_sdk_stub()
 
-import claude.pipeline.dispatch as _dispatch_module  # noqa: E402
+import cortex_command.pipeline.dispatch as _dispatch_module  # noqa: E402
 
 _sdk = sys.modules["claude_agent_sdk"]
 ResultMessage = _sdk.ResultMessage

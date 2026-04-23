@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from claude.pipeline.conflict import ConflictClassification, classify_conflict
+from cortex_command.pipeline.conflict import ConflictClassification, classify_conflict
 
 
 # ---------------------------------------------------------------------------

@@ -15,8 +15,8 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from claude.pipeline.merge import MergeResult, TestResult
-from claude.pipeline.merge_recovery import MergeRecoveryResult, recover_test_failure
+from cortex_command.pipeline.merge import MergeResult, TestResult
+from cortex_command.pipeline.merge_recovery import MergeRecoveryResult, recover_test_failure
 
 
 # ---------------------------------------------------------------------------

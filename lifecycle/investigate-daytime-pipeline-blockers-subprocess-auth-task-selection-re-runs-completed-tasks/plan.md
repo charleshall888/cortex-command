@@ -26,7 +26,7 @@ Two-track decomposition of the spec's 15 requirements. **Auth track** (Tasks 1�
   - apiKeyHelper subprocess call: `subprocess.run(parts, capture_output=True, text=True, timeout=5)` wrapped in `try/except (subprocess.TimeoutExpired, FileNotFoundError, OSError, json.JSONDecodeError)` per Edge Cases. Timeout/empty/non-zero falls through to oauth-file branch (NOT exit 2).
   - Malformed `~/.claude/settings.json` → exit 2 (helper-internal failure) per Edge Cases.
   - No side effects at import time — all work happens inside the two entry-point functions.
-- **Verification**: `python3 -c "from claude.overnight import auth; assert callable(auth.ensure_sdk_auth) and callable(auth.resolve_auth_for_shell)"` — pass if exit 0. AND `grep -E '^(import|from) ' claude/overnight/auth.py | grep -Ev '^(import|from) (__future__|json|os|pathlib|re|shlex|subprocess|sys|datetime|time|argparse|typing|claude\.pipeline\.state)( |$)'` — pass if exit code = 1 (grep finds nothing matching the disallowed pattern). The allow-list enumerates every module the helper may import; any unlisted import surfaces as a non-empty grep match (exit 0), which fails verification.
+- **Verification**: `python3 -c "from cortex_command.overnight import auth; assert callable(auth.ensure_sdk_auth) and callable(auth.resolve_auth_for_shell)"` — pass if exit 0. AND `grep -E '^(import|from) ' claude/overnight/auth.py | grep -Ev '^(import|from) (__future__|json|os|pathlib|re|shlex|subprocess|sys|datetime|time|argparse|typing|claude\.pipeline\.state)( |$)'` — pass if exit code = 1 (grep finds nothing matching the disallowed pattern). The allow-list enumerates every module the helper may import; any unlisted import surfaces as a non-empty grep match (exit 0), which fails verification.
 - **Status**: [x] complete
 
 ### Task 2: Comprehensive `test_auth.py` suite
@@ -95,7 +95,7 @@ Two-track decomposition of the spec's 15 requirements. **Auth track** (Tasks 1�
 - **Depends on**: [1]
 - **Complexity**: complex
 - **Context**:
-  - Import: `from claude.overnight.auth import ensure_sdk_auth` at top of file.
+  - Import: `from cortex_command.overnight.auth import ensure_sdk_auth` at top of file.
   - **Phase A placement (load-bearing)**: Phase A is the first statement INSIDE the try-block at line 332 — i.e., the new line 333, displacing the existing plan-exists check to line 334+. Placement BEFORE the try-block is wrong: the only `except` handler that translates exceptions into `_terminated_via = "startup_failure"` lives at lines 456-464, and only fires for raises INSIDE the try; the only frame that writes `daytime-result.json` is the finally at lines 466-524, also bound to that try. Position-zero placement bypasses both. Placement AFTER the plan-exists check is also wrong — auth resolution must precede I/O so a missing auth vector is reported even when `plan.md` is also missing.
   - **State variables already exist**: `_top_exc` (line 323), `_terminated_via` (line 324), `_outcome` (line 325), `_startup_phase` (line 326) are all initialized BEFORE the try at line 332. Phase A inside the try sees them in scope. `start_ts` (line 319) and `dispatch_id` (line 320) are also bound BEFORE the try, so the finally's `DaytimeResult` constructor (lines 505-516) has everything it needs.
   - **Hard-fail control flow** (mirror lines 334-343 verbatim in shape):

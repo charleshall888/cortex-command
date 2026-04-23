@@ -34,7 +34,7 @@ Read `lifecycle/escalations.jsonl`. Each line is a JSON object with a `type` fie
 ```python
 import json
 from pathlib import Path
-from claude.overnight.orchestrator_io import save_state, update_feature_status, write_escalation
+from cortex_command.overnight.orchestrator_io import save_state, update_feature_status, write_escalation
 
 escalations_path = Path("lifecycle/escalations.jsonl")
 entries = []
@@ -179,7 +179,7 @@ If `features_to_run` is empty but features with `pending`, `running`, or `paused
 Load the session strategy file to make `hot_files` and `round_history` available to later sections:
 
 ```python
-from claude.overnight.strategy import load_strategy
+from cortex_command.overnight.strategy import load_strategy
 from pathlib import Path
 
 strategy_path = Path("{session_dir}") / "overnight-strategy.json"
@@ -188,7 +188,7 @@ hot_files = strategy.hot_files
 round_history = strategy.round_history_notes
 ```
 
-`load_strategy` requires `from claude.overnight.strategy import load_strategy`. The `strategy_path` is a `Path` constructed from the parent directory of `state_path`.
+`load_strategy` requires `from cortex_command.overnight.strategy import load_strategy`. The `strategy_path` is a `Path` constructed from the parent directory of `state_path`.
 
 If `overnight-strategy.json` is absent (first round or new session), `load_strategy()` returns defaults:
 - `hot_files = []`
@@ -239,7 +239,7 @@ For each feature to execute this round, read its `plan_path` and `spec_path` fro
 
 ```python
 from pathlib import Path
-from claude.overnight.events import PLAN_GEN_DISPATCHED, log_event
+from cortex_command.overnight.events import PLAN_GEN_DISPATCHED, log_event
 
 missing = [f for f in features_to_run if not Path(f["plan_path"]).exists()]
 log_event(
@@ -308,7 +308,7 @@ On success, output only this JSON on the last line of your response:
 Use the overnight batch plan generator to create a temporary master plan for this round's features. Pass a `feature_plan_paths` dict mapping each feature name to its `plan_path` from state. The function returns a tuple of `(plan_path, excluded)` — unpack both:
 
 ```python
-from claude.overnight.batch_plan import generate_batch_plan
+from cortex_command.overnight.batch_plan import generate_batch_plan
 plan_path, excluded = generate_batch_plan(
     features=["feature-a", "feature-b"],
     feature_plan_paths={"feature-a": "lifecycle/actual-dir-a/plan.md", "feature-b": "lifecycle/actual-dir-b/plan.md"},
@@ -321,8 +321,8 @@ plan_path, excluded = generate_batch_plan(
 **Step 4a — Handle excluded features**: `excluded` is a list of dicts with `"name"` and `"error"` keys for features whose plans could not be parsed. For each excluded feature, mark it as `failed` in the overnight state (same mechanism as Step 3e for missing plans) and log a `FEATURE_FAILED` event to the overnight events log before proceeding to batch execution:
 
 ```python
-from claude.overnight.events import FEATURE_FAILED, log_event
-from claude.overnight.orchestrator_io import save_state, update_feature_status
+from cortex_command.overnight.events import FEATURE_FAILED, log_event
+from cortex_command.overnight.orchestrator_io import save_state, update_feature_status
 
 state_path = Path("{state_path}")
 for ex in excluded:

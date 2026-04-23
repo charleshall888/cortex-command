@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from claude.overnight.backlog import (
+from cortex_command.overnight.backlog import (
     BacklogItem,
     Batch,
     _parse_inline_id_list,
@@ -27,7 +27,7 @@ from claude.overnight.backlog import (
     group_into_batches,
     select_overnight_batch,
 )
-from claude.overnight.plan import _detect_risks
+from cortex_command.overnight.plan import _detect_risks
 
 
 # ---------------------------------------------------------------------------

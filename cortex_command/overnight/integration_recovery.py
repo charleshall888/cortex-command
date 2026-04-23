@@ -19,16 +19,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-from claude.overnight.events import (
+from cortex_command.overnight.events import (
     INTEGRATION_RECOVERY_FAILED,
     INTEGRATION_RECOVERY_START,
     INTEGRATION_RECOVERY_SUCCESS,
     log_event,
 )
-from claude.overnight.state import load_state
+from cortex_command.overnight.state import load_state
 
 try:
-    from claude.pipeline.dispatch import dispatch_task
+    from cortex_command.pipeline.dispatch import dispatch_task
     _DISPATCH_AVAILABLE = True
 except ImportError:
     _DISPATCH_AVAILABLE = False

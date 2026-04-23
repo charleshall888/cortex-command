@@ -28,7 +28,7 @@ _Classification: Requirements 1–8 are must-have (correctness and regression ga
    (`BatchConfig` and `ConcurrencyManager` are string-quoted because they are behind a `TYPE_CHECKING` guard — see Technical Constraints.)
 
    - Acceptance (a): `grep -n "^async def execute_feature" claude/overnight/feature_executor.py` exits 0 with at least one match.
-   - Acceptance (b): `python3 -c "from claude.overnight.feature_executor import execute_feature"` exits 0.
+   - Acceptance (b): `python3 -c "from cortex_command.overnight.feature_executor import execute_feature"` exits 0.
    - Acceptance (c): `grep -cn "^def _run_task\|^async def _run_task" claude/overnight/feature_executor.py` prints `0` — `_run_task` is not at module level.
 
 2. **[Must] Create `claude/overnight/types.py`** containing the `FeatureResult` dataclass. The docstring must include the complete status-to-field mapping. The full field inventory and mapping is as follows (reproduce this in the docstring):
@@ -54,12 +54,12 @@ _Classification: Requirements 1–8 are must-have (correctness and regression ga
      failed:           error (required)
    ```
 
-   Both `feature_executor.py` and `batch_runner.py` must import `FeatureResult` from `claude.overnight.types`. The `FeatureResult` class definition must be removed from `batch_runner.py` and replaced with `from claude.overnight.types import FeatureResult`.
+   Both `feature_executor.py` and `batch_runner.py` must import `FeatureResult` from `claude.overnight.types`. The `FeatureResult` class definition must be removed from `batch_runner.py` and replaced with `from cortex_command.overnight.types import FeatureResult`.
 
    - Acceptance (a): `grep -n "class FeatureResult" claude/overnight/types.py` exits 0 with a match.
-   - Acceptance (b): `python3 -c "from claude.overnight.types import FeatureResult"` exits 0.
-   - Acceptance (c): `grep -rn "from claude.overnight.batch_runner import FeatureResult" claude/overnight/` exits 1 (no matches).
-   - Acceptance (d): `grep -n "from claude.overnight.types import.*FeatureResult" claude/overnight/batch_runner.py` exits 0 with a match.
+   - Acceptance (b): `python3 -c "from cortex_command.overnight.types import FeatureResult"` exits 0.
+   - Acceptance (c): `grep -rn "from cortex_command.overnight.batch_runner import FeatureResult" claude/overnight/` exits 1 (no matches).
+   - Acceptance (d): `grep -n "from cortex_command.overnight.types import.*FeatureResult" claude/overnight/batch_runner.py` exits 0 with a match.
    - Acceptance (e): `grep -cn "^class FeatureResult" claude/overnight/batch_runner.py` prints `0` — the class is no longer defined there.
 
 3. **[Must] Create `claude/overnight/constants.py`** containing `CIRCUIT_BREAKER_THRESHOLD`. Both `batch_runner.py` and `feature_executor.py` import it from `constants.py`. The constant must not be defined as a standalone value in either file.
@@ -73,8 +73,8 @@ _Classification: Requirements 1–8 are must-have (correctness and regression ga
    - Acceptance: `pytest claude/overnight/tests/test_feature_executor_boundary.py -v` exits 0.
 
 5. **[Must] `batch_runner.py` re-exports `execute_feature` in its namespace** so that existing call sites (including test `patch.object(batch_runner_module, "execute_feature", ...)` patterns) continue to work without modification.
-   - Acceptance (a): `grep -n "from claude.overnight.feature_executor import execute_feature" claude/overnight/batch_runner.py` exits 0 with a match.
-   - Acceptance (b): `python3 -c "from claude.overnight.batch_runner import execute_feature"` exits 0.
+   - Acceptance (a): `grep -n "from cortex_command.overnight.feature_executor import execute_feature" claude/overnight/batch_runner.py` exits 0 with a match.
+   - Acceptance (b): `python3 -c "from cortex_command.overnight.batch_runner import execute_feature"` exits 0.
 
 6. **[Must] Update test import paths and patch targets.** The following symbols move to new locations; update imports and mock/patch targets throughout the test suite:
 
@@ -124,7 +124,7 @@ _Classification: Requirements 1–8 are must-have (correctness and regression ga
 - **`asyncio.to_thread(save_state, ...)` concurrency hazard**: The call inside conflict recovery creates a known race if two features hit the repair path concurrently and both try to persist state. Pre-existing — not introduced by this extraction. Preserve the `_save_ok` guard intact and add a code comment documenting the race.
 - **`conftest.py` coupling**: `conftest.py` stubs `backlog.update_item` before batch_runner is imported. `feature_executor.py` must not add unconditional module-level imports that fall outside the existing conftest stubs. If new imports are needed, update `conftest.py` accordingly.
 - **`from __future__ import annotations`**: Required in `feature_executor.py`. Some carried-over annotations reference lazily-imported types; without this import they would raise `NameError` at module load.
-- **`TYPE_CHECKING` guard for `BatchConfig`**: `execute_feature` accesses `config.*` attributes at runtime via duck-typing — no `isinstance` check exists. The guard is sufficient. Pattern: `from __future__ import annotations` at top, then `if TYPE_CHECKING: from claude.overnight.batch_runner import BatchConfig`.
+- **`TYPE_CHECKING` guard for `BatchConfig`**: `execute_feature` accesses `config.*` attributes at runtime via duck-typing — no `isinstance` check exists. The guard is sufficient. Pattern: `from __future__ import annotations` at top, then `if TYPE_CHECKING: from cortex_command.overnight.batch_runner import BatchConfig`.
 - **`_run_task` inner closure**: Captures ~8 variables from `execute_feature`'s outer scope. Stays as inner function — do not extract it as a standalone function.
 
 ## Changes to Existing Behavior

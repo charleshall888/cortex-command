@@ -12,7 +12,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Current definition is at `batch_runner.py` line 1200. Value is `3`. The constant appears at three sites in batch_runner (lines 517, 1515, 1966) — Task 4 removes the definition and adds the import. Task 3 imports from constants.py instead of batch_runner.
-- **Verification**: `grep -n "CIRCUIT_BREAKER_THRESHOLD" claude/overnight/constants.py` — pass if exits 0 with one match. `python3 -c "from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD"` — pass if exits 0.
+- **Verification**: `grep -n "CIRCUIT_BREAKER_THRESHOLD" claude/overnight/constants.py` — pass if exits 0 with one match. `python3 -c "from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD"` — pass if exits 0.
 - **Status**: [ ] pending
 
 ### Task 2: Create `claude/overnight/types.py`
@@ -21,7 +21,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Current `FeatureResult` is defined at `batch_runner.py` lines 125–138. Fields: `name: str`, `status: str`, `error: Optional[str] = None`, `deferred_question_count: int = 0`, `files_changed: list[str] = field(default_factory=list)`, `repair_branch: Optional[str] = None`, `trivial_resolved: bool = False`, `repair_agent_used: bool = False`, `parse_error: bool = False`, `resolved_files: list[str] = field(default_factory=list)`. Use `@dataclass` decorator. Import `Optional` from `typing`, `dataclass` and `field` from `dataclasses`. Status-to-field mapping from the spec: merged (no optional fields), repair_completed (repair_branch, trivial_resolved, resolved_files, repair_agent_used), paused (error required, parse_error may be True), deferred (deferred_question_count), failed (error required).
-- **Verification**: `grep -n "class FeatureResult" claude/overnight/types.py` — pass if exits 0 with one match. `python3 -c "from claude.overnight.types import FeatureResult"` — pass if exits 0.
+- **Verification**: `grep -n "class FeatureResult" claude/overnight/types.py` — pass if exits 0 with one match. `python3 -c "from cortex_command.overnight.types import FeatureResult"` — pass if exits 0.
 - **Status**: [ ] pending
 
 ### Task 3: Create `claude/overnight/feature_executor.py`
@@ -63,12 +63,12 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
   The `asyncio.to_thread(save_state, ...)` call in conflict recovery (around the `_save_ok` guard): add a comment `# Concurrency hazard (pre-existing): two concurrent features on the repair path may race on overnight-state.json. The _save_ok guard is the existing mitigation — do not remove it.`
 
   Precedent: `claude/pipeline/conflict.py` line 23 for the TYPE_CHECKING pattern.
-- **Verification**: (a) `grep -n "^async def execute_feature" claude/overnight/feature_executor.py` — pass if exits 0 with one match. (b) `python3 -c "from claude.overnight.feature_executor import execute_feature"` — pass if exits 0. (c) `grep -cn "^def _run_task\|^async def _run_task" claude/overnight/feature_executor.py` — pass if prints `0`.
+- **Verification**: (a) `grep -n "^async def execute_feature" claude/overnight/feature_executor.py` — pass if exits 0 with one match. (b) `python3 -c "from cortex_command.overnight.feature_executor import execute_feature"` — pass if exits 0. (c) `grep -cn "^def _run_task\|^async def _run_task" claude/overnight/feature_executor.py` — pass if prints `0`.
 - **Status**: [ ] pending
 
 ### Task 4: Update `claude/overnight/batch_runner.py` — remove moved symbols, add imports and re-export
 - **Files**: `claude/overnight/batch_runner.py`
-- **What**: Remove `FeatureResult` class definition, `CIRCUIT_BREAKER_THRESHOLD` constant definition, and the definitions of all functions moved to feature_executor.py. Add `from claude.overnight.types import FeatureResult`, `from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD`, and `from claude.overnight.feature_executor import execute_feature`. Do NOT remove or re-export `_read_learnings`, `_read_exit_report`, `_render_template`, `_handle_failed_task`, or any other private helpers.
+- **What**: Remove `FeatureResult` class definition, `CIRCUIT_BREAKER_THRESHOLD` constant definition, and the definitions of all functions moved to feature_executor.py. Add `from cortex_command.overnight.types import FeatureResult`, `from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD`, and `from cortex_command.overnight.feature_executor import execute_feature`. Do NOT remove or re-export `_read_learnings`, `_read_exit_report`, `_render_template`, `_handle_failed_task`, or any other private helpers.
 - **Depends on**: [3]
 - **Complexity**: complex
 - **Context**:
@@ -79,9 +79,9 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 
   After removal, add near the top of the imports section:
   ```
-  from claude.overnight.types import FeatureResult
-  from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
-  from claude.overnight.feature_executor import execute_feature
+  from cortex_command.overnight.types import FeatureResult
+  from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+  from cortex_command.overnight.feature_executor import execute_feature
   ```
 
   Placement: the three new imports should be grouped after existing `claude.overnight.*` imports and before `claude.pipeline.*` imports (or wherever the existing overnight imports are grouped). The re-export of `execute_feature` makes it available as `batch_runner.execute_feature` so `patch.object(batch_runner_module, "execute_feature", ...)` in test_lead_unit.py continues to work.
@@ -89,7 +89,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
   `CIRCUIT_BREAKER_THRESHOLD` and `FeatureResult` remain available as attributes of the batch_runner module via Python's import semantics (no explicit re-export declaration needed).
 
   Note: `_apply_feature_result` (line ~1200), `_accumulate_result` (line ~1535), `run_batch`, `BatchConfig`, `BatchResult`, `__main__` block — all stay in batch_runner unchanged.
-- **Verification**: (a) `grep -n "from claude.overnight.feature_executor import execute_feature" claude/overnight/batch_runner.py` — pass if exits 0 with one match. (b) `python3 -c "from claude.overnight.batch_runner import execute_feature"` — pass if exits 0. (c) `grep -cn "^class FeatureResult" claude/overnight/batch_runner.py` — pass if prints `0`. (d) `grep -n "^CIRCUIT_BREAKER_THRESHOLD = " claude/overnight/batch_runner.py` — pass if exits 1 (no match). (e) `grep -n "^async def execute_feature" claude/overnight/batch_runner.py` — pass if exits 1 (no match).
+- **Verification**: (a) `grep -n "from cortex_command.overnight.feature_executor import execute_feature" claude/overnight/batch_runner.py` — pass if exits 0 with one match. (b) `python3 -c "from cortex_command.overnight.batch_runner import execute_feature"` — pass if exits 0. (c) `grep -cn "^class FeatureResult" claude/overnight/batch_runner.py` — pass if prints `0`. (d) `grep -n "^CIRCUIT_BREAKER_THRESHOLD = " claude/overnight/batch_runner.py` — pass if exits 1 (no match). (e) `grep -n "^async def execute_feature" claude/overnight/batch_runner.py` — pass if exits 1 (no match).
 - **Status**: [ ] pending
 
 ### Task 5: Create `claude/overnight/tests/test_feature_executor_boundary.py`
@@ -113,7 +113,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 - **Depends on**: [3, 4]
 - **Complexity**: complex
 - **Context**:
-  **test_idempotency.py** (lines 20–25): Change `from claude.overnight.batch_runner import (_check_task_completed, _compute_plan_hash, _make_idempotency_token, _write_completion_token)` → `from claude.overnight.feature_executor import (...)`.
+  **test_idempotency.py** (lines 20–25): Change `from cortex_command.overnight.batch_runner import (_check_task_completed, _compute_plan_hash, _make_idempotency_token, _write_completion_token)` → `from cortex_command.overnight.feature_executor import (...)`.
 
   **test_exit_report.py** (lines 18–22 + `_apply_common_mocks` at lines 163–191 + per-test `_read_exit_report` patches at lines 211–212, 232–234, and similar in remaining test methods):
   - Import: `_read_exit_report` moves to feature_executor; `execute_feature` and `BatchConfig` stay importable from batch_runner.
@@ -121,10 +121,10 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
   - Per-test patches for `_read_exit_report`: change from `"claude.overnight.batch_runner._read_exit_report"` → `"claude.overnight.feature_executor._read_exit_report"`.
 
   **test_brain.py** (lines 26 + 286–287 + 331–348 + 369–386 + 409–426):
-  - Line 26: `from claude.overnight.batch_runner import _handle_failed_task` → `from claude.overnight.feature_executor import _handle_failed_task`.
+  - Line 26: `from cortex_command.overnight.batch_runner import _handle_failed_task` → `from cortex_command.overnight.feature_executor import _handle_failed_task`.
   - All `"claude.overnight.batch_runner.*"` string patch targets in `TestCircuitBreakerPreDispatch` and `TestHandleFailedTaskBrainActions` → `"claude.overnight.feature_executor.*"`: covers `request_brain_decision`, `overnight_log_event`, `mark_task_done_in_plan`, `write_deferral`, `_read_learnings`.
 
-  **feature_result_variants.py** (line 6): `from claude.overnight.batch_runner import FeatureResult` → `from claude.overnight.types import FeatureResult`.
+  **feature_result_variants.py** (line 6): `from cortex_command.overnight.batch_runner import FeatureResult` → `from cortex_command.overnight.types import FeatureResult`.
 - **Verification**: `pytest claude/overnight/tests/test_idempotency.py claude/overnight/tests/test_exit_report.py claude/overnight/tests/test_brain.py -v` — pass if exits 0 with all tests passing.
 - **Status**: [ ] pending
 
@@ -136,7 +136,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 - **Context**:
   **Import changes** (lines 19–29):
   - `_read_learnings` (line 27): change import source from `batch_runner` → `feature_executor`. All other imports in the block (`BatchResult`, `BatchConfig`, `CIRCUIT_BREAKER_THRESHOLD`, `FeatureResult`, `_apply_feature_result`, `_effective_merge_repo_path`, `execute_feature`) remain importable from `batch_runner` (either they stayed there or are re-exported from there).
-  - Add `import claude.overnight.feature_executor as feature_executor_module` after the existing `import claude.overnight.batch_runner as batch_runner_module` at line 19.
+  - Add `import cortex_command.overnight.feature_executor as feature_executor_module` after the existing `import cortex_command.overnight.batch_runner as batch_runner_module` at line 19.
 
   **TestExecuteFeature** (class starting at line 1013 — all `patch.object(batch_runner_module, ...)` calls in this class that target execution-layer symbols):
   Symbols to redirect to `feature_executor_module`: `load_state`, `parse_feature_plan`, `retry_task`, `_read_exit_report`, `mark_task_done_in_plan`, `pipeline_log_event`, `overnight_log_event`, `read_criticality`, `_render_template`, `_handle_failed_task`.
@@ -155,12 +155,12 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 
 ## Verification Strategy
 
-After all tasks complete: `just test` must exit 0 with all existing tests passing. Additionally verify the three acceptance checks from the spec's Req 4 (boundary test) and Req 5 (re-export): `python3 -c "from claude.overnight.batch_runner import execute_feature; from claude.overnight.feature_executor import execute_feature"` and `pytest claude/overnight/tests/test_feature_executor_boundary.py -v` both exit 0. Confirm that `python3 -m claude.overnight.batch_runner --help` (or any entry-point invocation) still works, verifying the CLI contract is unchanged.
+After all tasks complete: `just test` must exit 0 with all existing tests passing. Additionally verify the three acceptance checks from the spec's Req 4 (boundary test) and Req 5 (re-export): `python3 -c "from cortex_command.overnight.batch_runner import execute_feature; from cortex_command.overnight.feature_executor import execute_feature"` and `pytest claude/overnight/tests/test_feature_executor_boundary.py -v` both exit 0. Confirm that `python3 -m claude.overnight.batch_runner --help` (or any entry-point invocation) still works, verifying the CLI contract is unchanged.
 
 ## Veto Surface
 
 - **Task order 6 before 7 vs. both together**: Tasks 6 and 7 can run concurrently since they modify separate files. If overnight dispatch parallelizes them, the boundary is clean — neither file is in both tasks' Files list.
-- **FeatureResult remaining importable from batch_runner**: batch_runner will have `from claude.overnight.types import FeatureResult`, which makes `FeatureResult` an attribute of the batch_runner module. `test_lead_unit.py` imports it from batch_runner and that import continues to work. If this is undesirable (wanting strict "import from types only"), test_lead_unit.py's import line 24 would need to change — but that's outside the spec's stated requirements.
+- **FeatureResult remaining importable from batch_runner**: batch_runner will have `from cortex_command.overnight.types import FeatureResult`, which makes `FeatureResult` an attribute of the batch_runner module. `test_lead_unit.py` imports it from batch_runner and that import continues to work. If this is undesirable (wanting strict "import from types only"), test_lead_unit.py's import line 24 would need to change — but that's outside the spec's stated requirements.
 
 ## Scope Boundaries
 

@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from claude.overnight.state import OvernightState, load_state, save_state
+from cortex_command.overnight.state import OvernightState, load_state, save_state
 
 
 class TestIntegrationBranchesPersistence(unittest.TestCase):

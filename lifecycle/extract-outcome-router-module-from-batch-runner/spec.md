@@ -35,10 +35,10 @@ config: BatchConfig
 `BatchResult` and `BatchConfig` are imported under `TYPE_CHECKING` only — no runtime back-import from `batch_runner`.
 
 **Acceptance criteria**:
-- `python3 -c "from claude.overnight import outcome_router"` exits 0 (module imports cleanly)
+- `python3 -c "from cortex_command.overnight import outcome_router"` exits 0 (module imports cleanly)
 - `grep 'from __future__ import annotations' claude/overnight/outcome_router.py` exits 0
 - `grep 'TYPE_CHECKING' claude/overnight/outcome_router.py` exits 0
-- `python3 -c "import claude.overnight.batch_runner"` exits 0 (no circular import)
+- `python3 -c "import cortex_command.overnight.batch_runner"` exits 0 (no circular import)
 
 ### R3 — `apply_feature_result` public contract
 Move outcome routing into `async def apply_feature_result(name: str, result: FeatureResult, ctx: OutcomeContext) -> None`.
@@ -106,7 +106,7 @@ async def _accumulate_result(name: str, result: FeatureResult) -> None:
 
 **Acceptance criteria**:
 - A new test `claude/overnight/tests/test_outcome_router_boundary.py` passes: `just test` exits 0 and the test asserts that `claude.overnight.outcome_router` has no runtime dependency on `claude.overnight.batch_runner`
-- `python3 -c "from claude.overnight import outcome_router"` exits 0
+- `python3 -c "from cortex_command.overnight import outcome_router"` exits 0
 
 ### R6 — Both circuit-breaker sites preserved
 The circuit-breaker check (`consecutive_pauses_ref[0] >= CIRCUIT_BREAKER_THRESHOLD`) fires at two places:
@@ -144,7 +144,7 @@ All existing tests in `claude/overnight/tests/` pass after extraction.
 
 **Patch target migration — re-export strategy**: `batch_runner.py` does NOT re-export moved symbols from `outcome_router`. The moved symbols live exclusively in `outcome_router`'s namespace. All tests that patched `claude.overnight.batch_runner.{symbol}` for a moved symbol must be updated to patch `claude.overnight.outcome_router.{symbol}`.
 
-**`TestApplyFeatureResult` family** (test_lead_unit.py line 93, `TestApplyFeatureResultVariants` line 775, `TestApplyFeatureResultWorktreePaths` line 699, `TestConsecutivePausesSequence` line 907): These classes use `patch.object(batch_runner_module, ...)` where `batch_runner_module = import claude.overnight.batch_runner`. After `_apply_feature_result` and its internal callees move to `outcome_router`, these classes must import `outcome_router_module = claude.overnight.outcome_router` and patch against that module instead.
+**`TestApplyFeatureResult` family** (test_lead_unit.py line 93, `TestApplyFeatureResultVariants` line 775, `TestApplyFeatureResultWorktreePaths` line 699, `TestConsecutivePausesSequence` line 907): These classes use `patch.object(batch_runner_module, ...)` where `batch_runner_module = import cortex_command.overnight.batch_runner`. After `_apply_feature_result` and its internal callees move to `outcome_router`, these classes must import `outcome_router_module = claude.overnight.outcome_router` and patch against that module instead.
 
 **`TestAccumulateResultViaBatch` (line 1373)**: `_install_common_patches` (line ~1449) currently patches 14 symbols at `claude.overnight.batch_runner.*`. After extraction, the patch target for each symbol changes based on where the name is USED (not where it's defined):
 - Patch at `claude.overnight.outcome_router.*`: `merge_feature`, `recover_test_failure`, `_write_back_to_backlog`, `_get_changed_files`, `requires_review`, `read_tier`, `read_criticality`, `write_deferral`
@@ -161,7 +161,7 @@ All existing tests in `claude/overnight/tests/` pass after extraction.
 `batch_runner.py` imports `outcome_router` and uses it in `_accumulate_result`.
 
 **Acceptance criteria**:
-- `grep -c 'from claude.overnight import outcome_router\|import outcome_router' claude/overnight/batch_runner.py` ≥ 1
+- `grep -c 'from cortex_command.overnight import outcome_router\|import outcome_router' claude/overnight/batch_runner.py` ≥ 1
 - `python3 -m claude.overnight.batch_runner --help` exits 0 (CLI entry point still works)
 
 ## Non-Requirements
@@ -182,7 +182,7 @@ All existing tests in `claude/overnight/tests/` pass after extraction.
 - **Recovery attempt gating**: `recovery_attempts_map[name]` must be incremented before the recovery dispatch to prevent double-recovery. Gate check `recovery_attempts >= 1` must read the post-increment value.
 - **`feature_names` list dependency**: Logic in `apply_feature_result` uses `ctx.feature_names` for round-completion detection (checking if all features have resolved).
 - **Multi-repo path resolution**: `_effective_base_branch` and `_effective_merge_repo_path` use `ctx.integration_worktrees` and `ctx.integration_branches`.
-- **Lazy `dispatch_review` import**: Currently a local lazy import inside `_accumulate_result` to avoid circular import. In `outcome_router.py`, this import becomes top-level — `from claude.pipeline.review_dispatch import dispatch_review` — no circular dependency exists with `review_dispatch.py`.
+- **Lazy `dispatch_review` import**: Currently a local lazy import inside `_accumulate_result` to avoid circular import. In `outcome_router.py`, this import becomes top-level — `from cortex_command.pipeline.review_dispatch import dispatch_review` — no circular dependency exists with `review_dispatch.py`.
 - **budget_exhausted stays in `_accumulate_result`**: Lines 928–950 are session-layer state (sets global abort signal, persists state). They stay in the shim and do NOT move to `outcome_router`. `TestBudgetExhaustionSignal` patch targets remain at `claude.overnight.batch_runner.*`.
 
 ## Changes to Existing Behavior
@@ -195,13 +195,13 @@ All existing tests in `claude/overnight/tests/` pass after extraction.
 - ADDED: `claude/overnight/tests/test_outcome_router_boundary.py` import boundary test
 - MODIFIED: `TestApplyFeatureResult`-family patch targets — migrated from `batch_runner_module` to `outcome_router_module`
 - MODIFIED: `TestAccumulateResultViaBatch._install_common_patches` patch targets — partial migration per R9 table
-- REMOVED: Lazy `from claude.pipeline.review_dispatch import dispatch_review` local import in `_accumulate_result` — replaced with top-level import in `outcome_router.py`
+- REMOVED: Lazy `from cortex_command.pipeline.review_dispatch import dispatch_review` local import in `_accumulate_result` — replaced with top-level import in `outcome_router.py`
 
 ## Technical Constraints
 
 - **`apply_feature_result` must be `async def`**: It awaits `dispatch_review` (async, ~minutes per call) and `recover_test_failure` (async). The existing sync `_apply_feature_result` helper handles non-async routing paths and becomes an internal sync helper called from the async outer function.
 - **`from __future__ import annotations` required**: `outcome_router.py` must start with `from __future__ import annotations` (matching `feature_executor.py` line 8). This defers all annotation evaluation to strings, making unquoted `BatchResult` and `BatchConfig` field type annotations safe even when those types are imported only under `TYPE_CHECKING`.
-- **`BatchResult`/`BatchConfig` imports under `TYPE_CHECKING`**: No runtime import from `batch_runner.py`. Pattern: `if TYPE_CHECKING: from claude.overnight.batch_runner import BatchResult, BatchConfig` (same as `feature_executor.py` lines 20–21).
+- **`BatchResult`/`BatchConfig` imports under `TYPE_CHECKING`**: No runtime import from `batch_runner.py`. Pattern: `if TYPE_CHECKING: from cortex_command.overnight.batch_runner import BatchResult, BatchConfig` (same as `feature_executor.py` lines 20–21).
 - **`asyncio.Lock` owned by `run_batch`**: Created at line 895; shared with the heartbeat loop. Must be passed into `OutcomeContext`, not created inside `apply_feature_result`. `apply_feature_result` acquires it on entry via `async with ctx.lock:`.
 - **Two-phase lock pattern must be preserved**: `apply_feature_result` acquires the lock, releases it for recovery dispatch, re-acquires for recovery result routing. Same structure as current `_accumulate_result` lines 910, 1186–1202. Do NOT flatten to a single acquisition.
 - **`CIRCUIT_BREAKER_THRESHOLD` from `constants.py`**: Import from `claude.overnight.constants`. No `claude.overnight.*` circular dependency.

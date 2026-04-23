@@ -69,7 +69,7 @@ FeatureResult fields: `name`, `status`, `error`, `deferred_question_count`, `fil
 
 **To test `execute_feature` directly:**
 ```python
-from claude.overnight.batch_runner import execute_feature
+from cortex_command.overnight.batch_runner import execute_feature
 
 # Must mock:
 patch("claude.overnight.batch_runner.load_state")          → OvernightState mock
@@ -89,7 +89,7 @@ patch("claude.overnight.batch_runner.save_state")
 
 **To test `_apply_feature_result` directly:**
 ```python
-from claude.overnight.batch_runner import _apply_feature_result
+from cortex_command.overnight.batch_runner import _apply_feature_result
 
 # Must mock:
 patch("claude.overnight.batch_runner.subprocess.run")
@@ -121,7 +121,7 @@ patch("claude.overnight.batch_runner.save_state")
 
 **CRITICAL: Patching `dispatch_review` lazy import:**
 
-`dispatch_review` is imported lazily inside `_accumulate_result` at line 1691: `from claude.pipeline.review_dispatch import dispatch_review`. This import binds `dispatch_review` to the local scope of the `_accumulate_result` closure call, not to `batch_runner` module namespace. Standard `patch.object(batch_runner, "dispatch_review")` will fail because `dispatch_review` is never a `batch_runner` module-level attribute.
+`dispatch_review` is imported lazily inside `_accumulate_result` at line 1691: `from cortex_command.pipeline.review_dispatch import dispatch_review`. This import binds `dispatch_review` to the local scope of the `_accumulate_result` closure call, not to `batch_runner` module namespace. Standard `patch.object(batch_runner, "dispatch_review")` will fail because `dispatch_review` is never a `batch_runner` module-level attribute.
 
 Correct approach: patch at the **source module** before the lazy import executes:
 ```python

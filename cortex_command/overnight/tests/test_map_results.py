@@ -18,19 +18,19 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from claude.overnight.map_results import (
+from cortex_command.overnight.map_results import (
     _handle_missing_results,
     _map_results_to_state,
     _update_strategy,
 )
-from claude.overnight.state import (
+from cortex_command.overnight.state import (
     OvernightFeatureStatus,
     OvernightState,
     RoundSummary,
     load_state,
     save_state,
 )
-from claude.overnight.strategy import OvernightStrategy, load_strategy, save_strategy
+from cortex_command.overnight.strategy import OvernightStrategy, load_strategy, save_strategy
 
 
 def _make_state(features: dict[str, OvernightFeatureStatus] | None = None) -> OvernightState:

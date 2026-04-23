@@ -15,15 +15,15 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from claude.overnight.orchestrator import BatchConfig
-from claude.overnight.feature_executor import execute_feature
-from claude.overnight.feature_executor import _read_exit_report
-from claude.overnight.events import (
+from cortex_command.overnight.orchestrator import BatchConfig
+from cortex_command.overnight.feature_executor import execute_feature
+from cortex_command.overnight.feature_executor import _read_exit_report
+from cortex_command.overnight.events import (
     FEATURE_DEFERRED,
     WORKER_MALFORMED_EXIT_REPORT,
     WORKER_NO_EXIT_REPORT,
 )
-from claude.pipeline.parser import FeaturePlan, FeatureTask
+from cortex_command.pipeline.parser import FeaturePlan, FeatureTask
 
 
 # ---------------------------------------------------------------------------

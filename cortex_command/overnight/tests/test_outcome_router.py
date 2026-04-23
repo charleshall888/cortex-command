@@ -14,9 +14,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
-from claude.overnight.outcome_router import OutcomeContext, apply_feature_result
-from claude.overnight.types import CircuitBreakerState, FeatureResult
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.outcome_router import OutcomeContext, apply_feature_result
+from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
 
 
 def _make_ctx(pauses: int | None = None) -> OutcomeContext:

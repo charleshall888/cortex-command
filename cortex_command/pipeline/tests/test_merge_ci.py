@@ -18,7 +18,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import patch
 
-from claude.pipeline.merge import (
+from cortex_command.pipeline.merge import (
     _check_ci_status,
     merge_feature,
     run_tests,

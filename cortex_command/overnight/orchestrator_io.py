@@ -6,8 +6,8 @@ audit-point import rather than scattered imports from multiple internal
 modules.  It contains no new logic.
 """
 
-from claude.overnight.deferral import write_escalation
-from claude.overnight.state import load_state, save_state, update_feature_status
+from cortex_command.overnight.deferral import write_escalation
+from cortex_command.overnight.state import load_state, save_state, update_feature_status
 
 __all__ = [
     "load_state",

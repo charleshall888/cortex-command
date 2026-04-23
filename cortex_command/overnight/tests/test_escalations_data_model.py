@@ -20,8 +20,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from claude.overnight.deferral import EscalationEntry, _now_iso, write_escalation
-from claude.overnight.tests.conftest import _parse_jsonl
+from cortex_command.overnight.deferral import EscalationEntry, _now_iso, write_escalation
+from cortex_command.overnight.tests.conftest import _parse_jsonl
 
 
 class TestEscalationsDataModel(unittest.TestCase):

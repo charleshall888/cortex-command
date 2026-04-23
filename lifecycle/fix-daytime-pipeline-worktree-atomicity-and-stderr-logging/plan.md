@@ -45,7 +45,7 @@ Match the `conflict.py:119-128` style precisely (capture_output=True, text=True,
 
 **Verification:**
 - `just test` exits 0 (all three new tests in Task 2 pass; existing three venv-symlink tests continue to pass).
-- Run `python3 -c 'from claude.pipeline import worktree; import inspect; print("check=True" in inspect.getsource(worktree.create_worktree))'` and confirm output is `False` — `check=True` no longer appears in `create_worktree`.
+- Run `python3 -c 'from cortex_command.pipeline import worktree; import inspect; print("check=True" in inspect.getsource(worktree.create_worktree))'` and confirm output is `False` — `check=True` no longer appears in `create_worktree`.
 - Run `grep -n 'worktree_creation_failed' /Users/charlie.hall/Workspaces/cortex-command/claude/pipeline/worktree.py` and confirm exactly one match on the new `ValueError` raise line.
 
 **Status:** completed (commit `25c3ea0`)

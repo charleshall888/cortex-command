@@ -1,7 +1,7 @@
 """Conftest for claude/overnight/tests.
 
 Stubs out backlog.update_item and the claude_agent_sdk before any test in
-this package imports from claude.overnight.batch_runner.  The stubs must be in
+this package imports from cortex_command.overnight.batch_runner.  The stubs must be in
 sys.modules before batch_runner.py is first imported because batch_runner.py executes two
 unconditional module-level imports:
 
@@ -30,7 +30,7 @@ sys.modules.setdefault("backlog.update_item", _backlog_update_mod)
 # ---------------------------------------------------------------------------
 # Install the claude_agent_sdk stub (reuses the pipeline test helper).
 # ---------------------------------------------------------------------------
-from claude.tests._stubs import _install_sdk_stub  # noqa: E402
+from cortex_command.tests._stubs import _install_sdk_stub  # noqa: E402
 
 _install_sdk_stub()
 

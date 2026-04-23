@@ -15,10 +15,10 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from claude.overnight.deferral import DeferralQuestion, write_deferral
-from claude.pipeline.dispatch import dispatch_task
-from claude.pipeline.merge import merge_feature
-from claude.pipeline.state import log_event
+from cortex_command.overnight.deferral import DeferralQuestion, write_deferral
+from cortex_command.pipeline.dispatch import dispatch_task
+from cortex_command.pipeline.merge import merge_feature
+from cortex_command.pipeline.state import log_event
 
 logger = logging.getLogger(__name__)
 

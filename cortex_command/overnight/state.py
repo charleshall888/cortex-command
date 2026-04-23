@@ -19,10 +19,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-from claude.common import durable_fsync
+from cortex_command.common import durable_fsync
 
 if TYPE_CHECKING:
-    from claude.overnight.orchestrator import BatchResult
+    from cortex_command.overnight.orchestrator import BatchResult
 
 # Lifecycle root (resolved from this file's location)
 _LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"

@@ -18,7 +18,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from claude.dashboard.data import get_last_activity_ts
+from cortex_command.dashboard.data import get_last_activity_ts
 
 logger = logging.getLogger(__name__)
 

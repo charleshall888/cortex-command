@@ -341,7 +341,7 @@ log_event() {
     local details="${3:-}"
     LOG_EVENT_NAME="$event" LOG_ROUND="$round_num" LOG_DETAILS="$details" LOG_EVENTS_PATH="$EVENTS_PATH" python3 -c "
 import json, os
-from claude.overnight.events import log_event
+from cortex_command.overnight.events import log_event
 from pathlib import Path
 raw = os.environ.get('LOG_DETAILS', '')
 details = json.loads(raw) if raw else None
@@ -423,7 +423,7 @@ except Exception:
             # Log STALL_TIMEOUT event
             LOG_EVENT_NAME="stall_timeout" LOG_ROUND="$ROUND" LOG_DETAILS="{\"session_id\": \"$SESSION_ID\", \"last_event_ago_seconds\": $age_secs, \"round\": $ROUND}" LOG_EVENTS_PATH="$EVENTS_PATH" python3 -c "
 import json, os
-from claude.overnight.events import log_event
+from cortex_command.overnight.events import log_event
 from pathlib import Path
 raw = os.environ.get('LOG_DETAILS', '')
 details = json.loads(raw) if raw else None
@@ -459,7 +459,7 @@ cleanup() {
     echo "Signal received — pausing overnight session"
     STATE_PATH="$STATE_PATH" python3 -c "
 import os
-from claude.overnight.state import load_state, save_state, transition
+from cortex_command.overnight.state import load_state, save_state, transition
 from pathlib import Path
 state = load_state(Path(os.environ['STATE_PATH']))
 if state.phase != 'complete' and state.phase != 'paused':
@@ -491,7 +491,7 @@ if pointer_path.exists():
 import os
 from pathlib import Path
 from datetime import datetime, timezone
-from claude.overnight.report import collect_report_data, create_followup_backlog_items, generate_report, write_report
+from cortex_command.overnight.report import collect_report_data, create_followup_backlog_items, generate_report, write_report
 data = collect_report_data(state_path=Path(os.environ['STATE_PATH']), events_path=Path(os.environ['EVENTS_PATH']))
 data.new_backlog_items = create_followup_backlog_items(data, backlog_dir=Path(os.environ['WORKTREE_PATH']) / 'backlog')
 report = generate_report(data)
@@ -604,7 +604,7 @@ while [[ $ROUND -le $MAX_ROUNDS ]]; do
         echo "Round $ROUND: results file already exists — skipping"
         STATE_PATH="$STATE_PATH" ROUND="$ROUND" python3 -c "
 import os
-from claude.overnight.state import load_state, save_state
+from cortex_command.overnight.state import load_state, save_state
 from pathlib import Path
 state = load_state(Path(os.environ['STATE_PATH']))
 state.current_round = int(os.environ['ROUND']) + 1
@@ -659,7 +659,7 @@ print(sum(1 for f in features.values() if f.get('status') == 'merged'))
         echo "Warning: watchdog killed orchestrator due to event log silence (stall timeout)"
         STATE_PATH="$STATE_PATH" python3 -c "
 import os
-from claude.overnight.state import load_state, save_state, transition
+from cortex_command.overnight.state import load_state, save_state, transition
 from pathlib import Path
 state = load_state(Path(os.environ['STATE_PATH']))
 if state.phase != 'paused' and state.phase != 'complete':
@@ -673,7 +673,7 @@ if state.phase != 'paused' and state.phase != 'complete':
         echo "Warning: orchestrator agent exited with code $EXIT_CODE"
         LOG_EVENT_NAME="orchestrator_failed" LOG_ROUND="$ROUND" LOG_DETAILS="{\"exit_code\": $EXIT_CODE}" LOG_EVENTS_PATH="$EVENTS_PATH" python3 -c "
 import json, os
-from claude.overnight.events import log_event
+from cortex_command.overnight.events import log_event
 from pathlib import Path
 raw = os.environ.get('LOG_DETAILS', '')
 details = json.loads(raw) if raw else None
@@ -734,7 +734,7 @@ log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=de
             log_event "batch_runner_stalled" "$ROUND" "{\"round\": $ROUND}"
             STATE_PATH="$STATE_PATH" python3 -c "
 import os
-from claude.overnight.state import load_state, save_state, transition
+from cortex_command.overnight.state import load_state, save_state, transition
 from pathlib import Path
 state = load_state(Path(os.environ['STATE_PATH']))
 if state.phase != 'paused' and state.phase != 'complete':
@@ -816,7 +816,7 @@ print(sum(1 for f in features.values() if f.get('status') == 'merged'))
     # Update round in state
     STATE_PATH="$STATE_PATH" ROUND="$ROUND" python3 -c "
 import os
-from claude.overnight.state import load_state, save_state
+from cortex_command.overnight.state import load_state, save_state
 from pathlib import Path
 state = load_state(Path(os.environ['STATE_PATH']))
 state.current_round = int(os.environ['ROUND']) + 1
@@ -871,7 +871,7 @@ log_event "session_complete" "$(( ROUND - 1 ))" "{\"features_merged\": \"$FINAL_
 # Transition state to complete if all features are done
 STATE_PATH="$STATE_PATH" python3 -c "
 import os
-from claude.overnight.state import load_state, save_state, transition
+from cortex_command.overnight.state import load_state, save_state, transition
 from pathlib import Path
 state = load_state(Path(os.environ['STATE_PATH']))
 pending = sum(1 for f in state.features.values() if f.status in ('pending', 'running'))
@@ -929,7 +929,7 @@ if [[ -n "$TEST_COMMAND" ]] && [[ -n "$WORKTREE_PATH" ]] && [[ -d "$WORKTREE_PAT
             STATE_PATH="$STATE_PATH" python3 -c "
 import os
 from pathlib import Path
-from claude.overnight.strategy import load_strategy, save_strategy
+from cortex_command.overnight.strategy import load_strategy, save_strategy
 _p = Path(os.environ['STATE_PATH']).parent / 'overnight-strategy.json'
 _s = load_strategy(_p)
 _s.integration_health = 'degraded'
@@ -1315,7 +1315,7 @@ except Exception:
                             REPO_ROOT="$REPO_ROOT" SESSION_ID="$SESSION_ID" MC_PR_URL="$MC_PR_URL" MC_INTENDED_DRAFT="$MC_INTENDED_DRAFT" MC_READY_REASON="$MC_READY_REASON" python3 -c "
 import os
 from pathlib import Path
-from claude.pipeline.state import log_event
+from cortex_command.pipeline.state import log_event
 log_event(
     Path(os.environ['REPO_ROOT']) / 'lifecycle' / 'pipeline-events.log',
     {
@@ -1384,8 +1384,8 @@ if [[ -n "$TARGET_INTEGRATION_WORKTREE" ]]; then
     PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" TARGET_INTEGRATION_WORKTREE="$TARGET_INTEGRATION_WORKTREE" SESSION_ID="$SESSION_ID" ROUND="$ROUND" python3 -c "
 import json, os, hashlib
 from pathlib import Path
-from claude.overnight.report import generate_and_write_report
-from claude.overnight.events import log_event
+from cortex_command.overnight.report import generate_and_write_report
+from cortex_command.overnight.events import log_event
 pr_urls_file = Path(os.environ['PR_URLS_FILE'])
 pr_urls = json.loads(pr_urls_file.read_text()) if pr_urls_file.exists() else {}
 sid = os.environ['SESSION_ID']
@@ -1437,9 +1437,9 @@ else
     PR_URLS_FILE="$PR_URLS_FILE" STATE_PATH="$STATE_PATH" EVENTS_PATH="$EVENTS_PATH" HOME_PROJECT_ROOT="$HOME_PROJECT_ROOT" REPO_ROOT="$REPO_ROOT" SESSION_ID="$SESSION_ID" ROUND="$ROUND" python3 -c "
 import json, os, hashlib
 from pathlib import Path
-from claude.overnight.report import generate_and_write_report
-from claude.overnight.state import _LIFECYCLE_ROOT
-from claude.overnight.events import log_event
+from cortex_command.overnight.report import generate_and_write_report
+from cortex_command.overnight.state import _LIFECYCLE_ROOT
+from cortex_command.overnight.events import log_event
 pr_urls_file = Path(os.environ['PR_URLS_FILE'])
 pr_urls = json.loads(pr_urls_file.read_text()) if pr_urls_file.exists() else {}
 sid = os.environ['SESSION_ID']

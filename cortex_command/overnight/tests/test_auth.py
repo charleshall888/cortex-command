@@ -20,9 +20,9 @@ from pathlib import Path
 
 import pytest
 
-from claude.overnight import auth
-from claude.overnight.auth import ensure_sdk_auth, resolve_auth_for_shell
-from claude.pipeline import state as pipeline_state
+from cortex_command.overnight import auth
+from cortex_command.overnight.auth import ensure_sdk_auth, resolve_auth_for_shell
+from cortex_command.pipeline import state as pipeline_state
 
 
 REPO_ROOT = str(Path(__file__).resolve().parents[3])
@@ -178,7 +178,7 @@ def test_stdlib_only(tmp_path: Path) -> None:
     code = (
         f"import sys\n"
         f"sys.path.insert(0, {REPO_ROOT!r})\n"
-        f"from claude.overnight import auth\n"
+        f"from cortex_command.overnight import auth\n"
         f"raise SystemExit(auth.resolve_auth_for_shell())\n"
     )
     env = {
@@ -253,7 +253,7 @@ def test_redaction_and_byte_equivalence(
 
     FROZEN = "2026-04-23T12:00:00+00:00"
     monkeypatch.setattr("claude.pipeline.state._now_iso", lambda: FROZEN)
-    # auth.py re-exports _now_iso from claude.pipeline.state at import time;
+    # auth.py re-exports _now_iso from cortex_command.pipeline.state at import time;
     # patch the rebound name too so _build_event uses the frozen value.
     monkeypatch.setattr("claude.overnight.auth._now_iso", lambda: FROZEN)
 

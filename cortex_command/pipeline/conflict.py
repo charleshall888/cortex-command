@@ -19,12 +19,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from claude.pipeline.merge import TestResult
-    from claude.overnight.orchestrator import BatchConfig
+    from cortex_command.pipeline.merge import TestResult
+    from cortex_command.overnight.orchestrator import BatchConfig
 
-from claude.pipeline.dispatch import dispatch_task
-from claude.pipeline.merge_recovery import write_recovery_log_entry
-from claude.pipeline.state import log_event as pipeline_log_event
+from cortex_command.pipeline.dispatch import dispatch_task
+from cortex_command.pipeline.merge_recovery import write_recovery_log_entry
+from cortex_command.pipeline.state import log_event as pipeline_log_event
 
 _REPAIR_TEMPLATE = Path(__file__).resolve().parents[1] / "overnight/prompts/repair-agent.md"
 
@@ -223,8 +223,8 @@ async def dispatch_repair_agent(
     Returns:
         RepairResult with success status, model used, resolved files, and cost.
     """
-    from claude.pipeline.merge import run_tests  # lazy: avoid circular import
-    from claude.overnight.events import (  # lazy: avoid circular import via overnight.__init__
+    from cortex_command.pipeline.merge import run_tests  # lazy: avoid circular import
+    from cortex_command.overnight.events import (  # lazy: avoid circular import via overnight.__init__
         REPAIR_AGENT_START,
         REPAIR_AGENT_COMPLETE,
         REPAIR_AGENT_ESCALATED,
@@ -538,7 +538,7 @@ async def resolve_trivial_conflict(
         ConflictResolutionResult with success status, resolved files, and
         repair branch name on success, or error string on failure.
     """
-    from claude.pipeline.merge import run_tests  # lazy: avoid circular import
+    from cortex_command.pipeline.merge import run_tests  # lazy: avoid circular import
 
     repo = Path.cwd()
     repair_branch = f"repair/{feature}-{round_number}"

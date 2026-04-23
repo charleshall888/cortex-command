@@ -25,11 +25,11 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
-from claude.pipeline.conflict import (
+from cortex_command.pipeline.conflict import (
     ConflictResolutionResult,
     resolve_trivial_conflict,
 )
-from claude.overnight.feature_executor import execute_feature
+from cortex_command.overnight.feature_executor import execute_feature
 
 
 # ---------------------------------------------------------------------------
@@ -308,7 +308,7 @@ def test_execute_feature_routes_trivial_when_eligible(tmp_path: Path) -> None:
 
 def test_execute_feature_routes_repair_agent_when_hot_file(tmp_path: Path) -> None:
     """hot.py in hot_files → trivial path skipped, repair agent dispatched."""
-    from claude.pipeline.conflict import RepairResult
+    from cortex_command.pipeline.conflict import RepairResult
 
     feature = "feat"
     config = _FakeBatchConfig(tmp_path)
@@ -397,7 +397,7 @@ def test_execute_feature_budget_exhausted_deferral(tmp_path: Path) -> None:
 
 def test_execute_feature_trivial_fallthrough_to_repair_agent(tmp_path: Path) -> None:
     """Trivial path fails → repair agent dispatched, repair_agent_used=True."""
-    from claude.pipeline.conflict import RepairResult
+    from cortex_command.pipeline.conflict import RepairResult
 
     feature = "feat"
     config = _FakeBatchConfig(tmp_path)

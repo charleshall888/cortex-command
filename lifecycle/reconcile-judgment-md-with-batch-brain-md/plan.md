@@ -21,7 +21,7 @@ Three-task dead-code removal: delete the orphaned `judgment.md` prompt, clean th
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: In `claude/overnight/events.py`, apply two Edit tool replacements in sequence within this task: (1) find and remove the line `JUDGMENT_FAILED = "judgment_failed"` from the constants block (it appears between `SESSION_COMPLETE` and `HEARTBEAT`); (2) find and remove the entry `JUDGMENT_FAILED,` from the `EVENT_TYPES` tuple. Navigate to each by searching for the symbol name `JUDGMENT_FAILED`, not by line number. Do not commit between the two replacements — commit only after both are applied. After both edits, `JUDGMENT_FAILED` must not appear anywhere in `events.py`.
-- **Verification**: `grep "JUDGMENT_FAILED" claude/overnight/events.py` returns no matches; `python3 -c "from claude.overnight import events; assert not hasattr(events, 'JUDGMENT_FAILED')"` exits 0. Commit using `/commit` (may be combined with Task 1's commit if not yet committed).
+- **Verification**: `grep "JUDGMENT_FAILED" claude/overnight/events.py` returns no matches; `python3 -c "from cortex_command.overnight import events; assert not hasattr(events, 'JUDGMENT_FAILED')"` exits 0. Commit using `/commit` (may be combined with Task 1's commit if not yet committed).
 - **Status**: [x] complete
 
 ### Task 3: Add regression tests for dead-code cleanup
@@ -38,6 +38,6 @@ Three-task dead-code removal: delete the orphaned `judgment.md` prompt, clean th
 After all three tasks are complete:
 
 1. Confirm file deletion: `ls claude/overnight/prompts/` lists `batch-brain.md`, `orchestrator-round.md`, and `repair-agent.md` — `judgment.md` is absent.
-2. Confirm events.py clean: `grep "JUDGMENT_FAILED" claude/overnight/events.py` returns no matches; `python3 -c "from claude.overnight import events; assert not hasattr(events, 'JUDGMENT_FAILED')"` exits 0.
+2. Confirm events.py clean: `grep "JUDGMENT_FAILED" claude/overnight/events.py` returns no matches; `python3 -c "from cortex_command.overnight import events; assert not hasattr(events, 'JUDGMENT_FAILED')"` exits 0.
 3. Confirm test coverage: `just test` exits 0; output shows `tests/test_events.py` collected and all three new tests passing.
 4. Confirm no dead file references: `grep -rn "judgment\.md" claude/ --include="*.py" --include="*.sh"` returns no matches.

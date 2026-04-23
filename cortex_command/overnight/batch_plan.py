@@ -12,7 +12,7 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
-from claude.pipeline.parser import parse_feature_plan, parse_master_plan
+from cortex_command.pipeline.parser import parse_feature_plan, parse_master_plan
 
 
 def generate_batch_plan(

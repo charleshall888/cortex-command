@@ -17,22 +17,22 @@ from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from claude.overnight.orchestrator import BatchResult, BatchConfig
+    from cortex_command.overnight.orchestrator import BatchResult, BatchConfig
 
-from claude.common import (
+from cortex_command.common import (
     read_criticality,
     read_tier,
     requires_review,
 )
-from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
-from claude.overnight.deferral import (
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.deferral import (
     DEFAULT_DEFERRED_DIR,
     SEVERITY_BLOCKING,
     DeferralQuestion,
     _next_escalation_n,
     write_deferral,
 )
-from claude.overnight.events import (
+from cortex_command.overnight.events import (
     BACKLOG_WRITE_FAILED,
     CIRCUIT_BREAKER,
     FEATURE_COMPLETE,
@@ -48,15 +48,15 @@ from claude.overnight.events import (
     TRIVIAL_CONFLICT_RESOLVED,
     log_event as overnight_log_event,
 )
-from claude.overnight.state import _normalize_repo_key, load_state, save_state
-from claude.overnight.types import CircuitBreakerState, FeatureResult
-from claude.pipeline.merge import merge_feature
-from claude.pipeline.merge_recovery import recover_test_failure
-from claude.pipeline.review_dispatch import dispatch_review
-from claude.pipeline.worktree import cleanup_worktree
+from cortex_command.overnight.state import _normalize_repo_key, load_state, save_state
+from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
+from cortex_command.pipeline.merge import merge_feature
+from cortex_command.pipeline.merge_recovery import recover_test_failure
+from cortex_command.pipeline.review_dispatch import dispatch_review
+from cortex_command.pipeline.worktree import cleanup_worktree
 
 if TYPE_CHECKING:
-    from claude.pipeline.review_dispatch import ReviewResult  # noqa: F401
+    from cortex_command.pipeline.review_dispatch import ReviewResult  # noqa: F401
 
 
 logger = logging.getLogger(__name__)

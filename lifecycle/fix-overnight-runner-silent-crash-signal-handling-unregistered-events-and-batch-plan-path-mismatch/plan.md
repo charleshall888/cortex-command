@@ -12,7 +12,7 @@ Build the test infrastructure and validation layer first — event type registra
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Constants block runs lines 32-70; `EVENT_TYPES` tuple runs lines 72-112. Naming convention: `UPPER_CASE` constant, `all_lowercase_with_underscores` string value. The 6 types to add: `INTEGRATION_WORKTREE_MISSING`, `ORCHESTRATOR_NO_PLAN`, `BATCH_RUNNER_STALLED`, `ARTIFACT_COMMIT_FAILED`, `PUSH_FAILED`, `MORNING_REPORT_COMMIT_FAILED`. All 6 are already called by string literal in runner.sh (lines 310, 312, 660, 690, 949, 1067, 1194, 1204). Do not change the `log_event()` validation logic at line 172.
-- **Verification**: `python3 -c "from claude.overnight.events import EVENT_TYPES; assert 'orchestrator_no_plan' in EVENT_TYPES"` exits 0
+- **Verification**: `python3 -c "from cortex_command.overnight.events import EVENT_TYPES; assert 'orchestrator_no_plan' in EVENT_TYPES"` exits 0
 - **Status**: [x] complete
 
 ### Task 2: Make runner.sh REPO_ROOT testable
@@ -57,7 +57,7 @@ Build the test infrastructure and validation layer first — event type registra
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: `generate_batch_plan()` is at lines 18-57; `output_path.parent.mkdir(parents=True, exist_ok=True)` is the first file operation at line 46. Use `output_path.is_absolute()` (not `resolve()` — resolving would mask the bug). The relative `plan_path` fallback at line 55 is intentionally worktree-relative — do not add an assertion there. All existing callers pass absolute paths.
-- **Verification**: `python3 -c "from pathlib import Path; from claude.overnight.batch_plan import generate_batch_plan; generate_batch_plan([], None, Path('relative/path'))"` — pass if exit code != 0 (ValueError raised)
+- **Verification**: `python3 -c "from pathlib import Path; from cortex_command.overnight.batch_plan import generate_batch_plan; generate_batch_plan([], None, Path('relative/path'))"` — pass if exit code != 0 (ValueError raised)
 - **Status**: [x] complete
 
 ### Task 7: Add worktree fallback check in runner.sh
@@ -110,4 +110,4 @@ After all tasks complete:
    - `grep -c 'Path.*session_dir' claude/overnight/prompts/orchestrator-round.md` returns 2
    - `grep -c 'resolves to.*/' claude/overnight/prompts/orchestrator-round.md` returns >= 1
 3. `bash -n claude/overnight/runner.sh` exits 0
-4. `python3 -c "from claude.overnight.events import INTEGRATION_WORKTREE_MISSING, ORCHESTRATOR_NO_PLAN, BATCH_RUNNER_STALLED, ARTIFACT_COMMIT_FAILED, PUSH_FAILED, MORNING_REPORT_COMMIT_FAILED"` exits 0
+4. `python3 -c "from cortex_command.overnight.events import INTEGRATION_WORKTREE_MISSING, ORCHESTRATOR_NO_PLAN, BATCH_RUNNER_STALLED, ARTIFACT_COMMIT_FAILED, PUSH_FAILED, MORNING_REPORT_COMMIT_FAILED"` exits 0

@@ -17,7 +17,7 @@ import unittest
 import warnings
 from pathlib import Path
 
-from claude.overnight.deferral import (
+from cortex_command.overnight.deferral import (
     DeferralQuestion,
     EscalationEntry,
     _next_escalation_n,

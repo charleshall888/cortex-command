@@ -9,7 +9,7 @@ import argparse
 import asyncio
 from pathlib import Path
 
-from claude.overnight.orchestrator import BatchConfig, BatchResult, run_batch  # noqa: F401
+from cortex_command.overnight.orchestrator import BatchConfig, BatchResult, run_batch  # noqa: F401
 
 
 def build_parser() -> argparse.ArgumentParser:

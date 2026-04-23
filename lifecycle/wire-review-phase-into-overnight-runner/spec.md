@@ -10,7 +10,7 @@ The overnight batch runner (`batch_runner.py`) treats merged features as complet
 
 Add a `read_tier(feature, lifecycle_base=Path("lifecycle"))` function that mirrors `read_criticality()`. Scans `lifecycle/{feature}/events.log` for the last JSON line containing a `"tier"` field (from `lifecycle_start` or `complexity_override` events). Returns the tier as a string. Defaults to `"simple"` when no matching event is found.
 
-**Acceptance criteria**: `python -c "from claude.common import read_tier; print(read_tier.__doc__)"` exits 0. `grep -c 'def read_tier' claude/common.py` = 1.
+**Acceptance criteria**: `python -c "from cortex_command.common import read_tier; print(read_tier.__doc__)"` exits 0. `grep -c 'def read_tier' claude/common.py` = 1.
 
 ### R2: Add review gating logic to batch_runner.py post-merge flow
 

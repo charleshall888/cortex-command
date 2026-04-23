@@ -28,7 +28,7 @@ The overnight pipeline executes features in batches, but users often need a sing
    Acceptance: Interactive/session-dependent — manual acceptance test observes successful merge and test-gate pass; failure path triggers revert.
 
 8. **(M)** **Per-feature state file**: Driver creates `lifecycle/{feature}/daytime-state.json` with all fields required by `load_state()` in `claude/overnight/state.py` — including `session_id`, `plan_ref`, `current_round`, `phase`, `started_at`, `updated_at`, and `features` — with `features[{feature}]` pre-populated as a minimal `OvernightFeatureStatus` (read `state.py` for the exact field set) so that `load_state()` succeeds and the conflict-recovery block in `feature_executor` is not short-circuited by `_fs is None`. The `phase` field must be `"executing"`.
-   Acceptance: `python3 -c "from claude.overnight.state import load_state; s=load_state('lifecycle/{feature}/daytime-state.json'); assert s.features.get('{feature}') is not None"` exits 0 after a run is started.
+   Acceptance: `python3 -c "from cortex_command.overnight.state import load_state; s=load_state('lifecycle/{feature}/daytime-state.json'); assert s.features.get('{feature}') is not None"` exits 0 after a run is started.
 
 9. **(M)** **Dashboard isolation**: The per-feature state file is at `lifecycle/{feature}/daytime-state.json`, not at `lifecycle/overnight-state.json`. `config.overnight_state_path` points to the per-feature path so the shared overnight state is never touched or read.
    Acceptance: `ls lifecycle/overnight-state.json` is unmodified before and after a daytime run (or is absent if no overnight session has run).

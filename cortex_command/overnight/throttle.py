@@ -14,8 +14,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from claude.pipeline.dispatch import DispatchResult, dispatch_task
-from claude.pipeline.state import log_event
+from cortex_command.pipeline.dispatch import DispatchResult, dispatch_task
+from cortex_command.pipeline.state import log_event
 
 
 # ---------------------------------------------------------------------------

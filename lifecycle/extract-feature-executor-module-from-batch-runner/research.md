@@ -14,7 +14,7 @@ This ticket is Phase 1 of the 3-phase `batch_runner.py` decomposition (Candidate
 
 | File | Change |
 |------|--------|
-| `claude/overnight/batch_runner.py` | Remove execute_feature + helpers; add `from claude.overnight.feature_executor import execute_feature`; batch_runner re-exports execute_feature in its namespace so patch targets in test_lead_unit.py continue to work |
+| `claude/overnight/batch_runner.py` | Remove execute_feature + helpers; add `from cortex_command.overnight.feature_executor import execute_feature`; batch_runner re-exports execute_feature in its namespace so patch targets in test_lead_unit.py continue to work |
 | `claude/overnight/feature_executor.py` | New module — ~600–700 LOC |
 | `claude/overnight/tests/test_idempotency.py` | Update imports from `batch_runner` → `feature_executor` (lines 20–25) |
 | `claude/overnight/tests/test_exit_report.py` | Update imports from `batch_runner` → `feature_executor` (lines 18–22) |
@@ -86,7 +86,7 @@ This is the critical import boundary issue: the constant must be visible in both
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from claude.overnight.batch_runner import BatchConfig
+    from cortex_command.overnight.batch_runner import BatchConfig
 ```
 
 **If** a `constants.py` is created, `BatchConfig` should eventually migrate there too (or to a `types.py`). For Phase 1, TYPE_CHECKING is sufficient.
@@ -112,29 +112,29 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from claude.overnight.batch_runner import BatchConfig
+    from cortex_command.overnight.batch_runner import BatchConfig
 
-from claude.common import (
+from cortex_command.common import (
     compute_dependency_batches,
     mark_task_done_in_plan,
     read_criticality,
 )
-from claude.pipeline.conflict import (
+from cortex_command.pipeline.conflict import (
     ConflictClassification,
     dispatch_repair_agent,
     resolve_trivial_conflict,
 )
-from claude.pipeline.parser import FeatureTask, parse_feature_plan
-from claude.pipeline.retry import RetryResult, retry_task
-from claude.overnight.brain import BrainAction, BrainContext, request_brain_decision
-from claude.overnight.deferral import (
+from cortex_command.pipeline.parser import FeatureTask, parse_feature_plan
+from cortex_command.pipeline.retry import RetryResult, retry_task
+from cortex_command.overnight.brain import BrainAction, BrainContext, request_brain_decision
+from cortex_command.overnight.deferral import (
     SEVERITY_BLOCKING,
     DeferralQuestion,
     EscalationEntry,
     write_deferral,
     write_escalation,
 )
-from claude.overnight.events import (
+from cortex_command.overnight.events import (
     FEATURE_DEFERRED,
     MERGE_CONFLICT_CLASSIFIED,
     WORKER_MALFORMED_EXIT_REPORT,
@@ -142,7 +142,7 @@ from claude.overnight.events import (
     log_event as overnight_log_event,
     read_events,
 )
-from claude.overnight.state import load_state, save_state
+from cortex_command.overnight.state import load_state, save_state
 ```
 
 Plus `_next_escalation_n` from `claude.overnight.deferral` and `CIRCUIT_BREAKER_THRESHOLD` from `claude.overnight.constants` (if created) or batch_runner (see above).
@@ -207,7 +207,7 @@ For new pure helpers (any added during extraction): parametrized `pytest` with i
 ### "Move then Re-export" Migration Sequence
 
 1. Create feature_executor.py, move functions there
-2. In batch_runner.py: `from claude.overnight.feature_executor import execute_feature` (re-export — callers continue to work)
+2. In batch_runner.py: `from cortex_command.overnight.feature_executor import execute_feature` (re-export — callers continue to work)
 3. Confirm all tests pass
 4. Remove any unnecessary re-exports after Phase 2/3 migrations complete
 

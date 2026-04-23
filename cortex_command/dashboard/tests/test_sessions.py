@@ -14,7 +14,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from claude.dashboard.data import parse_session_detail, parse_session_list
+from cortex_command.dashboard.data import parse_session_detail, parse_session_list
 
 
 def _write_session(

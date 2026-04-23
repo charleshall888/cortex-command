@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
-from claude.overnight.backlog import BacklogItem, _is_pipeline_branch_merged, filter_ready
+from cortex_command.overnight.backlog import BacklogItem, _is_pipeline_branch_merged, filter_ready
 
 
 class TestIsPipelineBranchMerged(unittest.TestCase):

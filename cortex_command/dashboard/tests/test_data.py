@@ -23,7 +23,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from claude.dashboard.data import (
+from cortex_command.dashboard.data import (
     _read_all_jsonl,
     build_swim_lane_data,
     compute_slow_flags,

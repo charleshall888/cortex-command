@@ -21,22 +21,22 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from claude.pipeline.parser import parse_master_plan
-from claude.pipeline.state import log_event as pipeline_log_event
-from claude.pipeline.worktree import create_worktree
+from cortex_command.pipeline.parser import parse_master_plan
+from cortex_command.pipeline.state import log_event as pipeline_log_event
+from cortex_command.pipeline.worktree import create_worktree
 
-from claude.overnight.throttle import (
+from cortex_command.overnight.throttle import (
     ConcurrencyManager,
     load_throttle_config,
 )
-from claude.overnight.state import (
+from cortex_command.overnight.state import (
     load_state,
     save_batch_result,
     save_state,
     transition,
     OvernightFeatureStatus,
 )
-from claude.overnight.events import (
+from cortex_command.overnight.events import (
     BATCH_ASSIGNED,
     BATCH_BUDGET_EXHAUSTED,
     BATCH_COMPLETE,
@@ -45,10 +45,10 @@ from claude.overnight.events import (
     SESSION_BUDGET_EXHAUSTED,
     log_event as overnight_log_event,
 )
-from claude.overnight.types import CircuitBreakerState, FeatureResult
-from claude.overnight.feature_executor import execute_feature
-from claude.overnight import outcome_router
-from claude.overnight.outcome_router import OutcomeContext
+from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
+from cortex_command.overnight.feature_executor import execute_feature
+from cortex_command.overnight import outcome_router
+from cortex_command.overnight.outcome_router import OutcomeContext
 
 _LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"
 

@@ -18,24 +18,24 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from claude.overnight.orchestrator import BatchConfig
+    from cortex_command.overnight.orchestrator import BatchConfig
 
-from claude.common import (
+from cortex_command.common import (
     compute_dependency_batches,
     mark_task_done_in_plan,
     read_criticality,
 )
-from claude.pipeline.conflict import (
+from cortex_command.pipeline.conflict import (
     ConflictClassification,
     dispatch_repair_agent,
     resolve_trivial_conflict,
 )
-from claude.pipeline.parser import FeatureTask, parse_feature_plan
-from claude.pipeline.retry import RetryResult, retry_task
-from claude.pipeline.state import log_event as pipeline_log_event
+from cortex_command.pipeline.parser import FeatureTask, parse_feature_plan
+from cortex_command.pipeline.retry import RetryResult, retry_task
+from cortex_command.pipeline.state import log_event as pipeline_log_event
 
-from claude.overnight.brain import BrainAction, BrainContext, request_brain_decision
-from claude.overnight.deferral import (
+from cortex_command.overnight.brain import BrainAction, BrainContext, request_brain_decision
+from cortex_command.overnight.deferral import (
     DEFAULT_DEFERRED_DIR,
     SEVERITY_BLOCKING,
     DeferralQuestion,
@@ -44,7 +44,7 @@ from claude.overnight.deferral import (
     write_deferral,
     write_escalation,
 )
-from claude.overnight.events import (
+from cortex_command.overnight.events import (
     BRAIN_DECISION,
     FEATURE_DEFERRED,
     MERGE_CONFLICT_CLASSIFIED,
@@ -53,10 +53,10 @@ from claude.overnight.events import (
     log_event as overnight_log_event,
     read_events,
 )
-from claude.overnight.state import load_state, save_state
-from claude.overnight.throttle import ConcurrencyManager
-from claude.overnight.types import CircuitBreakerState, FeatureResult
-from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.state import load_state, save_state
+from cortex_command.overnight.throttle import ConcurrencyManager
+from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
 
 logger = logging.getLogger(__name__)
 

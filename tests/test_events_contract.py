@@ -13,8 +13,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from claude.overnight import events
-from claude.overnight.events import EVENT_TYPES
+from cortex_command.overnight import events
+from cortex_command.overnight.events import EVENT_TYPES
 
 REPO_ROOT = Path(__file__).parent.parent
 PROMPT_PATH = REPO_ROOT / "claude" / "overnight" / "prompts" / "orchestrator-round.md"

@@ -89,9 +89,9 @@ Implement a write-ahead log event (`FEATURE_MERGED`) that records a successful m
 - **Depends on**: [3, 4]
 - **Complexity**: complex
 - **Context**:
-  - `from claude.overnight.report import ReportData, render_failed_features, render_deferred_questions`
-  - `from claude.overnight.state import OvernightState, OvernightFeatureStatus` — `OvernightFeatureStatus` (aliased as `OvernightFeatureState` in state.py; the actual class is `OvernightFeatureStatus` at line 62 of `claude/overnight/state.py`)
-  - `from claude.overnight.deferral import DeferralQuestion, SEVERITY_BLOCKING`
+  - `from cortex_command.overnight.report import ReportData, render_failed_features, render_deferred_questions`
+  - `from cortex_command.overnight.state import OvernightState, OvernightFeatureStatus` — `OvernightFeatureStatus` (aliased as `OvernightFeatureState` in state.py; the actual class is `OvernightFeatureStatus` at line 62 of `claude/overnight/state.py`)
+  - `from cortex_command.overnight.deferral import DeferralQuestion, SEVERITY_BLOCKING`
   - Build `OvernightState` directly: `OvernightState(session_id="test-session", integration_branch="overnight/test")`
   - Set features dict: `state.features["feat-x"] = OvernightFeatureStatus(status="failed", error="dispatch_review raised RuntimeError")`
   - Build `ReportData`: `data = ReportData(); data.state = state; data.events = [...]`

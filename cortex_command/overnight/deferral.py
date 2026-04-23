@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from claude.common import durable_fsync
+from cortex_command.common import durable_fsync
 
 
 # Default directory for deferred question files

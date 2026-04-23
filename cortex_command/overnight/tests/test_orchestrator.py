@@ -27,16 +27,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from claude.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
-from claude.overnight.orchestrator import BatchConfig
-from claude.overnight.types import CircuitBreakerState, FeatureResult
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
+from cortex_command.overnight.orchestrator import BatchConfig
+from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
 
 
 class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
     """Integration coverage for ``orchestrator.run_batch``."""
 
     def setUp(self) -> None:
-        from claude.overnight.state import OvernightFeatureStatus, OvernightState
+        from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
 
         self._tmpdir = tempfile.TemporaryDirectory()
         self._tmp = Path(self._tmpdir.name)
@@ -193,7 +193,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
     async def test_multi_feature_dispatch_calls_execute_and_accumulates(self):
         """Two features → execute_feature called once per feature and
         BatchResult returned with matching batch_id."""
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         mocks = self._install_base_patches(
             feature_names=["feat-a", "feat-b"],
@@ -221,7 +221,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
     async def test_concurrency_manager_acquire_release_per_feature(self):
         """ConcurrencyManager.acquire and .release are each called exactly
         once per feature dispatched through _run_one."""
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         mock_manager = MagicMock()
         mock_manager.acquire = AsyncMock()
@@ -254,7 +254,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         patching apply_feature_result to set it after the first feature
         returns; the remaining features then hit the breaker branch in
         _run_one and execute_feature is never called for them."""
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         # First feature's apply_feature_result trips the breaker flag.
         async def _apply_trips_breaker(name, result, ctx):
@@ -265,7 +265,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         # all three _run_one coroutines concurrently, we serialize via the
         # semaphore: patch manager.acquire to await an event that only
         # releases after the first feature's apply callback sets the flag.
-        from claude.overnight.orchestrator import BatchConfig as _BC  # noqa: F401
+        from cortex_command.overnight.orchestrator import BatchConfig as _BC  # noqa: F401
 
         mock_manager = MagicMock()
         gate = asyncio.Event()
@@ -332,7 +332,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         """execute_feature returns a budget_exhausted pause → the inline
         budget check in _run_one sets global_abort_signal and returns
         before invoking apply_feature_result for that feature."""
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         mocks = self._install_base_patches(
             feature_names=["feat-a"],
@@ -359,7 +359,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         it before returning.  Patch create_task to capture the real task
         and assert it was cancelled; await it in addCleanup so no
         'task destroyed but pending' warnings appear."""
-        from claude.overnight.orchestrator import run_batch
+        from cortex_command.overnight.orchestrator import run_batch
 
         mocks = self._install_base_patches(
             feature_names=["feat-a"],

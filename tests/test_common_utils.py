@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from claude.common import mark_task_done_in_plan, read_tier, requires_review
+from cortex_command.common import mark_task_done_in_plan, read_tier, requires_review
 
 
 # ---------------------------------------------------------------------------

@@ -24,7 +24,7 @@ from typing import Optional
 # and tuple unpacking/indexing for backward compatibility.
 IneligibleItem = collections.namedtuple('IneligibleItem', ['item', 'reason'])
 
-from claude.common import TERMINAL_STATUSES, normalize_status, slugify
+from cortex_command.common import TERMINAL_STATUSES, normalize_status, slugify
 
 
 # ---------------------------------------------------------------------------

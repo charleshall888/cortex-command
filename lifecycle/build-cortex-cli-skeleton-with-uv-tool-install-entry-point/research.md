@@ -33,7 +33,7 @@ pythonpath = ["."]
 dev = ["pytest>=8.0"]
 ```
 
-`pythonpath = ["."]` is how `from claude.overnight.*` imports resolve during tests — a pytest-only shim, not a package install.
+`pythonpath = ["."]` is how `from cortex_command.overnight.*` imports resolve during tests — a pytest-only shim, not a package install.
 
 ### Python layout is flat under `claude/`, no src-layout, no top-level `__init__.py`
 
@@ -44,7 +44,7 @@ dev = ["pytest>=8.0"]
 - `claude/hooks/` — Python + shell hooks
 - `backlog/*.py` — three standalone scripts (`create_item.py`, `update_item.py`, `generate_index.py`) with manual `sys.path.insert(0, _PROJECT_ROOT)` preludes
 
-**`claude/` has no top-level `__init__.py`** — `from claude.overnight import *` currently works via implicit namespace packages (PEP 420), backed by `pythonpath = ["."]` in pyproject. There are 292+ `from claude.(overnight|pipeline|common)` hits across 100+ files; this import graph is load-bearing across `runner.sh`, orchestrator prompts, worker dispatch, and every test.
+**`claude/` has no top-level `__init__.py`** — `from cortex_command.overnight import *` currently works via implicit namespace packages (PEP 420), backed by `pythonpath = ["."]` in pyproject. There are 292+ `from claude.(overnight|pipeline|common)` hits across 100+ files; this import graph is load-bearing across `runner.sh`, orchestrator prompts, worker dispatch, and every test.
 
 Every existing Python CLI in the repo uses **argparse**. Notable sites: `claude/common.py:469-492`, `claude/overnight/batch_runner.py`, `claude/overnight/daytime_pipeline.py`, `claude/overnight/integration_recovery.py`, `claude/overnight/map_results.py`, `claude/pipeline/metrics.py`, `bin/audit-doc`, `bin/count-tokens`, `backlog/update_item.py`. No `click` or `typer` anywhere.
 
@@ -304,7 +304,7 @@ Add `[build-system]` + `[project.scripts]` with **argparse** as the framework, l
 
 ### The PyPI `claude` name is owned by Anthropic
 
-https://pypi.org/project/claude/ is a real, Anthropic-owned package (v0.4.11, June 2025; author Lina Tawfik). Option (a) from Axis 2 ships a wheel whose top-level import root is `claude`. If any user installs PyPI `claude` into the same environment as our `cortex-command` wheel, PEP 420 namespace resolution may silently mix contents, or the PyPI package wins and every `from claude.overnight import *` breaks with `ModuleNotFoundError`. `claude-agent-sdk` is already a direct dep and is a distinct import path — but if Anthropic ever publishes a non-trivial `claude` module as a transitive dep (direct or via `claude-agent-sdk`), we break silently.
+https://pypi.org/project/claude/ is a real, Anthropic-owned package (v0.4.11, June 2025; author Lina Tawfik). Option (a) from Axis 2 ships a wheel whose top-level import root is `claude`. If any user installs PyPI `claude` into the same environment as our `cortex-command` wheel, PEP 420 namespace resolution may silently mix contents, or the PyPI package wins and every `from cortex_command.overnight import *` breaks with `ModuleNotFoundError`. `claude-agent-sdk` is already a direct dep and is a distinct import path — but if Anthropic ever publishes a non-trivial `claude` module as a transitive dep (direct or via `claude-agent-sdk`), we break silently.
 
 **Mitigation**: rename `claude/` → `cortex_command/` (Axis 2 option e) before adding `[build-system]`. The "minimum churn" recommendation is a trap — minimum churn today at the cost of a namespace collision later where debugging is opaque.
 

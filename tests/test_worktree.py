@@ -17,7 +17,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import patch
 
-from claude.pipeline.worktree import create_worktree
+from cortex_command.pipeline.worktree import create_worktree
 
 
 def _init_git_repo(path: Path) -> str:

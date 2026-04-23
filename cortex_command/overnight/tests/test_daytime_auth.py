@@ -58,7 +58,7 @@ def test_no_auth_vector_hard_fails() -> None:
     """
     import tempfile
 
-    from claude.overnight.daytime_pipeline import run_daytime
+    from cortex_command.overnight.daytime_pipeline import run_daytime
 
     feature = "feat"
 

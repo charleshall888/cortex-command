@@ -33,7 +33,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from claude.common import TERMINAL_STATUSES, atomic_write  # noqa: E402
+from cortex_command.common import TERMINAL_STATUSES, atomic_write  # noqa: E402
 
 
 def _resolve_generate_index(backlog_dir: Path) -> Path:

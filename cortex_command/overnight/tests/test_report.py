@@ -4,8 +4,8 @@
 import pytest
 from pathlib import Path
 
-from claude.overnight.report import ReportData, render_completed_features, render_failed_features
-from claude.overnight.state import OvernightFeatureStatus, OvernightState
+from cortex_command.overnight.report import ReportData, render_completed_features, render_failed_features
+from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
 
 
 # ---------------------------------------------------------------------------
@@ -33,7 +33,7 @@ def _pytest_make_data(features: dict, integration_branches: dict | None = None, 
 
 def test_two_features_group_headers() -> None:
     """Two features (home repo + cross-repo) produce correct group headers."""
-    from claude.overnight import report as _report_module
+    from cortex_command.overnight import report as _report_module
     home_repo_name = Path(_report_module.__file__).resolve().parent.parent.parent.name
     features = {
         "feature-alpha": OvernightFeatureStatus(status="merged", repo_path=None),
@@ -74,7 +74,7 @@ def test_pr_url_in_cross_repo_output() -> None:
 
 def test_single_home_repo_feature() -> None:
     """Single home repo feature still renders a group header."""
-    from claude.overnight import report as _report_module
+    from cortex_command.overnight import report as _report_module
     home_repo_name = Path(_report_module.__file__).resolve().parent.parent.parent.name
     features = {
         "feature-delta": OvernightFeatureStatus(status="merged", repo_path=None),
@@ -125,7 +125,7 @@ def test_render_home_repo_group_header_regression():
     the repo name. The assertion uses the dynamic repo root name to remain correct
     in all contexts.
     """
-    from claude.overnight import report as _report_module
+    from cortex_command.overnight import report as _report_module
     home_repo_root = str(Path(_report_module.__file__).resolve().parent.parent.parent)
     expected_name = Path(home_repo_root).name
     features = {

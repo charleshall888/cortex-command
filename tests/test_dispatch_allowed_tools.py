@@ -15,7 +15,7 @@ import ast
 import re
 from pathlib import Path
 
-from claude.pipeline.dispatch import _ALLOWED_TOOLS
+from cortex_command.pipeline.dispatch import _ALLOWED_TOOLS
 
 REPO_ROOT = Path(__file__).parent.parent
 DOC_PATH = REPO_ROOT / "docs" / "overnight-operations.md"

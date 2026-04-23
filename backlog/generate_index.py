@@ -21,7 +21,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from claude.common import TERMINAL_STATUSES, atomic_write, detect_lifecycle_phase, normalize_status, slugify  # noqa: E402
+from cortex_command.common import TERMINAL_STATUSES, atomic_write, detect_lifecycle_phase, normalize_status, slugify  # noqa: E402
 
 BACKLOG_DIR = Path.cwd() / "backlog"
 LIFECYCLE_DIR = Path.cwd() / "lifecycle"

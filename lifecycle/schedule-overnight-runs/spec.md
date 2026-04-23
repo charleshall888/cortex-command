@@ -34,7 +34,7 @@ The overnight runner launches immediately when the user runs `overnight-start`. 
 
 11. **`scheduled_start` field in overnight-state.json**: Before sleeping, `overnight-schedule` writes a `scheduled_start` field (ISO 8601 timestamp of the target launch time) into the state file at the provided state path using atomic writes (tempfile + mv). Clears it (sets to `null`) just before calling `overnight-start`, also via atomic write. Acceptance criteria: `jq .scheduled_start <state-path>` shows a valid ISO 8601 timestamp while waiting; shows `null` after launch.
 
-12. **State schema backward compatibility**: The `scheduled_start` field is added as `Optional[str] = None` in the `OvernightState` dataclass, loaded via `raw.get("scheduled_start")`. Existing sessions without the field are unaffected. Acceptance criteria: `python3 -c "from claude.overnight.state import load_state; s = load_state('<old-state-path>'); print(s.scheduled_start)"` prints `None` for pre-existing state files.
+12. **State schema backward compatibility**: The `scheduled_start` field is added as `Optional[str] = None` in the `OvernightState` dataclass, loaded via `raw.get("scheduled_start")`. Existing sessions without the field are unaffected. Acceptance criteria: `python3 -c "from cortex_command.overnight.state import load_state; s = load_state('<old-state-path>'); print(s.scheduled_start)"` prints `None` for pre-existing state files.
 
 ### Deployment
 

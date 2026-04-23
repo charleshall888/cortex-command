@@ -16,9 +16,9 @@ from unittest.mock import patch
 
 import pytest
 
-from claude.overnight import orchestrator, outcome_router
-from claude.overnight.orchestrator import BatchConfig, run_batch
-from claude.pipeline.parser import MasterPlan, MasterPlanConfig
+from cortex_command.overnight import orchestrator, outcome_router
+from cortex_command.overnight.orchestrator import BatchConfig, run_batch
+from cortex_command.pipeline.parser import MasterPlan, MasterPlanConfig
 
 
 def _read_events(log_path: Path) -> list[dict]:

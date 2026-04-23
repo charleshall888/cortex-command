@@ -21,8 +21,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from claude.dashboard.alerts import evaluate_alerts, fire_notifications
-from claude.dashboard.poller import DashboardState
+from cortex_command.dashboard.alerts import evaluate_alerts, fire_notifications
+from cortex_command.dashboard.poller import DashboardState
 
 
 def _make_state(**kwargs) -> DashboardState:

@@ -183,6 +183,6 @@ Two files change: `skills/lifecycle/references/review.md` (four sequential edits
    - §3 artifact format shows `## Requirements Drift` as mandatory (no optional comment), verdict JSON includes `"requirements_drift"`
    - §4 shows pre-event validation step and updated event schema
    - Constraints table has two drift entries
-3. Run `uv run python -c "from claude.overnight.report import _read_requirements_drift; print('import ok')"` — confirm no import errors
-4. End-to-end smoke test: manually create `lifecycle/test-drift/review.md` with a valid drift section; run `uv run python -c "from claude.overnight.report import _read_requirements_drift; import json; print(json.dumps(_read_requirements_drift('test-drift')))"` — confirm correct dict output
+3. Run `uv run python -c "from cortex_command.overnight.report import _read_requirements_drift; print('import ok')"` — confirm no import errors
+4. End-to-end smoke test: manually create `lifecycle/test-drift/review.md` with a valid drift section; run `uv run python -c "from cortex_command.overnight.report import _read_requirements_drift; import json; print(json.dumps(_read_requirements_drift('test-drift')))"` — confirm correct dict output
 5. Run `just test` — confirm existing tests pass

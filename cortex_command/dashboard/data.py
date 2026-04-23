@@ -37,7 +37,7 @@ from pathlib import Path
 
 import markdown
 
-from claude.common import detect_lifecycle_phase, normalize_status, slugify
+from cortex_command.common import detect_lifecycle_phase, normalize_status, slugify
 
 
 def parse_overnight_state(path: Path) -> dict | None:
@@ -305,7 +305,7 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
     default: dict = {"current_phase": None, "phase_transitions": [], "rework_cycles": 0}
     path = lifecycle_dir / feature_slug / "events.log"
     try:
-        from claude.pipeline.metrics import parse_events  # local import to stay testable
+        from cortex_command.pipeline.metrics import parse_events  # local import to stay testable
 
         events = parse_events(path)
     except (OSError, Exception):

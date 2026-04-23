@@ -20,8 +20,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from claude.dashboard.alerts import evaluate_alerts, fire_notifications
-from claude.dashboard.data import (
+from cortex_command.dashboard.alerts import evaluate_alerts, fire_notifications
+from cortex_command.dashboard.data import (
     _read_all_jsonl,
     compute_slow_flags,
     parse_backlog_counts,

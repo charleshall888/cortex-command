@@ -23,7 +23,7 @@ class TestDiscoverPipelineEventLogs(unittest.TestCase):
     """Tests for discover_pipeline_event_logs."""
 
     def _fn(self, lifecycle_dir: Path):
-        from claude.pipeline.metrics import discover_pipeline_event_logs
+        from cortex_command.pipeline.metrics import discover_pipeline_event_logs
         return discover_pipeline_event_logs(lifecycle_dir)
 
     def test_pipeline_events_sources(self):
@@ -55,7 +55,7 @@ class TestPairDispatchEvents(unittest.TestCase):
     """Tests for pair_dispatch_events."""
 
     def _fn(self, events):
-        from claude.pipeline.metrics import pair_dispatch_events
+        from cortex_command.pipeline.metrics import pair_dispatch_events
         return pair_dispatch_events(events)
 
     # ------------------------------------------------------------------
@@ -291,11 +291,11 @@ class TestSinceFlag(unittest.TestCase):
     """Tests for filter_events_since and _parse_since."""
 
     def _filter(self, events, since):
-        from claude.pipeline.metrics import filter_events_since
+        from cortex_command.pipeline.metrics import filter_events_since
         return filter_events_since(events, since)
 
     def _parse_since(self, s):
-        from claude.pipeline.metrics import _parse_since
+        from cortex_command.pipeline.metrics import _parse_since
         return _parse_since(s)
 
     def _load_boundary_events(self):
@@ -369,7 +369,7 @@ class TestModelTierAggregates(unittest.TestCase):
     """Tests for compute_model_tier_dispatch_aggregates."""
 
     def _fn(self, paired):
-        from claude.pipeline.metrics import compute_model_tier_dispatch_aggregates
+        from cortex_command.pipeline.metrics import compute_model_tier_dispatch_aggregates
         return compute_model_tier_dispatch_aggregates(paired)
 
     def _make_complete(self, model, tier, cost_usd, num_turns, feature="feat-x", ts="2026-04-01T00:01:00Z"):
@@ -459,7 +459,7 @@ class TestModelTierAggregates(unittest.TestCase):
             if line:
                 events.append(json.loads(line))
 
-        from claude.pipeline.metrics import pair_dispatch_events
+        from cortex_command.pipeline.metrics import pair_dispatch_events
         paired = pair_dispatch_events(events)
         result = self._fn(paired)
 
@@ -606,7 +606,7 @@ class TestReportTierDispatch(unittest.TestCase):
         """
         import io
         import sys
-        from claude.pipeline.metrics import main
+        from cortex_command.pipeline.metrics import main
 
         captured = io.StringIO()
         old_stdout = sys.stdout

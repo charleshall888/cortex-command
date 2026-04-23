@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from claude.overnight.batch_plan import generate_batch_plan
+from cortex_command.overnight.batch_plan import generate_batch_plan
 
 
 class TestGenerateBatchPlanPreflight(unittest.TestCase):
