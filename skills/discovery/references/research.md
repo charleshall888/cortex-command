@@ -138,3 +138,11 @@ Stage and commit `research/{topic}/` using `/commit`. Summarize key findings for
 - **Scope**: Research the topic as described, not adjacent topics
 - **Citations**: codebase-pointing claims must carry an inline `[file:line]` citation traceable to codebase-agent findings, OR an explicit inline `[premise-unverified: not-searched]` marker when the author did not investigate the claim.
 - **Empty-corpus reporting**: searches that returned no results must be reported inline as `NOT_FOUND(query=<search-string>, scope=<path-or-glob>)` — distinct from the `premise-unverified: not-searched` marker used when no investigation was attempted.
+
+### Signal formats
+
+The following literal markers are stable contract for downstream consumers (e.g., `/discovery decompose`):
+
+- `[file:line]` — inline citation, e.g., `[skills/discovery/references/research.md:42]`
+- `[premise-unverified: not-searched]` — marker indicating the author did not attempt investigation
+- `NOT_FOUND(query=<string>, scope=<path-or-glob>)` — marker indicating a search was performed and returned no results
