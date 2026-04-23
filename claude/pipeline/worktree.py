@@ -7,6 +7,11 @@ named pipeline/{feature}.
 
 Cross-repo worktrees (repo_path is not None) are placed at
 $TMPDIR/overnight-worktrees/{session_id}/{feature} instead.
+
+If CORTEX_WORKTREE_ROOT is set, same-repo worktrees are placed at
+$CORTEX_WORKTREE_ROOT/{feature} instead of .claude/worktrees/. Needed when
+the host sandbox blocks writes under .claude/ (e.g., Claude Code Seatbelt
+profile blocks .mcp.json checkout into .claude/worktrees/).
 """
 
 import os
@@ -97,7 +102,11 @@ def create_worktree(
         tmpdir = Path(os.environ.get("TMPDIR", "/tmp"))
         worktree_path = tmpdir / "overnight-worktrees" / session_id / feature
     else:
-        worktree_path = repo / ".claude" / "worktrees" / feature
+        override_root = os.environ.get("CORTEX_WORKTREE_ROOT")
+        if override_root:
+            worktree_path = Path(override_root) / feature
+        else:
+            worktree_path = repo / ".claude" / "worktrees" / feature
 
     # If the worktree path already exists and is a valid worktree, return it
     if worktree_path.exists():

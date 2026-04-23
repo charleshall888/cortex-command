@@ -110,7 +110,15 @@ def _write_pid(pid_path: Path) -> None:
 
 
 def _worktree_path(feature: str) -> Path:
-    """Return the worktree path for a given feature."""
+    """Return the worktree path for a given feature.
+
+    Matches the same-repo resolution in claude.pipeline.worktree: if
+    CORTEX_WORKTREE_ROOT is set, use it; otherwise default to
+    .claude/worktrees/.
+    """
+    override_root = os.environ.get("CORTEX_WORKTREE_ROOT")
+    if override_root:
+        return Path(override_root) / feature
     return Path(".claude") / "worktrees" / feature
 
 
