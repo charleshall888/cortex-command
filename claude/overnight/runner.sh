@@ -44,47 +44,18 @@ export PYTHONPATH="$REPO_ROOT"
 # ---------------------------------------------------------------------------
 # apiKeyHelper only authenticates the parent `claude` process — it does NOT
 # export ANTHROPIC_API_KEY into child processes. SDK-spawned subagents need
-# the key injected explicitly. We check settings.json then settings.local.json
-# for apiKeyHelper and export the result so it propagates into dispatch.py.
-# If no apiKeyHelper is configured, subagents use subscription billing.
-if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
-    _API_KEY=$(python3 - <<'PYEOF' 2>/dev/null
-import json, shlex, subprocess, pathlib, sys
-home = pathlib.Path.home()
-helper = ""
-for p in [home / ".claude" / "settings.json", home / ".claude" / "settings.local.json"]:
-    if p.exists():
-        helper = json.loads(p.read_text()).get("apiKeyHelper", "")
-        if helper:
-            break
-if helper:
-    parts = shlex.split(helper.replace("~", str(home)))
-    r = subprocess.run(parts, capture_output=True, text=True, timeout=5)
-    if r.returncode == 0:
-        sys.stdout.write(r.stdout.strip())
-PYEOF
-)
-    if [[ -n "$_API_KEY" ]]; then
-        export ANTHROPIC_API_KEY="$_API_KEY"
-    elif [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-        # No apiKeyHelper and no OAuth token in env — try reading from file
-        _TOKEN_FILE="$HOME/.claude/personal-oauth-token"
-        if [[ -f "$_TOKEN_FILE" ]]; then
-            _OAUTH_TOKEN=$(tr -d '[:space:]' < "$_TOKEN_FILE")
-            if [[ -n "$_OAUTH_TOKEN" ]]; then
-                export CLAUDE_CODE_OAUTH_TOKEN="$_OAUTH_TOKEN"
-                echo "Using OAuth token from $_TOKEN_FILE" >&2
-            else
-                echo "Warning: $_TOKEN_FILE exists but is empty — claude -p will use Keychain auth if available" >&2
-            fi
-            unset _OAUTH_TOKEN
-        else
-            echo "Warning: no apiKeyHelper configured and no OAuth token file at $_TOKEN_FILE — claude -p will use Keychain auth if available" >&2
-        fi
-        unset _TOKEN_FILE
-    fi
-    unset _API_KEY
-fi
+# the key injected explicitly. Resolution is delegated to claude.overnight.auth
+# which emits shell-safe `export` lines on stdout and warnings on stderr.
+set +e
+_AUTH_STDOUT=$(python3 -m claude.overnight.auth --shell)
+_AUTH_EXIT=$?
+set -e
+case "$_AUTH_EXIT" in
+  0) eval "$_AUTH_STDOUT" ;;
+  1) : ;;
+  2) echo "Error: auth helper internal failure" >&2; exit 2 ;;
+esac
+unset _AUTH_STDOUT _AUTH_EXIT
 
 # ---------------------------------------------------------------------------
 # Defaults
