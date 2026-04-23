@@ -67,6 +67,8 @@ If no consolidation candidates are found, proceed to §4 silently.
 
 When items are combined, document the consolidation decision and rationale in the Key Design Decisions section of `research/{topic}/decomposed.md` (written in §6).
 
+**R5 flag propagation through consolidation**: When consolidation merges two or more work items, flags from inputs propagate to the merged output. Specifically: (i) if any input item to a consolidation merge carried a flag per R2, the merged output item carries the flag for R3 ack-display purposes — the merged item carries the flag of any flagged input, and flag propagation is inherited rather than re-derived on the merged Value prose; (ii) the R4 cap evaluates on the **pre-consolidation** flag count, not the post-consolidation count, so consolidation cannot mask a cap-triggering flag burden by collapsing flagged items into fewer merged items; (iii) the R3 ack prompt for a merged flagged item must surface the **originating** flagged input's Value string and its R2 premise (branch and basis) so the user sees the actual basis of the flag rather than the merged Value prose — per E5, this preserves the originally flagged premise through the merge; (iv) **E10 invariant**: consolidation cannot reduce the flagged set to zero — propagation ensures any input flag survives merging, so the count of flagged items after consolidation is always ≥ 1 whenever the pre-consolidation count was ≥ 1.
+
 ### 4. Determine Grouping
 
 **Single ticket**: If the research produces exactly one work item, create a single backlog ticket. No epic needed.
