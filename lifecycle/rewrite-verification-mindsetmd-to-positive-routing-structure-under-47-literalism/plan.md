@@ -99,7 +99,7 @@ The empty commit satisfies the orchestrator's commit-checkpoint step (`git log H
 - **Verification**: (b) `ls lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/control/trial-{1,2,3,4,5}.stream.json` — exit 0 for all 5; (b) `find lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/control/ -name 'trial-*.stream.json' -empty | wc -l` — returns 0.
 - **Status**: [x] complete
 
-### Task 6: Parse R1 stream-json; write §Run-1 Trial Log, §Per-Wording Summary, §Trial Disagreements; assert rail-hash stability
+### Task 6: Parse R1 stream-json; write §Run-1 Trial Log, §Per-Wording Summary, §Trial Disagreements; assert rail-hash stability [x]
 
 - **Files**: `lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md`
 - **What**: Parse all 40 stream-json files under `probe-runs/run1/` into `read_fired` and `challenge_fired` booleans per trial. Populate `probe-log.md §Run-1 Trial Log` with columns `wording`, `category`, `trial`, `read_fired`, `challenge_fired`, `stream_json_path` (and `hook_fired` if that column was captured). Compute per-wording majority votes (≥3 of 5) for each of `read_fired` and `challenge_fired`; populate §Per-Wording Summary with columns `wording`, `category`, `rf_vote`, `cf_vote`. Record any wordings with 2/5 or 3/5 split-vote patterns in §Trial Disagreements. Finally, assert rail-file hash stability across the full R1 battery: the two reference files must not have been edited between Task 1 and Task 6.
@@ -117,7 +117,7 @@ The empty commit satisfies the orchestrator's commit-checkpoint step (`git log H
   ```
   8 wording rows total (1 canonical + 6 hedge + 1 control). Rail-hash stability check: re-run `sha256sum -c lifecycle/.../rail-hashes-pre-r1.txt` — this is the primary R1-battery integrity gate. If drift is detected, abort and escalate (Task 7's §Decision must not run under a compromised battery).
 - **Verification**: (a) `grep -cE '^\| [a-z-]+ \| (canonical|hedge|control) \| [1-5] \|' lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md` — returns 40 (one row per trial, excluding header); (a) `grep -cE '^\| [a-z-]+ \| (canonical|hedge|control) \| [01] \| [01] \|$' lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md` — returns 8 (one Per-Wording Summary row per wording); (a) `sha256sum -c lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/rail-hashes-pre-r1.txt` — exit 0 (hashes stable across R1 battery).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Write probe-log.md §Decision with branch selection and numeric citation
 

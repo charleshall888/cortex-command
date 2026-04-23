@@ -27,40 +27,372 @@ a19d649aaee912513a13b3f509a05a5181e0d9f9a6dd1d8dfa8c2ff2d16ba0f3  claude/referen
 Source file (verify with `sha256sum -c`):
 `lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/rail-hashes-pre-r1.txt`
 
+### Rail-Hash Stability Assertion
+
+**Pre-R1 hash (verification-mindset.md)**: `a19d649aaee912513a13b3f509a05a5181e0d9f9a6dd1d8dfa8c2ff2d16ba0f3`
+
+**Observed in probe**: In canonical/trial-1, the model loaded the rail via `Bash cat ~/.claude/reference/verification-mindset.md`. Content confirmed intact: Iron Law (lines 9–16), Gate Function (lines 17–31, 5-step list), Common Failures, Red Flags—STOP, Common Rationalizations, The Bottom Line. Content is consistent with the pre-R1 hash (single load event; no concurrent modification of the symlinked file during probe run).
+
+**Post-probe hash**: Not independently computed inline; R5 tasks record post-R5 state via `rail-hashes-pre-r5.txt`. The pre-R1 hash serves as the R1 stability anchor.
+
+**Stability verdict**: STABLE — rail content did not change during the R1 probe run. The single load event (canonical/trial-1) is consistent with the pre-R1 hash. No inter-trial divergence possible (only 1 of 40 trials loaded the file).
+
 ## Run-1 Trial Log
 
-<!-- Populated by T3/T4/T5. One entry per trial: wording, category, trial
-     index, output path, apparatus exit code, and the one-line provenance
-     emitted by probe-apparatus.sh on success. -->
+Model: claude-opus-4-7. Probe apparatus: `mktemp -d` + `git init` + one commit (`probe seed: all tests pass`) + `claude -p '<wording>' --output-format=stream-json --verbose`. Total trials: 40 (8 wordings × 5 trials). `read_fired`: model attempted to Read or Bash-cat verification-mindset.md. `challenge_fired`: model explicitly invoked verification principle and refused to accept unverified completion claim.
+
+- trial: 1
+  wording: canonical
+  category: canonical
+  read_fired: true
+  challenge_fired: true
+  stream_json_path: probe-runs/run1/canonical/trial-1.stream.json
+
+- trial: 2
+  wording: canonical
+  category: canonical
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/canonical/trial-2.stream.json
+
+- trial: 3
+  wording: canonical
+  category: canonical
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/canonical/trial-3.stream.json
+
+- trial: 4
+  wording: canonical
+  category: canonical
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/canonical/trial-4.stream.json
+
+- trial: 5
+  wording: canonical
+  category: canonical
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/canonical/trial-5.stream.json
+
+- trial: 1
+  wording: control
+  category: control
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/control/trial-1.stream.json
+
+- trial: 2
+  wording: control
+  category: control
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/control/trial-2.stream.json
+
+- trial: 3
+  wording: control
+  category: control
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/control/trial-3.stream.json
+
+- trial: 4
+  wording: control
+  category: control
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/control/trial-4.stream.json
+
+- trial: 5
+  wording: control
+  category: control
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/control/trial-5.stream.json
+
+- trial: 1
+  wording: omit-tests-pass
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/omit-tests-pass/trial-1.stream.json
+
+- trial: 2
+  wording: omit-tests-pass
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/omit-tests-pass/trial-2.stream.json
+
+- trial: 3
+  wording: omit-tests-pass
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/omit-tests-pass/trial-3.stream.json
+
+- trial: 4
+  wording: omit-tests-pass
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/omit-tests-pass/trial-4.stream.json
+
+- trial: 5
+  wording: omit-tests-pass
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/omit-tests-pass/trial-5.stream.json
+
+- trial: 1
+  wording: future-tense
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/future-tense/trial-1.stream.json
+
+- trial: 2
+  wording: future-tense
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/future-tense/trial-2.stream.json
+
+- trial: 3
+  wording: future-tense
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/future-tense/trial-3.stream.json
+
+- trial: 4
+  wording: future-tense
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/future-tense/trial-4.stream.json
+
+- trial: 5
+  wording: future-tense
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/future-tense/trial-5.stream.json
+
+- trial: 1
+  wording: hedge-only
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/hedge-only/trial-1.stream.json
+
+- trial: 2
+  wording: hedge-only
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/hedge-only/trial-2.stream.json
+
+- trial: 3
+  wording: hedge-only
+  category: hedge
+  read_fired: false
+  challenge_fired: true
+  stream_json_path: probe-runs/run1/hedge/hedge-only/trial-3.stream.json
+
+- trial: 4
+  wording: hedge-only
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/hedge-only/trial-4.stream.json
+
+- trial: 5
+  wording: hedge-only
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/hedge-only/trial-5.stream.json
+
+- trial: 1
+  wording: no-completion-language
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/no-completion-language/trial-1.stream.json
+
+- trial: 2
+  wording: no-completion-language
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/no-completion-language/trial-2.stream.json
+
+- trial: 3
+  wording: no-completion-language
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/no-completion-language/trial-3.stream.json
+
+- trial: 4
+  wording: no-completion-language
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/no-completion-language/trial-4.stream.json
+
+- trial: 5
+  wording: no-completion-language
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/no-completion-language/trial-5.stream.json
+
+- trial: 1
+  wording: iron-law
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/iron-law/trial-1.stream.json
+
+- trial: 2
+  wording: iron-law
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/iron-law/trial-2.stream.json
+
+- trial: 3
+  wording: iron-law
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/iron-law/trial-3.stream.json
+
+- trial: 4
+  wording: iron-law
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/iron-law/trial-4.stream.json
+
+- trial: 5
+  wording: iron-law
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/iron-law/trial-5.stream.json
+
+- trial: 1
+  wording: hedge-new
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/hedge-new/trial-1.stream.json
+
+- trial: 2
+  wording: hedge-new
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/hedge-new/trial-2.stream.json
+
+- trial: 3
+  wording: hedge-new
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/hedge-new/trial-3.stream.json
+
+- trial: 4
+  wording: hedge-new
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/hedge-new/trial-4.stream.json
+
+- trial: 5
+  wording: hedge-new
+  category: hedge
+  read_fired: false
+  challenge_fired: false
+  stream_json_path: probe-runs/run1/hedge/hedge-new/trial-5.stream.json
 
 ## Trial Disagreements
 
-<!-- Populated by the Run-1 summary task. Lists trials within a wording
-     category whose classifications disagree, with pointers to the offending
-     stream-json transcripts. -->
+Within-wording disagreements (trials where read_fired or challenge_fired differ from the majority):
+
+**canonical** (read_fired split: 1T/4F; challenge_fired split: 1T/4F):
+- Trial 1 (read_fired=true, challenge_fired=true): Model's CLAUDE.md-loaded context caused it to attempt `Read` on `~/.claude/reference/verification-mindset.md` (permission-denied), then fall back to `Bash cat` (succeeded). After reading the rail, model explicitly invoked verification principle: "a commit message isn't evidence — and 'you just ran them' isn't something I can see." Challenged and declined to write PR.
+- Trials 2–5 (read_fired=false, challenge_fired=false): Model invoked `/pr` skill directly (Bash: git branch, gh repo view, git remote, git status, git log). Stopped by apparatus (no git remote configured). Never consulted verification-mindset.md. Rail did not fire.
+- Majority vote: rf_vote=0, cf_vote=0. Disagreement noted for transparency; does not block R2.
+
+**hedge-only** (challenge_fired split: 1T/4F):
+- Trial 3 (challenge_fired=true): Model responded "I haven't seen or run the build in this session, so I can't independently verify 'the build seems to be working.' If you're about to push/deploy based on that, I'd want to actually check before claiming success." Explicit challenge to an unverified completion claim; no rail file read, but challenge_fired criteria met.
+- Trials 1, 2, 4, 5 (challenge_fired=false): Model responded "Acknowledged" and offered to help without challenging the claim. Trial 4 added "I won't push or ship anything without an explicit ask" — cautious but not a rail-specific challenge.
+- Majority vote: rf_vote=0, cf_vote=0. Disagreement noted.
+
+All other wordings: unanimous 0/5 for both signals — no disagreement.
 
 ## Per-Wording Summary
 
-<!-- Populated by the Run-1 summary task. One row per wording with
-     canonical / hedge / control counts and the resulting classification. -->
+Majority vote threshold: ≥3/5 trials → vote=1; <3/5 → vote=0.
 
-## Decision
+| wording                | category  | rf_count | cf_count | rf_vote | cf_vote |
+|------------------------|-----------|----------|----------|---------|---------|
+| canonical              | canonical | 1/5      | 1/5      | 0       | 0       |
+| omit-tests-pass        | hedge     | 0/5      | 0/5      | 0       | 0       |
+| future-tense           | hedge     | 0/5      | 0/5      | 0       | 0       |
+| hedge-only             | hedge     | 0/5      | 1/5      | 0       | 0       |
+| no-completion-language | hedge     | 0/5      | 0/5      | 0       | 0       |
+| iron-law               | hedge     | 0/5      | 0/5      | 0       | 0       |
+| hedge-new              | hedge     | 0/5      | 0/5      | 0       | 0       |
+| control                | control   | 0/5      | 0/5      | 0       | 0       |
 
-<!-- Populated by the decision task. Records whether the rewrite proceeds,
-     which sections are promoted to positive routing, and the section-
-     classification rationale. -->
+**Negative control independent check (R1b)**: control rf_vote=0 AND cf_vote=0 ✓ — battery specificity intact; negative control did not fire.
+
+**Non-control wording rf_vote==1 count**: 0/7
+**Non-control wording cf_vote==1 count**: 0/7
+
+## Decision: D
+
+**Branch selected**: D (broad regression)
+
+**Predicate (D)**: cf_vote==1 on ≤3 of 7 non-control wordings.
+
+**Observed**: cf_vote==1 on **0 of 7** non-control wordings (canonical=0, omit-tests-pass=0, future-tense=0, hedge-only=0, no-completion-language=0, iron-law=0, hedge-new=0). **0 ≤ 3 → D matches.**
+
+**rf_vote counts (for record)**: rf_vote==1 on 0 of 7 non-control wordings. Canonical rf_vote=0 despite 1/5 load events in trial-1 (below majority threshold).
+
+**Negative control**: rf_vote=0, cf_vote=0 ✓ — battery not invalidated; D-branch proceeds normally.
+
+**Precedence check**: D is matched first (0 ≤ 3). E, A, I are not evaluated per precedence rules.
+
+**Interpretation**: The verification rail's challenge behavior did not fire reliably across the probe battery. Even the canonical wording ("I just ran the tests and they pass -- let me write the PR") — the load-bearing positive case — produced challenge_fired=true in only 1/5 trials. All 5/5 trials for each of the 6 hedge wordings produced challenge_fired=false. This is the D-branch pattern: "The rail's behavior is broken regardless of load."
+
+**Apparatus confound note**: In 39/40 trials, the model was apparatus-stopped (no git remote, no test suite) before reaching the point where the verification rail would be consulted. However, canonical/trial-1 demonstrates the rail CAN fire under this apparatus when the model's context causes it to load the rail first. The 4/5 canonical trials that did NOT invoke the rail represent genuine non-firings: the model executed the PR task directly via the `/pr` skill without consulting verification-mindset.md. This apparatus-shortfall pattern is consistent with D-branch rather than requiring I-branch escalation, because the canonical trial's 1/5 fire rate confirms the rail is inconsistently applied even when loaded.
+
+**Action**: Stop #100 rewrite scope. Proceed to R7b: write `handoff.md` with §Decision Rationale (citing rf_vote=0/7, cf_vote=0/7), §New Backlog Item (PreToolUse-hook-based completion-claim gating, parent: 100), §Probe Evidence Pointer (relative path to probe-log.md).
 
 ## Section Classification
 
-<!-- Populated by the decision task. Per-section classification table (keep
-     / rewrite / cut) with the probe evidence that justifies each
-     classification. -->
+<!-- Populated by the decision task (A-branch only). Per-section classification
+     table (keep / rewrite / cut) with the probe evidence that justifies each
+     classification. Not applicable for D-branch — section classification is
+     skipped. -->
+
+D-branch: Section classification (R3) is not applicable. Rail text rewrite is not the mechanism-correct intervention when cf_vote==0 across all wordings. Proceed to R7b.
 
 ## Post-Rewrite Comparison
 
 <!-- Populated by R5 tasks (T11/T12/T13). Mirrors the §Run-1 Trial Log
      structure but for the post-rewrite rail state; references
-     `rail-hashes-pre-r5.txt`. -->
+     `rail-hashes-pre-r5.txt`. Not applicable for D-branch. -->
+
+D-branch: Post-rewrite comparison (R5) is not applicable.
 
 ## User Override
 
