@@ -34,7 +34,6 @@
 | 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | 104 | 101 | — |
 | 119 | Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements | backlog | medium | feature | 114 | 113 | — |
 | 124 | Migration guide + script for existing symlink-based installs | backlog | medium | chore | 115, 116, 117, 118, 121, 122 | 113 | — |
-| 134 | Clean up active-session.json when overnight session transitions to phase:complete | backlog | medium | bug | — | — | — |
 | 137 | Harden /discovery citation grounding and external-endorsement value gating | backlog | medium | epic | — | — | — |
 | 138 | Codify citation norm and premise-as-verification in /discovery research phase | in_progress | medium | chore | — | 137 | — |
 | 139 | Add vendor-endorsement value gating to /discovery decompose phase | backlog | medium | chore | 138 | 137 | — |
@@ -61,7 +60,6 @@
 - **86** Extend output-floors.md with M1 Subagent Disposition section
 - **92** Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)
 - **101** Extract deterministic tool-call sequences into agent-invokable scripts
-- **134** Clean up active-session.json when overnight session transitions to phase:complete
 - **137** Harden /discovery citation grounding and external-endorsement value gating
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
 - **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release

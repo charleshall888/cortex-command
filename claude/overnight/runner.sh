@@ -922,11 +922,15 @@ if pointer_path.exists():
     try:
         data = json.loads(pointer_path.read_text())
         state = json.loads(Path(os.environ['STATE_PATH']).read_text())
-        data['phase'] = state.get('phase', data['phase'])
-        with tempfile.NamedTemporaryFile(mode='w', dir=str(pointer_path.parent), delete=False, suffix='.tmp') as f:
-            json.dump(data, f)
-            tmp_path = f.name
-        os.replace(tmp_path, pointer_path)
+        new_phase = state.get('phase', data['phase'])
+        if new_phase == 'complete':
+            pointer_path.unlink()
+        else:
+            data['phase'] = new_phase
+            with tempfile.NamedTemporaryFile(mode='w', dir=str(pointer_path.parent), delete=False, suffix='.tmp') as f:
+                json.dump(data, f)
+                tmp_path = f.name
+            os.replace(tmp_path, pointer_path)
     except Exception:
         pass
 " || true
@@ -1670,11 +1674,15 @@ if pointer_path.exists():
     try:
         data = json.loads(pointer_path.read_text())
         state = json.loads(Path(os.environ['STATE_PATH']).read_text())
-        data['phase'] = state.get('phase', data['phase'])
-        with tempfile.NamedTemporaryFile(mode='w', dir=str(pointer_path.parent), delete=False, suffix='.tmp') as f:
-            json.dump(data, f)
-            tmp_path = f.name
-        os.replace(tmp_path, pointer_path)
+        new_phase = state.get('phase', data['phase'])
+        if new_phase == 'complete':
+            pointer_path.unlink()
+        else:
+            data['phase'] = new_phase
+            with tempfile.NamedTemporaryFile(mode='w', dir=str(pointer_path.parent), delete=False, suffix='.tmp') as f:
+                json.dump(data, f)
+                tmp_path = f.name
+            os.replace(tmp_path, pointer_path)
     except Exception:
         pass
 " || true

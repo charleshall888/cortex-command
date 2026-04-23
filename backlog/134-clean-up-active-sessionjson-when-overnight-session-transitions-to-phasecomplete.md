@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: ec141696-e5f5-4a7f-b1a8-06f5bf9411b2
 title: "Clean up active-session.json when overnight session transitions to phase:complete"
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-04-22
