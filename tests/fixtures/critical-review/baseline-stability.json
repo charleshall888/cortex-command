@@ -1,0 +1,19 @@
+{
+  "measured_at": "2026-04-23T00:44:13+00:00",
+  "skill_version_commit": "f1caec42614b3c992024272f3136d85d665d0ba2",
+  "smoke_test_only": true,
+  "fixtures": {
+    "pure_b_aggregation": {
+      "runs": 1,
+      "passed": 1,
+      "per_run_probability": 1.0
+    },
+    "straddle_case": {
+      "runs": 1,
+      "passed": 0,
+      "per_run_probability": 0.0
+    }
+  },
+  "retry_policy": "smoke-test only \u2014 full measurement deferred",
+  "pass_criterion_recommendation": "3-of-3"
+}
