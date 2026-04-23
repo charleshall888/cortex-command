@@ -112,6 +112,7 @@ Show the user:
 
 ## Constraints
 
+- **Codebase-grounded Value**: Vendor guidance, best practices, and industry standards are not sufficient Value on their own — the Value field must state what problem this solves in *this* codebase.
 - **No implementation planning**: Don't specify HOW to build each item — that's `/lifecycle`'s plan phase. Ticket bodies must not contain prescriptive section headers like "## Proposed Fix", "## Implementation Steps", or "## How to Fix". Instead, use descriptive headers to summarize research context: "## Research Context", "## Findings", or "## Context from discovery:" are all fine. Tickets may reference findings from `discovery_source` to give implementers background, but should never prescribe solutions
 - **One epic max**: A single discovery produces at most one epic with children
 - **Respect backlog conventions**: Follow the backlog skill's frontmatter schema exactly
