@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import errno
+import json
 import os
 import re
 import subprocess
@@ -25,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from claude.overnight.auth import ensure_sdk_auth
 from claude.overnight.batch_runner import BatchConfig
 from claude.overnight.deferral import DEFAULT_DEFERRED_DIR
 from claude.overnight.feature_executor import execute_feature
@@ -330,6 +332,23 @@ async def run_daytime(feature: str) -> int:
     daytime_log_path = Path(f"lifecycle/{feature}/daytime.log")
 
     try:
+        # Phase A: resolve SDK auth vector. Must run INSIDE the try-block so
+        # the outer except/finally classify a no-vector hard-fail as
+        # startup_failure and write daytime-result.json. Buffer the event
+        # payload for Phase B emission once pipeline_events_path is known.
+        auth_event = ensure_sdk_auth(event_log_path=None)
+        if auth_event["vector"] == "none":
+            sys.stderr.write(
+                "error: no auth vector available: "
+                f"{auth_event['message']}\n"
+            )
+            _top_exc = RuntimeError(
+                "no auth vector available: " + auth_event["message"]
+            )
+            _terminated_via = "startup_failure"
+            _outcome = "failed"
+            return 1
+
         plan_path = Path(f"lifecycle/{feature}/plan.md")
         if not plan_path.exists():
             sys.stderr.write(
@@ -368,6 +387,15 @@ async def run_daytime(feature: str) -> int:
         )
         config = build_config(feature, cwd, session_id)
         deferred_dir = cwd / f"lifecycle/{feature}/deferred"
+
+        # Phase B: emit the buffered auth_bootstrap event to pipeline-events.log.
+        # Byte-format matches claude.pipeline.state.log_event (single
+        # json.dumps(event) + "\n", parent dir pre-created). The event dict
+        # already has "ts" first from ensure_sdk_auth.
+        pipeline_events_path = config.pipeline_events_path
+        pipeline_events_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(pipeline_events_path, "a", encoding="utf-8") as _auth_log:
+            _auth_log.write(json.dumps(auth_event["event"]) + "\n")
 
         worktree_info = create_worktree(feature)
 
