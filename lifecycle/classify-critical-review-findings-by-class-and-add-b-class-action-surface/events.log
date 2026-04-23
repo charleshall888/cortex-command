@@ -20,3 +20,5 @@
 {"ts": "2026-04-23T00:14:04Z", "event": "task_complete", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "task": 4, "batch": 1, "status": "success"}
 {"ts": "2026-04-23T00:14:38Z", "event": "batch_dispatch", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "batch": 2, "tasks": [5]}
 {"ts": "2026-04-23T00:15:50Z", "event": "task_complete", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "task": 5, "batch": 2, "status": "success"}
+{"ts": "2026-04-23T00:16:44Z", "event": "batch_dispatch", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "batch": 3, "tasks": [7, 10]}
+{"ts": "2026-04-23T00:21:06Z", "event": "task_complete", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "task": 7, "batch": 3, "status": "success"}

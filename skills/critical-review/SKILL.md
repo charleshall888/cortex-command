@@ -172,17 +172,11 @@ Output the fallback agent's result directly (no synthesis step). Prefix the outp
 
 #### Step 2c.5: Envelope Extraction
 
-After all parallel reviewers (or the surviving subset) return, the orchestrator extracts each reviewer's JSON envelope before invoking Step 2d synthesis.
+After parallel reviewers (or the surviving subset) return, extract each reviewer's JSON envelope before Step 2d synthesis:
 
-For each reviewer's output:
-
-1. Locate the `<!--findings-json-->` delimiter using the LAST occurrence anchor — `re.findall(r'^<!--findings-json-->\s*$', output, re.MULTILINE)`, then split the output at the last match. This tolerates prose that quotes the delimiter inside a finding.
-2. `json.loads` the post-delimiter tail. Assert schema: top-level `angle: str`, `findings: list`; each finding has `class ∈ {"A", "B", "C"}`, `finding: str`, `evidence_quote: str`, and optional `straddle_rationale: str`.
-3. On any extraction or validation failure (no delimiter, JSON decode error, missing required field, invalid `class` enum), the orchestrator:
-   - Emits an operator-facing line: `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason}) — class tags for this angle are UNAVAILABLE. Prose findings presented as-is; the B→A refusal gate will EXCLUDE this reviewer's findings from its count rather than treating them as C-class.`
-   - Passes the reviewer's prose findings to the synthesizer as an untagged block (distinct from class-tagged envelopes of well-formed reviewers). Step 2d below renders untagged prose under `## Concerns` and excludes it from the A-class tally that gates verdict-framing.
-
-Do NOT silently coerce malformed envelopes to C-class — the loud operator note plus prose pass-through is required so the reviewer's real findings are not lost or mis-tagged.
+1. Locate the `<!--findings-json-->` delimiter using the LAST occurrence anchor — `re.findall(r'^<!--findings-json-->\s*$', output, re.MULTILINE)`, then split at the last match (tolerates prose quoting the delimiter).
+2. `json.loads` the post-delimiter tail. Assert schema: top-level `angle: str`, `findings: list`; each finding has `class ∈ {"A","B","C"}`, `finding: str`, `evidence_quote: str`, optional `straddle_rationale: str`.
+3. On any extraction or validation failure (no delimiter, JSON decode error, missing required field, invalid `class` enum), emit `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason}) — class tags for this angle are UNAVAILABLE. Prose findings presented as-is; the B→A refusal gate will EXCLUDE this reviewer's findings from its count rather than treating them as C-class.` and pass the reviewer's prose findings to the synthesizer as an untagged block. Step 2d renders untagged prose under `## Concerns` and excludes it from the A-class tally. Do NOT silently coerce malformed envelopes to C-class.
 
 ### Step 2d: Opus Synthesis
 
@@ -206,8 +200,7 @@ You are synthesizing findings from multiple independent adversarial reviewers in
 5. Surface tensions where angles conflict or pull in different directions.
 6. Synthesize into a single coherent challenge. Do not produce a per-angle dump.
 7. Be specific — cite exact parts of the artifact.
-8. If no A-class findings remained after evidence re-examination, open the synthesis with: `No fix-invalidating objections after evidence re-examination. The concerns below are adjacent gaps or framing notes — do not read as verdict.` Then end with: "These are the strongest objections. Proceed as you see fit."
-9. Otherwise, end with: "These are the strongest objections. Proceed as you see fit."
+8. End with: "These are the strongest objections. Proceed as you see fit." If no A-class findings remained after evidence re-examination, also open the synthesis with: `No fix-invalidating objections after evidence re-examination. The concerns below are adjacent gaps or framing notes — do not read as verdict.`
 
 ## Output Format
 
@@ -235,6 +228,40 @@ If partial coverage occurred in Step 2c (some agents succeeded, some failed), un
 If the synthesis agent fails, skip synthesis and present the raw per-angle findings from Step 2c directly. Step 3 and Step 4 (Apply Feedback) then operate on the raw findings instead of a synthesized narrative.
 
 **Note:** Step 2d is skipped entirely when Step 2c's total-failure fallback was used — that path proceeds directly to Step 3.
+
+### Step 2e: Residue Write
+
+After synthesis (or Step 2c.5 pass-through), atomically write any B-class findings to a sidecar JSON for the morning report. Skip silently when zero B-class findings remain.
+
+Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `lifecycle/*/.session` files (whitespace-stripped match):
+
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+[ -z "$REPO_ROOT" ] || MATCHES=$(python3 -c "
+import os, glob
+sid = os.environ.get('LIFECYCLE_SESSION_ID', '')
+print('\n'.join(p for p in glob.glob(os.path.join('$REPO_ROOT','lifecycle','*','.session')) if open(p).read().strip()==sid))")
+```
+
+- **One match**: `{feature}` = parent dir of matched `.session`; proceed to atomic write.
+- **Zero matches** (or no `REPO_ROOT`): ad-hoc mode — if B-class findings exist, emit `Note: B-class residue not written — no active lifecycle context.`; skip write.
+- **Multiple matches**: emit `Note: multiple active lifecycle sessions matched $LIFECYCLE_SESSION_ID; B-class residue write skipped.`; skip write.
+
+Atomic write (only when `{feature}` resolved AND ≥1 B-class finding) — inline `python3 -c` calling `claude.common.atomic_write` to `lifecycle/{feature}/critical-review-residue.json`:
+
+```bash
+python3 -c "
+import json, sys; sys.path.insert(0, '$REPO_ROOT')
+from claude.common import atomic_write
+from pathlib import Path
+atomic_write(Path('$REPO_ROOT')/'lifecycle'/'$FEATURE'/'critical-review-residue.json',
+             json.dumps(json.loads(sys.stdin.read()), indent=2)+'\n')
+" <<< "$PAYLOAD_JSON"
+```
+
+Payload schema (R4): `{"ts":"<ISO 8601>","feature":"<slug>","artifact":"<path>","synthesis_status":"ok|failed","reviewers":{"completed":N,"dispatched":M},"findings":[{"class":"B","finding":"<text>","reviewer_angle":"<angle>","evidence_quote":"<text>"}]}`.
+
+Gates: zero B-class → no file, no note. Synthesis failure → write `synthesis_status:"failed"` with B-class findings from Step 2c reviewers' envelopes. Path-argument (`/critical-review <path>`) and auto-trigger invocations (specify.md §3b / plan.md) both obey session-bound resolution — the argument path does not re-bind `{feature}`.
 
 ## Step 3: Present
 

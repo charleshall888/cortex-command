@@ -133,7 +133,7 @@ Current Step 2c block (`skills/critical-review/SKILL.md` lines 74–105): **30 c
   - Synthesis-failure path writes `synthesis_status: "failed"` with whatever B-class findings surfaced from Step 2c.
   - Path-argument invocations (`/critical-review <path>`) and auto-trigger invocations (from `specify.md §3b` / `plan.md`) both obey session-bound resolution — the argument path does not re-bind `{feature}`.
 - **Verification**: `grep -cE 'LIFECYCLE_SESSION_ID|\.session' skills/critical-review/SKILL.md` ≥ 2 AND `grep -c 'B-class residue not written' skills/critical-review/SKILL.md` ≥ 1 AND `grep -c 'critical-review-residue' skills/critical-review/SKILL.md` ≥ 1 AND `grep -c 'git rev-parse --show-toplevel' skills/critical-review/SKILL.md` ≥ 1 AND `grep -cE 'strip\(\)|whitespace' skills/critical-review/SKILL.md` ≥ 1 AND `grep -c 'atomic_write' skills/critical-review/SKILL.md` ≥ 1 (inline helper invocation reference). Integration tested by Task 10 fixtures.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit pending; Step 2e=29 + Step 2c.5=15 = 44 lines combined ≤ 60; whole-skill 299 ≤ 300; all 6 grep ACs pass)
 
 ### Task 8: Implement `render_critical_review_residue` in the morning report (R6)
 - **Files**: `claude/overnight/report.py`
