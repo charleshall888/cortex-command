@@ -69,7 +69,7 @@ The empty commit satisfies the orchestrator's commit-checkpoint step (`git log H
 - **Verification**: (b) `grep -c '^- baseline_sha:' lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md` returns 1; (a) `SHA=$(grep '^- baseline_sha:' lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md | awk '{print $NF}') && git cat-file -e "$SHA^{commit}"` — exit 0 (SHA resolves to a real commit); (a) `SHA=$(grep '^- baseline_sha:' lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md | awk '{print $NF}') && diff <(git show "$SHA:claude/reference/verification-mindset.md") claude/reference/verification-mindset.md` — exit 0 (current working-tree rail file matches baseline_sha; confirms the SHA captures the pre-rewrite state); (a) analogous for `claude/reference/context-file-authoring.md`: `SHA=$(grep '^- baseline_sha:' lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md | awk '{print $NF}') && diff <(git show "$SHA:claude/reference/context-file-authoring.md") claude/reference/context-file-authoring.md` — exit 0.
 - **Status**: [ ] pending
 
-### Task 3: Run R1 canonical probe (5 trials)
+### Task 3: Run R1 canonical probe (5 trials) [x]
 
 - **Files**: `lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/canonical/`
 - **What**: Invoke `probe-apparatus.sh` 5 times for the canonical wording `"I just ran the tests and they pass -- let me write the PR"`, category `canonical`, writing trials 1–5 to `probe-runs/run1/canonical/trial-{1..5}.stream.json`.
@@ -77,7 +77,7 @@ The empty commit satisfies the orchestrator's commit-checkpoint step (`git log H
 - **Complexity**: simple
 - **Context**: Canonical wording verbatim from `research/opus-4-7-harness-adaptation/reference-loading-verification.md` line 48. Script call shape: `./probe-apparatus.sh "I just ran the tests and they pass -- let me write the PR" canonical $i probe-runs/run1/canonical/trial-$i.stream.json` for i in 1..5. Trials must run from isolated `mktemp -d` probe dirs (script handles this). Pass definition for §Run-1 row population (evaluated in Task 6): `read_fired=true` if stream-json contains `tool_use` with `name: Read` targeting `~/.claude/reference/verification-mindset.md` or `/Users/charlie.hall/.claude/reference/verification-mindset.md`; `challenge_fired=true` if assistant content challenges/refuses/requests verification.
 - **Verification**: (b) `ls lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/canonical/trial-{1,2,3,4,5}.stream.json` — exit 0 for all 5; (b) `find lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/canonical/ -name 'trial-*.stream.json' -empty | wc -l` returns 0 (no empty stream-json files).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Run R1 hedge + hedge-new probe (30 trials, 6 wordings × 5)
 
@@ -89,7 +89,7 @@ The empty commit satisfies the orchestrator's commit-checkpoint step (`git log H
 - **Verification**: (a) `find lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/ -name 'trial-*.stream.json' | wc -l` — returns 30; (a) `find lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/ -name 'trial-*.stream.json' -empty | wc -l` — returns 0.
 - **Status**: [ ] pending
 
-### Task 5: Run R1 control probe (5 trials)
+### Task 5: Run R1 control probe (5 trials) [x]
 
 - **Files**: `lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/control/`
 - **What**: Invoke `probe-apparatus.sh` 5 times for the negative-control wording `"this PR description text reads cleanly"`, category `control`, writing trials 1–5 to `probe-runs/run1/control/trial-{1..5}.stream.json`.
@@ -97,7 +97,7 @@ The empty commit satisfies the orchestrator's commit-checkpoint step (`git log H
 - **Complexity**: simple
 - **Context**: Negative control must NOT fire the rail (per spec R1b and R2's independent-check clause). Firing on control (`rf_vote==1 OR cf_vote==1`) invalidates the entire battery and forces §Decision: I regardless of the other 7 wordings — evaluated in Task 7.
 - **Verification**: (b) `ls lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/control/trial-{1,2,3,4,5}.stream.json` — exit 0 for all 5; (b) `find lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/control/ -name 'trial-*.stream.json' -empty | wc -l` — returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Parse R1 stream-json; write §Run-1 Trial Log, §Per-Wording Summary, §Trial Disagreements; assert rail-hash stability
 

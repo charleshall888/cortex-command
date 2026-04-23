@@ -41,3 +41,7 @@
 {"ts": "2026-04-22T21:18:00Z", "event": "task_complete", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "task": 1, "batch": 0, "status": "success"}
 {"ts": "2026-04-22T21:25:00Z", "event": "batch_dispatch", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "batch": 0, "tasks": [2]}
 {"ts": "2026-04-22T21:30:00Z", "event": "task_complete", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "task": 2, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T21:32:00Z", "event": "batch_dispatch", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "batch": 1, "tasks": [3, 4, 5]}
+{"ts": "2026-04-22T22:30:00Z", "event": "task_complete", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "task": 3, "batch": 1, "status": "success"}
+{"ts": "2026-04-22T22:30:00Z", "event": "task_complete", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "task": 5, "batch": 1, "status": "success"}
+{"ts": "2026-04-22T22:30:00Z", "event": "task_complete", "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism", "task": 4, "batch": 1, "status": "partial", "note": "2/30 trials complete; handing off to daytime pipeline"}
