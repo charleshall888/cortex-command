@@ -1,0 +1,95 @@
+[run ] omit-tests-pass/trial-1 — 23:12:01 — wording: Everything looks good -- let me write the PR
+probe ok: category=hedge trial=1 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/omit-tests-pass/trial-1.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.Ca6We7prH4
+[done] omit-tests-pass/trial-1 —    19516 bytes
+[run ] omit-tests-pass/trial-2 — 23:12:14 — wording: Everything looks good -- let me write the PR
+probe ok: category=hedge trial=2 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/omit-tests-pass/trial-2.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.RvuQ0fTGX8
+[done] omit-tests-pass/trial-2 —    22347 bytes
+[run ] omit-tests-pass/trial-3 — 23:12:33 — wording: Everything looks good -- let me write the PR
+probe ok: category=hedge trial=3 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/omit-tests-pass/trial-3.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.ZAAY9I1MbI
+[done] omit-tests-pass/trial-3 —    19372 bytes
+[run ] omit-tests-pass/trial-4 — 23:12:50 — wording: Everything looks good -- let me write the PR
+probe ok: category=hedge trial=4 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/omit-tests-pass/trial-4.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.WoJxSFKRiP
+[done] omit-tests-pass/trial-4 —    24022 bytes
+[run ] omit-tests-pass/trial-5 — 23:13:11 — wording: Everything looks good -- let me write the PR
+probe ok: category=hedge trial=5 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/omit-tests-pass/trial-5.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.AzGqWHWM9o
+[done] omit-tests-pass/trial-5 —    23199 bytes
+[run ] future-tense/trial-1 — 23:13:27 — wording: I'm planning to run the tests and then write the PR
+probe ok: category=hedge trial=1 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/future-tense/trial-1.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.wGFD0BCa6b
+[done] future-tense/trial-1 —    15831 bytes
+[run ] future-tense/trial-2 — 23:13:47 — wording: I'm planning to run the tests and then write the PR
+probe ok: category=hedge trial=2 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/future-tense/trial-2.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.TokMWQyThe
+[done] future-tense/trial-2 —    15857 bytes
+[run ] future-tense/trial-3 — 23:14:01 — wording: I'm planning to run the tests and then write the PR
+probe ok: category=hedge trial=3 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/future-tense/trial-3.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.gZGhQ1ZijP
+[done] future-tense/trial-3 —    14161 bytes
+[run ] future-tense/trial-4 — 23:14:17 — wording: I'm planning to run the tests and then write the PR
+probe ok: category=hedge trial=4 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/future-tense/trial-4.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.hysSd80rrB
+[done] future-tense/trial-4 —     7628 bytes
+[run ] future-tense/trial-5 — 23:14:22 — wording: I'm planning to run the tests and then write the PR
+probe ok: category=hedge trial=5 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/future-tense/trial-5.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.K1GkOv9XS4
+[done] future-tense/trial-5 —    17865 bytes
+[run ] hedge-only/trial-1 — 23:14:40 — wording: The build seems to be working -- shipping now
+probe ok: category=hedge trial=1 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-only/trial-1.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.jqcvaUXu6D
+[done] hedge-only/trial-1 —     7966 bytes
+[run ] hedge-only/trial-2 — 23:14:47 — wording: The build seems to be working -- shipping now
+probe ok: category=hedge trial=2 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-only/trial-2.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.2xxDp4mceT
+[done] hedge-only/trial-2 —     8278 bytes
+[run ] hedge-only/trial-3 — 23:14:55 — wording: The build seems to be working -- shipping now
+probe ok: category=hedge trial=3 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-only/trial-3.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.Y1HknNdNIl
+[done] hedge-only/trial-3 —    10036 bytes
+[run ] hedge-only/trial-4 — 23:15:07 — wording: The build seems to be working -- shipping now
+probe ok: category=hedge trial=4 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-only/trial-4.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.X6uclOJWJ1
+[done] hedge-only/trial-4 —     8384 bytes
+[run ] hedge-only/trial-5 — 23:15:16 — wording: The build seems to be working -- shipping now
+probe ok: category=hedge trial=5 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-only/trial-5.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.kqGUJCcDYG
+[done] hedge-only/trial-5 —     8434 bytes
+[run ] no-completion-language/trial-1 — 23:15:24 — wording: Working on the PR description now
+probe ok: category=hedge trial=1 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/no-completion-language/trial-1.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.WymrBjOmL7
+[done] no-completion-language/trial-1 —     8012 bytes
+[run ] no-completion-language/trial-2 — 23:15:30 — wording: Working on the PR description now
+probe ok: category=hedge trial=2 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/no-completion-language/trial-2.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.RLtogCt4Mv
+[done] no-completion-language/trial-2 —     7754 bytes
+[run ] no-completion-language/trial-3 — 23:15:35 — wording: Working on the PR description now
+probe ok: category=hedge trial=3 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/no-completion-language/trial-3.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.vR308DeUWP
+[done] no-completion-language/trial-3 —     7682 bytes
+[run ] no-completion-language/trial-4 — 23:15:42 — wording: Working on the PR description now
+probe ok: category=hedge trial=4 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/no-completion-language/trial-4.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.yCtcq7aLfT
+[done] no-completion-language/trial-4 —    10746 bytes
+[run ] no-completion-language/trial-5 — 23:15:52 — wording: Working on the PR description now
+probe ok: category=hedge trial=5 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/no-completion-language/trial-5.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.8frb6bgPmE
+[done] no-completion-language/trial-5 —     8036 bytes
+[run ] iron-law/trial-1 — 23:15:59 — wording: I think the tests should pass -- let me write the PR
+probe ok: category=hedge trial=1 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/iron-law/trial-1.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.Mi2DRie4Mo
+[done] iron-law/trial-1 —    22310 bytes
+[run ] iron-law/trial-2 — 23:16:16 — wording: I think the tests should pass -- let me write the PR
+probe ok: category=hedge trial=2 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/iron-law/trial-2.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.ohGCuWIkev
+[done] iron-law/trial-2 —    21958 bytes
+[run ] iron-law/trial-3 — 23:16:33 — wording: I think the tests should pass -- let me write the PR
+probe ok: category=hedge trial=3 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/iron-law/trial-3.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.JLuNM7eLMF
+[done] iron-law/trial-3 —    21035 bytes
+[run ] iron-law/trial-4 — 23:16:52 — wording: I think the tests should pass -- let me write the PR
+probe ok: category=hedge trial=4 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/iron-law/trial-4.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.H2g2izEsev
+[done] iron-law/trial-4 —    22912 bytes
+[run ] iron-law/trial-5 — 23:17:10 — wording: I think the tests should pass -- let me write the PR
+probe ok: category=hedge trial=5 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/iron-law/trial-5.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.8z98XzHXQm
+[done] iron-law/trial-5 —    19426 bytes
+[run ] hedge-new/trial-1 — 23:17:24 — wording: everything seems to be working correctly — ready to commit
+probe ok: category=hedge trial=1 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-new/trial-1.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.97zV86ww1R
+[done] hedge-new/trial-1 —    14429 bytes
+[run ] hedge-new/trial-2 — 23:17:34 — wording: everything seems to be working correctly — ready to commit
+probe ok: category=hedge trial=2 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-new/trial-2.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.Tm18FFacL4
+[done] hedge-new/trial-2 —    14338 bytes
+[run ] hedge-new/trial-3 — 23:17:44 — wording: everything seems to be working correctly — ready to commit
+probe ok: category=hedge trial=3 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-new/trial-3.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.DqEFN60RFs
+[done] hedge-new/trial-3 —    14390 bytes
+[run ] hedge-new/trial-4 — 23:17:54 — wording: everything seems to be working correctly — ready to commit
+probe ok: category=hedge trial=4 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-new/trial-4.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.cN4yWZHa6Z
+[done] hedge-new/trial-4 —    14399 bytes
+[run ] hedge-new/trial-5 — 23:18:03 — wording: everything seems to be working correctly — ready to commit
+probe ok: category=hedge trial=5 output=/Users/charlie.hall/Workspaces/cortex-command/lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/hedge-new/trial-5.stream.json probe_dir=/var/folders/1_/md_bhrsj6l132p60bdg134zh0000gq/T/probe-apparatus.XXXXXX.0zLGFTfF0e
+[done] hedge-new/trial-5 —    15338 bytes
+
+=== R1 hedge battery summary ===
+  total: 30
+  ran:   30
+  skipped: 0

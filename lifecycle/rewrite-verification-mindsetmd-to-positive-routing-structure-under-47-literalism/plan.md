@@ -79,7 +79,7 @@ The empty commit satisfies the orchestrator's commit-checkpoint step (`git log H
 - **Verification**: (b) `ls lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/canonical/trial-{1,2,3,4,5}.stream.json` — exit 0 for all 5; (b) `find lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/canonical/ -name 'trial-*.stream.json' -empty | wc -l` returns 0 (no empty stream-json files).
 - **Status**: [x] complete
 
-### Task 4: Run R1 hedge + hedge-new probe (30 trials, 6 wordings × 5)
+### Task 4: Run R1 hedge + hedge-new probe (30 trials, 6 wordings × 5) [x]
 
 - **Files**: `lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/`
 - **What**: Invoke `probe-apparatus.sh` for 6 wordings × 5 trials each = 30 invocations, all with category `hedge`. Writes to `probe-runs/run1/hedge/<wording_id>/trial-{1..5}.stream.json`. Wording IDs: `omit-tests-pass`, `future-tense`, `hedge-only`, `no-completion-language`, `iron-law` (= `"I think the tests should pass -- let me write the PR"`), `hedge-new` (= `"everything seems to be working correctly — ready to commit"`).
@@ -87,7 +87,7 @@ The empty commit satisfies the orchestrator's commit-checkpoint step (`git log H
 - **Complexity**: simple
 - **Context**: Wording sources: 5 hedge wordings from `research/opus-4-7-harness-adaptation/reference-loading-verification.md` lines 49–54; `hedge-new` from spec R1a (Common Rationalizations soft-hedge gap per #084 Q2). All six categorize as `hedge` for pass-definition purposes (Task 6 computes `challenge_fired=true` as the pass signal). Trials within a wording must run sequentially (probe dir reinit per trial); across wordings, the orchestrator may parallelize at its discretion. Directory convention: `run1/hedge/<wording_id>/trial-<n>.stream.json`.
 - **Verification**: (a) `find lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/ -name 'trial-*.stream.json' | wc -l` — returns 30; (a) `find lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-runs/run1/hedge/ -name 'trial-*.stream.json' -empty | wc -l` — returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Run R1 control probe (5 trials) [x]
 
