@@ -1,0 +1,34 @@
+{"ts": "2026-04-23T01:46:44Z", "event": "discovery_reference", "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase", "epic_research": "research/audit-and-improve-discovery-skill-rigor/research.md", "epic_spec": null}
+- ts: 2026-04-23T01:48:00Z
+  event: clarify_critic
+  feature: add-vendor-endorsement-value-gating-to-discovery-decompose-phase
+  findings:
+    - "Intent clarity rated High, but success criteria leave detection of 'external endorsement' and precedence between #138 signal vs 'absent citations' operationally underspecified; the implementer will have to invent procedure."
+    - "Scope boundedness rated High on 'single file', but reading #138's `premise-unverified` signal from research.md may require plumbing in decompose.md — the source asserts same-file scope without grounding it."
+    - "Scope claim relies on #138 being complete, but the source does not explicitly state completion; blocked-by frontmatter being empty is not the same as verified completion."
+    - "Requirements alignment rated High via negative check (pipeline/multi-agent/observability/remote-access don't apply) without showing that area-doc survey actually happened or that no skills/discovery-area doc exists."
+    - "Complexity 'simple' justified by #138-as-precedent, but #138 edits research.md (not decompose.md) and #139 introduces new per-item user-approval pause behavior with no cited precedent."
+    - "Criticality 'high' invoked as Clarify §5 default without engaging ticket-specific factors like user-in-the-loop retention and additive nature of the change."
+  dispositions:
+    apply: 2
+    dismiss: 4
+    ask: 0
+  applied_fixes:
+    - "Revised complexity reasoning: dropped the #138 precedent analogy (since #138 edits research.md, not decompose.md); grounded simple rating in single-file scope + localized extension of existing user-approval gate, not pattern-match."
+    - "Augmented criticality reasoning with ticket-specific factors: all future /discovery decomposition passes are affected (wide blast radius across future runs), silent-wrong-behavior is the failure mode, additive-and-user-gated nature partially offsets but does not override skill-change default."
+  dismissals:
+    - finding_index: 0
+      rationale: "Dismissed. Intent clarity is about WHAT (unambiguous: flag external-endorsement + unverified-premise items, pause user approval on flagged items). HOW (detection heuristics for paraphrase, scope of 'external endorsement') is a spec-phase design decision, legitimately carried into research as an open question — not a Clarify-gate ambiguity. The clarified outcome is single and clear."
+    - finding_index: 1
+      rationale: "Dismissed after self-resolution against codebase. `skills/discovery/references/decompose.md:9` already instructs 'Read research/{topic}/research.md for findings, feasibility assessment, and decision records' — so consuming #138's `premise-unverified` signal from research.md requires no new cross-artifact plumbing. Single-file scope in decompose.md is grounded."
+    - finding_index: 2
+      rationale: "Dismissed after direct verification. `backlog/138-codify-citation-norm-and-premise-as-verification-in-discovery-research.md` frontmatter shows `status: complete`; the dependency is satisfied. Empty blocked-by in #139 is consistent with #138 completion."
+    - finding_index: 3
+      rationale: "Dismissed after direct verification. `ls requirements/` produced only: multi-agent.md, observability.md, pipeline.md, project.md, remote-access.md. No skills-specific or discovery-specific area doc exists in the requirements directory. The negative check is grounded in actual directory enumeration, not assumption."
+  status: ok
+{"ts": "2026-04-23T01:50:49Z", "event": "lifecycle_start", "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase", "tier": "simple", "criticality": "high"}
+{"ts": "2026-04-23T01:51:17Z", "event": "phase_transition", "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase", "from": "clarify", "to": "research"}
+{"ts": "2026-04-23T02:05:16Z", "event": "complexity_override", "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase", "from": "simple", "to": "complex"}
+{"ts": "2026-04-23T02:05:16Z", "event": "phase_transition", "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase", "from": "research", "to": "specify"}
+{"ts": "2026-04-23T02:16:59Z", "event": "orchestrator_review", "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-23T02:32:34Z", "event": "phase_transition", "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase", "from": "specify", "to": "plan"}

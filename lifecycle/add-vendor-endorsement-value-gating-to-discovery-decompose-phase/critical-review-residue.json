@@ -1,0 +1,36 @@
+{
+  "ts": "2026-04-23T02:25:32Z",
+  "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase",
+  "artifact": "lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/spec.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "TC1 (no new persistent state) is load-bearing for the R4/R5 consolidation-bypass bug. Cleanly separating pre-consolidation research-quality signal from post-consolidation ack flow requires tracking both counts during the decompose run. TC1 pushes toward a single evaluation point which is precisely what creates the laundering path.",
+      "reviewer_angle": "Cap calibration and consolidation laundering",
+      "evidence_quote": "TC1 \u2014 Rule-edit scope only: No new files, tooling, or persistent state."
+    },
+    {
+      "class": "B",
+      "finding": "R2 surface-pattern list is closed-form and omits generic-authority phrasings (recommended, standard, widely adopted, accepted, conventional). An agent aware of the gate evades by substituting generic authority for named vendor. The list needs either expansion or a shift to a non-lexical signal.",
+      "reviewer_angle": "Surface-pattern evasion and marker sparsity",
+      "evidence_quote": "external-endorsement surface patterns (e.g., vendor X recommends, Anthropic says, CrewAI docs, industry best practice, canonical pattern in $framework)"
+    },
+    {
+      "class": "B",
+      "finding": "R2(a) written-by-agent-at-decompose-time (not copied verbatim from research.md) has no enforcement mechanism. Same-model agent trivially paraphrases. Requirement is observable only by human reviewer post-hoc, which is the escape hatch the gate is meant to reduce.",
+      "reviewer_angle": "Surface-pattern evasion and marker sparsity",
+      "evidence_quote": "produce a [file:line] citation that grounds the Value claim in this codebase, written by the agent at decompose time (not copied verbatim from research.md)"
+    },
+    {
+      "class": "B",
+      "finding": "\u00a76 Decomposition Record has no dropped-items section; flagged-and-dropped items leave no trace in the durable accounting artifact. Re-running /discovery on same topic cannot detect the same unverified premise was already proposed and rejected, enabling silent repeat-and-drop cycles with no captured learning.",
+      "reviewer_angle": "Silent scope-shift from Drop this item",
+      "evidence_quote": "Decomposition outputs go to research/{topic}/decomposed.md as an accounting record (per \u00a76 of decompose.md)"
+    }
+  ]
+}
