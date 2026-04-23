@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from claude.common import read_tier, requires_review
+from claude.common import mark_task_done_in_plan, read_tier, requires_review
 
 
 # ---------------------------------------------------------------------------
@@ -155,3 +155,57 @@ class TestRequiresReview:
 
     def test_complex_critical_requires_review(self):
         assert requires_review("complex", "critical") is True
+
+
+# ---------------------------------------------------------------------------
+# mark_task_done_in_plan — idempotency over already-marked Status fields (R12)
+# ---------------------------------------------------------------------------
+
+
+class TestMarkTaskDoneInPlanIdempotent:
+    """Codify R12: mark_task_done_in_plan is a no-op on already-[X] or [x]
+    Status fields (file bytes unchanged) and updates [ ] to [x].
+    """
+
+    def test_mark_task_done_in_plan_idempotent_over_existing_marks(
+        self, tmp_path: Path
+    ):
+        """R12: calling on [X] or [x] leaves bytes unchanged; [ ] becomes [x]."""
+        # Case 1: already [X] complete — file bytes must be byte-identical.
+        plan_upper = tmp_path / "plan_upper.md"
+        content_upper = (
+            "# Plan\n\n"
+            "### Task 1: Do the thing\n"
+            "- **Status**: [X] complete\n"
+        )
+        plan_upper.write_text(content_upper, encoding="utf-8")
+        before_upper = plan_upper.read_bytes()
+        mark_task_done_in_plan(plan_upper, 1)
+        after_upper = plan_upper.read_bytes()
+        assert after_upper == before_upper
+
+        # Case 2: already [x] complete — file bytes must be byte-identical.
+        plan_lower = tmp_path / "plan_lower.md"
+        content_lower = (
+            "# Plan\n\n"
+            "### Task 1: Do the thing\n"
+            "- **Status**: [x] complete\n"
+        )
+        plan_lower.write_text(content_lower, encoding="utf-8")
+        before_lower = plan_lower.read_bytes()
+        mark_task_done_in_plan(plan_lower, 1)
+        after_lower = plan_lower.read_bytes()
+        assert after_lower == before_lower
+
+        # Case 3: [ ] pending — file is updated to [x] complete.
+        plan_pending = tmp_path / "plan_pending.md"
+        content_pending = (
+            "# Plan\n\n"
+            "### Task 1: Do the thing\n"
+            "- **Status**: [ ] pending\n"
+        )
+        plan_pending.write_text(content_pending, encoding="utf-8")
+        mark_task_done_in_plan(plan_pending, 1)
+        updated = plan_pending.read_text(encoding="utf-8")
+        assert "- **Status**: [x] pending" in updated
+        assert "- **Status**: [ ] pending" not in updated
