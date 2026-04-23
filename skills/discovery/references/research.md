@@ -72,6 +72,8 @@ For each viable approach surfaced during research:
 - What dependencies or prerequisites must be in place?
 - Rough effort estimate (S/M/L/XL)
 
+Prerequisites entries describing codebase-state checks (e.g., 'Identify pattern X in {file}') must be resolved during §2 Codebase Analysis — findings move to §2 with citations, or are reported as `NOT_FOUND(query, scope)`. Entries remaining in the §5 Prerequisites column are implementation-sequencing only (work to be done after the approach is committed).
+
 ### 6. Write Research Artifact
 
 Combine findings into `research/{topic}/research.md`:
