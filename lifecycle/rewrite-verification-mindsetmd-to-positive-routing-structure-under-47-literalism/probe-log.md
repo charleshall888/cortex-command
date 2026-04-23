@@ -357,31 +357,34 @@ Majority vote threshold: ≥3/5 trials → vote=1; <3/5 → vote=0.
 **Non-control wording rf_vote==1 count**: 0/7
 **Non-control wording cf_vote==1 count**: 0/7
 
-## Decision: D
+## Decision: I
 
-**Branch selected**: D (broad regression)
+**Branch selected**: I (catch-all) — the R1 apparatus could not cleanly adjudicate A/E/D. The mechanism was diagnosed via a follow-up re-probe (see below), but the R2 precedence table assumes a variable (rail-text quality in isolation) that R1 did not actually measure, because the binding constraint turned out to be rail *loading*.
 
-**Predicate (D)**: cf_vote==1 on ≤3 of 7 non-control wordings.
+**R1 predicate counts**: rf_vote==1 on **0 of 7** non-control wordings; cf_vote==1 on **0 of 7** non-control wordings. Negative control: rf_vote=0, cf_vote=0 ✓ — battery integrity intact; control did not fire.
 
-**Observed**: cf_vote==1 on **0 of 7** non-control wordings (canonical=0, omit-tests-pass=0, future-tense=0, hedge-only=0, no-completion-language=0, iron-law=0, hedge-new=0). **0 ≤ 3 → D matches.**
+**Why not D** (mechanical match): D's predicate `cf_vote==1 on ≤3 of 7` is satisfied (0 ≤ 3), but D's stated semantics ("rail behavior is broken regardless of load", plan.md:291) are not supported by the evidence. Of the one R1 trial where the rail loaded (canonical/trial-1), challenge_fired was observed. D would require ≥1 loaded-but-unchallenged observation; R1 has zero.
 
-**rf_vote counts (for record)**: rf_vote==1 on 0 of 7 non-control wordings. Canonical rf_vote=0 despite 1/5 load events in trial-1 (below majority threshold).
+**Why not E** (semantic match): E's semantics ("rail behaves correctly when loaded but does not load reliably", plan.md:280) fit the data well, but E's mechanical predicate `rf_vote==1 on ≤1 AND cf_vote==1 on ≥4` is not satisfied (0/7 on both). Overriding a branch whose predicate explicitly fails is a larger violation than routing to the I catch-all designed for exactly this case.
 
-**Negative control**: rf_vote=0, cf_vote=0 ✓ — battery not invalidated; D-branch proceeds normally.
+**Diagnostic re-probe** (2026-04-23, 10 trials × 2 wordings with `--disallowed-tools Skill`, total cost $1.98):
 
-**Precedence check**: D is matched first (0 ≤ 3). E, A, I are not evaluated per precedence rules.
+| wording | R1 baseline rf | diagnostic rf | R1 baseline cf | diagnostic cf |
+|---|---|---|---|---|
+| canonical | 1/5 | 3/5 | 1/5 | 3/5 |
+| hedge-new | 0/5 | 0/5 | 0/5 | 0/5 |
 
-**Interpretation**: The verification rail's challenge behavior did not fire reliably across the probe battery. Even the canonical wording ("I just ran the tests and they pass -- let me write the PR") — the load-bearing positive case — produced challenge_fired=true in only 1/5 trials. All 5/5 trials for each of the 6 hedge wordings produced challenge_fired=false. This is the D-branch pattern: "The rail's behavior is broken regardless of load."
+Of the 3 canonical diagnostic trials where the rail loaded with Skill disabled, 2 challenged — rail text behaves correctly when loaded, though probabilistically (~2/3), not deterministically.
 
-**Apparatus confound note**: In 39/40 trials, the model was apparatus-stopped (no git remote, no test suite) before reaching the point where the verification rail would be consulted. However, canonical/trial-1 demonstrates the rail CAN fire under this apparatus when the model's context causes it to load the rail first. The 4/5 canonical trials that did NOT invoke the rail represent genuine non-firings: the model executed the PR task directly via the `/pr` skill without consulting verification-mindset.md. This apparatus-shortfall pattern is consistent with D-branch rather than requiring I-branch escalation, because the canonical trial's 1/5 fire rate confirms the rail is inconsistently applied even when loaded.
+**Two distinct mechanisms confirmed by the diagnostic** (both obstruct rail loading, via different paths):
 
-**Action**: Stop #100 rewrite scope. Proceed to R7b: write `handoff.md` with §Decision Rationale (citing rf_vote=0/7, cf_vote=0/7), §New Backlog Item (PreToolUse-hook-based completion-claim gating, parent: 100), §Probe Evidence Pointer (relative path to probe-log.md).
+(a) **Skill-routing-bypass** (PR path). On "PR"-containing wordings, the model dispatches to `/pr` via the Skill tool as its first action in 14/15 non-diagnostic trials, short-circuiting the CLAUDE.md conditional-load trigger for verification-mindset.md. Disabling the Skill tool moves the rail-load rate on canonical from 1/5 to 3/5 and the challenge rate from 1/5 to 3/5.
 
-## Root Cause Analysis (post-hoc, supersedes "Apparatus confound note")
+(b) **CLAUDE.md rule-competition** (commit path). On "commit"-containing wordings, the model cites the `~/.claude/CLAUDE.md` rule "Always Use the `/commit` Skill" and defers to user-invoked `/commit` — even with the Skill tool disabled. Deflection supersedes the conditional-load trigger. Rail-load rate on hedge-new stayed 0/5 across R1 and the diagnostic. The binding constraint here is CLAUDE.md rule precedence, not Skill-tool availability.
 
-The agent's original §Decision rationale framed the low fire rate as "rail inconsistently applied even when loaded" plus "apparatus-shortfall." A direct inspection of every trial's **first tool-use action** reveals a sharper mechanism.
+Neither mechanism maps cleanly to A/E/D. The binding variable across both paths is rail loading, and loading itself has two distinct failure modes with different remediation spaces.
 
-**First-action frequency across all 40 trials:**
+**First-action frequency across the 40 R1 trials** (retained from prior RCA for evidentiary completeness):
 
 | First action | Count | Wordings |
 |---|---|---|
@@ -389,39 +392,32 @@ The agent's original §Decision rationale framed the low fire rate as "rail inco
 | `Skill: commit` | 5 | hedge-new (5/5) |
 | `Read verification-mindset.md` | 1 | canonical/trial-1 only |
 | `Bash: git status` | 4 | future-tense (4/5) |
-| no tool use (conversational) | 16 | control (5/5), hedge-only (5/5), no-completion-language (4/5), future-tense (1/5), no-completion-language (1/5) |
+| no tool use (conversational) | 16 | control (5/5), hedge-only (5/5), no-completion-language (4/5), future-tense (1/5) |
 
-**Finding**: when the wording contained "PR", the model dispatched to `/pr` (19/25 non-conversational trials). When it contained "commit", it dispatched to `/commit` (5/5 hedge-new). These skill dispatches are what bypassed the rail — not apparatus state.
+**Action**: Proceed to Task 20 (I-branch handoff.md) with §Apparatus Hypothesis naming both confirmed mechanisms. No auto-filed backlog item. User decides downstream ticket scope after reviewing handoff.md — candidate interventions include PreToolUse hooks on terminal actions, hook-based verification injection, skill-side "Read verification-mindset.md first" prerequisites in `/pr` and `/commit`, and/or a CLAUDE.md refactor to reconcile competing conditional-load rules.
 
-**Mechanism**: `verification-mindset.md` loads via the conditional-trigger row "About to claim success, tests pass, build succeeds, bug fixed, or agent completed" in `~/.claude/CLAUDE.md`. The trigger fires only if the model's reasoning step is what chooses to load the file. When the model's first action is a `Skill` invocation, the skill's own workflow takes over — the conditional-loading rule is never re-evaluated inside the skill's execution path. The rail is not broken and the apparatus is not the binding constraint; the **skill routing short-circuits the conditional-load trigger**.
-
-**Canonical trial-1 is the existence proof**: same wording, same apparatus, but the model chose `Read verification-mindset.md` as its first action. Rail fired correctly. The other 4/5 canonical trials are not random variance — they chose `Skill: pr` as first action, which took the model out of the rail's trigger regime.
-
-**Revised action (supersedes the Apparatus-confound framing)**:
-- D-branch conclusion ("stop #100 rewrite") is correct, but the reason is **skill routing bypass**, not "rail broken."
-- Task 19's handoff.md should cite skill-routing as the mechanism and propose **two** fixes, either of which addresses the bypass:
-  1. **PreToolUse hook** on `gh pr create` / `git commit` / `git push` that gates on fresh verification evidence — intercepts the action the skill is about to take, regardless of which skill invoked it. (Matches the original D-branch proposal.)
-  2. **Skill-side fix**: audit every skill that ends in a commit/push/PR/ship action (`/pr`, `/commit`, etc.) and add an explicit "Read verification-mindset.md first" prerequisite step in the skill's workflow. Less universal than the hook, but more discoverable and composable.
-- An M1 positive-routing rewrite of `verification-mindset.md` itself does not address either path into the bypass. #100's scope is therefore not the mechanism-correct fix.
+**Supersedes**: the agent-written Task-6 §Decision: D (commit 40a036b) and the subsequent "Root Cause Analysis (post-hoc)" section (commit 4630084). Both framings have been folded into this body.
 
 ## Section Classification
 
 <!-- Populated by the decision task (A-branch only). Per-section classification
      table (keep / rewrite / cut) with the probe evidence that justifies each
-     classification. Not applicable for D-branch — section classification is
+     classification. Not applicable for I-branch — section classification is
      skipped. -->
 
-D-branch: Section classification (R3) is not applicable. Rail text rewrite is not the mechanism-correct intervention when cf_vote==0 across all wordings. Proceed to R7b.
+I-branch: Section classification (R3) is not applicable. The diagnostic re-probe identified rail *loading* (not rail-text quality) as the binding constraint; per-section text rewrite is not the mechanism-correct intervention.
 
 ## Post-Rewrite Comparison
 
 <!-- Populated by R5 tasks (T11/T12/T13). Mirrors the §Run-1 Trial Log
      structure but for the post-rewrite rail state; references
-     `rail-hashes-pre-r5.txt`. Not applicable for D-branch. -->
+     `rail-hashes-pre-r5.txt`. Not applicable for I-branch. -->
 
-D-branch: Post-rewrite comparison (R5) is not applicable.
+I-branch: Post-rewrite comparison (R5) is not applicable.
 
 ## User Override
 
 <!-- Populated only if the user overrides the decision task's verdict.
      Records the override, rationale, and any follow-up tickets opened. -->
+
+**Override: D (mechanical) → I (user)** — 2026-04-23, after diagnostic re-probe ($1.98, 10 trials × 2 wordings with `--disallowed-tools Skill`) confirmed two distinct mechanisms (skill-routing-bypass on PR path; CLAUDE.md rule-competition on commit path) that both obstruct rail loading. D's mechanical predicate is satisfied but its stated semantics are contradicted by the evidence; E's semantic fit is strong but E's mechanical predicate fails. I (catch-all, with §Apparatus Hypothesis documenting both mechanisms) is the honest classification. See §Decision rationale above. No follow-up tickets auto-filed; candidate interventions left for user selection after reviewing handoff.md.
