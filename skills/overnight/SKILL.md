@@ -43,11 +43,11 @@ Validate inputs before entering any flow:
 
 ## New Session Flow (`/overnight`)
 
-> **Python binary note**: The `claude.overnight.*` modules are not installed globally — they live in the the cortex-command source tree. When invoking Python in any planning step, use `PYTHONPATH=$CORTEX_COMMAND_ROOT $CORTEX_COMMAND_ROOT/.venv/bin/python3` (or `source $CORTEX_COMMAND_ROOT/.venv/bin/activate && export PYTHONPATH=$CORTEX_COMMAND_ROOT` in the same shell) to ensure the modules are importable regardless of the current working directory.
+> **Python module note**: After `uv tool install -e .` from `$CORTEX_COMMAND_ROOT`, the `cortex` console script is available globally and the `cortex_command.*` package is importable from any working directory — no `PYTHONPATH` manipulation required. Invoke planning helpers either through the CLI entry point (`cortex <subcommand>`) or, where subcommands are not yet wired, via `python3 -m cortex_command.<module>`.
 
 ### Step 1: Check for Existing Session
 
-Call `load_state()` from `claude.overnight.state` (no arguments — uses its default path at `$CORTEX_COMMAND_ROOT/lifecycle/overnight-state.json`).
+Call `load_state()` from `cortex_command.overnight.state` (no arguments — uses its default path at `$CORTEX_COMMAND_ROOT/lifecycle/overnight-state.json`).
 
 - **If found with phase other than `complete`**: Warn the user that an active overnight session exists. Report the phase and feature count. Ask whether to resume the existing session (switch to the Resume Flow) or abandon it and start fresh.
 - **If found with `complete` phase**: Treat as no active session. Proceed as new.
@@ -64,7 +64,7 @@ Regenerate the backlog index so that feature selection in Step 3 operates on up-
 
 ### Step 3: Select Eligible Features
 
-Run `select_overnight_batch()` from `claude.overnight.backlog` on the project's backlog directory.
+Run `select_overnight_batch()` from `cortex_command.overnight.backlog` on the project's backlog directory.
 
 This function composes the full selection pipeline: parse backlog items, filter for readiness (status, blockers, research + spec + plan artifacts), score by weighted algorithm (dependency structure, priority, tag cohesion, type routing), and group into batches.
 
@@ -92,7 +92,7 @@ The summary string is available as `selection.summary` on the `SelectionResult` 
 
 ### Step 5: Render Session Plan
 
-Call `render_session_plan()` from `claude.overnight.plan` with the selection result and default configuration:
+Call `render_session_plan()` from `cortex_command.overnight.plan` with the selection result and default configuration:
 
 ```python
 render_session_plan(
@@ -156,7 +156,7 @@ Approve this plan and specs?
 
 On user approval, execute these steps in order:
 
-0. **Validate target repos**: Call `validate_target_repos(selection)` from `claude.overnight.plan`. If the returned list is non-empty, report:
+0. **Validate target repos**: Call `validate_target_repos(selection)` from `cortex_command.overnight.plan`. If the returned list is non-empty, report:
    ```
    Cannot start overnight session: the following repo: paths are not valid git repositories:
      - {path1}
@@ -184,7 +184,7 @@ On user approval, execute these steps in order:
 
    **Error**: If `git status` fails (unexpected git error), report the error and stop. In practice this cannot occur — the git repository check in Input Validation (`.git/` exists) runs before Step 7.
 
-2. **Bootstrap the session**: Call `bootstrap_session(selection, plan_content)` from `claude.overnight.plan` with the approved selection and the rendered plan string from Step 5. Returns `(state, state_dir)` with `overnight-state.json`, `overnight-plan.md`, and `session.json` already written on disk.
+2. **Bootstrap the session**: Call `bootstrap_session(selection, plan_content)` from `cortex_command.overnight.plan` with the approved selection and the rendered plan string from Step 5. Returns `(state, state_dir)` with `overnight-state.json`, `overnight-plan.md`, and `session.json` already written on disk.
 
    This performs all initialization atomically:
    - Creates a timestamp-based session ID (`overnight-{YYYY-MM-DD}-{HHmm}`) with collision-avoidance
@@ -197,15 +197,15 @@ On user approval, execute these steps in order:
 
 3. **latest-overnight symlink**: Handled by the runner on startup (line 179 of `runner.sh`). The skill does not create this symlink — it writes to the repo root which is outside the sandbox's write allowlist in sandboxed projects.
 
-4. **Extract batch spec sections**: Read the worktree path from the initialized state (`state.worktree_path`). Call `extract_batch_specs(state, Path(worktree_path))` from `claude.overnight.plan`, passing the worktree path instead of the repository root so that extracted specs are written into the worktree's `lifecycle/` directory. If the returned list is non-empty, `cd` to the worktree directory, stage each returned path with `git add` (paths are relative to the worktree, not the repo root), and commit using `/commit` with message `"Extract batch spec sections for overnight session {session_id}"` (substituting the actual session ID). This commits the specs on the integration branch, not on main. If the list is empty, skip the commit — no batch-spec items were selected.
+4. **Extract batch spec sections**: Read the worktree path from the initialized state (`state.worktree_path`). Call `extract_batch_specs(state, Path(worktree_path))` from `cortex_command.overnight.plan`, passing the worktree path instead of the repository root so that extracted specs are written into the worktree's `lifecycle/` directory. If the returned list is non-empty, `cd` to the worktree directory, stage each returned path with `git add` (paths are relative to the worktree, not the repo root), and commit using `/commit` with message `"Extract batch spec sections for overnight session {session_id}"` (substituting the actual session ID). This commits the specs on the integration branch, not on main. If the list is empty, skip the commit — no batch-spec items were selected.
 
    **Error**: If `git add` or `git commit` fails, report: "Batch spec commit failed: {error}. Proceeding without committing batch spec sections — they may be extracted during runner startup." Continue — the runner can still function without the pre-commit.
 
-5. **Log session start**: Call `log_event()` from `claude.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`).
+5. **Log session start**: Call `log_event()` from `cortex_command.overnight.events` with `event='session_start'`, `round=1`, and `details` including the session ID, feature count, and time limit. Pass `log_path=state_dir / "overnight-events.log"` so the event log lands in the MC lifecycle session directory alongside the other session artifacts. Note: the parameter is `event` (not `event_type`) and event names are lowercase strings (e.g., `'session_start'`, not `'SESSION_START'`).
 
    **Error**: If `log_event()` fails, report: "Failed to log session start event: {error}." Continue — logging failure is non-fatal.
 
-6. **Launch the dashboard** (if not already running): Check whether the dashboard is live by reading `claude/dashboard/.pid`. If the file exists and the stored PID is alive (`kill -0 $(cat claude/dashboard/.pid)` exits 0), the dashboard is already running — note the URL and skip launch. Otherwise, instruct the user to run `just dashboard` in a separate terminal before starting the runner, or explain that they can launch it at any time during the session. Poll `GET http://localhost:8080/health` for a 200 response (up to 5 seconds, 1-second intervals); if successful, note "Dashboard available at http://localhost:8080" in the session start message.
+6. **Launch the dashboard** (if not already running): Check whether the dashboard is live by reading `cortex_command/dashboard/.pid`. If the file exists and the stored PID is alive (`kill -0 $(cat cortex_command/dashboard/.pid)` exits 0), the dashboard is already running — note the URL and skip launch. Otherwise, instruct the user to run `just dashboard` in a separate terminal before starting the runner, or explain that they can launch it at any time during the session. Poll `GET http://localhost:8080/health` for a 200 response (up to 5 seconds, 1-second intervals); if successful, note "Dashboard available at http://localhost:8080" in the session start message.
 
     **Error**: If the dashboard health check times out or the `.pid` file is unreadable, continue without failing — the dashboard is optional. Report: "Dashboard not detected at http://localhost:8080. Run `just dashboard` in a separate terminal to enable live progress monitoring."
 
@@ -246,7 +246,7 @@ On user approval, execute these steps in order:
 
 ### Step 1: Load Existing State
 
-Scan `$CORTEX_COMMAND_ROOT/lifecycle/sessions/*/overnight-state.json` (sorted by modification time, most recent first) and load the first file whose `phase` is not `complete` using `load_state(state_path=<path>)` from `claude.overnight.state`. You should pass the explicit `state_path` argument — the default path points to a different location. This mirrors the runner's own auto-discovery logic and works correctly whether state was written by a sandboxed or non-sandboxed session.
+Scan `$CORTEX_COMMAND_ROOT/lifecycle/sessions/*/overnight-state.json` (sorted by modification time, most recent first) and load the first file whose `phase` is not `complete` using `load_state(state_path=<path>)` from `cortex_command.overnight.state`. You should pass the explicit `state_path` argument — the default path points to a different location. This mirrors the runner's own auto-discovery logic and works correctly whether state was written by a sandboxed or non-sandboxed session.
 
 - **If no matching file is found** (glob returns no results, or all found files have `phase: complete`): Report "No active overnight session found. Use `/overnight` to start a new session." Stop.
 - **Error**: If a candidate file exists but cannot be parsed (corrupted JSON), skip it and try the next candidate. If all candidates fail to parse, report: "All overnight state files under $CORTEX_COMMAND_ROOT/lifecycle/sessions/ are corrupted. Inspect and repair manually, or start a new session with `/overnight`." → stop.
@@ -271,9 +271,9 @@ Present the current session state to the user:
 
 ### Step 3: Check for Deferred Questions
 
-Read deferred questions from the `deferred/` directory using `read_deferrals()` from `claude.overnight.deferral`.
+Read deferred questions from the `deferred/` directory using `read_deferrals()` from `cortex_command.overnight.deferral`.
 
-If there are deferred questions, present them using `summarize_deferrals()` from `claude.overnight.deferral`. For blocking questions, highlight that the affected features are paused and waiting for a human decision.
+If there are deferred questions, present them using `summarize_deferrals()` from `cortex_command.overnight.deferral`. For blocking questions, highlight that the affected features are paused and waiting for a human decision.
 
 **Error**: If `read_deferrals()` fails (e.g., directory permission error), report: "Could not read deferred questions from deferred/: {error}." Continue — proceed as if there are no deferred questions.
 
@@ -394,7 +394,7 @@ The key difference: pipeline creates research and specs interactively during the
 
 ## Constraints
 
-- **Do not contain implementation code.** This skill is a protocol that the agent follows. It references functions by their module paths (`claude.overnight.backlog`, `claude.overnight.plan`, `claude.overnight.state`, `claude.overnight.events`, `claude.overnight.deferral`).
+- **Do not contain implementation code.** This skill is a protocol that the agent follows. It references functions by their module paths (`cortex_command.overnight.backlog`, `cortex_command.overnight.plan`, `cortex_command.overnight.state`, `cortex_command.overnight.events`, `cortex_command.overnight.deferral`).
 - **One overnight session at a time.** If a session is active (non-complete state file), the user must resume or abandon it before starting a new one.
 - **Features must have `lifecycle/{slug}/research.md` and `lifecycle/{slug}/spec.md` on disk, and must not be `type: epic` (checked after blocked-by, before artifact checks).** The readiness gate in `select_overnight_batch()` enforces this. Features without all required artifacts are reported as ineligible with a reason. `plan.md` is generated during the session if missing — a plan generation sub-agent runs before dispatch and defers the feature (with a captured reason) if it cannot produce a valid plan.
 - **The skill does not execute features.** It creates the plan and state, then hands off to the bash runner. The runner and batch runner handle actual execution.
