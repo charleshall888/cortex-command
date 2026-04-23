@@ -1,0 +1,51 @@
+{
+  "ts": "2026-04-23T18:50:00Z",
+  "feature": "build-cortex-cli-skeleton-with-uv-tool-install-entry-point",
+  "artifact": "lifecycle/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {"completed": 4, "dispatched": 4},
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 7 misses residual docstring and argparse prog= strings in Python modules. Verified: claude/pipeline/metrics.py:1026 prog=\"python3 -m claude.pipeline.metrics\", claude/overnight/auth.py:322, claude/common.py:456/464/474 usage prints, claude/dashboard/data.py:286 Sphinx docstring, claude/overnight/batch_runner.py:3 :mod: role. just test does not fail on stale docstrings so the wheel ships with old names in --help output and tracebacks.",
+      "reviewer_angle": "sed-pattern correctness and false-negative verification gaps",
+      "evidence_quote": "Substitute any remaining `claude.<subpkg>` prose strings in docstrings or argparse metadata."
+    },
+    {
+      "class": "B",
+      "finding": "Verification grep extension scope narrower than 'rename every reference' claim. Neither Task 5 grep nor spec AC grep include *.yaml/*.yml/*.ps1 or extension-less executables (bin/audit-doc, bin/count-tokens, bin/validate-spec). No immediate runtime impact but guardrail not watertight for future additions.",
+      "reviewer_angle": "sed-pattern correctness and false-negative verification gaps",
+      "evidence_quote": "Run `grep -rnE 'python3 -m claude\\.(overnight|pipeline|common|dashboard|hooks|tests)' --include='*.py' --include='*.sh' --include='*.md' --include='*.json' --include='justfile' --include='*.toml' --include='*.txt' .; echo \"exit=$?\"` — pass if `exit=1`."
+    },
+    {
+      "class": "B",
+      "finding": "Ticket 128 (pre-commit hook rejecting main commits during overnight) is the exact guardrail that would make the atomic-land invariant enforceable against concurrent overnight sessions and agent branch-confusion, but status is backlog. .git/hooks/pre-commit does not exist. /commit skill has zero branch-awareness — never checks git branch --show-current. Plan does not declare 128 a prerequisite nor provide a compensating check.",
+      "reviewer_angle": "atomic-land invariant vs. squash-merge feasibility",
+      "evidence_quote": "Create the feature branch: `git checkout -b feat/114-cortex-cli-skeleton`."
+    },
+    {
+      "class": "B",
+      "finding": "Overnight runner derives target branch from session state (runner.sh:266-269: print(data.get('integration_branch') or 'main')), not from current HEAD. Task 1's one-shot overnight-pause covers only sessions running at branch-creation; a scheduled launchd/tmux session spawned during Tasks 2-14 picks up integration_branch='main' from its state JSON and does 'git worktree add' against whatever main's HEAD is at that moment.",
+      "reviewer_angle": "atomic-land invariant vs. squash-merge feasibility",
+      "evidence_quote": "Check `ps aux | grep -E 'overnight-(start|schedule|run)'` and `launchctl list | grep cortex` for active runners; stop them via the corresponding `overnight-*` stop command or `launchctl unload` before proceeding."
+    },
+    {
+      "class": "B",
+      "finding": "Task 5/7 miss filesystem-path literals referencing claude/ tree. justfile:625 hardcodes PID_FILE=\"claude/dashboard/.pid\"; claude/overnight/runner.sh:68 sets PROMPT_TEMPLATE=\"$REPO_ROOT/claude/overnight/prompts/orchestrator-round.md\". Neither matches python3 -m claude. nor uvicorn claude. nor from|import claude. patterns. After Task 2 git mv, app.py writes _pid_file to cortex_command/dashboard/.pid but justfile dashboard recipe reads claude/dashboard/.pid — 'already running' guard breaks silently.",
+      "reviewer_angle": "[build-system] + active .venv coupling and live overnight/launchd collision risk",
+      "evidence_quote": "`justfile` (5 lines: 615, 621, 655 uvicorn, 659, 663), `claude/overnight/runner.sh` (pre-rename; lives at `cortex_command/overnight/runner.sh` post Task 2) lines referencing `-m claude.*`"
+    },
+    {
+      "class": "B",
+      "finding": "Task 14 brittleness: uses sorted(glob.glob('dist/cortex_command-*.whl'))[-1] without cleaning dist/ or bumping version. Synthesizer re-classified from A to B — hatchling rebuilds same-named wheel deterministically, sorted()[-1] picks the single extant file. Scenario requiring stale wheel + timestamp tie to fool data-file assertions is unlikely; hygiene is valid polish, not fix-invalidating.",
+      "reviewer_angle": "task ordering correctness and file-collision races",
+      "evidence_quote": "`python3 -c \"import zipfile, glob; z=zipfile.ZipFile(sorted(glob.glob('dist/cortex_command-*.whl'))[-1])..."
+    },
+    {
+      "class": "B",
+      "finding": "Task 13 test-critical dependency set [4, 5, 6, 7, 9, 10, 11] covers all pytest-breaking changes, but because orphan-prose gaps (from claude.X in .md prompts) don't break pytest collection or mock.patch resolution (prompts are data files), Task 13 passes green with orchestrator prompts broken. Three verification layers (per-task greps, full pytest, wheel+install) all pass while first overnight session post-merge fails.",
+      "reviewer_angle": "task ordering correctness and file-collision races",
+      "evidence_quote": "Run `just test; echo \"exit=$?\"` — pass if last line = `exit=0`."
+    }
+  ]
+}
