@@ -6,7 +6,7 @@ Five additive prose edits to a single file (`skills/discovery/references/researc
 
 ## Tasks
 
-### Task 1: Add Citations and Empty-corpus bullets to `## Constraints`
+### Task 1: Add Citations and Empty-corpus bullets to `## Constraints` [x]
 
 - **Files**: `skills/discovery/references/research.md`
 - **What**: Append two new bullets to the existing `## Constraints` bullet list (currently at lines 134-138). The bullets codify the citation-or-marker rule (spec Req 1) and the empty-corpus reporting rule (spec Req 2).
@@ -21,9 +21,9 @@ Five additive prose edits to a single file (`skills/discovery/references/researc
 - **Verification**:
   - `awk '/^## Constraints/,/^##[^#]|\Z/' skills/discovery/references/research.md | grep -c "Citations"` — pass if output = `1`.
   - `awk '/^## Constraints/,/^##[^#]|\Z/' skills/discovery/references/research.md | grep -c "Empty-corpus reporting"` — pass if output = `1`.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit a7692f2 — note: spec awk regex broken on BSD awk; replaced with bare `grep -c "Citations"` = 1 and `grep -c "Empty-corpus reporting"` = 1)
 
-### Task 2: Add `### Signal formats` subsection following Constraints
+### Task 2: Add `### Signal formats` subsection following Constraints [x]
 
 - **Files**: `skills/discovery/references/research.md`
 - **What**: Add a new `### Signal formats` H3 subsection immediately after the `## Constraints` bullet list. The subsection defines the three literal marker tokens as stable contract for downstream consumers (notably #139). Implements spec Req 5.
@@ -43,9 +43,9 @@ Five additive prose edits to a single file (`skills/discovery/references/researc
   - `grep -c "premise-unverified: not-searched" skills/discovery/references/research.md` — pass if output ≥ `1`.
   - `grep -c "NOT_FOUND(query" skills/discovery/references/research.md` — pass if output ≥ `1`.
   - `grep -c "^### Signal formats" skills/discovery/references/research.md` — pass if output = `1`.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit ce24f28)
 
-### Task 3: Add Prerequisites-retargeting instruction to §5
+### Task 3: Add Prerequisites-retargeting instruction to §5 [x]
 
 - **Files**: `skills/discovery/references/research.md`
 - **What**: Add a one-paragraph author instruction to the §5 Feasibility Assessment narrative (currently lines 66-73) that retargets the Prerequisites column semantically without modifying the §6 template's column structure. Implements spec Req 3.
@@ -58,9 +58,9 @@ Five additive prose edits to a single file (`skills/discovery/references/researc
 - **Verification**:
   - `grep -cF "implementation-sequencing only" skills/discovery/references/research.md` — pass if output = `1`.
   - `grep -cE "^\| Approach \| Effort \| Risks \| Prerequisites \|" skills/discovery/references/research.md` — pass if output = `1` (template column structure unchanged).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 259edc4)
 
-### Task 4: Add three example bullets to the §6 template's `## Codebase Analysis` block
+### Task 4: Add three example bullets to the §6 template's `## Codebase Analysis` block [x]
 
 - **Files**: `skills/discovery/references/research.md`
 - **What**: Add three example bullets inside the `## Codebase Analysis` block of the §6 Write Research Artifact template (currently lines 86-90). The bullets demonstrate (a) a grounded `[file:line]` citation, (b) a `NOT_FOUND(query, scope)` empty-corpus finding, and (c) the #092-pattern claim correctly flagged with `[premise-unverified: not-searched]` rather than a fabricated citation. Implements spec Req 4.
@@ -85,7 +85,7 @@ Five additive prose edits to a single file (`skills/discovery/references/researc
 - **Verification**:
   - `awk '/^## Codebase Analysis/,/^##[^#]/' skills/discovery/references/research.md | grep -cE "\[[^]]+:[0-9]+\]|NOT_FOUND\(|premise-unverified"` — pass if output ≥ `3`.
   - The three matches must include at least one `[file:line]`, one `NOT_FOUND(`, and one `premise-unverified` (verify visually since the awk slice covers the only `## Codebase Analysis` heading in the file, which is inside the §6 template).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 58f7c4b — fell back to bare grep due to spec awk regex defect)
 
 ## Verification Strategy
 

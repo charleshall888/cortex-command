@@ -31,37 +31,6 @@
     "repo": null
   },
   {
-    "id": 129,
-    "title": "Un-silence morning-report commit and backfill 4 historical reports",
-    "status": "backlog",
-    "priority": "critical",
-    "type": "feature",
-    "tags": [
-      "overnight-runner",
-      "morning-report",
-      "gitignore",
-      "orchestrator-worktree-escape"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-21",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "126",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/orchestrator-worktree-escape/research.md",
-    "plan": null,
-    "uuid": "503f9a80-0ec5-4d12-b7b1-3e56b2b5e879",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 82,
     "title": "Adapt harness to Opus 4.7 (prompt delta + capability adoption)",
     "status": "backlog",
@@ -1034,36 +1003,6 @@
     "repo": null
   },
   {
-    "id": 138,
-    "title": "Codify citation norm and premise-as-verification in /discovery research phase",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "discovery",
-      "rigor",
-      "skills"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-22",
-    "updated": "2026-04-22",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "137",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/audit-and-improve-discovery-skill-rigor/research.md",
-    "plan": null,
-    "uuid": "72f5acad-4544-46b2-8070-dfd1257d69b9",
-    "lifecycle_slug": "codify-citation-norm-and-premise-as-verification-in-discovery-research-phase",
-    "session_id": "7c8876dd-75d4-4a7a-a13e-f1f57fd1d2b8",
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 139,
     "title": "Add vendor-endorsement value gating to /discovery decompose phase",
     "status": "backlog",
@@ -1080,9 +1019,7 @@
     "created": "2026-04-22",
     "updated": "2026-04-22",
     "blocks": [],
-    "blocked_by": [
-      "138"
-    ],
+    "blocked_by": [],
     "parent": "137",
     "research": null,
     "spec": null,
@@ -1120,7 +1057,7 @@
     "uuid": "f5c58535-ce2b-4bb1-8e73-26cf71ea0cca",
     "lifecycle_slug": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks",
     "session_id": "ee5a1968-3819-48c7-9167-bc4aa953ece1",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },

@@ -3,7 +3,6 @@
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
 | 128 | Install pre-commit hook rejecting main commits during overnight sessions | backlog | critical | feature | — | 126 | — |
-| 129 | Un-silence morning-report commit and backfill 4 historical reports | backlog | critical | feature | — | 126 | — |
 | 82 | Adapt harness to Opus 4.7 (prompt delta + capability adoption) | backlog | high | epic | — | — | — |
 | 100 | Rewrite verification-mindset.md to positive-routing structure under 4.7 literalism | backlog | high | feature | 88 | 82 | — |
 | 102 | Ship DR-5 SKILL.md-to-bin parity linter with zero existing violations | backlog | high | feature | 115 | 101 | — |
@@ -35,8 +34,7 @@
 | 119 | Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements | backlog | medium | feature | 114 | 113 | — |
 | 124 | Migration guide + script for existing symlink-based installs | backlog | medium | chore | 115, 116, 117, 118, 121, 122 | 113 | — |
 | 137 | Harden /discovery citation grounding and external-endorsement value gating | backlog | medium | epic | — | — | — |
-| 138 | Codify citation norm and premise-as-verification in /discovery research phase | in_progress | medium | chore | — | 137 | — |
-| 139 | Add vendor-endorsement value gating to /discovery decompose phase | backlog | medium | chore | 138 | 137 | — |
+| 139 | Add vendor-endorsement value gating to /discovery decompose phase | backlog | medium | chore | — | 137 | — |
 | 140 | Investigate daytime pipeline blockers: subprocess auth + task-selection re-runs completed tasks | in_progress | medium | bug | — | — | — |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
@@ -50,7 +48,6 @@
 ## Backlog
 
 - **128** Install pre-commit hook rejecting main commits during overnight sessions
-- **129** Un-silence morning-report commit and backfill 4 historical reports
 - **82** Adapt harness to Opus 4.7 (prompt delta + capability adoption)
 - **100** Rewrite verification-mindset.md to positive-routing structure under 4.7 literalism
 - **113** Distribute cortex-command as cortex CLI + plugin marketplace
@@ -61,6 +58,7 @@
 - **92** Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)
 - **101** Extract deterministic tool-call sequences into agent-invokable scripts
 - **137** Harden /discovery citation grounding and external-endorsement value gating
+- **139** Add vendor-endorsement value gating to /discovery decompose phase
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
 - **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release
 - **133** Evaluate implement.md:180 progress-tail narration under Opus 4.7
@@ -68,5 +66,4 @@
 ## In-Progress
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
-- **138** Codify citation norm and premise-as-verification in /discovery research phase (in_progress)
 - **140** Investigate daytime pipeline blockers: subprocess auth + task-selection re-runs completed tasks (in_progress)

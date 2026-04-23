@@ -4,7 +4,7 @@ uuid: 72f5acad-4544-46b2-8070-dfd1257d69b9
 id: "138"
 title: "Codify citation norm and premise-as-verification in /discovery research phase"
 type: chore
-status: backlog
+status: complete
 priority: medium
 parent: "137"
 blocked-by: []
@@ -13,6 +13,11 @@ areas: [skills]
 created: 2026-04-22
 updated: 2026-04-22
 discovery_source: research/audit-and-improve-discovery-skill-rigor/research.md
+session_id: null
+lifecycle_phase: research
+lifecycle_slug: codify-citation-norm-and-premise-as-verification-in-discovery-research-phase
+complexity: complex
+criticality: high
 ---
 
 # Codify citation norm and premise-as-verification in /discovery research phase
