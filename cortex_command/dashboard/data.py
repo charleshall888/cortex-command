@@ -283,7 +283,7 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
     """Parse phase transitions and rework cycles from a feature's events.log.
 
     Reads ``lifecycle/{feature_slug}/events.log`` via
-    ``claude.pipeline.metrics.parse_events()``.
+    ``cortex_command.pipeline.metrics.parse_events()``.
 
     Args:
         feature_slug: Feature directory name under ``lifecycle/``.
@@ -1034,7 +1034,7 @@ def parse_backlog_titles(backlog_dir: Path) -> dict[str, str]:
     Scans ``backlog_dir`` for files matching the pattern
     ``[0-9]*-*.md``, reads the YAML frontmatter between ``---``
     markers, and extracts the ``title`` field.  The lookup key is
-    derived by ``slugify(title)`` from ``claude.common`` (lowercase,
+    derived by ``slugify(title)`` from ``cortex_command.common`` (lowercase,
     underscores/slashes to spaces, strip non-alphanumeric, collapse
     whitespace/hyphens).
 

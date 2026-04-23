@@ -5,7 +5,7 @@ performs a flaky guard re-run and, on confirmed failure, dispatches a repair
 agent to fix the code.
 
 Follows the CLI module pattern established by interrupt.py and the flaky
-guard + SHA circuit breaker pattern from claude/pipeline/merge_recovery.py.
+guard + SHA circuit breaker pattern from cortex_command/pipeline/merge_recovery.py.
 
 Callable as:
     python3 -m cortex_command.overnight.integration_recovery [--state ...] [--test-command ...] ...
@@ -200,7 +200,7 @@ def main() -> int:
     # --- Dispatch repair agent ---
     if not _DISPATCH_AVAILABLE:
         print(
-            "integration_recovery: warning: claude.pipeline.dispatch is not available "
+            "integration_recovery: warning: cortex_command.pipeline.dispatch is not available "
             "(SDK not installed); cannot dispatch repair agent",
             file=sys.stderr,
         )

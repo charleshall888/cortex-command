@@ -29,7 +29,7 @@ The article's evaluator uses Playwright to screenshot running UI and Claude's vi
 
 ## What to produce
 
-Add a `## Visual Evaluation Criteria` section to `claude/dashboard/DESIGN.md` with four quality dimensions adapted from the Anthropic harness rubric:
+Add a `## Visual Evaluation Criteria` section to `cortex_command/dashboard/DESIGN.md` with four quality dimensions adapted from the Anthropic harness rubric:
 
 | Criterion | Weight | What to evaluate via screenshots |
 |-----------|--------|--------------------------------|

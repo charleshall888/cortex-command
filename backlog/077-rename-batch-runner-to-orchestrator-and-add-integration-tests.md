@@ -22,7 +22,7 @@ criticality: high
 ## Scope
 
 Complete the three-phase batch_runner decomposition. Move the remaining
-session-layer logic into `claude/overnight/orchestrator.py` and retain
+session-layer logic into `cortex_command/overnight/orchestrator.py` and retain
 `batch_runner.py` as a thin CLI wrapper preserving the
 `python3 -m cortex_command.overnight.batch_runner` contract. Add integration
 tests for `orchestrator.run_batch`.

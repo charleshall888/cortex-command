@@ -17,7 +17,7 @@ discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 
 ## Context from discovery
 
-`dispatch_start` events in `claude/pipeline/dispatch.py:445` record model, tier, feature, task — but not which skill initiated the sub-agent dispatch. Per-skill pipeline cost aggregates are therefore not computable today. This blocks data-driven ranking of pipeline-side extraction candidates (C8, C9) and makes post-ship ROI validation impossible for anything the pipeline dispatches.
+`dispatch_start` events in `cortex_command/pipeline/dispatch.py:445` record model, tier, feature, task — but not which skill initiated the sub-agent dispatch. Per-skill pipeline cost aggregates are therefore not computable today. This blocks data-driven ranking of pipeline-side extraction candidates (C8, C9) and makes post-ship ROI validation impossible for anything the pipeline dispatches.
 
 ## Research context
 
@@ -27,8 +27,8 @@ discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 
 ## Scope
 
-- Add `skill` field to `dispatch_start` event schema in `claude/pipeline/dispatch.py:445`.
-- Extend `claude/pipeline/metrics.py` with a secondary aggregator keyed on `(skill, tier)` over `agent-activity.jsonl`.
+- Add `skill` field to `dispatch_start` event schema in `cortex_command/pipeline/dispatch.py:445`.
+- Extend `cortex_command/pipeline/metrics.py` with a secondary aggregator keyed on `(skill, tier)` over `agent-activity.jsonl`.
 - New CLI report mode: `python3 -m cortex_command.pipeline.metrics --report skill-tier-dispatch`.
 
 ## Out of scope

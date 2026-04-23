@@ -114,7 +114,7 @@ def _write_pid(pid_path: Path) -> None:
 def _worktree_path(feature: str) -> Path:
     """Return the worktree path for a given feature.
 
-    Matches the same-repo resolution in claude.pipeline.worktree: if
+    Matches the same-repo resolution in cortex_command.pipeline.worktree: if
     CORTEX_WORKTREE_ROOT is set, use it; otherwise default to
     .claude/worktrees/.
     """
@@ -389,7 +389,7 @@ async def run_daytime(feature: str) -> int:
         deferred_dir = cwd / f"lifecycle/{feature}/deferred"
 
         # Phase B: emit the buffered auth_bootstrap event to pipeline-events.log.
-        # Byte-format matches claude.pipeline.state.log_event (single
+        # Byte-format matches cortex_command.pipeline.state.log_event (single
         # json.dumps(event) + "\n", parent dir pre-created). The event dict
         # already has "ts" first from ensure_sdk_auth.
         pipeline_events_path = config.pipeline_events_path

@@ -9,8 +9,8 @@ Timestamps are auto-generated in UTC ISO 8601 format.
 Includes reader utilities (read_events, read_events_for_round) used by
 the morning report generator and resume logic.
 
-Follows the pattern established by claude/pipeline/state.py:log_event()
-and claude/pipeline/metrics.py:parse_events().
+Follows the pattern established by cortex_command/pipeline/state.py:log_event()
+and cortex_command/pipeline/metrics.py:parse_events().
 """
 
 from __future__ import annotations
@@ -225,7 +225,7 @@ def log_event(
 def read_events(log_path: Path = DEFAULT_LOG_PATH) -> list[dict[str, Any]]:
     """Read the JSONL events log and return parsed event dicts.
 
-    Follows the pattern from ``claude/pipeline/metrics.py:parse_events()``:
+    Follows the pattern from ``cortex_command/pipeline/metrics.py:parse_events()``:
     iterate lines, skip blank and malformed entries, return a list of dicts.
 
     Args:

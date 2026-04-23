@@ -34,7 +34,7 @@ Skills that run daytime dispatch use the `Agent` tool directly inside their SKIL
 
 The overnight pipeline calls the SDK programmatically from Python, wrapping `query()` with model selection, budget enforcement, error classification, and activity logging. This path runs without human interaction.
 
-**Entry point:** `claude/pipeline/dispatch.py`
+**Entry point:** `cortex_command/pipeline/dispatch.py`
 
 ```python
 from claude_agent_sdk import (
@@ -86,8 +86,8 @@ Model escalation ladder on retry: Haiku → Sonnet → Opus (terminal).
 
 **Where `query()` is called:**
 
-- `claude/pipeline/dispatch.py` — main implementation dispatch
-- `claude/pipeline/conflict.py` — repair agent dispatch for merge conflicts (Sonnet, escalates to Opus)
+- `cortex_command/pipeline/dispatch.py` — main implementation dispatch
+- `cortex_command/pipeline/conflict.py` — repair agent dispatch for merge conflicts (Sonnet, escalates to Opus)
 
 ---
 
@@ -138,7 +138,7 @@ From `claude/settings.json`:
 
 ## Interrupt Recovery
 
-`claude/overnight/interrupt.py` runs at the start of every `overnight-start`. It finds features stuck in `running` status (from a prior interrupted session), classifies their worktree state for diagnostic logging, and resets them to `pending` for retry. The recovery action (reset to pending) is the same regardless of worktree classification.
+`cortex_command/overnight/interrupt.py` runs at the start of every `overnight-start`. It finds features stuck in `running` status (from a prior interrupted session), classifies their worktree state for diagnostic logging, and resets them to `pending` for retry. The recovery action (reset to pending) is the same regardless of worktree classification.
 
 Note: **recovery attempt counts are preserved across restarts.** A feature that exhausted its retry budget before the interrupt begins the next session with no remaining attempts and will be paused immediately after a single dispatch. If this is unexpected, reset `retries` manually in `overnight-state.json` before relaunching.
 
@@ -150,7 +150,7 @@ The SDK's `resume: session_id` parameter is a different capability — it restor
 
 **File-based state over SDK Task tools.** The overnight runner uses `overnight-state.json`, NDJSON event logs, and Python dataclasses rather than `TaskCreate`/`TaskUpdate`. File state survives SDK version changes, persists across any kind of process crash, and is readable with standard tools (`cat`, `python3 -c`, `jq`). SDK task state persistence across multi-hour sessions is unclear. `status.py` already provides cross-session queryability for live sessions.
 
-**Python orchestration layer over Agent Teams.** The `claude/pipeline/` and `claude/overnight/` modules reinvent some of what Agent Teams provides (lead + worker pattern, parallel dispatch). The Python layer exists because it provides controls the Teams API doesn't expose: the 2D model selection matrix, per-tier budget limits, structured error classification, and repair agent escalation. Agent Teams is also still experimental. This trade-off should be revisited when Teams reaches stable and exposes equivalent control surfaces.
+**Python orchestration layer over Agent Teams.** The `cortex_command/pipeline/` and `cortex_command/overnight/` modules reinvent some of what Agent Teams provides (lead + worker pattern, parallel dispatch). The Python layer exists because it provides controls the Teams API doesn't expose: the 2D model selection matrix, per-tier budget limits, structured error classification, and repair agent escalation. Agent Teams is also still experimental. This trade-off should be revisited when Teams reaches stable and exposes equivalent control surfaces.
 
 **`bypassPermissions` with `Bash` access.** Overnight agents run with `permission_mode: "bypassPermissions"` and `Bash` in the allowed tool list. This means an overnight agent can execute arbitrary shell commands in its worktree without prompts. The sandbox write allowlist restricts which file paths the SDK itself can write to, but it does not constrain what a Bash subprocess can do. This is a deliberate trade-off for autonomous execution — prompts in an unattended session would stall the runner. Operators should be aware that agents operating on real codebases with `bypassPermissions + Bash` have broad execution access. Mitigation: agents run in isolated worktrees, not on the main branch directly; `bypassPermissions` is scoped to the Python pipeline path only (interactive skills inherit the parent session's permission model).
 

@@ -158,8 +158,8 @@ Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth
 |-----------|-------------|
 | `skills/` | Slash commands -- `/commit`, `/pr`, `/lifecycle`, `/overnight`, `/discovery`, and more |
 | `hooks/` | Event handlers -- commit validation, lifecycle state injection, desktop notifications |
-| `claude/overnight/` | Autonomous overnight runner -- plans work, executes in parallel, writes a morning report |
-| `claude/dashboard/` | FastAPI web dashboard for monitoring overnight sessions |
+| `cortex_command/overnight/` | Autonomous overnight runner -- plans work, executes in parallel, writes a morning report |
+| `cortex_command/dashboard/` | FastAPI web dashboard for monitoring overnight sessions |
 | `lifecycle/` | Feature state machine -- research, specify, plan, implement, review, complete |
 | `backlog/` | YAML-frontmatter backlog items with overnight readiness gates |
 | `claude/reference/` | Reference docs loaded conditionally by agent instructions |

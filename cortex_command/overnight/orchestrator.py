@@ -8,7 +8,7 @@ and auto-merges completed features to main.
 This module contains the session-layer logic extracted from
 ``batch_runner.py``.  ``batch_runner.py`` is a thin CLI wrapper that
 imports from this module.  ``orchestrator.py`` must not import from
-``claude.overnight.batch_runner``.
+``cortex_command.overnight.batch_runner``.
 """
 
 from __future__ import annotations

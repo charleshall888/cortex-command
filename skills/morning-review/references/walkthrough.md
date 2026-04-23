@@ -561,7 +561,7 @@ while remote main has the PR merge commit. This step reconciles the two.
 
 1. Run:
    ```
-   git-sync-rebase.sh claude/overnight/sync-allowlist.conf
+   git-sync-rebase.sh cortex_command/overnight/sync-allowlist.conf
    ```
 
 2. Handle the exit code:

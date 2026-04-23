@@ -120,6 +120,6 @@ def _install_sdk_stub() -> None:
 
     # Force a fresh import of dispatch so it binds to our stubs.
     for key in list(sys.modules):
-        if key == "claude.pipeline.dispatch" or key.endswith(".dispatch"):
+        if key == "cortex_command.pipeline.dispatch" or key.endswith(".dispatch"):
             if "pipeline" in key and "dispatch" in key:
                 del sys.modules[key]

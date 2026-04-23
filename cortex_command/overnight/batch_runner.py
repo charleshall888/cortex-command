@@ -1,6 +1,6 @@
 """CLI entry point for the overnight batch orchestrator.
 
-Thin wrapper around :mod:`claude.overnight.orchestrator`.
+Thin wrapper around :mod:`cortex_command.overnight.orchestrator`.
 """
 
 from __future__ import annotations

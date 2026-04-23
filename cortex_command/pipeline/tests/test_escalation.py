@@ -137,7 +137,7 @@ class TestModelEscalationLadder(unittest.TestCase):
 class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
     """Tests for model-tier escalation in retry_task (Req 8).
 
-    All tests patch three names inside claude.pipeline.retry:
+    All tests patch three names inside cortex_command.pipeline.retry:
       - dispatch_task: replaced with an async function returning controlled results
       - cleanup_stale_lock: replaced with a no-op to avoid filesystem side effects
       - _get_worktree_diff: replaced to return unique diffs (prevents circuit breaker)

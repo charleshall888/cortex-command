@@ -1,4 +1,4 @@
-"""Unit tests for idempotency helpers in claude.overnight.batch_runner (DR-2).
+"""Unit tests for idempotency helpers in cortex_command.overnight.batch_runner (DR-2).
 
 Covers:
   TestComputePlanHash    — _compute_plan_hash() file-read and fallback behaviour

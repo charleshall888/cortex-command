@@ -79,7 +79,7 @@ def test_runner_sh_count_pending_contains_paused() -> None:
     validate only the test author's Python, not the live runner.sh.
     """
     result = subprocess.run(
-        ["bash", "-c", "grep -A10 'count_pending()' claude/overnight/runner.sh | grep -c 'paused'"],
+        ["bash", "-c", "grep -A10 'count_pending()' cortex_command/overnight/runner.sh | grep -c 'paused'"],
         capture_output=True,
         text=True,
         cwd=str(REAL_REPO_ROOT),

@@ -61,7 +61,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - **Outputs**: `lifecycle/{feature}/review.md` (review artifact with verdict JSON); `review_verdict` event in per-feature events.log; deferral file if non-APPROVED after rework
 - **Acceptance criteria**:
   - Gating matrix: complex tier at any criticality → review; simple tier at high/critical → review; simple tier at low/medium → skip
-  - Review agent dispatched via `dispatch_review()` in `claude/pipeline/review_dispatch.py`; batch_runner owns all `events.log` writes; review agent writes only `review.md`
+  - Review agent dispatched via `dispatch_review()` in `cortex_command/pipeline/review_dispatch.py`; batch_runner owns all `events.log` writes; review agent writes only `review.md`
   - 2-cycle rework loop: CHANGES_REQUESTED cycle 1 → write feedback to `orchestrator-note.md` → dispatch fix agent → SHA circuit breaker → re-merge (`ci_check=False`) → cycle 2 review
   - Non-APPROVED after cycle 2, REJECTED at any cycle, or review agent failure → feature status `deferred`; deferral file written for morning triage
   - APPROVED at any cycle → `review_verdict`, `phase_transition`, and `feature_complete` events written to per-feature events.log; feature proceeds to merged flow
@@ -109,7 +109,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 ### Post-Session Sync
 
 - **Description**: After morning review merges the overnight PR, local `main` diverges from remote (local has the morning report commit and review artifacts; remote has the PR merge commit). A post-merge sync step rebases local onto remote, resolves conflicts in overnight-managed files automatically, and pushes.
-- **Inputs**: `claude/overnight/sync-allowlist.conf` (glob patterns for auto-resolvable files), local `main` branch state, remote `origin/main` after PR merge
+- **Inputs**: `cortex_command/overnight/sync-allowlist.conf` (glob patterns for auto-resolvable files), local `main` branch state, remote `origin/main` after PR merge
 - **Outputs**: Local `main` synced and pushed to `origin/main`; conflicts in allowlist files auto-resolved with `--theirs` (remote wins)
 - **Acceptance criteria**:
   - After sync completes successfully, `git rev-list HEAD..origin/main --count` = 0 and `git rev-list origin/main..HEAD --count` = 0 (local and remote identical)
@@ -143,10 +143,10 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - `lifecycle/pipeline-events.log` — JSONL event audit log
 - `lifecycle/deferred/` — deferral question files
 - `lifecycle/escalations.jsonl` — escalation audit log
-- `claude/overnight/sync-allowlist.conf` — glob patterns for auto-resolvable files during post-merge sync
+- `cortex_command/overnight/sync-allowlist.conf` — glob patterns for auto-resolvable files during post-merge sync
 - `bin/git-sync-rebase.sh` — post-merge sync script (deployed to `~/.local/bin/`)
 - Multi-agent orchestration (see `requirements/multi-agent.md`) — agent spawning, worktrees, model selection
-- Smoke test gate (`claude/overnight/smoke_test.py`) — post-merge verification
+- Smoke test gate (`cortex_command/overnight/smoke_test.py`) — post-merge verification
 
 ## Edge Cases
 

@@ -2,7 +2,7 @@
 # git-sync-rebase.sh — post-merge sync: fetch, rebase with allowlist conflict resolution, push.
 #
 # Usage: git-sync-rebase.sh [allowlist-file]
-#   allowlist-file  Path to file with glob patterns for auto-resolve (default: claude/overnight/sync-allowlist.conf)
+#   allowlist-file  Path to file with glob patterns for auto-resolve (default: cortex_command/overnight/sync-allowlist.conf)
 #
 # Exit codes:
 #   0 — success (rebase + push completed, or nothing to rebase)
@@ -12,7 +12,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-ALLOWLIST_FILE="${1:-$REPO_ROOT/claude/overnight/sync-allowlist.conf}"
+ALLOWLIST_FILE="${1:-$REPO_ROOT/cortex_command/overnight/sync-allowlist.conf}"
 
 # Maximum number of rebase --continue passes before giving up
 MAX_PASSES=10

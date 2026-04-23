@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for claude.overnight.backlog.filter_ready().
+"""Tests for cortex_command.overnight.backlog.filter_ready().
 
 Constructs BacklogItem instances directly and verifies filter_ready() places
 each item in the expected bucket with the correct reason substring.

@@ -25,7 +25,7 @@ def generate_batch_plan(
     """Generate a master plan markdown file for a single batch of features.
 
     Creates a plan compatible with the pipeline parser at
-    ``claude.pipeline.parser.parse_master_plan()``. The generated plan
+    ``cortex_command.pipeline.parser.parse_master_plan()``. The generated plan
     covers only the features in this batch, with parallel execution mode.
 
     Args:

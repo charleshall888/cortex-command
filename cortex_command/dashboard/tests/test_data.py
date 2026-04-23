@@ -1,4 +1,4 @@
-"""Unit tests for claude/dashboard/data.py.
+"""Unit tests for cortex_command/dashboard/data.py.
 
 Tests cover:
   - tail_jsonl: initial call returns last N lines and byte offset

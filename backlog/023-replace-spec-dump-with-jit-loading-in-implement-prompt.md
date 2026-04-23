@@ -29,7 +29,7 @@ Deep research found that the overnight runner front-loads large amounts of conte
 
 **The spec dump problem**
 
-`claude/overnight/batch_runner.py` has a function named `_read_spec_excerpt` that performs no excerpting — it reads the entire spec file unconditionally:
+`cortex_command/overnight/batch_runner.py` has a function named `_read_spec_excerpt` that performs no excerpting — it reads the entire spec file unconditionally:
 
 ```python
 def _read_spec_excerpt(feature: str, spec_path: Optional[str] = None) -> str:

@@ -1,7 +1,7 @@
 """Shared data types for the overnight runner.
 
 This module imports only from stdlib and third-party packages.
-No claude.overnight.* imports are allowed here.
+No cortex_command.overnight.* imports are allowed here.
 
 FeatureResult status-to-field mapping:
   merged           — no optional fields set

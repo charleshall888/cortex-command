@@ -1,4 +1,4 @@
-"""Tests for claude/pipeline/metrics.py.
+"""Tests for cortex_command/pipeline/metrics.py.
 
 Covers: discover_pipeline_event_logs, pair_dispatch_events, filter_events_since
 """

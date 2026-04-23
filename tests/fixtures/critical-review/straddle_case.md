@@ -38,6 +38,6 @@ and the server will reject it identically on every attempt.
 ## Implementation Notes
 
 - `APIStatusError` is the Anthropic SDK exception class that carries `status_code`.
-- `should_retry` is called from the single retry-loop callsite in `claude/overnight/runner.py`.
+- `should_retry` is called from the single retry-loop callsite in `cortex_command/overnight/runner.py`.
 - No changes to the backoff calculation itself; only the early-exit predicate is added.
 - Log line uses the existing structured-logging helper so it appears in `events.log`.

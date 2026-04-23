@@ -1,4 +1,4 @@
-"""Unit tests for classify_conflict() in claude.pipeline.conflict.
+"""Unit tests for classify_conflict() in cortex_command.pipeline.conflict.
 
 Uses unittest.mock.patch to simulate git command outputs and file reads
 so no real git operations are performed.

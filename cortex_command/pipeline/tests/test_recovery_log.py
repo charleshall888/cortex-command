@@ -1,4 +1,4 @@
-"""Unit tests for write_recovery_log_entry() in claude.pipeline.merge_recovery.
+"""Unit tests for write_recovery_log_entry() in cortex_command.pipeline.merge_recovery.
 
 Uses tmp_path fixture for isolated filesystem — no git operations, no SDK calls.
 """

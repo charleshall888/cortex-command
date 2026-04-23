@@ -1,7 +1,7 @@
 """Regression tests for dead-code cleanup: judgment.md and JUDGMENT_FAILED removal.
 
 Ensures three cleanup deliverables remain enforced:
-  (1) claude/overnight/prompts/judgment.md is deleted
+  (1) cortex_command/overnight/prompts/judgment.md is deleted
   (2) JUDGMENT_FAILED is no longer an attribute of the events module
   (3) log_event("judgment_failed", ...) raises ValueError
 
@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).parent.parent
 
 def test_judgment_md_deleted():
     """judgment.md must not exist in the repository."""
-    assert not (REPO_ROOT / "claude/overnight/prompts/judgment.md").exists()
+    assert not (REPO_ROOT / "cortex_command/overnight/prompts/judgment.md").exists()
 
 
 def test_judgment_failed_constant_removed():

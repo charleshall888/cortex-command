@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 assert sys.version_info >= (3, 11), (
-    "claude/pipeline/metrics.py requires Python 3.11+ for datetime.fromisoformat offset handling"
+    "cortex_command/pipeline/metrics.py requires Python 3.11+ for datetime.fromisoformat offset handling"
 )
 
 # ---------------------------------------------------------------------------

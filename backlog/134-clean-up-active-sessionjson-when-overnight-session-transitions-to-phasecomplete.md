@@ -27,7 +27,7 @@ Either:
 1. Session cleanup (end-of-run) deletes `active-session.json` when `phase` transitions to `complete`; subsequent tooling treats "file absent" as the signal for no active runner.
 2. OR the file is archived to `~/.local/share/overnight-sessions/completed/{session_id}.json` and the canonical `active-session.json` symlink/pointer is removed.
 
-Option 1 is simpler. The cleanup path likely lives in `hooks/cortex-cleanup-session.sh` or `claude/overnight/runner.sh`'s cleanup trap.
+Option 1 is simpler. The cleanup path likely lives in `hooks/cortex-cleanup-session.sh` or `cortex_command/overnight/runner.sh`'s cleanup trap.
 
 ## Acceptance criteria
 

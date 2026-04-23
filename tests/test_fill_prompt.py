@@ -1,4 +1,4 @@
-"""Exercise the real fill_prompt() shell function from claude/overnight/runner.sh.
+"""Exercise the real fill_prompt() shell function from cortex_command/overnight/runner.sh.
 
 The function is extracted and sourced in isolation so runner.sh's top-level
 script initialization (arg parsing, state-JSON reads, realpath on STATE_PATH)

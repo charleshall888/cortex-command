@@ -11,23 +11,23 @@ Evaluate each overnight runner component against its original rationale using th
 
 | Component | File | Original rationale | Initial classification |
 |---|---|---|---|
-| Round loop | `claude/overnight/runner.sh` | Safety loop that spawns fresh orchestrators per round; enforces wall-clock limits and circuit breakers | load-bearing |
-| Orchestrator prompt | `claude/overnight/prompts/orchestrator-round.md` | Thin orchestrator prevents context saturation across rounds — reads state only, does not accumulate implementation details | load-bearing |
-| Batch runner | `claude/overnight/batch_runner.py` | Parallel feature dispatch; manages retry budget per task; auto-merges to main | load-bearing |
-| Batch plan hand-off | `claude/overnight/batch_plan.py` + orchestrator prompt §6 | Orchestrator writes batch plan as markdown file; batch runner parses it; adds a parse boundary between planning and execution | pruning-candidate |
-| Retry loop | `claude/pipeline/retry.py` | Fresh agent per attempt prevents context degradation across retries; routes failure types to different strategies | pruning-candidate |
-| Brain agent | `claude/overnight/brain.py` | Post-retry triage when retry budget exhausted; produces SKIP/DEFER/PAUSE verdict | pruning-candidate |
-| Throttle manager | `claude/overnight/throttle.py` | Subscription-aware concurrency; detects rate limits at runtime and reduces concurrency dynamically | load-bearing |
-| Deferral system | `claude/overnight/deferral.py` | Routes questions needing human input to deferred/ directory; prevents questions from blocking the session | load-bearing |
-| State management | `claude/overnight/state.py` | OvernightState dataclass with atomic save/load; phase transition tracking | load-bearing |
-| Backlog selection | `claude/overnight/backlog.py` | Scores and filters backlog items for session; dependency graph, priority, and tag scoring | load-bearing |
-| Morning report | `claude/overnight/report.py` | Collects session data and renders executive summary and per-feature sections | load-bearing |
-| Integration recovery | `claude/overnight/integration_recovery.py` | Flaky guard re-run + repair agent after integration branch test failure | pruning-candidate |
-| Session plan | `claude/overnight/plan.py` | Renders session plan from SelectionResult; validates repos; bootstraps state | load-bearing |
-| Status display | `claude/overnight/status.py` | Live status snapshot during session | load-bearing |
-| Event logging | `claude/overnight/events.py` | JSONL session event log; enforces event type validation | load-bearing |
-| Interrupt handler | `claude/overnight/interrupt.py` | Graceful pause on signal (SIGINT/SIGTERM) | load-bearing |
-| Smoke tests | `claude/overnight/smoke_test.py` | Pre-execution validation before session starts | load-bearing |
+| Round loop | `cortex_command/overnight/runner.sh` | Safety loop that spawns fresh orchestrators per round; enforces wall-clock limits and circuit breakers | load-bearing |
+| Orchestrator prompt | `cortex_command/overnight/prompts/orchestrator-round.md` | Thin orchestrator prevents context saturation across rounds — reads state only, does not accumulate implementation details | load-bearing |
+| Batch runner | `cortex_command/overnight/batch_runner.py` | Parallel feature dispatch; manages retry budget per task; auto-merges to main | load-bearing |
+| Batch plan hand-off | `cortex_command/overnight/batch_plan.py` + orchestrator prompt §6 | Orchestrator writes batch plan as markdown file; batch runner parses it; adds a parse boundary between planning and execution | pruning-candidate |
+| Retry loop | `cortex_command/pipeline/retry.py` | Fresh agent per attempt prevents context degradation across retries; routes failure types to different strategies | pruning-candidate |
+| Brain agent | `cortex_command/overnight/brain.py` | Post-retry triage when retry budget exhausted; produces SKIP/DEFER/PAUSE verdict | pruning-candidate |
+| Throttle manager | `cortex_command/overnight/throttle.py` | Subscription-aware concurrency; detects rate limits at runtime and reduces concurrency dynamically | load-bearing |
+| Deferral system | `cortex_command/overnight/deferral.py` | Routes questions needing human input to deferred/ directory; prevents questions from blocking the session | load-bearing |
+| State management | `cortex_command/overnight/state.py` | OvernightState dataclass with atomic save/load; phase transition tracking | load-bearing |
+| Backlog selection | `cortex_command/overnight/backlog.py` | Scores and filters backlog items for session; dependency graph, priority, and tag scoring | load-bearing |
+| Morning report | `cortex_command/overnight/report.py` | Collects session data and renders executive summary and per-feature sections | load-bearing |
+| Integration recovery | `cortex_command/overnight/integration_recovery.py` | Flaky guard re-run + repair agent after integration branch test failure | pruning-candidate |
+| Session plan | `cortex_command/overnight/plan.py` | Renders session plan from SelectionResult; validates repos; bootstraps state | load-bearing |
+| Status display | `cortex_command/overnight/status.py` | Live status snapshot during session | load-bearing |
+| Event logging | `cortex_command/overnight/events.py` | JSONL session event log; enforces event type validation | load-bearing |
+| Interrupt handler | `cortex_command/overnight/interrupt.py` | Graceful pause on signal (SIGINT/SIGTERM) | load-bearing |
+| Smoke tests | `cortex_command/overnight/smoke_test.py` | Pre-execution validation before session starts | load-bearing |
 
 ## Section 2 — Protocol
 
@@ -41,7 +41,7 @@ The very first line of your output must be:
 
 ### Step 2: Runtime scan
 
-List all `.py` and `.sh` files in `claude/overnight/` and `claude/pipeline/`. Compare against the inventory table above.
+List all `.py` and `.sh` files in `cortex_command/overnight/` and `cortex_command/pipeline/`. Compare against the inventory table above.
 
 Report exactly: "Evaluated N components from inventory; found M additional unlisted files: [list]." If M = 0, state "No unlisted files detected."
 
@@ -72,6 +72,6 @@ Apply these four questions to every component. No component is exempt.
 
 Handle these conditions explicitly:
 
-- **`claude/overnight/` not found**: Print "No overnight runner found at expected path" and stop. Do not attempt to evaluate any components.
+- **`cortex_command/overnight/` not found**: Print "No overnight runner found at expected path" and stop. Do not attempt to evaluate any components.
 - **Listed component file missing from disk**: Note "not found at path" next to that component, skip rubric evaluation for it, and flag it as a maintenance item in a separate "Maintenance Items" section at the end.
 - **Module has no docstring**: Fall back to reading inline comments in the first 30 lines of the file. If no rationale is found there either, note "rationale undocumented" and flag the component.

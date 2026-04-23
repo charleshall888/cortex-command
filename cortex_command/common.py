@@ -38,7 +38,7 @@ from pathlib import Path
 # shell should use "wont-do" (no apostrophe) — the apostrophe in "won't-do"
 # will be misinterpreted by the shell if not carefully quoted.
 #
-# NOTE: claude/overnight/backlog.py defines its own TERMINAL_STATUSES tuple
+# NOTE: cortex_command/overnight/backlog.py defines its own TERMINAL_STATUSES tuple
 # (5 values, missing the wont-do variants). Unifying that is a follow-up task.
 
 TERMINAL_STATUSES: frozenset[str] = frozenset({

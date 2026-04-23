@@ -33,7 +33,7 @@ The gaps cluster into three layers:
 - Per-task agent capability constraints: agents have no `Agent` tool,
   no `AskUserQuestion`, no Task tools. Only conveyed by absence in
   prompt templates and `dispatch.py`'s `allowed_tools` list
-- Split between `claude/pipeline/` and `claude/overnight/` — two
+- Split between `cortex_command/pipeline/` and `cortex_command/overnight/` — two
   `prompts/` directories with no doc explaining which does what
 - Escalation system (`lifecycle/escalations.jsonl`): the channel
   pipeline workers use to raise design questions for orchestrator

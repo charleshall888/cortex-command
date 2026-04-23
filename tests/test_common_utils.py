@@ -1,4 +1,4 @@
-"""Unit tests for claude.common utility functions: read_tier and requires_review.
+"""Unit tests for cortex_command.common utility functions: read_tier and requires_review.
 
 Tests cover:
   - read_tier: existing events.log with tier field, empty file,

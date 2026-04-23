@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 _FEATURE_EXECUTOR_PATH = Path(__file__).resolve().parents[1] / "feature_executor.py"
-_FORBIDDEN_PREFIXES = ("claude.overnight.batch_runner", "claude.overnight.orchestrator")
+_FORBIDDEN_PREFIXES = ("cortex_command.overnight.batch_runner", "cortex_command.overnight.orchestrator")
 
 
 def _type_checking_guarded_linenos(tree: ast.Module) -> set[int]:

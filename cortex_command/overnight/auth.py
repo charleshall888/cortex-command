@@ -170,7 +170,7 @@ def _write_event(event_log_path: pathlib.Path, event: dict) -> None:
     """Append one JSON line to the events log, byte-matching log_event output."""
     event_log_path.parent.mkdir(parents=True, exist_ok=True)
     # Open in append-only mode (O_APPEND). Single json.dumps + "\n" matches
-    # claude/pipeline/state.py::log_event byte-for-byte.
+    # cortex_command/pipeline/state.py::log_event byte-for-byte.
     with open(event_log_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(event) + "\n")
 

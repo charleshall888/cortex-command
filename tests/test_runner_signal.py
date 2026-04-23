@@ -89,7 +89,7 @@ def runner_env(tmp_path: Path):
     # (f) Events log path — writable, inside session dir
     events_path = session_dir / "overnight-events.log"
 
-    # (g) PYTHONPATH pointing to real repo so claude.overnight.* imports resolve
+    # (g) PYTHONPATH pointing to real repo so cortex_command.overnight.* imports resolve
     env = os.environ.copy()
     env["REPO_ROOT"] = str(repo)
     env["HOME"] = str(tmp_path)

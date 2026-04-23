@@ -22,7 +22,7 @@ areas: [overnight-runner]
 
 Found during lifecycle 022 research (adversarial agent review).
 
-`next_question_id()` in `claude/overnight/deferral.py` generates IDs by scanning the filesystem for existing deferral files and returning `max_id + 1`. Under concurrent async execution (`asyncio.gather` in batch_runner), two features can call this simultaneously, both read the same max_id, and both generate the same question ID — causing one deferral to silently overwrite the other.
+`next_question_id()` in `cortex_command/overnight/deferral.py` generates IDs by scanning the filesystem for existing deferral files and returning `max_id + 1`. Under concurrent async execution (`asyncio.gather` in batch_runner), two features can call this simultaneously, both read the same max_id, and both generate the same question ID — causing one deferral to silently overwrite the other.
 
 The function's docstring reportedly claims it is "thread-safe via filesystem" but the glob + max pattern is not atomic.
 

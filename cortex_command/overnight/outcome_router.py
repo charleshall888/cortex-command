@@ -2,7 +2,7 @@
 
 This module contains the outcome routing layer extracted from
 batch_runner.py. This module must not import from
-`claude.overnight.batch_runner` or `claude.overnight.orchestrator`.
+`cortex_command.overnight.batch_runner` or `cortex_command.overnight.orchestrator`.
 """
 
 from __future__ import annotations

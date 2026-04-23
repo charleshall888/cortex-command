@@ -1,4 +1,4 @@
-"""Unit tests for claude.overnight.auth.
+"""Unit tests for cortex_command.overnight.auth.
 
 Exercises the Task 1 contract:
   * R1 — vector resolution across all four branches.
@@ -154,7 +154,7 @@ def test_shell_exit_codes(
     def _fake_loads(s, *args, **kwargs):  # noqa: ANN001
         raise json.JSONDecodeError("forced", s if isinstance(s, str) else "", 0)
 
-    monkeypatch.setattr("claude.overnight.auth.json.loads", _fake_loads)
+    monkeypatch.setattr("cortex_command.overnight.auth.json.loads", _fake_loads)
     assert resolve_auth_for_shell() == 2
 
 
@@ -252,10 +252,10 @@ def test_redaction_and_byte_equivalence(
     _clear_auth_env(monkeypatch)
 
     FROZEN = "2026-04-23T12:00:00+00:00"
-    monkeypatch.setattr("claude.pipeline.state._now_iso", lambda: FROZEN)
+    monkeypatch.setattr("cortex_command.pipeline.state._now_iso", lambda: FROZEN)
     # auth.py re-exports _now_iso from cortex_command.pipeline.state at import time;
     # patch the rebound name too so _build_event uses the frozen value.
-    monkeypatch.setattr("claude.overnight.auth._now_iso", lambda: FROZEN)
+    monkeypatch.setattr("cortex_command.overnight.auth._now_iso", lambda: FROZEN)
 
     # Set up a minimal home where env_preexisting resolves deterministically,
     # producing a known message we can replay through log_event verbatim.

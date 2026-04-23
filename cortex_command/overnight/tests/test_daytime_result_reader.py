@@ -1,4 +1,4 @@
-"""Tests for claude.overnight.daytime_result_reader — 3-tier fallback logic.
+"""Tests for cortex_command.overnight.daytime_result_reader — 3-tier fallback logic.
 
 Validates Tier-1 (daytime-result.json + freshness check), Tier-2 (daytime-state.json
 discrimination), and Tier-3 (outcome="unknown" + discriminated messages) per spec R6/R7.

@@ -25,7 +25,7 @@ spec: lifecycle/disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-
 
 ## Context from discovery
 
-The acute root cause of session `overnight-2026-04-21-1708`'s `feature_start` failure is *lexical priming + token name collision* in `claude/overnight/prompts/orchestrator-round.md`:
+The acute root cause of session `overnight-2026-04-21-1708`'s `feature_start` failure is *lexical priming + token name collision* in `cortex_command/overnight/prompts/orchestrator-round.md`:
 
 - The session-level portion of the prompt (lines 14, 128-133, 185, 244, 254, 311, 321) repeatedly shows `Path("{token}")` patterns where `{token}` has been pre-filled by `fill_prompt()` (`runner.sh:386-391`) with an absolute home-repo path.
 - The per-feature dispatch block at lines 258-285 uses the identical `{token}` syntax for `{slug}`, `{spec_path}`, and `{plan_path}` — but these are expected to be substituted by the orchestrator agent at runtime from `state.features[<slug>]`, not by `fill_prompt()`.

@@ -1,4 +1,4 @@
-"""Unit tests for load_strategy() and save_strategy() in claude.overnight.strategy.
+"""Unit tests for load_strategy() and save_strategy() in cortex_command.overnight.strategy.
 
 Uses tmp_path fixture for isolated filesystem — no git operations, no SDK calls.
 """

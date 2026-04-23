@@ -1,4 +1,4 @@
-"""Unit tests for claude/dashboard/alerts.py.
+"""Unit tests for cortex_command/dashboard/alerts.py.
 
 Tests cover:
   - evaluate_alerts: stall triggers on >5min inactivity

@@ -1,4 +1,4 @@
-"""Unit tests for dispatch_repair_agent() in claude.pipeline.conflict.
+"""Unit tests for dispatch_repair_agent() in cortex_command.pipeline.conflict.
 
 Six scenarios covering the full dispatch contract: Sonnet success, Sonnet
 quality failure with Opus escalation, Opus quality failure, agent deferral,

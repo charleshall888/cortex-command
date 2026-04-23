@@ -34,7 +34,7 @@ No overlap detection of any kind exists at scheduling time. The `_detect_risks()
 Prior discovery: `research/overnight-merge-conflict-prevention/research.md`
 
 Key findings from that research:
-- `group_into_batches()` (`claude/overnight/backlog.py:869`) receives only `BacklogItem` metadata — no lifecycle spec or plan files are ever read at scheduling time
+- `group_into_batches()` (`cortex_command/overnight/backlog.py:869`) receives only `BacklogItem` metadata — no lifecycle spec or plan files are ever read at scheduling time
 - Tag-grouping and conflict-prevention are opposite objectives for same-discovery feature sets
 - File-level conflict prediction before implementation is an unsolved problem; no established standard exists at the work-item scheduling level
 - One candidate approach: declaring areas of impact on the backlog item itself, used as a separation constraint at scheduling time — but this has a fundamental limitation on net-new projects where file structure doesn't yet exist

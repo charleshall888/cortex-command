@@ -7,7 +7,7 @@
 # it kills the session and writes a partial event.
 #
 # Usage:
-#   bash claude/overnight/runner.sh [OPTIONS]
+#   bash cortex_command/overnight/runner.sh [OPTIONS]
 #
 # Options:
 #   --state <path>       Path to overnight-state.json (default: auto-discovers most recent executing session)
@@ -65,7 +65,7 @@ STATE_PATH=""  # resolved below after arg parsing if not set via --state
 TIME_LIMIT_HOURS=6
 MAX_ROUNDS=10
 TIER="max_100"
-PROMPT_TEMPLATE="$REPO_ROOT/claude/overnight/prompts/orchestrator-round.md"
+PROMPT_TEMPLATE="$REPO_ROOT/cortex_command/overnight/prompts/orchestrator-round.md"
 EVENTS_PATH=""  # set after session ID read
 PLAN_PATH=""    # set after session ID read
 TEST_COMMAND=""

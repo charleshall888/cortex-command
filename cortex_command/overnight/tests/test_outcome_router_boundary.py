@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 _OUTCOME_ROUTER_PATH = Path(__file__).resolve().parents[1] / "outcome_router.py"
-_FORBIDDEN_PREFIXES = ("claude.overnight.batch_runner",)
+_FORBIDDEN_PREFIXES = ("cortex_command.overnight.batch_runner",)
 
 
 def _type_checking_guarded_linenos(tree: ast.Module) -> set[int]:

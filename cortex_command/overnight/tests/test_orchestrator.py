@@ -13,8 +13,8 @@ Covers:
   5. Heartbeat lifecycle — the background heartbeat task created via
      ``create_task`` is cancelled before ``run_batch`` returns.
 
-All patch targets live on ``claude.overnight.orchestrator`` (or
-``claude.overnight.outcome_router`` for ``apply_feature_result``).  The
+All patch targets live on ``cortex_command.overnight.orchestrator`` (or
+``cortex_command.overnight.outcome_router`` for ``apply_feature_result``).  The
 ``conftest.py`` stub pre-installs ``backlog.update_item`` and
 ``claude_agent_sdk`` so these tests can import orchestrator safely.
 """

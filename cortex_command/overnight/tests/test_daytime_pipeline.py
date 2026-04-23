@@ -1,4 +1,4 @@
-"""Unit tests for ``claude.overnight.daytime_pipeline``.
+"""Unit tests for ``cortex_command.overnight.daytime_pipeline``.
 
 Covers startup guards (CWD, plan.md presence, live PID, stale PID),
 success/deferred/paused routing through ``run_daytime``, and behavioural

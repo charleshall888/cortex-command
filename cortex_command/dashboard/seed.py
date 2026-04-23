@@ -21,7 +21,7 @@ from pathlib import Path
 
 SEED_PREFIX = "overnight-seed"
 
-# Repo root: seed.py is at claude/dashboard/seed.py, so 2 levels up from here
+# Repo root: seed.py is at cortex_command/dashboard/seed.py, so 2 levels up from here
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # All timestamps in fixture data are anchored so the session appears to have

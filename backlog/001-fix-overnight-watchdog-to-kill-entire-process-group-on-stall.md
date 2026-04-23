@@ -67,8 +67,8 @@ The same pattern should apply to the orchestrator claude agent in the round loop
 
 ## Affected Files
 
-- `claude/overnight/runner.sh` — watchdog kill logic, process spawning
-- Possibly `claude/pipeline/dispatch.py` — could add `start_new_session=True` to
+- `cortex_command/overnight/runner.sh` — watchdog kill logic, process spawning
+- Possibly `cortex_command/pipeline/dispatch.py` — could add `start_new_session=True` to
   `anyio.open_process()` as defense-in-depth
 
 ## Acceptance Criteria

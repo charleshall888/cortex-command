@@ -2,7 +2,7 @@
 
 Task 6 — Exercises ``apply_feature_result`` directly for each major
 status branch (merged/paused/deferred/failed/repair_completed) and the
-circuit breaker. All patches target ``claude.overnight.outcome_router.*``
+circuit breaker. All patches target ``cortex_command.overnight.outcome_router.*``
 so these tests continue to pass after batch_runner's copies are removed.
 """
 

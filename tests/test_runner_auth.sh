@@ -29,7 +29,7 @@ fail() {
 }
 
 # ---------------------------------------------------------------------------
-# The auth block extracted verbatim from claude/overnight/runner.sh. Each
+# The auth block extracted verbatim from cortex_command/overnight/runner.sh. Each
 # scenario below sources this into a subshell after staging a stubbed
 # `python3` on PATH. Keep in sync with runner.sh if the block changes.
 # ---------------------------------------------------------------------------
