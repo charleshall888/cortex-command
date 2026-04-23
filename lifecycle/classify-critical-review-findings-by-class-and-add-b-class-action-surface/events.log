@@ -11,3 +11,8 @@
 {"ts": "2026-04-22T16:26:58Z", "event": "critical_review", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "phase": "plan", "applied": 9, "dismissed": 3, "asked": 2}
 {"ts": "2026-04-22T16:38:44Z", "event": "phase_transition", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "from": "plan", "to": "implement"}
 {"ts": "2026-04-22T21:13:39Z", "event": "batch_dispatch", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "batch": 0, "tasks": [1, 2, 3, 6, 8]}
+{"ts": "2026-04-22T21:18:21Z", "event": "task_complete", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T21:18:21Z", "event": "task_complete", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "task": 2, "batch": 0, "status": "success"}
+{"ts": "2026-04-22T21:18:21Z", "event": "task_complete", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "task": 8, "batch": 0, "status": "success"}
+{"ts": "2026-04-23T00:12:16Z", "event": "task_complete", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "task": 3, "batch": 0, "status": "success"}
+{"ts": "2026-04-23T00:12:16Z", "event": "task_complete", "feature": "classify-critical-review-findings-by-class-and-add-b-class-action-surface", "task": 6, "batch": 0, "status": "success"}

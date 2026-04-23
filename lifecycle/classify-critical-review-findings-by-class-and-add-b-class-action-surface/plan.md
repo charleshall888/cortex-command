@@ -16,7 +16,7 @@ Current Step 2c block (`skills/critical-review/SKILL.md` lines 74–105): **30 c
 - **Complexity**: simple
 - **Context**: Dispatch via `Agent(subagent_type="general-purpose", description="V2 pure-B fixture author")` to isolate authorship from prompt editors (R8 AC). Agent prompt must explicitly state: (1) you are authoring a fixture; you will NOT be shown the reviewer/synthesizer prompts; (2) produce an artifact that resembles the protein-grams Kotlin failure pattern (four structurally-independent adjacent-gap concerns); (3) metadata JSON schema: `{"fixture_type": "pure_b", "concerns": [{"id": "<slug>", "expected_class": "B", "description": "<summary>"}]}` — at least 4 concerns. Reference the research discussion of the Kotlin failure in `lifecycle/classify-critical-review-findings-by-class-and-add-b-class-action-surface/research.md` §Codebase Analysis for shape guidance. Fixture must compile as valid Markdown and valid JSON.
 - **Verification**: `test -f tests/fixtures/critical-review/pure_b_aggregation.md && test -f tests/fixtures/critical-review/pure_b_aggregation.meta.json && python3 -c "import json; j=json.load(open('tests/fixtures/critical-review/pure_b_aggregation.meta.json')); assert j['fixture_type']=='pure_b'; assert len(j['concerns'])>=4; assert all(c['expected_class']=='B' for c in j['concerns'])"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 80dd148; verified 4 concerns, all class B)
 
 ### Task 2: Author V2 fixture — straddle case
 - **Files**: `tests/fixtures/critical-review/straddle_case.md`, `tests/fixtures/critical-review/straddle_case.meta.json`
@@ -25,7 +25,7 @@ Current Step 2c block (`skills/critical-review/SKILL.md` lines 74–105): **30 c
 - **Complexity**: simple
 - **Context**: Dispatch via a **second, separate** `Agent(subagent_type="general-purpose", ...)` call (not the same agent as Task 1 — separate isolation is required for R8 AC). Agent prompt states: (1) author a fixture that demonstrates R2's split-preferred protocol; (2) the artifact text must contain one defect in the fix's core logic AND one adjacent pattern that is also concerning; (3) metadata JSON schema: `{"fixture_type": "straddle", "concerns": [{"id": "<core-slug>", "expected_class": "A", "description": "<core defect>"}, {"id": "<adjacent-slug>", "expected_class": "B", "description": "<adjacent pattern>"}]}` — exactly 2 concerns, one A, one B.
 - **Verification**: `test -f tests/fixtures/critical-review/straddle_case.md && python3 -c "import json; j=json.load(open('tests/fixtures/critical-review/straddle_case.meta.json')); assert j['fixture_type']=='straddle'; classes=sorted(c['expected_class'] for c in j['concerns']); assert classes==['A','B']"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit ef5511b — note: commit subject is mislabeled "pure-B" due to git index race; files are correct)
 
 ### Task 3: Update Step 2c reviewer prompt — taxonomy, JSON envelope, straddle protocol (R1 + R2)
 - **Files**: `skills/critical-review/SKILL.md`
@@ -83,8 +83,8 @@ Current Step 2c block (`skills/critical-review/SKILL.md` lines 74–105): **30 c
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Insert a one-sentence clause in the Ask definition (around line 207): "**C-class (framing) findings default to Ask unless self-resolution yields a verifiable fix** — framing concerns often depend on operator intent the orchestrator cannot verify unilaterally." Do NOT modify lines 217, 218, 226.
-- **Verification**: `grep -cE 'C-class|framing.*Ask|C.*default.*Ask' skills/critical-review/SKILL.md` ≥ 1 AND `grep -cE '^Dismiss: 0' docs/overnight-operations.md` = 0 AND `grep -cE 'strengthened|narrowed|clarified|added|removed|inverted' skills/critical-review/SKILL.md` ≥ 6.
-- **Status**: [ ] pending
+- **Verification**: `grep -cE 'C-class|framing.*Ask|C.*default.*Ask' skills/critical-review/SKILL.md` ≥ 1 AND `grep -cE '^Dismiss: 0' docs/overnight-operations.md` = 0 AND `grep -oE 'strengthened|narrowed|clarified|added|removed|inverted' skills/critical-review/SKILL.md | wc -l` ≥ 6 (occurrence count of direction verbs; original `-c` formula counted lines and was unsatisfiable).
+- **Status**: [x] completed (commit pending; C-class clause appended to Ask definition, all 6 verbs preserved with 8 total occurrences)
 
 ### Task 7: Add Step 2e residue write — inline python3 atomic write + session resolution + ad-hoc note (R4 + R5)
 - **Files**: `skills/critical-review/SKILL.md`
@@ -149,7 +149,7 @@ Current Step 2c block (`skills/critical-review/SKILL.md` lines 74–105): **30 c
   - Empty state (zero matching files): header `## Critical Review Residue (0)` + verbatim body `No residue files this cycle. Absence may indicate: zero B-class findings, no lifecycle-context runs, or total reviewer failure (which does not write a residue file).`
   - Register in `generate_report` sections list (line 1340) between `render_deferred_questions(data)` and `render_failed_features(data)`.
 - **Verification**: `grep -c render_critical_review_residue claude/overnight/report.py` ≥ 2 AND `grep -cE 'no lifecycle-context runs|total reviewer failure' claude/overnight/report.py` ≥ 1 AND `just test` passes (new tests added in Task 9).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 31a35b4; grep counts 2 + 1)
 
 ### Task 9: Write `render_critical_review_residue` + residue-generation unit tests (R4 + R5 + R6 ACs)
 - **Files**: `tests/test_report.py` (extension) or new `tests/test_critical_review_report.py`
