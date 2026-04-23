@@ -37,7 +37,7 @@ def test_conflicted_files_detected(tmp_path: Path) -> None:
     diff_result = _make_run_result(stdout="foo.py\nbar.py\n")
     abort_result = _make_run_result()
 
-    with patch("claude.pipeline.conflict.subprocess.run", side_effect=[diff_result, abort_result]) as mock_run:
+    with patch("cortex_command.pipeline.conflict.subprocess.run", side_effect=[diff_result, abort_result]) as mock_run:
         result = classify_conflict(tmp_path)
 
     assert result.conflicted_files == ["foo.py", "bar.py"]
@@ -54,7 +54,7 @@ def test_no_marker_conflict(tmp_path: Path) -> None:
     diff_result = _make_run_result(stdout="binary.png\n")
     abort_result = _make_run_result()
 
-    with patch("claude.pipeline.conflict.subprocess.run", side_effect=[diff_result, abort_result]):
+    with patch("cortex_command.pipeline.conflict.subprocess.run", side_effect=[diff_result, abort_result]):
         with patch.object(Path, "read_text", side_effect=UnicodeDecodeError("utf-8", b"", 0, 1, "invalid")):
             result = classify_conflict(tmp_path)
 
@@ -70,7 +70,7 @@ def test_abort_always_called(tmp_path: Path) -> None:
     """git merge --abort is called even when an exception occurs during classification."""
     abort_result = _make_run_result()
 
-    with patch("claude.pipeline.conflict.subprocess.run", side_effect=[RuntimeError("git exploded"), abort_result]) as mock_run:
+    with patch("cortex_command.pipeline.conflict.subprocess.run", side_effect=[RuntimeError("git exploded"), abort_result]) as mock_run:
         result = classify_conflict(tmp_path)
 
     # Confirm abort was called
@@ -86,7 +86,7 @@ def test_classification_failed_result(tmp_path: Path) -> None:
     """On any exception during classification, return conflicted_files=[] and summary='classification failed'."""
     abort_result = _make_run_result()
 
-    with patch("claude.pipeline.conflict.subprocess.run", side_effect=[RuntimeError("unexpected error"), abort_result]):
+    with patch("cortex_command.pipeline.conflict.subprocess.run", side_effect=[RuntimeError("unexpected error"), abort_result]):
         result = classify_conflict(tmp_path)
 
     assert result.conflicted_files == []

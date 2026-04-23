@@ -51,7 +51,7 @@ class TestIsPipelineBranchMerged(unittest.TestCase):
             branch_list="  pipeline/my-feature\n",
             log_outputs=[""],
         )
-        with patch("claude.overnight.backlog.subprocess.run", mock_run):
+        with patch("cortex_command.overnight.backlog.subprocess.run", mock_run):
             result = _is_pipeline_branch_merged("my-feature", self._root)
         self.assertTrue(result)
 
@@ -61,28 +61,28 @@ class TestIsPipelineBranchMerged(unittest.TestCase):
             branch_list="  pipeline/my-feature\n",
             log_outputs=["abc1234 add some feature\n"],
         )
-        with patch("claude.overnight.backlog.subprocess.run", mock_run):
+        with patch("cortex_command.overnight.backlog.subprocess.run", mock_run):
             result = _is_pipeline_branch_merged("my-feature", self._root)
         self.assertFalse(result)
 
     def test_no_matching_branches_returns_false(self) -> None:
         """When git branch --list returns no branches, returns False (fail open)."""
         mock_run = self._make_run(branch_list="", log_outputs=[])
-        with patch("claude.overnight.backlog.subprocess.run", mock_run):
+        with patch("cortex_command.overnight.backlog.subprocess.run", mock_run):
             result = _is_pipeline_branch_merged("my-feature", self._root)
         self.assertFalse(result)
 
     def test_subprocess_oserror_returns_false(self) -> None:
         """When subprocess.run raises OSError, returns False (fail open)."""
         with patch(
-            "claude.overnight.backlog.subprocess.run", side_effect=OSError("no git")
+            "cortex_command.overnight.backlog.subprocess.run", side_effect=OSError("no git")
         ):
             result = _is_pipeline_branch_merged("my-feature", self._root)
         self.assertFalse(result)
 
     def test_empty_slug_returns_false(self) -> None:
         """Empty slug short-circuits immediately without subprocess calls."""
-        with patch("claude.overnight.backlog.subprocess.run") as mock_run:
+        with patch("cortex_command.overnight.backlog.subprocess.run") as mock_run:
             result = _is_pipeline_branch_merged("", self._root)
         self.assertFalse(result)
         mock_run.assert_not_called()
@@ -93,7 +93,7 @@ class TestIsPipelineBranchMerged(unittest.TestCase):
             branch_list="  pipeline/feat\n  pipeline/feat-2\n",
             log_outputs=["", ""],
         )
-        with patch("claude.overnight.backlog.subprocess.run", mock_run):
+        with patch("cortex_command.overnight.backlog.subprocess.run", mock_run):
             result = _is_pipeline_branch_merged("feat", self._root)
         self.assertTrue(result)
 
@@ -103,7 +103,7 @@ class TestIsPipelineBranchMerged(unittest.TestCase):
             branch_list="  pipeline/feat\n  pipeline/feat-2\n",
             log_outputs=["", "abc1234 wip\n"],
         )
-        with patch("claude.overnight.backlog.subprocess.run", mock_run):
+        with patch("cortex_command.overnight.backlog.subprocess.run", mock_run):
             result = _is_pipeline_branch_merged("feat", self._root)
         self.assertFalse(result)
 
@@ -142,7 +142,7 @@ class TestFilterReadyMergeCheck(unittest.TestCase):
         log_result = MagicMock(returncode=0, stdout="")
 
         with patch(
-            "claude.overnight.backlog.subprocess.run",
+            "cortex_command.overnight.backlog.subprocess.run",
             side_effect=[branch_result, log_result],
         ):
             readiness = filter_ready([item], project_root=self._root)
@@ -161,7 +161,7 @@ class TestFilterReadyMergeCheck(unittest.TestCase):
         log_result = MagicMock(returncode=0, stdout="abc1234 some commit\n")
 
         with patch(
-            "claude.overnight.backlog.subprocess.run",
+            "cortex_command.overnight.backlog.subprocess.run",
             side_effect=[branch_result, log_result],
         ):
             readiness = filter_ready([item], project_root=self._root)

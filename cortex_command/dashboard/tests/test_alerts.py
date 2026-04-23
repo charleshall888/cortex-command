@@ -57,7 +57,7 @@ class TestEvaluateAlerts(unittest.TestCase):
         root, lifecycle_dir = self._root_and_lifecycle()
 
         stale_ts = datetime.now(timezone.utc) - timedelta(minutes=6)
-        with patch("claude.dashboard.alerts.get_last_activity_ts", return_value=stale_ts):
+        with patch("cortex_command.dashboard.alerts.get_last_activity_ts", return_value=stale_ts):
             evaluate_alerts(state, root, lifecycle_dir)
 
         self.assertIn(("feat-a", "stall"), state.alerts)
@@ -70,7 +70,7 @@ class TestEvaluateAlerts(unittest.TestCase):
         root, lifecycle_dir = self._root_and_lifecycle()
 
         recent_ts = datetime.now(timezone.utc) - timedelta(minutes=1)
-        with patch("claude.dashboard.alerts.get_last_activity_ts", return_value=recent_ts):
+        with patch("cortex_command.dashboard.alerts.get_last_activity_ts", return_value=recent_ts):
             evaluate_alerts(state, root, lifecycle_dir)
 
         self.assertNotIn(("feat-a", "stall"), state.alerts)
@@ -81,7 +81,7 @@ class TestEvaluateAlerts(unittest.TestCase):
         state = _make_state(overnight=overnight, feature_states=feature_states)
         root, lifecycle_dir = self._root_and_lifecycle()
 
-        with patch("claude.dashboard.alerts.get_last_activity_ts", return_value=None):
+        with patch("cortex_command.dashboard.alerts.get_last_activity_ts", return_value=None):
             evaluate_alerts(state, root, lifecycle_dir)
 
         self.assertNotIn(("feat-a", "stall"), state.alerts)
@@ -96,7 +96,7 @@ class TestEvaluateAlerts(unittest.TestCase):
         )
         root, lifecycle_dir = self._root_and_lifecycle()
 
-        with patch("claude.dashboard.alerts.get_last_activity_ts", return_value=None):
+        with patch("cortex_command.dashboard.alerts.get_last_activity_ts", return_value=None):
             evaluate_alerts(state, root, lifecycle_dir)
 
         self.assertTrue(state.circuit_breaker_active)
@@ -107,7 +107,7 @@ class TestEvaluateAlerts(unittest.TestCase):
         state = _make_state(overnight=overnight, feature_states=feature_states, overnight_events=[])
         root, lifecycle_dir = self._root_and_lifecycle()
 
-        with patch("claude.dashboard.alerts.get_last_activity_ts", return_value=None):
+        with patch("cortex_command.dashboard.alerts.get_last_activity_ts", return_value=None):
             evaluate_alerts(state, root, lifecycle_dir)
 
         self.assertFalse(state.circuit_breaker_active)
@@ -131,7 +131,7 @@ class TestEvaluateAlerts(unittest.TestCase):
         state.alerts[("feat-a", "deferred")] = {"first_seen": datetime.now(timezone.utc), "notified": True}
         root, lifecycle_dir = self._root_and_lifecycle()
 
-        with patch("claude.dashboard.alerts.get_last_activity_ts", return_value=None):
+        with patch("cortex_command.dashboard.alerts.get_last_activity_ts", return_value=None):
             evaluate_alerts(state, root, lifecycle_dir)
 
         self.assertNotIn(("feat-a", "deferred"), state.alerts)
@@ -143,7 +143,7 @@ class TestEvaluateAlerts(unittest.TestCase):
         state = _make_state(overnight=overnight, feature_states=feature_states)
         root, lifecycle_dir = self._root_and_lifecycle()
 
-        with patch("claude.dashboard.alerts.get_last_activity_ts", return_value=None):
+        with patch("cortex_command.dashboard.alerts.get_last_activity_ts", return_value=None):
             evaluate_alerts(state, root, lifecycle_dir)
 
         self.assertIn(("feat-a", "high_rework"), state.alerts)
@@ -155,7 +155,7 @@ class TestEvaluateAlerts(unittest.TestCase):
         state = _make_state(overnight=overnight, feature_states=feature_states)
         root, lifecycle_dir = self._root_and_lifecycle()
 
-        with patch("claude.dashboard.alerts.get_last_activity_ts", return_value=None):
+        with patch("cortex_command.dashboard.alerts.get_last_activity_ts", return_value=None):
             evaluate_alerts(state, root, lifecycle_dir)
 
         self.assertNotIn(("feat-a", "high_rework"), state.alerts)
@@ -189,7 +189,7 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
             call_count += 1
             return mock_proc
 
-        with patch("claude.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
+        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
             await fire_notifications(state, root)
             # Allow spawned tasks to run
             await asyncio.sleep(0)
@@ -212,7 +212,7 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
             call_count += 1
             return MagicMock()
 
-        with patch("claude.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
+        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
             await fire_notifications(state, root)
             await asyncio.sleep(0)
 
@@ -230,7 +230,7 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
         mock_proc = MagicMock()
         mock_proc.wait = AsyncMock(return_value=0)
 
-        with patch("claude.dashboard.alerts.asyncio.create_subprocess_shell", return_value=mock_proc):
+        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", return_value=mock_proc):
             await fire_notifications(state, root)
 
         self.assertTrue(state.alerts[("feat-a", "deferred")]["notified"])
@@ -249,7 +249,7 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
             call_count += 1
             return MagicMock()
 
-        with patch("claude.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
+        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
             await fire_notifications(state, root)
             await asyncio.sleep(0)
 
@@ -258,7 +258,7 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
 
         # Second call should not fire again
         call_count = 0
-        with patch("claude.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
+        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
             await fire_notifications(state, root)
             await asyncio.sleep(0)
 

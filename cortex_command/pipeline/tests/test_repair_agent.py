@@ -91,12 +91,12 @@ def test_sonnet_success(tmp_path: Path) -> None:
     run_tests_mock = MagicMock(return_value=_make_test_result(passed=True))
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               return_value=(worktree, [])),
-        patch("claude.pipeline.conflict._cleanup_repair_worktree"),
-        patch("claude.pipeline.conflict.dispatch_task", dispatch_mock),
-        patch("claude.pipeline.merge.run_tests", run_tests_mock),
-        patch("claude.pipeline.conflict.pipeline_log_event"),
+        patch("cortex_command.pipeline.conflict._cleanup_repair_worktree"),
+        patch("cortex_command.pipeline.conflict.dispatch_task", dispatch_mock),
+        patch("cortex_command.pipeline.merge.run_tests", run_tests_mock),
+        patch("cortex_command.pipeline.conflict.pipeline_log_event"),
     ):
         result = asyncio.run(dispatch_repair_agent(
             feature=feature,
@@ -146,12 +146,12 @@ def test_sonnet_quality_failure_opus_succeeds(tmp_path: Path) -> None:
     run_tests_mock = MagicMock(return_value=_make_test_result(passed=True))
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               return_value=(worktree, [])),
-        patch("claude.pipeline.conflict._cleanup_repair_worktree"),
-        patch("claude.pipeline.conflict.dispatch_task", dispatch_mock),
-        patch("claude.pipeline.merge.run_tests", run_tests_mock),
-        patch("claude.pipeline.conflict.pipeline_log_event"),
+        patch("cortex_command.pipeline.conflict._cleanup_repair_worktree"),
+        patch("cortex_command.pipeline.conflict.dispatch_task", dispatch_mock),
+        patch("cortex_command.pipeline.merge.run_tests", run_tests_mock),
+        patch("cortex_command.pipeline.conflict.pipeline_log_event"),
     ):
         result = asyncio.run(dispatch_repair_agent(
             feature=feature,
@@ -185,11 +185,11 @@ def test_opus_quality_failure(tmp_path: Path) -> None:
     dispatch_mock = AsyncMock(return_value=_make_dispatch_result())
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               return_value=(worktree, ["foo.py"])),
-        patch("claude.pipeline.conflict._cleanup_repair_worktree"),
-        patch("claude.pipeline.conflict.dispatch_task", dispatch_mock),
-        patch("claude.pipeline.conflict.pipeline_log_event"),
+        patch("cortex_command.pipeline.conflict._cleanup_repair_worktree"),
+        patch("cortex_command.pipeline.conflict.dispatch_task", dispatch_mock),
+        patch("cortex_command.pipeline.conflict.pipeline_log_event"),
     ):
         result = asyncio.run(dispatch_repair_agent(
             feature=feature,
@@ -225,11 +225,11 @@ def test_agent_deferral(tmp_path: Path) -> None:
     dispatch_mock = AsyncMock(side_effect=dispatch_side_effect)
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               return_value=(worktree, [])),  # no marker files — deferral is the signal
-        patch("claude.pipeline.conflict._cleanup_repair_worktree"),
-        patch("claude.pipeline.conflict.dispatch_task", dispatch_mock),
-        patch("claude.pipeline.conflict.pipeline_log_event"),
+        patch("cortex_command.pipeline.conflict._cleanup_repair_worktree"),
+        patch("cortex_command.pipeline.conflict.dispatch_task", dispatch_mock),
+        patch("cortex_command.pipeline.conflict.pipeline_log_event"),
     ):
         result = asyncio.run(dispatch_repair_agent(
             feature=feature,
@@ -269,12 +269,12 @@ def test_test_failure_after_clean_resolution(tmp_path: Path) -> None:
     )
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               return_value=(worktree, [])),  # no remaining markers
-        patch("claude.pipeline.conflict._cleanup_repair_worktree"),
-        patch("claude.pipeline.conflict.dispatch_task", dispatch_mock),
-        patch("claude.pipeline.merge.run_tests", run_tests_mock),
-        patch("claude.pipeline.conflict.pipeline_log_event"),
+        patch("cortex_command.pipeline.conflict._cleanup_repair_worktree"),
+        patch("cortex_command.pipeline.conflict.dispatch_task", dispatch_mock),
+        patch("cortex_command.pipeline.merge.run_tests", run_tests_mock),
+        patch("cortex_command.pipeline.conflict.pipeline_log_event"),
     ):
         result = asyncio.run(dispatch_repair_agent(
             feature=feature,
@@ -306,11 +306,11 @@ def test_sdk_exception_no_opus_escalation(tmp_path: Path) -> None:
     ))
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               return_value=(worktree, ["foo.py"])),
-        patch("claude.pipeline.conflict._cleanup_repair_worktree"),
-        patch("claude.pipeline.conflict.dispatch_task", dispatch_mock),
-        patch("claude.pipeline.conflict.pipeline_log_event"),
+        patch("cortex_command.pipeline.conflict._cleanup_repair_worktree"),
+        patch("cortex_command.pipeline.conflict.dispatch_task", dispatch_mock),
+        patch("cortex_command.pipeline.conflict.pipeline_log_event"),
     ):
         result = asyncio.run(dispatch_repair_agent(
             feature=feature,
@@ -364,10 +364,10 @@ def test_execute_feature_dispatches_repair_on_conflict_event(tmp_path: Path) -> 
     )
 
     with (
-        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
-        patch("claude.overnight.feature_executor.save_state"),
+        patch("cortex_command.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("cortex_command.overnight.feature_executor.save_state"),
         patch(
-            "claude.overnight.feature_executor.dispatch_repair_agent",
+            "cortex_command.overnight.feature_executor.dispatch_repair_agent",
             new=AsyncMock(return_value=repair_result),
         ),
     ):

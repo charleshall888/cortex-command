@@ -104,8 +104,8 @@ class TestWorktreeRouting(unittest.TestCase):
         cross_repo_resolved = str(Path("/path/to/wild-light").expanduser().resolve())
 
         env_patch = patch.dict(os.environ, {"TMPDIR": self._fake_tmpdir})
-        subprocess_patch = patch("claude.overnight.plan.subprocess.run", mock_run)
-        exists_patch = patch("claude.overnight.plan.Path.exists", return_value=False)
+        subprocess_patch = patch("cortex_command.overnight.plan.subprocess.run", mock_run)
+        exists_patch = patch("cortex_command.overnight.plan.Path.exists", return_value=False)
 
         with env_patch, subprocess_patch, exists_patch:
             state = initialize_overnight_state(selection)
@@ -128,8 +128,8 @@ class TestWorktreeRouting(unittest.TestCase):
         mock_run = MagicMock(side_effect=effects)
 
         env_patch = patch.dict(os.environ, {"TMPDIR": self._fake_tmpdir})
-        subprocess_patch = patch("claude.overnight.plan.subprocess.run", mock_run)
-        exists_patch = patch("claude.overnight.plan.Path.exists", return_value=False)
+        subprocess_patch = patch("cortex_command.overnight.plan.subprocess.run", mock_run)
+        exists_patch = patch("cortex_command.overnight.plan.Path.exists", return_value=False)
 
         with env_patch, subprocess_patch, exists_patch:
             state = initialize_overnight_state(selection)
@@ -154,7 +154,7 @@ class TestWorktreeRouting(unittest.TestCase):
         mock_run = MagicMock(return_value=MagicMock(returncode=0))
 
         env_patch = patch.dict(os.environ, {"TMPDIR": self._fake_tmpdir})
-        subprocess_patch = patch("claude.overnight.plan.subprocess.run", mock_run)
+        subprocess_patch = patch("cortex_command.overnight.plan.subprocess.run", mock_run)
 
         with env_patch, subprocess_patch:
             state = initialize_overnight_state(selection)
@@ -171,7 +171,7 @@ class TestWorktreeRouting(unittest.TestCase):
         mock_run = MagicMock(return_value=MagicMock(returncode=0))
 
         env_patch = patch.dict(os.environ, {"TMPDIR": self._fake_tmpdir})
-        subprocess_patch = patch("claude.overnight.plan.subprocess.run", mock_run)
+        subprocess_patch = patch("cortex_command.overnight.plan.subprocess.run", mock_run)
 
         with env_patch, subprocess_patch:
             state = initialize_overnight_state(selection)
@@ -200,8 +200,8 @@ class TestWorktreeRouting(unittest.TestCase):
         mock_run = MagicMock(side_effect=effects)
 
         env_patch = patch.dict(os.environ, {"TMPDIR": self._fake_tmpdir})
-        subprocess_patch = patch("claude.overnight.plan.subprocess.run", mock_run)
-        exists_patch = patch("claude.overnight.plan.Path.exists", return_value=False)
+        subprocess_patch = patch("cortex_command.overnight.plan.subprocess.run", mock_run)
+        exists_patch = patch("cortex_command.overnight.plan.Path.exists", return_value=False)
 
         with env_patch, subprocess_patch, exists_patch:
             state = initialize_overnight_state(selection)

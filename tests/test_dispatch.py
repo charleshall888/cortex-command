@@ -57,7 +57,7 @@ class TestBudgetExhaustedDispatchPath(unittest.TestCase):
                 async for m in _async_gen(msg):
                     yield m
 
-            with patch("claude.pipeline.dispatch.query", new=mock_query):
+            with patch("cortex_command.pipeline.dispatch.query", new=mock_query):
                 return await _dispatch_module.dispatch_task(
                     feature="budget-test",
                     task="do something",
@@ -114,8 +114,8 @@ class TestStderrAccumulatorIntegration(unittest.TestCase):
                 # Make this an async generator (required yield for the type).
                 yield  # pragma: no cover  -- never reached
 
-            with patch("claude.pipeline.dispatch.ClaudeAgentOptions", new=_CapturingOptions):
-                with patch("claude.pipeline.dispatch.query", new=mock_query):
+            with patch("cortex_command.pipeline.dispatch.ClaudeAgentOptions", new=_CapturingOptions):
+                with patch("cortex_command.pipeline.dispatch.query", new=mock_query):
                     return await _dispatch_module.dispatch_task(
                         feature="stderr-test",
                         task="do something",

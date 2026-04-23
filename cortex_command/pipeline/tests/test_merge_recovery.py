@@ -95,11 +95,11 @@ class TestFlakyGuard(unittest.IsolatedAsyncioTestCase):
         """Flaky guard passes -> result.success is True."""
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_success(),
                 ):
                     result = await recover_test_failure(
@@ -111,11 +111,11 @@ class TestFlakyGuard(unittest.IsolatedAsyncioTestCase):
         """Flaky guard passes -> result.flaky is True."""
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_success(),
                 ):
                     result = await recover_test_failure(
@@ -127,11 +127,11 @@ class TestFlakyGuard(unittest.IsolatedAsyncioTestCase):
         """Flaky guard passes -> result.attempts is 0 (no repair cycles needed)."""
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_success(),
                 ):
                     result = await recover_test_failure(
@@ -171,19 +171,19 @@ class TestRepairSuccess(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     side_effect=_merge_side_effect,
                 ):
                     with patch(
-                        "claude.pipeline.merge_recovery._get_branch_sha",
+                        "cortex_command.pipeline.merge_recovery._get_branch_sha",
                         side_effect=_sha_side_effect,
                     ):
                         with patch(
-                            "claude.pipeline.dispatch.dispatch_task",
+                            "cortex_command.pipeline.dispatch.dispatch_task",
                             new_callable=AsyncMock,
                         ) as mock_dispatch:
                             mock_dispatch.return_value = MagicMock(
@@ -217,19 +217,19 @@ class TestRepairSuccess(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     side_effect=_merge_side_effect,
                 ):
                     with patch(
-                        "claude.pipeline.merge_recovery._get_branch_sha",
+                        "cortex_command.pipeline.merge_recovery._get_branch_sha",
                         side_effect=_sha_side_effect,
                     ):
                         with patch(
-                            "claude.pipeline.dispatch.dispatch_task",
+                            "cortex_command.pipeline.dispatch.dispatch_task",
                             new_callable=AsyncMock,
                         ) as mock_dispatch:
                             mock_dispatch.return_value = MagicMock(
@@ -263,19 +263,19 @@ class TestRepairSuccess(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     side_effect=_merge_side_effect,
                 ):
                     with patch(
-                        "claude.pipeline.merge_recovery._get_branch_sha",
+                        "cortex_command.pipeline.merge_recovery._get_branch_sha",
                         side_effect=_sha_side_effect,
                     ):
                         with patch(
-                            "claude.pipeline.dispatch.dispatch_task",
+                            "cortex_command.pipeline.dispatch.dispatch_task",
                             new_callable=AsyncMock,
                         ) as mock_dispatch:
                             mock_dispatch.return_value = MagicMock(
@@ -299,19 +299,19 @@ class TestCircuitBreaker(unittest.IsolatedAsyncioTestCase):
         """Same SHA before and after dispatch -> result.paused is True."""
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_failure(),
                 ):
                     with patch(
-                        "claude.pipeline.merge_recovery._get_branch_sha",
+                        "cortex_command.pipeline.merge_recovery._get_branch_sha",
                         return_value="same_sha",
                     ):
                         with patch(
-                            "claude.pipeline.dispatch.dispatch_task",
+                            "cortex_command.pipeline.dispatch.dispatch_task",
                             new_callable=AsyncMock,
                         ) as mock_dispatch:
                             mock_dispatch.return_value = MagicMock(
@@ -327,19 +327,19 @@ class TestCircuitBreaker(unittest.IsolatedAsyncioTestCase):
         """Same SHA before and after dispatch -> 'circuit_breaker' in result.error."""
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_failure(),
                 ):
                     with patch(
-                        "claude.pipeline.merge_recovery._get_branch_sha",
+                        "cortex_command.pipeline.merge_recovery._get_branch_sha",
                         return_value="same_sha",
                     ):
                         with patch(
-                            "claude.pipeline.dispatch.dispatch_task",
+                            "cortex_command.pipeline.dispatch.dispatch_task",
                             new_callable=AsyncMock,
                         ) as mock_dispatch:
                             mock_dispatch.return_value = MagicMock(
@@ -370,19 +370,19 @@ class TestExhausted(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_failure(),
                 ):
                     with patch(
-                        "claude.pipeline.merge_recovery._get_branch_sha",
+                        "cortex_command.pipeline.merge_recovery._get_branch_sha",
                         side_effect=_sha_side_effect,
                     ):
                         with patch(
-                            "claude.pipeline.dispatch.dispatch_task",
+                            "cortex_command.pipeline.dispatch.dispatch_task",
                             new_callable=AsyncMock,
                         ) as mock_dispatch:
                             mock_dispatch.return_value = MagicMock(
@@ -405,19 +405,19 @@ class TestExhausted(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_failure(),
                 ):
                     with patch(
-                        "claude.pipeline.merge_recovery._get_branch_sha",
+                        "cortex_command.pipeline.merge_recovery._get_branch_sha",
                         side_effect=_sha_side_effect,
                     ):
                         with patch(
-                            "claude.pipeline.dispatch.dispatch_task",
+                            "cortex_command.pipeline.dispatch.dispatch_task",
                             new_callable=AsyncMock,
                         ) as mock_dispatch:
                             mock_dispatch.return_value = MagicMock(
@@ -440,19 +440,19 @@ class TestExhausted(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_failure(),
                 ):
                     with patch(
-                        "claude.pipeline.merge_recovery._get_branch_sha",
+                        "cortex_command.pipeline.merge_recovery._get_branch_sha",
                         side_effect=_sha_side_effect,
                     ):
                         with patch(
-                            "claude.pipeline.dispatch.dispatch_task",
+                            "cortex_command.pipeline.dispatch.dispatch_task",
                             new_callable=AsyncMock,
                         ) as mock_dispatch:
                             mock_dispatch.return_value = MagicMock(
@@ -475,19 +475,19 @@ class TestExhausted(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_subprocess_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_failure(),
                 ):
                     with patch(
-                        "claude.pipeline.merge_recovery._get_branch_sha",
+                        "cortex_command.pipeline.merge_recovery._get_branch_sha",
                         side_effect=_sha_side_effect,
                     ):
                         with patch(
-                            "claude.pipeline.dispatch.dispatch_task",
+                            "cortex_command.pipeline.dispatch.dispatch_task",
                             new_callable=AsyncMock,
                         ) as mock_dispatch:
                             mock_dispatch.return_value = MagicMock(
@@ -514,11 +514,11 @@ class TestDirtyBaseCheck(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_capturing_side_effect,
             ):
                 with patch(
-                    "claude.pipeline.merge.merge_feature",
+                    "cortex_command.pipeline.merge.merge_feature",
                     return_value=_merge_success(),
                 ):
                     await recover_test_failure(
@@ -540,7 +540,7 @@ class TestDirtyBaseCheck(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with patch(
-                "claude.pipeline.merge_recovery.subprocess.run",
+                "cortex_command.pipeline.merge_recovery.subprocess.run",
                 side_effect=_dirty_tracked_side_effect,
             ):
                 result = await recover_test_failure(

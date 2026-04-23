@@ -1477,20 +1477,20 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         self._start_patch.__self__  # sanity — ensure method is bound
 
         self._start_patch(
-            "claude.overnight.orchestrator.parse_master_plan",
+            "cortex_command.overnight.orchestrator.parse_master_plan",
             return_value=self._make_plan(feature_names),
         )
         self._start_patch(
-            "claude.overnight.orchestrator.create_worktree",
+            "cortex_command.overnight.orchestrator.create_worktree",
             side_effect=lambda name, *a, **kw: self._make_worktree_info(name),
         )
         self._start_patch(
-            "claude.overnight.orchestrator.load_state",
+            "cortex_command.overnight.orchestrator.load_state",
             return_value=self._make_state(feature_names),
         )
-        self._start_patch("claude.overnight.orchestrator.save_state")
+        self._start_patch("cortex_command.overnight.orchestrator.save_state")
         self._start_patch(
-            "claude.overnight.orchestrator.load_throttle_config",
+            "cortex_command.overnight.orchestrator.load_throttle_config",
             return_value=MagicMock(),
         )
         mock_manager = MagicMock()
@@ -1498,7 +1498,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         mock_manager.release = MagicMock()
         mock_manager.stats = {}
         self._start_patch(
-            "claude.overnight.orchestrator.ConcurrencyManager",
+            "cortex_command.overnight.orchestrator.ConcurrencyManager",
             return_value=mock_manager,
         )
 
@@ -1507,35 +1507,35 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             async def _exec_side(feature, *args, **kwargs):
                 return execute_return[feature]
             exec_mock = self._start_patch(
-                "claude.overnight.orchestrator.execute_feature",
+                "cortex_command.overnight.orchestrator.execute_feature",
                 new=AsyncMock(side_effect=_exec_side),
             )
         else:
             exec_mock = self._start_patch(
-                "claude.overnight.orchestrator.execute_feature",
+                "cortex_command.overnight.orchestrator.execute_feature",
                 new=AsyncMock(return_value=execute_return),
             )
 
         self._start_patch(
-            "claude.overnight.outcome_router._get_changed_files",
+            "cortex_command.overnight.outcome_router._get_changed_files",
             return_value=["src/foo.py"],
         )
         if merge_side_effect is not None:
             merge_mock = self._start_patch(
-                "claude.overnight.outcome_router.merge_feature",
+                "cortex_command.overnight.outcome_router.merge_feature",
                 side_effect=merge_side_effect,
             )
         else:
             merge_mock = None
 
-        self._start_patch("claude.overnight.orchestrator.overnight_log_event")
-        self._start_patch("claude.overnight.outcome_router._write_back_to_backlog")
-        self._start_patch("claude.overnight.outcome_router.cleanup_worktree")
+        self._start_patch("cortex_command.overnight.orchestrator.overnight_log_event")
+        self._start_patch("cortex_command.overnight.outcome_router._write_back_to_backlog")
+        self._start_patch("cortex_command.overnight.outcome_router.cleanup_worktree")
         recovery_mock = self._start_patch(
-            "claude.overnight.outcome_router.recover_test_failure",
+            "cortex_command.overnight.outcome_router.recover_test_failure",
             new=AsyncMock(),
         )
-        self._start_patch("claude.overnight.orchestrator.save_batch_result")
+        self._start_patch("cortex_command.overnight.orchestrator.save_batch_result")
 
         return {
             "execute_feature": exec_mock,
@@ -1563,7 +1563,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             execute_return=FeatureResult(name="feat-a", status="completed"),
             merge_side_effect=lambda **kw: merge_result,
         )
-        self._start_patch("claude.overnight.outcome_router.write_deferral")
+        self._start_patch("cortex_command.overnight.outcome_router.write_deferral")
 
         from cortex_command.overnight.orchestrator import run_batch
 
@@ -1590,7 +1590,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             execute_return=FeatureResult(name="feat-a", status="completed"),
             merge_side_effect=lambda **kw: merge_result,
         )
-        self._start_patch("claude.overnight.outcome_router.write_deferral")
+        self._start_patch("cortex_command.overnight.outcome_router.write_deferral")
 
         from cortex_command.overnight.orchestrator import run_batch
 
@@ -1614,7 +1614,7 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             ),
             merge_side_effect=None,  # non-completed features skip merge
         )
-        self._start_patch("claude.overnight.orchestrator.transition")
+        self._start_patch("cortex_command.overnight.orchestrator.transition")
 
         from cortex_command.overnight.orchestrator import run_batch
 
@@ -1660,12 +1660,12 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
         )
         # requires_review is invoked on the merge-success path for feat-b.
         self._start_patch(
-            "claude.overnight.outcome_router.requires_review",
+            "cortex_command.overnight.outcome_router.requires_review",
             return_value=False,
         )
-        self._start_patch("claude.overnight.outcome_router.read_tier", return_value="S")
+        self._start_patch("cortex_command.overnight.outcome_router.read_tier", return_value="S")
         self._start_patch(
-            "claude.overnight.outcome_router.read_criticality",
+            "cortex_command.overnight.outcome_router.read_criticality",
             return_value="low",
         )
 
@@ -1689,19 +1689,19 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             merge_side_effect=lambda **kw: merge_result,
         )
         self._start_patch(
-            "claude.overnight.outcome_router.requires_review",
+            "cortex_command.overnight.outcome_router.requires_review",
             return_value=False,
         )
         self._start_patch(
-            "claude.overnight.outcome_router.read_tier",
+            "cortex_command.overnight.outcome_router.read_tier",
             return_value="S",
         )
         self._start_patch(
-            "claude.overnight.outcome_router.read_criticality",
+            "cortex_command.overnight.outcome_router.read_criticality",
             return_value="low",
         )
         dispatch_mock = self._start_patch(
-            "claude.overnight.outcome_router.dispatch_review",
+            "cortex_command.overnight.outcome_router.dispatch_review",
             new_callable=AsyncMock,
         )
 
@@ -1724,19 +1724,19 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             merge_side_effect=lambda **kw: merge_result,
         )
         self._start_patch(
-            "claude.overnight.outcome_router.requires_review",
+            "cortex_command.overnight.outcome_router.requires_review",
             return_value=True,
         )
         self._start_patch(
-            "claude.overnight.outcome_router.read_tier",
+            "cortex_command.overnight.outcome_router.read_tier",
             return_value="L",
         )
         self._start_patch(
-            "claude.overnight.outcome_router.read_criticality",
+            "cortex_command.overnight.outcome_router.read_criticality",
             return_value="high",
         )
         self._start_patch(
-            "claude.overnight.outcome_router.dispatch_review",
+            "cortex_command.overnight.outcome_router.dispatch_review",
             new_callable=AsyncMock,
             return_value=MagicMock(deferred=False, verdict="APPROVED", cycle=1),
         )
@@ -1759,19 +1759,19 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             merge_side_effect=lambda **kw: merge_result,
         )
         self._start_patch(
-            "claude.overnight.outcome_router.requires_review",
+            "cortex_command.overnight.outcome_router.requires_review",
             return_value=True,
         )
         self._start_patch(
-            "claude.overnight.outcome_router.read_tier",
+            "cortex_command.overnight.outcome_router.read_tier",
             return_value="L",
         )
         self._start_patch(
-            "claude.overnight.outcome_router.read_criticality",
+            "cortex_command.overnight.outcome_router.read_criticality",
             return_value="high",
         )
         self._start_patch(
-            "claude.overnight.outcome_router.dispatch_review",
+            "cortex_command.overnight.outcome_router.dispatch_review",
             new_callable=AsyncMock,
             return_value=MagicMock(
                 deferred=True,
@@ -1798,23 +1798,23 @@ class TestAccumulateResultViaBatch(unittest.IsolatedAsyncioTestCase):
             merge_side_effect=lambda **kw: merge_result,
         )
         self._start_patch(
-            "claude.overnight.outcome_router.requires_review",
+            "cortex_command.overnight.outcome_router.requires_review",
             return_value=True,
         )
         self._start_patch(
-            "claude.overnight.outcome_router.read_tier",
+            "cortex_command.overnight.outcome_router.read_tier",
             return_value="L",
         )
         self._start_patch(
-            "claude.overnight.outcome_router.read_criticality",
+            "cortex_command.overnight.outcome_router.read_criticality",
             return_value="high",
         )
         self._start_patch(
-            "claude.overnight.outcome_router.dispatch_review",
+            "cortex_command.overnight.outcome_router.dispatch_review",
             new_callable=AsyncMock,
             side_effect=RuntimeError("crash"),
         )
-        self._start_patch("claude.overnight.outcome_router.write_deferral")
+        self._start_patch("cortex_command.overnight.outcome_router.write_deferral")
 
         from cortex_command.overnight.orchestrator import run_batch
 

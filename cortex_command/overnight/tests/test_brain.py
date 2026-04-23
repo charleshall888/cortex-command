@@ -166,16 +166,16 @@ class TestRequestBrainDecision(unittest.IsolatedAsyncioTestCase):
     async def test_dispatch_success_valid_json_returns_parsed_decision(self):
         """Dispatch succeeds with valid JSON → returns parsed BrainDecision."""
         mock_render = self._start_patch(
-            "claude.overnight.brain._render_template", return_value="stub"
+            "cortex_command.overnight.brain._render_template", return_value="stub"
         )
         mock_dispatch = self._start_patch(
-            "claude.overnight.brain.dispatch_task", new_callable=AsyncMock
+            "cortex_command.overnight.brain.dispatch_task", new_callable=AsyncMock
         )
         mock_dispatch.return_value = DispatchResult(
             success=True,
             output='{"action": "skip", "reasoning": "all good"}',
         )
-        mock_log = self._start_patch("claude.overnight.brain.pipeline_log_event")
+        mock_log = self._start_patch("cortex_command.overnight.brain.pipeline_log_event")
 
         result = await request_brain_decision(self._ctx, None, self._log_path)
 
@@ -186,13 +186,13 @@ class TestRequestBrainDecision(unittest.IsolatedAsyncioTestCase):
     async def test_dispatch_success_garbage_output_returns_fallback(self):
         """Dispatch succeeds but output unparseable → falls back to _default_decision."""
         self._start_patch(
-            "claude.overnight.brain._render_template", return_value="stub"
+            "cortex_command.overnight.brain._render_template", return_value="stub"
         )
         mock_dispatch = self._start_patch(
-            "claude.overnight.brain.dispatch_task", new_callable=AsyncMock
+            "cortex_command.overnight.brain.dispatch_task", new_callable=AsyncMock
         )
         mock_dispatch.return_value = DispatchResult(success=True, output="garbage")
-        self._start_patch("claude.overnight.brain.pipeline_log_event")
+        self._start_patch("cortex_command.overnight.brain.pipeline_log_event")
 
         result = await request_brain_decision(self._ctx, None, self._log_path)
 
@@ -202,16 +202,16 @@ class TestRequestBrainDecision(unittest.IsolatedAsyncioTestCase):
     async def test_parse_failure_emits_brain_unavailable_event(self):
         """Dispatch succeeds but parse returns None → brain_unavailable event logged."""
         self._start_patch(
-            "claude.overnight.brain._render_template", return_value="stub"
+            "cortex_command.overnight.brain._render_template", return_value="stub"
         )
         mock_dispatch = self._start_patch(
-            "claude.overnight.brain.dispatch_task", new_callable=AsyncMock
+            "cortex_command.overnight.brain.dispatch_task", new_callable=AsyncMock
         )
         mock_dispatch.return_value = DispatchResult(success=True, output="valid looking")
         self._start_patch(
-            "claude.overnight.brain._parse_brain_response", return_value=None
+            "cortex_command.overnight.brain._parse_brain_response", return_value=None
         )
-        mock_log = self._start_patch("claude.overnight.brain.pipeline_log_event")
+        mock_log = self._start_patch("cortex_command.overnight.brain.pipeline_log_event")
 
         result = await request_brain_decision(self._ctx, None, self._log_path)
 
@@ -228,15 +228,15 @@ class TestRequestBrainDecision(unittest.IsolatedAsyncioTestCase):
     async def test_dispatch_failure_generic_logs_brain_unavailable(self):
         """Dispatch fails (generic) → pipeline_log_event called with brain_unavailable."""
         self._start_patch(
-            "claude.overnight.brain._render_template", return_value="stub"
+            "cortex_command.overnight.brain._render_template", return_value="stub"
         )
         mock_dispatch = self._start_patch(
-            "claude.overnight.brain.dispatch_task", new_callable=AsyncMock
+            "cortex_command.overnight.brain.dispatch_task", new_callable=AsyncMock
         )
         mock_dispatch.return_value = DispatchResult(
             success=False, output="", error_type="generic_error"
         )
-        mock_log = self._start_patch("claude.overnight.brain.pipeline_log_event")
+        mock_log = self._start_patch("cortex_command.overnight.brain.pipeline_log_event")
 
         result = await request_brain_decision(self._ctx, None, self._log_path)
 
@@ -248,15 +248,15 @@ class TestRequestBrainDecision(unittest.IsolatedAsyncioTestCase):
     async def test_dispatch_failure_infrastructure_calls_report_rate_limit(self):
         """Dispatch fails (infrastructure) with manager → manager.report_rate_limit() called."""
         self._start_patch(
-            "claude.overnight.brain._render_template", return_value="stub"
+            "cortex_command.overnight.brain._render_template", return_value="stub"
         )
         mock_dispatch = self._start_patch(
-            "claude.overnight.brain.dispatch_task", new_callable=AsyncMock
+            "cortex_command.overnight.brain.dispatch_task", new_callable=AsyncMock
         )
         mock_dispatch.return_value = DispatchResult(
             success=False, output="", error_type="infrastructure_failure"
         )
-        self._start_patch("claude.overnight.brain.pipeline_log_event")
+        self._start_patch("cortex_command.overnight.brain.pipeline_log_event")
 
         mock_manager = MagicMock()
         result = await request_brain_decision(self._ctx, mock_manager, self._log_path)
@@ -285,7 +285,7 @@ class TestHandleFailedTask(unittest.IsolatedAsyncioTestCase):
         retry_result = MagicMock(attempts=1, final_output="err")
 
         with patch(
-            "claude.overnight.feature_executor.request_brain_decision", new_callable=AsyncMock
+            "cortex_command.overnight.feature_executor.request_brain_decision", new_callable=AsyncMock
         ) as mock_request_brain:
             result = await _handle_failed_task(
                 feature="test-feat",
@@ -330,21 +330,21 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
         retry_result = MagicMock(attempts=1, final_output="err")
 
         mock_request_brain = self._start_patch(
-            "claude.overnight.feature_executor.request_brain_decision",
+            "cortex_command.overnight.feature_executor.request_brain_decision",
             new_callable=AsyncMock,
         )
         mock_request_brain.return_value = BrainDecision(
             action=BrainAction.SKIP, reasoning="r", confidence=0.9
         )
-        self._start_patch("claude.overnight.feature_executor.overnight_log_event")
+        self._start_patch("cortex_command.overnight.feature_executor.overnight_log_event")
         mock_mark_done = self._start_patch(
-            "claude.overnight.feature_executor.mark_task_done_in_plan"
+            "cortex_command.overnight.feature_executor.mark_task_done_in_plan"
         )
         mock_write_deferral = self._start_patch(
-            "claude.overnight.feature_executor.write_deferral"
+            "cortex_command.overnight.feature_executor.write_deferral"
         )
         self._start_patch(
-            "claude.overnight.feature_executor._read_learnings",
+            "cortex_command.overnight.feature_executor._read_learnings",
             return_value="(No prior learnings.)",
         )
 
@@ -368,21 +368,21 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
         retry_result = MagicMock(attempts=1, final_output="err")
 
         mock_request_brain = self._start_patch(
-            "claude.overnight.feature_executor.request_brain_decision",
+            "cortex_command.overnight.feature_executor.request_brain_decision",
             new_callable=AsyncMock,
         )
         mock_request_brain.return_value = BrainDecision(
             action=BrainAction.DEFER, reasoning="r", confidence=0.9
         )
-        self._start_patch("claude.overnight.feature_executor.overnight_log_event")
+        self._start_patch("cortex_command.overnight.feature_executor.overnight_log_event")
         mock_mark_done = self._start_patch(
-            "claude.overnight.feature_executor.mark_task_done_in_plan"
+            "cortex_command.overnight.feature_executor.mark_task_done_in_plan"
         )
         mock_write_deferral = self._start_patch(
-            "claude.overnight.feature_executor.write_deferral"
+            "cortex_command.overnight.feature_executor.write_deferral"
         )
         self._start_patch(
-            "claude.overnight.feature_executor._read_learnings",
+            "cortex_command.overnight.feature_executor._read_learnings",
             return_value="(No prior learnings.)",
         )
 
@@ -408,21 +408,21 @@ class TestHandleFailedTaskBrainActions(unittest.IsolatedAsyncioTestCase):
         retry_result = MagicMock(attempts=1, final_output="err")
 
         mock_request_brain = self._start_patch(
-            "claude.overnight.feature_executor.request_brain_decision",
+            "cortex_command.overnight.feature_executor.request_brain_decision",
             new_callable=AsyncMock,
         )
         mock_request_brain.return_value = BrainDecision(
             action=BrainAction.PAUSE, reasoning="r", confidence=0.9
         )
-        self._start_patch("claude.overnight.feature_executor.overnight_log_event")
+        self._start_patch("cortex_command.overnight.feature_executor.overnight_log_event")
         mock_mark_done = self._start_patch(
-            "claude.overnight.feature_executor.mark_task_done_in_plan"
+            "cortex_command.overnight.feature_executor.mark_task_done_in_plan"
         )
         mock_write_deferral = self._start_patch(
-            "claude.overnight.feature_executor.write_deferral"
+            "cortex_command.overnight.feature_executor.write_deferral"
         )
         self._start_patch(
-            "claude.overnight.feature_executor._read_learnings",
+            "cortex_command.overnight.feature_executor._read_learnings",
             return_value="(No prior learnings.)",
         )
 

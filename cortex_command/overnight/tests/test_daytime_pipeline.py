@@ -377,45 +377,45 @@ class TestDeferredDirThreadingFeatureExecutor(
 
         with (
             patch(
-                "claude.overnight.feature_executor.write_deferral",
+                "cortex_command.overnight.feature_executor.write_deferral",
                 MagicMock(return_value=Path("/custom/feat-q001.md")),
             ) as m_write,
             patch(
-                "claude.overnight.feature_executor.parse_feature_plan",
+                "cortex_command.overnight.feature_executor.parse_feature_plan",
                 return_value=fake_plan,
             ),
             patch(
-                "claude.overnight.feature_executor.load_state",
+                "cortex_command.overnight.feature_executor.load_state",
                 side_effect=Exception("skip conflict recovery"),
             ),
             patch(
-                "claude.overnight.feature_executor.retry_task",
+                "cortex_command.overnight.feature_executor.retry_task",
                 new=AsyncMock(return_value=failing_retry),
             ),
             patch(
-                "claude.overnight.feature_executor.request_brain_decision",
+                "cortex_command.overnight.feature_executor.request_brain_decision",
                 new=AsyncMock(return_value=brain_decision),
             ),
             patch(
-                "claude.overnight.feature_executor._read_learnings",
+                "cortex_command.overnight.feature_executor._read_learnings",
                 return_value="(none)",
             ),
             patch(
-                "claude.overnight.feature_executor._read_spec_content",
+                "cortex_command.overnight.feature_executor._read_spec_content",
                 return_value="spec text",
             ),
             patch(
-                "claude.overnight.feature_executor.read_criticality",
+                "cortex_command.overnight.feature_executor.read_criticality",
                 return_value="low",
             ),
             patch(
-                "claude.overnight.feature_executor.pipeline_log_event"
+                "cortex_command.overnight.feature_executor.pipeline_log_event"
             ),
             patch(
-                "claude.overnight.feature_executor.overnight_log_event"
+                "cortex_command.overnight.feature_executor.overnight_log_event"
             ),
             patch(
-                "claude.overnight.feature_executor.subprocess.run",
+                "cortex_command.overnight.feature_executor.subprocess.run",
                 return_value=MagicMock(returncode=0, stdout="0\n", stderr=""),
             ),
         ):
@@ -454,25 +454,25 @@ class TestDeferredDirThreadingOutcomeRouter(
 
         with (
             patch(
-                "claude.overnight.outcome_router.write_deferral",
+                "cortex_command.overnight.outcome_router.write_deferral",
                 MagicMock(return_value=Path("/custom/feat-q001.md")),
             ) as m_write,
             patch(
-                "claude.overnight.outcome_router._get_changed_files",
+                "cortex_command.overnight.outcome_router._get_changed_files",
                 return_value=["src/a.py"],
             ),
             patch(
-                "claude.overnight.outcome_router.merge_feature",
+                "cortex_command.overnight.outcome_router.merge_feature",
                 return_value=merge_result,
             ),
             patch(
-                "claude.overnight.outcome_router._write_back_to_backlog",
+                "cortex_command.overnight.outcome_router._write_back_to_backlog",
             ),
             patch(
-                "claude.overnight.outcome_router.overnight_log_event"
+                "cortex_command.overnight.outcome_router.overnight_log_event"
             ),
             patch(
-                "claude.overnight.outcome_router._next_escalation_n",
+                "cortex_command.overnight.outcome_router._next_escalation_n",
                 return_value=1,
             ),
         ):

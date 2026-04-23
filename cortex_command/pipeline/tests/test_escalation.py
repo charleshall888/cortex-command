@@ -150,9 +150,9 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
-                patch("claude.pipeline.retry._get_worktree_diff", return_value=""),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry._get_worktree_diff", return_value=""),
             ):
                 result = await retry_task(
                     feature="feat",
@@ -180,10 +180,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -215,10 +215,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -246,9 +246,9 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
-                patch("claude.pipeline.retry._get_worktree_diff", return_value=""),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry._get_worktree_diff", return_value=""),
             ):
                 result = await retry_task(
                     feature="feat",
@@ -275,9 +275,9 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
-                patch("claude.pipeline.retry._get_worktree_diff", return_value=""),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry._get_worktree_diff", return_value=""),
             ):
                 result = await retry_task(
                     feature="feat",
@@ -306,10 +306,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -340,10 +340,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -373,10 +373,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -401,10 +401,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -434,10 +434,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -473,10 +473,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "events.jsonl"
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -509,10 +509,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "events.jsonl"
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -544,10 +544,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log_path = Path(tmp) / "events.jsonl"
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -588,10 +588,10 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
                 patch(
-                    "claude.pipeline.retry._get_worktree_diff",
+                    "cortex_command.pipeline.retry._get_worktree_diff",
                     side_effect=_make_unique_diff_fn(),
                 ),
             ):
@@ -619,9 +619,9 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
-                patch("claude.pipeline.retry._get_worktree_diff", return_value=""),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry._get_worktree_diff", return_value=""),
             ):
                 result = await retry_task(
                     feature="feat",
@@ -648,9 +648,9 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log_file = Path(tmp) / "events.jsonl"
             with (
-                patch("claude.pipeline.retry.dispatch_task", new=mock_dispatch),
-                patch("claude.pipeline.retry.cleanup_stale_lock"),
-                patch("claude.pipeline.retry._get_worktree_diff", return_value=""),
+                patch("cortex_command.pipeline.retry.dispatch_task", new=mock_dispatch),
+                patch("cortex_command.pipeline.retry.cleanup_stale_lock"),
+                patch("cortex_command.pipeline.retry._get_worktree_diff", return_value=""),
             ):
                 await retry_task(
                     feature="feat",

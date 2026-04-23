@@ -144,7 +144,7 @@ class TestEscalationsDataModel(unittest.TestCase):
             ids_in_order = [f"feat-1-q{i}" for i in range(1, 8)]
 
             with patch(
-                "claude.overnight.deferral._now_iso",
+                "cortex_command.overnight.deferral._now_iso",
                 side_effect=iso_ts,
             ):
                 for i, eid in enumerate(ids_in_order):

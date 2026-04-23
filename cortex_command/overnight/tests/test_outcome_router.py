@@ -71,27 +71,27 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "claude.overnight.outcome_router._get_changed_files",
+                "cortex_command.overnight.outcome_router._get_changed_files",
                 return_value=["src/a.py"],
             ),
             patch(
-                "claude.overnight.outcome_router.merge_feature",
+                "cortex_command.overnight.outcome_router.merge_feature",
                 return_value=merge_result,
             ) as m_merge,
             patch(
-                "claude.overnight.outcome_router.requires_review",
+                "cortex_command.overnight.outcome_router.requires_review",
                 return_value=False,
             ),
-            patch("claude.overnight.outcome_router.read_tier", return_value="S"),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="S"),
             patch(
-                "claude.overnight.outcome_router.read_criticality",
+                "cortex_command.overnight.outcome_router.read_criticality",
                 return_value="low",
             ),
             patch(
-                "claude.overnight.outcome_router._write_back_to_backlog",
+                "cortex_command.overnight.outcome_router._write_back_to_backlog",
             ) as m_wb,
-            patch("claude.overnight.outcome_router.overnight_log_event"),
-            patch("claude.overnight.outcome_router.cleanup_worktree"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
         ):
             await apply_feature_result(
                 "feat-a",
@@ -114,12 +114,12 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "claude.overnight.outcome_router.merge_feature",
+                "cortex_command.overnight.outcome_router.merge_feature",
             ) as m_merge,
             patch(
-                "claude.overnight.outcome_router._write_back_to_backlog",
+                "cortex_command.overnight.outcome_router._write_back_to_backlog",
             ) as m_wb,
-            patch("claude.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
         ):
             await apply_feature_result(
                 "feat-a",
@@ -148,12 +148,12 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
         ctx = _make_ctx(pauses=0)
 
         with (
-            patch("claude.overnight.outcome_router.merge_feature") as m_merge,
+            patch("cortex_command.overnight.outcome_router.merge_feature") as m_merge,
             patch(
-                "claude.overnight.outcome_router._write_back_to_backlog",
+                "cortex_command.overnight.outcome_router._write_back_to_backlog",
             ) as m_wb,
-            patch("claude.overnight.outcome_router.overnight_log_event"),
-            patch("claude.overnight.outcome_router.write_deferral") as m_write_def,
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.write_deferral") as m_write_def,
         ):
             await apply_feature_result(
                 "feat-a",
@@ -185,9 +185,9 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
         ctx = _make_ctx(pauses=1)
 
         with (
-            patch("claude.overnight.outcome_router.merge_feature") as m_merge,
-            patch("claude.overnight.outcome_router._write_back_to_backlog"),
-            patch("claude.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.merge_feature") as m_merge,
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
         ):
             await apply_feature_result(
                 "feat-a",
@@ -213,15 +213,15 @@ class TestApplyFeatureResultStatusDispatch(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "claude.overnight.outcome_router.subprocess.run",
+                "cortex_command.overnight.outcome_router.subprocess.run",
                 side_effect=[checkout_proc, ff_proc, del_proc],
             ) as m_sp,
-            patch("claude.overnight.outcome_router.merge_feature") as m_merge,
+            patch("cortex_command.overnight.outcome_router.merge_feature") as m_merge,
             patch(
-                "claude.overnight.outcome_router._write_back_to_backlog",
+                "cortex_command.overnight.outcome_router._write_back_to_backlog",
             ) as m_wb,
-            patch("claude.overnight.outcome_router.overnight_log_event"),
-            patch("claude.overnight.outcome_router.cleanup_worktree"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
         ):
             await apply_feature_result(
                 "feat-a",
@@ -258,9 +258,9 @@ class TestApplyFeatureResultCircuitBreaker(unittest.IsolatedAsyncioTestCase):
         ctx.batch_result.global_abort_signal = True  # short-circuit budget branch
 
         with (
-            patch("claude.overnight.outcome_router.merge_feature"),
-            patch("claude.overnight.outcome_router._write_back_to_backlog"),
-            patch("claude.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.merge_feature"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
         ):
             await apply_feature_result(
                 "feat-a",
@@ -288,29 +288,29 @@ class TestApplyFeatureResultReviewGating(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "claude.overnight.outcome_router._get_changed_files",
+                "cortex_command.overnight.outcome_router._get_changed_files",
                 return_value=["src/a.py"],
             ),
             patch(
-                "claude.overnight.outcome_router.merge_feature",
+                "cortex_command.overnight.outcome_router.merge_feature",
                 return_value=merge_result,
             ),
             patch(
-                "claude.overnight.outcome_router.requires_review",
+                "cortex_command.overnight.outcome_router.requires_review",
                 return_value=True,
             ),
             patch(
-                "claude.overnight.outcome_router.dispatch_review",
+                "cortex_command.overnight.outcome_router.dispatch_review",
                 new=AsyncMock(return_value=review_result),
             ) as m_dispatch,
-            patch("claude.overnight.outcome_router.read_tier", return_value="M"),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="M"),
             patch(
-                "claude.overnight.outcome_router.read_criticality",
+                "cortex_command.overnight.outcome_router.read_criticality",
                 return_value="high",
             ),
-            patch("claude.overnight.outcome_router._write_back_to_backlog"),
-            patch("claude.overnight.outcome_router.overnight_log_event"),
-            patch("claude.overnight.outcome_router.cleanup_worktree"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
         ):
             await apply_feature_result(
                 "feat-a",
@@ -334,29 +334,29 @@ class TestApplyFeatureResultReviewGating(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "claude.overnight.outcome_router._get_changed_files",
+                "cortex_command.overnight.outcome_router._get_changed_files",
                 return_value=["src/a.py"],
             ),
             patch(
-                "claude.overnight.outcome_router.merge_feature",
+                "cortex_command.overnight.outcome_router.merge_feature",
                 return_value=merge_result,
             ),
             patch(
-                "claude.overnight.outcome_router.requires_review",
+                "cortex_command.overnight.outcome_router.requires_review",
                 return_value=False,
             ),
             patch(
-                "claude.overnight.outcome_router.dispatch_review",
+                "cortex_command.overnight.outcome_router.dispatch_review",
                 new=AsyncMock(),
             ) as m_dispatch,
-            patch("claude.overnight.outcome_router.read_tier", return_value="S"),
+            patch("cortex_command.overnight.outcome_router.read_tier", return_value="S"),
             patch(
-                "claude.overnight.outcome_router.read_criticality",
+                "cortex_command.overnight.outcome_router.read_criticality",
                 return_value="low",
             ),
-            patch("claude.overnight.outcome_router._write_back_to_backlog"),
-            patch("claude.overnight.outcome_router.overnight_log_event"),
-            patch("claude.overnight.outcome_router.cleanup_worktree"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.cleanup_worktree"),
         ):
             await apply_feature_result(
                 "feat-a",
@@ -392,22 +392,22 @@ class TestApplyFeatureResultReviewGating(unittest.IsolatedAsyncioTestCase):
 
         with (
             patch(
-                "claude.overnight.outcome_router._get_changed_files",
+                "cortex_command.overnight.outcome_router._get_changed_files",
                 return_value=["src/a.py"],
             ),
             patch(
-                "claude.overnight.outcome_router.merge_feature",
+                "cortex_command.overnight.outcome_router.merge_feature",
                 return_value=merge_result,
             ),
             patch(
-                "claude.overnight.outcome_router.recover_test_failure",
+                "cortex_command.overnight.outcome_router.recover_test_failure",
                 new=AsyncMock(side_effect=_fake_recover),
             ) as m_recover,
-            patch("claude.overnight.outcome_router._write_back_to_backlog"),
-            patch("claude.overnight.outcome_router.overnight_log_event"),
-            patch("claude.overnight.outcome_router.load_state"),
-            patch("claude.overnight.outcome_router.save_state"),
-            patch("claude.overnight.outcome_router._apply_feature_result"),
+            patch("cortex_command.overnight.outcome_router._write_back_to_backlog"),
+            patch("cortex_command.overnight.outcome_router.overnight_log_event"),
+            patch("cortex_command.overnight.outcome_router.load_state"),
+            patch("cortex_command.overnight.outcome_router.save_state"),
+            patch("cortex_command.overnight.outcome_router._apply_feature_result"),
         ):
             await apply_feature_result(
                 "feat-a",

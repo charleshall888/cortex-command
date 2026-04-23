@@ -105,23 +105,23 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         Returns a dict of the mocks tests need to assert on.
         """
         self._start_patch(
-            "claude.overnight.orchestrator.parse_master_plan",
+            "cortex_command.overnight.orchestrator.parse_master_plan",
             return_value=self._make_plan(feature_names),
         )
         self._start_patch(
-            "claude.overnight.orchestrator.create_worktree",
+            "cortex_command.overnight.orchestrator.create_worktree",
             side_effect=lambda name, *a, **kw: self._make_worktree_info(name),
         )
         self._start_patch(
-            "claude.overnight.orchestrator.load_state",
+            "cortex_command.overnight.orchestrator.load_state",
             return_value=self._make_state(feature_names),
         )
-        self._start_patch("claude.overnight.orchestrator.save_state")
-        self._start_patch("claude.overnight.orchestrator.save_batch_result")
-        self._start_patch("claude.overnight.orchestrator.transition")
-        self._start_patch("claude.overnight.orchestrator.overnight_log_event")
+        self._start_patch("cortex_command.overnight.orchestrator.save_state")
+        self._start_patch("cortex_command.overnight.orchestrator.save_batch_result")
+        self._start_patch("cortex_command.overnight.orchestrator.transition")
+        self._start_patch("cortex_command.overnight.orchestrator.overnight_log_event")
         self._start_patch(
-            "claude.overnight.orchestrator.load_throttle_config",
+            "cortex_command.overnight.orchestrator.load_throttle_config",
             return_value=MagicMock(),
         )
 
@@ -131,7 +131,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
             mock_manager.release = MagicMock()
             mock_manager.stats = {}
         self._start_patch(
-            "claude.overnight.orchestrator.ConcurrencyManager",
+            "cortex_command.overnight.orchestrator.ConcurrencyManager",
             return_value=mock_manager,
         )
 
@@ -140,7 +140,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
             async def _exec_side(feature, *args, **kwargs):
                 return execute_return[feature]
             exec_mock = self._start_patch(
-                "claude.overnight.orchestrator.execute_feature",
+                "cortex_command.overnight.orchestrator.execute_feature",
                 autospec=True,
                 side_effect=_exec_side,
             )
@@ -148,7 +148,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
             async def _exec_single(*args, **kwargs):
                 return execute_return
             exec_mock = self._start_patch(
-                "claude.overnight.orchestrator.execute_feature",
+                "cortex_command.overnight.orchestrator.execute_feature",
                 autospec=True,
                 side_effect=_exec_single,
             )
@@ -157,7 +157,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         async def _apply_side(name, result, ctx):
             return None
         apply_mock = self._start_patch(
-            "claude.overnight.outcome_router.apply_feature_result",
+            "cortex_command.overnight.outcome_router.apply_feature_result",
             autospec=True,
             side_effect=_apply_side,
         )
@@ -174,7 +174,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
                 return task
 
             create_task_mock = self._start_patch(
-                "claude.overnight.orchestrator.create_task",
+                "cortex_command.overnight.orchestrator.create_task",
                 side_effect=_create_task_spy,
             )
             create_task_mock.captured = captured  # type: ignore[attr-defined]
@@ -305,7 +305,7 @@ class TestOrchestratorRunBatch(unittest.IsolatedAsyncioTestCase):
         # Additionally pre-seed CircuitBreakerState so the patched class
         # returns our threshold-seeded instance (spec requirement).
         self._start_patch(
-            "claude.overnight.orchestrator.CircuitBreakerState",
+            "cortex_command.overnight.orchestrator.CircuitBreakerState",
             new=MagicMock(
                 return_value=CircuitBreakerState(
                     consecutive_pauses=CIRCUIT_BREAKER_THRESHOLD

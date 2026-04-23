@@ -256,7 +256,7 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
 
             # Patch log_event (called inside _write_activity_event) to raise
             with patch.object(_dispatch_module, "query", mock_query):
-                with patch("claude.pipeline.dispatch.log_event", side_effect=OSError("disk full")):
+                with patch("cortex_command.pipeline.dispatch.log_event", side_effect=OSError("disk full")):
                     result = await _dispatch_module.dispatch_task(
                         feature="test-feat",
                         task="task with failing log",

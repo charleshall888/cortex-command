@@ -45,7 +45,7 @@ def _runs_json(status: str, conclusion: str) -> str:
 def _patch_subprocess_run(returncode: int = 0, stdout: str = "", stderr: str = ""):
     """Patch subprocess.run in the merge module to return a fixed CompletedProcess."""
     return patch(
-        "claude.pipeline.merge.subprocess.run",
+        "cortex_command.pipeline.merge.subprocess.run",
         return_value=_make_proc(returncode, stdout, stderr),
     )
 
@@ -63,12 +63,12 @@ def _git_success_side_effect(cmd, **kwargs):
 
 def _patch_git_success():
     """Patch subprocess.run so all git commands appear to succeed."""
-    return patch("claude.pipeline.merge.subprocess.run", side_effect=_git_success_side_effect)
+    return patch("cortex_command.pipeline.merge.subprocess.run", side_effect=_git_success_side_effect)
 
 
 def _patch_ci(ci_result: str):
     """Patch _check_ci_status to return a fixed result string."""
-    return patch("claude.pipeline.merge._check_ci_status", return_value=ci_result)
+    return patch("cortex_command.pipeline.merge._check_ci_status", return_value=ci_result)
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +120,7 @@ class TestCheckCiStatusSkipped(unittest.TestCase):
 
     def test_gh_not_installed_returns_skipped(self):
         with patch(
-            "claude.pipeline.merge.subprocess.run",
+            "cortex_command.pipeline.merge.subprocess.run",
             side_effect=FileNotFoundError("gh: not found"),
         ):
             self.assertEqual(_check_ci_status("pipeline/my-feature"), "skipped")
@@ -154,7 +154,7 @@ class TestCheckCiStatusCliInvocation(unittest.TestCase):
     """_check_ci_status() calls gh with the correct arguments."""
 
     def test_correct_gh_command_and_flags(self):
-        with patch("claude.pipeline.merge.subprocess.run") as mock_run:
+        with patch("cortex_command.pipeline.merge.subprocess.run") as mock_run:
             mock_run.return_value = _make_proc(stdout=_runs_json("completed", "success"))
             _check_ci_status("pipeline/some-branch")
             mock_run.assert_called_once_with(
@@ -171,7 +171,7 @@ class TestCheckCiStatusCliInvocation(unittest.TestCase):
 
     def test_branch_name_passed_verbatim(self):
         """Branch names with special characters are forwarded unchanged."""
-        with patch("claude.pipeline.merge.subprocess.run") as mock_run:
+        with patch("cortex_command.pipeline.merge.subprocess.run") as mock_run:
             mock_run.return_value = _make_proc(stdout="[]")
             _check_ci_status("pipeline/feat/with-slash")
             call_args = mock_run.call_args[0][0]
@@ -205,7 +205,7 @@ class TestMergeFeatureCiPending(unittest.TestCase):
     def test_git_merge_not_called(self):
         """No git merge should be attempted when CI is pending."""
         with _patch_ci("pending"):
-            with patch("claude.pipeline.merge.subprocess.run") as mock_run:
+            with patch("cortex_command.pipeline.merge.subprocess.run") as mock_run:
                 mock_run.return_value = _make_proc(stdout="/fake/repo\n")
                 merge_feature("my-feature")
             for call_args in mock_run.call_args_list:
@@ -231,7 +231,7 @@ class TestMergeFeatureCiFailing(unittest.TestCase):
     def test_git_merge_not_called(self):
         """No git merge should be attempted when CI is failing."""
         with _patch_ci("failing"):
-            with patch("claude.pipeline.merge.subprocess.run") as mock_run:
+            with patch("cortex_command.pipeline.merge.subprocess.run") as mock_run:
                 mock_run.return_value = _make_proc(stdout="/fake/repo\n")
                 merge_feature("my-feature")
             for call_args in mock_run.call_args_list:
@@ -276,14 +276,14 @@ class TestMergeFeatureCiCheckDisabled(unittest.TestCase):
     """merge_feature(ci_check=False) skips the CI gate entirely."""
 
     def test_check_ci_status_not_called_when_ci_check_false(self):
-        with patch("claude.pipeline.merge._check_ci_status") as mock_ci:
+        with patch("cortex_command.pipeline.merge._check_ci_status") as mock_ci:
             with _patch_git_success():
                 merge_feature("my-feature", ci_check=False)
         mock_ci.assert_not_called()
 
     def test_ci_check_false_is_backward_compatible_default(self):
         """ci_check=True is the default; ci_check=False must be explicitly set."""
-        with patch("claude.pipeline.merge._check_ci_status") as mock_ci:
+        with patch("cortex_command.pipeline.merge._check_ci_status") as mock_ci:
             mock_ci.return_value = "pass"
             with _patch_git_success():
                 merge_feature("my-feature")
@@ -398,7 +398,7 @@ class TestRunTestsNoneNormalization(unittest.TestCase):
 
     def test_run_tests_string_none_returns_passing(self):
         """run_tests('none') must return TestResult(passed=True) without spawning a subprocess."""
-        with patch("claude.pipeline.merge.subprocess.run") as mock_run:
+        with patch("cortex_command.pipeline.merge.subprocess.run") as mock_run:
             result = run_tests("none")
         mock_run.assert_not_called()
         self.assertTrue(result.passed)
@@ -406,14 +406,14 @@ class TestRunTestsNoneNormalization(unittest.TestCase):
 
     def test_run_tests_string_none_uppercase(self):
         """run_tests('NONE') is also treated as no test command."""
-        with patch("claude.pipeline.merge.subprocess.run") as mock_run:
+        with patch("cortex_command.pipeline.merge.subprocess.run") as mock_run:
             result = run_tests("NONE")
         mock_run.assert_not_called()
         self.assertTrue(result.passed)
 
     def test_run_tests_none_value_unchanged(self):
         """run_tests(None) still returns passing without subprocess."""
-        with patch("claude.pipeline.merge.subprocess.run") as mock_run:
+        with patch("cortex_command.pipeline.merge.subprocess.run") as mock_run:
             result = run_tests(None)
         mock_run.assert_not_called()
         self.assertTrue(result.passed)

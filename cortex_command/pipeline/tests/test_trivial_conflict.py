@@ -109,11 +109,11 @@ def test_resolve_trivial_conflict_success(tmp_path: Path) -> None:
     run_tests_mock = MagicMock(return_value=_make_test_result(passed=True))
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               return_value=(worktree, ["file.py"])),
-        patch("claude.pipeline.conflict._cleanup_repair_worktree", cleanup_mock),
+        patch("cortex_command.pipeline.conflict._cleanup_repair_worktree", cleanup_mock),
         patch("subprocess.run", return_value=_make_subprocess_result(returncode=0)),
-        patch("claude.pipeline.merge.run_tests", run_tests_mock),
+        patch("cortex_command.pipeline.merge.run_tests", run_tests_mock),
     ):
         result = asyncio.run(resolve_trivial_conflict(
             feature=feature,
@@ -148,7 +148,7 @@ def test_resolve_trivial_conflict_worktree_failure() -> None:
     feature = "feat"
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               side_effect=ValueError("feature_branch_missing: pipeline/feat")),
         patch("subprocess.run", return_value=_make_subprocess_result(returncode=0)),
     ):
@@ -189,9 +189,9 @@ def test_resolve_trivial_conflict_continue_failure(tmp_path: Path) -> None:
     ]
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               return_value=(worktree, ["file.py"])),
-        patch("claude.pipeline.conflict._cleanup_repair_worktree", cleanup_mock),
+        patch("cortex_command.pipeline.conflict._cleanup_repair_worktree", cleanup_mock),
         patch("subprocess.run", side_effect=subprocess_side_effects),
     ):
         result = asyncio.run(resolve_trivial_conflict(
@@ -232,11 +232,11 @@ def test_resolve_trivial_conflict_test_failure(tmp_path: Path) -> None:
     )
 
     with (
-        patch("claude.pipeline.conflict._create_repair_worktree",
+        patch("cortex_command.pipeline.conflict._create_repair_worktree",
               return_value=(worktree, ["file.py"])),
-        patch("claude.pipeline.conflict._cleanup_repair_worktree", cleanup_mock),
+        patch("cortex_command.pipeline.conflict._cleanup_repair_worktree", cleanup_mock),
         patch("subprocess.run", return_value=_make_subprocess_result(returncode=0)),
-        patch("claude.pipeline.merge.run_tests", run_tests_mock),
+        patch("cortex_command.pipeline.merge.run_tests", run_tests_mock),
     ):
         result = asyncio.run(resolve_trivial_conflict(
             feature=feature,
@@ -283,10 +283,10 @@ def test_execute_feature_routes_trivial_when_eligible(tmp_path: Path) -> None:
     repair_mock = AsyncMock()
 
     with (
-        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
-        patch("claude.overnight.feature_executor.save_state"),
-        patch("claude.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
-        patch("claude.overnight.feature_executor.dispatch_repair_agent", repair_mock),
+        patch("cortex_command.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("cortex_command.overnight.feature_executor.save_state"),
+        patch("cortex_command.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
+        patch("cortex_command.overnight.feature_executor.dispatch_repair_agent", repair_mock),
     ):
         result = asyncio.run(execute_feature(
             feature=feature,
@@ -333,10 +333,10 @@ def test_execute_feature_routes_repair_agent_when_hot_file(tmp_path: Path) -> No
     repair_mock = AsyncMock(return_value=repair_result)
 
     with (
-        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
-        patch("claude.overnight.feature_executor.save_state"),
-        patch("claude.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
-        patch("claude.overnight.feature_executor.dispatch_repair_agent", repair_mock),
+        patch("cortex_command.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("cortex_command.overnight.feature_executor.save_state"),
+        patch("cortex_command.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
+        patch("cortex_command.overnight.feature_executor.dispatch_repair_agent", repair_mock),
     ):
         result = asyncio.run(execute_feature(
             feature=feature,
@@ -372,11 +372,11 @@ def test_execute_feature_budget_exhausted_deferral(tmp_path: Path) -> None:
     deferral_mock = MagicMock()
 
     with (
-        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
-        patch("claude.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
-        patch("claude.overnight.feature_executor.dispatch_repair_agent", repair_mock),
-        patch("claude.overnight.feature_executor.write_deferral", deferral_mock),
-        patch("claude.overnight.feature_executor._next_escalation_n", return_value=1),
+        patch("cortex_command.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("cortex_command.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
+        patch("cortex_command.overnight.feature_executor.dispatch_repair_agent", repair_mock),
+        patch("cortex_command.overnight.feature_executor.write_deferral", deferral_mock),
+        patch("cortex_command.overnight.feature_executor._next_escalation_n", return_value=1),
     ):
         result = asyncio.run(execute_feature(
             feature=feature,
@@ -422,10 +422,10 @@ def test_execute_feature_trivial_fallthrough_to_repair_agent(tmp_path: Path) -> 
     repair_mock = AsyncMock(return_value=repair_result)
 
     with (
-        patch("claude.overnight.feature_executor.load_state", return_value=mock_state),
-        patch("claude.overnight.feature_executor.save_state"),
-        patch("claude.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
-        patch("claude.overnight.feature_executor.dispatch_repair_agent", repair_mock),
+        patch("cortex_command.overnight.feature_executor.load_state", return_value=mock_state),
+        patch("cortex_command.overnight.feature_executor.save_state"),
+        patch("cortex_command.overnight.feature_executor.resolve_trivial_conflict", resolve_mock),
+        patch("cortex_command.overnight.feature_executor.dispatch_repair_agent", repair_mock),
     ):
         result = asyncio.run(execute_feature(
             feature=feature,
