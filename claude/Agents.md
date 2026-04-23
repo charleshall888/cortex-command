@@ -20,7 +20,6 @@ These instructions apply to all projects on this machine.
 | Trigger | Read |
 |---------|------|
 | Modifying SKILL.md files, Agents.md, CLAUDE.md, or reference docs | `~/.claude/reference/context-file-authoring.md` and `~/.claude/reference/claude-skills.md` |
-| About to claim success, tests pass, build succeeds, bug fixed, or agent completed | `~/.claude/reference/verification-mindset.md` |
 | Deciding whether to dispatch agents in parallel | `~/.claude/reference/parallel-agents.md` |
 | Writing phase transition summaries, approval surfaces, or editing skill output instructions | `~/.claude/reference/output-floors.md` |
 

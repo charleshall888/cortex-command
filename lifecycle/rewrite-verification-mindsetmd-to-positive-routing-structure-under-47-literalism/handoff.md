@@ -109,7 +109,18 @@ among these, combines them, or names a different path):
 
 ---
 
-**User decision**:
+**User decision** (2026-04-23):
 
-<!-- User: write your decision here, including which intervention(s) you are
-     adopting (if any), scope, and any follow-up ticket identifiers you open. -->
+**None of the four candidate interventions are adopted, and the rail itself is removed.**
+
+The system architecture has evolved to rely on adversarial review agents — per Anthropic's harness-design-long-running-apps guidance — realized locally as `/critical-review`, orchestrator review at phase boundaries, and the final Review phase. Those layers are the primary safety net for verifying that work claims match reality; asking the *implementer* to also be self-critical via `verification-mindset.md` is redundant with that architecture.
+
+The two loading-obstruction mechanisms the diagnostic identified (skill-routing-bypass on the PR path; CLAUDE.md rule-competition on the commit path) are natural consequences of the system evolving past needing an implementer-side rail, without anyone having explicitly deprecated it. The ~1/5 natural fire rate the rail exhibited in R1 was providing false comfort rather than real coverage: it was present in context and pretending to protect low-ceremony interactive work, while actually not firing in exactly those flows.
+
+**Actions taken:**
+
+1. Deleted `claude/reference/verification-mindset.md` (the rail file) and its symlink at `~/.claude/reference/verification-mindset.md`.
+2. Removed the "About to claim success…" conditional-load row from `claude/Agents.md` (symlinked to `~/.claude/CLAUDE.md`), eliminating the trigger that referenced the deleted file and simultaneously eliminating the rule-competition with "Always Use the `/commit` Skill".
+3. No new backlog items opened. The four candidate interventions (PreToolUse hook, verification injection hook, skill-side Read-first prereq, CLAUDE.md rule-competition refactor) are all rendered moot by removal.
+
+**If the review architecture's coverage ever appears inadequate** (e.g., a low-ceremony flow is found to routinely ship unverified work because no reviewer fires), the correct response is to strengthen the review layer — not to reintroduce an implementer-side rail. This ticket's evidence shows implementer-side rails leak value via skill-routing and CLAUDE.md rule-competition; those same mechanisms would leak value from any future rail with the same shape.

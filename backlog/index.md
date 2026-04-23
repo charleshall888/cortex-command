@@ -4,14 +4,13 @@
 |-----|-------|--------|----------|------|------------|--------|------|
 | 128 | Install pre-commit hook rejecting main commits during overnight sessions | backlog | critical | feature | — | 126 | — |
 | 82 | Adapt harness to Opus 4.7 (prompt delta + capability adoption) | backlog | high | epic | — | — | — |
-| 100 | Rewrite verification-mindset.md to positive-routing structure under 4.7 literalism | backlog | high | feature | 88 | 82 | — |
 | 102 | Ship DR-5 SKILL.md-to-bin parity linter with zero existing violations | backlog | high | feature | 115 | 101 | — |
 | 103 | Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7) | backlog | high | feature | 115 | 101 | — |
 | 104 | Instrument skill-name on dispatch_start for per-skill pipeline aggregates | backlog | high | feature | 115 | 101 | — |
 | 105 | Extract /commit preflight into bin/commit-preflight | backlog | high | feature | 102, 103 | 101 | — |
 | 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | — |
 | 113 | Distribute cortex-command as cortex CLI + plugin marketplace | backlog | high | epic | — | — | — |
-| 114 | Build cortex CLI skeleton with uv tool install entry point | backlog | high | feature | — | 113 | — |
+| 114 | Build cortex CLI skeleton with uv tool install entry point | refined | high | feature | — | 113 | ✓ |
 | 115 | Rebuild overnight runner under cortex CLI | backlog | high | feature | 114, 117 | 113 | — |
 | 116 | Build MCP control-plane server with versioned runner IPC contract | backlog | high | feature | 115 | 113 | — |
 | 117 | Build cortex setup subcommand and retire shareable-install scaffolding | backlog | high | feature | 114 | 113 | — |
@@ -41,14 +40,13 @@
 
 ## Refined
 
+- **114** Build cortex CLI skeleton with uv tool install entry point
 
 ## Backlog
 
 - **128** Install pre-commit hook rejecting main commits during overnight sessions
 - **82** Adapt harness to Opus 4.7 (prompt delta + capability adoption)
-- **100** Rewrite verification-mindset.md to positive-routing structure under 4.7 literalism
 - **113** Distribute cortex-command as cortex CLI + plugin marketplace
-- **114** Build cortex CLI skeleton with uv tool install entry point
 - **135** Shared git index race between parallel Claude sessions causes wrong files to land in commits
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 - **86** Extend output-floors.md with M1 Subagent Disposition section
