@@ -511,13 +511,34 @@ Because field drift across consumers is possible, the template is the one place 
 
 ### Auth Resolution (apiKeyHelper and env-var fallback order)
 
-`runner.sh` resolves Anthropic authentication in a strict 4-step fallback order before spawning any subprocess. Each step short-circuits on success.
+Auth resolution is owned by the shared `claude/overnight/auth.py` module. Both the overnight entry point (`runner.sh`) and the daytime entry point (`daytime_pipeline.py`) delegate to this one module so they share one priority order, one sanitization rule, and one event schema — divergence between the two paths would be a silent correctness hazard.
 
-1. **`ANTHROPIC_API_KEY` already in the environment** — use it as-is and stop. This is the common CI/dev path.
-2. **`apiKeyHelper` configured in `~/.claude/settings.json` or `~/.claude/settings.local.json`** — execute the helper command and export its stdout as `ANTHROPIC_API_KEY`. This is the recommended path for machines that keep the key out of shell profiles.
-3. **No helper AND no `CLAUDE_CODE_OAUTH_TOKEN`** — try `~/.claude/personal-oauth-token`; if non-empty, export its contents as `CLAUDE_CODE_OAUTH_TOKEN`. This covers OAuth-style authentication for `claude -p` / SDK usage.
-4. **Fall through to keychain-backed auth** — print a warning and proceed; the first subprocess spawn may block on a macOS keychain-access prompt (see [Security and Trust Boundaries](#security-and-trust-boundaries)).
+The module resolves Anthropic authentication in a strict 4-step fallback order before any subprocess is spawned. Each step short-circuits on success.
 
-**Files**: `claude/overnight/runner.sh` (the fallback logic), `claude/pipeline/dispatch.py` (re-exports both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` into SDK subprocesses).
+1. **`ANTHROPIC_API_KEY` already in the environment** — use it as-is and stop. This is the common CI/dev path (vector: `env_preexisting`).
+2. **`apiKeyHelper` configured in `~/.claude/settings.json` or `~/.claude/settings.local.json`** — execute the helper command and export its stdout as `ANTHROPIC_API_KEY`. This is the recommended path for machines that keep the key out of shell profiles (vector: `api_key_helper`).
+3. **No helper AND no `CLAUDE_CODE_OAUTH_TOKEN`** — try `~/.claude/personal-oauth-token`; if non-empty, export its contents as `CLAUDE_CODE_OAUTH_TOKEN`. This covers OAuth-style authentication for `claude -p` / SDK usage (vector: `oauth_file`).
+4. **Fall through to keychain-backed auth** — print a warning and proceed; the first subprocess spawn may block on a macOS keychain-access prompt (see [Security and Trust Boundaries](#security-and-trust-boundaries)). Vector: `none`.
 
-Propagation: `dispatch.py` forwards both variables into SDK subprocesses. Note the asymmetry — `CLAUDE_CODE_OAUTH_TOKEN` works only for `claude -p` and the SDK; standalone tools (including most scripts invoked from within a task) still need `ANTHROPIC_API_KEY`. If a worker subprocess reports auth errors but the orchestrator is fine, inspect which variable is reaching it.
+**Files**: `claude/overnight/auth.py` (shared resolver — source of truth), `claude/overnight/runner.sh` (shell delegation), `claude/overnight/daytime_pipeline.py` (in-process delegation inside `run_daytime`), `claude/pipeline/dispatch.py` (re-exports both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` into SDK subprocesses).
+
+#### Shell entry point: three-exit-code contract
+
+`runner.sh` invokes the helper pre-venv via `python3 -m claude.overnight.auth --shell` and branches on the exit code:
+
+- **exit code 0** — vector resolved. Helper prints `export VAR=VALUE` to stdout; `runner.sh` `eval`s it. Warnings (if any) went to stderr.
+- **exit code 1** — no vector resolved. Helper printed a warning to stderr. `runner.sh` continues; the first SDK spawn may prompt for keychain access.
+- **exit code 2** — helper-internal failure (malformed `~/.claude/settings.json`, stdlib import regression, other deterministic defect inside the resolver itself). `runner.sh` logs `Error: auth helper internal failure` and exits immediately with status 2. User-environment issues (helper binary missing, helper timeout, helper non-zero exit) are NOT exit code 2 — those fall through to the next resolution step.
+
+#### Daytime entry point: deferred-event-emit pattern
+
+`daytime_pipeline.py::run_daytime` calls `ensure_sdk_auth` in-process rather than shelling out, because it runs inside an existing Python process and needs to classify a no-vector result as a `startup_failure` through the same try/except/finally path that writes `daytime-result.json`. The wiring runs in two phases because the event log path is not known at the moment auth resolves:
+
+- **Phase A** (first statement inside `run_daytime`'s try-block, before any other startup work): call `ensure_sdk_auth(event_log_path=None)`. This writes the credential into `os.environ` and returns the `auth_bootstrap` event dict without emitting it anywhere — no pipeline-events.log exists yet because the feature-scoped directory may not even be populated. A `vector == "none"` result is converted to a `RuntimeError` with `_terminated_via = "startup_failure"` so the outer `finally` writes `daytime-result.json` with the right classification.
+- **Phase B** (immediately after `build_config` returns and `pipeline_events_path` is known): append the buffered event dict to `pipeline_events_path` using `json.dumps(event) + "\n"`. This byte-matches `claude.pipeline.state.log_event` output, which is what the R7 byte-equivalence test locks in.
+
+Both phases use the same event payload (built once inside `ensure_sdk_auth` with `ts` first), so there is only ever one `auth_bootstrap` line per daytime run regardless of which phase writes it.
+
+#### Propagation
+
+`dispatch.py` forwards both variables into SDK subprocesses. Note the asymmetry — `CLAUDE_CODE_OAUTH_TOKEN` works only for `claude -p` and the SDK; standalone tools (including most scripts invoked from within a task) still need `ANTHROPIC_API_KEY`. If a worker subprocess reports auth errors but the orchestrator is fine, inspect which variable is reaching it.
