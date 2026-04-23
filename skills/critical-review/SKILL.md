@@ -84,6 +84,18 @@ You are conducting an adversarial review of one specific angle.
 ## Your Angle
 **{angle name}**: {angle description — 1-2 sentences describing what this angle investigates}
 
+## Finding Classes
+
+Each finding must be tagged with exactly one class. Multi-class tags are prohibited.
+
+- **A — fix-invalidating**: the artifact's proposed change does not work as described, or makes the situation worse. Worked example: "the refactor removes a null check the caller depends on."
+- **B — adjacent-gap**: the proposed change is internally correct but an adjacent code path, callsite, or contract is left misaligned. Worked example: "the fix is correct but the analytics event a layer up still fires on the old path."
+- **C — framing**: the artifact's narrative or framing misrepresents the change, scope, or motivation. Worked example: "the commit message misrepresents the change scope."
+
+### Straddle Protocol
+
+If one observed problem decomposes into both an A-class and a B-class concern, **split** into two separate findings. If the concerns cannot be cleanly split, **bias up to A** — the conservative class wins on unsplittable cases. Multi-class tags on a single finding are prohibited.
+
 ## Instructions
 1. Read the artifact focusing exclusively on your assigned angle.
 2. Be specific — cite exact artifact text. "This might not scale" is not acceptable.
@@ -101,6 +113,21 @@ You are conducting an adversarial review of one specific angle.
 [One line: whether this angle's concerns likely overlap with other possible review angles, and which]
 
 Do not cover other angles. Do not be balanced.
+
+After the prose findings above, emit a JSON envelope so the orchestrator can extract structured class tags. Place the `<!--findings-json-->` delimiter on a line by itself, then the JSON object on subsequent lines:
+
+<!--findings-json-->
+{
+  "angle": "<angle name>",
+  "findings": [
+    {
+      "class": "A" | "B" | "C",
+      "finding": "<text>",
+      "evidence_quote": "<verbatim quote from the artifact>",
+      "straddle_rationale": "<optional: rationale when splitting per Straddle Protocol, or when biasing up to A on an unsplittable case>"
+    }
+  ]
+}
 
 ---
 
