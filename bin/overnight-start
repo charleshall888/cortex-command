@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/.."
-RUNNER="$REPO_ROOT/claude/overnight/runner.sh"
+RUNNER="$REPO_ROOT/cortex_command/overnight/runner.sh"
 
 STATE_ARG="${1:-}"
 TIME_LIMIT="${2:-6}"

@@ -17,7 +17,7 @@ discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 
 ## Context from discovery
 
-The overnight orchestrator-round prompt (`claude/overnight/prompts/orchestrator-round.md:22-176`) reads 6–8 files per round: `escalations.jsonl`, per-feature `spec.md` and `plan.md`, `overnight-state.json`, `overnight-strategy.json`, session plan markdown.
+The overnight orchestrator-round prompt (`cortex_command/overnight/prompts/orchestrator-round.md:22-176`) reads 6–8 files per round: `escalations.jsonl`, per-feature `spec.md` and `plan.md`, `overnight-state.json`, `overnight-strategy.json`, session plan markdown.
 
 Round-2 quantification (the only data-rankable candidate): ~500–800 tokens of inline file reads per round, reducible to ~200 tokens via aggregated `bin/orchestrator-context` output. Savings: ~300–500 tokens + ~1 turn per round × 50–100 rounds/year.
 
@@ -31,9 +31,9 @@ Gated on ticket 104 (pipeline skill-name instrumentation) so the data-driven ROI
 
 ## Scope
 
-- Extend `claude/overnight/map_results.py` as a library with an aggregation function.
+- Extend `cortex_command/overnight/map_results.py` as a library with an aggregation function.
 - New CLI `bin/orchestrator-context <state-path>` emitting merged-context JSON.
-- Rewrite `claude/overnight/prompts/orchestrator-round.md` to invoke the CLI in place of the inline file reads.
+- Rewrite `cortex_command/overnight/prompts/orchestrator-round.md` to invoke the CLI in place of the inline file reads.
 - Validate: mid-round resume behavior unchanged (no regression).
 - Confirm ROI using 104's aggregator on at least one full overnight session before closing.
 

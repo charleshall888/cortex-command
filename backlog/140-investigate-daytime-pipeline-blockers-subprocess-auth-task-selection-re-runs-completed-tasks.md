@@ -19,7 +19,7 @@ areas: [overnight-runner]
 
 ## Context
 
-After `f1caec4` (CORTEX_WORKTREE_ROOT override) unblocked the `.claude/worktrees/` sandbox issue, end-to-end testing of `claude/overnight/daytime_pipeline.py` against lifecycle 100 surfaced two further blockers. Worktree creation, file checkout, PID write, and dispatch loop startup all succeed. Then the first task dispatch fails, pauses, and exits.
+After `f1caec4` (CORTEX_WORKTREE_ROOT override) unblocked the `.claude/worktrees/` sandbox issue, end-to-end testing of `cortex_command/overnight/daytime_pipeline.py` against lifecycle 100 surfaced two further blockers. Worktree creation, file checkout, PID write, and dispatch loop startup all succeed. Then the first task dispatch fails, pauses, and exits.
 
 ## Problem 1: Subprocess auth failure
 
@@ -37,7 +37,7 @@ brain_decision     action=pause reasoning="Brain agent unavailable"
 feature_paused     details.error="Task 2 failed after 2 attempts"
 ```
 
-The dispatch loop retries twice, then pauses. The subprocess auth resolution does not inherit from the parent session. The overnight runner (`claude/overnight/runner.sh`) must solve this problem to work unattended — compare launch contexts to see how auth is propagated there.
+The dispatch loop retries twice, then pauses. The subprocess auth resolution does not inherit from the parent session. The overnight runner (`cortex_command/overnight/runner.sh`) must solve this problem to work unattended — compare launch contexts to see how auth is propagated there.
 
 Possible lines of investigation:
 - Env vars the overnight runner sets before invoking the pipeline (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_*`, etc.)
@@ -48,7 +48,7 @@ Possible lines of investigation:
 
 The pipeline dispatched Task 2 (`"Capture baseline commit SHA and reference-file line counts"`) even though its Status field in `lifecycle/.../plan.md` reads `[x] complete`.
 
-`claude/pipeline/parser.py::_parse_field_status` (line 385) handles `[x]` correctly — its test suite is green. So the pipeline's task-selection path is either:
+`cortex_command/pipeline/parser.py::_parse_field_status` (line 385) handles `[x]` correctly — its test suite is green. So the pipeline's task-selection path is either:
 - Not calling `_parse_field_status` at all (uses a different code path)
 - Calling it but ignoring the `done` result
 - Reading a stale or different plan.md than the one on disk
@@ -60,7 +60,7 @@ The failing task in the events.log includes the `[x]` suffix I added to the head
 ```bash
 DAYTIME_DISPATCH_ID=$(python3 -c 'import uuid; print(uuid.uuid4().hex)') \
 CORTEX_WORKTREE_ROOT=$TMPDIR/cortex-worktrees \
-.venv/bin/python3 -m claude.overnight.daytime_pipeline \
+.venv/bin/python3 -m cortex_command.overnight.daytime_pipeline \
   --feature <lifecycle-slug-with-mixed-done-and-pending-tasks>
 ```
 

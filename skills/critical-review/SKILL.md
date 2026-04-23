@@ -252,7 +252,7 @@ Atomic write (only when `{feature}` resolved AND ≥1 B-class finding) — inlin
 ```bash
 python3 -c "
 import json, sys; sys.path.insert(0, '$REPO_ROOT')
-from claude.common import atomic_write
+from cortex_command.common import atomic_write
 from pathlib import Path
 atomic_write(Path('$REPO_ROOT')/'lifecycle'/'$FEATURE'/'critical-review-residue.json',
              json.dumps(json.loads(sys.stdin.read()), indent=2)+'\n')

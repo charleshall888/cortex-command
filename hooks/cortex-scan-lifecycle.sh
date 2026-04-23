@@ -376,7 +376,7 @@ fi
 # --- Regenerate and inject metrics summary ---
 
 if [[ -n "$active_feature" ]] && command -v python3 &>/dev/null; then
-  python3 -m claude.pipeline.metrics --root "$CWD" >/dev/null 2>&1 || true
+  python3 -m cortex_command.pipeline.metrics --root "$CWD" >/dev/null 2>&1 || true
 
   METRICS_FILE="$LIFECYCLE_DIR/metrics.json"
   if [[ -f "$METRICS_FILE" ]]; then

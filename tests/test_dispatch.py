@@ -14,10 +14,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 # Install the SDK stub before importing dispatch.
-from claude.tests._stubs import _install_sdk_stub
+from cortex_command.tests._stubs import _install_sdk_stub
 _install_sdk_stub()
 
-import claude.pipeline.dispatch as _dispatch_module  # noqa: E402
+import cortex_command.pipeline.dispatch as _dispatch_module  # noqa: E402
 
 _sdk = sys.modules["claude_agent_sdk"]
 ResultMessage = _sdk.ResultMessage
@@ -57,7 +57,7 @@ class TestBudgetExhaustedDispatchPath(unittest.TestCase):
                 async for m in _async_gen(msg):
                     yield m
 
-            with patch("claude.pipeline.dispatch.query", new=mock_query):
+            with patch("cortex_command.pipeline.dispatch.query", new=mock_query):
                 return await _dispatch_module.dispatch_task(
                     feature="budget-test",
                     task="do something",
@@ -114,8 +114,8 @@ class TestStderrAccumulatorIntegration(unittest.TestCase):
                 # Make this an async generator (required yield for the type).
                 yield  # pragma: no cover  -- never reached
 
-            with patch("claude.pipeline.dispatch.ClaudeAgentOptions", new=_CapturingOptions):
-                with patch("claude.pipeline.dispatch.query", new=mock_query):
+            with patch("cortex_command.pipeline.dispatch.ClaudeAgentOptions", new=_CapturingOptions):
+                with patch("cortex_command.pipeline.dispatch.query", new=mock_query):
                     return await _dispatch_module.dispatch_task(
                         feature="stderr-test",
                         task="do something",

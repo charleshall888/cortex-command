@@ -9,12 +9,12 @@ parent: 113
 tags: [distribution, cli, overnight-runner, overnight-layer-distribution]
 areas: [overnight-runner]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-23
 lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
 blocks: []
-blocked-by: [114, 117]
+blocked-by: [117]
 discovery_source: research/overnight-layer-distribution/research.md
 ---
 
@@ -24,10 +24,10 @@ discovery_source: research/overnight-layer-distribution/research.md
 
 **Framed as a rebuild, not a port.** Critical review of the decomposition surfaced that the original "port runner.sh under a Python entry point" framing understated scope by ~2.3×. Quantified surface:
 
-- `claude/overnight/runner.sh` is **1,362 lines** (codebase report claimed 600+)
-- `claude/overnight/*.py` is **~10,400 LOC across 22 modules**
-- `claude/pipeline/*.py` is **~5,500 LOC across 10 modules**
-- Tests: **~13,300 LOC across `claude/overnight/tests/` + `claude/pipeline/tests/`**
+- `cortex_command/overnight/runner.sh` is **1,362 lines** (codebase report claimed 600+)
+- `cortex_command/overnight/*.py` is **~10,400 LOC across 22 modules**
+- `cortex_command/pipeline/*.py` is **~5,500 LOC across 10 modules**
+- Tests: **~13,300 LOC across `cortex_command/overnight/tests/` + `cortex_command/pipeline/tests/`**
 - **50** inline Python snippets in runner.sh (grep for `python3 -c|python3 <<|python3 -m`)
 - **23** `REPO_ROOT` occurrences in runner.sh alone
 - **25** atomic-write sites (`os.replace | NamedTemporaryFile`) across 7 files
@@ -46,10 +46,10 @@ Shared contracts with 117 (`cortex setup`): runner.sh hard-codes `~/.claude/noti
 - Preserve today's load-bearing guarantees: atomic state writes (all 25 call sites), process-group management (the 4 `set -m` sites + `kill -- -$PID` watchdog), signal-based graceful shutdown at `trap cleanup SIGINT SIGTERM SIGHUP`
 - Update all 23 `REPO_ROOT` sites + `CORTEX_COMMAND_ROOT` + `$PYTHONPATH` assumptions to work under `uv tool install -e` semantics; decide whether bash remains as a subprocess or the orchestration layer becomes pure Python
 - Update the 50 inline Python snippets — each reads from `os.environ['REPO_ROOT']` or literal `~/.claude/...` paths that must be ported to package-resource semantics
-- **Unresolved design question for planning**: prompt template substitution at runner.sh:379-393 reads `$REPO_ROOT/claude/overnight/prompts/orchestrator-round.md` and does 6 `t.replace('{...}', ...)` calls with absolute paths. The prompt is handed to `claude -p` as stdin, so the paths it contains must still resolve on the host side (state, plan, events, session_dir). Which paths are "package-internal" (load via `importlib.resources`) vs. "user-repo-internal" (absolute paths on host filesystem)? The planning phase must answer this.
+- **Unresolved design question for planning**: prompt template substitution at runner.sh:379-393 reads `$REPO_ROOT/cortex_command/overnight/prompts/orchestrator-round.md` and does 6 `t.replace('{...}', ...)` calls with absolute paths. The prompt is handed to `claude -p` as stdin, so the paths it contains must still resolve on the host side (state, plan, events, session_dir). Which paths are "package-internal" (load via `importlib.resources`) vs. "user-repo-internal" (absolute paths on host filesystem)? The planning phase must answer this.
 - Update the 13 `~/.claude/notify.sh` call sites to use the deploy-resolution shape 117 establishes
 - Retire `bin/overnight-start`, `bin/overnight-status`, `bin/overnight-schedule` shim scripts (coordinate with 117's `just deploy-bin` retirement — these are linked call sites)
-- Test migration: ~13,300 LOC of tests in `claude/overnight/tests/` and `claude/pipeline/tests/` must stay green through the rebuild
+- Test migration: ~13,300 LOC of tests in `cortex_command/overnight/tests/` and `cortex_command/pipeline/tests/` must stay green through the rebuild
 
 ## Out of scope
 

@@ -33,7 +33,7 @@
 - **Verdict**: PASS
 
 ### Requirement 7: Background subprocess launch
-- **Expected**: Launch `python3 -m claude.overnight.daytime_pipeline --feature {slug}` in background with stdout/stderr redirected to `lifecycle/{feature}/daytime.log`, via Bash run_in_background=true.
+- **Expected**: Launch `python3 -m cortex_command.overnight.daytime_pipeline --feature {slug}` in background with stdout/stderr redirected to `lifecycle/{feature}/daytime.log`, via Bash run_in_background=true.
 - **Actual**: §1b.iv (lines 130–135) specifies the exact command with redirect `> lifecycle/{feature}/daytime.log 2>&1` and `run_in_background: true`.
 - **Verdict**: PASS
 
@@ -63,7 +63,7 @@
 - **Verdict**: PASS
 
 ### Requirement 13: Integration test for CLI invocation
-- **Expected**: Test verifies skill invokes `python3 -m claude.overnight.daytime_pipeline --feature {slug}` with no extra flags beyond `--feature`.
+- **Expected**: Test verifies skill invokes `python3 -m cortex_command.overnight.daytime_pipeline --feature {slug}` with no extra flags beyond `--feature`.
 - **Actual**: `test_skill_contracts` (lines 315–403) checks invocation string presence AND absence of `--tier`, `--criticality`, `--base-branch`, `--test-command` on that line; grep pattern from spec acceptance matches.
 - **Verdict**: PASS
 

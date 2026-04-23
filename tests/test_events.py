@@ -1,7 +1,7 @@
 """Regression tests for dead-code cleanup: judgment.md and JUDGMENT_FAILED removal.
 
 Ensures three cleanup deliverables remain enforced:
-  (1) claude/overnight/prompts/judgment.md is deleted
+  (1) cortex_command/overnight/prompts/judgment.md is deleted
   (2) JUDGMENT_FAILED is no longer an attribute of the events module
   (3) log_event("judgment_failed", ...) raises ValueError
 
@@ -16,15 +16,15 @@ from pathlib import Path
 
 import pytest
 
-from claude.overnight import events
-from claude.overnight.events import EVENT_TYPES, log_event
+from cortex_command.overnight import events
+from cortex_command.overnight.events import EVENT_TYPES, log_event
 
 REPO_ROOT = Path(__file__).parent.parent
 
 
 def test_judgment_md_deleted():
     """judgment.md must not exist in the repository."""
-    assert not (REPO_ROOT / "claude/overnight/prompts/judgment.md").exists()
+    assert not (REPO_ROOT / "cortex_command/overnight/prompts/judgment.md").exists()
 
 
 def test_judgment_failed_constant_removed():
@@ -40,7 +40,7 @@ def test_judgment_failed_raises_value_error(tmp_path):
 
 def test_all_log_event_calls_registered():
     """Every string-literal log_event call in overnight files must use a registered type."""
-    overnight_dir = REPO_ROOT / "claude" / "overnight"
+    overnight_dir = REPO_ROOT / "cortex_command" / "overnight"
 
     # Patterns for extracting string-literal event type arguments
     sh_pattern = re.compile(r'log_event "([^"]+)"')

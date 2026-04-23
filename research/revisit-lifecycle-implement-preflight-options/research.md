@@ -28,7 +28,7 @@ This is a correction from the first-draft version of the artifact, which applied
 | # | Option | Dispatch mechanism | Recommended today |
 |---|--------|-------------------|--------------------|
 | 1 | Implement in worktree | `Agent(isolation: "worktree")` — single agent, sequential inline per-task dispatch | **Yes (current default)** |
-| 2 | Implement in autonomous worktree | `python3 -m claude.overnight.daytime_pipeline` as background subprocess; reuses overnight machinery for per-task fresh context | No |
+| 2 | Implement in autonomous worktree | `python3 -m cortex_command.overnight.daytime_pipeline` as background subprocess; reuses overnight machinery for per-task fresh context | No |
 | 3 | Implement on main | Trunk-based; edits land on `main` directly | No |
 | 4 | Create feature branch | `git checkout -b feature/{slug}`; PR-based | No |
 

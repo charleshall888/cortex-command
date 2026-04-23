@@ -1,4 +1,4 @@
-"""Unit tests for claude.common utility functions: read_tier and requires_review.
+"""Unit tests for cortex_command.common utility functions: read_tier and requires_review.
 
 Tests cover:
   - read_tier: existing events.log with tier field, empty file,
@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from claude.common import mark_task_done_in_plan, read_tier, requires_review
+from cortex_command.common import mark_task_done_in_plan, read_tier, requires_review
 
 
 # ---------------------------------------------------------------------------

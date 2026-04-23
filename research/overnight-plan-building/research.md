@@ -112,7 +112,7 @@ runner.sh (main loop)
 │
 ├─ Pre-round: interrupt recovery, worktree validation
 │
-├─ NEW: python3 -m claude.overnight.plan_generator
+├─ NEW: python3 -m cortex_command.overnight.plan_generator
 │  ├─ Load state, filter features for this round
 │  ├─ For each feature with missing plan_path:
 │  │   ├─ Validate spec_path exists (hard-fail if not)

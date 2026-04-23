@@ -17,7 +17,7 @@ Implement the `areas:` field as a hard area-separation constraint in the overnig
   - `parse_backlog_dir()` constructs `BacklogItem` at `backlog.py:~267–289` using `fm.get(...)` calls. Add: `areas=_parse_inline_str_list(fm.get("areas", "[]"))`. The `_parse_inline_str_list()` utility is already defined at `backlog.py:~154` — use the same utility as for `tags`.
   - `load_from_index()` constructs `BacklogItem` at `backlog.py:~308–332` from a JSON dict. Add: `areas=entry.get("areas") or []`.
   - `backlog/generate_index.py` outputs a dict per backlog item at `~line 125` where `"tags": _parse_inline_str_list(fm.get("tags", "[]"))` already exists. Add an adjacent line: `"areas": _parse_inline_str_list(fm.get("areas", "[]"))`. The `_parse_inline_str_list` function is imported/defined in that file already (it handles inline YAML arrays like `[foo, bar]`).
-- **Verification**: Run `python3 -c "from claude.overnight.backlog import BacklogItem; b = BacklogItem(); assert b.areas == []"` to confirm the default. Run `python3 backlog/generate_index.py` and check that `backlog/index.json` entries include an `"areas"` key (value `[]` for items without the field). Run existing tests to confirm no regressions: `python3 -m pytest tests/test_select_overnight_batch.py -x`.
+- **Verification**: Run `python3 -c "from cortex_command.overnight.backlog import BacklogItem; b = BacklogItem(); assert b.areas == []"` to confirm the default. Run `python3 backlog/generate_index.py` and check that `backlog/index.json` entries include an `"areas"` key (value `[]` for items without the field). Run existing tests to confirm no regressions: `python3 -m pytest tests/test_select_overnight_batch.py -x`.
 - **Status**: [x] complete
 
 ---

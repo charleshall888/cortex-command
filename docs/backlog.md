@@ -114,7 +114,7 @@ Runs `generate-backlog-index` to regenerate `backlog/index.md` and `backlog/inde
 
 ## Overnight Readiness Gates
 
-Before an item is eligible for overnight execution, `filter_ready()` in `claude/overnight/backlog.py` applies five checks in order. An item fails at the first gate it does not pass.
+Before an item is eligible for overnight execution, `filter_ready()` in `cortex_command/overnight/backlog.py` applies five checks in order. An item fails at the first gate it does not pass.
 
 **Gate 1 — Status.** The item's `status` must be one of the eligible values: `backlog`, `in_progress`, `implementing`, or `refined`. Items in any other status (including `complete`, `abandoned`, `review`) are excluded.
 
@@ -248,7 +248,7 @@ BACKLOG_DIR = Path.cwd() / "backlog"
 
 This document describes the backlog system as implemented at the time of writing. When any of the following change, update this document:
 
-- `claude/overnight/backlog.py` — changes to `ELIGIBLE_STATUSES`, `TERMINAL_STATUSES`, or `filter_ready()` gate logic
+- `cortex_command/overnight/backlog.py` — changes to `ELIGIBLE_STATUSES`, `TERMINAL_STATUSES`, or `filter_ready()` gate logic
 - `skills/backlog/references/schema.md` — additions or removals from the frontmatter schema
 - `skills/backlog/SKILL.md` — new subcommands or changed subcommand behavior
 - `backlog/update_item.py` — changes to the CLI interface or side-effect behavior

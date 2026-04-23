@@ -11,7 +11,7 @@ Read `lifecycle/{feature}/plan.md` and identify pending tasks (those with `[ ]`)
 **Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with three options:
 
 - **Implement on current branch** (recommended) — trunk-based workflow, changes land directly on the current branch. **When to pick**: tiny, trunk-safe changes where a branch would be overhead.
-- **Implement in autonomous worktree** — dispatch to the daytime pipeline (`python3 -m claude.overnight.daytime_pipeline`) which runs the full implement → review → complete cycle headlessly in the background without requiring live steering; note that uncommitted changes remain on main and do not travel to the worktree. **When to pick**: medium/many-task/no-live-steering-needed features where you want to kick off a longer autonomous run and move on. Proceeds to §1a below.
+- **Implement in autonomous worktree** — dispatch to the daytime pipeline (`python3 -m cortex_command.overnight.daytime_pipeline`) which runs the full implement → review → complete cycle headlessly in the background without requiring live steering; note that uncommitted changes remain on main and do not travel to the worktree. **When to pick**: medium/many-task/no-live-steering-needed features where you want to kick off a longer autonomous run and move on. Proceeds to §1a below.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
 **Uncommitted-changes guard**: Immediately before the `AskUserQuestion` call, run `git status --porcelain` (no path filter, no additional flags). If non-empty output is returned, the option that keeps the user on the current branch is demoted in place: (a) prepend the fixed warning `Warning: uncommitted changes in working tree — this will mix them into the commit on main.` as a one-line prefix to that option's description, and (b) strip the `(recommended)` suffix from that option's label if present. The option remains selectable and stays at its existing position — no removal, no gating pre-question. If `git status --porcelain` exits non-zero (e.g., missing `.git`, corrupt index, bisect/rebase state), the guard does not fire — neither the demotion nor the warning prefix are applied — a single-line diagnostic `uncommitted-changes guard skipped: git status failed` is surfaced alongside the prompt, and the pre-flight continues normally as a fallback.
@@ -68,7 +68,7 @@ This writes `lifecycle/{feature}/daytime-dispatch.json` with `pid: null` using t
 **Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed:
 
 ```
-DAYTIME_DISPATCH_ID={uuid} python3 -m claude.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
+DAYTIME_DISPATCH_ID={uuid} python3 -m cortex_command.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
 ```
 
 The subprocess is responsible for writing `lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID file — it only reads it.
@@ -103,7 +103,7 @@ This ensures the on-disk dispatch file reflects the actual subprocess PID for li
 **vii. Result surfacing.** Invoke the `daytime_result_reader` helper module — the canonical classification logic — via a single Bash call:
 
 ```
-python3 -m claude.overnight.daytime_result_reader --feature {slug}
+python3 -m cortex_command.overnight.daytime_result_reader --feature {slug}
 ```
 
 The helper implements the full 3-tier fallback (Tier 1: `daytime-result.json` + freshness check against `daytime-dispatch.json`; Tier 2: `daytime-state.json` phase discrimination; Tier 3: `outcome: "unknown"` with discriminated message) and prints a JSON dict to stdout. The skill MAY cache the dispatch UUID in conversation memory for speed, but `daytime-dispatch.json` on disk is authoritative — the helper reads it directly, so a re-entered skill after compaction or process restart recovers the active dispatch identity without trusting in-memory state.

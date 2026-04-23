@@ -12,7 +12,7 @@ Add one-shot overnight scheduling via a new `bin/overnight-schedule` bash script
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: `OvernightState` is defined at `claude/overnight/state.py:154`. The field goes after `integration_worktrees` (line 210). In `load_state()` (line 275), add `scheduled_start=raw.get("scheduled_start")` to the return statement at line 321. Follow the existing pattern used by `paused_reason`, `worktree_path`, and other Optional fields — all use `raw.get()` for backward compatibility.
-- **Verification**: `python3 -c "from claude.overnight.state import OvernightState; s = OvernightState(); print(s.scheduled_start)"` — pass if output is `None`
+- **Verification**: `python3 -c "from cortex_command.overnight.state import OvernightState; s = OvernightState(); print(s.scheduled_start)"` — pass if output is `None`
 - **Status**: [x] complete
 
 ### Task 2: Create `bin/overnight-schedule` — full script with self-dispatch architecture
@@ -117,7 +117,7 @@ End-to-end verification after all tasks:
 2. **Usage output**: `overnight-schedule` (no args) prints usage and exits 1
 3. **Validation**: `overnight-schedule 25:99` exits 1 with format error
 4. **ISO format**: `overnight-schedule 2099-01-01T00:00` exits 1 with ">7 days" error
-5. **State schema**: `python3 -c "from claude.overnight.state import OvernightState; print(OvernightState().scheduled_start)"` prints `None`
+5. **State schema**: `python3 -c "from cortex_command.overnight.state import OvernightState; print(OvernightState().scheduled_start)"` prints `None`
 6. **Justfile recipe**: `just --list | grep overnight-schedule` shows the recipe
 7. **Check-symlinks**: `just check-symlinks` passes with no failures for `overnight-schedule`
 8. **Test suite**: `just test` passes

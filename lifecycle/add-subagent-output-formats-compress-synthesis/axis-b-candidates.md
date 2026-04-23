@@ -55,7 +55,7 @@ Baseline total: 4 matches across 4 files. Each match classified below.
 ### Match B1-2 — `skills/overnight/SKILL.md:248`
 
 - **Pattern matched**: `You must ` (multi-word imperative)
-- **Line**: `Scan $CORTEX_COMMAND_ROOT/lifecycle/sessions/*/overnight-state.json (sorted by modification time, most recent first) and load the first file whose phase is not complete using load_state(state_path=<path>) from claude.overnight.state. You must pass the explicit state_path argument — the default path points to a different location. This mirrors the runner's own auto-discovery logic and works correctly whether state was written by a sandboxed or non-sandboxed session.`
+- **Line**: `Scan $CORTEX_COMMAND_ROOT/lifecycle/sessions/*/overnight-state.json (sorted by modification time, most recent first) and load the first file whose phase is not complete using load_state(state_path=<path>) from cortex_command.overnight.state. You must pass the explicit state_path argument — the default path points to a different location. This mirrors the runner's own auto-discovery logic and works correctly whether state was written by a sandboxed or non-sandboxed session.`
 - **Context**: Prose paragraph in `### Step 1: Load Existing State` under `## Resume Flow`. Not inside a code fence or indented block — free prose.
 - **Exclusion category**: none apply
   - Not inside a code fence (Cat 1): prose paragraph at top-level `### Step 1`, no backticks around it.

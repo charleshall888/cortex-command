@@ -27,7 +27,7 @@ When a feature is paused due to a merge conflict, the morning report currently s
 
 The data needed is already present: `batch_runner.py:_apply_feature_result()` writes a `merge_conflict_classified` event with `details.conflicted_files` (list) and `details.conflict_summary` (human-readable string) to the event log. `collect_report_data()` in `report.py` already loads all events into `data.events`. The `_render_failed_features()` function already iterates `data.events` to count retries — the data is in memory, just not extracted.
 
-Key files: `claude/overnight/report.py`, `claude/overnight/batch_runner.py`
+Key files: `cortex_command/overnight/report.py`, `cortex_command/overnight/batch_runner.py`
 
 ## Findings
 

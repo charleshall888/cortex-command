@@ -17,12 +17,12 @@ from pathlib import Path
 import pytest
 
 from backlog.update_item import update_item
-from claude.overnight.report import (
+from cortex_command.overnight.report import (
     NewBacklogItem,
     ReportData,
     create_followup_backlog_items,
 )
-from claude.overnight.state import OvernightFeatureStatus, OvernightState
+from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -86,7 +86,7 @@ def test_update_item_writes_to_passed_backlog_dir(tmp_path: Path):
 
 def test_write_back_to_backlog_routes_to_worktree(tmp_path: Path, monkeypatch):
     """outcome_router._write_back_to_backlog writes to worktree, not home."""
-    from claude.overnight import outcome_router
+    from cortex_command.overnight import outcome_router
 
     worktree_backlog = tmp_path / "worktree" / "backlog"
     _mk_item(worktree_backlog, "001-test-feature", status="refined",

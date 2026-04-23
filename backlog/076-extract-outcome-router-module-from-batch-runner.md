@@ -22,7 +22,7 @@ criticality: high
 ## Scope
 
 Extract feature-result routing and policy from `batch_runner.py` into a
-new module `claude/overnight/outcome_router.py` (~900–1000 LOC target).
+new module `cortex_command/overnight/outcome_router.py` (~900–1000 LOC target).
 Phase 2 of the three-phase batch_runner decomposition.
 
 ## What moves

@@ -83,13 +83,13 @@ tests/
   pressure_runner.py         Pressure scenario runner (dispatches claude -p subagents)
   failure_matrix.py          Transition failure matrix script
 
-claude/overnight/tests/      Overnight runner module tests (pytest)
+cortex_command/overnight/tests/      Overnight runner module tests (pytest)
   test_overnight_readiness.py  Backlog readiness gate tests
   test_overnight_state.py      OvernightFeatureStatus tests
   test_report.py               render_completed_features tests
   test_strategy.py             load/save strategy tests
 
-claude/pipeline/tests/       Pipeline module tests (pytest)
+cortex_command/pipeline/tests/       Pipeline module tests (pytest)
   test_conflict_classifier.py  classify_conflict() tests
   test_trivial_conflict.py     resolve_trivial_conflict() and execute_feature() tests
   test_repair_agent.py         dispatch_repair_agent() tests

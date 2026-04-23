@@ -148,7 +148,7 @@ Both were deferred from #052 to this ticket with the instruction: "verify line c
 
 Any edit must preserve these cross-skill and cross-system contracts:
 
-- **`events.log` schema**: event type names (`phase_transition`, `lifecycle_start`, `complexity_override`, `criticality_override`, `clarify_critic`, `feature_complete`, `review_verdict`, `orchestrator_review`, `batch_dispatch`, `task_complete`, etc.) and field names. Consumed by `claude/overnight/report.py` and `claude/pipeline/metrics.py`. Do not rewrite event emission instructions in a way that changes the event JSON.
+- **`events.log` schema**: event type names (`phase_transition`, `lifecycle_start`, `complexity_override`, `criticality_override`, `clarify_critic`, `feature_complete`, `review_verdict`, `orchestrator_review`, `batch_dispatch`, `task_complete`, etc.) and field names. Consumed by `cortex_command/overnight/report.py` and `cortex_command/pipeline/metrics.py`. Do not rewrite event emission instructions in a way that changes the event JSON.
 - **Dashboard input files**: `overnight-state.json`, `pipeline-events.log`, per-feature `events.log`, `plan.md`, `active-session.json`. Schemas are load-bearing.
 - **Morning review**: reads `phase_transition` event types and `from`/`to` fields from events.log. Does NOT read narrative content, but still expects the event structure.
 - **Deferral file schema**: severity / context / question / options / action / default.
@@ -160,8 +160,8 @@ Any edit must preserve these cross-skill and cross-system contracts:
 ## Out of scope (do not touch)
 
 - Any SKILL.md files outside the 9 listed above
-- Hooks (`hooks/`), settings (`claude/settings.json`), statusline, dashboard (`claude/dashboard/`), notification scripts
-- Overnight runner code (`claude/overnight/`, `claude/pipeline/`)
+- Hooks (`hooks/`), settings (`claude/settings.json`), statusline, dashboard (`cortex_command/dashboard/`), notification scripts
+- Overnight runner code (`cortex_command/overnight/`, `cortex_command/pipeline/`)
 - Requirements docs (`requirements/`)
 - `claude/reference/output-floors.md` — editing there shifts requirements, not trims
 - `tests/`, `bin/`

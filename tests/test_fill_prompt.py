@@ -1,4 +1,4 @@
-"""Exercise the real fill_prompt() shell function from claude/overnight/runner.sh.
+"""Exercise the real fill_prompt() shell function from cortex_command/overnight/runner.sh.
 
 The function is extracted and sourced in isolation so runner.sh's top-level
 script initialization (arg parsing, state-JSON reads, realpath on STATE_PATH)
@@ -13,8 +13,8 @@ import subprocess
 from pathlib import Path
 
 REAL_REPO_ROOT = Path(__file__).resolve().parent.parent
-RUNNER_SH = REAL_REPO_ROOT / "claude" / "overnight" / "runner.sh"
-PROMPT_TEMPLATE = REAL_REPO_ROOT / "claude" / "overnight" / "prompts" / "orchestrator-round.md"
+RUNNER_SH = REAL_REPO_ROOT / "cortex_command" / "overnight" / "runner.sh"
+PROMPT_TEMPLATE = REAL_REPO_ROOT / "cortex_command" / "overnight" / "prompts" / "orchestrator-round.md"
 
 
 def _extract_fill_prompt(runner_path: Path) -> str:

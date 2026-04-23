@@ -14,7 +14,7 @@ Two-track decomposition of the spec's 15 requirements. **Auth track** (Tasks 1�
 - **Context**:
   - **First module line must be `from __future__ import annotations`** — defers annotation evaluation so PEP 604 union syntax (`X | None`) does not crash on Python 3.9. The helper is invokable pre-venv (spec R2: "succeeds with `PYTHONPATH=$REPO_ROOT` with NO venv active"); stock macOS `/usr/bin/python3` is 3.9, so runtime annotation evaluation must not fail there.
   - Public API: `def ensure_sdk_auth(event_log_path: pathlib.Path | None = None) -> dict` returning `{"vector": str, "message": str, "event": dict}`. Vector values: `"env_preexisting" | "api_key_helper" | "oauth_file" | "none"`.
-  - Public API: `def resolve_auth_for_shell() -> int` invoked via `python3 -m claude.overnight.auth --shell`; prints `export VAR=VALUE` to stdout (VALUE through `shlex.quote()`), warning to stderr; exit codes 0=resolved, 1=no-vector, 2=helper-internal-failure.
+  - Public API: `def resolve_auth_for_shell() -> int` invoked via `python3 -m cortex_command.overnight.auth --shell`; prints `export VAR=VALUE` to stdout (VALUE through `shlex.quote()`), warning to stderr; exit codes 0=resolved, 1=no-vector, 2=helper-internal-failure.
   - Stdlib-only imports allowed: `json`, `os`, `pathlib`, `re`, `shlex`, `subprocess`, `sys`, `datetime`, `time`. No `claude_agent_sdk`, no `requests`, no third-party deps (R3 enforces this).
   - **Home-directory lookup must use `pathlib.Path.home()`** — NOT `os.path.expanduser`, NOT direct `$HOME` reads. This pins a single API surface so test fixtures using `monkeypatch.setattr(pathlib.Path, "home", ...)` cover every lookup site.
   - Sanitization: `re.sub(r'sk-ant-[a-zA-Z0-9_-]+', 'sk-ant-<redacted>', text)` applied to all message content, including helper subprocess stderr and exception `repr()`.
@@ -26,7 +26,7 @@ Two-track decomposition of the spec's 15 requirements. **Auth track** (Tasks 1�
   - apiKeyHelper subprocess call: `subprocess.run(parts, capture_output=True, text=True, timeout=5)` wrapped in `try/except (subprocess.TimeoutExpired, FileNotFoundError, OSError, json.JSONDecodeError)` per Edge Cases. Timeout/empty/non-zero falls through to oauth-file branch (NOT exit 2).
   - Malformed `~/.claude/settings.json` → exit 2 (helper-internal failure) per Edge Cases.
   - No side effects at import time — all work happens inside the two entry-point functions.
-- **Verification**: `python3 -c "from claude.overnight import auth; assert callable(auth.ensure_sdk_auth) and callable(auth.resolve_auth_for_shell)"` — pass if exit 0. AND `grep -E '^(import|from) ' claude/overnight/auth.py | grep -Ev '^(import|from) (__future__|json|os|pathlib|re|shlex|subprocess|sys|datetime|time|argparse|typing|claude\.pipeline\.state)( |$)'` — pass if exit code = 1 (grep finds nothing matching the disallowed pattern). The allow-list enumerates every module the helper may import; any unlisted import surfaces as a non-empty grep match (exit 0), which fails verification.
+- **Verification**: `python3 -c "from cortex_command.overnight import auth; assert callable(auth.ensure_sdk_auth) and callable(auth.resolve_auth_for_shell)"` — pass if exit 0. AND `grep -E '^(import|from) ' claude/overnight/auth.py | grep -Ev '^(import|from) (__future__|json|os|pathlib|re|shlex|subprocess|sys|datetime|time|argparse|typing|claude\.pipeline\.state)( |$)'` — pass if exit code = 1 (grep finds nothing matching the disallowed pattern). The allow-list enumerates every module the helper may import; any unlisted import surfaces as a non-empty grep match (exit 0), which fails verification.
 - **Status**: [x] complete
 
 ### Task 2: Comprehensive `test_auth.py` suite
@@ -49,14 +49,14 @@ Two-track decomposition of the spec's 15 requirements. **Auth track** (Tasks 1�
 
 ### Task 3: Refactor `runner.sh` auth block to delegate to helper
 - **Files**: `claude/overnight/runner.sh`
-- **What**: Replace `runner.sh:42-87` (current auth resolution heredoc) with the capture + case-statement pattern from spec R4, delegating all resolution logic to `python3 -m claude.overnight.auth --shell`.
+- **What**: Replace `runner.sh:42-87` (current auth resolution heredoc) with the capture + case-statement pattern from spec R4, delegating all resolution logic to `python3 -m cortex_command.overnight.auth --shell`.
 - **Depends on**: [1]
 - **Complexity**: simple
 - **Context**:
   - Replacement pattern (per R4 verbatim):
     ```bash
     set +e
-    _AUTH_STDOUT=$(python3 -m claude.overnight.auth --shell)
+    _AUTH_STDOUT=$(python3 -m cortex_command.overnight.auth --shell)
     _AUTH_EXIT=$?
     set -e
     case "$_AUTH_EXIT" in
@@ -68,8 +68,8 @@ Two-track decomposition of the spec's 15 requirements. **Auth track** (Tasks 1�
     ```
   - Preserve `set -euo pipefail` at line 18 unchanged.
   - All warning strings currently at `runner.sh:78` and `runner.sh:82` are removed from bash — they re-emit from `auth.py` via stderr per R1.
-  - `python3 -m claude.overnight.auth` must work pre-venv; `runner.sh` exports `PYTHONPATH=$REPO_ROOT` at line 40 before this block, so the module is importable.
-- **Verification**: `bash -n claude/overnight/runner.sh` — pass if exit 0 (syntax valid). AND `grep -c 'python3 -m claude.overnight.auth --shell' claude/overnight/runner.sh` — pass if count = 1. AND `grep -c '_API_KEY=$(python3' claude/overnight/runner.sh` — pass if count = 0 (old heredoc removed).
+  - `python3 -m cortex_command.overnight.auth` must work pre-venv; `runner.sh` exports `PYTHONPATH=$REPO_ROOT` at line 40 before this block, so the module is importable.
+- **Verification**: `bash -n claude/overnight/runner.sh` — pass if exit 0 (syntax valid). AND `grep -c 'python3 -m cortex_command.overnight.auth --shell' claude/overnight/runner.sh` — pass if count = 1. AND `grep -c '_API_KEY=$(python3' claude/overnight/runner.sh` — pass if count = 0 (old heredoc removed).
 - **Status**: [x] complete
 
 ### Task 4: Bash regression test for runner.sh auth block
@@ -81,7 +81,7 @@ Two-track decomposition of the spec's 15 requirements. **Auth track** (Tasks 1�
   - Test file location: `tests/test_runner_auth.sh` (project root, alongside `tests/test_hook_commit.sh`).
   - Pattern: `tests/test_hook_commit.sh` for shell-test layout (conftest-free, executable, exits 0/non-zero based on assertions).
   - Three scenarios (each runs the auth block in a subshell with controlled fixture env):
-    1. Success: stub `python3 -m claude.overnight.auth --shell` to print `export CLAUDE_CODE_OAUTH_TOKEN='abc'` and exit 0; after the block, assert `[[ "${CLAUDE_CODE_OAUTH_TOKEN}" == "abc" ]]`.
+    1. Success: stub `python3 -m cortex_command.overnight.auth --shell` to print `export CLAUDE_CODE_OAUTH_TOKEN='abc'` and exit 0; after the block, assert `[[ "${CLAUDE_CODE_OAUTH_TOKEN}" == "abc" ]]`.
     2. No-vector: stub the helper to exit 1 with empty stdout; assert subshell continues past the block (write a sentinel marker after the block, assert it's reached).
     3. Helper-internal failure: stub the helper to exit 2; assert the subshell aborts with exit 2 and prints "Error: auth helper internal failure" to stderr.
   - Helper stubbing pattern: prepend a fake `python3` script to PATH inside the subshell (`PATH=$tmpdir:$PATH`).
@@ -95,7 +95,7 @@ Two-track decomposition of the spec's 15 requirements. **Auth track** (Tasks 1�
 - **Depends on**: [1]
 - **Complexity**: complex
 - **Context**:
-  - Import: `from claude.overnight.auth import ensure_sdk_auth` at top of file.
+  - Import: `from cortex_command.overnight.auth import ensure_sdk_auth` at top of file.
   - **Phase A placement (load-bearing)**: Phase A is the first statement INSIDE the try-block at line 332 — i.e., the new line 333, displacing the existing plan-exists check to line 334+. Placement BEFORE the try-block is wrong: the only `except` handler that translates exceptions into `_terminated_via = "startup_failure"` lives at lines 456-464, and only fires for raises INSIDE the try; the only frame that writes `daytime-result.json` is the finally at lines 466-524, also bound to that try. Position-zero placement bypasses both. Placement AFTER the plan-exists check is also wrong — auth resolution must precede I/O so a missing auth vector is reported even when `plan.md` is also missing.
   - **State variables already exist**: `_top_exc` (line 323), `_terminated_via` (line 324), `_outcome` (line 325), `_startup_phase` (line 326) are all initialized BEFORE the try at line 332. Phase A inside the try sees them in scope. `start_ts` (line 319) and `dispatch_id` (line 320) are also bound BEFORE the try, so the finally's `DaytimeResult` constructor (lines 505-516) has everything it needs.
   - **Hard-fail control flow** (mirror lines 334-343 verbatim in shape):

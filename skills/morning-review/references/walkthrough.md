@@ -25,7 +25,7 @@ user sees. Do not ask questions or prompt for input during this step.
 No morning report found. No overnight session has been run yet, or the report was not
 generated. To generate one, run:
 
-    python3 -m claude.overnight.report
+    python3 -m cortex_command.overnight.report
 ```
 
 Then stop. Do not proceed to later sections.
@@ -561,7 +561,7 @@ while remote main has the PR merge commit. This step reconciles the two.
 
 1. Run:
    ```
-   git-sync-rebase.sh claude/overnight/sync-allowlist.conf
+   git-sync-rebase.sh cortex_command/overnight/sync-allowlist.conf
    ```
 
 2. Handle the exit code:
@@ -579,7 +579,7 @@ After this section, the review is complete.
 | Situation | Action |
 |-----------|--------|
 | No morning report at `lifecycle/morning-report.md` | Print missing-report message (Section 1) and stop |
-| `lifecycle/sessions/` exists but report is missing | Print "Incomplete session detected — report not generated. Run: `python3 -m claude.overnight.report`" and stop |
+| `lifecycle/sessions/` exists but report is missing | Print "Incomplete session detected — report not generated. Run: `python3 -m cortex_command.overnight.report`" and stop |
 | No completed features | Skip Sections 2, 2b, and 5 entirely |
 | No deferred question files | Skip Section 3 entirely |
 | No failed features | Skip Section 4 entirely |

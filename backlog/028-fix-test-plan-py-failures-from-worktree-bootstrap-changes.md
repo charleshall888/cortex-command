@@ -20,14 +20,14 @@ spec: lifecycle/fix-test-plan-py-failures-from-worktree-bootstrap-changes/spec.m
 
 ## Context
 
-Commit `1bd7bde` ("Fix worktree bootstrap to use correct repo and prune grace period") changed `claude/overnight/plan.py` to add `cwd=project_root` to `subprocess.run` calls and `--expire now` to `git worktree prune` calls. The three tests in `TestInitializeOvernightState` were not updated to match the new call signatures, leaving the test suite failing.
+Commit `1bd7bde` ("Fix worktree bootstrap to use correct repo and prune grace period") changed `cortex_command/overnight/plan.py` to add `cwd=project_root` to `subprocess.run` calls and `--expire now` to `git worktree prune` calls. The three tests in `TestInitializeOvernightState` were not updated to match the new call signatures, leaving the test suite failing.
 
 ## Failing tests
 
 ```
-claude/overnight/tests/test_plan.py::TestInitializeOvernightState::test_git_worktree_prune_called
-claude/overnight/tests/test_plan.py::TestInitializeOvernightState::test_git_worktree_add_called_with_correct_args
-claude/overnight/tests/test_plan.py::TestInitializeOvernightState::test_cross_repo_prune_called_with_cwd
+cortex_command/overnight/tests/test_plan.py::TestInitializeOvernightState::test_git_worktree_prune_called
+cortex_command/overnight/tests/test_plan.py::TestInitializeOvernightState::test_git_worktree_add_called_with_correct_args
+cortex_command/overnight/tests/test_plan.py::TestInitializeOvernightState::test_cross_repo_prune_called_with_cwd
 ```
 
 ## What broke

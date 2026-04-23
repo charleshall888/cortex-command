@@ -49,7 +49,7 @@ The two share a function name by accident. They are architecturally separate.
 
 ### LLM-side log_event precedent
 
-Exactly one LLM-side `log_event` call exists in the orchestrator prompt today: `orchestrator-round.md:295-313` (Step 4a, `FEATURE_FAILED` for batch_plan exclusions). Uses `from claude.overnight.events import FEATURE_FAILED, log_event` and `from claude.overnight.orchestrator_io import ...`. The `orchestrator_io.py` module is the sanctioned import surface for orchestrator-prompt-executed Python.
+Exactly one LLM-side `log_event` call exists in the orchestrator prompt today: `orchestrator-round.md:295-313` (Step 4a, `FEATURE_FAILED` for batch_plan exclusions). Uses `from cortex_command.overnight.events import FEATURE_FAILED, log_event` and `from cortex_command.overnight.orchestrator_io import ...`. The `orchestrator_io.py` module is the sanctioned import surface for orchestrator-prompt-executed Python.
 
 The pattern is **sanctioned but not battle-tested** — one call site with a small production sample.
 

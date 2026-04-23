@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
 [project]
 name = "cortex-command"
 version = "0.1.0"
@@ -10,8 +14,14 @@ dependencies = [
     "markdown",
 ]
 
+[project.scripts]
+cortex = "cortex_command.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cortex_command"]
+
 [tool.pytest.ini_options]
-testpaths = ["tests", "claude/dashboard/tests", "claude/pipeline/tests", "claude/overnight/tests"]
+testpaths = ["tests", "cortex_command/dashboard/tests", "cortex_command/pipeline/tests", "cortex_command/overnight/tests"]
 pythonpath = ["."]
 markers = [
     "slow: opt-in tests that invoke live models (use --run-slow to enable)",

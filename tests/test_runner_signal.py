@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 REAL_REPO_ROOT = Path(__file__).resolve().parent.parent
-RUNNER_SH = REAL_REPO_ROOT / "claude" / "overnight" / "runner.sh"
+RUNNER_SH = REAL_REPO_ROOT / "cortex_command" / "overnight" / "runner.sh"
 
 
 def _iso_now() -> str:
@@ -80,7 +80,7 @@ def runner_env(tmp_path: Path):
     mock_claude.chmod(mock_claude.stat().st_mode | stat.S_IEXEC)
 
     # (e) Orchestrator prompt template
-    prompt_dir = repo / "claude" / "overnight" / "prompts"
+    prompt_dir = repo / "cortex_command" / "overnight" / "prompts"
     prompt_dir.mkdir(parents=True)
     (prompt_dir / "orchestrator-round.md").write_text(
         "Round {round_number} prompt for {state_path}\n"
@@ -89,7 +89,7 @@ def runner_env(tmp_path: Path):
     # (f) Events log path — writable, inside session dir
     events_path = session_dir / "overnight-events.log"
 
-    # (g) PYTHONPATH pointing to real repo so claude.overnight.* imports resolve
+    # (g) PYTHONPATH pointing to real repo so cortex_command.overnight.* imports resolve
     env = os.environ.copy()
     env["REPO_ROOT"] = str(repo)
     env["HOME"] = str(tmp_path)

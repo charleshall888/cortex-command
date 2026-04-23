@@ -118,7 +118,7 @@ Current Step 2c block (`skills/critical-review/SKILL.md` lines 74–105): **30 c
   python3 -c "
   import json, sys, os
   sys.path.insert(0, '$REPO_ROOT')
-  from claude.common import atomic_write
+  from cortex_command.common import atomic_write
   from pathlib import Path
   payload = json.loads(sys.stdin.read())
   target = Path('$REPO_ROOT') / 'lifecycle' / '$FEATURE' / 'critical-review-residue.json'

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from claude.overnight.map_results import _map_results_to_state
+from cortex_command.overnight.map_results import _map_results_to_state
 
 
 _ISO_NOW = "2026-04-07T00:00:00+00:00"

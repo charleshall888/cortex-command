@@ -17,7 +17,7 @@ Background context lives in `research/implement-in-autonomous-worktree-overnight
 **New files:**
 - `claude/overnight/daytime_pipeline.py` (~150–200 LOC) — the driver module and CLI entry point
 
-  > **Note**: The backlog item says `claude/lifecycle/daytime_pipeline.py`, but `claude/lifecycle/` does not exist as a Python module directory. The correct home is `claude/overnight/`, alongside `feature_executor.py` and `outcome_router.py`. The CLI invocation `python3 -m claude.overnight.daytime_pipeline` replaces the backlog's proposed `python3 -m claude.lifecycle.daytime_pipeline`.
+  > **Note**: The backlog item says `claude/lifecycle/daytime_pipeline.py`, but `claude/lifecycle/` does not exist as a Python module directory. The correct home is `claude/overnight/`, alongside `feature_executor.py` and `outcome_router.py`. The CLI invocation `python3 -m cortex_command.overnight.daytime_pipeline` replaces the backlog's proposed `python3 -m claude.lifecycle.daytime_pipeline`.
 
 **Possibly modified:**
 - `claude/overnight/feature_executor.py` — only if deferral namespacing (DR-4) is implemented (see Open Question #1)
@@ -75,7 +75,7 @@ For a single-feature daytime run: `consecutive_pauses_ref=[0]`, `integration_wor
 ### CLI pattern to mirror (`batch_runner.py:408–456`)
 ```python
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="python3 -m claude.overnight.batch_runner", ...)
+    p = argparse.ArgumentParser(prog="python3 -m cortex_command.overnight.batch_runner", ...)
     p.add_argument("--plan", required=True)
     p.add_argument("--batch-id", type=int, required=True)
     p.add_argument("--events-path", default="lifecycle/sessions/latest-overnight/overnight-events.log")

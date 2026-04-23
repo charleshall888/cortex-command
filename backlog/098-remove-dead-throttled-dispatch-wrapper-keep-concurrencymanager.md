@@ -19,8 +19,8 @@ Delete the adaptive-rate-limit-backoff wrapper `throttled_dispatch()` and its su
 
 Surfaced while scoping #087 (baseline metrics for turns/cost). The #087 spec initially included rate-limit aggregation over `throttle_backoff` events. Critical review found:
 
-- `throttled_dispatch()` at `claude/overnight/throttle.py:206` has **zero call sites** in production code. `grep 'throttled_dispatch\(' claude/` returns only the definition.
-- `claude/overnight/brain.py:194-196` explicitly comments: *"Calls `dispatch_task` directly (not `throttled_dispatch`) because the `throttled_dispatch` would deadlock at MAX_5."* The wrapper was tried, broke things, and was swapped out for the simpler path.
+- `throttled_dispatch()` at `cortex_command/overnight/throttle.py:206` has **zero call sites** in production code. `grep 'throttled_dispatch\(' claude/` returns only the definition.
+- `cortex_command/overnight/brain.py:194-196` explicitly comments: *"Calls `dispatch_task` directly (not `throttled_dispatch`) because the `throttled_dispatch` would deadlock at MAX_5."* The wrapper was tried, broke things, and was swapped out for the simpler path.
 - Zero `throttle_backoff` events exist across all session pipeline-events.log files. Zero `infrastructure_failure` error_type events either.
 - Prior investigation at `lifecycle/replace-concurrency-cap-with-conflict-aware-round-scheduling/inner-task-investigation.md:57,91` independently reached the same conclusion.
 

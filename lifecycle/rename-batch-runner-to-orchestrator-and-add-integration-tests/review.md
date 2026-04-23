@@ -10,7 +10,7 @@
 
 ### R2: Move `BatchConfig` and `BatchResult` to `orchestrator.py`
 - **Expected**: Dataclasses live in orchestrator; batch_runner imports them.
-- **Actual**: `class BatchConfig` on orchestrator.py line 62, `class BatchResult` on line 88. `batch_runner.py` imports them via `from claude.overnight.orchestrator import BatchConfig, BatchResult, run_batch` (line 12). `grep -c "class BatchConfig"` orchestrator = 1, batch_runner = 0.
+- **Actual**: `class BatchConfig` on orchestrator.py line 62, `class BatchResult` on line 88. `batch_runner.py` imports them via `from cortex_command.overnight.orchestrator import BatchConfig, BatchResult, run_batch` (line 12). `grep -c "class BatchConfig"` orchestrator = 1, batch_runner = 0.
 - **Verdict**: PASS
 
 ### R3: Reduce `batch_runner.py` to thin CLI wrapper (≤50 LOC)
@@ -30,14 +30,14 @@
 - **Verdict**: PASS
 
 ### R6: Update all import sites to canonical locations
-- **Expected**: `grep -rn "from claude.overnight.batch_runner import" claude/` = 0.
-- **Actual**: One match remains: `claude/overnight/daytime_pipeline.py:25: from claude.overnight.batch_runner import BatchConfig`. `daytime_pipeline.py` is owned by a separate parallel lifecycle (#078) whose commits interleave with #077; it was added before orchestrator.py existed. All files listed in R6 and in the plan's Changed Files list are correctly migrated. The import still resolves because batch_runner re-exports via `from claude.overnight.orchestrator import BatchConfig, BatchResult, run_batch` (with `noqa: F401`).
+- **Expected**: `grep -rn "from cortex_command.overnight.batch_runner import" claude/` = 0.
+- **Actual**: One match remains: `claude/overnight/daytime_pipeline.py:25: from cortex_command.overnight.batch_runner import BatchConfig`. `daytime_pipeline.py` is owned by a separate parallel lifecycle (#078) whose commits interleave with #077; it was added before orchestrator.py existed. All files listed in R6 and in the plan's Changed Files list are correctly migrated. The import still resolves because batch_runner re-exports via `from cortex_command.overnight.orchestrator import BatchConfig, BatchResult, run_batch` (with `noqa: F401`).
 - **Verdict**: PARTIAL
 - **Notes**: Strict acceptance fails by 1 match in a cross-lifecycle file not in #077's scope. Non-blocking: the re-export means imports still work. Worth updating daytime_pipeline.py's import in a follow-up touch (it's a one-line change to use `claude.overnight.orchestrator`).
 
 ### R7: CLI invocation contract preserved
-- **Expected**: `python3 -m claude.overnight.batch_runner --help` exits 0; `from claude.overnight import BatchConfig, run_batch` works; `just test` passes.
-- **Actual**: `--help` prints usage correctly. `from claude.overnight import BatchConfig, run_batch` exits 0. `just test` reports `Test suite: 3/3 passed`.
+- **Expected**: `python3 -m cortex_command.overnight.batch_runner --help` exits 0; `from cortex_command.overnight import BatchConfig, run_batch` works; `just test` passes.
+- **Actual**: `--help` prints usage correctly. `from cortex_command.overnight import BatchConfig, run_batch` exits 0. `just test` reports `Test suite: 3/3 passed`.
 - **Verdict**: PASS
 
 ### R8: Add `test_orchestrator.py` with ≥5 IsolatedAsyncioTestCase integration tests
@@ -69,7 +69,7 @@
 - **Naming conventions**: Consistent. `CircuitBreakerState` follows the `FeatureResult` dataclass pattern in `types.py`. `cb_state` parameter name is used uniformly across orchestrator, feature_executor, and outcome_router. Module docstrings follow existing conventions.
 - **Error handling**: Matches the project pattern of `try/except Exception: pass` guards around state I/O inside `run_batch` (lines 150, 240, 371, 391) — consistent with pre-refactor behavior. The `# Don't let state-write failure abort the batch` comments document intent. Preserves graceful-partial-failure from project.md. The late-exception `gather` handler (lines 317–357) correctly re-invokes outcome_router for failures raised out of `_run_one`, including a guarded budget-exhaustion check.
 - **Test coverage**: All 5 R8 scenarios exercised; `autospec=True` used on both mandated mocks. Heartbeat test captures the task object via a spy on `create_task` and asserts `done()` and `cancelled()` post-return. Full test suite green (`just test` = 3/3 passed; `test_orchestrator` = 5/5; `test_lead_unit` = 48/48).
-- **Pattern consistency**: Uses `asyncio.Lock` + `asyncio.gather(return_exceptions=True)` + `create_task` for heartbeat — mirrors the pre-refactor control flow in batch_runner. TYPE_CHECKING import migration in `state.py`, `feature_executor.py`, `outcome_router.py`, and `conflict.py` uses the PEP 563 `from __future__ import annotations` pattern per spec Edge Cases. No circular imports introduced (verified by successful `from claude.overnight import BatchConfig, run_batch`).
+- **Pattern consistency**: Uses `asyncio.Lock` + `asyncio.gather(return_exceptions=True)` + `create_task` for heartbeat — mirrors the pre-refactor control flow in batch_runner. TYPE_CHECKING import migration in `state.py`, `feature_executor.py`, `outcome_router.py`, and `conflict.py` uses the PEP 563 `from __future__ import annotations` pattern per spec Edge Cases. No circular imports introduced (verified by successful `from cortex_command.overnight import BatchConfig, run_batch`).
 
 ## Verdict
 

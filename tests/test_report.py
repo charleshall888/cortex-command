@@ -16,17 +16,17 @@ from pathlib import Path
 
 import pytest
 
-from claude.common import atomic_write
-from claude.overnight.deferral import DeferralQuestion, SEVERITY_BLOCKING
-from claude.overnight.report import (
+from cortex_command.common import atomic_write
+from cortex_command.overnight.deferral import DeferralQuestion, SEVERITY_BLOCKING
+from cortex_command.overnight.report import (
     ReportData,
     generate_report,
     render_critical_review_residue,
     render_deferred_questions,
     render_failed_features,
 )
-from claude.overnight.state import OvernightFeatureStatus, OvernightState
-import claude.overnight.report as _report_mod
+from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
+import cortex_command.overnight.report as _report_mod
 
 
 class TestMergedFeatureAnnotations:

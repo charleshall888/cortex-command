@@ -49,7 +49,7 @@ Agentic workflow toolkit for AI-assisted software development. Defines the globa
 
 - Dotfiles and machine configuration (terminals, shells, prompts, fonts, git) — those belong in machine-config
 - Application code or libraries — those belong in their own repos
-- Published packages or reusable modules for others
+- Published packages or reusable modules for others — the `cortex` CLI ships as a local editable install (`uv tool install -e .`) for self-hosted use; publishing to PyPI or other registries is out of scope.
 - Setup automation for new machines (owned by machine-config)
 
 ### Deferred

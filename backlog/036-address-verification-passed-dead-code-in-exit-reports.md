@@ -21,7 +21,7 @@ areas: [overnight-runner]
 
 ## Problem
 
-The `verification_passed` boolean field is written by every builder agent in their exit reports (`claude/pipeline/prompts/implement.md` lines 81, 93, 104), but `_read_exit_report()` in `batch_runner.py` (lines 404-446) extracts only `action`, `reason`, and `question`. The field is never read by any Python code. This means an agent can report `verification_passed: false` while reporting `action: "complete"`, and the pipeline will mark the task as done regardless.
+The `verification_passed` boolean field is written by every builder agent in their exit reports (`cortex_command/pipeline/prompts/implement.md` lines 81, 93, 104), but `_read_exit_report()` in `batch_runner.py` (lines 404-446) extracts only `action`, `reason`, and `question`. The field is never read by any Python code. This means an agent can report `verification_passed: false` while reporting `action: "complete"`, and the pipeline will mark the task as done regardless.
 
 This creates a false impression that verification status is tracked when it is not. The field is dead code that looks like a safety gate.
 

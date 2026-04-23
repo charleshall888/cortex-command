@@ -35,7 +35,7 @@
 
 ### Critical Platform Finding: macOS Has No `setsid` CLI
 
-The `setsid(1)` command is part of `util-linux`, a **Linux-only** package. macOS has the `setsid(2)` system call but no shell-level wrapper. The backlog's proposed syntax (`setsid python3 -m claude.overnight.batch_runner ...`) will fail on stock macOS/Darwin.
+The `setsid(1)` command is part of `util-linux`, a **Linux-only** package. macOS has the `setsid(2)` system call but no shell-level wrapper. The backlog's proposed syntax (`setsid python3 -m cortex_command.overnight.batch_runner ...`) will fail on stock macOS/Darwin.
 
 ### `setsid` vs `setpgrp` — Key Distinction
 
@@ -87,7 +87,7 @@ The `setsid(1)` command is part of `util-linux`, a **Linux-only** package. macOS
 
 ```bash
 python3 -c "import os,sys; os.setpgid(0,0); os.execvp(sys.argv[1], sys.argv[1:])" \
-    python3 -m claude.overnight.batch_runner ... & BATCH_PID=$!
+    python3 -m cortex_command.overnight.batch_runner ... & BATCH_PID=$!
 ```
 
 Clean, explicit, portable. Slightly more verbose.

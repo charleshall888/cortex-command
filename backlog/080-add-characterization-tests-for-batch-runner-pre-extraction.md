@@ -56,7 +56,7 @@ by #075 and #076. Minimum targets:
 
 ## Fixtures
 
-Fixtures live under `claude/overnight/tests/fixtures/batch_runner/`
+Fixtures live under `cortex_command/overnight/tests/fixtures/batch_runner/`
 and consist of:
 
 - Representative feature/plan/spec markdown

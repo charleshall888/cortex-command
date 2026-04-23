@@ -158,8 +158,8 @@ Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth
 |-----------|-------------|
 | `skills/` | Slash commands -- `/commit`, `/pr`, `/lifecycle`, `/overnight`, `/discovery`, and more |
 | `hooks/` | Event handlers -- commit validation, lifecycle state injection, desktop notifications |
-| `claude/overnight/` | Autonomous overnight runner -- plans work, executes in parallel, writes a morning report |
-| `claude/dashboard/` | FastAPI web dashboard for monitoring overnight sessions |
+| `cortex_command/overnight/` | Autonomous overnight runner -- plans work, executes in parallel, writes a morning report |
+| `cortex_command/dashboard/` | FastAPI web dashboard for monitoring overnight sessions |
 | `lifecycle/` | Feature state machine -- research, specify, plan, implement, review, complete |
 | `backlog/` | YAML-frontmatter backlog items with overnight readiness gates |
 | `claude/reference/` | Reference docs loaded conditionally by agent instructions |
@@ -168,6 +168,15 @@ Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth
 ## Customization
 
 `claude/settings.json` is the repo defaults template — `just setup` copies it to `~/.claude/settings.json` on first install. Run `/setup-merge` to pull updated repo defaults into your settings. Use `settings.local.json` for per-machine overrides.
+
+## Distribution
+
+The `cortex` CLI is installed as an editable `uv tool`; a few constraints apply:
+
+- When cortex invokes `uv run` internally, it operates on the user's current project, not cortex's own tool venv.
+- Do not run `uv tool uninstall uv` — removing uv via itself breaks the tool environment.
+- Adding or renaming `[project.scripts]` entries requires re-running `uv tool install -e . --force` to refresh shims.
+- Run `uv tool update-shell` once after the first `uv tool install` to add the tool bin directory to your `PATH`.
 
 ## Commands
 

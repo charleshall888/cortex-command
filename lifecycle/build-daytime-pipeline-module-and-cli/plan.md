@@ -66,7 +66,7 @@ Thread `deferred_dir` backward-compatibly through six call sites in `feature_exe
     - Also calls `(cwd / f"lifecycle/{feature}/deferred").mkdir(parents=True, exist_ok=True)` to pre-create the deferred directory
     - Returns `config`
   - Required imports: `asyncio`, `os`, `subprocess`, `sys`, `time` from stdlib; `Path` from `pathlib`; `Optional` from `typing`; `BatchConfig`, `BatchResult` from `claude.overnight.batch_runner`; `OvernightState`, `OvernightFeatureStatus`, `save_state` from `claude.overnight.state`; `create_worktree`, `cleanup_worktree` from `claude.pipeline.worktree`; `execute_feature` from `claude.overnight.feature_executor`; `apply_feature_result`, `OutcomeContext` from `claude.overnight.outcome_router`; `DEFAULT_DEFERRED_DIR` from `claude.overnight.deferral`
-- **Verification**: `python3 -c "from claude.overnight.daytime_pipeline import _check_cwd, _read_pid, _is_alive, _write_pid, _recover_stale, build_config; print('ok')"` — pass if output is `ok` and exit 0
+- **Verification**: `python3 -c "from cortex_command.overnight.daytime_pipeline import _check_cwd, _read_pid, _is_alive, _write_pid, _recover_stale, build_config; print('ok')"` — pass if output is `ok` and exit 0
 
 ---
 
@@ -120,12 +120,12 @@ Thread `deferred_dir` backward-compatibly through six call sites in `feature_exe
         - `any(d.get("name") == feature for d in ctx.batch_result.features_deferred)` → print path to deferral file from `lifecycle/{feature}/deferred/`; return 1
         - `any(d.get("name") == feature for d in ctx.batch_result.features_paused)` → print "Feature {feature} paused — worktree cleaned; check events.log for details."; return 1
         - otherwise (features_failed or unrecognized) → print error from `ctx.batch_result.features_failed` if present; return 1
-  - `build_parser() -> argparse.ArgumentParser`: `prog="python3 -m claude.overnight.daytime_pipeline"`, add `--feature` (required, help="Feature slug to execute (e.g. my-feature)")
+  - `build_parser() -> argparse.ArgumentParser`: `prog="python3 -m cortex_command.overnight.daytime_pipeline"`, add `--feature` (required, help="Feature slug to execute (e.g. my-feature)")
   - `_run() -> None`: `args = build_parser().parse_args(); sys.exit(asyncio.run(run_daytime(args.feature)))`
   - `if __name__ == "__main__": _run()`
 - **Verification**:
-  - `python3 -m claude.overnight.daytime_pipeline --help` — pass if exit 0 and output contains `--feature`
-  - From `/tmp`: `python3 -m claude.overnight.daytime_pipeline --feature x 2>&1` — pass if output contains "must be run from the repo root"
+  - `python3 -m cortex_command.overnight.daytime_pipeline --help` — pass if exit 0 and output contains `--feature`
+  - From `/tmp`: `python3 -m cortex_command.overnight.daytime_pipeline --feature x 2>&1` — pass if output contains "must be run from the repo root"
 
 ---
 
@@ -152,8 +152,8 @@ Thread `deferred_dir` backward-compatibly through six call sites in `feature_exe
 
 After all tasks complete, run the full acceptance sequence:
 1. `just test` — exit 0, all tests pass, including `test_daytime_pipeline.py`
-2. `python3 -m claude.overnight.daytime_pipeline --help` — exit 0, output contains `--feature`
-3. From `/tmp`: `python3 -m claude.overnight.daytime_pipeline --feature x` — exit 1, stderr "must be run from the repo root"
+2. `python3 -m cortex_command.overnight.daytime_pipeline --help` — exit 0, output contains `--feature`
+3. From `/tmp`: `python3 -m cortex_command.overnight.daytime_pipeline --feature x` — exit 1, stderr "must be run from the repo root"
 4. From repo root with a feature that has no `plan.md`: exit 1, stderr "plan.md not found"
 5. Interactive acceptance test (manual): run against a small feature with a complete `plan.md`; verify `lifecycle/{feature}/daytime-state.json` exists after startup; verify `lifecycle/{feature}/deferred/` exists; verify branch is cleaned up after completion
 

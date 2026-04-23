@@ -41,7 +41,7 @@ No `raise ... from e` pattern exists anywhere in `claude/pipeline/`. The establi
 
 ### Daytime.log mechanics
 
-`daytime.log` is the redirected stdout/stderr of `python3 -m claude.overnight.daytime_pipeline --feature {slug}` (launched by `skills/lifecycle/references/implement.md:133`). There is no structured logger writing to it; uncaught exception tracebacks land there as stderr. Enriching the exception message (or using `add_note` — notes render in tracebacks) is what causes stderr to appear in `daytime.log`.
+`daytime.log` is the redirected stdout/stderr of `python3 -m cortex_command.overnight.daytime_pipeline --feature {slug}` (launched by `skills/lifecycle/references/implement.md:133`). There is no structured logger writing to it; uncaught exception tracebacks land there as stderr. Enriching the exception message (or using `add_note` — notes render in tracebacks) is what causes stderr to appear in `daytime.log`.
 
 ### Conventions to follow
 

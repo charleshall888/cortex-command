@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 9b5c4931-763b-4112-b261-a111119cb99f
 title: "Build cortex CLI skeleton with uv tool install entry point"
-status: refined
+status: complete
 priority: high
 type: feature
 parent: 113
@@ -11,12 +11,13 @@ areas: [install]
 created: 2026-04-21
 updated: 2026-04-23
 lifecycle_slug: null
-lifecycle_phase: null
+lifecycle_phase: implement
 session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 spec: lifecycle/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/spec.md
+plan: lifecycle/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/plan.md
 ---
 
 # Build cortex CLI skeleton with uv tool install entry point

@@ -39,4 +39,4 @@ The report generator should classify common failure modes and surface them inlin
 
 The `no_commit_guard` in `batch_runner.py` already knows *why* it paused the feature. That reason should propagate through `overnight-state.json` into the morning report's Failed Features section rather than being flattened to a generic message.
 
-Key files: `claude/overnight/batch_runner.py`, `claude/overnight/report.py`
+Key files: `cortex_command/overnight/batch_runner.py`, `cortex_command/overnight/report.py`

@@ -20,7 +20,7 @@ lifecycle_phase: implement
 
 # Fix daytime pipeline worktree atomicity and stderr logging
 
-Two defects in `claude/pipeline/worktree.py::create_worktree` cause daytime-pipeline startup failures to leave orphaned branches behind and hide the underlying git error from the operator.
+Two defects in `cortex_command/pipeline/worktree.py::create_worktree` cause daytime-pipeline startup failures to leave orphaned branches behind and hide the underlying git error from the operator.
 
 ## Findings from discovery
 

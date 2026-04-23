@@ -93,7 +93,7 @@ A new `save_daytime_result()` should be added following `save_batch_result()` as
 
 **Launch command (§1b iv, line ~130):**
 ```
-python3 -m claude.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
+python3 -m cortex_command.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
 ```
 No `PYTHONUNBUFFERED=1` today. No env var passed to communicate a freshness token.
 

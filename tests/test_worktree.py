@@ -17,7 +17,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import patch
 
-from claude.pipeline.worktree import create_worktree
+from cortex_command.pipeline.worktree import create_worktree
 
 
 def _init_git_repo(path: Path) -> str:
@@ -68,7 +68,7 @@ class TestWorktreeVenvSymlink(unittest.TestCase):
             # Create a .venv directory in the repo root
             (tmppath / ".venv").mkdir()
 
-            with patch("claude.pipeline.worktree._repo_root", return_value=tmppath):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath):
                 info = create_worktree("test-feature", base_branch=branch)
 
             self.assertTrue((info.path / ".venv").is_symlink())
@@ -84,7 +84,7 @@ class TestWorktreeVenvSymlink(unittest.TestCase):
 
             # No .venv directory created
 
-            with patch("claude.pipeline.worktree._repo_root", return_value=tmppath):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath):
                 info = create_worktree("test-feature-2", base_branch=branch)
 
             self.assertFalse((info.path / ".venv").is_symlink())
@@ -130,7 +130,7 @@ class TestWorktreeCreateFailure(unittest.TestCase):
             target_dir.mkdir(parents=True)
             (target_dir / "sentinel.txt").write_text("block")
 
-            with patch("claude.pipeline.worktree._repo_root", return_value=tmppath):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath):
                 with self.assertRaises(ValueError) as ctx:
                     create_worktree("orphan-test", base_branch=branch)
 
@@ -189,8 +189,8 @@ class TestWorktreeCreateFailure(unittest.TestCase):
                 # Fallback: return success.
                 return CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-            with patch("claude.pipeline.worktree._repo_root", return_value=tmppath), \
-                    patch("claude.pipeline.worktree.subprocess.run", side_effect=fake_run):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath), \
+                    patch("cortex_command.pipeline.worktree.subprocess.run", side_effect=fake_run):
                 with self.assertRaises(ValueError) as ctx:
                     create_worktree("empty-stderr-test", base_branch="main")
 
@@ -230,8 +230,8 @@ class TestWorktreeCreateFailure(unittest.TestCase):
 
                 return CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-            with patch("claude.pipeline.worktree._repo_root", return_value=tmppath), \
-                    patch("claude.pipeline.worktree.subprocess.run", side_effect=fake_run):
+            with patch("cortex_command.pipeline.worktree._repo_root", return_value=tmppath), \
+                    patch("cortex_command.pipeline.worktree.subprocess.run", side_effect=fake_run):
                 with self.assertRaises(ValueError) as ctx:
                     create_worktree("cleanup-fail-test", base_branch="main")
 

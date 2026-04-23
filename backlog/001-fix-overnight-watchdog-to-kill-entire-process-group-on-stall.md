@@ -51,7 +51,7 @@ runner.sh (PGID leader)
 Launch `batch_runner` with `setsid` so it gets its own PGID:
 
 ```bash
-setsid python3 -m claude.overnight.batch_runner ... & BATCH_PID=$!
+setsid python3 -m cortex_command.overnight.batch_runner ... & BATCH_PID=$!
 ```
 
 Then the watchdog can kill the entire batch process group:
@@ -67,8 +67,8 @@ The same pattern should apply to the orchestrator claude agent in the round loop
 
 ## Affected Files
 
-- `claude/overnight/runner.sh` — watchdog kill logic, process spawning
-- Possibly `claude/pipeline/dispatch.py` — could add `start_new_session=True` to
+- `cortex_command/overnight/runner.sh` — watchdog kill logic, process spawning
+- Possibly `cortex_command/pipeline/dispatch.py` — could add `start_new_session=True` to
   `anyio.open_process()` as defense-in-depth
 
 ## Acceptance Criteria

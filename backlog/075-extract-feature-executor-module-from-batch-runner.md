@@ -22,8 +22,8 @@ spec: lifecycle/extract-feature-executor-module-from-batch-runner/spec.md
 
 ## Scope
 
-Extract per-feature execution from `claude/overnight/batch_runner.py` into
-a new module `claude/overnight/feature_executor.py` (~600 LOC target).
+Extract per-feature execution from `cortex_command/overnight/batch_runner.py` into
+a new module `cortex_command/overnight/feature_executor.py` (~600 LOC target).
 Phase 1 of the three-phase batch_runner decomposition.
 
 ## What moves
@@ -94,5 +94,5 @@ matching updates in both tickets.
 See `research/implement-in-autonomous-worktree-overnight-component-reuse/research.md`
 for the full responsibility map of `batch_runner.py` (15 conceptual
 buckets) and the rationale for the 3-way decomposition (Candidate A).
-Prior art: `claude/pipeline/review_dispatch.py` was successfully
+Prior art: `cortex_command/pipeline/review_dispatch.py` was successfully
 extracted along this same pattern.

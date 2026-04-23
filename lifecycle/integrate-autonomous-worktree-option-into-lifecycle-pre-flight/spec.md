@@ -30,9 +30,9 @@ Users invoking `/lifecycle implement` currently see three execution paths: singl
 6. **(Must) Worktree-branch guard**: If the current branch matches `^worktree/agent-`, the "Implement in autonomous worktree" option must not be available (the pre-flight prompt should not include it, or selecting it must produce an immediate rejection). This prevents daytime dispatch from within a single-agent worktree context.
    Acceptance: `grep -A5 "worktree.*agent\|agent.*worktree" skills/lifecycle/references/implement.md` shows a branch-prefix guard for the daytime option.
 
-7. **(Must) Background subprocess launch**: After all guards pass, launch `python3 -m claude.overnight.daytime_pipeline --feature {slug}` in the background with stdout and stderr redirected to `lifecycle/{feature}/daytime.log`:
+7. **(Must) Background subprocess launch**: After all guards pass, launch `python3 -m cortex_command.overnight.daytime_pipeline --feature {slug}` in the background with stdout and stderr redirected to `lifecycle/{feature}/daytime.log`:
    ```
-   python3 -m claude.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
+   python3 -m cortex_command.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
    ```
    Launched via Bash `run_in_background=true`. Subprocess writes `lifecycle/{feature}/daytime.pid` at startup.
    Acceptance: `ls lifecycle/{feature}/daytime.log` exits 0 after the option is selected AND a live PID appears in `lifecycle/{feature}/daytime.pid` within 5 seconds of launch (acceptance test expectation — not a runtime wait enforced by the skill).
@@ -84,7 +84,7 @@ Users invoking `/lifecycle implement` currently see three execution paths: singl
     - Outcome detection uses last `"Feature "` line: "paused" substring in a failure message does not misclassify as paused outcome
     Acceptance: `just test` exits 0 after the tests are added; `grep -r "daytime_preflight\|autonomous_worktree\|daytime.*guard\|daytime.*pid" tests/` shows at least one test file referencing the new behavior.
 
-13. **(Should) Integration test for CLI invocation**: Add a test verifying that the skill correctly invokes `python3 -m claude.overnight.daytime_pipeline --feature {slug}` with the expected command shape (no extra CLI flags beyond `--feature`).
+13. **(Should) Integration test for CLI invocation**: Add a test verifying that the skill correctly invokes `python3 -m cortex_command.overnight.daytime_pipeline --feature {slug}` with the expected command shape (no extra CLI flags beyond `--feature`).
     Acceptance: `just test` exits 0; `grep -r "daytime_pipeline.*feature\|feature.*daytime_pipeline" tests/` shows at least one test.
 
 ## Non-Requirements

@@ -2,7 +2,7 @@
 
 Covers spec Req 8 of `lifecycle/gate-overnight-pr-creation-on-merged-over-zero/`:
 eleven subprocess-capture tests that invoke
-`bash claude/overnight/runner.sh --dry-run --state-path <tmp>` and assert
+`bash cortex_command/overnight/runner.sh --dry-run --state-path <tmp>` and assert
 substring patterns on stdout.
 
 Test isolation (mandatory per spec Req 8):
@@ -159,7 +159,7 @@ def _build_env(
 def _run_runner(state_path: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     """Invoke runner.sh --dry-run against a state file copy."""
     return subprocess.run(
-        ["bash", "claude/overnight/runner.sh", "--dry-run", "--state-path", str(state_path)],
+        ["bash", "cortex_command/overnight/runner.sh", "--dry-run", "--state-path", str(state_path)],
         cwd=str(REAL_REPO_ROOT),
         env=env,
         capture_output=True,
@@ -282,7 +282,7 @@ def test_nonzero_merge_degraded(env_setup) -> None:
     warning_file.write_text(warning_text)
     try:
         # The fixture's `integration_degraded: true` is preserved across
-        # save_state (see claude/overnight/state.py dataclass). No env-var
+        # save_state (see cortex_command/overnight/state.py dataclass). No env-var
         # override needed.
         env = _build_env(tp, env_setup["bin_dir"], env_setup["git_config"])
         result = _run_runner(state, env)
@@ -337,7 +337,7 @@ def test_degraded_plus_zero_title(env_setup) -> None:
     tp = env_setup["tmp_path"]
     state = _copy_state_fixture("state-zero-merge.json", tp)
     # Patch the state to add `integration_degraded: true` — the field is now
-    # preserved across save_state (see claude/overnight/state.py).
+    # preserved across save_state (see cortex_command/overnight/state.py).
     _patch_state(state, {"integration_degraded": True})
     branch = "overnight/test-zero-merge"
     _create_integration_branch(branch, ensure=True)

@@ -2,12 +2,12 @@
 
 ## Problem Statement
 
-The overnight pipeline executes features in batches, but users often need a single feature executed today — not in the next overnight window. Before #075 and #076 extracted `feature_executor` and `outcome_router` from `batch_runner.py`, building a daytime driver would have required duplicating ~700 LOC of orchestration glue. With those modules now extracted, a thin daytime driver (~150 LOC) can invoke the same dispatch, merge, review, and recovery logic that overnight uses, with zero duplication. This ticket builds that driver. Users benefit by being able to execute `python3 -m claude.overnight.daytime_pipeline --feature <slug>` and get a feature merged by end of day, with the same test-gate and auto-revert safety net as overnight.
+The overnight pipeline executes features in batches, but users often need a single feature executed today — not in the next overnight window. Before #075 and #076 extracted `feature_executor` and `outcome_router` from `batch_runner.py`, building a daytime driver would have required duplicating ~700 LOC of orchestration glue. With those modules now extracted, a thin daytime driver (~150 LOC) can invoke the same dispatch, merge, review, and recovery logic that overnight uses, with zero duplication. This ticket builds that driver. Users benefit by being able to execute `python3 -m cortex_command.overnight.daytime_pipeline --feature <slug>` and get a feature merged by end of day, with the same test-gate and auto-revert safety net as overnight.
 
 ## Requirements
 
-1. **(M)** **CLI entry point**: Module `claude/overnight/daytime_pipeline.py` is invocable as `python3 -m claude.overnight.daytime_pipeline --feature <slug>`.
-   Acceptance: `python3 -m claude.overnight.daytime_pipeline --help` exits 0 and output contains `--feature`.
+1. **(M)** **CLI entry point**: Module `claude/overnight/daytime_pipeline.py` is invocable as `python3 -m cortex_command.overnight.daytime_pipeline --feature <slug>`.
+   Acceptance: `python3 -m cortex_command.overnight.daytime_pipeline --help` exits 0 and output contains `--feature`.
 
 2. **(M)** **CWD enforcement**: CLI aborts with a clear error if `lifecycle/` directory does not exist in CWD.
    Acceptance: Running from `/tmp` produces exit code 1 and stderr containing "must be run from the repo root" (or equivalent).
@@ -28,7 +28,7 @@ The overnight pipeline executes features in batches, but users often need a sing
    Acceptance: Interactive/session-dependent — manual acceptance test observes successful merge and test-gate pass; failure path triggers revert.
 
 8. **(M)** **Per-feature state file**: Driver creates `lifecycle/{feature}/daytime-state.json` with all fields required by `load_state()` in `claude/overnight/state.py` — including `session_id`, `plan_ref`, `current_round`, `phase`, `started_at`, `updated_at`, and `features` — with `features[{feature}]` pre-populated as a minimal `OvernightFeatureStatus` (read `state.py` for the exact field set) so that `load_state()` succeeds and the conflict-recovery block in `feature_executor` is not short-circuited by `_fs is None`. The `phase` field must be `"executing"`.
-   Acceptance: `python3 -c "from claude.overnight.state import load_state; s=load_state('lifecycle/{feature}/daytime-state.json'); assert s.features.get('{feature}') is not None"` exits 0 after a run is started.
+   Acceptance: `python3 -c "from cortex_command.overnight.state import load_state; s=load_state('lifecycle/{feature}/daytime-state.json'); assert s.features.get('{feature}') is not None"` exits 0 after a run is started.
 
 9. **(M)** **Dashboard isolation**: The per-feature state file is at `lifecycle/{feature}/daytime-state.json`, not at `lifecycle/overnight-state.json`. `config.overnight_state_path` points to the per-feature path so the shared overnight state is never touched or read.
    Acceptance: `ls lifecycle/overnight-state.json` is unmodified before and after a daytime run (or is absent if no overnight session has run).
@@ -43,7 +43,7 @@ The overnight pipeline executes features in batches, but users often need a sing
     Acceptance: Interactive/session-dependent — create a stale PID file with a dead PID and stale worktree; subsequent invocation proceeds without error.
 
 13. **(S)** **Concurrent same-feature guard**: If `lifecycle/{feature}/daytime.pid` exists and the recorded PID is alive, driver refuses to start with exit code 1 and a message naming the running PID.
-    Acceptance: `python3 -m claude.overnight.daytime_pipeline --feature slug` exits 1 and stderr contains "already running" when a live daytime process exists for that feature.
+    Acceptance: `python3 -m cortex_command.overnight.daytime_pipeline --feature slug` exits 1 and stderr contains "already running" when a live daytime process exists for that feature.
 
 14. **(S)** **macOS orphan prevention**: Subprocess (if applicable) polls `os.getppid() == 1` at 1-second cadence in a background task; on parent death, attempts cleanup and exits within 2 seconds.
     Acceptance: Interactive/session-dependent — kill parent process, verify subprocess exits and worktree is cleaned up within ~5 seconds.
@@ -55,7 +55,7 @@ The overnight pipeline executes features in batches, but users often need a sing
     Acceptance: `just test` exits 0; `claude/overnight/tests/test_daytime_pipeline.py` exists and contains at least one test function; `claude/overnight/tests/` contains at least one test verifying `write_deferral` is called with a non-default `deferred_dir` in each modified module.
 
 17. **(M)** **Plan.md required**: Driver checks for `lifecycle/{feature}/plan.md` before starting; if absent, exits 1 with a clear message.
-    Acceptance: `python3 -m claude.overnight.daytime_pipeline --feature no-plan-feature` exits 1 and stderr contains "plan.md not found" (or equivalent).
+    Acceptance: `python3 -m cortex_command.overnight.daytime_pipeline --feature no-plan-feature` exits 1 and stderr contains "plan.md not found" (or equivalent).
 
 ## Non-Requirements
 
@@ -93,12 +93,12 @@ The overnight pipeline executes features in batches, but users often need a sing
 
 - MODIFIED: `claude/overnight/feature_executor.py` — all three deferral call sites (lines 250, 442, 497) now accept `deferred_dir: Path = DEFAULT_DEFERRED_DIR`; all existing overnight call paths use the default, behavior unchanged.
 - MODIFIED: `claude/overnight/outcome_router.py` — all three deferral call sites (lines 633, 893, 957) now accept `deferred_dir: Path = DEFAULT_DEFERRED_DIR`; all existing overnight call paths use the default, behavior unchanged.
-- ADDED: `claude/overnight/daytime_pipeline.py` — new CLI module invocable as `python3 -m claude.overnight.daytime_pipeline`.
+- ADDED: `claude/overnight/daytime_pipeline.py` — new CLI module invocable as `python3 -m cortex_command.overnight.daytime_pipeline`.
 - ADDED: `claude/overnight/tests/test_daytime_pipeline.py` — unit tests for daytime driver logic and behavioral deferral threading tests.
 
 ## Technical Constraints
 
-- **Module location**: `claude/overnight/daytime_pipeline.py` — `claude/lifecycle/` does not exist as a Python package. CLI invocation is `python3 -m claude.overnight.daytime_pipeline`, replacing the backlog item's stated `python3 -m claude.lifecycle.daytime_pipeline`.
+- **Module location**: `claude/overnight/daytime_pipeline.py` — `claude/lifecycle/` does not exist as a Python package. CLI invocation is `python3 -m cortex_command.overnight.daytime_pipeline`, replacing the backlog item's stated `python3 -m claude.lifecycle.daytime_pipeline`.
 - **CWD must equal repo root**: All path construction in `feature_executor` and `outcome_router` uses bare relative `Path(f"lifecycle/{feature}/...")` — no absolute-base derivation. The CWD enforcement check (Requirement 2) is the only guard.
 - **`escalations_path` is hardcoded relative** in `feature_executor` and `outcome_router` (`Path("lifecycle/escalations.jsonl")`): this is a pre-existing constraint; CWD enforcement is the mitigation.
 - **deferral.py already supports `deferred_dir`**: `write_deferral(question, deferred_dir=DEFAULT_DEFERRED_DIR)` accepts the parameter; only the six call sites in `feature_executor` and `outcome_router` need to thread it through.

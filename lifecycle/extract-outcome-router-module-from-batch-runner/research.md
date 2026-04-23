@@ -100,7 +100,7 @@ rr = await dispatch_review(
 )
 ```
 
-Lazy import at call site: `from claude.pipeline.review_dispatch import dispatch_review  # noqa: E402`.
+Lazy import at call site: `from cortex_command.pipeline.review_dispatch import dispatch_review  # noqa: E402`.
 
 ### Circuit breaker — mutation sites
 

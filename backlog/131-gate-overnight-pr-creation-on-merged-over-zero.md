@@ -24,7 +24,7 @@ spec: lifecycle/gate-overnight-pr-creation-on-merged-over-zero/spec.md
 
 ## Context from discovery
 
-`claude/overnight/runner.sh:1149` runs `gh pr create` unconditionally whenever `INTEGRATION_BRANCH` is set (line 1124 gate). `MC_MERGED_COUNT` is computed at lines 1134-1142 but used only in the PR body template — not as a gate.
+`cortex_command/overnight/runner.sh:1149` runs `gh pr create` unconditionally whenever `INTEGRATION_BRANCH` is set (line 1124 gate). `MC_MERGED_COUNT` is computed at lines 1134-1142 but used only in the PR body template — not as a gate.
 
 Session `overnight-2026-04-21-1708` is the live artifact: all 3 features failed at `feature_start`, `MC_MERGED_COUNT` was 0, and PR #4 was still created (OPEN, MERGEABLE, CLEAN). Its only unique content vs main is 3 lines of `session_id: null` frontmatter mutations on backlog 094/095/096 — content that should not land on main.
 

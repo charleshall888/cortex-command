@@ -44,8 +44,8 @@ Note: The following lists what Claude's Bash tool invokes during interactive ses
 - GPG: `GNUPGHOME=* git commit *`
 
 **Python execution** (overnight runner, pipeline, backlog tools):
-- `python3 -m claude.overnight.*` (runner modules)
-- `python3 -m claude.pipeline.*` (merge, conflict resolution)
+- `python3 -m cortex_command.overnight.*` (runner modules)
+- `python3 -m cortex_command.pipeline.*` (merge, conflict resolution)
 - `python3 -c "..."` (inline JSON manipulation in overnight-schedule)
 - `uv run python3 -m claude.*` (via justfile recipes)
 

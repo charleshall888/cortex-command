@@ -35,7 +35,7 @@ For each feature paused due to a conflict, the morning report should include a r
 - Conflicted files (available from event log — see ticket 015)
 - Suggested next action: one of "re-enqueue for next overnight session", "resolve manually and re-enqueue", or contextually appropriate guidance based on conflict classification
 
-Key files: `claude/overnight/report.py`
+Key files: `cortex_command/overnight/report.py`
 
 ## Notes
 

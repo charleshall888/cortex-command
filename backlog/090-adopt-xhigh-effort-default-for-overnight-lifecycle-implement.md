@@ -25,21 +25,21 @@ From `research/opus-4-7-harness-adaptation/research.md` DR-3 Wave 2 and Open Que
 
 - SDK wiring for `effort` is already complete — `ClaudeAgentOptions(effort="xhigh")` works end-to-end at runtime (the Python Literal missing `"xhigh"` is a type-checker warning only; `@dataclass` doesn't enforce it).
 - `max_tokens` is **NOT wireable** through the harness — `ClaudeAgentOptions` has no such field and CLI v2.1.x has no `--max-tokens` flag. The correct mitigation for xhigh output-size risk is `stop_reason == "max_tokens"` monitoring in the dispatch path, not a config knob.
-- Docstring at `claude/pipeline/dispatch.py:371` lists valid effort values without `"xhigh"` — must be updated in the same commit as the adoption flip so the function contract matches the shipped behavior.
+- Docstring at `cortex_command/pipeline/dispatch.py:371` lists valid effort values without `"xhigh"` — must be updated in the same commit as the adoption flip so the function contract matches the shipped behavior.
 
 ## Deliverable
 
 - Configure `xhigh` effort as the default for overnight lifecycle implement-phase dispatches.
-- Update the `dispatch_task` docstring at `claude/pipeline/dispatch.py:371` to include `"xhigh"` in the documented list of valid `effort_override` values.
+- Update the `dispatch_task` docstring at `cortex_command/pipeline/dispatch.py:371` to include `"xhigh"` in the documented list of valid `effort_override` values.
 - Add detection for `stop_reason == "max_tokens"` in the dispatch event logging (not currently captured) so that silent truncations under xhigh surface in overnight reports rather than being masked.
 - Document the choice rationale in the commit and in `docs/overnight-operations.md` (cite Anthropic migration guide + community estimates + the #089 closure rationale).
-- Monitor the next 2–3 overnight rounds for regressions via the existing `claude/pipeline/metrics.py` aggregator; roll back if cost or quality anomalies appear.
+- Monitor the next 2–3 overnight rounds for regressions via the existing `cortex_command/pipeline/metrics.py` aggregator; roll back if cost or quality anomalies appear.
 
 ## Flip scope — decide before implementing
 
 The implement phase can set `xhigh` in three ways; pick one explicitly:
 
-1. **Global flip of `EFFORT_MAP`** (`claude/pipeline/dispatch.py:126–130`): `"complex"` → `"xhigh"`. Simplest but affects every complex dispatch, not just lifecycle implement.
+1. **Global flip of `EFFORT_MAP`** (`cortex_command/pipeline/dispatch.py:126–130`): `"complex"` → `"xhigh"`. Simplest but affects every complex dispatch, not just lifecycle implement.
 2. **Criticality-aware 2D effort matrix** analogous to `_MODEL_MATRIX`: xhigh only at (complex, high/critical); keep high at (complex, low/medium). More nuanced, adds a config surface.
 3. **Per-phase override** threaded through the overnight runner: implement phase uses `effort_override="xhigh"` explicitly; other phases inherit EFFORT_MAP. Closest match to the ticket's stated scope ("overnight lifecycle implement phase").
 

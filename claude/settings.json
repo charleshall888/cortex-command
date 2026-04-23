@@ -96,7 +96,7 @@
       "Bash(git reset *)",
       "Bash(git ls-files *)",
       "Bash(git describe *)",
-      "Bash(python3 -m claude.*)",
+      "Bash(python3 -m cortex_command.*)",
       "Bash(python3 -m json.tool *)",
       "Bash(uv run *)",
       "Bash(uv sync *)",

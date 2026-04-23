@@ -6,7 +6,7 @@ regardless of the process's current working directory.
 
 from __future__ import annotations
 
-from claude.pipeline.conflict import _REPAIR_TEMPLATE
+from cortex_command.pipeline.conflict import _REPAIR_TEMPLATE
 
 
 def test_repair_template_path_is_cwd_independent(monkeypatch, tmp_path):

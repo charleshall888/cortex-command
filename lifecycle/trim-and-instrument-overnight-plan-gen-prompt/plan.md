@@ -20,7 +20,7 @@ Tasks 1 and 2 are independent and can be done in either order. Task 3 depends on
 
 **Context**: The constants block runs lines 32–76; the tuple runs lines 78–124. `log_event()` at line 184 raises `ValueError` if the event string is not in `EVENT_TYPES`. Adding the constant to both locations in one atomic change prevents the drift that would cause a runtime ValueError the first time the orchestrator executes the Step 3b call. The string value `"plan_gen_dispatched"` must match the constant name's snake_case convention used throughout the file.
 
-**Verification**: Run `grep -c 'PLAN_GEN_DISPATCHED' /Users/charlie.hall/Workspaces/cortex-command/claude/overnight/events.py` — result must be 2 (one constant line, one tuple line). Run `python3 -c "from claude.overnight.events import PLAN_GEN_DISPATCHED, EVENT_TYPES; assert PLAN_GEN_DISPATCHED in EVENT_TYPES; print('ok')"` from the repo root — must print `ok` and exit 0. The existing `test_all_log_event_calls_registered` test in `tests/test_events.py` must still pass (`just test` exits 0).
+**Verification**: Run `grep -c 'PLAN_GEN_DISPATCHED' /Users/charlie.hall/Workspaces/cortex-command/claude/overnight/events.py` — result must be 2 (one constant line, one tuple line). Run `python3 -c "from cortex_command.overnight.events import PLAN_GEN_DISPATCHED, EVENT_TYPES; assert PLAN_GEN_DISPATCHED in EVENT_TYPES; print('ok')"` from the repo root — must print `ok` and exit 0. The existing `test_all_log_event_calls_registered` test in `tests/test_events.py` must still pass (`just test` exits 0).
 
 **Status**: pending
 
@@ -46,12 +46,12 @@ Tasks 1 and 2 are independent and can be done in either order. Task 3 depends on
 
 **Files**: `/Users/charlie.hall/Workspaces/cortex-command/claude/overnight/prompts/orchestrator-round.md`
 
-**What**: Insert an inline Python `log_event` call at the top of Step 3b (after line 238, the `**Step 3b — Generate missing plans**:` header line). The call must appear before the instruction to dispatch Task sub-agents. The call follows the Step 4a precedent at lines 297–313 structurally: same import path (`from claude.overnight.events import PLAN_GEN_DISPATCHED, log_event`), same `log_path=Path("{events_path}")` substitution, same `round={round_number}` substitution. The `feature` argument is omitted (this is a round-level event). The `details` dict must include fields: `features` (list of feature slugs whose plan_path was missing), `reason` (string `"missing_plan_path"`), `spec_paths` (dict of slug → spec_path), `plan_paths` (dict of slug → expected plan_path).
+**What**: Insert an inline Python `log_event` call at the top of Step 3b (after line 238, the `**Step 3b — Generate missing plans**:` header line). The call must appear before the instruction to dispatch Task sub-agents. The call follows the Step 4a precedent at lines 297–313 structurally: same import path (`from cortex_command.overnight.events import PLAN_GEN_DISPATCHED, log_event`), same `log_path=Path("{events_path}")` substitution, same `round={round_number}` substitution. The `feature` argument is omitted (this is a round-level event). The `details` dict must include fields: `features` (list of feature slugs whose plan_path was missing), `reason` (string `"missing_plan_path"`), `spec_paths` (dict of slug → spec_path), `plan_paths` (dict of slug → expected plan_path).
 
 The inserted block (modeled on Step 4a) should read:
 
 ```python
-from claude.overnight.events import PLAN_GEN_DISPATCHED, log_event
+from cortex_command.overnight.events import PLAN_GEN_DISPATCHED, log_event
 from pathlib import Path
 
 log_event(

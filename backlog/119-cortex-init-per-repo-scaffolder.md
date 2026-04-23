@@ -9,12 +9,12 @@ parent: 113
 tags: [distribution, cli, scaffolding, overnight-layer-distribution]
 areas: [install]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-23
 lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
 blocks: []
-blocked-by: [114]
+blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 ---
 

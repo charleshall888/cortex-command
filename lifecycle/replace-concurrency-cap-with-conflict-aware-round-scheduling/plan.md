@@ -12,7 +12,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: `BatchConfig` is a `@dataclass` at lines 95-119. The concurrency field is at line 113. The argparse setup is in `main()` starting at line 2047; `--concurrency` is at line 2053 and feeds into `BatchConfig(concurrency=args.concurrency)` at line 2083. The log event at line 1521 is called before `ConcurrencyManager` is created (line 1566), so `manager` is not in scope — remove the field rather than replacing.
-- **Verification**: `python3 -c "from claude.overnight.batch_runner import BatchConfig; assert not hasattr(BatchConfig, 'concurrency')"` — pass if no assertion error; `python3 -m claude.overnight.batch_runner --help 2>&1 | grep -c 'concurrency'` — pass if count is 0 (the `--concurrency` flag is gone). Note: `batch_runner.py` contains many references to `ConcurrencyManager` (imports, type annotations, docstrings) which must remain — do not use a bare `grep 'concurrency'` as verification since those legitimate references will match.
+- **Verification**: `python3 -c "from cortex_command.overnight.batch_runner import BatchConfig; assert not hasattr(BatchConfig, 'concurrency')"` — pass if no assertion error; `python3 -m cortex_command.overnight.batch_runner --help 2>&1 | grep -c 'concurrency'` — pass if count is 0 (the `--concurrency` flag is gone). Note: `batch_runner.py` contains many references to `ConcurrencyManager` (imports, type annotations, docstrings) which must remain — do not use a bare `grep 'concurrency'` as verification since those legitimate references will match.
 - **Status**: [x] complete
 
 ### Task 2: Remove generate_batch_plan concurrency parameter
@@ -137,7 +137,7 @@ Parallel-first dead-code removal across ~12 files, removing the vestigial `Batch
 After all tasks complete:
 1. `just test` exits 0 — all existing and new tests pass
 2. `grep -rn 'concurrency' --include='*.py' --include='*.md' . | grep -v throttle | grep -v node_modules | grep -v lifecycle/replace | grep -v __pycache__` returns only acceptable references (tier system, ConcurrencyManager, unrelated asyncio patterns)
-3. `python3 -c "from claude.overnight.batch_runner import BatchConfig; print(BatchConfig.__dataclass_fields__.keys())"` does not include `concurrency`
-4. `python3 -m claude.overnight.batch_runner --help` does not list `--concurrency`
+3. `python3 -c "from cortex_command.overnight.batch_runner import BatchConfig; print(BatchConfig.__dataclass_fields__.keys())"` does not include `concurrency`
+4. `python3 -m cortex_command.overnight.batch_runner --help` does not list `--concurrency`
 5. The parser backward compatibility test passes (historical plans with `concurrency_limit` rows parse without error)
 6. `lifecycle/replace-concurrency-cap-with-conflict-aware-round-scheduling/inner-task-investigation.md` exists with a clear recommendation

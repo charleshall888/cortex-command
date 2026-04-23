@@ -1,5 +1,5 @@
 """Contract test: the documented `_ALLOWED_TOOLS` list in docs/overnight-operations.md
-must match `claude.pipeline.dispatch._ALLOWED_TOOLS` exactly (as a set).
+must match `cortex_command.pipeline.dispatch._ALLOWED_TOOLS` exactly (as a set).
 
 Parses the fenced Python list literal from the docs at runtime and asserts
 set-equality against the imported constant. Catches both code drift (tool
@@ -15,7 +15,7 @@ import ast
 import re
 from pathlib import Path
 
-from claude.pipeline.dispatch import _ALLOWED_TOOLS
+from cortex_command.pipeline.dispatch import _ALLOWED_TOOLS
 
 REPO_ROOT = Path(__file__).parent.parent
 DOC_PATH = REPO_ROOT / "docs" / "overnight-operations.md"
@@ -30,7 +30,7 @@ _DOC_LIST_RE = re.compile(
 
 def test_documented_allowed_tools_matches_dispatch_module():
     """The Python list literal documented in overnight-operations.md must match
-    claude.pipeline.dispatch._ALLOWED_TOOLS as a set."""
+    cortex_command.pipeline.dispatch._ALLOWED_TOOLS as a set."""
     assert DOC_PATH.is_file(), (
         f"Source-of-truth doc missing: {DOC_PATH}. "
         "This test reads the documented _ALLOWED_TOOLS list from that file; "
@@ -61,7 +61,7 @@ def test_documented_allowed_tools_matches_dispatch_module():
 
     assert doc_set == code_set, (
         "Drift between documented _ALLOWED_TOOLS and "
-        "claude.pipeline.dispatch._ALLOWED_TOOLS:\n"
+        "cortex_command.pipeline.dispatch._ALLOWED_TOOLS:\n"
         f"  only in {DOC_PATH.name}: {sorted(only_in_doc)}\n"
         f"  only in dispatch.py:      {sorted(only_in_code)}\n"
         f"  doc list:   {documented}\n"

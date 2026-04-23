@@ -28,12 +28,12 @@ DR-3 Wave 2 proposes adopting `xhigh` effort as the default for overnight lifecy
 
 From `research/opus-4-7-harness-adaptation/research.md` Open Question 2:
 
-> Should overnight's effort default be high or xhigh? Anthropic says xhigh is "the best setting for most coding and agentic use cases" and requires max_tokens ≥ 64k. Our current SDK calls in claude/pipeline/dispatch.py may not set effort explicitly. Needs: (a) confirm SDK wiring supports effort passing, (b) measure actual cost delta between effort tiers on a representative task.
+> Should overnight's effort default be high or xhigh? Anthropic says xhigh is "the best setting for most coding and agentic use cases" and requires max_tokens ≥ 64k. Our current SDK calls in cortex_command/pipeline/dispatch.py may not set effort explicitly. Needs: (a) confirm SDK wiring supports effort passing, (b) measure actual cost delta between effort tiers on a representative task.
 
 ## Deliverable
 
 A short report covering:
-- Does `claude/pipeline/dispatch.py` support passing `effort` through `ClaudeAgentOptions`? If not, what wiring is missing?
+- Does `cortex_command/pipeline/dispatch.py` support passing `effort` through `ClaudeAgentOptions`? If not, what wiring is missing?
 - On a representative lifecycle-implement task (pick one in-flight or synthetic), what's the cost delta between `high` and `xhigh`?
 - What's the turn-count delta? (Often correlated with cost but not always.)
 - What's the qualitative output-quality delta? (Subjective; worth a paragraph.)

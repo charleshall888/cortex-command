@@ -566,7 +566,7 @@ overnight-run state="lifecycle/sessions/latest-overnight/overnight-state.json" t
         echo "  just overnight-run lifecycle/sessions/.../overnight-state.json 6h" >&2
         exit 1
     fi
-    bash "{{justfile_directory()}}/claude/overnight/runner.sh" --state {{ state }} --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}
+    bash "{{justfile_directory()}}/cortex_command/overnight/runner.sh" --state {{ state }} --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}
 
 # Launch overnight runner in a detached tmux session (recommended for unattended runs)
 # Usage: just overnight-start <state-path> <time-limit-hours>  (args are positional)
@@ -596,7 +596,7 @@ overnight-start state="" time-limit="6" max-rounds="10" tier="max_100":
         STATE_ARG="--state {{ state }}"
     fi
     tmux new-session -d -s "$SESSION" -c "$REPO_ROOT" \
-        "bash \"{{justfile_directory()}}/claude/overnight/runner.sh\" $STATE_ARG --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}"
+        "bash \"{{justfile_directory()}}/cortex_command/overnight/runner.sh\" $STATE_ARG --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}"
     echo "Overnight runner started in tmux session '$SESSION'"
     echo "  Attach : tmux attach -t $SESSION"
     echo "  Watch  : tail -f lifecycle/sessions/latest-overnight/overnight-events.log"
@@ -612,13 +612,13 @@ overnight-status:
     trap 'exit 0' INT
     while true; do
         clear
-        uv run python3 -m claude.overnight.status
+        uv run python3 -m cortex_command.overnight.status
         sleep 5
     done
 
 # Run the overnight smoke test (verifies worker commit round-trip)
 overnight-smoke-test:
-    uv run python3 -m claude.overnight.smoke_test
+    uv run python3 -m cortex_command.overnight.smoke_test
 
 # Tail the current session's events log with pretty-printed JSON output
 overnight-logs:
@@ -643,7 +643,7 @@ dashboard_port := env_var_or_default("DASHBOARD_PORT", "8080")
 dashboard:
     #!/usr/bin/env bash
     set -e
-    PID_FILE="claude/dashboard/.pid"
+    PID_FILE="cortex_command/dashboard/.pid"
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")
         if kill -0 "$PID" 2>/dev/null; then
@@ -652,15 +652,15 @@ dashboard:
         fi
     fi
     echo "Dashboard running at http://0.0.0.0:{{dashboard_port}}"
-    uv run uvicorn claude.dashboard.app:app --host 0.0.0.0 --port {{dashboard_port}}
+    uv run uvicorn cortex_command.dashboard.app:app --host 0.0.0.0 --port {{dashboard_port}}
 
 # Write fixture files for visual dashboard testing (overnight state, events, features, backlog)
 dashboard-seed:
-    uv run python3 -m claude.dashboard.seed
+    uv run python3 -m cortex_command.dashboard.seed
 
 # Remove all fixture files written by dashboard-seed
 dashboard-seed-clean:
-    uv run python3 -m claude.dashboard.seed --clean
+    uv run python3 -m cortex_command.dashboard.seed --clean
 
 # --- Backlog ---
 
@@ -869,14 +869,14 @@ test-pipeline:
     #!/usr/bin/env bash
     set -euo pipefail
     [ -f .venv/bin/pytest ] || { echo "venv not found — run 'just python-setup' first"; exit 1; }
-    .venv/bin/pytest claude/pipeline/tests/ -q
+    .venv/bin/pytest cortex_command/pipeline/tests/ -q
 
 # Run overnight runner tests (requires venv — run 'just python-setup' first)
 test-overnight:
     #!/usr/bin/env bash
     set -euo pipefail
     [ -f .venv/bin/pytest ] || { echo "venv not found — run 'just python-setup' first"; exit 1; }
-    .venv/bin/pytest claude/overnight/tests/ -q
+    .venv/bin/pytest cortex_command/overnight/tests/ -q
 
 # Run all pipeline and overnight test suites and print aggregate pass/fail summary
 test:
