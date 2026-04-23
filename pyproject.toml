@@ -13,6 +13,9 @@ dependencies = [
 [tool.pytest.ini_options]
 testpaths = ["tests", "claude/dashboard/tests", "claude/pipeline/tests", "claude/overnight/tests"]
 pythonpath = ["."]
+markers = [
+    "slow: opt-in tests that invoke live models (use --run-slow to enable)",
+]
 
 [dependency-groups]
 dev = [
