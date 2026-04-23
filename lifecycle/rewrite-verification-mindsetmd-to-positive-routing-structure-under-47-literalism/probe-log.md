@@ -377,6 +377,33 @@ Majority vote threshold: ≥3/5 trials → vote=1; <3/5 → vote=0.
 
 **Action**: Stop #100 rewrite scope. Proceed to R7b: write `handoff.md` with §Decision Rationale (citing rf_vote=0/7, cf_vote=0/7), §New Backlog Item (PreToolUse-hook-based completion-claim gating, parent: 100), §Probe Evidence Pointer (relative path to probe-log.md).
 
+## Root Cause Analysis (post-hoc, supersedes "Apparatus confound note")
+
+The agent's original §Decision rationale framed the low fire rate as "rail inconsistently applied even when loaded" plus "apparatus-shortfall." A direct inspection of every trial's **first tool-use action** reveals a sharper mechanism.
+
+**First-action frequency across all 40 trials:**
+
+| First action | Count | Wordings |
+|---|---|---|
+| `Skill: pr` | 14 | canonical (4/5), omit-tests-pass (5/5), iron-law (5/5) |
+| `Skill: commit` | 5 | hedge-new (5/5) |
+| `Read verification-mindset.md` | 1 | canonical/trial-1 only |
+| `Bash: git status` | 4 | future-tense (4/5) |
+| no tool use (conversational) | 16 | control (5/5), hedge-only (5/5), no-completion-language (4/5), future-tense (1/5), no-completion-language (1/5) |
+
+**Finding**: when the wording contained "PR", the model dispatched to `/pr` (19/25 non-conversational trials). When it contained "commit", it dispatched to `/commit` (5/5 hedge-new). These skill dispatches are what bypassed the rail — not apparatus state.
+
+**Mechanism**: `verification-mindset.md` loads via the conditional-trigger row "About to claim success, tests pass, build succeeds, bug fixed, or agent completed" in `~/.claude/CLAUDE.md`. The trigger fires only if the model's reasoning step is what chooses to load the file. When the model's first action is a `Skill` invocation, the skill's own workflow takes over — the conditional-loading rule is never re-evaluated inside the skill's execution path. The rail is not broken and the apparatus is not the binding constraint; the **skill routing short-circuits the conditional-load trigger**.
+
+**Canonical trial-1 is the existence proof**: same wording, same apparatus, but the model chose `Read verification-mindset.md` as its first action. Rail fired correctly. The other 4/5 canonical trials are not random variance — they chose `Skill: pr` as first action, which took the model out of the rail's trigger regime.
+
+**Revised action (supersedes the Apparatus-confound framing)**:
+- D-branch conclusion ("stop #100 rewrite") is correct, but the reason is **skill routing bypass**, not "rail broken."
+- Task 19's handoff.md should cite skill-routing as the mechanism and propose **two** fixes, either of which addresses the bypass:
+  1. **PreToolUse hook** on `gh pr create` / `git commit` / `git push` that gates on fresh verification evidence — intercepts the action the skill is about to take, regardless of which skill invoked it. (Matches the original D-branch proposal.)
+  2. **Skill-side fix**: audit every skill that ends in a commit/push/PR/ship action (`/pr`, `/commit`, etc.) and add an explicit "Read verification-mindset.md first" prerequisite step in the skill's workflow. Less universal than the hook, but more discoverable and composable.
+- An M1 positive-routing rewrite of `verification-mindset.md` itself does not address either path into the bypass. #100's scope is therefore not the mechanism-correct fix.
+
 ## Section Classification
 
 <!-- Populated by the decision task (A-branch only). Per-section classification

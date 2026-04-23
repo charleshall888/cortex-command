@@ -79,5 +79,32 @@ Any lifecycle dir where `plan.md` has both `[x] complete` and `[ ] pending` Stat
 ## Related
 
 - `f1caec4` — CORTEX_WORKTREE_ROOT override (this fix's immediate predecessor)
+- `3e3d3b8` — parser regex fix (addresses Problem 2 above; landed 2026-04-22 while ticket was open)
 - Ticket #128 — pre-commit hook rejecting main commits during overnight sessions (adjacent harness reliability work)
-- Lifecycle 100 — first real-world lifecycle blocked by these issues; can be hand-finished by invoking `probe-apparatus.sh` directly for the remaining 28 hedge trials once auth is sorted
+
+## Follow-up findings (2026-04-23, lifecycle 100 implement session)
+
+After Problems 1 and 2 were fixed, lifecycle 100's Task 6 ran through the pipeline and surfaced two additional issues.
+
+### Problem 3: `max_turns=20` can't express scripted-loop tasks
+
+- Battery tasks in lifecycle 100 (Task 4: 30 probes; Task 12: 30 probes) are deterministic for-loops. Each probe is 1 Bash call minimum — 30 probes can't fit in 20 (or 30) turns.
+- Pipeline classifier correctly identifies this as `deferred` (agent makes progress but doesn't commit), but the dispatch cost is wasted (~$1.87 per attempt).
+- Repro: invoke pipeline on any feature whose plan.md has a task that expands to >20 sequential subprocess calls.
+- Fix direction: either (a) detect scripted-loop tasks and route to direct-bash execution, (b) add a `bash-loop` task type that skips agent dispatch, or (c) document the limitation and require authors to split battery tasks into ≤5-trial chunks.
+- Workaround in lifecycle 100: bash-loop script (`lifecycle/<slug>/run-r1-hedge.sh`) invoked directly with `dangerouslyDisableSandbox: true`. 30 trials in 6 min, $6.87 (vs pipeline's $1.87 for zero trials).
+
+### Problem 4: claude_agent_sdk crashes with opaque "exit code 1" mid-dispatch
+
+- Lifecycle 100's Task 6 dispatch crashed three times in a row (attempts 1–3: $4.65 + $5.17 + $2.71 = $12.53 burned).
+- Crash signature: `claude_agent_sdk/_internal/query.py:611: raise Exception(message.get("error", "Unknown error"))`. The SDK received an error message with text "Check stderr output for details" and re-raised.
+- Each attempt ran 49–56 agent turns before crashing; all three attempts produced real work in the worktree (400-line `probe-log.md`) but `new_commit_count: 0` because the crash happened before the agent's commit step.
+- Important: the "paused" outcome path does NOT auto-cleanup the worktree, so the uncommitted work was salvageable by copying the worktree's `probe-log.md` back to main. This is luck, not design.
+- Repro: unclear — need to capture stderr from the SDK subprocess or enable verbose SDK logging. The current "Check stderr output for details" message is useless.
+- Fix direction: instrument the SDK wrapper to capture the subprocess's stderr and surface it in the `dispatch_error` event.
+
+### Lifecycle 100 outcome
+
+- §Decision = D. Root cause diagnosed post-hoc by direct inspection of stream-json action sequences: **skill routing bypasses the rail's conditional-load trigger** (14/40 trials first-actioned `Skill: pr`, 5/40 `Skill: commit`; the rail fired only in the 1/40 trial where `Read verification-mindset.md` was the first action).
+- See `lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md` §Root Cause Analysis for the full mechanism.
+- #100's planned M1 rewrite does NOT address the bypass. Task 19's follow-up backlog ticket should propose EITHER a PreToolUse hook (on `gh pr create` / `git commit` / `git push`) OR a skill-side audit (`/pr`, `/commit` SKILL.md explicitly invoking the rail).
