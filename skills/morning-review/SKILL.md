@@ -45,7 +45,7 @@ jq '.phase = "complete"' <resolved_state_path> > <resolved_state_path>.tmp
 mv <resolved_state_path>.tmp <resolved_state_path>
 ```
 
-After updating `overnight-state.json`, also update the pointer file's `phase` field to `"complete"` using the same jq pattern (`jq '.phase = "complete"' <pointer_path> > <pointer_path>.tmp` then `mv`). Skip pointer update if Step 0 used the fallback path (no pointer file).
+After updating `overnight-state.json`, remove the active-session pointer file: `rm -f <pointer_path>`. Skip if Step 0 used the fallback path (no pointer file).
 
 #### Garbage sweep: stale demo worktrees
 
