@@ -4,7 +4,7 @@ Implements the classification logic described in spec R6/R7 as pure-Python
 helpers with a testable interface. The skill's Bash §1b vii may invoke this
 module via:
 
-    python3 -m claude.overnight.daytime_result_reader --feature {slug}
+    python3 -m cortex_command.overnight.daytime_result_reader --feature {slug}
 
 which prints a JSON dict to stdout.
 
@@ -224,14 +224,14 @@ def classify_result(
 
 # ---------------------------------------------------------------------------
 # CLI entry point — enables skill invocation via:
-#   python3 -m claude.overnight.daytime_result_reader --feature {slug}
+#   python3 -m cortex_command.overnight.daytime_result_reader --feature {slug}
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="python3 -m claude.overnight.daytime_result_reader",
+        prog="python3 -m cortex_command.overnight.daytime_result_reader",
         description="Classify a daytime dispatch outcome via 3-tier fallback.",
     )
     parser.add_argument(

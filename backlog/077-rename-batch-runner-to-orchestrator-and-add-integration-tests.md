@@ -24,7 +24,7 @@ criticality: high
 Complete the three-phase batch_runner decomposition. Move the remaining
 session-layer logic into `claude/overnight/orchestrator.py` and retain
 `batch_runner.py` as a thin CLI wrapper preserving the
-`python3 -m claude.overnight.batch_runner` contract. Add integration
+`python3 -m cortex_command.overnight.batch_runner` contract. Add integration
 tests for `orchestrator.run_batch`.
 
 ## What moves into orchestrator.py
@@ -64,7 +64,7 @@ the orchestrator seam. Not mandatory; decide during spec.
 
 ## Acceptance
 
-- CLI invocation (`python3 -m claude.overnight.batch_runner --plan …
+- CLI invocation (`python3 -m cortex_command.overnight.batch_runner --plan …
   --batch-id …`) works unchanged
 - Full overnight run completes end-to-end (final regression gate for the
   three-phase refactor)

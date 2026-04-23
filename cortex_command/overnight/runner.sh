@@ -47,7 +47,7 @@ export PYTHONPATH="$REPO_ROOT"
 # the key injected explicitly. Resolution is delegated to claude.overnight.auth
 # which emits shell-safe `export` lines on stdout and warnings on stderr.
 set +e
-_AUTH_STDOUT=$(python3 -m claude.overnight.auth --shell)
+_AUTH_STDOUT=$(python3 -m cortex_command.overnight.auth --shell)
 _AUTH_EXIT=$?
 set -e
 case "$_AUTH_EXIT" in
@@ -559,7 +559,7 @@ done
 log_event "session_start" "1" "{\"time_limit_hours\": $TIME_LIMIT_HOURS, \"max_rounds\": $MAX_ROUNDS}"
 
 # Reset any features stuck in running status from a previous interrupted session
-python3 -m claude.overnight.interrupt "$STATE_PATH"
+python3 -m cortex_command.overnight.interrupt "$STATE_PATH"
 
 # For new-style sessions, cd into the worktree so all subsequent agent spawns
 # operate in the correct git context. Old-style sessions (no worktree_path)
@@ -709,7 +709,7 @@ log_event(os.environ['LOG_EVENT_NAME'], int(os.environ['LOG_ROUND']), details=de
         # set -m gives batch_runner its own PGID for process group kill.
         # $! == PGID only holds for direct cmd & (not pipelines).
         set -m
-        python3 -m claude.overnight.batch_runner \
+        python3 -m cortex_command.overnight.batch_runner \
             --plan "$BATCH_PLAN_PATH" \
             --batch-id $ROUND \
             --tier $TIER \
@@ -761,7 +761,7 @@ if state.phase != 'paused' and state.phase != 'complete':
         # -------------------------------------------------------------------
         # Step 6: Invoke map_results.py to update state and strategy
         # -------------------------------------------------------------------
-        python3 -m claude.overnight.map_results \
+        python3 -m cortex_command.overnight.map_results \
             --batch-id $ROUND \
             --plan "$BATCH_PLAN_PATH" \
             --state-path "$STATE_PATH" \
@@ -916,7 +916,7 @@ if [[ -n "$TEST_COMMAND" ]] && [[ -n "$WORKTREE_PATH" ]] && [[ -d "$WORKTREE_PAT
     if [[ $GATE_EXIT -ne 0 ]]; then
         echo "Integration gate failed (exit $GATE_EXIT) — attempting recovery"
         set +e
-        python3 -m claude.overnight.integration_recovery \
+        python3 -m cortex_command.overnight.integration_recovery \
             --state "$STATE_PATH" \
             --test-command "$TEST_COMMAND" \
             --worktree "$WORKTREE_PATH" \

@@ -9,7 +9,7 @@
 - **Notes**: Return dict additionally contains `event`, which is a non-breaking superset used intentionally by R5 Phase B.
 
 ### Requirement R2: Shared auth module — shell API
-- **Expected**: `resolve_auth_for_shell() -> int` invokable via `python3 -m claude.overnight.auth --shell`; prints `export VAR=VALUE` with `shlex.quote`, warnings to stderr, exit 0 on resolved / 1 on no-vector / 2 on helper-internal failure. Module must import with no venv active.
+- **Expected**: `resolve_auth_for_shell() -> int` invokable via `python3 -m cortex_command.overnight.auth --shell`; prints `export VAR=VALUE` with `shlex.quote`, warnings to stderr, exit 0 on resolved / 1 on no-vector / 2 on helper-internal failure. Module must import with no venv active.
 - **Actual**: `resolve_auth_for_shell` prints `export ANTHROPIC_API_KEY=…` or `export CLAUDE_CODE_OAUTH_TOKEN=…` via `shlex.quote`, writes warnings to stderr, catches `_HelperInternalError` → exit 2, catches generic `Exception` → exit 2 (stdlib-regression safety net), returns 0 on pre-existing env and resolved helper/oauth, 1 on no-vector. CLI dispatch in `_main` under `if __name__ == "__main__"`. The unit test `test_shell_exit_codes` asserts all three exit codes.
 - **Verdict**: PASS
 
@@ -20,7 +20,7 @@
 
 ### Requirement R4: runner.sh refactor — concrete bash pattern
 - **Expected**: Lines 42–87 replaced with the exact `set +e` / capture / `case` pattern specified; `bash -n` passes; regression test covers three exit-code branches.
-- **Actual**: `claude/overnight/runner.sh:42-58` matches the spec block verbatim (the `set +e` bracket, `$(python3 -m claude.overnight.auth --shell)` capture, `case` on `$_AUTH_EXIT`, `unset` cleanup). The two warning strings at the old `runner.sh:78,82` are removed as specified. `tests/test_runner_auth.sh` stages a stubbed `python3` on `PATH` per scenario and exercises success (token exported), no-vector (sentinel reached), and helper-internal-failure (exit 2 with stderr message, sentinel NOT reached) — all three scenarios.
+- **Actual**: `claude/overnight/runner.sh:42-58` matches the spec block verbatim (the `set +e` bracket, `$(python3 -m cortex_command.overnight.auth --shell)` capture, `case` on `$_AUTH_EXIT`, `unset` cleanup). The two warning strings at the old `runner.sh:78,82` are removed as specified. `tests/test_runner_auth.sh` stages a stubbed `python3` on `PATH` per scenario and exercises success (token exported), no-vector (sentinel reached), and helper-internal-failure (exit 2 with stderr message, sentinel NOT reached) — all three scenarios.
 - **Verdict**: PASS
 
 ### Requirement R5: daytime_pipeline.py auth bootstrap — call-site ordering

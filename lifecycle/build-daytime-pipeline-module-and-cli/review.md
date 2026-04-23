@@ -3,8 +3,8 @@
 ## Stage 1: Spec Compliance
 
 ### Requirement 1: CLI entry point
-- **Expected**: Module invocable as `python3 -m claude.overnight.daytime_pipeline --feature <slug>`; `--help` exits 0 and output contains `--feature`.
-- **Actual**: `if __name__ == "__main__": _run()` is present; `build_parser()` defines `--feature` as a required argument; `argparse.ArgumentParser` with `prog="python3 -m claude.overnight.daytime_pipeline"`. Module is a proper Python module under `claude/overnight/`.
+- **Expected**: Module invocable as `python3 -m cortex_command.overnight.daytime_pipeline --feature <slug>`; `--help` exits 0 and output contains `--feature`.
+- **Actual**: `if __name__ == "__main__": _run()` is present; `build_parser()` defines `--feature` as a required argument; `argparse.ArgumentParser` with `prog="python3 -m cortex_command.overnight.daytime_pipeline"`. Module is a proper Python module under `claude/overnight/`.
 - **Verdict**: PASS
 
 ### Requirement 2: CWD enforcement

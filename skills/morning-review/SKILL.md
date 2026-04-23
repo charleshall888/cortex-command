@@ -83,7 +83,7 @@ Check for the morning report in order:
 2. `lifecycle/sessions/latest-overnight/morning-report.md` — reachable via a project-local `latest-overnight` symlink (if one exists)
 3. `lifecycle/morning-report.md` — regular file overwritten by each overnight session's writer.
 
-Use whichever path resolves first. If none exist, report that no morning report was found. Tell the user that no overnight session has been run yet, or the report was not generated. Suggest running `python3 -m claude.overnight.report` to generate one. Stop.
+Use whichever path resolves first. If none exist, report that no morning report was found. Tell the user that no overnight session has been run yet, or the report was not generated. Suggest running `python3 -m cortex_command.overnight.report` to generate one. Stop.
 
 **Staleness check**: After locating the report, read the session ID from the report heading (e.g., `overnight-2026-03-27-0121`). Compare it against the session ID in the state file resolved during Step 0. If they differ, warn the user that the report may be stale and ask whether to proceed or regenerate.
 
@@ -151,6 +151,6 @@ After a successful merge, Section 6a of the walkthrough handles post-merge sync:
 ## Constraints
 
 - Does not re-run or resume overnight sessions (use `/overnight resume`)
-- Does not re-generate the morning report (use `python3 -m claude.overnight.report`)
+- Does not re-generate the morning report (use `python3 -m cortex_command.overnight.report`)
 - Reads `overnight-state.json` for metadata from the session directory (resolved via `lifecycle/sessions/latest-overnight/` symlink for new-style worktree sessions, or directly from `lifecycle/overnight-state.json` for old-style sessions); Step 0 may write `phase: "complete"` to it — all other steps are read-only
 - Does not support resuming a partially-completed review; restart if interrupted

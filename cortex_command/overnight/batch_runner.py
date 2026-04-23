@@ -13,7 +13,7 @@ from cortex_command.overnight.orchestrator import BatchConfig, BatchResult, run_
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="python3 -m claude.overnight.batch_runner")
+    p = argparse.ArgumentParser(prog="python3 -m cortex_command.overnight.batch_runner")
     p.add_argument("--plan", required=True)
     p.add_argument("--batch-id", type=int, required=True)
     p.add_argument("--test-command", default=None)

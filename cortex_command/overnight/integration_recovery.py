@@ -8,7 +8,7 @@ Follows the CLI module pattern established by interrupt.py and the flaky
 guard + SHA circuit breaker pattern from claude/pipeline/merge_recovery.py.
 
 Callable as:
-    python3 -m claude.overnight.integration_recovery [--state ...] [--test-command ...] ...
+    python3 -m cortex_command.overnight.integration_recovery [--state ...] [--test-command ...] ...
 """
 
 from __future__ import annotations
@@ -116,7 +116,7 @@ def _get_diff(worktree_path: str) -> str:
 # ---------------------------------------------------------------------------
 
 def main() -> int:
-    """Entry point for python3 -m claude.overnight.integration_recovery."""
+    """Entry point for python3 -m cortex_command.overnight.integration_recovery."""
     parser = argparse.ArgumentParser(
         description="Integration branch test-failure recovery for overnight orchestration.",
     )

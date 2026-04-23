@@ -1,6 +1,6 @@
 """Shared auth-resolution helper for the overnight runner and daytime pipeline.
 
-Stdlib-only module invokable both pre-venv (via ``python3 -m claude.overnight.auth
+Stdlib-only module invokable both pre-venv (via ``python3 -m cortex_command.overnight.auth
 --shell`` from ``runner.sh``) and in-process (via ``ensure_sdk_auth()`` from
 ``daytime_pipeline.py``). Resolves the SDK auth vector in the priority order:
 
@@ -249,7 +249,7 @@ def ensure_sdk_auth(event_log_path: pathlib.Path | None = None) -> dict:
 def resolve_auth_for_shell() -> int:
     """Shell entry point: print an ``export VAR=VALUE`` line or exit non-zero.
 
-    Invoked by ``runner.sh`` via ``python3 -m claude.overnight.auth --shell``
+    Invoked by ``runner.sh`` via ``python3 -m cortex_command.overnight.auth --shell``
     before the venv is active. Prints ``export ANTHROPIC_API_KEY=<quoted>`` or
     ``export CLAUDE_CODE_OAUTH_TOKEN=<quoted>`` to stdout on resolution;
     warning text goes to stderr.
@@ -319,7 +319,7 @@ def resolve_auth_for_shell() -> int:
 
 def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="python3 -m claude.overnight.auth",
+        prog="python3 -m cortex_command.overnight.auth",
         description="Resolve the SDK auth vector for runner.sh / daytime_pipeline.py.",
     )
     parser.add_argument(

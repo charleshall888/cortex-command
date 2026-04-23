@@ -4,7 +4,7 @@ Enables visual testing of every dashboard panel without running a real overnight
 workflow. All fixture files are written to their canonical dashboard-polled paths
 so the dashboard renders immediately after seeding.
 
-Entry point: python3 -m claude.dashboard.seed
+Entry point: python3 -m cortex_command.dashboard.seed
 """
 
 import argparse
@@ -759,7 +759,7 @@ def run_clean() -> None:
 def main() -> None:
     """Parse CLI arguments and dispatch to seed or clean."""
     parser = argparse.ArgumentParser(
-        prog="python3 -m claude.dashboard.seed",
+        prog="python3 -m cortex_command.dashboard.seed",
         description=(
             "Write realistic fixture files for the monitoring dashboard, "
             "enabling visual testing without running a real overnight workflow."

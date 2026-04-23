@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add a "Implement in autonomous worktree" fourth pre-flight option to `implement.md §1 Branch Selection`, backed by a new `§1b Daytime Dispatch` alternate path that guards against double-dispatch and concurrent overnight runs, launches `python3 -m claude.overnight.daytime_pipeline` in the background, polls for completion, and surfaces results. Accompany the change with behavior tests covering all guard scenarios and a contract test for the CLI invocation shape.
+Add a "Implement in autonomous worktree" fourth pre-flight option to `implement.md §1 Branch Selection`, backed by a new `§1b Daytime Dispatch` alternate path that guards against double-dispatch and concurrent overnight runs, launches `python3 -m cortex_command.overnight.daytime_pipeline` in the background, polls for completion, and surfaces results. Accompany the change with behavior tests covering all guard scenarios and a contract test for the CLI invocation shape.
 
 ## Tasks
 
@@ -44,7 +44,7 @@ Add a "Implement in autonomous worktree" fourth pre-flight option to `implement.
     3. Derive session dir: parent directory of `state_path`. Read: `cat {session_dir}/.runner.lock 2>/dev/null` — extract runner PID
     4. Check liveness: `kill -0 $runner_pid 2>/dev/null`. Alive → reject with "Overnight runner is active (PID {pid}) — wait for it to complete before launching a daytime run." Dead → emit warning "overnight state shows executing but no live runner found — may be stale; proceeding" and continue.
     - `state_path` is the full path to the session's state JSON file (e.g. `lifecycle/sessions/{id}/overnight-state.json`); the session dir is the containing directory (`Path(state_path).parent`). This matches the `bin/overnight-status` detection pattern.
-  - **Background subprocess launch (Req 7)**: Single Bash call with `run_in_background=true`. Command: `python3 -m claude.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1`. Subprocess writes `lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID — it only reads it.
+  - **Background subprocess launch (Req 7)**: Single Bash call with `run_in_background=true`. Command: `python3 -m cortex_command.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1`. Subprocess writes `lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID — it only reads it.
   - **`implementation_dispatch` event (Req 8)**: Immediately after background launch, separate Bash call appends to `lifecycle/{feature}/events.log`:
     ```json
     {"ts": "<ISO 8601>", "event": "implementation_dispatch", "feature": "<name>", "mode": "daytime"}
@@ -84,7 +84,7 @@ Add a "Implement in autonomous worktree" fourth pre-flight option to `implement.
 - **Context**:
   - Test style: standard pytest, `Path` + `tmp_path` fixtures, no subprocess mocking frameworks — create real temp files and (where possible) real processes. Reference `tests/test_runner_signal.py` for subprocess + signal patterns; `tests/test_skill_contracts.py` for document content assertion patterns. Run `just test` before and after to verify no regressions.
   - The file must satisfy: `grep -r "daytime_preflight\|autonomous_worktree\|daytime.*guard\|daytime.*pid" tests/` → finds `tests/test_daytime_preflight.py`. Use at least one of those terms in a function or variable name in the file.
-  - The file must also satisfy: `grep -r "daytime_pipeline.*feature\|feature.*daytime_pipeline" tests/` → finds this file. Include the invocation string `python3 -m claude.overnight.daytime_pipeline --feature` in the contract test.
+  - The file must also satisfy: `grep -r "daytime_pipeline.*feature\|feature.*daytime_pipeline" tests/` → finds this file. Include the invocation string `python3 -m cortex_command.overnight.daytime_pipeline --feature` in the contract test.
   - Required tests (implement as pure Python guard-logic tests or document contract tests):
 
   **Guard tests** — implement the guard logic described in spec §1b as Python helper functions and test their behavior:
@@ -99,7 +99,7 @@ Add a "Implement in autonomous worktree" fourth pre-flight option to `implement.
 
   **Contract test** — read `implement.md` and assert document content:
 
-  8. `test_skill_contracts`: read `skills/lifecycle/references/implement.md` and locate the §1b section (text between `### 1b.` and the next `### ` heading). Assert all of: (a) invocation string `python3 -m claude.overnight.daytime_pipeline --feature` is present; (b) no extra flags on the same invocation line (`--tier`, `--criticality`, `--base-branch`, `--test-command` absent from that line); (c) "plan.md" text appears before the first `daytime.pid` reference in §1b (guard ordering: plan.md check → daytime.pid → overnight); (d) `"mode": "daytime"` appears at least twice in §1b (implementation_dispatch and dispatch_complete events); (e) `"merged successfully"` appears before `"deferred"` and `"deferred"` appears before `"paused"` in §1b (first-match-wins outcome detection ordering is preserved)
+  8. `test_skill_contracts`: read `skills/lifecycle/references/implement.md` and locate the §1b section (text between `### 1b.` and the next `### ` heading). Assert all of: (a) invocation string `python3 -m cortex_command.overnight.daytime_pipeline --feature` is present; (b) no extra flags on the same invocation line (`--tier`, `--criticality`, `--base-branch`, `--test-command` absent from that line); (c) "plan.md" text appears before the first `daytime.pid` reference in §1b (guard ordering: plan.md check → daytime.pid → overnight); (d) `"mode": "daytime"` appears at least twice in §1b (implementation_dispatch and dispatch_complete events); (e) `"merged successfully"` appears before `"deferred"` and `"deferred"` appears before `"paused"` in §1b (first-match-wins outcome detection ordering is preserved)
 
   - `REPO_ROOT = Path(__file__).resolve().parent.parent` — use this pattern for all file paths
   - For overnight guard tests: mock the `active-session.json` path. The real path is `~/.local/share/overnight-sessions/active-session.json` (global). Factor the guard logic into a testable helper `_check_overnight_guard(session_file: Path, cwd: Path) -> tuple[bool, str]` that accepts the session file path as a parameter (so tests can pass a tmp_path version). Document that the §1b implementation reads the real global path when `session_file` is not overridden.

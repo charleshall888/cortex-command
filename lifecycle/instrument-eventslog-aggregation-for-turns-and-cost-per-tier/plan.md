@@ -48,7 +48,7 @@ Extend `claude/pipeline/metrics.py` with stdlib-only functions that discover and
 - **Depends on**: [2, 3, 4]
 - **Complexity**: simple
 - **Context**: Insertion point `claude/pipeline/metrics.py:534-547` (the `output` dict assembly). Preserve existing key order: append new keys after `calibration`. Atomic-write pattern at `metrics.py:542-546` is unchanged. Per-file invocation of `pair_dispatch_events` is the architectural fix for the file-local pairing invariant — a single concatenation across files before pairing would allow a `dispatch_complete` in session B to pair to a `dispatch_start` in session A if the latter's session rotated out mid-dispatch.
-- **Verification**: `python3 -m claude.pipeline.metrics` — pass if exit 0 AND `python3 -c "import json, pathlib; d = json.loads(pathlib.Path('lifecycle/metrics.json').read_text()); assert all(k in d for k in ['generated_at','features','aggregates','calibration','model_tier_dispatch_aggregates'])"` exits 0 AND `pytest claude/dashboard/tests/test_data.py::TestParseMetrics::test_valid_json_returns_dict_unchanged -v` exits 0
+- **Verification**: `python3 -m cortex_command.pipeline.metrics` — pass if exit 0 AND `python3 -c "import json, pathlib; d = json.loads(pathlib.Path('lifecycle/metrics.json').read_text()); assert all(k in d for k in ['generated_at','features','aggregates','calibration','model_tier_dispatch_aggregates'])"` exits 0 AND `pytest claude/dashboard/tests/test_data.py::TestParseMetrics::test_valid_json_returns_dict_unchanged -v` exits 0
 - **Status**: [x] pending
 
 ### Task 6: Add --report tier-dispatch CLI output with window and orphan banners
@@ -57,14 +57,14 @@ Extend `claude/pipeline/metrics.py` with stdlib-only functions that discover and
 - **Depends on**: [5]
 - **Complexity**: simple
 - **Context**: Use f-string column formatting, no external library. Iterate `sorted(model_tier_dispatch_aggregates.items())` for deterministic output. Untiered bucket (if present) prints last with `budget_cap_usd="—"` and `over_cap_rate="—"`. Window header and orphan banner both go to stdout (not stderr) — this is the spec's "explicit warning surfaced in the CLI output" (spec Edge Cases). Tests under `TestReportTierDispatch`: (a) populated aggregates → captured stdout contains `(estimated)` and each bucket key; (b) empty aggregates → stdout contains `No dispatch data found` and exit 0; (c) `--since 2099-01-01` → stdout contains `No dispatch data found after 2099-01-01`; (d) populated + `--since 2026-04-18` → stdout contains the window header line; (e) aggregates with 2 untiered records → stdout contains `"⚠ 2 dispatches had no matching dispatch_start"`; (f) bucket with errors → `error_counts_summary` column renders the condensed string.
-- **Verification**: `python3 -m claude.pipeline.metrics --report tier-dispatch | grep -q '(estimated)'` — pass if exit 0 AND `pytest claude/pipeline/tests/test_metrics.py -k report_tier_dispatch` exits 0
+- **Verification**: `python3 -m cortex_command.pipeline.metrics --report tier-dispatch | grep -q '(estimated)'` — pass if exit 0 AND `pytest claude/pipeline/tests/test_metrics.py -k report_tier_dispatch` exits 0
 - **Status**: [x] pending
 
 ## Verification Strategy
 
 1. End-to-end unit tests: `pytest claude/pipeline/tests/test_metrics.py -v` — all new tests pass (pair walker + aggregates + since + reporter).
 2. Schema backcompat: `pytest claude/dashboard/tests/test_data.py::TestParseMetrics::test_valid_json_returns_dict_unchanged -v` — confirms the additive JSON key doesn't break the dashboard parser.
-3. Full aggregator run: `python3 -m claude.pipeline.metrics --report tier-dispatch --since 2026-04-18` against the real `lifecycle/sessions/*/pipeline-events.log` corpus — exit 0, stdout contains the window header, `(estimated)` cost labels, and one row per observed `(model, tier)` bucket.
+3. Full aggregator run: `python3 -m cortex_command.pipeline.metrics --report tier-dispatch --since 2026-04-18` against the real `lifecycle/sessions/*/pipeline-events.log` corpus — exit 0, stdout contains the window header, `(estimated)` cost labels, and one row per observed `(model, tier)` bucket.
 4. Top-level key presence: `python3 -c "import json; d=json.load(open('lifecycle/metrics.json')); assert 'model_tier_dispatch_aggregates' in d"`.
 5. File-local pairing invariant (manual spot-check): with a real overnight session log, confirm that no `(model, tier)` bucket has more completes than its matched starts could account for — i.e., `sum(n_completes + n_errors)` across all buckets equals `count(dispatch_complete) + count(dispatch_error) − count(untiered) − count(daytime-schema-skipped)`.
 6. Full project test suite: `just test` — no regressions.

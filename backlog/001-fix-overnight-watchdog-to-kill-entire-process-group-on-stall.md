@@ -51,7 +51,7 @@ runner.sh (PGID leader)
 Launch `batch_runner` with `setsid` so it gets its own PGID:
 
 ```bash
-setsid python3 -m claude.overnight.batch_runner ... & BATCH_PID=$!
+setsid python3 -m cortex_command.overnight.batch_runner ... & BATCH_PID=$!
 ```
 
 Then the watchdog can kill the entire batch process group:

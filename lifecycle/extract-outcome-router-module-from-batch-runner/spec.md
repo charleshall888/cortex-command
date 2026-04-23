@@ -162,7 +162,7 @@ All existing tests in `claude/overnight/tests/` pass after extraction.
 
 **Acceptance criteria**:
 - `grep -c 'from cortex_command.overnight import outcome_router\|import outcome_router' claude/overnight/batch_runner.py` ≥ 1
-- `python3 -m claude.overnight.batch_runner --help` exits 0 (CLI entry point still works)
+- `python3 -m cortex_command.overnight.batch_runner --help` exits 0 (CLI entry point still works)
 
 ## Non-Requirements
 

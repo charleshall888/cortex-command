@@ -35,7 +35,7 @@ This ticket is decomposed from the discovery research at [`research/morning-revi
   - Each feature's `lifecycle/{feature}/spec.md`, derivable from the `spec_path` field on each merged feature in state.
 - **Worktree creation for the demo** requires a direct `git worktree add` from the skill's main repo context. The runner's existing pattern at `runner.sh:582` is the model. The `cortex-worktree-create.sh` hook cannot be reused.
 - **Cleanup coupling to Section 6**: Section 6 step 5 already removes the integration worktree on successful merge (`walkthrough.md:381-385`). A demo worktree would need similar removal, plus a user-facing reminder for any still-running demo process the skill cannot kill.
-- **External tools shelled out** (already in morning-review's toolkit): `jq`, `gh`, `git`, `open`, `update-item`, `python3 -m claude.overnight.report`, `git-sync-rebase.sh`. Adding `git diff` and `git worktree add` is consistent with this toolset; running an arbitrary user-provided `demo-command` is new.
+- **External tools shelled out** (already in morning-review's toolkit): `jq`, `gh`, `git`, `open`, `update-item`, `python3 -m cortex_command.overnight.report`, `git-sync-rebase.sh`. Adding `git diff` and `git worktree add` is consistent with this toolset; running an arbitrary user-provided `demo-command` is new.
 
 ### Conventions to follow
 

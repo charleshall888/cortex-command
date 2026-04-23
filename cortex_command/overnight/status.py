@@ -5,7 +5,7 @@ produce a single-screen status snapshot. Designed to be run in a
 refresh loop via `just overnight-status`.
 
 Usage:
-    python3 -m claude.overnight.status
+    python3 -m cortex_command.overnight.status
 """
 
 from __future__ import annotations

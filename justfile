@@ -612,13 +612,13 @@ overnight-status:
     trap 'exit 0' INT
     while true; do
         clear
-        uv run python3 -m claude.overnight.status
+        uv run python3 -m cortex_command.overnight.status
         sleep 5
     done
 
 # Run the overnight smoke test (verifies worker commit round-trip)
 overnight-smoke-test:
-    uv run python3 -m claude.overnight.smoke_test
+    uv run python3 -m cortex_command.overnight.smoke_test
 
 # Tail the current session's events log with pretty-printed JSON output
 overnight-logs:
@@ -656,11 +656,11 @@ dashboard:
 
 # Write fixture files for visual dashboard testing (overnight state, events, features, backlog)
 dashboard-seed:
-    uv run python3 -m claude.dashboard.seed
+    uv run python3 -m cortex_command.dashboard.seed
 
 # Remove all fixture files written by dashboard-seed
 dashboard-seed-clean:
-    uv run python3 -m claude.dashboard.seed --clean
+    uv run python3 -m cortex_command.dashboard.seed --clean
 
 # --- Backlog ---
 

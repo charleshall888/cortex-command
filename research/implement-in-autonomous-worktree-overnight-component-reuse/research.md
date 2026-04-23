@@ -214,7 +214,7 @@ Either way, the extraction pays for itself independent of the daytime decision.
 
 1. **Phase 1 — Extract `feature_executor.py`**. Move `execute_feature` + helpers (idempotency, context loading, exit-report, brain triage, conflict recovery). batch_runner imports from it. Add unit tests for idempotency + context loading. Run full overnight as regression gate.
 2. **Phase 2 — Extract `outcome_router.py`**. Move `_apply_feature_result` + merge paths + review gating + test-recovery + backlog write-back + circuit-breaker detection. batch_runner's `_accumulate_result` collapses to a one-line call. Add unit tests for `apply_feature_result` (mock merge/review); assert circuit breaker fires at threshold.
-3. **Phase 3 — Rename batch_runner.py → orchestrator.py**; keep batch_runner.py as thin CLI wrapper preserving the `python3 -m claude.overnight.batch_runner` contract.
+3. **Phase 3 — Rename batch_runner.py → orchestrator.py**; keep batch_runner.py as thin CLI wrapper preserving the `python3 -m cortex_command.overnight.batch_runner` contract.
 4. **Phase 4 — Integration tests for `orchestrator.run_batch`**: multi-feature batch with mocked feature_executor + outcome_router; assert concurrency, circuit breaker, budget exhaustion, heartbeat.
 5. **Phase 5 (optional) — Daytime driver**: thin module (~150 LOC) + CLI entry + skill integration. Only if TC4 evidence justifies.
 

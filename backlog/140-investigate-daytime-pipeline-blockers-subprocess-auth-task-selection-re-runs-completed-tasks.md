@@ -60,7 +60,7 @@ The failing task in the events.log includes the `[x]` suffix I added to the head
 ```bash
 DAYTIME_DISPATCH_ID=$(python3 -c 'import uuid; print(uuid.uuid4().hex)') \
 CORTEX_WORKTREE_ROOT=$TMPDIR/cortex-worktrees \
-.venv/bin/python3 -m claude.overnight.daytime_pipeline \
+.venv/bin/python3 -m cortex_command.overnight.daytime_pipeline \
   --feature <lifecycle-slug-with-mixed-done-and-pending-tasks>
 ```
 

@@ -37,7 +37,7 @@ dev = ["pytest>=8.0"]
 
 ### Python layout is flat under `claude/`, no src-layout, no top-level `__init__.py`
 
-- `claude/common.py` (~500 lines; its own `python3 -m claude.common` CLI at `claude/common.py:453-492` using argparse)
+- `claude/common.py` (~500 lines; its own `python3 -m cortex_command.common` CLI at `claude/common.py:453-492` using argparse)
 - `claude/overnight/` — 24 `.py` + `runner.sh` + `prompts/*.md`; `__init__.py` re-exports ~35 symbols
 - `claude/pipeline/` — 13 `.py` + `prompts/*.md`; `__init__.py` docstring-only
 - `claude/dashboard/` — `app.py`, `data.py`, `poller.py`, `templates/` (Jinja2), `tests/`
@@ -65,8 +65,8 @@ These are symlinked on `just deploy-bin` — the convention CLAUDE.md documents 
 
 Three paths, all relevant to the `uv run` constraint this ticket must document:
 
-1. **Runner (venv-activated)**: `claude/overnight/runner.sh:35-40` sources `$REPO_ROOT/.venv/bin/activate`, exports `PYTHONPATH="$REPO_ROOT"`, then runs `python3 -m claude.overnight.*`.
-2. **justfile (`uv run`)**: `justfile:615-663` uses `uv run python3 -m claude.overnight.status`, `uv run uvicorn claude.dashboard.app:app`, `uv run pytest`, etc.
+1. **Runner (venv-activated)**: `claude/overnight/runner.sh:35-40` sources `$REPO_ROOT/.venv/bin/activate`, exports `PYTHONPATH="$REPO_ROOT"`, then runs `python3 -m cortex_command.overnight.*`.
+2. **justfile (`uv run`)**: `justfile:615-663` uses `uv run python3 -m cortex_command.overnight.status`, `uv run uvicorn claude.dashboard.app:app`, `uv run pytest`, etc.
 3. **PEP 723 shebang**: `bin/audit-doc:1` and `bin/count-tokens:1` use `#!/usr/bin/env -S uv run --script` with an inline `# /// script` block declaring per-file deps.
 
 `PYTHONPATH` and `.venv/` are baked in across ~20 sites (runner.sh, `skills/overnight/SKILL.md:46`, multiple test harnesses). Ticket 115 is the owner of migrating those assumptions to `uv tool install`-ed semantics; this skeleton ticket must coexist without breaking them.

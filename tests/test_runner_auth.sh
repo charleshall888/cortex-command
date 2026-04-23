@@ -2,7 +2,7 @@
 # tests/test_runner_auth.sh — regression tests for runner.sh auth block
 # Asserts all three exit-code branches of the capture + case-statement that
 # runner.sh uses to delegate auth resolution to
-# `python3 -m claude.overnight.auth --shell`:
+# `python3 -m cortex_command.overnight.auth --shell`:
 #
 #   0 -> eval stdout, token exported into the shell
 #   1 -> no vector available, continue past the block silently
@@ -35,7 +35,7 @@ fail() {
 # ---------------------------------------------------------------------------
 AUTH_BLOCK='
 set +e
-_AUTH_STDOUT=$(python3 -m claude.overnight.auth --shell)
+_AUTH_STDOUT=$(python3 -m cortex_command.overnight.auth --shell)
 _AUTH_EXIT=$?
 set -e
 case "$_AUTH_EXIT" in

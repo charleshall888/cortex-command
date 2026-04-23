@@ -5,7 +5,7 @@ overnight-state.json with per-feature statuses. Also updates
 overnight-strategy.json with hot file accumulation and a round history note.
 
 Invoked by runner.sh after batch_runner exits:
-    python3 -m claude.overnight.map_results \
+    python3 -m cortex_command.overnight.map_results \
         --batch-id N --plan <path> --state-path <path> \
         --events-path <path> --strategy-path <path>
 """
@@ -35,7 +35,7 @@ _TERMINAL_STATUSES = frozenset({"merged", "failed", "deferred"})
 def _build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser for map_results."""
     parser = argparse.ArgumentParser(
-        prog="python3 -m claude.overnight.map_results",
+        prog="python3 -m cortex_command.overnight.map_results",
         description="Map batch runner results to overnight state and strategy.",
     )
     parser.add_argument(
@@ -230,7 +230,7 @@ def _update_strategy(
 
 
 def _run() -> None:
-    """Entry point for python3 -m claude.overnight.map_results."""
+    """Entry point for python3 -m cortex_command.overnight.map_results."""
     args = _build_parser().parse_args()
 
     plan_path = Path(args.plan)

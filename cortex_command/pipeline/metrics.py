@@ -10,7 +10,7 @@ backfilled events marked as null).
 
 Usage::
 
-    python3 -m claude.pipeline.metrics [--root /path/to/repo]
+    python3 -m cortex_command.pipeline.metrics [--root /path/to/repo]
 """
 
 from __future__ import annotations
@@ -1023,7 +1023,7 @@ def main(argv: list[str] | None = None) -> None:
         argv: Command-line arguments (defaults to ``sys.argv[1:]``).
     """
     parser = argparse.ArgumentParser(
-        prog="python3 -m claude.pipeline.metrics",
+        prog="python3 -m cortex_command.pipeline.metrics",
         description="Compute lifecycle metrics from event logs.",
     )
     parser.add_argument(

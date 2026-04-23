@@ -49,7 +49,7 @@
 
 ### Requirement 10: `batch_runner.py` imports `outcome_router`
 - **Expected**: Import statement present; CLI entry point still works.
-- **Actual**: `from cortex_command.overnight import outcome_router` + `from cortex_command.overnight.outcome_router import OutcomeContext` present. `python3 -m claude.overnight.batch_runner --help` exits 0.
+- **Actual**: `from cortex_command.overnight import outcome_router` + `from cortex_command.overnight.outcome_router import OutcomeContext` present. `python3 -m cortex_command.overnight.batch_runner --help` exits 0.
 - **Verdict**: PASS
 
 ## Stage 2: Code Quality

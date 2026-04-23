@@ -176,7 +176,7 @@ Build `outcome_router.py` fully alongside `batch_runner.py` (Tasks 1–4 — no 
   - `grep -c 'await outcome_router.apply_feature_result' claude/overnight/batch_runner.py` = 1
   - `grep -c 'budget_exhausted\|global_abort_signal' claude/overnight/batch_runner.py` — pass if result ≥ 1
   - `python3 -m py_compile claude/overnight/batch_runner.py` — pass if exit 0 (no syntax errors from orphaned code)
-  - `python3 -m claude.overnight.batch_runner --help` — pass if exit 0
+  - `python3 -m cortex_command.overnight.batch_runner --help` — pass if exit 0
 
 ---
 
@@ -205,7 +205,7 @@ After all tasks complete, `just test` must exit 0 with no new failures (Task 9's
 1. `python3 -c "import cortex_command.overnight.batch_runner; import cortex_command.overnight.outcome_router"` — no circular import
 2. `grep -c 'def _apply_feature_result\|def _write_back_to_backlog' claude/overnight/batch_runner.py` = 0
 3. `grep -c 'CIRCUIT_BREAKER_THRESHOLD' claude/overnight/outcome_router.py` ≥ 2
-4. `python3 -m claude.overnight.batch_runner --help` exits 0
+4. `python3 -m cortex_command.overnight.batch_runner --help` exits 0
 
 ## Veto Surface
 

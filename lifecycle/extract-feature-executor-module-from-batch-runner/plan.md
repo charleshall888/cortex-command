@@ -155,7 +155,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 
 ## Verification Strategy
 
-After all tasks complete: `just test` must exit 0 with all existing tests passing. Additionally verify the three acceptance checks from the spec's Req 4 (boundary test) and Req 5 (re-export): `python3 -c "from cortex_command.overnight.batch_runner import execute_feature; from cortex_command.overnight.feature_executor import execute_feature"` and `pytest claude/overnight/tests/test_feature_executor_boundary.py -v` both exit 0. Confirm that `python3 -m claude.overnight.batch_runner --help` (or any entry-point invocation) still works, verifying the CLI contract is unchanged.
+After all tasks complete: `just test` must exit 0 with all existing tests passing. Additionally verify the three acceptance checks from the spec's Req 4 (boundary test) and Req 5 (re-export): `python3 -c "from cortex_command.overnight.batch_runner import execute_feature; from cortex_command.overnight.feature_executor import execute_feature"` and `pytest claude/overnight/tests/test_feature_executor_boundary.py -v` both exit 0. Confirm that `python3 -m cortex_command.overnight.batch_runner --help` (or any entry-point invocation) still works, verifying the CLI contract is unchanged.
 
 ## Veto Surface
 

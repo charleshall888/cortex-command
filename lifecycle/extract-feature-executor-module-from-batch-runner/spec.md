@@ -116,7 +116,7 @@ _Classification: Requirements 1–8 are must-have (correctness and regression ga
 - `BatchConfig` does NOT move to `types.py` in Phase 1 — it stays in `batch_runner.py`; `feature_executor.py` uses a `TYPE_CHECKING`-guarded import for its type annotation.
 - `BatchResult` does NOT move in Phase 1 — it stays in `batch_runner.py` (orchestrator territory).
 - Doc updates to `docs/overnight-operations.md` and `docs/pipeline.md` are NOT in scope for Phase 1 — deferred to Phase 3.
-- The CLI contract (`python3 -m claude.overnight.batch_runner`) is NOT changed.
+- The CLI contract (`python3 -m cortex_command.overnight.batch_runner`) is NOT changed.
 - No new public API surfaces beyond `execute_feature()`.
 
 ## Edge Cases
@@ -143,7 +143,7 @@ _Classification: Requirements 1–8 are must-have (correctness and regression ga
 - **No circular imports**: `feature_executor` → `batch_runner` is forbidden (enforced by the boundary test in Req 4). `batch_runner` → `feature_executor` is the permitted direction.
 - **`types.py` imports only from stdlib and third-party** — no imports from `claude.overnight.*`. This prevents it from becoming a node in the internal dependency graph. Note: this constraint applies to the Phase 1 contents (FeatureResult only). Before adding `BatchResult` or other orchestrator-layer types in Phase 2, verify that their field types do not require overnight-package imports.
 - **`constants.py` imports only from stdlib** — no project imports.
-- **`batch_runner.py` CLI contract is unchanged**: `python3 -m claude.overnight.batch_runner` remains the entry point; `BatchConfig` and `__main__` block remain in `batch_runner.py`.
+- **`batch_runner.py` CLI contract is unchanged**: `python3 -m cortex_command.overnight.batch_runner` remains the entry point; `BatchConfig` and `__main__` block remain in `batch_runner.py`.
 - **All state writes use `tempfile + os.replace()`** (existing pattern, must be preserved in extracted code).
 - **Feature status lifecycle transitions are identical** after extraction: `pending → running → merged/paused/deferred/failed`.
 - **Repair attempt cap is a fixed architectural constraint**: Sonnet→Opus single escalation for merge conflicts; max 2 attempts (Sonnet + Opus) for test failures. These values must not change.

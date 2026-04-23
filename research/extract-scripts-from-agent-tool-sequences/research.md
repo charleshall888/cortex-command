@@ -94,7 +94,7 @@ Positive controls (well-wired): `overnight-status`, `overnight-start`, `overnigh
 
 - **Pipeline, per-turn**: `lifecycle/{feature}/agent-activity.jsonl` (`dispatch.py:485-528`).
 - **Pipeline, per-dispatch**: `lifecycle/sessions/{id}/pipeline-events.log`.
-- **Pipeline aggregates**: `python3 -m claude.pipeline.metrics --report tier-dispatch`.
+- **Pipeline aggregates**: `python3 -m cortex_command.pipeline.metrics --report tier-dispatch`.
 - **Gap — skill name on dispatch**: `dispatch.py:445` doesn't record which skill triggered the sub-agent dispatch. Addressed by ticket 109 — but this only covers pipeline sub-agent dispatches, NOT tool calls the agent makes inside an interactive SKILL.md flow. 109 is orthogonal to interactive adoption.
 - **Gap — interactive tool calls**: daytime Claude Code sessions have no tool-call log. Candidates C1, C3, C4, C5, C7, C11–C15 all live here.
 - **Unused infrastructure**: `claude/settings.json:252-267` already wires PreToolUse Bash hooks (`cortex-validate-commit.sh`, `cortex-output-filter.sh`) that receive `{"tool_name": "Bash", "tool_input": {"command": "..."}}`. A third matcher grepping for `bin/*` invocations and appending to a rolling JSONL would produce real interactive-session adoption telemetry at trivial cost. See DR-7.
@@ -117,7 +117,7 @@ Skipped. Internal topic.
 | # | Candidate | Script shape | Effort | Risks | Prerequisites |
 |---|-----------|--------------|--------|-------|---------------|
 | C1 | `bin/commit-preflight` → `{status, diff, recent_log}` | S | ~1 turn saved. Diff emitted in full. Stage/compose stay inline. | 102 + 113 (DR-7). |
-| C2+C3 | Promote `claude.common.detect_lifecycle_phase()` to canonical + extend to return `{phase, checked, total, cycle}`; expose `python3 -m claude.common detect-phase <dir>` CLI; hook subprocesses to it. **Statusline stays bash** (structural constraint). Retire hook's 38-line ladder; retire skill's 22-line pseudo-ladder. `.dispatching` + worktree overrides in skill stay (they're phase *overrides*, not detection). | **L (reverted from M)** | Statusline keeps bash ladder — document that it is a known second source that cannot be unified under current constraints (DR-6). Net drift: 4→3. `claude.common` return type grows — acknowledge DR-2 tension. | 102 + documented statusline exception in DR-6. |
+| C2+C3 | Promote `claude.common.detect_lifecycle_phase()` to canonical + extend to return `{phase, checked, total, cycle}`; expose `python3 -m cortex_command.common detect-phase <dir>` CLI; hook subprocesses to it. **Statusline stays bash** (structural constraint). Retire hook's 38-line ladder; retire skill's 22-line pseudo-ladder. `.dispatching` + worktree overrides in skill stay (they're phase *overrides*, not detection). | **L (reverted from M)** | Statusline keeps bash ladder — document that it is a known second source that cannot be unified under current constraints (DR-6). Net drift: 4→3. `claude.common` return type grows — acknowledge DR-2 tension. | 102 + documented statusline exception in DR-6. |
 | C4 | `bin/build-epic-map` → `{epic_id: {children, status, refined}}` | S | Step 3c decision tree stays inline. | 102 + 113. |
 | C5 | `bin/resolve-backlog-item` with distinct exit codes for unambiguous / ambiguous / no-match | S | **Ship unconditionally.** Bailout design = Pareto improvement: happy path faster, unhappy path unchanged (agent re-reads SKILL.md Step 1 guidance as today). Telemetry is post-ship validation (see 113), not a ship gate. | 102 + 113. |
 | C6 | — | — | Blocked on ticket #94. | — |

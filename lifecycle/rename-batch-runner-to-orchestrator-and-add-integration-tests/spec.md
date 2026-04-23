@@ -7,7 +7,7 @@
 
 ## Problem Statement
 
-`claude/overnight/batch_runner.py` (456 LOC after #076) still contains all session-layer logic — `run_batch()`, `_run_one()`, `_accumulate_result()`, heartbeat, session state initialization, worktree creation, and final persistence — alongside `BatchConfig`, `BatchResult`, and the CLI entry point. This mixes session orchestration with CLI plumbing in one file and leaves the core overnight orchestration path with no dedicated integration tests. Phase 3 of the batch_runner decomposition creates `orchestrator.py` as the session layer, makes `batch_runner.py` a thin ~30 LOC CLI wrapper, and adds integration tests for `orchestrator.run_batch`. This is the final regression gate for the three-phase refactor and closes the `python3 -m claude.overnight.batch_runner` invocation contract.
+`claude/overnight/batch_runner.py` (456 LOC after #076) still contains all session-layer logic — `run_batch()`, `_run_one()`, `_accumulate_result()`, heartbeat, session state initialization, worktree creation, and final persistence — alongside `BatchConfig`, `BatchResult`, and the CLI entry point. This mixes session orchestration with CLI plumbing in one file and leaves the core overnight orchestration path with no dedicated integration tests. Phase 3 of the batch_runner decomposition creates `orchestrator.py` as the session layer, makes `batch_runner.py` a thin ~30 LOC CLI wrapper, and adds integration tests for `orchestrator.run_batch`. This is the final regression gate for the three-phase refactor and closes the `python3 -m cortex_command.overnight.batch_runner` invocation contract.
 
 ## Requirements
 
@@ -32,8 +32,8 @@
    - `test_lead_unit.py`, `test_exit_report.py`, `test_trivial_conflict.py`, `test_repair_agent.py`, `test_overnight_state.py`: update imports to canonical locations (`FeatureResult` → `claude.overnight.types`, `execute_feature` → `claude.overnight.feature_executor`, `CIRCUIT_BREAKER_THRESHOLD` → `claude.overnight.constants`)  
    Acceptance: `grep -rn "from cortex_command.overnight.batch_runner import" claude/` returns 0 matches (no remaining direct imports from batch_runner except the `if __name__ == "__main__"` block inside batch_runner itself, if any)
 
-7. **[must-have]** **CLI invocation contract preserved**: `python3 -m claude.overnight.batch_runner --plan <path> --batch-id <id>` works unchanged.  
-   Acceptance: `python3 -m claude.overnight.batch_runner --help` exits 0 (verifies argparse is wired in thin wrapper); `python3 -c "from cortex_command.overnight import BatchConfig, run_batch"` exits 0 (verifies package import chain is clean); `just test` exits 0
+7. **[must-have]** **CLI invocation contract preserved**: `python3 -m cortex_command.overnight.batch_runner --plan <path> --batch-id <id>` works unchanged.  
+   Acceptance: `python3 -m cortex_command.overnight.batch_runner --help` exits 0 (verifies argparse is wired in thin wrapper); `python3 -c "from cortex_command.overnight import BatchConfig, run_batch"` exits 0 (verifies package import chain is clean); `just test` exits 0
 
 8. **[must-have]** **Add `claude/overnight/tests/test_orchestrator.py`** with `unittest.IsolatedAsyncioTestCase` integration tests for `orchestrator.run_batch`. Required scenarios:
    - Multi-feature batch: 2+ features with mocked `execute_feature` (use `autospec=True`) + `outcome_router.apply_feature_result` (use `autospec=True`); assert all features are dispatched and results accumulated

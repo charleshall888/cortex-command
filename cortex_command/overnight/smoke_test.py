@@ -4,7 +4,7 @@ Creates a minimal 1-task lifecycle plan, runs run_batch directly, asserts
 the feature branch has a new commit, and cleans up in a finally block.
 
 Usage:
-    uv run python3 -m claude.overnight.smoke_test
+    uv run python3 -m cortex_command.overnight.smoke_test
 """
 
 from __future__ import annotations

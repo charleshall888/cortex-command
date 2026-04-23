@@ -453,7 +453,7 @@ def normalize_status(raw: str) -> str:
 def _cli_detect_phase(args: list[str]) -> None:
     """Handle ``detect-phase <dir>`` subcommand."""
     if len(args) != 1:
-        print("Usage: python3 -m claude.common detect-phase <dir>", file=sys.stderr)
+        print("Usage: python3 -m cortex_command.common detect-phase <dir>", file=sys.stderr)
         sys.exit(1)
     print(detect_lifecycle_phase(Path(args[0])))
 
@@ -461,7 +461,7 @@ def _cli_detect_phase(args: list[str]) -> None:
 def _cli_normalize_status(args: list[str]) -> None:
     """Handle ``normalize-status <status>`` subcommand."""
     if len(args) != 1:
-        print("Usage: python3 -m claude.common normalize-status <status>", file=sys.stderr)
+        print("Usage: python3 -m cortex_command.common normalize-status <status>", file=sys.stderr)
         sys.exit(1)
     print(normalize_status(args[0]))
 
@@ -471,7 +471,7 @@ if __name__ == "__main__":
 
     if not argv:
         print(
-            "Usage: python3 -m claude.common <subcommand> [args]\n"
+            "Usage: python3 -m cortex_command.common <subcommand> [args]\n"
             "\n"
             "Subcommands:\n"
             "  detect-phase <dir>      Detect lifecycle phase for a feature directory\n"

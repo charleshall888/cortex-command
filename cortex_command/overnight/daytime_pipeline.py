@@ -555,7 +555,7 @@ async def run_daytime(feature: str) -> int:
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser."""
     p = argparse.ArgumentParser(
-        prog="python3 -m claude.overnight.daytime_pipeline"
+        prog="python3 -m cortex_command.overnight.daytime_pipeline"
     )
     p.add_argument(
         "--feature",

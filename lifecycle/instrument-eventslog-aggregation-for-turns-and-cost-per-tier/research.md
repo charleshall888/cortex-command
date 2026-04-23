@@ -29,7 +29,7 @@ Per-feature `events.log` also carries `dispatch_start` (captures `complexity`, `
 - Parses JSONL via `parse_events()` (line 67-93), with backfilled-timestamp detection at `metrics.py:32-47`
 - Joins tier via `lifecycle_start` event (line 157-159)
 - Produces `lifecycle/metrics.json` with per-feature records + per-tier aggregates + calibration summaries
-- Runs as `python3 -m claude.pipeline.metrics [--root PATH]` (line 493-548)
+- Runs as `python3 -m cortex_command.pipeline.metrics [--root PATH]` (line 493-548)
 
 **Gap**: metrics.py reads `feature_complete`, `phase_transition`, `review_verdict`, `batch_dispatch` — it does **not** read `dispatch_complete`, `dispatch_error`, or `throttle_backoff`. The per-dispatch `num_turns` and `cost_usd` fields are emitted and persisted but never aggregated. This is exactly the gap #087 fills.
 
@@ -42,7 +42,7 @@ Per-feature `events.log` also carries `dispatch_start` (captures `complexity`, `
 ### CLI deployment pattern
 
 `bin/` scripts → deployed to `~/.local/bin/` via justfile symlink recipes (justfile:120-140). Examples: `bin/overnight-status`, `bin/audit-doc`, `bin/count-tokens`. For a new reporter, either:
-- Expose via `python3 -m claude.pipeline.metrics --report tier-dispatch` (extend existing module), OR
+- Expose via `python3 -m cortex_command.pipeline.metrics --report tier-dispatch` (extend existing module), OR
 - Add `bin/overnight-metrics` wrapper that invokes the module
 
 ### Test fixtures and patterns
@@ -59,7 +59,7 @@ New tests go in `claude/pipeline/tests/test_tier_aggregator.py` (or extended `te
 
 - `claude/pipeline/metrics.py` — extend with `extract_dispatch_records()`, `compute_tier_dispatch_aggregates()`, new `tier_dispatch_aggregates` / `rate_limit_incidents` top-level keys in output
 - `claude/pipeline/tests/test_metrics.py` (or new `test_tier_aggregator.py`) — unit tests over hand-crafted fixtures
-- Possibly `bin/overnight-metrics` (shell wrapper) + `justfile` symlink recipe — only if a dedicated command name is preferred over `python3 -m claude.pipeline.metrics --report tier-dispatch`
+- Possibly `bin/overnight-metrics` (shell wrapper) + `justfile` symlink recipe — only if a dedicated command name is preferred over `python3 -m cortex_command.pipeline.metrics --report tier-dispatch`
 
 ## Web Research
 

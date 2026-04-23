@@ -32,7 +32,7 @@ Guards already in place:
 ### Daytime Pipeline CLI Interface
 
 ```
-python3 -m claude.overnight.daytime_pipeline --feature {slug}
+python3 -m cortex_command.overnight.daytime_pipeline --feature {slug}
 ```
 
 - CWD must be repo root (`_check_cwd()` enforces; exits 1 with `"must be run from repo root"`)
@@ -103,7 +103,7 @@ New tests needed: scenario YAML for four-option decision tree, concurrent guard 
 **The Bash tool has a hard 10-minute maximum timeout**. The daytime pipeline runs execute_feature → Claude SDK dispatch → per-task agents, which takes 30–90 minutes. Synchronous blocking via `subprocess.run()` or `proc.communicate()` will time out in a Bash tool call.
 
 **Correct architecture for long-running subprocesses from a skill:**
-- Launch subprocess in background: `nohup python3 -m claude.overnight.daytime_pipeline --feature {slug} > {log} 2>&1 &; echo $!`
+- Launch subprocess in background: `nohup python3 -m cortex_command.overnight.daytime_pipeline --feature {slug} > {log} 2>&1 &; echo $!`
 - Skill receives PID immediately
 - Skill periodically polls for completion (via `kill -0 $PID` liveness check or reading events.log)
 - When complete, read results from stdout log or events.log
@@ -226,7 +226,7 @@ This mirrors `bin/overnight-status` exactly and avoids scanning all historical s
 
 ### Critical: Bash Tool Timeout Makes Synchronous Blocking Infeasible
 
-The Bash tool has a 10-minute maximum timeout. The daytime pipeline runs 30–90 minutes. The skill CANNOT block on `python3 -m claude.overnight.daytime_pipeline` via a synchronous Bash call. The proposed "block on subprocess exit" architecture is infeasible as stated.
+The Bash tool has a 10-minute maximum timeout. The daytime pipeline runs 30–90 minutes. The skill CANNOT block on `python3 -m cortex_command.overnight.daytime_pipeline` via a synchronous Bash call. The proposed "block on subprocess exit" architecture is infeasible as stated.
 
 **Required mitigation**: Background execution model:
 1. Launch subprocess with `nohup ... & echo $!` (or Bash `run_in_background=True`)

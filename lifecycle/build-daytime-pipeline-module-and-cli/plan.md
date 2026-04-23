@@ -120,12 +120,12 @@ Thread `deferred_dir` backward-compatibly through six call sites in `feature_exe
         - `any(d.get("name") == feature for d in ctx.batch_result.features_deferred)` → print path to deferral file from `lifecycle/{feature}/deferred/`; return 1
         - `any(d.get("name") == feature for d in ctx.batch_result.features_paused)` → print "Feature {feature} paused — worktree cleaned; check events.log for details."; return 1
         - otherwise (features_failed or unrecognized) → print error from `ctx.batch_result.features_failed` if present; return 1
-  - `build_parser() -> argparse.ArgumentParser`: `prog="python3 -m claude.overnight.daytime_pipeline"`, add `--feature` (required, help="Feature slug to execute (e.g. my-feature)")
+  - `build_parser() -> argparse.ArgumentParser`: `prog="python3 -m cortex_command.overnight.daytime_pipeline"`, add `--feature` (required, help="Feature slug to execute (e.g. my-feature)")
   - `_run() -> None`: `args = build_parser().parse_args(); sys.exit(asyncio.run(run_daytime(args.feature)))`
   - `if __name__ == "__main__": _run()`
 - **Verification**:
-  - `python3 -m claude.overnight.daytime_pipeline --help` — pass if exit 0 and output contains `--feature`
-  - From `/tmp`: `python3 -m claude.overnight.daytime_pipeline --feature x 2>&1` — pass if output contains "must be run from the repo root"
+  - `python3 -m cortex_command.overnight.daytime_pipeline --help` — pass if exit 0 and output contains `--feature`
+  - From `/tmp`: `python3 -m cortex_command.overnight.daytime_pipeline --feature x 2>&1` — pass if output contains "must be run from the repo root"
 
 ---
 
@@ -152,8 +152,8 @@ Thread `deferred_dir` backward-compatibly through six call sites in `feature_exe
 
 After all tasks complete, run the full acceptance sequence:
 1. `just test` — exit 0, all tests pass, including `test_daytime_pipeline.py`
-2. `python3 -m claude.overnight.daytime_pipeline --help` — exit 0, output contains `--feature`
-3. From `/tmp`: `python3 -m claude.overnight.daytime_pipeline --feature x` — exit 1, stderr "must be run from the repo root"
+2. `python3 -m cortex_command.overnight.daytime_pipeline --help` — exit 0, output contains `--feature`
+3. From `/tmp`: `python3 -m cortex_command.overnight.daytime_pipeline --feature x` — exit 1, stderr "must be run from the repo root"
 4. From repo root with a feature that has no `plan.md`: exit 1, stderr "plan.md not found"
 5. Interactive acceptance test (manual): run against a small feature with a complete `plan.md`; verify `lifecycle/{feature}/daytime-state.json` exists after startup; verify `lifecycle/{feature}/deferred/` exists; verify branch is cleaned up after completion
 

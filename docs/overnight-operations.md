@@ -63,7 +63,7 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 **Mutators** (who writes):
 
 - **Orchestrator prompt, end of round.** `orchestrator-round.md`'s end-of-round step appends a `round_history_notes` entry and refreshes `hot_files` and `recovery_log_summary` via `save_strategy()` in `claude/overnight/strategy.py`. `save_strategy()` is atomic (tempfile + `os.replace()`).
-- **`runner.sh`, on integration-recovery failure.** When `python3 -m claude.overnight.integration_recovery` exits non-zero, `runner.sh` sets `integration_health="degraded"` in the file and sets `INTEGRATION_DEGRADED=true` in the environment (the warning file is then prepended to the PR body).
+- **`runner.sh`, on integration-recovery failure.** When `python3 -m cortex_command.overnight.integration_recovery` exits non-zero, `runner.sh` sets `integration_health="degraded"` in the file and sets `INTEGRATION_DEGRADED=true` in the environment (the warning file is then prepended to the PR body).
 
 **Consumers** (who reads):
 
@@ -189,13 +189,13 @@ The test gate runs in `runner.sh` after `batch_runner.py` has merged all passing
 
 Flow on pass: the gate runs `bash -c "$TEST_COMMAND"` inside the integration worktree, captures stdout/stderr to `$INTEGRATION_TEST_OUTPUT`, and on exit 0 proceeds to PR creation with no state change.
 
-Flow on fail: a non-zero exit invokes `python3 -m claude.overnight.integration_recovery` with the same `--test-command`, the worktree path, and a truncated 20-line head of the test output for the repair agent's context. Recovery dispatch itself obeys the 2-attempt cap documented under [Repair caps](#repair-caps). If recovery succeeds, the runner proceeds to PR creation normally. If recovery fails, three things happen in order: (1) `INTEGRATION_DEGRADED=true` is set in the runner's shell env; (2) `integration_health` is flipped to `"degraded"` in `overnight-strategy.json` via `load_strategy`/`save_strategy`, so subsequent rounds' conflict-recovery decisions can treat the branch with more caution (see [Strategy File mutators](#strategy-file-overnight-strategyjson--mutators-and-consumers)); (3) a warning block containing the first 20 lines of the failing test output is prepended to the PR body so a human reviewer sees it before merging. The PR is still pushed — successful merges are not rolled back by a gate failure.
+Flow on fail: a non-zero exit invokes `python3 -m cortex_command.overnight.integration_recovery` with the same `--test-command`, the worktree path, and a truncated 20-line head of the test output for the repair agent's context. Recovery dispatch itself obeys the 2-attempt cap documented under [Repair caps](#repair-caps). If recovery succeeds, the runner proceeds to PR creation normally. If recovery fails, three things happen in order: (1) `INTEGRATION_DEGRADED=true` is set in the runner's shell env; (2) `integration_health` is flipped to `"degraded"` in `overnight-strategy.json` via `load_strategy`/`save_strategy`, so subsequent rounds' conflict-recovery decisions can treat the branch with more caution (see [Strategy File mutators](#strategy-file-overnight-strategyjson--mutators-and-consumers)); (3) a warning block containing the first 20 lines of the failing test output is prepended to the PR body so a human reviewer sees it before merging. The PR is still pushed — successful merges are not rolled back by a gate failure.
 
 For tunable surfaces (`--test-command` choice, the unconditional-repair rule, `integration_health` semantics) see [Test Gate and integration_health tuning](#test-gate-and-integration_health-tuning) under Tuning.
 
 ### Startup Recovery (interrupt.py)
 
-`claude/overnight/interrupt.py` runs once at session startup to reconcile state that a prior crash or SIGKILL may have left in an inconsistent shape. It is invoked as `python3 -m claude.overnight.interrupt [state_path]` from `runner.sh` before the round loop begins.
+`claude/overnight/interrupt.py` runs once at session startup to reconcile state that a prior crash or SIGKILL may have left in an inconsistent shape. It is invoked as `python3 -m cortex_command.overnight.interrupt [state_path]` from `runner.sh` before the round loop begins.
 
 **Files**: `claude/overnight/interrupt.py` (`handle_interrupted_features`, `_infer_interrupt_reason`), invoked by `claude/overnight/runner.sh` at session start.
 
@@ -273,7 +273,7 @@ Tune by matching your API plan's parallelism ceiling to the tier. Picking `max_2
 
 The [Test Gate and integration_health](#test-gate-and-integration_health) subsection under Architecture documents the flow; this subsection calls out the *tunable surfaces*:
 
-- **`--test-command`** (passed to `runner.sh` / `batch_runner.py`). This is the command run after every merge onto the integration branch — a non-zero exit invokes `python3 -m claude.overnight.integration_recovery`. Choosing a slow or flaky command multiplies every round's wall-clock cost; choosing a fast-but-shallow command narrows what the gate catches before repair dispatch.
+- **`--test-command`** (passed to `runner.sh` / `batch_runner.py`). This is the command run after every merge onto the integration branch — a non-zero exit invokes `python3 -m cortex_command.overnight.integration_recovery`. Choosing a slow or flaky command multiplies every round's wall-clock cost; choosing a fast-but-shallow command narrows what the gate catches before repair dispatch.
 - **`integration_health` in `overnight-strategy.json`**. `healthy` is the implicit baseline; `degraded` is set by `runner.sh` when `integration_recovery` fails (alongside `INTEGRATION_DEGRADED=true` and a warning file prepended to the PR body). Downstream rounds consult this field in conflict-recovery decisions.
 - **Repair dispatch is unconditional** on gate failure — there is no suppression flag. If you need to skip repair, skip the gate (set `--test-command` to a no-op) rather than trying to gate the repair.
 
@@ -524,7 +524,7 @@ The module resolves Anthropic authentication in a strict 4-step fallback order b
 
 #### Shell entry point: three-exit-code contract
 
-`runner.sh` invokes the helper pre-venv via `python3 -m claude.overnight.auth --shell` and branches on the exit code:
+`runner.sh` invokes the helper pre-venv via `python3 -m cortex_command.overnight.auth --shell` and branches on the exit code:
 
 - **exit code 0** — vector resolved. Helper prints `export VAR=VALUE` to stdout; `runner.sh` `eval`s it. Warnings (if any) went to stderr.
 - **exit code 1** — no vector resolved. Helper printed a warning to stderr. `runner.sh` continues; the first SDK spawn may prompt for keychain access.

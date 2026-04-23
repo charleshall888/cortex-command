@@ -28,7 +28,7 @@
    - (c) read `~/.claude/personal-oauth-token` (exists on this machine, 108 bytes) and export as `CLAUDE_CODE_OAUTH_TOKEN`
    - (d) warn and rely on Keychain (real macOS fallback)
 
-The skill launch line at `skills/lifecycle/references/implement.md:71` is `DAYTIME_DISPATCH_ID={uuid} python3 -m claude.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1` — no venv, no auth bootstrap. The interactive Claude Code parent does not export `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` (confirmed: parent uses Keychain auth which is not env-exported; `~/.claude/settings.json` has no `apiKeyHelper`).
+The skill launch line at `skills/lifecycle/references/implement.md:71` is `DAYTIME_DISPATCH_ID={uuid} python3 -m cortex_command.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1` — no venv, no auth bootstrap. The interactive Claude Code parent does not export `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` (confirmed: parent uses Keychain auth which is not env-exported; `~/.claude/settings.json` has no `apiKeyHelper`).
 
 **claude_agent_sdk invocation site:**
 

@@ -22,14 +22,14 @@ discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ## Research context
 
 - Observability floor section of `research/extract-scripts-from-agent-tool-sequences/research.md`.
-- Existing aggregator: `python3 -m claude.pipeline.metrics --report tier-dispatch`.
+- Existing aggregator: `python3 -m cortex_command.pipeline.metrics --report tier-dispatch`.
 - This complements but does NOT replace ticket 103 (DR-7) — 104 covers pipeline sub-agent dispatches, 103 covers interactive-session tool calls. Different surfaces.
 
 ## Scope
 
 - Add `skill` field to `dispatch_start` event schema in `claude/pipeline/dispatch.py:445`.
 - Extend `claude/pipeline/metrics.py` with a secondary aggregator keyed on `(skill, tier)` over `agent-activity.jsonl`.
-- New CLI report mode: `python3 -m claude.pipeline.metrics --report skill-tier-dispatch`.
+- New CLI report mode: `python3 -m cortex_command.pipeline.metrics --report skill-tier-dispatch`.
 
 ## Out of scope
 

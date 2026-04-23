@@ -316,7 +316,7 @@ def test_skill_contracts() -> None:
     """implement.md §1b must satisfy five document invariants.
 
     Checks:
-      (a) invocation string `python3 -m claude.overnight.daytime_pipeline
+      (a) invocation string `python3 -m cortex_command.overnight.daytime_pipeline
           --feature` is present
       (b) no extra flags on that invocation line (--tier, --criticality,
           --base-branch, --test-command absent from that line)
@@ -345,7 +345,7 @@ def test_skill_contracts() -> None:
     section = full_section[steps_start:]
 
     # (a) invocation string present
-    invocation = "python3 -m claude.overnight.daytime_pipeline --feature"
+    invocation = "python3 -m cortex_command.overnight.daytime_pipeline --feature"
     assert invocation in section, (
         f"§1b must contain the invocation string {invocation!r}"
     )
@@ -387,7 +387,7 @@ def test_skill_contracts() -> None:
     vii_end_marker = section.find("**viii.", vii_start)
     vii_section = section[vii_start:vii_end_marker] if vii_end_marker != -1 else section[vii_start:]
 
-    reader_invocation = "python3 -m claude.overnight.daytime_result_reader"
+    reader_invocation = "python3 -m cortex_command.overnight.daytime_result_reader"
     assert reader_invocation in vii_section, (
         f"§1b.vii must invoke the reader helper {reader_invocation!r}"
     )

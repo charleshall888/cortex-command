@@ -5,7 +5,7 @@ module checks each feature's worktree state, logs an 'interrupted' event
 with a reason field, and resets the feature to 'pending'.
 
 Callable as:
-    python3 -m claude.overnight.interrupt [state_path]
+    python3 -m cortex_command.overnight.interrupt [state_path]
 
 The state_path argument defaults to lifecycle/overnight-state.json.
 """
@@ -151,7 +151,7 @@ def handle_interrupted_features(state_path: Path) -> None:
 
 
 def main() -> None:
-    """Entry point for python3 -m claude.overnight.interrupt."""
+    """Entry point for python3 -m cortex_command.overnight.interrupt."""
     if len(sys.argv) > 1:
         state_path = Path(sys.argv[1])
     else:

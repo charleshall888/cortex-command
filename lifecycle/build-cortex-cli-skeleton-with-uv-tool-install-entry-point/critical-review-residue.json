@@ -7,7 +7,7 @@
   "findings": [
     {
       "class": "B",
-      "finding": "Task 7 misses residual docstring and argparse prog= strings in Python modules. Verified: claude/pipeline/metrics.py:1026 prog=\"python3 -m claude.pipeline.metrics\", claude/overnight/auth.py:322, claude/common.py:456/464/474 usage prints, claude/dashboard/data.py:286 Sphinx docstring, claude/overnight/batch_runner.py:3 :mod: role. just test does not fail on stale docstrings so the wheel ships with old names in --help output and tracebacks.",
+      "finding": "Task 7 misses residual docstring and argparse prog= strings in Python modules. Verified: claude/pipeline/metrics.py:1026 prog=\"python3 -m cortex_command.pipeline.metrics\", claude/overnight/auth.py:322, claude/common.py:456/464/474 usage prints, claude/dashboard/data.py:286 Sphinx docstring, claude/overnight/batch_runner.py:3 :mod: role. just test does not fail on stale docstrings so the wheel ships with old names in --help output and tracebacks.",
       "reviewer_angle": "sed-pattern correctness and false-negative verification gaps",
       "evidence_quote": "Substitute any remaining `claude.<subpkg>` prose strings in docstrings or argparse metadata."
     },

@@ -64,11 +64,11 @@ The overnight bundle — files that must ship together for autonomous execution:
 The overnight runner directly calls:
 
 1. **Python modules at key gates:**
-   - `python3 -m claude.overnight.interrupt` — startup recovery (line ~570)
-   - `python3 -m claude.overnight.batch_runner` — feature execution (line ~716)
-   - `python3 -m claude.overnight.map_results` — state updates (line ~768)
-   - `python3 -m claude.overnight.integration_recovery` — test-gate repair (line ~919)
-   - `python3 -m claude.overnight.report` — morning report (line ~512)
+   - `python3 -m cortex_command.overnight.interrupt` — startup recovery (line ~570)
+   - `python3 -m cortex_command.overnight.batch_runner` — feature execution (line ~716)
+   - `python3 -m cortex_command.overnight.map_results` — state updates (line ~768)
+   - `python3 -m cortex_command.overnight.integration_recovery` — test-gate repair (line ~919)
+   - `python3 -m cortex_command.overnight.report` — morning report (line ~512)
 
 2. **Inline Python snippets** (lines 51-296, scattered): state reads, feature counting, prompt filling, auth resolution.
 
@@ -117,10 +117,10 @@ The overnight runner directly calls:
 **Hardcoded path assumptions:**
 - `runner.sh` reads `$REPO_ROOT/.venv/bin/activate` (line 39)
 - `runner.sh` reads `$REPO_ROOT/claude/overnight/prompts/orchestrator-round.md` (line 97)
-- `runner.sh` calls `python3 -m claude.overnight.*` — requires `PYTHONPATH=$REPO_ROOT`
+- `runner.sh` calls `python3 -m cortex_command.overnight.*` — requires `PYTHONPATH=$REPO_ROOT`
 - `settings.json` references `~/.claude/notify.sh` literally
 - `dispatch.py` loads `.claude/settings.json` to read `apiKeyHelper` (line ~42)
-- `skills/overnight/SKILL.md` invokes `$CORTEX_COMMAND_ROOT/.venv/bin/python3 -m claude.overnight.*` (line 46)
+- `skills/overnight/SKILL.md` invokes `$CORTEX_COMMAND_ROOT/.venv/bin/python3 -m cortex_command.overnight.*` (line 46)
 
 ---
 

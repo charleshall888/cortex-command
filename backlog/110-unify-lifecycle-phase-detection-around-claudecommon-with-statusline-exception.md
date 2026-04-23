@@ -31,12 +31,12 @@ Round-2 semantic diff confirmed all four agree on the phase model. `claude.commo
 - C2+C3 and DR-6 in `research/extract-scripts-from-agent-tool-sequences/research.md`.
 - Statusline parses `implement:N/M` back apart for a progress bar at lines 535-546 — the format is an inter-component contract, not caller-specific wrapping.
 - Canonical API must return `{phase, checked, total, cycle}` to preserve the contract. DR-2 narrow-schema exception documented.
-- Effort: L. Touches `claude/common.py`, hook, skill, and adds new CLI `python3 -m claude.common detect-phase <dir>`.
+- Effort: L. Touches `claude/common.py`, hook, skill, and adds new CLI `python3 -m cortex_command.common detect-phase <dir>`.
 
 ## Scope
 
 - Extend `claude.common.detect_lifecycle_phase()` return type to `{phase, checked, total, cycle}`.
-- Add CLI entry point: `python3 -m claude.common detect-phase <dir>`.
+- Add CLI entry point: `python3 -m cortex_command.common detect-phase <dir>`.
 - Hook: replace `determine_phase()` function body with subprocess call; format `implement:N/M` label from structured result.
 - Skill: replace Step 2 pseudo-ladder with reference to the CLI; retain `.dispatching` marker check and worktree-aware override (those are phase overrides, not detection).
 - Statusline: add comment documenting it is a deliberate bash-only mirror; include phase-model sync reminder.

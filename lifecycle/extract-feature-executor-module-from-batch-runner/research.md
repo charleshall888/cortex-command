@@ -232,7 +232,7 @@ For new pure helpers (any added during extraction): parametrized `pytest` with i
 
 ### From docs
 
-- **CLI contract**: `python3 -m claude.overnight.batch_runner` must remain the entry point. `BatchConfig` and `__main__` block stay in batch_runner.
+- **CLI contract**: `python3 -m cortex_command.overnight.batch_runner` must remain the entry point. `BatchConfig` and `__main__` block stay in batch_runner.
 - **Doc updates needed**: `docs/overnight-operations.md` strategy file consumers table references execute_feature by module name — must update from batch_runner to feature_executor after extraction. `docs/pipeline.md` has stale path `claude/pipeline/batch_runner.py` — should be `claude/overnight/batch_runner.py`.
 - **Scope**: feature_executor.py is an internal overnight library module, not a standalone CLI and not a published package.
 

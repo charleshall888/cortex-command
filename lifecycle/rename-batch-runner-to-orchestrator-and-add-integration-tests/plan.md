@@ -48,7 +48,7 @@ Move all session-layer logic from `batch_runner.py` into a new `orchestrator.py`
   - `_run()` function: lines 435–453; preserve exact function name; same `BatchConfig` field mapping from argparse namespace
   - `if __name__ == "__main__": _run()` block (line 455): keep as-is
   - Only imports needed: `argparse`, `asyncio`, `from cortex_command.overnight.orchestrator import BatchConfig, run_batch`
-- **Verification**: `wc -l < claude/overnight/batch_runner.py` ≤ 50; `grep -c "class BatchConfig" claude/overnight/batch_runner.py` = 0; `python3 -m claude.overnight.batch_runner --help` exits 0
+- **Verification**: `wc -l < claude/overnight/batch_runner.py` ≤ 50; `grep -c "class BatchConfig" claude/overnight/batch_runner.py` = 0; `python3 -m cortex_command.overnight.batch_runner --help` exits 0
 
 ---
 
@@ -172,7 +172,7 @@ Move all session-layer logic from `batch_runner.py` into a new `orchestrator.py`
 ### Task 11: Update `requirements/pipeline.md` — Session Orchestration section
 - [x]
 - **Files**: `requirements/pipeline.md`
-- **What**: In the Session Orchestration section, replace references to `batch_runner.py` as the session management module with `orchestrator.py`. The file may retain `batch_runner.py` in CLI invocation examples (e.g., `python3 -m claude.overnight.batch_runner`).
+- **What**: In the Session Orchestration section, replace references to `batch_runner.py` as the session management module with `orchestrator.py`. The file may retain `batch_runner.py` in CLI invocation examples (e.g., `python3 -m cortex_command.overnight.batch_runner`).
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Scan `requirements/pipeline.md` for "batch_runner.py" in prose descriptions; update session-management description text to name `orchestrator.py`; do not change CLI invocation examples
@@ -194,7 +194,7 @@ grep -c "class CircuitBreakerState" claude/overnight/types.py           # = 1
 grep -rn "consecutive_pauses_ref" claude/overnight/                     # 0 matches
 grep -c "global_abort_signal = True" claude/overnight/outcome_router.py # = 0
 grep -rn "from cortex_command.overnight.batch_runner import" claude/            # 0 matches
-python3 -m claude.overnight.batch_runner --help                         # exit 0
+python3 -m cortex_command.overnight.batch_runner --help                         # exit 0
 python3 -c "from cortex_command.overnight import BatchConfig, run_batch"        # exit 0
 grep -c "class.*IsolatedAsyncioTestCase" claude/overnight/tests/test_orchestrator.py # ≥ 1
 grep -c "def test_" claude/overnight/tests/test_orchestrator.py         # ≥ 5

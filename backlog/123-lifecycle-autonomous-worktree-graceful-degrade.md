@@ -22,7 +22,7 @@ discovery_source: research/overnight-layer-distribution/research.md
 
 ## Context from discovery
 
-The lifecycle skill has four execution modes; one of them ("Implement in autonomous worktree") dispatches to `python3 -m claude.overnight.daytime_pipeline` — a module that ships with the runner CLI, not with `cortex-interactive`. Users who install `cortex-interactive` alone (skipping `cortex-overnight-integration` + the CLI tier) will hit a ModuleNotFoundError if they pick that option.
+The lifecycle skill has four execution modes; one of them ("Implement in autonomous worktree") dispatches to `python3 -m cortex_command.overnight.daytime_pipeline` — a module that ships with the runner CLI, not with `cortex-interactive`. Users who install `cortex-interactive` alone (skipping `cortex-overnight-integration` + the CLI tier) will hit a ModuleNotFoundError if they pick that option.
 
 The plugin-split decision (DR-2) keeps `lifecycle` in `cortex-interactive` to preserve the "interactive-only install" value proposition. That requires the skill to detect runner absence at runtime and hide the autonomous-worktree menu item instead of erroring.
 

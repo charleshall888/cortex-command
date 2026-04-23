@@ -36,7 +36,7 @@
 - **Notes**: Strict acceptance fails by 1 match in a cross-lifecycle file not in #077's scope. Non-blocking: the re-export means imports still work. Worth updating daytime_pipeline.py's import in a follow-up touch (it's a one-line change to use `claude.overnight.orchestrator`).
 
 ### R7: CLI invocation contract preserved
-- **Expected**: `python3 -m claude.overnight.batch_runner --help` exits 0; `from cortex_command.overnight import BatchConfig, run_batch` works; `just test` passes.
+- **Expected**: `python3 -m cortex_command.overnight.batch_runner --help` exits 0; `from cortex_command.overnight import BatchConfig, run_batch` works; `just test` passes.
 - **Actual**: `--help` prints usage correctly. `from cortex_command.overnight import BatchConfig, run_batch` exits 0. `just test` reports `Test suite: 3/3 passed`.
 - **Verdict**: PASS
 

@@ -4,7 +4,7 @@ Manages long-running overnight sessions that execute multiple features in
 rounds, with state tracking, pause/resume capability, and deferred question
 handling.
 
-Entry point: python3 -m claude.overnight (future)
+Entry point: python3 -m cortex_command.overnight (future)
 """
 
 __version__ = "0.1.0"
