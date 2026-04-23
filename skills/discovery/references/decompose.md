@@ -30,7 +30,26 @@ For each work item, capture:
 - **Size**: S/M/L (informs ordering, not stored in backlog)
 - **Dependencies**: Which other work items must complete first
 
-Present the proposed work items to the user for review before creating tickets.
+**Flagged-item routing and batch review**: Route flagged items and unflagged items separately before creating tickets.
+
+(i) **R4 cap check (pre-consolidation)**: If any items are flagged per R2, first evaluate the cap on the **pre-consolidation** flag set (before §3 Consolidation Review runs). The cap fires when EITHER (a) **more than 3** items are flagged in the pre-consolidation set, OR (b) **all items are flagged** and N ≥ 2. When the cap fires, skip per-item pauses and halt with a single escalation: "{N} of {total} flagged items (pre-consolidation) — recommend re-running research with premise verification." Offer the user "Return to research" or "Proceed anyway" (the latter resumes the per-item ack flow in (ii)).
+
+(ii) **Per-item acknowledgment for flagged items**: If the cap did not fire, present each flagged item one at a time via `AskUserQuestion`. Each prompt must:
+  - Quote the proposed Value string verbatim.
+  - State which R2 branch flagged the item: `R2(a)-no-grounding`, `R2(b)-research-absent`, or `both`.
+  - Offer three choices: "Acknowledge and proceed", "Drop this item", "Return to research".
+
+If the user chooses "Drop this item", remove the item from the decomposition (no ticket is created later) and continue to the next flagged item. If the user chooses "Return to research", halt decomposition — do not proceed to ticket creation. If the user chooses "Acknowledge and proceed", keep the item and continue.
+
+(iii) **Unflagged items — batch review**: Present the proposed work items to the user for review before creating tickets. Unflagged items (including flagged items the user acknowledged in (ii)) continue through this existing batch-review behavior unchanged.
+
+(iv) **Event logging (R7)**: When a flag is raised, when the user acknowledges a flagged item, or when the user drops a flagged item, append an event to the active discovery topic's event stream (the same stream used by `orchestrator-review.md:22-30`, e.g., `research/{topic}/events.log`). If no event stream exists for the topic, skip silently — do not create new infrastructure.
+
+```
+{"ts": "<ISO 8601>", "event": "decompose_flag", "phase": "decompose", "item": "<title>", "reason": "<R2(a)|R2(b)|both>", "details": "<short>"}
+{"ts": "<ISO 8601>", "event": "decompose_ack", "phase": "decompose", "item": "<title>"}
+{"ts": "<ISO 8601>", "event": "decompose_drop", "phase": "decompose", "item": "<title>", "reason": "<R2 basis from flag event>"}
+```
 
 ### 3. Consolidation Review
 
