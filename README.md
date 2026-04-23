@@ -169,6 +169,15 @@ Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth
 
 `claude/settings.json` is the repo defaults template — `just setup` copies it to `~/.claude/settings.json` on first install. Run `/setup-merge` to pull updated repo defaults into your settings. Use `settings.local.json` for per-machine overrides.
 
+## Distribution
+
+The `cortex` CLI is installed as an editable `uv tool`; a few constraints apply:
+
+- When cortex invokes `uv run` internally, it operates on the user's current project, not cortex's own tool venv.
+- Do not run `uv tool uninstall uv` — removing uv via itself breaks the tool environment.
+- Adding or renaming `[project.scripts]` entries requires re-running `uv tool install -e . --force` to refresh shims.
+- Run `uv tool update-shell` once after the first `uv tool install` to add the tool bin directory to your `PATH`.
+
 ## Commands
 
 Run `just` to see all recipes (30+). Key commands:
