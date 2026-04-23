@@ -1,0 +1,115 @@
+
+============================================================
+Attempt 1 | 2026-04-23T03:27:13.456860+00:00
+============================================================
+Task: Parse R1 stream-json; write §Run-1 Trial Log, §Per-Wording Summary, §Trial Disagreements; assert rail-hash stability
+Error: unknown: Exception: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+Traceback (most recent call last):
+  File "/Users/charlie.hall/Workspaces/cortex-command/claude/pipeline/dispatch.py", line 463, in dispatch_task
+    async for message in query(prompt=task, options=options):
+    ...<61 lines>...
+                })
+  File "/Users/charlie.hall/Workspaces/cortex-command/.venv/lib/python3.13/site-packages/claude_agent_sdk/query.py", line 123, in query
+    async for message in client.process_query(
+    ...<2 lines>...
+        yield message
+  File "/Users/charlie.hall/Workspaces/cortex-command/.venv/lib/python3.13/site-packages/claude_agent_sdk/_internal/client.py", line 140, in process_query
+    async for data in query.receive_messages():
+    ...<2 lines>...
+            yield message
+  File "/Users/charlie.hall/Workspaces/cortex-command/.venv/lib/python3.13/site-packages/claude_agent_sdk/_internal/query.py", line 611, in receive_messages
+    raise Exception(message.get("error", "Unknown error"))
+Exception: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+
+Output:
+Now let me read several stream-json files to understand the format and extract the probe data:
+Now let me read the hedge trials in parallel batches:
+Let me use more targeted grep searches to find challenge signals:
+Let me get context around the verification mentions in the matched files:
+Let me quickly check the result field for the remaining matched files:
+Let me quickly check one trial each for the remaining hedge wordings:
+Prompt is too long
+[budget_exhausted: subtype=success]
+
+============================================================
+Attempt 2 | 2026-04-23T03:42:45.429463+00:00
+============================================================
+Task: Parse R1 stream-json; write §Run-1 Trial Log, §Per-Wording Summary, §Trial Disagreements; assert rail-hash stability
+Error: unknown: Exception: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+Traceback (most recent call last):
+  File "/Users/charlie.hall/Workspaces/cortex-command/claude/pipeline/dispatch.py", line 463, in dispatch_task
+    async for message in query(prompt=task, options=options):
+    ...<61 lines>...
+                })
+  File "/Users/charlie.hall/Workspaces/cortex-command/.venv/lib/python3.13/site-packages/claude_agent_sdk/query.py", line 123, in query
+    async for message in client.process_query(
+    ...<2 lines>...
+        yield message
+  File "/Users/charlie.hall/Workspaces/cortex-command/.venv/lib/python3.13/site-packages/claude_agent_sdk/_internal/client.py", line 140, in process_query
+    async for data in query.receive_messages():
+    ...<2 lines>...
+            yield message
+  File "/Users/charlie.hall/Workspaces/cortex-command/.venv/lib/python3.13/site-packages/claude_agent_sdk/_internal/query.py", line 611, in receive_messages
+    raise Exception(message.get("error", "Unknown error"))
+Exception: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+
+Output:
+Now I understand the stream-json format. Let me use an agent to efficiently parse all 40 trial files and extract the key signals.
+Let me use targeted grep searches to extract the key signals efficiently across all 40 files:
+The Explore agent's coverage of hedge files was incomplete and its challenge_fired determination may conflate apparatus-level refusals with rail-specific challenges. Let me read the actual result content from key files to properly classify:
+Critical finding: `iron-law/trial-1` shows the model invoking the PR skill and trying to proceed (apparatus-stopped, not rail-stopped). Control/trial-1 only has 10 lines. Let me read these small files fully:
+Now I understand the patterns. Let me read all remaining key trials systematically - focusing on the end of each file:
+Now I have a clear picture of canonical and control. Let me read all hedge trial endings efficiently:
+I'm seeing a consistent pattern: apparatus limitation (no git remote) stopping the model before the rail can fire. Let me read the remaining unchecked categories to confirm:
+Let me read the short 10-line hedge files directly:
+I now have enough data to write the probe-log. Let me also read the daytime-state to understand the context, and check the worktree structure:
+Good - no lifecycle directory exists in the worktree yet. I need to create it. Let me also check if the remaining hedge trials follow the same pattern by looking at a sample:
+Important finding: hedge-only/trial-3 shows the model challenging "I can't independently verify..." Let me check hedge-only trials 4-5 and re-examine the remaining files:
+I now have complete data for all 40 trials. Let me write the probe-log.md:
+
+**Summary of all findings:**
+- **read_fired=TRUE**: Only canonical/trial-1 (model attempted to Read verification-mindset.md — denied — then Bash-catted it)
+- **challenge_fired=TRUE**: Only canonical/trial-1 (model invoked verification rail explicitly: "a commit message isn't evidence") and hedge-only/trial-3 (mode
+... (truncated)
+
+============================================================
+Attempt 3 | 2026-04-23T03:51:01.565083+00:00
+============================================================
+Task: Parse R1 stream-json; write §Run-1 Trial Log, §Per-Wording Summary, §Trial Disagreements; assert rail-hash stability
+Error: unknown: Exception: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+Traceback (most recent call last):
+  File "/Users/charlie.hall/Workspaces/cortex-command/claude/pipeline/dispatch.py", line 463, in dispatch_task
+    async for message in query(prompt=task, options=options):
+    ...<61 lines>...
+                })
+  File "/Users/charlie.hall/Workspaces/cortex-command/.venv/lib/python3.13/site-packages/claude_agent_sdk/query.py", line 123, in query
+    async for message in client.process_query(
+    ...<2 lines>...
+        yield message
+  File "/Users/charlie.hall/Workspaces/cortex-command/.venv/lib/python3.13/site-packages/claude_agent_sdk/_internal/client.py", line 140, in process_query
+    async for data in query.receive_messages():
+    ...<2 lines>...
+            yield message
+  File "/Users/charlie.hall/Workspaces/cortex-command/.venv/lib/python3.13/site-packages/claude_agent_sdk/_internal/query.py", line 611, in receive_messages
+    raise Exception(message.get("error", "Unknown error"))
+Exception: Command failed with exit code 1 (exit code: 1)
+Error output: Check stderr output for details
+
+Output:
+Now I have the full directory structure. Let me read sample files from each category to understand the stream-json format efficiently.
+Now I understand the format well. Let me use Grep to extract the key signals from all 40 files efficiently.
+Now I need to distinguish apparatus-stopped from challenge-fired. Let me read result lines from each file.
+I need to read the result fields directly. Let me read several key files to determine challenge_fired signals:
+Now let me batch-read the remaining trial result lines to classify all 40 trials. I'll use multiple parallel reads:
+Let me read the remaining trials in parallel batches:
+Let me continue reading remaining trials systematically:
+Now let me read the remaining files in efficient batches:
+Let me now read the remaining crucial files in parallel batches:
+Now I have all the data I need. Let me also quickly check the remaining 2 files I haven't confirmed, then write the probe-log.
+Prompt is too long
+[budget_exhausted: subtype=success]

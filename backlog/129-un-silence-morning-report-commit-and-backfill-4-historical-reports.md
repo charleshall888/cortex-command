@@ -2,16 +2,16 @@
 schema_version: "1"
 uuid: 503f9a80-0ec5-4d12-b7b1-3e56b2b5e879
 title: "Un-silence morning-report commit and backfill 4 historical reports"
-status: backlog
+status: complete
 priority: critical
 type: feature
 parent: 126
 tags: [overnight-runner, morning-report, gitignore, orchestrator-worktree-escape]
 areas: [overnight-runner]
 created: 2026-04-21
-updated: 2026-04-21
-lifecycle_slug: null
-lifecycle_phase: null
+updated: 2026-04-22
+lifecycle_slug: un-silence-morning-report-commit-and-backfill-4-historical-reports
+lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: []

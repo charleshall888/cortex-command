@@ -1,0 +1,5 @@
+{
+  "action": "question",
+  "reason": "Bash tool blocked by EPERM on session-env dir; cannot run probe-apparatus.sh (requires claude -p CLI)",
+  "question": "The Bash tool fails with 'EPERM: operation not permitted, mkdir /Users/charlie.hall/.claude/session-env/...' for every invocation, including in all subagents. Task 4 requires running 30 `claude -p` probes via probe-apparatus.sh, which is impossible without Bash. Please fix the session-env directory permissions (chmod 755 /Users/charlie.hall/.claude/session-env or mkdir -p if missing) and re-dispatch this task."
+}

@@ -1,0 +1,35 @@
+{"ts": "2026-04-21T19:04:34Z", "event": "discovery_reference", "feature": "migrate-overnight-schedule-to-a-launchagent-based-scheduler", "epic_research": "research/overnight-runner-sandbox-launch/research.md", "epic_spec": null}
+- ts: 2026-04-21T19:06:00Z
+  event: clarify_critic
+  feature: migrate-overnight-schedule-to-a-launchagent-based-scheduler
+  findings:
+    - "The 'Desired outcome' bullet 'Launch the runner in a sandbox-clean context (launchd is the parent, no seatbelt inheritance)' treats runner-subtree unsandboxed-ness as a named success criterion, yet DR-2 in the research explicitly flags that 'sandbox-on-runner as load-bearing is unexamined' and the Assumptions section lists 'The sandbox on the runner subtree is load-bearing' as 'Unexamined.' An intent statement that elevates a side-effect of unclear value into a named success criterion is not fully clear."
+    - "The assessment asserts 'Boundaries between this ticket and the sibling F-path ticket are delineated' but the source ticket never names the sibling, never links it, and never says where the sibling's boundary is. The Recommendation in the research states both paths need changes to the same files (claude/settings.json, skills/overnight/SKILL.md, bin/overnight-schedule); the assessment treats a one-line parenthetical as a delineated boundary without verifying collision risk."
+    - "The 'Exploratory framing for planning' section is framed as questions, not scope decisions — 'Whether launchctl:* belongs in sandbox.excludedCommands …​ or whether per-call dangerouslyDisableSandbox: true on the launchctl bootstrap call is tighter' and 'Whether bin/overnight-schedule stays as a CLI surface …​ or is subsumed' are unresolved architectural forks. A HIGH boundedness rating needs decisions, not a list of unresolved questions re-labeled 'exploratory framing.'"
+    - "Requirements alignment rated HIGH with 'No conflicts detected' ignores that DR-5 requires adding ~/Library/LaunchAgents/ to sandbox.filesystem.allowWrite and potentially adding launchctl:* to excludedCommands. Both actions widen the defense-in-depth surface that requirements/project.md treats as 'the critical security surface for autonomous execution.' At minimum it's a trade-off, not a pure alignment."
+    - "Complexity rated complex cites 'research sized it as Medium effort (1–3 days)' as load-bearing reasoning, but DR-5 qualifies that estimate with 'Requires …​ launchctl:* in excludedCommands (or equivalent scoping)' — equivalent scoping is itself an open question. The effort figure is cited as trustworthy while the source flagged unresolved scope unknowns (DR-6 contract doc update, daytime-tmux implications, self-unload semantics)."
+    - "Criticality rated high dismisses critical without engaging with 'loss of a core capability everything else depends on.' If the migration lands with a StartCalendarInterval / self-unload / PATH-inheritance bug that silently prevents scheduled runs, the morning-review capability that requirements/project.md frames as the entire point of the day/night split fails."
+    - "Intent clarity HIGH and scope boundedness HIGH assert resolution while the ticket itself enumerates 'Whether the current-but-stale scheduled_start state-file write should persist' and 'Whether bin/overnight-schedule stays as a CLI surface' as unresolved — these are user-facing deliverable surfaces (CLI command availability, dashboard observability field), not implementation details."
+  dispositions:
+    apply: 2
+    dismiss: 5
+    ask: 0
+  applied_fixes:
+    - "Revised scope boundedness reasoning: outcome set is closed via explicit '## Out of scope' section and four outcome criteria; the 'Exploratory framing' forks (plist location, CLI surface fate, scheduled_start observability, excludedCommands vs. per-call bypass) are implementation means to be decided in Spec — they do not move the scope boundary. Rating HIGH maintained."
+    - "Revised requirements alignment reasoning: the proposed sandbox-config additions (launchctl:* in excludedCommands, ~/Library/LaunchAgents/ in sandbox.filesystem.allowWrite) are consistent with DR-6's contract rule in claude/rules/sandbox-behaviors.md (short-lived, transactional) and with the research's recommendation. Widening is narrow and governed by the documented contract, not a conflict with defense-in-depth. Rating HIGH maintained."
+  dismissals:
+    - finding_index: 0
+      rationale: "The parenthetical '(launchd is the parent, no seatbelt inheritance)' grounds the bullet in the mechanism (launchd spawn avoids needing excludedCommands entry for the scheduled path), aligning with DR-5's framing — the value is in not widening the sandbox config, not in claiming runner-subtree sandboxing is load-bearing."
+    - finding_index: 1
+      rationale: "The sibling F-path work is referenced in past tense ('has now been reverted', 'switched') and verified against current skills/overnight/SKILL.md which already invokes both overnight-start and overnight-schedule with dangerouslyDisableSandbox: true. No sequencing/collision concern remains."
+    - finding_index: 4
+      rationale: "The complex tier rating is independently supported by multi-file scope, introduction of a new pattern (plist generation + launchctl bootstrap), cross-cutting effect on the overnight launch path, and multiple design decisions. The 1–3 day figure is a data point, not load-bearing — the tier label stands."
+    - finding_index: 5
+      rationale: "clarify.md §5 sets high as the default for shared skills/workflow-infrastructure/overnight-runner changes. Critical adds parallel research + competing plans, which DR-5 has already ruled unnecessary by converging on Option E. Failures are visible via missing morning report (not silent), and rollback is simple (revert and restore tmux path). The critical-tier rigor would not add value."
+    - finding_index: 6
+      rationale: "Absorbed by the Apply on objection 2. The outcome set is closed; the unresolved user-facing surfaces (CLI wrapper fate, scheduled_start observability) are means-questions for Spec — both forks yield the same four outcome criteria."
+  status: ok
+{"ts": "2026-04-21T19:10:50Z", "event": "lifecycle_start", "feature": "migrate-overnight-schedule-to-a-launchagent-based-scheduler", "tier": "complex", "criticality": "high"}
+{"ts": "2026-04-21T19:10:50Z", "event": "phase_transition", "feature": "migrate-overnight-schedule-to-a-launchagent-based-scheduler", "from": "clarify", "to": "research"}
+{"ts": "2026-04-21T19:31:03Z", "event": "phase_transition", "feature": "migrate-overnight-schedule-to-a-launchagent-based-scheduler", "from": "research", "to": "specify"}
+{"ts": "2026-04-21T19:38:07Z", "event": "lifecycle_paused", "feature": "migrate-overnight-schedule-to-a-launchagent-based-scheduler", "reason": "Parked pending epic 113 (cortex CLI + plugin marketplace). Per epic 113 scope: LaunchAgent migration lands on the new CLI shape post-113. Research is complete; resume at Spec phase when 113 ships."}

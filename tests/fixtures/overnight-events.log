@@ -1,0 +1,13 @@
+{"v": 1, "ts": "2026-04-22T16:47:52.763404+00:00", "event": "session_start", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 1, "details": {"time_limit_hours": 6, "max_rounds": 10}}
+{"v": 1, "ts": "2026-04-22T16:48:08.701531+00:00", "event": "session_start", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 1, "details": {"time_limit_hours": 6, "max_rounds": 10}}
+{"v": 1, "ts": "2026-04-22T21:03:47.520427+00:00", "event": "session_start", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 1, "details": {"time_limit_hours": 6, "max_rounds": 10}}
+{"v": 1, "ts": "2026-04-22T21:06:54.288218+00:00", "event": "session_start", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 1, "details": {"time_limit_hours": 6, "max_rounds": 10}}
+{"v": 1, "ts": "2026-04-22T21:06:55.188732+00:00", "event": "session_complete", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 0, "details": {"features_merged": "2/3"}}
+{"v": 1, "ts": "2026-04-22T21:06:56.101462+00:00", "event": "push_failed", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 0, "details": {"session_id": "test-nonzero-merge", "branch": "overnight/test-nonzero-merge"}}
+{"v": 1, "ts": "2026-04-22T21:06:57.087380+00:00", "event": "morning_report_commit_result", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 1, "details": {"status": "committed", "commit_sha": "438a05f154a8b1a177f88566deaf2f9fef28e3da"}}
+{"v": 1, "ts": "2026-04-22T21:06:57.521227+00:00", "event": "morning_report_commit_failed", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 0, "details": {"session_id": "test-nonzero-merge"}}
+{"v": 1, "ts": "2026-04-22T21:12:01.178248+00:00", "event": "session_start", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 1, "details": {"time_limit_hours": 6, "max_rounds": 10}}
+{"v": 1, "ts": "2026-04-22T21:12:02.088570+00:00", "event": "session_complete", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 0, "details": {"features_merged": "2/3"}}
+{"v": 1, "ts": "2026-04-22T21:12:03.000775+00:00", "event": "push_failed", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 0, "details": {"session_id": "test-nonzero-merge", "branch": "overnight/test-nonzero-merge"}}
+{"v": 1, "ts": "2026-04-22T21:12:03.722662+00:00", "event": "morning_report_commit_result", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 1, "details": {"status": "no_changes", "commit_sha": null}}
+{"v": 1, "ts": "2026-04-22T21:12:04.137557+00:00", "event": "morning_report_commit_failed", "session_id": "a6561053-7638-4dc0-b98d-077de554af3e", "round": 0, "details": {"session_id": "test-nonzero-merge"}}

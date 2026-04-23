@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "dispatch_id": "f2b8fcf371004718940463be8b4f1ed8",
+  "feature": "rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism",
+  "start_ts": "2026-04-23T03:19:50.572637+00:00",
+  "end_ts": "2026-04-23T03:51:34.863295+00:00",
+  "outcome": "paused",
+  "terminated_via": "classification",
+  "deferred_files": [],
+  "error": null,
+  "pr_url": null
+}
