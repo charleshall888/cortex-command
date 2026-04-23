@@ -136,3 +136,5 @@ Stage and commit `research/{topic}/` using `/commit`. Summarize key findings for
 - **Read-only**: Do not modify project files except the research artifact
 - **All findings in the artifact**: They won't survive in context alone
 - **Scope**: Research the topic as described, not adjacent topics
+- **Citations**: codebase-pointing claims must carry an inline `[file:line]` citation traceable to codebase-agent findings, OR an explicit inline `[premise-unverified: not-searched]` marker when the author did not investigate the claim.
+- **Empty-corpus reporting**: searches that returned no results must be reported inline as `NOT_FOUND(query=<search-string>, scope=<path-or-glob>)` — distinct from the `premise-unverified: not-searched` marker used when no investigation was attempted.
