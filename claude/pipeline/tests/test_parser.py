@@ -299,5 +299,56 @@ class TestParseFieldStatusAnchoredMatch(unittest.TestCase):
         self.assertEqual(_parse_field_status(body), "pending")
 
 
+def test_heading_and_status_round_trip(tmp_path):
+    """R13: Parser round-trip integration — E1 heading strip + E2 Status anchor combined.
+
+    Fixture plan.md has two tasks whose headings both end with trailing `[x]`:
+      - Task 1: heading `[x]` AND Status `[x] complete` -> status=done, description stripped
+      - Task 2: heading `[x]` AND Status `[ ] pending` -> status=pending, description stripped
+
+    The second pattern mirrors `lifecycle/rewrite-verification-mindsetmd-to-positive-
+    routing-structure-under-47-literalism/plan.md` Task 2, where an authored-`[x]` in
+    the heading must not leak through as `status == done` when the Status field is
+    genuinely `[ ] pending`.
+    """
+    plan_md = (
+        "# Plan: round-trip-feature\n\n"
+        "## Overview\n\n"
+        "round-trip integration test\n\n"
+        "## Tasks\n\n"
+        "### Task 1: Do the complete thing [x]\n\n"
+        "- **Files**: `src/a.py`\n"
+        "- **What**: first task\n"
+        "- **Depends on**: none\n"
+        "- **Complexity**: simple\n"
+        "- **Status**: [x] complete\n\n"
+        "### Task 2: Capture baseline commit SHA and reference-file line counts [x]\n\n"
+        "- **Files**: `src/b.py`\n"
+        "- **What**: second task\n"
+        "- **Depends on**: none\n"
+        "- **Complexity**: simple\n"
+        "- **Status**: [ ] pending\n"
+    )
+    plan_path = tmp_path / "plan.md"
+    plan_path.write_text(plan_md, encoding="utf-8")
+
+    plan = parse_feature_plan(plan_path)
+
+    assert len(plan.tasks) == 2
+
+    # Task 1: heading [x] stripped AND Status [x] complete -> done
+    assert plan.tasks[0].number == 1
+    assert plan.tasks[0].description == "Do the complete thing"
+    assert plan.tasks[0].status == "done"
+
+    # Task 2: heading [x] stripped AND Status [ ] pending -> pending
+    # (exact pattern from the referenced lifecycle plan.md Task 2)
+    assert plan.tasks[1].number == 2
+    assert plan.tasks[1].description == (
+        "Capture baseline commit SHA and reference-file line counts"
+    )
+    assert plan.tasks[1].status == "pending"
+
+
 if __name__ == "__main__":
     unittest.main()
