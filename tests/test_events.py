@@ -40,7 +40,7 @@ def test_judgment_failed_raises_value_error(tmp_path):
 
 def test_all_log_event_calls_registered():
     """Every string-literal log_event call in overnight files must use a registered type."""
-    overnight_dir = REPO_ROOT / "claude" / "overnight"
+    overnight_dir = REPO_ROOT / "cortex_command" / "overnight"
 
     # Patterns for extracting string-literal event type arguments
     sh_pattern = re.compile(r'log_event "([^"]+)"')

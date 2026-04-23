@@ -25,7 +25,7 @@ from pathlib import Path
 import pytest
 
 REAL_REPO_ROOT = Path(__file__).resolve().parent.parent
-RUNNER_SH = REAL_REPO_ROOT / "claude" / "overnight" / "runner.sh"
+RUNNER_SH = REAL_REPO_ROOT / "cortex_command" / "overnight" / "runner.sh"
 
 
 def _iso_now() -> str:
@@ -131,7 +131,7 @@ def worktree_runner_env(tmp_path: Path):
     mock_claude.write_text("#!/bin/bash\nsleep 60\n")
     mock_claude.chmod(mock_claude.stat().st_mode | stat.S_IEXEC)
 
-    prompt_dir = repo / "claude" / "overnight" / "prompts"
+    prompt_dir = repo / "cortex_command" / "overnight" / "prompts"
     prompt_dir.mkdir(parents=True)
     (prompt_dir / "orchestrator-round.md").write_text(
         "Round {round_number} prompt for {state_path}\n"

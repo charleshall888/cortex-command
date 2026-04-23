@@ -17,7 +17,7 @@ from cortex_command.overnight import events
 from cortex_command.overnight.events import EVENT_TYPES
 
 REPO_ROOT = Path(__file__).parent.parent
-PROMPT_PATH = REPO_ROOT / "claude" / "overnight" / "prompts" / "orchestrator-round.md"
+PROMPT_PATH = REPO_ROOT / "cortex_command" / "overnight" / "prompts" / "orchestrator-round.md"
 
 # Matches log_event( followed by the first argument (constant name or string literal)
 _CALL_RE = re.compile(r'log_event\(\s*([A-Z_]+|"[^"]+"|\'[^\']+\')')
