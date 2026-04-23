@@ -50,15 +50,14 @@ def _evaluate_straddle(synthesis, meta):
         return False, f"expected 1 A-class finding, got {a_count}"
     if b_count != 1:
         return False, f"expected 1 B-class finding, got {b_count}"
-    # Named-concern-to-class substring matching
     a_concern = next((c for c in meta["concerns"] if c["expected_class"] == "A"), None)
     b_concern = next((c for c in meta["concerns"] if c["expected_class"] == "B"), None)
-    # Use the description's leading word(s) as a substring anchor (tolerant matching)
     a_anchor = a_concern["description"].split(".")[0][:40] if a_concern else ""
     b_anchor = b_concern["description"].split(".")[0][:40] if b_concern else ""
-    # The substring matching is intentionally lenient — if the synthesis paraphrases the
-    # concern but emits the right A/B classification, count it as pass. Tightening this
-    # to exact concern-id matching is a separate refinement.
+    if a_anchor and a_anchor not in synthesis:
+        return False, f"A-concern anchor '{a_anchor}' not found in synthesis"
+    if b_anchor and b_anchor not in synthesis:
+        return False, f"B-concern anchor '{b_anchor}' not found in synthesis"
     return True, "pass"
 
 
