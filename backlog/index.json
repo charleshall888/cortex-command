@@ -610,36 +610,6 @@
     "repo": null
   },
   {
-    "id": 132,
-    "title": "Classify /critical-review findings by class and add B-class action surface",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "critical-review",
-      "scope-expansion-bias",
-      "skills"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-22",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/classify-critical-review-findings-by-class-and-add-b-class-action-surface/spec.md",
-    "discovery_source": "research/critical-review-scope-expansion-bias/research.md",
-    "plan": null,
-    "uuid": "4451ab84-0143-46d9-ba83-958165b2fb32",
-    "lifecycle_slug": "classify-critical-review-findings-by-class-and-add-b-class-action-surface",
-    "session_id": "551b268d-873e-4d05-ab32-d2a129ba654d",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 135,
     "title": "Shared git index race between parallel Claude sessions causes wrong files to land in commits",
     "status": "backlog",
@@ -1113,7 +1083,7 @@
     "uuid": "72f5acad-4544-46b2-8070-dfd1257d69b9",
     "lifecycle_slug": "codify-citation-norm-and-premise-as-verification-in-discovery-research-phase",
     "session_id": "7c8876dd-75d4-4a7a-a13e-f1f57fd1d2b8",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -1146,6 +1116,35 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 140,
+    "title": "Investigate daytime pipeline blockers: subprocess auth + task-selection re-runs completed tasks",
+    "status": "in_progress",
+    "priority": "medium",
+    "type": "bug",
+    "tags": [
+      "overnight",
+      "daytime-pipeline",
+      "auth",
+      "parser"
+    ],
+    "areas": [],
+    "created": "2026-04-22",
+    "updated": "2026-04-22",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "f5c58535-ce2b-4bb1-8e73-26cf71ea0cca",
+    "lifecycle_slug": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks",
+    "session_id": "ee5a1968-3819-48c7-9167-bc4aa953ece1",
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },

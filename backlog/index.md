@@ -21,7 +21,6 @@
 | 121 | Publish cortex-overnight-integration plugin (overnight skill + runner hooks) | backlog | high | feature | 115, 116, 120 | 113 | — |
 | 122 | Publish plugin marketplace manifest for cortex-command | backlog | high | feature | 115, 116, 117, 120, 121 | 113 | — |
 | 123 | Lifecycle skill gracefully degrades autonomous-worktree option when runner absent | backlog | high | feature | 120 | 113 | — |
-| 132 | Classify /critical-review findings by class and add B-class action surface | refined | high | feature | — | — | ✓ |
 | 135 | Shared git index race between parallel Claude sessions causes wrong files to land in commits | backlog | high | bug | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | 85 | 82 | — |
@@ -39,6 +38,7 @@
 | 137 | Harden /discovery citation grounding and external-endorsement value gating | backlog | medium | epic | — | — | — |
 | 138 | Codify citation norm and premise-as-verification in /discovery research phase | in_progress | medium | chore | — | 137 | — |
 | 139 | Add vendor-endorsement value gating to /discovery decompose phase | backlog | medium | chore | 138 | 137 | — |
+| 140 | Investigate daytime pipeline blockers: subprocess auth + task-selection re-runs completed tasks | in_progress | medium | bug | — | — | — |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
@@ -47,7 +47,6 @@
 
 ## Refined
 
-- **132** Classify /critical-review findings by class and add B-class action surface
 
 ## Backlog
 
@@ -72,3 +71,4 @@
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
 - **138** Codify citation norm and premise-as-verification in /discovery research phase (in_progress)
+- **140** Investigate daytime pipeline blockers: subprocess auth + task-selection re-runs completed tasks (in_progress)
