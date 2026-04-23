@@ -59,8 +59,8 @@ Current Step 2c block (`skills/critical-review/SKILL.md` lines 74–105): **30 c
   1. Emits an operator-facing line: `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason}) — class tags for this angle are UNAVAILABLE. Prose findings presented as-is; the B→A refusal gate will EXCLUDE this reviewer's findings from its count rather than treating them as C-class.`
   2. Passes the reviewer's prose findings to the synthesizer as an untagged block (distinct from class-tagged JSON envelopes of well-formed reviewers).
   3. In Step 2d, the synthesizer includes the untagged prose in final presentation under `## Concerns` but does NOT count it toward the A-class tally that gates verdict-framing.
-- **Verification**: `grep -cE 'findings-json|envelope|malformed' skills/critical-review/SKILL.md` ≥ 3 in the Step 2c.5 block (extracted with `sed -n '/Step 2c.5/,/Step 2d/p'`) AND `grep -cE 'UNAVAILABLE|EXCLUDE this reviewer' skills/critical-review/SKILL.md` ≥ 1.
-- **Status**: [ ] pending
+- **Verification**: `sed -n '/^#### Step 2c.5/,/^### Step 2d/p' skills/critical-review/SKILL.md | grep -cE 'findings-json|envelope|malformed'` ≥ 3 (anchored heading patterns; the original `/Step 2c.5/,/Step 2d/` form stopped at the first body mention of "Step 2d") AND `grep -cE 'UNAVAILABLE|EXCLUDE this reviewer' skills/critical-review/SKILL.md` ≥ 1.
+- **Status**: [x] completed (commit pending; Step 2c.5 inserted between Step 2c fallback and Step 2d, anchored AC: 5 lines, UNAVAILABLE+EXCLUDE: 1 line)
 
 ### Task 5: Update Step 2d synthesis prompt — same-class through-lines + evidence-based re-examination + B→A refusal (R3)
 - **Files**: `skills/critical-review/SKILL.md`

@@ -170,6 +170,20 @@ Do not be balanced. Do not reassure. Find the problems.
 
 Output the fallback agent's result directly (no synthesis step). Prefix the output with this one-line note: "Note: parallel dispatch failed, falling back to single reviewer" before proceeding to Step 3.
 
+#### Step 2c.5: Envelope Extraction
+
+After all parallel reviewers (or the surviving subset) return, the orchestrator extracts each reviewer's JSON envelope before invoking Step 2d synthesis.
+
+For each reviewer's output:
+
+1. Locate the `<!--findings-json-->` delimiter using the LAST occurrence anchor — `re.findall(r'^<!--findings-json-->\s*$', output, re.MULTILINE)`, then split the output at the last match. This tolerates prose that quotes the delimiter inside a finding.
+2. `json.loads` the post-delimiter tail. Assert schema: top-level `angle: str`, `findings: list`; each finding has `class ∈ {"A", "B", "C"}`, `finding: str`, `evidence_quote: str`, and optional `straddle_rationale: str`.
+3. On any extraction or validation failure (no delimiter, JSON decode error, missing required field, invalid `class` enum), the orchestrator:
+   - Emits an operator-facing line: `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason}) — class tags for this angle are UNAVAILABLE. Prose findings presented as-is; the B→A refusal gate will EXCLUDE this reviewer's findings from its count rather than treating them as C-class.`
+   - Passes the reviewer's prose findings to the synthesizer as an untagged block (distinct from class-tagged envelopes of well-formed reviewers). Step 2d below renders untagged prose under `## Concerns` and excludes it from the A-class tally that gates verdict-framing.
+
+Do NOT silently coerce malformed envelopes to C-class — the loud operator note plus prose pass-through is required so the reviewer's real findings are not lost or mis-tagged.
+
 ### Step 2d: Opus Synthesis
 
 After all parallel reviewer agents from Step 2c complete (or the successful subset), dispatch one `opus` model agent with the following prompt template verbatim, with bracketed variables substituted at runtime:
