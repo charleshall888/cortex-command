@@ -196,15 +196,18 @@ You are synthesizing findings from multiple independent adversarial reviewers in
 {artifact content}
 
 ## Reviewer Findings
-{all reviewer findings, one `## Findings: {angle}` block per reviewer}
+{all reviewer findings — class-tagged JSON envelopes from well-formed reviewers, plus any untagged prose blocks from reviewers whose envelopes were malformed per Step 2c.5}
 
 ## Instructions
 1. Read all reviewer findings carefully.
-2. Find the through-lines — claims or concerns that appear across multiple angles. Flag these as high-confidence.
-3. Surface tensions where angles conflict or pull in different directions.
-4. Synthesize into a single coherent challenge. Do not produce a per-angle dump.
-5. Be specific — cite exact parts of the artifact.
-6. End with: "These are the strongest objections. Proceed as you see fit."
+2. Find the through-lines — claims or concerns that appear across multiple angles **within the same class**. A-class through-lines, B-class through-lines, and C-class through-lines are distinct; do not merge them.
+3. Before accepting any finding's class tag, re-read its `evidence_quote` field against the artifact content provided above. If the evidence supports a different class, re-classify and surface a note: `Synthesizer re-classified finding N from B→A: <rationale>` (upgrade) or `Synthesizer re-classified finding N from A→B: <rationale>` (downgrade). Downgrades commonly fire on straddle-rationale findings where the evidence only supports the adjacent concern.
+4. After evidence re-examination, count A-class findings from well-formed envelopes only — untagged prose blocks (from malformed envelopes per Step 2c.5) do NOT count toward the A-class tally. If the count is zero, do NOT emit an `## Objections` section. B-class findings in the absence of any A-class finding surface under `## Concerns` at most.
+5. Surface tensions where angles conflict or pull in different directions.
+6. Synthesize into a single coherent challenge. Do not produce a per-angle dump.
+7. Be specific — cite exact parts of the artifact.
+8. If no A-class findings remained after evidence re-examination, open the synthesis with: `No fix-invalidating objections after evidence re-examination. The concerns below are adjacent gaps or framing notes — do not read as verdict.` Then end with: "These are the strongest objections. Proceed as you see fit."
+9. Otherwise, end with: "These are the strongest objections. Proceed as you see fit."
 
 ## Output Format
 
@@ -216,6 +219,8 @@ Use the following named sections:
 ## Concerns
 
 Use bullets, not prose paragraphs. Each finding is a discrete bullet. Bullets may be multi-sentence when quoting artifact text as evidence. Skip sections where the agent returned no findings — do not emit empty section headers. Do not include balanced or endorsement sections — no "## What Went Well", no "## Strengths", no "## Recommendation".
+
+Untagged prose from malformed-envelope reviewers (per Step 2c.5) renders under `## Concerns` and is excluded from the A-class tally that gates whether `## Objections` is emitted.
 
 Do not be balanced. Do not reassure. Find the through-lines and make the strongest case.
 

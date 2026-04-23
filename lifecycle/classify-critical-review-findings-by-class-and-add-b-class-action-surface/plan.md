@@ -75,7 +75,7 @@ Current Step 2c block (`skills/critical-review/SKILL.md` lines 74–105): **30 c
   - New instruction: "After evidence re-examination, count A-class findings from well-formed envelopes only (untagged prose from malformed envelopes per Step 2c.5 does NOT count). If the count is zero, do NOT emit an `## Objections` section. B-class findings in the absence of any A-class finding surface under `## Concerns` at most."
   - Closing: keep "These are the strongest objections. Proceed as you see fit." but add preceding: "If no A-class findings remained after evidence re-examination, open the synthesis with: `No fix-invalidating objections after evidence re-examination. The concerns below are adjacent gaps or framing notes — do not read as verdict.`"
 - **Verification**: `grep -cE 'same class|within class|same-class' skills/critical-review/SKILL.md` ≥ 1 AND `grep -cE 're-examine|re-classif|evidence_quote' skills/critical-review/SKILL.md` ≥ 1 AND the synthesis block contains an explicit refusal clause (grep `no.*A-class|zero.*A-class|no.*Objections`).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit pending; same-class: 1, re-examine/re-classif/evidence_quote: 3, refusal clause: 2)
 
 ### Task 6: Update Step 4 — C-class findings default to Ask (R7)
 - **Files**: `skills/critical-review/SKILL.md`
