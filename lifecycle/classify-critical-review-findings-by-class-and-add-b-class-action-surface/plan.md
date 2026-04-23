@@ -195,8 +195,12 @@ Current Step 2c block (`skills/critical-review/SKILL.md` lines 74–105): **30 c
   - Reviewer-survival check per run: each of the 3 runs MUST have `reviewers.completed == reviewers.dispatched` (read from residue file if lifecycle-context, else from operator output). A run with partial reviewer failure is retried once (max 1 retry); if still partial, test fails loudly distinguishing "prompt broken" from "transient reviewer failure."
   - Read pass criterion from `tests/fixtures/critical-review/baseline-stability.json` `pass_criterion_recommendation` field. If `3-of-3`, require all 3 runs pass. If `2-of-3`, require majority. If `escalate`, skip with explicit message (shouldn't reach this state — Task 10 halts before Task 11 in the escalate case).
   - Mark test functions with `@pytest.mark.slow`. Register `slow` marker in `pytest.ini` (`markers = \n    slow: opt-in tests that invoke live models`). Default `just test` skips slow tests via `conftest.py` `pytest_collection_modifyitems` with skip-unless-`--run-slow`. Add `--run-slow` via `pytest_addoption`.
-- **Verification**: `just test -k critical_review_classifier --run-slow` exits 0 AND `just test -k critical_review_classifier --run-slow -v 2>&1 | grep -cE 'PASSED|FAILED'` ≥ 2 (proves both fixture-test functions actually ran, not silently skipped) AND `grep -cE '3-of-3|named-concern-to-class' tests/test_critical_review_classifier.py` ≥ 2 (assertion comments present in source) AND `grep -c '@pytest.mark.slow' tests/test_critical_review_classifier.py` ≥ 2.
-- **Status**: [ ] pending
+- **Verification** (amended — scaffolding-only scope per user direction): Collection-time checks replace execution-time checks; live `--run-slow` execution deferred pending full T10 5x baseline measurement.
+  - `.venv/bin/pytest tests/test_critical_review_classifier.py --collect-only --run-slow 2>&1 | grep -cE 'test_pure_b_aggregation_named_concern_to_class|test_straddle_case_named_concern_to_class'` = 2 (both tests collected and visible to --run-slow) ✓
+  - `.venv/bin/pytest tests/test_critical_review_classifier.py -v 2>&1 | grep -cE 'SKIPPED'` ≥ 2 (slow tests properly skipped without --run-slow) ✓
+  - `grep -cE '3-of-3|named-concern-to-class' tests/test_critical_review_classifier.py` ≥ 2 (assertion comments present in source) ✓
+  - `grep -c '@pytest.mark.slow' tests/test_critical_review_classifier.py` ≥ 2 ✓
+- **Status**: [x] completed (scaffolding-only scope; --run-slow execution deferred pending full T10 5x baseline measurement)
 
 ### Task 12: Final verification sweep — spec ACs + whole-skill line budget
 - **Files**: none (verification only)
