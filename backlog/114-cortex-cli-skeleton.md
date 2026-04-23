@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 9b5c4931-763b-4112-b261-a111119cb99f
 title: "Build cortex CLI skeleton with uv tool install entry point"
-status: refined
+status: complete
 priority: high
 type: feature
 parent: 113

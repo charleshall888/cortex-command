@@ -51,7 +51,7 @@ The spec's atomic-land MUST is protected by two enforcement points, both concret
 - **Complexity**: complex
 - **Context**: Same sed pattern as Task 4, scoped to the broader file extensions. Task 4 (import statements, including `.md` prose imports) ran first so that the import graph is valid before prose and docs follow. Commit: "Rewrite -m claude invocations across shell, markdown, and config".
 - **Verification**: Run `grep -rnE 'python3 -m claude\.(overnight|pipeline|common|dashboard|hooks|tests)' --include='*.py' --include='*.sh' --include='*.md' --include='*.json' --include='justfile' --include='*.toml' --include='*.txt' .; echo "exit=$?"` — pass if `exit=1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (2038000)
 
 ### Task 6: Rewrite `unittest.mock.patch("claude.X.Y")` strings across test files using a multi-line-aware Python helper
 - **Files**: Every `.py` file matched by `grep -rlE 'unittest\.mock\.patch|\bpatch\s*\(' --include='*.py' . | xargs grep -l "claude\.\(overnight\|pipeline\|common\|dashboard\|hooks\|tests\)"`. Live count against the current tree: ~236 single-line matches across ~18 files (verified during Plan phase). ADDITIONAL scope — multi-line wrapped `patch(\n    "claude.X.Y",\n    ...)` idioms pervasive in `claude/pipeline/tests/test_merge_recovery.py` (lines 97-103, 113-119, 129-135, 177-188, 221-232) and `claude/pipeline/tests/test_merge_ci.py` (lines 45-50). A line-scoped sed misses these; count pre-implementation with `python3 -c "import re, pathlib; p=re.compile(r'patch\s*\(\s*([\"\\'])claude\.', re.MULTILINE|re.DOTALL); print(sum(len(p.findall(f.read_text())) for f in pathlib.Path('.').rglob('*.py')))"`.
@@ -68,7 +68,7 @@ The spec's atomic-land MUST is protected by two enforcement points, both concret
 
   The `re.DOTALL` + `re.MULTILINE` combination consumes newlines inside the `\s*` gap between `patch(` and the opening quote. Apply with `re.sub` to each file's contents, write back atomically via the repo's `claude.common.atomic_write` (or `tempfile.NamedTemporaryFile` + `os.replace` if running pre-Task-4 on the old import path). Alternatively use `perl -0777 -pe 's/.../.../gs'` per file, which slurps the whole file and treats `.` as matching newlines. Commit: "Rewrite mock.patch strings to cortex_command namespace (multi-line aware)".
 - **Verification**: Use a multi-line-aware grep by piping through `tr`-delete-newlines or by using `pcregrep -M` or by a Python one-liner: `python3 -c "import re, pathlib; p=re.compile(r'patch(?:\.object|\.dict)?\s*\(\s*[\"\\']claude\.(overnight|pipeline|common|dashboard|hooks|tests)', re.MULTILINE|re.DOTALL); hits=[(str(f), len(p.findall(f.read_text()))) for f in pathlib.Path('.').rglob('*.py') if p.search(f.read_text())]; print(hits); import sys; sys.exit(1 if hits else 0)"` — pass if `exit=0` (empty `hits` list). A line-scoped grep is NOT acceptable as the sole check for this task because it systematically undercounts multi-line idioms.
-- **Status**: [ ] pending
+- **Status**: [x] completed (8c162f5)
 
 ### Task 7: Update non-module runtime-string references — uvicorn, settings.json, docstrings, AND slash-separated directory paths
 - **Files**: Four categories:
@@ -81,7 +81,7 @@ The spec's atomic-land MUST is protected by two enforcement points, both concret
 - **Complexity**: complex
 - **Context**: `claude/settings.json` stays at its existing path (spec §Changes to Existing Behavior — FILE stays; CONTENTS change). Validate JSON after editing: `python3 -c "import json; json.loads(open('claude/settings.json').read())"`. For category (d), use a discrimination step: the pattern `claude/(overnight|pipeline|common|dashboard|hooks|tests)/` MUST NOT match `claude/hooks/` (preserved), `claude/rules/` (preserved), `claude/reference/` (preserved) — the enumerated subpackage list intentionally omits those. For category (c), Python docstrings/`prog=` strings can be rewritten with the same sed as earlier tasks scoped to `.py` files (the earlier grep at line 4's `--include='*.py'` covers them, but Task 4's pattern requires `(from|import)` prefix, so docstrings survived). Apply `sed -E -i '' 's/claude\.(overnight|pipeline|common|dashboard|hooks|tests)/cortex_command.\1/g' <matched files>` scoped to `.py` only, then manually audit anything Task 4 would have touched if the prefix pattern had been loose. Commit: "Rewrite non-module runtime-string claude references (uvicorn, settings, docstrings, slash paths)".
 - **Verification**: Run `grep -rnE 'uvicorn claude\.' --include='*.py' --include='*.sh' --include='*.md' --include='justfile' --include='*.toml' .; echo "exit=$?"` — pass if `exit=1`. Run `grep -c 'Bash(python3 -m claude\.' claude/settings.json` — pass if output = `0`. Run `grep -c 'Bash(python3 -m cortex_command\.' claude/settings.json` — pass if output ≥ `1`. Run `python3 -c "import json; json.loads(open('claude/settings.json').read())"; echo "exit=$?"` — pass if `exit=0`. Run `grep -rnE 'claude\.(overnight|pipeline|common|dashboard|hooks|tests)' --include='*.py' .; echo "exit=$?"` — pass if `exit=1` (no residual dotted prose refs in Python sources). Run `grep -rnE 'claude/(overnight|pipeline|common|dashboard|tests)/' --include='*.py' --include='*.sh' --include='*.md' --include='*.json' --include='justfile' --include='*.toml' --include='*.txt' . | grep -vE 'claude/settings\.json|claude/Agents\.md|claude/rules/|claude/reference/|claude/statusline|claude/hooks/(?!overnight|pipeline)'; echo "exit=$?"` — pass if output is empty (no residual slash-path refs to moved subtrees).
-- **Status**: [ ] pending
+- **Status**: [x] completed (518562d)
 
 ### Task 8: Full-file audit and semantic rewrite of `skills/overnight/SKILL.md`
 - **Files**: `skills/overnight/SKILL.md`
@@ -90,7 +90,7 @@ The spec's atomic-land MUST is protected by two enforcement points, both concret
 - **Complexity**: simple
 - **Context**: Order the two parts: (1) mechanical substitution first (a `sed -E -i '' 's/claude\.(overnight|pipeline|common|dashboard|hooks|tests)/cortex_command.\1/g' skills/overnight/SKILL.md` is safe since Tasks 4 and 5 already ran — any residual match IS bare prose), (2) then semantic rewrite of the line-46 paragraph's meaning. Part 1 is a pure token substitution; part 2 is a paragraph-level rewrite. Part 1's sed is needed because the per-task AC for this task requires `grep -c 'claude\.overnight' SKILL.md = 0`, which a paragraph-only rewrite cannot satisfy. Commit: "Audit skills/overnight/SKILL.md and rewrite post-CLI install paragraph".
 - **Verification**: Run `grep -c 'cortex_command' skills/overnight/SKILL.md` — pass if output ≥ `1` (rename landed). Run `grep -c 'claude\.overnight\|claude\.pipeline\|claude\.common\|claude\.dashboard' skills/overnight/SKILL.md` — pass if output = `0` (no residual dotted references). Run `grep -c 'not installed globally' skills/overnight/SKILL.md` — pass if output = `0` (invalidated claim removed).
-- **Status**: [ ] pending
+- **Status**: [x] completed (1a5c267)
 
 ### Task 9: Update `pyproject.toml` testpaths to `cortex_command/...`
 - **Files**: `pyproject.toml`
@@ -131,7 +131,7 @@ The spec's atomic-land MUST is protected by two enforcement points, both concret
   - `python3 -m cortex_command.cli overnight; echo "exit=$?"` — pass if last line = `exit=2`.
   - Same exit-2 + stderr-substring shape for `mcp-server`, `setup`, `init`, `upgrade` (loop in a small shell script or pytest).
   - `python3 -m cortex_command.cli --help 2>&1 | grep -cE 'uv run|--force'` — pass if output ≥ `2` (epilog documents both constraints).
-- **Status**: [ ] pending
+- **Status**: [x] completed (1f5d0b6)
 
 ### Task 12: Add README "Distribution" section
 - **Files**: `README.md` (add section) OR `docs/distribution.md` (new file). Plan recommends the README section — spec AC allows either, and README is more discoverable.
@@ -142,7 +142,7 @@ The spec's atomic-land MUST is protected by two enforcement points, both concret
 - **Verification**:
   - `grep -lE 'uv run.*user.*project|tool.*venv' README.md docs/distribution.md 2>/dev/null | head -1 | grep -q .; echo "exit=$?"` — pass if `exit=0` (either file matches).
   - Spot-check for all four points: `grep -cE 'uv run|uv tool uninstall|--force|uv tool update-shell' README.md docs/distribution.md 2>/dev/null | awk -F: '{s+=$2} END {print s}'` — pass if output ≥ `4`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (365ad16)
 
 ### Task 13: Run `just test` and verify full suite passes against renamed packages
 - **Files**: none (verification-only)
@@ -151,7 +151,7 @@ The spec's atomic-land MUST is protected by two enforcement points, both concret
 - **Complexity**: simple
 - **Context**: `just test` runs pytest with `pythonpath = ["."]` + the four testpaths (now pointed at `cortex_command/...`). Any missed `claude.X` reference (import, `-m` invocation, mock.patch string, runtime docstring) will surface here as collection error, import error, or assertion failure. If failures occur, diagnose against the specific AC greps from Tasks 4–7 and re-run targeted subsets (e.g., `just test cortex_command/pipeline/tests/`) rather than re-doing the rename.
 - **Verification**: `just test; echo "exit=$?"` — pass if last line = `exit=0`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (f9b58c1 fixes test Path literals; all 3 groups pass)
 
 ### Task 14: Clean `dist/`, build wheel, verify data-file presence, install editable, verify `cortex --help`
 - **Files**: none (verification-only; produces `dist/cortex_command-*.whl` as a side effect of `uv build`)
@@ -163,7 +163,7 @@ The spec's atomic-land MUST is protected by two enforcement points, both concret
   - `rm -rf dist/; uv build; echo "exit=$?"` — pass if last line = `exit=0`.
   - `python3 -c "import zipfile, glob; whls=sorted(glob.glob('dist/cortex_command-*.whl')); assert len(whls)==1, f'expected exactly one wheel, got {len(whls)}'; z=zipfile.ZipFile(whls[-1]); names=z.namelist(); assert any(n.startswith('cortex_command/') for n in names); assert any(n.startswith('cortex_command/overnight/prompts/') and n.endswith('.md') for n in names), 'prompt files missing from wheel'; assert any(n.startswith('cortex_command/dashboard/templates/') for n in names), 'dashboard templates missing from wheel'"; echo "exit=$?"` — pass if `exit=0`.
   - Post-install `cortex --help` resolution is Interactive/session-dependent: `uv tool install -e . --force` writes to `~/.local/share/uv/tools/` outside the sandbox allow list, so the `which cortex` + `cortex --help | grep -cE '(overnight|mcp-server|setup|init|upgrade)' ≥ 5` check is executed manually by the developer in their shell and recorded in the task's exit report.
-- **Status**: [ ] pending
+- **Status**: [x] completed (wheel built; `uv tool install -e . --force` produced `/Users/charlie.hall/.local/bin/cortex`; `cortex --help` lists all 5 subcommands; `cortex overnight` exits 2 with stderr "not yet implemented: cortex overnight")
 
 ## Verification Strategy
 

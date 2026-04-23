@@ -247,36 +247,6 @@
     "repo": null
   },
   {
-    "id": 114,
-    "title": "Build cortex CLI skeleton with uv tool install entry point",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "cli",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "install"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-23",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": "lifecycle/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/spec.md",
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "9b5c4931-763b-4112-b261-a111119cb99f",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 115,
     "title": "Rebuild overnight runner under cortex CLI",
     "status": "backlog",
@@ -292,10 +262,9 @@
       "overnight-runner"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-21",
+    "updated": "2026-04-23",
     "blocks": [],
     "blocked_by": [
-      "114",
       "117"
     ],
     "parent": "113",
@@ -359,11 +328,9 @@
       "install"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-21",
+    "updated": "2026-04-23",
     "blocks": [],
-    "blocked_by": [
-      "114"
-    ],
+    "blocked_by": [],
     "parent": "113",
     "research": null,
     "spec": null,
@@ -391,10 +358,9 @@
       "install"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-21",
+    "updated": "2026-04-23",
     "blocks": [],
     "blocked_by": [
-      "114",
       "117"
     ],
     "parent": "113",
@@ -425,10 +391,9 @@
       "skills"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-21",
+    "updated": "2026-04-23",
     "blocks": [],
     "blocked_by": [
-      "114",
       "117"
     ],
     "parent": "113",
@@ -889,11 +854,9 @@
       "install"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-21",
+    "updated": "2026-04-23",
     "blocks": [],
-    "blocked_by": [
-      "114"
-    ],
+    "blocked_by": [],
     "parent": "113",
     "research": null,
     "spec": null,
