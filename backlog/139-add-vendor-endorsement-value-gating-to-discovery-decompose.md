@@ -4,7 +4,7 @@ uuid: 0483eebe-92eb-435f-ae65-a17961af4a2f
 id: "139"
 title: "Add vendor-endorsement value gating to /discovery decompose phase"
 type: chore
-status: refined
+status: complete
 priority: medium
 parent: "137"
 blocked-by: []
@@ -13,7 +13,7 @@ areas: [skills]
 created: 2026-04-22
 updated: 2026-04-22
 discovery_source: research/audit-and-improve-discovery-skill-rigor/research.md
-session_id: aae3862b-e02d-4d9d-bd22-512e81443f9f
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: add-vendor-endorsement-value-gating-to-discovery-decompose-phase
 complexity: simple

@@ -33,8 +33,6 @@
 | 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | 104 | 101 | — |
 | 119 | Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements | backlog | medium | feature | 114 | 113 | — |
 | 124 | Migration guide + script for existing symlink-based installs | backlog | medium | chore | 115, 116, 117, 118, 121, 122 | 113 | — |
-| 137 | Harden /discovery citation grounding and external-endorsement value gating | backlog | medium | epic | — | — | — |
-| 139 | Add vendor-endorsement value gating to /discovery decompose phase | refined | medium | chore | — | 137 | ✓ |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
@@ -43,7 +41,6 @@
 
 ## Refined
 
-- **139** Add vendor-endorsement value gating to /discovery decompose phase
 
 ## Backlog
 
@@ -57,7 +54,6 @@
 - **86** Extend output-floors.md with M1 Subagent Disposition section
 - **92** Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)
 - **101** Extract deterministic tool-call sequences into agent-invokable scripts
-- **137** Harden /discovery citation grounding and external-endorsement value gating
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
 - **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release
 - **133** Evaluate implement.md:180 progress-tail narration under Opus 4.7

@@ -4,7 +4,7 @@ uuid: 15ee4b9e-c570-4d25-ab98-a49e34e59890
 id: "137"
 title: "Harden /discovery citation grounding and external-endorsement value gating"
 type: epic
-status: backlog
+status: complete
 priority: medium
 blocked-by: []
 tags: [discovery, rigor, skills]

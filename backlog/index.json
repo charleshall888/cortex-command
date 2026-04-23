@@ -973,66 +973,6 @@
     "repo": null
   },
   {
-    "id": 137,
-    "title": "Harden /discovery citation grounding and external-endorsement value gating",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "epic",
-    "tags": [
-      "discovery",
-      "rigor",
-      "skills"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-22",
-    "updated": "2026-04-22",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/audit-and-improve-discovery-skill-rigor/research.md",
-    "plan": null,
-    "uuid": "15ee4b9e-c570-4d25-ab98-a49e34e59890",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 139,
-    "title": "Add vendor-endorsement value gating to /discovery decompose phase",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "discovery",
-      "rigor",
-      "skills"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-22",
-    "updated": "2026-04-22",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "137",
-    "research": null,
-    "spec": "lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/spec.md",
-    "discovery_source": "research/audit-and-improve-discovery-skill-rigor/research.md",
-    "plan": null,
-    "uuid": "0483eebe-92eb-435f-ae65-a17961af4a2f",
-    "lifecycle_slug": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase",
-    "session_id": "aae3862b-e02d-4d9d-bd22-512e81443f9f",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 90,
     "title": "Adopt xhigh effort default for overnight lifecycle implement",
     "status": "backlog",

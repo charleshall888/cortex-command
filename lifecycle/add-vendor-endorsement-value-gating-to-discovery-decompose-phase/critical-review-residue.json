@@ -1,36 +1,77 @@
 {
-  "ts": "2026-04-23T02:25:32Z",
+  "ts": "2026-04-23T02:48:17Z",
   "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase",
-  "artifact": "lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/spec.md",
+  "artifact": "lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
     "dispatched": 4
   },
+  "prior_cycle": {
+    "artifact": "lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/spec.md",
+    "b_class_count": 4,
+    "note": "Prior spec-phase B-class findings preserved in commit 9738d7b as an earlier version of this file."
+  },
   "findings": [
     {
       "class": "B",
-      "finding": "TC1 (no new persistent state) is load-bearing for the R4/R5 consolidation-bypass bug. Cleanly separating pre-consolidation research-quality signal from post-consolidation ack flow requires tracking both counts during the decompose run. TC1 pushes toward a single evaluation point which is precisely what creates the laundering path.",
-      "reviewer_angle": "Cap calibration and consolidation laundering",
-      "evidence_quote": "TC1 \u2014 Rule-edit scope only: No new files, tooling, or persistent state."
+      "finding": "No grep excludes Markdown comment blocks, fenced code blocks, or stale-section insertions. File already has HTML comment at line 71 \u2014 rule text stranded in <\\!--  --> or deprecated example blocks could satisfy every gate.",
+      "reviewer_angle": "Grep-verification fragility",
+      "evidence_quote": "<\\!-- Note: lifecycle reads discovery_source: first"
     },
     {
       "class": "B",
-      "finding": "R2 surface-pattern list is closed-form and omits generic-authority phrasings (recommended, standard, widely adopted, accepted, conventional). An agent aware of the gate evades by substituting generic authority for named vendor. The list needs either expansion or a shift to a non-lexical signal.",
-      "reviewer_angle": "Surface-pattern evasion and marker sparsity",
-      "evidence_quote": "external-endorsement surface patterns (e.g., vendor X recommends, Anthropic says, CrewAI docs, industry best practice, canonical pattern in $framework)"
+      "finding": "Task 7 pytest is circular with per-task greps \u2014 same string-presence predicate executed by different tool; not an independent signal.",
+      "reviewer_angle": "Grep-verification fragility",
+      "evidence_quote": "pytest module asserting R1-R7 strings are present in decompose.md"
     },
     {
       "class": "B",
-      "finding": "R2(a) written-by-agent-at-decompose-time (not copied verbatim from research.md) has no enforcement mechanism. Same-model agent trivially paraphrases. Requirement is observable only by human reviewer post-hoc, which is the escape hatch the gate is meant to reduce.",
-      "reviewer_angle": "Surface-pattern evasion and marker sparsity",
-      "evidence_quote": "produce a [file:line] citation that grounds the Value claim in this codebase, written by the agent at decompose time (not copied verbatim from research.md)"
+      "finding": "E10 invariant (consolidation cannot reduce flagged set to zero) explicitly obligated as prose by Task 4 but Verification greps only on R5 propagation strings. Invariant sentence is droppable without test catching it.",
+      "reviewer_angle": "Edge-case coverage gaps",
+      "evidence_quote": "The E10 invariant follows from the propagation rule \u2014 state it explicitly in the prose"
     },
     {
       "class": "B",
-      "finding": "\u00a76 Decomposition Record has no dropped-items section; flagged-and-dropped items leave no trace in the durable accounting artifact. Re-running /discovery on same topic cannot detect the same unverified premise was already proposed and rejected, enabling silent repeat-and-drop cycles with no captured learning.",
-      "reviewer_angle": "Silent scope-shift from Drop this item",
-      "evidence_quote": "Decomposition outputs go to research/{topic}/decomposed.md as an accounting record (per \u00a76 of decompose.md)"
+      "finding": "E6 integration (drop event + section 6 Dropped Items + ack choice) split across Tasks 3/5/6 with each piece verified individually; cross-referencing not verified \u2014 three disconnected prose pieces pass all greps.",
+      "reviewer_angle": "Edge-case coverage gaps",
+      "evidence_quote": "E6 \u2014 User chooses Drop this item: item dropped, decompose_drop logged, recorded in section 6 Dropped Items subsection"
+    },
+    {
+      "class": "B",
+      "finding": "E5 originating-input surfacing for merged flagged items not anchored in any grep. Task 3 Context mentions it but neither Task 3 nor Task 4 Verification greps for originating/originally-flagged.",
+      "reviewer_angle": "Edge-case coverage gaps",
+      "evidence_quote": "surface the originating flagged input Value + premise"
+    },
+    {
+      "class": "B",
+      "finding": "E3/E4 cap branches merged in Task 3 grep via alternation \u2014 single match on either branch satisfies verification, so branch-comprehensive coverage is untested.",
+      "reviewer_angle": "Edge-case coverage gaps",
+      "evidence_quote": "grep -c more than 3 OR all items are flagged >= 1"
+    },
+    {
+      "class": "B",
+      "finding": "Orchestration location backwards \u2014 decompose_flag/ack/drop events fire at section 2 user approval (Task 3) but schema block lives at section 3a. Readers at fire site scroll past section 3 Consolidation Review to find event shapes.",
+      "reviewer_angle": "Section numbering conflict",
+      "evidence_quote": "Place the block after section 3 Consolidation Review (e.g., as a new section 3a Event Logging)"
+    },
+    {
+      "class": "B",
+      "finding": "Tasks 4 and 6 both touch section 3 boundary without explicit merge-order rule. Task 4 appends propagation paragraph inside section 3; Task 6 inserts new section 3a heading immediately after \u2014 adjacent-line edits with unspecified ordering.",
+      "reviewer_angle": "Section numbering conflict",
+      "evidence_quote": "Task 4: Add R5 flag propagation to section 3 ... Task 6: Place block after section 3"
+    },
+    {
+      "class": "B",
+      "finding": "just test runs full aggregate suite (test-pipeline + test-overnight + pytest tests/) with no scope mechanism. Unrelated flakes block Task 8 even when R1-R9 correctly implemented.",
+      "reviewer_angle": "Test shallowness + just test assumption",
+      "evidence_quote": "Run just test \u2014 pass if exit 0 and recipe summary reports zero failures"
+    },
+    {
+      "class": "B",
+      "finding": "No failure-recovery path specified for partial rule insertion. Task 8 binary pass/fail with no iteration loop if pytest test fails because one R-rule missing while others present.",
+      "reviewer_angle": "Test shallowness + just test assumption",
+      "evidence_quote": "Depends on: [1, 2, 3, 4, 5, 6]"
     }
   ]
 }
