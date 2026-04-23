@@ -111,6 +111,12 @@ Create `research/{topic}/decomposed.md` to record what was produced:
 |----|-------|----------|------|------------|
 | NNN | [title] | high/medium/low | S/M/L | [IDs or —] |
 
+## Dropped Items
+| Title | Reason (R2 branch) | Originating Value |
+|-------|--------------------|-------------------|
+
+Include this subsection only when items were dropped at R3's ack prompt; omit when no drops occurred.
+
 ## Suggested Implementation Order
 [Brief description of the recommended sequence]
 
