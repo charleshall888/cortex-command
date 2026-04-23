@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
@@ -422,6 +423,7 @@ async def dispatch_task(
     _stderr_lines: list[str] = []
 
     def _on_stderr(line: str) -> None:
+        line = re.sub(r'sk-ant-[a-zA-Z0-9_-]+', 'sk-ant-<redacted>', line)
         if len(_stderr_lines) < _MAX_STDERR_LINES:
             _stderr_lines.append(line)
 

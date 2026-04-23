@@ -742,5 +742,63 @@ class TestDispatchTaskBudgetExhausted(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(error_events[0]["error_type"], "budget_exhausted")
 
 
+# ---------------------------------------------------------------------------
+# Tests: dispatch_task _on_stderr redaction of sk-ant-* tokens
+# ---------------------------------------------------------------------------
+
+
+class TestDispatchTaskStderrRedaction(unittest.IsolatedAsyncioTestCase):
+    """Tests that _on_stderr redacts sk-ant-* tokens before storing stderr."""
+
+    async def test_on_stderr_redacts_sk_ant_tokens_stderr_redact(self):
+        """sk-ant-abc123def in a stderr line is rewritten to sk-ant-<redacted>."""
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree = Path(tmp) / "feature-worktree"
+            worktree.mkdir()
+
+            captured: dict = {}
+
+            async def mock_query(**kwargs):
+                options = kwargs.get("options")
+                captured["options"] = options
+                # Emit a synthetic stderr line containing a sk-ant-* token.
+                if options is not None and options.stderr is not None:
+                    options.stderr("error: leaked key sk-ant-abc123def trailing text")
+                result_msg = ResultMessage(
+                    subtype="success",
+                    duration_ms=100,
+                    duration_api_ms=80,
+                    is_error=False,
+                    num_turns=1,
+                    session_id="sess-stderr-redact",
+                    total_cost_usd=0.0,
+                )
+                async for m in _async_gen(result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="stderr-redact-test",
+                    task="do something",
+                    worktree_path=worktree,
+                    complexity="simple",
+                    system_prompt="",
+                )
+
+            # _stderr_lines is a closure cell on the _on_stderr callback.
+            on_stderr = captured["options"].stderr
+            stderr_lines = None
+            for name, cell in zip(on_stderr.__code__.co_freevars, on_stderr.__closure__ or ()):
+                if name == "_stderr_lines":
+                    stderr_lines = cell.cell_contents
+                    break
+
+            self.assertIsNotNone(stderr_lines, "_stderr_lines closure cell not found")
+            self.assertEqual(len(stderr_lines), 1)
+            line = stderr_lines[-1]
+            self.assertIn("sk-ant-<redacted>", line)
+            self.assertNotIn("sk-ant-abc123def", line)
+
+
 if __name__ == "__main__":
     unittest.main()

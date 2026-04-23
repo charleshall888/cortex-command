@@ -299,6 +299,7 @@ def _parse_tasks(text: str, path: Path) -> list[FeatureTask]:
     for i, match in enumerate(matches):
         task_num = int(match.group(1))
         description = match.group(2).strip()
+        description = re.sub(r'\s*\[[xX]\]\s*$', '', description).strip()
 
         # Extract the body of this task section (up to next ### or ## or EOF)
         start = match.end()
@@ -391,6 +392,6 @@ def _parse_field_status(body: str) -> str:
         return "pending"
 
     raw = match.group(1).strip()
-    if re.search(r"\[x\]", raw, re.IGNORECASE):
+    if re.match(r"\[[xX]\]", raw):
         return "done"
     return "pending"

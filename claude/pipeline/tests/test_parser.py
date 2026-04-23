@@ -20,6 +20,7 @@ from claude.pipeline.parser import (
     parse_feature_plan,
     parse_master_plan,
     _normalize_task_separators,
+    _parse_field_status,
 )
 
 
@@ -244,6 +245,58 @@ class TestMasterPlanConcurrencyLimitBackwardCompat(unittest.TestCase):
         self.assertFalse(hasattr(plan.config, "concurrency_limit"))
         self.assertEqual(len(plan.features), 1)
         self.assertEqual(plan.features[0].name, "alpha-feature")
+
+
+class TestParseTasksStripsTrailingXXFromHeading(unittest.TestCase):
+    """E1: trailing [x] or [X] on task headings is stripped from description; [ ] is preserved."""
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _parse(self, tasks_body: str) -> FeaturePlan:
+        plan_path = Path(self._tmpdir.name) / "plan.md"
+        plan_path.write_text(_make_plan(tasks_body), encoding="utf-8")
+        return parse_feature_plan(plan_path)
+
+    def test_parse_tasks_strips_trailing_xX_from_heading(self):
+        """Trailing [x]/[X] stripped from description; literal [ ] preserved."""
+        body = (
+            _task_block("### Task 2: Do the thing [x]", Complexity="simple")
+            + _task_block("### Task 3: Other [X]", Complexity="simple")
+            + _task_block("### Task 5: Reserve slot [ ]", Complexity="simple")
+        )
+        plan = self._parse(body)
+        self.assertEqual(len(plan.tasks), 3)
+        self.assertEqual(plan.tasks[0].description, "Do the thing")
+        self.assertEqual(plan.tasks[1].description, "Other")
+        self.assertEqual(plan.tasks[2].description, "Reserve slot [ ]")
+
+
+class TestParseFieldStatusAnchoredMatch(unittest.TestCase):
+    """E2: _parse_field_status matches [x]/[X] only at the anchor, not mid-line."""
+
+    def test_parse_field_status_anchored_match(self):
+        """Lowercase [x] prefix -> done."""
+        body = "- **Status**: [x] complete\n"
+        self.assertEqual(_parse_field_status(body), "done")
+
+    def test_parse_field_status_anchored_match_uppercase(self):
+        """Uppercase [X] prefix -> done."""
+        body = "- **Status**: [X] complete\n"
+        self.assertEqual(_parse_field_status(body), "done")
+
+    def test_parse_field_status_anchored_match_rejects_mid_line_x(self):
+        """Mid-line [x] no longer false-positives as done."""
+        body = "- **Status**: see [x]y.txt pending\n"
+        self.assertEqual(_parse_field_status(body), "pending")
+
+    def test_parse_field_status_anchored_match_empty_box_is_pending(self):
+        """Literal [ ] -> pending."""
+        body = "- **Status**: [ ] pending\n"
+        self.assertEqual(_parse_field_status(body), "pending")
 
 
 if __name__ == "__main__":
