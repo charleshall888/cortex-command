@@ -12,7 +12,7 @@
 | 113 | Distribute cortex-command as cortex CLI + plugin marketplace | backlog | high | epic | — | — | — |
 | 115 | Rebuild overnight runner under cortex CLI | backlog | high | feature | 117 | 113 | — |
 | 116 | Build MCP control-plane server with versioned runner IPC contract | backlog | high | feature | 115 | 113 | — |
-| 117 | Build cortex setup subcommand and retire shareable-install scaffolding | backlog | high | feature | — | 113 | — |
+| 117 | Build cortex setup subcommand and retire shareable-install scaffolding | in_progress | high | feature | — | 113 | — |
 | 118 | Ship curl | sh bootstrap installer for cortex-command | backlog | high | feature | 117 | 113 | — |
 | 120 | Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities) | backlog | high | feature | 117 | 113 | — |
 | 121 | Publish cortex-overnight-integration plugin (overnight skill + runner hooks) | backlog | high | feature | 115, 116, 120 | 113 | — |
@@ -45,7 +45,6 @@
 - **128** Install pre-commit hook rejecting main commits during overnight sessions
 - **82** Adapt harness to Opus 4.7 (prompt delta + capability adoption)
 - **113** Distribute cortex-command as cortex CLI + plugin marketplace
-- **117** Build cortex setup subcommand and retire shareable-install scaffolding
 - **135** Shared git index race between parallel Claude sessions causes wrong files to land in commits
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 - **86** Extend output-floors.md with M1 Subagent Disposition section
@@ -59,3 +58,4 @@
 ## In-Progress
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
+- **117** Build cortex setup subcommand and retire shareable-install scaffolding (in_progress)

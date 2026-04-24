@@ -315,7 +315,7 @@
   {
     "id": 117,
     "title": "Build cortex setup subcommand and retire shareable-install scaffolding",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -337,9 +337,9 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "d07b577f-e72f-4246-b0bd-19a9e36f1f08",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "build-cortex-setup-subcommand-and-retire-shareable-install-scaffolding",
+    "session_id": "8810190a-9f11-494c-b526-f70dc34deb7c",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },

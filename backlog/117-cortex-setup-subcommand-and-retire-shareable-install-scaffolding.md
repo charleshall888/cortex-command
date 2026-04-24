@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: d07b577f-e72f-4246-b0bd-19a9e36f1f08
 title: "Build cortex setup subcommand and retire shareable-install scaffolding"
-status: backlog
+status: in_progress
 priority: high
 type: feature
 parent: 113
@@ -10,12 +10,14 @@ tags: [distribution, cli, install, overnight-layer-distribution]
 areas: [install]
 created: 2026-04-21
 updated: 2026-04-23
-lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+lifecycle_slug: build-cortex-setup-subcommand-and-retire-shareable-install-scaffolding
+lifecycle_phase: research
+session_id: 8810190a-9f11-494c-b526-f70dc34deb7c
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: high
 ---
 
 # Build cortex setup subcommand and retire shareable-install scaffolding
