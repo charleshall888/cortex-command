@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: e2f12538-0606-44ca-a64c-9677389083af
 title: "Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements"
-status: backlog
+status: in_progress
 priority: medium
 type: feature
 parent: 113
@@ -10,9 +10,9 @@ tags: [distribution, cli, scaffolding, overnight-layer-distribution]
 areas: [install]
 created: 2026-04-21
 updated: 2026-04-23
-lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+lifecycle_slug: add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements
+lifecycle_phase: research
+session_id: 69d6f350-d5a4-4bf6-9a39-abb21ac04cbd
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
@@ -31,7 +31,7 @@ cortex-command's `lifecycle/`, `backlog/`, `retros/`, `requirements/` directorie
 - Ship reasonable starter templates: `requirements/project.md` stub, `backlog/README.md`, `lifecycle/README.md`, `retros/README.md`, `lifecycle.config.md` with `type: other` default
 - Declines to run if the directories already exist with user content, unless `--update` is passed; `--force` flag for full overwrite with confirmation prompt
 - Documented in the bootstrap's post-install message so users know the verb exists
-- **Register per-repo sandbox `allowWrite` entry** for overnight: append `$(pwd)/lifecycle/sessions/` to `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array (additive, idempotent). This responsibility migrates from the retired `just setup` (ticket 117) — without it, overnight runs in this repo fail with sandbox-blocked writes to `lifecycle/sessions/`. Use `jq` for safe JSON merge; fall back to a clear error (not a destructive overwrite) if `jq` is absent. Matches today's `justfile:390-408` behavior.
+- **Register per-repo sandbox `allowWrite` entry** for overnight: append `$(pwd)/lifecycle/sessions/` to `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array (additive, idempotent). This responsibility moved from `just setup` when 117 retired that recipe (now complete) — without it, overnight runs in this repo fail with sandbox-blocked writes to `lifecycle/sessions/`. Use `jq` for safe JSON merge; fall back to a clear error (not a destructive overwrite) if `jq` is absent. The pre-117 `justfile:390-408` behavior is the reference implementation (available in git history prior to the 117 merge).
 
 ## Out of scope
 

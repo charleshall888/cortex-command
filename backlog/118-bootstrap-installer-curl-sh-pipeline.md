@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: db742018-cb3e-488d-8084-688cd575e241
 title: "Ship curl | sh bootstrap installer for cortex-command"
-status: backlog
+status: in_progress
 priority: high
 type: feature
 parent: 113
@@ -10,9 +10,9 @@ tags: [distribution, install, overnight-layer-distribution]
 areas: [install]
 created: 2026-04-21
 updated: 2026-04-23
-lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+lifecycle_slug: ship-curl-sh-bootstrap-installer-for-cortex-command
+lifecycle_phase: research
+session_id: c8ea5b34-a9e2-4603-b56d-25daa47143f3
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
@@ -29,11 +29,15 @@ The clone still happens — the bootstrap does it for the user at `~/.cortex` (o
 ## Scope
 
 - Install script hosted at a stable URL (`https://cortex.sh/install` or similar) — GitHub Pages or a static asset is fine
-- Script does: install `uv` if absent → `git clone ${CORTEX_REPO_URL:-github.com/charleshall888/cortex-command} ~/.cortex` → `uv tool install -e ~/.cortex` → `~/.cortex/bin/cortex setup` (or whatever the installed entry point resolves to)
+- Script does: install `uv` if absent → `git clone ${CORTEX_REPO_URL:-github.com/charleshall888/cortex-command} ~/.cortex` → `uv tool install -e ~/.cortex` (installs the `cortex` CLI entry point to `~/.local/bin/`). **No post-install subcommand exists to call** — 117 was pure retirement, there is no `cortex setup` (see 117's spec scope-inversion note). See Open Decisions below for what the script does after `uv tool install`.
 - Honors `CORTEX_REPO_URL` env var so forkers can point at their own remote before running
 - Adds `cortex upgrade` subcommand to the CLI: `git -C ~/.cortex pull` — 118's author finalizes upgrade semantics
 - Emits clear output on each step; exits non-zero with a useful message on failure
 - Safe to re-run (idempotent)
+
+## Open Decisions
+
+- **What happens after `uv tool install -e ~/.cortex`?** Options: (a) script exits with a message directing the user to open Claude Code and run `/plugin marketplace add charleshall888/cortex-command` + `/plugin install cortex-interactive@cortex-command`; (b) script invokes `claude` CLI non-interactively to perform the plugin registration if `claude` is installed and a login exists; (c) script prints per-repo `cortex init` (ticket 119) instructions since per-repo setup is needed for overnight. Pick one in the spec phase. Note: cortex-command no longer ships a `cortex setup` subcommand, so there's no single command to wrap here.
 
 ## Out of scope
 

@@ -249,7 +249,7 @@
   {
     "id": 115,
     "title": "Rebuild overnight runner under cortex CLI",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -271,9 +271,9 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "e8311326-418f-47db-b3f4-852efc3ef192",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "rebuild-overnight-runner-under-cortex-cli",
+    "session_id": "7261518a-ccb3-42e1-b05f-a7b11f521a73",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -313,7 +313,7 @@
   {
     "id": 118,
     "title": "Ship curl | sh bootstrap installer for cortex-command",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -334,16 +334,16 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "db742018-cb3e-488d-8084-688cd575e241",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "ship-curl-sh-bootstrap-installer-for-cortex-command",
+    "session_id": "c8ea5b34-a9e2-4603-b56d-25daa47143f3",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 120,
     "title": "Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities)",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -365,9 +365,9 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "4d7e4c7d-fbd9-41ad-8df9-205c55ffe429",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities",
+    "session_id": "4154e3b3-6da9-4274-8053-e1113a05263c",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -803,7 +803,7 @@
   {
     "id": 119,
     "title": "Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -825,9 +825,9 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "e2f12538-0606-44ca-a64c-9677389083af",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements",
+    "session_id": "69d6f350-d5a4-4bf6-9a39-abb21ac04cbd",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
