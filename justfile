@@ -413,16 +413,19 @@ _list-hand-maintained-plugins:
     set -euo pipefail
     echo '{{HAND_MAINTAINED_PLUGINS}}' | tr ' ' '\n'
 
-# Regenerate cortex-interactive plugin tree from top-level sources (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)
+# Regenerate build-output plugin trees from top-level sources (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)
 build-plugin:
     #!/usr/bin/env bash
     set -euo pipefail
     SKILLS=(commit pr lifecycle backlog requirements research discovery refine retro dev fresh diagnose evolve critical-review)
-    for s in "${SKILLS[@]}"; do
-        rsync -a --delete "skills/$s/" "plugins/cortex-interactive/skills/$s/"
+    for p in {{BUILD_OUTPUT_PLUGINS}}; do
+        [[ -d plugins/$p/.claude-plugin ]] || { echo "build-plugin: skipping $p (not yet materialized)" >&2; continue; }
+        for s in "${SKILLS[@]}"; do
+            rsync -a --delete "skills/$s/" "plugins/$p/skills/$s/"
+        done
+        rsync -a --delete --include='cortex-*' --exclude='*' bin/ "plugins/$p/bin/"
+        rsync -a hooks/cortex-validate-commit.sh "plugins/$p/hooks/cortex-validate-commit.sh"
     done
-    rsync -a --delete --include='cortex-*' --exclude='*' bin/ plugins/cortex-interactive/bin/
-    rsync -a hooks/cortex-validate-commit.sh plugins/cortex-interactive/hooks/cortex-validate-commit.sh
 
 # Point git at .githooks/ so the dual-source drift pre-commit hook runs on every commit
 setup-githooks:
