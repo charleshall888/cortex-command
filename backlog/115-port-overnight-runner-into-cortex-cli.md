@@ -9,13 +9,15 @@ parent: 113
 tags: [distribution, cli, overnight-runner, overnight-layer-distribution]
 areas: [overnight-runner]
 created: 2026-04-21
-updated: 2026-04-23
+updated: 2026-04-24
 lifecycle_slug: rebuild-overnight-runner-under-cortex-cli
-lifecycle_phase: research
-session_id: 7261518a-ccb3-42e1-b05f-a7b11f521a73
+lifecycle_phase: implement
+session_id: c5e303b4-d8eb-4506-9387-f750e39619b7
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: critical
 ---
 
 # Rebuild overnight runner under cortex CLI

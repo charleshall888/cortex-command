@@ -1,0 +1,115 @@
+{"ts": "2026-04-24T01:54:43Z", "event": "discovery_reference", "feature": "rebuild-overnight-runner-under-cortex-cli", "epic_research": "research/overnight-layer-distribution/research.md", "epic_spec": null}
+- ts: 2026-04-24T02:17:42Z
+  event: clarify_critic
+  feature: rebuild-overnight-runner-under-cortex-cli
+  findings:
+    - "Intent-clarity reasoning names only the bash-vs-Python fork and the prompt-path question as unresolved, treating the prompt-template question as 'secondary'. The ticket's Scope line also leaves $PYTHONPATH and CORTEX_COMMAND_ROOT semantics unresolved ('update all 23 REPO_ROOT sites + CORTEX_COMMAND_ROOT + $PYTHONPATH assumptions to work under uv tool install -e semantics'), which is a distinct third unresolved decision fork the assessment did not name. The ticket itself says 'The planning phase must answer this' about the prompt paths, not treating it as secondary."
+    - "Intent-clarity reasoning asserts 'only the surface (the four CLI subcommands) is' clear. The surface is not fully specified either: 'cortex overnight cancel' is cross-referenced to ticket 116 for PID/PGID persistence (which is out of scope for 115) with no statement on whether cancel ships as a stub, errors, or depends on 116 landing first. The 'logs --since <cursor>' cursor protocol is named but not defined."
+    - "Scope boundedness LOW reasoning attributes the low rating entirely to the bash-vs-Python fork while praising the site counts. Precision is not boundedness: the '+ CORTEX_COMMAND_ROOT + $PYTHONPATH' bullet is open-ended with no site inventory, and the ~13,300 LOC test-migration bullet provides no inventory either. The LOW rating is right but the drivers are under-counted."
+    - "The out-of-scope treatment reads '116 = MCP/IPC' and '112 = LaunchAgents' and 'dashboard stays' as clean boundary lines. 'cortex overnight cancel' invokes infrastructure (PID/PGID persistence) that 115 disclaims responsibility for. The dashboard reads state files the runner writes — any state-write change has dashboard implications that the carve-out hand-waves."
+    - "Requirements alignment HIGH asserts 'No conflicts detected' and that the ticket 'explicitly commits to preserving all' load-bearing guarantees. The ticket's preservation list names only three items (atomic state writes, process-group management, signal-based shutdown). Pipeline.md enumerates additional must-haves the ticket does not name: zero-merge home-repo PR draft with [ZERO PROGRESS] prefix, integration_pr_flipped_once marker, runner.sh --dry-run with tests/test_runner_pr_gating.py, conflict fast-path ≤3-file threshold, post-merge sync bin/git-sync-rebase.sh, deferral file schema, rework-cycle state machine. Preserving three named things is not the same as preserving everything pipeline.md lists as must-have."
+    - "Direct conflict: pipeline.md describes 'runner.sh --dry-run' as a supported test-affordance mode with regression coverage in tests/test_runner_pr_gating.py. The ticket proposes retiring runner.sh as an entry point. The ticket does not mention --dry-run or that test file. This is a flagged conflict between the ticket and a pipeline.md must-have, not 'no conflict'."
+    - "The requirements-alignment reasoning cites project.md's day/night philosophy as aligning with the ticket. Project.md's philosophy is orthogonal to what 115 changes — re-platforming the entry point and orchestration layer. Calling an orthogonal philosophy line 'alignment' inflates HIGH-rating evidence."
+    - "The backlog frontmatter shows blocked-by: [] and blocks: [] but the ticket body says 'This ticket is now explicitly gated on 117 (blocked-by: [114, 117])'. The assessment accepts the prose at face value. Either prose or frontmatter is stale; the dependency graph used for scope reasoning ('MCP/IPC = 116 … LaunchAgents = 112') is not actually encoded in the frontmatter."
+    - "Complexity/criticality is not challenged — simply taken as given. A rebuild of ~11,000 LOC orchestration + ~13,300 LOC test migration touching the autonomous-execution framework that pipeline.md calls must-have across seven functional requirement blocks is near the top end of complexity/criticality. The assessment's silence on calibration leaves the tier/severity rating ungrounded in the summary."
+  dispositions:
+    apply: 7
+    dismiss: 2
+    ask: 0
+  applied_fixes:
+    - "Revised intent-clarity reasoning to name all three unresolved design forks (bash-vs-Python; REPO_ROOT/CORTEX_COMMAND_ROOT/$PYTHONPATH semantics under uv tool install -e; orchestrator-round prompt template path classification) rather than calling one 'secondary'."
+    - "Added to intent-clarity reasoning that the CLI surface itself has unspecified edges: cancel's 116 dependency and logs cursor protocol are undefined."
+    - "Revised scope-boundedness reasoning to note that CORTEX_COMMAND_ROOT/$PYTHONPATH sites and test-migration scope are un-inventoried, and that out-of-scope carve-outs are not clean (cancel invokes 116-owned infrastructure; dashboard reads runner-written state files)."
+    - "Revised requirements-alignment rating from HIGH to Partial. Ticket preserves three named must-haves but does not enumerate the full pipeline.md preservation surface (zero-merge PR draft + [ZERO PROGRESS], integration_pr_flipped_once, --dry-run + test_runner_pr_gating.py, post-merge sync, conflict fast-path, deferral schema, rework cycles). Research must surface these as preservation requirements."
+    - "Removed the project.md day/night-philosophy anchor from the alignment reasoning as orthogonal to what this ticket changes."
+    - "Flagged --dry-run + test_runner_pr_gating.py as a direct pipeline.md conflict. Resolved as a scope refinement: the --dry-run contract and its test are in-scope preservation requirements; the migration mechanism follows from the bash-vs-Python design fork resolution."
+    - "Added explicit complexity/criticality reasoning grounded in the ~11,000 LOC rebuild scale, pipeline.md's seven must-have blocks, and project.md's framing of overnight as the core autonomous-execution capability. Complexity: complex. Criticality: critical."
+  dismissals:
+    - finding_index: 7
+      rationale: "Self-resolved against verifiable filesystem evidence: tickets 114 and 117 both show status:complete in their frontmatter, which is consistent with 115's empty blocked-by:[] array (blockers resolved → array cleared). The body prose referencing 'blocked-by: [114, 117]' is historical context from when 115 was authored. Frontmatter is authoritative and current; the ticket is correctly unblocked. No intent-clarity impact on what must be built now."
+    - finding_index: 6
+      rationale: "Cosmetic rather than load-bearing. Dropping the project.md philosophy anchor from alignment reasoning (applied_fixes item 5) already addresses this objection's practical concern. No separate intent- or scope-level issue remains."
+  status: ok
+- ts: 2026-04-24T02:17:42Z
+  event: lifecycle_start
+  feature: rebuild-overnight-runner-under-cortex-cli
+  tier: complex
+  criticality: critical
+- ts: 2026-04-24T02:17:42Z
+  event: phase_transition
+  feature: rebuild-overnight-runner-under-cortex-cli
+  from: clarify
+  to: research
+- ts: 2026-04-24T02:36:57Z
+  event: phase_transition
+  feature: rebuild-overnight-runner-under-cortex-cli
+  from: research
+  to: specify
+- ts: 2026-04-24T03:46:03Z
+  event: orchestrator_review
+  feature: rebuild-overnight-runner-under-cortex-cli
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-24T03:57:27Z
+  event: critical_review
+  feature: rebuild-overnight-runner-under-cortex-cli
+  phase: specify
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  findings_total: 23
+  findings_A_class: 12
+  findings_B_class: 9
+  findings_C_class: 2
+  dispositions:
+    apply: 21
+    dismiss: 2
+    ask: 0
+  synthesis_status: ok
+  residue_written: true
+- ts: 2026-04-24T15:50:00Z
+  event: spec_approved
+  feature: rebuild-overnight-runner-under-cortex-cli
+  phase: specify
+  approver: user
+  approval_signal: "approve spec lifecycle/rebuild-overnight-runner-under-cortex-cli/spec.md"
+- ts: 2026-04-24T15:50:00Z
+  event: phase_transition
+  feature: rebuild-overnight-runner-under-cortex-cli
+  from: specify
+  to: plan
+{"ts": "2026-04-24T16:20:00Z", "event": "plan_comparison", "feature": "rebuild-overnight-runner-under-cortex-cli", "variants": [{"label": "Plan A", "approach": "Contract-layer-first with finest module granularity (ipc/logs/session_validation/fill_prompt separate)", "task_count": 16, "risk": "highest coordination overhead, each task small and clear"}, {"label": "Plan B", "approach": "Bottom-up primitives with runner_primitives.py extracted for threading/signal isolation", "task_count": 14, "risk": "extra module boundary but cleanest threading-test isolation"}, {"label": "Plan C", "approach": "Foundation-first with CLI wired before runner.py implementation", "task_count": 13, "risk": "CLI forward-references runner.run before it exists; early runner.sh retirement compresses rollback window"}], "selected": "Plan A with Plan B runner_primitives.py extraction grafted in"}
+- ts: 2026-04-24T16:22:00Z
+  event: orchestrator_review
+  feature: rebuild-overnight-runner-under-cortex-cli
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-24T16:45:00Z
+  event: critical_review
+  feature: rebuild-overnight-runner-under-cortex-cli
+  phase: plan
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  findings_total: 12
+  findings_A_class: 6
+  findings_B_class: 5
+  findings_C_class: 2
+  dispositions:
+    apply: 10
+    dismiss: 2
+    ask: 0
+  synthesis_status: ok
+  residue_written: true
+- ts: 2026-04-24T17:00:00Z
+  event: plan_approved
+  feature: rebuild-overnight-runner-under-cortex-cli
+  phase: plan
+  approver: user
+- ts: 2026-04-24T17:00:00Z
+  event: phase_transition
+  feature: rebuild-overnight-runner-under-cortex-cli
+  from: plan
+  to: implement
