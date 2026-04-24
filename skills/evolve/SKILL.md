@@ -49,10 +49,12 @@ Stop.
 
 ### 4. Read MEMORY.md
 
-Derive the memory path from this skill file's own location:
+Derive the memory path from the cortex-command repo root:
 
-1. **Resolve this skill file's real path** by following symlinks (e.g., `~/.claude/skills/evolve/SKILL.md` is typically a symlink to the repo's `skills/evolve/SKILL.md`). Use `readlink` or equivalent to get the canonical path.
-2. **Derive the repo root** by stripping `skills/evolve/SKILL.md` from the resolved path.
+1. **Resolve the repo root** using `REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)` — the repo's canonical repo-root resolver, matching sibling skills (`critical-review`) and utilities (`bin/git-sync-rebase.sh`). This keeps invocation subdirectory-safe.
+2. **Validate the cortex-command marker**: check that `$REPO_ROOT/skills/evolve/SKILL.md` exists. If it does not, emit the following two-line error to stderr and exit non-zero:
+   - Line 1: `/cortex:evolve must be invoked from inside a cortex-command checkout (git rev-parse --show-toplevel resolved to "<resolved-path>" but skills/evolve/SKILL.md not found there)`
+   - Line 2: `Fix: cd into a cortex-command clone and re-invoke.`
 3. **Compute the project slug** from the repo root's absolute path: replace the leading `/` with nothing, then replace all remaining `/` with `-` (e.g., `/Users/jane/repos/my-project` becomes `Users-jane-repos-my-project`).
 4. **Construct the memory path**: `~/.claude/projects/-<project-slug>/memory/MEMORY.md`
 
