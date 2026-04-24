@@ -20,6 +20,9 @@ Exposed surface:
     register(repo_root,        -- additive append of ``target_path`` to
             target_path,         ``sandbox.filesystem.allowWrite``.
             *, home=None)
+    unregister(repo_root,      -- remove ``target_path`` from
+            target_path,         ``sandbox.filesystem.allowWrite``.
+            *, home=None)
     validate_settings(         -- pre-flight-only R14 gate. No mutation.
             home=None)
 """
@@ -192,6 +195,94 @@ def register(
         # reorder the user's existing allowWrite entries.
         if target_path not in allow_array:
             allow_array.append(target_path)
+
+        content = json.dumps(data, indent=2) + "\n"
+        atomic_write(settings_path, content)
+    finally:
+        os.close(lock_fd)
+
+
+def unregister(
+    repo_root: Path,
+    target_path: str,
+    *,
+    home: Path | None = None,
+) -> None:
+    """Remove ``target_path`` from ``sandbox.filesystem.allowWrite`` if present.
+
+    Mirrors :func:`register` exactly — same sibling-lockfile flock discipline,
+    same sandbox-shape validation (R14), same atomic_write — but removes the
+    caller-supplied canonical ``target_path`` rather than appending it. Covers
+    R15 and ADR-2 for the unregister path.
+
+    Args:
+        repo_root: The repo root (retained for diagnostic messages; the
+            caller has already resolved/canonicalized ``target_path``).
+        target_path: The already-resolved, canonicalized ``lifecycle/sessions/``
+            path (trailing slash) to remove from ``allowWrite``. Caller is
+            Task 9's handler on the ``--unregister`` flag path.
+        home: Optional HOME override (tests).
+
+    Behavior:
+        * No-op early-exit if ``settings.local.json`` is absent (does not
+          create an empty settings file on unregister).
+        * Pre-validates ``.sandbox`` and ``.sandbox.filesystem`` are objects
+          (R14); raises ``SettingsMergeError`` with a clear diagnostic
+          otherwise.
+        * No-op early-exit if ``sandbox``, ``sandbox.filesystem``, or
+          ``sandbox.filesystem.allowWrite`` is absent (idempotent).
+        * Order-preserving removal: filters out every occurrence of
+          ``target_path`` while preserving the remaining entries' order.
+        * Preserves all unrelated existing keys and sibling subtrees
+          byte-for-byte.
+        * Writes via ``cortex_command.common.atomic_write`` (tempfile +
+          ``os.replace``, with ``durable_fsync``).
+
+    Raises:
+        SettingsMergeError: malformed sandbox types, invalid JSON, or an
+            underlying OSError surfaced for the handler to translate to
+            exit code 2.
+    """
+    # repo_root is carried purely for diagnostic messages; resolution happened
+    # upstream (see Task 3 — check_symlink_safety returns the canonical path).
+    del repo_root
+
+    settings_path = _settings_path(home)
+    # Early exit when the file is absent: nothing to unregister, and we
+    # must NOT create an empty settings file on this path.
+    if not settings_path.exists():
+        return
+
+    lock_fd = _acquire_lock(home)
+    try:
+        data = _read_settings(settings_path)
+        # Re-check after acquiring the lock in case another process removed
+        # the file between the initial probe and lock acquisition.
+        if not settings_path.exists():
+            return
+        _validate_sandbox_shape(data)
+
+        sandbox = data.get("sandbox")
+        if not isinstance(sandbox, dict):
+            return
+        filesystem = sandbox.get("filesystem")
+        if not isinstance(filesystem, dict):
+            return
+        if "allowWrite" not in filesystem:
+            return
+        allow_array = filesystem["allowWrite"]
+        if not isinstance(allow_array, list):
+            raise SettingsMergeError(
+                f"~/.claude/settings.local.json: expected "
+                f"sandbox.filesystem.allowWrite to be an array, got "
+                f"{type(allow_array).__name__}"
+            )
+
+        if target_path not in allow_array:
+            return
+
+        # Order-preserving removal of all occurrences of target_path.
+        filesystem["allowWrite"] = [e for e in allow_array if e != target_path]
 
         content = json.dumps(data, indent=2) + "\n"
         atomic_write(settings_path, content)
