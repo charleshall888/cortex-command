@@ -17,24 +17,14 @@ An opinionated AI workflow framework for Claude Code. Provides skills (slash com
 - `retros/` - Session retrospectives (dated problem-only logs)
 - `bin/` - Global CLI utilities (deployed to `~/.local/bin/`)
 
-## Symlink Architecture
+## Distribution
 
-Files in this repo are symlinked to system locations — always edit the repo copy (the symlink target), never create files at the destination.
-
-Key symlinks:
-- `skills/*` -> `~/.claude/skills/*`
-- `hooks/*` -> `~/.claude/hooks/*`
-- `hooks/cortex-notify.sh` -> `~/.claude/notify.sh` (direct — settings.json references this path)
-- `claude/settings.json` — defaults template (copied on first install, updated via `/setup-merge`)
-- `claude/Agents.md` -> `~/.claude/CLAUDE.md` (global cross-project instructions)
-- `claude/reference/*` -> `~/.claude/reference/*`
-- `claude/statusline.sh` -> `~/.claude/statusline.sh`
+Cortex-command ships as a CLI installed via `uv tool install -e .` plus plugins installed via `/plugin install`. It no longer deploys symlinks into `~/.claude/`.
 
 ## Commands
 
 Run `just` to see all available recipes. Key commands:
 
-- Full setup: `just setup`
 - Generate backlog index: `just backlog-index`
 - Validate commit hook: `just validate-commit`
 - Check symlinks: `just check-symlinks`
@@ -55,6 +45,6 @@ Run `just` to see all available recipes. Key commands:
 - Agent-specific config goes in `claude/`
 - Settings JSON must remain valid JSON
 - Hook/notification scripts must be executable (`chmod +x`)
-- New global utilities follow the deploy-bin pattern: logic goes in `bin/`, deployed to `~/.local/bin/` via `just deploy-bin`, skills invoke the binary by name (not a relative path). Run `just setup` to deploy all global agentic layer components at once.
+- New global utilities ship via the `cortex-interactive` plugin's `bin/` directory (ticket 120 scope); see `just --list` for available recipes.
 - Use `jcc <recipe>` (deployed to `~/.local/bin/jcc`) to invoke cortex-command recipes from any directory. The wrapper runs recipes in this repo's directory context, so it's suitable for repo-specific operations (`jcc deploy-bin`, `jcc validate-commit`), not for operations that should act on another repo's files (use `update-item`, `generate-backlog-index`, etc. for those).
 - Overnight docs source of truth: `docs/overnight-operations.md` owns the round loop and orchestrator behavior, `docs/pipeline.md` owns pipeline-module internals, and `docs/sdk.md` owns SDK model-selection mechanics. When editing overnight-related docs, update the owning doc and link from the others rather than duplicating content.
