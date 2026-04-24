@@ -425,7 +425,7 @@
     "uuid": "c6fb710e-139a-4eb2-9c36-4ce3a86e990f",
     "lifecycle_slug": "vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins",
     "session_id": "4370ae28-c05b-4638-a713-f276729fbf14",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -726,37 +726,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 119,
-    "title": "Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "cli",
-      "scaffolding",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "install"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-24",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": "lifecycle/add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements/spec.md",
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "e2f12538-0606-44ca-a64c-9677389083af",
-    "lifecycle_slug": "add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements",
-    "session_id": "a174c46d-70e2-4ba1-a0e1-daa07a019e23",
-    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: e2f12538-0606-44ca-a64c-9677389083af
 title: "Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements"
-status: refined
+status: complete
 priority: medium
 type: feature
 parent: 113
@@ -11,8 +11,8 @@ areas: [install]
 created: 2026-04-21
 updated: 2026-04-24
 lifecycle_slug: add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements
-lifecycle_phase: plan
-session_id: 69d6f350-d5a4-4bf6-9a39-abb21ac04cbd
+lifecycle_phase: complete
+session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md

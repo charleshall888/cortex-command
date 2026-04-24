@@ -26,7 +26,6 @@
 | 109 | Extract /refine resolution into bin/resolve-backlog-item with bailout | backlog | medium | feature | 102, 103 | 101 | — |
 | 110 | Unify lifecycle phase detection around claude.common with statusline exception | backlog | medium | feature | 102, 103 | 101 | — |
 | 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | 104 | 101 | — |
-| 119 | Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements | in_progress | medium | feature | — | 113 | ✓ |
 | 124 | Migration guide + script for existing symlink-based installs | backlog | medium | chore | 116, 118, 121, 122 | 113 | — |
 | 141 | Non-editable wheel install support for cortex-command | backlog | medium | feature | — | — | — |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
@@ -65,4 +64,3 @@
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
 - **144** Vendor cortex-ui-extras and cortex-pr-review from cortex-command-plugins (in_progress)
-- **119** Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements (in_progress)
