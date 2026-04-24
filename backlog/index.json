@@ -339,7 +339,7 @@
     "uuid": "d07b577f-e72f-4246-b0bd-19a9e36f1f08",
     "lifecycle_slug": "build-cortex-setup-subcommand-and-retire-shareable-install-scaffolding",
     "session_id": "8810190a-9f11-494c-b526-f70dc34deb7c",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
