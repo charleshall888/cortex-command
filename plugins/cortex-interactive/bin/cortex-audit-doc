@@ -1,0 +1,656 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["anthropic"]
+# ///
+"""
+Documentation audit script for Claude Code.
+Analyzes markdown files and provides line count, token count, and recommendations.
+Uses the Anthropic SDK count_tokens API for accurate Claude-specific token counts.
+
+Dependencies are managed inline - uv automatically handles the virtual environment.
+"""
+
+import json
+import os
+import shlex
+import subprocess
+import sys
+import argparse
+import re
+from pathlib import Path
+
+import anthropic
+
+
+DEFAULT_MODEL = "claude-opus-4-7"
+
+
+def resolve_api_key() -> None:
+    """
+    Resolve ANTHROPIC_API_KEY by checking env, then running apiKeyHelper from
+    the nearest .claude/settings{.local,}.json (project → global). Sets the env
+    var so the anthropic client picks it up automatically.
+    """
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return
+
+    # Walk up from cwd looking for a project settings file
+    candidates = []
+    for parent in [Path.cwd(), *Path.cwd().parents]:
+        local = parent / ".claude" / "settings.local.json"
+        committed = parent / ".claude" / "settings.json"
+        if local.exists():
+            candidates.append(local)
+            break
+        if committed.exists():
+            candidates.append(committed)
+            break
+
+    # Always include global as final fallback
+    global_settings = Path.home() / ".claude" / "settings.json"
+    if global_settings not in candidates:
+        candidates.append(global_settings)
+
+    for settings_path in candidates:
+        try:
+            settings = json.loads(settings_path.read_text())
+        except Exception:
+            continue
+        helper = settings.get("apiKeyHelper")
+        if helper == "":
+            print("Error: Personal subscription repo — token counting requires an API key.", file=sys.stderr)
+            sys.exit(1)
+        if helper:
+            expanded = helper.replace("~", str(Path.home()))
+            try:
+                result = subprocess.run(shlex.split(expanded), capture_output=True, text=True, timeout=5)
+                if result.returncode == 0 and result.stdout.strip():
+                    os.environ["ANTHROPIC_API_KEY"] = result.stdout.strip()
+                    return
+            except Exception:
+                pass
+
+    print("Error: No API key available. Set ANTHROPIC_API_KEY or configure apiKeyHelper in .claude/settings.json.", file=sys.stderr)
+    sys.exit(1)
+
+
+# Color codes for terminal output
+class Colors:
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BLUE = '\033[94m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
+    @staticmethod
+    def disable():
+        Colors.GREEN = ''
+        Colors.YELLOW = ''
+        Colors.RED = ''
+        Colors.BLUE = ''
+        Colors.BOLD = ''
+        Colors.END = ''
+
+
+def count_tokens(text: str) -> int:
+    """Count tokens using the Anthropic count_tokens API."""
+    client = anthropic.Anthropic()
+    response = client.messages.count_tokens(
+        model=DEFAULT_MODEL,
+        messages=[{"role": "user", "content": text}],
+    )
+    return response.input_tokens
+
+
+def get_score_color(tokens: int) -> str:
+    """Get color based on token count."""
+    if tokens < 2000:
+        return Colors.GREEN
+    elif tokens <= 4000:
+        return Colors.YELLOW
+    else:
+        return Colors.RED
+
+
+def get_assessment(tokens: int, noise_ratio: float = None) -> tuple[str, str]:
+    """
+    Get assessment and recommendation based on token count and noise ratio.
+    Returns (assessment, recommendation)
+    """
+    if tokens < 2000:
+        if noise_ratio is not None and noise_ratio > 0.7:
+            return "KEEP AS-IS (HIGH NOISE)", "Despite high noise ratio, document is small enough to keep as-is. Focus on content quality."
+        return "KEEP AS-IS", "Document is well-sized. Focus on content quality, not splitting."
+
+    elif tokens <= 4000:
+        if noise_ratio is not None:
+            if noise_ratio > 0.7:
+                return "SPLIT RECOMMENDED", f"Noise ratio ({noise_ratio:.0%}) exceeds 70% threshold. Consider progressive disclosure."
+            else:
+                return "KEEP AS-IS", f"Noise ratio ({noise_ratio:.0%}) is acceptable. Monitor size as it grows."
+        else:
+            return "EVALUATE", "Calculate noise ratio to determine if splitting is needed."
+
+    else:  # > 4000
+        if noise_ratio is not None:
+            if noise_ratio > 0.7:
+                return "SPLIT NOW", f"High token count + high noise ratio ({noise_ratio:.0%}). Definitely split into focused sections."
+            else:
+                return "EVALUATE SPLITTING", f"High token count but noise ratio ({noise_ratio:.0%}) is acceptable. Consider human maintainability."
+        else:
+            return "CONSIDER SPLITTING", "Document is large. Calculate noise ratio to make informed decision."
+
+
+def parse_frontmatter(text: str) -> tuple[dict, str]:
+    """
+    Parse YAML frontmatter from markdown.
+    Returns (frontmatter_dict, content_without_frontmatter)
+    """
+    frontmatter = {}
+    content = text
+
+    # Check if file starts with ---
+    if text.startswith('---\n'):
+        # Find the closing ---
+        match = re.match(r'^---\n(.*?)\n---\n', text, re.DOTALL)
+        if match:
+            yaml_content = match.group(1)
+            content = text[match.end():]
+
+            # Simple YAML parsing (just key: value pairs)
+            for line in yaml_content.split('\n'):
+                line = line.strip()
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    frontmatter[key.strip()] = value.strip()
+
+    return frontmatter, content
+
+
+def parse_noise_ratio(value: str) -> float:
+    """
+    Parse noise ratio from string input.
+    Accepts formats: 0.75, 75, 75%
+    Returns value between 0.0 and 1.0
+    """
+    value = value.strip().rstrip('%')
+    try:
+        ratio = float(value)
+        # If value is > 1, assume it's a percentage
+        if ratio > 1:
+            ratio = ratio / 100
+        if not 0 <= ratio <= 1:
+            raise ValueError("Noise ratio must be between 0 and 1 (or 0-100%)")
+        return ratio
+    except ValueError as e:
+        raise ValueError(f"Invalid noise ratio format: {value}. Use 0.75, 75, or 75%") from e
+
+
+def prompt_for_noise_ratio(file_path: str, total_tokens: int) -> float | None:
+    """
+    Interactively prompt user for noise ratio calculation.
+    Returns noise_ratio or None if skipped.
+    """
+    print()
+    print(f"{Colors.BOLD}Noise Ratio Calculation{Colors.END}")
+    print(f"File: {file_path}")
+    print(f"Total tokens: {Colors.BOLD}{total_tokens:,}{Colors.END}")
+    print()
+    print("How many tokens are typically relevant for your tasks?")
+    print(f"(Enter a number, or press Enter to skip)")
+    print()
+
+    try:
+        response = input(f"{Colors.BOLD}Typically relevant tokens:{Colors.END} ").strip()
+
+        if not response:
+            return None
+
+        relevant_tokens = int(response)
+
+        if relevant_tokens < 0:
+            print(f"{Colors.RED}Error: Cannot be negative{Colors.END}")
+            return None
+
+        if relevant_tokens > total_tokens:
+            print(f"{Colors.YELLOW}Warning: Relevant tokens exceed total tokens. Using 100% (no noise).{Colors.END}")
+            return 0.0
+
+        noise_ratio = (total_tokens - relevant_tokens) / total_tokens
+        print()
+        print(f"{Colors.BOLD}Calculated noise ratio:{Colors.END} {noise_ratio:.1%}")
+        print(f"Formula: ({total_tokens:,} - {relevant_tokens:,}) / {total_tokens:,} = {noise_ratio:.1%}")
+
+        return noise_ratio
+
+    except ValueError:
+        print(f"{Colors.RED}Error: Invalid number{Colors.END}")
+        return None
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None
+
+
+def should_skip_file(file_path: str, include_human: bool = False) -> tuple[bool, str]:
+    """
+    Determine if a file should be skipped.
+    Returns (should_skip, reason)
+    """
+    path = Path(file_path)
+
+    # Check if in education/ directory
+    if 'education' in path.parts and not include_human:
+        return True, "education directory (human-only)"
+
+    # Check frontmatter
+    try:
+        text = path.read_text(encoding='utf-8')
+    except:
+        return False, ""
+
+    frontmatter, _ = parse_frontmatter(text)
+
+    if 'audience' in frontmatter:
+        audience = frontmatter['audience'].lower()
+        if audience == 'human' and not include_human:
+            return True, "audience: human"
+
+    return False, ""
+
+
+def audit_file(file_path: str, no_color: bool = False, include_human: bool = False,
+               noise_ratio: float = None, interactive: bool = False) -> dict:
+    """Audit a single markdown file."""
+    if no_color:
+        Colors.disable()
+
+    path = Path(file_path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    if not path.is_file():
+        raise ValueError(f"Not a file: {file_path}")
+
+    # Check if should skip
+    should_skip, reason = should_skip_file(file_path, include_human)
+    if should_skip:
+        return {
+            'path': file_path,
+            'skipped': True,
+            'skip_reason': reason
+        }
+
+    # Read file
+    try:
+        text = path.read_text(encoding='utf-8')
+    except UnicodeDecodeError:
+        text = path.read_text(encoding='latin-1')
+
+    # Calculate metrics
+    char_count = len(text)
+    line_count = text.count('\n') + (1 if text and not text.endswith('\n') else 0)
+    token_count = count_tokens(text)
+
+    # Claude context calculations (200K tokens)
+    claude_context = 200_000
+    context_percentage = (token_count / claude_context) * 100
+
+    # Interactive noise ratio prompt
+    if interactive and noise_ratio is None:
+        noise_ratio = prompt_for_noise_ratio(file_path, token_count)
+
+    # Get assessment
+    assessment, recommendation = get_assessment(token_count, noise_ratio)
+
+    result = {
+        'path': file_path,
+        'chars': char_count,
+        'lines': line_count,
+        'tokens': token_count,
+        'context_pct': context_percentage,
+        'assessment': assessment,
+        'recommendation': recommendation
+    }
+
+    # Add noise ratio to result if provided
+    if noise_ratio is not None:
+        result['noise_ratio'] = noise_ratio
+
+    return result
+
+
+def print_audit_report(result: dict, detailed: bool = False):
+    """Print formatted audit report."""
+    color = get_score_color(result['tokens'])
+
+    print()
+    print(f"{Colors.BOLD}{'=' * 70}{Colors.END}")
+    print(f"{Colors.BOLD}DOCUMENTATION AUDIT: {result['path']}{Colors.END}")
+    print(f"{Colors.BOLD}{'=' * 70}{Colors.END}")
+    print()
+
+    # Basic metrics
+    print(f"{Colors.BOLD}Metrics:{Colors.END}")
+    print(f"  Lines:          {result['lines']:>8,}")
+    print(f"  Characters:     {result['chars']:>8,}")
+    print(f"  {Colors.BOLD}Tokens:         {result['tokens']:>8,}{Colors.END}")
+
+    # Noise ratio if available
+    if 'noise_ratio' in result:
+        noise_color = Colors.RED if result['noise_ratio'] > 0.7 else (Colors.YELLOW if result['noise_ratio'] > 0.5 else Colors.GREEN)
+        print(f"  {Colors.BOLD}Noise Ratio:    {noise_color}{result['noise_ratio']:>7.1%}{Colors.END}")
+    print()
+
+    # Context usage
+    print(f"{Colors.BOLD}Context Usage:{Colors.END}")
+    print(f"  % of Claude Context: {color}{result['context_pct']:.2f}%{Colors.END} (200K tokens)")
+
+    # Visual bar
+    bar_length = 50
+    filled = int((result['context_pct'] / 5) * bar_length)  # Scale to 5% = full bar
+    bar = '█' * filled + '░' * (bar_length - filled)
+    print(f"  [{color}{bar}{Colors.END}]")
+    print()
+
+    # Score/Rating
+    print(f"{Colors.BOLD}Token Rating:{Colors.END}")
+    if result['tokens'] < 2000:
+        rating = f"{Colors.GREEN}●●●●● GREEN{Colors.END}"
+        description = "<2,000 tokens - Optimal size"
+    elif result['tokens'] <= 4000:
+        rating = f"{Colors.YELLOW}●●●○○ YELLOW{Colors.END}"
+        description = "2,000-4,000 tokens - Monitor size"
+    else:
+        rating = f"{Colors.RED}●○○○○ RED{Colors.END}"
+        description = ">4,000 tokens - Consider splitting"
+
+    print(f"  {rating}")
+    print(f"  {description}")
+    print()
+
+    # Assessment
+    print(f"{Colors.BOLD}Assessment:{Colors.END}")
+    print(f"  {color}{Colors.BOLD}{result['assessment']}{Colors.END}")
+    print()
+
+    print(f"{Colors.BOLD}Recommendation:{Colors.END}")
+    print(f"  {result['recommendation']}")
+    print()
+
+    # Decision tree
+    print(f"{Colors.BOLD}Decision Tree:{Colors.END}")
+
+    has_noise = 'noise_ratio' in result
+    noise_ratio = result.get('noise_ratio', 0)
+
+    if result['tokens'] < 2000:
+        print(f"  {Colors.GREEN}✓{Colors.END} Document is well-sized")
+        print(f"  {Colors.GREEN}✓{Colors.END} Focus on content quality, not splitting")
+        if has_noise and noise_ratio > 0.7:
+            print(f"  {Colors.YELLOW}•{Colors.END} Note: High noise ratio, but size is manageable")
+        else:
+            print(f"  {Colors.GREEN}✓{Colors.END} Maintenance cost of splitting would exceed benefits")
+    elif result['tokens'] <= 4000:
+        if has_noise:
+            if noise_ratio > 0.7:
+                print(f"  {Colors.RED}!{Colors.END} Noise ratio >70% - consider progressive disclosure")
+                print(f"  {Colors.RED}!{Colors.END} Extract conditional content to reference files")
+                print(f"  {Colors.RED}!{Colors.END} Keep main file <500 tokens, references loaded on-demand")
+            else:
+                print(f"  {Colors.GREEN}✓{Colors.END} Noise ratio acceptable (<70%)")
+                print(f"  {Colors.GREEN}✓{Colors.END} Keep as-is, monitor as document grows")
+                print(f"  {Colors.GREEN}✓{Colors.END} Most content is relevant for typical tasks")
+        else:
+            print(f"  {Colors.YELLOW}•{Colors.END} Document is moderately sized")
+            print(f"  {Colors.YELLOW}•{Colors.END} Calculate noise ratio: (total - relevant) / total")
+            print(f"  {Colors.YELLOW}•{Colors.END} Use --interactive flag for guided calculation")
+            print(f"  {Colors.YELLOW}•{Colors.END} If noise ratio >70%, consider splitting")
+    else:
+        if has_noise:
+            if noise_ratio > 0.7:
+                print(f"  {Colors.RED}!{Colors.END} SPLIT NOW - High tokens + high noise ratio")
+                print(f"  {Colors.RED}!{Colors.END} Create focused sections with conditional loading")
+                print(f"  {Colors.RED}!{Colors.END} Target: Main file <1000 tokens + reference sections")
+                print(f"  {Colors.RED}!{Colors.END} See progressive disclosure patterns")
+            else:
+                print(f"  {Colors.YELLOW}•{Colors.END} High token count, but acceptable noise ratio")
+                print(f"  {Colors.YELLOW}•{Colors.END} Evaluate human maintainability cost")
+                print(f"  {Colors.YELLOW}•{Colors.END} Most content is relevant - keep focused structure")
+                print(f"  {Colors.YELLOW}•{Colors.END} Consider splitting if it grows further")
+        else:
+            print(f"  {Colors.RED}!{Colors.END} Document exceeds recommended size")
+            print(f"  {Colors.RED}!{Colors.END} Calculate noise ratio to make informed decision")
+            print(f"  {Colors.RED}!{Colors.END} Use --interactive flag for guided calculation")
+            print(f"  {Colors.RED}!{Colors.END} If noise ratio >70%, definitely split")
+
+    print()
+    print(f"{Colors.BOLD}{'=' * 70}{Colors.END}")
+    print()
+
+
+def main():
+    resolve_api_key()
+
+    parser = argparse.ArgumentParser(
+        description="Audit Claude Code documentation files",
+        epilog="""
+Examples:
+  %(prog)s file.md                           # Audit single file
+  %(prog)s file1.md file2.md                 # Audit multiple files
+  %(prog)s *.md                              # Audit all markdown files
+  %(prog)s skills/                           # Audit directory (recursive)
+  %(prog)s skills/ bin/                      # Audit multiple directories
+  %(prog)s --no-color file.md                # Plain output (for piping)
+  %(prog)s --all skills/                     # Include human-only docs
+  %(prog)s -i file.md                        # Interactive noise ratio calculation
+  %(prog)s -n 0.75 file.md                   # Specify noise ratio (75%%)
+  %(prog)s -n 75%% file.md                   # Specify noise ratio as percentage
+  %(prog)s -i *.md                           # Interactive mode for multiple files
+
+Token Thresholds:
+  GREEN   (<2,000):  Keep as-is, focus on quality
+  YELLOW  (2-4K):    Evaluate noise ratio, consider splitting if >70%%
+  RED     (>4,000):  Strong candidate for splitting
+
+Noise Ratio:
+  Measures percentage of content that's irrelevant for typical tasks
+  Formula: (total_tokens - typically_relevant_tokens) / total_tokens
+  >70%%: Strong candidate for progressive disclosure
+  <70%%: Most content is relevant, keep as-is
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument(
+        'paths',
+        nargs='+',
+        help='Markdown file(s) or directories to audit'
+    )
+
+    parser.add_argument(
+        '-r', '--recursive',
+        action='store_true',
+        help='Recursively audit directories (default behavior for directories)'
+    )
+
+    parser.add_argument(
+        '--no-color',
+        action='store_true',
+        help='Disable colored output'
+    )
+
+    parser.add_argument(
+        '-s', '--summary',
+        action='store_true',
+        help='Show only summary (for multiple files)'
+    )
+
+    parser.add_argument(
+        '--all',
+        action='store_true',
+        help='Include human-only docs (education/, audience: human)'
+    )
+
+    parser.add_argument(
+        '-n', '--noise-ratio',
+        type=str,
+        metavar='RATIO',
+        help='Specify noise ratio (0.75, 75, or 75%%). Used for all files in batch mode.'
+    )
+
+    parser.add_argument(
+        '-i', '--interactive',
+        action='store_true',
+        help='Interactively calculate noise ratio by prompting for typically relevant tokens'
+    )
+
+    args = parser.parse_args()
+
+    # Parse noise ratio if provided
+    noise_ratio = None
+    if args.noise_ratio:
+        try:
+            noise_ratio = parse_noise_ratio(args.noise_ratio)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
+    if args.no_color:
+        Colors.disable()
+
+    # Collect all files to audit
+    files_to_audit = []
+
+    for path_arg in args.paths:
+        path = Path(path_arg)
+
+        if path.is_file():
+            files_to_audit.append(str(path))
+        elif path.is_dir():
+            for md_file in path.rglob('*.md'):
+                files_to_audit.append(str(md_file))
+        else:
+            print(f"Warning: Path not found: {path_arg}", file=sys.stderr)
+
+    if not files_to_audit:
+        print("Error: No markdown files found to audit", file=sys.stderr)
+        return 1
+
+    # Process files
+    results = []
+    skipped = []
+    errors = []
+
+    for file_path in files_to_audit:
+        try:
+            result = audit_file(file_path, args.no_color, args.all, noise_ratio, args.interactive)
+            if result.get('skipped'):
+                skipped.append(result)
+            else:
+                results.append(result)
+        except Exception as e:
+            errors.append((file_path, str(e)))
+
+    # Print results
+    if len(results) == 1 and not args.summary:
+        print_audit_report(results[0])
+    else:
+        # Summary view for multiple files
+        print()
+        print(f"{Colors.BOLD}{'=' * 70}{Colors.END}")
+        print(f"{Colors.BOLD}DOCUMENTATION AUDIT SUMMARY{Colors.END}")
+        print(f"{Colors.BOLD}{'=' * 70}{Colors.END}")
+        print()
+
+        # Table header
+        has_noise_data = any('noise_ratio' in r for r in results)
+        if has_noise_data:
+            print(f"{Colors.BOLD}{'File':<30} {'Lines':>7} {'Tokens':>8} {'Noise':>8} {'% Ctx':>7} {'Status':>8}{Colors.END}")
+            print("-" * 70)
+        else:
+            print(f"{Colors.BOLD}{'File':<35} {'Lines':>7} {'Tokens':>8} {'% Ctx':>8} {'Status':>10}{Colors.END}")
+            print("-" * 70)
+
+        # Table rows
+        for result in results:
+            color = get_score_color(result['tokens'])
+
+            if has_noise_data:
+                file_display = result['path'][-28:] if len(result['path']) > 30 else result['path']
+                if len(result['path']) > 30:
+                    file_display = "..." + file_display
+
+                noise_str = ""
+                if 'noise_ratio' in result:
+                    noise_color = Colors.RED if result['noise_ratio'] > 0.7 else (Colors.YELLOW if result['noise_ratio'] > 0.5 else Colors.GREEN)
+                    noise_str = f"{noise_color}{result['noise_ratio']:>7.1%}{Colors.END}"
+                else:
+                    noise_str = f"{'--':>8}"
+
+                status = "GREEN" if result['tokens'] < 2000 else ("YELLOW" if result['tokens'] <= 4000 else "RED")
+                print(f"{file_display:<30} {result['lines']:>7,} {color}{result['tokens']:>8,}{Colors.END} {noise_str} {result['context_pct']:>6.2f}% {color}{status:>8}{Colors.END}")
+            else:
+                file_display = result['path'][-33:] if len(result['path']) > 35 else result['path']
+                if len(result['path']) > 35:
+                    file_display = "..." + file_display
+
+                status = "GREEN" if result['tokens'] < 2000 else ("YELLOW" if result['tokens'] <= 4000 else "RED")
+                print(f"{file_display:<35} {result['lines']:>7,} {color}{result['tokens']:>8,}{Colors.END} {result['context_pct']:>7.2f}% {color}{status:>10}{Colors.END}")
+
+        print()
+
+        # Totals
+        total_lines = sum(r['lines'] for r in results)
+        total_tokens = sum(r['tokens'] for r in results)
+        total_context_pct = (total_tokens / 200_000) * 100
+
+        print("-" * 70)
+        print(f"{Colors.BOLD}{'TOTAL':<35} {total_lines:>7,} {total_tokens:>8,} {total_context_pct:>7.2f}%{Colors.END}")
+        print()
+
+        # Overall assessment
+        print(f"{Colors.BOLD}Overall Assessment:{Colors.END}")
+        green_count = sum(1 for r in results if r['tokens'] < 2000)
+        yellow_count = sum(1 for r in results if 2000 <= r['tokens'] <= 4000)
+        red_count = sum(1 for r in results if r['tokens'] > 4000)
+
+        print(f"  {Colors.GREEN}GREEN:{Colors.END}  {green_count:>3} files (<2K tokens)")
+        print(f"  {Colors.YELLOW}YELLOW:{Colors.END} {yellow_count:>3} files (2-4K tokens)")
+        print(f"  {Colors.RED}RED:{Colors.END}    {red_count:>3} files (>4K tokens)")
+        print()
+
+        if red_count > 0:
+            print(f"  {Colors.RED}→ {red_count} file(s) should be evaluated for splitting{Colors.END}")
+        if yellow_count > 0:
+            print(f"  {Colors.YELLOW}→ {yellow_count} file(s) should be monitored{Colors.END}")
+        if green_count == len(results):
+            print(f"  {Colors.GREEN}✓ All files are well-sized!{Colors.END}")
+
+        print()
+        print(f"{Colors.BOLD}{'=' * 70}{Colors.END}")
+        print()
+
+    # Print skipped files if any
+    if skipped:
+        print(f"{Colors.BLUE}{Colors.BOLD}Skipped (human-only):{Colors.END}")
+        for result in skipped:
+            file_display = result['path'][-60:] if len(result['path']) > 60 else result['path']
+            print(f"  {Colors.BLUE}○{Colors.END} {file_display} ({result['skip_reason']})")
+        print(f"  {Colors.BLUE}→ Use --all flag to include these files{Colors.END}")
+        print()
+
+    # Print errors if any
+    if errors:
+        print(f"{Colors.RED}{Colors.BOLD}Errors:{Colors.END}")
+        for file_path, error in errors:
+            print(f"  {Colors.RED}✗{Colors.END} {file_path}: {error}")
+        print()
+        return 1
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

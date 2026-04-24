@@ -1,0 +1,209 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["anthropic"]
+# ///
+"""
+Token counter for Claude Code documentation.
+Uses the Anthropic SDK count_tokens API for accurate Claude-specific token counts.
+
+Dependencies are managed inline - uv automatically handles the virtual environment.
+"""
+
+import json
+import os
+import shlex
+import subprocess
+import sys
+import argparse
+from pathlib import Path
+
+import anthropic
+
+
+def resolve_api_key() -> None:
+    """
+    Resolve ANTHROPIC_API_KEY by checking env, then running apiKeyHelper from
+    the nearest .claude/settings{.local,}.json (project → global). Sets the env
+    var so the anthropic client picks it up automatically.
+    """
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return
+
+    # Walk up from cwd looking for a project settings file
+    candidates = []
+    for parent in [Path.cwd(), *Path.cwd().parents]:
+        local = parent / ".claude" / "settings.local.json"
+        committed = parent / ".claude" / "settings.json"
+        if local.exists():
+            candidates.append(local)
+            break
+        if committed.exists():
+            candidates.append(committed)
+            break
+
+    # Always include global as final fallback
+    global_settings = Path.home() / ".claude" / "settings.json"
+    if global_settings not in candidates:
+        candidates.append(global_settings)
+
+    for settings_path in candidates:
+        try:
+            settings = json.loads(settings_path.read_text())
+        except Exception:
+            continue
+        helper = settings.get("apiKeyHelper")
+        if helper == "":
+            print("Error: Personal subscription repo — token counting requires an API key.", file=sys.stderr)
+            sys.exit(1)
+        if helper:
+            expanded = helper.replace("~", str(Path.home()))
+            try:
+                result = subprocess.run(shlex.split(expanded), capture_output=True, text=True, timeout=5)
+                if result.returncode == 0 and result.stdout.strip():
+                    os.environ["ANTHROPIC_API_KEY"] = result.stdout.strip()
+                    return
+            except Exception:
+                pass
+
+    print("Error: No API key available. Set ANTHROPIC_API_KEY or configure apiKeyHelper in .claude/settings.json.", file=sys.stderr)
+    sys.exit(1)
+
+
+def count_tokens(text: str, model: str = "claude-opus-4-7") -> int:
+    """
+    Count tokens in text using the Anthropic count_tokens API.
+    Counts include minimal message-envelope overhead (~5-15 tokens) from wrapping
+    file content as a user message; negligible for skill file size decisions.
+    """
+    client = anthropic.Anthropic()
+    response = client.messages.count_tokens(
+        model=model,
+        messages=[{"role": "user", "content": text}],
+    )
+    return response.input_tokens
+
+
+def main():
+    resolve_api_key()
+
+    parser = argparse.ArgumentParser(
+        description="Count tokens in text or files for Claude Code",
+        epilog="""
+Examples:
+  %(prog)s file.md                    # Count tokens in file
+  %(prog)s file.md --detailed         # Show detailed breakdown
+  cat file.md | %(prog)s              # Count from stdin
+  %(prog)s -d file1.md file2.md       # Count multiple files
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
+    parser.add_argument(
+        'files',
+        nargs='*',
+        help='File(s) to count tokens in (use stdin if none provided)'
+    )
+
+    parser.add_argument(
+        '-d', '--detailed',
+        action='store_true',
+        help='Show detailed output with file info'
+    )
+
+    parser.add_argument(
+        '-m', '--model',
+        default='claude-opus-4-7',
+        help='Claude model to use for token counting (default: claude-opus-4-7)'
+    )
+
+    args = parser.parse_args()
+
+    # Read from stdin if no files provided
+    if not args.files:
+        text = sys.stdin.read()
+        token_count = count_tokens(text, args.model)
+
+        if args.detailed:
+            char_count = len(text)
+            line_count = text.count('\n') + (1 if text and not text.endswith('\n') else 0)
+            print(f"Characters: {char_count:,}")
+            print(f"Lines: {line_count:,}")
+            print(f"Tokens: {token_count:,}")
+            print(f"Chars/Token: {char_count/token_count:.2f}" if token_count > 0 else "Chars/Token: N/A")
+        else:
+            print(token_count)
+
+        return 0
+
+    # Process file(s)
+    total_tokens = 0
+    results = []
+
+    for file_path in args.files:
+        path = Path(file_path)
+
+        if not path.exists():
+            print(f"Error: File not found: {file_path}", file=sys.stderr)
+            return 1
+
+        if not path.is_file():
+            print(f"Error: Not a file: {file_path}", file=sys.stderr)
+            return 1
+
+        try:
+            text = path.read_text(encoding='utf-8')
+        except UnicodeDecodeError:
+            try:
+                text = path.read_text(encoding='latin-1')
+            except Exception as e:
+                print(f"Error reading {file_path}: {e}", file=sys.stderr)
+                return 1
+
+        token_count = count_tokens(text, args.model)
+        total_tokens += token_count
+
+        results.append({
+            'path': file_path,
+            'tokens': token_count,
+            'chars': len(text),
+            'lines': text.count('\n') + (1 if text and not text.endswith('\n') else 0)
+        })
+
+    # Output results
+    if args.detailed:
+        if len(results) > 1:
+            print("=" * 70)
+            print("TOKEN COUNT SUMMARY")
+            print("=" * 70)
+            print()
+
+        for result in results:
+            if len(results) > 1:
+                print(f"File: {result['path']}")
+                print("-" * 70)
+
+            print(f"Characters: {result['chars']:,}")
+            print(f"Lines: {result['lines']:,}")
+            print(f"Tokens: {result['tokens']:,}")
+            print(f"Chars/Token: {result['chars']/result['tokens']:.2f}" if result['tokens'] > 0 else "Chars/Token: N/A")
+
+            if len(results) > 1:
+                print()
+
+        if len(results) > 1:
+            print("=" * 70)
+            print(f"TOTAL TOKENS: {total_tokens:,}")
+            print("=" * 70)
+    else:
+        if len(results) == 1:
+            print(results[0]['tokens'])
+        else:
+            for result in results:
+                print(f"{result['tokens']}\t{result['path']}")
+            print(f"{total_tokens}\tTOTAL")
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
