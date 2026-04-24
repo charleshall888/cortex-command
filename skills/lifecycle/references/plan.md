@@ -234,7 +234,7 @@ After writing `plan.md`, update `lifecycle/{feature}/index.md`:
 
 ### 3a. Orchestrator Review
 
-Before presenting the artifact to the user, read and follow `~/.claude/skills/lifecycle/references/orchestrator-review.md` for the `plan` phase. The orchestrator review must pass before proceeding to user approval.
+Before presenting the artifact to the user, read and follow `references/orchestrator-review.md` for the `plan` phase. The orchestrator review must pass before proceeding to user approval.
 
 ### 3b. Critical Review
 

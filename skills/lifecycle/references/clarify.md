@@ -46,7 +46,7 @@ For Context B (ad-hoc), assess requirements alignment as "no requirements files 
 
 ### 3a. Critic Review
 
-Read `~/.claude/skills/lifecycle/references/clarify-critic.md` and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `lifecycle/{feature}/events.log` with the post-critic status.
+Read `references/clarify-critic.md` and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `lifecycle/{feature}/events.log` with the post-critic status.
 
 ### 4. Question Threshold
 

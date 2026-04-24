@@ -184,7 +184,7 @@ Combine the findings into `lifecycle/{feature}/research.md`:
 
 ### 4. Transition
 
-Before proceeding, read and follow `~/.claude/skills/lifecycle/references/orchestrator-review.md` for the `research` phase. The orchestrator review must pass before logging the transition event.
+Before proceeding, read and follow `references/orchestrator-review.md` for the `research` phase. The orchestrator review must pass before logging the transition event.
 
 Append a `phase_transition` event to `lifecycle/{feature}/events.log`:
 
