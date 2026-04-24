@@ -109,17 +109,17 @@ Skip any section that has no entries — do not display a placeholder or empty h
 
 After all sections are walked, close each completed feature's backlog ticket. No per-feature confirmation is needed.
 
-**Slug resolution**: The overnight state stores lifecycle slugs (e.g., `enemy-chase-ai-upgrade-simpleenemy-to-characterbody2d-with-direct-steering`) which are longer than backlog file slugs (e.g., `036-enemy-chase-ai`). The `update-item` script accepts backlog file slugs or numeric IDs — not lifecycle slugs.
+**Slug resolution**: The overnight state stores lifecycle slugs (e.g., `enemy-chase-ai-upgrade-simpleenemy-to-characterbody2d-with-direct-steering`) which are longer than backlog file slugs (e.g., `036-enemy-chase-ai`). The `cortex-update-item` script accepts backlog file slugs or numeric IDs — not lifecycle slugs.
 
-To resolve: read each feature's `backlog_id` field from `overnight-state.json` (the state file located in Step 0). Pass the zero-padded numeric ID to `update-item`:
+To resolve: read each feature's `backlog_id` field from `overnight-state.json` (the state file located in Step 0). Pass the zero-padded numeric ID to `cortex-update-item`:
 
 ```
-update-item 078 status=complete
+cortex-update-item 078 status=complete
 ```
 
 **Important**: IDs must be zero-padded to 3 digits (e.g., `078` not `78`). Unpadded IDs return "Item not found".
 
-If `backlog_id` is not set for a feature, fall back to passing the lifecycle slug — `update-item` does substring matching and may still find a match.
+If `backlog_id` is not set for a feature, fall back to passing the lifecycle slug — `cortex-update-item` does substring matching and may still find a match.
 
 For each feature report one of:
 - `closed #ID` — ticket was found and updated

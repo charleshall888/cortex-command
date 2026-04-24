@@ -453,7 +453,7 @@ For each completed feature (the same list as Section 2, in the same order):
 1. Run:
 
    ```
-   update-item {backlog_id} status=complete
+   cortex-update-item {backlog_id} status=complete
    ```
 
    Where `{backlog_id}` is the zero-padded numeric ID from `overnight-state.json`'s

@@ -30,17 +30,17 @@ This event closes the event log for the feature.
 **Backlog write-back**: If a matching backlog item was identified in Step 2 of `SKILL.md`, mark it complete and clear the session:
 
 ```bash
-update-item <slug> status=complete session_id=null
+cortex-update-item <slug> status=complete session_id=null
 ```
 
 If no backlog item was found, skip this silently.
 
-**Backlog index sync**: After the `update-item` call (regardless of whether it succeeded, failed, or was skipped), regenerate the backlog index using this fallback chain:
+**Backlog index sync**: After the `cortex-update-item` call (regardless of whether it succeeded, failed, or was skipped), regenerate the backlog index using this fallback chain:
 
-1. If `update-item` was not found (`command -v update-item` failed), emit: `"WARNING: update-item not found — backlog item status may not be updated."`
+1. If `cortex-update-item` was not found (`command -v cortex-update-item` failed), emit: `"WARNING: cortex-update-item not found — backlog item status may not be updated."`
 2. Attempt index regeneration in order:
    - Run `test -f backlog/generate_index.py` — if it exists, run `python3 backlog/generate_index.py` and emit: `"Index regenerated via backlog/generate_index.py"`
-   - Else run `command -v generate-backlog-index` — if found on PATH, run `generate-backlog-index` and emit: `"Index regenerated via generate-backlog-index"`
+   - Else run `command -v cortex-generate-backlog-index` — if found on PATH, run `cortex-generate-backlog-index` and emit: `"Index regenerated via cortex-generate-backlog-index"`
    - Else run `test -f ~/.local/bin/generate-backlog-index` — if that absolute path exists, run `python3 ~/.local/bin/generate-backlog-index` and emit: `"Index regenerated via ~/.local/bin/generate-backlog-index"`
    - Else emit: `"WARNING: Could not regenerate backlog index — no generate_index.py script found. Index may be stale."`
 
@@ -51,7 +51,7 @@ Each fallback is a separate Bash tool call using `test -f` or `command -v` to ch
 If the backlog write-back in Step 2 was skipped (no matching backlog item was identified earlier), attempt closure now:
 
 ```bash
-update-item "{feature}" status=complete session_id=null
+cortex-update-item "{feature}" status=complete session_id=null
 ```
 
 Handles: slug/UUID matching, in-place status update, `blocked-by` cleanup, and
@@ -59,12 +59,12 @@ parent epic auto-close. Index regeneration is performed by the explicit sync ste
 that follows. Exits 0 if updated; exits 1
 if no match (silently acceptable — not all features originate from backlog items).
 
-**Backlog index sync**: After the `update-item` call (regardless of whether it succeeded, failed, or was skipped), regenerate the backlog index using this fallback chain:
+**Backlog index sync**: After the `cortex-update-item` call (regardless of whether it succeeded, failed, or was skipped), regenerate the backlog index using this fallback chain:
 
-1. If `update-item` was not found (`command -v update-item` failed), emit: `"WARNING: update-item not found — backlog item status may not be updated."`
+1. If `cortex-update-item` was not found (`command -v cortex-update-item` failed), emit: `"WARNING: cortex-update-item not found — backlog item status may not be updated."`
 2. Attempt index regeneration in order:
    - Run `test -f backlog/generate_index.py` — if it exists, run `python3 backlog/generate_index.py` and emit: `"Index regenerated via backlog/generate_index.py"`
-   - Else run `command -v generate-backlog-index` — if found on PATH, run `generate-backlog-index` and emit: `"Index regenerated via generate-backlog-index"`
+   - Else run `command -v cortex-generate-backlog-index` — if found on PATH, run `cortex-generate-backlog-index` and emit: `"Index regenerated via cortex-generate-backlog-index"`
    - Else run `test -f ~/.local/bin/generate-backlog-index` — if that absolute path exists, run `python3 ~/.local/bin/generate-backlog-index` and emit: `"Index regenerated via ~/.local/bin/generate-backlog-index"`
    - Else emit: `"WARNING: Could not regenerate backlog index — no generate_index.py script found. Index may be stale."`
 

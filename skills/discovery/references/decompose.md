@@ -127,7 +127,7 @@ Include this subsection only when items were dropped at R3's ack prompt; omit wh
 
 ### 7. Update Index
 
-Run `generate-backlog-index` to update the backlog index.
+Run `cortex-generate-backlog-index` to update the backlog index.
 
 ### 8. Commit
 
