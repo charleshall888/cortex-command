@@ -271,7 +271,7 @@ ALWAYS find root cause before attempting fixes. No fixes without completing Phas
 
 Determine where to write the artifact using this priority:
 
-1. **Explicit feature argument** (e.g., `/diagnose my-feature`): write to
+1. **Explicit feature argument** (e.g., `/cortex:diagnose my-feature`): write to
    `lifecycle/{feature}/debug-session.md` if the directory exists. If not, warn verbally
    and fall back to step 3.
 2. **Active session scan**: check `lifecycle/*/` for a `.session` file whose content matches
@@ -282,7 +282,7 @@ Determine where to write the artifact using this priority:
 
 > **Note**: `$LIFECYCLE_SESSION_ID` propagation into overnight sub-agent sessions is
 > unverified. In autonomous/overnight context, pass the feature name explicitly
-> (e.g., `/diagnose my-feature`) for reliable lifecycle-coupled artifact placement.
+> (e.g., `/cortex:diagnose my-feature`) for reliable lifecycle-coupled artifact placement.
 
 ### Format
 
@@ -330,7 +330,7 @@ different concerns:
 | **Action** | Team investigation first (§5); architecture discussion if team doesn't converge | User is prompted to escalate to Complex tier |
 | **Phase** | Implement (post-build debugging) | Research/Specify (pre-build design) |
 
-Invoking `/diagnose` when a lifecycle task fails is a structured pre-retry step — it does not
+Invoking `/cortex:diagnose` when a lifecycle task fails is a structured pre-retry step — it does not
 replace or short-circuit the lifecycle's own phase gates.
 
 ---

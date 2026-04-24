@@ -1,6 +1,6 @@
 ---
 name: requirements
-description: Gather and document project-level and feature-area requirements through structured interviews. Creates a requirements directory at the project root with a master project requirements doc and area-specific requirements. Use when user says "/requirements", "gather requirements", "document requirements", "requirements for", "what are the requirements", "define project scope", "capture what we have", "document existing project", or wants to capture project scope and feature-area requirements — whether for a new project or retroactively documenting an existing codebase.
+description: Gather and document project-level and feature-area requirements through structured interviews. Creates a requirements directory at the project root with a master project requirements doc and area-specific requirements. Use when user says "/cortex:requirements", "gather requirements", "document requirements", "requirements for", "what are the requirements", "define project scope", "capture what we have", "document existing project", or wants to capture project scope and feature-area requirements — whether for a new project or retroactively documenting an existing codebase.
 disable-model-invocation: true
 argument-hint: "[area]"
 inputs:
@@ -21,9 +21,9 @@ Area: $ARGUMENTS (if non-empty, scope interview to this area; if empty, run full
 
 ## Invocation
 
-- `/requirements` — start or resume project-level requirements
-- `/requirements {{area}}` — start or resume area-level requirements (e.g., `/requirements multiplayer`)
-- `/requirements list` — show all documented requirements areas
+- `/cortex:requirements` — start or resume project-level requirements
+- `/cortex:requirements {{area}}` — start or resume area-level requirements (e.g., `/cortex:requirements multiplayer`)
+- `/cortex:requirements list` — show all documented requirements areas
 
 ## Storage
 
@@ -51,7 +51,7 @@ Scan `requirements/` for all `.md` files. For each, read the first heading and t
 | project.md | Project | {date} | {count} |
 | multiplayer.md | Area | {date} | {count} |
 
-If no requirements directory exists, report: "No requirements documented yet. Run `/requirements` to start with project-level requirements."
+If no requirements directory exists, report: "No requirements documented yet. Run `/cortex:requirements` to start with project-level requirements."
 
 ## Step 2: Check for Existing State
 
@@ -93,7 +93,7 @@ Present the requirements document summary. The user must approve before finalizi
 
 ## Step 7: Commit
 
-Stage `requirements/` and commit using `/commit`.
+Stage `requirements/` and commit using `/cortex:commit`.
 
 ## Downstream Integration
 

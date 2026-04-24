@@ -192,7 +192,7 @@ Append a `phase_transition` event to `lifecycle/{feature}/events.log`:
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "research", "to": "specify"}
 ```
 
-If `commit-artifacts` is enabled in project config (default), stage `lifecycle/{feature}/` and commit using `/commit`.
+If `commit-artifacts` is enabled in project config (default), stage `lifecycle/{feature}/` and commit using `/cortex:commit`.
 
 After writing research.md, summarize the key findings for the user and proceed to Specify.
 

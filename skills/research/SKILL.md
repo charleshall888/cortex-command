@@ -1,8 +1,8 @@
 ---
 name: research
 description: >
-  Parallel research orchestrator. Use when the user says "/research", "research this topic",
-  "investigate this feature", "gather research for", or when /refine delegates its research
+  Parallel research orchestrator. Use when the user says "/cortex:research", "research this topic",
+  "investigate this feature", "gather research for", or when /cortex:refine delegates its research
   phase. Dispatches 3–5 parallel agents across independent angles (codebase, web, constraints,
   tradeoffs, adversarial), synthesizes into research.md or conversation output.
 inputs:
@@ -18,7 +18,7 @@ preconditions:
 argument-hint: "topic=\"<topic>\" [lifecycle-slug=<slug>] [tier=simple|complex] [criticality=low|medium|high|critical]"
 ---
 
-# /research
+# /cortex:research
 
 Parallel research orchestrator. Dispatches N agents across independent angles and synthesizes findings.
 

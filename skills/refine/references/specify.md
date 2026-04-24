@@ -64,7 +64,7 @@ After the interview concludes, evaluate whether the research from `research.md` 
    ```
    {"ts": "<ISO 8601>", "event": "confidence_check", "feature": "<name>", "cycle": 1, "signals": ["<C1|C2|C3 with description>", ...], "action": "loop_back"}
    ```
-3. Transition back to Research — **bypassing /refine's Sufficiency Check**. Because Specify runs inside a /refine invocation (Step 5), the normal loop-back to Research would re-enter /refine Step 4, which applies a Sufficiency Check that may declare the existing `research.md` sufficient and skip back to Spec. This must not happen. Explicitly override: treat the existing `research.md` as invalidated and re-run Research from scratch regardless of Sufficiency Check criteria. This follows the same override pattern used in lifecycle SKILL.md's Discovery Bootstrap edge case.
+3. Transition back to Research — **bypassing /refine's Sufficiency Check**. Because Specify runs inside a /cortex:refine invocation (Step 5), the normal loop-back to Research would re-enter /cortex:refine Step 4, which applies a Sufficiency Check that may declare the existing `research.md` sufficient and skip back to Spec. This must not happen. Explicitly override: treat the existing `research.md` as invalidated and re-run Research from scratch regardless of Sufficiency Check criteria. This follows the same override pattern used in lifecycle SKILL.md's Discovery Bootstrap edge case.
 
 **If any signal is flagged AND current_cycle ≥ 2**:
 

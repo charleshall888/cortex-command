@@ -75,10 +75,10 @@ Each fallback is a separate Bash tool call using `test -f` or `command -v` to ch
 Execute the appropriate workflow based on the current git state. Do not ask the user to choose — the correct action is determined by branch and change state.
 
 **If there are uncommitted changes:**
-Stage `lifecycle/{feature}/` artifacts alongside source changes, then use `/commit` to create the commit. If `lifecycle.config.md` specifies `commit-artifacts: false`, exclude lifecycle artifacts from staging.
+Stage `lifecycle/{feature}/` artifacts alongside source changes, then use `/cortex:commit` to create the commit. If `lifecycle.config.md` specifies `commit-artifacts: false`, exclude lifecycle artifacts from staging.
 
 **If on a feature branch (not main/master):**
-Push the branch and use `/pr` to create a pull request with a summary of the feature.
+Push the branch and use `/cortex:pr` to create a pull request with a summary of the feature.
 
 **If on main/master:**
 The changes are already committed to the main branch. No PR needed.

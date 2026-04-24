@@ -1,6 +1,6 @@
 ---
 name: lifecycle
-description: Structured feature development lifecycle with phases for research, specification, planning, implementation, review, and completion. Use when user says "/lifecycle", "start a lifecycle", "lifecycle research/specify/plan/implement/review/complete", or wants to build a non-trivial feature with structured phases. Also triggers on "start a feature lifecycle" or "lifecycle <feature-name>". Required before editing any file in ~/.claude/skills/ or ~/.claude/hooks/ — skip only if the user explicitly says to.
+description: Structured feature development lifecycle with phases for research, specification, planning, implementation, review, and completion. Use when user says "/cortex:lifecycle", "start a lifecycle", "lifecycle research/specify/plan/implement/review/complete", or wants to build a non-trivial feature with structured phases. Also triggers on "start a feature lifecycle" or "lifecycle <feature-name>". Required before editing any file in ~/.claude/skills/ or ~/.claude/hooks/ — skip only if the user explicitly says to.
 argument-hint: "<feature> [phase]"
 inputs:
   - "feature: string (required) — kebab-case slug of the feature to develop or resume"
@@ -20,9 +20,9 @@ A file-based state machine that survives context loss. Enforces research-before-
 
 ## Invocation
 
-- `/lifecycle {{feature}}` — start new or resume existing feature
-- `/lifecycle {{phase}}` — explicitly enter a phase for the active feature
-- `/lifecycle resume {{feature}}` — resume a specific feature if multiple exist
+- `/cortex:lifecycle {{feature}}` — start new or resume existing feature
+- `/cortex:lifecycle {{phase}}` — explicitly enter a phase for the active feature
+- `/cortex:lifecycle resume {{feature}}` — resume a specific feature if multiple exist
 
 ## Project Configuration
 
@@ -195,7 +195,7 @@ if match found:
             epic_research_path = unset
 ```
 
-**Do not copy epic content into lifecycle files.** Epic research covers all tickets in the epic — copying it wholesale bleeds cross-ticket context into this ticket's research and spec. Record the paths as reference context only; `/refine` will produce ticket-specific research.md and spec.md that reference the epic artifacts without reproducing them.
+**Do not copy epic content into lifecycle files.** Epic research covers all tickets in the epic — copying it wholesale bleeds cross-ticket context into this ticket's research and spec. Record the paths as reference context only; `/cortex:refine` will produce ticket-specific research.md and spec.md that reference the epic artifacts without reproducing them.
 
 If `epic_research_path` was found, announce: "Found epic research at `{epic_research_path}` — will use as background reference during research. Running ticket-specific research and spec phases."
 
@@ -203,7 +203,7 @@ If `epic_research_path` was found, announce: "Found epic research at `{epic_rese
 
 ### Epic Context Event Logging
 
-If `epic_research_path` was found in Discovery Bootstrap above, log a `discovery_reference` event before delegating to `/refine`. This records that the lifecycle is scoped from a larger epic, without implying that any phases were skipped:
+If `epic_research_path` was found in Discovery Bootstrap above, log a `discovery_reference` event before delegating to `/cortex:refine`. This records that the lifecycle is scoped from a larger epic, without implying that any phases were skipped:
 
 ```json
 {"ts": "<ISO 8601>", "event": "discovery_reference", "feature": "<name>", "epic_research": "<epic_research_path>", "epic_spec": "<epic_spec_path or null>"}
@@ -211,28 +211,28 @@ If `epic_research_path` was found in Discovery Bootstrap above, log a `discovery
 
 If no epic context was found, skip this section entirely.
 
-### /refine Delegation
+### /cortex:refine Delegation
 
-The Clarify, Research, and Spec phases are delegated to `/refine`. This section determines whether delegation is needed and, if so, how to execute it.
+The Clarify, Research, and Spec phases are delegated to `/cortex:refine`. This section determines whether delegation is needed and, if so, how to execute it.
 
-**If `lifecycle/{feature}/spec.md` already exists AND `lifecycle/{feature}/research.md` also exists** (from a prior `/refine` run, or a resumed lifecycle): announce that early-phase delegation is skipped and proceed directly to the phase execution table below (Plan phase).
+**If `lifecycle/{feature}/spec.md` already exists AND `lifecycle/{feature}/research.md` also exists** (from a prior `/cortex:refine` run, or a resumed lifecycle): announce that early-phase delegation is skipped and proceed directly to the phase execution table below (Plan phase).
 
-**If `lifecycle/{feature}/spec.md` exists but `lifecycle/{feature}/research.md` does not**: warn that the lifecycle is in an inconsistent state — spec exists without research, and overnight requires both. Delegate to `/refine` normally; `/refine`'s Step 2 will detect the missing research.md and route to the research phase.
+**If `lifecycle/{feature}/spec.md` exists but `lifecycle/{feature}/research.md` does not**: warn that the lifecycle is in an inconsistent state — spec exists without research, and overnight requires both. Delegate to `/cortex:refine` normally; `/cortex:refine`'s Step 2 will detect the missing research.md and route to the research phase.
 
-**If `lifecycle/{feature}/spec.md` does not exist**: delegate to `/refine` as follows:
+**If `lifecycle/{feature}/spec.md` does not exist**: delegate to `/cortex:refine` as follows:
 
-1. **Read `skills/refine/SKILL.md` verbatim.** Do not paraphrase or reconstruct `/refine`'s protocol from training context. The file read is mandatory — this ensures lifecycle stays in sync as `/refine` evolves.
+1. **Read `skills/refine/SKILL.md` verbatim.** Do not paraphrase or reconstruct `/cortex:refine`'s protocol from training context. The file read is mandatory — this ensures lifecycle stays in sync as `/cortex:refine` evolves.
 
-2. **Epic context injection** (applies when `epic_research_path` was recorded in Discovery Bootstrap): before starting Clarify, read the epic research file at `{epic_research_path}` (and `{epic_spec_path}` if present) as background context. This explains the broader epic scope and which concerns belong to adjacent tickets. Instruct `/refine` to:
+2. **Epic context injection** (applies when `epic_research_path` was recorded in Discovery Bootstrap): before starting Clarify, read the epic research file at `{epic_research_path}` (and `{epic_spec_path}` if present) as background context. This explains the broader epic scope and which concerns belong to adjacent tickets. Instruct `/cortex:refine` to:
    - Scope research and spec to THIS ticket's specific requirements only — do not reproduce content that belongs to other tickets in the epic
    - Include a `## Epic Reference` section near the top of `research.md` with a link to the epic research path and a one-sentence note on how the epic relates to this ticket
    - In `spec.md`, add a brief preamble note referencing the epic research path for broader context
 
-3. **Determine the starting point for `/refine`:** `/refine`'s Step 2 (Check State) checks for `lifecycle/{lifecycle-slug}/research.md` and `lifecycle/{lifecycle-slug}/spec.md` at those exact paths. Rules:
+3. **Determine the starting point for `/cortex:refine`:** `/cortex:refine`'s Step 2 (Check State) checks for `lifecycle/{lifecycle-slug}/research.md` and `lifecycle/{lifecycle-slug}/spec.md` at those exact paths. Rules:
    - If both files exist at those exact paths: Step 2 proceeds normally.
-   - If a backlog item's `discovery_source` or `research` frontmatter field points to epic research at a different path: that epic file is background context for the Clarify phase, not a substitute for the lifecycle research artifact. `/refine` must still run its full Research phase to produce `lifecycle/{slug}/research.md`.
+   - If a backlog item's `discovery_source` or `research` frontmatter field points to epic research at a different path: that epic file is background context for the Clarify phase, not a substitute for the lifecycle research artifact. `/cortex:refine` must still run its full Research phase to produce `lifecycle/{slug}/research.md`.
 
-4. **Event logging during delegation**: lifecycle owns `lifecycle/{feature}/events.log`. Log these events as `/refine` completes each phase:
+4. **Event logging during delegation**: lifecycle owns `lifecycle/{feature}/events.log`. Log these events as `/cortex:refine` completes each phase:
 
    - After the full Clarify phase completes (including §3a critic review and any Q&A) — **before Research begins** — log `lifecycle_start` (tier and criticality come from the post-critic, post-Q&A values in context):
      ```json
@@ -263,7 +263,7 @@ The Clarify, Research, and Spec phases are delegated to `/refine`. This section 
      {"ts": "<ISO 8601>", "event": "complexity_override", "feature": "<name>", "from": "simple", "to": "complex"}
      ```
 
-The Research and Spec phases are handled by the /refine delegation block above. The following phases run directly in the lifecycle context:
+The Research and Spec phases are handled by the /cortex:refine delegation block above. The following phases run directly in the lifecycle context:
 
 | Phase | Reference | Artifact Produced |
 |-------|-----------|-------------------|
@@ -283,7 +283,7 @@ After completing a phase artifact, announce the transition and proceed to the ne
 - **Blockers**: Active blockers, escalations, or deferred questions (or "None")
 - **Next**: Next phase name and what it will do
 
-If the user invokes `/lifecycle <phase>` to jump to a specific phase, honor the request but warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
+If the user invokes `/cortex:lifecycle <phase>` to jump to a specific phase, honor the request but warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
 
 ## Criticality Override
 
@@ -353,12 +353,12 @@ echo $LIFECYCLE_SESSION_ID > lifecycle/{feature}/.session
 
 ## Parallel Execution
 
-When the user requests running multiple lifecycle features in parallel (e.g., "/lifecycle 120 and 121 in parallel"), use the `Agent` tool with `isolation: "worktree"` for each feature:
+When the user requests running multiple lifecycle features in parallel (e.g., "/cortex:lifecycle 120 and 121 in parallel"), use the `Agent` tool with `isolation: "worktree"` for each feature:
 
 ```
 Agent(
   isolation: "worktree",
-  prompt: "/lifecycle {feature}"
+  prompt: "/cortex:lifecycle {feature}"
 )
 ```
 

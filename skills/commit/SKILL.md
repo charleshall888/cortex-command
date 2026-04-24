@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Create git commits with consistent, well-formatted messages. Use when user says "commit", "/commit", "make a commit", "commit these changes", or asks to save/checkpoint their work as a git commit.
+description: Create git commits with consistent, well-formatted messages. Use when user says "commit", "/cortex:commit", "make a commit", "commit these changes", or asks to save/checkpoint their work as a git commit.
 ---
 
 # Commit

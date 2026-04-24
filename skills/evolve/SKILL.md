@@ -1,6 +1,6 @@
 ---
 name: evolve
-description: Identify recurring problems across retro logs and route each trend to the appropriate skill for investigation or resolution. Use when user says "/evolve", "evolve", "find trends in retros", "process retros", "what keeps going wrong", or wants to analyze session retrospectives to surface patterns and route improvements to the right workflow.
+description: Identify recurring problems across retro logs and route each trend to the appropriate skill for investigation or resolution. Use when user says "/cortex:evolve", "evolve", "find trends in retros", "process retros", "what keeps going wrong", or wants to analyze session retrospectives to surface patterns and route improvements to the right workflow.
 disable-model-invocation: true
 argument-hint: "[N]"
 ---
@@ -13,15 +13,15 @@ Read unprocessed retro logs, cluster recurring problems into trends, and route e
 
 ## Invocation
 
-- `/evolve` — process up to the last 5 unprocessed retros
-- `/evolve N` — process up to the last N unprocessed retros (e.g., `/evolve 10`)
+- `/cortex:evolve` — process up to the last 5 unprocessed retros
+- `/cortex:evolve N` — process up to the last N unprocessed retros (e.g., `/cortex:evolve 10`)
 
 ## Steps
 
 ### 1. Check for retros
 
 If `retros/` does not exist or contains no `*.md` files (excluding dot-files):
-> "No retros found — run /retro to start the feedback loop"
+> "No retros found — run /cortex:retro to start the feedback loop"
 
 Stop.
 
@@ -36,7 +36,7 @@ Read `retros/.evolve-state.json` if it exists:
 }
 ```
 
-`last_processed` is the filename of the newest retro from the previous `/evolve` run. Only retro files with filenames **lexicographically greater** than `last_processed` are unprocessed. If no state file exists, all retros are unprocessed.
+`last_processed` is the filename of the newest retro from the previous `/cortex:evolve` run. Only retro files with filenames **lexicographically greater** than `last_processed` are unprocessed. If no state file exists, all retros are unprocessed.
 
 ### 3. Collect retros to analyze
 
@@ -78,12 +78,12 @@ For each trend, assign the most appropriate route:
 
 | Situation | Route |
 |-----------|-------|
-| Unknown or complex root cause | `/discovery <topic>` |
-| Understood, non-trivial fix | `/lifecycle <feature>` |
-| Simple, scoped improvement | `/backlog add` |
+| Unknown or complex root cause | `/cortex:discovery <topic>` |
+| Understood, non-trivial fix | `/cortex:lifecycle <feature>` |
+| Simple, scoped improvement | `/cortex:backlog add` |
 | Immediate config or memory update | `/claude-md-improver` or direct MEMORY.md/CLAUDE.md edit |
 
-Before proposing `/backlog add`, scan `backlog/*.md` for an open item with matching title keywords. If one exists, note it rather than creating a duplicate.
+Before proposing `/cortex:backlog add`, scan `backlog/*.md` for an open item with matching title keywords. If one exists, note it rather than creating a duplicate.
 
 ### 8. Present for approval
 
@@ -94,8 +94,8 @@ Show the user a summary table before taking any action:
 
 | # | Problem pattern | Occurrences | Proposed route |
 |---|-----------------|-------------|----------------|
-| 1 | <description>   | 2 (retros: YYYY-MM-DD-HHmm, ...) | /discovery <topic> |
-| 2 | ...             | 3 | /lifecycle <feature> |
+| 1 | <description>   | 2 (retros: YYYY-MM-DD-HHmm, ...) | /cortex:discovery <topic> |
+| 2 | ...             | 3 | /cortex:lifecycle <feature> |
 
 ### Single-occurrence problems (not routed)
 - <problem> (retro: YYYY-MM-DD-HHmm)
@@ -108,9 +108,9 @@ Approve to dispatch the routes above, or adjust before proceeding.
 ### 9. Dispatch approved routes
 
 After approval, invoke each route in the order listed. For each:
-- `/discovery <topic>` — invoke the discovery skill
-- `/lifecycle <feature>` — invoke the lifecycle skill
-- `/backlog add` — create a backlog item following the repo's backlog format (`backlog/NNN-title.md` with YAML frontmatter)
+- `/cortex:discovery <topic>` — invoke the discovery skill
+- `/cortex:lifecycle <feature>` — invoke the lifecycle skill
+- `/cortex:backlog add` — create a backlog item following the repo's backlog format (`backlog/NNN-title.md` with YAML frontmatter)
 - Direct edit — apply the MEMORY.md or CLAUDE.md change; use `/claude-md-improver` for structural rewrites
 
 If `/skill-creator` or `/claude-md-improver` is unavailable, describe the proposed change in prose so the user can apply it manually.

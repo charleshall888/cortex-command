@@ -2,7 +2,7 @@
 
 Pre-discovery gap identification. Scans requirements, backlog, active lifecycles, and existing skills to identify undercovered areas, ranks them, and presents a numbered list for the user to select a discovery topic from.
 
-Runs only when `/discovery` is invoked with no topic argument. Does not write any files or state — it is read-only and produces only a `{{topic}}` for the normal discovery flow.
+Runs only when `/cortex:discovery` is invoked with no topic argument. Does not write any files or state — it is read-only and produces only a `{{topic}}` for the normal discovery flow.
 
 ## Protocol
 
@@ -10,7 +10,7 @@ Runs only when `/discovery` is invoked with no topic argument. Does not write an
 
 Look for a `requirements/` directory at the project root.
 
-- If it does not exist: output "No requirements docs found — cannot auto-scan for gaps. Provide a topic to start discovery: `/discovery <topic>`." and exit.
+- If it does not exist: output "No requirements docs found — cannot auto-scan for gaps. Provide a topic to start discovery: `/cortex:discovery <topic>`." and exit.
 - If it exists: read all `requirements/*.md` files.
 
 ### 2. Extract Coverage Targets
@@ -44,7 +44,7 @@ For each gap candidate from §2, determine coverage:
 
 Mark candidates as covered and exclude them from the gap list. Keep zero-coverage and partial-coverage candidates.
 
-If all candidates are covered: output a coverage summary (e.g., "All requirements areas have active backlog or lifecycle coverage.") and exit cleanly. Do not prompt for a topic — the user can call `/discovery <topic>` manually.
+If all candidates are covered: output a coverage summary (e.g., "All requirements areas have active backlog or lifecycle coverage.") and exit cleanly. Do not prompt for a topic — the user can call `/cortex:discovery <topic>` manually.
 
 ### 5. Rank and Present
 
@@ -84,4 +84,4 @@ Use the AskUserQuestion tool to present the selection. Include "Other" implicitl
 | "I should run discovery on all the gaps I found" | The user picks one. Parallel discovery on multiple gaps is not supported by this mode. |
 | "I should only check requirements/project.md" | Load all `requirements/*.md` — future area docs benefit automatically. |
 | "I should filter using completed lifecycle directories too" | Filter on in-progress (has research.md or plan.md). Completed lifecycles don't block re-discovery of an area. |
-| "I should present gaps that are already covered so the user can re-explore" | Covered areas are excluded. The user can always call `/discovery <topic>` directly to explore a covered area. |
+| "I should present gaps that are already covered so the user can re-explore" | Covered areas are excluded. The user can always call `/cortex:discovery <topic>` directly to explore a covered area. |

@@ -66,7 +66,7 @@ Write a one-sided critique — focus on what the assessment got wrong. Exclude b
 
 ## Disposition Framework
 
-After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection with one of three dispositions. (Apply/Dismiss/Ask classification and the self-resolution step below are reproduced from `/critical-review` Step 4 to avoid silent drift. Dismiss-rationale handling diverges by design: clarify-critic routes rationales to `dismissals[].rationale` per the Dispositioning Output Contract below; `/critical-review` Step 4 emits a count-only user-facing line.)
+After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection with one of three dispositions. (Apply/Dismiss/Ask classification and the self-resolution step below are reproduced from `/cortex:critical-review` Step 4 to avoid silent drift. Dismiss-rationale handling diverges by design: clarify-critic routes rationales to `dismissals[].rationale` per the Dispositioning Output Contract below; `/cortex:critical-review` Step 4 emits a count-only user-facing line.)
 
 **Apply** — the objection identifies a concrete problem and the correct fix is clear and unambiguous. Examples: a High confidence rating is demonstrably unsupported by the source, the scope claim contradicts explicit text in the backlog item, the requirements alignment is asserted when no requirements file was loaded. Fix these without asking — revise the affected confidence dimension(s) accordingly.
 
