@@ -75,6 +75,10 @@ main() {
 			exit 1
 		fi
 	fi
+	run env UV_PYTHON_DOWNLOADS=automatic uv tool install -e "$target" --force
+	log "cortex CLI installed."
+	log "plugin auto-registration is not yet automated -- see docs/setup.md for manual steps."
+	log "if 'cortex' is not on your PATH, run 'uv tool update-shell' and reload your shell."
 }
 
 main "$@"
