@@ -320,11 +320,6 @@ validate-skill-preconditions skill:
 validate-spec *args:
     python3 bin/validate-spec {{args}}
 
-# Verify setup including full test suite
-verify-setup-full:
-    just verify-setup
-    just test
-
 # --- Testing ---
 
 # Run skill contract tests (validates SKILL.md frontmatter across all skills)
