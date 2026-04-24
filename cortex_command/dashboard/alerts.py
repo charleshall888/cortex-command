@@ -3,17 +3,16 @@
 Evaluates running overnight session features for four alertable conditions:
 stall (no activity for > 5 minutes), circuit breaker (CIRCUIT_BREAKER event
 in overnight_events), deferred (feature status == "deferred"), and high rework
-(rework_cycles >= 2). Fires cortex-notify.sh subprocess on first trigger and
-deduplicates subsequent fires.
+(rework_cycles >= 2). Logs first-trigger notifications and deduplicates
+subsequent fires via a notified flag.
 
 Functions:
-    evaluate_alerts   -- detect/clear conditions, mutate state.alerts in place
-    fire_notifications -- async fire notify.sh for new unnotified alerts
+    evaluate_alerts    -- detect/clear conditions, mutate state.alerts in place
+    fire_notifications -- log new unnotified alerts and mark them notified
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -96,50 +95,38 @@ def evaluate_alerts(state: "DashboardState", root: Path, lifecycle_dir: Path) ->
 
 
 async def fire_notifications(state: "DashboardState", root: Path) -> None:  # type: ignore[name-defined]
-    """Fire cortex-notify.sh for each new unnotified alert.
+    """Log newly-detected alerts and mark them notified.
 
     Called every 5 seconds after ``evaluate_alerts``. For each alert entry
-    with ``notified == False``, launches the notification script via
-    ``asyncio.create_subprocess_shell`` (fire-and-forget). Subprocess failures
-    are logged at WARNING and do not propagate.
+    with ``notified == False``, emits a log line and flips ``notified`` to
+    ``True`` so subsequent ticks do not re-fire. The shell-subprocess
+    notification channel was retired with the shareable-install scaffolding;
+    machine-config is now responsible for wiring alert messages to any
+    desktop-notifier surface.
 
     Args:
         state: Shared ``DashboardState`` instance (mutated in place).
-        root: Project root path — notify script at ``root/hooks/cortex-notify.sh``.
+        root: Project root path (unused; reserved for future use).
     """
-    notify_sh = root / "hooks" / "cortex-notify.sh"
-
-    async def _fire(script: Path, message: str) -> None:
-        try:
-            proc = await asyncio.create_subprocess_shell(
-                f'{script} "{message}"',
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            asyncio.create_task(proc.wait())
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("notify subprocess failed (%s): %s", script.name, exc)
-
     # Per-feature alerts
     for (slug, condition), entry in list(state.alerts.items()):
         if entry.get("notified"):
             continue
 
         if condition == "stall":
-            message = f"\u26a0 {slug}: stalled (no activity for 5m)"
+            message = f"⚠ {slug}: stalled (no activity for 5m)"
         elif condition == "deferred":
-            message = f"\u23f8 {slug}: deferred"
+            message = f"⏸ {slug}: deferred"
         elif condition == "high_rework":
             count = entry.get("rework_cycles", 2)
             message = f"\U0001f504 {slug}: high rework ({count} cycles)"
         else:
-            message = f"\u26a0 {slug}: {condition}"
+            message = f"⚠ {slug}: {condition}"
 
-        asyncio.create_task(_fire(notify_sh, message))
+        logger.info("alert: %s", message)
         entry["notified"] = True
 
     # Circuit breaker (once per session)
     if state.circuit_breaker_active and not state.circuit_breaker_notified:
-        message = "\U0001f504 circuit breaker fired"
-        asyncio.create_task(_fire(notify_sh, message))
+        logger.info("alert: \U0001f504 circuit breaker fired")
         state.circuit_breaker_notified = True
