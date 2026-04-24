@@ -142,7 +142,7 @@ Omit this callout entirely when §2a passed cleanly or no loop-back occurred.
 
 ### 3a. Orchestrator Review
 
-Before presenting the artifact to the user, read and follow `~/.claude/skills/lifecycle/references/orchestrator-review.md` for the `specify` phase. The orchestrator review must pass before proceeding to user approval.
+Before presenting the artifact to the user, read and follow `references/orchestrator-review.md` for the `specify` phase. The orchestrator review must pass before proceeding to user approval.
 
 ### 3b. Critical Review
 
