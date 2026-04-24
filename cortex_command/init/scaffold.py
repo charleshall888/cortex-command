@@ -10,7 +10,12 @@ and the ``--force`` backup path on top.
 Exposed surface (consumed by Tasks 4, 5, 6, 9):
     scaffold(repo_root, *, overwrite, backup_dir) -> list[Path]
         Walk ``templates/`` and additively write each file that is absent on
-        disk. Returns the list of files actually written (for stderr report).
+        disk. When ``overwrite`` is True, existing destinations are backed
+        up via :func:`backup_existing` before being rewritten.
+    backup_existing(repo_root, *, targets) -> Path
+        Copy each existing ``targets`` file into
+        ``.cortex-init-backup/<UTC-timestamp>/<relative-path>`` and return
+        the backup directory path for stderr logging (R10).
     drift_files(repo_root) -> list[Path]
         Return scaffold target paths (relative to ``repo_root``) whose
         on-disk bytes differ from the shipped template bytes after ``\\r\\n``
@@ -32,6 +37,7 @@ import importlib.metadata
 import json
 import os
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 from cortex_command.common import atomic_write
@@ -40,6 +46,7 @@ _TEMPLATE_ROOT = Path(__file__).resolve().parent / "templates"
 
 _MARKER_FILENAME = ".cortex-init"
 _BACKUP_DIR_PATTERN = ".cortex-init-backup/"
+_BACKUP_DIR_ROOT = ".cortex-init-backup"
 _GITIGNORE_TARGETS = (_MARKER_FILENAME, _BACKUP_DIR_PATTERN)
 
 # Target scaffold paths inspected by the content-aware decline gate (R19).
@@ -186,18 +193,24 @@ def scaffold(
     overwrite: bool,
     backup_dir: Path | None,
 ) -> list[Path]:
-    """Walk the shipped templates and additively write missing files.
+    """Walk the shipped templates and write files, optionally with backup.
 
     Args:
         repo_root: Target repo root. Each shipped template file is written
             to ``repo_root / <relative-path-from-templates>``.
         overwrite: If True, existing target files are overwritten (Task 6's
-            ``--force`` path). If False (Task 3 baseline), existing files
-            are left untouched.
-        backup_dir: If not None (Task 6's ``--force`` path), callers supply
-            a pre-created backup directory whose ``backup_existing`` helper
-            has already captured the prior content. Task 3 baseline always
-            receives ``None``.
+            ``--force`` path). Any existing destination is first copied
+            into a timestamped backup directory under
+            ``.cortex-init-backup/`` via :func:`backup_existing` (unless
+            the caller pre-supplied ``backup_dir``). If False (Task 3
+            baseline), existing files are left untouched.
+        backup_dir: If not None, the caller has already captured prior
+            content via :func:`backup_existing` (Task 9's handler does
+            this so it can log the backup directory before invoking
+            scaffold). Scaffold will overwrite existing files without
+            re-backing them up. If None and ``overwrite`` is True,
+            scaffold calls :func:`backup_existing` itself for any
+            destinations that already exist.
 
     Returns:
         The list of paths that were written, as absolute paths under
@@ -205,6 +218,22 @@ def scaffold(
         report.
     """
     written: list[Path] = []
+
+    if overwrite and backup_dir is None:
+        # Collect existing destinations up front so the backup lands under
+        # one timestamp directory rather than spawning a fresh dir per
+        # file (which the per-second ``%Y-%m-%dT%H-%M-%SZ`` format would
+        # collapse anyway, but this is cleaner and avoids the edge case
+        # where two iterations of the loop straddle a second boundary).
+        existing_targets: list[Path] = []
+        for template_path in _iter_template_files():
+            rel = template_path.relative_to(_TEMPLATE_ROOT)
+            dest = repo_root / rel
+            if dest.exists():
+                existing_targets.append(dest)
+        if existing_targets:
+            backup_existing(repo_root, targets=existing_targets)
+
     for template_path in _iter_template_files():
         rel = template_path.relative_to(_TEMPLATE_ROOT)
         dest = repo_root / rel
@@ -213,10 +242,54 @@ def scaffold(
         content = template_path.read_text(encoding="utf-8")
         atomic_write(dest, content)
         written.append(dest)
-    # ``backup_dir`` is part of the exposed signature for Task 6 consumers;
-    # Task 3 baseline never uses it (overwrite=False path).
-    del backup_dir
     return written
+
+
+def backup_existing(
+    repo_root: Path,
+    *,
+    targets: Iterable[Path],
+) -> Path:
+    """Copy each existing ``targets`` file into a timestamped backup dir.
+
+    Backups land at ``<repo_root>/.cortex-init-backup/<UTC-timestamp>/<rel>``
+    where ``<rel>`` is each target path's position relative to
+    ``repo_root``. The timestamp uses ``%Y-%m-%dT%H-%M-%SZ`` (colons
+    replaced with hyphens so the path is portable across filesystems
+    that treat ``:`` specially — e.g., Windows). Files are copied via
+    :func:`cortex_command.common.atomic_write`; non-existent targets and
+    directories are skipped (R10 backs up the file contents of each of
+    the five scaffold targets, not empty-dir shells).
+
+    Args:
+        repo_root: Target repo root. The backup tree is created under
+            ``repo_root / .cortex-init-backup / <timestamp> /``.
+        targets: Iterable of paths (absolute or under ``repo_root``) to
+            back up. Each path is made relative to ``repo_root`` to
+            compute its backup destination.
+
+    Returns:
+        The absolute backup directory path
+        (``<repo_root>/.cortex-init-backup/<UTC-timestamp>``) so callers
+        (Task 9's handler) can log it to stderr.
+    """
+    timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H-%M-%SZ")
+    backup_dir = repo_root / _BACKUP_DIR_ROOT / timestamp
+
+    for target in targets:
+        src = Path(target)
+        if not src.is_absolute():
+            src = repo_root / src
+        if not src.exists() or not src.is_file():
+            # R10 backs up file content; directories are recreated by
+            # the shipped templates on overwrite.
+            continue
+        rel = src.relative_to(repo_root)
+        dest = backup_dir / rel
+        content = src.read_text(encoding="utf-8")
+        atomic_write(dest, content)
+
+    return backup_dir
 
 
 def drift_files(repo_root: Path) -> list[Path]:
