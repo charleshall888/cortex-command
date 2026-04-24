@@ -163,55 +163,11 @@ overnight-run state="lifecycle/sessions/latest-overnight/overnight-state.json" t
         echo "  just overnight-run lifecycle/sessions/.../overnight-state.json 6h" >&2
         exit 1
     fi
-    bash "{{justfile_directory()}}/cortex_command/overnight/runner.sh" --state {{ state }} --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}
-
-# Launch overnight runner in a detached tmux session (recommended for unattended runs)
-# Usage: just overnight-start <state-path> <time-limit-hours>  (args are positional)
-overnight-start state="" time-limit="6" max-rounds="10" tier="max_100":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    STATE="{{ state }}"
-    if [[ "$STATE" == --* || "$STATE" == *=* ]]; then
-        echo "Error: wrong arg format — use positional syntax:" >&2
-        echo "  just overnight-start <state-path> <time-limit-hours>" >&2
-        echo "  just overnight-start lifecycle/sessions/.../overnight-state.json 6h" >&2
-        exit 1
-    fi
-    if \! command -v tmux &>/dev/null; then
-        echo "tmux not found — run in foreground with: just overnight-run" >&2
-        exit 1
-    fi
-    SESSION="overnight-runner"
-    N=2
-    while tmux has-session -t "=$SESSION" 2>/dev/null; do
-        SESSION="overnight-runner-$N"
-        N=$((N + 1))
-    done
-    REPO_ROOT="{{justfile_directory()}}"
-    STATE_ARG=""
-    if [[ -n "{{ state }}" ]]; then
-        STATE_ARG="--state {{ state }}"
-    fi
-    tmux new-session -d -s "$SESSION" -c "$REPO_ROOT" \
-        "bash \"{{justfile_directory()}}/cortex_command/overnight/runner.sh\" $STATE_ARG --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}"
-    echo "Overnight runner started in tmux session '$SESSION'"
-    echo "  Attach : tmux attach -t $SESSION"
-    echo "  Watch  : tail -f lifecycle/sessions/latest-overnight/overnight-events.log"
-    just overnight-status
+    cortex overnight start --state {{ state }} --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}
 
 # Schedule an overnight run to start at a specific time (e.g. just overnight-schedule 23:00)
 overnight-schedule target-time state="" time-limit="6" max-rounds="10" tier="max_100":
     overnight-schedule "{{ target-time }}" "{{ state }}" "{{ time-limit }}" "{{ max-rounds }}" "{{ tier }}"
-
-# Show a live auto-refreshing status display for the active overnight session
-overnight-status:
-    #!/usr/bin/env bash
-    trap 'exit 0' INT
-    while true; do
-        clear
-        uv run python3 -m cortex_command.overnight.status
-        sleep 5
-    done
 
 # Run the overnight smoke test (verifies worker commit round-trip)
 overnight-smoke-test:

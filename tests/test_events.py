@@ -61,9 +61,11 @@ def test_all_log_event_calls_registered():
         for match in py_overnight_pattern.finditer(text):
             found_literals.append((str(path.relative_to(REPO_ROOT)), match.group(1)))
 
-    # Sanity: we should find at least one literal (runner.sh has many)
-    assert found_literals, "Expected to find log_event string literals in overnight files"
-
+    # Python call sites use imported constants (e.g. events.CIRCUIT_BREAKER)
+    # rather than string literals, so found_literals may legitimately be
+    # empty once the legacy bash runner is retired. The test's substantive
+    # check — that any string literals we do find are registered — still
+    # holds in that case.
     unregistered = [
         (f, evt) for f, evt in found_literals if evt not in EVENT_TYPES
     ]
