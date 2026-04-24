@@ -243,7 +243,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Complexity**: simple
 - **Context**: Per spec R6 (evolve) and R14 (install smoke), this verification is session-dependent: `/plugin install` and slash-command dispatch require a live Claude Code session — neither has a headless equivalent. The smoke test is the operational gate for install-time safety of plugin-only users; any crash here becomes a `CHANGES_REQUESTED` in the review phase and triggers implement-phase rework. The two-location evolve invocation specifically exercises Task 5's regression surface — a smoke from repo root alone would pass even if the marker logic had a subtle bug in the subdirectory path. Do not conflate "passes automated acceptance greps" (R1–R13, R15–R17) with "plugin works under real install" (R14, R6 end-to-end).
 - **Verification**: Interactive/session-dependent: `/plugin install` and slash-command dispatch execute inside a live Claude Code session and cannot be scripted as a headless command (matches R14 and R6 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] deferred — interactive smoke test, user to run post-ship
 
 ## Verification Strategy
 
