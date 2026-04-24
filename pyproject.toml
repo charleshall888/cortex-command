@@ -12,10 +12,12 @@ dependencies = [
     "uvicorn[standard]",
     "jinja2",
     "markdown",
+    "psutil>=5.9",
 ]
 
 [project.scripts]
 cortex = "cortex_command.cli:main"
+cortex-batch-runner = "cortex_command.overnight.batch_runner:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["cortex_command"]

@@ -24,7 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def _run() -> None:
+def main() -> int:
     args = build_parser().parse_args()
     result_dir = Path(args.plan).parent
     test_command = args.test_command
@@ -42,7 +42,8 @@ def _run() -> None:
         throttle_tier=args.tier,
     )
     asyncio.run(run_batch(config))
+    return 0
 
 
 if __name__ == "__main__":
-    _run()
+    raise SystemExit(main())
