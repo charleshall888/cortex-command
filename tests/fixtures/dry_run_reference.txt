@@ -1,0 +1,21 @@
+=== Overnight Runner ===
+  State:      /private/tmp/dry-run-capture/overnight-state.json
+  Time limit: 6h
+  Max rounds: 10
+  Tier:       max_100
+  Started:    2026-04-24T13:03:19Z
+
+Round 1: No pending features — all done
+
+=== Overnight Session Complete ===
+  Features merged: 1/3
+  Rounds executed: 0
+  Finished:        2026-04-24T13:03:20Z
+Session marked complete
+branch 'overnight/test-dry-run-reference' set up to track 'origin/overnight/test-dry-run-reference'.
+Pushed overnight/test-dry-run-reference to origin
+DRY-RUN gh pr create gh pr create --title Overnight session: overnight/test-dry-run-reference --base main --head overnight/test-dry-run-reference --body-file /tmp/dry-run-capture/overnight-pr-body.txt
+Warning: PR creation failed (branch may already have a PR)
+Deleted branch overnight/test-dry-run-reference (was 1c94097).
+Local branch deleted: overnight/test-dry-run-reference
+Done.
