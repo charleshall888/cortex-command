@@ -8,71 +8,55 @@
 
 ---
 
-## Before You Start
+## Prerequisites
 
-`just setup` creates symlinks that **replace** existing files in `~/.claude/`. If you already have Claude Code configured, back up these files first:
+Before installing cortex-command, make sure you have:
 
-```bash
-# Back up existing Claude Code config
-cp -r ~/.claude/settings.json ~/.claude/settings.json.backup 2>/dev/null
-cp -r ~/.claude/settings.local.json ~/.claude/settings.local.json.backup 2>/dev/null
-cp -r ~/.claude/statusline.sh ~/.claude/statusline.sh.backup 2>/dev/null
-cp -r ~/.claude/skills ~/.claude/skills.backup 2>/dev/null
-cp -r ~/.claude/hooks ~/.claude/hooks.backup 2>/dev/null
-```
-
-`just setup` does **not** create or modify `~/.claude/CLAUDE.md` — it deploys rules to `~/.claude/rules/` only. Your existing `CLAUDE.md` is safe.
+- **[uv](https://docs.astral.sh/uv/)** — Python package manager. Install with `brew install uv`.
+- **[Claude Code CLI](https://docs.claude.com/en/docs/claude-code/overview)** — the `claude` binary on your `PATH`.
 
 ---
 
-## Quick Setup
+## Install
+
+Cortex-command ships as a Python CLI plus a set of Claude Code plugins. Installation is three steps: clone the repo, install the CLI, and enable the plugins from inside Claude.
+
+### 1. Install the `cortex` CLI
 
 ```bash
-git clone https://github.com/charleshall888/cortex-command.git ~/cortex-command
-cd ~/cortex-command
-just setup
+curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
 ```
 
-Then add to your shell profile (`.zshrc`, `.bashrc`, etc.):
+> **TBD:** the `install.sh` bootstrap script lands with ticket 118. Until then, clone the repo manually and run `uv tool install -e .` from the clone root.
+
+This puts the `cortex` binary on your `PATH`. It clones the repo to `$HOME/.cortex` (or wherever `install.sh` places it), and is the surface you use for per-repo setup (see step 3).
+
+### 2. Add and install the plugins from inside Claude Code
+
+Launch `claude`, then run:
+
+```
+/plugin marketplace add charleshall888/cortex-command
+/plugin install cortex-interactive@cortex-command
+```
+
+`cortex-interactive` is the core plugin (skills, hooks, statusline). If you plan to run overnight sessions, also install the optional integration plugin:
+
+```
+/plugin install cortex-overnight-integration@cortex-command
+```
+
+Additional opt-in plugins (UI design stack, pr-review, etc.) live in [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins). See that repo's README for the authoritative plugin list.
+
+### 3. Per-repo setup with `cortex init`
+
+For each project you want cortex-command active in, `cd` into the repo and run:
 
 ```bash
-export CORTEX_COMMAND_ROOT="$HOME/cortex-command"
+cortex init
 ```
 
-Restart your shell and run `just check-symlinks` to verify.
-
----
-
-## Limited / Custom installation
-
-`just setup` is the default and deploys the full agentic layer. Most customization happens via `/setup-merge` after `just setup` — it prompts individually for the optional `cortex-notify.sh` hook.
-
-This section covers only the things that compose cleanly when omitted. Finer pruning isn't documented because the dependency graph between skills, hooks, bin utilities, and reference docs is too interconnected to hand-curate without reading the underlying sources.
-
-### What's safely skippable
-
-- **Optional hook** (prompted individually by `/setup-merge`):
-  - `cortex-notify.sh` — `terminal-notifier` desktop notifications. macOS-only (requires `brew install terminal-notifier`). Skip if you don't want attention pings.
-
-Everything else in `just setup` is assumed required. Partial installs beyond this item break silently at runtime because of skill→hook, skill→bin, and skill→reference-doc dependencies that are not worth documenting exhaustively at this project's size.
-
-### UI skills and pr-review (opt-in plugins)
-
-The UI design enforcement stack (`ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup`) and `pr-review` are no longer bundled with `just setup`. They live in the separate [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace and install via Claude Code's plugin system:
-
-```
-claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins
-```
-
-Then enable the plugin you want (e.g. `cortex-ui-extras` for the UI stack). See the `cortex-command-plugins` README for the authoritative plugin list and per-plugin install commands.
-
-### Skipping optional hooks
-
-Run `/setup-merge` from Claude Code in the cortex-command directory. It iterates `OPTIONAL_HOOK_SCRIPTS` (the two hooks listed above) and prompts individually — answer `n` to each one you don't want. Re-run it any time to revisit the answers.
-
-### Why no finer-grained presets?
-
-An earlier version of this section documented a 4-preset dependency matrix (Minimal / Overnight / Daytime / Full) with per-component dependency columns. A critical review found the matrix drifted from the underlying code — phantom dependencies, missing dependencies, and presets that shipped skills whose own declared dependencies contradicted the preset. Keeping such a matrix accurate against evolving skills is a maintenance burden this project doesn't need at its current size. The two optional hooks are the only in-repo components that compose cleanly when omitted; optional skill bundles are delivered as plugins (see above).
+This wires per-repo sandbox write paths, creates `.claude/settings.json` entries, and registers the repo with the overnight runner if applicable. See ticket 119 for the full `cortex init` scope.
 
 ---
 
@@ -102,8 +86,6 @@ cortex-command/skills/commit/        →  ~/.claude/skills/commit/
 cortex-command/hooks/cortex-*.sh     →  ~/.claude/hooks/cortex-*.sh
 cortex-command/bin/jcc               →  ~/.local/bin/jcc
 ```
-
-Exception: `settings.json` is copied (not symlinked) so `/setup-merge` can merge repo defaults into your personalized settings. Run `/setup-merge` after pulling repo changes to update.
 
 Always edit the repo copy (the symlink target), never create files at the destination.
 
@@ -164,15 +146,66 @@ The runner uses `apiKeyHelper` when present (work), and falls back to the OAuth 
 
 ## Customization
 
-### settings.json
+### Recommended `~/.claude/settings.json` entries
 
-`claude/settings.json` is tracked in the repo and copied on first install to `~/.claude/settings.json`. Run `/setup-merge` to pull updated defaults. After forking, review and adjust:
+Cortex-command no longer ships a `settings.json` into your user scope — you own that file. The maintainer's personal template (allow list, model, env vars, attribution, etc.) is opinionated and not a good default for others. The entries below are the load-bearing generic pieces cortex-command actually depends on; everything else (the `permissions.allow` list, `env`, `model`, `effortLevel`, `attribution`, `enableAllProjectMcpServers`, `alwaysThinkingEnabled`, `skipDangerousModePermissionPrompt`, `skipAutoPermissionPrompt`) is personal preference — compose your own.
 
-- **Permissions**: The `allow`/`deny` lists reference specific tool names and path patterns. Update for your tools.
-- **MCP plugins**: Add or remove plugins in `enabledPlugins`.
-- **Sandbox**: `sandbox.enabled: true` is the default. Adjust `allowWrite` paths if your projects live outside the default locations.
+**`sandbox.excludedCommands`**
 
-Use `settings.local.json` in any project for per-machine overrides (e.g., `apiKeyHelper`).
+```json
+"sandbox": {
+  "excludedCommands": ["gh:*", "git:*", "WebFetch", "WebSearch"]
+}
+```
+
+Critical. `git` and `gh` need to run unsandboxed so GPG signing works and so commit hooks can spawn child processes (e.g., `gpg-agent`) without hitting sandbox denials. Changing this list breaks the sandbox-excluded command contract that cortex-command's git integration relies on.
+
+**`sandbox.autoAllowBashIfSandboxed`**
+
+```json
+"sandbox": {
+  "autoAllowBashIfSandboxed": true
+}
+```
+
+Required for the overnight runner. Without it, every sandboxed Bash call requires interactive approval, which defeats unattended execution.
+
+**`sandbox.network.allowedDomains`**
+
+```json
+"sandbox": {
+  "network": {
+    "allowedDomains": [
+      "api.github.com",
+      "raw.githubusercontent.com",
+      "registry.npmjs.org",
+      "*.anthropic.com"
+    ]
+  }
+}
+```
+
+The minimum set cortex-command needs: GitHub API for `gh` operations, raw.githubusercontent.com for the install bootstrap, npm registry for plugin installs, and Anthropic endpoints for the SDK. Add more domains as your own workflows require.
+
+**`sandbox.filesystem.allowWrite`**
+
+You do not need to hand-edit this. Run `cortex init` (ticket 119) in each repo where you want cortex-command active — it appends the per-repo overnight-session write paths automatically. Hand-editing is error-prone because the paths are repo-scoped and resolve relative to each project.
+
+**`statusLine.command`** (optional)
+
+```json
+"statusLine": {
+  "command": "$HOME/.cortex/claude/statusline.sh"
+}
+```
+
+Point to the `statusline.sh` inside your cortex-command clone (adjust the absolute path if you cloned somewhere other than `$HOME/.cortex`). This is optional — it shows cortex-specific session state in the Claude Code statusline. Skip it if you don't want that coupling.
+
+**`permissions.deny`**
+
+A conservative deny list is a useful safety baseline: `sudo`, destructive `rm -rf` patterns, `git push --force` against protected branches, reads of secrets directories (`~/.ssh`, `~/.aws`, etc.). Cortex-command does not prescribe a specific list — compose your own. For a starting template, see the pre-117 version of `claude/settings.json` in this repo's git history (it contains roughly 80 curated entries). Do not paste that list blindly; review each rule against your own threat model.
+
+For the exact historical template including the maintainer's personal allow list, see `git show HEAD:claude/settings.json` on the pre-117 commit.
 
 ### Adding an MCP Server
 
