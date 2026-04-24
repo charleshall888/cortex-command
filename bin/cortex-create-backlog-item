@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+
+# Branch (a): packaged form — cortex_command.backlog.create_item
+if python3 -c "import cortex_command.backlog.create_item" 2>/dev/null; then
+    exec python3 -m cortex_command.backlog.create_item "$@"
+fi
+
+# Branch (b): CORTEX_COMMAND_ROOT points at a cortex-command checkout
+if [ -n "${CORTEX_COMMAND_ROOT:-}" ] && grep -q '^name = "cortex-command"' "$CORTEX_COMMAND_ROOT/pyproject.toml" 2>/dev/null; then
+    exec python3 "$CORTEX_COMMAND_ROOT/backlog/create_item.py" "$@"
+fi
+
+# Branch (c): not found
+echo "cortex-command CLI not found — run 'cortex setup' or point CORTEX_COMMAND_ROOT at a cortex-command checkout" >&2
+exit 2
