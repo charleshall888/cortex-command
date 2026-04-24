@@ -11,6 +11,11 @@ Exposed surface (consumed by Tasks 4, 5, 6, 9):
     scaffold(repo_root, *, overwrite, backup_dir) -> list[Path]
         Walk ``templates/`` and additively write each file that is absent on
         disk. Returns the list of files actually written (for stderr report).
+    drift_files(repo_root) -> list[Path]
+        Return scaffold target paths (relative to ``repo_root``) whose
+        on-disk bytes differ from the shipped template bytes after ``\\r\\n``
+        → ``\\n`` line-ending normalization. Consumed by ``--update`` for
+        R9's drift report.
     write_marker(repo_root, *, refresh) -> None
         Write or refresh ``.cortex-init`` JSON marker with ``cortex_version``
         and ``initialized_at``.
@@ -212,6 +217,42 @@ def scaffold(
     # Task 3 baseline never uses it (overwrite=False path).
     del backup_dir
     return written
+
+
+def drift_files(repo_root: Path) -> list[Path]:
+    """Return scaffold target paths whose on-disk bytes differ from shipped.
+
+    For each shipped template file under ``_TEMPLATE_ROOT``, compares the
+    shipped bytes against ``repo_root / <relative-path>`` after normalizing
+    ``\\r\\n`` → ``\\n`` on both sides. Missing on-disk files are skipped
+    (they are handled by :func:`scaffold`, not drift). Byte-for-byte matches
+    after normalization are not drift.
+
+    Used by ``--update`` (R9) to emit the stderr drift report; the handler
+    formats the returned relative paths as a bulleted list plus a
+    ``--force`` hint line.
+
+    Args:
+        repo_root: Target repo root. Relative paths in the return list are
+            anchored here.
+
+    Returns:
+        Sorted list of paths (relative to ``repo_root``) whose on-disk
+        content differs from the shipped template after line-ending
+        normalization. Empty list means no drift.
+    """
+    drifted: list[Path] = []
+    for template_path in _iter_template_files():
+        rel = template_path.relative_to(_TEMPLATE_ROOT)
+        dest = repo_root / rel
+        if not dest.exists():
+            # Missing files are a scaffold concern, not a drift concern.
+            continue
+        shipped = template_path.read_bytes().replace(b"\r\n", b"\n")
+        on_disk = dest.read_bytes().replace(b"\r\n", b"\n")
+        if shipped != on_disk:
+            drifted.append(rel)
+    return drifted
 
 
 def write_marker(repo_root: Path, *, refresh: bool) -> None:
