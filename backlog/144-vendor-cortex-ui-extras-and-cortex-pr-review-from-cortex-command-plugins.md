@@ -2,20 +2,23 @@
 schema_version: "1"
 uuid: c6fb710e-139a-4eb2-9c36-4ce3a86e990f
 title: "Vendor cortex-ui-extras and cortex-pr-review from cortex-command-plugins"
-status: backlog
+status: complete
 priority: high
 type: feature
 parent: 113
 tags: [distribution, plugin, vendor, overnight-layer-distribution]
-areas: [install, plugins]
+areas: [install,plugins,hooks]
 created: 2026-04-24
 updated: 2026-04-24
-lifecycle_slug: null
-lifecycle_phase: null
+lifecycle_slug: vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins
+lifecycle_phase: complete
 session_id: null
 blocks: [122]
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins/spec.md
 ---
 
 # Vendor cortex-ui-extras and cortex-pr-review from cortex-command-plugins

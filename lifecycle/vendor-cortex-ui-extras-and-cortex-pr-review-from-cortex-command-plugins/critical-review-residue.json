@@ -1,0 +1,48 @@
+{
+  "ts": "2026-04-24T20:58:00Z",
+  "feature": "vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins",
+  "artifact": "lifecycle/vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 6's subtest matrix does not exercise the staged-only-plugin-tree hand-edit scenario (A seeds via top-level source; no subtest stages an edit only under plugins/cortex-interactive/... with no top-level source).",
+      "reviewer_angle": "Hook short-circuit correctness on direct plugin-tree hand-edits",
+      "evidence_quote": "(A) build-output drift (top-level `skills/commit/SKILL.md` edit propagated, plugin-tree diff detected) — asserts hook exits 1."
+    },
+    {
+      "class": "B",
+      "finding": "Existing SKILLS=(commit pr lifecycle ...) at justfile:407 is a recipe-local bash array — the 'readonly bash array' shape Task 3 claims. Task 3 silently departs from this convention without surfacing the structural difference or why cross-recipe sharing requires the different format.",
+      "reviewer_angle": "Policy-array format: readonly bash arrays vs just-variables inconsistency",
+      "evidence_quote": "SKILLS=(commit pr lifecycle backlog requirements research discovery refine retro dev fresh diagnose evolve critical-review)"
+    },
+    {
+      "class": "B",
+      "finding": "Task 5's mapfile -t BO < <(just _list-build-output-plugins) works only because Task 3 re-materializes the space-joined string as newline-separated output via | tr ' ' '\\n'. This contract (helper recipes must emit one-name-per-line) is never documented as load-bearing; Task 3's verification only checks sorted content, not separator.",
+      "reviewer_angle": "Policy-array format: readonly bash arrays vs just-variables inconsistency",
+      "evidence_quote": "Load classification via `mapfile -t BO < <(just _list-build-output-plugins)` and `mapfile -t HM < <(just _list-hand-maintained-plugins)`."
+    },
+    {
+      "class": "B",
+      "finding": "Task 6's drift-enforcement tests cover existing classified plugins and an unclassified-directory case, but do not simulate a new build-output plugin directory materializing for the first time. No subtest verifies a newly-created BUILD_OUTPUT plugin directory receives a plugin-appropriate build — the cortex-overnight-integration materialization trap would not be caught by 144's own test suite.",
+      "reviewer_angle": "Pre-registration of cortex-overnight-integration creates a one-shot directory-guard trap for ticket 121",
+      "evidence_quote": "Add three subtests (C: hand-maintained edit to plugins/cortex-ui-extras/skills/ui-lint/SKILL.md, D: hand-maintained edit to plugins/cortex-pr-review/skills/pr-review/SKILL.md, E: unclassified plugin dir creation via plugins/cortex-unclassified/.claude-plugin/plugin.json)"
+    },
+    {
+      "class": "B",
+      "finding": "Plan's Scope Boundaries correctly notes plugins/cortex-overnight-integration/ is not created by 144, but the adjacent handoff contract to ticket 121 is left misaligned: nothing in Scope Boundaries, Veto Surface, or Follow-ups tells 121 its first materialization commit must atomically introduce either per-plugin SKILLS, HAND_MAINTAINED reclassification, or a pre-flight opt-out.",
+      "reviewer_angle": "Pre-registration of cortex-overnight-integration creates a one-shot directory-guard trap for ticket 121",
+      "evidence_quote": "No cortex-overnight-integration plugin directory creation (ticket 121). The name is pre-registered in BUILD_OUTPUT_PLUGINS but no files are created under plugins/cortex-overnight-integration/."
+    },
+    {
+      "class": "B",
+      "finding": "If subtest E's git restore --staged step is missed, re-runs of the test script after a failed run inherit a staged plugins/cortex-unclassified/.claude-plugin/plugin.json in the index. The new Task 5 hook's Phase 1 fail-closed guard will then fire for subtest A's hook invocation, causing A to fail for reasons unrelated to skills drift.",
+      "reviewer_angle": "Task 6 cleanup semantics: git stash push -u with nonexistent paths and inter-subtest residue",
+      "evidence_quote": "subtest E must also git add plugins/cortex-unclassified/.claude-plugin/plugin.json before the hook runs — the hook reads staged state, and the fail-closed guard enumerates committed+staged plugin.json files. Unstage in cleanup: git restore --staged plugins/cortex-unclassified/."
+    }
+  ]
+}
