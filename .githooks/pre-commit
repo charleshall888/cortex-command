@@ -1,0 +1,37 @@
+#!/bin/bash
+# .githooks/pre-commit — dual-source drift enforcement
+#
+# Runs `just build-plugin` to regenerate plugins/cortex-interactive/ from the
+# top-level sources (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)
+# and fails the commit if the build output differs from the committed tree.
+# Any mismatch means the top-level source was edited without running
+# `just build-plugin`, or the plugin tree was edited directly (which is
+# build-output and should never be hand-modified).
+#
+# Enable with:   just setup-githooks
+# Bypass once:   git commit --no-verify   (discouraged)
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Rebuild the plugin tree from top-level sources. Fail fast if the build errors.
+if ! just build-plugin >/dev/null 2>&1; then
+    echo "pre-commit: 'just build-plugin' failed — cannot verify plugin tree." >&2
+    just build-plugin >&2 || true
+    exit 1
+fi
+
+# Detect drift anywhere under plugins/cortex-interactive/ (skills, bin, hooks).
+if ! git diff --quiet plugins/cortex-interactive/; then
+    echo "pre-commit: dual-source drift detected in plugins/cortex-interactive/." >&2
+    echo "The following files differ from the freshly-built plugin tree:" >&2
+    git diff --name-only plugins/cortex-interactive/ | sed 's/^/  /' >&2
+    echo "" >&2
+    echo "Fix: edit the top-level source (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)," >&2
+    echo "     run 'just build-plugin', and stage the regenerated plugin files." >&2
+    exit 1
+fi
+
+exit 0

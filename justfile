@@ -401,3 +401,8 @@ build-plugin:
     done
     rsync -a --delete --include='cortex-*' --exclude='*' bin/ plugins/cortex-interactive/bin/
     rsync -a hooks/cortex-validate-commit.sh plugins/cortex-interactive/hooks/cortex-validate-commit.sh
+
+# Point git at .githooks/ so the dual-source drift pre-commit hook runs on every commit
+setup-githooks:
+    git config core.hooksPath .githooks
+    echo "git hooksPath set to .githooks/ — dual-source drift pre-commit hook is active."
