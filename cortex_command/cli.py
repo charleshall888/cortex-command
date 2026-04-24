@@ -39,7 +39,7 @@ def _make_stub(name: str):
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex",
-        description="Cortex Command CLI — orchestrates overnight runs, MCP server, and setup.",
+        description="Cortex Command CLI — orchestrates overnight runs and the MCP server.",
         epilog=EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -59,13 +59,6 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Serve Cortex tools over the Model Context Protocol.",
     )
     mcp_server.set_defaults(func=_make_stub("mcp-server"))
-
-    setup = subparsers.add_parser(
-        "setup",
-        help="Deploy Cortex config into the current environment",
-        description="Install symlinks, hooks, and global utilities for Cortex Command.",
-    )
-    setup.set_defaults(func=_make_stub("setup"))
 
     init = subparsers.add_parser(
         "init",
