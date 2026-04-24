@@ -46,15 +46,13 @@ Launch `claude`, then run:
 
 Additional opt-in plugins (UI design stack, pr-review, etc.) live in [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins). See that repo's README for the authoritative plugin list.
 
-### 3. Per-repo setup with `cortex init`
+### 3. Per-repo setup
 
-For each project you want cortex-command active in, `cd` into the repo and run:
+Run `cortex init` once in each repo where you want to use the overnight runner or interactive dashboard; this scaffolds `lifecycle/`, `backlog/`, `retros/`, `requirements/` templates and registers the repo's `lifecycle/sessions/` path in your sandbox allowWrite list.
 
 ```bash
 cortex init
 ```
-
-This wires per-repo sandbox write paths, creates `.claude/settings.json` entries, and registers the repo with the overnight runner if applicable. See ticket 119 for the full `cortex init` scope.
 
 ---
 

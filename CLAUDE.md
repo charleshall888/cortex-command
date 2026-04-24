@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install -e .`) plus plugins installed via `/plugin install` in Claude Code; nothing is deployed into `~/.claude/` by this repo.
+An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install -e .`) plus plugins installed via `/plugin install` in Claude Code; `cortex init` additionally writes one entry per repo into `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array to unblock interactive session writes to `lifecycle/sessions/`.
 
 ## Repository Structure
 
