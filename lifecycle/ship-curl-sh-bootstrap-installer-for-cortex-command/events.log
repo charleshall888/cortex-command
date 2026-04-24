@@ -7,3 +7,4 @@
 {"ts": "2026-04-24T12:45:00Z", "event": "phase_transition", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "from": "specify", "to": "plan"}
 {"ts": "2026-04-24T17:26:21Z", "event": "orchestrator_review", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-24T17:47:35Z", "event": "phase_transition", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "from": "plan", "to": "implement"}
+{"ts": "2026-04-24T17:48:59Z", "event": "batch_dispatch", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "batch": 0, "tasks": [1]}
