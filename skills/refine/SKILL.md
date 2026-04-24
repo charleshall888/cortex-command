@@ -23,7 +23,7 @@ Topic: $ARGUMENTS (backlog item slug, title, or description). If empty, prompt u
 
 Determine the feature topic from the invocation argument.
 
-Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §1 (Resolve Input) and follow its protocol to identify the backlog item and input context (Context A — backlog item, or Context B — ad-hoc prompt).
+Read `references/clarify.md` §1 (Resolve Input) and follow its protocol to identify the backlog item and input context (Context A — backlog item, or Context B — ad-hoc prompt).
 
 Record:
 - `backlog-filename-slug`: the backlog filename without `.md` (e.g., `119-create-refine-skill`) — used for `update_item.py` calls
@@ -57,7 +57,7 @@ If both artifacts exist and the user chooses to re-run, re-running will overwrit
 
 ## Step 3: Clarify Phase
 
-Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` and follow its full protocol (§2–§7).
+Read `references/clarify.md` and follow its full protocol (§2–§7).
 
 Key outputs from Clarify (record these for use in subsequent phases):
 - Clarified intent statement
@@ -78,7 +78,7 @@ If `update-item` fails, surface the error and wait for the user to resolve befor
 
 ### Sufficiency Check
 
-If `lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
+If `lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
 
 **Path guard** (explicit rules for what satisfies the Sufficiency Check):
 
@@ -127,7 +127,7 @@ If the `## Open Questions` section is absent from `research.md`, the gate passes
 
 ## Step 5: Spec Phase
 
-Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md` and follow its full protocol (§1–§4) with these adaptations:
+Read `references/specify.md` and follow its full protocol (§1–§4) with these adaptations:
 
 - **§1 (Load Context)**: Requirements context was loaded during Clarify (Step 3) and research.md was produced in Step 4. Re-read `lifecycle/{lifecycle-slug}/research.md` but skip redundant requirements loading.
 - **§2a loop-back**: If the Research Confidence Check triggers a loop-back, re-enter Step 4 (Research Phase) with the Sufficiency Check bypass described there.
