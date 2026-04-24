@@ -66,6 +66,43 @@ def _dispatch_overnight_logs(args: argparse.Namespace) -> int:
     return cli_handler.handle_logs(args)
 
 
+def _dispatch_upgrade(args: argparse.Namespace) -> int:
+    import os
+    import subprocess
+    from pathlib import Path
+
+    cortex_root = os.environ.get("CORTEX_COMMAND_ROOT") or str(Path.home() / ".cortex")
+    try:
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=cortex_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        if dirty.stdout.strip():
+            print(
+                f"uncommitted changes in {cortex_root}; commit or stash before upgrading",
+                file=sys.stderr,
+            )
+            return 1
+        subprocess.run(
+            ["git", "-C", cortex_root, "pull", "--ff-only"],
+            check=True,
+        )
+        # --force regenerates console scripts per the EPILOG note (see cli.py:21-23).
+        subprocess.run(
+            ["uv", "tool", "install", "-e", cortex_root, "--force"],
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        print(f"command failed: {' '.join(exc.cmd)}", file=sys.stderr)
+        if exc.stderr:
+            print(exc.stderr, file=sys.stderr)
+        return 1
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex",
@@ -239,7 +276,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Upgrade the installed Cortex tool",
         description="Upgrade the Cortex Command tool and refresh deployed artifacts.",
     )
-    upgrade.set_defaults(func=_make_stub("upgrade"))
+    upgrade.set_defaults(func=_dispatch_upgrade)
 
     return parser
 
