@@ -400,6 +400,19 @@ dangerous:
 
 # --- Plugin ---
 
+BUILD_OUTPUT_PLUGINS := "cortex-interactive cortex-overnight-integration"
+HAND_MAINTAINED_PLUGINS := "cortex-pr-review cortex-ui-extras"
+
+_list-build-output-plugins:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo '{{BUILD_OUTPUT_PLUGINS}}' | tr ' ' '\n'
+
+_list-hand-maintained-plugins:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo '{{HAND_MAINTAINED_PLUGINS}}' | tr ' ' '\n'
+
 # Regenerate cortex-interactive plugin tree from top-level sources (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)
 build-plugin:
     #!/usr/bin/env bash
