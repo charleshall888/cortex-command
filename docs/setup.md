@@ -27,8 +27,6 @@ Cortex-command ships as a Python CLI plus a set of Claude Code plugins. Installa
 curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
 ```
 
-> **TBD:** the `install.sh` bootstrap script lands with ticket 118. Until then, clone the repo manually and run `uv tool install -e .` from the clone root.
-
 This puts the `cortex` binary on your `PATH`. It clones the repo to `$HOME/.cortex` (or wherever `install.sh` places it), and is the surface you use for per-repo setup (see step 3).
 
 ### 2. Add and install the plugins from inside Claude Code

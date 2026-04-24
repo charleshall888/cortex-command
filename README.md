@@ -76,16 +76,13 @@ You ──► Clarify ──► Research ──► Spec ──► Plan ──►
 Cortex-command ships as a CLI (installed as an editable `uv tool`) plus Claude Code plugins (skills + hooks + utilities). Installation has three steps:
 
 ```bash
-# 1. Bootstrap the repo clone (pending — ticket 118 provides `curl | sh`)
-#    Until the bootstrap lands, clone manually:
-git clone https://github.com/charleshall888/cortex-command.git ~/.cortex
+# 1. Bootstrap: clones the repo to ~/.cortex and installs the `cortex` CLI
+curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
 
-# 2. Install the `cortex` CLI as an editable uv tool
-uv tool install -e ~/.cortex
-uv tool update-shell    # one-time: ensures the tool bin directory is on PATH
+# 2. One-time: ensure the uv tool bin directory is on PATH
+uv tool update-shell
 
 # 3. In Claude Code, install the plugin marketplace, then the plugins
-#    (plugins ship the skills, hooks, and bin utilities; pending tickets 120/121/122)
 claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins
 claude /plugin install cortex-interactive
 ```
