@@ -9,12 +9,12 @@ parent: 113
 tags: [distribution, plugin, marketplace, overnight-layer-distribution]
 areas: [install]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-23
 lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
 blocks: []
-blocked-by: [115, 116, 117, 120, 121]
+blocked-by: [115, 116, 120, 121]
 discovery_source: research/overnight-layer-distribution/research.md
 ---
 

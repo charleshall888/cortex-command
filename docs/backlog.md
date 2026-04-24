@@ -202,17 +202,8 @@ Backlog scripts can be deployed to `~/.local/bin/` so they are available as comm
 ### Adding a new deployable script
 
 1. **Add the script file to the repo** (e.g., `backlog/my_script.py`).
-2. **Add a symlink entry to `just deploy-bin`** in `justfile`:
-   ```
-   ln -sf $(pwd)/backlog/my_script.py ~/.local/bin/my-script
-   ```
-3. **Add a check entry to `just check-symlinks`** in `justfile`:
-   ```
-   check ~/.local/bin/my-script
-   ```
-4. **Use `Path.cwd()` for repo-local directory references** inside the script (not `_PROJECT_ROOT` or `Path(__file__).parent`).
-
-Run `just deploy-bin` to create the symlinks on the current machine.
+2. **Add the entry to the `cortex-interactive` plugin's `bin/` directory** — post-epic-120, bin/ deployment is plugin-owned; the plugin manifest exposes the script to agents via the plugin's command surface rather than a shell-level symlink.
+3. **Use `Path.cwd()` for repo-local directory references** inside the script (not `_PROJECT_ROOT` or `Path(__file__).parent`).
 
 ### How symlink resolution works
 

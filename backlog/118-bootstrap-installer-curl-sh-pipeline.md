@@ -14,7 +14,7 @@ lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
 blocks: []
-blocked-by: [117]
+blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 ---
 
@@ -31,7 +31,7 @@ The clone still happens — the bootstrap does it for the user at `~/.cortex` (o
 - Install script hosted at a stable URL (`https://cortex.sh/install` or similar) — GitHub Pages or a static asset is fine
 - Script does: install `uv` if absent → `git clone ${CORTEX_REPO_URL:-github.com/charleshall888/cortex-command} ~/.cortex` → `uv tool install -e ~/.cortex` → `~/.cortex/bin/cortex setup` (or whatever the installed entry point resolves to)
 - Honors `CORTEX_REPO_URL` env var so forkers can point at their own remote before running
-- Adds `cortex upgrade` subcommand to the CLI: `git -C ~/.cortex pull && cortex setup --verify-symlinks`
+- Adds `cortex upgrade` subcommand to the CLI: `git -C ~/.cortex pull` — 118's author finalizes upgrade semantics
 - Emits clear output on each step; exits non-zero with a useful message on failure
 - Safe to re-run (idempotent)
 

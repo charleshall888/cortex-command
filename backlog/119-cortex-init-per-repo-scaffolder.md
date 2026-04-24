@@ -31,6 +31,7 @@ cortex-command's `lifecycle/`, `backlog/`, `retros/`, `requirements/` directorie
 - Ship reasonable starter templates: `requirements/project.md` stub, `backlog/README.md`, `lifecycle/README.md`, `retros/README.md`, `lifecycle.config.md` with `type: other` default
 - Declines to run if the directories already exist with user content, unless `--update` is passed; `--force` flag for full overwrite with confirmation prompt
 - Documented in the bootstrap's post-install message so users know the verb exists
+- **Register per-repo sandbox `allowWrite` entry** for overnight: append `$(pwd)/lifecycle/sessions/` to `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array (additive, idempotent). This responsibility migrates from the retired `just setup` (ticket 117) — without it, overnight runs in this repo fail with sandbox-blocked writes to `lifecycle/sessions/`. Use `jq` for safe JSON merge; fall back to a clear error (not a destructive overwrite) if `jq` is absent. Matches today's `justfile:390-408` behavior.
 
 ## Out of scope
 

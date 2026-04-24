@@ -4,7 +4,7 @@ Cortex Command is an AI workflow framework for Claude Code built on a single ins
 
 The front half of the lifecycle is deliberately human-driven. You run discovery to understand the problem space, collaborate with agents to write tight specs, and mark features ready only when the scope is genuinely clear. Once that work is done, the handoff is earned. Run `/lifecycle` to stay in the loop for interactive development, or queue a batch for `/overnight` and wake up to a morning report with PRs ready to review. The overnight runner is the natural payoff of doing the front half well.
 
-Skills are slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. All config is deployed via symlinks so the whole thing lives in version control.
+Skills are slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. Cortex-command ships as a CLI (installed via `uv tool install -e .`) plus Claude Code plugins (installed via `/plugin install`) — everything lives in version control and is distributed without host-level symlinks.
 
 ```
  ┌──────────────────────────────────────────────────────────────────────────┐
@@ -73,28 +73,24 @@ You ──► Clarify ──► Research ──► Spec ──► Plan ──►
 
 ## Quick Start
 
-> **Back up first.** `just setup` creates symlinks that replace existing files in `~/.claude/`. If you already have Claude Code configured:
-> ```bash
-> cp -r ~/.claude/settings.json ~/.claude/settings.json.backup 2>/dev/null
-> cp -r ~/.claude/settings.local.json ~/.claude/settings.local.json.backup 2>/dev/null
-> cp -r ~/.claude/skills ~/.claude/skills.backup 2>/dev/null
-> cp -r ~/.claude/hooks ~/.claude/hooks.backup 2>/dev/null
-> ```
-> `just setup` does **not** touch `~/.claude/CLAUDE.md` — it deploys to `~/.claude/rules/` only.
+Cortex-command ships as a CLI (installed as an editable `uv tool`) plus Claude Code plugins (skills + hooks + utilities). Installation has three steps:
 
 ```bash
-git clone https://github.com/charleshall888/cortex-command.git ~/cortex-command
-cd ~/cortex-command
-just setup
+# 1. Bootstrap the repo clone (pending — ticket 118 provides `curl | sh`)
+#    Until the bootstrap lands, clone manually:
+git clone https://github.com/charleshall888/cortex-command.git ~/.cortex
+
+# 2. Install the `cortex` CLI as an editable uv tool
+uv tool install -e ~/.cortex
+uv tool update-shell    # one-time: ensures the tool bin directory is on PATH
+
+# 3. In Claude Code, install the plugin marketplace, then the plugins
+#    (plugins ship the skills, hooks, and bin utilities; pending tickets 120/121/122)
+claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins
+claude /plugin install cortex-interactive
 ```
 
-Then add to your shell profile (`.zshrc`, `.bashrc`, etc.):
-
-```bash
-export CORTEX_COMMAND_ROOT="$HOME/cortex-command"
-```
-
-Restart your shell. Run `just check-symlinks` to verify.
+No symlinks into `~/.claude/` are created — plugins are discovered by Claude Code directly.
 
 ### Optional plugins
 
@@ -114,11 +110,7 @@ See [cortex-command-plugins](https://github.com/charleshall888/cortex-command-pl
 
 ### Limited / custom installation
 
-`just setup` deploys the full agentic layer. One thing composes cleanly when omitted:
-
-- **Three optional hooks** (sandbox GPG, desktop notifications, remote notifications) — run `/setup-merge` in Claude Code after `just setup` and answer `n` to the ones you don't want.
-
-Anything narrower needs reading the `justfile` and skill sources directly — see [`docs/setup.md#limited--custom-installation`](docs/setup.md#limited--custom-installation) for the rationale.
+You can skip the `cortex-interactive` plugin and install only the companion plugin repo (`cortex-ui-extras`, PR-review automation, etc.) — plugins are composable per project via Claude Code's plugin manager. Anything narrower needs reading the plugin sources directly — see [`docs/setup.md#limited--custom-installation`](docs/setup.md#limited--custom-installation) for the rationale.
 
 ## Authentication
 
@@ -167,7 +159,7 @@ Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth
 
 ## Customization
 
-`claude/settings.json` is the repo defaults template — `just setup` copies it to `~/.claude/settings.json` on first install. Run `/setup-merge` to pull updated repo defaults into your settings. Use `settings.local.json` for per-machine overrides.
+Cortex-command does not own `~/.claude/settings.json`. Edit it directly as personal machine configuration; use `~/.claude/settings.local.json` for per-machine overrides. Plugin-shipped skills and hooks are enabled per project via `.claude/settings.json`'s `enabledPlugins` map.
 
 ## Distribution
 
@@ -180,11 +172,9 @@ The `cortex` CLI is installed as an editable `uv tool`; a few constraints apply:
 
 ## Commands
 
-Run `just` to see all recipes (30+). Key commands:
+Run `just --list` to see all operational recipes. Key commands:
 
 ```
-just setup                 # Full install (symlinks + Python deps)
-just check-symlinks        # Verify all symlinks are intact
 just test                  # Run all test suites
 just overnight-run         # Run overnight in foreground
 just overnight-start       # Run overnight in detached tmux

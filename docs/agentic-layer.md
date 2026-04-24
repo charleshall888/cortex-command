@@ -201,7 +201,7 @@ Hooks in `hooks/` are shared entry points. Hooks in `claude/hooks/` are specific
 |------|-------|---------|--------|
 | `hooks/cortex-validate-commit.sh` | PreToolUse | Validate commit message: imperative mood, ≤72 chars subject, no trailing period, blank line before body | Claude only |
 | `hooks/cortex-scan-lifecycle.sh` | SessionStart | Inject `LIFECYCLE_SESSION_ID`, active feature state, overnight execution state, and fresh-resume prompts into context | Claude only |
-| `hooks/cortex-notify.sh` | Stop, Notification | Desktop notifications via terminal-notifier when Claude needs input or completes (macOS) | Claude only |
+| *desktop notifier* | Stop, Notification | Desktop notifications via terminal-notifier when Claude needs input or completes (macOS) — user/machine-config responsibility; no script shipped by this repo | Claude only |
 | `hooks/cortex-cleanup-session.sh` | SessionEnd | Remove `.session` lock files from `lifecycle/*/` when a Claude Code session ends (skips on `/clear`) | Claude only |
 | `claude/hooks/setup-github-pat.sh` | SessionStart | Read GitHub PATs from `~/.config/claude-code-secrets/` and write to `/tmp/claude/` so skills can authenticate `gh` inside the sandbox | Claude only |
 | `claude/hooks/cortex-sync-permissions.py` | PreToolUse | Merge MCP allow/deny patterns from `settings.json` so permissions stay consistent | Claude only |
@@ -263,7 +263,7 @@ Hooks that need request context receive a JSON object on **stdin** before they w
 - **`WorktreeCreate`** — `{"cwd": "...", "name": "...", "session_id": "...", "hook_event_name": "WorktreeCreate"}`. `cortex-worktree-create.sh` reads `cwd` and `name` to construct the worktree path and branch name.
 - **`Notification`** — `{"hook_event_name": "Notification", "notification_type": "permission_prompt", "message": "...", "title": "..."}`. Used by `cortex-permission-audit-log.sh` to log the prompt. Note: `hook_event_name` is always `"Notification"` for all notification events; `notification_type` discriminates between event subtypes.
 
-Hooks that do not need request context (e.g., `cortex-notify.sh`, `cortex-cleanup-session.sh`) ignore stdin.
+Hooks that do not need request context (e.g., desktop-notifier scripts, `cortex-cleanup-session.sh`) ignore stdin.
 
 #### Ordering
 
@@ -279,12 +279,12 @@ Within a single event, hooks execute sequentially in registration order. If a `P
 
 ## Reference Documents
 
-Four markdown files in `claude/reference/` that agents load on-demand based on task context. These are not general documentation — they are conditional reference loaded by the global `CLAUDE.md` only when specific conditions apply.
+Four markdown files agents load on-demand based on task context. These are not general documentation — they are conditional reference material shipped via plugins and pulled in only when specific conditions apply.
 
 | File | Purpose | When agents load it |
 |------|---------|---------------------|
 | `claude-skills.md` | Rules for building Claude Code skills — frontmatter, triggers, output contracts | Creating or editing SKILL.md files |
-| `context-file-authoring.md` | Rules for authoring context files (CLAUDE.md, Agents.md) | Modifying CLAUDE.md or agent instruction files |
+| `context-file-authoring.md` | Rules for authoring context files (project/user instruction files) | Modifying project-level instruction files |
 | `parallel-agents.md` | Protocol for dispatching parallel agents safely | Deciding whether to run agents in parallel |
 | `verification-mindset.md` | Verification discipline — evidence before claims, no speculation | Before claiming success, tests pass, or bug fixed |
 

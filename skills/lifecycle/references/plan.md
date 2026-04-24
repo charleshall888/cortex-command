@@ -246,7 +246,7 @@ After orchestrator review passes, check `lifecycle/{feature}/events.log` for the
 
 ### 4. User Approval
 
-Present the plan summary (overview + task list). In addition to the overview and task list, include these approval surface fields (see `~/.claude/reference/output-floors.md` for expanded definitions):
+Present the plan summary (overview + task list). In addition to the overview and task list, include these approval surface fields:
 
 - **Produced** (one-line summary of the artifact)
 - **Trade-offs** (alternatives considered and rationale for chosen approach)
