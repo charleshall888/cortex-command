@@ -15,7 +15,7 @@ An opinionated AI workflow framework for Claude Code. Provides skills (slash com
 - `docs/` - Documentation (setup guide, agentic layer, overnight, skills reference)
 - `tests/` - Automated test suite for skills, hooks, and overnight runner
 - `retros/` - Session retrospectives (dated problem-only logs)
-- `bin/` - Global CLI utilities (deployed to `~/.local/bin/`)
+- `bin/` - Global CLI utilities (migrate to `cortex-interactive` plugin bin/ in ticket 120)
 
 ## Distribution
 
@@ -27,7 +27,6 @@ Run `just` to see all available recipes. Key commands:
 
 - Generate backlog index: `just backlog-index`
 - Validate commit hook: `just validate-commit`
-- Check symlinks: `just check-symlinks`
 - Run tests: `just test`
 
 ## Dependencies
@@ -46,5 +45,5 @@ Run `just` to see all available recipes. Key commands:
 - Settings JSON must remain valid JSON
 - Hook/notification scripts must be executable (`chmod +x`)
 - New global utilities ship via the `cortex-interactive` plugin's `bin/` directory (ticket 120 scope); see `just --list` for available recipes.
-- Use `jcc <recipe>` (deployed to `~/.local/bin/jcc`) to invoke cortex-command recipes from any directory. The wrapper runs recipes in this repo's directory context, so it's suitable for repo-specific operations (`jcc deploy-bin`, `jcc validate-commit`), not for operations that should act on another repo's files (use `update-item`, `generate-backlog-index`, etc. for those).
+- Use `jcc <recipe>` (installed to `~/.local/bin/jcc`) to invoke cortex-command recipes from any directory. The wrapper runs recipes in this repo's directory context, so it's suitable for repo-specific operations (`jcc backlog-index`, `jcc validate-commit`), not for operations that should act on another repo's files (use `update-item`, `generate-backlog-index`, etc. for those).
 - Overnight docs source of truth: `docs/overnight-operations.md` owns the round loop and orchestrator behavior, `docs/pipeline.md` owns pipeline-module internals, and `docs/sdk.md` owns SDK model-selection mechanics. When editing overnight-related docs, update the owning doc and link from the others rather than duplicating content.
