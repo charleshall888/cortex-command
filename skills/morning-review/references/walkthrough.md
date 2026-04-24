@@ -611,7 +611,7 @@ After this section, the review is complete.
 | `git-sync-rebase.sh` exits 1 (unresolvable conflicts) | Report diverged — resolve manually with `git pull --rebase origin main` |
 | `git-sync-rebase.sh` exits 2 (push failed) | Report rebase succeeded — run `git push origin main` when network available |
 | Merge was declined or skipped | Skip Section 6a entirely |
-| `git-sync-rebase.sh` not found | Report missing script, skip sync, note "run `just deploy-bin` to install" |
+| `git-sync-rebase.sh` not found | Report missing script, skip sync, note "install the `cortex-interactive` plugin" |
 | Dirty `.git/rebase-merge/` detected | Script auto-aborts stale rebase, warns user, proceeds with sync |
 | Push fails after rebase | Report error, note local main is clean but not pushed |
 | All conflicts auto-resolved | Report "N files auto-resolved via allowlist" |
