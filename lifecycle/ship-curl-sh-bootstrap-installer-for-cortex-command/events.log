@@ -8,3 +8,24 @@
 {"ts": "2026-04-24T17:26:21Z", "event": "orchestrator_review", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-24T17:47:35Z", "event": "phase_transition", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "from": "plan", "to": "implement"}
 {"ts": "2026-04-24T17:48:59Z", "event": "batch_dispatch", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "batch": 0, "tasks": [1]}
+{"ts": "2026-04-24T18:41:20Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-24T18:42:09Z", "event": "batch_dispatch", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "batch": 1, "tasks": [2, 3, 8]}
+{"ts": "2026-04-24T18:43:35Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-24T18:44:52Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 3, "batch": 1, "status": "success"}
+{"ts": "2026-04-24T18:46:51Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 8, "batch": 1, "status": "success"}
+{"ts": "2026-04-24T18:46:51Z", "event": "batch_dispatch", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "batch": 2, "tasks": [4, 9]}
+{"ts": "2026-04-24T18:51:09Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 4, "batch": 2, "status": "success"}
+{"ts": "2026-04-24T18:51:09Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 9, "batch": 2, "status": "success"}
+{"ts": "2026-04-24T18:51:09Z", "event": "batch_dispatch", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "batch": 3, "tasks": [5]}
+{"ts": "2026-04-24T18:52:39Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 5, "batch": 3, "status": "success"}
+{"ts": "2026-04-24T18:52:39Z", "event": "batch_dispatch", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "batch": 4, "tasks": [6, 10]}
+{"ts": "2026-04-24T19:04:07Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 6, "batch": 4, "status": "success"}
+{"ts": "2026-04-24T19:04:07Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 10, "batch": 4, "status": "success"}
+{"ts": "2026-04-24T19:04:07Z", "event": "batch_dispatch", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "batch": 5, "tasks": [7]}
+{"ts": "2026-04-24T19:09:41Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 7, "batch": 5, "status": "success"}
+{"ts": "2026-04-24T19:09:41Z", "event": "batch_dispatch", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "batch": 6, "tasks": [11]}
+{"ts": "2026-04-24T19:10:49Z", "event": "task_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "task": 11, "batch": 6, "status": "success", "note": "just test 4/4 passed; live-URL smoke test deferred until after push"}
+{"ts": "2026-04-24T19:10:49Z", "event": "phase_transition", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-24T19:24:03Z", "event": "review_verdict", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-24T19:24:03Z", "event": "phase_transition", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "from": "review", "to": "complete"}
+{"ts": "2026-04-24T19:25:14Z", "event": "feature_complete", "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command", "tasks_total": 11, "rework_cycles": 1}

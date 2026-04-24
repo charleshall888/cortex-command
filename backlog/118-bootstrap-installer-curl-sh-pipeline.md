@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: db742018-cb3e-488d-8084-688cd575e241
 title: "Ship curl | sh bootstrap installer for cortex-command"
-status: in_progress
+status: complete
 priority: high
 type: feature
 parent: 113
@@ -11,8 +11,8 @@ areas: [install]
 created: 2026-04-21
 updated: 2026-04-24
 lifecycle_slug: ship-curl-sh-bootstrap-installer-for-cortex-command
-lifecycle_phase: implement
-session_id: 37184ff2-e25d-4c76-80bd-3d42c986e6d3
+lifecycle_phase: complete
+session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md

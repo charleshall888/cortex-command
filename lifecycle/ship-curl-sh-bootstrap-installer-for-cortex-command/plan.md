@@ -21,7 +21,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
   - Mirror the `ensure()` pattern from uv's official installer for `run()`.
   - Body should end with a single call that invokes a `main()` function; `main()` is a no-op in this task and gets filled by later tasks.
 - **Verification**: `test -x install.sh && head -1 install.sh | grep -qx '#!/bin/sh' && grep -qE '^set -eu' install.sh && grep -qE '^(run|ensure)\(\)[[:space:]]*\{' install.sh` — pass if exit 0. Also `shellcheck -s sh install.sh` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add uv auto-install and `just` precondition checks
 - **Files**: `install.sh`
@@ -34,7 +34,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
   - **Why the tempfile split**: POSIX sh pipelines report only the last command's exit code; `curl | sh` with a failing curl and empty stdin yields `sh`-exits-0, which silently defeats R11. Splitting into two wrapped calls lets `run()` catch either failure independently.
   - PATH prepend: `$HOME/.local/bin` (where uv installs on Linux/macOS without `XDG_BIN_HOME` set) and `$HOME/.cargo/bin` (uv's older default) — both prepended to survive either layout.
 - **Verification**: `grep -qE 'astral\.sh/uv/install\.sh' install.sh && grep -qE 'brew install just' install.sh && ! grep -qE 'curl[^|]*\|[[:space:]]*sh' install.sh` — pass if first two greps exit 0 AND the third exits 1 (no unsplit curl-to-sh pipe present).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Add `CORTEX_REPO_URL` normalization function
 - **Files**: `install.sh`
@@ -49,7 +49,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
     - `ssh://git@github.com/me/fork.git` → unchanged
   - Pattern matching via POSIX `case "$url" in git@*:*/*) ...;; ssh://*|https://*|http://*) ...;; *) ...;; esac` — no `[[ ]]` bashisms.
 - **Verification**: `grep -qE 'normalize_repo_url' install.sh && grep -qE 'CORTEX_REPO_URL' install.sh` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add clone-or-pull safety logic on existing target
 - **Files**: `install.sh`
@@ -62,7 +62,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
   - Abort message for branches (c)/(d) must name BOTH the existing origin and the resolved URL so users can see the mismatch at a glance.
   - POSIX-compatible conditional: use `[ ]` / `test`, not `[[ ]]`.
 - **Verification**: `grep -qE 'CORTEX_COMMAND_ROOT:-\$HOME/\.cortex' install.sh && ! grep -qE 'rm -rf' install.sh` — pass if first grep exits 0 AND second grep exits 1 (pattern absent).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Add `uv tool install -e` step and final-step messaging
 - **Files**: `install.sh`
@@ -74,7 +74,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
   - `--force` is load-bearing: it regenerates `[project.scripts]` entry points between runs (see `cli.py:21-23` EPILOG note and spec R8).
   - Env-var invocation pattern `env VAR=value uv ...` keeps the assignment outside the `run()` wrapper's `$@` concern — `run` sees `env` as argv[0].
 - **Verification**: `grep -qE 'UV_PYTHON_DOWNLOADS=automatic' install.sh && grep -qE 'uv tool install -e "?\$?[a-zA-Z_]+"? --force' install.sh && ! grep -qE '12[0-9]' install.sh` — pass if exit code matches each clause.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Write `tests/test_install.sh` — shell integration tests
 - **Files**: `tests/test_install.sh`, `tests/fixtures/install/` (new directory holding stub scripts + fake-repo setup helpers; expected file count 6–10, see Context)
@@ -110,7 +110,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
   - **R19 lint regex (POSIX-portable)**: `grep -nE '^[[:space:]]*(git|curl|uv)[[:space:]]' install.sh | grep -v '# allow-direct' | grep -v '^[[:space:]]*run[[:space:]]'` — use `[[:space:]]` (POSIX character class) not `\s` (GNU extension; BSD grep on macOS does not honor it reliably in ERE mode, which would make the lint silently false-pass on the primary dev platform). The `# allow-direct` escape exempts intentional direct calls (e.g., Task 4's detection `git remote get-url`); the final grep strips lines that start with `run` so the wrapper body itself is not flagged when it contains the literal string `git`/`curl`/`uv`.
   - **Stderr-ordering assertion (R7)**: capture via `2>&1 >/dev/null` redirected to a file, then grep for line numbers using `grep -n` and assert the URL and target log lines appear before any `git clone` or `git pull` invocation line. The stubs echo their argv to a separate file (`$tmpdir/git.argv`) so stderr and invocation-log ordering are independently checkable.
 - **Verification**: `bash tests/test_install.sh` — pass if exit 0 and the output contains a `PASS` line for each of R2, R3, R6(a), R6(b), R6(b-dirty), R6(c), R6(d), R6(e), R7, R10, R11-repo, R11-uv, R19 (thirteen PASS lines minimum).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Wire `shellcheck` + `test-install` into `just test`
 - **Files**: `tests/test_install.sh`, `justfile`
@@ -123,7 +123,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
   - SKIP semantics: add a `skip()` helper alongside `pass()`/`fail()`; SKIP increments neither the pass nor fail counter and prints a visible `SKIP` line. This preserves signal — a missing shellcheck is not silently green.
   - `just test`'s aggregator (`justfile:328-354`) uses `run_test` with a name + command; `run_test "test-install" bash tests/test_install.sh` matches the existing pattern.
 - **Verification**: `just test` — pass if exit 0 and output contains a `[PASS] test-install` line. To validate shellcheck is load-bearing: introduce a temp bashism (`[[ 1 == 1 ]]`) into `install.sh`, rerun `just test`, assert the `test-install` step reports FAIL; revert.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Replace `cortex upgrade` stub with real handler
 - **Files**: `cortex_command/cli.py`
@@ -144,7 +144,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
     ```
   - The three other stubs (`mcp-server`, `init`) remain untouched — do not accidentally rewire them.
 - **Verification**: `uv tool install -e . --force && cortex upgrade --help` — pass if exit 0 and output does NOT contain `not yet implemented`. Also `grep -c '_make_stub("upgrade")' cortex_command/cli.py` = 0 — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Write `tests/test_cli_upgrade.py` — unit tests for the upgrade handler
 - **Files**: `tests/test_cli_upgrade.py`
@@ -159,7 +159,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
   - `CalledProcessError` construction: `subprocess.CalledProcessError(returncode=128, cmd=["git", "-C", root, "pull", "--ff-only"])`.
   - Assertions on argv: `mock_run.call_args_list[0] == call(["git", "status", "--porcelain"], cwd=root, check=True, capture_output=True, text=True)`.
 - **Verification**: `uv run pytest tests/test_cli_upgrade.py -q` — pass if exit 0 and all four tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Update `docs/setup.md` and `README.md` — remove TBD banners, wire real one-liner
 - **Files**: `docs/setup.md`, `README.md`
@@ -171,7 +171,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
   - The `README.md` install block at lines 77-91 is rewritten so the three-step flow reads: step 1 = `curl | sh`; step 2 = `uv tool update-shell`; step 3 = `/plugin marketplace add` + `/plugin install` from inside Claude.
   - Do not introduce new ticket numbers in the rewritten text (R9's `12[0-9]`-pattern rule applies to the installer, not the README, but it's a good habit).
 - **Verification**: `grep -q 'TBD.*118' docs/setup.md` — pass if exit 1 (pattern absent). `grep -qE 'pending.*ticket 118|pending — ticket 118' README.md` — pass if exit 1. `grep -qE 'curl -fsSL.*install\.sh.*sh' README.md` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: End-to-end validation — `just test` green, smoke-test real `install.sh` against fork
 - **Files**: none (verification-only; no file writes)
@@ -189,7 +189,7 @@ Ship `install.sh` at the repo root (POSIX sh, shellchecked, `[cortex-install]`-p
     (Second invocation reuses the first's sandbox `HOME` so branch (b) of R6 fires.)
   - Do NOT run `install.sh` against the live `$HOME/.cortex` — always use a scratch `HOME`.
 - **Verification**: `just test` — pass if exit 0 and output contains `Test suite: 4/4 passed`. Smoke test is interactive/session-dependent: the executor runs the two-invocation sequence manually and reports both exit codes + `cortex --help` result — no automated verification.
-- **Status**: [ ] pending
+- **Status**: [x] complete (just test: 4/4 passed; live-URL smoke test deferred until after merge/push)
 
 ## Verification Strategy
 

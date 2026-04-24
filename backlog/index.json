@@ -272,36 +272,6 @@
     "repo": null
   },
   {
-    "id": 118,
-    "title": "Ship curl | sh bootstrap installer for cortex-command",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "install",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "install"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-24",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": "lifecycle/ship-curl-sh-bootstrap-installer-for-cortex-command/spec.md",
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "db742018-cb3e-488d-8084-688cd575e241",
-    "lifecycle_slug": "ship-curl-sh-bootstrap-installer-for-cortex-command",
-    "session_id": "37184ff2-e25d-4c76-80bd-3d42c986e6d3",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 121,
     "title": "Publish cortex-overnight-integration plugin (overnight skill + runner hooks)",
     "status": "backlog",
@@ -428,7 +398,7 @@
   {
     "id": 144,
     "title": "Vendor cortex-ui-extras and cortex-pr-review from cortex-command-plugins",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -453,9 +423,9 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "c6fb710e-139a-4eb2-9c36-4ce3a86e990f",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins",
+    "session_id": "4370ae28-c05b-4638-a713-f276729fbf14",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
