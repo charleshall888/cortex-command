@@ -1,65 +1,40 @@
-"""Exercise the real fill_prompt() shell function from cortex_command/overnight/runner.sh.
+"""Exercise the fill_prompt() function from cortex_command.overnight.fill_prompt.
 
-The function is extracted and sourced in isolation so runner.sh's top-level
-script initialization (arg parsing, state-JSON reads, realpath on STATE_PATH)
-does not run. Per R7a, the shell function body itself is executed — not a
-Python copy of the substitution logic.
+Per R7a, the Python port of fill_prompt() performs the six single-brace token
+substitutions against the orchestrator-round.md template. These tests call the
+function directly (no bash source-extract) to verify the substitution contract.
 """
 
 from __future__ import annotations
 
 import re
-import subprocess
 from pathlib import Path
 
-REAL_REPO_ROOT = Path(__file__).resolve().parent.parent
-RUNNER_SH = REAL_REPO_ROOT / "cortex_command" / "overnight" / "runner.sh"
-PROMPT_TEMPLATE = REAL_REPO_ROOT / "cortex_command" / "overnight" / "prompts" / "orchestrator-round.md"
+from cortex_command.overnight.fill_prompt import fill_prompt
 
 
-def _extract_fill_prompt(runner_path: Path) -> str:
-    lines = runner_path.read_text().splitlines()
-    start = end = None
-    for i, line in enumerate(lines):
-        if line.startswith("fill_prompt() {"):
-            start = i
-        elif start is not None and line == "}":
-            end = i
-            break
-    assert start is not None and end is not None, "fill_prompt() function not found in runner.sh"
-    return "\n".join(lines[start : end + 1])
+STUB_SESSION_DIR = Path("/tmp/overnight-2026-04-21-stub")
+STUB_PLAN_PATH = STUB_SESSION_DIR / "overnight-plan.md"
+STUB_STATE_PATH = STUB_SESSION_DIR / "overnight-state.json"
+STUB_EVENTS_PATH = STUB_SESSION_DIR / "overnight-events.log"
 
 
 def _run_fill_prompt() -> str:
-    stub_session_dir = "/tmp/overnight-2026-04-21-stub"
-    stub_env = {
-        "PATH": "/usr/bin:/bin:/usr/local/bin",
-        "PLAN_PATH": f"{stub_session_dir}/overnight-plan.md",
-        "STATE_PATH": f"{stub_session_dir}/overnight-state.json",
-        "SESSION_DIR": stub_session_dir,
-        "EVENTS_PATH": f"{stub_session_dir}/overnight-events.log",
-        "TIER": "simple",
-        "PROMPT_TEMPLATE": str(PROMPT_TEMPLATE),
-        "TEMPLATE": str(PROMPT_TEMPLATE),
-    }
-    body = _extract_fill_prompt(RUNNER_SH)
-    script = body + "\nfill_prompt 1\n"
-    result = subprocess.run(
-        ["bash", "-c", script],
-        env=stub_env,
-        cwd=str(REAL_REPO_ROOT),
-        capture_output=True,
-        text=True,
-        check=True,
+    return fill_prompt(
+        round_number=1,
+        state_path=STUB_STATE_PATH,
+        plan_path=STUB_PLAN_PATH,
+        events_path=STUB_EVENTS_PATH,
+        session_dir=STUB_SESSION_DIR,
+        tier="simple",
     )
-    return result.stdout
 
 
 def test_fill_prompt_substitutes_session_plan_path():
     """R7c: {session_plan_path} and {plan_path} are fully substituted (not present in output)."""
     out = _run_fill_prompt()
     assert "{session_plan_path}" not in out, (
-        "{session_plan_path} token survived fill_prompt — runner.sh did not substitute the renamed key"
+        "{session_plan_path} token survived fill_prompt — fill_prompt did not substitute the renamed key"
     )
     assert "{plan_path}" not in out, (
         "{plan_path} token survived fill_prompt — stale single-brace token remains somewhere in the template"
