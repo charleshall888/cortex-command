@@ -1,0 +1,212 @@
+"""IPC contract layer for the overnight runner.
+
+Provides the per-session ``runner.pid`` file (R8), the global
+``active-session.json`` pointer (R9), and stale-PID verification (R18).
+Both artifacts share a single ``schema_version`` axis per R8's versioning
+rule; the active-session pointer additionally carries a ``phase`` field.
+
+All on-disk writes are atomic (``tempfile.NamedTemporaryFile`` +
+``os.fsync`` via ``durable_fsync`` + ``os.replace``) and never leak
+partial content.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+from datetime import datetime
+from pathlib import Path
+
+import psutil
+
+from cortex_command.common import durable_fsync
+
+
+# ---------------------------------------------------------------------------
+# Module constants
+# ---------------------------------------------------------------------------
+
+_RUNNER_MAGIC = "cortex-runner-v1"
+_SCHEMA_VERSION = 1
+_START_TIME_TOLERANCE_SECONDS = 2.0
+
+ACTIVE_SESSION_PATH: Path = (
+    Path.home() / ".local" / "share" / "overnight-sessions" / "active-session.json"
+)
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _atomic_write_json(path: Path, payload: dict, mode: int = 0o600) -> None:
+    """Write ``payload`` as JSON to ``path`` atomically.
+
+    Uses ``tempfile.NamedTemporaryFile`` in ``path.parent`` with
+    ``delete=False``, fsyncs durably, closes, then ``os.replace`` onto
+    the destination. Applies ``os.chmod(mode)`` after replace.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+
+    tmp = tempfile.NamedTemporaryFile(
+        mode="wb",
+        dir=path.parent,
+        prefix=f".{path.name}-",
+        suffix=".tmp",
+        delete=False,
+    )
+    tmp_path = Path(tmp.name)
+    try:
+        tmp.write(data)
+        tmp.flush()
+        durable_fsync(tmp.fileno())
+        tmp.close()
+        os.replace(tmp_path, path)
+        os.chmod(path, mode)
+    except BaseException:
+        try:
+            tmp.close()
+        except OSError:
+            pass
+        try:
+            tmp_path.unlink()
+        except OSError:
+            pass
+        raise
+
+
+# ---------------------------------------------------------------------------
+# Per-session runner.pid (R8)
+# ---------------------------------------------------------------------------
+
+def write_runner_pid(
+    session_dir: Path,
+    pid: int,
+    pgid: int,
+    start_time: str,
+    session_id: str,
+    repo_path: Path,
+) -> None:
+    """Atomically write ``runner.pid`` into ``session_dir``.
+
+    Schema matches R8 exactly: ``schema_version: 1``,
+    ``magic: "cortex-runner-v1"``, plus the passed fields. File mode is
+    ``0o600``.
+    """
+    payload = {
+        "schema_version": _SCHEMA_VERSION,
+        "magic": _RUNNER_MAGIC,
+        "pid": pid,
+        "pgid": pgid,
+        "start_time": start_time,
+        "session_id": session_id,
+        "session_dir": str(session_dir),
+        "repo_path": str(repo_path),
+    }
+    _atomic_write_json(session_dir / "runner.pid", payload, mode=0o600)
+
+
+def clear_runner_pid(session_dir: Path) -> None:
+    """Remove ``runner.pid`` from ``session_dir`` if present."""
+    (session_dir / "runner.pid").unlink(missing_ok=True)
+
+
+def read_runner_pid(session_dir: Path) -> dict | None:
+    """Return the parsed ``runner.pid`` dict, or ``None`` if absent."""
+    path = session_dir / "runner.pid"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def verify_runner_pid(pid_data: dict) -> bool:
+    """Verify a ``runner.pid`` payload matches a running process.
+
+    Checks ``magic == "cortex-runner-v1"``, ``schema_version >= 1``,
+    and ``psutil.Process(pid).create_time()`` within ±2s of the
+    recorded ``start_time``. Returns ``False`` on any mismatch,
+    ``psutil.NoSuchProcess``, or ``psutil.AccessDenied``. Never signals;
+    never raises to the caller.
+    """
+    if not isinstance(pid_data, dict):
+        return False
+
+    if pid_data.get("magic") != _RUNNER_MAGIC:
+        return False
+
+    schema_version = pid_data.get("schema_version")
+    if not isinstance(schema_version, int) or schema_version < 1:
+        return False
+
+    pid = pid_data.get("pid")
+    start_time_str = pid_data.get("start_time")
+    if not isinstance(pid, int) or not isinstance(start_time_str, str):
+        return False
+
+    try:
+        recorded_epoch = datetime.fromisoformat(
+            start_time_str.replace("Z", "+00:00")
+        ).timestamp()
+    except (ValueError, TypeError):
+        return False
+
+    try:
+        actual_epoch = psutil.Process(pid).create_time()
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return False
+    except Exception:
+        return False
+
+    return abs(actual_epoch - recorded_epoch) <= _START_TIME_TOLERANCE_SECONDS
+
+
+# ---------------------------------------------------------------------------
+# Active-session pointer (R9)
+# ---------------------------------------------------------------------------
+
+def write_active_session(pid_data: dict, phase: str) -> None:
+    """Write the active-session pointer atomically.
+
+    Merges ``pid_data`` with ``{"phase": phase}`` and writes to
+    :data:`ACTIVE_SESSION_PATH`. Creates the parent directory if needed.
+    """
+    payload = dict(pid_data)
+    payload["phase"] = phase
+    _atomic_write_json(ACTIVE_SESSION_PATH, payload, mode=0o600)
+
+
+def read_active_session() -> dict | None:
+    """Return the parsed active-session pointer, or ``None`` if absent."""
+    if not ACTIVE_SESSION_PATH.exists():
+        return None
+    try:
+        return json.loads(ACTIVE_SESSION_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def update_active_session_phase(session_id: str, new_phase: str) -> None:
+    """Update the active-session pointer's phase.
+
+    Reads the pointer, verifies the ``session_id`` matches, then
+    atomically rewrites with the updated phase. Used for ``paused`` and
+    pre-``complete`` transitions; ``complete`` should use
+    :func:`clear_active_session` instead.
+    """
+    current = read_active_session()
+    if current is None:
+        return
+    if current.get("session_id") != session_id:
+        return
+    current["phase"] = new_phase
+    _atomic_write_json(ACTIVE_SESSION_PATH, current, mode=0o600)
+
+
+def clear_active_session() -> None:
+    """Remove the active-session pointer file if present."""
+    ACTIVE_SESSION_PATH.unlink(missing_ok=True)
