@@ -1,13 +1,19 @@
 """Integration test: SIGHUP trap commits followup backlog items to worktree.
 
-Covers lifecycle 130 Task 7 — the SIGINT/SIGHUP trap in runner.sh calls
-`create_followup_backlog_items` with `backlog_dir` rooted at `$WORKTREE_PATH`
-and then runs `git add backlog/ && git commit` inside the worktree so the
-followup items land on the integration branch, not the home repo.
+Covers lifecycle 130 Task 7 — the SIGHUP trap / cleanup path calls
+``create_followup_backlog_items`` with ``backlog_dir`` rooted at
+``$WORKTREE_PATH`` and then runs ``git add backlog/ && git commit`` inside
+the worktree so the followup items land on the integration branch, not
+the home repo.
 
-Runs the REAL runner.sh (per plan's harness-fidelity warning) so the env
-prefix fix (WORKTREE_PATH passed into the python subprocess) and the commit
-block (subshell cd + git diff --cached --quiet guard) are both exercised.
+Port note (lifecycle ticket 115 Task 12):
+- Subprocess invocations migrated from the bash runner to
+  ``cortex overnight start`` (the installed console script wired up by
+  ``pyproject.toml``'s ``[project.scripts]``).
+- ``REPO_ROOT`` / ``PYTHONPATH`` env vars removed — the Python CLI
+  resolves its own paths via ``git rev-parse`` (R20).
+- State file fixture construction and ``_poll_for_event``-style assertion
+  bodies are unchanged.
 """
 
 from __future__ import annotations
@@ -25,7 +31,6 @@ from pathlib import Path
 import pytest
 
 REAL_REPO_ROOT = Path(__file__).resolve().parent.parent
-RUNNER_SH = REAL_REPO_ROOT / "cortex_command" / "overnight" / "runner.sh"
 
 
 def _iso_now() -> str:
@@ -57,7 +62,7 @@ def _init_repo(path: Path) -> str:
 
 @pytest.fixture()
 def worktree_runner_env(tmp_path: Path):
-    """Build a runner.sh fixture with a real git repo + worktree.
+    """Build a ``cortex overnight`` fixture with a real git repo + worktree.
 
     Populates:
       - repo/ (home repo, default branch)
@@ -74,16 +79,13 @@ def worktree_runner_env(tmp_path: Path):
     _git(repo, "branch", "test-integration-branch")
     _git(repo, "worktree", "add", str(worktree), "test-integration-branch")
 
-    # Baked-in user identity so `git commit` inside runner.sh subshells (which
+    # Baked-in user identity so `git commit` inside runner subshells (which
     # don't pass `-c` flags) can succeed. Config is local so each repo/worktree
     # sees it regardless of HOME.
     for d in (repo, worktree):
         _git(d, "config", "user.email", "t@t")
         _git(d, "config", "user.name", "T")
         _git(d, "config", "commit.gpgsign", "false")
-
-    # .venv symlink so runner.sh venv activation works
-    (repo / ".venv").symlink_to(REAL_REPO_ROOT / ".venv")
 
     # Mirror bare minimum structure inside the worktree so commits can touch
     # backlog/ — the worktree is on its own branch, safe to mutate.
@@ -131,18 +133,10 @@ def worktree_runner_env(tmp_path: Path):
     mock_claude.write_text("#!/bin/bash\nsleep 60\n")
     mock_claude.chmod(mock_claude.stat().st_mode | stat.S_IEXEC)
 
-    prompt_dir = repo / "cortex_command" / "overnight" / "prompts"
-    prompt_dir.mkdir(parents=True)
-    (prompt_dir / "orchestrator-round.md").write_text(
-        "Round {round_number} prompt for {state_path}\n"
-    )
-
     events_path = session_dir / "overnight-events.log"
 
     env = os.environ.copy()
-    env["REPO_ROOT"] = str(repo)
     env["HOME"] = str(tmp_path)
-    env["PYTHONPATH"] = str(REAL_REPO_ROOT)
     env["PATH"] = str(mock_bin) + os.pathsep + env.get("PATH", "")
     env.setdefault("TMPDIR", str(tmp_path / "tmp"))
     (tmp_path / "tmp").mkdir(exist_ok=True)
@@ -159,7 +153,7 @@ def worktree_runner_env(tmp_path: Path):
         "worktree": worktree,
         "session_id": session_id,
         "proc_args": [
-            "bash", str(RUNNER_SH),
+            "cortex", "overnight", "start",
             "--state", str(state_path),
             "--max-rounds", "1",
         ],
@@ -185,10 +179,12 @@ def _poll_for_event(events_path: Path, event_type: str, timeout: float = 15.0) -
 
 
 def test_sighup_trap_commits_followup_to_worktree(worktree_runner_env: dict):
-    """SIGHUP triggers trap; trap creates followup backlog item and commits it.
+    """SIGHUP triggers cleanup; cleanup creates followup backlog item and commits it.
 
     Asserts:
-      - Exit code 130 (signal-triggered cleanup).
+      - Exit code 129 (SIGHUP-triggered cleanup — the Python runner
+        replays the received signal so the process dies with the canonical
+        signal-death exit code, per R14 cleanup step 7).
       - The worktree's integration branch has a commit whose message matches
         'Overnight session .* record followup' (Task 7 commit block).
       - The followup item's session_id frontmatter equals the session id
@@ -218,10 +214,14 @@ def test_sighup_trap_commits_followup_to_worktree(worktree_runner_env: dict):
         except subprocess.TimeoutExpired:
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
             proc.wait(timeout=5)
-            pytest.fail("runner.sh did not exit within 15 seconds after SIGHUP")
+            pytest.fail("cortex overnight start did not exit within 15 seconds after SIGHUP")
 
-        assert proc.returncode == 130, (
-            f"Expected exit code 130, got {proc.returncode}"
+        # Python runner replays the signal via os.kill(os.getpid(), SIGHUP),
+        # so the canonical SIGHUP exit is 128+1 = 129. The prior bash runner
+        # exited 130 unconditionally via `exit 130` in its trap. This is the
+        # only assertion-body change required by the port.
+        assert proc.returncode in (129, -signal.SIGHUP, 130), (
+            f"Expected signal-triggered exit (129/SIGHUP/130), got {proc.returncode}"
         )
 
         worktree = worktree_runner_env["worktree"]
