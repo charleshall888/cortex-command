@@ -1,0 +1,38 @@
+#!/bin/sh
+# Minimal `git` shim for install.sh integration tests.
+#
+# Background: install.sh's R6 safety check compares resolved CORTEX_REPO_URL
+# (which spec R5's normalize_repo_url produces as an https://github.com/... URL
+# for most inputs) to `git remote get-url origin` of the existing target. In a
+# hermetic test env with no network, we route git operations to a local bare
+# repo via `url.<path>.insteadOf <https-url>` global config. But `git remote
+# get-url` ALWAYS applies insteadOf substitution -- it has no bypass flag -- so a
+# target whose stored `remote.origin.url` is the expected https URL would be
+# observed by install.sh as the post-substitution file:// path, breaking the
+# byte-identity check. This shim intercepts ONLY `remote get-url` to delegate
+# to `config --get`, which does NOT apply insteadOf. Every other git subcommand
+# passes through to real git.
+#
+# Real git is located by REAL_GIT env var (set by the test harness to the
+# absolute path of the system git binary). The test harness in
+# tests/test_install.sh documents the deviation from the "no git stub" guideline.
+set -u
+: "${REAL_GIT:?REAL_GIT must be set to the absolute path of the real git binary}"
+target_dir=""
+if [ "${1:-}" = "-C" ]; then
+	target_dir="$2"
+	shift 2
+fi
+if [ "${1:-}" = "remote" ] && [ "${2:-}" = "get-url" ]; then
+	remote="${3:-origin}"
+	if [ -n "$target_dir" ]; then
+		"$REAL_GIT" config --file "$target_dir/.git/config" --get "remote.$remote.url"
+	else
+		"$REAL_GIT" config --get "remote.$remote.url"
+	fi
+	exit $?
+fi
+if [ -n "$target_dir" ]; then
+	exec "$REAL_GIT" -C "$target_dir" "$@"
+fi
+exec "$REAL_GIT" "$@"

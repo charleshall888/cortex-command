@@ -1,0 +1,11 @@
+#!/bin/sh
+# Stub `uv` for install.sh integration tests.
+# Default: append argv to $STUB_LOG_DIR/uv.argv and exit 0.
+# Dispatch via STUB_UV_FAIL=1 → write to stderr and exit 1.
+log_dir="${STUB_LOG_DIR:-/tmp}"
+printf '%s\n' "$*" >> "$log_dir/uv.argv"
+if [ "${STUB_UV_FAIL:-0}" = "1" ]; then
+	printf 'stub uv: simulated failure\n' >&2
+	exit 1
+fi
+exit 0

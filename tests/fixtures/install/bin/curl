@@ -1,0 +1,34 @@
+#!/bin/sh
+# Stub `curl` for install.sh integration tests.
+# Default: append argv to $STUB_LOG_DIR/curl.argv. When invoked with -o <path>,
+# write a minimal uv-installer shell script to <path>. The installer copies the
+# stub `uv` binary into $HOME/.local/bin/uv so subsequent uv invocations resolve.
+# Dispatch via STUB_CURL_FAIL=1 → write to stderr and exit 1.
+log_dir="${STUB_LOG_DIR:-/tmp}"
+printf '%s\n' "$*" >> "$log_dir/curl.argv"
+if [ "${STUB_CURL_FAIL:-0}" = "1" ]; then
+	printf 'stub curl: simulated failure\n' >&2
+	exit 1
+fi
+# Find -o <path> argument and write the stub installer there.
+out_path=""
+prev=""
+for arg in "$@"; do
+	if [ "$prev" = "-o" ]; then
+		out_path="$arg"
+		break
+	fi
+	prev="$arg"
+done
+if [ -n "$out_path" ]; then
+	# The "uv installer" planted here just copies our stub uv into ~/.local/bin/.
+	# Build the installer via printf to avoid heredoc temp-file creation (which
+	# needs a writable CWD; install.sh may run with CWD=/ or other locked-down dir).
+	printf '%s\n' \
+		'#!/bin/sh' \
+		'mkdir -p "$HOME/.local/bin"' \
+		'cp "$STUB_UV_SOURCE" "$HOME/.local/bin/uv"' \
+		'chmod +x "$HOME/.local/bin/uv"' \
+		> "$out_path"
+fi
+exit 0
