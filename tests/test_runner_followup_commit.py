@@ -113,9 +113,19 @@ def worktree_runner_env(tmp_path: Path):
         "started_at": _iso_now(),
         "updated_at": _iso_now(),
         "features": {
+            # failed feature → followup backlog item emitted in the trap
             "broken-feature": {
                 "status": "failed",
                 "error": "simulated failure",
+            },
+            # pending feature → keeps the round loop alive until SIGHUP
+            # arrives. Without this, runner.run() sees pending==0 and
+            # exits cleanly before the test delivers SIGHUP (exit 0),
+            # failing the signal-exit assertion. The mock claude sleeps
+            # 60s so the orchestrator subprocess blocks long enough for
+            # SIGHUP delivery.
+            "pending-feature": {
+                "status": "pending",
             },
         },
         "integration_branch": "test-integration-branch",

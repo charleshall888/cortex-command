@@ -699,7 +699,7 @@ def _filter_dry_run_lines(text: str) -> list[str]:
     return [ln for ln in text.splitlines() if ln.startswith("DRY-RUN ")]
 
 
-def test_dry_run_stdout_byte_identical() -> None:
+def test_dry_run_stdout_byte_identical(tmp_path: Path) -> None:
     """R15 byte-identical DRY-RUN stdout check post-TMPDIR normalization.
 
     Invokes ``cortex overnight start --dry-run --state tests/fixtures/dry_run_state.json``
@@ -709,6 +709,15 @@ def test_dry_run_stdout_byte_identical() -> None:
     and the committed reference, then asserts full-line equality on the
     filtered DRY-RUN lines. Substring-only fallback is explicitly
     prohibited by the plan — format drift must be caught.
+
+    Fixture setup (Task 12b): the reference expects the `gh pr create`
+    DRY-RUN line, which the runner only emits when `git rev-list --count
+    main..<integration-branch>` returns >0. Create the integration branch
+    referenced by ``dry_run_state.json`` (``overnight/test-dry-run-reference``)
+    with one fresh commit via ``git commit-tree`` + ``git update-ref`` so the
+    post-loop sees ≥1 commit and fires the PR-create path. Mirrors the
+    fake-remote + git_config + gh-stub shim used by the other PR-gating
+    tests.
     """
     assert DRY_RUN_REFERENCE.exists(), (
         f"reference file missing at {DRY_RUN_REFERENCE}"
@@ -722,18 +731,42 @@ def test_dry_run_stdout_byte_identical() -> None:
     tmpdir = "/tmp/dry-run-capture"
     os.makedirs(tmpdir, exist_ok=True)
 
-    env = dict(os.environ)
-    env["TMPDIR"] = tmpdir
-    env["SKIP_NOTIFICATIONS"] = "1"
+    # Copy the source fixture into tmp_path — the runner saves state back
+    # to --state on round transitions and session completion, so passing
+    # DRY_RUN_STATE directly would pollute the checked-in fixture (see
+    # test-isolation rule in this module's docstring).
+    state_copy = tmp_path / "overnight-state.json"
+    shutil.copy(DRY_RUN_STATE, state_copy)
 
-    result = subprocess.run(
-        ["cortex", "overnight", "start", "--dry-run", "--state", str(DRY_RUN_STATE)],
-        env=env,
-        capture_output=True,
-        text=True,
-        stdin=subprocess.DEVNULL,
-        timeout=120,
-    )
+    # Seed the integration branch the fixture references so the post-loop's
+    # `git rev-list --count main..<branch>` returns >0 and the `gh pr create`
+    # path fires instead of the zero-commit notify fallback.
+    branch = "overnight/test-dry-run-reference"
+    _create_integration_branch(branch, ensure=True)
+
+    # Fake remote + git config redirect so `git push -u origin <branch>`
+    # never reaches GitHub.
+    fake_remote = _make_fake_remote(tmp_path)
+    git_config = _make_git_config(tmp_path, fake_remote)
+    bin_dir = _install_gh_stub(tmp_path)
+
+    try:
+        env = dict(os.environ)
+        env["TMPDIR"] = tmpdir
+        env["SKIP_NOTIFICATIONS"] = "1"
+        env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
+        env["GIT_CONFIG_GLOBAL"] = str(git_config)
+
+        result = subprocess.run(
+            ["cortex", "overnight", "start", "--dry-run", "--state", str(state_copy)],
+            env=env,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=120,
+        )
+    finally:
+        _create_integration_branch(branch, ensure=False)
 
     # The runner may exit nonzero in environments where the integration
     # branch / fake remote setup isn't pre-staged; what matters for R15
