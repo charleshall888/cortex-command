@@ -388,3 +388,16 @@ test-skills:
 # Launch Claude with --dangerously-skip-permissions
 dangerous:
     claude --dangerously-skip-permissions
+
+# --- Plugin ---
+
+# Regenerate cortex-interactive plugin tree from top-level sources (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)
+build-plugin:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SKILLS=(commit pr lifecycle backlog requirements research discovery refine retro dev fresh diagnose evolve critical-review)
+    for s in "${SKILLS[@]}"; do
+        rsync -a --delete "skills/$s/" "plugins/cortex-interactive/skills/$s/"
+    done
+    rsync -a --delete --include='cortex-*' --exclude='*' bin/ plugins/cortex-interactive/bin/
+    rsync -a hooks/cortex-validate-commit.sh plugins/cortex-interactive/hooks/cortex-validate-commit.sh
