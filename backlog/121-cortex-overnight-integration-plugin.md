@@ -27,8 +27,8 @@ The second plugin in the DR-2 split. Installed on top of `cortex-interactive` by
 ## Scope
 
 - Plugin layout under `plugins/cortex-overnight-integration/` in this repo with `.claude-plugin/plugin.json`
-- Skills included (renamed to `/cortex:*`): `overnight` (the user-facing entry point to overnight workflow)
-- `critical-review` and `morning-review` land here if the codebase check in ticket 120 finds they import `claude.overnight.*` at module load; otherwise they stay in `cortex-interactive`
+- Skills included (renamed to `/cortex:*`): `overnight` (the user-facing entry point to overnight workflow), `morning-review` (ships in this plugin — requires `$CORTEX_COMMAND_ROOT` and runner state)
+- Note: `critical-review` ships in `cortex-interactive` (ticket 120) — remediated to run standalone
 - Hooks included: runner-only hooks that aren't useful in interactive flows (re-evaluate the list during implementation based on what ticket 115 leaves standing)
 - `.mcp.json` registering `cortex mcp-server` so enabling the plugin auto-starts the control-plane MCP server
 - Document the explicit dependency on the CLI tier being installed; plugin should surface a clear error if `cortex` isn't on PATH
