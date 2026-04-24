@@ -264,9 +264,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-23",
     "blocks": [],
-    "blocked_by": [
-      "117"
-    ],
+    "blocked_by": [],
     "parent": "113",
     "research": null,
     "spec": null,
@@ -313,37 +311,6 @@
     "repo": null
   },
   {
-    "id": 117,
-    "title": "Build cortex setup subcommand and retire shareable-install scaffolding",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "cli",
-      "install",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "install"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-23",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "d07b577f-e72f-4246-b0bd-19a9e36f1f08",
-    "lifecycle_slug": "build-cortex-setup-subcommand-and-retire-shareable-install-scaffolding",
-    "session_id": "8810190a-9f11-494c-b526-f70dc34deb7c",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 118,
     "title": "Ship curl | sh bootstrap installer for cortex-command",
     "status": "backlog",
@@ -360,9 +327,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-23",
     "blocks": [],
-    "blocked_by": [
-      "117"
-    ],
+    "blocked_by": [],
     "parent": "113",
     "research": null,
     "spec": null,
@@ -393,9 +358,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-23",
     "blocks": [],
-    "blocked_by": [
-      "117"
-    ],
+    "blocked_by": [],
     "parent": "113",
     "research": null,
     "spec": null,
@@ -460,12 +423,11 @@
       "install"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-21",
+    "updated": "2026-04-23",
     "blocks": [],
     "blocked_by": [
       "115",
       "116",
-      "117",
       "120",
       "121"
     ],
@@ -884,12 +846,11 @@
       "install"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-21",
+    "updated": "2026-04-23",
     "blocks": [],
     "blocked_by": [
       "115",
       "116",
-      "117",
       "118",
       "121",
       "122"
