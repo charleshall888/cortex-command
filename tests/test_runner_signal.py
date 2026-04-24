@@ -1,8 +1,23 @@
-"""Integration test: SIGHUP triggers cleanup() with correct events and exit code.
+"""Integration test: SIGHUP to ``cortex overnight start`` triggers R14 cleanup.
 
-Runs the real runner.sh in a fully isolated tmpdir environment, sends SIGHUP,
-and verifies that the cleanup() handler fires — producing a circuit_breaker
-event with reason: signal and exit code 130.
+Spawns ``cortex overnight start`` as a real subprocess in an isolated
+``HOME`` + ``PATH`` environment (mock ``claude`` on PATH so the spawned
+orchestrator blocks, rather than contacting a live API), sends SIGHUP,
+and verifies the runner's signal-cleanup path per R14:
+
+  (a) Process exits with the canonical SIGHUP signal-death code (129).
+      The spec prose at R14.5 (spec.md line 105) names 130 but that is
+      SIGINT's canonical code; the cleanup path replays the actual
+      received signal via ``os.kill(os.getpid(), signum)`` with the
+      default handler restored, so SIGHUP yields 128+1 == 129. The task
+      spec context's reference to 130 is tracked as a spec discrepancy
+      (see PR body / retro).
+  (b) ``overnight-events.log`` contains a ``circuit_breaker`` event with
+      ``details.reason == "signal"``.
+  (c) ``~/.local/share/overnight-sessions/active-session.json`` exists
+      with ``phase == "paused"`` (pointer retained, not cleared).
+  (d) No half-written backlog file appears under ``backlog/``.
+  (e) The whole path completes within 30 seconds.
 """
 
 from __future__ import annotations
@@ -19,7 +34,6 @@ from pathlib import Path
 import pytest
 
 REAL_REPO_ROOT = Path(__file__).resolve().parent.parent
-RUNNER_SH = REAL_REPO_ROOT / "cortex_command" / "overnight" / "runner.sh"
 
 
 def _iso_now() -> str:
@@ -28,89 +42,95 @@ def _iso_now() -> str:
 
 @pytest.fixture()
 def runner_env(tmp_path: Path):
-    """Build a fully isolated environment for runner.sh.
+    """Build an isolated ``HOME`` + state fixture for ``cortex overnight start``.
 
-    Yields a dict with 'env', 'state_path', 'events_path', and 'proc_args'
-    ready to launch the runner subprocess.
+    Yields a dict with ``env``, ``state_path``, ``events_path``,
+    ``session_dir``, ``active_session_path``, ``backlog_dir``, and
+    ``proc_args`` ready to spawn the CLI subprocess.
     """
     repo = tmp_path / "repo"
     repo.mkdir()
 
-    # (a) Symlink .venv from the real repo so venv activation works
-    (repo / ".venv").symlink_to(REAL_REPO_ROOT / ".venv")
+    # Initialise as a git repo so `git rev-parse --show-toplevel` (used
+    # by cli_handler._resolve_repo_path) resolves `repo` rather than
+    # falling back to the test-runner's cwd.
+    subprocess.run(
+        ["git", "init", "--quiet", str(repo)],
+        check=True,
+        capture_output=True,
+    )
 
-    # (b) HOME=$tmpdir — create ~/.claude/notify.sh (no-op executable)
-    claude_dir = tmp_path / ".claude"
-    claude_dir.mkdir()
-    notify = claude_dir / "notify.sh"
-    notify.write_text("#!/bin/bash\nexit 0\n")
-    notify.chmod(notify.stat().st_mode | stat.S_IEXEC)
+    # Backlog directory is referenced by the R14 cleanup sequence
+    # (report.create_followup_backlog_items) — leave it empty so we can
+    # assert nothing was written mid-cleanup.
+    backlog_dir = repo / "backlog"
+    backlog_dir.mkdir()
 
-    # Create ~/.local/share/overnight-sessions/ so active-session pointer works
+    # HOME isolation: ipc.ACTIVE_SESSION_PATH resolves via Path.home()
+    # at import time; the spawned subprocess's HOME controls the pointer
+    # location. ~/.claude/notify.sh is optional (runner falls back to
+    # stderr when missing) — omit it so the cleanup path exercises the
+    # fallback.
     (tmp_path / ".local" / "share" / "overnight-sessions").mkdir(parents=True)
 
-    # (c) State JSON — structurally complete for load_state()
-    session_id = "test-signal-session"
+    # State fixture — structurally complete for state.load_state().
+    session_id = "overnight-2026-04-24-signal"
     session_dir = repo / "lifecycle" / "sessions" / session_id
     session_dir.mkdir(parents=True)
 
     state = {
         "session_id": session_id,
         "phase": "executing",
-        "plan_ref": "",
+        "plan_ref": "lifecycle/overnight-plan.md",
         "current_round": 1,
         "started_at": _iso_now(),
         "updated_at": _iso_now(),
         "features": {
-            "test-feature": {"status": "pending"},
+            "feat-sighup": {"status": "pending"},
         },
-        "integration_branch": "test-integration-branch",
+        "integration_branch": "overnight-integration",
     }
     state_path = session_dir / "overnight-state.json"
-    state_path.write_text(json.dumps(state))
+    state_path.write_text(json.dumps(state), encoding="utf-8")
 
-    # Overnight plan file (runner reads PLAN_PATH from session dir)
+    # Orchestrator plan file (read by fill_prompt).
     (session_dir / "overnight-plan.md").write_text("# Test plan\n")
 
-    # (d) Mock claude binary — sleeps so main loop blocks at `wait $CLAUDE_PID`
+    # Mock ``claude`` binary on PATH — sleeps so the orchestrator Popen
+    # blocks in _poll_subprocess. The signal handler installed by
+    # runner.run() sets shutdown_event; the next POLL_INTERVAL tick
+    # detects it and invokes _cleanup on the main thread.
     mock_bin = tmp_path / "mock-bin"
     mock_bin.mkdir()
     mock_claude = mock_bin / "claude"
     mock_claude.write_text("#!/bin/bash\nsleep 60\n")
     mock_claude.chmod(mock_claude.stat().st_mode | stat.S_IEXEC)
 
-    # (e) Orchestrator prompt template
-    prompt_dir = repo / "cortex_command" / "overnight" / "prompts"
-    prompt_dir.mkdir(parents=True)
-    (prompt_dir / "orchestrator-round.md").write_text(
-        "Round {round_number} prompt for {state_path}\n"
+    events_path = session_dir / "overnight-events.log"
+    active_session_path = (
+        tmp_path / ".local" / "share" / "overnight-sessions" / "active-session.json"
     )
 
-    # (f) Events log path — writable, inside session dir
-    events_path = session_dir / "overnight-events.log"
-
-    # (g) PYTHONPATH pointing to real repo so cortex_command.overnight.* imports resolve
     env = os.environ.copy()
-    env["REPO_ROOT"] = str(repo)
     env["HOME"] = str(tmp_path)
-    env["PYTHONPATH"] = str(REAL_REPO_ROOT)
-    # Put mock claude binary first in PATH
     env["PATH"] = str(mock_bin) + os.pathsep + env.get("PATH", "")
-    # Ensure TMPDIR is set (macOS may use /var/folders/...)
     env.setdefault("TMPDIR", str(tmp_path / "tmp"))
     (tmp_path / "tmp").mkdir(exist_ok=True)
-    # lifecycle/sessions/ directory for symlink creation
-    (repo / "lifecycle" / "sessions").mkdir(parents=True, exist_ok=True)
 
     yield {
         "env": env,
-        "state_path": str(state_path),
+        "state_path": state_path,
         "events_path": events_path,
         "session_dir": session_dir,
+        "active_session_path": active_session_path,
+        "backlog_dir": backlog_dir,
+        "repo": repo,
         "proc_args": [
-            "bash", str(RUNNER_SH),
+            "cortex", "overnight", "start",
             "--state", str(state_path),
+            "--time-limit", "3600",
             "--max-rounds", "1",
+            "--tier", "simple",
         ],
     }
 
@@ -135,9 +155,10 @@ def _poll_for_event(events_path: Path, event_type: str, timeout: float = 15.0) -
 
 
 def _find_event(events_path: Path, event_type: str) -> dict | None:
-    """Return the first event matching event_type, or None."""
+    """Return the last event matching event_type, or None."""
     if not events_path.exists():
         return None
+    found: dict | None = None
     for line in events_path.read_text().splitlines():
         line = line.strip()
         if not line:
@@ -145,49 +166,67 @@ def _find_event(events_path: Path, event_type: str) -> dict | None:
         try:
             evt = json.loads(line)
             if evt.get("event") == event_type:
-                return evt
+                found = evt
         except json.JSONDecodeError:
             continue
-    return None
+    return found
 
 
 def test_sighup_triggers_cleanup(runner_env: dict):
-    """Start runner.sh, send SIGHUP, verify cleanup ran correctly."""
+    """Send SIGHUP to ``cortex overnight start``; verify R14 cleanup behavior."""
+    overall_deadline = time.monotonic() + 30.0
+
     proc = subprocess.Popen(
         runner_env["proc_args"],
         env=runner_env["env"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        # Start in its own process group so we can signal it cleanly
+        cwd=str(runner_env["repo"]),
+        # Own process group so we can signal it cleanly.
         preexec_fn=os.setsid,
     )
 
     try:
-        # Poll for session_start event — confirms trap is registered
-        found = _poll_for_event(runner_env["events_path"], "session_start", timeout=15.0)
+        # Wait for session_start — confirms signal handlers are installed
+        # and the runner is inside the round loop.
+        remaining = max(1.0, overall_deadline - time.monotonic())
+        found = _poll_for_event(
+            runner_env["events_path"],
+            "session_start",
+            timeout=min(15.0, remaining),
+        )
         assert found, (
-            "session_start event never appeared in events log — "
-            "runner.sh may have failed during setup"
+            "session_start event never appeared — cortex overnight start "
+            "may have failed during setup"
         )
 
-        # Send SIGHUP to the runner process
         os.kill(proc.pid, signal.SIGHUP)
 
-        # Wait for process to exit (cleanup should complete within 10 seconds)
+        # Cleanup should complete well within the remaining budget.
+        remaining = max(1.0, overall_deadline - time.monotonic())
         try:
-            proc.wait(timeout=10)
+            proc.wait(timeout=min(10.0, remaining))
         except subprocess.TimeoutExpired:
-            # Safety net — kill if hung
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
             proc.wait(timeout=5)
-            pytest.fail("runner.sh did not exit within 10 seconds after SIGHUP")
+            pytest.fail(
+                "cortex overnight start did not exit within 10s after SIGHUP"
+            )
 
-        # Assert exit code 130
-        assert proc.returncode == 130, (
-            f"Expected exit code 130, got {proc.returncode}"
+        # (a) Exit code: SIGHUP canonical signal-death code is 129
+        # (128 + SIGHUP=1) under shell convention. Python's
+        # ``subprocess.Popen.returncode`` reports killed-by-signal-N as
+        # ``-N`` — so for SIGHUP (signum=1) the expected value is ``-1``.
+        # The spec prose at R14.5 says "130" but that is SIGINT's code;
+        # cleanup replays the actual signal received (here SIGHUP), so
+        # the signal-death code is 129 / ``-1``. See module docstring
+        # for the discrepancy note.
+        assert proc.returncode == -signal.SIGHUP, (
+            f"Expected returncode == -SIGHUP ({-signal.SIGHUP}) "
+            f"(shell convention 129), got {proc.returncode}"
         )
 
-        # Assert circuit_breaker event with reason: signal
+        # (b) Last circuit_breaker event has reason: signal.
         cb_event = _find_event(runner_env["events_path"], "circuit_breaker")
         assert cb_event is not None, (
             "circuit_breaker event not found in events log after SIGHUP"
@@ -197,8 +236,34 @@ def test_sighup_triggers_cleanup(runner_env: dict):
             f"Expected circuit_breaker reason='signal', got {details!r}"
         )
 
+        # (c) active-session.json exists with phase=="paused".
+        active_path = runner_env["active_session_path"]
+        assert active_path.exists(), (
+            f"active-session.json should be retained (not cleared) on "
+            f"signal-driven pause; expected at {active_path}"
+        )
+        active = json.loads(active_path.read_text(encoding="utf-8"))
+        assert active.get("phase") == "paused", (
+            f"Expected active-session phase='paused', got {active.get('phase')!r}"
+        )
+
+        # (d) No half-written backlog files. The cleanup path invokes
+        # report.create_followup_backlog_items; we assert no .md files
+        # were written for this session (empty fixture has no deferred
+        # questions to promote).
+        backlog_entries = list(runner_env["backlog_dir"].iterdir())
+        assert backlog_entries == [], (
+            f"Expected empty backlog directory after signal cleanup; "
+            f"found {[p.name for p in backlog_entries]}"
+        )
+
+        # (e) Wall-clock budget check.
+        assert time.monotonic() < overall_deadline, (
+            "test exceeded 30-second wall-clock budget"
+        )
+
     finally:
-        # Safety net: ensure process is dead
+        # Safety net: ensure process is dead.
         if proc.poll() is None:
             try:
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
