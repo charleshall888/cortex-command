@@ -42,7 +42,7 @@ Ideation research for topics not ready for implementation. Investigates the prob
 ---
 
 ### research
-Parallel research orchestrator for pre-implementation investigation. Dispatches 3–5 agents across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/research` or invoked automatically by `/refine` and `/lifecycle`.
+Parallel research orchestrator for pre-implementation investigation. Dispatches 3–5 agents across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex:research` or invoked automatically by `/cortex:refine` and `/cortex:lifecycle`.
 
 [skills/research/SKILL.md](../skills/research/SKILL.md)
 
@@ -56,19 +56,19 @@ Manage project backlog items as individual markdown files with YAML frontmatter.
 ---
 
 ### overnight
-Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the bash runner for unattended execution. Requires features to already have research and spec artifacts produced by `/refine` or `/lifecycle`.
+Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the bash runner for unattended execution. Requires features to already have research and spec artifacts produced by `/cortex:refine` or `/cortex:lifecycle`.
 
 [skills/overnight/SKILL.md](../skills/overnight/SKILL.md)
 
 ---
 
-### Choosing between `/dev`, `/lifecycle`, and `/overnight`
+### Choosing between `/cortex:dev`, `/cortex:lifecycle`, and `/overnight`
 
 These three skills overlap and route to each other — here is when to use each:
 
-- **`/dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/lifecycle`, `/overnight`, `/discovery`, or direct implementation. Start here if you do not already know which workflow you need.
-- **`/lifecycle`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete). It is a structured, interactive state machine for a single feature. `/dev` routes non-trivial single features here automatically.
-- **`/overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/refine` or `/lifecycle`) and you want autonomous unattended execution. It handles plan approval and hands off to the bash runner; no interactive research or spec phases occur. `/dev` recommends this when all backlog children are refined.
+- **`/cortex:dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/cortex:lifecycle`, `/overnight`, `/cortex:discovery`, or direct implementation. Start here if you do not already know which workflow you need.
+- **`/cortex:lifecycle`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete). It is a structured, interactive state machine for a single feature. `/cortex:dev` routes non-trivial single features here automatically.
+- **`/overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/cortex:refine` or `/cortex:lifecycle`) and you want autonomous unattended execution. It handles plan approval and hands off to the bash runner; no interactive research or spec phases occur. `/cortex:dev` recommends this when all backlog children are refined.
 
 ---
 
@@ -114,7 +114,7 @@ Gather and document project-level and feature-area requirements through structur
 ## Session Management
 
 ### fresh
-Capture the current session state as a resume prompt you can paste into a fresh context window. Reads the conversation, identifies ephemeral context not captured in files, and outputs a ready-to-paste prompt. Also runs `/retro` first for human-initiated sessions.
+Capture the current session state as a resume prompt you can paste into a fresh context window. Reads the conversation, identifies ephemeral context not captured in files, and outputs a ready-to-paste prompt. Also runs `/cortex:retro` first for human-initiated sessions.
 
 [skills/fresh/SKILL.md](../skills/fresh/SKILL.md)
 
@@ -128,7 +128,7 @@ Write a dated problem-only log for the current session. Captures user correction
 ---
 
 ### evolve
-Identify recurring problems across retro logs and route each trend to the appropriate skill for investigation or resolution. Clusters problems that appear in two or more retros into trends, classifies each with a proposed route (`/discovery`, `/lifecycle`, `/backlog add`, or direct edit), and dispatches only after explicit user approval.
+Identify recurring problems across retro logs and route each trend to the appropriate skill for investigation or resolution. Clusters problems that appear in two or more retros into trends, classifies each with a proposed route (`/cortex:discovery`, `/cortex:lifecycle`, `/cortex:backlog add`, or direct edit), and dispatches only after explicit user approval.
 
 [skills/evolve/SKILL.md](../skills/evolve/SKILL.md)
 

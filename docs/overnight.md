@@ -24,7 +24,7 @@ For mechanics, state files, recovery, and debugging procedures, see [overnight-o
 
 - [ ] Features in backlog have `status: refined`
 - [ ] Each feature has `research:` and `spec:` frontmatter fields pointing to existing files
-- [ ] `lifecycle/{slug}/spec.md` exists for each feature (run `/refine <item>` to produce it)
+- [ ] `lifecycle/{slug}/spec.md` exists for each feature (run `/cortex:refine <item>` to produce it)
 - [ ] Python venv is set up (`just python-setup` if not done)
 - [ ] Run `/overnight` in Claude Code — review and approve the session plan
 - [ ] (Optional) Launch the [dashboard](dashboard.md) in a separate terminal: `just dashboard`
@@ -104,10 +104,10 @@ prepared before selection. The readiness gate checks four things:
 
 | Requirement | Where it comes from |
 |-------------|-------------------|
-| `status: refined` in backlog frontmatter | Set by `/refine` on spec approval, or manually with `/backlog` |
-| `research:` field in backlog YAML pointing to an existing file | Produced by `/refine` or `/discovery` |
-| `spec:` field in backlog YAML pointing to an existing file | Produced by `/refine` or `/discovery` |
-| `lifecycle/{slug}/spec.md` exists on disk | Produced by `/refine <item>` |
+| `status: refined` in backlog frontmatter | Set by `/cortex:refine` on spec approval, or manually with `/cortex:backlog` |
+| `research:` field in backlog YAML pointing to an existing file | Produced by `/cortex:refine` or `/cortex:discovery` |
+| `spec:` field in backlog YAML pointing to an existing file | Produced by `/cortex:refine` or `/cortex:discovery` |
+| `lifecycle/{slug}/spec.md` exists on disk | Produced by `/cortex:refine <item>` |
 
 A feature that passes all four checks is eligible for overnight selection. Features
 that fail the gate are reported as ineligible with a reason — they don't silently drop.
@@ -115,11 +115,11 @@ that fail the gate are reported as ineligible with a reason — they don't silen
 **The typical prep path:**
 
 ```
-/discovery <topic>          (optional — for topics not yet broken into tickets)
+/cortex:discovery <topic>          (optional — for topics not yet broken into tickets)
     → writes research + spec artifacts
     → creates backlog tickets with research: and spec: frontmatter
 
-/refine <item>              (for each backlog ticket you want to run overnight)
+/cortex:refine <item>              (for each backlog ticket you want to run overnight)
     → Clarify → Research → Spec phases (interactive, ~15 min)
     → produces lifecycle/{slug}/spec.md
     → sets status: refined on the backlog item
@@ -127,15 +127,15 @@ that fail the gate are reported as ineligible with a reason — they don't silen
 /overnight                  → select features, approve plan, launch
 ```
 
-`/refine` is the dedicated prep tool for overnight: it stops at spec, writes `status: refined`,
-and does not proceed to plan or implement. Use `/lifecycle <feature>` instead when you want
+`/cortex:refine` is the dedicated prep tool for overnight: it stops at spec, writes `status: refined`,
+and does not proceed to plan or implement. Use `/cortex:lifecycle <feature>` instead when you want
 the full interactive research-specify-plan-implement flow for a single feature.
 
-See [Interactive Phases Guide](interactive-phases.md) for details on what `/refine` asks
+See [Interactive Phases Guide](interactive-phases.md) for details on what `/cortex:refine` asks
 during each phase and how artifacts flow to the overnight runner.
 
 `plan.md` is generated automatically by the orchestrator on demand — you don't need to
-run `/lifecycle plan` before an overnight session.
+run `/cortex:lifecycle plan` before an overnight session.
 
 ---
 
@@ -259,8 +259,8 @@ The runner scales well — you can queue as many features as you like. There is 
 
 ### What to prepare the night before
 
-- Run `/backlog pick` → `/refine <item>` for each target feature
-- `/refine` runs Clarify → Research → Spec and sets `status: refined` — takes ~15 min per feature
+- Run `/cortex:backlog pick` → `/cortex:refine <item>` for each target feature
+- `/cortex:refine` runs Clarify → Research → Spec and sets `status: refined` — takes ~15 min per feature
 - Verify `lifecycle/{slug}/spec.md` exists: `ls lifecycle/*/spec.md`
 - Run `just overnight-smoke-test` once to verify the toolchain is healthy
 
@@ -299,8 +299,8 @@ required preparation:
 | **Spec needed** | Runs it | Must exist already |
 | **Plan** | Runs it | Auto-generated if missing |
 | **Execution** | Interactive | Bash runner + tmux |
-| **Resume** | `/lifecycle resume` | `/overnight resume` |
-| **Morning close-out** | Manual or `/lifecycle complete` | `/morning-review` |
+| **Resume** | `/cortex:lifecycle resume` | `/overnight resume` |
+| **Morning close-out** | Manual or `/cortex:lifecycle complete` | `/morning-review` |
 
 **Choose overnight when**: You have a backlog of prepared features and want to make
 progress while not at your computer.
