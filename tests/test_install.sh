@@ -52,6 +52,33 @@ fail() {
 	FAIL_COUNT=$((FAIL_COUNT + 1))
 }
 
+# SKIP: increments neither PASS_COUNT nor FAIL_COUNT. Use when a prerequisite
+# tool is missing (e.g., shellcheck on a dev machine). A visible SKIP line
+# preserves signal — the suite is not silently green.
+skip() {
+	echo "SKIP $1: $2"
+}
+
+# ---------------------------------------------------------------------------
+# Test: shellcheck -s sh install.sh
+# Placed FIRST so a bashism (`[[ ]]`, arrays, `local`, `pipefail`, etc.) fails
+# fast rather than surfacing downstream as opaque stub errors. SKIP if
+# shellcheck is not installed so a missing dev dependency is not a silent
+# false-pass; CI must install shellcheck.
+# ---------------------------------------------------------------------------
+if ! command -v shellcheck >/dev/null 2>&1; then
+	skip "install/shellcheck-posix-sh" "shellcheck not installed; install via 'brew install shellcheck'"
+else
+	shellcheck_output=$(shellcheck -s sh "$INSTALL_SH" 2>&1)
+	shellcheck_exit=$?
+	if [[ $shellcheck_exit -eq 0 ]]; then
+		pass "install/shellcheck-posix-sh"
+	else
+		fail "install/shellcheck-posix-sh" \
+			"shellcheck -s sh reported issues (exit=$shellcheck_exit): $shellcheck_output"
+	fi
+fi
+
 # ---------------------------------------------------------------------------
 # Per-test sandbox setup
 # ---------------------------------------------------------------------------

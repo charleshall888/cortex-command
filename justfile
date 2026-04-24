@@ -345,6 +345,7 @@ test:
     }
     run_test "test-pipeline" just test-pipeline
     run_test "test-overnight" just test-overnight
+    run_test "test-install" bash tests/test_install.sh
     run_test "tests" .venv/bin/pytest tests/ -q
     total=$((passed + failed))
     echo ""
