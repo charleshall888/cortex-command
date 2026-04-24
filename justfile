@@ -324,6 +324,13 @@ test-overnight:
     [ -f .venv/bin/pytest ] || { echo "venv not found — run 'just python-setup' first"; exit 1; }
     .venv/bin/pytest cortex_command/overnight/tests/ -q
 
+# Run cortex init tests (requires venv — run 'just python-setup' first)
+test-init:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ -f .venv/bin/pytest ] || { echo "venv not found — run 'just python-setup' first"; exit 1; }
+    .venv/bin/pytest cortex_command/init/tests/ -q
+
 # Run all pipeline and overnight test suites and print aggregate pass/fail summary
 test:
     #!/usr/bin/env bash
@@ -345,6 +352,7 @@ test:
     }
     run_test "test-pipeline" just test-pipeline
     run_test "test-overnight" just test-overnight
+    run_test "test-init" just test-init
     run_test "test-install" bash tests/test_install.sh
     run_test "tests" .venv/bin/pytest tests/ -q
     total=$((passed + failed))
