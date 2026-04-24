@@ -240,6 +240,11 @@ class OvernightState:
             the PR block's body-warning branch fires deterministically in
             --dry-run sessions. Live sessions leave it False and rely on the
             shell variable set during recovery.
+        schema_version: Integer state-file schema version (ticket 115, R10).
+            Defaults to ``1`` for newly constructed sessions. ``load_state``
+            treats absence as ``schema_version = 0`` (legacy pre-115 state
+            files); the next ``save_state`` call upgrades the file in place
+            by emitting the dataclass default of ``1``.
     """
 
     session_id: str = ""
@@ -261,6 +266,7 @@ class OvernightState:
     scheduled_start: Optional[str] = None
     integration_pr_flipped_once: bool = False
     integration_degraded: bool = False
+    schema_version: int = 1
 
     def __post_init__(self) -> None:
         if self.phase not in PHASES:
@@ -391,6 +397,7 @@ def load_state(state_path: Path = DEFAULT_STATE_PATH) -> OvernightState:
         scheduled_start=raw.get("scheduled_start"),
         integration_pr_flipped_once=raw.get("integration_pr_flipped_once", False),
         integration_degraded=raw.get("integration_degraded", False),
+        schema_version=raw.get("schema_version", 0),
     )
 
 
