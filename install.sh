@@ -38,7 +38,7 @@ normalize_repo_url() {
 
 main() {
 	resolved_url=$(normalize_repo_url)
-	log "resolved repo URL: $resolved_url"
+	target=${CORTEX_COMMAND_ROOT:-$HOME/.cortex}
 	if ! command -v just >/dev/null 2>&1; then
 		case "$(uname)" in
 			Darwin)
@@ -51,6 +51,30 @@ main() {
 		exit 1
 	fi
 	command -v uv >/dev/null 2>&1 || install_uv
+	log "resolved repo URL: $resolved_url"
+	log "target path: $target"
+	if [ ! -e "$target" ]; then
+		run git clone --quiet "$resolved_url" "$target"
+	else
+		if [ -d "$target/.git" ]; then
+			existing_origin=$(git -C "$target" remote get-url origin 2>/dev/null || echo "")  # allow-direct
+			if [ "$existing_origin" = "$resolved_url" ]; then
+				dirty=$(git -C "$target" status --porcelain)  # allow-direct
+				if [ -n "$dirty" ]; then
+					log "uncommitted changes in $target; commit or stash before re-installing (or use 'cortex upgrade' after committing)"
+					exit 1
+				fi
+				run git -C "$target" fetch --quiet origin
+				run git -C "$target" pull --ff-only --quiet
+			else
+				log "origin URL mismatch at $target: existing origin '$existing_origin' vs resolved '$resolved_url'; run 'git -C \"$target\" remote set-url origin \"$resolved_url\"' OR 'mv \"$target\" \"$target.old\"' and re-run"
+				exit 1
+			fi
+		else
+			log "refusing to overwrite: $target exists but is not a git repo"
+			exit 1
+		fi
+	fi
 }
 
 main "$@"
