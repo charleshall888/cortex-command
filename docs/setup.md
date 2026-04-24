@@ -60,23 +60,6 @@ This wires per-repo sandbox write paths, creates `.claude/settings.json` entries
 
 ---
 
-## What `just setup` Does
-
-The setup recipe deploys the full agentic layer via symlinks:
-
-| Recipe | What it deploys | Target |
-|--------|----------------|--------|
-| `deploy-bin` | CLI utilities (`jcc`, `count-tokens`, `audit-doc`, `overnight-start`, etc.) | `~/.local/bin/` |
-| `deploy-reference` | Reference docs for conditional loading | `~/.claude/reference/` |
-| `deploy-skills` | All skill directories | `~/.claude/skills/` |
-| `deploy-hooks` | Hook scripts + notification handler | `~/.claude/hooks/`, `~/.claude/notify.sh` |
-| `deploy-config` | Settings (copy), statusline, agent rules | `~/.claude/settings.json` (copy), `~/.claude/statusline.sh`, `~/.claude/rules/` |
-| `python-setup` | Python venv + dependencies | `.venv/` |
-
-If any target already exists and is not a symlink pointing into this repo, the recipe skips it and reports a conflict. Run `/setup-merge` in Claude Code to resolve conflicts interactively.
-
----
-
 ## Symlink Architecture
 
 Config files are symlinked to their system locations. Editing the repo copy changes the active config immediately. This pattern keeps config version-controlled and auditable.
@@ -236,37 +219,22 @@ Claude Code's settings merge is strictly additive: `permissions.allow` arrays co
 
 ### Setup with direnv
 
-1. Copy `~/.claude` to a shadow location: `cp -R ~/.claude ~/.claude-shadow`. Read the symlink warning below before running this.
-2. Remove the host-shared symlinks from the shadow (see the next section for the exact commands).
-3. Write `.envrc` in your repo root:
+1. Copy `~/.claude` to a shadow location: `cp -R ~/.claude ~/.claude-shadow`.
+2. Write `.envrc` in your repo root:
 
    ```
    export CLAUDE_CONFIG_DIR=$HOME/.claude-shadow
    ```
 
-4. Run `direnv allow` once in the repo.
-5. Quit and relaunch Claude Code from the repo. direnv reloads `.envrc` on each `cd`, but Claude Code only reads `CLAUDE_CONFIG_DIR` at launch.
+3. Run `direnv allow` once in the repo.
+4. Quit and relaunch Claude Code from the repo. direnv reloads `.envrc` on each `cd`, but Claude Code only reads `CLAUDE_CONFIG_DIR` at launch.
 
 If you don't use direnv, a shell alias (`alias cc-shadow='CLAUDE_CONFIG_DIR=$HOME/.claude-shadow claude'`) or a `./bin/claude` wrapper script work equivalently.
 
 ### Limitations and foot-guns
 
-**The `cp -R` symlink trap (most severe).** On macOS, four files under `~/.claude/` are symlinks back into your cortex-command repo: `settings.json`, `statusline.sh`, `notify.sh`, and `CLAUDE.md`. `cp -R` preserves symlinks by default, so a naive shadow copy shares those four files with the host — mutating the shadow mutates the host. Immediately after `cp -R`, remove each symlink in the shadow before making any changes:
-
-```
-rm ~/.claude-shadow/settings.json
-rm ~/.claude-shadow/statusline.sh
-rm ~/.claude-shadow/notify.sh
-rm ~/.claude-shadow/CLAUDE.md
-```
-
-Then write a fresh minimal `settings.json` in the shadow (or deliberately re-symlink them to wherever you want). Do not reach for the `-L` flag on `cp` as a shortcut — dereferencing all symlinks produces a frozen snapshot that won't pick up repo updates, which is the wrong default for a living cortex-command install.
-
 **Cortex-command foot-guns.** Each of the following is a known failure mode this pattern surfaces. None of them are managed automatically — treat each as a rule to follow, not a problem the shadow resolves for you:
 
-- **`/setup-merge` hardcodes `~/.claude`**: do not run `/setup-merge` from a shadowed shell — it silently writes to the host scope, bypassing the shadow. Run it from a non-shadowed shell, then re-copy the updated files into your shadow.
-- **`just setup` hardcodes `~/.claude`**: same shape — run `just setup` from a non-shadowed shell, then refresh the shadow with `cp -R --update`.
-- **Notify hook fires from the host literal path**: `claude/settings.json` references `~/.claude/notify.sh` literally in hook commands. Under a shadow, notifications fire from the host path (or fail silently if the host install is missing). Keep a working host install alongside any shadow.
 - **Evolve, auto-memory, audit-doc, and count-tokens walk from host**: these tools fall back to `~/.claude` rather than `$CLAUDE_CONFIG_DIR`. Auto-memory under a shadow writes to the host scope. Treat their output as host-scoped.
 - **Concurrent sessions and scope confusion**: Claude Code's `/context` (an upstream bug) shows the host path even when a shadow is active, so you cannot verify the live scope from inside a session. Run `echo $CLAUDE_CONFIG_DIR` in your shell before launching each session.
 
