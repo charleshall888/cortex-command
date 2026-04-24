@@ -355,7 +355,8 @@
     "blocks": [],
     "blocked_by": [
       "116",
-      "121"
+      "121",
+      "144"
     ],
     "parent": "113",
     "research": null,
@@ -418,6 +419,40 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "ebdcac83-1152-4caa-9aae-7499771961c1",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 144,
+    "title": "Vendor cortex-ui-extras and cortex-pr-review from cortex-command-plugins",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "plugin",
+      "vendor",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install",
+      "plugins"
+    ],
+    "created": "2026-04-24",
+    "updated": "2026-04-24",
+    "blocks": [
+      "122"
+    ],
+    "blocked_by": [],
+    "parent": "113",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/overnight-layer-distribution/research.md",
+    "plan": null,
+    "uuid": "c6fb710e-139a-4eb2-9c36-4ce3a86e990f",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,

@@ -13,9 +13,10 @@
 | 116 | Build MCP control-plane server with versioned runner IPC contract | backlog | high | feature | — | 113 | — |
 | 118 | Ship curl | sh bootstrap installer for cortex-command | in_progress | high | feature | — | 113 | ✓ |
 | 121 | Publish cortex-overnight-integration plugin (overnight skill + runner hooks) | backlog | high | feature | 116 | 113 | — |
-| 122 | Publish plugin marketplace manifest for cortex-command | backlog | high | feature | 116, 121 | 113 | — |
+| 122 | Publish plugin marketplace manifest for cortex-command | backlog | high | feature | 116, 121, 144 | 113 | — |
 | 123 | Lifecycle skill gracefully degrades autonomous-worktree option when runner absent | backlog | high | feature | — | 113 | — |
 | 135 | Shared git index race between parallel Claude sessions causes wrong files to land in commits | backlog | high | bug | — | — | — |
+| 144 | Vendor cortex-ui-extras and cortex-pr-review from cortex-command-plugins | backlog | high | feature | — | 113 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | 85 | 82 | — |
 | 92 | Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1) | backlog | medium | feature | — | 82 | — |
@@ -50,6 +51,7 @@
 - **116** Build MCP control-plane server with versioned runner IPC contract
 - **123** Lifecycle skill gracefully degrades autonomous-worktree option when runner absent
 - **135** Shared git index race between parallel Claude sessions causes wrong files to land in commits
+- **144** Vendor cortex-ui-extras and cortex-pr-review from cortex-command-plugins
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 - **86** Extend output-floors.md with M1 Subagent Disposition section
 - **92** Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)
