@@ -13,7 +13,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Complexity**: simple
 - **Context**: JSON shape per research: `{"name": "cortex-interactive", "description": "...", "author": "..."}`. Name is kebab-case and drives the `/cortex:` slash prefix. Directory `plugins/cortex-interactive/.claude-plugin/` is new. Only `plugin.json` belongs under `.claude-plugin/` — all other components live at sibling paths (`hooks/`, `skills/`, `bin/`) per spec Technical Constraints and research anti-patterns.
 - **Verification**: `jq -r '.name' plugins/cortex-interactive/.claude-plugin/plugin.json` — pass if output is exactly `cortex-interactive` and exit 0 (matches R1 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Inline atomic_write in critical-review
 - **Files**: `skills/critical-review/SKILL.md`
@@ -22,7 +22,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Complexity**: simple
 - **Context**: The import sits inside a heredoc-style `python3 -c "..."` block that writes B-class residue for lifecycle sessions. Inline implementation uses `tempfile.NamedTemporaryFile(dir=<target_dir>, delete=False)` + `os.replace(tmp, final)` to preserve atomic-write semantics (write to temp in the same directory, then atomic rename). Follow the existing call pattern — the snippet already constructs the target path and payload; only the import line and the single `atomic_write(...)` call site are replaced. Keep `sys.path.insert(...)` removed along with the import to avoid dead code.
 - **Verification**: `grep -c "from cortex_command.common import atomic_write" skills/critical-review/SKILL.md` — pass if count = 0 AND `grep -cE "tempfile\\.|os\\.replace" skills/critical-review/SKILL.md` ≥ 1 (matches R3 acceptance after build).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Relocate cross-skill content referenced by refine
 - **Files**: `skills/refine/references/clarify.md` (new), `skills/refine/references/specify.md` (new), `skills/refine/SKILL.md` (edit lines 26, 60, 81, 130)
@@ -31,7 +31,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Complexity**: complex
 - **Context**: Source file `skills/lifecycle/references/clarify.md` has numbered sections §1–§7; copy all sections referenced by refine (confirmed at refine/SKILL.md:26 §1, :60 §2–§7, :81 §6). Source `skills/lifecycle/references/specify.md` has sections §1–§4, all of which refine/SKILL.md:130 pulls in. Produce verbatim copies, not paraphrased summaries. Rewrite pattern example: `Read \`${CLAUDE_SKILL_DIR}/../lifecycle/references/clarify.md\` §1` → `Read \`references/clarify.md\` §1`. Retain section-anchor identifiers so downstream reads still work.
 - **Verification**: `grep -c 'CLAUDE_SKILL_DIR' skills/refine/SKILL.md` — pass if count = 0 AND `test -f skills/refine/references/clarify.md && test -f skills/refine/references/specify.md` — pass if exit 0 (matches R4 source-side acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Rewrite hardcoded ~/.claude/skills paths in lifecycle and discovery references
 - **Files**: `skills/lifecycle/references/clarify.md`, `skills/lifecycle/references/plan.md`, `skills/lifecycle/references/research.md`, `skills/lifecycle/references/specify.md`, `skills/discovery/references/research.md`
@@ -40,7 +40,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Complexity**: simple
 - **Context**: Known line offsets from spec R5: clarify.md:49, plan.md:237, research.md:187, specify.md:145, discovery/references/research.md:130. Each is a single-line read-instruction of the form `Read \`~/.claude/skills/.../references/<file>.md\``. Target rewrite: `Read \`references/<file>.md\`` when the reader is already inside the same skill's tree (lifecycle references reading siblings), or `Read \`<path relative to reader>\`` otherwise. For hook/MCP JSON contexts (if any remain after audit), prefer `${CLAUDE_PLUGIN_ROOT}/skills/<skill>/references/<file>` because JSON substitution is reliable per research.
 - **Verification**: `grep -rn '~/.claude/skills' skills/lifecycle/references/ skills/discovery/references/` — pass if 0 matches (matches R5 source-side acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Replace readlink-based repo-root resolution in evolve
 - **Files**: `skills/evolve/SKILL.md`
@@ -49,7 +49,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Complexity**: simple
 - **Context**: Current pattern (readlink on SKILL.md path → derive repo root) breaks in plugin layouts because the plugin cache is not a symlink into the user's repo. Replacement strategy uses `REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)` (matching the pattern already in `bin/git-sync-rebase.sh:14`, `cortex_command/pipeline/worktree.py`, `pipeline/merge.py`, `pipeline/smoke_test.py`, `skills/critical-review/SKILL.md`), then checks for `skills/evolve/SKILL.md` at the resolved root as the cortex-command-specific marker. Rationale for the marker choice: (a) `.git/ alone` matches any git repo; (b) `backlog/ alone` matches any project with a backlog directory (not uncommon); (c) `skills/evolve/SKILL.md` is load-bearing — it's the file evolve itself is running from and is unique to cortex-command. Preserves the capability the prior readlink pattern provided (subdirectory-safe invocation) while adding robustness against plugin-cache layout and cross-repo invocation.
 - **Verification**: `grep -c 'readlink' skills/evolve/SKILL.md` — pass if count = 0 (matches R6 source-side acceptance) AND `grep -c 'git rev-parse --show-toplevel' skills/evolve/SKILL.md` ≥ 1 (confirms replacement pattern is in place). Interactive/session-dependent: end-to-end manual test of `/cortex:evolve` from both repo-root AND a subdirectory (e.g., `skills/evolve/`) is Task 17.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 6: Rename existing bin utilities with cortex- prefix
 - **Files**: `bin/jcc` → `bin/cortex-jcc`, `bin/count-tokens` → `bin/cortex-count-tokens`, `bin/audit-doc` → `bin/cortex-audit-doc`, `bin/git-sync-rebase.sh` → `bin/cortex-git-sync-rebase`. Also inspect the renamed `cortex-git-sync-rebase` for internal references to `cortex_command/overnight/sync-allowlist.conf` (confirmed in research as repo-relative) — no rewrite required unless the path has drifted.
@@ -58,7 +58,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Complexity**: simple
 - **Context**: Current `bin/` contents: `audit-doc`, `count-tokens`, `git-sync-rebase.sh`, `jcc`, `overnight-schedule`, `overnight-start`, `overnight-status`, `validate-spec`. Only the four named in spec R7 are renamed; the `overnight-*` and `validate-spec` scripts remain untouched (they do not ship in `cortex-interactive` — `overnight-*` is #121 territory, `validate-spec` is CLI-internal). `bin/jcc` is installed as `~/.local/bin/jcc` via an external step — accept the rename as a hard cut per spec "Changes to Existing Behavior" (no compatibility alias).
 - **Verification**: `ls bin/ | grep -cE '^cortex-(jcc|count-tokens|audit-doc|git-sync-rebase)$'` — pass if count = 4 AND `find bin/ -maxdepth 1 -name 'cortex-*' -type f ! -perm -u+x | wc -l` — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 7: Create three cortex-prefixed bin shims for backlog Python utilities
 - **Files**: `bin/cortex-update-item` (new), `bin/cortex-create-backlog-item` (new), `bin/cortex-generate-backlog-index` (new)
@@ -80,7 +80,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
     - `grep -F "import cortex_command.backlog" bin/cortex-generate-backlog-index | wc -l` ≥ 1.
     - `find bin/ -maxdepth 1 -name 'cortex-update-item' -o -name 'cortex-create-backlog-item' -o -name 'cortex-generate-backlog-index' | while read f; do test -x "$f" || echo NOT_EXEC; done | wc -l` — pass if count = 0.
     - `env -u CORTEX_COMMAND_ROOT ./bin/cortex-update-item 2>&1 | grep -c 'cortex-command CLI not found'` — pass if count ≥ 1 (branch (c) triggers without env + no packaged module).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 8: Rewrite bin call sites in top-level skills
 - **Files**:
@@ -99,7 +99,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Complexity**: complex
 - **Context**: Task touches 10 files, exceeding the 5-file soft cap; kept as one task because the change is a mechanical batch-rewrite of the same regex across all call-sites — splitting creates arbitrary seams with no independent verification boundary. Word-boundary regex from spec R9: `(^| |\`|\()(update-item|create-backlog-item|generate-backlog-index|jcc|count-tokens|audit-doc|git-sync-rebase)( |$|"|\`|\))`. Replacement: prepend `cortex-` to the captured utility name, preserving the surrounding delimiter characters. Edit in-place with `sed -i` (BSD sed on macOS requires `sed -i ''`) per hit OR via a small Python helper invoked manually — exact mechanism is implementer's choice, subject to the verification grep returning 0. Do NOT use the scoped namespace rewrite tool (Task 9) for this — that tool targets `/slash:command` boundaries, not bin-name boundaries. Note: `morning-review` and `overnight` are non-shipped skills but their call-sites must still be rewritten because the top-level `bin/` files are being renamed at the source — these skills would break locally if their callers were not updated.
 - **Verification**: `grep -rnE '(^| |\`|\()(update-item|create-backlog-item|generate-backlog-index|jcc|count-tokens|audit-doc|git-sync-rebase)( |$|"|\`|\))' skills/ | wc -l` — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 9: Build scoped namespace rewrite tool and fixture tests
 - **Files**: `scripts/migrate-namespace.py` (new), `tests/test_migrate_namespace.py` (new), `tests/fixtures/migrate_namespace/` (new directory — seeded fixtures for tests)
@@ -130,7 +130,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
         9. Idempotence: run `--mode apply` twice on fixture dir; second run produces zero changes (`--verify` exits 0).
     - Framework: use Python `unittest` or plain assertions per `tests/` convention; pick up with `just test` (existing recipe).
 - **Verification**: `python3 scripts/migrate-namespace.py --help` — exit 0 AND `just test 2>&1 | grep -c 'FAILED\|error'` — pass if count = 0 AND fixture tests execute (evidence: test file count increases by 1 in `just test` output).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 10: Execute namespace migration Part A across 14 shipped skill trees
 - **Files**: `skills/commit/**`, `skills/pr/**`, `skills/lifecycle/**`, `skills/backlog/**`, `skills/requirements/**`, `skills/research/**`, `skills/discovery/**`, `skills/refine/**`, `skills/retro/**`, `skills/dev/**`, `skills/fresh/**`, `skills/diagnose/**`, `skills/evolve/**`, `skills/critical-review/**` (all files under each subtree walked by Task 9's tool)
@@ -139,7 +139,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Complexity**: simple
 - **Context**: Invocation: `python3 scripts/migrate-namespace.py --mode apply --include skills/commit --include skills/pr --include skills/lifecycle --include skills/backlog --include skills/requirements --include skills/research --include skills/discovery --include skills/refine --include skills/retro --include skills/dev --include skills/fresh --include skills/diagnose --include skills/evolve --include skills/critical-review`. Depends on Tasks 2–5 and 8 so the source trees already reflect all other remediation before the namespace sweep — prevents double-edit churn and regex false-positives on temporarily-in-flux content. Task 9's skip rules use directory-prefix matching (not substring) so `skills/research/` is NOT inadvertently skipped by the top-level `research/` skip rule.
 - **Verification**: `grep -rnE '(^| |\x60|\(|\[|,|;|:|")(/commit|/pr|/lifecycle|/backlog|/requirements|/research|/discovery|/refine|/retro|/dev|/fresh|/diagnose|/evolve|/critical-review)( |$|"|\x60|\)|\]|,|;|:|\.)' skills/commit/ skills/pr/ skills/lifecycle/ skills/backlog/ skills/requirements/ skills/research/ skills/discovery/ skills/refine/ skills/retro/ skills/dev/ skills/fresh/ skills/diagnose/ skills/evolve/ skills/critical-review/ | wc -l` — pass if count = 0. Delimiter set matches Task 9's full regex (left: `^`, space, backtick, `(`, `[`, `,`, `;`, `:`, `"`; right: space, `$`, `"`, backtick, `)`, `]`, `,`, `;`, `:`, `.`) so the verification is not strictly narrower than the rewrite surface. Task 9 skip rules (URL patterns, relative-path segments) may produce legitimate residuals that this grep flags — in those cases the residual is a correctly-unrewritten string like a URL or relative path, and must be manually confirmed to be a skip-rule match. If genuine residuals remain that SHOULD be rewritten, fix by re-running the tool (likely a Task 9 bug) rather than grep-narrowing here.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 11: Execute namespace migration Part B across live documentation, hooks, and tests
 - **Files**: `docs/**`, `CLAUDE.md`, `README.md`, `justfile`, `pyproject.toml`, `hooks/**`, `claude/hooks/**`, `tests/**` (walked by Task 9's tool with skip-list applied)
@@ -150,7 +150,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Verification** (all must pass):
     - Completeness: `for skill in commit pr lifecycle backlog requirements research discovery refine retro dev fresh diagnose evolve critical-review; do grep -rnE "(^| |\`|\(|\[|,|;|:)/$skill( |\$|\"|\`|\)|\]|,|;|:)" docs/ CLAUDE.md README.md justfile pyproject.toml hooks/ claude/hooks/ tests/ 2>/dev/null; done | wc -l` — pass if count = 0 (matches R11(a)).
     - Idempotence: `python3 scripts/migrate-namespace.py --verify --include docs --include CLAUDE.md --include README.md --include justfile --include pyproject.toml --include hooks --include claude/hooks --include tests` — pass if exit 0 (matches R11(b)).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 12: Implement `just build-plugin` recipe
 - **Files**: `justfile` (append `build-plugin` recipe)
@@ -169,7 +169,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
     - `just --list | grep -c 'build-plugin'` ≥ 1 (recipe registered).
     - After running `just build-plugin` twice in succession with no source edits between runs: `git status --porcelain plugins/cortex-interactive/` — pass if output is empty (matches R13 idempotence). This verification runs after Task 14 seeds the plugin directory; Task 12 alone is checked only for recipe presence via the `just --list` probe.
     - `plugins/cortex-interactive/hooks/cortex-validate-commit.sh` is treated as build-output: after an edit to top-level `hooks/cortex-validate-commit.sh`, running `just build-plugin` propagates the edit into the plugin tree (verified during Task 15's drift test).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 13: Hand-author plugin hooks manifest
 - **Files**: `plugins/cortex-interactive/hooks/hooks.json` (new)
@@ -186,7 +186,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
     - `jq -r '.hooks | values[] | .[] | .hooks[] | .command' plugins/cortex-interactive/hooks/hooks.json | grep -c 'cortex-validate-commit.sh'` ≥ 1.
     - `grep -cE '/Users/|/home/' hooks/cortex-validate-commit.sh` — pass if count = 0 (no repo-absolute paths at the source).
     - `test -x plugins/cortex-interactive/hooks/cortex-validate-commit.sh` — pass if exit 0 (the script is produced by Task 12's build and this verification runs after Task 14).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 14: Run build and commit plugin artifacts
 - **Files**: `plugins/cortex-interactive/skills/**` (generated — 14 skill subtrees), `plugins/cortex-interactive/bin/**` (generated — 7 cortex-prefixed utilities)
@@ -202,7 +202,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
     - R12: `test ! -d plugins/cortex-interactive/skills/morning-review` — exit 0.
     - R15: `find plugins/cortex-interactive/ -name 'settings*.json' | wc -l` = 0.
     - R13 idempotence: immediately after commit, run `just build-plugin` again; `git status --porcelain plugins/cortex-interactive/` — pass if output empty.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 15: Add dual-source drift enforcement via pre-commit hook
 - **Files**: `.githooks/pre-commit` (new, executable), `justfile` (append `setup-githooks` recipe), `tests/test_drift_enforcement.sh` (new test), `CLAUDE.md` (add one-line pointer to `just setup-githooks` in the Conventions section)
@@ -223,7 +223,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
     - `just --list | grep -c 'setup-githooks'` ≥ 1.
     - R16(a) (clean state pass): after `just setup-githooks && just build-plugin`, run `.githooks/pre-commit` → exit 0.
     - R16(b) (drift state fail): `bash tests/test_drift_enforcement.sh` — exit 0 (both subtests pass iff the hook detects drift in both skills/ and hooks/ surfaces; test restores repo afterward).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 16: Rewrite backlog/121 to commit morning-review inclusion and de-conditional critical-review
 - **Files**: `backlog/121-cortex-overnight-integration-plugin.md`, `backlog/index.md`
@@ -234,7 +234,7 @@ Ship the `cortex-interactive` Claude Code plugin by (a) remediating source-tree 
 - **Verification** (all must pass):
     - `grep -cE 'if the codebase check.*morning-review|morning-review.*if.*import' backlog/121-cortex-overnight-integration-plugin.md` — pass if count = 0 (matches R12 acceptance).
     - `grep -cE '(ships|includes|includes the following skills).*morning-review|morning-review.*(ships|included)' backlog/121-cortex-overnight-integration-plugin.md` — pass if count ≥ 1 (matches R12 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 17: Plugin-install smoke test (interactive)
 - **Files**: none (operational check against the committed plugin tree)

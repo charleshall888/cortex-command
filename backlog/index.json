@@ -286,48 +286,17 @@
       "install"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-23",
+    "updated": "2026-04-24",
     "blocks": [],
     "blocked_by": [],
     "parent": "113",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/ship-curl-sh-bootstrap-installer-for-cortex-command/spec.md",
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "db742018-cb3e-488d-8084-688cd575e241",
     "lifecycle_slug": "ship-curl-sh-bootstrap-installer-for-cortex-command",
-    "session_id": "c8ea5b34-a9e2-4603-b56d-25daa47143f3",
-    "lifecycle_phase": "research",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 120,
-    "title": "Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities)",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "plugin",
-      "skills",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-23",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "4d7e4c7d-fbd9-41ad-8df9-205c55ffe429",
-    "lifecycle_slug": "publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities",
-    "session_id": "4154e3b3-6da9-4274-8053-e1113a05263c",
+    "session_id": "37184ff2-e25d-4c76-80bd-3d42c986e6d3",
     "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
@@ -352,8 +321,7 @@
     "updated": "2026-04-24",
     "blocks": [],
     "blocked_by": [
-      "116",
-      "120"
+      "116"
     ],
     "parent": "113",
     "research": null,
@@ -387,7 +355,6 @@
     "blocks": [],
     "blocked_by": [
       "116",
-      "120",
       "121"
     ],
     "parent": "113",
@@ -418,11 +385,9 @@
       "skills"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-21",
+    "updated": "2026-04-24",
     "blocks": [],
-    "blocked_by": [
-      "120"
-    ],
+    "blocked_by": [],
     "parent": "113",
     "research": null,
     "spec": null,
@@ -762,7 +727,7 @@
   {
     "id": 119,
     "title": "Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements",
-    "status": "refined",
+    "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -785,8 +750,8 @@
     "plan": null,
     "uuid": "e2f12538-0606-44ca-a64c-9677389083af",
     "lifecycle_slug": "add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements",
-    "session_id": "69d6f350-d5a4-4bf6-9a39-abb21ac04cbd",
-    "lifecycle_phase": "plan",
+    "session_id": "a174c46d-70e2-4ba1-a0e1-daa07a019e23",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

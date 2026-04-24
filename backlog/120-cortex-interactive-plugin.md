@@ -2,20 +2,23 @@
 schema_version: "1"
 uuid: 4d7e4c7d-fbd9-41ad-8df9-205c55ffe429
 title: "Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities)"
-status: in_progress
+status: complete
 priority: high
 type: feature
 parent: 113
 tags: [distribution, plugin, skills, overnight-layer-distribution]
-areas: [skills]
+areas: [skills,hooks]
 created: 2026-04-21
-updated: 2026-04-23
+updated: 2026-04-24
 lifecycle_slug: publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities
-lifecycle_phase: research
-session_id: 4154e3b3-6da9-4274-8053-e1113a05263c
+lifecycle_phase: complete
+session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities/spec.md
 ---
 
 # Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities)
