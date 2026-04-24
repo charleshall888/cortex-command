@@ -75,7 +75,7 @@ URL_MARKERS = ("://", "github.com/", "gitlab.com/", "bitbucket.org/")
 # Path components that trigger a full-file skip.
 # ``research`` is matched only as the TOP-LEVEL component (parts[0]) so that
 # ``skills/research/`` — the shipped ``research`` skill — is not skipped.
-SKIP_ANY_COMPONENTS = ("retros",)
+SKIP_ANY_COMPONENTS = ("retros", "migrate_namespace")
 
 
 def build_pattern(skill_names: tuple[str, ...]) -> re.Pattern[str]:
@@ -154,6 +154,9 @@ def path_should_skip(path: Path, include_roots: list[Path]) -> bool:
                 return True
             if len(parts) >= 3 and parts[-1] == "events.log":
                 return True
+
+        if parts[-1] == "test_migrate_namespace.py":
+            return True
 
     return False
 

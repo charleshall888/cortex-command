@@ -24,7 +24,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SYNC_REBASE_SH = REPO_ROOT / "bin" / "git-sync-rebase.sh"
+SYNC_REBASE_SH = REPO_ROOT / "bin" / "cortex-git-sync-rebase"
 SYNC_ALLOWLIST = REPO_ROOT / "cortex_command" / "overnight" / "sync-allowlist.conf"
 
 
