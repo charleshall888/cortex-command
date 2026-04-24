@@ -13,6 +13,8 @@ from __future__ import annotations
 import argparse
 import sys
 
+from cortex_command.init.handler import main as init_main
+
 
 EPILOG = """\
 Notes:
@@ -269,7 +271,28 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Initialize Cortex scaffolding in a project",
         description="Create the directory layout and starter files needed for Cortex Command.",
     )
-    init.set_defaults(func=_make_stub("init"))
+    init.add_argument(
+        "--path",
+        default=None,
+        help="Target repo root (defaults to CWD)",
+    )
+    init_verbs = init.add_mutually_exclusive_group()
+    init_verbs.add_argument(
+        "--update",
+        action="store_true",
+        help="Refresh managed files in an already-initialized repo",
+    )
+    init_verbs.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite managed files, including local edits",
+    )
+    init_verbs.add_argument(
+        "--unregister",
+        action="store_true",
+        help="Remove the repo from the Cortex registry without modifying files",
+    )
+    init.set_defaults(func=init_main)
 
     upgrade = subparsers.add_parser(
         "upgrade",
