@@ -24,7 +24,8 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - The morning report commit is the only runner commit that stays on local `main` (needed before PR merge for morning review to read)
   - Budget exhaustion transitions the session to `paused` without aborting in-flight features
   - Home-repo integration PR is always created (home-repo is an always-participant); cross-repo PRs are opt-in per-feature and skip when the repo contributed zero merges. On zero-merge home-repo sessions the PR is opened as a draft with a `[ZERO PROGRESS]` title prefix to block accidental merge; `integration_pr_flipped_once` (session-scoped marker in `overnight-state.json`) gates the resume-flow state-flip so the runner defers to human action after the first flip or a persistent `gh pr ready` failure
-  - `runner.sh --dry-run` is a supported test-affordance mode that echoes (instead of executing) PR-side-effect calls (`gh pr create`, `gh pr ready`, `git push`, `notify.sh`) and assertable state writes; it rejects invocation when any feature is still pending. Regression coverage lives in `tests/test_runner_pr_gating.py`
+  - `cortex overnight start --dry-run` is a supported test-affordance mode that echoes (instead of executing) PR-side-effect calls (`gh pr create`, `gh pr ready`, `git push`, `notify.sh`) and assertable state writes; it rejects invocation when any feature is still pending. Regression coverage lives in `tests/test_runner_pr_gating.py`, including a byte-identical stdout snapshot against `tests/fixtures/dry_run_reference.txt` that catches format drift (full-line equality, not substring).
+  - The overnight runner ships as a `cortex overnight {start|status|cancel|logs}` Python CLI; the legacy `runner.sh` bash entry and `bin/overnight-{start,status}` shims are retired. `cortex overnight cancel` validates session-ids against `^[a-zA-Z0-9._-]{1,128}$` + realpath containment before any filesystem access, and verifies the per-session `runner.pid` (magic + `schema_version ≥ 1` + psutil `create_time` within ±2s of the recorded `start_time`) before signalling. When `~/.claude/notify.sh` is absent, notifications fall back to stderr with a `NOTIFY:` prefix so stdout remains clean as the orchestrator agent's input channel.
 - **Priority**: must-have
 
 ### Feature Execution and Failure Handling
@@ -147,6 +148,8 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - `bin/git-sync-rebase.sh` — post-merge sync script (deployed to `~/.local/bin/`)
 - Multi-agent orchestration (see `requirements/multi-agent.md`) — agent spawning, worktrees, model selection
 - Smoke test gate (`cortex_command/overnight/smoke_test.py`) — post-merge verification
+- `lifecycle/sessions/{session_id}/runner.pid` — per-session IPC contract (JSON `{schema_version, magic, pid, pgid, start_time, session_id, session_dir, repo_path}`, mode 0o600, atomic write). Cleared on clean shutdown; cancel verifies magic + start_time (±2s via psutil) before signalling to close the PID-reuse race. Stable contract for ticket 116 MCP control plane.
+- `~/.local/share/overnight-sessions/active-session.json` — host-global active-session pointer sharing the `runner.pid` schema plus a `phase: "planning|executing|paused|complete"` field. Retained on `paused` transition (preserves dashboard/statusline visibility); cleared on `complete`.
 
 ## Edge Cases
 

@@ -113,3 +113,38 @@
   feature: rebuild-overnight-runner-under-cortex-cli
   from: plan
   to: implement
+{"ts": "2026-04-24T17:15:00Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": 0, "tasks": [1, 3, 4, 5]}
+{"ts": "2026-04-24T17:22:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-24T17:22:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 3, "batch": 0, "status": "success"}
+{"ts": "2026-04-24T17:22:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 4, "batch": 0, "status": "success"}
+{"ts": "2026-04-24T17:22:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 5, "batch": 0, "status": "success"}
+{"ts": "2026-04-24T17:30:00Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": 1, "tasks": [2, 10]}
+{"ts": "2026-04-24T17:40:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-24T17:40:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 10, "batch": 1, "status": "success"}
+{"ts": "2026-04-24T17:42:00Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": 2, "tasks": [6]}
+{"ts": "2026-04-24T17:50:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": "6a", "batch": 2, "status": "success"}
+{"ts": "2026-04-24T17:50:30Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": 3, "tasks": ["6b", 9]}
+{"ts": "2026-04-24T18:00:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": "6b", "batch": 3, "status": "success"}
+{"ts": "2026-04-24T18:00:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 9, "batch": 3, "status": "success"}
+{"ts": "2026-04-24T18:05:00Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": 4, "tasks": [7, 13, 14]}
+{"ts": "2026-04-24T18:20:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 7, "batch": 4, "status": "success"}
+{"ts": "2026-04-24T18:20:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 13, "batch": 4, "status": "success"}
+{"ts": "2026-04-24T18:20:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 14, "batch": 4, "status": "success"}
+{"ts": "2026-04-24T18:20:30Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": 5, "tasks": [8, 11, 12]}
+{"ts": "2026-04-24T18:40:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 8, "batch": 5, "status": "success"}
+{"ts": "2026-04-24T18:40:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 11, "batch": 5, "status": "success"}
+{"ts": "2026-04-24T18:40:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 12, "batch": 5, "status": "partial", "note": "structural port complete; 13/14 pytest failures due to missing post-loop PR-gating port in runner.py — plan gap, blocks Task 15"}
+{"ts": "2026-04-24T18:50:00Z", "event": "plan_amendment", "feature": "rebuild-overnight-runner-under-cortex-cli", "amendment": "add_task_6c", "rationale": "Task 6b scope miss: post-loop PR-gating/morning-report/worktree-commit (runner.sh:851-1694) left in bash, but spec R15/R16 + Edge Cases mandate preservation and spec Priority line forbids partial-ship. Blocks Task 12 retry and Task 15."}
+{"ts": "2026-04-24T18:51:00Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": "5a", "tasks": ["6c"]}
+{"ts": "2026-04-24T19:10:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": "6c", "batch": "5a", "status": "success"}
+{"ts": "2026-04-24T19:10:30Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": "5b", "tasks": ["12b"]}
+{"ts": "2026-04-24T19:20:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": "12b", "batch": "5b", "status": "success"}
+{"ts": "2026-04-24T19:21:00Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": 6, "tasks": [15]}
+{"ts": "2026-04-24T19:35:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 15, "batch": 6, "status": "success"}
+{"ts": "2026-04-24T19:35:30Z", "event": "batch_dispatch", "feature": "rebuild-overnight-runner-under-cortex-cli", "batch": 7, "tasks": [16]}
+{"ts": "2026-04-24T19:45:00Z", "event": "task_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "task": 16, "batch": 7, "status": "success"}
+{"ts": "2026-04-24T19:48:00Z", "event": "phase_transition", "feature": "rebuild-overnight-runner-under-cortex-cli", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-24T20:00:00Z", "event": "review_verdict", "feature": "rebuild-overnight-runner-under-cortex-cli", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-04-24T20:02:00Z", "event": "requirements_updated", "feature": "rebuild-overnight-runner-under-cortex-cli", "file": "requirements/pipeline.md", "section": "Session Orchestration + Dependencies", "content": "Added cortex overnight CLI surface, byte-identical DRY-RUN contract, NOTIFY stderr fallback, runner.pid schema, active-session.json pointer"}
+{"ts": "2026-04-24T20:02:30Z", "event": "phase_transition", "feature": "rebuild-overnight-runner-under-cortex-cli", "from": "review", "to": "complete"}
+{"ts": "2026-04-24T20:10:00Z", "event": "feature_complete", "feature": "rebuild-overnight-runner-under-cortex-cli", "tasks_total": 17, "rework_cycles": 1}

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: e8311326-418f-47db-b3f4-852efc3ef192
 title: "Rebuild overnight runner under cortex CLI"
-status: in_progress
+status: complete
 priority: high
 type: feature
 parent: 113
@@ -12,7 +12,7 @@ created: 2026-04-21
 updated: 2026-04-24
 lifecycle_slug: rebuild-overnight-runner-under-cortex-cli
 lifecycle_phase: implement
-session_id: c5e303b4-d8eb-4506-9387-f750e39619b7
+session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
