@@ -276,7 +276,7 @@ Read **only** the reference for the current phase. Do not preload other phases.
 
 ## Phase Transition
 
-After completing a phase artifact, announce the transition and proceed to the next phase automatically. Between phases, include these minimum fields in the transition summary (see `~/.claude/reference/output-floors.md` for expanded definitions — when loaded, the reference doc supersedes these inline names):
+After completing a phase artifact, announce the transition and proceed to the next phase automatically. Between phases, include these minimum fields in the transition summary:
 
 - **Decisions**: Key decisions made during this phase (or "None")
 - **Scope delta**: Changes to scope, approach, or plan since last phase (or "None")

@@ -71,7 +71,7 @@ If the project has existing source code, launch a focused codebase exploration t
 - Existing features and capabilities already built
 - Architecture patterns, conventions, and technology choices already made
 - README, docs, or any existing requirements/spec/design files
-- CLAUDE.md/Agents.md or equivalent project instructions — understand what operational context is already documented so the interview and artifact avoid duplicating it
+- CLAUDE.md or equivalent project instructions — understand what operational context is already documented so the interview and artifact avoid duplicating it
 
 **For existing codebases** (retroactive documentation): Mine the code for what's already been decided. The codebase IS the current requirements — extract them rather than asking the user to re-state what the code already shows. Focus the interview on intent, priorities, and boundaries the code can't tell you.
 

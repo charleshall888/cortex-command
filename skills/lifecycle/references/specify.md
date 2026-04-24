@@ -154,7 +154,7 @@ After orchestrator review passes, check `lifecycle/{feature}/events.log` for the
 
 ### 4. User Approval
 
-Present the specification summary and use the AskUserQuestion tool to collect approval — not as plain markdown text. The summary must include these approval surface fields (see `~/.claude/reference/output-floors.md` for expanded definitions):
+Present the specification summary and use the AskUserQuestion tool to collect approval — not as plain markdown text. The summary must include these approval surface fields:
 
 - **Produced** (one-line summary of the artifact)
 - **Value** (what problem this solves and why it's worth building now — flag weak value cases explicitly)

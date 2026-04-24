@@ -304,7 +304,7 @@ Based on the session phase, ask the user what to do:
 
 ## Status Flow (`/overnight status`)
 
-Run `overnight-status` (the deployed script) and present its output to the user. If the command is not found, instruct the user to run `just deploy-bin` first.
+Run `overnight-status` (the deployed script) and present its output to the user. If the command is not found, instruct the user to install the `cortex-interactive` plugin.
 
 ## Success Criteria
 
