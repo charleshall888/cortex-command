@@ -11,7 +11,7 @@
 | 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | — |
 | 113 | Distribute cortex-command as cortex CLI + plugin marketplace | backlog | high | epic | — | — | — |
 | 116 | Build MCP control-plane server with versioned runner IPC contract | backlog | high | feature | — | 113 | — |
-| 118 | Ship curl | sh bootstrap installer for cortex-command | refined | high | feature | — | 113 | ✓ |
+| 118 | Ship curl | sh bootstrap installer for cortex-command | in_progress | high | feature | — | 113 | ✓ |
 | 120 | Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities) | refined | high | feature | — | 113 | ✓ |
 | 121 | Publish cortex-overnight-integration plugin (overnight skill + runner hooks) | backlog | high | feature | 116, 120 | 113 | — |
 | 122 | Publish plugin marketplace manifest for cortex-command | backlog | high | feature | 116, 120, 121 | 113 | — |
@@ -35,12 +35,10 @@
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
 | 125 | Homebrew tap as thin wrapper around the curl installer | backlog | low | feature | 118 | 113 | — |
 | 133 | Evaluate implement.md:180 progress-tail narration under Opus 4.7 | backlog | low | feature | — | 82 | — |
-| 143 | Justfile overnight-run defaults drift against cortex CLI | backlog | low | feature | — | — | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
 
 ## Refined
 
-- **118** Ship curl | sh bootstrap installer for cortex-command
 - **120** Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities)
 
 ## Backlog
@@ -61,10 +59,10 @@
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
 - **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release
 - **133** Evaluate implement.md:180 progress-tail narration under Opus 4.7
-- **143** Justfile overnight-run defaults drift against cortex CLI
 - **142** Multi-session host concurrency registry for cortex overnight
 
 ## In-Progress
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
+- **118** Ship curl | sh bootstrap installer for cortex-command (in_progress)
 - **119** Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements (in_progress)

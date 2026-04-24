@@ -274,7 +274,7 @@
   {
     "id": 118,
     "title": "Ship curl | sh bootstrap installer for cortex-command",
-    "status": "refined",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -296,7 +296,7 @@
     "plan": null,
     "uuid": "db742018-cb3e-488d-8084-688cd575e241",
     "lifecycle_slug": "ship-curl-sh-bootstrap-installer-for-cortex-command",
-    "session_id": "c8ea5b34-a9e2-4603-b56d-25daa47143f3",
+    "session_id": "37184ff2-e25d-4c76-80bd-3d42c986e6d3",
     "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
@@ -994,33 +994,6 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "daf2f648-6cf3-4322-9971-a7cee01cce6f",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 143,
-    "title": "Justfile overnight-run defaults drift against cortex CLI",
-    "status": "backlog",
-    "priority": "low",
-    "type": "feature",
-    "tags": [
-      "overnight-runner",
-      "dx"
-    ],
-    "areas": [],
-    "created": "2026-04-24",
-    "updated": "2026-04-24",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "4a15e6ec-937e-4867-9625-c60225a0619e",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,

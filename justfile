@@ -152,15 +152,15 @@ setup-tmux-socket:
 # --- Overnight ---
 
 # Run the overnight round-loop runner
-# Usage: just overnight-run <state-path> <time-limit-hours>  (args are positional)
-overnight-run state="lifecycle/sessions/latest-overnight/overnight-state.json" time-limit="6" max-rounds="10" tier="max_100":
+# Usage: just overnight-run <state-path> <time-limit-seconds>  (args are positional)
+overnight-run state="lifecycle/sessions/latest-overnight/overnight-state.json" time-limit="21600" max-rounds="10" tier="simple":
     #!/usr/bin/env bash
     set -euo pipefail
     STATE="{{ state }}"
     if [[ "$STATE" == --* || "$STATE" == *=* ]]; then
         echo "Error: wrong arg format — use positional syntax:" >&2
-        echo "  just overnight-run <state-path> <time-limit-hours>" >&2
-        echo "  just overnight-run lifecycle/sessions/.../overnight-state.json 6h" >&2
+        echo "  just overnight-run <state-path> <time-limit-seconds>" >&2
+        echo "  just overnight-run lifecycle/sessions/.../overnight-state.json 21600" >&2
         exit 1
     fi
     cortex overnight start --state {{ state }} --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}

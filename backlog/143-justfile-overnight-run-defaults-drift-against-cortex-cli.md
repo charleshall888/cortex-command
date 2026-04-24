@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4a15e6ec-937e-4867-9625-c60225a0619e
 title: "Justfile overnight-run defaults drift against cortex CLI"
-status: backlog
+status: complete
 priority: low
 type: feature
 tags: [overnight-runner, dx]
@@ -10,6 +10,7 @@ created: 2026-04-24
 updated: 2026-04-24
 blocks: []
 blocked-by: []
+session_id: null
 ---
 
 # Justfile overnight-run defaults drift against cortex CLI
