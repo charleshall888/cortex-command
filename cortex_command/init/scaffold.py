@@ -25,6 +25,7 @@ from __future__ import annotations
 import datetime
 import importlib.metadata
 import json
+import os
 import re
 from pathlib import Path
 
@@ -35,6 +36,132 @@ _TEMPLATE_ROOT = Path(__file__).resolve().parent / "templates"
 _MARKER_FILENAME = ".cortex-init"
 _BACKUP_DIR_PATTERN = ".cortex-init-backup/"
 _GITIGNORE_TARGETS = (_MARKER_FILENAME, _BACKUP_DIR_PATTERN)
+
+# Target scaffold paths inspected by the content-aware decline gate (R19).
+# A populated non-marker repo with any of these present fires the gate.
+_CONTENT_DECLINE_TARGETS = (
+    "lifecycle",
+    "backlog",
+    "retros",
+    "requirements",
+    "lifecycle.config.md",
+)
+
+
+class ScaffoldError(Exception):
+    """Raised by pre-flight gates to signal ``cortex init`` should abort.
+
+    The message text is surfaced verbatim on stderr by the handler (Task 9),
+    which also translates the exception into exit code 2.
+    """
+
+
+def check_marker_decline(repo_root: Path) -> None:
+    """R6 gate: refuse to re-initialize a repo that already has ``.cortex-init``.
+
+    Raises:
+        ScaffoldError: if ``repo_root / .cortex-init`` exists.
+    """
+    if (repo_root / _MARKER_FILENAME).exists():
+        raise ScaffoldError(
+            "`cortex init`: repo already initialized. Use `--update` to add "
+            "missing templates or `--force` to overwrite."
+        )
+
+
+def _target_has_content(path: Path) -> bool:
+    """Return True if ``path`` exists and is non-empty (dir) or present (file)."""
+    if not path.exists():
+        return False
+    if path.is_dir():
+        # Any child entry counts as non-empty.
+        return any(path.iterdir())
+    # Regular file (or symlink to one) — presence alone is "content".
+    return True
+
+
+def check_content_decline(repo_root: Path) -> None:
+    """R19 gate: refuse if any target scaffold path exists with content.
+
+    Precondition: caller has already confirmed the ``.cortex-init`` marker is
+    absent (R6 runs first). This gate inspects the five target paths and
+    fires if any one is a non-empty directory or a present file.
+
+    Raises:
+        ScaffoldError: if any target scaffold path exists non-empty.
+    """
+    for rel in _CONTENT_DECLINE_TARGETS:
+        if _target_has_content(repo_root / rel):
+            raise ScaffoldError(
+                "`cortex init`: one or more target paths exist with "
+                "pre-existing content (no `.cortex-init` marker). Run "
+                "`cortex init --update` to add missing templates without "
+                "overwriting, or `cortex init --force` to overwrite with "
+                "backup."
+            )
+
+
+def check_symlink_safety(repo_root: Path) -> str:
+    """R13 gate: refuse if ``lifecycle/sessions/`` resolves outside the repo.
+
+    Returns the canonical sessions path (with trailing slash) that the
+    handler threads into :func:`settings_merge.register` to close the TOCTOU
+    window between pre-flight resolution and a re-resolve at registration
+    time.
+
+    If ``lifecycle/sessions/`` does not yet exist, no resolution is possible;
+    the non-canonical path (still with trailing slash) is returned. Ancestor
+    canonicalization is the handler's responsibility (it calls
+    ``repo_root.resolve()`` before invoking any gate), which makes the
+    non-canonical path consistent with what the future-created directory
+    will resolve to.
+
+    Args:
+        repo_root: Target repo root. Must already be canonicalized by the
+            caller (handler invariant).
+
+    Returns:
+        The canonical sessions-path string with a trailing ``/``.
+
+    Raises:
+        ScaffoldError: if an existing ``lifecycle/sessions`` resolves to a
+            location that is not a subpath of ``repo_root``.
+    """
+    sessions_path = repo_root / "lifecycle" / "sessions"
+
+    # ``Path.exists`` follows symlinks by default and returns False for
+    # dangling links. We want to catch dangling symlinks too, since a
+    # dangling link pointing outside the repo is still a safety concern
+    # (it will resolve on creation). ``lexists`` via ``follow_symlinks=False``
+    # detects the link entry regardless of target validity.
+    try:
+        present = sessions_path.exists(follow_symlinks=False)
+    except TypeError:
+        # Python <3.12 fallback — shouldn't hit (project requires 3.12+),
+        # but guard anyway via os.path.lexists.
+        present = os.path.lexists(sessions_path)
+
+    if not present:
+        return str(sessions_path) + "/"
+
+    sessions_canon = sessions_path.resolve(strict=False)
+    root_canon = repo_root.resolve(strict=False)
+
+    # APFS (macOS) preserves case but compares case-insensitively; ``resolve``
+    # does not normalize case. Normalize both sides before the containment
+    # check so the comparison matches filesystem semantics.
+    sessions_norm = Path(os.path.normcase(str(sessions_canon)))
+    root_norm = Path(os.path.normcase(str(root_canon)))
+
+    # ``is_relative_to`` performs proper subpath containment; ``startswith``
+    # would false-positive (e.g. ``/tmp/repository`` vs ``/tmp/repo``).
+    if not sessions_norm.is_relative_to(root_norm):
+        raise ScaffoldError(
+            "`cortex init`: refusing to proceed — `lifecycle/sessions` "
+            "resolves outside the repo root."
+        )
+
+    return str(sessions_canon) + "/"
 
 # Any line starting with ``.cortex-init`` that is NOT exactly one of the two
 # canonical targets is treated as an orphan-prefix fragment from a prior
