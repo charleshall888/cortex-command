@@ -21,7 +21,24 @@ install_uv() {
 	export PATH
 }
 
+normalize_repo_url() {
+	url="${CORTEX_REPO_URL:-charleshall888/cortex-command}"
+	case "$url" in
+		git@*:*/*)
+			printf '%s\n' "$url"
+			;;
+		ssh://*|https://*|http://*)
+			printf '%s\n' "$url"
+			;;
+		*)
+			printf 'https://github.com/%s.git\n' "$url"
+			;;
+	esac
+}
+
 main() {
+	resolved_url=$(normalize_repo_url)
+	log "resolved repo URL: $resolved_url"
 	if ! command -v just >/dev/null 2>&1; then
 		case "$(uname)" in
 			Darwin)
