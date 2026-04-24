@@ -57,7 +57,7 @@ Call `load_state()` from `cortex_command.overnight.state` (no arguments — uses
 
 Regenerate the backlog index so that feature selection in Step 3 operates on up-to-date metadata.
 
-1. Run `generate-backlog-index` from the project root. If the command exits with a non-zero status, report: "Backlog index regeneration failed (exit {code}). Fix the issue and retry `/overnight`." → halt.
+1. Run `cortex-generate-backlog-index` from the project root. If the command exits with a non-zero status, report: "Backlog index regeneration failed (exit {code}). Fix the issue and retry `/overnight`." → halt.
 2. Stage the regenerated index files: `git add backlog/index.json backlog/index.md`.
 3. If there are staged changes (i.e., the index actually changed), commit with message "Regenerate backlog index". If the commit fails, report: "Failed to commit regenerated backlog index: {error}." → halt.
 4. If there are no staged changes, skip the commit — the index is already current.

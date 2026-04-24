@@ -50,7 +50,7 @@ When invoked without a `{{subcommand}}` (just `/backlog`), present the available
 
 Create a new backlog item from `{{title}}`.
 
-1. Run `create-backlog-item --title "{{title}}" --status backlog --type {{type}} --priority {{priority}}` (type defaults to `feature`, priority defaults to `medium` unless user specifies). Pass `--parent NNN` if the user specified a parent epic.
+1. Run `cortex-create-backlog-item --title "{{title}}" --status backlog --type {{type}} --priority {{priority}}` (type defaults to `feature`, priority defaults to `medium` unless user specifies). Pass `--parent NNN` if the user specified a parent epic.
 2. Open the created file for the user to review or edit the body
 
 ### list
@@ -66,8 +66,8 @@ Present the current backlog summary.
 Update the item's status in place using `update_item.py`:
 
 ```bash
-update-item {{item}} status=complete               # mark complete
-update-item {{item}} status=abandoned              # mark abandoned
+cortex-update-item {{item}} status=complete               # mark complete
+cortex-update-item {{item}} status=abandoned              # mark abandoned
 ```
 
 This updates frontmatter in place (no file move), cascades `blocked-by` cleanup, auto-closes parent epics when all children are terminal, and regenerates the index.
@@ -105,5 +105,5 @@ Report which items are ready to work on.
 
 Regenerate the backlog index.
 
-1. Run `generate-backlog-index`
+1. Run `cortex-generate-backlog-index`
 2. Report the result (item count for both `index.json` and `index.md`)

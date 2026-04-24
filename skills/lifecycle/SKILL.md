@@ -101,13 +101,13 @@ Before creating any artifacts or performing write-back, check whether the origin
         Intentionally omit `tasks_total` and `rework_cycles` — `plan.md` may not exist on this path (the lifecycle may have been completed out-of-band before a plan was written). Do NOT add those fields with value 0.
      2. Run:
         ```bash
-        update-item <slug> status=complete lifecycle_phase=complete session_id=null
+        cortex-update-item <slug> status=complete lifecycle_phase=complete session_id=null
         ```
         Where `<slug>` is the backlog filename stem (e.g., `1043-add-backlog-status-detection-to-lifecycle-resume`).
      3. **Exit immediately.** Do not proceed to "Create index.md", "Backlog Write-Back", "Discovery Bootstrap", or any subsequent Step 2 sections or later steps. The lifecycle is closed.
 
    - **If `phase = none`** (no `lifecycle/{feature}/` directory exists):
-     1. **Exit immediately** without creating any lifecycle artifacts (no directory, no events.log, no index.md) and without calling `update-item`. The backlog item is already complete and no lifecycle artifacts need to exist.
+     1. **Exit immediately** without creating any lifecycle artifacts (no directory, no events.log, no index.md) and without calling `cortex-update-item`. The backlog item is already complete and no lifecycle artifacts need to exist.
 
 ### Create index.md (New Lifecycle Only)
 
@@ -156,7 +156,7 @@ scan backlog/[0-9]*-*{feature}*.md for a matching file
 If a match is found, run:
 
 ```bash
-update-item <path> status=in_progress session_id=$LIFECYCLE_SESSION_ID lifecycle_phase=research
+cortex-update-item <path> status=in_progress session_id=$LIFECYCLE_SESSION_ID lifecycle_phase=research
 ```
 
 Where `<path>` is the slug-or-uuid of the matched backlog item (e.g., `045-my-feature`).
@@ -164,7 +164,7 @@ Where `<path>` is the slug-or-uuid of the matched backlog item (e.g., `045-my-fe
 Additionally, when `phase = none` (new lifecycle only), also run the following write-back to record the lifecycle slug — this is separate from and in addition to the status write-back above:
 
 ```bash
-update-item <path> lifecycle_slug={lifecycle-slug}
+cortex-update-item <path> lifecycle_slug={lifecycle-slug}
 ```
 
 This `lifecycle_slug` write-back runs only when `phase = none`. The status write-back runs on all phases when a match is found.
