@@ -408,7 +408,7 @@ The `OvernightStrategy` dataclass in `cortex_command/overnight/strategy.py` seri
 
 **Assembly**: `generate_report()` concatenates `render_executive_summary`, `render_completed_features`, `render_pending_drift`, `render_deferred_questions`, `render_failed_features`, `render_new_backlog_items`, `render_action_checklist`, `render_run_statistics`, and — when any exist — `render_tool_failures`. Each renderer is a pure function of `ReportData`.
 
-**Output**: `lifecycle/morning-report.md`. `write_report()` uses tempfile + `os.replace()` so the report is never observed half-written. After the write, `runner.sh` emits a `morning_report_generate_result` event (per-session and latest-copy sha256s + byte counts) and then a `morning_report_commit_result` event recording whether the commit landed on `main`. `notify()` then fires `~/.claude/notify.sh` so the operator knows overnight is done.
+**Output**: `lifecycle/morning-report.md`. `write_report()` uses tempfile + `os.replace()` so the report is never observed half-written. After the write, `runner.sh` emits a `morning_report_generate_result` event (per-session and latest-copy sha256s + byte counts) and then a `morning_report_commit_result` event recording whether the commit landed on `main`. `notify()` then fires the user's desktop-notifier hook (user/machine-config responsibility, not shipped by this repo) so the operator knows overnight is done.
 
 The morning-report commit is the only runner commit that stays on local `main`; all other artifact commits travel on the integration branch. (Historical reports from 2026-04-07, 2026-04-11, and 2026-04-21 were backfilled retroactively under commits whose subject lines end with `(backfill)`.)
 
@@ -462,9 +462,9 @@ Polling cadence: state files every 2s, `overnight-events.log` every 1s (offset-t
 
 ### Session Hooks (SessionStart, SessionEnd, notification hooks)
 
-Claude Code fires lifecycle hooks at session boundaries and on specific tool/notification events; `claude/settings.json` wires these to shell scripts in `hooks/` (symlinked to `~/.claude/hooks/`).
+Claude Code fires lifecycle hooks at session boundaries and on specific tool/notification events; plugin hook manifests wire these to shell scripts in `hooks/`.
 
-**Files**: `claude/settings.json` (`hooks` key), `hooks/cortex-scan-lifecycle.sh` (SessionStart — injects `LIFECYCLE_SESSION_ID` + lifecycle state into context), `hooks/cortex-cleanup-session.sh` (SessionEnd — removes `.session` marker unless reason is `clear`), `hooks/cortex-notify.sh` (Notification matcher `permission_prompt` and Stop events — local macOS toast), plus `cortex-validate-commit.sh` (PreToolUse Bash), `cortex-tool-failure-tracker.sh` (PostToolUse Bash), and `cortex-skill-edit-advisor.sh` (PostToolUse Write|Edit).
+**Files**: plugin hook manifests (hook registrations), `hooks/cortex-scan-lifecycle.sh` (SessionStart — injects `LIFECYCLE_SESSION_ID` + lifecycle state into context), `hooks/cortex-cleanup-session.sh` (SessionEnd — removes `.session` marker unless reason is `clear`), a user-supplied desktop-notifier hook (Notification matcher `permission_prompt` and Stop events — local macOS toast; user/machine-config responsibility), plus `cortex-validate-commit.sh` (PreToolUse Bash), `cortex-tool-failure-tracker.sh` (PostToolUse Bash), and `cortex-skill-edit-advisor.sh` (PostToolUse Write|Edit).
 
 **Inputs**: JSON payload on stdin from Claude Code (`session_id`, `cwd`, `reason`, `tool_name`, etc.); environment (`CLAUDE_ENV_FILE`).
 
