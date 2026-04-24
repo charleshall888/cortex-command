@@ -8,18 +8,17 @@ Tests cover:
   - evaluate_alerts: deferred detection
   - evaluate_alerts: high-rework detection (>= 2 cycles)
   - evaluate_alerts: high-rework clears when cycles drop below threshold
-  - fire_notifications: calls both scripts for an unnotified alert
-  - fire_notifications: does not re-fire when notified == True
-  - fire_notifications: circuit breaker fires once via notified flag
+  - fire_notifications: marks unnotified alerts as notified
+  - fire_notifications: does not re-mark when notified == True
+  - fire_notifications: circuit breaker notified flag fires once
 """
 
 from __future__ import annotations
 
-import asyncio
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 from cortex_command.dashboard.alerts import evaluate_alerts, fire_notifications
 from cortex_command.dashboard.poller import DashboardState
@@ -168,10 +167,15 @@ class TestEvaluateAlerts(unittest.TestCase):
 
 
 class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
-    """Tests for fire_notifications async subprocess dispatch."""
+    """Tests for fire_notifications notified-flag bookkeeping.
 
-    async def test_fires_notify_script_for_unnotified_alert(self):
-        """One subprocess call (cortex-notify.sh) per unnotified alert."""
+    The shell-subprocess dispatch path was retired with the shareable-install
+    scaffolding; fire_notifications now logs and updates the notified flag
+    only. These tests guard the dedup contract.
+    """
+
+    async def test_notified_flag_set_to_true_after_fire(self):
+        """notified flips to True after fire_notifications runs for a new alert."""
         state = _make_state()
         state.alerts[("feat-a", "stall")] = {
             "first_seen": datetime.now(timezone.utc),
@@ -179,25 +183,12 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
         }
         root = Path("/tmp/test-root")
 
-        mock_proc = MagicMock()
-        mock_proc.wait = AsyncMock(return_value=0)
+        await fire_notifications(state, root)
 
-        call_count = 0
+        self.assertTrue(state.alerts[("feat-a", "stall")]["notified"])
 
-        async def mock_subprocess(cmd, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            return mock_proc
-
-        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
-            await fire_notifications(state, root)
-            # Allow spawned tasks to run
-            await asyncio.sleep(0)
-
-        self.assertEqual(call_count, 1)
-
-    async def test_does_not_refire_when_already_notified(self):
-        """No subprocess calls when alert is already notified."""
+    async def test_does_not_remark_when_already_notified(self):
+        """notified stays True across consecutive fire_notifications calls."""
         state = _make_state()
         state.alerts[("feat-a", "stall")] = {
             "first_seen": datetime.now(timezone.utc),
@@ -205,21 +196,13 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
         }
         root = Path("/tmp/test-root")
 
-        call_count = 0
+        await fire_notifications(state, root)
 
-        async def mock_subprocess(cmd, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            return MagicMock()
+        # Entry remains notified; no mutation expected.
+        self.assertTrue(state.alerts[("feat-a", "stall")]["notified"])
 
-        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
-            await fire_notifications(state, root)
-            await asyncio.sleep(0)
-
-        self.assertEqual(call_count, 0)
-
-    async def test_notified_flag_set_to_true_after_fire(self):
-        """notified becomes True after fire_notifications runs."""
+    async def test_deferred_alert_notified_flag_set(self):
+        """notified flips to True for a deferred alert entry."""
         state = _make_state()
         state.alerts[("feat-a", "deferred")] = {
             "first_seen": datetime.now(timezone.utc),
@@ -227,42 +210,23 @@ class TestFireNotifications(unittest.IsolatedAsyncioTestCase):
         }
         root = Path("/tmp/test-root")
 
-        mock_proc = MagicMock()
-        mock_proc.wait = AsyncMock(return_value=0)
-
-        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", return_value=mock_proc):
-            await fire_notifications(state, root)
+        await fire_notifications(state, root)
 
         self.assertTrue(state.alerts[("feat-a", "deferred")]["notified"])
 
-    async def test_circuit_breaker_fires_once(self):
-        """Circuit breaker notification fires only when not yet notified."""
+    async def test_circuit_breaker_notified_once(self):
+        """circuit_breaker_notified flips True on first call and stays True."""
         state = _make_state()
         state.circuit_breaker_active = True
         state.circuit_breaker_notified = False
         root = Path("/tmp/test-root")
 
-        call_count = 0
-
-        async def mock_subprocess(cmd, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            return MagicMock()
-
-        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
-            await fire_notifications(state, root)
-            await asyncio.sleep(0)
-
-        self.assertEqual(call_count, 1)
+        await fire_notifications(state, root)
         self.assertTrue(state.circuit_breaker_notified)
 
-        # Second call should not fire again
-        call_count = 0
-        with patch("cortex_command.dashboard.alerts.asyncio.create_subprocess_shell", side_effect=mock_subprocess):
-            await fire_notifications(state, root)
-            await asyncio.sleep(0)
-
-        self.assertEqual(call_count, 0)
+        # Second call is a no-op for the circuit-breaker flag.
+        await fire_notifications(state, root)
+        self.assertTrue(state.circuit_breaker_notified)
 
 
 if __name__ == "__main__":
