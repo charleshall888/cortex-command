@@ -1,0 +1,66 @@
+{
+  "ts": "2026-04-24T17:39:03Z",
+  "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command",
+  "artifact": "lifecycle/ship-curl-sh-bootstrap-installer-for-cortex-command/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "reviewer_angle": "run() wrapper semantics",
+      "finding": "Task 4's detection call git -C remote get-url origin requires unwrapped invocation but R19 lint flags any such call without # allow-direct; plan did not originally spell out the escape.",
+      "evidence_quote": "Detection: [ -d \"$target/.git\" ] = is-git-repo; git -C \"$target\" remote get-url origin = origin URL."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Task 6 test mocking surface",
+      "finding": "Task 6 originally declared 1-5 files but hermetic coverage needs 6-10 fixture files (stubs, fake-repo helpers, non-git dir, synthetic pyproject). Plan now acknowledges 6-10 range in Files field.",
+      "evidence_quote": "tests/test_install.sh, tests/fixtures/install/ (new directory with any fixture files needed)"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Task 6 test mocking surface",
+      "finding": "Task 7's Files list was 'justfile' but Context directed editing tests/test_install.sh \u2014 P6 inconsistency. Now lists both.",
+      "evidence_quote": "Simpler: add it as a step inside tests/test_install.sh as the first test case"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Task 6 test mocking surface",
+      "finding": "Task 6 claimed tests/test_hooks.sh convention covers stderr-ordering assertions; it does not. Test harness must add ordered-stderr capture plumbing.",
+      "evidence_quote": "Follow the shell-testing pattern from tests/test_hooks.sh (pass/fail counters, per-case pass/fail helpers, exit 0 if all pass)."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "install.sh vs cortex upgrade safety divergence",
+      "finding": "README rewrite in Task 10 adds no guidance on when to use curl|sh re-run vs cortex upgrade. Users have divergent dirty-tree semantics on two paths they treat as interchangeable.",
+      "evidence_quote": "remove only the manual clone + uv tool install -e step since the bootstrap now covers them."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "install.sh vs cortex upgrade safety divergence",
+      "finding": "Task 4's 'Critical invariant: no rm -rf' framing is true but misleading \u2014 git pull --ff-only on a dirty tree with non-overlapping paths can still interleave upstream commits with uncommitted edits.",
+      "evidence_quote": "**Critical invariant**: no rm -rf anywhere in the file."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "install.sh vs cortex upgrade safety divergence",
+      "finding": "Task 6 test matrix originally omitted dirty-tree fixture for install.sh re-run. Not yet added; pending user decision on whether to add dirty-tree abort to install.sh.",
+      "evidence_quote": "R10 (idempotent re-run: two consecutive runs both exit 0; ~/.cortex/.git/HEAD unchanged; third run after synthetic [project.scripts] addition makes the new console script resolvable)"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Idempotence acceptance gap",
+      "finding": "Task 11 originally ran install.sh once against the real GitHub URL, validating first-install only. Now updated to run twice for live idempotence coverage.",
+      "evidence_quote": "Task 11: run bash install.sh in a disposable HOME=$tmpdir sandbox pointing at the actual charleshall888/cortex-command GitHub URL"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Idempotence acceptance gap",
+      "finding": "Overview originally omitted idempotence despite R10 being a named top-level requirement. Now added 'idempotent re-runs' to Overview feature list.",
+      "evidence_quote": "Overview: Ship install.sh at the repo root (POSIX sh, shellchecked, [cortex-install]-prefixed stderr logging, a run() wrapper enforcing exit-1 contract)"
+    }
+  ]
+}

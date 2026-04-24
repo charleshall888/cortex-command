@@ -9,13 +9,16 @@ parent: 113
 tags: [distribution, install, overnight-layer-distribution]
 areas: [install]
 created: 2026-04-21
-updated: 2026-04-23
+updated: 2026-04-24
 lifecycle_slug: ship-curl-sh-bootstrap-installer-for-cortex-command
-lifecycle_phase: research
-session_id: c8ea5b34-a9e2-4603-b56d-25daa47143f3
+lifecycle_phase: implement
+session_id: 37184ff2-e25d-4c76-80bd-3d42c986e6d3
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/ship-curl-sh-bootstrap-installer-for-cortex-command/spec.md
 ---
 
 # Ship curl | sh bootstrap installer for cortex-command
