@@ -12,8 +12,28 @@ run() {
 	fi
 }
 
+install_uv() {
+	tmp=$(mktemp 2>/dev/null || echo "${TMPDIR:-/tmp}/cortex-uv-install.$$")
+	run curl -LsSf https://astral.sh/uv/install.sh -o "$tmp"
+	run sh "$tmp"
+	rm -f "$tmp"
+	PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+	export PATH
+}
+
 main() {
-	:
+	if ! command -v just >/dev/null 2>&1; then
+		case "$(uname)" in
+			Darwin)
+				log "'just' is required. Install with: brew install just"
+				;;
+			*)
+				log "'just' is required. Install with: apt install just (or: brew install just)"
+				;;
+		esac
+		exit 1
+	fi
+	command -v uv >/dev/null 2>&1 || install_uv
 }
 
 main "$@"
