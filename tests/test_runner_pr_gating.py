@@ -1,14 +1,14 @@
-"""End-to-end regression tests for PR-gating behavior in runner.sh.
+"""End-to-end regression tests for PR-gating behavior under ``cortex overnight``.
 
 Covers spec Req 8 of `lifecycle/gate-overnight-pr-creation-on-merged-over-zero/`:
-eleven subprocess-capture tests that invoke
-`bash cortex_command/overnight/runner.sh --dry-run --state-path <tmp>` and assert
-substring patterns on stdout.
+eleven subprocess-capture tests that invoke ``cortex overnight start --dry-run``
+via subprocess (and, for the byte-identical reference test, the CLI wrapper for
+CLI-wiring coverage) and assert substring patterns on stdout.
 
 Test isolation (mandatory per spec Req 8):
 - The source state fixtures in `tests/fixtures/` are NEVER written to by the
   runner. Each test copies the fixture into `tmp_path` and passes the copy
-  as `--state-path`. `LOCK_FILE`, `session_start` event appends, and
+  as `--state`. `runner.pid`, `session_start` event appends, and
   `interrupt.py` state mutations all land in `tmp_path`.
 - A per-test bare-repo fake remote + `GIT_CONFIG_GLOBAL` `insteadOf` redirect
   ensures `git push -u origin <branch>` never reaches the real GitHub remote.
@@ -26,12 +26,22 @@ Every test asserts three things:
 Rationale: grep-only assertions cannot distinguish "PR gate misbehavior" from
 "runner crashed at state-load"; the return-code and traceback checks fail
 loudly on non-PR-gate faults.
+
+Port note (lifecycle ticket 115 Task 12):
+- `_run_runner()` now invokes ``cortex overnight start --dry-run --state <path>``
+  via subprocess. REPO_ROOT / PYTHONPATH env vars are no longer passed — the
+  installed ``cortex`` console script locates its own code and user-repo paths.
+- ``DRY_RUN_GH_READY_SIMULATE`` is preserved in the env per R15 so transient /
+  persistent gh-pr-ready failure simulation continues to work end-to-end.
+- ``cwd`` is no longer forced to ``REAL_REPO_ROOT`` because the CLI entrypoint
+  resolves its own home repo via ``git rev-parse``.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -42,6 +52,8 @@ import pytest
 REAL_REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_DIR = REAL_REPO_ROOT / "tests" / "fixtures"
 GH_STUB_SOURCE = FIXTURE_DIR / "gh-stub.sh"
+DRY_RUN_REFERENCE = FIXTURE_DIR / "dry_run_reference.txt"
+DRY_RUN_STATE = FIXTURE_DIR / "dry_run_state.json"
 
 
 def _copy_state_fixture(source_name: str, tmp_path: Path) -> Path:
@@ -136,7 +148,12 @@ def _build_env(
     git_config: Path,
     extra: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    """Assemble the subprocess environment for a runner invocation."""
+    """Assemble the subprocess environment for a runner invocation.
+
+    Port note: `REPO_ROOT` / `PYTHONPATH` are no longer passed — the Python
+    CLI derives its own paths (R20). `DRY_RUN_GH_READY_SIMULATE` is still
+    passed through when tests request it via ``extra`` per R15.
+    """
     env = dict(os.environ)
     # PATH-injected gh stub takes precedence over real gh
     env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
@@ -157,10 +174,14 @@ def _build_env(
 
 
 def _run_runner(state_path: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
-    """Invoke runner.sh --dry-run against a state file copy."""
+    """Invoke ``cortex overnight start --dry-run`` against a state file copy.
+
+    Port: was the bash runner with ``--state-path`` and ``cwd=REAL_REPO_ROOT``;
+    now invokes the installed console script with no cwd override — the CLI
+    resolves its own home repo via ``git rev-parse``.
+    """
     return subprocess.run(
-        ["bash", "cortex_command/overnight/runner.sh", "--dry-run", "--state-path", str(state_path)],
-        cwd=str(REAL_REPO_ROOT),
+        ["cortex", "overnight", "start", "--dry-run", "--state", str(state_path)],
         env=env,
         capture_output=True,
         text=True,
@@ -566,7 +587,8 @@ def test_pr_ready_transient_does_not_set_marker(env_setup) -> None:
         # dry_run_echo short-circuits the gh pr ready invocation in dry-run,
         # so the gh stub's exit code cannot drive the failure branch. Use the
         # runner's dry-run-only simulation hook (DRY_RUN_GH_READY_SIMULATE)
-        # to force non-zero exit with a canned 429 stderr payload.
+        # to force non-zero exit with a canned 429 stderr payload. The env
+        # var is preserved verbatim per R15 after the port to cortex overnight.
         env = _build_env(
             tp,
             env_setup["bin_dir"],
@@ -602,6 +624,7 @@ def test_pr_ready_persistent_sets_marker(env_setup) -> None:
     try:
         # See comment in test_pr_ready_transient_does_not_set_marker for why
         # DRY_RUN_GH_READY_SIMULATE is used instead of the gh stub's exit code.
+        # The env var is preserved verbatim per R15 after the port.
         env = _build_env(
             tp,
             env_setup["bin_dir"],
@@ -622,4 +645,173 @@ def test_pr_ready_persistent_sets_marker(env_setup) -> None:
     # Persistent -> marker IS set (retry is pointless)
     assert "DRY-RUN state-write integration_pr_flipped_once: true" in result.stdout, (
         f"expected marker write on persistent failure, got:\n{result.stdout}"
+    )
+
+
+# --- Task 12 byte-identical DRY-RUN reference (R15) ---------------------
+
+
+def _normalize_dry_run_output(text: str) -> str:
+    """Normalize runtime-variable tokens before byte-equality comparison.
+
+    R15 mandates "byte-identical" DRY-RUN stdout; the plan narrows this to
+    "byte-identical after environment-path normalization" because `$TMPDIR`
+    and other runtime-variable tokens can't match literally across the
+    capture machine and the test-runner machine.
+
+    Normalization rules (all substitutions are documented here — if a new
+    runtime token surfaces during implementation, add a rule below AND
+    update this docstring):
+
+    1. macOS canonicalizes ``/tmp`` to ``/private/tmp`` when resolving
+       symlinks. Strip the ``/private`` prefix so the mac-captured reference
+       matches Linux-captured actual output (and vice-versa).
+    2. ``$PR_BODY_FILE`` expands to ``<TMPDIR>/overnight-pr-body.txt`` —
+       the `TMPDIR` varies by machine. Both the reference (captured with
+       ``TMPDIR=/tmp/dry-run-capture``) and the actual (run with the same
+       ``TMPDIR`` env var) are rewritten to ``<TMPDIR>/overnight-pr-body.txt``
+       so the body-file token becomes a stable symbol.
+    3. Commit SHAs inside DRY-RUN-prefixed lines (if any appear post-port)
+       are normalized to ``<SHA>`` via a ``[a-f0-9]{7,40}`` regex. Timestamp
+       lines (``Started:`` / ``Finished:``) are NOT in the filtered
+       DRY-RUN-only comparison set, so they don't need normalization here;
+       the filter does that work upstream.
+    """
+    # Step 1: mac /private/tmp → /tmp
+    normalized = text.replace("/private/tmp/dry-run-capture/", "/tmp/dry-run-capture/")
+    # Step 2: $PR_BODY_FILE path → <TMPDIR>/overnight-pr-body.txt
+    normalized = re.sub(
+        r"/tmp/dry-run-capture/overnight-pr-body\.txt",
+        "<TMPDIR>/overnight-pr-body.txt",
+        normalized,
+    )
+    # Step 3: normalize 7-40 char hex SHAs on DRY-RUN-prefixed lines.
+    lines: list[str] = []
+    for line in normalized.splitlines():
+        if line.startswith("DRY-RUN "):
+            line = re.sub(r"\b[a-f0-9]{7,40}\b", "<SHA>", line)
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _filter_dry_run_lines(text: str) -> list[str]:
+    """Return only the ``DRY-RUN ``-prefixed lines, in order."""
+    return [ln for ln in text.splitlines() if ln.startswith("DRY-RUN ")]
+
+
+def test_dry_run_stdout_byte_identical() -> None:
+    """R15 byte-identical DRY-RUN stdout check post-TMPDIR normalization.
+
+    Invokes ``cortex overnight start --dry-run --state tests/fixtures/dry_run_state.json``
+    via subprocess with ``TMPDIR=/tmp/dry-run-capture`` to stabilize the
+    ``$PR_BODY_FILE`` path (matching Task 10's reference capture). Applies
+    :func:`_normalize_dry_run_output` to both the captured actual stdout
+    and the committed reference, then asserts full-line equality on the
+    filtered DRY-RUN lines. Substring-only fallback is explicitly
+    prohibited by the plan — format drift must be caught.
+    """
+    assert DRY_RUN_REFERENCE.exists(), (
+        f"reference file missing at {DRY_RUN_REFERENCE}"
+    )
+    assert DRY_RUN_STATE.exists(), (
+        f"state fixture missing at {DRY_RUN_STATE}"
+    )
+
+    # Stable TMPDIR so $PR_BODY_FILE resolves to the same path the
+    # reference was captured against.
+    tmpdir = "/tmp/dry-run-capture"
+    os.makedirs(tmpdir, exist_ok=True)
+
+    env = dict(os.environ)
+    env["TMPDIR"] = tmpdir
+    env["SKIP_NOTIFICATIONS"] = "1"
+
+    result = subprocess.run(
+        ["cortex", "overnight", "start", "--dry-run", "--state", str(DRY_RUN_STATE)],
+        env=env,
+        capture_output=True,
+        text=True,
+        stdin=subprocess.DEVNULL,
+        timeout=120,
+    )
+
+    # The runner may exit nonzero in environments where the integration
+    # branch / fake remote setup isn't pre-staged; what matters for R15
+    # is the label + structural-token shape of the DRY-RUN lines.
+    assert "Traceback" not in result.stderr, (
+        f"Python traceback in stderr:\n{result.stderr}"
+    )
+
+    actual_normalized = _normalize_dry_run_output(result.stdout)
+    reference_normalized = _normalize_dry_run_output(DRY_RUN_REFERENCE.read_text())
+
+    actual_lines = _filter_dry_run_lines(actual_normalized)
+    reference_lines = _filter_dry_run_lines(reference_normalized)
+
+    assert actual_lines == reference_lines, (
+        f"DRY-RUN lines drifted from reference after normalization.\n"
+        f"reference ({len(reference_lines)} lines):\n"
+        + "\n".join(reference_lines)
+        + f"\n\nactual ({len(actual_lines)} lines):\n"
+        + "\n".join(actual_lines)
+        + f"\n\nstderr:\n{result.stderr}"
+    )
+
+
+# --- R15 dry-run reject-with-pending acceptance -------------------------
+
+
+def test_dry_run_rejects_with_pending_features(tmp_path: Path) -> None:
+    """R15: dry-run must reject when any feature is ``pending``.
+
+    Invokes ``cortex overnight start --dry-run`` against a fixture state
+    that has one feature in ``pending`` status. Asserts exit nonzero and
+    stderr contains the contract message.
+    """
+    state_path = tmp_path / "overnight-state.json"
+    state_path.write_text(json.dumps({
+        "session_id": "test-reject-with-pending",
+        "plan_ref": "",
+        "current_round": 1,
+        "phase": "executing",
+        "started_at": "2026-04-22T00:00:00+00:00",
+        "updated_at": "2026-04-22T00:00:00+00:00",
+        "features": {
+            "feat-a": {
+                "status": "pending",
+                "repo_path": None,
+            },
+            "feat-b": {
+                "status": "merged",
+                "repo_path": None,
+            },
+        },
+        "integration_branch": "overnight/test-reject-with-pending",
+        "integration_branches": {},
+        "integration_worktrees": {},
+        "worktree_path": "",
+    }))
+
+    env = dict(os.environ)
+    env["TMPDIR"] = str(tmp_path)
+    env["SKIP_NOTIFICATIONS"] = "1"
+
+    result = subprocess.run(
+        ["cortex", "overnight", "start", "--dry-run", "--state", str(state_path)],
+        env=env,
+        capture_output=True,
+        text=True,
+        stdin=subprocess.DEVNULL,
+        timeout=60,
+    )
+
+    assert result.returncode != 0, (
+        f"expected nonzero exit for pending-feature dry-run, "
+        f"got {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
+    assert (
+        "--dry-run requires a state file with all features in terminal states"
+        in result.stderr
+    ), (
+        f"expected R15 acceptance message in stderr, got:\n{result.stderr}"
     )
