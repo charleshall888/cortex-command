@@ -1,12 +1,17 @@
 #!/bin/bash
-# .githooks/pre-commit — dual-source drift enforcement
+# .githooks/pre-commit — policy-aware dual-source drift enforcement
 #
-# Runs `just build-plugin` to regenerate plugins/cortex-interactive/ from the
-# top-level sources (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)
-# and fails the commit if the build output differs from the committed tree.
-# Any mismatch means the top-level source was edited without running
-# `just build-plugin`, or the plugin tree was edited directly (which is
-# build-output and should never be hand-modified).
+# Four phases:
+#   1. Validate every plugins/*/.claude-plugin/plugin.json has a non-empty
+#      .name field, and fail closed if any discovered plugin dir is not
+#      classified in BUILD_OUTPUT_PLUGINS or HAND_MAINTAINED_PLUGINS.
+#   2. Decide whether a build is needed based on staged paths. Build is
+#      needed when any staged path is a top-level source (skills/, bin/cortex-,
+#      hooks/cortex-validate-commit.sh) or under a build-output plugin tree.
+#   3. When a build is needed, run `just build-plugin` to regenerate all
+#      build-output plugin trees from top-level sources.
+#   4. For each build-output plugin, run `git diff --quiet plugins/$p/` to
+#      detect drift between the freshly-built working tree and the index.
 #
 # Enable with:   just setup-githooks
 # Bypass once:   git commit --no-verify   (discouraged)
@@ -16,18 +21,102 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-# Rebuild the plugin tree from top-level sources. Fail fast if the build errors.
-if ! just build-plugin >/dev/null 2>&1; then
-    echo "pre-commit: 'just build-plugin' failed — cannot verify plugin tree." >&2
-    just build-plugin >&2 || true
-    exit 1
+# -----------------------------------------------------------------------------
+# Phase 1 — Name validation and classification guard
+# -----------------------------------------------------------------------------
+# Populate BO/HM from helper recipes. `mapfile -t` is the natural idiom but is
+# unavailable in bash 3.2 (macOS system bash); use read-loop to remain
+# compatible with the spec's `#!/bin/bash` shebang constraint.
+BO=()
+while IFS= read -r line; do
+    [ -n "$line" ] && BO+=("$line")
+done < <(just _list-build-output-plugins)
+HM=()
+while IFS= read -r line; do
+    [ -n "$line" ] && HM+=("$line")
+done < <(just _list-hand-maintained-plugins)
+
+shopt -s nullglob
+for pj in plugins/*/.claude-plugin/plugin.json; do
+    plugin_dir="${pj#plugins/}"
+    plugin_dir="${plugin_dir%%/*}"
+
+    if ! jq -e '.name | length > 0' "$pj" >/dev/null 2>&1; then
+        echo "pre-commit: $pj missing non-empty 'name' field." >&2
+        exit 1
+    fi
+
+    classified=0
+    for p in "${BO[@]}"; do
+        if [ "$p" = "$plugin_dir" ]; then classified=1; break; fi
+    done
+    if [ "$classified" -eq 0 ]; then
+        for p in "${HM[@]}"; do
+            if [ "$p" = "$plugin_dir" ]; then classified=1; break; fi
+        done
+    fi
+    if [ "$classified" -eq 0 ]; then
+        echo "pre-commit: plugin '$plugin_dir' not classified (BUILD_OUTPUT_PLUGINS or HAND_MAINTAINED_PLUGINS)." >&2
+        exit 1
+    fi
+done
+shopt -u nullglob
+
+# -----------------------------------------------------------------------------
+# Phase 2 — Short-circuit decision
+# -----------------------------------------------------------------------------
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+BUILD_NEEDED=0
+
+if echo "$staged" | grep -qE '^(skills/|bin/cortex-|hooks/cortex-validate-commit\.sh$)'; then
+    BUILD_NEEDED=1
 fi
 
-# Detect drift anywhere under plugins/cortex-interactive/ (skills, bin, hooks).
-if ! git diff --quiet plugins/cortex-interactive/; then
-    echo "pre-commit: dual-source drift detected in plugins/cortex-interactive/." >&2
+if [ "$BUILD_NEEDED" -eq 0 ]; then
+    while read -r p; do
+        [ -z "$p" ] && continue
+        if echo "$staged" | grep -qE "^plugins/$p/"; then
+            BUILD_NEEDED=1
+            break
+        fi
+    done < <(just _list-build-output-plugins)
+fi
+
+# -----------------------------------------------------------------------------
+# Phase 3 — Conditional build
+# -----------------------------------------------------------------------------
+if [ "$BUILD_NEEDED" -eq 1 ]; then
+    if ! just build-plugin >/dev/null 2>&1; then
+        echo "pre-commit: 'just build-plugin' failed — cannot verify plugin tree." >&2
+        just build-plugin >&2 || true
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
+# Phase 4 — Drift loop
+# -----------------------------------------------------------------------------
+drift_found=0
+drift_report=""
+for p in "${BO[@]}"; do
+    # Skip build-output plugins that exist neither on disk nor in the index
+    # (declared in policy but not yet materialized — no drift possible).
+    if [ ! -d "plugins/$p" ] && ! git ls-files --error-unmatch -- "plugins/$p/" >/dev/null 2>&1; then
+        continue
+    fi
+    if ! git diff --quiet -- "plugins/$p/"; then
+        drift_found=1
+        drift_report+="  plugin: $p"$'\n'
+        while IFS= read -r line; do
+            drift_report+="    $line"$'\n'
+        done < <(git diff --name-only -- "plugins/$p/")
+    fi
+done
+
+if [ "$drift_found" -eq 1 ]; then
+    echo "pre-commit: dual-source drift detected in one or more build-output plugins." >&2
     echo "The following files differ from the freshly-built plugin tree:" >&2
-    git diff --name-only plugins/cortex-interactive/ | sed 's/^/  /' >&2
+    printf '%s' "$drift_report" >&2
     echo "" >&2
     echo "Fix: edit the top-level source (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)," >&2
     echo "     run 'just build-plugin', and stage the regenerated plugin files." >&2
