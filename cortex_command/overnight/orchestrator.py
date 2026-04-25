@@ -72,6 +72,15 @@ class BatchConfig:
         overnight_events_path: Path to overnight-events.log.
         result_dir: Directory to write batch-{N}-results.json into.
         pipeline_events_path: Path to pipeline-events.log for worker logs.
+        session_id: The overnight session identifier. Used as the prefix
+            for ``escalation_id`` so that IDs remain globally unique even
+            though counter scope is per-session.
+        session_dir: The session directory under which per-session state
+            (including ``escalations.jsonl`` and ``overnight-strategy.json``)
+            is stored. Threaded through to escalation callsites so that no
+            callsite computes ``Path(state_path).parent`` inline (which
+            would silently route writes to the wrong directory under test
+            fixtures with synthetic state paths).
     """
 
     batch_id: int
@@ -83,6 +92,25 @@ class BatchConfig:
     result_dir: Path = _LIFECYCLE_ROOT
     pipeline_events_path: Path = _LIFECYCLE_ROOT / "pipeline-events.log"
     throttle_tier: Optional[str] = None
+    session_id: str = ""
+    session_dir: Optional[Path] = None
+
+    def __post_init__(self) -> None:
+        """Derive ``session_dir`` from ``overnight_state_path.parent`` if not
+        explicitly set.
+
+        This default is computed at config-construction time (here, in
+        ``orchestrator.py``) so that the per-escalation callsites in
+        ``feature_executor.py`` and ``outcome_router.py`` do not need to
+        perform ``Path(state_path).parent`` themselves — the spec
+        explicitly rejects that inline-derivation pattern at escalation
+        callsites because it silently routes writes to the wrong directory
+        under test fixtures with synthetic state paths. Test fixtures and
+        callers that want a different ``session_dir`` should pass it
+        explicitly to ``BatchConfig(...)``.
+        """
+        if self.session_dir is None:
+            self.session_dir = Path(self.overnight_state_path).parent
 
 
 @dataclass
@@ -170,6 +198,15 @@ async def run_batch(config: BatchConfig) -> BatchResult:
         repo_path_map = {name: None for name in feature_names}
         integration_branches = {}
         integration_worktrees = {}
+
+    # Backfill session_id on config for downstream escalation callsites
+    # in feature_executor and outcome_router. (session_dir is filled in
+    # at BatchConfig construction time via __post_init__; session_id
+    # cannot be derived from state_path so it's set here once state has
+    # been loaded.) Constructors that pre-set session_id take precedence
+    # so test fixtures can override.
+    if not config.session_id:
+        config.session_id = session_id
 
     # Create worktrees; capture actual branch names (may include -2/-N suffixes)
     worktree_paths: dict[str, Path] = {}

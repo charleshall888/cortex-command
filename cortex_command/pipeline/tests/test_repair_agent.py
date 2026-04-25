@@ -37,6 +37,8 @@ class _FakeBatchConfig:
         self.pipeline_events_path: Path = Path("/dev/null")
         self.overnight_state_path: Path = Path("/dev/null")
         self.overnight_events_path: Path = Path("/dev/null")
+        self.session_dir: Path = Path("/dev/null")
+        self.session_id: str = "test-session"
 
 
 def _make_dispatch_result(

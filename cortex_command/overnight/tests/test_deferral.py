@@ -215,15 +215,17 @@ class TestWriteEscalation(unittest.TestCase):
     def test_all_seven_fields_present(self):
         """A single write produces a JSONL line with all 7 required fields."""
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
-            entry = EscalationEntry(
-                escalation_id="feat-1-q1",
+            session_dir = Path(tmp)
+            path = session_dir / "escalations.jsonl"
+            entry = EscalationEntry.build(
+                session_id="sess-1",
                 feature="feat",
                 round=1,
+                n=1,
                 question="Do this?",
                 context="Doing thing.",
             )
-            write_escalation(entry, escalations_path=path)
+            write_escalation(entry, session_dir=session_dir)
             data = json.loads(path.read_text(encoding="utf-8").strip())
             for key in ("type", "escalation_id", "feature", "round",
                         "question", "context", "ts"):
@@ -233,36 +235,37 @@ class TestWriteEscalation(unittest.TestCase):
     def test_two_writes_produce_two_distinct_lines(self):
         """Two escalation writes append two separate lines with distinct IDs."""
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
-            e1 = EscalationEntry(
-                escalation_id="feat-1-q1", feature="feat", round=1,
+            session_dir = Path(tmp)
+            path = session_dir / "escalations.jsonl"
+            e1 = EscalationEntry.build(
+                session_id="sess-1", feature="feat", round=1, n=1,
                 question="Q1?", context="ctx1",
             )
-            e2 = EscalationEntry(
-                escalation_id="feat-1-q2", feature="feat", round=1,
+            e2 = EscalationEntry.build(
+                session_id="sess-1", feature="feat", round=1, n=2,
                 question="Q2?", context="ctx2",
             )
-            write_escalation(e1, escalations_path=path)
-            write_escalation(e2, escalations_path=path)
+            write_escalation(e1, session_dir=session_dir)
+            write_escalation(e2, session_dir=session_dir)
             lines = [
                 l for l in path.read_text(encoding="utf-8").splitlines() if l.strip()
             ]
             self.assertEqual(len(lines), 2)
             ids = {json.loads(l)["escalation_id"] for l in lines}
-            self.assertEqual(ids, {"feat-1-q1", "feat-1-q2"})
+            self.assertEqual(ids, {"sess-1-feat-1-q1", "sess-1-feat-1-q2"})
 
     def test_next_escalation_n_sequential_ids(self):
         """_next_escalation_n returns 1 before any write and 2 after first write."""
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
-            n_before = _next_escalation_n("feat", 1, path)
+            session_dir = Path(tmp)
+            n_before = _next_escalation_n("feat", 1, session_dir)
             self.assertEqual(n_before, 1)
-            entry = EscalationEntry(
-                escalation_id="feat-1-q1", feature="feat", round=1,
+            entry = EscalationEntry.build(
+                session_id="sess-1", feature="feat", round=1, n=1,
                 question="Q?", context="ctx",
             )
-            write_escalation(entry, escalations_path=path)
-            n_after = _next_escalation_n("feat", 1, path)
+            write_escalation(entry, session_dir=session_dir)
+            n_after = _next_escalation_n("feat", 1, session_dir)
             self.assertEqual(n_after, 2)
 
 

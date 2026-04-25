@@ -48,9 +48,12 @@ class _FakeBatchConfig:
         if tmp_path is not None:
             self.overnight_state_path: Path = tmp_path / "overnight-state.json"
             self.overnight_events_path: Path = tmp_path / "overnight-events.jsonl"
+            self.session_dir: Path = tmp_path
         else:
             self.overnight_state_path = Path("/dev/null")
             self.overnight_events_path = Path("/dev/null")
+            self.session_dir = Path("/dev/null")
+        self.session_id: str = "test-session"
 
 
 def _make_test_result(*, passed: bool = True, output: str = "") -> MagicMock:

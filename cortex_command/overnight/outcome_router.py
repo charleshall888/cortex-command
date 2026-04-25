@@ -625,10 +625,11 @@ def _apply_feature_result(
                 )
                 context_text = "Merge blocked: CI run has a non-success conclusion (failure, cancelled, timed_out, or action_required)."
 
-            escalations_path = Path("lifecycle/escalations.jsonl")
             deferral = DeferralQuestion(
                 feature=name,
-                question_id=_next_escalation_n(name, ctx.config.batch_id, escalations_path),
+                question_id=_next_escalation_n(
+                    name, ctx.config.batch_id, ctx.config.session_dir,
+                ),
                 severity=SEVERITY_BLOCKING,
                 context=context_text,
                 question=question_text,
@@ -880,10 +881,11 @@ async def apply_feature_result(
                         },
                         log_path=ctx.config.overnight_events_path,
                     )
-                    escalations_path = Path("lifecycle/escalations.jsonl")
                     deferral = DeferralQuestion(
                         feature=name,
-                        question_id=_next_escalation_n(name, ctx.config.batch_id, escalations_path),
+                        question_id=_next_escalation_n(
+                            name, ctx.config.batch_id, ctx.config.session_dir,
+                        ),
                         severity=SEVERITY_BLOCKING,
                         context=(
                             "Feature merged successfully but post-merge review dispatch "
@@ -951,10 +953,11 @@ async def apply_feature_result(
                     "(failure, cancelled, timed_out, or action_required)."
                 )
 
-            escalations_path = Path("lifecycle/escalations.jsonl")
             deferral = DeferralQuestion(
                 feature=name,
-                question_id=_next_escalation_n(name, ctx.config.batch_id, escalations_path),
+                question_id=_next_escalation_n(
+                    name, ctx.config.batch_id, ctx.config.session_dir,
+                ),
                 severity=SEVERITY_BLOCKING,
                 context=context_text,
                 question=question_text,

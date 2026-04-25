@@ -398,14 +398,13 @@ async def execute_feature(
                 _hot_files: list[str] = []
                 try:
                     _strategy_path = (
-                        Path(config.overnight_state_path).parent
-                        / "overnight-strategy.json"
+                        config.session_dir / "overnight-strategy.json"
                     )
                     _strategy_data = json.loads(
                         _strategy_path.read_text(encoding="utf-8")
                     )
                     _hot_files = _strategy_data.get("hot_files", [])
-                except (OSError, json.JSONDecodeError):
+                except (OSError, json.JSONDecodeError, TypeError):
                     pass
 
                 # Decision: trivial eligible?
@@ -434,10 +433,11 @@ async def execute_feature(
 
                 # Repair agent path.
                 if _fs.recovery_attempts >= 1:
-                    escalations_path = Path("lifecycle/escalations.jsonl")
                     _deferral = DeferralQuestion(
                         feature=feature,
-                        question_id=_next_escalation_n(feature, config.batch_id, escalations_path),
+                        question_id=_next_escalation_n(
+                            feature, config.batch_id, config.session_dir,
+                        ),
                         severity=SEVERITY_BLOCKING,
                         context=f"Conflict recovery budget exhausted for {feature} — repair agent already attempted once",
                         question=f"Conflict recovery budget exhausted for {feature} — repair agent already attempted once",
@@ -489,10 +489,11 @@ async def execute_feature(
                         )
                     elif _repair_result.error and _repair_result.error.startswith("deferral:"):
                         _question_text = _repair_result.error[len("deferral:"):].strip()
-                        escalations_path = Path("lifecycle/escalations.jsonl")
                         _deferral = DeferralQuestion(
                             feature=feature,
-                            question_id=_next_escalation_n(feature, config.batch_id, escalations_path),
+                            question_id=_next_escalation_n(
+                                feature, config.batch_id, config.session_dir,
+                            ),
                             severity=SEVERITY_BLOCKING,
                             context=f"Repair agent for {feature} could not determine intent",
                             question=_question_text,
@@ -693,20 +694,19 @@ async def execute_feature(
 
             if report_action == "question" and report_question:
                 # Worker declared a question — escalate and defer
-                escalations_path = Path("lifecycle/escalations.jsonl")
                 esc_n = _next_escalation_n(
-                    feature, config.batch_id, escalations_path,
+                    feature, config.batch_id, config.session_dir,
                 )
-                esc_id = f"{feature}-{config.batch_id}-q{esc_n}"
                 write_escalation(
-                    EscalationEntry(
-                        escalation_id=esc_id,
+                    EscalationEntry.build(
+                        session_id=config.session_id,
                         feature=feature,
                         round=config.batch_id,
+                        n=esc_n,
                         question=report_question,
                         context=report_reason or "",
                     ),
-                    escalations_path=escalations_path,
+                    session_dir=config.session_dir,
                 )
                 overnight_log_event(
                     FEATURE_DEFERRED,

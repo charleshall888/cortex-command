@@ -34,22 +34,23 @@ class TestEscalationsDataModel(unittest.TestCase):
     def test_unresolved_is_set_difference_of_escalation_minus_resolved(self):
         """Unresolved = escalation IDs not in resolution or promoted IDs."""
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
+            session_dir = Path(tmp)
+            path = session_dir / "escalations.jsonl"
             # Write 3 escalations
             for i in range(1, 4):
                 write_escalation(
-                    EscalationEntry(
-                        escalation_id=f"feat-1-q{i}",
-                        feature="feat", round=1,
+                    EscalationEntry.build(
+                        session_id="sess-1",
+                        feature="feat", round=1, n=i,
                         question=f"Q{i}?", context="ctx",
                     ),
-                    escalations_path=path,
+                    session_dir=session_dir,
                 )
             # Resolve escalation 1
             with open(path, "a", encoding="utf-8") as f:
                 f.write(json.dumps({
                     "type": "resolution",
-                    "escalation_id": "feat-1-q1",
+                    "escalation_id": "sess-1-feat-1-q1",
                     "feature": "feat",
                     "answer": "yes",
                     "resolved_by": "orchestrator",
@@ -62,7 +63,7 @@ class TestEscalationsDataModel(unittest.TestCase):
                         if e["type"] in ("resolution", "promoted")}
             unresolved = escalated - resolved
 
-            self.assertEqual(unresolved, {"feat-1-q2", "feat-1-q3"})
+            self.assertEqual(unresolved, {"sess-1-feat-1-q2", "sess-1-feat-1-q3"})
 
     # ------------------------------------------------------------------
     # Req 2: promoted-as-tombstone
@@ -71,20 +72,21 @@ class TestEscalationsDataModel(unittest.TestCase):
     def test_promoted_entry_removes_from_unresolved(self):
         """A 'promoted' entry acts as a tombstone, removing ID from unresolved."""
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
+            session_dir = Path(tmp)
+            path = session_dir / "escalations.jsonl"
             write_escalation(
-                EscalationEntry(
-                    escalation_id="feat-1-q1",
-                    feature="feat", round=1,
+                EscalationEntry.build(
+                    session_id="sess-1",
+                    feature="feat", round=1, n=1,
                     question="Q?", context="ctx",
                 ),
-                escalations_path=path,
+                session_dir=session_dir,
             )
             # Promote (tombstone) it
             with open(path, "a", encoding="utf-8") as f:
                 f.write(json.dumps({
                     "type": "promoted",
-                    "escalation_id": "feat-1-q1",
+                    "escalation_id": "sess-1-feat-1-q1",
                     "feature": "feat",
                     "promoted_by": "orchestrator",
                     "ts": _now_iso(),
@@ -105,19 +107,20 @@ class TestEscalationsDataModel(unittest.TestCase):
     def test_cycle_breaking_resolution_count_is_one(self):
         """Exactly one resolution entry exists for the feature after one resolution write."""
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
+            session_dir = Path(tmp)
+            path = session_dir / "escalations.jsonl"
             write_escalation(
-                EscalationEntry(
-                    escalation_id="feat-1-q1",
-                    feature="cycle-feat", round=1,
+                EscalationEntry.build(
+                    session_id="sess-1",
+                    feature="cycle-feat", round=1, n=1,
                     question="Q?", context="ctx",
                 ),
-                escalations_path=path,
+                session_dir=session_dir,
             )
             with open(path, "a", encoding="utf-8") as f:
                 f.write(json.dumps({
                     "type": "resolution",
-                    "escalation_id": "feat-1-q1",
+                    "escalation_id": "sess-1-cycle-feat-1-q1",
                     "feature": "cycle-feat",
                     "answer": "resolved",
                     "resolved_by": "orchestrator",
@@ -138,23 +141,24 @@ class TestEscalationsDataModel(unittest.TestCase):
     def test_cap_logic_selects_five_oldest_by_timestamp(self):
         """Cap logic: sort by ts, take first 5 → these are the 5 oldest entries."""
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
+            session_dir = Path(tmp)
+            path = session_dir / "escalations.jsonl"
             # Write 7 escalations with controlled timestamps
             iso_ts = [f"2026-01-0{i}T00:00:00+00:00" for i in range(1, 8)]
-            ids_in_order = [f"feat-1-q{i}" for i in range(1, 8)]
+            ids_in_order = [f"sess-1-feat-1-q{i}" for i in range(1, 8)]
 
             with patch(
                 "cortex_command.overnight.deferral._now_iso",
                 side_effect=iso_ts,
             ):
-                for i, eid in enumerate(ids_in_order):
+                for i in range(7):
                     write_escalation(
-                        EscalationEntry(
-                            escalation_id=eid,
-                            feature="feat", round=1,
+                        EscalationEntry.build(
+                            session_id="sess-1",
+                            feature="feat", round=1, n=i + 1,
                             question=f"Q{i+1}?", context="ctx",
                         ),
-                        escalations_path=path,
+                        session_dir=session_dir,
                     )
 
             entries = _parse_jsonl(path)
@@ -172,14 +176,15 @@ class TestEscalationsDataModel(unittest.TestCase):
     def test_escalation_entry_has_all_required_fields(self):
         """write_escalation() produces a record with all 7 required fields."""
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
+            session_dir = Path(tmp)
+            path = session_dir / "escalations.jsonl"
             write_escalation(
-                EscalationEntry(
-                    escalation_id="feat-1-q1",
-                    feature="feat", round=1,
+                EscalationEntry.build(
+                    session_id="sess-1",
+                    feature="feat", round=1, n=1,
                     question="Q?", context="ctx",
                 ),
-                escalations_path=path,
+                session_dir=session_dir,
             )
             data = _parse_jsonl(path)[0]
             for field in ("type", "escalation_id", "feature", "round",
@@ -239,16 +244,15 @@ class TestEscalationsDataModel(unittest.TestCase):
     def test_escalation_id_consistent_across_escalation_and_resolution(self):
         """The escalation_id in a resolution entry matches the original escalation."""
         with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "escalations.jsonl"
-            eid = "feat-1-q1"
-            write_escalation(
-                EscalationEntry(
-                    escalation_id=eid,
-                    feature="feat", round=1,
-                    question="Q?", context="ctx",
-                ),
-                escalations_path=path,
+            session_dir = Path(tmp)
+            path = session_dir / "escalations.jsonl"
+            entry = EscalationEntry.build(
+                session_id="sess-1",
+                feature="feat", round=1, n=1,
+                question="Q?", context="ctx",
             )
+            eid = entry.escalation_id
+            write_escalation(entry, session_dir=session_dir)
             with open(path, "a", encoding="utf-8") as f:
                 f.write(json.dumps({
                     "type": "resolution",
