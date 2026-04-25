@@ -23,7 +23,7 @@ Agentic workflow toolkit for AI-assisted software development. Defines the globa
 ## Architectural Constraints
 
 - **File-based state**: Lifecycle artifacts, backlog items, pipeline state, and session tracking all use plain files (markdown, JSON, YAML frontmatter). No database or server. May evolve if complexity warrants it, but simplicity is preferred.
-- **Per-repo sandbox registration**: `cortex init` additively registers the repo's `lifecycle/sessions/` path in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array. This is the only write cortex-command performs inside `~/.claude/`; it is serialized across concurrent invocations via `fcntl.flock` on a sibling lockfile.
+- **Per-repo sandbox registration**: `cortex init` additively registers the repo's `lifecycle/` path in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array. This is the only write cortex-command performs inside `~/.claude/`; it is serialized across concurrent invocations via `fcntl.flock` on a sibling lockfile.
 
 ## Quality Attributes
 
