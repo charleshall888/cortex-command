@@ -163,6 +163,35 @@ def test_straddle_case_named_concern_to_class():
     assert overall, f"straddle classifier validation failed under {criterion}: {summary}; details: {results}"
 
 
+def _evaluate_weak_argument_downgrade(synthesis, meta=None):
+    """Weak-argument-downgrade pass: synthesis emits an A→B reclassification note.
+
+    The fixture is calibrated so reviewers plausibly raise an A-class finding
+    whose strongest honest fix_invalidation_argument hits a downgrade trigger
+    (adjacent issue without straddle_rationale). The synthesizer rubric should
+    fire and emit the standard reclassification phrase.
+    """
+    if re.search(r're-classified finding \d+ from A→B', synthesis):
+        return True, "pass"
+    if "A→B" in synthesis:
+        return True, "pass (substring)"
+    return False, "no A→B reclassification note found in synthesis"
+
+
+@pytest.mark.slow
+def test_weak_argument_downgrade():
+    """2-of-3: weak-argument fixture must produce an A→B reclassification note (R6).
+
+    Uses 2-of-3 tolerance directly per spec R6 — not the global baseline
+    criterion — because reviewer-side field-inclusion variance is expected.
+    """
+    fixture = REPO_ROOT / "tests" / "fixtures" / "critical-review" / "weak_argument_downgrade.md"
+    assert fixture.exists(), f"missing fixture {fixture}"
+    results = _run_n_times(str(fixture), _evaluate_weak_argument_downgrade)
+    overall, summary = _apply_pass_criterion(results, "2-of-3")
+    assert overall, f"weak_argument_downgrade classifier validation failed under 2-of-3: {summary}; details: {results}"
+
+
 def _extract_synthesizer_template():
     """Extract the Step 2d Opus Synthesis prompt template from SKILL.md.
 
