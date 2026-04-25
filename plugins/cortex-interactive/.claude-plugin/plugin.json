@@ -1,5 +1,8 @@
 {
   "name": "cortex-interactive",
   "description": "Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows",
-  "author": "Charlie Hall <charliemhall@gmail.com>"
+  "author": {
+    "name": "Charlie Hall",
+    "email": "charliemhall@gmail.com"
+  }
 }
