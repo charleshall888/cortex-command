@@ -340,12 +340,12 @@ def test_symlink_refusal_prefix_aliased_path(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """R13: refuse when lifecycle/sessions/ resolves outside the repo.
+    """R13: refuse when lifecycle/ resolves outside the repo.
 
     Covers the ``/tmp/repo`` vs ``/tmp/repository`` false-positive case —
     ``is_relative_to`` must be used (not ``str.startswith``). The parent
     ``tmp_path`` contains both ``repo`` and ``repository`` directories; an
-    escape symlink from ``repo/lifecycle/sessions`` points into
+    escape symlink from ``repo/lifecycle`` points into
     ``repository`` (sibling, NOT a subpath of ``repo``). The previous
     ``str.startswith`` approach would false-positive (since
     ``/tmp/.../repository/escape`` starts with ``/tmp/.../repo``); the
@@ -369,8 +369,7 @@ def test_symlink_refusal_prefix_aliased_path(
     )
     pre_bytes = settings_path.read_bytes()
 
-    (repo / "lifecycle").mkdir()
-    (repo / "lifecycle" / "sessions").symlink_to(escape_target)
+    (repo / "lifecycle").symlink_to(escape_target)
 
     rc = init_main(_make_args(repo))
     assert rc == 2
@@ -403,8 +402,7 @@ def test_symlink_refusal_case_variant(
 
     _isolate_home(monkeypatch, tmp_path)
 
-    (repo / "lifecycle").mkdir()
-    (repo / "lifecycle" / "sessions").symlink_to(elsewhere)
+    (repo / "lifecycle").symlink_to(elsewhere)
 
     rc = init_main(_make_args(repo))
     assert rc == 2

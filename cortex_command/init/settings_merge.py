@@ -144,7 +144,7 @@ def register(
     Args:
         repo_root: The repo root (retained for diagnostic messages; the
             caller has already resolved/canonicalized ``target_path``).
-        target_path: The already-resolved, canonicalized ``lifecycle/sessions/``
+        target_path: The already-resolved, canonicalized ``lifecycle/``
             path (trailing slash) to append to ``allowWrite``. Caller is
             Task 9's handler, which obtains this from the R13 symlink-safety
             gate (Task 3).
@@ -218,7 +218,7 @@ def unregister(
     Args:
         repo_root: The repo root (retained for diagnostic messages; the
             caller has already resolved/canonicalized ``target_path``).
-        target_path: The already-resolved, canonicalized ``lifecycle/sessions/``
+        target_path: The already-resolved, canonicalized ``lifecycle/``
             path (trailing slash) to remove from ``allowWrite``. Caller is
             Task 9's handler on the ``--unregister`` flag path.
         home: Optional HOME override (tests).

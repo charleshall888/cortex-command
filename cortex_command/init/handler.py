@@ -122,11 +122,20 @@ def _run(args: argparse.Namespace) -> int:
     # no longer exist).
     if args.unregister:
         resolved_path = Path(args.path or os.getcwd()).resolve()
-        target_path = str(resolved_path / "lifecycle" / "sessions") + "/"
+        legacy_target_path = str(resolved_path / "lifecycle" / "sessions") + "/"
+        wide_target_path = str(resolved_path / "lifecycle") + "/"
         # R14 pre-flight still fires so a malformed settings file surfaces
         # before we try to mutate it.
         settings_merge.validate_settings(home)
-        settings_merge.unregister(resolved_path, target_path, home=home)
+        # Unconditionally attempt removal of BOTH the legacy narrow
+        # `lifecycle/sessions/` entry and the new wide `lifecycle/` entry.
+        # `settings_merge.unregister`'s exact-string equality filter is a
+        # no-op when an entry is absent (idempotent), so a fresh-init repo
+        # that only registered the wide path safely no-ops on the legacy
+        # call, and a pre-Task-7-installed user with both entries gets a
+        # full cleanup in one invocation (migration symmetry).
+        settings_merge.unregister(resolved_path, legacy_target_path, home=home)
+        settings_merge.unregister(resolved_path, wide_target_path, home=home)
         return 0
 
     # Step 1: git-repo + submodule gates (R2, R3). Resolution is done
@@ -134,10 +143,10 @@ def _run(args: argparse.Namespace) -> int:
     # step so no downstream helper calls resolve() independently.
     repo_root = _resolve_repo_root(args.path)
 
-    # Step 2: symlink-safety gate (R13). Returns the canonical sessions
+    # Step 2: symlink-safety gate (R13). Returns the canonical lifecycle
     # path string that is passed into register() at step 7 so registration
     # uses the exact value validated here (no TOCTOU re-resolve).
-    sessions_target = scaffold.check_symlink_safety(repo_root)
+    lifecycle_target = scaffold.check_symlink_safety(repo_root)
 
     # Step 3: malformed-settings pre-flight (R14) — no mutation.
     settings_merge.validate_settings(home)
@@ -184,8 +193,8 @@ def _run(args: argparse.Namespace) -> int:
     scaffold.ensure_gitignore(repo_root)
 
     # Step 7: register allowWrite entry last (ADR-3). Uses the canonical
-    # sessions_target captured from check_symlink_safety to avoid TOCTOU.
-    settings_merge.register(repo_root, sessions_target, home=home)
+    # lifecycle_target captured from check_symlink_safety to avoid TOCTOU.
+    settings_merge.register(repo_root, lifecycle_target, home=home)
 
     return 0
 

@@ -79,8 +79,8 @@ def _make_args(
 
 
 def _target_path_for(repo_root: Path) -> str:
-    """Compute the canonical ``lifecycle/sessions/`` path string for a repo."""
-    return str(repo_root.resolve() / "lifecycle" / "sessions") + "/"
+    """Compute the canonical ``lifecycle/`` path string for a repo."""
+    return str(repo_root.resolve() / "lifecycle") + "/"
 
 
 def _settings_path(home: Path) -> Path:

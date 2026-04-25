@@ -114,14 +114,14 @@ def check_content_decline(repo_root: Path) -> None:
 
 
 def check_symlink_safety(repo_root: Path) -> str:
-    """R13 gate: refuse if ``lifecycle/sessions/`` resolves outside the repo.
+    """R13 gate: refuse if ``lifecycle/`` resolves outside the repo.
 
-    Returns the canonical sessions path (with trailing slash) that the
+    Returns the canonical lifecycle path (with trailing slash) that the
     handler threads into :func:`settings_merge.register` to close the TOCTOU
     window between pre-flight resolution and a re-resolve at registration
     time.
 
-    If ``lifecycle/sessions/`` does not yet exist, no resolution is possible;
+    If ``lifecycle/`` does not yet exist, no resolution is possible;
     the non-canonical path (still with trailing slash) is returned. Ancestor
     canonicalization is the handler's responsibility (it calls
     ``repo_root.resolve()`` before invoking any gate), which makes the
@@ -133,13 +133,13 @@ def check_symlink_safety(repo_root: Path) -> str:
             caller (handler invariant).
 
     Returns:
-        The canonical sessions-path string with a trailing ``/``.
+        The canonical lifecycle-path string with a trailing ``/``.
 
     Raises:
-        ScaffoldError: if an existing ``lifecycle/sessions`` resolves to a
+        ScaffoldError: if an existing ``lifecycle`` resolves to a
             location that is not a subpath of ``repo_root``.
     """
-    sessions_path = repo_root / "lifecycle" / "sessions"
+    lifecycle_path = repo_root / "lifecycle"
 
     # ``Path.exists`` follows symlinks by default and returns False for
     # dangling links. We want to catch dangling symlinks too, since a
@@ -147,33 +147,33 @@ def check_symlink_safety(repo_root: Path) -> str:
     # (it will resolve on creation). ``lexists`` via ``follow_symlinks=False``
     # detects the link entry regardless of target validity.
     try:
-        present = sessions_path.exists(follow_symlinks=False)
+        present = lifecycle_path.exists(follow_symlinks=False)
     except TypeError:
         # Python <3.12 fallback — shouldn't hit (project requires 3.12+),
         # but guard anyway via os.path.lexists.
-        present = os.path.lexists(sessions_path)
+        present = os.path.lexists(lifecycle_path)
 
     if not present:
-        return str(sessions_path) + "/"
+        return str(lifecycle_path) + "/"
 
-    sessions_canon = sessions_path.resolve(strict=False)
+    lifecycle_canon = lifecycle_path.resolve(strict=False)
     root_canon = repo_root.resolve(strict=False)
 
     # APFS (macOS) preserves case but compares case-insensitively; ``resolve``
     # does not normalize case. Normalize both sides before the containment
     # check so the comparison matches filesystem semantics.
-    sessions_norm = Path(os.path.normcase(str(sessions_canon)))
+    lifecycle_norm = Path(os.path.normcase(str(lifecycle_canon)))
     root_norm = Path(os.path.normcase(str(root_canon)))
 
     # ``is_relative_to`` performs proper subpath containment; ``startswith``
     # would false-positive (e.g. ``/tmp/repository`` vs ``/tmp/repo``).
-    if not sessions_norm.is_relative_to(root_norm):
+    if not lifecycle_norm.is_relative_to(root_norm):
         raise ScaffoldError(
-            "`cortex init`: refusing to proceed — `lifecycle/sessions` "
+            "`cortex init`: refusing to proceed — `lifecycle/` "
             "resolves outside the repo root."
         )
 
-    return str(sessions_canon) + "/"
+    return str(lifecycle_canon) + "/"
 
 # Any line starting with ``.cortex-init`` that is NOT exactly one of the two
 # canonical targets is treated as an orphan-prefix fragment from a prior
