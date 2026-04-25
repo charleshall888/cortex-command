@@ -27,6 +27,7 @@ import shutil as _shutil
 import signal as _signal
 import subprocess as _subprocess
 import sys as _sys
+import time as _time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -607,6 +608,20 @@ async def overnight_status(payload: StatusInput) -> StatusOutput:
     ``asyncio.to_thread`` per R29 so the stdio server stays responsive
     while this coroutine is in flight.
     """
+
+    # Test-only slow path (Task 16 sub-test ii): when the env var
+    # ``CORTEX_MCP_TEST_SLEEP_MS`` is set, sleep that many ms inside a
+    # ``to_thread`` so the test harness can verify head-of-line blocking
+    # is absent. Production never sets this env var; the sleep is wrapped
+    # in ``asyncio.to_thread`` so the audit's structural rule still holds.
+    _test_sleep_ms = os.environ.get("CORTEX_MCP_TEST_SLEEP_MS")
+    if _test_sleep_ms:
+        try:
+            _ms = int(_test_sleep_ms)
+        except (TypeError, ValueError):
+            _ms = 0
+        if _ms > 0:
+            await asyncio.to_thread(_time.sleep, _ms / 1000.0)
 
     if payload.session_id is not None:
         state_path = _resolve_state_path_for_session(payload.session_id)
