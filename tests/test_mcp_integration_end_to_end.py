@@ -72,6 +72,10 @@ from typing import Optional
 import psutil
 import pytest
 
+# End-to-end stack spawns real stdio MCP transport + runner subprocess tree —
+# keep serialized against the other subprocess-spawning suites (R26 / Task 20).
+pytestmark = pytest.mark.serial
+
 
 # ---------------------------------------------------------------------------
 # Paths / fixtures

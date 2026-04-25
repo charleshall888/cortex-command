@@ -32,6 +32,10 @@ from cortex_command.mcp_server import tools
 from cortex_command.mcp_server.schema import CancelInput, CancelOutput
 from cortex_command.overnight import cli_handler, ipc
 
+# Spawns real subprocesses with their own PGs — keep serialized against the
+# other subprocess-spawning suites (R26 / Task 20).
+pytestmark = pytest.mark.serial
+
 
 # ---------------------------------------------------------------------------
 # Subprocess fixtures

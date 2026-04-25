@@ -41,6 +41,10 @@ from pathlib import Path
 import psutil
 import pytest
 
+# Spawns real subprocesses (start_new_session=True) — must not run in parallel
+# against the other subprocess-spawning suites (R26 / Task 20).
+pytestmark = pytest.mark.serial
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 

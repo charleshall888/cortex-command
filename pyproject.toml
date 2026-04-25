@@ -28,6 +28,7 @@ testpaths = ["tests", "cortex_command/dashboard/tests", "cortex_command/pipeline
 pythonpath = ["."]
 markers = [
     "slow: opt-in tests that invoke live models (use --run-slow to enable)",
+    "serial: tests that spawn real subprocesses and must not run in parallel against each other (R26 / Task 20)",
 ]
 
 [dependency-groups]

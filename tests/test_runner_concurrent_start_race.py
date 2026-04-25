@@ -32,6 +32,10 @@ import pytest
 from cortex_command.overnight import ipc
 from cortex_command.overnight.ipc import ConcurrentRunnerError
 
+# Concurrent O_EXCL race tests use real threads + filesystem locks — keep
+# serialized against the other subprocess-spawning suites (R26 / Task 20).
+pytestmark = pytest.mark.serial
+
 
 # ---------------------------------------------------------------------------
 # Helpers
