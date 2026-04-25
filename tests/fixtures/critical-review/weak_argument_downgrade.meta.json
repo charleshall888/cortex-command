@@ -1,0 +1,26 @@
+{
+  "fixture_type": "weak_argument_downgrade",
+  "concerns": [
+    {
+      "id": "tax-dashboard-aggregation-mismatch",
+      "expected_class": "B",
+      "description": "The plan explicitly defers updating the /internal/reports/tax-by-state dashboard, which continues to group by billing_address.state rather than ship_to.state. After the fix lands, the live checkout tax computation and the finance dashboard will disagree on multi-address orders — a real adjacent gap, but the checkout-service fix itself produces correct receipts on every order. A reviewer is likely to elicit this as an A-class fix-invalidating concern, but the strongest honest fix_invalidation_argument restates the adjacent-reporting gap rather than identifying a failure path inside calculateTax(); the synthesizer should fire trigger 3 (adjacent without straddle_rationale) and downgrade A→B."
+    }
+  ],
+  "expected_downgrades": [
+    "tax-dashboard-aggregation-mismatch"
+  ],
+  "expected_class_distribution": {
+    "A": 0,
+    "B": 1
+  },
+  "expected_class_distribution_note": "B is the minimum expected count after synthesis (≥1); reviewers may surface additional adjacent-gap findings without violating the fixture's intent.",
+  "expected_synthesizer_behavior": {
+    "objections_section_emitted": false,
+    "reclassification_note_present": true,
+    "residue_file_written": true,
+    "residue_class": "B",
+    "downgrade_trigger": 3,
+    "trigger_rationale": "fix_invalidation_argument describes an adjacent reporting/dashboard gap, not fix-invalidation of calculateTax(); no straddle_rationale present so the Straddle exemption does not apply"
+  }
+}
