@@ -410,8 +410,8 @@ def handle_logs(args: argparse.Namespace) -> int:
     """Implement ``cortex overnight logs``.
 
     Resolves the session dir, computes the log path via
-    :data:`logs_module.LOG_FILES` (escalations is at the repo-level
-    ``lifecycle/escalations.jsonl`` — handled specially), dispatches to
+    :data:`logs_module.LOG_FILES` (all streams — events, agent-activity,
+    and escalations — are per-session), dispatches to
     :func:`logs_module.read_log`, prints lines to stdout, and emits a
     ``next_cursor: @<int>`` trailer on stderr.
     """
@@ -456,16 +456,9 @@ def handle_logs(args: argparse.Namespace) -> int:
             return 1
         session_dir = Path(str(active["session_dir"]))
 
-    # Compute log path. Escalations live at the repo-level
-    # `lifecycle/escalations.jsonl` — not per-session.
-    if args.files == "escalations":
-        # Repo-level file: traverse up from `lifecycle/sessions/<id>` to
-        # `lifecycle/escalations.jsonl`. This relies on the standard
-        # layout produced by the planner.
-        lifecycle_dir = session_dir.parent.parent
-        log_path = lifecycle_dir / "escalations.jsonl"
-    else:
-        log_path = session_dir / logs_module.LOG_FILES[args.files]
+    # Compute log path. All streams — events, agent-activity, and
+    # escalations — are per-session (R19).
+    log_path = session_dir / logs_module.LOG_FILES[args.files]
 
     try:
         lines, next_offset = logs_module.read_log(
