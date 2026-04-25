@@ -22,9 +22,12 @@ from __future__ import annotations
 import asyncio
 import glob as _glob
 import json
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
+
+from mcp.server.fastmcp.exceptions import ToolError
 
 from cortex_command.mcp_server.schema import (
     CancelInput,
@@ -42,9 +45,39 @@ from cortex_command.mcp_server.schema import (
 )
 from cortex_command.overnight import cli_handler as _cli_handler
 from cortex_command.overnight import ipc as _ipc
+from cortex_command.overnight import logs as _logs
 
 
 _NOT_IMPLEMENTED_MSG = "handler not yet implemented — filled in by Task 12–15"
+
+
+# ---------------------------------------------------------------------------
+# R14: MAX_TOOL_FILE_READ_BYTES cap on file-touching tools
+# ---------------------------------------------------------------------------
+
+# Default 256 MiB — the cap defends against (a) accidental whole-file reads
+# and (b) a single oversized log line blowing out the tool's output budget.
+# Overridable via ``CORTEX_MCP_MAX_FILE_READ_BYTES`` (parsed as int) so
+# operators can dial it down in resource-constrained environments.
+_DEFAULT_MAX_TOOL_FILE_READ_BYTES = 256 * 1024 * 1024
+
+
+def _resolve_max_tool_file_read_bytes() -> int:
+    """Return the configured max-bytes cap, preferring the env override."""
+    raw = os.environ.get("CORTEX_MCP_MAX_FILE_READ_BYTES")
+    if raw is None:
+        return _DEFAULT_MAX_TOOL_FILE_READ_BYTES
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return _DEFAULT_MAX_TOOL_FILE_READ_BYTES
+
+
+MAX_TOOL_FILE_READ_BYTES = _resolve_max_tool_file_read_bytes()
+
+
+# Server-side cap for ``overnight_logs``' ``limit`` (spec R5).
+_LOGS_LIMIT_SERVER_CAP = 200
 
 # Phases that count as "active" (i.e. not terminated) for
 # ``overnight_list_sessions``. ``complete`` is the only terminal phase.
@@ -286,10 +319,144 @@ async def overnight_status(payload: StatusInput) -> StatusOutput:
     return _state_to_status_output(data)
 
 
-async def overnight_logs(payload: LogsInput) -> LogsOutput:
-    """Return paginated log lines. Filled in by Task 13."""
+def _parse_log_line(line: str) -> dict[str, Any]:
+    """Parse a log line as JSON; fall back to ``{"raw": line}`` on failure.
 
-    raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
+    Events / agent-activity / escalations are all JSONL — a failed parse
+    means a malformed or partial line. Surface the raw text under a
+    ``raw`` key so the client still sees *something* and a grep for
+    ``"raw"`` in the response reveals a parse problem.
+    """
+    try:
+        obj = json.loads(line)
+    except (ValueError, TypeError):
+        return {"raw": line}
+    if not isinstance(obj, dict):
+        return {"raw": line}
+    return obj
+
+
+def _read_log_for_session(
+    session_dir: Path,
+    file_key: str,
+    cursor: Optional[str],
+    tail: Optional[int],
+    limit: int,
+    max_bytes: int,
+) -> dict:
+    """Blocking wrapper around :func:`logs.read_log_structured`.
+
+    Maps ``file_key`` (one of ``events`` / ``agent-activity`` /
+    ``escalations``) to its per-session filename via
+    :data:`logs.LOG_FILES`.
+    """
+    log_path = session_dir / _logs.LOG_FILES[file_key]
+    return _logs.read_log_structured(
+        log_path=log_path,
+        cursor=cursor,
+        tail=tail,
+        limit=limit,
+        max_bytes=max_bytes,
+    )
+
+
+async def overnight_logs(payload: LogsInput) -> LogsOutput:
+    """Return paginated log lines for one or more per-session log streams.
+
+    Reads ``lifecycle/sessions/{session_id}/<file>`` for each file in
+    ``payload.files`` (events / agent-activity / escalations) using the
+    opaque cursor codec from :mod:`cortex_command.overnight.cursor` and
+    the ``MAX_TOOL_FILE_READ_BYTES`` cap (R14). Surfaces
+    ``cursor_invalid`` / ``oversized_line`` / ``truncated`` /
+    ``original_line_bytes`` flags directly from
+    :func:`logs.read_log_structured`.
+
+    Edge cases:
+    * ``session_id`` not found → raises :class:`ToolError` with a
+      structured-JSON body ``{error: "session_not_found", session_id}``
+      so the MCP client receives an ``isError: true`` Tool Execution
+      Error per SEP-1303 (spec Edge Cases).
+    * Invalid cursor → ``ValueError`` from the codec propagates as a
+      :class:`ToolError` with the reason embedded.
+
+    R29: all blocking I/O (``Path.exists``, ``Path.stat``, file reads)
+    runs on a worker thread via :func:`asyncio.to_thread`.
+    """
+
+    repo_path = _cli_handler._resolve_repo_path()
+    session_dir = (
+        repo_path / "lifecycle" / "sessions" / payload.session_id
+    )
+
+    # R5 Edge Case: session_not_found surfaces as a Tool Execution Error
+    # (``isError: true``) rather than a JSON-RPC protocol error.
+    if not await asyncio.to_thread(session_dir.is_dir):
+        raise ToolError(
+            json.dumps(
+                {
+                    "error": "session_not_found",
+                    "session_id": payload.session_id,
+                }
+            )
+        )
+
+    # Server-cap limit at 200 regardless of request value (R5).
+    effective_limit = max(1, min(payload.limit, _LOGS_LIMIT_SERVER_CAP))
+
+    aggregated_lines: list[dict[str, Any]] = []
+    next_cursor: Optional[str] = None
+    eof_flags: list[bool] = []
+    oversized_line_seen = False
+    original_line_bytes_seen: Optional[int] = None
+
+    for file_key in payload.files:
+        try:
+            result = await asyncio.to_thread(
+                _read_log_for_session,
+                session_dir,
+                file_key,
+                payload.cursor,
+                payload.tail,
+                effective_limit,
+                MAX_TOOL_FILE_READ_BYTES,
+            )
+        except ValueError as exc:
+            # Malformed cursor — surface as Tool Execution Error.
+            raise ToolError(f"invalid cursor: {exc}") from exc
+
+        # R11: cursor_invalid short-circuits — drop accumulated lines
+        # and return the empty-lines + null-cursor signal so the client
+        # re-baselines.
+        if result.get("cursor_invalid"):
+            return LogsOutput(
+                lines=[],
+                next_cursor=None,
+                eof=False,
+                cursor_invalid=True,
+            )
+
+        for raw_line in result.get("lines", []):
+            aggregated_lines.append(_parse_log_line(raw_line))
+
+        if result.get("next_cursor") is not None:
+            next_cursor = result["next_cursor"]
+        eof_flags.append(bool(result.get("eof")))
+
+        if result.get("oversized_line"):
+            oversized_line_seen = True
+            original_line_bytes_seen = result.get("original_line_bytes")
+
+    eof = all(eof_flags) if eof_flags else True
+
+    return LogsOutput(
+        lines=aggregated_lines,
+        next_cursor=next_cursor,
+        eof=eof,
+        cursor_invalid=None,
+        oversized_line=True if oversized_line_seen else None,
+        truncated=None,
+        original_line_bytes=original_line_bytes_seen,
+    )
 
 
 async def overnight_cancel(payload: CancelInput) -> CancelOutput:
