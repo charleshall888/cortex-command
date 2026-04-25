@@ -413,18 +413,39 @@ _list-hand-maintained-plugins:
     set -euo pipefail
     echo '{{HAND_MAINTAINED_PLUGINS}}' | tr ' ' '\n'
 
-# Regenerate build-output plugin trees from top-level sources (skills/, bin/cortex-*, hooks/cortex-validate-commit.sh)
+# Regenerate build-output plugin trees from top-level sources (skills/, bin/cortex-*, hooks/cortex-*.sh, claude/hooks/cortex-*.sh)
 build-plugin:
     #!/usr/bin/env bash
     set -euo pipefail
-    SKILLS=(commit pr lifecycle backlog requirements research discovery refine retro dev fresh diagnose evolve critical-review)
     for p in {{BUILD_OUTPUT_PLUGINS}}; do
         [[ -d plugins/$p/.claude-plugin ]] || { echo "build-plugin: skipping $p (not yet materialized)" >&2; continue; }
+        BIN=()
+        case "$p" in
+            cortex-interactive)
+                SKILLS=(commit pr lifecycle backlog requirements research discovery refine retro dev fresh diagnose evolve critical-review)
+                HOOKS=(hooks/cortex-validate-commit.sh)
+                BIN=(cortex-)
+                ;;
+            cortex-overnight-integration)
+                BIN=()
+                SKILLS=(overnight morning-review)
+                HOOKS=(hooks/cortex-cleanup-session.sh hooks/cortex-scan-lifecycle.sh claude/hooks/cortex-tool-failure-tracker.sh claude/hooks/cortex-permission-audit-log.sh)
+                ;;
+            *)
+                echo "build-plugin: no manifest for $p" >&2
+                continue
+                ;;
+        esac
         for s in "${SKILLS[@]}"; do
             rsync -a --delete "skills/$s/" "plugins/$p/skills/$s/"
         done
-        rsync -a --delete --include='cortex-*' --exclude='*' bin/ "plugins/$p/bin/"
-        rsync -a hooks/cortex-validate-commit.sh "plugins/$p/hooks/cortex-validate-commit.sh"
+        rm -f plugins/$p/hooks/cortex-*.sh
+        for h in "${HOOKS[@]}"; do
+            rsync -a "$h" "plugins/$p/hooks/$(basename "$h")"
+        done
+        if [[ ${#BIN[@]} -gt 0 ]]; then
+            rsync -a --delete --include='cortex-*' --exclude='*' bin/ "plugins/$p/bin/"
+        fi
     done
 
 # Point git at .githooks/ so the dual-source drift pre-commit hook runs on every commit
