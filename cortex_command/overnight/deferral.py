@@ -345,13 +345,18 @@ def read_deferrals_for_feature(
 class EscalationEntry:
     """A single escalation entry raised by a worker during overnight execution.
 
-    Written to ``lifecycle/escalations.jsonl`` as a JSONL append log.
-    The escalation_id format is ``{feature}-{round}-q{N}`` where N is
-    determined by counting existing escalation entries for the same
-    feature+round.
+    Written to ``{session_dir}/escalations.jsonl`` as a JSONL append log.
+    The ``escalation_id`` format is ``{session_id}-{feature}-{round}-q{N}``
+    where N is determined by counting existing escalation entries for the
+    same feature+round within the per-session escalations file. Including
+    ``session_id`` in the ID guarantees global uniqueness even though the
+    counter scope is per-session (round numbers reset across sessions and
+    feature slugs persist).
 
     Fields:
-        escalation_id: Unique identifier for this escalation.
+        escalation_id: Unique identifier for this escalation, formatted
+            as ``{session_id}-{feature}-{round}-q{N}``.
+        session_id: The overnight session that produced this escalation.
         feature: Name of the feature the worker was implementing.
         round: The orchestration round number.
         question: The specific question requiring human input.
@@ -360,32 +365,68 @@ class EscalationEntry:
     """
 
     escalation_id: str
+    session_id: str
     feature: str
     round: int
     question: str
     context: str
     ts: str = field(default_factory=_now_iso)
 
+    @classmethod
+    def build(
+        cls,
+        *,
+        session_id: str,
+        feature: str,
+        round: int,
+        n: int,
+        question: str,
+        context: str,
+        ts: Optional[str] = None,
+    ) -> "EscalationEntry":
+        """Construct an EscalationEntry with a properly formatted escalation_id.
+
+        The ``escalation_id`` is composed as
+        ``{session_id}-{feature}-{round}-q{n}`` to keep IDs globally unique
+        across sessions while the counter ``n`` is per-session.
+        """
+        escalation_id = f"{session_id}-{feature}-{round}-q{n}"
+        kwargs = {
+            "escalation_id": escalation_id,
+            "session_id": session_id,
+            "feature": feature,
+            "round": round,
+            "question": question,
+            "context": context,
+        }
+        if ts is not None:
+            kwargs["ts"] = ts
+        return cls(**kwargs)
+
 
 def write_escalation(
     entry: EscalationEntry,
-    escalations_path: Path = Path("lifecycle/escalations.jsonl"),
+    session_dir: Path,
 ) -> None:
-    """Append an escalation entry to the JSONL escalation log.
+    """Append an escalation entry to the per-session JSONL escalation log.
 
-    Creates the parent directory and file if they do not exist.
-    Each line is a JSON object with ``type: "escalation"`` plus the
-    entry's fields.
+    Writes to ``session_dir / "escalations.jsonl"``. Creates the parent
+    directory and file if they do not exist. Each line is a JSON object
+    with ``type: "escalation"`` plus the entry's fields (including
+    ``session_id``).
 
     Args:
         entry: The escalation entry to persist.
-        escalations_path: Path to the JSONL file.
+        session_dir: The session directory under which to write
+            ``escalations.jsonl``.
     """
+    escalations_path = session_dir / "escalations.jsonl"
     escalations_path.parent.mkdir(parents=True, exist_ok=True)
 
     record = {
         "type": "escalation",
         "escalation_id": entry.escalation_id,
+        "session_id": entry.session_id,
         "feature": entry.feature,
         "round": entry.round,
         "question": entry.question,
@@ -402,12 +443,16 @@ def write_escalation(
 def _next_escalation_n(
     feature: str,
     round: int,
-    escalations_path: Path,
+    session_dir: Path,
 ) -> int:
-    """Return the next sequential N for an escalation_id.
+    """Return the next sequential N for an escalation_id within a session.
 
-    Counts existing ``"escalation"`` type entries in *escalations_path*
-    that match *feature* and *round*, then returns count + 1.
+    Counts existing ``"escalation"`` type entries in
+    ``session_dir / "escalations.jsonl"`` that match *feature* and
+    *round*, then returns count + 1. The counter scope is per-session;
+    cross-session uniqueness of the resulting ``escalation_id`` is
+    achieved by prefixing with ``session_id`` at the construction site
+    (see :meth:`EscalationEntry.build`).
 
     TOCTOU note: there is a theoretical race between reading the count
     here and appending the new entry in ``write_escalation`` — a
@@ -421,6 +466,7 @@ def _next_escalation_n(
     concurrent workers on the same feature+round, this function will
     need a locking mechanism or an atomic counter.
     """
+    escalations_path = session_dir / "escalations.jsonl"
     count = 0
     if escalations_path.is_file():
         with open(escalations_path, "r", encoding="utf-8") as f:
