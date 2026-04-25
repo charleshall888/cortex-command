@@ -1,0 +1,10 @@
+{
+  "name": "cortex-command",
+  "owner": {
+    "name": "charleshall888",
+    "email": "charliemhall@gmail.com"
+  },
+  "plugins": [
+    {"name": "cortex-overnight-integration", "source": "./plugins/cortex-overnight-integration"}
+  ]
+}
