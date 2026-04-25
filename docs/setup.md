@@ -56,20 +56,6 @@ cortex init
 
 ---
 
-## Symlink Architecture
-
-Config files are symlinked to their system locations. Editing the repo copy changes the active config immediately. This pattern keeps config version-controlled and auditable.
-
-```
-cortex-command/skills/commit/        →  ~/.claude/skills/commit/
-cortex-command/hooks/cortex-*.sh     →  ~/.claude/hooks/cortex-*.sh
-cortex-command/bin/jcc               →  ~/.local/bin/jcc
-```
-
-Always edit the repo copy (the symlink target), never create files at the destination.
-
----
-
 ## Authentication
 
 The overnight runner and some CLI utilities need API credentials. There are two modes depending on your account type.
