@@ -699,6 +699,9 @@ def _spawn_orchestrator(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         start_new_session=True,
+        # R28: mark this child as runner-spawned so the install guard
+        # carve-out (b) fires on any cortex-package import inside it.
+        env={**os.environ, "CORTEX_RUNNER_CHILD": "1"},
     )
     spawned_procs.append((proc, "orchestrator"))
     wctx = WatchdogContext(stall_flag=threading.Event())
@@ -754,6 +757,9 @@ def _spawn_batch_runner(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         start_new_session=True,
+        # R28: mark this child as runner-spawned so the install guard
+        # carve-out (b) fires on any cortex-package import inside it.
+        env={**os.environ, "CORTEX_RUNNER_CHILD": "1"},
     )
     spawned_procs.append((proc, "batch_runner"))
     wctx = WatchdogContext(stall_flag=threading.Event())
