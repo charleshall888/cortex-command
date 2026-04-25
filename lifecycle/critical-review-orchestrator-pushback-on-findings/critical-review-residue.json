@@ -1,0 +1,81 @@
+{
+  "ts": "2026-04-25T13:30:00Z",
+  "feature": "critical-review-orchestrator-pushback-on-findings",
+  "artifact": "lifecycle/critical-review-orchestrator-pushback-on-findings/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {"completed": 4, "dispatched": 4},
+  "findings": [
+    {
+      "class": "B",
+      "finding": "T3's file-wide R1 grep `grep -cE '\"fix_invalidation_argument\"' SKILL.md` ≥ 3 is double-counted with T3's own 8 worked-example JSON snippets, masking whether T1 or T2 contributed their share. Per-section awk ranges on T1 and T2 partially mitigate.",
+      "reviewer_angle": "Verification-criteria correctness",
+      "evidence_quote": "AND `grep -cE '\"fix_invalidation_argument\"' skills/critical-review/SKILL.md` returns ≥ 3 — pass if count ≥ 3 (R1 file-wide aggregate)."
+    },
+    {
+      "class": "B",
+      "finding": "T1's awk range terminator `/^### Straddle Protocol/` assumes a specific heading depth. If the implementer makes Straddle Protocol a `####` sub-section or a `##` peer, the range silently runs to EOF and the verification succeeds for the wrong reason.",
+      "reviewer_angle": "Verification-criteria correctness",
+      "evidence_quote": "awk '/^## Finding Classes/,/^### Straddle Protocol/' skills/critical-review/SKILL.md | grep -c 'fix_invalidation_argument'"
+    },
+    {
+      "class": "B",
+      "finding": "T2's second verification clause (fixture JSON load) is unrelated to the task (updating Step 2c.5 schema description). The fixtures are not modified by T2, so the check is tautologically satisfied. The first clause `grep -c 'fix_invalidation_argument' ≥ 1` is satisfied by any single mention including a TODO comment.",
+      "reviewer_angle": "Verification-criteria correctness",
+      "evidence_quote": "AND `python3 -c \"import json; json.loads(open('tests/fixtures/critical-review/straddle_case.meta.json').read()); json.loads(open('tests/fixtures/critical-review/pure_b_aggregation.meta.json').read())\"` exits 0 — pass if both fixtures still load (R4's schema-compatibility check, slightly broadened)."
+    },
+    {
+      "class": "B",
+      "finding": "Reclassified A→B during synthesis: `---` overload across SKILL.md (8 occurrences) creates future-drift risk for T6's anchor logic, but today's 'first `---` after Step 2d header' anchor is unambiguous. The plan's mitigation (boundary anchors documented in test code) is aspirational without a sentinel-substring assertion. Adjacent risk; not fix-invalidating today.",
+      "reviewer_angle": "T6 synthesizer-prompt extraction brittleness",
+      "evidence_quote": "Synthesizer prompt template lives in `skills/critical-review/SKILL.md` between the first `---` after `### Step 2d: Opus Synthesis` (line ~185) and the next `---` (line ~220)."
+    },
+    {
+      "class": "B",
+      "finding": "Plan does not flag that `{artifact content}` and `{all reviewer findings ...}` are syntactically Python f-string keys. If implementer reaches for `prompt.format()`, the em-dash-and-spaces key raises and any literal `{`/`}` in the synthesizer template's JSON examples (lines 209–212) compounds the failure. Plan provides no `.replace()` vs `.format()` guidance.",
+      "reviewer_angle": "T6 synthesizer-prompt extraction brittleness",
+      "evidence_quote": "perform string substitution on the two placeholders."
+    },
+    {
+      "class": "B",
+      "finding": "Line-number anchors '~185' and '~220' in T6 Context are derived from current SKILL.md snapshot, but T1-T3 modify SKILL.md upstream of T6 execution (T3 alone adds rubric + 8 examples ≈ 60-100 lines). Implementer relying on line-anchored search will land in wrong place after T1-T3 land.",
+      "reviewer_angle": "T6 synthesizer-prompt extraction brittleness",
+      "evidence_quote": "Synthesizer prompt template lives in `skills/critical-review/SKILL.md` between the first `---` after `### Step 2d: Opus Synthesis` (line ~185) and the next `---` (line ~220)."
+    },
+    {
+      "class": "B",
+      "finding": "Reclassified A→B during synthesis: T1 reviewer-prompt instruction has zero deterministic coverage. T6 hand-crafts reviewer JSON (bypassing Step 2c), and T5 at 2-of-3 lets a 33% reviewer regression slip through silently. Belt-and-suspenders framing is asymmetric — Task 6 hardens only the synthesizer side. This is a regression-detection gap on future changes, not fix-invalidation of the current change.",
+      "reviewer_angle": "Stochastic-deterministic coverage interaction",
+      "evidence_quote": "Adds a `@pytest.mark.slow` test function `test_synthesizer_rubric_deterministic` that exercises the Step 2d synthesizer prompt in isolation — bypassing reviewer dispatch entirely."
+    },
+    {
+      "class": "B",
+      "finding": "Reclassified A→B during synthesis: 2-of-3 tolerance is justified by assertion ('reviewer-side variance is real') rather than measured calibration data. For a feature whose motivation is verdict reliability, accepting a 33% miss rate as the suite floor is prophylactic without empirical justification. No path to tighten described. Verification design choice; adjacent to fix correctness.",
+      "reviewer_angle": "Stochastic-deterministic coverage interaction",
+      "evidence_quote": "If the global baseline tightens to 3-of-3 in the future, this test stays at 2-of-3 by design (per spec R6 — reviewer-side field-inclusion variance is real and the test must accommodate it)."
+    },
+    {
+      "class": "B",
+      "finding": "Three-layer verification framing overclaims coverage. Layer 1 is static text presence, Layer 3 bypasses the reviewer, Layer 2 is the only end-to-end check at 2-of-3 tolerance. For reviewer-prompt regressions specifically, the layers collapse to 'static grep + stochastic 2-of-3' with no deterministic floor.",
+      "reviewer_angle": "Stochastic-deterministic coverage interaction",
+      "evidence_quote": "End-to-end verification has three layers: 1. Per-section grep contract (Tasks 1–3) 2. Fixture + behavior contract (Tasks 4–5) 3. Rubric-isolation contract (Task 6)"
+    },
+    {
+      "class": "B",
+      "finding": "T2 envelope-validation logic ('json.loads + manual schema assertion') has no test exercising validation behavior. A future change making `fix_invalidation_argument` required would route reviewer outputs missing the field to 'untagged prose' — T5 might pass under 2-of-3 noise tolerance and T6 hand-crafts JSON containing the field.",
+      "reviewer_angle": "Stochastic-deterministic coverage interaction",
+      "evidence_quote": "T2 only updates a prose schema description sentence — the actual envelope-validation logic in Step 2c.5 (described as `json.loads` + manual schema assertion) doesn't have automated tests."
+    },
+    {
+      "class": "B",
+      "finding": "T4 meta.json's `expected_downgrades`/`expected_class_distribution` is pre-committed before T5 measures actual reviewer/synthesizer behavior. Verification only checks key presence, not value accuracy. If any future test consumer reads these fields as ground truth, they encode a hypothesis. Currently mitigated because T5's verification doesn't cross-reference meta.",
+      "reviewer_angle": "T4 fixture iteration / dependency mismatch",
+      "evidence_quote": "Add at minimum one of `expected_downgrades` (array of finding ids/descriptions expected to be reclassified A→B) OR `expected_class_distribution` (object like `{\"A\": 0, \"B\": ≥1}` — counts after synthesis)."
+    },
+    {
+      "class": "B",
+      "finding": "T4 instructs unbounded iteration ('iterate on the fixture content to achieve reliable elicitation') with no stop condition tied to T5's 2-of-3 tolerance. An implementer could iterate indefinitely or stop prematurely at 1-of-3.",
+      "reviewer_angle": "T4 fixture iteration / dependency mismatch",
+      "evidence_quote": "Implementation may iterate on the fixture content to achieve reliable elicitation. Acceptable to draft, run T5 once, observe reviewer behavior, refine fixture text, re-run."
+    }
+  ]
+}
