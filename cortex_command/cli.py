@@ -68,6 +68,20 @@ def _dispatch_overnight_logs(args: argparse.Namespace) -> int:
     return cli_handler.handle_logs(args)
 
 
+def _dispatch_mcp_server(_args: argparse.Namespace) -> int:
+    """Launch the stdio MCP control-plane server (R1).
+
+    Imports :mod:`cortex_command.mcp_server.server` lazily so ``cortex
+    --help`` and other subcommands do not pay the ``mcp`` SDK import
+    cost. Blocks until the transport closes.
+    """
+
+    from cortex_command.mcp_server.server import build_server
+
+    build_server().run(transport="stdio")
+    return 0
+
+
 def _dispatch_upgrade(args: argparse.Namespace) -> int:
     import os
     import subprocess
@@ -262,9 +276,14 @@ def _build_parser() -> argparse.ArgumentParser:
     mcp_server = subparsers.add_parser(
         "mcp-server",
         help="Start the Cortex MCP server",
-        description="Serve Cortex tools over the Model Context Protocol.",
+        description=(
+            "Serve the Cortex overnight control-plane tools over the "
+            "Model Context Protocol via stdio. Intended to be launched "
+            "by a Claude Code client via `claude mcp add` or the "
+            "cortex-overnight-integration plugin, not run interactively."
+        ),
     )
-    mcp_server.set_defaults(func=_make_stub("mcp-server"))
+    mcp_server.set_defaults(func=_dispatch_mcp_server)
 
     init = subparsers.add_parser(
         "init",
