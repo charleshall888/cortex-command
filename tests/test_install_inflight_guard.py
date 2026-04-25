@@ -53,6 +53,7 @@ from typing import Iterator
 import psutil
 import pytest
 
+from cortex_command import install_guard
 from cortex_command.install_guard import (
     InstallInFlightError,
     _check_in_flight_install_core,
@@ -110,9 +111,11 @@ def isolated_home(
     """Redirect ``ACTIVE_SESSION_PATH`` into a tmp-path ``HOME``.
 
     The guard reads ``~/.local/share/overnight-sessions/active-session.json``
-    via :data:`ipc.ACTIVE_SESSION_PATH`. We rewrite that module-level
-    constant (via monkeypatch) to point under the tmp HOME so each test
-    gets a fresh filesystem slate.
+    via :data:`install_guard._ACTIVE_SESSION_PATH` (its own copy of the
+    path so the read can avoid importing ``ipc`` — see install_guard.py
+    docstring). The legacy ``ipc.ACTIVE_SESSION_PATH`` is also patched so
+    any code path that still goes through ``ipc`` (e.g. write_active_session
+    in fixtures) stays aligned. Each test gets a fresh filesystem slate.
     """
     fake_home = tmp_path / "home"
     fake_home.mkdir()
@@ -124,6 +127,7 @@ def isolated_home(
         / "active-session.json"
     )
     monkeypatch.setattr(ipc, "ACTIVE_SESSION_PATH", active_path)
+    monkeypatch.setattr(install_guard, "_ACTIVE_SESSION_PATH", active_path)
     yield fake_home
 
 

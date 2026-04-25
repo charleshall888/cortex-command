@@ -38,9 +38,23 @@ runner cannot permanently lock out reinstalls.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
+
+# Mirror of ``cortex_command.overnight.ipc.ACTIVE_SESSION_PATH``. We
+# duplicate the path derivation rather than importing ``ipc`` because
+# ``ipc`` transitively imports ``psutil`` at module load — and the guard
+# runs from system-python invocations (e.g. ``python3
+# backlog/update_item.py``) where ``psutil`` is not on sys.path. Pulling
+# in ``ipc`` unconditionally turned the guard into a hard ImportError
+# for every system-python entry point. The ``ipc`` import is now
+# deferred to the live-runner branch where ``verify_runner_pid`` is
+# actually called.
+_ACTIVE_SESSION_PATH = (
+    Path.home() / ".local" / "share" / "overnight-sessions" / "active-session.json"
+)
 
 
 class InstallInFlightError(SystemExit):
@@ -188,13 +202,20 @@ def _check_in_flight_install_core() -> None:
         return
 
     # -------------------------------------------------------------------
-    # Main check: read the active-session pointer; bail if absent or
-    # already in ``complete`` phase.
+    # Main check: read the active-session pointer directly. Defer the
+    # ``ipc`` import (which pulls in psutil) until we actually need
+    # ``verify_runner_pid`` — that way system-python invocations with
+    # no overnight session in flight don't trip on a missing psutil.
     # -------------------------------------------------------------------
-    from cortex_command.overnight import ipc  # Lazy import (cheap but defer).
+    if not _ACTIVE_SESSION_PATH.exists():
+        return
 
-    active = ipc.read_active_session()
-    if active is None:
+    try:
+        active = json.loads(_ACTIVE_SESSION_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return  # Unreadable / malformed — treat as absent.
+
+    if not isinstance(active, dict):
         return
 
     phase = active.get("phase")
@@ -214,7 +235,27 @@ def _check_in_flight_install_core() -> None:
         return  # Malformed pointer — treat as stale.
 
     session_dir = Path(session_dir_str)
-    pid_data = ipc.read_runner_pid(session_dir)
+    runner_pid_path = session_dir / "runner.pid"
+    if not runner_pid_path.exists():
+        # Pointer references a session whose runner.pid is gone — stale.
+        print(
+            f"warning: stale active-session pointer for {session_id!r} "
+            f"(runner.pid missing). Run "
+            f"`cortex overnight cancel {session_id} --force` to clear.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return
+
+    try:
+        pid_data = json.loads(runner_pid_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pid_data = None
+
+    # Only now do we need psutil — defer the ``ipc`` import here so
+    # absent / malformed paths don't pay it.
+    from cortex_command.overnight import ipc
+
     if pid_data is None or not ipc.verify_runner_pid(pid_data):
         # Runner is dead/missing but pointer lingers. Warn and allow.
         print(
