@@ -13,6 +13,7 @@ dependencies = [
     "jinja2",
     "markdown",
     "psutil>=5.9",
+    "mcp>=1.27.0",
 ]
 
 [project.scripts]
