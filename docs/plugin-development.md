@@ -8,10 +8,10 @@ before ticket 122 publishes the production marketplace manifest.
 
 Per epic decisions:
 
-- **DR-9**: This repo (`cortex-command`) publishes the core plugins
-  (`cortex-interactive`, `cortex-overnight-integration`); the
-  `cortex-command-plugins` repo continues as the optional/per-project
-  extras marketplace.
+- **DR-9**: This repo (`cortex-command`) publishes the four core plugins
+  (`cortex-interactive`, `cortex-overnight-integration`, `cortex-ui-extras`,
+  `cortex-pr-review`) via the in-tree `cortex-command` marketplace; the
+  separate companion-extras repo now holds only `android-dev-extras`.
 - **DR-2**: The runner boundary splits the agentic layer into two plugins:
   `cortex-interactive` (already shipped in ticket 120) and
   `cortex-overnight-integration` (this ticket's plugin —

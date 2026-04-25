@@ -6,7 +6,7 @@
 
 The agentic layer is the workflow orchestration system built on top of Claude Code skills. It coordinates how development work flows from a vague idea through research, specification, planning, implementation, and review â€” across single features, parallel batches, or fully autonomous overnight sessions. Skills are the primitive units; hooks wire them into the development environment at the right moments; and state files let the system resume across sessions and tool invocations.
 
-This document is a reference for the full skill inventory, the main workflow diagrams, and the lifecycle phase map. It covers the core skills organized by functional group, both ASCII diagrams showing how they connect, and the tier/criticality model that governs model selection and review requirements. Start with the diagrams for an orientation, then consult the skill table for individual trigger and output details. Optional skills (UI design enforcement, `pr-review`) are extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace.
+This document is a reference for the full skill inventory, the main workflow diagrams, and the lifecycle phase map. It covers the core skills organized by functional group, both ASCII diagrams showing how they connect, and the tier/criticality model that governs model selection and review requirements. Start with the diagrams for an orientation, then consult the skill table for individual trigger and output details. Optional skills (UI design enforcement, `pr-review`) ship as separate plugins in the `cortex-command` marketplace; see [docs/setup.md](setup.md) for install instructions.
 
 ---
 
@@ -34,7 +34,7 @@ Skill count current as of this writing. `skills/` is the authoritative source â€
 | **commit** | Create well-formatted git commits | `/cortex:commit`, "commit these changes" | Git commit (signed) | All agents |
 | **pr** | Create GitHub pull requests | `/cortex:pr`, "create a pr" | GitHub PR via `gh pr create` | All agents |
 
-> **Note:** `pr-review` has been extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace. Install via `claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins`.
+> **Note:** `pr-review` ships as the `cortex-pr-review` plugin in the `cortex-command` marketplace. Install via `/plugin install cortex-pr-review@cortex-command`; see [docs/setup.md](setup.md) for the full install walkthrough.
 
 ### Thinking Tools
 
@@ -53,7 +53,7 @@ Skill count current as of this writing. `skills/` is the authoritative source â€
 
 ### UI Design Enforcement
 
-Several optional skills have been extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace: `cortex-ui-extras` (UI skills), `cortex-pr-review` (`pr-review`), and `cortex-dev-extras` (`skill-creator`, `devils-advocate`). Install via `claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins`. For the full UI tooling reference, see [docs/ui-tooling.md in cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins/blob/main/docs/ui-tooling.md).
+Several optional skills ship as plugins in the `cortex-command` marketplace: `cortex-ui-extras` (UI skills) and `cortex-pr-review` (`pr-review`). Install via `/plugin install cortex-ui-extras@cortex-command` (or `cortex-pr-review@cortex-command`); see [docs/setup.md](setup.md) for the full walkthrough.
 
 ### Utilities
 
@@ -314,7 +314,7 @@ For overnight runner operations and architecture (state schemas, recovery, allow
 
 ## UI Design Enforcement
 
-The UI skills have been extracted to the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace (`cortex-ui-extras` plugin). Install via `claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins`. Full reference â€” including the three-layer pipeline, Playwright MCP, Claude in Chrome, and design rationale â€” lives at [docs/ui-tooling.md in that repo](https://github.com/charleshall888/cortex-command-plugins/blob/main/docs/ui-tooling.md).
+The UI skills ship as the `cortex-ui-extras` plugin in the `cortex-command` marketplace. Install via `/plugin install cortex-ui-extras@cortex-command`; see [docs/setup.md](setup.md) for the full install walkthrough.
 
 ---
 

@@ -7,7 +7,7 @@
 
 A grouped inventory of the skills in this repo. Each entry shows what the skill does and links to its full SKILL.md for trigger phrases, inputs, outputs, and implementation details.
 
-See also [Optional Plugins](#optional-plugins) below for UI skills, `pr-review`, `skill-creator`, and `devils-advocate`, which now live in the separate `cortex-command-plugins` repo.
+See also [Optional Plugins](#optional-plugins) below for UI skills and `pr-review`, which ship as separate plugins in the `cortex-command` marketplace.
 
 ---
 
@@ -136,21 +136,21 @@ Identify recurring problems across retro logs and route each trend to the approp
 
 ## Optional Plugins
 
-Several skills have been extracted into the separate [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) marketplace:
+Several skills ship as optional plugins in the `cortex-command` marketplace:
 
 | Plugin | Skills |
 |--------|--------|
 | `cortex-ui-extras` | `ui-a11y`, `ui-brief`, `ui-check`, `ui-judge`, `ui-lint`, `ui-setup` |
 | `cortex-pr-review` | `pr-review` |
-| `cortex-dev-extras` | `skill-creator`, `devils-advocate` |
 
-Install via Claude Code's plugin system:
+Install via Claude Code's plugin system (see [docs/setup.md](setup.md) for the full walkthrough):
 
 ```
-claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins
+/plugin install cortex-ui-extras@cortex-command
+/plugin install cortex-pr-review@cortex-command
 ```
 
-Then enable the desired plugin per project in `.claude/settings.json`. See the `cortex-command-plugins` repo for the full skill list and install instructions.
+Then enable the desired plugin per project in `.claude/settings.json`.
 
 ### Project-local: harness-review
 

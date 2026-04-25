@@ -96,7 +96,7 @@ Playwright MCP gives Claude interactive browser access to the running dashboard 
 
 ### Prerequisites
 
-- **Node.js 18+** must be installed (`node --version` to verify). All Python-based skills (`ui-judge`, `ui-a11y` — now in the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) `cortex-ui-extras` plugin) work without Node.js; only Playwright MCP requires it.
+- **Node.js 18+** must be installed (`node --version` to verify). All Python-based skills (`ui-judge`, `ui-a11y` — now in the `cortex-ui-extras` plugin from the `cortex-command` marketplace) work without Node.js; only Playwright MCP requires it.
 - On first use, the MCP server automatically downloads Chromium browser binaries (~150MB). No manual setup step is required, but the first tool call will be slower while the download completes.
 
 ### Per-Session Setup
@@ -120,7 +120,7 @@ The three visual evaluation tools are complementary and serve different purposes
 | `ui-a11y` skill (plugin) | Accessibility checking against WCAG guidelines | Verifying accessibility compliance |
 | Playwright MCP | Ad-hoc interactive visual access | Development-time inspection, iterating on UI changes, exploratory visual debugging |
 
-`ui-judge` and `ui-a11y` are no longer bundled with cortex-command. They ship in the `cortex-ui-extras` plugin from [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) and require the plugin to be installed and enabled (`claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins`).
+`ui-judge` and `ui-a11y` are no longer bundled by default. They ship in the `cortex-ui-extras` plugin from the `cortex-command` marketplace and require the plugin to be installed and enabled (`/plugin install cortex-ui-extras@cortex-command`; see [docs/setup.md](setup.md) for the full install walkthrough).
 
 Playwright MCP is a development tool for interactive sessions — it is **not** used in overnight or autonomous agent runs. Overnight evaluation uses `ui-judge` and `ui-a11y` (when the plugin is enabled), which produce structured output compatible with unattended execution. Playwright MCP's per-session approval prompt makes it incompatible with unattended use.
 
