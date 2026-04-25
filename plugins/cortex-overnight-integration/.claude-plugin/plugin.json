@@ -1,0 +1,5 @@
+{
+  "name": "cortex-overnight-integration",
+  "description": "Overnight skill runner hooks that integrate with the cortex CLI on PATH and the cortex-interactive plugin to drive autonomous lifecycle execution",
+  "author": "Charlie Hall <charliemhall@gmail.com>"
+}
