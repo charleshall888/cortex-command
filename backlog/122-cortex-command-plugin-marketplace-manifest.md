@@ -2,23 +2,30 @@
 schema_version: "1"
 uuid: 7a291fcc-a9c8-4df2-97e2-81e0c01c5016
 title: "Publish plugin marketplace manifest for cortex-command"
-status: backlog
+status: in_progress
 priority: high
 type: feature
 parent: 113
 tags: [distribution, plugin, marketplace, overnight-layer-distribution]
-areas: [install]
+areas: [skills,docs]
 created: 2026-04-21
 updated: 2026-04-25
-lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+lifecycle_slug: publish-plugin-marketplace-manifest-for-cortex-command
+lifecycle_phase: implement
+session_id: 3ba65c0d-3c81-4be9-97ec-07c1e0485411
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/publish-plugin-marketplace-manifest-for-cortex-command/spec.md
 ---
 
 # Publish plugin marketplace manifest for cortex-command
+
+## Handoff note from ticket 121
+
+A stub `.claude-plugin/marketplace.json` already exists at the repo root, listing only `cortex-overnight-integration` (single-entry `plugins` array). Ticket 121 shipped it so the overnight plugin was reproducibly installable from any commit. This ticket's work is to **edit** that stub, not author from scratch — add entries for `cortex-interactive`, `cortex-ui-extras`, and `cortex-pr-review`. The schema and `name`/`owner` fields can stay as-is.
 
 ## Context from discovery
 
@@ -28,7 +35,7 @@ Supersedes DR-9: the separate extras marketplace is folded in for ui-extras and 
 
 ## Scope
 
-- Author `.claude-plugin/marketplace.json` at this repo's root listing the four in-repo plugins with names, descriptions, and source paths: `plugins/cortex-interactive`, `plugins/cortex-overnight-integration`, `plugins/cortex-ui-extras`, `plugins/cortex-pr-review`.
+- Edit the existing `.claude-plugin/marketplace.json` (stubbed in ticket 121 with a single `cortex-overnight-integration` entry) to list all four in-repo plugins with names, descriptions, and source paths: `plugins/cortex-interactive`, `plugins/cortex-overnight-integration`, `plugins/cortex-ui-extras`, `plugins/cortex-pr-review`. The repo-root `.claude-plugin/` directory and the marketplace.json file already exist — this is an edit, not a create.
 - No `version` field — plugins use git-SHA versioning per research DR-4.
 - Installation docs: README section covering how to add the marketplace, which plugins are core vs extras, and a one-line pointer to cortex-command-plugins for android-dev-extras.
 - `docs/install.md` (or equivalent): end-to-end install walkthrough for each plugin, covering `${CORTEX_COMMAND_ROOT}` requirement for cortex-overnight-integration.
@@ -36,7 +43,7 @@ Supersedes DR-9: the separate extras marketplace is folded in for ui-extras and 
 
 ## Out of scope
 
-- Vendoring the extras plugins themselves (ticket 144 — must land first; this ticket's frontmatter reflects that via `blocked-by: [144]`).
+- Vendoring the extras plugins themselves (ticket 144 — already complete; both `plugins/cortex-ui-extras` and `plugins/cortex-pr-review` are in-tree and ready to be referenced from the manifest).
 - `cortex-overnight-integration` plugin content (ticket 121).
 - Retirement or archival of cortex-command-plugins repo (does NOT happen — keeps android-dev-extras).
 - Migration guide for pre-117 symlinked users or users with the old marketplace already added (ticket 124).
