@@ -241,37 +241,6 @@
     "repo": null
   },
   {
-    "id": 116,
-    "title": "Build MCP control-plane server with versioned runner IPC contract",
-    "status": "backlog",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "mcp",
-      "overnight-runner",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-24",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "e327a6e7-fabb-47f5-b99e-35a30c995ab0",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 121,
     "title": "Publish cortex-overnight-integration plugin (overnight skill + runner hooks)",
     "status": "backlog",
@@ -288,11 +257,9 @@
       "overnight-runner"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-24",
+    "updated": "2026-04-25",
     "blocks": [],
-    "blocked_by": [
-      "116"
-    ],
+    "blocked_by": [],
     "parent": "113",
     "research": null,
     "spec": null,
@@ -321,10 +288,9 @@
       "install"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-24",
+    "updated": "2026-04-25",
     "blocks": [],
     "blocked_by": [
-      "116",
       "121"
     ],
     "parent": "113",
@@ -333,37 +299,6 @@
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "7a291fcc-a9c8-4df2-97e2-81e0c01c5016",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 123,
-    "title": "Lifecycle skill gracefully degrades autonomous-worktree option when runner absent",
-    "status": "backlog",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "plugin",
-      "lifecycle",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-24",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "4ed319f6-98e0-48ff-ace6-8e1023b1cfbb",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -709,10 +644,9 @@
       "install"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-24",
+    "updated": "2026-04-25",
     "blocks": [],
     "blocked_by": [
-      "116",
       "118",
       "121",
       "122"
@@ -753,6 +687,36 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 145,
+    "title": "Lazy-apply cortex CLI auto-update via SessionStart probe + in-process apply-on-invoke",
+    "status": "in_progress",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "distribution",
+      "upgrade",
+      "overnight-layer-distribution"
+    ],
+    "areas": [
+      "install"
+    ],
+    "created": "2026-04-24",
+    "updated": "2026-04-25",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "113",
+    "research": null,
+    "spec": "lifecycle/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke/spec.md",
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "83bf0aaa-694e-456b-868b-2c993aaa40d2",
+    "lifecycle_slug": "lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke",
+    "session_id": "c496df5c-e20e-4ff4-82c4-18015f3bb214",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -838,38 +802,6 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "4337b723-4a50-4d3e-811f-ef2709f4a26e",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 125,
-    "title": "Homebrew tap as thin wrapper around the curl installer",
-    "status": "backlog",
-    "priority": "low",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "homebrew",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "install"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-21",
-    "blocks": [],
-    "blocked_by": [
-      "118"
-    ],
-    "parent": "113",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "8ca55836-e562-400e-952b-1d91b23fe2f8",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,

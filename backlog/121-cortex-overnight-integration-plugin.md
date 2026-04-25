@@ -9,12 +9,12 @@ parent: 113
 tags: [distribution, plugin, overnight-runner, overnight-layer-distribution]
 areas: [skills, overnight-runner]
 created: 2026-04-21
-updated: 2026-04-24
+updated: 2026-04-25
 lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
 blocks: []
-blocked-by: [116]
+blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 ---
 

@@ -150,6 +150,10 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - Smoke test gate (`cortex_command/overnight/smoke_test.py`) — post-merge verification
 - `lifecycle/sessions/{session_id}/runner.pid` — per-session IPC contract (JSON `{schema_version, magic, pid, pgid, start_time, session_id, session_dir, repo_path}`, mode 0o600, atomic write). Cleared on clean shutdown; cancel verifies magic + start_time (±2s via psutil) before signalling to close the PID-reuse race. Stable contract for ticket 116 MCP control plane.
 - `~/.local/share/overnight-sessions/active-session.json` — host-global active-session pointer sharing the `runner.pid` schema plus a `phase: "planning|executing|paused|complete"` field. Retained on `paused` transition (preserves dashboard/statusline visibility); cleared on `complete`.
+- `runner.pid` verification policy: `magic` + `1 ≤ schema_version ≤ MAX_KNOWN_RUNNER_PID_SCHEMA_VERSION` + psutil `create_time` within ±2s of the recorded `start_time`. The bounded-version policy prevents an older `cortex` from silently mis-decoding a newer runner's PID file (R9; tightens the line 28 phrasing under Session Orchestration).
+- `cortex mcp-server` exposes five stdio tools (`overnight_start_run`, `overnight_status`, `overnight_logs`, `overnight_cancel`, `overnight_list_sessions`) wrapping `cli_handler` boundaries. The server is stateless; tools accept `session_id` and read filesystem-grounded state. `confirm_dangerously_skip_permissions: Literal[True]` is the operational gate on `overnight_start_run`. See `docs/mcp-server.md`.
+- Pre-install in-flight guard: `cortex` aborts when an active overnight session is detected (phase != `complete` AND `verify_runner_pid` succeeds); bypassable inline via `CORTEX_ALLOW_INSTALL_DURING_RUN=1` (do NOT export). Carve-outs: pytest, runner-spawned children (`CORTEX_RUNNER_CHILD=1`), dashboard, cancel-force invocation.
+- `lifecycle/sessions/{session_id}/runner-bootstrap.log` — captures runner stdout/stderr on the MCP-spawned start path so pre-`events.log`-init failures (import errors, missing deps, permission errors) are diagnosable.
 
 ## Edge Cases
 

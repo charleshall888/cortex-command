@@ -2,20 +2,23 @@
 schema_version: "1"
 uuid: e327a6e7-fabb-47f5-b99e-35a30c995ab0
 title: "Build MCP control-plane server with versioned runner IPC contract"
-status: backlog
+status: complete
 priority: high
 type: feature
 parent: 113
 tags: [distribution, mcp, overnight-runner, overnight-layer-distribution]
 areas: [overnight-runner]
 created: 2026-04-21
-updated: 2026-04-24
-lifecycle_slug: null
-lifecycle_phase: null
+updated: 2026-04-25
+lifecycle_slug: build-mcp-control-plane-server-with-versioned-runner-ipc-contract
+lifecycle_phase: implement
 session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/build-mcp-control-plane-server-with-versioned-runner-ipc-contract/spec.md
 ---
 
 # Build MCP control-plane server with versioned runner IPC contract
