@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "cortex-overnight": {
+      "command": "cortex",
+      "args": ["mcp-server"]
+    }
+  }
+}

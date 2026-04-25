@@ -6,6 +6,8 @@
 
 > **Jump to:** [Architecture](#architecture) | [Code Layout](#code-layout) | [Tuning](#tuning) | [Observability](#observability) | [Security and Trust Boundaries](#security-and-trust-boundaries) | [Internal APIs](#internal-apis)
 
+> **Driving overnight from a Claude Code conversation?** See [`docs/mcp-server.md`](mcp-server.md) for the `cortex mcp-server` control-plane interface — registration, the five MCP tools (`overnight_start_run`, `overnight_status`, `overnight_logs`, `overnight_cancel`, `overnight_list_sessions`), cursor pagination, and recovery procedures.
+
 This doc applies the **progressive disclosure** model from `claude/reference/claude-skills.md` to human-facing docs rather than to agent skill loading. `docs/overnight.md` stays compact for a reader whose access pattern is "how do I run overnight tonight?" — landing via the README, a peer recommendation, or a getting-started cross-link — and they get Quick-Start plus a one-paragraph pointer here. `docs/overnight-operations.md` is the single source of truth for mechanics, debugging, and recovery for a reader whose access pattern is "something broke at 2am" — landing via a stack trace, a retro back-reference, or a deep cross-link from `pipeline.md` — and they find the complete picture in one file rather than bouncing between two. The split optimizes which doc each reader hits first: new operators hit `overnight.md`; debuggers hit this file. See `CLAUDE.md` under `## Conventions` for the source-of-truth rule that partitions overnight mechanics, pipeline internals, and SDK mechanics across docs.
 
 ---
