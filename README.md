@@ -2,7 +2,7 @@
 
 Cortex Command is an AI workflow framework for Claude Code built on a single insight: autonomous execution is only as good as the specification that precedes it. Most AI coding tools optimize for speed. The result is fast accumulation of plausible-looking code that misses the point, because the problem space was never mapped, the scope was never agreed on, and nobody was asking the hard questions before the first line was written.
 
-The front half of the lifecycle is deliberately human-driven. You run discovery to understand the problem space, collaborate with agents to write tight specs, and mark features ready only when the scope is genuinely clear. Once that work is done, the handoff is earned. Run `/cortex:lifecycle` to stay in the loop for interactive development, or queue a batch for `/overnight` and wake up to a morning report with PRs ready to review. The overnight runner is the natural payoff of doing the front half well.
+The front half of the lifecycle is deliberately human-driven. You run discovery to understand the problem space, collaborate with agents to write tight specs, and mark features ready only when the scope is genuinely clear. Once that work is done, the handoff is earned. Run `/cortex-interactive:lifecycle` to stay in the loop for interactive development, or queue a batch for `/overnight` and wake up to a morning report with PRs ready to review. The overnight runner is the natural payoff of doing the front half well.
 
 Skills are slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. Cortex-command ships as a CLI (installed via `uv tool install -e .`) plus Claude Code plugins (installed via `/plugin install`) — everything lives in version control and is distributed without host-level symlinks.
 
@@ -12,7 +12,7 @@ Skills are slash commands you invoke from Claude Code. Hooks wire them into the 
  └────────────────────────────────────┬─────────────────────────────────────┘
                                       │ informs scope
  ┌────────────────────────────────────▼─────────────────────────────────────┐
- │  DISCOVERY   /cortex:discovery [topic]                                          │
+ │  DISCOVERY   /cortex-interactive:discovery [topic]                                          │
  │  Researches problem space, decomposes into epics and backlog tickets     │
  └────────────────────────────────────┬─────────────────────────────────────┘
                                       │
@@ -22,14 +22,14 @@ Skills are slash commands you invoke from Claude Code. Hooks wire them into the 
  └──────────────────────┬───────────────────────────┬───────────────────────┘
                         │ interactive               │ autonomous
                         │                  ┌────────▼─────────────────────┐
-                        │                  │  /cortex:refine [item] × N          │
+                        │                  │  /cortex-interactive:refine [item] × N          │
                         │                  │  each in a separate session  │
                         │                  │  run in parallel per ticket  │
                         │                  │  Clarify → Research → Spec   │
                         │                  │  sets status:refined         │
                         │                  └────────┬─────────────────────┘
           ┌─────────────▼────────────┐    ┌─────────▼────────────────────┐
-          │  /cortex:lifecycle              │    │  /overnight                  │
+          │  /cortex-interactive:lifecycle              │    │  /overnight                  │
           │  one feature at a time   │    │  selects status:refined items│
           │  human-in-the-loop       │    │  runs features in parallel   │
           └──────────────────────────┘    └───────────────┬──────────────┘
@@ -43,7 +43,7 @@ Skills are slash commands you invoke from Claude Code. Hooks wire them into the 
 ```
 
 ```
-        ┌──────────── /cortex:refine ──────┐
+        ┌──────────── /cortex-interactive:refine ──────┐
         │                           │
 You ──► Clarify ──► Research ──► Spec ──► Plan ──► Implement ──► Review ──► Complete
                                     │                               ▲         │
@@ -53,7 +53,7 @@ You ──► Clarify ──► Research ──► Spec ──► Plan ──►
 
   Complexity tier — auto-detected or set in lifecycle.config.md:
     simple   ·  standard gates only
-    complex  ·  /cortex:critical-review challenges spec before Plan begins
+    complex  ·  /cortex-interactive:critical-review challenges spec before Plan begins
                 (auto-escalated when research surfaces ≥2 open questions)
 
   Criticality — controls rigor and model selection:
@@ -143,7 +143,7 @@ Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth
 
 | Component | Description |
 |-----------|-------------|
-| `skills/` | Slash commands -- `/cortex:commit`, `/cortex:pr`, `/cortex:lifecycle`, `/overnight`, `/cortex:discovery`, and more |
+| `skills/` | Slash commands -- `/cortex-interactive:commit`, `/cortex-interactive:pr`, `/cortex-interactive:lifecycle`, `/overnight`, `/cortex-interactive:discovery`, and more |
 | `hooks/` | Event handlers -- commit validation, lifecycle state injection, desktop notifications |
 | `cortex_command/overnight/` | Autonomous overnight runner -- plans work, executes in parallel, writes a morning report |
 | `cortex_command/dashboard/` | FastAPI web dashboard for monitoring overnight sessions |

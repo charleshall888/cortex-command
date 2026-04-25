@@ -57,7 +57,7 @@ if [[ -n "$SESSION_ID" && -n "$LIFECYCLE_SESSION_ID" && "$SESSION_ID" != "$LIFEC
 fi
 
 # --- Fresh resume detection ---
-# If lifecycle/.fresh-resume exists (written by /cortex:fresh skill before /clear),
+# If lifecycle/.fresh-resume exists (written by /cortex-interactive:fresh skill before /clear),
 # read the full handoff prompt and inject it directly. Delete after first read.
 fresh_resume_prompt=""
 fresh_resume_file="$LIFECYCLE_DIR/.fresh-resume"
@@ -294,7 +294,7 @@ fi
 
 # --- Build context message ---
 
-# Fresh resume: /cortex:fresh was invoked before /clear. Inject the full handoff prompt
+# Fresh resume: /cortex-interactive:fresh was invoked before /clear. Inject the full handoff prompt
 # at the top of context so the agent immediately knows how to continue.
 context=""
 if [[ -n "$fresh_resume_prompt" ]]; then
@@ -307,7 +307,7 @@ if [[ -n "$active_feature" ]]; then
 
   # /clear recovery (no fresh-resume): session_id matched a .session file.
   if [[ -z "$fresh_resume_prompt" && "$session_matched" == true ]]; then
-    context="This session was working on $active_feature ($label). Resume with \`/cortex:lifecycle $active_feature\`.
+    context="This session was working on $active_feature ($label). Resume with \`/cortex-interactive:lifecycle $active_feature\`.
 "
   fi
 
@@ -322,13 +322,13 @@ Artifacts: lifecycle/$active_feature/"
       total="${progress#*/}"
       if (( checked > 0 && checked < total )); then
         context="$context
-Interrupted: implementation in progress ($checked of $total tasks done). Resume with /cortex:lifecycle $active_feature."
+Interrupted: implementation in progress ($checked of $total tasks done). Resume with /cortex-interactive:lifecycle $active_feature."
       fi
       ;;
     implement-rework:*)
       cycle="${active_phase#implement-rework:}"
       context="$context
-Interrupted: review cycle $cycle returned CHANGES_REQUESTED. Re-enter implementation to address feedback. Resume with /cortex:lifecycle $active_feature."
+Interrupted: review cycle $cycle returned CHANGES_REQUESTED. Re-enter implementation to address feedback. Resume with /cortex-interactive:lifecycle $active_feature."
       ;;
     escalated)
       context="$context
@@ -347,7 +347,7 @@ Other incomplete lifecycles:"
   - ${incomplete_features[$i]} ($label)"
     done
     context="$context
-Switch with /cortex:lifecycle resume <feature>."
+Switch with /cortex-interactive:lifecycle resume <feature>."
   fi
 
 elif (( ${#incomplete_features[@]} > 1 )); then
@@ -359,7 +359,7 @@ elif (( ${#incomplete_features[@]} > 1 )); then
   - ${incomplete_features[$i]} ($label)"
   done
   context="$context
-Resume with /cortex:lifecycle resume <feature>."
+Resume with /cortex-interactive:lifecycle resume <feature>."
 fi
 
 # --- Prepend pipeline context if present ---

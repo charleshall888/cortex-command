@@ -1,6 +1,6 @@
 ---
 name: refine
-description: Prepare a backlog item for overnight execution by running it through Clarify → Research → Spec. Use when user says "/cortex:refine", "refine backlog item", "prepare for overnight", "prepare feature for execution", or "run on a backlog item before overnight". Produces lifecycle/{slug}/research.md and lifecycle/{slug}/spec.md, then sets status:refined on the backlog item.
+description: Prepare a backlog item for overnight execution by running it through Clarify → Research → Spec. Use when user says "/cortex-interactive:refine", "refine backlog item", "prepare for overnight", "prepare feature for execution", or "run on a backlog item before overnight". Produces lifecycle/{slug}/research.md and lifecycle/{slug}/spec.md, then sets status:refined on the backlog item.
 inputs:
   - "topic: string (required) — backlog item ID (numeric), slug (kebab-case), or title (quoted phrase); or ad-hoc topic name if no backlog item exists"
 outputs:
@@ -13,7 +13,7 @@ preconditions:
 argument-hint: "<topic>"
 ---
 
-# /cortex:refine
+# /cortex-interactive:refine
 
 Prepares a single backlog item for overnight execution. Runs three phases in sequence: **Clarify** (intent gate and requirements alignment), **Research** (implementation-level exploration), and **Spec** (structured requirements interview). When complete, the backlog item has `status: refined` and a linked spec, and the overnight runner can plan and execute it without further human input.
 
@@ -30,7 +30,7 @@ Record:
 - `item-title`: the `title:` field from the backlog item frontmatter — used to derive the lifecycle slug
 - `lifecycle-slug`: derived from `item-title` using the canonical `slugify()` from `claude/common.py`: lowercase, convert underscores and slashes to spaces, strip remaining non-alphanumeric except hyphens/spaces, collapse runs of spaces/hyphens to single hyphen. Underscores become hyphens, not stripped (e.g., `session_panel` → `session-panel`, not `sessionpanel`). Leading/trailing hyphens are stripped.
 
-Example: title `"Create /cortex:refine skill (Clarify → Research → Spec)"` → lifecycle-slug `create-refine-skill-clarify-research-spec`
+Example: title `"Create /cortex-interactive:refine skill (Clarify → Research → Spec)"` → lifecycle-slug `create-refine-skill-clarify-research-spec`
 
 These two slugs are often different. Do not conflate them.
 
@@ -93,21 +93,21 @@ If `lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research S
 
 ### Research Execution
 
-Delegate to `/cortex:research`:
+Delegate to `/cortex-interactive:research`:
 
 ```
-/cortex:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality}
+/cortex-interactive:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality}
 ```
 
 Where `{clarified intent}` is the output from Step 3 Clarify, `{lifecycle-slug}` is the slug computed in Step 1, and `{tier}` / `{criticality}` are the values confirmed during Step 3 Clarify.
 
 **Research scope anchor**: The clarified intent from Step 3 is the scope anchor for research — not the original ticket body. The ticket body provides context, but the clarified intent defines what research must cover.
 
-**Alternative exploration**: When a backlog item contains implementation suggestions (e.g., a "Proposed Fix" section, "one approach might be..." language, or specific technical recommendations) AND the feature is complex-tier or high/critical criticality, research must explicitly explore at least one alternative approach alongside the ticket's suggestion. This exploration happens within the `/cortex:research` call — not as a separate competing agent. For simple-tier or low/medium-criticality features, alternative exploration is encouraged but not required. If research ultimately validates the ticket's suggested approach, that is a correct outcome — the requirement is to explore alternatives, not to reject the suggestion.
+**Alternative exploration**: When a backlog item contains implementation suggestions (e.g., a "Proposed Fix" section, "one approach might be..." language, or specific technical recommendations) AND the feature is complex-tier or high/critical criticality, research must explicitly explore at least one alternative approach alongside the ticket's suggestion. This exploration happens within the `/cortex-interactive:research` call — not as a separate competing agent. For simple-tier or low/medium-criticality features, alternative exploration is encouraged but not required. If research ultimately validates the ticket's suggested approach, that is a correct outcome — the requirement is to explore alternatives, not to reject the suggestion.
 
-`/cortex:research` writes its output to `lifecycle/{lifecycle-slug}/research.md`.
+`/cortex-interactive:research` writes its output to `lifecycle/{lifecycle-slug}/research.md`.
 
-After `/cortex:research` returns, verify that `lifecycle/{lifecycle-slug}/research.md` exists and is non-empty. If the file is absent or empty, surface the error to the user and halt — do not proceed to the Research Exit Gate.
+After `/cortex-interactive:research` returns, verify that `lifecycle/{lifecycle-slug}/research.md` exists and is non-empty. If the file is absent or empty, surface the error to the user and halt — do not proceed to the Research Exit Gate.
 
 After writing `research.md`, update `lifecycle/{lifecycle-slug}/index.md`:
 - If `"research"` is already in the `artifacts` array, skip entirely (no-op)
@@ -131,9 +131,9 @@ Read `references/specify.md` and follow its full protocol (§1–§4) with these
 
 - **§1 (Load Context)**: Requirements context was loaded during Clarify (Step 3) and research.md was produced in Step 4. Re-read `lifecycle/{lifecycle-slug}/research.md` but skip redundant requirements loading.
 - **§2a loop-back**: If the Research Confidence Check triggers a loop-back, re-enter Step 4 (Research Phase) with the Sufficiency Check bypass described there.
-- **§3b tier detection**: Read `lifecycle/{lifecycle-slug}/events.log` for the most recent `lifecycle_start` or `complexity_override` event to determine the active tier. The caller (`/cortex:lifecycle`) may escalate the tier between Research and Spec — do not rely solely on the Clarify output.
+- **§3b tier detection**: Read `lifecycle/{lifecycle-slug}/events.log` for the most recent `lifecycle_start` or `complexity_override` event to determine the active tier. The caller (`/cortex-interactive:lifecycle`) may escalate the tier between Research and Spec — do not rely solely on the Clarify output.
 - **§4 (User Approval) — Complexity/value gate**: After the spec is written, before showing the approval surface, check whether complexity is proportional to the value case. Fire this check if the spec has any of: 3+ distinct new state surfaces, a new persistent data format or config section the user must maintain, or a subsystem requiring ongoing per-feature upkeep. This check fires regardless of whether critical-review ran. If the check fires, do NOT proceed to the approval question in the same turn — instead present: (1) a one-sentence value case for the primary outcome, (2) a one-sentence complexity cost, and (3) 2–3 concrete alternatives. Where they naturally exist for this ticket, offer: "drop entirely" (value is achievable another way or too weak), "bugs-only" (strip the feature, keep only latent fix work the spec uncovered), "minimum viable" (identify one concrete scope cut). If an alternative doesn't naturally apply, say so. Wait for the user's response before showing the approval surface.
-- **§5 (Transition)**: Skip — /cortex:refine does not log phase transitions. The caller handles transition events if applicable.
+- **§5 (Transition)**: Skip — /cortex-interactive:refine does not log phase transitions. The caller handles transition events if applicable.
 
 Do NOT set `status: refined` before user approval.
 
@@ -167,7 +167,7 @@ If either `cortex-update-item` call fails, surface the error and wait for the us
 
 ## Step 6: Completion
 
-Announce that `/cortex:refine` is complete. Summarize:
+Announce that `/cortex-interactive:refine` is complete. Summarize:
 - Backlog item: `{backlog-filename-slug}`
 - Lifecycle directory: `lifecycle/{lifecycle-slug}/`
 - Artifacts produced: research.md, spec.md
@@ -179,7 +179,7 @@ The feature is now ready for overnight execution. The overnight runner will auto
 
 | Thought | Reality |
 |---------|---------|
-| "I should generate a plan" | /cortex:refine stops at spec. Overnight auto-generates plans from specs. |
+| "I should generate a plan" | /cortex-interactive:refine stops at spec. Overnight auto-generates plans from specs. |
 | "I should set status:refined as soon as research is done" | status:refined is set only after the user approves the spec (Step 5). |
 | "I should use the lifecycle-slug as the update_item.py argument" | update_item.py takes the backlog-filename-slug (e.g., 119-create-refine-skill), not the lifecycle-slug. |
 | "If update_item.py fails I can skip it and continue" | Write-back failures must be surfaced and resolved before proceeding. Silent skips corrupt backlog state. |

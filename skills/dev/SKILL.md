@@ -1,10 +1,10 @@
 ---
 name: dev
-description: Development entry point that analyzes requests and routes to the appropriate workflow. Use when user says "/cortex:dev", "what should I work on", "start working on", "dev hub", "where do I start", "next task", "what's next", or describes a feature without naming a specific skill.
+description: Development entry point that analyzes requests and routes to the appropriate workflow. Use when user says "/cortex-interactive:dev", "what should I work on", "start working on", "dev hub", "where do I start", "next task", "what's next", or describes a feature without naming a specific skill.
 inputs:
   - "request: string (optional) — development request or description; omit to trigger backlog triage of refined items"
 outputs:
-  - "Routing delegation (stdout) — one of: /cortex:lifecycle, /pipeline, /cortex:discovery, or direct implementation"
+  - "Routing delegation (stdout) — one of: /cortex-interactive:lifecycle, /pipeline, /cortex-interactive:discovery, or direct implementation"
   - "Backlog triage summary (stdout) — refined items with recommended workflows (when invoked with no request)"
 preconditions:
   - "Run from project root"
@@ -17,20 +17,20 @@ A conversational routing hub — the single entry point for all development work
 
 ## Invocation
 
-- `/cortex:dev` — open-ended; triggers backlog triage
-- `/cortex:dev {{request}}` — analyze and route to the right workflow
+- `/cortex-interactive:dev` — open-ended; triggers backlog triage
+- `/cortex-interactive:dev {{request}}` — analyze and route to the right workflow
 
 ## Step 1: Classify the Request
 
 Read the user's input and classify it into one of five routing branches. Evaluate in this order — first match wins.
 
-**Skill name mentions**: If the user names a specific skill (e.g., "use skill-creator", "run discovery on X"), treat it as a strong signal during classification — not an automatic pass-through. Dev always analyzes the request and provides its own assessment. If the analysis agrees with the user's stated preference, route there with context. If it disagrees, present the discrepancy and let the user decide. The user chose `/cortex:dev` over invoking the skill directly because they want the routing hub's analysis.
+**Skill name mentions**: If the user names a specific skill (e.g., "use skill-creator", "run discovery on X"), treat it as a strong signal during classification — not an automatic pass-through. Dev always analyzes the request and provides its own assessment. If the analysis agrees with the user's stated preference, route there with context. If it disagrees, present the discrepancy and let the user decide. The user chose `/cortex-interactive:dev` over invoking the skill directly because they want the routing hub's analysis.
 
 ### Branch 1: Backlog Triage
 
 The user asks what to work on, without naming a specific feature.
 
-**Signals**: "what should I work on", "what's next", "next task", "where do I start", bare `/cortex:dev` with no arguments, or any request for prioritization guidance.
+**Signals**: "what should I work on", "what's next", "next task", "where do I start", bare `/cortex-interactive:dev` with no arguments, or any request for prioritization guidance.
 
 **Action**: Execute the backlog triage workflow (Step 3).
 
@@ -54,7 +54,7 @@ The user describes something broad or uncertain that needs decomposition before 
 
 **Signals**: "I'm not sure how to approach", "need to understand", "explore", "investigate", "what are the options for", or a topic description that lacks concrete implementation details.
 
-**Action**: State: "Invoke `/cortex:discovery <topic>`" with the topic extracted from the request.
+**Action**: State: "Invoke `/cortex-interactive:discovery <topic>`" with the topic extracted from the request.
 
 ### Branch 4: Trivial Change
 
@@ -68,7 +68,7 @@ The user describes a change that is clearly trivial — single file, existing pa
 
 The user describes a single non-trivial feature that does not match any earlier branch.
 
-**Action**: Perform the criticality pre-assessment (Step 2), then state: "Invoke `/cortex:lifecycle <feature-name>`" along with the criticality context.
+**Action**: Perform the criticality pre-assessment (Step 2), then state: "Invoke `/cortex-interactive:lifecycle <feature-name>`" along with the criticality context.
 
 ### Ambiguous Requests
 
@@ -84,7 +84,7 @@ Honor the user's choice immediately.
 
 ## Step 2: Criticality Pre-Assessment
 
-Before routing to `/cortex:lifecycle`, analyze the feature description for heuristic signals that suggest elevated criticality.
+Before routing to `/cortex-interactive:lifecycle`, analyze the feature description for heuristic signals that suggest elevated criticality.
 
 ### Heuristic Signals
 
@@ -125,7 +125,7 @@ Before performing this assessment, check whether `lifecycle/<feature>/` already 
 
 1. Read `lifecycle/<feature>/events.log` for an existing criticality setting.
 2. Inform the user: "A lifecycle for `<feature>` already exists at `<phase>`. Resume it?"
-3. If the user confirms, state: "Invoke `/cortex:lifecycle <feature>`" to resume. Skip the criticality suggestion — the existing lifecycle already has one.
+3. If the user confirms, state: "Invoke `/cortex-interactive:lifecycle <feature>`" to resume. Skip the criticality suggestion — the existing lifecycle already has one.
 4. If the user wants to start fresh, confirm they want to discard existing artifacts before proceeding.
 
 ## Step 3: Backlog Triage
@@ -138,7 +138,7 @@ Run the global shell command `cortex-generate-backlog-index` directly (it is a b
 
 If it fails:
 - Warn the user: "Index generation failed. Falling back to the existing index."
-- Attempt to read `backlog/index.md` directly. If that file also does not exist, report: "No backlog index found. Use `/cortex:backlog add` to create items, then re-run `/cortex:dev`."
+- Attempt to read `backlog/index.md` directly. If that file also does not exist, report: "No backlog index found. Use `/cortex-interactive:backlog add` to create items, then re-run `/cortex-interactive:dev`."
 
 ### 3b. Read the Ready Section
 
@@ -146,7 +146,7 @@ Read `backlog/index.md` and extract the **Ready** section — items with no unre
 
 If no items are in the Ready section:
 - Report: "No ready items in the backlog."
-- Suggest: check blocked items for stale dependencies, or create new items with `/cortex:backlog add`.
+- Suggest: check blocked items for stale dependencies, or create new items with `/cortex-interactive:backlog add`.
 
 **Epic detection and child map construction** (must complete before any output is rendered):
 
@@ -163,7 +163,7 @@ For each detected epic, build its child list by scanning `index.json` entries (a
 3. **Skip UUIDs**: If the bare value contains a `-` character (UUID format, e.g., `58f9eb72-...`), skip it — UUID-format parent references belong to a deprecated schema era and do not match epic IDs.
 4. **Integer comparison**: Parse the remaining value as an integer and compare it to the epic's numeric ID. If they match, add the entry's fields (ID, title, status, and the `spec` field from `index.json` — non-null means refined) to that epic's child list.
 
-The result is a `epic_id → [children]` map where each child entry contains: ID, title, status, and a boolean indicating whether the item has been through `/cortex:refine` (i.e., `spec` field is non-null in `index.json`). This map is an intermediate artifact required by Step 3c for deduplication and grouped rendering.
+The result is a `epic_id → [children]` map where each child entry contains: ID, title, status, and a boolean indicating whether the item has been through `/cortex-interactive:refine` (i.e., `spec` field is non-null in `index.json`). This map is an intermediate artifact required by Step 3c for deduplication and grouped rendering.
 
 ### 3c. Present Ready Items with Workflow Recommendations
 
@@ -182,23 +182,23 @@ Render each epic in priority order (critical → high → medium → low). For e
 - **Status** — the child's current status
 - **Refinement indicator**:
   - `[refined]` if the child's `spec:` frontmatter field is present with a non-null value
-  - `[needs /cortex:refine]` if the `spec:` field is absent or null
+  - `[needs /cortex-interactive:refine]` if the `spec:` field is absent or null
 
 **Status-based display variations**:
 - Children with `status: in_progress` or `status: review`: show in the list with their status label. Note them as already being worked on; exclude from workflow recommendations.
 - Children with `status: blocked`: show in the list with a `[blocked]` indicator. Before the group-level recommendation, note how many children are blocked.
 
-**No-children case** — if the epic has no children in the child map (childless or all children are complete/abandoned): display the heading and a note: "No active child tickets found — consider running `/cortex:discovery` to decompose this epic."
+**No-children case** — if the epic has no children in the child map (childless or all children are complete/abandoned): display the heading and a note: "No active child tickets found — consider running `/cortex-interactive:discovery` to decompose this epic."
 
 **Per-epic workflow recommendation** — after rendering the child list (or no-children note), append a recommendation based on the children's state:
 
-- **No active children** (childless epic or all children complete/abandoned): "No active child tickets found. Consider running `/cortex:discovery` to decompose this epic into child tickets."
+- **No active children** (childless epic or all children complete/abandoned): "No active child tickets found. Consider running `/cortex-interactive:discovery` to decompose this epic into child tickets."
 
 - **Blocked children note** — if any children have `status: blocked`, prepend the following to the recommendation: "Note: [N] children are blocked — skip them until unblocked. Recommendations apply to the remaining [M] children." (where N is the count of blocked children and M is the count of non-blocked active children).
 
 - **All children refined** (all active, non-in_progress, non-review, non-blocked children have `spec:` present): "All children are refined. Run `/overnight` — it will auto-select them via its own readiness scan."
 
-- **Any children unrefined** (any active child that is not in_progress/review/blocked lacks `spec:`): "Run `/cortex:refine` on each unrefined child one at a time (each requires interactive spec approval before moving to the next): [list unrefined child IDs and titles]. Once all are refined and have `status: refined`, run `/overnight` — it will auto-select the full group."
+- **Any children unrefined** (any active child that is not in_progress/review/blocked lacks `spec:`): "Run `/cortex-interactive:refine` on each unrefined child one at a time (each requires interactive spec approval before moving to the next): [list unrefined child IDs and titles]. Once all are refined and have `status: refined`, run `/overnight` — it will auto-select the full group."
 
 For the blocked-children note: evaluate the all-refined vs any-unrefined branch using only the non-blocked, non-in_progress, non-review active children. The blocked note is prepended to whichever branch applies.
 
@@ -216,12 +216,12 @@ For each remaining item, render with:
 
 | Item Type | Default Recommendation |
 |-----------|----------------------|
-| `feature` | `/cortex:lifecycle` — structured phases for non-trivial features |
+| `feature` | `/cortex-interactive:lifecycle` — structured phases for non-trivial features |
 | `bug` | Direct implementation — bugs are typically well-scoped fixes |
 | `chore` | Direct implementation — maintenance tasks follow known patterns |
-| `spike` | `/cortex:discovery` — investigation before committing to build |
-| `idea` | `/cortex:discovery` — needs research and decomposition first |
-| `epic` | See epic grouping section above — children are shown grouped under their epic with per-group workflow recommendations. Do not route epics to `/cortex:lifecycle`. |
+| `spike` | `/cortex-interactive:discovery` — investigation before committing to build |
+| `idea` | `/cortex-interactive:discovery` — needs research and decomposition first |
+| `epic` | See epic grouping section above — children are shown grouped under their epic with per-group workflow recommendations. Do not route epics to `/cortex-interactive:lifecycle`. |
 
 After presenting both blocks, ask the user which item to pick up. Once chosen, route according to the recommended workflow (or the user's preferred alternative).
 
@@ -229,7 +229,7 @@ After presenting both blocks, ask the user which item to pick up. Once chosen, r
 
 If `backlog/` contains no item files (or does not exist):
 - Report: "No backlog found."
-- Suggest: "Use `/cortex:backlog add <description>` to create items, or describe what you want to build and I'll route you directly."
+- Suggest: "Use `/cortex-interactive:backlog add <description>` to create items, or describe what you want to build and I'll route you directly."
 
 ## Step 4: Direct Implementation Confirmation
 
@@ -238,7 +238,7 @@ When a request appears trivial (Branch 5), confirm before skipping lifecycle:
 > This looks like a trivial change — implement directly without lifecycle?
 >
 > - **Yes**: Proceed with the change immediately
-> - **No**: Route through `/cortex:lifecycle` for structured phases
+> - **No**: Route through `/cortex-interactive:lifecycle` for structured phases
 
 **The user must explicitly confirm.** Do not auto-skip lifecycle.
 
@@ -248,11 +248,11 @@ If the user confirms direct implementation:
 
 If the user declines:
 - Perform the criticality pre-assessment (Step 2)
-- Route to lifecycle: "Invoke `/cortex:lifecycle <feature-name>`" with criticality context
+- Route to lifecycle: "Invoke `/cortex-interactive:lifecycle <feature-name>`" with criticality context
 
 ## Constraint: No Built-In Plan Mode
 
-Never use Claude Code's built-in `EnterPlanMode` as a substitute for `/cortex:lifecycle`. When a feature requires planning, route through `/cortex:lifecycle` — its structured phases (research → specify → plan → implement → review → complete) replace the built-in plan mode entirely. The `/cortex:dev` skill exists to route to the right workflow skill, not to perform planning itself.
+Never use Claude Code's built-in `EnterPlanMode` as a substitute for `/cortex-interactive:lifecycle`. When a feature requires planning, route through `/cortex-interactive:lifecycle` — its structured phases (research → specify → plan → implement → review → complete) replace the built-in plan mode entirely. The `/cortex-interactive:dev` skill exists to route to the right workflow skill, not to perform planning itself.
 
 ## Step 5: User Override
 

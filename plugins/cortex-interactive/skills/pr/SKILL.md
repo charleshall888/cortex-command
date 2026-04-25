@@ -1,6 +1,6 @@
 ---
 name: pr
-description: Create GitHub pull requests with well-crafted titles and descriptions. Use when user says "pr", "/cortex:pr", "create a pr", "open a pull request", "submit a pr", "make a pull request", or asks to get their changes ready for review.
+description: Create GitHub pull requests with well-crafted titles and descriptions. Use when user says "pr", "/cortex-interactive:pr", "create a pr", "open a pull request", "submit a pr", "make a pull request", or asks to get their changes ready for review.
 inputs: []
 outputs:
   - "GitHub PR URL — created via gh pr create (printed to stdout)"
@@ -22,7 +22,7 @@ Create a GitHub pull request from the current branch.
    gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
    ```
 3. Run `git log --oneline <base>..HEAD`, `git diff --stat <base>..HEAD`, and `git status` in parallel to gather context
-4. If there are uncommitted changes, warn the user and stop — they should `/cortex:commit` first
+4. If there are uncommitted changes, warn the user and stop — they should `/cortex-interactive:commit` first
 5. If the branch has no commits ahead of base, warn and stop — nothing to PR
 6. Push the branch if not yet pushed: `git push -u origin HEAD`
 7. Check for a PR template (case-insensitive — GitHub accepts both casings):

@@ -48,11 +48,11 @@ If the current branch is not `main`/`master` (already on a feature branch or res
 
 ### 1a. Daytime Dispatch (Alternate Path)
 
-This section runs **only** when the user selected "Implement in autonomous worktree" in §1. It **replaces §2–§4 for the main session**: the main session does not run Task Dispatch, Rework, or Transition directly. Instead, it launches the daytime pipeline as a background subprocess, polls for progress, surfaces the final outcome, and exits /cortex:lifecycle.
+This section runs **only** when the user selected "Implement in autonomous worktree" in §1. It **replaces §2–§4 for the main session**: the main session does not run Task Dispatch, Rework, or Transition directly. Instead, it launches the daytime pipeline as a background subprocess, polls for progress, surfaces the final outcome, and exits /cortex-interactive:lifecycle.
 
 There is **no `.dispatching` noclobber marker** on this path — the `$$`-based mechanism is unsuitable for a detached background subprocess (the dispatching shell's PID `$$` dies milliseconds after the Bash call returns). The `daytime.pid` guard below is sufficient to prevent double-dispatch.
 
-**i. Plan.md prerequisite check.** Before any guards or subprocess launch, verify `lifecycle/{feature}/plan.md` exists. If absent: surface to the user "plan.md not found — cannot launch autonomous worktree. Run /cortex:lifecycle plan first." and exit §1a. Do NOT proceed to the guards or the subprocess launch.
+**i. Plan.md prerequisite check.** Before any guards or subprocess launch, verify `lifecycle/{feature}/plan.md` exists. If absent: surface to the user "plan.md not found — cannot launch autonomous worktree. Run /cortex-interactive:lifecycle plan first." and exit §1a. Do NOT proceed to the guards or the subprocess launch.
 
 **ii. Double-dispatch guard.** Two separate Bash calls (no compound commands):
 
@@ -164,7 +164,7 @@ The `outcome` field maps from the result-surfacing classification:
 
 The `pr_url` field is the PR URL string if one was surfaced from the result file during Tier-1 success (merged outcome), or the JSON literal `null` otherwise.
 
-**ix. Exit /cortex:lifecycle entirely.** Do not transition to any further phase. The daytime pipeline has already run the full lifecycle; the main session's role is done.
+**ix. Exit /cortex-interactive:lifecycle entirely.** Do not transition to any further phase. The daytime pipeline has already run the full lifecycle; the main session's role is done.
 
 ### 2. Task Dispatch
 
@@ -299,4 +299,4 @@ The `"to"` field is determined by the gating matrix above.
 | "This task is too small, let me do more" | Small tasks with clear scope succeed reliably. Large tasks with vague scope fail unpredictably. Trust the plan's sizing. |
 | "I should dispatch all tasks at once for maximum speed" | Batch ordering respects dependencies. Tasks in batch N+1 must wait for batch N to complete, even if some seem independent. The batch model keeps dispatch simple and checkpoint writes serialized. |
 | "This path would be better organized as X" | Deviating from spec paths breaks traceability between phases. If the spec path is wrong, flag it — don't fix it silently. |
-| "I'll just run `git add` and `git commit` directly" | Always use `/cortex:commit` for all commits — orchestrator checkpoints included. Never use raw git commands for staging or committing. Sub-agents in worktrees have full tool access including the Skill tool — uncertainty about this is not a reason to bypass it. |
+| "I'll just run `git add` and `git commit` directly" | Always use `/cortex-interactive:commit` for all commits — orchestrator checkpoints included. Never use raw git commands for staging or committing. Sub-agents in worktrees have full tool access including the Skill tool — uncertainty about this is not a reason to bypass it. |

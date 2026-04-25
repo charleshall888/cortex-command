@@ -1,6 +1,6 @@
 ---
 name: discovery
-description: Ideation research for topics not ready for implementation. Checks whether the topic is well-aimed, investigates the problem space thoroughly, then decomposes findings into backlog tickets grouped by epic. Use when user says "/cortex:discovery", "discover this", "research and ticket", "break this down into tickets", "decompose into backlog", "create an epic for", "investigate before building", "what should I discover", "find gaps in requirements", "self-directed discovery", "no topic discovery", or wants to understand a topic deeply before committing to build it. Also use when invoked with no arguments to scan requirements and suggest gap candidates. Different from /cortex:lifecycle — discovery stops at backlog tickets rather than proceeding to plan/implement.
+description: Ideation research for topics not ready for implementation. Checks whether the topic is well-aimed, investigates the problem space thoroughly, then decomposes findings into backlog tickets grouped by epic. Use when user says "/cortex-interactive:discovery", "discover this", "research and ticket", "break this down into tickets", "decompose into backlog", "create an epic for", "investigate before building", "what should I discover", "find gaps in requirements", "self-directed discovery", "no topic discovery", or wants to understand a topic deeply before committing to build it. Also use when invoked with no arguments to scan requirements and suggest gap candidates. Different from /cortex-interactive:lifecycle — discovery stops at backlog tickets rather than proceeding to plan/implement.
 argument-hint: "[topic]"
 inputs:
   - "topic: string (optional) — the topic or feature area to research and decompose into backlog tickets; if omitted, auto-scan mode activates to suggest gap candidates from requirements"
@@ -17,9 +17,9 @@ preconditions:
 
 ## Invocation
 
-- `/cortex:discovery {{topic}}` — start new or resume existing discovery
-- `/cortex:discovery {{phase}}` — jump to a specific phase (clarify, research, decompose)
-- `/cortex:discovery` — no topic; triggers auto-scan mode to suggest gap candidates from requirements
+- `/cortex-interactive:discovery {{topic}}` — start new or resume existing discovery
+- `/cortex-interactive:discovery {{phase}}` — jump to a specific phase (clarify, research, decompose)
+- `/cortex-interactive:discovery` — no topic; triggers auto-scan mode to suggest gap candidates from requirements
 
 ## Step 1: Identify the Topic
 
@@ -66,6 +66,6 @@ After completing a phase artifact, commit the `research/{{topic}}/` directory, s
 
 One active discovery at a time. If multiple incomplete `research/*/` directories exist (those without `decomposed.md`), list them and ask which to resume.
 
-## Relationship to /cortex:lifecycle
+## Relationship to /cortex-interactive:lifecycle
 
-When `/cortex:discovery` creates backlog tickets, each ticket receives a `discovery_source:` field pointing to the research artifact. When `/cortex:lifecycle` starts on that ticket, it automatically loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip). In pipeline or overnight contexts the skip is applied automatically. To re-investigate from scratch, choose N at the prompt.
+When `/cortex-interactive:discovery` creates backlog tickets, each ticket receives a `discovery_source:` field pointing to the research artifact. When `/cortex-interactive:lifecycle` starts on that ticket, it automatically loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip). In pipeline or overnight contexts the skip is applied automatically. To re-investigate from scratch, choose N at the prompt.

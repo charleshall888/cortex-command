@@ -1,6 +1,6 @@
 ---
 name: retro
-description: Write a dated problem-only log for the current session. Accepts an optional context tag (e.g. `/cortex:retro lifecycle-work`). Use when user says "/cortex:retro", "write a retro", "session retrospective", or wants to log what went wrong in this session. Captures user corrections, mistakes made, things missed, and wrong approaches — each with its consequence. Does NOT capture what worked or accomplishments.
+description: Write a dated problem-only log for the current session. Accepts an optional context tag (e.g. `/cortex-interactive:retro lifecycle-work`). Use when user says "/cortex-interactive:retro", "write a retro", "session retrospective", or wants to log what went wrong in this session. Captures user corrections, mistakes made, things missed, and wrong approaches — each with its consequence. Does NOT capture what worked or accomplishments.
 argument-hint: "[tag]"
 inputs:
   - "tag: string (optional) — context label appended to the retro filename; sanitized to lowercase-kebab-case; max length 50 chars after sanitization"
@@ -46,7 +46,7 @@ The optional `tag` argument must be validated before use:
 
 ### Example 1: Session with problems, no tag, no lessons
 
-**Input**: `/cortex:retro` (invoked after a session with user corrections)
+**Input**: `/cortex-interactive:retro` (invoked after a session with user corrections)
 
 **Output filename**: `retros/2026-03-05-1430.md`
 
@@ -65,7 +65,7 @@ The optional `tag` argument must be validated before use:
 
 ### Example 2: Session with no problems, with tag, with lessons
 
-**Input**: `/cortex:retro feature-auth` (invoked after a clean session that included user-taught lessons)
+**Input**: `/cortex-interactive:retro feature-auth` (invoked after a clean session that included user-taught lessons)
 
 **Output filename**: `retros/2026-03-05-1515-feature-auth.md`
 
@@ -99,13 +99,13 @@ If nothing went wrong and no corrections were made: write `No problems recorded.
 3. Reflect on this session: scan for user corrections, mistakes, missed items, wrong approaches
 4. Create `$REPO_ROOT/retros/` if it does not exist
 5. Determine the filename:
-   - If a tag argument was provided (any text after `/cortex:retro` on the command line), sanitize it:
+   - If a tag argument was provided (any text after `/cortex-interactive:retro` on the command line), sanitize it:
      - Lowercase the entire string
      - Replace spaces with hyphens
      - Strip any character outside `[a-z0-9-]`
      - Collapse consecutive hyphens into a single hyphen
      - Trim leading and trailing hyphens
-   - If the sanitized result is non-empty, use `$REPO_ROOT/retros/YYYY-MM-DD-HHmm-<tag>.md` (e.g. `/cortex:retro lifecycle-work` → `$REPO_ROOT/retros/2026-02-26-1430-lifecycle-work.md`)
+   - If the sanitized result is non-empty, use `$REPO_ROOT/retros/YYYY-MM-DD-HHmm-<tag>.md` (e.g. `/cortex-interactive:retro lifecycle-work` → `$REPO_ROOT/retros/2026-02-26-1430-lifecycle-work.md`)
    - If no tag was provided, or the sanitized result is empty, use `$REPO_ROOT/retros/YYYY-MM-DD-HHmm.md` (e.g. `$REPO_ROOT/retros/2026-02-26-1430.md`)
 6. Write the retro file at the filename determined in step 5
 7. Delete `$REPO_ROOT/retros/.session-lessons.md` if it existed
@@ -113,7 +113,7 @@ If nothing went wrong and no corrections were made: write `No problems recorded.
    - Run `[ "${CLAUDE_AUTOMATED_SESSION:-0}" = "1" ]` — if this exits 0 (i.e. the var is set to "1"), skip the rest of this step.
    - Determine `last_processed`: if `$REPO_ROOT/retros/.evolve-state.json` exists, extract the value of the `last_processed` key from it (plain string, no JSON library required — a grep/sed on `"last_processed"` is sufficient); otherwise `last_processed` is empty.
    - Count unprocessed retros: list all `.md` files in `$REPO_ROOT/retros/` whose basenames do not start with `.` (i.e. exclude dot-files). If `last_processed` is non-empty, keep only those whose basename is lexicographically greater than `last_processed`. The resulting count is the number of unprocessed retros.
-   - If count ≥ 10, append to the response: `"$count retros unprocessed — consider running /cortex:evolve."` (substituting the actual count). If count < 10, output nothing.
+   - If count ≥ 10, append to the response: `"$count retros unprocessed — consider running /cortex-interactive:evolve."` (substituting the actual count). If count < 10, output nothing.
 
 ## Error Handling
 

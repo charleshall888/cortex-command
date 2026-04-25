@@ -131,11 +131,11 @@ Before committing, read and follow `references/orchestrator-review.md` for the `
 
 ### 6b. Critical Review
 
-Run `/cortex:critical-review` on `research/{topic}/research.md`. Address any significant challenges raised before proceeding.
+Run `/cortex-interactive:critical-review` on `research/{topic}/research.md`. Address any significant challenges raised before proceeding.
 
 ### 7. Transition
 
-Stage and commit `research/{topic}/` using `/cortex:commit`. Summarize key findings for the user and proceed to Specify.
+Stage and commit `research/{topic}/` using `/cortex-interactive:commit`. Summarize key findings for the user and proceed to Specify.
 
 ## Constraints
 
@@ -147,7 +147,7 @@ Stage and commit `research/{topic}/` using `/cortex:commit`. Summarize key findi
 
 ### Signal formats
 
-The following literal markers are stable contract for downstream consumers (e.g., `/cortex:discovery decompose`):
+The following literal markers are stable contract for downstream consumers (e.g., `/cortex-interactive:discovery decompose`):
 
 - `[file:line]` — inline citation, e.g., `[skills/discovery/references/research.md:42]`
 - `[premise-unverified: not-searched]` — marker indicating the author did not attempt investigation

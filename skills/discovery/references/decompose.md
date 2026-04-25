@@ -13,7 +13,7 @@ Read `research/{topic}/research.md` for findings, feasibility assessment, and de
 Analyze the research and break findings into discrete, independently implementable work items. Each should:
 
 - Deliver a testable increment of value
-- Be completable in a single `/cortex:lifecycle` run
+- Be completable in a single `/cortex-interactive:lifecycle` run
 - Have clear boundaries (what's in, what's out)
 
 For each work item, capture:
@@ -83,7 +83,7 @@ When items are combined, document the consolidation decision and rationale in th
 
 ### 5. Create Backlog Tickets
 
-Follow the `/cortex:backlog add` conventions for each ticket:
+Follow the `/cortex-interactive:backlog add` conventions for each ticket:
 
 1. Scan filenames matching `[0-9]*-*.md` in both `backlog/` and `backlog/archive/` to find the highest existing numeric ID
 2. Create the epic first if applicable (children need its ID for `parent`)
@@ -92,7 +92,7 @@ Follow the `/cortex:backlog add` conventions for each ticket:
    - `blocked-by: [<ids>]` based on work item dependencies
    - `tags: [<topic>]` to link back to the discovery topic
    - `created` and `updated` set to today's date
-   - `discovery_source: research/{topic}/research.md` — enables `/cortex:lifecycle` to auto-load prior discovery context
+   - `discovery_source: research/{topic}/research.md` — enables `/cortex-interactive:lifecycle` to auto-load prior discovery context
    <!-- Note: lifecycle reads `discovery_source:` first; `research:` is recognized as a fallback for hand-authored or pre-coupling backlog items. -->
 
 ### 6. Write Decomposition Record
@@ -131,7 +131,7 @@ Run `cortex-generate-backlog-index` to update the backlog index.
 
 ### 8. Commit
 
-Stage and commit the new backlog files and `research/{topic}/decomposed.md` using `/cortex:commit`.
+Stage and commit the new backlog files and `research/{topic}/decomposed.md` using `/cortex-interactive:commit`.
 
 ### 9. Present Summary
 
@@ -139,11 +139,11 @@ Show the user:
 
 - The epic and its children (or single ticket if no epic)
 - The dependency graph and suggested implementation order
-- Reminder that `/cortex:lifecycle <feature>` is the next step when ready to build
+- Reminder that `/cortex-interactive:lifecycle <feature>` is the next step when ready to build
 
 ## Constraints
 
 - **Codebase-grounded Value**: Vendor guidance, best practices, and industry standards are not sufficient Value on their own — the Value field must state what problem this solves in *this* codebase.
-- **No implementation planning**: Don't specify HOW to build each item — that's `/cortex:lifecycle`'s plan phase. Ticket bodies must not contain prescriptive section headers like "## Proposed Fix", "## Implementation Steps", or "## How to Fix". Instead, use descriptive headers to summarize research context: "## Research Context", "## Findings", or "## Context from discovery:" are all fine. Tickets may reference findings from `discovery_source` to give implementers background, but should never prescribe solutions
+- **No implementation planning**: Don't specify HOW to build each item — that's `/cortex-interactive:lifecycle`'s plan phase. Ticket bodies must not contain prescriptive section headers like "## Proposed Fix", "## Implementation Steps", or "## How to Fix". Instead, use descriptive headers to summarize research context: "## Research Context", "## Findings", or "## Context from discovery:" are all fine. Tickets may reference findings from `discovery_source` to give implementers background, but should never prescribe solutions
 - **One epic max**: A single discovery produces at most one epic with children
 - **Respect backlog conventions**: Follow the backlog skill's frontmatter schema exactly

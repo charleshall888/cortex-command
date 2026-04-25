@@ -56,14 +56,14 @@ stub manifest).
 
 The `@cortex-command` suffix selects the marketplace registered in step 1.
 After install, `/plugin list` shows `cortex-overnight-integration` as
-enabled, and `/cortex:overnight` becomes invocable.
+enabled, and `/cortex-overnight-integration:overnight` becomes invocable.
 
 ### 3. Verify the install
 
 In the same session:
 
 - `/plugin list` should show `cortex-overnight-integration` enabled.
-- `/cortex:overnight` should be available as a slash command.
+- `/cortex-overnight-integration:overnight` should be available as a slash command.
 - `/mcp` should show the `cortex-overnight` MCP server connected
   (registered via the plugin's `.mcp.json`).
 

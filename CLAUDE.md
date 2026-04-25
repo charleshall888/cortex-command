@@ -37,7 +37,7 @@ Run `just` to see all available recipes. Key commands:
 
 ## Conventions
 
-- Always commit using the `/cortex:commit` skill -- never run `git commit` manually
+- Always commit using the `/cortex-interactive:commit` skill -- never run `git commit` manually
 - Commit messages: imperative mood, capitalized, no trailing period, max 72 chars subject
 - A shared hook validates commit messages automatically
 - New skills go in `skills/` with `name` and `description` frontmatter

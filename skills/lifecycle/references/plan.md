@@ -261,7 +261,7 @@ Append a `phase_transition` event to `lifecycle/{feature}/events.log`:
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "plan", "to": "implement"}
 ```
 
-If `commit-artifacts` is enabled in project config (default), stage `lifecycle/{feature}/` and commit using `/cortex:commit`.
+If `commit-artifacts` is enabled in project config (default), stage `lifecycle/{feature}/` and commit using `/cortex-interactive:commit`.
 
 After approval, proceed to Implement.
 

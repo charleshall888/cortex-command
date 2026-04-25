@@ -327,7 +327,7 @@ os.replace(tmp_path, final)
 
 Payload schema (R4): `{"ts":"<ISO 8601>","feature":"<slug>","artifact":"<path>","synthesis_status":"ok|failed","reviewers":{"completed":N,"dispatched":M},"findings":[{"class":"B","finding":"<text>","reviewer_angle":"<angle>","evidence_quote":"<text>"}]}`.
 
-Gates: zero B-class → no file, no note. Synthesis failure → write `synthesis_status:"failed"` with B-class findings from Step 2c reviewers' envelopes. Path-argument (`/cortex:critical-review <path>`) and auto-trigger invocations (specify.md §3b / plan.md) both obey session-bound resolution — the argument path does not re-bind `{feature}`.
+Gates: zero B-class → no file, no note. Synthesis failure → write `synthesis_status:"failed"` with B-class findings from Step 2c reviewers' envelopes. Path-argument (`/cortex-interactive:critical-review <path>`) and auto-trigger invocations (specify.md §3b / plan.md) both obey session-bound resolution — the argument path does not re-bind `{feature}`.
 
 ## Step 3: Present
 

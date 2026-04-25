@@ -59,7 +59,7 @@ Write or present the following outputs — this is the handoff package for Resea
 
 | Thought | Reality |
 |---------|---------|
-| "I should assess complexity and criticality" | Discovery Clarify does not assess implementation complexity — there is nothing to implement yet. That assessment happens in /cortex:refine or /cortex:lifecycle when a ticket is ready to build. |
+| "I should assess complexity and criticality" | Discovery Clarify does not assess implementation complexity — there is nothing to implement yet. That assessment happens in /cortex-interactive:refine or /cortex-interactive:lifecycle when a ticket is ready to build. |
 | "I should look for a backlog item to match" | Discovery produces backlog items; it does not start from them. The backlog coverage check (§3) looks for overlap to avoid duplicating existing work, not to resolve an input. |
 | "I should ask questions even when the topic is clear" | High confidence on all four dimensions = proceed without questions. A well-stated topic should flow through Clarify quickly. |
 | "I should research feasibility here" | That is Research's job. Clarify only checks aim, domain, novelty, and alignment. |

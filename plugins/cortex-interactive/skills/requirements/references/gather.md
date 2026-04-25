@@ -134,9 +134,9 @@ For each major requirement, establish:
 
 ## Re-Gather Triggers
 
-Requirements are living documents. Re-run `/cortex:requirements <scope>` when any of these occur:
+Requirements are living documents. Re-run `/cortex-interactive:requirements <scope>` when any of these occur:
 
-- **Lifecycle review identifies drift**: a lifecycle review surfaces a gap between what was built and what the requirements say. Run `/cortex:requirements <area>` to update the affected area doc, or `/cortex:requirements project` if the drift is project-level.
+- **Lifecycle review identifies drift**: a lifecycle review surfaces a gap between what was built and what the requirements say. Run `/cortex-interactive:requirements <area>` to update the affected area doc, or `/cortex-interactive:requirements project` if the drift is project-level.
 - **Retro surfaces unmet assumption**: a session retrospective identifies a requirement that was assumed but never documented, or a documented requirement that misled implementation.
 - **Core architectural decision changes**: e.g., the state model changes, a core subsystem is replaced, or a constraint that was "may evolve" actually evolves.
 - **Scope changes after discovery research**: a discovery epic reshapes what the project is doing in a feature area — update before refining tickets from that epic.
@@ -144,7 +144,7 @@ Requirements are living documents. Re-run `/cortex:requirements <scope>` when an
 
 When updating (not replacing):
 
-1. Use `/cortex:requirements {area}` to update a specific area doc without regenerating project.md — preferred for targeted drift fixes.
+1. Use `/cortex-interactive:requirements {area}` to update a specific area doc without regenerating project.md — preferred for targeted drift fixes.
 2. Run a focused interview targeting only what has changed: new requirements, invalidated constraints, resolved open questions.
 3. Rewrite the full artifact (do not patch sections — maintain internal coherence).
 4. After updating an area doc, check the parent's `## Conditional Loading` trigger table. If area scope changed, update the trigger phrase for that entry.

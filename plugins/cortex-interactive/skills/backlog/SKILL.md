@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Manage project backlog items as individual markdown files with YAML frontmatter. Use when user says "/cortex:backlog", "backlog add", "backlog list", "backlog pick", "add to backlog", "show backlog", "archive backlog item", "what's ready", "pick a backlog item", or asks to create/view/manage/select backlog items.
+description: Manage project backlog items as individual markdown files with YAML frontmatter. Use when user says "/cortex-interactive:backlog", "backlog add", "backlog list", "backlog pick", "add to backlog", "show backlog", "archive backlog item", "what's ready", "pick a backlog item", or asks to create/view/manage/select backlog items.
 inputs:
   - "subcommand: string (required) — add|list|pick|ready|archive|reindex"
   - "title: string (optional, with add) — title of the new backlog item to create"
@@ -8,7 +8,7 @@ inputs:
 outputs:
   - "backlog/NNN-slug.md — for add subcommand"
   - "stdout — for list and ready subcommands"
-  - "/cortex:lifecycle {{item}} invocation — for pick subcommand"
+  - "/cortex-interactive:lifecycle {{item}} invocation — for pick subcommand"
 preconditions:
   - "Run from project root"
   - "backlog/ directory exists"
@@ -23,7 +23,7 @@ Subcommand: $ARGUMENTS (first word = subcommand, remainder = subcommand args; em
 
 ## Invocation
 
-`/cortex:backlog {{subcommand}}` — run the specified subcommand. When `{{subcommand}}` is `add`, provide `{{title}}` to name the new item. When `{{subcommand}}` is `archive`, provide `{{item}}` to identify the target.
+`/cortex-interactive:backlog {{subcommand}}` — run the specified subcommand. When `{{subcommand}}` is `add`, provide `{{title}}` to name the new item. When `{{subcommand}}` is `archive`, provide `{{item}}` to identify the target.
 
 ## Frontmatter Schema
 
@@ -37,7 +37,7 @@ Examples: `001-complete-phase-commits.md`, `014-add-search-feature.md`
 
 ## Subcommands
 
-When invoked without a `{{subcommand}}` (just `/cortex:backlog`), present the available actions via `AskUserQuestion`:
+When invoked without a `{{subcommand}}` (just `/cortex-interactive:backlog`), present the available actions via `AskUserQuestion`:
 
 - **pick** — Select an open item to work on
 - **list** — Show the backlog summary table
@@ -79,7 +79,7 @@ regardless of current status.
 
 Interactive item selector. Presents open backlog items as a selectable list.
 
-1. Read `backlog/index.json`. If missing, report "Run `/cortex:backlog reindex` first" and stop.
+1. Read `backlog/index.json`. If missing, report "Run `/cortex-interactive:backlog reindex` first" and stop.
 2. Filter to actionable items: `status` is `backlog`, `refined`, or `in_progress`, and `blocked_by` is empty (`[]`) or all blockers resolved. Prefer `status: refined` items (spec-approved, overnight-eligible) — list them first within each priority tier.
 3. Sort by priority (critical → low), then ID ascending
 5. If no actionable items exist, report that the backlog is clear
@@ -89,7 +89,7 @@ Interactive item selector. Presents open backlog items as a selectable list.
    - Each option's `description` includes priority and type from the index
 8. If 5+ items exist, present the top 4 by priority via `AskUserQuestion` and note how many additional items were omitted
 9. After the user selects an item, ask what they'd like to do with it using a second `AskUserQuestion`:
-   - **Start lifecycle** — invoke `/cortex:lifecycle {{item}}` to begin structured development
+   - **Start lifecycle** — invoke `/cortex-interactive:lifecycle {{item}}` to begin structured development
    - **View details** — read and present the full item file
    - **Mark in-progress** — update the item's status to `in_progress` and `updated` date
 
