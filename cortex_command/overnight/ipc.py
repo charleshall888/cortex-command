@@ -7,7 +7,9 @@ rule; the active-session pointer additionally carries a ``phase`` field.
 
 All on-disk writes are atomic (``tempfile.NamedTemporaryFile`` +
 ``os.fsync`` via ``durable_fsync`` + ``os.replace``) and never leak
-partial content.
+partial content. The initial ``runner.pid`` claim additionally uses
+``O_CREAT|O_EXCL`` so two concurrent ``cortex overnight start``
+invocations cannot both win the lock (R8 / Adversarial §1).
 """
 
 from __future__ import annotations
@@ -21,6 +23,26 @@ from pathlib import Path
 import psutil
 
 from cortex_command.common import durable_fsync
+
+
+class ConcurrentRunnerError(Exception):
+    """Raised when another runner has already claimed ``runner.pid``.
+
+    Signals R8's race-loser path: the caller lost the
+    ``O_CREAT|O_EXCL`` claim against a live (or unverifiable-but-present)
+    competitor. Carries the ``session_id`` of the contended session and
+    the ``existing_pid`` recorded in the on-disk claim so the MCP layer
+    can surface ``{started: false, reason: "concurrent_runner_alive",
+    existing_session_id: ...}`` to the caller.
+    """
+
+    def __init__(self, session_id: str, existing_pid: int) -> None:
+        self.session_id = session_id
+        self.existing_pid = existing_pid
+        super().__init__(
+            f"runner.pid already claimed for session {session_id!r} "
+            f"by pid {existing_pid}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -82,6 +104,39 @@ def _atomic_write_json(path: Path, payload: dict, mode: int = 0o600) -> None:
 # Per-session runner.pid (R8)
 # ---------------------------------------------------------------------------
 
+def _exclusive_create_runner_pid(path: Path, payload: dict) -> None:
+    """Create ``path`` exclusively and write ``payload`` as JSON.
+
+    Uses ``os.open`` with ``O_CREAT | O_EXCL | O_WRONLY`` and mode
+    ``0o600``. Raises ``FileExistsError`` if another writer already
+    created the file. On any post-open failure the partially-written
+    file is unlinked so a retry sees a clean slate.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+
+    fd = os.open(
+        str(path),
+        os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+        0o600,
+    )
+    try:
+        os.write(fd, data)
+        durable_fsync(fd)
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            path.unlink()
+        except OSError:
+            pass
+        raise
+    else:
+        os.close(fd)
+
+
 def write_runner_pid(
     session_dir: Path,
     pid: int,
@@ -90,11 +145,25 @@ def write_runner_pid(
     session_id: str,
     repo_path: Path,
 ) -> None:
-    """Atomically write ``runner.pid`` into ``session_dir``.
+    """Atomically claim ``runner.pid`` in ``session_dir`` via O_EXCL.
 
     Schema matches R8 exactly: ``schema_version: 1``,
     ``magic: "cortex-runner-v1"``, plus the passed fields. File mode is
     ``0o600``.
+
+    The initial claim uses ``os.open(O_CREAT | O_EXCL | O_WRONLY)`` so
+    two concurrent starters cannot both win the lock. On
+    ``FileExistsError``:
+
+    1. Read the existing payload and run :func:`verify_runner_pid`.
+    2. If verification fails (stale PID), unlink and retry the claim
+       exactly once.
+    3. If verification passes (the existing claim points at a live
+       runner), raise :class:`ConcurrentRunnerError`.
+    4. If the retry's second claim also collides — a third party beat
+       us to the recreated file — re-read, run verify, and raise
+       :class:`ConcurrentRunnerError` regardless of liveness. The
+       retry budget is exactly one; the loop never spins.
     """
     payload = {
         "schema_version": _SCHEMA_VERSION,
@@ -106,7 +175,41 @@ def write_runner_pid(
         "session_dir": str(session_dir),
         "repo_path": str(repo_path),
     }
-    _atomic_write_json(session_dir / "runner.pid", payload, mode=0o600)
+    path = session_dir / "runner.pid"
+
+    try:
+        _exclusive_create_runner_pid(path, payload)
+        return
+    except FileExistsError:
+        pass
+
+    existing = read_runner_pid(session_dir)
+    if existing is not None and verify_runner_pid(existing):
+        existing_session_id = existing.get("session_id", session_id)
+        existing_pid = existing.get("pid", -1)
+        raise ConcurrentRunnerError(existing_session_id, existing_pid)
+
+    # Stale claim — unlink and retry exactly once.
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+
+    try:
+        _exclusive_create_runner_pid(path, payload)
+        return
+    except FileExistsError:
+        # A third party beat us to the recreated claim. Treat as alive
+        # race-loser to break the loop deterministically.
+        existing = read_runner_pid(session_dir)
+        if existing is not None:
+            verify_runner_pid(existing)
+            existing_session_id = existing.get("session_id", session_id)
+            existing_pid = existing.get("pid", -1)
+        else:
+            existing_session_id = session_id
+            existing_pid = -1
+        raise ConcurrentRunnerError(existing_session_id, existing_pid)
 
 
 def clear_runner_pid(session_dir: Path) -> None:
