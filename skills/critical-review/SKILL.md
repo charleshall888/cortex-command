@@ -198,7 +198,66 @@ You are synthesizing findings from multiple independent adversarial reviewers in
 ## Instructions
 1. Read all reviewer findings carefully.
 2. Find the through-lines — claims or concerns that appear across multiple angles **within the same class**. A-class through-lines, B-class through-lines, and C-class through-lines are distinct; do not merge them.
-3. Before accepting any finding's class tag, re-read its `evidence_quote` field against the artifact content provided above. If the evidence supports a different class, re-classify and surface a note: `Synthesizer re-classified finding N from B→A: <rationale>` (upgrade) or `Synthesizer re-classified finding N from A→B: <rationale>` (downgrade). Downgrades commonly fire on straddle-rationale findings where the evidence only supports the adjacent concern.
+3. Before accepting any finding's class tag, re-read its `evidence_quote` field against the artifact content provided above. For A-class findings, also re-read the `"fix_invalidation_argument"` field — apply the A→B downgrade rubric below. If the evidence supports a different class, re-classify and surface a note: `Synthesizer re-classified finding N from B→A: <rationale>` (upgrade) or `Synthesizer re-classified finding N from A→B: <rationale>` (downgrade). Downgrades commonly fire on straddle-rationale findings where the evidence only supports the adjacent concern.
+
+   **A→B downgrade rubric.** A-class status requires a credible `"fix_invalidation_argument"` — a concrete causal link from the cited evidence to a failure of the proposed change. Downgrade A→B when any of the following triggers fires (using the reclassification note `Synthesizer re-classified finding N from A→B: <rationale>`):
+
+   - **Trigger 1 (absent)**: the `"fix_invalidation_argument"` field is absent or empty.
+   - **Trigger 2 (restates)**: the argument restates the finding text without adding a causal link from evidence to fix-failure.
+   - **Trigger 3 (adjacent)**: the argument identifies an adjacent issue (B-class material) rather than fix-invalidation. **Straddle exemption**: when the finding's `straddle_rationale` field is present, Straddle Protocol bias-up takes precedence and trigger 3 does NOT fire — ratify as A.
+   - **Trigger 4 (vague)**: the argument is vague or speculative ("might cause", "could break") without a concrete failure path.
+
+   Conversely, ratify as A when the `"fix_invalidation_argument"` names a concrete mechanism by which the proposed change, as written, would fail to produce its stated outcome.
+
+### Worked example 1 (absent): ratify
+
+- Candidate `"fix_invalidation_argument"`: "the patch sets `retries=0` but leaves `retry_on_timeout=True`, so the loop in `client.py:142` still re-enters on timeout — the documented fix never takes effect."
+- Trigger applies: none — argument is present and names a concrete mechanism.
+- Disposition: ratify as A. The argument carries a concrete causal link from evidence (`retry_on_timeout=True`) to a fix-failure (loop still re-enters).
+
+### Worked example 2 (absent): downgrade
+
+- Candidate `"fix_invalidation_argument"`: (field omitted from envelope).
+- Trigger applies: 1 (absent). The reviewer tagged the finding A but supplied no fix-invalidation argument.
+- Disposition: downgrade A→B. Note: `Synthesizer re-classified finding N from A→B: fix_invalidation_argument absent; A-class requires a concrete failure path.`
+
+### Worked example 3 (restates): ratify
+
+- Candidate `"fix_invalidation_argument"`: "the proposed null-check guards `user.email` but the crash trace at `auth.py:88` shows the NPE originates from `user.profile.email`, two attribute hops up — the guard is on the wrong object."
+- Trigger applies: none — argument adds a causal link (wrong object guarded → NPE persists), not a restatement.
+- Disposition: ratify as A.
+
+### Worked example 4 (restates): downgrade
+
+- Candidate `"fix_invalidation_argument"`: "the fix does not work because the bug is not actually fixed by this change."
+- Trigger applies: 2 (restates). The argument restates the finding ("does not work") without a causal mechanism linking evidence to fix-failure.
+- Disposition: downgrade A→B. Note: `Synthesizer re-classified finding N from A→B: fix_invalidation_argument restates the finding without a causal link.`
+
+### Worked example 5 (adjacent): ratify
+
+- Candidate `"fix_invalidation_argument"`: "the patch updates the validator but the cache layer at `cache.py:55` still serves the pre-fix payload for 1h — within the documented 'effective immediately' window the fix is invisible to callers."
+- `straddle_rationale`: "splits between fix-invalidation (cache window swallows the fix) and adjacent cache-invalidation gap; biasing up because the cache window collapses the documented outcome."
+- Trigger applies: 3 would fire on adjacency grounds, BUT `straddle_rationale` is populated — Straddle exemption activates and trigger 3 does NOT fire.
+- Disposition: ratify as A.
+
+### Worked example 6 (adjacent): downgrade
+
+- Candidate `"fix_invalidation_argument"`: "the analytics event one layer up still fires on the old code path, so downstream dashboards will be wrong."
+- `straddle_rationale`: (absent).
+- Trigger applies: 3 (adjacent). The argument describes a B-class adjacent gap (analytics misalignment) rather than fix-invalidation of the proposed change itself; no Straddle exemption because `straddle_rationale` is not set.
+- Disposition: downgrade A→B. Note: `Synthesizer re-classified finding N from A→B: fix_invalidation_argument describes an adjacent gap, not fix-invalidation; no straddle_rationale present.`
+
+### Worked example 7 (vague): ratify
+
+- Candidate `"fix_invalidation_argument"`: "the migration drops the index before backfilling the new column, so the backfill query at `migrate.py:212` will table-scan a 40M-row table and time out under the 30s statement timeout — the migration aborts mid-fix."
+- Trigger applies: none — argument names a concrete failure path (index drop → table scan → statement timeout → abort).
+- Disposition: ratify as A.
+
+### Worked example 8 (vague): downgrade
+
+- Candidate `"fix_invalidation_argument"`: "this might cause performance issues and could break things under load."
+- Trigger applies: 4 (vague). Hedged language ("might cause", "could break") with no concrete failure path.
+- Disposition: downgrade A→B. Note: `Synthesizer re-classified finding N from A→B: fix_invalidation_argument is speculative ("might cause", "could break") with no concrete failure path.`
 4. After evidence re-examination, count A-class findings from well-formed envelopes only — untagged prose blocks (from malformed envelopes per Step 2c.5) do NOT count toward the A-class tally. If the count is zero, do NOT emit an `## Objections` section. B-class findings in the absence of any A-class finding surface under `## Concerns` at most.
 5. Surface tensions where angles conflict or pull in different directions.
 6. Synthesize into a single coherent challenge. Do not produce a per-angle dump.
