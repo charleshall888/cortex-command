@@ -2,20 +2,23 @@
 schema_version: "1"
 uuid: 86a87121-2737-4b2a-8505-3ed605721d0f
 title: "Publish cortex-overnight-integration plugin (overnight skill + runner hooks)"
-status: backlog
+status: complete
 priority: high
 type: feature
 parent: 113
 tags: [distribution, plugin, overnight-runner, overnight-layer-distribution]
-areas: [skills, overnight-runner]
+areas: [skills,overnight-runner]
 created: 2026-04-21
 updated: 2026-04-25
-lifecycle_slug: null
-lifecycle_phase: null
+lifecycle_slug: publish-cortex-overnight-integration-plugin-overnight-skill-runner-hooks
+lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/publish-cortex-overnight-integration-plugin-overnight-skill-runner-hooks/spec.md
 ---
 
 # Publish cortex-overnight-integration plugin (overnight skill + runner hooks)

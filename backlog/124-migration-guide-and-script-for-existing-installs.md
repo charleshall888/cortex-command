@@ -14,7 +14,7 @@ lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
 blocks: []
-blocked-by: [118, 121, 122]
+blocked-by: [118, 122]
 discovery_source: research/overnight-layer-distribution/research.md
 ---
 
