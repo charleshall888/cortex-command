@@ -23,10 +23,12 @@ import asyncio
 import glob as _glob
 import json
 import os
+import signal as _signal
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+import psutil as _psutil
 from mcp.server.fastmcp.exceptions import ToolError
 
 from cortex_command.mcp_server.schema import (
@@ -82,6 +84,31 @@ _LOGS_LIMIT_SERVER_CAP = 200
 # Phases that count as "active" (i.e. not terminated) for
 # ``overnight_list_sessions``. ``complete`` is the only terminal phase.
 _ACTIVE_PHASES = {"planning", "executing", "paused"}
+
+
+# ---------------------------------------------------------------------------
+# Cancel-tool constants (R6 / Task 14)
+# ---------------------------------------------------------------------------
+
+#: Outer SIGTERM-to-SIGKILL window for ``overnight_cancel``. Strictly
+#: greater than the runner's in-handler 6 s descendant-tree-walk budget
+#: (``runner.DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS``) so the runner's own
+#: SIGTERM handler completes its descendant-cleanup phase before any
+#: outer SIGKILL escalates against the runner itself.
+_CANCEL_GRACEFUL_TIMEOUT_SECONDS: float = 12.0
+
+#: Polling interval for the runner-exit watcher between SIGTERM and the
+#: SIGKILL escalation. The poll loop is preferred over a fixed sleep so
+#: the common path (runner exits cleanly within a fraction of the
+#: budget) does not pay the full timeout.
+_CANCEL_POLL_INTERVAL_SECONDS: float = 0.25
+
+#: Post-SIGKILL settle window — SIGKILL cannot be caught, so a runner
+#: that is still alive after this brief poll is necessarily SIGSTOP'd
+#: or otherwise unkillable from this process's perspective. Distinct
+#: from the 12 s graceful budget so the cumulative cancel time stays
+#: bounded for the SIGSTOP'd-runner test cases.
+_CANCEL_POST_SIGKILL_SETTLE_SECONDS: float = 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -459,10 +486,320 @@ async def overnight_logs(payload: LogsInput) -> LogsOutput:
     )
 
 
-async def overnight_cancel(payload: CancelInput) -> CancelOutput:
-    """Cancel the active overnight runner. Filled in by Task 14."""
+def _classify_verify_failure(pid_data: dict) -> str:
+    """Return the reason a ``runner.pid`` payload failed verification.
 
-    raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
+    Mirrors the structural checks in
+    :func:`cortex_command.overnight.ipc.verify_runner_pid` but, instead
+    of collapsing every failure into a single ``False``, distinguishes
+    the cancel-tool's contract reasons. Returns one of:
+
+    * ``"magic_mismatch"`` — payload not a dict, missing magic field, or
+      schema_version outside the known range.
+    * ``"start_time_skew"`` — magic + schema match but the recorded
+      start_time does not match the live process create_time within the
+      tolerance, the PID has been recycled, or the PID is gone (R6 Edge
+      Cases line 234 maps the no-such-process case to the magic-stale
+      branch — but our caller checks runner liveness before this is
+      reached, so a no-such-process here means PID reuse mid-cancel).
+
+    The cancel handler must have already ruled out ``no_runner_pid``
+    before invoking this helper.
+    """
+
+    if not isinstance(pid_data, dict):
+        return "magic_mismatch"
+    if pid_data.get("magic") != _ipc._RUNNER_MAGIC:
+        return "magic_mismatch"
+    schema_version = pid_data.get("schema_version")
+    if (
+        not isinstance(schema_version, int)
+        or schema_version < 1
+        or schema_version > _ipc.MAX_KNOWN_RUNNER_PID_SCHEMA_VERSION
+    ):
+        return "magic_mismatch"
+    # Anything else (bad pid type, bad start_time, no such process,
+    # access denied, start_time tolerance miss) is bucketed under
+    # ``start_time_skew``: the IPC contract identifies the runner, but
+    # the recorded process is no longer the one we expect.
+    return "start_time_skew"
+
+
+def _is_pid_running(pid: int) -> bool:
+    """Return ``True`` while the PID resolves to a live, non-zombie process.
+
+    ``psutil.Process(pid).is_running()`` returns ``True`` for zombie
+    processes (the PID is still in the kernel's process table even
+    though the program has exited and is awaiting reap). For the
+    cancel-tool's exit-watcher contract, a zombie has effectively
+    "exited" — its work is done, the runner.pid lock can be cleared,
+    and a fresh ``overnight_start_run`` can claim the slot. This helper
+    therefore treats ``STATUS_ZOMBIE`` as not-running.
+
+    Wrapped (alongside the polling sleep) inside ``asyncio.to_thread``
+    by the cancel handler per R29.
+    """
+    try:
+        proc = _psutil.Process(pid)
+        if not proc.is_running():
+            return False
+        try:
+            if proc.status() == _psutil.STATUS_ZOMBIE:
+                return False
+        except (_psutil.NoSuchProcess, _psutil.AccessDenied):
+            return False
+        return True
+    except (_psutil.NoSuchProcess, _psutil.AccessDenied):
+        return False
+    except Exception:
+        return False
+
+
+async def _wait_for_pid_exit(pid: int, deadline_seconds: float) -> bool:
+    """Poll ``psutil.Process(pid).is_running()`` until exit or deadline.
+
+    Returns ``True`` if the process exited within the budget, ``False``
+    otherwise. The polling step (``_psutil.Process(...).is_running()``)
+    is dispatched via ``asyncio.to_thread`` per R29 so the stdio MCP
+    server's event loop is never blocked.
+    """
+    loop = asyncio.get_running_loop()
+    start = loop.time()
+    while True:
+        running = await asyncio.to_thread(_is_pid_running, pid)
+        if not running:
+            return True
+        elapsed = loop.time() - start
+        if elapsed >= deadline_seconds:
+            return False
+        # Sleep at most the remaining budget so the loop never
+        # overshoots the deadline.
+        await asyncio.sleep(
+            min(_CANCEL_POLL_INTERVAL_SECONDS, deadline_seconds - elapsed)
+        )
+
+
+async def overnight_cancel(payload: CancelInput) -> CancelOutput:
+    """Cancel an overnight runner via PG signal escalation (R6 / Task 14).
+
+    Reads ``runner.pid``, calls :func:`ipc.verify_runner_pid` for the
+    standard liveness check, then sends ``SIGTERM`` to the recorded
+    PGID. Polls the runner PID for up to
+    ``_CANCEL_GRACEFUL_TIMEOUT_SECONDS`` (12 s — strictly greater than
+    Task 3's in-handler 6 s budget so the runner's tree-walker finishes
+    before any outer SIGKILL fires). On timeout, sends ``SIGKILL`` to the
+    PGID. If the runner is still alive after the SIGKILL window, the
+    return ``reason`` is ``"signal_not_delivered_within_timeout"``;
+    when ``payload.force=True``, the tool additionally unlinks
+    ``runner.pid`` so a subsequent ``overnight_start_run`` can claim the
+    O_EXCL lock (closes the SIGSTOP'd-runner permanent-lockout path).
+
+    The five enumerated reasons (per spec R6) are returned via
+    :class:`CancelOutput`:
+
+    * ``"cancelled"`` — runner exited inside the budget.
+    * ``"no_runner_pid"`` — no ``runner.pid`` file present.
+    * ``"magic_mismatch"`` — ``runner.pid`` magic / schema_version bad.
+    * ``"start_time_skew"`` — recorded start_time does not match live
+      process (PID reuse).
+    * ``"signal_not_delivered_within_timeout"`` — signals were sent but
+      the runner did not exit.
+
+    Note: ``os.killpg(pgid, SIGTERM)`` only signals processes in the
+    runner's PG. Grandchildren spawned with ``start_new_session=True``
+    are out of reach here — termination of those is wholly delegated to
+    Task 3's in-runner SIGTERM handler walking the descendant tree.
+
+    R29: ``os.killpg``, ``os.unlink``, and the ``psutil.Process`` polls
+    are wrapped in ``asyncio.to_thread`` so this coroutine never blocks
+    the stdio MCP server's event loop.
+    """
+
+    repo_path = _cli_handler._resolve_repo_path()
+    session_dir = (
+        repo_path / "lifecycle" / "sessions" / payload.session_id
+    )
+
+    pid_data = await asyncio.to_thread(_ipc.read_runner_pid, session_dir)
+    pid_file_unlinked = False
+    pid_value: Optional[int] = None
+
+    if pid_data is None:
+        return CancelOutput(
+            cancelled=False,
+            signal_sent=[],
+            reason="no_runner_pid",
+            pid_file_unlinked=False,
+            pid=None,
+        )
+
+    if isinstance(pid_data, dict):
+        recorded_pid = pid_data.get("pid")
+        if isinstance(recorded_pid, int):
+            pid_value = recorded_pid
+
+    verified = await asyncio.to_thread(_ipc.verify_runner_pid, pid_data)
+    if not verified:
+        # Self-heal stale state — same behaviour as cli_handler.py:359-372.
+        try:
+            await asyncio.to_thread(_ipc.clear_runner_pid, session_dir)
+            pid_file_unlinked = True
+        except OSError:
+            pass
+        try:
+            await asyncio.to_thread(_ipc.clear_active_session)
+        except OSError:
+            pass
+        reason = _classify_verify_failure(pid_data)
+        return CancelOutput(
+            cancelled=False,
+            signal_sent=[],
+            reason=reason,
+            pid_file_unlinked=pid_file_unlinked,
+            pid=pid_value,
+        )
+
+    pgid = pid_data.get("pgid") if isinstance(pid_data, dict) else None
+    runner_pid = pid_data.get("pid") if isinstance(pid_data, dict) else None
+    if not isinstance(pgid, int) or not isinstance(runner_pid, int):
+        # Treat structurally-broken pid file as magic_mismatch — the
+        # IPC contract was not honoured even though verify happened to
+        # accept it. Self-heal so the lock does not leak.
+        try:
+            await asyncio.to_thread(_ipc.clear_runner_pid, session_dir)
+            pid_file_unlinked = True
+        except OSError:
+            pass
+        return CancelOutput(
+            cancelled=False,
+            signal_sent=[],
+            reason="magic_mismatch",
+            pid_file_unlinked=pid_file_unlinked,
+            pid=pid_value,
+        )
+
+    signal_sent: list[str] = []
+
+    # Phase 1: SIGTERM the runner's PG.
+    try:
+        await asyncio.to_thread(os.killpg, pgid, _signal.SIGTERM)
+        signal_sent.append("SIGTERM")
+    except (ProcessLookupError, PermissionError):
+        # Race: PG vanished between verify and signal. macOS returns
+        # EPERM for an empty PG (Linux returns ESRCH); treat both as
+        # "the runner is gone" and self-heal the lock.
+        try:
+            await asyncio.to_thread(_ipc.clear_runner_pid, session_dir)
+            pid_file_unlinked = True
+        except OSError:
+            pass
+        try:
+            await asyncio.to_thread(_ipc.clear_active_session)
+        except OSError:
+            pass
+        return CancelOutput(
+            cancelled=True,
+            signal_sent=[],
+            reason="cancelled",
+            pid_file_unlinked=pid_file_unlinked,
+            pid=pid_value,
+        )
+
+    # Phase 2: poll for graceful exit within the 12 s budget.
+    exited = await _wait_for_pid_exit(
+        runner_pid, _CANCEL_GRACEFUL_TIMEOUT_SECONDS
+    )
+
+    if exited:
+        # Self-heal the now-irrelevant lock so a fresh start can claim
+        # the O_EXCL slot.
+        try:
+            await asyncio.to_thread(_ipc.clear_runner_pid, session_dir)
+            pid_file_unlinked = True
+        except OSError:
+            pass
+        try:
+            await asyncio.to_thread(_ipc.clear_active_session)
+        except OSError:
+            pass
+        return CancelOutput(
+            cancelled=True,
+            signal_sent=signal_sent,
+            reason="cancelled",
+            pid_file_unlinked=pid_file_unlinked,
+            pid=pid_value,
+        )
+
+    # Phase 3: escalate to SIGKILL on the PG. Runner did not exit
+    # within the graceful budget.
+    try:
+        await asyncio.to_thread(os.killpg, pgid, _signal.SIGKILL)
+        signal_sent.append("SIGKILL")
+    except (ProcessLookupError, PermissionError):
+        # PG vanished between the SIGTERM-budget poll and the escalation
+        # — on macOS an empty PG returns EPERM rather than ESRCH, so we
+        # bucket both errors as "PG is gone, runner exited" and treat
+        # the cancel as cancelled.
+        try:
+            await asyncio.to_thread(_ipc.clear_runner_pid, session_dir)
+            pid_file_unlinked = True
+        except OSError:
+            pass
+        try:
+            await asyncio.to_thread(_ipc.clear_active_session)
+        except OSError:
+            pass
+        return CancelOutput(
+            cancelled=True,
+            signal_sent=signal_sent,
+            reason="cancelled",
+            pid_file_unlinked=pid_file_unlinked,
+            pid=pid_value,
+        )
+
+    # Phase 4: brief poll to see if SIGKILL took effect. SIGKILL cannot
+    # be caught — the only way a process survives this poll is if it is
+    # SIGSTOP'd or otherwise unkillable from this process's perspective.
+    exited_after_kill = await _wait_for_pid_exit(
+        runner_pid, _CANCEL_POST_SIGKILL_SETTLE_SECONDS
+    )
+
+    if exited_after_kill:
+        try:
+            await asyncio.to_thread(_ipc.clear_runner_pid, session_dir)
+            pid_file_unlinked = True
+        except OSError:
+            pass
+        try:
+            await asyncio.to_thread(_ipc.clear_active_session)
+        except OSError:
+            pass
+        return CancelOutput(
+            cancelled=True,
+            signal_sent=signal_sent,
+            reason="cancelled",
+            pid_file_unlinked=pid_file_unlinked,
+            pid=pid_value,
+        )
+
+    # SIGSTOP'd / unkillable runner. ``force=True`` unlinks the lock so
+    # a subsequent start can claim the slot; the runner process itself
+    # is left in whatever signalled state it ended in (per spec R6 —
+    # the user is responsible for ``kill -9 <pid>`` if needed).
+    if payload.force:
+        try:
+            await asyncio.to_thread(_ipc.clear_runner_pid, session_dir)
+            pid_file_unlinked = True
+        except OSError:
+            pass
+
+    return CancelOutput(
+        cancelled=False,
+        signal_sent=signal_sent,
+        reason="signal_not_delivered_within_timeout",
+        pid_file_unlinked=pid_file_unlinked,
+        pid=pid_value,
+    )
 
 
 async def overnight_list_sessions(
