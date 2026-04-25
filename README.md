@@ -83,8 +83,11 @@ curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/
 uv tool update-shell
 
 # 3. In Claude Code, install the plugin marketplace, then the plugins
-claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins
+claude /plugin marketplace add charleshall888/cortex-command
 claude /plugin install cortex-interactive
+claude /plugin install cortex-overnight-integration
+claude /plugin install cortex-ui-extras
+claude /plugin install cortex-pr-review
 ```
 
 No symlinks into `~/.claude/` are created — plugins are discovered by Claude Code directly.
@@ -96,27 +99,13 @@ Cortex-command ships four plugins in this repo, split into core and extras tiers
 | Plugin | Tier | Notes |
 |--------|------|-------|
 | `cortex-interactive` | core | Interactive skills + hooks (lifecycle, commit, pr, etc.) |
-| `cortex-overnight-integration` | core | Autonomous overnight runner integration (shipping in ticket 121) |
+| `cortex-overnight-integration` | core | Autonomous overnight runner integration |
 | `cortex-ui-extras` | extras | Experimental — UI design skills |
 | `cortex-pr-review` | extras | PR-review automation |
 
-In-repo plugins ship via this repo's marketplace once ticket 122 lands. Until then, the marketplace URL below continues to point to the companion `cortex-command-plugins` repo, which now retains only `android-dev-extras`:
+For installation specifics and per-project enablement, see [`docs/setup.md`](docs/setup.md).
 
-```bash
-claude /plugin marketplace add https://github.com/charleshall888/cortex-command-plugins
-```
-
-Then enable per project in `.claude/settings.json`:
-
-```json
-{ "enabledPlugins": { "cortex-ui-extras": true } }
-```
-
-See [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) for `android-dev-extras`.
-
-### Limited / custom installation
-
-You can skip the `cortex-interactive` plugin and install only the extras (`cortex-ui-extras`, `cortex-pr-review`, etc.) — plugins are composable per project via Claude Code's plugin manager. Anything narrower needs reading the plugin sources directly — see [`docs/setup.md#limited--custom-installation`](docs/setup.md#limited--custom-installation) for the rationale.
+`android-dev-extras` lives in the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) companion repo, which now holds only that plugin.
 
 ## Authentication
 
