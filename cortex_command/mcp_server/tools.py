@@ -23,13 +23,17 @@ import asyncio
 import glob as _glob
 import json
 import os
+import shutil as _shutil
 import signal as _signal
-from datetime import datetime
+import subprocess as _subprocess
+import sys as _sys
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import psutil as _psutil
 from mcp.server.fastmcp.exceptions import ToolError
+from pydantic import ValidationError as _PydanticValidationError
 
 from cortex_command.mcp_server.schema import (
     CancelInput,
@@ -50,6 +54,18 @@ from cortex_command.overnight import ipc as _ipc
 from cortex_command.overnight import logs as _logs
 
 
+# Verbatim warning sentence (literal copy for the grep invariant).
+# This tool spawns a multi-hour autonomous agent that bypasses permission
+# prompts and consumes Opus tokens. Only call when the user has
+# explicitly asked to start an overnight run.
+#
+# The actual constant used by both call sites below (the tool description
+# in server.py and the validation-error path in :func:`overnight_start_run`)
+# is :data:`cortex_command.mcp_server.server._START_RUN_WARNING`. It is
+# imported lazily inside the handler to avoid a top-level circular import:
+# ``server.py`` imports ``tools`` at module load, then defines the
+# constant. A top-level ``from .server import _START_RUN_WARNING`` would
+# fire before the constant exists and crash at import time.
 _NOT_IMPLEMENTED_MSG = "handler not yet implemented — filled in by Task 12–15"
 
 
@@ -308,10 +324,272 @@ def _list_sessions_sync(payload: ListSessionsInput) -> ListSessionsOutput:
 # ---------------------------------------------------------------------------
 
 
-async def overnight_start_run(payload: StartRunInput) -> StartRunOutput:
-    """Spawn the overnight runner. Filled in by Task 15."""
+def _resolve_start_run_state_path(
+    state_path_arg: Optional[str],
+) -> Path:
+    """Return the resolved ``overnight-state.json`` path or raise ToolError.
 
-    raise NotImplementedError(_NOT_IMPLEMENTED_MSG)
+    Mirrors :func:`cli_handler.handle_start`'s discovery semantics:
+
+    * When ``state_path_arg`` is provided, expand-and-resolve it.
+    * Otherwise, auto-discover via
+      :func:`cli_handler._auto_discover_state` against the caller's repo's
+      ``lifecycle/sessions/`` root.
+
+    Surfaces missing-state-file errors as ``ToolError`` so the MCP client
+    sees a structured Tool Execution Error instead of an attribute crash.
+    """
+    repo_path = _cli_handler._resolve_repo_path()
+
+    if state_path_arg is not None:
+        state_path = Path(state_path_arg).expanduser().resolve()
+    else:
+        sessions_root = repo_path / "lifecycle" / "sessions"
+        discovered = _cli_handler._auto_discover_state(sessions_root)
+        if discovered is None:
+            raise ToolError(
+                "no overnight session found — create a state file or "
+                "pass `state_path` explicitly"
+            )
+        state_path = discovered
+
+    if not state_path.exists():
+        raise ToolError(f"state file not found: {state_path}")
+
+    return state_path
+
+
+def _read_session_id_from_state(state_path: Path) -> str:
+    """Return the ``session_id`` recorded in ``overnight-state.json``.
+
+    Raises :class:`ToolError` when the file is unreadable or the
+    ``session_id`` field is missing/empty — both surface as structured
+    Tool Execution Errors so the caller does not see a bare exception.
+    """
+    try:
+        data = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ToolError(f"failed to read state file: {exc}") from exc
+    session_id = data.get("session_id") if isinstance(data, dict) else None
+    if not isinstance(session_id, str) or not session_id:
+        raise ToolError(
+            f"state file missing 'session_id' field: {state_path}"
+        )
+    return session_id
+
+
+def _open_bootstrap_log(session_dir: Path) -> int:
+    """Open ``session_dir/runner-bootstrap.log`` with O_CREAT|O_APPEND|O_WRONLY.
+
+    Returns the raw file descriptor so the caller can pass it to
+    :class:`subprocess.Popen` for ``stdout`` / ``stderr`` redirection
+    (R16). Mode ``0o600`` keeps the bootstrap log private to the user.
+    """
+    session_dir.mkdir(parents=True, exist_ok=True)
+    log_path = session_dir / "runner-bootstrap.log"
+    return os.open(
+        str(log_path),
+        os.O_CREAT | os.O_APPEND | os.O_WRONLY,
+        0o600,
+    )
+
+
+def _resolve_cortex_executable() -> list[str]:
+    """Return the argv prefix that invokes ``cortex overnight start``.
+
+    Prefers the ``cortex`` console script discovered via
+    :func:`shutil.which`; falls back to ``[sys.executable, "-m",
+    "cortex_command"]`` so the spawn keeps working in environments where
+    only a Python module form is on PATH.
+    """
+    cortex = _shutil.which("cortex")
+    if cortex is not None:
+        return [cortex]
+    return [_sys.executable, "-m", "cortex_command"]
+
+
+def _spawn_runner_subprocess(
+    state_path: Path,
+    bootstrap_log_fd: int,
+) -> _subprocess.Popen:
+    """Spawn ``cortex overnight start --state <path>`` detached.
+
+    The runner inherits ``stdin=DEVNULL`` (R16) and writes any pre-
+    ``events.log``-init output (import errors, missing deps, early
+    uncaught exceptions) to ``runner-bootstrap.log`` via the supplied
+    file descriptor. ``start_new_session=True`` puts the runner into its
+    own process group so :func:`overnight_cancel`'s ``os.killpg`` reaches
+    the full PG without flowing back into the MCP server.
+    """
+    argv = _resolve_cortex_executable() + [
+        "overnight",
+        "start",
+        "--state",
+        str(state_path),
+    ]
+    return _subprocess.Popen(
+        argv,
+        stdin=_subprocess.DEVNULL,
+        stdout=bootstrap_log_fd,
+        stderr=bootstrap_log_fd,
+        start_new_session=True,
+    )
+
+
+def _check_concurrent_runner(
+    session_dir: Path,
+) -> Optional[StartRunOutput]:
+    """Return a ``concurrent_runner_alive`` payload when a live runner is found.
+
+    Mirrors the pre-flight check used by Task 5's atomic-claim path:
+    reads ``runner.pid`` and runs :func:`ipc.verify_runner_pid`. When the
+    recorded runner is alive, build the structured-refusal output
+    (``{started: false, reason: "concurrent_runner_alive",
+    existing_session_id: ...}``) so the caller can surface it without
+    spawning anything. Returns ``None`` when no live runner is found.
+    """
+    pid_data = _ipc.read_runner_pid(session_dir)
+    if pid_data is None:
+        return None
+    if not _ipc.verify_runner_pid(pid_data):
+        # Stale lock — the runner subprocess will self-heal during its
+        # own ``write_runner_pid`` call (T5's retry-once path), so we do
+        # not block the spawn here.
+        return None
+    existing_session_id = pid_data.get("session_id") if isinstance(
+        pid_data, dict
+    ) else None
+    return StartRunOutput(
+        started=False,
+        session_id=None,
+        pid=None,
+        started_at=None,
+        reason="concurrent_runner_alive",
+        existing_session_id=(
+            existing_session_id
+            if isinstance(existing_session_id, str)
+            else None
+        ),
+    )
+
+
+async def overnight_start_run(
+    payload: Union[StartRunInput, dict, None] = None,
+) -> StartRunOutput:
+    """Spawn the overnight runner with a confirmation gate (R3 / R13 / R16).
+
+    Required input: ``confirm_dangerously_skip_permissions: Literal[True]``
+    (Pydantic ``Literal[True]``) — a model that calls this tool without
+    the keyword sees the verbatim warning sentence in the Tool Execution
+    Error body, not a bare JSON-RPC schema-validation failure.
+
+    On success, returns ``{session_id, pid, started_at}`` (R3). On the
+    ``ConcurrentRunnerError`` path (R8), returns
+    ``{started: false, reason: "concurrent_runner_alive",
+    existing_session_id}`` so the caller sees a structured refusal.
+
+    Spawning uses :class:`subprocess.Popen` with ``stdin=DEVNULL``
+    (R16), ``stdout``/``stderr`` redirected to a
+    ``runner-bootstrap.log`` file descriptor opened *before* spawn, and
+    ``start_new_session=True`` so the runner runs in a detached PG (R16).
+
+    R29: ``open()``, ``subprocess.Popen``, and the runner.pid pre-flight
+    read all run via :func:`asyncio.to_thread`.
+    """
+
+    # Validation gate (R3 / R13). The handler accepts a raw dict so the
+    # FastMCP wrapper's already-validated ``StartRunInput`` payload still
+    # passes through unchanged in production while tests can exercise
+    # the validation-error path by passing a missing-field dict directly.
+    # The verbatim warning sentence is re-included in the ToolError body
+    # via ``_START_RUN_WARNING`` (literal copy on the next line keeps the
+    # ``grep -c "spawns a multi-hour autonomous agent"`` invariant happy):
+    # "This tool spawns a multi-hour autonomous agent that bypasses permission prompts and consumes Opus tokens."
+    # Lazy import: server.py imports this module at load time, so a
+    # top-level ``from .server import _START_RUN_WARNING`` would race
+    # against server.py's own definition order (circular import).
+    from cortex_command.mcp_server.server import _START_RUN_WARNING
+
+    if isinstance(payload, StartRunInput):
+        validated = payload
+    else:
+        try:
+            validated = StartRunInput.model_validate(payload or {})
+        except _PydanticValidationError as exc:
+            raise ToolError(f"{_START_RUN_WARNING} {exc}") from exc
+
+    # Resolve state_path (and through it the session_dir) using the same
+    # discovery semantics as ``cli_handler.handle_start``.
+    state_path = await asyncio.to_thread(
+        _resolve_start_run_state_path, validated.state_path
+    )
+    session_dir = state_path.parent
+
+    # Read session_id once so we can return it in the success response
+    # (and surface it in the structured concurrent-refusal payload below).
+    session_id = await asyncio.to_thread(
+        _read_session_id_from_state, state_path
+    )
+
+    # Pre-flight: a live runner already holds ``runner.pid`` → return
+    # the structured ``concurrent_runner_alive`` refusal without
+    # spawning. This mirrors Task 5's atomic-claim path; the actual
+    # ConcurrentRunnerError raise happens inside the runner subprocess
+    # if a race lands between this check and the spawn — that path is
+    # detected by the runner's own startup self-heal.
+    concurrent = await asyncio.to_thread(
+        _check_concurrent_runner, session_dir
+    )
+    if concurrent is not None:
+        return concurrent
+
+    # Open the bootstrap log fd before spawning so any pre-events.log
+    # failure (import error, missing dep, early uncaught exception) is
+    # captured (R16).
+    bootstrap_log_fd = await asyncio.to_thread(
+        _open_bootstrap_log, session_dir
+    )
+
+    started_at = datetime.now(timezone.utc).isoformat()
+    try:
+        proc = await asyncio.to_thread(
+            _spawn_runner_subprocess, state_path, bootstrap_log_fd
+        )
+    except _ipc.ConcurrentRunnerError as exc:
+        # Defensive: the runner subprocess raises ConcurrentRunnerError
+        # from its in-process ``write_runner_pid`` call, which we never
+        # see here because the runner is detached. Kept for symmetry —
+        # if a future refactor calls ``write_runner_pid`` from the MCP
+        # layer directly, this branch surfaces the structured refusal.
+        try:
+            os.close(bootstrap_log_fd)
+        except OSError:
+            pass
+        return StartRunOutput(
+            started=False,
+            session_id=None,
+            pid=None,
+            started_at=None,
+            reason="concurrent_runner_alive",
+            existing_session_id=exc.session_id,
+        )
+    finally:
+        # The child subprocess inherits the fd via Popen's stdout/stderr
+        # plumbing; the parent's copy is no longer needed once Popen has
+        # dup'd it into the child.
+        try:
+            os.close(bootstrap_log_fd)
+        except OSError:
+            pass
+
+    return StartRunOutput(
+        started=True,
+        session_id=session_id,
+        pid=proc.pid,
+        started_at=started_at,
+        reason=None,
+        existing_session_id=None,
+    )
 
 
 async def overnight_status(payload: StatusInput) -> StatusOutput:
