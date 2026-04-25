@@ -16,6 +16,27 @@ Read `lifecycle/{feature}/plan.md` and identify pending tasks (those with `[ ]`)
 
 **Uncommitted-changes guard**: Immediately before the `AskUserQuestion` call, run `git status --porcelain` (no path filter, no additional flags). If non-empty output is returned, the option that keeps the user on the current branch is demoted in place: (a) prepend the fixed warning `Warning: uncommitted changes in working tree — this will mix them into the commit on main.` as a one-line prefix to that option's description, and (b) strip the `(recommended)` suffix from that option's label if present. The option remains selectable and stays at its existing position — no removal, no gating pre-question. If `git status --porcelain` exits non-zero (e.g., missing `.git`, corrupt index, bisect/rebase state), the guard does not fire — neither the demotion nor the warning prefix are applied — a single-line diagnostic `uncommitted-changes guard skipped: git status failed` is surfaced alongside the prompt, and the pre-flight continues normally as a fallback.
 
+**Runtime probe**: After the uncommitted-changes guard and before assembling the prompt's options array, run a single Bash call that probes for the top-level `cortex_command` package via `importlib.util.find_spec` against that top-level module name. The probe is wrapped in an explicit `try/except` so that an exception inside the import machinery cannot collide with the absence-signaling exit 1:
+
+```
+python3 -c "
+import sys
+try:
+    import importlib.util
+    sys.exit(0 if importlib.util.find_spec('cortex_command') is not None else 1)
+except Exception:
+    sys.exit(2)
+"
+```
+
+Route by exit code into one of three menu dispositions:
+
+- **exit 0** → the `cortex_command` module is present → all three options remain unchanged: `Implement on current branch`, `Implement in autonomous worktree`, and `Create feature branch`.
+- **exit 1** → the module is absent → remove `Implement in autonomous worktree` from the options array; this is a silent hide, with no diagnostic surfaced. The post-degrade option set is `Implement on current branch` and `Create feature branch`.
+- **any other exit** (including 2 and 127) → the probe failed → fail open: all three options remain, and the literal diagnostic string `runtime probe skipped: import probe failed` is surfaced alongside the prompt.
+
+After the probe completes and the options array has been resolved per the routing rules above, the resolved options array is then passed to `AskUserQuestion`.
+
 Dispatch by selection:
 - If the user selects **Implement in autonomous worktree**, proceed to §1a (Daytime Dispatch alternate path below).
 - If the user selects **"Implement on current branch"**, remain on the current branch and proceed to §2 Task Dispatch.
