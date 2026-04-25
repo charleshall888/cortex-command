@@ -1,6 +1,6 @@
 {
   "name": "cortex-ui-extras",
   "description": "Experimental UI design skills (brief, setup, lint, a11y, judge, check) for Claude Code interactive workflows",
-  "author": "Charlie Hall <charliemhall@gmail.com>",
+  "author": {"name": "Charlie Hall", "email": "charliemhall@gmail.com"},
   "experimental": true
 }

@@ -1,5 +1,5 @@
 {
   "name": "cortex-pr-review",
   "description": "Multi-agent GitHub pull request review pipeline for Claude Code",
-  "author": "Charlie Hall <charliemhall@gmail.com>"
+  "author": {"name": "Charlie Hall", "email": "charliemhall@gmail.com"}
 }
