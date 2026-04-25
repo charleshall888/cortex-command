@@ -31,20 +31,43 @@ This puts the `cortex` binary on your `PATH`. It clones the repo to `$HOME/.cort
 
 ### 2. Add and install the plugins from inside Claude Code
 
-Launch `claude`, then run:
+Launch `claude`, then add the marketplace once and install whichever of the four plugins you want:
 
 ```
 /plugin marketplace add charleshall888/cortex-command
 /plugin install cortex-interactive@cortex-command
-```
-
-`cortex-interactive` is the core plugin (skills, hooks, statusline). If you plan to run overnight sessions, also install the optional integration plugin:
-
-```
 /plugin install cortex-overnight-integration@cortex-command
+/plugin install cortex-ui-extras@cortex-command
+/plugin install cortex-pr-review@cortex-command
 ```
 
-Additional opt-in plugins (UI design stack, pr-review, etc.) live in [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins). See that repo's README for the authoritative plugin list.
+The four plugins are:
+
+- **`cortex-interactive`** — core plugin: skills, hooks, statusline.
+- **`cortex-overnight-integration`** — overnight runner MCP server and the `/cortex-overnight-integration:overnight` and `/cortex-overnight-integration:morning-review` skills.
+- **`cortex-ui-extras`** — opt-in UI design stack.
+- **`cortex-pr-review`** — opt-in PR review tooling.
+
+#### Plugin-specific prerequisites
+
+- **`cortex-overnight-integration`** requires the `${CORTEX_COMMAND_ROOT}` environment variable exported and pointing at your cortex-command checkout, plus the `cortex` CLI on your `PATH` (the MCP server resolves the CLI from there). Export it in your shell rc file, e.g. `export CORTEX_COMMAND_ROOT=$HOME/.cortex`.
+- **`cortex-interactive`** shell-side bin shims (`jcc` and friends) require `${CORTEX_COMMAND_ROOT}` exported as well; the in-Claude skills work without it, but the bin shims will error explicitly if it is unset.
+- **`cortex-ui-extras`** has no extra prerequisites.
+- **`cortex-pr-review`** has no extra prerequisites.
+
+#### Do not add via direct `marketplace.json` URL
+
+Use the `owner/repo` git form (`/plugin marketplace add charleshall888/cortex-command`). Do **not** add the marketplace by passing a raw `marketplace.json` URL — relative-path `source` fields only resolve against a git checkout, so the URL form silently breaks plugin installs.
+
+#### Verify install
+
+1. Run `/plugin list` to confirm the plugins you installed are listed.
+2. If a skill is missing after install, run `/reload-plugins` to refresh the plugin metadata cache.
+3. As a last resort, nuke the plugin cache and re-run `/reload-plugins`:
+
+   ```bash
+   rm -rf ~/.claude/plugins/cache
+   ```
 
 ### 3. Per-repo setup
 
