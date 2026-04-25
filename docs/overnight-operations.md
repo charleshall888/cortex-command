@@ -164,16 +164,16 @@ On repair success the feature re-merges and continues; on repair failure the fea
 
 ### Cycle-breaking for repeated escalations
 
-Workers raise escalations to the Escalation System by appending entries to `lifecycle/escalations.jsonl` — an append-only JSONL log whose writer is `write_escalation()` in `cortex_command/overnight/deferral.py` (re-exported via `cortex_command/overnight/orchestrator_io.py`). Each record carries an `escalation_id` of form `{feature}-{round}-q{N}` and a `type` field — one of `"escalation"` (worker asked), `"resolution"` (orchestrator answered), or `"promoted"` (cycle broken, see below). N is chosen by `_next_escalation_n()`, which counts existing `"escalation"` entries for the same feature+round; a TOCTOU race is acknowledged in code comments and is safe under the per-feature single-coroutine dispatch invariant.
+Workers raise escalations to the Escalation System by appending entries to `lifecycle/sessions/{session_id}/escalations.jsonl` — an append-only JSONL log whose writer is `write_escalation()` in `cortex_command/overnight/deferral.py` (re-exported via `cortex_command/overnight/orchestrator_io.py`). Each record carries an `escalation_id` of form `{feature}-{round}-q{N}` and a `type` field — one of `"escalation"` (worker asked), `"resolution"` (orchestrator answered), or `"promoted"` (cycle broken, see below). N is chosen by `_next_escalation_n()`, which counts existing `"escalation"` entries for the same feature+round; a TOCTOU race is acknowledged in code comments and is safe under the per-feature single-coroutine dispatch invariant.
 
 **Files**: `cortex_command/overnight/deferral.py` (`EscalationEntry`, `write_escalation`, `_next_escalation_n`), `cortex_command/overnight/orchestrator_io.py` (re-export), `cortex_command/overnight/prompts/orchestrator-round.md` (Step 0a–0d — the cycle-breaking logic lives in the prompt, not Python).
 
-**Inputs**: `lifecycle/escalations.jsonl`; prior orchestrator feedback at `lifecycle/{feature}/learnings/orchestrator-note.md`.
+**Inputs**: `lifecycle/sessions/{session_id}/escalations.jsonl`; prior orchestrator feedback at `lifecycle/{feature}/learnings/orchestrator-note.md`.
 
-Cycle-breaking fires when a worker re-asks a question the orchestrator already answered. The orchestrator prompt's Step 0d scans `escalations.jsonl` at round start: if ≥1 `"type": "resolution"` entry exists for the same `feature` and a new worker escalation raises a sufficiently similar question, the orchestrator treats the feature as stuck rather than answering again. The concrete action is:
+Cycle-breaking fires when a worker re-asks a question the orchestrator already answered. The orchestrator prompt's Step 0d scans `lifecycle/sessions/{session_id}/escalations.jsonl` at round start: if ≥1 `"type": "resolution"` entry exists for the same `feature` and a new worker escalation raises a sufficiently similar question, the orchestrator treats the feature as stuck rather than answering again. The concrete action is:
 
 - Delete `lifecycle/{feature}/learnings/orchestrator-note.md` (the feedback channel clearly did not land — do not accumulate stale guidance).
-- Append a `"type": "promoted"` entry to `escalations.jsonl` recording the promotion.
+- Append a `"type": "promoted"` entry to `lifecycle/sessions/{session_id}/escalations.jsonl` recording the promotion.
 - Call `write_deferral()` to file a blocking deferral for human review at morning.
 - Do **not** re-queue the feature for this session.
 
@@ -241,7 +241,7 @@ The naming convention is "per-task, per-feature" — one prompt file per role an
 
 ### cortex_command/overnight/prompts — orchestrator/session-level prompts
 
-`cortex_command/overnight/prompts/` holds prompts loaded by `runner.sh` and overnight subsystems that operate at the session or orchestrator level — not inside a per-feature worktree. These agents reason about the whole session, read session-scoped state files (`overnight-strategy.json`, `escalations.jsonl`), and coordinate work across features.
+`cortex_command/overnight/prompts/` holds prompts loaded by `runner.sh` and overnight subsystems that operate at the session or orchestrator level — not inside a per-feature worktree. These agents reason about the whole session, read session-scoped state files (`overnight-strategy.json`, `sessions/{session_id}/escalations.jsonl`), and coordinate work across features.
 
 **Files**: `cortex_command/overnight/prompts/orchestrator-round.md` (the round-loop orchestrator prompt, including the escalations Step 0a–0d cycle-breaking logic), `cortex_command/overnight/prompts/batch-brain.md` (the `brain.py` post-retry triage prompt rendered with `{feature, task_description, retry_count, learnings, spec_excerpt, has_dependents, last_attempt_output}`), `cortex_command/overnight/prompts/repair-agent.md` (conflict-repair and integration-repair agent prose).
 
@@ -320,7 +320,7 @@ Every overnight session persists state as files under `lifecycle/`. The runner r
 | `lifecycle/overnight-events.log` | `cortex_command/overnight/events.py` (`log_event`) | Append-only JSONL event stream at the session level (round boundaries, feature lifecycle, circuit breakers). |
 | `lifecycle/sessions/{id}/pipeline-events.log` | `cortex_command/pipeline/events.py` via `batch_runner` | Append-only JSONL of per-task dispatch/merge/test events inside each feature. |
 | `lifecycle/sessions/{id}/overnight-strategy.json` | `cortex_command/overnight/strategy.py` (`save_strategy` — atomic tempfile + `os.replace`) | Cross-round strategy: `hot_files`, `integration_health`, `recovery_log_summary`, `round_history_notes`. |
-| `lifecycle/escalations.jsonl` | `cortex_command/overnight/deferral.py` (`write_escalation`) | Append-only JSONL of worker escalations, orchestrator resolutions, and cycle-break promotions. |
+| `lifecycle/sessions/{session_id}/escalations.jsonl` | `cortex_command/overnight/deferral.py` (`write_escalation`) | Append-only JSONL of worker escalations, orchestrator resolutions, and cycle-break promotions. |
 | `lifecycle/{feature}/events.log` | `cortex_command/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/cortex:lifecycle resume` and `/morning-review`. |
 | `lifecycle/{feature}/agent-activity.jsonl` | `cortex_command/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
 | `lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
@@ -332,7 +332,7 @@ State file reads are not lock-protected by design — forward-only phase transit
 
 ### Escalation System (escalations.jsonl)
 
-`lifecycle/escalations.jsonl` is the worker-to-orchestrator side channel. Writer is `write_escalation()` in `cortex_command/overnight/deferral.py` (re-exported from `cortex_command/overnight/orchestrator_io.py`); readers include the orchestrator prompt (Steps 0a–0d) and `_next_escalation_n()` in the same module. Records are one JSON object per line with a `type` discriminator.
+`lifecycle/sessions/{session_id}/escalations.jsonl` is the worker-to-orchestrator side channel. Writer is `write_escalation()` in `cortex_command/overnight/deferral.py` (re-exported from `cortex_command/overnight/orchestrator_io.py`); readers include the orchestrator prompt (Steps 0a–0d) and `_next_escalation_n()` in the same module. Records are one JSON object per line with a `type` discriminator.
 
 **Worker-raised escalation** (`"type": "escalation"`), appended by `write_escalation()`:
 
@@ -446,7 +446,7 @@ Overnight writes several JSONL logs at different scopes. Pick the one that match
 | `lifecycle/sessions/{id}/pipeline-events.log` | Investigating dispatch/merge/test outcomes for individual tasks within a feature (`dispatch_start`, `dispatch_complete`, `merge_start`, `merge_success`, `task_idempotency_skip`). |
 | `lifecycle/{feature}/events.log` | Investigating phase transitions, review verdicts, and completion for one feature — what `/cortex:lifecycle resume` and `/morning-review` read. |
 | `lifecycle/{feature}/agent-activity.jsonl` | Investigating what tools an agent actually invoked inside a dispatch and whether they succeeded — the "what did the worker really do" log. |
-| `lifecycle/escalations.jsonl` | Investigating which features blocked on questions, how the orchestrator answered, and which were cycle-break-promoted to deferrals. |
+| `lifecycle/sessions/{session_id}/escalations.jsonl` | Investigating which features blocked on questions, how the orchestrator answered, and which were cycle-break-promoted to deferrals. |
 
 All five are append-only JSONL and safe to `tail -f` live. The first four are written by four different modules — session events by `cortex_command/overnight/events.py`, pipeline events by `cortex_command/pipeline/events.py`, per-feature lifecycle by `cortex_command/pipeline/batch_runner.py`, and agent activity by `cortex_command/pipeline/dispatch.py` — so ownership drift is contained. A symptom that spans "did the orchestrator try to merge?" plus "what did the merge agent do?" requires grepping both `pipeline-events.log` and the feature's `agent-activity.jsonl`.
 

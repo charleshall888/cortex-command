@@ -87,7 +87,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 
 - **Description**: When the pipeline encounters an ambiguous decision that cannot be resolved autonomously, it writes a structured deferral question and surfaces it in the morning report.
 - **Inputs**: Worker exit report declaring `action: "question"`; CI gate block; repair agent declaring deferral
-- **Outputs**: Deferral file at `lifecycle/deferred/{feature}-q{NNN}.md`; feature status transitions to `deferred` (blocking) or continues (non-blocking); escalation entry in `lifecycle/escalations.jsonl`
+- **Outputs**: Deferral file at `lifecycle/deferred/{feature}-q{NNN}.md`; feature status transitions to `deferred` (blocking) or continues (non-blocking); escalation entry in `lifecycle/sessions/{session_id}/escalations.jsonl`
 - **Acceptance criteria**:
   - Deferral files are written atomically
   - Blocking deferrals pause the feature; non-blocking deferrals allow the feature to continue using the recorded `default_choice`
@@ -143,7 +143,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - `lifecycle/{feature}/plan.md` — per-feature task plans
 - `lifecycle/pipeline-events.log` — JSONL event audit log
 - `lifecycle/deferred/` — deferral question files
-- `lifecycle/escalations.jsonl` — escalation audit log
+- `lifecycle/sessions/{session_id}/escalations.jsonl` — escalation audit log
 - `cortex_command/overnight/sync-allowlist.conf` — glob patterns for auto-resolvable files during post-merge sync
 - `bin/git-sync-rebase.sh` — post-merge sync script (deployed to `~/.local/bin/`)
 - Multi-agent orchestration (see `requirements/multi-agent.md`) — agent spawning, worktrees, model selection
