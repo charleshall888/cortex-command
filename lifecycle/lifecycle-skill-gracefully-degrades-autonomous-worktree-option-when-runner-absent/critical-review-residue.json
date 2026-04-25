@@ -1,0 +1,54 @@
+{
+  "ts": "2026-04-24T22:55:00Z",
+  "feature": "lifecycle-skill-gracefully-degrades-autonomous-worktree-option-when-runner-absent",
+  "artifact": "lifecycle/lifecycle-skill-gracefully-degrades-autonomous-worktree-option-when-runner-absent/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "R7 forbidden-token scan in Task 1 verification only covers source implement.md, while the spec's R7 acceptance criterion scopes to cortex_command/, skills/lifecycle/, and plugins/cortex-interactive/skills/lifecycle/. Adjacent files in the broader scope are not validated.",
+      "reviewer_angle": "Verification grep-suite soundness",
+      "evidence_quote": "[ \"$(grep -cE 'runtime_probe|probe_check|graceful_degrade' \"$F\")\" -eq 0 ]"
+    },
+    {
+      "class": "B",
+      "finding": "Dispatch list at implement.md:19-22 documents the handler routing for 'Implement in autonomous worktree' but on the degrade path that option is removed from the menu \u2014 leaving an unreachable dispatch branch with no annotation. Plan forbids editing the dispatch list.",
+      "reviewer_angle": "Task decomposition coverage gaps",
+      "evidence_quote": "Do not alter the guard paragraph, the branch-selection intro, the option bullets, or the dispatch list."
+    },
+    {
+      "class": "B",
+      "finding": "Branch-selection intro at implement.md:11 hardcodes 'three options' but the degrade path produces a two-option menu. Plan forbids editing this intro, leaving the prose count contradicting the live menu on exit-1.",
+      "reviewer_angle": "Task decomposition coverage gaps",
+      "evidence_quote": "prompt the user via AskUserQuestion with three options:"
+    },
+    {
+      "class": "B",
+      "finding": "Spec R8's two-option degrade enumeration must live in the new probe block per the plan, but the option labels already appear in the option bullets (13-15) and dispatch list (20-22). Three-locus duplication with no sync convention.",
+      "reviewer_angle": "Task decomposition coverage gaps",
+      "evidence_quote": "Degrade-path enumeration: co-locate \"Implement on current branch\" and \"Create feature branch\" on at least one line."
+    },
+    {
+      "class": "B",
+      "finding": "Task 1's 15-clause &&-joined grep chain returns a single pass/fail bit; a fresh-context overnight worker cannot localize which requirement failed without manual decomposition.",
+      "reviewer_angle": "Inter-task failure recovery",
+      "evidence_quote": "Pass if the full chain exits 0; fail if any line fails."
+    },
+    {
+      "class": "B",
+      "finding": "Task 3's hook-rejection recovery prose hard-codes a single failure cause ('just build-plugin was not run or produced different output'), foreclosing recovery from a Task 1 source-content error. Re-running the recipe in that case faithfully propagates the broken source.",
+      "reviewer_angle": "Inter-task failure recovery",
+      "evidence_quote": "If the pre-commit hook rejects the commit, treat it as a signal that `just build-plugin` was not run or produced different output than what was staged \u2014 re-run the recipe, re-stage, re-commit. Do not `--no-verify`."
+    },
+    {
+      "class": "B",
+      "finding": "Task 3's verification counts file paths in HEAD but does not re-assert Task 1's content gates against the committed source. Drift hook is declared 'authoritative' but its post-conditions are not verified.",
+      "reviewer_angle": "Inter-task failure recovery",
+      "evidence_quote": "git log -1 --name-only HEAD | grep -cE '^(skills|plugins/cortex-interactive/skills)/lifecycle/references/implement\\.md$' returns 2."
+    }
+  ]
+}

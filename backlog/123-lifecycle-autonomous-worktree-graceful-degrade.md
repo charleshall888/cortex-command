@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4ed319f6-98e0-48ff-ace6-8e1023b1cfbb
 title: "Lifecycle skill gracefully degrades autonomous-worktree option when runner absent"
-status: backlog
+status: complete
 priority: high
 type: feature
 parent: 113
@@ -10,12 +10,15 @@ tags: [distribution, plugin, lifecycle, overnight-layer-distribution]
 areas: [skills]
 created: 2026-04-21
 updated: 2026-04-24
-lifecycle_slug: null
-lifecycle_phase: null
+lifecycle_slug: lifecycle-skill-gracefully-degrades-autonomous-worktree-option-when-runner-absent
+lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/lifecycle-skill-gracefully-degrades-autonomous-worktree-option-when-runner-absent/spec.md
 ---
 
 # Lifecycle skill gracefully degrades autonomous-worktree option when runner absent
