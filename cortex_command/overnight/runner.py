@@ -32,7 +32,9 @@ import time
 from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
+
+import psutil
 
 from cortex_command.overnight import auth
 from cortex_command.overnight import events
@@ -81,6 +83,106 @@ STALL_TIMEOUT_SECONDS: float = 1800.0
 
 #: Orchestrator ``claude -p`` turn cap. Matches ``runner.sh:643``.
 ORCHESTRATOR_MAX_TURNS: int = 50
+
+#: Graceful shutdown budget for the SIGTERM tree-walker (R12 / Task 3).
+#: When SIGTERM arrives, the tree-walker enumerates all descendants via
+#: ``psutil.Process(os.getpid()).children(recursive=True)``, sends SIGTERM
+#: to each, waits up to this many seconds for graceful exit via
+#: ``psutil.wait_procs``, then SIGKILLs survivors. Strictly less than
+#: ``overnight_cancel``'s outer 12-second SIGKILL budget so the runner's
+#: in-handler survivor-SIGKILL phase always completes before any outer
+#: SIGKILL hits the runner itself (closes the budget-race surfaced in
+#: critical review).
+DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS: float = 6.0
+
+
+# ---------------------------------------------------------------------------
+# SIGTERM descendant tree-walk (R12 / Task 3)
+# ---------------------------------------------------------------------------
+
+def _terminate_descendant_tree(
+    graceful_timeout: float = DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS,
+) -> None:
+    """Walk the runner's descendant tree on SIGTERM and reap each process.
+
+    Enumerates all descendants via
+    ``psutil.Process(os.getpid()).children(recursive=True)`` — this reaches
+    grandchildren spawned with ``start_new_session=True`` (whose PGID
+    diverges from the runner's), which ``os.killpg`` cannot signal. SIGTERMs
+    each descendant via ``proc.terminate()``, waits up to ``graceful_timeout``
+    seconds collectively for graceful exit via ``psutil.wait_procs``, then
+    SIGKILLs survivors via ``proc.kill()``.
+
+    The walk is at signal-receipt time (not at runner startup), so workers
+    spawned later by ``batch_runner`` and their grandchildren are reached
+    regardless of which spawn site set ``start_new_session=True``. The
+    recorded-child-PGID approach is rejected (spec R12) because the runner
+    does not know in advance which PGIDs ``batch_runner`` workers will use.
+
+    All ``psutil`` exceptions during enumeration / signal / wait are
+    swallowed: a failure to reap one descendant must not prevent the
+    handler from continuing on to the next, and the handler itself must
+    return cleanly so the chained shutdown handler runs.
+    """
+    try:
+        descendants = psutil.Process(os.getpid()).children(recursive=True)
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
+        return
+
+    if not descendants:
+        return
+
+    # Phase 1: SIGTERM each descendant for graceful exit.
+    for proc in descendants:
+        try:
+            proc.terminate()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    # Phase 2: collective wait for graceful exit (up to graceful_timeout).
+    try:
+        _gone, alive = psutil.wait_procs(descendants, timeout=graceful_timeout)
+    except Exception:
+        alive = descendants
+
+    # Phase 3: SIGKILL any survivors.
+    for proc in alive:
+        try:
+            proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+
+def _install_sigterm_tree_walker(prior_handler: Any) -> Any:
+    """Install a SIGTERM handler that reaps descendants then chains to prior.
+
+    Replaces whatever SIGTERM handler is currently installed (typically
+    the shutdown-event-setter from
+    :func:`runner_primitives.install_signal_handlers`) with a wrapper that:
+
+      1. Walks the descendant tree via :func:`_terminate_descendant_tree`,
+         SIGTERM-then-SIGKILL with a ``DESCENDANT_GRACEFUL_SHUTDOWN_SECONDS``
+         graceful budget.
+      2. Chains to ``prior_handler`` so the runner's main-thread cleanup
+         (state-paused write, circuit_breaker event, signal replay) still
+         runs on the next poll-loop tick.
+
+    Returns the handler that was previously installed (i.e., what was
+    passed in as ``prior_handler``, modulo signal-module-internal sentinel
+    values), so callers can restore at cleanup end.
+    """
+
+    def _handle_sigterm(signum: int, frame: Any) -> None:
+        try:
+            _terminate_descendant_tree()
+        finally:
+            # Chain to the prior handler so the existing shutdown
+            # bookkeeping (set shutdown_event, append signum) still runs.
+            if callable(prior_handler):
+                prior_handler(signum, frame)
+
+    signal.signal(signal.SIGTERM, _handle_sigterm)
+    return prior_handler
 
 
 # ---------------------------------------------------------------------------
@@ -1368,6 +1470,17 @@ def run(
         received_signals=[],
     )
     prior = install_signal_handlers(coord)
+
+    # R12 / Task 3: install a SIGTERM handler that walks the descendant
+    # tree and reaps each process before chaining to the shutdown-event
+    # setter installed above. This reaches grandchildren spawned with
+    # ``start_new_session=True`` (whose PGID diverges from the runner's)
+    # that ``os.killpg`` cannot signal. The 6-second graceful budget is
+    # strictly less than ``overnight_cancel``'s 12-second outer SIGKILL
+    # budget so the in-handler survivor-SIGKILL phase always completes
+    # before any outer SIGKILL.
+    _shutdown_sigterm_handler = signal.getsignal(signal.SIGTERM)
+    _install_sigterm_tree_walker(_shutdown_sigterm_handler)
 
     # Export LIFECYCLE_SESSION_ID so spawned children (orchestrator
     # agent and cortex-batch-runner) pick up the per-session events-log
