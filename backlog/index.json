@@ -241,38 +241,6 @@
     "repo": null
   },
   {
-    "id": 121,
-    "title": "Publish cortex-overnight-integration plugin (overnight skill + runner hooks)",
-    "status": "backlog",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "plugin",
-      "overnight-runner",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "skills",
-      "overnight-runner"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-25",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "86a87121-2737-4b2a-8505-3ed605721d0f",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 122,
     "title": "Publish plugin marketplace manifest for cortex-command",
     "status": "backlog",
@@ -290,9 +258,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-25",
     "blocks": [],
-    "blocked_by": [
-      "121"
-    ],
+    "blocked_by": [],
     "parent": "113",
     "research": null,
     "spec": null,
@@ -648,7 +614,6 @@
     "blocks": [],
     "blocked_by": [
       "118",
-      "121",
       "122"
     ],
     "parent": "113",
@@ -691,32 +656,35 @@
     "repo": null
   },
   {
-    "id": 145,
-    "title": "Lazy-apply cortex CLI auto-update via SessionStart probe + in-process apply-on-invoke",
+    "id": 146,
+    "title": "Decouple MCP server from CLI Python imports + own auto-update orchestration",
     "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
       "distribution",
+      "mcp",
+      "architecture",
       "upgrade",
       "overnight-layer-distribution"
     ],
     "areas": [
-      "install"
+      "mcp-server",
+      "plugins"
     ],
-    "created": "2026-04-24",
+    "created": "2026-04-25",
     "updated": "2026-04-25",
     "blocks": [],
     "blocked_by": [],
     "parent": "113",
     "research": null,
-    "spec": "lifecycle/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke/spec.md",
+    "spec": null,
     "discovery_source": null,
     "plan": null,
-    "uuid": "83bf0aaa-694e-456b-868b-2c993aaa40d2",
-    "lifecycle_slug": "lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke",
-    "session_id": "c496df5c-e20e-4ff4-82c4-18015f3bb214",
-    "lifecycle_phase": "implement",
+    "uuid": "6baeb00e-799c-43e8-a354-3d54445e1a29",
+    "lifecycle_slug": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration",
+    "session_id": "4717f34d-f3bf-459f-9013-bbe4c0dfd187",
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },

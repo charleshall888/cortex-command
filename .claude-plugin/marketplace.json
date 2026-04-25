@@ -4,7 +4,29 @@
     "name": "charleshall888",
     "email": "charliemhall@gmail.com"
   },
+  "metadata": {
+    "description": "Cortex-command plugin marketplace — interactive Claude Code skills, overnight runner integration, and opt-in extras for autonomous development workflows."
+  },
   "plugins": [
-    {"name": "cortex-overnight-integration", "source": "./plugins/cortex-overnight-integration"}
+    {
+      "name": "cortex-interactive",
+      "source": "./plugins/cortex-interactive",
+      "description": "Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows"
+    },
+    {
+      "name": "cortex-overnight-integration",
+      "source": "./plugins/cortex-overnight-integration",
+      "description": "Overnight skill runner hooks that integrate with the cortex CLI on PATH and the cortex-interactive plugin to drive autonomous lifecycle execution"
+    },
+    {
+      "name": "cortex-pr-review",
+      "source": "./plugins/cortex-pr-review",
+      "description": "Multi-agent GitHub pull request review pipeline for Claude Code"
+    },
+    {
+      "name": "cortex-ui-extras",
+      "source": "./plugins/cortex-ui-extras",
+      "description": "Experimental UI design skills (brief, setup, lint, a11y, judge, check) for Claude Code interactive workflows"
+    }
   ]
 }
