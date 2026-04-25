@@ -29,6 +29,7 @@ from cortex_command.common import durable_fsync
 
 _RUNNER_MAGIC = "cortex-runner-v1"
 _SCHEMA_VERSION = 1
+MAX_KNOWN_RUNNER_PID_SCHEMA_VERSION = 1
 _START_TIME_TOLERANCE_SECONDS = 2.0
 
 ACTIVE_SESSION_PATH: Path = (
@@ -127,11 +128,14 @@ def read_runner_pid(session_dir: Path) -> dict | None:
 def verify_runner_pid(pid_data: dict) -> bool:
     """Verify a ``runner.pid`` payload matches a running process.
 
-    Checks ``magic == "cortex-runner-v1"``, ``schema_version >= 1``,
-    and ``psutil.Process(pid).create_time()`` within ±2s of the
+    Checks ``magic == "cortex-runner-v1"``, ``1 <= schema_version <=
+    MAX_KNOWN_RUNNER_PID_SCHEMA_VERSION``, and
+    ``psutil.Process(pid).create_time()`` within ±2s of the
     recorded ``start_time``. Returns ``False`` on any mismatch,
     ``psutil.NoSuchProcess``, or ``psutil.AccessDenied``. Never signals;
-    never raises to the caller.
+    never raises to the caller. A future ``schema_version`` exceeding the
+    known maximum is rejected to prevent silent mis-decoding when an
+    older ``cortex`` reads a newer runner's PID file.
     """
     if not isinstance(pid_data, dict):
         return False
@@ -140,7 +144,11 @@ def verify_runner_pid(pid_data: dict) -> bool:
         return False
 
     schema_version = pid_data.get("schema_version")
-    if not isinstance(schema_version, int) or schema_version < 1:
+    if (
+        not isinstance(schema_version, int)
+        or schema_version < 1
+        or schema_version > MAX_KNOWN_RUNNER_PID_SCHEMA_VERSION
+    ):
         return False
 
     pid = pid_data.get("pid")
