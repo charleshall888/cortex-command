@@ -7,6 +7,7 @@ Pass criterion is read from tests/fixtures/critical-review/baseline-stability.js
 """
 
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -14,6 +15,28 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = REPO_ROOT / "tests" / "fixtures" / "critical-review" / "baseline-stability.json"
+SKILL_MD_PATH = REPO_ROOT / "skills" / "critical-review" / "SKILL.md"
+
+# Stub artifact used to ground the synthesizer prompt's "{artifact content}" reference.
+# Minimal but coherent — a small spec fragment with one concrete claim a reviewer
+# could plausibly tag at A-class.
+STUB_ARTIFACT = """\
+# Plan: Disable retry on payment endpoint timeouts
+
+## Change
+Set `retries=0` in the payment client constructor in `client.py:88` so that
+timed-out payment requests fail fast instead of being retried.
+
+## Rationale
+Retries on timeout cause duplicate charges when the upstream gateway
+eventually completes the original request after the client has already
+retried. Failing fast surfaces the timeout to the caller, who can
+decide whether to retry idempotently.
+
+## Acceptance
+- Payment client no longer retries on timeout.
+- Existing retry behavior for non-payment clients is preserved.
+"""
 
 
 def _load_pass_criterion():
@@ -138,3 +161,112 @@ def test_straddle_case_named_concern_to_class():
     criterion = _load_pass_criterion()
     overall, summary = _apply_pass_criterion(results, criterion)
     assert overall, f"straddle classifier validation failed under {criterion}: {summary}; details: {results}"
+
+
+def _extract_synthesizer_template():
+    """Extract the Step 2d Opus Synthesis prompt template from SKILL.md.
+
+    Uses header-anchored search (NOT line numbers — line numbers shift after edits).
+    Finds the `### Step 2d: Opus Synthesis` heading, then the first `---` line
+    after it (start of template), then the next `---` line (end of template).
+    """
+    skill_md = SKILL_MD_PATH.read_text()
+    header_match = re.search(r'^### Step 2d: Opus Synthesis\s*$', skill_md, re.MULTILINE)
+    assert header_match, "Step 2d: Opus Synthesis header not found in SKILL.md"
+    after_header = skill_md[header_match.end():]
+    delims = list(re.finditer(r'^---\s*$', after_header, re.MULTILINE))
+    assert len(delims) >= 2, (
+        "expected at least 2 '---' delimiters after Step 2d header; "
+        f"found {len(delims)}"
+    )
+    template = after_header[delims[0].end():delims[1].start()].strip("\n")
+    return template
+
+
+@pytest.mark.slow
+def test_synthesizer_rubric_deterministic():
+    """Deterministic synthesizer-rubric test (R7).
+
+    Bypasses reviewer dispatch entirely — extracts the Step 2d synthesizer prompt
+    template from SKILL.md, substitutes a stub artifact and a hand-crafted
+    reviewer-output JSON envelope (one A-class finding with a deliberately weak
+    `fix_invalidation_argument`), invokes `claude -p '<assembled prompt>' --model
+    opus`, and asserts the response contains the A→B reclassification note.
+
+    This decouples rubric verification from reviewer-side stochasticity.
+    Single live model invocation; no 2-of-3 tolerance.
+    """
+    template = _extract_synthesizer_template()
+
+    # Sentinel substring assertion — converts silent skew to loud failure if
+    # SKILL.md is restructured. The task spec named
+    # "After all parallel reviewer agents from Step 2c complete" but that
+    # phrase lives in the prose intro BEFORE the `---` delimiter (line 186 of
+    # SKILL.md), not in the extracted template body. The intent is to detect
+    # extraction skew, so we use the unique opener of the template body
+    # ("You are synthesizing findings from multiple independent adversarial
+    # reviewers") which is present only in Step 2d's template.
+    sentinel = "You are synthesizing findings from multiple independent adversarial reviewers"
+    assert sentinel in template, (
+        "synthesizer template extraction failed — anchor mismatch in SKILL.md"
+    )
+
+    # Hand-crafted reviewer JSON: one A-class finding with empty
+    # `fix_invalidation_argument` (trigger 1 — absent/empty) — unambiguously
+    # fires the rubric.
+    reviewer_envelope = {
+        "angle": "fragile assumptions",
+        "findings": [
+            {
+                "class": "A",
+                "finding": (
+                    "The plan assumes setting `retries=0` is sufficient to disable "
+                    "retry behavior on timeout for the payment client."
+                ),
+                "evidence_quote": (
+                    "Set `retries=0` in the payment client constructor in "
+                    "`client.py:88` so that timed-out payment requests fail fast "
+                    "instead of being retried."
+                ),
+                "fix_invalidation_argument": "",
+            }
+        ],
+    }
+    reviewer_json = json.dumps(reviewer_envelope, indent=2)
+
+    # Regex substitution — naive .replace() against bare placeholder names
+    # would silently no-op because the actual placeholders include descriptive
+    # clauses (em-dash for the long form). str.format() cannot be used because
+    # the Output Format section contains literal JSON braces.
+    assembled = re.sub(
+        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+    )
+    assembled = re.sub(
+        r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
+    )
+
+    # Post-substitution assertion — catches placeholder-name drift loudly.
+    assert "{artifact content}" not in assembled, (
+        "regex substitution failed: {artifact content} placeholder still present"
+    )
+    assert "{all reviewer findings" not in assembled, (
+        "regex substitution failed: {all reviewer findings ...} placeholder still present"
+    )
+
+    # Invoke claude -p directly with the assembled prompt — bypasses reviewer
+    # dispatch entirely. Modeled after _run_critical_review above.
+    proc = subprocess.run(
+        ["claude", "-p", assembled, "--model", "opus"],
+        capture_output=True, text=True, timeout=600,
+    )
+    stdout = proc.stdout
+    assert proc.returncode == 0, (
+        f"claude -p exited {proc.returncode}; stderr: {proc.stderr[:500]}"
+    )
+
+    # Pass assertion: synthesizer emits the A→B reclassification note.
+    match = re.search(r're-classified finding \d+ from A→B', stdout)
+    assert match, (
+        "synthesizer did not emit A→B reclassification note for weak-argument "
+        f"finding; stdout (first 2000 chars):\n{stdout[:2000]}"
+    )
