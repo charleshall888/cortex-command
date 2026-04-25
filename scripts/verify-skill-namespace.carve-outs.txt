@@ -1,0 +1,5 @@
+# Carve-outs for verify-skill-namespace.py
+# Format: <file>:<line> <quoted-string>
+# Each entry suppresses an old-form `/cortex:<skill>` reference that is
+# intentional (e.g. literal example strings used for input validation).
+skills/retro/SKILL.md:38 "/cortex:retro ---"
