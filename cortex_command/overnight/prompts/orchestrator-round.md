@@ -25,18 +25,18 @@ You are the overnight orchestrator agent for round {round_number}. Your job is t
 
 **Step 0a — Check for escalations file**:
 
-If `lifecycle/escalations.jsonl` does not exist, skip Step 0 entirely and proceed to Step 1.
+If `{session_dir}/escalations.jsonl` does not exist, skip Step 0 entirely and proceed to Step 1.
 
 **Step 0b — Compute unresolved entries**:
 
-Read `lifecycle/escalations.jsonl`. Each line is a JSON object with a `type` field. Compute the unresolved set:
+Read `{session_dir}/escalations.jsonl`. Each line is a JSON object with a `type` field. Compute the unresolved set:
 
 ```python
 import json
 from pathlib import Path
 from cortex_command.overnight.orchestrator_io import save_state, update_feature_status, write_escalation
 
-escalations_path = Path("lifecycle/escalations.jsonl")
+escalations_path = Path("{session_dir}/escalations.jsonl")
 entries = []
 for line in escalations_path.read_text().splitlines():
     line = line.strip()
@@ -46,7 +46,7 @@ for line in escalations_path.read_text().splitlines():
         entries.append(json.loads(line))
     except json.JSONDecodeError:
         # Malformed line — skip with a logged warning, do not crash
-        print(f"WARNING: Skipping malformed escalations.jsonl line: {line[:80]}")
+        print(f"WARNING: Skipping malformed {session_dir}/escalations.jsonl line: {line[:80]}")
         continue
 
 # Collect all escalation IDs and subtract those with a resolution or promoted entry
@@ -84,10 +84,10 @@ to_process = unresolved_entries[:5]
 
 For each entry in `to_process`, wrap the entire processing in a try/except so that a single malformed or problematic entry never crashes the round.
 
-**Cycle-breaking check**: Before attempting resolution, count entries in `escalations.jsonl` with `"type": "resolution"` and the same `feature` field as this escalation. If count >= 1 (the orchestrator already resolved a question for this feature in a prior round, but the worker asked again), this is a cycle — do **not** attempt resolution:
+**Cycle-breaking check**: Before attempting resolution, count entries in `{session_dir}/escalations.jsonl` with `"type": "resolution"` and the same `feature` field as this escalation. If count >= 1 (the orchestrator already resolved a question for this feature in a prior round, but the worker asked again), this is a cycle — do **not** attempt resolution:
 
 1. Delete `lifecycle/{feature}/learnings/orchestrator-note.md` if it exists (prevents stale answers from polluting future sessions).
-2. Append a `promoted` entry to `lifecycle/escalations.jsonl`:
+2. Append a `promoted` entry to `{session_dir}/escalations.jsonl`:
    ```python
    import datetime
    promoted_entry = {
@@ -113,7 +113,7 @@ Using the content of these files, determine whether the worker's `question` can 
 
 - **If resolvable** — the question can be answered from spec, plan, or session plan context:
   1. Write the answer to `lifecycle/{feature}/learnings/orchestrator-note.md` (overwrite the file if it already exists). Use plain prose — the worker will see this in its `{learnings}` slot.
-  2. Append a `resolution` entry to `lifecycle/escalations.jsonl`:
+  2. Append a `resolution` entry to `{session_dir}/escalations.jsonl`:
      ```python
      resolution_entry = {
          "type": "resolution",
@@ -134,7 +134,7 @@ Using the content of these files, determine whether the worker's `question` can 
 
 - **If not resolvable** (question requires human judgment, or `spec.md` is absent):
   1. Delete `lifecycle/{feature}/learnings/orchestrator-note.md` if it exists — this prevents a stale answer from a prior resolution from polluting the next session when the feature is retried.
-  2. Append a `promoted` entry to `lifecycle/escalations.jsonl`:
+  2. Append a `promoted` entry to `{session_dir}/escalations.jsonl`:
      ```python
      promoted_entry = {
          "type": "promoted",
