@@ -1,5 +1,7 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "cortex-command",
+  "version": "1.0.0",
   "owner": {
     "name": "charleshall888",
     "email": "charliemhall@gmail.com"
@@ -11,22 +13,26 @@
     {
       "name": "cortex-interactive",
       "source": "./plugins/cortex-interactive",
-      "description": "Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows"
+      "description": "Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows",
+      "category": "development"
     },
     {
       "name": "cortex-overnight-integration",
       "source": "./plugins/cortex-overnight-integration",
-      "description": "Hosts the canonical cortex MCP server (PEP 723 single-file server.py) plus overnight skill runner hooks; integrates with the cortex CLI on PATH and the cortex-interactive plugin to drive autonomous lifecycle execution"
+      "description": "Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution",
+      "category": "development"
     },
     {
       "name": "cortex-pr-review",
       "source": "./plugins/cortex-pr-review",
-      "description": "Multi-agent GitHub pull request review pipeline for Claude Code"
+      "description": "Multi-agent GitHub pull request review pipeline for Claude Code",
+      "category": "development"
     },
     {
       "name": "cortex-ui-extras",
       "source": "./plugins/cortex-ui-extras",
-      "description": "Experimental UI design skills (brief, setup, lint, a11y, judge, check) for Claude Code interactive workflows"
+      "description": "Experimental UI design skills for Claude Code interactive workflows",
+      "category": "development"
     }
   ]
 }
