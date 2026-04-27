@@ -31,6 +31,26 @@ from cortex_command.overnight import status as status_module
 
 
 # ---------------------------------------------------------------------------
+# JSON-output helpers (R4, R5, R15)
+# ---------------------------------------------------------------------------
+
+# Schema-floor version stamped on every JSON payload emitted by the CLI for
+# MCP consumption. Major.minor per Terraform's ``format_version`` convention
+# (R15): consumers reject mismatched majors; minor bumps are additive.
+_JSON_SCHEMA_VERSION = "1.0"
+
+
+def _emit_json(payload: dict) -> None:
+    """Print ``payload`` as a one-line JSON object stamped with the schema version.
+
+    Always prefixes ``"version": _JSON_SCHEMA_VERSION`` so the consumer can
+    enforce the schema-floor check without reaching past the first field.
+    """
+    versioned = {"version": _JSON_SCHEMA_VERSION, **payload}
+    print(json.dumps(versioned))
+
+
+# ---------------------------------------------------------------------------
 # Path resolution helpers (R20)
 # ---------------------------------------------------------------------------
 
@@ -110,7 +130,15 @@ def handle_start(args: argparse.Namespace) -> int:
     ``--state`` is absent, derives session-relative paths, and hands off
     to :func:`runner_module.run`. Per R20, this is the single site that
     owns user-repo path resolution.
+
+    When ``--format json`` is set and the atomic-claim collides with an
+    already-alive runner, emits a versioned ``{"error":
+    "concurrent_runner", "session_id": "<existing>", ...}`` payload to
+    stdout and returns non-zero (R4 / R15). Other failure paths still
+    print to stderr; the JSON contract is scoped to the
+    concurrent-runner refusal that the MCP plugin needs to discriminate.
     """
+    fmt = getattr(args, "format", "human")
     repo_path = _resolve_repo_path()
 
     if args.state is not None:
@@ -139,6 +167,33 @@ def handle_start(args: argparse.Namespace) -> int:
     session_dir = state_path.parent
     plan_path = session_dir / "overnight-plan.md"
     events_path = session_dir / "overnight-events.log"
+
+    # Pre-flight concurrent-runner detection so JSON consumers see a
+    # structured ``concurrent_runner`` refusal before runner.run prints
+    # its stderr-only "session already running" message (R4). The check
+    # mirrors :func:`runner._check_concurrent_start` semantics: only
+    # treat verifiably-alive PIDs as a collision; stale PIDs fall
+    # through and let runner.run self-heal.
+    if fmt == "json":
+        existing_pid_data = ipc.read_runner_pid(session_dir)
+        if (
+            existing_pid_data is not None
+            and ipc.verify_runner_pid(existing_pid_data)
+        ):
+            existing_session_id = existing_pid_data.get("session_id", "")
+            existing_pid = existing_pid_data.get("pid")
+            payload: dict = {
+                "error": "concurrent_runner",
+                "session_id": (
+                    existing_session_id
+                    if isinstance(existing_session_id, str)
+                    else ""
+                ),
+            }
+            if isinstance(existing_pid, int):
+                payload["existing_pid"] = existing_pid
+            _emit_json(payload)
+            return 1
 
     return runner_module.run(
         state_path=state_path,
@@ -306,6 +361,20 @@ def _resolve_cancel_target(
     return (session_dir, None)
 
 
+def _cancel_error(fmt: str, code: str, message: str) -> int:
+    """Emit a cancel-error per the requested format and return exit code 1.
+
+    For ``human``, prints ``message`` to stderr (preserves the existing
+    stderr text contract). For ``json``, emits a versioned ``{"error":
+    code, ...}`` payload to stdout per R5/R15.
+    """
+    if fmt == "json":
+        _emit_json({"error": code, "message": message})
+    else:
+        print(message, file=sys.stderr, flush=True)
+    return 1
+
+
 def handle_cancel(args: argparse.Namespace) -> int:
     """Implement ``cortex overnight cancel``.
 
@@ -318,7 +387,14 @@ def handle_cancel(args: argparse.Namespace) -> int:
 
     When ``args.session_dir`` is provided, the session-id is the
     directory's ``name`` and containment is asserted against the parent.
+
+    When ``--format json`` is set (R5), every result emits a versioned
+    JSON payload to stdout: success is ``{"version": "1.0", "cancelled":
+    true, "session_id": ...}``; failures emit ``{"version": "1.0",
+    "error": <code>, "message": ...}`` with non-zero exit.
     """
+    fmt = getattr(args, "format", "human")
+
     # Validate positional session-id up-front so R3 acceptance tests
     # (`cortex overnight cancel "; rm -rf ~"` and
     # `cortex overnight cancel "../../../etc"`) exit with the expected
@@ -328,8 +404,7 @@ def handle_cancel(args: argparse.Namespace) -> int:
         try:
             session_validation.validate_session_id(positional_id)
         except ValueError:
-            print("invalid session id", file=sys.stderr, flush=True)
-            return 1
+            return _cancel_error(fmt, "invalid_session_id", "invalid session id")
 
     if args.session_dir is not None:
         # Basename must pass the session-id regex for path-containment
@@ -339,21 +414,19 @@ def handle_cancel(args: argparse.Namespace) -> int:
         try:
             session_validation.validate_session_id(candidate_id)
         except ValueError:
-            print("invalid session id", file=sys.stderr, flush=True)
-            return 1
+            return _cancel_error(fmt, "invalid_session_id", "invalid session id")
 
     repo_path = _resolve_repo_path()
     session_dir, err = _resolve_cancel_target(args, repo_path)
     if err is not None:
-        print(err, file=sys.stderr, flush=True)
-        return 1
+        code = "invalid_session_id" if err == "invalid session id" else "no_active_session"
+        return _cancel_error(fmt, code, err)
 
     assert session_dir is not None  # for type-checkers
 
     pid_data = ipc.read_runner_pid(session_dir)
     if pid_data is None:
-        print("no active session", file=sys.stderr, flush=True)
-        return 1
+        return _cancel_error(fmt, "no_active_session", "no active session")
 
     if not ipc.verify_runner_pid(pid_data):
         # Self-heal stale state (spec Edge Cases line 234).
@@ -365,17 +438,15 @@ def handle_cancel(args: argparse.Namespace) -> int:
             ipc.clear_active_session()
         except OSError:
             pass
-        print(
+        return _cancel_error(
+            fmt,
+            "stale_lock_cleared",
             "stale lock cleared — session was not running",
-            file=sys.stderr,
-            flush=True,
         )
-        return 1
 
     pgid = pid_data.get("pgid")
     if not isinstance(pgid, int):
-        print("no active session", file=sys.stderr, flush=True)
-        return 1
+        return _cancel_error(fmt, "no_active_session", "no active session")
 
     try:
         os.killpg(pgid, signal.SIGTERM)
@@ -389,22 +460,42 @@ def handle_cancel(args: argparse.Namespace) -> int:
             ipc.clear_active_session()
         except OSError:
             pass
-        print(
+        return _cancel_error(
+            fmt,
+            "stale_lock_cleared",
             "stale lock cleared — session was not running",
-            file=sys.stderr,
-            flush=True,
         )
-        return 1
     except PermissionError as exc:
-        print(f"cancel failed: {exc}", file=sys.stderr, flush=True)
-        return 1
+        return _cancel_error(fmt, "cancel_failed", f"cancel failed: {exc}")
 
+    if fmt == "json":
+        session_id = pid_data.get("session_id") if isinstance(pid_data, dict) else None
+        payload: dict = {
+            "cancelled": True,
+            "session_id": session_id if isinstance(session_id, str) else "",
+            "pgid": pgid,
+        }
+        _emit_json(payload)
     return 0
 
 
 # ---------------------------------------------------------------------------
 # logs (R4)
 # ---------------------------------------------------------------------------
+
+def _logs_error(fmt: str, code: str, message: str) -> int:
+    """Emit a logs-error per the requested format and return exit code 1.
+
+    For ``human``, prints ``message`` to stderr (preserves the existing
+    stderr text contract). For ``json``, emits a versioned ``{"error":
+    code, ...}`` payload to stdout per R5/R15.
+    """
+    if fmt == "json":
+        _emit_json({"error": code, "message": message})
+    else:
+        print(message, file=sys.stderr, flush=True)
+    return 1
+
 
 def handle_logs(args: argparse.Namespace) -> int:
     """Implement ``cortex overnight logs``.
@@ -414,15 +505,22 @@ def handle_logs(args: argparse.Namespace) -> int:
     and escalations — are per-session), dispatches to
     :func:`logs_module.read_log`, prints lines to stdout, and emits a
     ``next_cursor: @<int>`` trailer on stderr.
+
+    When ``--format json`` is set (R5), the entire result becomes a
+    single versioned JSON object on stdout: ``{"version": "1.0",
+    "lines": [...], "next_cursor": "@<int>", "files": ...}``. Failures
+    emit ``{"version": "1.0", "error": <code>, "message": ...}`` with
+    non-zero exit.
     """
+    fmt = getattr(args, "format", "human")
+
     # Validate positional session-id up-front.
     positional_id = getattr(args, "session_id", None)
     if positional_id is not None:
         try:
             session_validation.validate_session_id(positional_id)
         except ValueError:
-            print("invalid session id", file=sys.stderr, flush=True)
-            return 1
+            return _logs_error(fmt, "invalid_session_id", "invalid session id")
 
     # Session-id validation / containment when --session-dir is passed.
     if args.session_dir is not None:
@@ -430,8 +528,7 @@ def handle_logs(args: argparse.Namespace) -> int:
         try:
             session_validation.validate_session_id(candidate_id)
         except ValueError:
-            print("invalid session id", file=sys.stderr, flush=True)
-            return 1
+            return _logs_error(fmt, "invalid_session_id", "invalid session id")
 
     # Resolve session directory: --session-dir override > positional
     # session_id > active-session pointer.
@@ -445,15 +542,13 @@ def handle_logs(args: argparse.Namespace) -> int:
                 positional_id, lifecycle_sessions_root
             )
         except ValueError:
-            print("invalid session id", file=sys.stderr, flush=True)
-            return 1
+            return _logs_error(fmt, "invalid_session_id", "invalid session id")
     else:
         active = ipc.read_active_session()
         if active is None or not isinstance(
             active.get("session_dir"), str
         ):
-            print("no active session", file=sys.stderr, flush=True)
-            return 1
+            return _logs_error(fmt, "no_active_session", "no active session")
         session_dir = Path(str(active["session_dir"]))
 
     # Compute log path. All streams — events, agent-activity, and
@@ -468,8 +563,17 @@ def handle_logs(args: argparse.Namespace) -> int:
             limit=args.limit,
         )
     except ValueError as exc:
-        print(f"invalid cursor: {exc}", file=sys.stderr, flush=True)
-        return 1
+        return _logs_error(fmt, "invalid_cursor", f"invalid cursor: {exc}")
+
+    if fmt == "json":
+        _emit_json(
+            {
+                "lines": lines,
+                "next_cursor": f"@{next_offset}",
+                "files": args.files,
+            }
+        )
+        return 0
 
     for line in lines:
         print(line)

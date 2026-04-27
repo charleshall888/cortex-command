@@ -273,6 +273,12 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Simulate without spawning agents; rejects state with pending features",
     )
+    start.add_argument(
+        "--format",
+        choices=("human", "json"),
+        default="human",
+        help="Output format (default: human). 'json' emits versioned JSON on collisions.",
+    )
     start.set_defaults(func=_dispatch_overnight_start)
 
     # cortex overnight status (R2)
@@ -314,6 +320,12 @@ def _build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Override the session directory (default: active-session pointer)",
+    )
+    cancel.add_argument(
+        "--format",
+        choices=("human", "json"),
+        default="human",
+        help="Output format (default: human)",
     )
     cancel.set_defaults(func=_dispatch_overnight_cancel)
 
@@ -359,6 +371,12 @@ def _build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Override the session directory (default: active-session pointer)",
+    )
+    logs.add_argument(
+        "--format",
+        choices=("human", "json"),
+        default="human",
+        help="Output format (default: human)",
     )
     logs.set_defaults(func=_dispatch_overnight_logs)
 
