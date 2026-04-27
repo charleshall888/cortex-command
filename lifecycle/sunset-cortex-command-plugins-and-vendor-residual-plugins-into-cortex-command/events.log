@@ -28,3 +28,7 @@
 {"ts": "2026-04-27T19:43:27Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 11, "status": "success"}
 {"ts": "2026-04-27T19:43:27Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 12, "status": "success"}
 {"ts": "2026-04-27T19:43:27Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 13, "status": "success"}
+{"ts": "2026-04-27T19:44:02Z", "event": "batch_dispatch", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "batch": 8, "tasks": [14]}
+{"ts": "2026-04-27T19:44:27Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 14, "batch": 8, "status": "success"}
+{"ts": "2026-04-27T19:44:27Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 15, "batch": null, "status": "not_triggered"}
+{"ts": "2026-04-27T19:44:52Z", "event": "phase_transition", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "tier": "complex", "from": "implement", "to": "review"}
