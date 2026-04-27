@@ -14,7 +14,7 @@ Vendor `android-dev-extras` and `cortex-dev-extras` (devils-advocate only) into 
 - **Complexity**: simple
 - **Context**: Current line is `HAND_MAINTAINED_PLUGINS := "cortex-pr-review cortex-ui-extras"`. New value is `"cortex-pr-review cortex-ui-extras android-dev-extras cortex-dev-extras"`. `BUILD_OUTPUT_PLUGINS` at line 403 is unchanged. No new manifest needed at `justfile:417-449` since HAND_MAINTAINED plugins are excluded from the rsync drift loop (`/Users/charlie.hall/Workspaces/cortex-command/.githooks/pre-commit:101`).
 - **Verification**: `grep -E '^HAND_MAINTAINED_PLUGINS' /Users/charlie.hall/Workspaces/cortex-command/justfile | grep -c android-dev-extras` = 1 AND `grep -E '^HAND_MAINTAINED_PLUGINS' /Users/charlie.hall/Workspaces/cortex-command/justfile | grep -c cortex-dev-extras` = 1 — pass if both equal 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Vendor android-dev-extras plugin tree (plain copy, no git history)
 
@@ -94,7 +94,7 @@ Vendor `android-dev-extras` and `cortex-dev-extras` (devils-advocate only) into 
 - **Complexity**: simple
 - **Context**: Source workflow exists at `/Users/charlie.hall/Workspaces/cortex-command-plugins/.github/workflows/validate.yml`; cortex-command has no `.github/` directory at all (research confirmed). `validate-skill.py` and `validate-callgraph.py` both live at `/Users/charlie.hall/Workspaces/cortex-command/scripts/` (verified identical to sibling). Both repos' root LICENSEs are byte-identical MIT under the same copyright holder, so the workflow port is license-clean. After PR-A merges, the workflow runs once on `main` — its first run is part of R12's parity-verification (captured in Task 13's AC, not here, because it requires the PR to be merged).
 - **Verification**: `test -f /Users/charlie.hall/Workspaces/cortex-command/.github/workflows/validate.yml` (exit 0) AND **YAML structural validity**: `python3 -c "import yaml; yaml.safe_load(open('/Users/charlie.hall/Workspaces/cortex-command/.github/workflows/validate.yml'))"` exits 0 AND **validate-skill.py is invoked under a `run:` step** (not in a comment or `name:`): `python3 -c "import yaml; doc=yaml.safe_load(open('/Users/charlie.hall/Workspaces/cortex-command/.github/workflows/validate.yml')); steps=[s for j in doc['jobs'].values() for s in j['steps']]; assert any('validate-skill.py' in (s.get('run') or '') for s in steps)"` exits 0 AND **validate-callgraph.py is invoked under a `run:` step**: same Python check substituting `validate-callgraph.py` exits 0 AND **setup-python and pyyaml install present**: `python3 -c "import yaml; doc=yaml.safe_load(open('/Users/charlie.hall/Workspaces/cortex-command/.github/workflows/validate.yml')); steps=[s for j in doc['jobs'].values() for s in j['steps']]; assert any('actions/setup-python' in (s.get('uses') or '') for s in steps); assert any('pyyaml' in (s.get('run') or '') for s in steps)"` exits 0 AND `grep -c '~/.claude/skills/ui-' /Users/charlie.hall/Workspaces/cortex-command/.github/workflows/validate.yml` = 0 AND `test -f /Users/charlie.hall/Workspaces/cortex-command/scripts/validate-callgraph.py` (call-graph script exists) — pass if all seven hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Replace cortex-command-plugins README with redirect notice
 
