@@ -230,7 +230,7 @@
   {
     "id": 148,
     "title": "Apply post-113 audit follow-ups: stale-doc cleanup, lifecycle-archive run, MCP hardening",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -240,24 +240,20 @@
       "lifecycle",
       "hardening"
     ],
-    "areas": [
-      "skills",
-      "docs",
-      "lifecycle"
-    ],
+    "areas": [],
     "created": "2026-04-27",
     "updated": "2026-04-27",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/spec.md",
     "discovery_source": "research/post-113-repo-state/research.md",
     "plan": null,
     "uuid": "69035ea8-a484-4490-b86c-51a5bd54c187",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening",
+    "session_id": "5f35752a-46bd-41d2-9e0c-79bd287d7549",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -591,7 +587,7 @@
   {
     "id": 147,
     "title": "Sunset cortex-command-plugins and vendor residual plugins into cortex-command",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -609,13 +605,13 @@
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command/spec.md",
     "discovery_source": "research/post-113-repo-state/research.md",
     "plan": null,
     "uuid": "098f8bb5-b6ea-46fb-95d8-14359543613e",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command",
+    "session_id": "8da4b786-12cc-48d8-8631-13eb642acd36",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

@@ -2,19 +2,22 @@
 schema_version: "1"
 uuid: 098f8bb5-b6ea-46fb-95d8-14359543613e
 title: "Sunset cortex-command-plugins and vendor residual plugins into cortex-command"
-status: backlog
+status: in_progress
 priority: medium
 type: feature
 tags: [distribution, plugin, marketplace, post-113-repo-state]
 areas: [skills]
 created: 2026-04-27
 updated: 2026-04-27
-lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+lifecycle_slug: sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command
+lifecycle_phase: implement
+session_id: 8da4b786-12cc-48d8-8631-13eb642acd36
 blocks: []
 blocked-by: []
 discovery_source: research/post-113-repo-state/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command/spec.md
 ---
 
 # Sunset cortex-command-plugins and vendor residual plugins into cortex-command
