@@ -256,12 +256,17 @@ def _get_cortex_root_payload() -> dict[str, Any]:
     if _CORTEX_ROOT_CACHE is not None:
         return _CORTEX_ROOT_CACHE
 
-    completed = subprocess.run(
-        _resolve_cortex_argv() + ["--print-root"],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
+    try:
+        completed = subprocess.run(
+            _resolve_cortex_argv() + ["--print-root"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except FileNotFoundError as exc:
+        raise CortexCliMissing(
+            exc.errno, exc.strerror, *exc.args[2:]
+        ) from exc
     if completed.returncode != 0:
         raise RuntimeError(
             f"`cortex --print-root` exited {completed.returncode}: "
@@ -1386,12 +1391,17 @@ def _run_cortex(
     error envelopes (like ``{"error": "concurrent_runner", ...}``) are
     not collapsed into a generic exception.
     """
-    return subprocess.run(
-        _resolve_cortex_argv() + argv_tail,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
+    try:
+        return subprocess.run(
+            _resolve_cortex_argv() + argv_tail,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except FileNotFoundError as exc:
+        raise CortexCliMissing(
+            exc.errno, exc.strerror, *exc.args[2:]
+        ) from exc
 
 
 def _parse_json_payload(
