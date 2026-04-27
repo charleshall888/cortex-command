@@ -160,7 +160,11 @@ lifecycle-archive *args:
         exit 1
     fi
     # --- Load --from-file slug filter (if given) ---
-    declare -A from_file_slugs
+    # Use a newline-delimited string (with leading+trailing newline sentinels)
+    # rather than `declare -A` so the recipe runs on macOS bash 3.2, which
+    # predates associative arrays. Membership test below is a fixed-string
+    # grep against "\n<slug>\n".
+    from_file_slugs=$'\n'
     use_from_file=0
     if [ -n "$from_file" ]; then
         if [ ! -f "$from_file" ]; then
@@ -173,7 +177,7 @@ lifecycle-archive *args:
             slug="${line%%#*}"
             slug="$(echo "$slug" | awk '{$1=$1; print}')"
             [ -z "$slug" ] && continue
-            from_file_slugs["$slug"]=1
+            from_file_slugs="${from_file_slugs}${slug}"$'\n'
         done < "$from_file"
     fi
     mkdir -p lifecycle/archive
@@ -205,9 +209,13 @@ lifecycle-archive *args:
         # Only archive if events.log contains feature_complete
         grep -q '"feature_complete"' "$events_log" || continue
         slug="$(basename "$dir")"
-        # Apply --from-file slug filter if set
-        if [ "$use_from_file" -eq 1 ] && [ -z "${from_file_slugs[$slug]:-}" ]; then
-            continue
+        # Apply --from-file slug filter if set (fixed-string membership test
+        # against the newline-delimited from_file_slugs sentinel string).
+        if [ "$use_from_file" -eq 1 ]; then
+            case "$from_file_slugs" in
+                *$'\n'"$slug"$'\n'*) ;; # match — keep
+                *) continue ;;          # not in sample list — skip
+            esac
         fi
         candidates+=("$dir")
     done
