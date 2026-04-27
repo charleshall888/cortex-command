@@ -241,38 +241,6 @@
     "repo": null
   },
   {
-    "id": 122,
-    "title": "Publish plugin marketplace manifest for cortex-command",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "plugin",
-      "marketplace",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "skills",
-      "docs"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-25",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": "lifecycle/publish-plugin-marketplace-manifest-for-cortex-command/spec.md",
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "7a291fcc-a9c8-4df2-97e2-81e0c01c5016",
-    "lifecycle_slug": "publish-plugin-marketplace-manifest-for-cortex-command",
-    "session_id": "3ba65c0d-3c81-4be9-97ec-07c1e0485411",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 135,
     "title": "Shared git index race between parallel Claude sessions causes wrong files to land in commits",
     "status": "backlog",
@@ -611,11 +579,10 @@
       "install"
     ],
     "created": "2026-04-21",
-    "updated": "2026-04-25",
+    "updated": "2026-04-27",
     "blocks": [],
     "blocked_by": [
-      "118",
-      "122"
+      "118"
     ],
     "parent": "113",
     "research": null,

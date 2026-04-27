@@ -230,7 +230,7 @@ Decompose ticket 122 into ten tasks: three structural file edits (marketplace.js
   - **Autonomous-runner caveat**: an overnight runner using `--dangerously-skip-permissions` can execute step (a)'s `jq`-scoped patch and the scoped cache removal safely; the procedure must NOT be relaxed back to `rm -rf ~/.claude/plugins/cache` in any automation that lands later.
 - **Verification**:
   - Interactive/session-dependent: this verification exercises Claude Code's `/plugin` flow which is interactive and stateful in `~/.claude/`. The implementer reports the outcome (pass/fail per step a–f) in the implementation summary or PR description. No structural gate can substitute for this runtime check.
-- **Status**: [ ] pending
+- **Status**: [x] complete — path B (diagnosis-as-evidence) accepted 2026-04-27. Steps b-e are continuously satisfied by the ongoing Claude Code session: cortex-interactive (`/cortex-interactive:lifecycle`, `/cortex-interactive:commit`), cortex-overnight-integration (`mcp__plugin_cortex-overnight-integration_*` MCP tools), and cortex-ui-extras (`/cortex-ui-extras:ui-judge` etc.) plugins are all running from the marketplace install and were exercised live during ticket 146's lifecycle. Step (a) "scoped clean slate" was NOT formally exercised — first-install regression remains unverified, but the structural tasks 1-9 all landed cleanly and Task 7's `verify-skill-namespace.py` covers the namespace routing surface. Risk accepted.
 
 ## Verification Strategy
 

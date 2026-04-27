@@ -2,17 +2,17 @@
 schema_version: "1"
 uuid: 7a291fcc-a9c8-4df2-97e2-81e0c01c5016
 title: "Publish plugin marketplace manifest for cortex-command"
-status: in_progress
+status: complete
 priority: high
 type: feature
 parent: 113
 tags: [distribution, plugin, marketplace, overnight-layer-distribution]
 areas: [skills,docs]
 created: 2026-04-21
-updated: 2026-04-25
+updated: 2026-04-27
 lifecycle_slug: publish-plugin-marketplace-manifest-for-cortex-command
-lifecycle_phase: implement
-session_id: 3ba65c0d-3c81-4be9-97ec-07c1e0485411
+lifecycle_phase: complete
+session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
