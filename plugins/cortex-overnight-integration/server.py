@@ -239,6 +239,199 @@ def _get_cortex_root_payload() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# R8/R9 throttled update-check + skip-predicate state (Task 7)
+# ---------------------------------------------------------------------------
+
+#: Per-MCP-server-lifetime cache for the upstream "is upstream ahead?"
+#: check. The cache key is ``(cortex_root abs path, remote_url, "HEAD")``
+#: per spec R8 (multi-fork installs share neither remote_url nor
+#: cortex_root). The value is a boolean: ``True`` = upstream advanced
+#: past local ``head_sha``; ``False`` = local matches upstream. ``None``
+#: (key absent) means "not yet checked this lifetime".
+_UPDATE_CHECK_CACHE: dict[tuple[str, str, str], bool] = {}
+
+#: Per-process latch for skip-predicate stderr messages. We log each
+#: distinct skip reason exactly once per MCP-server lifetime to avoid
+#: spamming stderr on tight polling loops while still surfacing the
+#: condition the first time it fires.
+_SKIP_REASON_LOGGED: set[str] = set()
+
+
+def _invalidate_update_cache() -> None:
+    """Mark the R8 update-check cache as stale (placeholder no-op).
+
+    This helper is the cache-invalidation contract surface that future
+    tasks (Task 8 upgrade orchestration, Task 10 schema-floor gate,
+    Task 11 NDJSON failure surface) will fill in. For Task 7 it clears
+    the cache wholesale — that is technically correct (the next tool
+    call will re-check) but the actual call-sites where invalidation
+    must fire are wired by the dependent tasks.
+
+    Spec Technical Constraints "Cache invalidation rules for R8's
+    instance cache":
+
+    * On any successful upgrade (R10 or R13), the cache MUST be marked
+      unset so the next tool call re-checks.
+    * On R11 flock-budget expiry, the cache MUST be marked unset.
+    * On any update-orchestration error (R14 NDJSON-logged failure),
+      the cache MUST be marked unset.
+    """
+    _UPDATE_CHECK_CACHE.clear()
+
+
+def _log_skip_reason_once(reason: str) -> None:
+    """Log a skip-predicate reason to stderr at most once per process."""
+    if reason in _SKIP_REASON_LOGGED:
+        return
+    _SKIP_REASON_LOGGED.add(reason)
+    print(
+        f"cortex MCP: update check skipped ({reason}); "
+        f"proceeding against on-disk CLI",
+        file=sys.stderr,
+    )
+
+
+def _evaluate_skip_predicates(cortex_root: str) -> Optional[str]:
+    """Return the firing skip-reason or ``None`` if the check should run.
+
+    Predicates evaluated lazily in spec-defined order so dev-mode
+    short-circuits before any subprocess shell-out (R9 ordering):
+
+    (a) ``CORTEX_DEV_MODE=1``        — explicit dev-mode bypass.
+    (b) ``git status --porcelain``   — non-empty means uncommitted changes.
+    (c) ``git rev-parse --abbrev-ref HEAD != "main"`` — feature branch.
+
+    On a firing predicate, log the reason once to stderr (per-process
+    latch) and return the reason string. The caller should proceed with
+    the user's tool call against the on-disk CLI without checking
+    upstream.
+    """
+
+    if os.environ.get("CORTEX_DEV_MODE") == "1":
+        _log_skip_reason_once("CORTEX_DEV_MODE=1")
+        return "CORTEX_DEV_MODE=1"
+
+    # Predicate (b): dirty tree.
+    try:
+        status = subprocess.run(
+            ["git", "-C", cortex_root, "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        # If `git status` itself fails, we cannot reason about the
+        # tree's cleanliness — be conservative and skip the upstream
+        # check. The tool call still proceeds; the next MCP-server
+        # lifetime retries.
+        _log_skip_reason_once(f"git_status_failed:{exc.__class__.__name__}")
+        return f"git_status_failed:{exc.__class__.__name__}"
+    if status.returncode == 0 and status.stdout.strip():
+        _log_skip_reason_once("dirty_tree")
+        return "dirty_tree"
+
+    # Predicate (c): non-main branch.
+    try:
+        branch = subprocess.run(
+            ["git", "-C", cortex_root, "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        _log_skip_reason_once(f"git_branch_failed:{exc.__class__.__name__}")
+        return f"git_branch_failed:{exc.__class__.__name__}"
+    if branch.returncode == 0 and branch.stdout.strip() != "main":
+        _log_skip_reason_once(f"branch={branch.stdout.strip()!r}")
+        return "non_main_branch"
+
+    return None
+
+
+def _maybe_check_upstream(
+    cortex_root_payload: Optional[dict[str, Any]] = None,
+) -> Optional[bool]:
+    """Throttled R8 update-check entry point.
+
+    Consulted at the start of each tool call (wired by Tasks 8/10/16).
+    For Task 7 the return value is *informational only*: callers do not
+    yet trigger ``cortex upgrade`` (Task 8), surface a notice (Task 16
+    on the FAIL fallback path), or run the verification probe (Task 9).
+
+    Returns:
+
+    * ``True``  — upstream is ahead; next stage should orchestrate an
+      upgrade.
+    * ``False`` — upstream matches local; nothing to do.
+    * ``None``  — a skip predicate fired, the discovery cache is
+      missing required fields, or ``git ls-remote`` failed; the caller
+      should proceed against the on-disk CLI without escalating.
+    """
+
+    if cortex_root_payload is None:
+        try:
+            cortex_root_payload = _get_cortex_root_payload()
+        except (RuntimeError, subprocess.SubprocessError, OSError):
+            # Discovery cache not yet primed and the bootstrap fails —
+            # fall through; the user's tool call still proceeds and
+            # the next call retries.
+            return None
+
+    cortex_root = cortex_root_payload.get("root")
+    remote_url = cortex_root_payload.get("remote_url")
+    head_sha = cortex_root_payload.get("head_sha")
+    if not cortex_root or not remote_url or not head_sha:
+        # Missing fields in discovery payload — cannot construct the
+        # cache key or compare. Skip silently; this is a defensive
+        # branch (R3 acceptance asserts these fields are populated by
+        # the CLI, but we don't want a half-formed payload to crash
+        # tool dispatch).
+        return None
+
+    # R9 skip-predicate evaluation precedes the throttle cache; the
+    # cache is intentionally NOT consulted on the skip path so a
+    # subsequent un-skipped invocation still pays the ls-remote cost
+    # exactly once.
+    if _evaluate_skip_predicates(str(cortex_root)) is not None:
+        return None
+
+    cache_key = (str(cortex_root), str(remote_url), "HEAD")
+    cached = _UPDATE_CHECK_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    # First call for this key in this lifetime: run `git ls-remote`.
+    try:
+        completed = subprocess.run(
+            ["git", "ls-remote", str(remote_url), "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        # Network failure / timeout: do not cache. Next tool call
+        # retries. The user's tool call proceeds against the on-disk
+        # CLI (per spec Edge Cases: "git ls-remote timeout / network
+        # failure: skip predicate fires implicitly").
+        return None
+
+    if completed.returncode != 0:
+        return None
+
+    # `git ls-remote <remote> HEAD` emits one line:
+    #   "<sha>\tHEAD"
+    # Take the first whitespace-separated token of the first line.
+    first_line = completed.stdout.splitlines()[0] if completed.stdout else ""
+    remote_sha = first_line.split()[0] if first_line.strip() else ""
+    if not remote_sha:
+        return None
+
+    upstream_ahead = remote_sha != str(head_sha)
+    _UPDATE_CHECK_CACHE[cache_key] = upstream_ahead
+    return upstream_ahead
+
+
+# ---------------------------------------------------------------------------
 # Pydantic models — ported verbatim from the legacy
 # `cortex_command.mcp_server.schema` (R1 forbids importing them).
 # Each output model carries ``extra="ignore"`` so minor-greater payloads
@@ -482,6 +675,10 @@ def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
     # input model's ``Literal[True]`` rejects missing/false confirmations
     # before we get here).
 
+    # R8/R9 wiring point. Return value is informational-only in Task 7;
+    # Tasks 8/10/16 will branch on it.
+    _maybe_check_upstream()
+
     argv: list[str] = ["overnight", "start", "--format", "json"]
     if payload.state_path is not None:
         argv.extend(["--state", payload.state_path])
@@ -538,6 +735,9 @@ def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
 
 def _delegate_overnight_status(payload: StatusInput) -> StatusOutput:
     """Subprocess delegation for ``overnight_status``."""
+
+    # R8/R9 wiring point. Return value is informational-only in Task 7.
+    _maybe_check_upstream()
 
     argv: list[str] = ["overnight", "status", "--format", "json"]
     # The CLI's ``--session-dir`` override is the way to target a
@@ -626,6 +826,9 @@ def _delegate_overnight_logs(payload: LogsInput) -> LogsOutput:
     per invocation; the MCP tool accepts a list of files. We invoke
     the CLI once per file in ``payload.files`` and aggregate.
     """
+
+    # R8/R9 wiring point. Return value is informational-only in Task 7.
+    _maybe_check_upstream()
 
     aggregated_lines: list[dict[str, Any]] = []
     next_cursor: str | None = None
@@ -718,6 +921,9 @@ def _delegate_overnight_cancel(payload: CancelInput) -> CancelOutput:
     error envelope onto the matching reason code.
     """
 
+    # R8/R9 wiring point. Return value is informational-only in Task 7.
+    _maybe_check_upstream()
+
     argv: list[str] = [
         "overnight",
         "cancel",
@@ -785,6 +991,9 @@ def _delegate_overnight_list_sessions(
     payload: ListSessionsInput,
 ) -> ListSessionsOutput:
     """Subprocess delegation for ``overnight_list_sessions``."""
+
+    # R8/R9 wiring point. Return value is informational-only in Task 7.
+    _maybe_check_upstream()
 
     argv: list[str] = ["overnight", "list-sessions", "--format", "json"]
     if payload.status is not None:
