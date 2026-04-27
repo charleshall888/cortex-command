@@ -9,7 +9,7 @@ parent: "101"
 blocked-by: ["102", "103"]
 tags: [harness, scripts, backlog]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-27
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 
@@ -26,8 +26,8 @@ discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 
 ## Scope
 
-- New `bin/backlog-ready` emitting priority-grouped ready items as JSON.
-- Deploy via `just deploy-bin`.
+- New `bin/cortex-backlog-ready` emitting priority-grouped ready items as JSON.
+- Top-level `bin/cortex-backlog-ready` is source-of-truth; `just build-plugin` ships it via `plugins/cortex-interactive/bin/`.
 - Update `skills/backlog/SKILL.md` pick flow to invoke the script.
 
 ## Out of scope

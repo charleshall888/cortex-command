@@ -9,7 +9,7 @@ parent: "101"
 blocked-by: []
 tags: [harness, scripts, discoverability, enforcement]
 created: 2026-04-21
-updated: 2026-04-24
+updated: 2026-04-27
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 
@@ -39,3 +39,17 @@ Five of nine good-shape `bin/` scripts are currently under-adopted. Root-cause a
 
 - Runtime adoption telemetry (separate ticket 103 / DR-7).
 - New extractions (tickets 105–111).
+
+> **2026-04-27 (epic #113 complete) — scope amendment.** The distribution model assumed in the original Scope above is dead post-113.
+>
+> **Deploy mechanism (L31, L35):** `just deploy-bin` no longer exists; the linter ships as `bin/cortex-check-parity` and is built into `plugins/cortex-interactive/bin/` via `just build-plugin` (drift-checked by `.githooks/pre-commit`). The `cortex-` prefix is structural — `build-plugin` filters with `--include='cortex-*' --exclude='*'`.
+>
+> **Symlink-deploy inventory (L35) is moot:** cortex no longer symlinks into `~/.claude/` or `~/.local/bin/` (per CLAUDE.md). Replace the inventory item with: enumerate plugin-tree deploy patterns — top-level `bin/cortex-*` → `plugins/cortex-interactive/bin/`; top-level `hooks/cortex-*.sh` and `claude/hooks/cortex-*.sh` → routed to either `cortex-interactive` or `cortex-overnight-integration` per `justfile:420-432`.
+>
+> **Scan scope (L33):** drop `claude/reference/` (directory removed). Open call for `/refine`: scan top-level `skills/` only and rely on `build-plugin` drift detection, OR scan `plugins/*/skills/**/*.md` too. The drift-only approach is simpler.
+>
+> **Signal categories (L34):** drop the `~/.local/bin/foo` heuristic — that target is dead.
+>
+> **Retrofit list (L36) is partially already done:** `cortex-update-item`, `cortex-create-backlog-item`, `cortex-generate-backlog-index` are already wired in current SKILLs. Re-scope the retrofit at refine time. Real fixtures the linter should catch on its first run: `skills/morning-review/references/walkthrough.md` references `git-sync-rebase.sh` (5 occurrences; actual binary is `cortex-git-sync-rebase`); `skills/lifecycle/references/complete.md` falls back to `~/.local/bin/generate-backlog-index` (dead path).
+>
+> **Open question for refine:** does `validate-spec` get renamed to `cortex-validate-spec` to ride plugin distribution, or stay un-prefixed and ship via the `cortex` CLI itself? The current top-level `bin/validate-spec` is the only remaining un-prefixed script that 102 cared about.

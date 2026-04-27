@@ -9,7 +9,7 @@ parent: "101"
 blocked-by: ["102", "103"]
 tags: [harness, scripts, dev]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-27
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 
@@ -28,8 +28,8 @@ discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 
 ## Scope
 
-- New `bin/build-epic-map` emitting `{epic_id: {children: [...], status, refined}}` JSON.
-- Deploy via `just deploy-bin`.
+- New `bin/cortex-build-epic-map` emitting `{epic_id: {children: [...], status, refined}}` JSON.
+- Top-level `bin/cortex-build-epic-map` is source-of-truth; `just build-plugin` ships it via `plugins/cortex-interactive/bin/`.
 - Update `skills/dev/SKILL.md` Steps 3a/3b to invoke the script; remove inline normalization logic.
 
 ## Out of scope

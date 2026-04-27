@@ -9,7 +9,7 @@ parent: "101"
 blocked-by: []
 tags: [harness, scripts, discoverability, observability]
 created: 2026-04-21
-updated: 2026-04-24
+updated: 2026-04-27
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 
@@ -38,3 +38,13 @@ Infrastructure already exists: `claude/settings.json:252-267` wires PreToolUse B
 
 - Capturing non-Bash tool calls (Read, Grep, etc.).
 - Integration with pipeline `agent-activity.jsonl` (separate observability channel for pipeline).
+
+> **2026-04-27 (epic #113 complete) — scope amendment.** The hook-host file referenced in the original Scope is gone post-113.
+>
+> **Hook host (L22, L32):** `claude/settings.json:252-267` no longer exists. The new PreToolUse Bash matcher hook ships as a new entry inside `plugins/cortex-interactive/hooks/hooks.json`, alongside the existing Bash matcher entry for `cortex-validate-commit.sh`. Both entries share the same matcher.
+>
+> **Script inventory source (L27):** "extracted from `just deploy-bin` parsing" replaced by: glob top-level `bin/cortex-*` (the same set `just build-plugin` ships into the interactive plugin per `justfile:447`).
+>
+> **Aggregator script (L35):** `bin/bin-invocation-report` → `bin/cortex-invocation-report` so the `cortex-*` filter picks it up for plugin distribution.
+>
+> **Log location:** the originally-proposed `~/.claude/bin-invocations.jsonl` still works as a user-scoped path (it's a runtime write target, not a deploy target — no symlink involved).

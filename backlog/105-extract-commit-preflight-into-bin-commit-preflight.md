@@ -9,7 +9,7 @@ parent: "101"
 blocked-by: ["102", "103"]
 tags: [harness, scripts, commit]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-27
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 
@@ -30,8 +30,8 @@ Steps 3–5 (stage / compose / commit) stay inline — Step 3 is judgment (which
 
 ## Scope
 
-- New `bin/commit-preflight` emitting `{status, diff, recent_log}`. Diff in full, not summarized.
-- Deploy via `just deploy-bin`.
+- New `bin/cortex-commit-preflight` emitting `{status, diff, recent_log}`. Diff in full, not summarized.
+- Top-level `bin/cortex-commit-preflight` is source-of-truth; `just build-plugin` syncs it into `plugins/cortex-interactive/bin/` (drift-checked by `.githooks/pre-commit`). The `cortex-` prefix is structural — `build-plugin` filters with `--include='cortex-*' --exclude='*'`.
 - Update `skills/commit/SKILL.md` Step 1 to invoke the script directly; remove the three parallel Bash calls.
 - Verify 102 (parity linter) passes post-change; verify 103 (runtime telemetry) records the invocation.
 

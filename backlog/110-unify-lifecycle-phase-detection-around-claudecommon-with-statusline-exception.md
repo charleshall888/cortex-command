@@ -9,7 +9,7 @@ parent: "101"
 blocked-by: ["102", "103"]
 tags: [harness, scripts, lifecycle]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-27
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 
@@ -48,3 +48,11 @@ Round-2 semantic diff confirmed all four agree on the phase model. `claude.commo
 - Overhaul of `.dispatching` or worktree-override logic (they are override signals, not phase detection).
 
 > **2026-04-22 (ticket #097) — scope amendment.** The `.dispatching` marker check and Worktree-Aware Phase Detection override have been deleted in full from SKILL.md Step 2. The "retain `.dispatching` marker check and worktree-aware override" language above (line 41) and the "Overhaul of `.dispatching` or worktree-override logic" out-of-scope entry (line 48) no longer apply — neither override exists in post-#097 SKILL.md. `/refine` should re-evaluate scope against the reduced surface before planning.
+
+> **2026-04-27 (epic #113 complete) — scope amendment.** Module path moved and hook routing changed.
+>
+> **Module path (L24, L34):** `claude/common.py` → `cortex_command/common.py`. `detect_lifecycle_phase()` is at L88; `slugify()` is at L59. CLI invocation `python3 -m cortex_command.common detect-phase <dir>` (L39) is correct as written — module path matches.
+>
+> **Hook routing (L22):** `hooks/cortex-scan-lifecycle.sh` is plugin-distributed via `cortex-overnight-integration`, NOT `cortex-interactive` (per `justfile:432`). Editing this hook means editing top-level `hooks/cortex-scan-lifecycle.sh` (source) and running `just build-plugin` to refresh `plugins/cortex-overnight-integration/hooks/cortex-scan-lifecycle.sh`. The drift hook at `.githooks/pre-commit` enforces this. `determine_phase()` is now at L170-205 (was L170-207, minor drift).
+>
+> **Statusline exception (L25, L42):** `claude/statusline.sh` still exists, still bash, still parses `implement:N/M` (parser at L535-546). The bash-only mirror exception still holds.

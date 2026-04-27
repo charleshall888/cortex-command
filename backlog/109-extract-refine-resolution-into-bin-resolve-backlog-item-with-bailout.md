@@ -9,7 +9,7 @@ parent: "101"
 blocked-by: ["102", "103"]
 tags: [harness, scripts, refine]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-27
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 
@@ -29,11 +29,11 @@ discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 
 ## Scope
 
-- New `bin/resolve-backlog-item <fuzzy>` with distinct exit codes:
+- New `bin/cortex-resolve-backlog-item <fuzzy>` with distinct exit codes:
   - `0` — unambiguous match; JSON on stdout with `{filename, slug, title, lifecycle_slug, frontmatter}`.
   - Non-zero distinct codes for: ambiguous, no-match.
-- Fuzzy matching must exactly mirror canonical `claude/common.py:slugify()`.
-- Deploy via `just deploy-bin`.
+- Fuzzy matching must exactly mirror canonical `cortex_command/common.py:slugify()` (function at L59).
+- Top-level `bin/cortex-resolve-backlog-item` is source-of-truth; `just build-plugin` ships it via `plugins/cortex-interactive/bin/`.
 - Update `skills/refine/SKILL.md` Step 1 to invoke the script; fall through to existing disambiguation flow on non-zero.
 
 ## Out of scope
