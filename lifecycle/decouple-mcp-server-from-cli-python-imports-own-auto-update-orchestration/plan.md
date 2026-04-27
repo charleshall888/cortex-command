@@ -13,7 +13,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: complex
 - **Context**: Spec R18 enumerates the four operations exhaustively. Probe MUST run as MCP tool handler code spawned by Claude Code's MCP-launch path — not via the `Bash` tool (which inherits Claude Code's bash sandbox, a different surface). PEP 723 single-file probe with `# /// script` requires-python = ">=3.12" and deps `["mcp>=1.27,<2"]`. Probe operation 4 depends on Task 2 having landed (`cortex --print-root` flag) — surface this prerequisite by either running operation 4 against `cortex --version` as a substitute or by sequencing this task after Task 2 lands; the plan's Veto Surface flags the choice. Verdict semantics from R18: PASS = all four succeed; FAIL = any of 1–4 blocked by sandbox/TCC; PARTIAL = mixed (treat as FAIL for R10–R14 scoping).
 - **Verification**: `grep -cE '^## Verdict$' lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/sandbox-probe-result.md` = 1 — pass if count = 1. Additionally, `grep -cE '^(PASS|FAIL|PARTIAL)$' lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/sandbox-probe-result.md` ≥ 1 — pass if a verdict line exists.
-- **Status**: [ ] pending
+- **Status**: [x] complete — verdict PASS resolved 2026-04-27 (Op 4b PARTIAL traced to probe invocation-form bug, corrected; user accepted diagnosis-as-evidence path B)
 
 ### Task 2: Add `cortex --print-root` flag with versioned JSON (R3, R16)
 - **Files**: `cortex_command/cli.py`, `tests/test_cli_print_root.py` (create).
@@ -22,7 +22,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Add the flag in `_build_parser()` at `cortex_command/cli.py:122`. Dispatch in `main()` at `cortex_command/cli.py:326` (intercept before subcommand dispatch). `cortex_root` discovery chain (per research Q#4): `CORTEX_COMMAND_ROOT` env var → editable-install `.pth` resolution → `$HOME/.cortex` → hard-fail. `remote_url` via `subprocess.run(["git", "-C", root, "remote", "get-url", "origin"], ...)`; `head_sha` via `subprocess.run(["git", "-C", root, "rev-parse", "HEAD"], ...)`. Both with `capture_output=True, text=True, timeout=5`. R1 invariant doesn't apply here (this is CLI code) but every shell-out follows spec Technical Constraints (no `check=True`).
 - **Verification**: `uv run pytest tests/test_cli_print_root.py -v` exits 0. Test invokes `cortex --print-root` via `subprocess.run`, parses stdout JSON, asserts `version` starts with `"1."`, `root` is an absolute path that exists, `head_sha` is exactly 40 hex chars, `remote_url` is non-empty.
-- **Status**: [ ] pending
+- **Status**: [x] complete (441d3b3)
 
 ### Task 3: Add `--format json` to `overnight start`, `overnight logs`, `overnight cancel` (R4, R5)
 - **Files**: `cortex_command/cli.py`, `cortex_command/overnight/cli_handler.py`, `tests/test_cli_overnight_format_json.py` (create).
@@ -31,7 +31,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: `overnight status --format json` already exists — follow its code path. `--format` flag is already declared on `overnight status` at `cortex_command/cli.py:193`. Concurrent-runner detection lives in CLI dispatch (`_dispatch_overnight_start` at `cli.py:47` → `cli_handler.py`). Reuse any existing JSON-output helper in `cli_handler.py`; if none exists, add one alongside the current text-output helper. All payloads MUST include `"version": "1.0"` per spec R15.
 - **Verification**: `uv run pytest tests/test_cli_overnight_format_json.py -v` exits 0. Tests: (a) `cortex overnight logs --format json <session-id>` produces `version`-prefixed JSON parseable by `json.load(stdout)`; (b) `cortex overnight cancel --format json <session-id>` likewise; (c) `cortex overnight start --format json` against pre-existing `runner.pid` produces `{"error": "concurrent_runner", ...}` with non-zero exit.
-- **Status**: [ ] pending
+- **Status**: [x] complete (fa2ad12)
 
 ### Task 4: Author MCP contract documentation (R15, R16, R22, plus carve-outs)
 - **Files**: `docs/mcp-contract.md` (create).
@@ -40,7 +40,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Spec R15, R16, R22, and Non-Requirements cross-tool carve-out. JSON shapes referenced from Tasks 2 and 3's actual output. The "Forever-public API" section explicitly names which fields are append-only.
 - **Verification**: `grep -cE '^## (Schema versioning|JSON payload reference|Threat model|Cross-tool serialization carve-out)$' docs/mcp-contract.md` = 4 — pass if count = 4. `grep -F 'Forever-public API' docs/mcp-contract.md` ≥ 1 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (fdea7ab)
 
 ### Task 5: Bootstrap plugin server.py with confused-deputy check (R6, R17)
 - **Files**: `plugins/cortex-overnight-integration/server.py` (create), `tests/test_mcp_subprocess_contract.py` (create — initial confused-deputy test only).
@@ -49,7 +49,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Spec R6 (PEP 723 single-file), R17 (confused-deputy mitigation), R1 (no `cortex_command` imports). The plugin is already materialized in-repo at `plugins/cortex-overnight-integration/` with `.claude-plugin/plugin.json`, `hooks/` (4 shell scripts + `hooks.json`), and `skills/` (overnight, morning-review) — T5 adds `server.py` at the plugin root alongside these existing artifacts and does NOT modify them. R1's "no `cortex_command.*` imports" applies to the new `server.py` only; the existing hooks are shell scripts that already shell out to `cortex` (consistent with the subprocess+JSON contract this lifecycle is establishing). The check fires at module import or at `__main__` entrypoint — earlier is better for fail-fast semantics. `${CLAUDE_PLUGIN_ROOT}` is a Claude Code-injected env var; absence of the env var should also be treated as mismatch (refuse to start).
 - **Verification**: `uv run pytest tests/test_mcp_subprocess_contract.py::test_plugin_path_mismatch_exits_nonzero -v` exits 0. Test invokes `python plugins/cortex-overnight-integration/server.py` with `CLAUDE_PLUGIN_ROOT=/tmp/attacker-controlled` via `subprocess.run`, asserts non-zero exit and stderr containing `"plugin path mismatch"`. Plus: `grep -cE '^(from|import) cortex_command' plugins/cortex-overnight-integration/server.py` exits with code 1 (no match found).
-- **Status**: [ ] pending
+- **Status**: [x] complete (5264ff6)
 
 ### Task 6: Implement subprocess+JSON tool delegation + schema-version enforcement (R1, R2, R15)
 - **Files**: `plugins/cortex-overnight-integration/server.py`, `tests/test_mcp_subprocess_contract.py`.
@@ -58,7 +58,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: complex
 - **Context**: Existing tool signatures live in `cortex_command/mcp_server/tools.py` (1114 lines) and use `cortex_command.mcp_server.schema` Pydantic models — port the public-facing schema (input/output models) into `server.py` directly (R1 forbids importing them). All shell-outs follow spec Technical Constraints (no `check=True`; explicit timeout; capture_output). For `overnight_list_sessions`, verify that `cortex overnight list-sessions --format json` exists in the CLI; if not, extend Task 3 scope to add it before this task or surface as an open issue. Tests in `tests/test_mcp_subprocess_contract.py` mock `subprocess.run` and assert: (a) each tool invokes the expected `cortex <verb> --format json` argv; (b) response parsing returns the expected output model; (c) major-version mismatch raises a clear error; (d) minor-greater accepts and skips unknown fields; (e) the R4 acceptance test `test_overnight_start_concurrent_runner_json_shape` exercising the CLI directly with a pre-written `runner.pid`.
 - **Verification**: `uv run pytest tests/test_mcp_subprocess_contract.py -v` exits 0. Suite includes: per-tool delegation tests, `test_major_version_mismatch_is_rejected`, `test_minor_version_greater_skips_unknown_fields`, `test_overnight_start_concurrent_runner_json_shape`, plus the existing `test_plugin_path_mismatch_exits_nonzero` from Task 5.
-- **Status**: [ ] pending
+- **Status**: [x] complete (761465a) — also added `cortex overnight list-sessions --format json` CLI verb
 
 ### Task 7: Implement throttled update-check + skip predicates (R8, R9)
 - **Files**: `plugins/cortex-overnight-integration/server.py`, `tests/test_mcp_auto_update_orchestration.py` (create).
@@ -67,7 +67,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Spec R8 (cache-key shape, throttle semantics), R9 (skip-predicate triple). Cache invalidation contract from Technical Constraints: `_invalidate_update_cache()` helper exposed for Tasks 8/10/11 to call.
 - **Verification**: `uv run pytest tests/test_mcp_auto_update_orchestration.py -k "throttle or skip_predicate" -v` exits 0. Tests: `test_throttle_cache_first_call_runs_ls_remote`, `test_throttle_cache_subsequent_call_skips_ls_remote`, `test_skip_predicate_dev_mode_suppresses_ls_remote`, `test_skip_predicate_dev_mode_tool_call_still_executes` (all four named in spec R8/R9 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] complete (520518b)
 
 ### Task 8: Upgrade orchestration with flock + post-flock re-verify (R10, R11) [conditional R18=PASS]
 - **Files**: `plugins/cortex-overnight-integration/server.py`, `tests/test_mcp_auto_update_orchestration.py`.
@@ -112,7 +112,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Spec R20. The marketplace mechanism (ticket 122 landed) is now the canonical user-facing update path — installing via local copy is a maintainer/dogfooding workflow per `docs/plugin-development.md`, not a typical end-user path. The note must answer Value bullet 2's claim ("no Claude Code restart needed for CLI updates to take effect") with a verdict that informs Edge Cases AND informs T14's deprecation-message text (T14 reads this verdict to decide whether to append a "restart Claude Code" advisory). If MCP restart requires Claude Code restart, this is documented as a known limitation (Value bullet 2 weakens to "after the next Claude Code session starts").
 - **Verification**: `grep -cE '^## Observed behavior$' lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/plugin-refresh-semantics.md` = 1 — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [ ] partial — scaffolding committed (c9801f0), verdict pending user execution
 
 ### Task 13: Subprocess-overhead benchmark + integration smoke (R21, plus integration coverage)
 - **Files**: `lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/perf-benchmark.md` (create), `tests/perf_mcp_subprocess.py` (create — disposable benchmark harness + integration smoke; not part of the regular test suite, but invokable via `uv run python tests/perf_mcp_subprocess.py`).
@@ -121,7 +121,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Spec R21 plus integration-coverage extension (chosen over a separate Task 16 to keep plan scope bounded). The current in-process baseline lives in `cortex_command/mcp_server/tools.py` — measure it BEFORE Task 15 deletes that directory. `tests/perf_mcp_subprocess.py` is a disposable harness, not a CI test (it shells out and would slow down `just test`); name it `perf_*` so it's excluded from the default pytest discovery. The integration-smoke section runs in the same harness because the subprocess invocations and fixture session are shared with the perf-benchmark scenarios.
 - **Verification**: `grep -cE '^## (overnight_status|overnight_logs|Integration smoke)$' lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/perf-benchmark.md` = 3 — pass if count = 3. Plus: `grep -cE '\bp(50|95|99)\b' lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/perf-benchmark.md` ≥ 6 — pass if all three quantiles appear at least once per perf scenario. Plus: `uv run python tests/perf_mcp_subprocess.py --integration-only` exits 0 — pass if the integration-smoke section of the harness asserts each of the five MCP tools returns a Pydantic-model-validated JSON payload from a real subprocess invocation against the fixture session.
-- **Status**: [ ] pending
+- **Status**: [x] complete (e9f0672) — KNOWN REGRESSION: subprocess path adds ~400ms p95 to both scenarios (over the 200ms surface threshold); see perf-benchmark.md "Threshold evaluation"
 
 ### Task 16: MCP discoverability nudge fallback (R19) [conditional R18=FAIL/PARTIAL]
 - **Files**: `plugins/cortex-overnight-integration/server.py`, `tests/test_mcp_auto_update_orchestration.py`, `backlog/NNN-cortex-init-allowwrite-registration-revisit.md` (create — only on the active branch).

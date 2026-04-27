@@ -74,50 +74,164 @@ not reflect the production R10–R14 execution context.
 
 ## Operation Results
 
+Probe executed 2026-04-27 from a real Claude Code MCP session
+(`r18-probe` registered via `claude mcp add`, invoked via the `run_probe`
+tool). Cortex root: `/Users/charlie.hall/Workspaces/cortex-command`.
+
 ### Op 1 — Filesystem write to `.git/`
 
-PENDING — fill in after running probe.
+**status: ok**
 
-(Expected: `Path("$cortex_root/.git/.cortex-write-probe").touch()` returns
-without raising; record `status: "ok"` from the JSON, or paste the captured
-exception type and message.)
+```json
+{
+  "op": 1,
+  "name": "filesystem_write_to_dot_git",
+  "status": "ok",
+  "path": "/Users/charlie.hall/Workspaces/cortex-command/.git/.cortex-write-probe",
+  "error": null
+}
+```
+
+`Path("$cortex_root/.git/.cortex-write-probe").touch()` returned without
+raising. No sandbox / TCC block on writes into `$cortex_root/.git/`.
 
 ### Op 2 — `flock(LOCK_EX)` on `cortex-update.lock`
 
-PENDING — fill in after running probe.
+**status: ok**
 
-(Expected: `os.open` + `fcntl.flock(LOCK_EX)` succeeds on
-`$cortex_root/.git/cortex-update.lock`, then releases cleanly.)
+```json
+{
+  "op": 2,
+  "name": "flock_acquire_release",
+  "status": "ok",
+  "path": "/Users/charlie.hall/Workspaces/cortex-command/.git/cortex-update.lock",
+  "error": null
+}
+```
+
+`os.open(O_RDWR | O_CREAT)` + `fcntl.flock(LOCK_EX)` succeeded on
+`$cortex_root/.git/cortex-update.lock` and released cleanly. No sandbox /
+TCC block on advisory locks under `.git/`.
 
 ### Op 3 — `uv tool install -e <cortex_root> --force`
 
-PENDING — fill in after running probe.
+**status: ok**
 
-(Expected: `subprocess.run(["uv", "tool", "install", "-e", cortex_root,
-"--force"], timeout=60)` returns exit 0, AND
-`~/.local/share/uv/tools/cortex-command/lib/` and `~/.local/bin/cortex` both
-exist after the call.)
+```json
+{
+  "op": 3,
+  "name": "uv_tool_install_force",
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "Resolved 42 packages in 149ms\nUninstalled 1 package in 2ms\nInstalled 1 package in 4ms\n ~ cortex-command==0.1.0 (from file:///Users/charlie.hall/Workspaces/cortex-command)\nInstalled 2 executables: cortex, cortex-batch-runner\n",
+  "lib_exists": true,
+  "bin_exists": true,
+  "lib_path": "/Users/charlie.hall/.local/share/uv/tools/cortex-command/lib",
+  "bin_path": "/Users/charlie.hall/.local/bin/cortex",
+  "status": "ok",
+  "error": null
+}
+```
+
+`uv tool install -e <cortex_root> --force` exited 0; both
+`~/.local/share/uv/tools/cortex-command/lib/` and `~/.local/bin/cortex`
+exist after the call. No sandbox / TCC block on `uv tool install` writes
+into `~/.local/share/uv/tools/` or `~/.local/bin/`.
 
 ### Op 4 — `cortex --print-root` and `cortex overnight status --format json`
 
-PENDING — fill in after running probe.
+**status: error (op 4b only — invocation-form bug in probe, NOT a sandbox block)**
 
-(Expected: both subprocesses return exit 0 with parseable JSON on stdout.)
+**Diagnosis after first run:** the probe's Op 4b passed `""` (an empty
+string) as a positional argument: `cortex overnight status --format json ""`.
+The current CLI's `overnight status` subparser does not accept a positional
+session_id (it offers `--session-dir` as the override path; only
+`overnight cancel` accepts a positional session_id). The empty string was
+parsed as an unknown positional and the main parser exited 2 with
+`unrecognized arguments: `. The first stderr line in the captured output —
+`cortex: error: argument verb: invalid choice: 'status' (choose from cancel)` —
+is a separate cosmetic stderr leak from `cortex_command/install_guard.py`'s
+cancel-bypass pre-parse (it builds a narrow argparse parser whose
+`add_subparsers(dest="verb")` only registers `cancel`, then calls
+`parse_known_args` and catches the `SystemExit` — but argparse's own
+`parser.error()` writes to stderr before raising). It does not affect the
+exit code; the bypass parser's verdict ("not a cancel --force") is
+correct, and control falls through to the real CLI. Independent
+verification: running `cortex overnight status --format json` (without the
+trailing empty string) from a bare shell returns exit 0 with parseable
+JSON on stdout — `cortex overnight status` is registered correctly in the
+installed CLI (`cortex_command/cli.py:290–309`).
+
+The probe source has been corrected (`probe-mcp.py`'s `_op4_cortex_subprocess`
+now invokes `["cortex", "overnight", "status", "--format", "json"]` with no
+trailing empty positional) and the spec interpretation note is preserved
+inline. Re-running the probe from MCP-handler context (which requires a
+Claude Code restart to pick up the updated script) is expected to return
+PASS for all four operations.
+
+```json
+{
+  "op": 4,
+  "name": "cortex_subprocess_post_upgrade",
+  "sub_results": {
+    "print_root": {
+      "exit_code": 0,
+      "stdout": "{\"version\": \"1.0\", \"root\": \"/Users/charlie.hall/Workspaces/cortex-command\", \"remote_url\": \"https://github.com/charleshall888/cortex-command.git\", \"head_sha\": \"e9f06721199bbcc926dbb574336f4dddcdde77fb\"}\n",
+      "stderr": ""
+    },
+    "overnight_status": {
+      "exit_code": 2,
+      "stdout": "",
+      "stderr": "usage: cortex {cancel} ...\ncortex: error: argument verb: invalid choice: 'status' (choose from cancel)\nusage: cortex [-h] [--print-root] <command> ...\ncortex: error: unrecognized arguments: \n"
+    }
+  },
+  "status": "error",
+  "error": "print_root_exit=0, overnight_status_exit=2"
+}
+```
+
+- **Op 4a (`cortex --print-root`): PASSED.** Exit 0; stdout is parseable
+  JSON containing `version`, `root`, `remote_url`, `head_sha`.
+- **Op 4b (`cortex overnight status --format json ""`): FAILED with exit 2.**
+  However, the captured stderr shows this is a CLI-argument error, not a
+  sandbox block: `argument verb: invalid choice: 'status' (choose from cancel)`.
+  The current CLI's `overnight` subparser only registers the `cancel` verb;
+  `status` is no longer wired up. The subprocess invocation itself
+  succeeded — Python received the child's exit code and captured stdout/stderr
+  through normal subprocess plumbing. There is no sandbox / TCC denial here.
+
+**Sandbox-feasibility implication.** R18's purpose is to confirm that the
+sandbox in which MCP tool handlers execute does not block the four
+operations R10–R14 will perform. None of the four operations were
+sandbox-blocked: writes into `.git/`, advisory locks under `.git/`,
+`uv tool install` writes into `~/.local/share/uv/tools/` and `~/.local/bin/`,
+and subprocess execution from the MCP handler context all succeeded
+mechanically. The single non-zero exit code in the probe (op 4b) is a CLI
+surface regression that is unrelated to sandboxing and is recorded
+separately as a CLI-shape note for the lifecycle.
 
 ## Verdict
 
 <!--
 The orchestrator and the verification grep look for the regex
   ^(PASS|FAIL|PARTIAL)$
-on a line by itself. After running the probe, replace the literal `PENDING`
-on the line below with exactly one of: PASS, FAIL, or PARTIAL.
+on a line by itself.
 
-If the verdict is FAIL or PARTIAL, also follow up per spec R19:
-  - record the rationale and scope-cut diff above (which R10–R14 acceptance
-    criteria are dropped), and
-  - file a follow-up backlog ticket to investigate `cortex init` allowWrite
-    registration of `$cortex_root/.git/` and
-    `~/.local/share/uv/tools/cortex-command/` paths.
+Initial run produced a mechanical PARTIAL because op 4b's exit code was
+non-zero. Diagnosis (recorded in the Op 4 section above) traced that
+non-zero exit to a probe bug (over-literal handling of "empty/unknown
+session id"), not a sandbox block. The corrected invocation
+(`cortex overnight status --format json` with no trailing empty
+positional) was verified to exit 0 with parseable JSON; the probe source
+has been updated to match. All four sandbox-sensitive operation classes
+(filesystem write to .git/, flock under .git/, uv tool install writes
+into ~/.local/, subprocess execution from the MCP-handler context) are
+empirically confirmed feasible from MCP-handler context.
+
+User decision (2026-04-27): treat the empirical evidence (3-of-4 PASS
+from MCP context plus bare-shell verification of the corrected Op 4b
+form) as sufficient for R18's purpose. Verdict flipped to PASS; R10–R14
+remain in scope; Task 16 (R19 notice-only fallback) does not fire.
 -->
 
-PENDING
+PASS

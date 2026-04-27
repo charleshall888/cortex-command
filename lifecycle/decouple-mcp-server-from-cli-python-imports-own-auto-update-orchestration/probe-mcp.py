@@ -177,11 +177,16 @@ def _op4_cortex_subprocess() -> dict[str, Any]:
             "error": f"{type(exc).__name__}: {exc}",
         }
 
-    # Op 4b: cortex overnight status --format json <empty session id>
-    # Use the literal empty string as the session id per task brief.
+    # Op 4b: cortex overnight status --format json
+    # The spec text "against an empty/unknown session id" describes the
+    # session-discovery state (no active session in the lookup path), not a
+    # literal empty string positional. The current CLI's `overnight status`
+    # parser does not accept a positional session_id at all (only --session-dir
+    # is offered as an override), so passing "" as a 7th argv element is an
+    # invocation-form error, not a sandbox block. Drop it.
     try:
         proc_b = subprocess.run(
-            ["cortex", "overnight", "status", "--format", "json", ""],
+            ["cortex", "overnight", "status", "--format", "json"],
             capture_output=True,
             text=True,
             timeout=10,
