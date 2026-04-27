@@ -2,20 +2,22 @@
 schema_version: "1"
 uuid: 8ca55836-e562-400e-952b-1d91b23fe2f8
 title: "Homebrew tap as thin wrapper around the curl installer"
-status: backlog
+status: wontfix
 priority: low
 type: feature
 parent: 113
 tags: [distribution, homebrew, overnight-layer-distribution]
 areas: [install]
 created: 2026-04-21
-updated: 2026-04-21
-lifecycle_slug: null
-lifecycle_phase: null
+updated: 2026-04-24
+lifecycle_slug: homebrew-tap-as-thin-wrapper-around-the-curl-installer
+lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: [118]
 discovery_source: research/overnight-layer-distribution/research.md
+complexity: complex
+criticality: medium
 ---
 
 # Homebrew tap as thin wrapper around the curl installer
@@ -43,3 +45,20 @@ Low priority because the bootstrap installer already covers macOS via `curl | sh
 ## Research
 
 See `research/overnight-layer-distribution/research.md` DR-4 trade-offs (Homebrew tap as thin wrapper), `_cli-packaging-report.md` Homebrew section (specifically the `post_install` runs on every `brew upgrade` problem), and the prior-art scan ("no surveyed project ships primarily via Homebrew").
+
+## Closure (2026-04-24): wontfix
+
+Closed after full lifecycle research + spec-phase architectural challenge. The wrapper-Formula approach the ticket proposes was found architecturally unsupported:
+
+- **Pattern B (wrapper Formula) is unprecedented**: 0 of 11 surveyed real-world tools with both a `curl | sh` installer and a brew presence ship a Formula that wraps the curl script (rustup, uv, nvm, starship, deno, bun, fzf, gh, flyctl, cloudflared, railway). Expanded to a Python-CLI cohort (poetry, pipx, pdm, hatch, httpie, ansible) — independently 0/6. All surveyed tools build from source or download pre-built binaries independently in their formula.
+- **Homebrew's `Empty installation` check** is a runtime invariant (`Library/Homebrew/keg.rb` `empty_installation?`) enforced regardless of tap-vs-core. A wrapper formula whose install block delegates to a curl script that places files outside the formula's prefix triggers the error. Documented mitigations (kiro-cli `--prefix` pattern, placeholder file, shim wrapper) are all hacks against brew's design.
+- **Maintainer guidance** (Homebrew Discussion #4717, #5388) consistently redirects wrapper-formula proposals to either "build from source" or "ship in your own tap" — never "wrap the installer."
+- **Cask alternative** with `auto_updates true` (gcloud-cli / miniforge precedent) makes `brew upgrade` a documented no-op, so it doesn't solve the upgrade-verb conflict either — it just names the mismatch.
+
+**Full research artifact**: `lifecycle/homebrew-tap-as-thin-wrapper-around-the-curl-installer/research.md`.
+
+**Separable concerns that emerged during this ticket's design review**:
+
+- **Option 2 (from-source Formula via `uv tool install --from git+url@tag`)** was prematurely dismissed in this ticket's original "Out of scope" line; the original rejection covers only `virtualenv_install_with_resources`, not all from-source paths. This is the survey's 9-of-11 consensus pattern. Not pursued here but documented for future work — if macOS-brew discoverability becomes a priority, this is the architecturally-honest path.
+- **DR-4 discoverability surface**: the parent epic 113's DR-4 recommended a brew tap specifically for `brew search` discoverability. Closing this ticket leaves that rationale partially unaddressed. An epic-level decision record should be added (revise DR-4 or accept the loss); deferred.
+- **CLI auto-update UX** surfaced as a separately feasible improvement: see ticket 145 (Lazy-apply cortex CLI auto-update via SessionStart probe + in-process apply-on-invoke). Addresses a different concern (upgrade UX, not discoverability); measured-feasible at <1 day implementation cost.

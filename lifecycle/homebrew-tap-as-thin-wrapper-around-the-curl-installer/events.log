@@ -1,0 +1,36 @@
+{"ts": "2026-04-24T22:14:54Z", "event": "discovery_reference", "feature": "homebrew-tap-as-thin-wrapper-around-the-curl-installer", "epic_research": "research/overnight-layer-distribution/research.md", "epic_spec": null}
+- ts: 2026-04-24T22:14:54Z
+  event: clarify_critic
+  feature: homebrew-tap-as-thin-wrapper-around-the-curl-installer
+  findings:
+    - "Intent clarity HIGH treats wrap-an-existing-installer as a single unambiguous outcome, but the source's load-bearing line `curl -fsSL https://cortex.sh/install | sh` depends on ticket 118's installer endpoint, which the source asserts without evidence."
+    - "Intent clarity HIGH does not address what brew owns when the curl script does the install — there is no binary in the formula prefix and `brew uninstall` would not undo the curl install, which the source glosses as a single unambiguous outcome."
+    - "Scope boundedness HIGH cites enumerated lists, but the in-scope upgrade path (`brew upgrade` re-runs the curl script) is structurally the same hazard the source's own Research section flags (post_install runs on every brew upgrade), without resolving the contradiction."
+    - "Requirements alignment HIGH invokes DR-8's proposed project.md update while conceding the update has not landed; until it lands, the ticket is in direct textual conflict with the current `Published packages or reusable modules for others` Out-of-Scope clause."
+    - "Complexity simple assumes a mechanical pattern the source never demonstrates and the source itself notes 'no surveyed project ships primarily via Homebrew'; multiple judgment calls (tap repo owner, pin vs latest, brew audit style, version string under uv tool install) are not engaged."
+    - "Criticality medium reasons about install-time recoverability but does not engage with the source's own flagged upgrade-time hazard — silent overwrite of user customizations on every brew upgrade is not recoverable via tap update."
+  dispositions:
+    apply: 1
+    dismiss: 5
+    ask: 0
+  applied_fixes:
+    - "Revised requirements alignment from HIGH to Partial: aligns with epic DR-4/DR-8 resolution; project.md Out-of-Scope clause has not yet been updated to reflect the resolution and the update is acknowledged as pending in DR-8 ('deferred to the epic that implements this')."
+  dismissals:
+    - finding_index: 0
+      rationale: "Research-phase concern, not Clarify-phase. Ticket 118 is complete; the canonical install URL is determined by 118's deployment and is a fact research will confirm. The intent — wrap the curl bootstrap installer — is unambiguous regardless of which URL 118 ultimately published."
+    - finding_index: 1
+      rationale: "The source explicitly says the formula is a 'thin wrapper' that 'doesn't own ~/.claude/ deployment, it just runs the curl script once and prints caveats.' That is the architectural answer to what brew owns. Specifics like Cellar contents and brew uninstall semantics are research-phase investigation, not Clarify-phase intent ambiguity."
+    - finding_index: 2
+      rationale: "Misreads DR-5 architectural split. DR-5 separates 'install the tool' (curl/brew/uv handle this) from 'deploy ~/.claude/' (cortex setup handles this). The curl script from ticket 118 installs the cortex CLI via `uv tool install` and does not touch ~/.claude/. The post_install hazard the source flags was specifically about formulas writing to user config; brew upgrade re-running an idempotent CLI installer is not the same hazard."
+    - finding_index: 4
+      rationale: "Items flagged (tap repo owner, pin vs latest, brew audit style, version string) are research-phase fact-finding to be resolved by reading code/docs, not architectural design trade-offs requiring user judgment. The lifecycle's Research→Specify automatic complexity-escalation gate (≥2 open questions in research.md) will catch any genuine complexity surfaced by research."
+    - finding_index: 5
+      rationale: "Same DR-5 reasoning as finding 2: curl script does not deploy ~/.claude/. brew upgrade re-running it re-installs the CLI idempotently via `uv tool install`. The blast-radius hazard the critic describes is mitigated architecturally; medium criticality stands."
+  status: ok
+{"ts": "2026-04-24T22:14:54Z", "event": "lifecycle_start", "feature": "homebrew-tap-as-thin-wrapper-around-the-curl-installer", "tier": "simple", "criticality": "medium"}
+{"ts": "2026-04-24T22:14:54Z", "event": "phase_transition", "feature": "homebrew-tap-as-thin-wrapper-around-the-curl-installer", "from": "clarify", "to": "research"}
+{"ts": "2026-04-24T22:14:54Z", "event": "complexity_override", "feature": "homebrew-tap-as-thin-wrapper-around-the-curl-installer", "from": "simple", "to": "complex"}
+{"ts": "2026-04-24T22:14:54Z", "event": "phase_transition", "feature": "homebrew-tap-as-thin-wrapper-around-the-curl-installer", "from": "research", "to": "specify"}
+{"ts": "2026-04-24T22:14:54Z", "event": "confidence_check", "feature": "homebrew-tap-as-thin-wrapper-around-the-curl-installer", "cycle": 1, "signals": ["C1: ticket's wrapper-Formula premise materially in question — brew's update model cannot own a wrapper-installed CLI; Cask and 'drop the tap' surfaced as alternatives not in research"], "action": "loop_back"}
+{"ts": "2026-04-24T22:14:54Z", "event": "phase_transition", "feature": "homebrew-tap-as-thin-wrapper-around-the-curl-installer", "from": "specify", "to": "research"}
+{"ts": "2026-04-24T22:14:54Z", "event": "feature_complete", "feature": "homebrew-tap-as-thin-wrapper-around-the-curl-installer", "outcome": "wontfix", "spawned_tickets": [145]}

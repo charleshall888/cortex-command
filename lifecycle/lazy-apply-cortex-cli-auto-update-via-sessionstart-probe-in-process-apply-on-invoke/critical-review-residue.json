@@ -1,0 +1,18 @@
+{
+  "ts": "2026-04-25T15:30:00Z",
+  "feature": "lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke",
+  "artifact": "lifecycle/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 3,
+    "dispatched": 3
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "The gate adds a 1s ls-remote tax to every cortex overnight status invocation with no caching or rate-limit (only no_origin log dedup is mentioned), so frequent status polling from dashboards or runners pays repeated network cost.",
+      "reviewer_angle": "Workflow composition with cortex overnight start",
+      "evidence_quote": "git ls-remote main with 1s Python-side timeout (logging ls_remote_timeout / ls_remote on failures)"
+    }
+  ]
+}

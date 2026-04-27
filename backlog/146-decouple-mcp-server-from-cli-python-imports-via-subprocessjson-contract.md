@@ -13,7 +13,7 @@ areas: [mcp-server,plugins]
 complexity: complex
 criticality: high
 absorbed: ["145"]
-session_id: 5fe36dc6-1b2f-4fd2-8729-49afb70d70b9
+session_id: 9510d7c9-8c41-479c-b8f1-266a9962ce2e
 lifecycle_phase: implement
 lifecycle_slug: decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration
 spec: lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md

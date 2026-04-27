@@ -243,7 +243,7 @@
   {
     "id": 122,
     "title": "Publish plugin marketplace manifest for cortex-command",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -253,7 +253,8 @@
       "overnight-layer-distribution"
     ],
     "areas": [
-      "install"
+      "skills",
+      "docs"
     ],
     "created": "2026-04-21",
     "updated": "2026-04-25",
@@ -261,13 +262,13 @@
     "blocked_by": [],
     "parent": "113",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/publish-plugin-marketplace-manifest-for-cortex-command/spec.md",
     "discovery_source": "research/overnight-layer-distribution/research.md",
     "plan": null,
     "uuid": "7a291fcc-a9c8-4df2-97e2-81e0c01c5016",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "publish-plugin-marketplace-manifest-for-cortex-command",
+    "session_id": "3ba65c0d-3c81-4be9-97ec-07c1e0485411",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -673,18 +674,18 @@
       "plugins"
     ],
     "created": "2026-04-25",
-    "updated": "2026-04-25",
+    "updated": "2026-04-26",
     "blocks": [],
     "blocked_by": [],
     "parent": "113",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "6baeb00e-799c-43e8-a354-3d54445e1a29",
     "lifecycle_slug": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration",
-    "session_id": "4717f34d-f3bf-459f-9013-bbe4c0dfd187",
-    "lifecycle_phase": "research",
+    "session_id": "9510d7c9-8c41-479c-b8f1-266a9962ce2e",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

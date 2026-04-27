@@ -1,0 +1,24 @@
+{
+  "ts": "2026-04-24T22:14:54Z",
+  "feature": "homebrew-tap-as-thin-wrapper-around-the-curl-installer",
+  "artifact": "conversation recommendation (Drop ticket 125 + file auto-update ticket)",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "The proposed sentinel files .last-update-check and .update-available are NOT in the cortex-command .gitignore. Since README documents that ~/.cortex IS the cloned cortex-command checkout, daily touches dirty the working tree the auto-update logic itself reads (`git -C ~/.cortex rev-parse HEAD`).",
+      "reviewer_angle": "Auto-update implementation speculation",
+      "evidence_quote": "touch ~/.cortex/.update-available  # flag for statusline / future apply step"
+    },
+    {
+      "class": "B",
+      "finding": "Option 1 silently re-decides DR-4 from the parent epic 113's research artifact, which specifically recommended 'Homebrew tap as thin wrapper for discoverability.' Dropping the tap leaves the discoverability rationale unaddressed; the proposed replacement ticket solves a different problem (update UX) and does not substitute for the discoverability surface.",
+      "reviewer_angle": "Premature dismissal of from-source Formula",
+      "evidence_quote": "Drop the brew tap entirely (close ticket 125 as won't-fix). Add a separate backlog item for 'CLI auto-update via Claude SessionStart hook.'"
+    }
+  ]
+}
