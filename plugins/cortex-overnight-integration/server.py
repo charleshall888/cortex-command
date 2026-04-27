@@ -45,7 +45,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Callable, Literal, Optional
 
 
 def _enforce_plugin_root() -> None:
@@ -230,6 +230,15 @@ if shutil.which("cortex") is None:
 #: Cache of the ``cortex --print-root`` payload, populated on first
 #: access. ``None`` indicates not-yet-fetched. R8 (Task 7) reads
 #: ``head_sha`` and ``remote_url`` from this cache.
+#:
+#: Concurrency: FastMCP's stdio transport runs tool handlers on a single
+#: asyncio event loop, and ``_get_cortex_root_payload`` performs a sync
+#: ``subprocess.run`` with no ``await`` between the cache-read and
+#: cache-write. The event loop therefore serializes the check-then-act,
+#: so no lock is required today. Any future move to ``asyncio.to_thread``
+#: or thread-pool dispatch will require a lock around the
+#: check-then-act in ``_get_cortex_root_payload`` (and the cache-clear
+#: in the retry handler).
 _CORTEX_ROOT_CACHE: Optional[dict[str, Any]] = None
 
 
@@ -1404,6 +1413,39 @@ def _run_cortex(
         ) from exc
 
 
+def _retry_on_cli_missing(
+    budget: list[int],
+    func: Callable[..., Any],
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    """Invoke ``func`` and retry once on :class:`CortexCliMissing`.
+
+    ``budget`` is a single-element mutable list ``[remaining_retries]``
+    owned by the caller (the verb-dispatch tool body) so the retry
+    counter is per-tool-call (local to the dispatcher) rather than
+    module-global. The first ``CortexCliMissing`` clears
+    ``_CORTEX_ROOT_CACHE`` (in case a stale cache entry caused
+    discovery to point at a now-missing CLI) and retries once. A
+    second ``CortexCliMissing`` (or any failure once budget is
+    exhausted) re-raises so the caller can return
+    :data:`_CORTEX_CLI_MISSING_ERROR`.
+
+    Catches exactly ``CortexCliMissing`` — never the broader ``OSError``
+    parent — so unrelated failures (e.g., ``PermissionError``) propagate
+    unchanged.
+    """
+    global _CORTEX_ROOT_CACHE
+    try:
+        return func(*args, **kwargs)
+    except CortexCliMissing:
+        if budget[0] <= 0:
+            raise
+        budget[0] -= 1
+        _CORTEX_ROOT_CACHE = None
+        return func(*args, **kwargs)
+
+
 def _parse_json_payload(
     completed: subprocess.CompletedProcess[str],
     *,
@@ -1443,7 +1485,9 @@ _DEFAULT_TOOL_TIMEOUT = 30.0
 _START_RUN_TOOL_TIMEOUT = 60.0
 
 
-def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
+def _delegate_overnight_start_run(
+    payload: StartRunInput,
+) -> StartRunOutput | str:
     """Subprocess delegation for ``overnight_start_run``.
 
     The CLI either spawns the runner (no JSON envelope on stdout, exit
@@ -1453,6 +1497,10 @@ def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
     delegation we approximate by treating exit-zero as
     ``started=True`` with best-effort fields filled from the
     discovery-cache + the state file.
+
+    On unrecovered :class:`CortexCliMissing` (S1.3 retry exhausted),
+    returns :data:`_CORTEX_CLI_MISSING_ERROR` (S5.2) so FastMCP wraps
+    the response into the canonical missing-CLI error envelope.
     """
 
     # Validation gate is enforced at the FastMCP wrapper layer (the
@@ -1466,7 +1514,18 @@ def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
     if payload.state_path is not None:
         argv.extend(["--state", payload.state_path])
 
-    completed = _run_cortex(argv, timeout=_START_RUN_TOOL_TIMEOUT)
+    # Per-tool-call retry budget for CortexCliMissing (S1.3). Local
+    # variable, NOT module-global — each verb invocation gets its own.
+    cli_retry_budget: list[int] = [1]
+    try:
+        completed = _retry_on_cli_missing(
+            cli_retry_budget,
+            _run_cortex,
+            argv,
+            timeout=_START_RUN_TOOL_TIMEOUT,
+        )
+    except CortexCliMissing:
+        return _CORTEX_CLI_MISSING_ERROR
 
     # The CLI emits a JSON envelope only on the concurrent-runner
     # refusal path. A successful spawn returns 0 with no stdout JSON
@@ -1516,13 +1575,22 @@ def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
     )
 
 
-def _delegate_overnight_status(payload: StatusInput) -> StatusOutput:
-    """Subprocess delegation for ``overnight_status``."""
+def _delegate_overnight_status(payload: StatusInput) -> StatusOutput | str:
+    """Subprocess delegation for ``overnight_status``.
+
+    On unrecovered :class:`CortexCliMissing` (S1.3 retry exhausted),
+    returns :data:`_CORTEX_CLI_MISSING_ERROR` (S5.2).
+    """
 
     # R13/R8/R9/R10/R11 gate dispatch (Task 10 wires R13 ahead of R8).
     _gate_dispatch()
 
     argv: list[str] = ["overnight", "status", "--format", "json"]
+    # Per-tool-call retry budget for CortexCliMissing (S1.3). Shared
+    # across BOTH _get_cortex_root_payload and _run_cortex below — the
+    # whole tool invocation gets exactly one retry across all
+    # subprocess hits.
+    cli_retry_budget: list[int] = [1]
     # The CLI's ``--session-dir`` override is the way to target a
     # specific session; ``session_id`` from the MCP input maps to the
     # absolute session-dir under the resolved cortex root. Without an
@@ -1534,7 +1602,13 @@ def _delegate_overnight_status(payload: StatusInput) -> StatusOutput:
         # the caller passed a session_id, hand it through as the
         # directory basename and let the CLI resolve via its own
         # `_resolve_repo_path()`.
-        cortex_root = _get_cortex_root_payload().get("root", "")
+        try:
+            root_payload = _retry_on_cli_missing(
+                cli_retry_budget, _get_cortex_root_payload
+            )
+        except CortexCliMissing:
+            return _CORTEX_CLI_MISSING_ERROR
+        cortex_root = root_payload.get("root", "")
         # The CLI expects an absolute or repo-relative session dir; use
         # the cortex_root's lifecycle/sessions tree.
         session_dir = (
@@ -1542,7 +1616,15 @@ def _delegate_overnight_status(payload: StatusInput) -> StatusOutput:
         )
         argv.extend(["--session-dir", str(session_dir)])
 
-    completed = _run_cortex(argv, timeout=_DEFAULT_TOOL_TIMEOUT)
+    try:
+        completed = _retry_on_cli_missing(
+            cli_retry_budget,
+            _run_cortex,
+            argv,
+            timeout=_DEFAULT_TOOL_TIMEOUT,
+        )
+    except CortexCliMissing:
+        return _CORTEX_CLI_MISSING_ERROR
     if completed.returncode != 0:
         raise RuntimeError(
             f"overnight_status: cortex exited "
@@ -1603,12 +1685,17 @@ def _feature_counts_from_map(features_map: Any) -> FeatureCounts:
     return FeatureCounts(**counts)
 
 
-def _delegate_overnight_logs(payload: LogsInput) -> LogsOutput:
+def _delegate_overnight_logs(payload: LogsInput) -> LogsOutput | str:
     """Subprocess delegation for ``overnight_logs``.
 
     The CLI's ``logs`` verb only handles a single ``--files`` selector
     per invocation; the MCP tool accepts a list of files. We invoke
     the CLI once per file in ``payload.files`` and aggregate.
+
+    On unrecovered :class:`CortexCliMissing` (S1.3 retry exhausted),
+    returns :data:`_CORTEX_CLI_MISSING_ERROR` (S5.2). The retry budget
+    is shared across all loop iterations: the tool invocation as a
+    whole gets one retry, not one-per-file.
     """
 
     # R13/R8/R9/R10/R11 gate dispatch (Task 10 wires R13 ahead of R8).
@@ -1617,6 +1704,9 @@ def _delegate_overnight_logs(payload: LogsInput) -> LogsOutput:
     aggregated_lines: list[dict[str, Any]] = []
     next_cursor: str | None = None
     eof_flags: list[bool] = []
+    # Per-tool-call retry budget for CortexCliMissing (S1.3). Shared
+    # across all loop iterations below.
+    cli_retry_budget: list[int] = [1]
 
     for file_key in payload.files:
         argv: list[str] = [
@@ -1635,7 +1725,15 @@ def _delegate_overnight_logs(payload: LogsInput) -> LogsOutput:
             argv.extend(["--limit", str(payload.limit)])
         argv.append(payload.session_id)
 
-        completed = _run_cortex(argv, timeout=_DEFAULT_TOOL_TIMEOUT)
+        try:
+            completed = _retry_on_cli_missing(
+                cli_retry_budget,
+                _run_cortex,
+                argv,
+                timeout=_DEFAULT_TOOL_TIMEOUT,
+            )
+        except CortexCliMissing:
+            return _CORTEX_CLI_MISSING_ERROR
         # Logs verb emits a versioned JSON envelope for both success
         # and error paths; check the envelope before falling back to
         # exit code.
@@ -1696,13 +1794,16 @@ def _parse_log_line(line: Any) -> dict[str, Any]:
     return obj
 
 
-def _delegate_overnight_cancel(payload: CancelInput) -> CancelOutput:
+def _delegate_overnight_cancel(payload: CancelInput) -> CancelOutput | str:
     """Subprocess delegation for ``overnight_cancel``.
 
     The CLI's ``cancel`` verb signals the runner's process group; the
     MCP tool's richer contract (signal escalation, ``force`` flag,
     five enumerated reasons) is approximated by mapping the CLI's
     error envelope onto the matching reason code.
+
+    On unrecovered :class:`CortexCliMissing` (S1.3 retry exhausted),
+    returns :data:`_CORTEX_CLI_MISSING_ERROR` (S5.2).
     """
 
     # R13/R8/R9/R10/R11 gate dispatch (Task 10 wires R13 ahead of R8).
@@ -1715,7 +1816,17 @@ def _delegate_overnight_cancel(payload: CancelInput) -> CancelOutput:
         "json",
         payload.session_id,
     ]
-    completed = _run_cortex(argv, timeout=_DEFAULT_TOOL_TIMEOUT)
+    # Per-tool-call retry budget for CortexCliMissing (S1.3).
+    cli_retry_budget: list[int] = [1]
+    try:
+        completed = _retry_on_cli_missing(
+            cli_retry_budget,
+            _run_cortex,
+            argv,
+            timeout=_DEFAULT_TOOL_TIMEOUT,
+        )
+    except CortexCliMissing:
+        return _CORTEX_CLI_MISSING_ERROR
 
     if not completed.stdout.strip():
         raise RuntimeError(
@@ -1773,8 +1884,12 @@ def _delegate_overnight_cancel(payload: CancelInput) -> CancelOutput:
 
 def _delegate_overnight_list_sessions(
     payload: ListSessionsInput,
-) -> ListSessionsOutput:
-    """Subprocess delegation for ``overnight_list_sessions``."""
+) -> ListSessionsOutput | str:
+    """Subprocess delegation for ``overnight_list_sessions``.
+
+    On unrecovered :class:`CortexCliMissing` (S1.3 retry exhausted),
+    returns :data:`_CORTEX_CLI_MISSING_ERROR` (S5.2).
+    """
 
     # R13/R8/R9/R10/R11 gate dispatch (Task 10 wires R13 ahead of R8).
     _gate_dispatch()
@@ -1788,7 +1903,17 @@ def _delegate_overnight_list_sessions(
     if payload.limit is not None:
         argv.extend(["--limit", str(payload.limit)])
 
-    completed = _run_cortex(argv, timeout=_DEFAULT_TOOL_TIMEOUT)
+    # Per-tool-call retry budget for CortexCliMissing (S1.3).
+    cli_retry_budget: list[int] = [1]
+    try:
+        completed = _retry_on_cli_missing(
+            cli_retry_budget,
+            _run_cortex,
+            argv,
+            timeout=_DEFAULT_TOOL_TIMEOUT,
+        )
+    except CortexCliMissing:
+        return _CORTEX_CLI_MISSING_ERROR
     if completed.returncode != 0:
         raise RuntimeError(
             f"overnight_list_sessions: cortex exited "
@@ -1833,8 +1958,17 @@ _START_RUN_WARNING = (
     name="overnight_start_run",
     description=_START_RUN_WARNING,
 )
-async def overnight_start_run(payload: StartRunInput) -> StartRunOutput:
-    """Spawn the overnight runner via subprocess delegation."""
+async def overnight_start_run(
+    payload: StartRunInput,
+) -> StartRunOutput | str:
+    """Spawn the overnight runner via subprocess delegation.
+
+    Return type union with ``str`` accommodates the
+    :data:`_CORTEX_CLI_MISSING_ERROR` graceful-degrade path (S5.2):
+    when the cortex CLI is unrecoverably missing, the delegate
+    returns the canonical error string and FastMCP wraps it as a
+    ``CallToolResult(isError=True, ...)`` envelope.
+    """
     return _delegate_overnight_start_run(payload)
 
 
@@ -1845,8 +1979,12 @@ async def overnight_start_run(payload: StartRunInput) -> StartRunOutput:
         "feature counts, integration branch)."
     ),
 )
-async def overnight_status(payload: StatusInput) -> StatusOutput:
-    """Return overnight session status via subprocess delegation."""
+async def overnight_status(payload: StatusInput) -> StatusOutput | str:
+    """Return overnight session status via subprocess delegation.
+
+    Return type union with ``str`` accommodates the
+    :data:`_CORTEX_CLI_MISSING_ERROR` graceful-degrade path (S5.2).
+    """
     return _delegate_overnight_status(payload)
 
 
@@ -1857,8 +1995,12 @@ async def overnight_status(payload: StatusInput) -> StatusOutput:
         "escalations using opaque cursor tokens."
     ),
 )
-async def overnight_logs(payload: LogsInput) -> LogsOutput:
-    """Return overnight session logs via subprocess delegation."""
+async def overnight_logs(payload: LogsInput) -> LogsOutput | str:
+    """Return overnight session logs via subprocess delegation.
+
+    Return type union with ``str`` accommodates the
+    :data:`_CORTEX_CLI_MISSING_ERROR` graceful-degrade path (S5.2).
+    """
     return _delegate_overnight_logs(payload)
 
 
@@ -1869,8 +2011,12 @@ async def overnight_logs(payload: LogsInput) -> LogsOutput:
         "against its process group."
     ),
 )
-async def overnight_cancel(payload: CancelInput) -> CancelOutput:
-    """Cancel an overnight session via subprocess delegation."""
+async def overnight_cancel(payload: CancelInput) -> CancelOutput | str:
+    """Cancel an overnight session via subprocess delegation.
+
+    Return type union with ``str`` accommodates the
+    :data:`_CORTEX_CLI_MISSING_ERROR` graceful-degrade path (S5.2).
+    """
     return _delegate_overnight_cancel(payload)
 
 
@@ -1883,8 +2029,12 @@ async def overnight_cancel(payload: CancelInput) -> CancelOutput:
 )
 async def overnight_list_sessions(
     payload: ListSessionsInput,
-) -> ListSessionsOutput:
-    """List overnight sessions via subprocess delegation."""
+) -> ListSessionsOutput | str:
+    """List overnight sessions via subprocess delegation.
+
+    Return type union with ``str`` accommodates the
+    :data:`_CORTEX_CLI_MISSING_ERROR` graceful-degrade path (S5.2).
+    """
     return _delegate_overnight_list_sessions(payload)
 
 
