@@ -1,0 +1,6 @@
+{"ts": "2026-04-27T18:30:00Z", "event": "orchestrator_review", "feature": "docs-setup-audit", "phase": "research", "verdict": "flag", "cycle": 1, "issues": ["R4: Q4 (cortex init reversibility) self-tagged as not-a-research-question; not a true open question per R4 criteria"]}
+{"ts": "2026-04-27T18:31:00Z", "event": "orchestrator_dispatch_fix", "feature": "docs-setup-audit", "phase": "research", "mode": "same_context", "issue": "R4: Remove Q4 from Open Questions; renumber Q5 to Q4"}
+{"ts": "2026-04-27T18:32:00Z", "event": "orchestrator_review", "feature": "docs-setup-audit", "phase": "research", "verdict": "pass", "cycle": 2, "issues": []}
+{"ts": "2026-04-27T19:00:00Z", "event": "critical_review_dispatch", "feature": "docs-setup-audit", "phase": "research", "angles": 4, "reviewers_completed": 4, "findings": {"a_class": 0, "b_class": 2, "c_class": 25}}
+{"ts": "2026-04-27T19:01:00Z", "event": "critical_review_synthesis", "feature": "docs-setup-audit", "phase": "research", "synthesis_status": "ok", "throughlines": 4, "tensions": 3, "concerns": 6}
+{"ts": "2026-04-27T19:02:00Z", "event": "critical_review_apply", "feature": "docs-setup-audit", "phase": "research", "applied": 8, "dismissed": 0, "asked": 1}
