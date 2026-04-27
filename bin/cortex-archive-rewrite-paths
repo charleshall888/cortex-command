@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+"""Rewrite lifecycle/<slug> path references after a `lifecycle-archive` move.
+
+Walks every `*.md` file under the repo root (excluding `.git/`,
+`lifecycle/archive/`, `lifecycle/sessions/`, and `retros/`) and rewrites
+references to one or more given slugs to point at the new
+`lifecycle/archive/<slug>` location. Three citation forms are handled:
+
+  - Slash form:    ``lifecycle/<slug>/...``     -> ``lifecycle/archive/<slug>/...``
+  - Wikilink form: ``[[lifecycle/<slug>{/]|}``  -> ``[[lifecycle/archive/<slug>{/]|}``
+  - Bare form:     ``lifecycle/<slug>`` (no trailing slash, with non-word
+                   boundary on either side) -> ``lifecycle/archive/<slug>``
+
+Boundary semantics use the explicit character class ``[A-Za-z0-9_/-]`` rather
+than the regex ``\\b`` shorthand. Two reasons: (1) BSD sed silently no-ops on
+``\\b``, and the legacy recipe ran on macOS; (2) ``\\b`` treats ``-`` as a
+word boundary, so ``lifecycle/add-foo`` would falsely match inside
+``lifecycle/add-foo-bar``. The explicit class treats ``-`` and ``/`` as
+"word-equivalent" characters so prefix-substring slugs do not collide.
+
+Patterns are applied in order **slash -> wikilink -> bare** for each file so
+the bare pattern (the most permissive) does not steal slash-form matches.
+
+Writes are atomic: each file is written to a sibling tempfile
+``<file>.tmp-archive-rewrite`` and then ``os.replace``d to the original path,
+so a crash mid-write leaves either the original file intact or the new file
+atomically in place — never a half-written file. No ``.bak`` files are left
+behind, eliminating the trap-and-cleanup machinery the legacy sed-based
+recipe required.
+
+Stdout protocol: one JSON object per slug, NDJSON-style:
+
+    {"slug": "<slug>", "rewritten_files": ["<path>", ...]}
+
+Paths in ``rewritten_files`` are relative to the repo root (the directory the
+helper was invoked from), matching what the calling recipe stores in the
+manifest.
+
+Usage:
+    cortex-archive-rewrite-paths --slug <slug> [--slug <slug>...] [--dry-run]
+    cortex-archive-rewrite-paths --help
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+from pathlib import Path
+from typing import Iterable, List
+
+
+# Directories to exclude from the walk. Matched on path components.
+EXCLUDED_DIR_NAMES = frozenset({".git"})
+EXCLUDED_REL_PREFIXES = (
+    Path("lifecycle") / "archive",
+    Path("lifecycle") / "sessions",
+    Path("retros"),
+)
+
+
+def _iter_markdown_files(root: Path) -> Iterable[Path]:
+    """Yield every ``*.md`` file under ``root`` honoring the four exclusions."""
+    for dirpath, dirnames, filenames in os.walk(root):
+        # Prune excluded directories in-place so os.walk does not descend.
+        dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDED_DIR_NAMES)
+        rel_dir = Path(dirpath).resolve().relative_to(root.resolve())
+        if any(
+            rel_dir == prefix or _is_under(rel_dir, prefix)
+            for prefix in EXCLUDED_REL_PREFIXES
+        ):
+            continue
+        for name in sorted(filenames):
+            if name.endswith(".md"):
+                yield Path(dirpath) / name
+
+
+def _is_under(rel: Path, prefix: Path) -> bool:
+    """Return True if ``rel`` is at or under ``prefix``."""
+    try:
+        rel.relative_to(prefix)
+    except ValueError:
+        return False
+    return True
+
+
+def _build_patterns(slug: str) -> List[tuple[re.Pattern[str], str]]:
+    """Return the three (pattern, replacement) pairs for ``slug``.
+
+    Order matters: slash -> wikilink -> bare. Slug is regex-escaped before
+    interpolation so slug values containing regex metacharacters are safe.
+    The boundary character class ``[A-Za-z0-9_/-]`` treats ``-`` and ``/`` as
+    word-equivalent so prefix-substring slugs do not collide.
+    """
+    slug_re = re.escape(slug)
+    slash = (
+        re.compile(rf"(?P<L>(?:^|[^A-Za-z0-9_/-]))lifecycle/{slug_re}/"),
+        rf"\g<L>lifecycle/archive/{slug}/",
+    )
+    wikilink = (
+        re.compile(rf"(?P<L>\[\[)lifecycle/{slug_re}(?P<T>[/\]|])"),
+        rf"\g<L>lifecycle/archive/{slug}\g<T>",
+    )
+    bare = (
+        re.compile(
+            rf"(?P<L>(?:^|[^A-Za-z0-9_/-]))lifecycle/{slug_re}"
+            rf"(?P<T>(?:[^A-Za-z0-9_/-]|$))"
+        ),
+        rf"\g<L>lifecycle/archive/{slug}\g<T>",
+    )
+    return [slash, wikilink, bare]
+
+
+def rewrite_text(text: str, slug: str) -> str:
+    """Apply the three rewrite patterns for ``slug`` to ``text`` in order."""
+    for pattern, replacement in _build_patterns(slug):
+        text = pattern.sub(replacement, text)
+    return text
+
+
+def _atomic_write(path: Path, new_content: str) -> None:
+    """Write ``new_content`` to ``path`` atomically via a sibling tempfile."""
+    tmp_path = path.with_name(path.name + ".tmp-archive-rewrite")
+    with open(tmp_path, "w", encoding="utf-8", newline="") as fh:
+        fh.write(new_content)
+    os.replace(tmp_path, path)
+
+
+def rewrite_for_slug(root: Path, slug: str, dry_run: bool) -> List[str]:
+    """Walk ``root``, rewrite references to ``slug``, return relative paths.
+
+    Returns the list of files whose content was changed (or would have been
+    changed under ``--dry-run``). Paths are relative to ``root`` and use
+    POSIX separators.
+    """
+    rewritten: List[str] = []
+    root_resolved = root.resolve()
+    for md_path in _iter_markdown_files(root):
+        try:
+            with open(md_path, "r", encoding="utf-8") as fh:
+                original = fh.read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        new_content = rewrite_text(original, slug)
+        if new_content == original:
+            continue
+        rel = md_path.resolve().relative_to(root_resolved).as_posix()
+        rewritten.append(rel)
+        if not dry_run:
+            _atomic_write(md_path, new_content)
+    return rewritten
+
+
+def _parse_args(argv: List[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="cortex-archive-rewrite-paths",
+        description=(
+            "Rewrite lifecycle/<slug> citations to lifecycle/archive/<slug> "
+            "across *.md files (excluding .git/, lifecycle/archive/, "
+            "lifecycle/sessions/, retros/). Emits one JSON line per slug."
+        ),
+    )
+    parser.add_argument(
+        "--slug",
+        action="append",
+        required=True,
+        help="Slug to rewrite. Repeat for multiple slugs.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Do not write any files; report which files would be rewritten.",
+    )
+    parser.add_argument(
+        "--root",
+        default=".",
+        help="Repo root to walk. Defaults to the current working directory.",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: List[str] | None = None) -> int:
+    args = _parse_args(list(sys.argv[1:] if argv is None else argv))
+    root = Path(args.root)
+    if not root.is_dir():
+        print(
+            f"cortex-archive-rewrite-paths: --root not a directory: {root}",
+            file=sys.stderr,
+        )
+        return 2
+    for slug in args.slug:
+        rewritten = rewrite_for_slug(root, slug, args.dry_run)
+        sys.stdout.write(
+            json.dumps({"slug": slug, "rewritten_files": rewritten}) + "\n"
+        )
+        sys.stdout.flush()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

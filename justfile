@@ -136,7 +136,7 @@ backlog-close feature="":
 
 # Move completed lifecycle dirs (events.log contains "feature_complete") to lifecycle/archive/
 # Flags:
-#   --dry-run               Print archive + rewrite candidates without performing mv or sed.
+#   --dry-run               Print archive + rewrite candidates without performing mv or path rewrites.
 #   --from-file <path>      Limit iteration to slugs (basenames) listed in <path>, one per line.
 # Recovery on mid-run failure: `git checkout -- .` (working-tree changes since precheck baseline).
 # The manifest at lifecycle/archive/.archive-manifest.jsonl is for audit/inspection only.
@@ -247,7 +247,7 @@ lifecycle-archive *args:
                 fi
             done
         fi
-        echo "(dry-run: no mv or sed performed; ${#candidates[@]} candidate dir(s))"
+        echo "(dry-run: no mv or rewrite performed; ${#candidates[@]} candidate dir(s))"
         exit 0
     fi
     # --- Real run: per-slug rewrite + mv + manifest append ---
@@ -255,25 +255,16 @@ lifecycle-archive *args:
     ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     for dir in "${candidates[@]}"; do
         slug="$(basename "$dir")"
-        # --- Rewrite step ---
-        # REPLACED by bin/cortex-archive-rewrite-paths in T12.
-        # T11 leaves the rewrite step as a no-op placeholder so that T12 can
-        # swap in the helper without re-touching this recipe's structure.
-        # The boundary-anchored grep below mirrors the dry-run pattern and
-        # captures rewritten_files for the manifest entry.
-        pat='(^|[^A-Za-z0-9_/-])lifecycle/'"$slug"'($|[^A-Za-z0-9_/-])'
-        rewritten_list=$(grep -rlE "$pat" \
-            --include='*.md' \
-            --exclude-dir=.git \
-            --exclude-dir=archive \
-            --exclude-dir=sessions \
-            --exclude-dir=retros \
-            . 2>/dev/null || true)
-        # --- Build manifest entry (NDJSON; rewritten_files reflects on-disk reality after rewrite) ---
-        rewritten_json="[]"
-        if [ -n "$rewritten_list" ]; then
-            rewritten_json=$(printf '%s\n' "$rewritten_list" | python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
-        fi
+        # --- Rewrite step (T12: bin/cortex-archive-rewrite-paths) ---
+        # Python helper handles the three citation forms (slash, wikilink,
+        # bare) with explicit boundary char classes (NOT regex \b — BSD sed
+        # silently no-ops on \b, and \b treats hyphens as word boundaries
+        # which incorrectly accepts add-foo inside add-foo-bar). Writes are
+        # atomic via tempfile + os.replace, so no .bak cleanup is needed.
+        # Helper emits one JSON line per slug to stdout: we capture it and
+        # extract rewritten_files for the manifest entry below.
+        rewrite_json=$(bin/cortex-archive-rewrite-paths --slug "$slug")
+        rewritten_json=$(printf '%s' "$rewrite_json" | python3 -c 'import json,sys; print(json.dumps(json.loads(sys.stdin.read())["rewritten_files"]))')
         src="$dir"
         dst="lifecycle/archive/$slug"
         line=$(python3 -c 'import json,sys; print(json.dumps({"ts": sys.argv[1], "src": sys.argv[2], "dst": sys.argv[3], "rewritten_files": json.loads(sys.argv[4])}))' "$ts" "$src" "$dst" "$rewritten_json")
