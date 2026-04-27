@@ -13,7 +13,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: New class `CortexCliMissing(OSError)` near top of `server.py` (after imports, before `_CORTEX_ROOT_CACHE` declaration at line 191) — internal use only, surfaces only at retry-site catch handlers (Task 3) and via OSError parentage at `_maybe_check_upstream`/`_maybe_run_upgrade`. New module-level constant: `_CORTEX_CLI_MISSING_ERROR = "Error: cortex CLI not found on PATH. Install: see https://github.com/charleshall888/cortex-command#install (or `uv tool install -e .` from a local checkout for dev mode)."` — used by both the startup-stderr branch and the tool-body string-return path so message text is identical across surfaces. Startup branch added at module scope after imports: if `shutil.which("cortex") is None`, log a structured stderr line containing `_CORTEX_CLI_MISSING_ERROR`; do NOT raise. Plugin invariant preserved: no `cortex_command.*` import, no `mcp.types`/`mcp.shared.exceptions` import (FastMCP's exception conversion is documented behavior we accept; we don't construct the wire envelope ourselves). Reference style: existing stderr NDJSON logging at e.g. `_resolve_cortex_argv` sites.
 - **Verification**: `python -c "import sys; sys.path.insert(0, 'plugins/cortex-overnight-integration'); import server; assert issubclass(server.CortexCliMissing, OSError); assert isinstance(server._CORTEX_CLI_MISSING_ERROR, str) and 'cortex CLI not found' in server._CORTEX_CLI_MISSING_ERROR and 'github.com/charleshall888/cortex-command#install' in server._CORTEX_CLI_MISSING_ERROR"` — pass if exit 0. Plus `grep -F 'class CortexCliMissing(OSError)' plugins/cortex-overnight-integration/server.py | wc -l` = 1 AND `grep -F '_CORTEX_CLI_MISSING_ERROR' plugins/cortex-overnight-integration/server.py | wc -l` ≥ 2 (constant defined and referenced).
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 2: Wrap `subprocess.run` in `_get_cortex_root_payload` AND `_run_cortex` (S1.2)
 - **Files**: `plugins/cortex-overnight-integration/server.py`
@@ -22,7 +22,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: Two sites — `_get_cortex_root_payload` body (`subprocess.run` at server.py:217-222) and `_run_cortex` body (`subprocess.run` at server.py:1347). Wrap each in `try/except FileNotFoundError` that re-raises `CortexCliMissing` with the original errno/strerror preserved (use `raise CortexCliMissing(...) from exc`). Spec edge case "S1.2 shebang-interpreter missing": accept conflation — do NOT inspect errno to distinguish missing-cortex from missing-#!-interpreter. The other existing handlers in `_get_cortex_root_payload` (`RuntimeError` for non-zero exit, `json.JSONDecodeError` for parse failure) remain unchanged.
 - **Verification**: `grep -nE 'except FileNotFoundError' plugins/cortex-overnight-integration/server.py | wc -l` ≥ 2 — pass if count ≥ 2.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 3: Cache-clear-and-retry-once at verb-dispatch sites + return error string on exhaust (S1.3 + S5.2)
 - **Files**: `plugins/cortex-overnight-integration/server.py`
@@ -31,7 +31,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: complex
 - **Context**: Six tool-body sites identified by `grep -n -E '_run_cortex\(|_get_cortex_root_payload\(\)' server.py`: 1417, 1485, 1493, 1586, 1666, 1739. Existing `_maybe_check_upstream` (line 466) and `_maybe_run_upgrade` (line 975, 1077, 1151) are EXCLUDED — they retain swallow-and-skip via their pre-existing `except OSError` clauses (CortexCliMissing inherits from OSError, so the existing handlers fire automatically). Concurrency model: FastMCP's stdio transport runs tool handlers on a single asyncio event loop, and the existing `_delegate_*` helpers call sync `subprocess.run` with no `await` between cache-read and cache-write inside `_get_cortex_root_payload`. The event loop therefore serializes tool calls at the subprocess boundary — two coroutines cannot interleave mid-discovery under the current architecture. The "per-tool-call retry counter (local variable, not module-global)" enforces retry-bound (one cache-clear-and-retry per tool call); it is NOT a cross-coroutine synchronization mechanism. Add a one-line code comment near `_CORTEX_ROOT_CACHE` noting that any future move to `asyncio.to_thread` or thread-pool dispatch will require a lock around the check-then-act in `_get_cortex_root_payload`. Pattern: extract a small `_retry_on_cli_missing(func, *args)` helper if it cleans up the call sites, otherwise inline the try/except at each site (pick the form that keeps each call site under ~10 lines added). Catch surface MUST be exactly `except CortexCliMissing` — never `except OSError`, which would silently absorb `PermissionError` and contradict Task 4 case (c).
 - **Verification**: (a) `grep -n -B1 -A6 'except CortexCliMissing' plugins/cortex-overnight-integration/server.py | grep -c '_CORTEX_ROOT_CACHE'` ≥ 1 (cache clear present in retry handler) — pass if count ≥ 1. (b) `grep -nE 'return _CORTEX_CLI_MISSING_ERROR' plugins/cortex-overnight-integration/server.py | wc -l` ≥ 1 (retry-exhaust returns the canonical error string from at least one tool body) — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 4: Tests for S1+S5 (FNF paths, retry semantics, OSError preservation, startup branch, byte-equal error string)
 - **Files**: `tests/test_mcp_cortex_cli_missing.py` (new file)
@@ -40,7 +40,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: complex
 - **Context**: Cases (one test function per case): (a) FNF in `_get_cortex_root_payload` raises `CortexCliMissing` (monkeypatch `subprocess.run` to raise `FileNotFoundError`); (b) FNF in `_run_cortex` raises `CortexCliMissing` (same pattern); (c) `PermissionError` is NOT converted to `CortexCliMissing` (negative test — assert `pytest.raises(PermissionError)`); (d) cache-then-FNF-then-recovery succeeds with one retry (prime cache, monkeypatch `subprocess.run` to raise FNF on first call and succeed on second, verify the dispatched tool call returns success and `_CORTEX_ROOT_CACHE` is repopulated). Single-coroutine test only — under FastMCP's current sync-blocking-subprocess model, asyncio cannot interleave two coroutines mid-cache-clear, so a multi-coroutine test would tautologically pass via cooperative serialization rather than verifying the cache logic; cross-coroutine concurrency safety is documented as out-of-scope until a future refactor introduces real async (see Task 3 Context); (e) cache-then-FNF-then-FNF returns the canonical error string from the tool body — monkeypatch `subprocess.run` to raise FNF on every call; assert the tool body's return value equals `server._CORTEX_CLI_MISSING_ERROR` exactly (string equality); (f) `_maybe_check_upstream` returns its existing sentinel (`None` or equivalent) on `CortexCliMissing` (asserts OSError parentage preserves swallow); (g) startup `shutil.which` returning None emits a stderr line containing `_CORTEX_CLI_MISSING_ERROR` (capsys check); (h) byte-equal error string from two propagation paths — capture the stderr line emitted at startup branch (case g) and the tool-body return value at retry-exhaust (case e); assert string equality across the two. Use `pytest.MonkeyPatch` and `unittest.mock.patch` per existing test patterns in `tests/test_mcp_subprocess_contract.py`.
 - **Verification**: `uv run pytest tests/test_mcp_cortex_cli_missing.py -v` — pass if exit 0, all tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 5: Update lifecycle skill description (N3.1) and rebuild plugin mirror (N3.2)
 - **Files**: `skills/lifecycle/SKILL.md`, `plugins/cortex-interactive/skills/lifecycle/SKILL.md` (auto-regenerated by pre-commit `just build-plugin`)
@@ -49,7 +49,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: Exact replacement string from spec §N3.1: `"Required before editing any file in `skills/`, `hooks/`, `claude/hooks/`, `bin/cortex-*`, `claude/common.py`, `plugins/cortex-pr-review/`, or `plugins/cortex-ui-extras/` — canonical sources for skills, hooks, shared helpers, and hand-maintained plugins. Auto-generated mirrors at `plugins/cortex-interactive/{skills,hooks,bin}/` are regenerated by the pre-commit hook from canonical sources; edit the canonical sources only. Skip only if the user explicitly says to."`. The mirror at `plugins/cortex-interactive/skills/lifecycle/SKILL.md` must NOT be edited directly — the pre-commit hook runs `just build-plugin` and rejects drift. The first commit covering this task triggers the regeneration. Spec §N3.1 acknowledges that `claude/statusline.py` is intentionally excluded from this list (B-class residue, accepted scope).
 - **Verification**: After `just build-plugin`, `grep -F 'plugins/cortex-pr-review/' skills/lifecycle/SKILL.md | wc -l` ≥ 1 AND `grep -F '~/.claude/skills' skills/lifecycle/SKILL.md | wc -l` = 0 AND `git diff --quiet plugins/cortex-interactive/skills/lifecycle/SKILL.md` (exit 0, mirror in sync) — pass if all three hold.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 6: Update diagnose skill illustrative reference + rephrase pedagogy (N4.1, N4.2)
 - **Files**: `skills/diagnose/SKILL.md`, `plugins/cortex-interactive/skills/diagnose/SKILL.md` (auto-regenerated)
@@ -58,7 +58,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: B-class residue addressed: spec §"Changes to Existing Behavior" notes the surrounding sentence is about absolute-vs-tilde paths in sandbox allowlists; a flat path swap may invalidate the example's teaching point. Read the surrounding 6-10 lines of context at `skills/diagnose/SKILL.md:140-160` and choose either: (a) replace example with a different absolute-vs-tilde case that still uses post-#117-canonical paths, or (b) use a different file unrelated to N4 (e.g., a sandbox allowlist example using `~/.config/...`) so the lesson lands without referencing the retired path. Mirror regeneration follows N3.2 model.
 - **Verification**: `grep -F '~/.claude/hooks' skills/diagnose/SKILL.md | wc -l` = 0 AND `git diff --quiet plugins/cortex-interactive/skills/diagnose/SKILL.md` after build (exit 0) — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 7: Remove `claude/reference/` row from README "What's Inside" table (N8.1)
 - **Files**: `README.md`
@@ -67,7 +67,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: README.md line 152 — the row is part of a markdown table. Verify table rendering still parses after the row is removed (no orphaned column separator).
 - **Verification**: `grep -F 'claude/reference' README.md | wc -l` = 0 — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 8: Replace `claude/reference/claude-skills.md` citation in overnight-operations.md (N8.2)
 - **Files**: `docs/overnight-operations.md`
@@ -76,7 +76,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: Replacement URL: `https://docs.claude.com/en/docs/agents-and-tools/agent-skills/overview`. Inline description: 1-2 sentences naming the three loading levels (Level 1 metadata, Level 2 instructions, Level 3 resources/code) and the progressive-disclosure principle. Research caveat noted: docs.claude.com URLs may shift; the inline description is the durable form.
 - **Verification**: `grep -F 'claude/reference' docs/overnight-operations.md | wc -l` = 0 AND `grep -F 'docs.claude.com/en/docs/agents-and-tools/agent-skills' docs/overnight-operations.md | wc -l` ≥ 1 — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 9: Remove context-file-authoring reminders from cortex-skill-edit-advisor.sh (N8.3)
 - **Files**: `claude/hooks/cortex-skill-edit-advisor.sh`
@@ -85,7 +85,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: This hook is NOT mirrored into `plugins/cortex-interactive/hooks/` (verified: only `cortex-validate-commit.sh`, `cortex-worktree-create.sh`, `cortex-worktree-remove.sh`, `hooks.json` are mirrored), so no plugin-side regeneration is required. After deletion, the four sites will print only the surrounding `just test-skills` reporting; double-check that no surrounding control-flow logic depends on the deleted lines.
 - **Verification**: `grep -F 'context-file-authoring' claude/hooks/cortex-skill-edit-advisor.sh | wc -l` = 0 AND `grep -F 'just test-skills' claude/hooks/cortex-skill-edit-advisor.sh | wc -l` ≥ 1 AND `bash -n claude/hooks/cortex-skill-edit-advisor.sh` (syntax check, exit 0) — pass if all three hold.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 10: Delete setup-github-pat assets across script, justfile, docs (N9.1, N9.2, N9.3)
 - **Files**: `claude/hooks/setup-github-pat.sh` (delete), `justfile` (modify), `docs/agentic-layer.md` (modify)
@@ -94,7 +94,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: Caller enumeration (verified via `git grep -lF 'setup-github-pat'` excluding lifecycle/retros/research/backlog): (1) `claude/hooks/setup-github-pat.sh` — entire file deleted; (2) `justfile` — both `setup-github-pat:` and `setup-github-pat-org:` recipes removed; (3) `docs/agentic-layer.md` line 206 — table row referencing the hook removed. README.md and docs/setup.md were verified to NOT reference setup-github-pat (so no edits there). The acceptance-grep exclusion list (`':!lifecycle/**' ':!retros/**' ':!research/**' ':!backlog/**'`) is intentional: history/audit dirs may legitimately reference the prior name.
 - **Verification**: `test ! -f claude/hooks/setup-github-pat.sh` (exit 0) AND `just --list 2>&1 | grep -E 'setup-github-pat(-org)?' | wc -l` = 0 AND `git grep -F 'setup-github-pat' -- ':!lifecycle/**' ':!retros/**' ':!research/**' ':!backlog/**' | wc -l` = 0 — pass if all three hold.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 11: lifecycle-archive recipe — add --dry-run mode + manifest writer + clean-tree precheck (N6.1, N6.2, N6.5 precheck)
 - **Files**: `justfile`
@@ -103,7 +103,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: complex
 - **Context**: Existing recipe behavior: idempotent, `set -euo pipefail`, iterates `lifecycle/*/events.log` and skips `lifecycle/archive/*`, `lifecycle/sessions/*`, active worktrees. New behavior: dry-run gates the destructive operations behind a single conditional; manifest writing is per-slug, written **after** the rewrite step for that slug completes (so `rewritten_files` reflects on-disk reality, not pre-rewrite grep matches) — append form is `printf '%s\n' "$line" >> "$manifest"` with the recipe holding a flock on the manifest path during the append (guards against concurrent dry-run-then-real interleave). Precheck aborts with a clear error pointing the user to commit/stash. Spec edge case: dry-run also requires clean tree (consistency for downstream consumers). Stale-symlink guard: add `[ -e "$dir" ]` before `realpath` to skip broken symlinks gracefully (spec edge case "N6 stale symlinks"). Dry-run mode does NOT run the rewrite step at all — the "rewrite candidates" section is computed via the same boundary-anchored `grep -lE` that the real run uses for `rewritten_files`, but no in-place edits occur and no backup files are created.
 - **Verification**: `just lifecycle-archive --dry-run 2>&1 | grep -E '^(archive candidates|rewrite candidates):' | wc -l` ≥ 2 AND `just lifecycle-archive --dry-run >/dev/null 2>&1; test ! -d lifecycle/archive || test -f lifecycle/archive/.archive-manifest.jsonl || true; ! ls lifecycle/archive/*/events.log 2>/dev/null | head -1` (exit 0; dry-run did not move anything new) AND `grep -F 'git diff --quiet' justfile | wc -l` ≥ 1 — pass if all three hold.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 12: lifecycle-archive recipe — path-rewriting via Python helper (N6.3)
 - **Files**: `bin/cortex-archive-rewrite-paths` (new file), `justfile` (recipe wires the helper into the archive flow)
@@ -116,7 +116,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
   - **Bare form** (no trailing slash): `(?P<L>(?:^|[^A-Za-z0-9_/-]))lifecycle/{slug_re}(?P<T>(?:[^A-Za-z0-9_/-]|$))` → `\g<L>lifecycle/archive/{slug}\g<T>`
   Boundary character class `[A-Za-z0-9_/-]` treats hyphens AND slashes as "word characters" so `add-foo` does not match inside `add-foo-bar`. Apply patterns in order slash → wikilink → bare for each file (avoids the bare pattern stealing slash-form matches). Use `re.sub` with the named-group replacement. Atomic write: write to `<file>.tmp-archive-rewrite` in same dir, then `os.replace` to original path. After all rewrites for the slug-set complete, the recipe captures stdout JSON and merges into the per-slug manifest entries written in Task 11. Spec edge cases handled: substring collision (`add-foo` vs `add-foo-bar`) — boundary char class treats `-` as word-equivalent so `add-foo` does NOT match inside `add-foo-bar` (verified by unit test on the helper); nested slug references — slash-form rewrites `lifecycle/add-foo/research.md` to `lifecycle/archive/add-foo/research.md`; wikilink variants `[[lifecycle/foo]]`, `[[lifecycle/foo/]]`, `[[lifecycle/foo|x]]`, `[[lifecycle/foo/index]]` — wikilink anchor `(?P<T>[/\]|])` catches `/`, `]`, `|`. Rewrite scope: `*.md` only — non-md citers (`bin/cortex-*`, `claude/hooks/*.sh`, `tests/*.py`, `plugins/**/server.py`) are out of scope and may break post-archive (acknowledged scope limitation; Task 16 verification grep confirms). Place the helper in `bin/` so it ships via the cortex-interactive plugin's `bin/` mirror per CLAUDE.md conventions; mirror auto-regenerated by pre-commit.
 - **Verification**: (a) Unit test on the helper logic via `python3 -m pytest bin/cortex-archive-rewrite-paths --doctest-modules` OR a sibling test file `tests/test_archive_rewrite_paths.py` covering: substring collision (`add-foo` does not match inside `add-foo-bar`), all four wikilink terminator variants, slash form, bare form, and slug-with-regex-metacharacters via `re.escape()`. (b) After full run on the sample (verified in Task 15), `grep -rn -E "lifecycle/(slug-1|slug-2|slug-3)/" --include='*.md' . --exclude-dir=.git --exclude-dir=archive --exclude-dir=sessions --exclude-dir=retros | grep -v 'archive/' | wc -l` = 0 (no unrewritten references remain). (c) `find . -name '*.tmp-archive-rewrite' | wc -l` = 0 (atomic write left no temp files). — pass if all three hold.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 13: Document lifecycle-archive recovery procedure in overnight-operations.md (N6.5 docs)
 - **Files**: `docs/overnight-operations.md`
@@ -125,7 +125,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: Section appended to `docs/overnight-operations.md` (the doc-partitioning rule from CLAUDE.md says this doc owns the round loop and operational procedures). Content: the three-step recovery procedure (1. confirm precheck error or mid-run abort; 2. `git checkout -- .` from main repo CWD to revert all uncommitted moves and rewrites; 3. manifest under `lifecycle/archive/.archive-manifest.jsonl` is for audit/inspection only; do NOT script a manifest-driven rollback). One sentence linking to N6.4's two-phase run pattern.
 - **Verification**: `grep -F 'lifecycle-archive' docs/overnight-operations.md | wc -l` ≥ 1 AND `grep -F 'git checkout -- .' docs/overnight-operations.md | wc -l` ≥ 1 — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 14: Deterministic sample-selection script with citation-form coverage + persisted sample list (N6.4 phase a)
 - **Files**: `bin/cortex-archive-sample-select` (new file), `.archive-sample.txt` (written at repo root by Task 15 invocation; gitignored)
@@ -134,7 +134,7 @@ Land seven post-#117 audit follow-ups in research-recommended order: S5 first (e
 - **Complexity**: simple
 - **Context**: Inputs: scan `lifecycle/*/events.log` for the `feature_complete` marker (excluding `lifecycle/archive/`, `lifecycle/sessions/`, active worktrees per the existing recipe filters). For each candidate, classify which citation forms appear in citers (under `*.md` outside the four excluded dirs): slash form (`lifecycle/{slug}/`), wikilink form (`[[lifecycle/{slug}`), bare form (`lifecycle/{slug}` not followed by `/`). Selection algorithm: (1) pick the highest-cross-ref-count slug per form (3 picks, may overlap); (2) pick one zero-cross-ref slug; (3) pick one out-of-band-closed slug (events.log has only `feature_complete`, dir contents limited to `events.log` + `index.md`); (4) pick most-recent-by-mtime; (5) pick oldest-by-mtime. After dedup, return at least 5 slugs (may be more if form-coverage requires it; the script emits the smallest set covering all three forms plus the four structural criteria, deduplicated). Output: chosen slugs, newline-separated, on stdout. Add `.archive-sample.txt` to `.gitignore` (or use a path under `lifecycle/` already gitignored for transient state — the file must NOT be tracked). Place the script in `bin/` so it ships via the cortex-interactive plugin's `bin/` mirror; mirror auto-regenerated by pre-commit. Make the script executable (`chmod +x`).
 - **Verification**: `bin/cortex-archive-sample-select | wc -l` ≥ 5 AND `bin/cortex-archive-sample-select | sort -u | wc -l` equals raw line count (no duplicates) AND `bin/cortex-archive-sample-select | head -1 | xargs -I{} test -d lifecycle/{}` (first slug names a real dir, exit 0) AND `bin/cortex-archive-sample-select --form-report 2>&1 | grep -E '^(slash|wikilink|bare):' | wc -l` = 3 (form report shows all three forms covered) — pass if all four hold.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 15: Run lifecycle-archive on the 5+ sample + commit (N6.4 phase a)
 - **Files**: `.archive-sample.txt` (written at start), `lifecycle/archive/` (created), `lifecycle/{sample slugs}/` (moved), `lifecycle/archive/.archive-manifest.jsonl` (written), citing `*.md` files (rewritten by helper)
