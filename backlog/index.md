@@ -22,7 +22,6 @@
 | 110 | Unify lifecycle phase detection around claude.common with statusline exception | backlog | medium | feature | 102, 103 | 101 | — |
 | 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | 104 | 101 | — |
 | 141 | Non-editable wheel install support for cortex-command | backlog | medium | feature | — | — | — |
-| 147 | Sunset cortex-command-plugins and vendor residual plugins into cortex-command | in_progress | medium | feature | — | — | ✓ |
 | 149 | Fix runner.pid takeover race in ipc.py:write_runner_pid | backlog | medium | bug | — | — | — |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
@@ -56,4 +55,3 @@
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
 - **148** Apply post-113 audit follow-ups: stale-doc cleanup, lifecycle-archive run, MCP hardening (in_progress)
-- **147** Sunset cortex-command-plugins and vendor residual plugins into cortex-command (in_progress)

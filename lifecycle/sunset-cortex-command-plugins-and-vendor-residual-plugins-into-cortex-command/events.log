@@ -34,3 +34,4 @@
 {"ts": "2026-04-27T19:44:52Z", "event": "phase_transition", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "tier": "complex", "from": "implement", "to": "review"}
 {"ts": "2026-04-27T19:55:16Z", "event": "review_verdict", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
 {"ts": "2026-04-27T19:55:16Z", "event": "phase_transition", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "from": "review", "to": "complete"}
+{"ts": "2026-04-27T20:27:49Z", "event": "feature_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "tasks_total": 15, "rework_cycles": 0}

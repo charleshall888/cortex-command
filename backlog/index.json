@@ -585,44 +585,20 @@
     "repo": null
   },
   {
-    "id": 147,
-    "title": "Sunset cortex-command-plugins and vendor residual plugins into cortex-command",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "plugin",
-      "marketplace",
-      "post-113-repo-state"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-27",
-    "updated": "2026-04-27",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command/spec.md",
-    "discovery_source": "research/post-113-repo-state/research.md",
-    "plan": null,
-    "uuid": "098f8bb5-b6ea-46fb-95d8-14359543613e",
-    "lifecycle_slug": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command",
-    "session_id": "8da4b786-12cc-48d8-8631-13eb642acd36",
-    "lifecycle_phase": "complete",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 149,
     "title": "Fix runner.pid takeover race in ipc.py:write_runner_pid",
     "status": "backlog",
     "priority": "medium",
     "type": "bug",
-    "tags": [],
-    "areas": [],
+    "tags": [
+      "overnight",
+      "runner",
+      "concurrency",
+      "ipc"
+    ],
+    "areas": [
+      "overnight"
+    ],
     "created": "2026-04-27",
     "updated": "2026-04-27",
     "blocks": [],
