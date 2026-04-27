@@ -46,9 +46,11 @@ This is an AI-guided workflow, not an automated script. Next time you want to re
    - Update `NOTICE` if the upstream copyright year or attribution has changed.
    - **Post-update safety check** (for every file listed in `### Accepted divergences`): verify the `CFA-PATCH` marker is present in the post-update file AND positioned inside the frontmatter→first-heading window (between the closing frontmatter `---` and the first `#` heading). A marker that is absent OR present-but-mispositioned fails the sync; investigate before proceeding.
 4. Run `android skills list` and reconcile its output against the union of `### Covered skills` + `### Deferred candidates`. Any skill in the CLI output that is absent from both lists surfaces a new curation decision — the curator must decide whether to cover or defer before completing sync; do NOT silently skip unlisted skills.
-5. Run validation locally: `python3 scripts/validate-skill.py plugins/android-dev-extras/skills` (from the cortex-command-plugins repo root). Must exit 0 with no warnings.
+5. Run validation locally: `python3 scripts/validate-skill.py plugins/android-dev-extras/skills` (from the cortex-command repo root). Must exit 0 with no warnings.
 6. Commit via the `/commit` skill. Never use raw `git commit` or `git -C`.
-7. Push to GitHub remote — the marketplace source is `https://github.com/charleshall888/cortex-command-plugins.git`, so pushing is required for other project sessions to pick up changes.
+7. Push to GitHub remote — the marketplace source is `https://github.com/charleshall888/cortex-command.git`, so pushing is required for other project sessions to pick up changes.
+
+**Cache-vs-source caveat**: this sync procedure is only valid when run from a working clone of the cortex-command repo. Do **not** run it in `~/.claude/plugins/cache/cortex-command/plugins/android-dev-extras/` — that directory is the read-only plugin cache populated by Claude Code's plugin loader, and any commits or pushes from there will not reach the canonical remote. Always confirm you're in a clone of `https://github.com/charleshall888/cortex-command.git` before invoking the procedure.
 
 ## Apache 2.0 attribution obligation
 
