@@ -228,36 +228,6 @@
     "repo": null
   },
   {
-    "id": 148,
-    "title": "Apply post-113 audit follow-ups: stale-doc cleanup, lifecycle-archive run, MCP hardening",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "post-113-repo-state",
-      "mcp",
-      "documentation",
-      "lifecycle",
-      "hardening"
-    ],
-    "areas": [],
-    "created": "2026-04-27",
-    "updated": "2026-04-27",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/spec.md",
-    "discovery_source": "research/post-113-repo-state/research.md",
-    "plan": null,
-    "uuid": "69035ea8-a484-4490-b86c-51a5bd54c187",
-    "lifecycle_slug": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening",
-    "session_id": "c3b88adc-ec92-4b7f-a74d-7126efecd2ec",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -339,7 +309,7 @@
     "uuid": "0a2f1fee-dd42-49ff-b393-bd16d1fa5607",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "complete",
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },

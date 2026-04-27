@@ -26,3 +26,6 @@
 {"ts": "2026-04-27T21:50:00Z", "event": "task_complete", "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening", "task": 15, "batch": 1, "status": "success", "commit": "beb2cfe"}
 {"ts": "2026-04-27T21:50:00Z", "event": "task_complete", "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening", "task": 16, "batch": 2, "status": "success", "commit": "64c2083"}
 {"ts": "2026-04-27T21:50:00Z", "event": "phase_transition", "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-27T22:00:00Z", "event": "review_verdict", "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-27T22:00:00Z", "event": "phase_transition", "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening", "from": "review", "to": "complete"}
+{"ts": "2026-04-27T22:05:00Z", "event": "feature_complete", "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening", "tasks_total": 16, "rework_cycles": 1}
