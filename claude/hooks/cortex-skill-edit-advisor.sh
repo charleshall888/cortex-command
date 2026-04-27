@@ -27,14 +27,14 @@ fi
 
 # --- Graceful degradation: check that `just` is available ---
 if ! command -v just >/dev/null 2>&1; then
-  MSG_A="skill-edit-advisor: \`just\` not found on PATH — skipping test-skills run\nReminder: verify ~/.claude/reference/context-file-authoring.md was consulted."
+  MSG_A="skill-edit-advisor: \`just\` not found on PATH — skipping test-skills run"
   jq -n --arg ctx "$MSG_A" '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":$ctx}}'
   exit 0
 fi
 
 # --- Graceful degradation: check that the `test-skills` recipe exists ---
 if ! just --list 2>/dev/null | grep -q 'test-skills'; then
-  MSG_B="skill-edit-advisor: \`test-skills\` recipe not found in justfile — skipping test run\nReminder: verify ~/.claude/reference/context-file-authoring.md was consulted."
+  MSG_B="skill-edit-advisor: \`test-skills\` recipe not found in justfile — skipping test run"
   jq -n --arg ctx "$MSG_B" '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":$ctx}}'
   exit 0
 fi
@@ -52,7 +52,6 @@ if [[ "$TEST_EXIT" -eq 0 ]]; then
   else
     SUMMARY="Skill tests passed after editing SKILL.md"
   fi
-  SUMMARY="$SUMMARY\nReminder: verify ~/.claude/reference/context-file-authoring.md was consulted."
   jq -n --arg ctx "$SUMMARY" '{
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
@@ -60,7 +59,7 @@ if [[ "$TEST_EXIT" -eq 0 ]]; then
     }
   }'
 else
-  FAIL_MSG="Skill tests FAILED after editing SKILL.md (exit ${TEST_EXIT}):\n${TRUNCATED}\nReminder: verify ~/.claude/reference/context-file-authoring.md was consulted."
+  FAIL_MSG="Skill tests FAILED after editing SKILL.md (exit ${TEST_EXIT}):\n${TRUNCATED}"
   jq -n --arg ctx "$FAIL_MSG" '{
     hookSpecificOutput: {
       hookEventName: "PostToolUse",
