@@ -149,7 +149,6 @@ Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth
 | `cortex_command/dashboard/` | FastAPI web dashboard for monitoring overnight sessions |
 | `lifecycle/` | Feature state machine -- research, specify, plan, implement, review, complete |
 | `backlog/` | YAML-frontmatter backlog items with overnight readiness gates |
-| `claude/reference/` | Reference docs loaded conditionally by agent instructions |
 | `plugins/cortex-interactive/bin/` | CLI utilities on `PATH` via the plugin -- `cortex-jcc` (recipe wrapper), `cortex-count-tokens`, `cortex-audit-doc`, `cortex-update-item`, `cortex-generate-backlog-index`, `cortex-create-backlog-item`, `cortex-git-sync-rebase` |
 
 ## Customization
