@@ -1,0 +1,436 @@
+#!/usr/bin/env python3
+"""Deterministic sample selector for the lifecycle-archive sample run.
+
+Emits at least 5 candidate slugs for the N6.4 phase-a sample run that
+precedes the full archive. The chosen sample list is written to
+``.archive-sample.txt`` at repo root by the caller (Task 15) so re-runs
+after recipe-repair operate against the same sample.
+
+Selection algorithm
+-------------------
+Inputs: scan ``lifecycle/*/events.log`` for the ``feature_complete`` marker,
+excluding ``lifecycle/archive/``, ``lifecycle/sessions/``, and any directory
+that is an active git worktree (matches the existing recipe filters in
+``justfile`` ``lifecycle-archive``).
+
+For each candidate, classify which citation forms appear in citers (under
+``*.md`` outside ``.git/``, ``lifecycle/archive/``, ``lifecycle/sessions/``,
+``retros/``):
+
+  - ``slash``    -> ``lifecycle/<slug>/``
+  - ``wikilink`` -> ``[[lifecycle/<slug>`` (followed by ``/``, ``]``, or ``|``)
+  - ``bare``     -> ``lifecycle/<slug>`` not followed by ``/`` and bounded by
+                    a non ``[A-Za-z0-9_/-]`` character (matches the helper
+                    word-boundary semantics in ``cortex-archive-rewrite-paths``)
+
+Selection (in order, deduplicating after each step):
+
+  1. Highest-cross-ref-count slug per citation form (3 picks; may overlap).
+  2. One zero-cross-ref slug.
+  3. One out-of-band-closed slug (events.log has only ``feature_complete``,
+     dir contents limited to ``events.log`` + ``index.md``).
+  4. Most-recent-by-mtime candidate.
+  5. Oldest-by-mtime candidate.
+
+Returns at least 5 slugs (more if form-coverage requires it). Within each
+deterministic step, ties break by slug name (lexicographic ascending) so the
+output is stable across runs.
+
+Output
+------
+Default: chosen slugs, newline-separated, on stdout.
+``--form-report``: ``slash: <slug>``, ``wikilink: <slug>``, ``bare: <slug>``
+lines on stdout showing which slug satisfies each form.
+``--root <path>``: optional override of repo root (defaults to git toplevel).
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+from typing import Dict, Iterable, List, Set, Tuple
+
+
+# Directories excluded from the citer walk (matches recipe filters).
+CITER_EXCLUDED_DIR_NAMES = frozenset({".git"})
+CITER_EXCLUDED_REL_PREFIXES: Tuple[Path, ...] = (
+    Path("lifecycle") / "archive",
+    Path("lifecycle") / "sessions",
+    Path("retros"),
+)
+
+# Directories excluded from the candidate scan.
+CANDIDATE_EXCLUDED_DIR_BASENAMES = frozenset({"archive", "sessions"})
+
+# Forms in the order T12 applies them.
+FORMS: Tuple[str, ...] = ("slash", "wikilink", "bare")
+
+
+def _git_toplevel() -> Path:
+    """Return the git toplevel directory as a ``Path``."""
+    out = subprocess.check_output(
+        ["git", "rev-parse", "--show-toplevel"], text=True
+    ).strip()
+    return Path(out)
+
+
+def _active_worktree_paths(root: Path) -> Set[Path]:
+    """Return resolved paths of every active git worktree under ``root``."""
+    try:
+        raw = subprocess.check_output(
+            ["git", "-C", str(root), "worktree", "list", "--porcelain"],
+            text=True,
+        )
+    except subprocess.CalledProcessError:
+        return set()
+    paths: Set[Path] = set()
+    for line in raw.splitlines():
+        if line.startswith("worktree "):
+            paths.add(Path(line[len("worktree ") :]).resolve())
+    return paths
+
+
+def _is_under(rel: Path, prefix: Path) -> bool:
+    try:
+        rel.relative_to(prefix)
+    except ValueError:
+        return False
+    return True
+
+
+def _candidate_slugs(root: Path) -> List[str]:
+    """Return slugs eligible for archiving (events.log has feature_complete).
+
+    Mirrors the recipe filters: skip ``lifecycle/archive/``,
+    ``lifecycle/sessions/``, and directories that are active git worktrees.
+    """
+    lifecycle_dir = root / "lifecycle"
+    if not lifecycle_dir.is_dir():
+        return []
+    worktrees = _active_worktree_paths(root)
+    slugs: List[str] = []
+    for entry in sorted(lifecycle_dir.iterdir()):
+        if not entry.is_dir():
+            continue
+        if entry.name in CANDIDATE_EXCLUDED_DIR_BASENAMES:
+            continue
+        events_log = entry / "events.log"
+        if not events_log.is_file():
+            continue
+        try:
+            if entry.resolve() in worktrees:
+                continue
+        except OSError:
+            continue
+        try:
+            with open(events_log, "r", encoding="utf-8") as fh:
+                content = fh.read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if '"feature_complete"' not in content:
+            continue
+        slugs.append(entry.name)
+    return slugs
+
+
+def _iter_citer_markdown(root: Path) -> Iterable[Path]:
+    """Yield ``*.md`` files honoring the citer-walk exclusions."""
+    root_resolved = root.resolve()
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = sorted(
+            d for d in dirnames if d not in CITER_EXCLUDED_DIR_NAMES
+        )
+        try:
+            rel_dir = Path(dirpath).resolve().relative_to(root_resolved)
+        except ValueError:
+            continue
+        if any(
+            rel_dir == prefix or _is_under(rel_dir, prefix)
+            for prefix in CITER_EXCLUDED_REL_PREFIXES
+        ):
+            dirnames[:] = []
+            continue
+        for name in sorted(filenames):
+            if name.endswith(".md"):
+                yield Path(dirpath) / name
+
+
+def _build_combined_pattern(slugs: List[str]) -> re.Pattern[str]:
+    """Compile a single regex that captures any citation of any slug.
+
+    The regex matches three alternatives that mirror the rewrite helper in
+    ``bin/cortex-archive-rewrite-paths``:
+
+      - wikilink: ``[[lifecycle/<slug>`` followed by ``/``, ``]``, or ``|``.
+      - slash:    ``lifecycle/<slug>/`` with non word-equiv left boundary.
+      - bare:     ``lifecycle/<slug>`` with non word-equiv on both sides
+                  (no trailing ``/``).
+
+    The slug is captured into a named group whose name encodes the form and
+    the slug index. Alternation order is wikilink -> slash -> bare so the
+    most-specific form wins each match (consistent with T12's apply order).
+
+    A single combined pattern lets us scan each file once instead of once per
+    (slug, form) pair, turning O(slugs × files × 3) regex calls into
+    O(files) — a dramatic speedup with ~100 candidates × ~10k md files.
+    """
+    if not slugs:
+        return re.compile(r"(?!x)x")  # never matches
+    slug_alt = "|".join(re.escape(s) for s in slugs)
+    # Three alternatives with one named capture each. Wikilink first so the
+    # ``[[`` prefix wins over the bare-form left-boundary class (``[`` is not
+    # in ``[A-Za-z0-9_/-]``, so bare would otherwise match inside ``[[…``).
+    # Slash second; bare third (most permissive). Boundary semantics use the
+    # explicit char class ``[A-Za-z0-9_/-]`` to mirror T12's helper — see its
+    # docstring for the rationale (BSD-sed \b no-op + hyphen-as-boundary
+    # collision on prefix-substring slugs).
+    pattern = (
+        rf"\[\[lifecycle/(?P<wl>{slug_alt})(?=[/\]|])"
+        rf"|(?:^|[^A-Za-z0-9_/-])lifecycle/(?P<sl>{slug_alt})/"
+        rf"|(?:^|[^A-Za-z0-9_/-])lifecycle/(?P<br>{slug_alt})(?=[^A-Za-z0-9_/-]|$)"
+    )
+    return re.compile(pattern, re.MULTILINE)
+
+
+def _classify_citers(
+    root: Path, slugs: List[str]
+) -> Tuple[Dict[str, Dict[str, int]], Dict[str, int]]:
+    """For each slug, count per-form citers and total citer files.
+
+    Returns ``(per_form_counts, total_counts)`` where:
+      - ``per_form_counts[slug][form]`` is the number of files containing at
+        least one match of ``form`` for ``slug``.
+      - ``total_counts[slug]`` is the number of files containing at least one
+        match of any form for ``slug``.
+    """
+    per_form: Dict[str, Dict[str, int]] = {
+        slug: {form: 0 for form in FORMS} for slug in slugs
+    }
+    total: Dict[str, int] = {slug: 0 for slug in slugs}
+    if not slugs:
+        return per_form, total
+    pattern = _build_combined_pattern(slugs)
+    group_to_form = {"wl": "wikilink", "sl": "slash", "br": "bare"}
+    for md_path in _iter_citer_markdown(root):
+        try:
+            with open(md_path, "r", encoding="utf-8") as fh:
+                text = fh.read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        # For this file, track which (slug, form) pairs were seen so we
+        # increment per_form once per file (a "citer file" count, not a
+        # match count) and total once per file per slug.
+        file_form_hits: Set[Tuple[str, str]] = set()
+        file_slug_hits: Set[str] = set()
+        for m in pattern.finditer(text):
+            for grp, form in group_to_form.items():
+                slug = m.group(grp)
+                if slug is not None:
+                    file_form_hits.add((slug, form))
+                    file_slug_hits.add(slug)
+                    break
+        for slug, form in file_form_hits:
+            per_form[slug][form] += 1
+        for slug in file_slug_hits:
+            total[slug] += 1
+    return per_form, total
+
+
+def _is_out_of_band_closed(root: Path, slug: str) -> bool:
+    """Return True if events.log has only feature_complete and dir is minimal.
+
+    "Out-of-band-closed" means the lifecycle was closed by manually appending
+    a ``feature_complete`` event without going through the normal phase
+    transitions (only event in events.log) AND the directory contents are
+    limited to ``events.log`` and ``index.md``.
+    """
+    feature_dir = root / "lifecycle" / slug
+    events_log = feature_dir / "events.log"
+    try:
+        with open(events_log, "r", encoding="utf-8") as fh:
+            lines = [ln for ln in fh.read().splitlines() if ln.strip()]
+    except (OSError, UnicodeDecodeError):
+        return False
+    if len(lines) != 1 or '"feature_complete"' not in lines[0]:
+        return False
+    try:
+        contents = {p.name for p in feature_dir.iterdir()}
+    except OSError:
+        return False
+    return contents.issubset({"events.log", "index.md"})
+
+
+def _mtime(root: Path, slug: str) -> float:
+    """Return the lifecycle dir's mtime for ordering by recency."""
+    try:
+        return (root / "lifecycle" / slug).stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def _pick_per_form(
+    per_form: Dict[str, Dict[str, int]],
+) -> Dict[str, str | None]:
+    """For each form, pick the slug with the highest count; ties: slug asc."""
+    picks: Dict[str, str | None] = {form: None for form in FORMS}
+    for form in FORMS:
+        best: Tuple[int, str] | None = None
+        for slug, counts in per_form.items():
+            count = counts[form]
+            if count <= 0:
+                continue
+            # Higher count wins; tie-break by slug ascending (so we negate
+            # slug for max comparison via tuple of (count, -slug) is awkward;
+            # instead iterate sorted-by-slug and keep strict-greater).
+            candidate = (count, slug)
+            if best is None or candidate[0] > best[0] or (
+                candidate[0] == best[0] and candidate[1] < best[1]
+            ):
+                best = candidate
+        picks[form] = best[1] if best else None
+    return picks
+
+
+def select_sample(
+    root: Path,
+) -> Tuple[List[str], Dict[str, str | None]]:
+    """Run the selection algorithm; return (chosen_slugs, form_picks).
+
+    ``form_picks`` maps form -> the slug picked to satisfy that form (or
+    ``None`` if no candidate exercises that form). ``chosen_slugs`` is the
+    deduplicated, ordered selection list.
+    """
+    candidates = _candidate_slugs(root)
+    if not candidates:
+        return [], {form: None for form in FORMS}
+
+    per_form, total = _classify_citers(root, candidates)
+
+    # Step 1: per-form picks (highest cross-ref count).
+    form_picks = _pick_per_form(per_form)
+
+    chosen: List[str] = []
+    seen: Set[str] = set()
+
+    def add(slug: str | None) -> None:
+        if slug is None or slug in seen:
+            return
+        chosen.append(slug)
+        seen.add(slug)
+
+    for form in FORMS:
+        add(form_picks[form])
+
+    # Step 2: one zero-cross-ref slug. Tie-break: slug ascending.
+    zero_ref = sorted(s for s in candidates if total[s] == 0)
+    if zero_ref:
+        add(zero_ref[0])
+
+    # Step 3: one out-of-band-closed slug. Tie-break: slug ascending.
+    oob = sorted(s for s in candidates if _is_out_of_band_closed(root, s))
+    for slug in oob:
+        if slug not in seen:
+            add(slug)
+            break
+    else:
+        if oob:
+            # All oob candidates already chosen — that is fine; nothing to add
+            # for this criterion since the requirement (representation) is met.
+            pass
+
+    # Step 4: most-recent-by-mtime. Tie-break: slug ascending (so newer-mtime
+    # wins, then lexicographic).
+    by_mtime_desc = sorted(
+        candidates, key=lambda s: (-_mtime(root, s), s)
+    )
+    for slug in by_mtime_desc:
+        if slug not in seen:
+            add(slug)
+            break
+
+    # Step 5: oldest-by-mtime. Tie-break: slug ascending.
+    by_mtime_asc = sorted(candidates, key=lambda s: (_mtime(root, s), s))
+    for slug in by_mtime_asc:
+        if slug not in seen:
+            add(slug)
+            break
+
+    # Ensure at least 5 slugs by filling from remaining candidates in
+    # deterministic order (slug ascending) until we hit 5 (or exhaust).
+    if len(chosen) < 5:
+        for slug in sorted(candidates):
+            if len(chosen) >= 5:
+                break
+            add(slug)
+
+    return chosen, form_picks
+
+
+def _parse_args(argv: List[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        prog="cortex-archive-sample-select",
+        description=(
+            "Deterministically select >=5 lifecycle slugs for the archive "
+            "sample run, ensuring all three citation forms (slash, wikilink, "
+            "bare) are represented when possible."
+        ),
+    )
+    parser.add_argument(
+        "--form-report",
+        action="store_true",
+        help=(
+            "Emit 'slash: <slug>', 'wikilink: <slug>', 'bare: <slug>' lines "
+            "showing which slug satisfies each citation form."
+        ),
+    )
+    parser.add_argument(
+        "--root",
+        default=None,
+        help=(
+            "Repo root to scan. Defaults to `git rev-parse --show-toplevel`."
+        ),
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: List[str] | None = None) -> int:
+    args = _parse_args(list(sys.argv[1:] if argv is None else argv))
+    if args.root is not None:
+        root = Path(args.root)
+    else:
+        try:
+            root = _git_toplevel()
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            print(
+                f"cortex-archive-sample-select: cannot find git toplevel: {exc}",
+                file=sys.stderr,
+            )
+            return 2
+    if not root.is_dir():
+        print(
+            f"cortex-archive-sample-select: --root not a directory: {root}",
+            file=sys.stderr,
+        )
+        return 2
+
+    chosen, form_picks = select_sample(root)
+
+    if args.form_report:
+        for form in FORMS:
+            slug = form_picks[form]
+            sys.stdout.write(f"{form}: {slug if slug else '(none)'}\n")
+        sys.stdout.flush()
+        return 0
+
+    for slug in chosen:
+        sys.stdout.write(slug + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

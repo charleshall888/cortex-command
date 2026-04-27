@@ -62,3 +62,6 @@ debug/test-*/
 
 # UI check output
 ui-check-results/
+
+# Lifecycle-archive sample-run slug list (transient; written by cortex-archive-sample-select)
+.archive-sample.txt
