@@ -1,0 +1,19 @@
+{
+  "ts": "2026-04-27T18:00:00Z",
+  "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening",
+  "artifact": "lifecycle/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/spec.md",
+  "synthesis_status": "ok",
+  "reviewers": {"completed": 4, "dispatched": 4},
+  "findings": [
+    {"class": "B", "finding": "Rewrite scope omits docs/, README.md, SKILL.md citers; acceptance grep also scoped to four dirs hides the gap", "reviewer_angle": "Path-rewriting fragility in N6.3", "evidence_quote": "any remaining files under lifecycle/, backlog/, research/, and retros/ that cite the moved dir"},
+    {"class": "B", "finding": ".bak cleanup specified only for success path; failure path leaves stranded *.md.bak files with no specified cleanup", "reviewer_angle": "Path-rewriting fragility in N6.3", "evidence_quote": "Implementation: sed -i.bak with explicit pattern; .bak files are removed on success."},
+    {"class": "B", "finding": "Per-tool-call attempt counter unsafe under asyncio concurrency; concurrent calls can race on _CORTEX_ROOT_CACHE", "reviewer_angle": "S1+S5 retry/error coupling", "evidence_quote": "attempt counter scoped per-tool-call"},
+    {"class": "B", "finding": "FNF from missing shebang interpreter (e.g., python3 not on PATH) misdiagnosed as cortex CLI missing", "reviewer_angle": "S1+S5 retry/error coupling", "evidence_quote": "The new FNF handler only fires when subprocess.run([cortex, ...]) itself can't find cortex"},
+    {"class": "B", "finding": "N4.1 example pedagogy is about tilde-vs-absolute paths in sandbox allowlists; relative-path substitution invalidates the teaching content", "reviewer_angle": "Advisory-text scope drift in N3.1/N4.1", "evidence_quote": "skills/diagnose/SKILL.md:148 no longer references ~/.claude/hooks/. The illustrative context is updated to point at claude/hooks/"},
+    {"class": "B", "finding": "Path list excludes claude/statusline.py; bin/cortex-* glob excludes non-cortex-prefixed bin scripts; brittle to future additions", "reviewer_angle": "Advisory-text scope drift in N3.1/N4.1", "evidence_quote": "Required before editing any file in skills/, hooks/, claude/hooks/, bin/cortex-*, or claude/common.py"},
+    {"class": "B", "finding": "Substantial gate-fire volume increase with no overnight-mode escape hatch (only escape is 'user explicitly says to skip', no autonomous equivalent)", "reviewer_angle": "Advisory-text scope drift in N3.1/N4.1", "evidence_quote": "Skip only if the user explicitly says to."},
+    {"class": "B", "finding": "Sample-selection mechanism undefined; qualitative descriptors have no operational measure", "reviewer_angle": "N6 sample-then-full sequencing", "evidence_quote": "5 representative dirs (one with broad cross-refs, one isolated, one out-of-band-closed/minimal-content, one recent, one very old)"},
+    {"class": "B", "finding": "Cross-reference volume is ~1869 lines (not ~30); sed surface 2 orders of magnitude larger than initial framing assumed", "reviewer_angle": "N6 sample-then-full sequencing", "evidence_quote": "the recipe is run on a 5-directory representative sample first"},
+    {"class": "B", "finding": "N6.5 rollback acceptance has 'code review at plan' escape hatch — never integration-tested", "reviewer_angle": "N6 sample-then-full sequencing", "evidence_quote": "verified during sample run by intentionally interrupting if practical, otherwise by recipe code review during plan"}
+  ]
+}
