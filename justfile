@@ -423,7 +423,7 @@ build-plugin:
         case "$p" in
             cortex-interactive)
                 SKILLS=(commit pr lifecycle backlog requirements research discovery refine retro dev fresh diagnose evolve critical-review)
-                HOOKS=(hooks/cortex-validate-commit.sh)
+                HOOKS=(hooks/cortex-validate-commit.sh claude/hooks/cortex-worktree-create.sh claude/hooks/cortex-worktree-remove.sh)
                 BIN=(cortex-)
                 ;;
             cortex-overnight-integration)
