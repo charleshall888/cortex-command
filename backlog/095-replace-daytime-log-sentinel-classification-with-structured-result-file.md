@@ -13,7 +13,7 @@ discovery_source: research/revisit-lifecycle-implement-preflight-options/researc
 areas: [overnight-runner]
 complexity: complex
 criticality: high
-spec: lifecycle/replace-daytime-log-sentinel-classification-with-structured-result-file/spec.md
+spec: lifecycle/archive/replace-daytime-log-sentinel-classification-with-structured-result-file/spec.md
 session_id: null
 lifecycle_phase: implement
 ---

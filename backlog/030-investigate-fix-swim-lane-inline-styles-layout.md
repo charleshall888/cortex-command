@@ -14,7 +14,7 @@ updated: 2026-04-08
 discovery_source: research/generative-ui-harness/research.md
 complexity: complex
 criticality: medium
-spec: lifecycle/investigate-and-fix-swim-lane-inline-styles-and-layout-degradation/spec.md
+spec: lifecycle/archive/investigate-and-fix-swim-lane-inline-styles-and-layout-degradation/spec.md
 areas: [dashboard]
 session_id: null
 ---

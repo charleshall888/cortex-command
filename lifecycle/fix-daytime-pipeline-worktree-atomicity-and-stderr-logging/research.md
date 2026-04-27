@@ -9,7 +9,7 @@
 
 ### Callers (behavior unchanged; contracts verified)
 
-- `claude/overnight/daytime_pipeline.py:287` — `worktree_info = create_worktree(feature)` at top of `run_daytime`, **outside** the `try/except Exception` at lines 307–320. A raised exception propagates out of `run_daytime` entirely; `asyncio.run(run_daytime(...))` at `_run` (line 369) lets the exception reach the interpreter, producing the traceback captured in `daytime.log`. This is why `lifecycle/suppress-internal-narration-in-lifecycle-specify-phase/daytime.log:34` shows `CalledProcessError: … returned non-zero exit status 128.` with zero git stderr: `CalledProcessError.__str__` excludes `stderr` by default.
+- `claude/overnight/daytime_pipeline.py:287` — `worktree_info = create_worktree(feature)` at top of `run_daytime`, **outside** the `try/except Exception` at lines 307–320. A raised exception propagates out of `run_daytime` entirely; `asyncio.run(run_daytime(...))` at `_run` (line 369) lets the exception reach the interpreter, producing the traceback captured in `daytime.log`. This is why `lifecycle/archive/suppress-internal-narration-in-lifecycle-specify-phase/daytime.log:34` shows `CalledProcessError: … returned non-zero exit status 128.` with zero git stderr: `CalledProcessError.__str__` excludes `stderr` by default.
 - `claude/overnight/orchestrator.py:162` — called in the feature loop, no try/except. An exception aborts the whole batch.
 - `claude/overnight/smoke_test.py:250` — inside `_run_smoke_test`'s outer try/except.
 - Sibling pattern (adversarial found this, agents 1/4 missed): `claude/overnight/plan.py:381, 472` catches `subprocess.CalledProcessError` from sibling worktree-creation subprocess calls. `claude/pipeline/merge.py:349` documents `CalledProcessError` as part of related raise contracts. Module-level pattern is "raise `CalledProcessError` or `RuntimeError`-from-it."
@@ -22,7 +22,7 @@ No `raise ... from e` pattern exists anywhere in `claude/pipeline/`. The establi
 
 ### Cleanup primitives already in worktree.py
 
-- `cleanup_worktree(feature, repo_path=None, worktree_path=None)` (line 167) — `git worktree remove` (with `--force` fallback), `git worktree prune`, `git branch -d <branch>`. **Hardcodes `branch = f"pipeline/{feature}"` (line 213); cannot clean up `-2`/`-N`-suffixed branches** — separate issue flagged in `lifecycle/integrate-autonomous-worktree-option-into-lifecycle-pre-flight/research.md:86`. Not directly reusable from the error path because the orphan-branch name is the `_resolve_branch_name`-resolved name, which may include a suffix.
+- `cleanup_worktree(feature, repo_path=None, worktree_path=None)` (line 167) — `git worktree remove` (with `--force` fallback), `git worktree prune`, `git branch -d <branch>`. **Hardcodes `branch = f"pipeline/{feature}"` (line 213); cannot clean up `-2`/`-N`-suffixed branches** — separate issue flagged in `lifecycle/archive/integrate-autonomous-worktree-option-into-lifecycle-pre-flight/research.md:86`. Not directly reusable from the error path because the orphan-branch name is the `_resolve_branch_name`-resolved name, which may include a suffix.
 - `cleanup_stale_lock` (line 223) — removes `.git/worktrees/{feature}/index.lock` with `lsof` check. Not applicable.
 - `list_worktrees` (line 259) — read-only.
 

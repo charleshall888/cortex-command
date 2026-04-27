@@ -18,7 +18,7 @@ blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/publish-cortex-overnight-integration-plugin-overnight-skill-runner-hooks/spec.md
+spec: lifecycle/archive/publish-cortex-overnight-integration-plugin-overnight-skill-runner-hooks/spec.md
 ---
 
 # Publish cortex-overnight-integration plugin (overnight skill + runner hooks)

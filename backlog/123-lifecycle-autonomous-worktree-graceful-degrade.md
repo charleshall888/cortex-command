@@ -18,7 +18,7 @@ blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/lifecycle-skill-gracefully-degrades-autonomous-worktree-option-when-runner-absent/spec.md
+spec: lifecycle/archive/lifecycle-skill-gracefully-degrades-autonomous-worktree-option-when-runner-absent/spec.md
 ---
 
 # Lifecycle skill gracefully degrades autonomous-worktree option when runner absent

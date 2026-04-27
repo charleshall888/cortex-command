@@ -15,7 +15,7 @@ lifecycle_phase: review
 lifecycle_slug: apply-confirmed-safe-permission-tightening
 complexity: complex
 criticality: high
-spec: lifecycle/apply-confirmed-safe-permission-tightening/spec.md
+spec: lifecycle/archive/apply-confirmed-safe-permission-tightening/spec.md
 areas: [skills]
 ---
 

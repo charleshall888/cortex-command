@@ -25,7 +25,7 @@ criticality: high
 
 Part of epic #49 (agent output signal-to-noise). The epic has several decision records in `research/agent-output-efficiency/research.md`:
 
-- **DR-6 (stress-test gate)**: Does removing verbose-by-default instructions suffice? **Answered NO by #052.** After adversarial review against 9 skills, zero high-confidence removal candidates were found. Every initial "remove" verdict was overturned by finding load-bearing value. See `lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md` for the gate closure and `lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/research.md` for the per-skill analysis.
+- **DR-6 (stress-test gate)**: Does removing verbose-by-default instructions suffice? **Answered NO by #052.** After adversarial review against 9 skills, zero high-confidence removal candidates were found. Every initial "remove" verdict was overturned by finding load-bearing value. See `lifecycle/archive/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md` for the gate closure and `lifecycle/archive/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/research.md` for the per-skill analysis.
 - **DR-1/DR-2 (structured intervention)**: Add targeted constraints where they earn their place. **This is what #053 delivers.**
 
 Because DR-6 closed negative, this ticket is the epic's next step — the one that actually moves the needle on skill prompt output quality with Opus 4.6.
@@ -172,10 +172,10 @@ Any edit must preserve these cross-skill and cross-system contracts:
 
 These files contain the full context grounding this ticket. Read them during the refine phase for more detail:
 
-- `lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/research.md` — per-skill candidate analysis with adversarial counter-arguments. Authoritative rationale archive for the preservation decisions above.
-- `lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md` — DR-6 gate closure note.
-- `lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/spec.md` — #052's final spec (documentation-only scope after the adversarial review).
-- `lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/review.md` — #052's review (APPROVED, no drift).
+- `lifecycle/archive/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/research.md` — per-skill candidate analysis with adversarial counter-arguments. Authoritative rationale archive for the preservation decisions above.
+- `lifecycle/archive/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/dr6-answer.md` — DR-6 gate closure note.
+- `lifecycle/archive/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/spec.md` — #052's final spec (documentation-only scope after the adversarial review).
+- `lifecycle/archive/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/review.md` — #052's review (APPROVED, no drift).
 - `research/agent-output-efficiency/research.md` — epic-level research (broader compression spectrum, DR-1 through DR-6 decision records).
 - `claude/reference/output-floors.md` — #050 output floor definitions (phase transition floor, approval surface floor, applicability rules). Only `lifecycle` and `discovery` are subject to these floors.
 - `requirements/project.md` — project quality attributes ("Complexity must earn its place", "Maintainability through simplicity", "Handoff readiness: the spec is the entire communication channel", "ROI matters").

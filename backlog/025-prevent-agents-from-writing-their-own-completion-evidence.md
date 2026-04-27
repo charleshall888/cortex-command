@@ -17,7 +17,7 @@ lifecycle_phase: implement
 lifecycle_slug: prevent-agents-from-writing-their-own-completion-evidence
 complexity: complex
 criticality: high
-spec: lifecycle/prevent-agents-from-writing-their-own-completion-evidence/spec.md
+spec: lifecycle/archive/prevent-agents-from-writing-their-own-completion-evidence/spec.md
 areas: [lifecycle,overnight-runner]
 ---
 

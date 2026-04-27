@@ -17,7 +17,7 @@ lifecycle_phase: specify
 lifecycle_slug: define-evaluator-rubric-for-software-features-spike
 complexity: complex
 criticality: low
-spec: lifecycle/define-evaluator-rubric-for-software-features-spike/spec.md
+spec: lifecycle/archive/define-evaluator-rubric-for-software-features-spike/spec.md
 areas: [overnight-runner,lifecycle]
 ---
 

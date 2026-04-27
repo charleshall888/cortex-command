@@ -13,7 +13,7 @@ lifecycle_phase: complete
 lifecycle_slug: investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks
 complexity: complex
 criticality: high
-spec: lifecycle/investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks/spec.md
+spec: lifecycle/archive/investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks/spec.md
 areas: [overnight-runner]
 ---
 

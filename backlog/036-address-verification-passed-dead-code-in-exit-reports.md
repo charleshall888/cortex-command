@@ -13,7 +13,7 @@ lifecycle_phase: review
 lifecycle_slug: address-verification-passed-dead-code-in-exit-reports
 complexity: simple
 criticality: high
-spec: lifecycle/address-verification-passed-dead-code-in-exit-reports/spec.md
+spec: lifecycle/archive/address-verification-passed-dead-code-in-exit-reports/spec.md
 areas: [overnight-runner]
 ---
 

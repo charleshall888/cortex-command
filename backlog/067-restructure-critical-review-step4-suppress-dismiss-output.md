@@ -14,7 +14,7 @@ lifecycle_phase: implement
 lifecycle_slug: restructure-critical-review-step-4-to-suppress-dismiss-output
 complexity: complex
 criticality: high
-spec: lifecycle/restructure-critical-review-step-4-to-suppress-dismiss-output/spec.md
+spec: lifecycle/archive/restructure-critical-review-step-4-to-suppress-dismiss-output/spec.md
 areas: [skills]
 ---
 

@@ -15,7 +15,7 @@ lifecycle_phase: research
 lifecycle_slug: add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps
 complexity: complex
 criticality: high
-spec: lifecycle/add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps/spec.md
+spec: lifecycle/archive/add-index-regeneration-to-overnight-pre-flight-and-investigate-staleness-gaps/spec.md
 ---
 
 The backlog index (`index.json`) can silently go stale when backlog `.md` files are edited directly (bypassing `update_item.py`). `select_overnight_batch()` prefers `load_from_index()` and only falls back to `parse_backlog_dir()` on structural errors — semantic staleness passes through silently. This caused a real bug during overnight planning where a renamed lifecycle directory wasn't picked up.

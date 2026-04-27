@@ -14,7 +14,7 @@ updated: 2026-04-08
 discovery_source: research/generative-ui-harness/research.md
 complexity: complex
 criticality: medium
-spec: lifecycle/add-accessibility-foundations-aria-live-multi-modal-severity/spec.md
+spec: lifecycle/archive/add-accessibility-foundations-aria-live-multi-modal-severity/spec.md
 areas: [dashboard]
 session_id: null
 ---

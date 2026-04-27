@@ -20,7 +20,7 @@ Split from #85 Pass 2 scope. #85 treats `verification-mindset.md` as read-only; 
 
 ## Starting Context
 
-*(Verbatim from `lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/research.md` §"verification-mindset.md structural inventory (for Pass 2)" — copied rather than referenced to avoid dangling cross-lifecycle reference.)*
+*(Verbatim from `lifecycle/archive/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/research.md` §"verification-mindset.md structural inventory (for Pass 2)" — copied rather than referenced to avoid dangling cross-lifecycle reference.)*
 
 106 lines total. Structural at-risk content:
 

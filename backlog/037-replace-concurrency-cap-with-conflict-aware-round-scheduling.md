@@ -15,7 +15,7 @@ lifecycle_phase: implement
 lifecycle_slug: replace-concurrency-cap-with-conflict-aware-round-scheduling
 complexity: complex
 criticality: high
-spec: lifecycle/replace-concurrency-cap-with-conflict-aware-round-scheduling/spec.md
+spec: lifecycle/archive/replace-concurrency-cap-with-conflict-aware-round-scheduling/spec.md
 ---
 
 The overnight runner uses a static concurrency cap (default 2) to limit parallel feature execution per round. This is a blunt instrument — it doesn't consider whether features actually conflict. Two features touching completely different files could safely run in parallel, while two features editing the same template should be serialized regardless of the cap.

@@ -18,7 +18,7 @@ blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/publish-plugin-marketplace-manifest-for-cortex-command/spec.md
+spec: lifecycle/archive/publish-plugin-marketplace-manifest-for-cortex-command/spec.md
 ---
 
 # Publish plugin marketplace manifest for cortex-command

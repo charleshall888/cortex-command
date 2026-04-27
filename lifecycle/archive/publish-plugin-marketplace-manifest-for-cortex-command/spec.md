@@ -1,0 +1,116 @@
+# Specification: Publish plugin marketplace manifest for cortex-command
+
+> Epic context: Part of `overnight-layer-distribution` (ticket 113). See `research/overnight-layer-distribution/research.md` for cross-ticket scope; `lifecycle/archive/publish-plugin-marketplace-manifest-for-cortex-command/research.md` for ticket-specific findings (codebase analysis, schema spec, adversarial review).
+
+## Problem Statement
+
+The cortex-command repo's `.claude-plugin/marketplace.json` currently lists only one of the four in-tree plugins, and user-facing docs still route users to the old `cortex-command-plugins` marketplace for `cortex-ui-extras` and `cortex-pr-review`. After this ticket, a user who runs `/plugin marketplace add charleshall888/cortex-command` followed by `/plugin install <name>@cortex-command` for any of the four plugins must succeed — and a user reading the repo's docs (README, setup guide, plugin docs) must see a coherent, current install path with no contradictions or stale pointers. This is the user-visible distribution entry point for the entire agentic toolkit; the predecessor tickets (117 retired symlinks; 120/121 published the two core plugins; 144 vendored the two extras) all converge here.
+
+## Requirements
+
+1. **Marketplace.json lists all four plugins**: `.claude-plugin/marketplace.json` contains exactly four `plugins[]` entries — `cortex-interactive`, `cortex-overnight-integration`, `cortex-ui-extras`, `cortex-pr-review` — each with `name`, `source` (string form `"./plugins/<name>"`), and `description` (mirroring each plugin's `plugin.json` description). No `version` field on any entry. The existing `cortex-overnight-integration` stub entry is rewritten to match the same shape (add `description`).
+   Acceptance: `jq '.plugins | length' .claude-plugin/marketplace.json` = 4. `jq -r '.plugins[].name' .claude-plugin/marketplace.json | sort` outputs the four names in alphabetical order. `jq '[.plugins[] | select(has("version"))] | length' .claude-plugin/marketplace.json` = 0. `jq -e '.plugins[] | select(.source | startswith("./plugins/"))' .claude-plugin/marketplace.json` exits 0 for all four entries. `jq -r '.plugins[] | select(.name=="cortex-overnight-integration") | .description' .claude-plugin/marketplace.json` is non-empty.
+
+2. **Marketplace.json has a `metadata.description`**: Top-level `metadata` block is present with `description: "Cortex-command plugin marketplace — interactive Claude Code skills, overnight runner integration, and opt-in extras for autonomous development workflows."`. Eliminates the non-blocking validator warning shown on every `/plugin marketplace add`. The exact wording is reviewable in the diff and can be tweaked during implementation if desired.
+   Acceptance: `jq -e '.metadata.description | type == "string" and length > 0' .claude-plugin/marketplace.json` exits 0.
+
+3. **plugin.json `author` field normalized to object form**: `plugins/cortex-ui-extras/.claude-plugin/plugin.json` and `plugins/cortex-pr-review/.claude-plugin/plugin.json` use object form `{"name": "Charlie Hall", "email": "charliemhall@gmail.com"}` — matching the convention established for the other two plugins in commit `1f5745a`.
+   Acceptance: For each of the four plugin manifests, `jq -e '.author | type == "object" and has("name") and has("email")' plugins/<name>/.claude-plugin/plugin.json` exits 0.
+
+4. **`docs/setup.md` install walkthrough covers all four plugins with prerequisites**: The existing "Add and install the plugins" section (currently only mentions `cortex-interactive` and `cortex-overnight-integration`) is extended to:
+   (a) Use a single canonical `marketplace add` command followed by per-plugin `install` commands for all four plugins.
+   (b) Include a "Plugin-specific prerequisites" subsection covering only the plugins with extra steps: `cortex-overnight-integration` requires `${CORTEX_COMMAND_ROOT}` exported; `cortex-interactive`'s shell-side `bin/jcc` and bin-shim fallbacks also require `${CORTEX_COMMAND_ROOT}`. The two extras have no extra prerequisites.
+   (c) Include a "Do not add via direct `marketplace.json` URL" note (use `owner/repo` git form).
+   (d) Include a "Verify install" subsection covering `/plugin list`, `/reload-plugins`, and `rm -rf ~/.claude/plugins/cache` as the last-resort cache nuke.
+   Acceptance: `grep -c 'cortex-ui-extras@cortex-command\|cortex-pr-review@cortex-command\|cortex-interactive@cortex-command\|cortex-overnight-integration@cortex-command' docs/setup.md` ≥ 4. `grep -c 'CORTEX_COMMAND_ROOT' docs/setup.md` ≥ 1. `grep -ci 'reload-plugins' docs/setup.md` ≥ 1. `grep -c 'marketplace.json' docs/setup.md` ≥ 1 (for the URL warning).
+
+5. **`docs/setup.md` "Symlink Architecture" section deleted**: Lines describing `cortex-command/skills/* → ~/.claude/skills/*` symlink mapping are removed. This section directly contradicts CLAUDE.md's "no longer deploys symlinks into `~/.claude/`" commitment and would create user confusion next to the fresh install walkthrough.
+   Acceptance: `grep -c 'Symlink Architecture' docs/setup.md` = 0. `grep -c '~/.claude/skills/' docs/setup.md` = 0.
+
+6. **README.md Quick Start / Plugin roster section updated**: The placeholder text "ships once ticket 122 lands" (line 102) is replaced; the still-stale `cortex-command-plugins` marketplace URL in Quick Start (line 86) and "Limited / custom installation" (lines 103–107) is replaced with `charleshall888/cortex-command`. The existing one-line android-dev-extras pointer (currently on line 115) is preserved or rephrased to reflect that android-dev-extras is the only remaining content in `cortex-command-plugins`.
+   Acceptance: `grep -c 'cortex-command-plugins' README.md` ≤ 2 (consolidated to one or two android-dev-extras pointer lines, matching R7's per-file ceiling). `grep -c 'ticket 122 lands\|once ticket 122' README.md` = 0. `grep -c 'charleshall888/cortex-command' README.md` ≥ 1.
+
+7. **Stale `cortex-command-plugins` pointers removed from all five docs files; android-dev-extras survivors confined to README.md**: Update every reference to `cortex-command-plugins` (regardless of form — install pointer, marketplace URL, prose claim that the companion repo carries cortex-ui-extras/cortex-pr-review, link-syntax pointer) across: `README.md`, `docs/setup.md`, `docs/dashboard.md`, `docs/skills-reference.md`, `docs/agentic-layer.md`, `docs/plugin-development.md`. The five `docs/*` files end up with zero `cortex-command-plugins` references; only `README.md` retains its existing one-or-two-line android-dev-extras pointer (lines 103 and/or 115 in current state, which may be consolidated into one line during the sweep). Note that `docs/plugin-development.md:13`'s "continues as the optional/per-project extras marketplace" prose is in scope: ticket 144 vendored ui-extras/pr-review out of `cortex-command-plugins`, so that prose is factually stale and must be rewritten or removed.
+   Acceptance:
+   - `grep -c 'cortex-command-plugins' README.md` ≤ 2 (one or two android-dev-extras pointer survivors only).
+   - `grep -c 'cortex-command-plugins' docs/setup.md` = 0.
+   - `grep -c 'cortex-command-plugins' docs/dashboard.md` = 0.
+   - `grep -c 'cortex-command-plugins' docs/skills-reference.md` = 0.
+   - `grep -c 'cortex-command-plugins' docs/agentic-layer.md` = 0.
+   - `grep -c 'cortex-command-plugins' docs/plugin-development.md` = 0.
+   - `grep -cE '/plugin install cortex-ui-extras@cortex-command\b' docs/setup.md` ≥ 1 and `grep -cE '/plugin install cortex-pr-review@cortex-command\b' docs/setup.md` ≥ 1 (both extras have install commands routing to the new marketplace in the canonical install doc).
+
+8. **Skill invocation namespace updated across CLAUDE.md, skill docs, and functional invocation surfaces**: All references to `/cortex:<skill>` invocation form in repo-tracked files are updated to the post-install plugin namespace — `/cortex-interactive:<skill>` for the 14 skills owned by `cortex-interactive`; `/cortex-overnight-integration:<skill>` for the 2 skills owned by `cortex-overnight-integration`. The skill-to-plugin mapping is fixed by the `build-plugin` recipe's case statement at `justfile` lines 423–432:
+   - **`cortex-interactive`** owns: `backlog`, `commit`, `critical-review`, `dev`, `diagnose`, `discovery`, `evolve`, `fresh`, `lifecycle`, `pr`, `refine`, `requirements`, `research`, `retro` (14 skills).
+   - **`cortex-overnight-integration`** owns: `overnight`, `morning-review` (2 skills).
+
+   Note: `BUILD_OUTPUT_PLUGINS` (justfile line 403) is just the bare list `"cortex-interactive cortex-overnight-integration"` — it does NOT carry the skill-to-plugin association; the case statement above is the authoritative source.
+
+   Files in scope:
+   - **Markdown surfaces**: `CLAUDE.md`, `README.md`, `docs/**/*.md`, `skills/**/SKILL.md` and `skills/**/references/**.md`, `plugins/cortex-interactive/skills/**/SKILL.md` and `plugins/cortex-interactive/skills/**/references/**.md` (drift-checked twins of `skills/` for cortex-interactive-owned skills), `plugins/cortex-overnight-integration/skills/**/SKILL.md` and `plugins/cortex-overnight-integration/skills/**/references/**.md` (drift-checked twins of `skills/overnight` and `skills/morning-review`).
+   - **Functional invocation surfaces**: `tests/*.py` (notably `tests/baseline_critical_review.py`, `tests/test_critical_review_classifier.py`, `tests/test_skill_callgraph.py`), `tests/scenarios/**/*.yaml` (pressure-test fixtures), `hooks/cortex-scan-lifecycle.sh` (user-facing message strings emitted into session prompts), `cortex_command/init/templates/retros/README.md` (template shipped to new repos by `cortex init`).
+
+   Out of scope:
+   - `backlog/*.md`, `lifecycle/*/research.md|spec.md|plan.md`, `retros/*.md` — historical artifacts; preserve original prose.
+   - **Quoted historical-input strings inside in-scope files** where the literal `/cortex:<skill>` is a documented input/example, not an invocation (e.g., `skills/retro/SKILL.md:38` documenting the input string `"/cortex:retro ---"`). Such carve-outs must be enumerated in the implementation commit message; each surviving match in the acceptance grep below must correspond to one of the enumerated items.
+
+   Acceptance:
+   - **No old-form survivors (extended scope)**: `grep -rEln '/cortex:[a-zA-Z][a-zA-Z0-9_-]+' CLAUDE.md README.md docs/ skills/ plugins/cortex-interactive/skills/ plugins/cortex-overnight-integration/skills/ tests/*.py tests/scenarios/ hooks/cortex-scan-lifecycle.sh cortex_command/init/templates/` outputs only files where every match is in the enumerated quoted-input carve-out list captured in the commit message; otherwise the count must be zero.
+   - **Correct new-form mapping**: For each of the 16 skill names, every reference of the form `/cortex-interactive:<skill>` or `/cortex-overnight-integration:<skill>` in the swept files matches the plugin that actually owns that skill per the mapping above. Verifiable by: `python3 -c` script reading the mapping and asserting each `/<plugin>:<skill>` reference's `<plugin>` matches `<skill>`'s owner. (Plan phase will produce the script as part of the sweep tooling.)
+   - **Dual-tree identity (cortex-interactive)**: For each of the 14 cortex-interactive skills, `diff -r skills/<skill>/ plugins/cortex-interactive/skills/<skill>/` exits 0.
+   - **Dual-tree identity (cortex-overnight-integration)**: `diff -r skills/overnight/ plugins/cortex-overnight-integration/skills/overnight/` exits 0; `diff -r skills/morning-review/ plugins/cortex-overnight-integration/skills/morning-review/` exits 0.
+   - **Drift hook passes**: `.githooks/pre-commit` (installed via `just setup-githooks`) executes successfully against a commit containing the R8 changes — i.e., its Phase 4 (`just build-plugin` followed by `git diff --quiet -- plugins/$p/`) exits 0 for both `cortex-interactive` and `cortex-overnight-integration`. The previously-cited `git diff --cached --check` is whitespace-only and is NOT the correct drift check.
+
+9. **End-to-end install smoke check (implementer behavioral verification)**: Before merging, the implementer runs the documented install path against the resulting state and confirms it succeeds. Procedure (run in order):
+   (a) `rm -rf ~/.claude/plugins/cache` and remove any pre-existing `cortex-command` marketplace registration from `~/.claude/settings.json` to ensure a clean slate.
+   (b) `/plugin marketplace add charleshall888/cortex-command` succeeds with no error and no `metadata.description` validator warning.
+   (c) `/plugin install cortex-interactive@cortex-command`, `/plugin install cortex-overnight-integration@cortex-command`, `/plugin install cortex-ui-extras@cortex-command`, `/plugin install cortex-pr-review@cortex-command` each succeed.
+   (d) `/reload-plugins`, then `/plugin list` shows all four installed.
+   (e) Invoke at least one cortex-interactive skill in its post-migration namespace form (e.g., `/cortex-interactive:commit` reaches the commit skill rather than failing as "command not found") — confirms R8's namespace migration routes correctly post-install.
+   (f) With `${CORTEX_COMMAND_ROOT}` exported per the install walkthrough, confirm the overnight runner can be reached (e.g., `cortex --help` or running the `cortex-overnight-integration` MCP server with `cortex mcp-server` does not error on missing env or PATH).
+
+   Acceptance: Interactive/session-dependent — this requirement cannot be reduced to a runnable command in the spec because it exercises Claude Code's plugin install flow which is interactive and stateful in `~/.claude/`. The implementer must run the procedure and report the outcome (pass/fail per step) in the implementation summary or PR description; structural acceptance (R1–R8) cannot substitute for this runtime check, since the spec's Edge Cases section enumerates four runtime failure modes (URL-vs-git add, cache staleness, missing env var, drift-hook break) that all bypass the file-shape gates.
+
+## Non-Requirements
+
+- **No submission to `anthropics/claude-plugins-official`**. Confirmed out of scope: cortex-command is intentionally distributed as its own marketplace, not via the official Anthropic plugin marketplace. No follow-up backlog ticket needed.
+- **No migration documentation for users on the old `cortex-command-plugins` marketplace**. Owned by ticket 124. Ticket 122's docs target the new-user happy path only; the duplicate-marketplace migration narrative is ticket 124's deliverable. (Today there is no production user to migrate; ticket 124 will land before broader rollout.)
+- **No changes to plugin manifests beyond `author`-field normalization**. Descriptions, version omission, and other plugin.json fields are left as-is. The marketplace.json `description` mirrors the plugin.json description; if a description should change, that's a separate ticket.
+- **No CI/lint check for `version`-field regression** in `plugin.json`. Web research flagged this as a forward-looking risk surface (silent override of marketplace versioning). Out of strict 122 scope; can be a follow-up.
+- **No changes to bin-on-PATH provisioning**. `cortex-interactive`'s `bin/` access from the user's shell still requires `install.sh` placement or manual symlink (matching the README's existing description); the install walkthrough surfaces this as a prerequisite, not a fix.
+- **No changes to `cortex setup` or `cortex init` behavior**. Owned by ticket 117 (complete) and adjacent epic work.
+- **No top-level `$schema` or `metadata.pluginRoot`** added to marketplace.json beyond the `metadata.description` required in R2. Optional schema validation aids editor tooling but is not load-bearing for the user flow this ticket ships.
+
+## Edge Cases
+
+- **User adds marketplace via direct `marketplace.json` URL instead of `owner/repo`**: Add succeeds silently, but `/plugin install <name>@cortex-command` fails because relative-path sources don't resolve without a git checkout. Mitigation: explicit one-sentence "Do not add via direct URL — use the `owner/repo` git form" warning in setup.md (per R4c). No code-side fix is possible.
+- **Skills don't appear immediately after install**: Plugin metadata cache may not refresh until `/reload-plugins` or `~/.claude/plugins/cache` is invalidated. Mitigation: "Verify install" subsection in setup.md (R4d) walks through the resolution.
+- **`${CORTEX_COMMAND_ROOT}` not set when overnight runner or shell-side `jcc` is invoked**: The bin shims already error explicitly ("jcc: CORTEX_COMMAND_ROOT is not set"); the install walkthrough's "Plugin-specific prerequisites" subsection (R4b) names this requirement up front so users set it before they hit the error.
+- **Drift-checked plugin tree breaks during R8 namespace sweep**: The pre-commit hook enforces drift between `skills/<name>/SKILL.md` and `plugins/cortex-interactive/skills/<name>/SKILL.md` (and the equivalent for `cortex-overnight-integration`'s overnight/morning-review skills). The R8 sweep must edit only the top-level `skills/` source tree, then run `just build-plugin` to regenerate both `plugins/cortex-interactive/skills/` and `plugins/cortex-overnight-integration/skills/` via rsync. Editing the plugin trees directly is **not** an acceptable alternative — `just build-plugin` uses `rsync -a --delete`, so a later unrelated build run will silently overwrite plugin-tree-only edits with the source-tree state.
+- **Plugin.json's `author` normalization could affect `/plugin info` display**: Spec accepts both forms; user-visible impact is rendering-only. Verified no consumer code depends on string-form parsing of `author` (none found in research).
+- **A skill's reference docs (`skills/<name>/references/*.md`) reference another skill's invocation**: When sweeping `/cortex:<skill>` → `/cortex-interactive:<skill>` (or the overnight namespace), references between skills must use the correct namespace based on which plugin owns the *referenced* skill, not the referring one. Use the explicit skill-to-plugin mapping enumerated in R8 (NOT `BUILD_OUTPUT_PLUGINS`, which is just the bare plugin-name list). R8's "Correct new-form mapping" acceptance check enforces this.
+- **Marketplace.json `metadata.description` value choice**: One sentence; a poor choice harms only first-impression discovery in `/plugin marketplace info`. Out of risk surface for the ticket's correctness but worth a brief review.
+
+## Changes to Existing Behavior
+
+- **MODIFIED**: Skill invocation namespace in repo-tracked docs *and functional invocation surfaces* (test fixtures, hook user-message strings, init-template README) changes from `/cortex:<skill>` to `/cortex-interactive:<skill>` (or `/cortex-overnight-integration:<skill>` for the runner skills). This reflects how Claude Code actually namespaces plugin-installed skills; the old form was always going to break post-install. Tests that subprocess `claude -p "/cortex:..."` (e.g., `tests/baseline_critical_review.py`, `tests/test_critical_review_classifier.py`) now invoke the post-install form and start succeeding against a real plugin install. The hook script `hooks/cortex-scan-lifecycle.sh` no longer emits stale "Resume with `/cortex:lifecycle ...`" messages. New repos initialized via `cortex init` now ship retros/README.md instructions consistent with the post-install form. The bare-`/foo` headless workaround documented in MEMORY.md remains as a fallback for users invoking from the command line during the mid-migration window.
+- **MODIFIED**: `.claude-plugin/marketplace.json` grows from 1 to 4 plugin entries; the `cortex-overnight-integration` stub entry is rewritten to add a `description` field (cosmetic, no behavioral change).
+- **MODIFIED**: `docs/setup.md` install walkthrough covers all four plugins instead of two; "Plugin-specific prerequisites" and "Verify install" subsections are added.
+- **REMOVED**: `docs/setup.md` "Symlink Architecture" section (the `cortex-command/skills/* → ~/.claude/skills/*` mapping). The section is stale — symlink-based deployment was retired in ticket 117.
+- **REMOVED**: All install-from-`cortex-command-plugins` instructions for `cortex-ui-extras` and `cortex-pr-review` across README, docs/setup.md, docs/dashboard.md, docs/skills-reference.md, docs/agentic-layer.md, docs/plugin-development.md. Replaced with install-from-`cortex-command` instructions.
+- **ADDED**: `metadata.description` field at the top of marketplace.json.
+- **ADDED**: New marketplace entries for `cortex-interactive`, `cortex-ui-extras`, `cortex-pr-review`.
+
+## Technical Constraints
+
+- **`source` field shape**: Per the Claude Code marketplace spec (https://code.claude.com/docs/en/plugin-marketplaces), in-tree plugins use the relative-path string form starting with `./`. No `../`. Resolves relative to the marketplace root (the directory containing `.claude-plugin/`). Object forms (`github`, `url`, `git-subdir`, `npm`) do not apply to in-tree plugins.
+- **Version omission requires `version` to be absent in BOTH `plugin.json` AND the marketplace entry**: The `plugin.json` value silently wins if both are set (per spec). All four `plugin.json` files currently have no `version` field — this is verified clean. Implementation must not add a `version` field to any plugin.json or marketplace entry.
+- **Marketplace name uniqueness within a marketplace**: All four plugin names (`cortex-interactive`, `cortex-overnight-integration`, `cortex-ui-extras`, `cortex-pr-review`) are distinct kebab-case strings; none collide with the spec's reserved-name list. The marketplace `name` field stays as `cortex-command`.
+- **Skill namespace = plugin name**: After install, Claude Code namespaces commands as `/<plugin-name>:<skill>`. There is no way to alias `/cortex-interactive:` to `/cortex:` short of renaming the plugin (which would break ticket 121's distribution path). The R8 doc-sweep is the spec-approved mitigation.
+- **Pre-commit drift hook**: `.githooks/pre-commit` (installed via `just setup-githooks`) Phase 4 enforces equality between `skills/<name>/` and `plugins/cortex-interactive/skills/<name>/` (for cortex-interactive-owned skills) and between `skills/{overnight,morning-review}/` and the corresponding `plugins/cortex-overnight-integration/skills/` paths. R8 sequencing: (a) edit only the top-level `skills/` source tree, (b) run `just build-plugin` to regenerate both plugin trees via `rsync -a --delete`, (c) commit; the pre-commit hook re-runs `build-plugin` and asserts `git diff --quiet -- plugins/$p/` exits 0 for each plugin. Direct edits to plugin trees are prohibited (`rsync --delete` will revert them on the next build).
+- **`metadata.description` content choice is reversible**: One-sentence string; can be edited in any future PR with no migration cost.
+- **Citing the marketplace spec in spec/plan**: The ticket body's "git-SHA versioning per research DR-4" attribution is shorthand — research.md's DR-4 is actually about the install path (`uv tool install` + `curl | sh`). The technical decision is supported by the Claude Code spec directly, not by DR-4. Implementation references should cite `code.claude.com/docs/en/plugin-marketplaces#version-resolution-and-release-channels`.
+
+## Open Decisions
+
+(None — all spec-time decisions resolved during the §2 interview.)

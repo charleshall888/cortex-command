@@ -15,7 +15,7 @@ lifecycle_phase: review
 lifecycle_slug: verify-claude-reference-md-conditional-loading-behavior-under-opus-47
 complexity: complex
 criticality: high
-spec: lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spec.md
+spec: lifecycle/archive/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spec.md
 areas: []
 ---
 

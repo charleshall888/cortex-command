@@ -14,7 +14,7 @@ lifecycle_phase: research
 lifecycle_slug: suppress-internal-narration-in-lifecycle-specify-phase
 complexity: simple
 criticality: high
-spec: lifecycle/suppress-internal-narration-in-lifecycle-specify-phase/spec.md
+spec: lifecycle/archive/suppress-internal-narration-in-lifecycle-specify-phase/spec.md
 areas: [lifecycle]
 ---
 

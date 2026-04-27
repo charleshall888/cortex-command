@@ -16,7 +16,7 @@ lifecycle_phase: research
 lifecycle_slug: fix-skill-sub-file-path-bug-across-all-skills
 complexity: complex
 criticality: high
-spec: lifecycle/fix-skill-sub-file-path-bug-across-all-skills/spec.md
+spec: lifecycle/archive/fix-skill-sub-file-path-bug-across-all-skills/spec.md
 ---
 
 # Fix skill sub-file path bug across all skills

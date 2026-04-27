@@ -16,7 +16,7 @@ blocked-by: []
 
 ## Context
 
-Filed per R27 follow-up from lifecycle 115. Captures the host-wide session-enumeration problem identified in `lifecycle/rebuild-overnight-runner-under-cortex-cli/research.md` Adversarial #8. This is a future-contingency ticket — no owner is assigned and no work should start until multi-session support becomes a concrete requirement.
+Filed per R27 follow-up from lifecycle 115. Captures the host-wide session-enumeration problem identified in `lifecycle/archive/rebuild-overnight-runner-under-cortex-cli/research.md` Adversarial #8. This is a future-contingency ticket — no owner is assigned and no work should start until multi-session support becomes a concrete requirement.
 
 ## Current design (single-active-session)
 
@@ -43,5 +43,5 @@ If cortex-command grows to support concurrent overnight sessions on the same hos
 
 ## References
 
-- `lifecycle/rebuild-overnight-runner-under-cortex-cli/research.md` — Adversarial #8
+- `lifecycle/archive/rebuild-overnight-runner-under-cortex-cli/research.md` — Adversarial #8
 - R9 (single-active-session requirement)

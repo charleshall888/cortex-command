@@ -12,7 +12,7 @@ Every JSON payload the CLI emits for MCP consumption carries a `"version"` strin
 - **Initial version: `"1.0"`.** Stamped on every payload from `cortex --print-root`, `cortex overnight start --format json`, `cortex overnight status --format json`, `cortex overnight logs --format json`, and `cortex overnight cancel --format json`. The CLI side of the constant lives at `cortex_command/overnight/cli_handler.py::_JSON_SCHEMA_VERSION`.
 - **Major bump (M increments) = breaking change.** The MCP consumer hard-rejects payloads whose major component differs from its baked-in `MCP_REQUIRED_CLI_VERSION` constant. A major bump is reserved for renaming or retyping an existing field, removing a field, or changing its semantics.
 - **Minor bump (m increments) = additive change.** The MCP consumer skips unknown fields and accepts payloads with a greater minor than its required floor. Minor bumps are how new fields land without breaking older MCP plugins paired with newer CLIs.
-- **Single CLI major in scope.** The first implementation pins the MCP to one CLI major schema version. Multi-major compatibility is explicitly out of scope (see `lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md` Non-Requirements).
+- **Single CLI major in scope.** The first implementation pins the MCP to one CLI major schema version. Multi-major compatibility is explicitly out of scope (see `lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md` Non-Requirements).
 
 ### Forever-public API
 

@@ -22,7 +22,7 @@ Surfaced while scoping #087 (baseline metrics for turns/cost). The #087 spec ini
 - `throttled_dispatch()` at `cortex_command/overnight/throttle.py:206` has **zero call sites** in production code. `grep 'throttled_dispatch\(' claude/` returns only the definition.
 - `cortex_command/overnight/brain.py:194-196` explicitly comments: *"Calls `dispatch_task` directly (not `throttled_dispatch`) because the `throttled_dispatch` would deadlock at MAX_5."* The wrapper was tried, broke things, and was swapped out for the simpler path.
 - Zero `throttle_backoff` events exist across all session pipeline-events.log files. Zero `infrastructure_failure` error_type events either.
-- Prior investigation at `lifecycle/replace-concurrency-cap-with-conflict-aware-round-scheduling/inner-task-investigation.md:57,91` independently reached the same conclusion.
+- Prior investigation at `lifecycle/archive/replace-concurrency-cap-with-conflict-aware-round-scheduling/inner-task-investigation.md:57,91` independently reached the same conclusion.
 
 `ConcurrencyManager` itself is live and necessary — `orchestrator.py:170` creates it; `feature_executor.py:188` uses `acquire()`/`release()` to enforce the tier-bound concurrency cap (1–3 workers depending on subscription). The dead part is the adaptive-rate-limit-shrinkage layered on top.
 

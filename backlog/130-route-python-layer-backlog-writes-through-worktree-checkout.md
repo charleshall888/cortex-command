@@ -18,7 +18,7 @@ blocked-by: []
 discovery_source: research/orchestrator-worktree-escape/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/route-python-layer-backlog-writes-through-worktree-checkout/spec.md
+spec: lifecycle/archive/route-python-layer-backlog-writes-through-worktree-checkout/spec.md
 ---
 
 # Route Python-layer backlog writes through worktree checkout

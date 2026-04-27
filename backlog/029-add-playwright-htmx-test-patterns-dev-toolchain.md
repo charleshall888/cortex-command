@@ -14,7 +14,7 @@ updated: 2026-04-08
 discovery_source: research/generative-ui-harness/research.md
 complexity: simple
 criticality: medium
-spec: lifecycle/add-playwright-mcp-for-dashboard-visual-evaluation/spec.md
+spec: lifecycle/archive/add-playwright-mcp-for-dashboard-visual-evaluation/spec.md
 areas: [dashboard]
 session_id: null
 ---

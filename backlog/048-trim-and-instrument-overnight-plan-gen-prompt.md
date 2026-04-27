@@ -13,7 +13,7 @@ lifecycle_phase: complete
 lifecycle_slug: trim-and-instrument-overnight-plan-gen-prompt
 complexity: simple
 criticality: high
-spec: lifecycle/trim-and-instrument-overnight-plan-gen-prompt/spec.md
+spec: lifecycle/archive/trim-and-instrument-overnight-plan-gen-prompt/spec.md
 areas: [overnight-runner]
 ---
 

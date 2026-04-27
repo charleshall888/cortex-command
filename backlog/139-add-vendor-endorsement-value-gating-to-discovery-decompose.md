@@ -18,7 +18,7 @@ lifecycle_phase: research
 lifecycle_slug: add-vendor-endorsement-value-gating-to-discovery-decompose-phase
 complexity: simple
 criticality: high
-spec: lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/spec.md
+spec: lifecycle/archive/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/spec.md
 ---
 
 # Add vendor-endorsement value gating to /discovery decompose phase

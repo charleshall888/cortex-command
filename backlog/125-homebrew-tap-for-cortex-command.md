@@ -55,7 +55,7 @@ Closed after full lifecycle research + spec-phase architectural challenge. The w
 - **Maintainer guidance** (Homebrew Discussion #4717, #5388) consistently redirects wrapper-formula proposals to either "build from source" or "ship in your own tap" — never "wrap the installer."
 - **Cask alternative** with `auto_updates true` (gcloud-cli / miniforge precedent) makes `brew upgrade` a documented no-op, so it doesn't solve the upgrade-verb conflict either — it just names the mismatch.
 
-**Full research artifact**: `lifecycle/homebrew-tap-as-thin-wrapper-around-the-curl-installer/research.md`.
+**Full research artifact**: `lifecycle/archive/homebrew-tap-as-thin-wrapper-around-the-curl-installer/research.md`.
 
 **Separable concerns that emerged during this ticket's design review**:
 

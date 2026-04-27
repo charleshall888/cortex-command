@@ -15,7 +15,7 @@ lifecycle_phase: review
 lifecycle_slug: verify-escape-hatch-bypass-mechanism
 complexity: simple
 criticality: high
-spec: lifecycle/verify-escape-hatch-bypass-mechanism/spec.md
+spec: lifecycle/archive/verify-escape-hatch-bypass-mechanism/spec.md
 areas: [skills]
 ---
 

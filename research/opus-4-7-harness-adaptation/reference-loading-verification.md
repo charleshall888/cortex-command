@@ -1,6 +1,6 @@
 # Reference-Loading Verification under Opus 4.7 (spike deliverable)
 
-Spike resolving **OQ5** from the epic [research/opus-4-7-harness-adaptation/research.md](./research.md): whether Opus 4.7's stricter instruction-following changes the conditional-loading behavior of the five reference files that `~/.claude/CLAUDE.md` maps via its natural-language conditional table (`verification-mindset.md`, `parallel-agents.md`, `claude-skills.md`, `context-file-authoring.md`, `output-floors.md`). Per-file verdicts gate ticket #085's remediation scope and DR-1's firmness. Raw evidence captured in `lifecycle/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` (anchors referenced throughout).
+Spike resolving **OQ5** from the epic [research/opus-4-7-harness-adaptation/research.md](./research.md): whether Opus 4.7's stricter instruction-following changes the conditional-loading behavior of the five reference files that `~/.claude/CLAUDE.md` maps via its natural-language conditional table (`verification-mindset.md`, `parallel-agents.md`, `claude-skills.md`, `context-file-authoring.md`, `output-floors.md`). Per-file verdicts gate ticket #085's remediation scope and DR-1's firmness. Raw evidence captured in `lifecycle/archive/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spike-notes.md` (anchors referenced throughout).
 
 ## Verdicts
 

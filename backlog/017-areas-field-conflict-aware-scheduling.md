@@ -17,7 +17,7 @@ lifecycle_phase: plan
 lifecycle_slug: investigate-and-solve-conflict-aware-round-scheduling-in-overnight-runner
 complexity: complex
 criticality: high
-spec: lifecycle/investigate-and-solve-conflict-aware-round-scheduling-in-overnight-runner/spec.md
+spec: lifecycle/archive/investigate-and-solve-conflict-aware-round-scheduling-in-overnight-runner/spec.md
 areas: [overnight-runner]
 ---
 

@@ -15,7 +15,7 @@ lifecycle_phase: complete
 lifecycle_slug: build-setup-merge-local-skill
 complexity: complex
 criticality: high
-spec: lifecycle/build-setup-merge-local-skill/spec.md
+spec: lifecycle/archive/build-setup-merge-local-skill/spec.md
 ---
 
 # Build /setup-merge local skill

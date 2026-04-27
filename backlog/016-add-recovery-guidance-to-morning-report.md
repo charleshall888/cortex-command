@@ -16,7 +16,7 @@ lifecycle_phase: complete
 lifecycle_slug: add-recovery-guidance-to-morning-report-for-conflicted-features
 complexity: simple
 criticality: medium
-spec: lifecycle/add-recovery-guidance-to-morning-report-for-conflicted-features/spec.md
+spec: lifecycle/archive/add-recovery-guidance-to-morning-report-for-conflicted-features/spec.md
 ---
 
 # Add recovery guidance to morning report for conflicted features

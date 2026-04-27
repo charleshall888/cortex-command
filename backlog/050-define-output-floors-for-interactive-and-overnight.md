@@ -14,7 +14,7 @@ lifecycle_phase: implement
 lifecycle_slug: define-output-floors-for-interactive-approval-and-overnight-compaction
 complexity: complex
 criticality: high
-spec: lifecycle/define-output-floors-for-interactive-approval-and-overnight-compaction/spec.md
+spec: lifecycle/archive/define-output-floors-for-interactive-approval-and-overnight-compaction/spec.md
 areas: [skills,lifecycle]
 ---
 

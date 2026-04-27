@@ -38,12 +38,12 @@ Apply Anthropic's 3-step 4.7 guidance (Opus 4.7 migration guide, item 4) to this
 
 ## Scope bounds
 
-- Do NOT touch other "announce/summarize" patterns identified in #092's research (phase-transition floor, approval-surface floor, end-of-skill announces, multi-agent between-waves summaries) — those are structural content specifications or brief confirmations, not cadence-triggered scaffolding. See `lifecycle/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md` for the per-site analysis.
+- Do NOT touch other "announce/summarize" patterns identified in #092's research (phase-transition floor, approval-surface floor, end-of-skill announces, multi-agent between-waves summaries) — those are structural content specifications or brief confirmations, not cadence-triggered scaffolding. See `lifecycle/archive/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md` for the per-site analysis.
 - Regression detection is qualitative (as with the closed parent ticket) — revert via git if narration becomes clearly degraded, accept that subtle changes won't be attributable.
 
 ## Background
 
-- #092 (closed wontfix 2026-04-22): [lifecycle/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md](../lifecycle/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md)
+- #092 (closed wontfix 2026-04-22): [lifecycle/archive/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md](../lifecycle/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md)
 - Anthropic migration guide: `platform.claude.com/docs/en/about-claude/models/migration-guide` item 4
 - Epic research: `research/opus-4-7-harness-adaptation/research.md` (DR-3)
 

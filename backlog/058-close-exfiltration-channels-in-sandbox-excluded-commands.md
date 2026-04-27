@@ -15,7 +15,7 @@ lifecycle_phase: review
 lifecycle_slug: close-exfiltration-channels-in-sandbox-excluded-commands
 complexity: complex
 criticality: high
-spec: lifecycle/close-exfiltration-channels-in-sandbox-excluded-commands/spec.md
+spec: lifecycle/archive/close-exfiltration-channels-in-sandbox-excluded-commands/spec.md
 areas: [skills]
 ---
 

@@ -17,7 +17,7 @@ lifecycle_phase: implement
 lifecycle_slug: replace-spec-dump-with-jit-loading-in-implement-prompt
 complexity: complex
 criticality: high
-spec: lifecycle/replace-spec-dump-with-jit-loading-in-implement-prompt/spec.md
+spec: lifecycle/archive/replace-spec-dump-with-jit-loading-in-implement-prompt/spec.md
 areas: [overnight-runner]
 ---
 

@@ -14,7 +14,7 @@ lifecycle_phase: research
 lifecycle_slug: suppress-dismiss-rationale-leak-in-lifecycle-clarify-critic
 complexity: complex
 criticality: high
-spec: lifecycle/suppress-dismiss-rationale-leak-in-lifecycle-clarify-critic/spec.md
+spec: lifecycle/archive/suppress-dismiss-rationale-leak-in-lifecycle-clarify-critic/spec.md
 areas: [lifecycle]
 ---
 

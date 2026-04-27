@@ -17,7 +17,7 @@ lifecycle_phase: research
 lifecycle_slug: redesign-requirements-skill-and-rewrite-project-md
 complexity: simple
 criticality: high
-spec: lifecycle/redesign-requirements-skill-and-rewrite-project-md/spec.md
+spec: lifecycle/archive/redesign-requirements-skill-and-rewrite-project-md/spec.md
 ---
 
 # Redesign /requirements skill and rewrite project.md

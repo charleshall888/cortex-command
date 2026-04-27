@@ -17,7 +17,7 @@ lifecycle_phase: research
 lifecycle_slug: reconcile-judgment-md-with-batch-brain-md
 complexity: complex
 criticality: high
-spec: lifecycle/reconcile-judgment-md-with-batch-brain-md/spec.md
+spec: lifecycle/archive/reconcile-judgment-md-with-batch-brain-md/spec.md
 areas: [overnight-runner,tests]
 ---
 

@@ -16,7 +16,7 @@ lifecycle_phase: research
 lifecycle_slug: surface-conflict-details-inline-in-morning-report
 complexity: simple
 criticality: medium
-spec: lifecycle/surface-conflict-details-inline-in-morning-report/spec.md
+spec: lifecycle/archive/surface-conflict-details-inline-in-morning-report/spec.md
 ---
 
 # Surface conflict details inline in morning report

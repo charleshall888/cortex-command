@@ -14,7 +14,7 @@ updated: 2026-04-08
 discovery_source: research/generative-ui-harness/research.md
 complexity: simple
 criticality: low
-spec: lifecycle/add-dashboard-visual-evaluation-criteria-to-designmd/spec.md
+spec: lifecycle/archive/add-dashboard-visual-evaluation-criteria-to-designmd/spec.md
 areas: [dashboard]
 session_id: null
 ---

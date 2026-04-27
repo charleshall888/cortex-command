@@ -17,8 +17,8 @@ lifecycle_phase: complete
 lifecycle_slug: remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch
 complexity: complex
 criticality: high
-spec: lifecycle/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/spec.md
-plan: lifecycle/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/plan.md
+spec: lifecycle/archive/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/spec.md
+plan: lifecycle/archive/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/plan.md
 ---
 
 # Remove single-agent worktree dispatch and flip recommended default to current branch

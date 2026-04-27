@@ -17,7 +17,7 @@ lifecycle_phase: plan
 lifecycle_slug: build-daytime-pipeline-module-and-cli
 complexity: complex
 criticality: high
-spec: lifecycle/build-daytime-pipeline-module-and-cli/spec.md
+spec: lifecycle/archive/build-daytime-pipeline-module-and-cli/spec.md
 ---
 
 ## Scope

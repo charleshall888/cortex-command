@@ -13,7 +13,7 @@ discovery_source: research/revisit-lifecycle-implement-preflight-options/researc
 areas: [skills]
 complexity: simple
 criticality: high
-spec: lifecycle/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/spec.md
+spec: lifecycle/archive/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/spec.md
 session_id: null
 lifecycle_phase: complete
 ---

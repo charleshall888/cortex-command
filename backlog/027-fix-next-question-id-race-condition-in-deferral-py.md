@@ -14,7 +14,7 @@ lifecycle_phase: complete
 lifecycle_slug: fix-next-question-id-race-condition-in-deferral-py
 complexity: simple
 criticality: high
-spec: lifecycle/fix-next-question-id-race-condition-in-deferral-py/spec.md
+spec: lifecycle/archive/fix-next-question-id-race-condition-in-deferral-py/spec.md
 areas: [overnight-runner]
 ---
 

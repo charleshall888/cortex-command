@@ -18,7 +18,7 @@ blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/build-mcp-control-plane-server-with-versioned-runner-ipc-contract/spec.md
+spec: lifecycle/archive/build-mcp-control-plane-server-with-versioned-runner-ipc-contract/spec.md
 ---
 
 # Build MCP control-plane server with versioned runner IPC contract

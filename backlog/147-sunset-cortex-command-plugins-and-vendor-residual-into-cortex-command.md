@@ -17,7 +17,7 @@ blocked-by: []
 discovery_source: research/post-113-repo-state/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command/spec.md
+spec: lifecycle/archive/sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command/spec.md
 ---
 
 # Sunset cortex-command-plugins and vendor residual plugins into cortex-command

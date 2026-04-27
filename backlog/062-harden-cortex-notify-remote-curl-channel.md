@@ -58,4 +58,4 @@ Flagged during critical review of #060 spec. Quoted from #060 spec Non-Requireme
 
 > `hooks/cortex-notify-remote.sh` curl channel: Line 56 invokes `curl -s --max-time 5 -d "$MESSAGE" -H "Title: $TITLE" "https://ntfy.sh/$NTFY_TOPIC"`. Hooks execute under the shell directly — Claude Code's permission matcher does NOT gate hook commands. R1 does NOT close this channel, even though `$MESSAGE` and `$TITLE` are derived from session-level event data that may be influenced by an adversarial session.
 
-See `lifecycle/permissions-audit-round-2-cfa-android-learnings/spec.md` for the full discussion.
+See `lifecycle/archive/permissions-audit-round-2-cfa-android-learnings/spec.md` for the full discussion.

@@ -14,7 +14,7 @@ lifecycle_phase: implement
 lifecycle_slug: add-hook-based-preprocessing-for-test-build-output
 complexity: complex
 criticality: high
-spec: lifecycle/add-hook-based-preprocessing-for-test-build-output/spec.md
+spec: lifecycle/archive/add-hook-based-preprocessing-for-test-build-output/spec.md
 areas: [hooks]
 ---
 

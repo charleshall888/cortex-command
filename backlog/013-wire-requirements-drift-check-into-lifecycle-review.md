@@ -17,7 +17,7 @@ lifecycle_phase: review
 lifecycle_slug: wire-requirements-drift-check-into-lifecycle-review
 complexity: complex
 criticality: high
-spec: lifecycle/wire-requirements-drift-check-into-lifecycle-review/spec.md
+spec: lifecycle/archive/wire-requirements-drift-check-into-lifecycle-review/spec.md
 ---
 
 # Wire requirements drift check into lifecycle review

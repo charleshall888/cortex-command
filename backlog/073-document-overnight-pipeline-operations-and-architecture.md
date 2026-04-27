@@ -14,7 +14,7 @@ lifecycle_phase: complete
 lifecycle_slug: document-overnight-pipeline-operations-and-architecture
 complexity: complex
 criticality: high
-spec: lifecycle/document-overnight-pipeline-operations-and-architecture/spec.md
+spec: lifecycle/archive/document-overnight-pipeline-operations-and-architecture/spec.md
 ---
 
 A docs audit surfaced 13 gaps in overnight pipeline documentation. A

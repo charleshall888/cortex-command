@@ -17,7 +17,7 @@ lifecycle_phase: complete
 lifecycle_slug: gather-area-requirements-docs-for-four-missing-areas
 complexity: complex
 criticality: medium
-spec: lifecycle/gather-area-requirements-docs-for-four-missing-areas/spec.md
+spec: lifecycle/archive/gather-area-requirements-docs-for-four-missing-areas/spec.md
 ---
 
 # Gather area requirements docs for four missing areas

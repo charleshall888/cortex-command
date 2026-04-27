@@ -16,7 +16,7 @@ lifecycle_phase: research
 lifecycle_slug: remove-interpreter-escape-hatch-commands
 complexity: simple
 criticality: high
-spec: lifecycle/remove-interpreter-escape-hatch-commands/spec.md
+spec: lifecycle/archive/remove-interpreter-escape-hatch-commands/spec.md
 areas: [skills]
 ---
 
@@ -57,4 +57,4 @@ Spike 055 confirmed the bypass is **OPEN**. All four test cases (bash -c, bash -
 
 Priority set to **high** per the three-tier logic: any test shows allow → high.
 
-Full test report: `lifecycle/verify-escape-hatch-bypass-mechanism/test-report.md`
+Full test report: `lifecycle/archive/verify-escape-hatch-bypass-mechanism/test-report.md`

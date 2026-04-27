@@ -15,7 +15,7 @@ lifecycle_phase: implement
 lifecycle_slug: make-just-setup-additive-by-default
 complexity: complex
 criticality: high
-spec: lifecycle/make-just-setup-additive-by-default/spec.md
+spec: lifecycle/archive/make-just-setup-additive-by-default/spec.md
 ---
 
 # Make `just setup` additive by default

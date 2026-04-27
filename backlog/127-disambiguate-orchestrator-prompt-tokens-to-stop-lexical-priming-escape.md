@@ -18,7 +18,7 @@ blocked-by: []
 discovery_source: research/orchestrator-worktree-escape/research.md
 complexity: complex
 criticality: critical
-spec: lifecycle/disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape/spec.md
+spec: lifecycle/archive/disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape/spec.md
 ---
 
 # Disambiguate orchestrator prompt tokens to stop lexical-priming escape

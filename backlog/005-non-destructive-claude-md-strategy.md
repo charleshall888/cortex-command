@@ -14,7 +14,7 @@ lifecycle_phase: research
 lifecycle_slug: non-destructive-claude-md-strategy
 complexity: complex
 criticality: high
-spec: lifecycle/non-destructive-claude-md-strategy/spec.md
+spec: lifecycle/archive/non-destructive-claude-md-strategy/spec.md
 ---
 
 # Non-destructive CLAUDE.md strategy

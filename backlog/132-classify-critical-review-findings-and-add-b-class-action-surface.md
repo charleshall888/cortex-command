@@ -17,7 +17,7 @@ complexity: complex
 criticality: medium
 lifecycle_phase: plan
 lifecycle_slug: classify-critical-review-findings-by-class-and-add-b-class-action-surface
-spec: lifecycle/classify-critical-review-findings-by-class-and-add-b-class-action-surface/spec.md
+spec: lifecycle/archive/classify-critical-review-findings-by-class-and-add-b-class-action-surface/spec.md
 ---
 
 # Classify /critical-review findings by class and add B-class action surface

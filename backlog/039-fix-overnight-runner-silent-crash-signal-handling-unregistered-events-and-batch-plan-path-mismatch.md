@@ -15,7 +15,7 @@ lifecycle_phase: review
 lifecycle_slug: fix-overnight-runner-silent-crash-signal-handling-unregistered-events-and-batch-plan-path-mismatch
 complexity: complex
 criticality: critical
-spec: lifecycle/fix-overnight-runner-silent-crash-signal-handling-unregistered-events-and-batch-plan-path-mismatch/spec.md
+spec: lifecycle/archive/fix-overnight-runner-silent-crash-signal-handling-unregistered-events-and-batch-plan-path-mismatch/spec.md
 ---
 
 Session `overnight-2026-04-07-0008` crashed silently after Round 1 completed. Three independent failures converged. Full investigation in `debug/2026-04-07-overnight-round2-crash.md`.

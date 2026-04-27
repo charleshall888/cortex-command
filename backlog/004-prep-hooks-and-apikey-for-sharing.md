@@ -14,7 +14,7 @@ lifecycle_phase: review
 lifecycle_slug: prep-hooks-and-apikey-for-sharing
 complexity: complex
 criticality: high
-spec: lifecycle/prep-hooks-and-apikey-for-sharing/spec.md
+spec: lifecycle/archive/prep-hooks-and-apikey-for-sharing/spec.md
 ---
 
 # Prep hooks and apiKeyHelper for sharing

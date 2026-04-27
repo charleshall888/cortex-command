@@ -21,7 +21,7 @@ Wave 2 capability adoption from DR-3. Per Anthropic's migration guide, `xhigh` i
 
 ## Research context
 
-From `research/opus-4-7-harness-adaptation/research.md` DR-3 Wave 2 and Open Question 2, plus the ticket-specific research at `lifecycle/measure-xhigh-vs-high-effort-cost-delta-on-representative-task/research.md`. #089 was closed as wontfix on 2026-04-20: n=1 + a single synthetic task could not carry the decision weight; community research (third-party estimate of ~1.5× tokens, 5–6% quality boost on agentic coding) is consistent with ship. The #089 research artifact also verified:
+From `research/opus-4-7-harness-adaptation/research.md` DR-3 Wave 2 and Open Question 2, plus the ticket-specific research at `lifecycle/archive/measure-xhigh-vs-high-effort-cost-delta-on-representative-task/research.md`. #089 was closed as wontfix on 2026-04-20: n=1 + a single synthetic task could not carry the decision weight; community research (third-party estimate of ~1.5× tokens, 5–6% quality boost on agentic coding) is consistent with ship. The #089 research artifact also verified:
 
 - SDK wiring for `effort` is already complete — `ClaudeAgentOptions(effort="xhigh")` works end-to-end at runtime (the Python Literal missing `"xhigh"` is a type-checker warning only; `@dataclass` doesn't enforce it).
 - `max_tokens` is **NOT wireable** through the harness — `ClaudeAgentOptions` has no such field and CLI v2.1.x has no `--max-tokens` flag. The correct mitigation for xhigh output-size risk is `stop_reason == "max_tokens"` monitoring in the dispatch path, not a config knob.

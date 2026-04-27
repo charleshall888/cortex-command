@@ -15,7 +15,7 @@ lifecycle_phase: complete
 lifecycle_slug: audit-skill-prompts-and-remove-verbose-instructions-above-the-floor
 complexity: complex
 criticality: high
-spec: lifecycle/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/spec.md
+spec: lifecycle/archive/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/spec.md
 areas: [skills]
 ---
 

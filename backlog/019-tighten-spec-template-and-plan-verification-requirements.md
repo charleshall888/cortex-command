@@ -17,7 +17,7 @@ lifecycle_phase: review
 lifecycle_slug: tighten-spec-template-and-plan-verification-requirements
 complexity: complex
 criticality: high
-spec: lifecycle/tighten-spec-template-and-plan-verification-requirements/spec.md
+spec: lifecycle/archive/tighten-spec-template-and-plan-verification-requirements/spec.md
 areas: [lifecycle]
 ---
 

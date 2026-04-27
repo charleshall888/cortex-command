@@ -73,10 +73,10 @@ No questions were deferred — all ambiguities were resolved by the pipeline.
 
 ## Failed Features (3)
 
-### add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/plan.md'
+### add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/archive/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/plan.md'
 - Retry attempts: 0
 - Circuit breaker: not triggered
-- Learnings: `lifecycle/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/learnings/progress.txt`
+- Learnings: `lifecycle/archive/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/learnings/progress.txt`
 - **Suggested next step**: Review learnings, retry or investigate
 
 ### fix-daytime-pipeline-worktree-atomicity-and-stderr-logging: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/plan.md'
@@ -85,10 +85,10 @@ No questions were deferred — all ambiguities were resolved by the pipeline.
 - Learnings: `lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/learnings/progress.txt`
 - **Suggested next step**: Review learnings, retry or investigate
 
-### replace-daytime-log-sentinel-classification-with-structured-result-file: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/replace-daytime-log-sentinel-classification-with-structured-result-file/plan.md'
+### replace-daytime-log-sentinel-classification-with-structured-result-file: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/archive/replace-daytime-log-sentinel-classification-with-structured-result-file/plan.md'
 - Retry attempts: 0
 - Circuit breaker: not triggered
-- Learnings: `lifecycle/replace-daytime-log-sentinel-classification-with-structured-result-file/learnings/progress.txt`
+- Learnings: `lifecycle/archive/replace-daytime-log-sentinel-classification-with-structured-result-file/learnings/progress.txt`
 - **Suggested next step**: Review learnings, retry or investigate
 
 ## New Backlog Items

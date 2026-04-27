@@ -18,7 +18,7 @@ blocked-by: []
 discovery_source: research/overnight-layer-distribution/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements/spec.md
+spec: lifecycle/archive/add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements/spec.md
 ---
 
 # Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements
