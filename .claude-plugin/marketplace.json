@@ -11,6 +11,18 @@
   },
   "plugins": [
     {
+      "name": "android-dev-extras",
+      "source": "./plugins/android-dev-extras",
+      "description": "Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration",
+      "category": "development"
+    },
+    {
+      "name": "cortex-dev-extras",
+      "source": "./plugins/cortex-dev-extras",
+      "description": "Devil's advocate inline challenge for solo deliberation",
+      "category": "development"
+    },
+    {
       "name": "cortex-interactive",
       "source": "./plugins/cortex-interactive",
       "description": "Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows",
