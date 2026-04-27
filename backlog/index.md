@@ -22,6 +22,7 @@
 | 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | 104 | 101 | — |
 | 141 | Non-editable wheel install support for cortex-command | backlog | medium | feature | — | — | — |
 | 149 | Fix runner.pid takeover race in ipc.py:write_runner_pid | backlog | medium | bug | — | — | — |
+| 150 | Restructure README and setup.md for clearer onboarding | backlog | medium | feature | — | — | — |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
@@ -45,6 +46,7 @@
 - **101** Extract deterministic tool-call sequences into agent-invokable scripts
 - **141** Non-editable wheel install support for cortex-command
 - **149** Fix runner.pid takeover race in ipc.py:write_runner_pid
+- **150** Restructure README and setup.md for clearer onboarding
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
 - **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release
 - **133** Evaluate implement.md:180 progress-tail narration under Opus 4.7
