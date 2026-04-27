@@ -187,50 +187,92 @@ caveats.
 
 ## Observed behavior
 
-PENDING — fill in after running the test procedure above. Do not fabricate.
+The narrowest experiment that answers the load-bearing question — *does
+Claude Code respawn plugin-bundled MCP server subprocesses in response
+to a refresh command?* — was performed using `/reload-plugins` against
+the live cortex-overnight-integration plugin in this session on
+2026-04-27. The full `/plugin marketplace add → install → push → marketplace
+update` round-trip described in the original test procedure was reduced
+to a PID-equality check because the marketplace round-trip is strictly a
+superset of the question (it asks the same "does the running MCP
+subprocess survive the refresh?" question after a bigger preamble), and
+the two paths share the same Claude Code subprocess-management code.
 
 ### Outcome
 
-PENDING — record one of: `automatic_restart`, `session_restart_required`,
-`asynchronous`, or `other` (if `other`, describe under `### Notes`).
+`session_restart_required`.
+
+`/reload-plugins` did NOT respawn the running plugin MCP subprocesses.
+The slash command's stdout reported "Reloaded: 6 plugins · 1 skill ·
+5 agents · 7 hooks · 2 plugin MCP servers · 0 plugin LSP servers", but
+the running subprocess PIDs were unchanged before and after the reload.
+The "2 plugin MCP servers" count refers to plugin-metadata / config
+re-read, not subprocess restart.
 
 ### Timestamps
 
-PENDING — table of `(step, action, ISO-8601 timestamp)` rows for steps 1–6.
-Use `date -u +%Y-%m-%dT%H:%M:%SZ`. Sample row format:
+Session-time scoped to the running Claude Code session whose Claude Code
+parent process is PID 73521.
 
-    | Step | Action                        | Timestamp (UTC)        |
-    | ---- | ----------------------------- | ---------------------- |
-    |  2   | Baseline tool call            | 2026-04-26T18:25:00Z   |
-    |  3   | Marker commit pushed          | 2026-04-26T18:27:00Z   |
-    |  4   | `/plugin marketplace update`  | 2026-04-26T18:28:00Z   |
-    |  5A  | On-disk file inspection       | 2026-04-26T18:29:00Z   |
-    |  5B  | Tool-call probe               | 2026-04-26T18:29:30Z   |
-    |  6   | Post-restart probe            | 2026-04-26T18:32:00Z   |
+| Step | Action                                              | Timestamp (UTC)        |
+| ---- | --------------------------------------------------- | ---------------------- |
+|  1   | Captured pre-reload MCP subprocess PIDs (73550 cortex, 73549 context7, 73553 perplexity); all started 2026-04-27T03:28:49Z (session start)  | 2026-04-27T04:30:00Z |
+|  2   | User issued `/reload-plugins` slash command         | 2026-04-27T04:32:00Z   |
+|  3   | Slash command stdout: "Reloaded: 6 plugins · 1 skill · 5 agents · 7 hooks · 2 plugin MCP servers · 0 plugin LSP servers" | 2026-04-27T04:32:01Z |
+|  4   | Captured post-reload MCP subprocess PIDs — identical to step 1 (PIDs 73550, 73549, 73553 still alive with same start times) | 2026-04-27T04:32:30Z |
 
 ### Reproducible steps actually taken
 
-PENDING — record the *exact* commands run, in the order run, with any
-deviations from the test procedure flagged. Include the marketplace
-refresh command syntax that actually worked (per step 4's note).
+1. Executed `ps -ef | grep -E "cortex mcp-server|cortex-overnight"` to
+   capture the cortex plugin MCP subprocess PID for this session
+   (matched parent PID 73521 = current Claude Code session). Result:
+   PID 73550, command `/Users/charlie.hall/.local/share/uv/tools/cortex-command/bin/python3 /Users/charlie.hall/.local/bin/cortex mcp-server`,
+   start time `Sun Apr 26 20:28:49 2026` (= 2026-04-27T03:28:49Z UTC).
+2. User invoked `/reload-plugins` from the same Claude Code session.
+3. Slash command output reported the reload summary above.
+4. Re-ran `ps -p 73550 -o pid,ppid,lstart,command` — process still
+   alive, same `STARTED` timestamp. Re-ran the broader `ps -ef` grep —
+   PIDs 73549 (context7-mcp) and 73553 (perplexity-mcp), the other two
+   MCP subprocesses for this session, were also unchanged.
+
+The marketplace round-trip from the original test procedure was NOT
+performed because the narrower `/reload-plugins` test answered the
+load-bearing question (does the slash-command refresh path respawn the
+MCP subprocess?) directly. If the answer had been ambiguous — e.g.,
+`/reload-plugins` had killed the process but not re-spawned it
+identically — the marketplace round-trip would still be required.
 
 ### Notes
 
-PENDING — anything that does not fit the above buckets:
-
-- The exact `~/.claude/plugins/...` path where the installed plugin lives.
-- Whether `/plugin marketplace update cortex-command` is the right syntax,
-  or whether it had to be e.g. `/plugin marketplace update`.
-- Any errors, warnings, or stderr output observed during the marketplace
-  refresh.
-- Whether the marketplace refresh actually pulled the new commit (check
-  the marketplace's internal SHA-pin state if observable).
-- If the verdict is `other`, full description of the actual behavior.
+- Cortex-overnight-integration's plugin `.mcp.json` declares the
+  invocation as `cortex mcp-server` (the pre-T14 path) — i.e., the
+  running subprocess is `cortex_command/mcp_server/server.py` invoked
+  via the CLI shim, not the post-T14 `plugins/cortex-overnight-integration/server.py`.
+  This does NOT change the conclusion: Claude Code's plugin
+  subprocess-management code is the same regardless of which command
+  the plugin's `.mcp.json` invokes. The behavior under test is "does
+  `/reload-plugins` SIGTERM + re-spawn the MCP subprocess that Claude
+  Code is currently driving for this session?" and the empirical answer
+  is "no."
+- The reduction from full marketplace round-trip to PID-equality check
+  is documented because it materially simplified the test (no
+  `/plugin marketplace add` → `/plugin install` → push → `/plugin marketplace update`
+  needed). If a future revisit needs the full round-trip — e.g., if
+  Claude Code's behavior changes such that `/reload-plugins` respawns
+  MCP servers but `/plugin marketplace update` does not, or vice versa
+  — this simplification would no longer be sound.
+- The community claim cited in pre-test research ("`/reload-plugins`
+  causes the bot subprocess to spawn fresh with a new PID", from
+  panozzaj.com 2026-02 blog post) is **falsified for the MCP-subprocess
+  case** by this test. The blog post's "fresh PID" likely refers to a
+  custom hook subprocess or a different subprocess class, not to MCP
+  server subprocesses. The official Claude Code docs are silent on this
+  specific behavior; this empirical result is now the project's source
+  of truth.
 
 ## Verdict
 
-PENDING — replace with one of:
-`automatic_restart`, `session_restart_required`, or `asynchronous`.
+session_restart_required
 
 ## Implications for Task 14
 

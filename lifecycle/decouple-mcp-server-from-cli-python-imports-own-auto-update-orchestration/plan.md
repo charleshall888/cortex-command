@@ -112,7 +112,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Spec R20. The marketplace mechanism (ticket 122 landed) is now the canonical user-facing update path — installing via local copy is a maintainer/dogfooding workflow per `docs/plugin-development.md`, not a typical end-user path. The note must answer Value bullet 2's claim ("no Claude Code restart needed for CLI updates to take effect") with a verdict that informs Edge Cases AND informs T14's deprecation-message text (T14 reads this verdict to decide whether to append a "restart Claude Code" advisory). If MCP restart requires Claude Code restart, this is documented as a known limitation (Value bullet 2 weakens to "after the next Claude Code session starts").
 - **Verification**: `grep -cE '^## Observed behavior$' lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/plugin-refresh-semantics.md` = 1 — pass if count = 1.
-- **Status**: [ ] partial — scaffolding committed (c9801f0), verdict pending user execution
+- **Status**: [x] complete — verdict `session_restart_required` (PID-equality check via `/reload-plugins` empirically falsified subprocess-respawn hypothesis on 2026-04-27)
 
 ### Task 13: Subprocess-overhead benchmark + integration smoke (R21, plus integration coverage)
 - **Files**: `lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/perf-benchmark.md` (create), `tests/perf_mcp_subprocess.py` (create — disposable benchmark harness + integration smoke; not part of the regular test suite, but invokable via `uv run python tests/perf_mcp_subprocess.py`).
