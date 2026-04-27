@@ -1,0 +1,11 @@
+android-dev-extras
+
+This plugin bundles skill content derived from the Android Skills project at
+https://github.com/android/skills (Apache License 2.0, Copyright 2026 Google LLC).
+
+The vendored skills under plugins/android-dev-extras/skills/ retain their original
+Apache 2.0 licensing; the accompanying LICENSE file is a verbatim copy of the
+upstream LICENSE.txt.
+
+Plugin scaffolding (plugin.json, HOW-TO-SYNC.md, marketplace registration) is
+original and covered by the cortex-command-plugins repository's root LICENSE.
