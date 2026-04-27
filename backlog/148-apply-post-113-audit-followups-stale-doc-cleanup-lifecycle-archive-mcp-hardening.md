@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 69035ea8-a484-4490-b86c-51a5bd54c187
 title: "Apply post-113 audit follow-ups: stale-doc cleanup, lifecycle-archive run, MCP hardening"
-status: refined
+status: in_progress
 priority: high
 type: feature
 tags: [post-113-repo-state, mcp, documentation, lifecycle, hardening]
@@ -10,8 +10,8 @@ areas: []
 created: 2026-04-27
 updated: 2026-04-27
 lifecycle_slug: apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening
-lifecycle_phase: research
-session_id: 5f35752a-46bd-41d2-9e0c-79bd287d7549
+lifecycle_phase: implement
+session_id: c3b88adc-ec92-4b7f-a74d-7126efecd2ec
 blocks: []
 blocked-by: []
 discovery_source: research/post-113-repo-state/research.md

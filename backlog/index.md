@@ -10,7 +10,7 @@
 | 105 | Extract /commit preflight into bin/commit-preflight | backlog | high | feature | 102, 103 | 101 | — |
 | 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | — |
 | 135 | Shared git index race between parallel Claude sessions causes wrong files to land in commits | backlog | high | bug | — | — | — |
-| 148 | Apply post-113 audit follow-ups: stale-doc cleanup, lifecycle-archive run, MCP hardening | refined | high | feature | — | — | ✓ |
+| 148 | Apply post-113 audit follow-ups: stale-doc cleanup, lifecycle-archive run, MCP hardening | in_progress | high | feature | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | 85 | 82 | — |
 | 92 | Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1) | backlog | medium | feature | — | 82 | — |
@@ -31,7 +31,6 @@
 
 ## Refined
 
-- **148** Apply post-113 audit follow-ups: stale-doc cleanup, lifecycle-archive run, MCP hardening
 
 ## Backlog
 
@@ -54,4 +53,5 @@
 ## In-Progress
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
+- **148** Apply post-113 audit follow-ups: stale-doc cleanup, lifecycle-archive run, MCP hardening (in_progress)
 - **147** Sunset cortex-command-plugins and vendor residual plugins into cortex-command (in_progress)
