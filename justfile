@@ -143,6 +143,12 @@ backlog-close feature="":
 lifecycle-archive *args:
     #!/usr/bin/env bash
     set -euo pipefail
+    # CRITICAL: just shebang recipes do NOT auto-pass declared args as $1, $2,
+    # ...  — they must be made positional explicitly. Without this `set --`,
+    # the flag-parser below sees $# = 0, dry_run stays 0, from_file stays "",
+    # and EVERY invocation runs destructively on ALL candidates. Verified by
+    # incident where `just lifecycle-archive --dry-run` archived 111 dirs.
+    set -- {{args}}
     # --- Parse flags ---
     dry_run=0
     from_file=""
