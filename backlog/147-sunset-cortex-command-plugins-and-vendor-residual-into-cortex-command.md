@@ -10,7 +10,7 @@ areas: [skills]
 created: 2026-04-27
 updated: 2026-04-27
 lifecycle_slug: sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command
-lifecycle_phase: implement
+lifecycle_phase: review
 session_id: 8da4b786-12cc-48d8-8631-13eb642acd36
 blocks: []
 blocked-by: []

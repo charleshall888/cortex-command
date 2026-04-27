@@ -611,7 +611,7 @@
     "uuid": "098f8bb5-b6ea-46fb-95d8-14359543613e",
     "lifecycle_slug": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command",
     "session_id": "8da4b786-12cc-48d8-8631-13eb642acd36",
-    "lifecycle_phase": "implement",
+    "lifecycle_phase": "review",
     "schema_version": "1",
     "repo": null
   },
