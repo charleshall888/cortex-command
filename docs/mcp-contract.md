@@ -166,9 +166,7 @@ Source: `cortex_command/overnight/cli_handler.py::handle_cancel` (around lines 3
 
 ### `cortex overnight list-sessions`
 
-Not currently a CLI verb. Today, the `overnight_list_sessions` MCP tool is implemented in-process inside the legacy `cortex_command/mcp_server/tools.py`. The decoupling refactor (this feature) replaces that in-process tool with a subprocess call — but the matching CLI verb does not yet exist. When `overnight list-sessions --format json` is added to the CLI, its payload shape will be documented here under the same schema-versioning rules as the other verbs.
-
-Until that verb lands, the plugin-bundled MCP either reads the sessions directory directly via subprocess `find`/`stat` calls (no `cortex_command` imports) or the tool is temporarily unavailable in the new MCP. Implementation choice tracked in this feature's plan.
+Not currently a CLI verb. The `overnight_list_sessions` MCP tool reads the sessions directory directly from the plugin (no `cortex_command` imports). When `overnight list-sessions --format json` is added to the CLI, its payload shape will be documented here under the same schema-versioning rules as the other verbs.
 
 ## Threat model
 

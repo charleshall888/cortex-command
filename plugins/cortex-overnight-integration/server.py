@@ -1163,10 +1163,11 @@ def _gate_dispatch(
 
 
 # ---------------------------------------------------------------------------
-# Pydantic models — ported verbatim from the legacy
-# `cortex_command.mcp_server.schema` (R1 forbids importing them).
-# Each output model carries ``extra="ignore"`` so minor-greater payloads
-# silently drop unknown fields (R15 forward-compat).
+# Pydantic models — input/output schemas for the MCP tool surface. R1
+# forbids importing schema modules from the cortex_command package, so
+# these models are defined inline here. Each output model carries
+# ``extra="ignore"`` so minor-greater payloads silently drop unknown
+# fields (R15 forward-compat).
 # ---------------------------------------------------------------------------
 
 
@@ -1528,8 +1529,9 @@ def _delegate_overnight_status(payload: StatusInput) -> StatusOutput:
 def _feature_counts_from_map(features_map: Any) -> FeatureCounts:
     """Collapse the per-feature map into per-status totals.
 
-    Mirrors the legacy ``cortex_command.mcp_server.tools._feature_counts_from_state``
-    behavior so the output shape is preserved across the refactor.
+    Output shape is preserved across the decoupling refactor: the same
+    per-status totals (pending/running/merged/paused/deferred) the
+    in-process MCP tool surfaced before R7 deleted it.
     """
     counts = {
         "pending": 0,
