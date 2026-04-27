@@ -68,6 +68,12 @@ def _dispatch_overnight_logs(args: argparse.Namespace) -> int:
     return cli_handler.handle_logs(args)
 
 
+def _dispatch_overnight_list_sessions(args: argparse.Namespace) -> int:
+    from cortex_command.overnight import cli_handler
+
+    return cli_handler.handle_list_sessions(args)
+
+
 def _dispatch_mcp_server(_args: argparse.Namespace) -> int:
     """Launch the stdio MCP control-plane server (R1).
 
@@ -379,6 +385,44 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Output format (default: human)",
     )
     logs.set_defaults(func=_dispatch_overnight_logs)
+
+    # cortex overnight list-sessions (R2 — MCP support verb)
+    list_sessions = overnight_sub.add_parser(
+        "list-sessions",
+        help="List active and recent overnight sessions",
+        description=(
+            "List overnight sessions discovered under "
+            "lifecycle/sessions/. Active sessions (planning, executing, "
+            "paused) and recent sessions (complete) are partitioned in "
+            "the JSON output."
+        ),
+    )
+    list_sessions.add_argument(
+        "--status",
+        action="append",
+        choices=("planning", "executing", "paused", "complete"),
+        default=None,
+        help="Filter by phase; repeatable (default: include all phases)",
+    )
+    list_sessions.add_argument(
+        "--since",
+        type=str,
+        default=None,
+        help="Only include sessions whose updated_at is at or after this ISO-8601 timestamp",
+    )
+    list_sessions.add_argument(
+        "--limit",
+        type=int,
+        default=10,
+        help="Cap on the number of recent (non-active) sessions to return (default: 10)",
+    )
+    list_sessions.add_argument(
+        "--format",
+        choices=("human", "json"),
+        default="human",
+        help="Output format (default: human)",
+    )
+    list_sessions.set_defaults(func=_dispatch_overnight_list_sessions)
 
     # -------------------------------------------------------------------
     # Remaining stubs — not yet implemented.

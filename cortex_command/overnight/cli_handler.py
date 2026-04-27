@@ -581,3 +581,144 @@ def handle_logs(args: argparse.Namespace) -> int:
     # Emit next_cursor trailer on stderr per R11.
     print(f"next_cursor: @{next_offset}", file=sys.stderr, flush=True)
     return 0
+
+
+# ---------------------------------------------------------------------------
+# list-sessions (MCP support verb)
+# ---------------------------------------------------------------------------
+
+# Phases that count as "active" (i.e. not terminated).
+_ACTIVE_PHASES = frozenset({"planning", "executing", "paused"})
+
+
+def _list_sessions_state_paths(sessions_root: Path) -> list[Path]:
+    """Return all per-session ``overnight-state.json`` paths sorted by mtime desc.
+
+    Skips paths whose parent directory is a symlink (e.g.
+    ``latest-overnight``) so the linked target is not double-counted.
+    """
+    if not sessions_root.exists():
+        return []
+    candidates = [
+        p
+        for p in sessions_root.glob("*/overnight-state.json")
+        if not p.parent.is_symlink()
+    ]
+    try:
+        candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    except OSError:
+        pass
+    return candidates
+
+
+def _summarize_state(data: dict) -> dict:
+    """Return the compact session-summary dict used in list-sessions output."""
+    return {
+        "session_id": str(data.get("session_id", "")),
+        "phase": str(data.get("phase", "")),
+        "started_at": data.get("started_at"),
+        "updated_at": data.get("updated_at"),
+        "integration_branch": data.get("integration_branch"),
+    }
+
+
+def _parse_iso8601(value: Optional[str]):
+    """Best-effort ISO-8601 parse; returns ``None`` on failure."""
+    from datetime import datetime as _dt
+
+    if not isinstance(value, str):
+        return None
+    try:
+        return _dt.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+
+def handle_list_sessions(args: argparse.Namespace) -> int:
+    """Implement ``cortex overnight list-sessions``.
+
+    Globs ``lifecycle/sessions/*/overnight-state.json``, partitions
+    results into active (``planning`` / ``executing`` / ``paused``) and
+    recent (``complete``), and applies optional ``status`` / ``since`` /
+    ``limit`` filters. Pagination cursors are reserved for a future
+    expansion — v1 returns ``next_cursor: null`` and relies on
+    ``--limit`` for the default 10-item recent slice.
+
+    When ``--format json`` is set, emits a versioned envelope:
+
+        {"version": "1.0", "active": [...], "recent": [...],
+         "total_count": N, "next_cursor": null}
+    """
+    fmt = getattr(args, "format", "human")
+    repo_path = _resolve_repo_path()
+    sessions_root = repo_path / "lifecycle" / "sessions"
+
+    paths = _list_sessions_state_paths(sessions_root)
+
+    status_filter = (
+        set(args.status) if getattr(args, "status", None) else None
+    )
+    since_dt = _parse_iso8601(getattr(args, "since", None))
+
+    active: list[dict] = []
+    recent: list[dict] = []
+
+    for path in paths:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+
+        phase = data.get("phase")
+        if status_filter is not None and phase not in status_filter:
+            continue
+        if since_dt is not None:
+            updated_dt = _parse_iso8601(data.get("updated_at"))
+            if updated_dt is None or updated_dt < since_dt:
+                continue
+
+        summary = _summarize_state(data)
+        if phase in _ACTIVE_PHASES:
+            active.append(summary)
+        else:
+            recent.append(summary)
+
+    limit = getattr(args, "limit", 10)
+    if not isinstance(limit, int) or limit < 0:
+        limit = 0
+    total_count = len(active) + len(recent)
+    recent_limited = recent[:limit]
+
+    if fmt == "json":
+        _emit_json(
+            {
+                "active": active,
+                "recent": recent_limited,
+                "total_count": total_count,
+                "next_cursor": None,
+            }
+        )
+        return 0
+
+    # Human format: simple summary.
+    if not active and not recent_limited:
+        print("No overnight sessions found")
+        return 0
+    if active:
+        print("Active sessions:")
+        for entry in active:
+            print(
+                f"  {entry['session_id']}  phase={entry['phase']}  "
+                f"updated_at={entry.get('updated_at')}"
+            )
+    if recent_limited:
+        print("Recent sessions:")
+        for entry in recent_limited:
+            print(
+                f"  {entry['session_id']}  phase={entry['phase']}  "
+                f"updated_at={entry.get('updated_at')}"
+            )
+    print(f"total: {total_count}")
+    return 0
