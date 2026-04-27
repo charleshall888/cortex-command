@@ -141,7 +141,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Verification**:
   - `uv run pytest tests/test_cli_mcp_server_deprecated.py -v` exits 0. Tests: (a) `test_deprecation_stub_stderr_contains_migration_target` — invokes `cortex mcp-server` via `subprocess.run`, asserts non-zero exit AND stderr contains the literal substring `cortex-overnight-integration`; (b) `test_post_upgrade_notice_emitted` — invokes `cortex upgrade` against a fixture repo, asserts stderr contains the literal substring `update it to point at uvx`; (c) `test_deprecation_stub_appends_restart_advisory_when_t12_verdict_is_restart_required` — pre-writes a `lifecycle/.../plugin-refresh-semantics.md` with a "restart-required" verdict, invokes `cortex mcp-server`, asserts stderr contains `Restart Claude Code`.
   - `python3 -c "import json; d = json.load(open('plugins/cortex-overnight-integration/.mcp.json')); cmd = d['mcpServers']['cortex-overnight']['command']; args = d['mcpServers']['cortex-overnight']['args']; assert cmd == 'uvx' or 'uvx' in args, repr((cmd, args))"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (bffc830)
 
 ### Task 15: Removal + caller-enumeration cleanup (R7, completion)
 - **Files**: `cortex_command/mcp_server/__init__.py` (delete), `cortex_command/mcp_server/server.py` (delete), `cortex_command/mcp_server/tools.py` (delete), `cortex_command/mcp_server/schema.py` (delete), plus any in-tree caller files identified by the grep enumeration below (deleted or updated in-place).
@@ -153,7 +153,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
   - `test ! -d cortex_command/mcp_server` exits 0 — pass if directory absent.
   - `grep -rE 'cortex_command\.mcp_server|cortex_command/mcp_server' cortex_command/ tests/ plugins/ docs/ skills/ --exclude-dir=__pycache__ --exclude-dir=.claude` exits with code 1 — pass if no match found.
   - `uv run pytest tests/ -v --ignore=tests/perf_mcp_subprocess.py` exits 0 — full test suite passes after deletion.
-- **Status**: [ ] pending
+- **Status**: [x] complete (781c5ca — 314 passed, 5 skipped, 1 xfailed; cortex_command/mcp_server/ deleted entirely; R7 satisfied)
 
 ## Conditional Replanning: R18 verdict FAIL or PARTIAL
 
