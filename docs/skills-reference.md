@@ -3,7 +3,7 @@
 # Skills Reference
 
 **For:** All users — quick reference to find the right skill for the job.
-**Assumes:** Claude Code is set up and skills are symlinked.
+**Assumes:** Claude Code is set up and the cortex-interactive plugin is installed.
 
 A grouped inventory of the skills in this repo. Each entry shows what the skill does and links to its full SKILL.md for trigger phrases, inputs, outputs, and implementation details.
 
@@ -154,7 +154,7 @@ Then enable the desired plugin per project in `.claude/settings.json`.
 
 ### Project-local: harness-review
 
-`harness-review` is a project-local skill that lives in `.claude/skills/` inside the cortex-command repo. It is specific to cortex-command's overnight runner inventory and is not published as a plugin or symlinked globally.
+`harness-review` is a project-local skill that lives in `.claude/skills/` inside the cortex-command repo. It is specific to cortex-command's overnight runner inventory and is not distributed as a plugin.
 
 ---
 

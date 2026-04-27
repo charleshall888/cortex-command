@@ -197,17 +197,17 @@ python3 backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete ses
 
 ## Global Deployment (Cross-Repo Use)
 
-Backlog scripts can be deployed to `~/.local/bin/` so they are available as commands in any working directory, not just when invoked via `python3 backlog/...` from the repo root.
+Backlog scripts are deployed via the `cortex-interactive` plugin's `bin/` directory so they are available as commands in any working directory, not just when invoked via `python3 backlog/...` from the repo root.
 
 ### Adding a new deployable script
 
 1. **Add the script file to the repo** (e.g., `backlog/my_script.py`).
-2. **Add the entry to the `cortex-interactive` plugin's `bin/` directory** — post-epic-120, bin/ deployment is plugin-owned; the plugin manifest exposes the script to agents via the plugin's command surface rather than a shell-level symlink.
+2. **Add the entry to the `cortex-interactive` plugin's `bin/` directory** — bin/ deployment is plugin-owned; the plugin manifest exposes the script to agents via the plugin's command surface.
 3. **Use `Path.cwd()` for repo-local directory references** inside the script (not `_PROJECT_ROOT` or `Path(__file__).parent`).
 
-### How symlink resolution works
+### How plugin bin/ PATH resolution works
 
-When a script is invoked via the `~/.local/bin/` symlink, Python resolves `__file__` to the **real script path** (not the symlink path). This means `Path(__file__).resolve().parent` correctly points into the repo regardless of how the script was invoked — making it safe to use for Python import path setup:
+Scripts in the `cortex-interactive` plugin's `bin/` directory are added to PATH directly by Claude Code's plugin loader, so they are available as commands without any additional shell configuration. When Python runs one of these scripts, `__file__` resolves to the **real script path** inside the plugin directory. This means `Path(__file__).resolve().parent` correctly points into the repo regardless of how the script was invoked — making it safe to use for Python import path setup:
 
 ```python
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
