@@ -25,7 +25,7 @@ After `f1caec4` (CORTEX_WORKTREE_ROOT override) unblocked the `.claude/worktrees
 
 `claude_agent_sdk` spawns the `claude` CLI to execute tasks. The CLI returns `"Not logged in · Please run /login"` even when invoked from a parent interactive Claude Code session that is authenticated.
 
-Sequence from `lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/events.log` (2026-04-23T00:30:29Z–00:30:32Z):
+Sequence from `lifecycle/archive/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/events.log` (2026-04-23T00:30:29Z–00:30:32Z):
 
 ```
 dispatch_start     feature=... model=sonnet effort=medium max_turns=20 max_budget_usd=25
@@ -106,5 +106,5 @@ After Problems 1 and 2 were fixed, lifecycle 100's Task 6 ran through the pipeli
 ### Lifecycle 100 outcome
 
 - §Decision = D. Root cause diagnosed post-hoc by direct inspection of stream-json action sequences: **skill routing bypasses the rail's conditional-load trigger** (14/40 trials first-actioned `Skill: pr`, 5/40 `Skill: commit`; the rail fired only in the 1/40 trial where `Read verification-mindset.md` was the first action).
-- See `lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md` §Root Cause Analysis for the full mechanism.
+- See `lifecycle/archive/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/probe-log.md` §Root Cause Analysis for the full mechanism.
 - #100's planned M1 rewrite does NOT address the bypass. Task 19's follow-up backlog ticket should propose EITHER a PreToolUse hook (on `gh pr create` / `git commit` / `git push`) OR a skill-side audit (`/pr`, `/commit` SKILL.md explicitly invoking the rail).

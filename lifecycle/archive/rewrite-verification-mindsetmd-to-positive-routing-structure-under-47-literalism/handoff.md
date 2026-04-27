@@ -70,7 +70,7 @@ or completion-language heuristic gets to run.
 
 ## Probe Evidence Pointer
 
-All evidence paths below are relative to this handoff's directory (`lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/`):
+All evidence paths below are relative to this handoff's directory (`lifecycle/archive/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/`):
 
 - `probe-log.md` — full R1 trial log (§Run-1 Trial Log), per-wording counts
   (§Per-Wording Summary), the §Decision: I body with diagnostic re-probe

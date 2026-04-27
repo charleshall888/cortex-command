@@ -25,7 +25,7 @@ a19d649aaee912513a13b3f509a05a5181e0d9f9a6dd1d8dfa8c2ff2d16ba0f3  claude/referen
 ```
 
 Source file (verify with `sha256sum -c`):
-`lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/rail-hashes-pre-r1.txt`
+`lifecycle/archive/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/rail-hashes-pre-r1.txt`
 
 ### Rail-Hash Stability Assertion
 

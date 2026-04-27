@@ -164,7 +164,7 @@ Two-track decomposition of the spec's 15 requirements. **Auth track** (Tasks 1�
 
 ### Task 9: Parser round-trip integration test
 - **Files**: `claude/pipeline/tests/test_parser.py`
-- **What**: Add `test_heading_and_status_round_trip` per R13: fixture plan.md with two task headings each containing trailing `[x]`, one with Status `[x] complete` (parses to `done`, clean description), one with Status `[ ] pending` (parses to `pending`, clean description — the exact pattern from `lifecycle/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/plan.md` Task 2).
+- **What**: Add `test_heading_and_status_round_trip` per R13: fixture plan.md with two task headings each containing trailing `[x]`, one with Status `[x] complete` (parses to `done`, clean description), one with Status `[ ] pending` (parses to `pending`, clean description — the exact pattern from `lifecycle/archive/rewrite-verification-mindsetmd-to-positive-routing-structure-under-47-literalism/plan.md` Task 2).
 - **Depends on**: [8]
 - **Complexity**: simple
 - **Context**:
