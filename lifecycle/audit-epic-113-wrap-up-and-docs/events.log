@@ -1,0 +1,121 @@
+- ts: 2026-04-27T00:00:00Z
+  event: clarify_critic
+  feature: audit-epic-113-wrap-up-and-docs
+  findings:
+    - "The intent-clarity rating of Medium rests on the orchestrator's gloss that 'deeper audit' means 'go beyond path-string fixes and surface substantive gaps' — but the user's actual second message ('Actually use the /lifecycle skill to research/spec etc...') is a procedural directive, not a depth qualifier."
+    - "The intent assessment treats the audit goal and the documentation goal as a single unified request, averaging over two questions of different clarity rather than rating either."
+    - "Scope boundedness is rated Low with the dual-source skills/ vs plugins/skills/ arrangement listed as ambiguity — but the orchestrator's own background notes the pre-commit hook enforces top-level→plugin sync, making it settled architecture rather than open scope."
+    - "The scope question about behavioral validation (dry-running install.sh) is presented as a genuine open boundary, but nothing in the source messages asks for execution-level verification — the user said 'audit' and 'documented clearly.'"
+    - "Requirements alignment is rated High on the basis that requirements/project.md confirms distribution model alignment, but says nothing about documentation completeness expectations — the harder half of the request."
+    - "Complexity rated complex with reasoning generic enough to apply to any documentation sweep; the lifecycle invocation appears to be justifying the rating post-hoc rather than independently."
+    - "Criticality medium with the parenthetical 'though arguably medium-low' — the hedge is the tell; the rater partially disavows the rating in the same sentence."
+  dispositions:
+    apply: 6
+    dismiss: 1
+    ask: 0
+  applied_fixes:
+    - "Split intent clarity: audit-half is High (verify epic 113 closure is concrete), docs-half is Medium (substantive depth and breadth left genuinely ambiguous). Reframe the user's 'Actually use the /lifecycle skill' as procedural compliance, not depth interpretation."
+    - "Removed dual-source skills/ from the scope-ambiguity list — settled architecture per .githooks/pre-commit. Removed behavioral-validation-of-install.sh — orchestrator-invented scope not requested by user."
+    - "Refined requirements alignment: aligned with requirements/project.md on distribution model and on 'shared publicly for others to clone or fork' framing; silent on specific doc completeness expectations."
+    - "Refined complexity reasoning to specifics: likely 4+ docs touched (README, setup.md, plugin-development.md, plus possibly skills-reference.md and others) and requires judgment on rewrite-vs-retire of docs/plugin-development.md. Verdict stays Complex; reasoning no longer leans on lifecycle invocation."
+  dismissals:
+    - finding_index: 6
+      rationale: "Medium aligns with the Clarify reference's definition: 'affects users or developers but recoverable; isolated tooling change with no downstream consumers.' New-user-facing docs being wrong impacts onboarding (user-facing), but recoverable by re-editing. Low would apply to a typo; this is broader than that. The hedge in the original reasoning was unnecessary, but the rating itself is supported."
+  status: ok
+- ts: 2026-04-27T00:00:01Z
+  event: lifecycle_start
+  feature: audit-epic-113-wrap-up-and-docs
+  tier: complex
+  criticality: medium
+- ts: 2026-04-27T00:00:02Z
+  event: phase_transition
+  feature: audit-epic-113-wrap-up-and-docs
+  from: clarify
+  to: research
+- ts: 2026-04-27T00:00:03Z
+  event: phase_transition
+  feature: audit-epic-113-wrap-up-and-docs
+  from: research
+  to: specify
+- ts: 2026-04-27T00:00:04Z
+  event: orchestrator_review
+  feature: audit-epic-113-wrap-up-and-docs
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-27T00:00:05Z
+  event: critical_review
+  feature: audit-epic-113-wrap-up-and-docs
+  phase: specify
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  synthesis: "3 A-class objections held after evidence re-examination (R1 greps under-specify; R7 passes on wholesale deletion; R11 narrower than per-R nets); 1 A→B downgrade (R1 ticket regex 'until ticket 124 ships' is actually caught by unbounded 'until ticket' alternative)."
+  applied_fixes:
+    - "R1: subsection-keyed positive greps gate (a)-(e) so a stub rewrite cannot pass"
+    - "R3: extended to also fix skills-reference.md:157 'symlinked globally'"
+    - "R7: positive greps on '__file__' and 'plugin loader' gate that replacement preserves explanation; suggested wording avoids 'host-level symlink' to prevent self-match"
+    - "R11: regex widened to union of per-R forbidden patterns (adds 'Installation, symlinks', 'ticket 119', 'symlinked globally'); 'host-level symlink' explicitly excluded due to legitimate-use collision; known-legitimate hits enumerated as triage-as-clean; path glob hardened with find"
+    - "Technical Constraints: commit-order plan extended with explicit R10 commit"
+    - "Non-Requirements: scope rule added clarifying same-cause-adjacent vs unrelated residue"
+  dismissals:
+    - rationale: "C on R10 off-theme: artifact rationale already present, reinforced by new scope rule. Same-cause-adjacent is the audit's principle, not a precedent for generic stale-doc sweeps."
+    - rationale: "B on README.md:93 transitional voice: research classified line as ✓ clean; the sentence is user-friendly explanatory text, not stale framing."
+    - rationale: "C on R11 not catching R10's target: R10 has its own gate; R11's job is straggler-detection across the distribution-doc surface, not double-checking single-line edits already gated."
+  pending_user_questions: 2
+  status: ok
+- ts: 2026-04-27T00:00:06Z
+  event: spec_approved
+  feature: audit-epic-113-wrap-up-and-docs
+- ts: 2026-04-27T00:00:07Z
+  event: phase_transition
+  feature: audit-epic-113-wrap-up-and-docs
+  from: specify
+  to: plan
+- ts: 2026-04-27T00:00:08Z
+  event: orchestrator_review
+  feature: audit-epic-113-wrap-up-and-docs
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-27T00:00:09Z
+  event: critical_review
+  feature: audit-epic-113-wrap-up-and-docs
+  phase: plan
+  reviewers_dispatched: 3
+  reviewers_completed: 3
+  synthesis: "7 A-class objections held: (1) Task 11 audit surface drops plugins/ path; (2) Tasks 1–10 Depends-on:none incompatible with 6-ordered-commits requirement under parallel-dispatch model; (3-7) Tasks 2/3/4/8/9 verifications are negative-only and admit deletion-only/wrong-replacement edits as a pass."
+  applied_fixes:
+    - "Restructured 11 tasks → 6 tasks, one per commit group. Strict serial Depends-on chain (1 → 2 → 3 → 4 → 5 → 6) enforces commit ordering and prevents parallel dispatch from violating the spec's six-commit constraint."
+    - "Task 2 (R2): added positive grep `grep -ciE 'Installation, plugins|installation.*plugin' README.md ≥ 1` to gate against deletion-only or wrong-replacement."
+    - "Task 2 (R5/R6): added positive grep `grep -ciE 'compose your own|do not paste' docs/setup.md ≥ 1` to confirm surrounding paragraph survived."
+    - "Task 3 (R3): added positive greps for 'cortex-interactive plugin' and '**Assumes:**' framing on docs/skills-reference.md."
+    - "Task 4 (R4): added `wc -l = 4` jq check against accidental description-field deletion; tightened lifecycle.config.md positive gate to require plugin-name reference."
+    - "Task 5 (R10): added structural sanity gate `wc -l requirements/remote-access.md ≥ 30` against whole-file deletion."
+    - "Task 5 (R11): added positive grep 'canonical source|dual-source' on CLAUDE.md to gate that line 18 was rewritten, not just had its parenthetical deleted."
+    - "Task 5 (R12): tightened positive grep on requirements/pipeline.md to anchor on phrasing the rewrite must produce ('versioned runner IPC' or 'MCP control plane.*versioned'), not pre-existing content elsewhere."
+    - "Task 6 (R13): widened audit verification command to use find for plugin-glob safety; explicitly added plugins/*/.claude-plugin/plugin.json to the surface; added gate that find returns ≥ 4 plugin.json results to detect a broken glob."
+  dismissals:
+    - rationale: "Reviewer 1's claim that the plan's 'subset' framing was inaccurate is now moot after restructure: each task's Verification is now a superset of the spec's acceptance for the Rs in that commit group."
+  status: ok
+- ts: 2026-04-27T00:00:10Z
+  event: plan_approved
+  feature: audit-epic-113-wrap-up-and-docs
+  note: "User approved plan but paused before implement. Lifecycle suspended at end of plan phase; resume with /cortex-interactive:lifecycle audit-epic-113-wrap-up-and-docs to enter implement."
+{"ts": "2026-04-27T16:54:50Z", "event": "batch_dispatch", "feature": "audit-epic-113-wrap-up-and-docs", "batch": 0, "tasks": [1]}
+{"ts": "2026-04-27T16:57:06Z", "event": "task_complete", "feature": "audit-epic-113-wrap-up-and-docs", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-27T16:57:06Z", "event": "batch_dispatch", "feature": "audit-epic-113-wrap-up-and-docs", "batch": 1, "tasks": [2]}
+{"ts": "2026-04-27T16:58:33Z", "event": "task_complete", "feature": "audit-epic-113-wrap-up-and-docs", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-27T16:58:33Z", "event": "batch_dispatch", "feature": "audit-epic-113-wrap-up-and-docs", "batch": 2, "tasks": [3]}
+{"ts": "2026-04-27T17:00:24Z", "event": "task_complete", "feature": "audit-epic-113-wrap-up-and-docs", "task": 3, "batch": 2, "status": "success"}
+{"ts": "2026-04-27T17:00:24Z", "event": "batch_dispatch", "feature": "audit-epic-113-wrap-up-and-docs", "batch": 3, "tasks": [4]}
+{"ts": "2026-04-27T17:02:06Z", "event": "task_complete", "feature": "audit-epic-113-wrap-up-and-docs", "task": 4, "batch": 3, "status": "success"}
+{"ts": "2026-04-27T17:02:06Z", "event": "batch_dispatch", "feature": "audit-epic-113-wrap-up-and-docs", "batch": 4, "tasks": [5]}
+{"ts": "2026-04-27T17:03:58Z", "event": "task_complete", "feature": "audit-epic-113-wrap-up-and-docs", "task": 5, "batch": 4, "status": "success"}
+{"ts": "2026-04-27T17:03:58Z", "event": "batch_dispatch", "feature": "audit-epic-113-wrap-up-and-docs", "batch": 5, "tasks": [6]}
+{"ts": "2026-04-27T17:05:52Z", "event": "task_complete", "feature": "audit-epic-113-wrap-up-and-docs", "task": 6, "batch": 5, "status": "success"}
+{"ts": "2026-04-27T17:05:52Z", "event": "phase_transition", "feature": "audit-epic-113-wrap-up-and-docs", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-27T17:09:57Z", "event": "review_verdict", "feature": "audit-epic-113-wrap-up-and-docs", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-27T17:09:57Z", "event": "phase_transition", "feature": "audit-epic-113-wrap-up-and-docs", "from": "review", "to": "complete"}
+{"ts": "2026-04-27T17:11:20Z", "event": "feature_complete", "feature": "audit-epic-113-wrap-up-and-docs", "tasks_total": 6, "rework_cycles": 1}
