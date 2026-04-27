@@ -94,18 +94,18 @@ No symlinks into `~/.claude/` are created — plugins are discovered by Claude C
 
 ### Plugin roster
 
-Cortex-command ships four plugins in this repo, split into core and extras tiers:
+Cortex-command ships six plugins in this repo, split into core and extras tiers:
 
 | Plugin | Tier | Notes |
 |--------|------|-------|
-| `cortex-interactive` | core | Interactive skills + hooks (lifecycle, commit, pr, etc.) |
-| `cortex-overnight-integration` | core | Autonomous overnight runner integration |
-| `cortex-ui-extras` | extras | Experimental — UI design skills |
-| `cortex-pr-review` | extras | PR-review automation |
+| cortex-interactive | core | Interactive skills + hooks (lifecycle, commit, pr, etc.) |
+| cortex-overnight-integration | core | Autonomous overnight runner integration |
+| cortex-ui-extras | extras | Experimental — UI design skills |
+| cortex-pr-review | extras | PR-review automation |
+| android-dev-extras | extras | Android development helpers |
+| cortex-dev-extras | extras | Cortex-command development helpers |
 
 For installation specifics and per-project enablement, see [`docs/setup.md`](docs/setup.md).
-
-`android-dev-extras` lives in the [cortex-command-plugins](https://github.com/charleshall888/cortex-command-plugins) companion repo, which now holds only that plugin.
 
 ## Authentication
 
