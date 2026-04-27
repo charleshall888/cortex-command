@@ -24,7 +24,6 @@
 | 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | 104 | 101 | — |
 | 124 | Migration guide + script for existing symlink-based installs | backlog | medium | chore | 118, 122 | 113 | — |
 | 141 | Non-editable wheel install support for cortex-command | backlog | medium | feature | — | — | — |
-| 146 | Decouple MCP server from CLI Python imports + own auto-update orchestration | in_progress | medium | feature | — | 113 | ✓ |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
@@ -57,4 +56,3 @@
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
 - **122** Publish plugin marketplace manifest for cortex-command (in_progress)
-- **146** Decouple MCP server from CLI Python imports + own auto-update orchestration (in_progress)

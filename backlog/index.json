@@ -657,39 +657,6 @@
     "repo": null
   },
   {
-    "id": 146,
-    "title": "Decouple MCP server from CLI Python imports + own auto-update orchestration",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "distribution",
-      "mcp",
-      "architecture",
-      "upgrade",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "mcp-server",
-      "plugins"
-    ],
-    "created": "2026-04-25",
-    "updated": "2026-04-26",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "113",
-    "research": null,
-    "spec": "lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "6baeb00e-799c-43e8-a354-3d54445e1a29",
-    "lifecycle_slug": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration",
-    "session_id": "9510d7c9-8c41-479c-b8f1-266a9962ce2e",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 90,
     "title": "Adopt xhigh effort default for overnight lifecycle implement",
     "status": "backlog",

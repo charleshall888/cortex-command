@@ -2,18 +2,18 @@
 schema_version: "1"
 uuid: 6baeb00e-799c-43e8-a354-3d54445e1a29
 title: "Decouple MCP server from CLI Python imports + own auto-update orchestration"
-status: in_progress
+status: complete
 priority: medium
 type: feature
 created: 2026-04-25
-updated: 2026-04-26
+updated: 2026-04-27
 parent: "113"
 tags: [distribution, mcp, architecture, upgrade, overnight-layer-distribution]
 areas: [mcp-server,plugins]
 complexity: complex
 criticality: high
 absorbed: ["145"]
-session_id: 9510d7c9-8c41-479c-b8f1-266a9962ce2e
+session_id: null
 lifecycle_phase: implement
 lifecycle_slug: decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration
 spec: lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md
