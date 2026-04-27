@@ -184,7 +184,7 @@ just validate-skills       # Check skill frontmatter
 | Guide | Covers |
 |-------|--------|
 | [`docs/agentic-layer.md`](docs/agentic-layer.md) | Full skill and hook inventory, workflow diagrams, lifecycle phase map |
-| [`docs/setup.md`](docs/setup.md) | Installation, symlinks, authentication, customization |
+| [`docs/setup.md`](docs/setup.md) | Installation, plugins, authentication, customization |
 | [`docs/overnight.md`](docs/overnight.md) | Autonomous overnight runner -- planning, execution, deferral, morning review |
 | [`docs/dashboard.md`](docs/dashboard.md) | Web dashboard for monitoring overnight sessions |
 | [`docs/backlog.md`](docs/backlog.md) | Backlog YAML schema, readiness gates, overnight eligibility |

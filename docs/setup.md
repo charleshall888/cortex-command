@@ -177,7 +177,7 @@ The minimum set cortex-command needs: GitHub API for `gh` operations, raw.github
 
 **`sandbox.filesystem.allowWrite`**
 
-You do not need to hand-edit this. Run `cortex init` (ticket 119) in each repo where you want cortex-command active — it appends the per-repo overnight-session write paths automatically. Hand-editing is error-prone because the paths are repo-scoped and resolve relative to each project.
+You do not need to hand-edit this. Run `cortex init` in each repo where you want cortex-command active — it appends the per-repo overnight-session write paths automatically. Hand-editing is error-prone because the paths are repo-scoped and resolve relative to each project.
 
 **`statusLine.command`** (optional)
 
@@ -191,9 +191,7 @@ Point to the `statusline.sh` inside your cortex-command clone (adjust the absolu
 
 **`permissions.deny`**
 
-A conservative deny list is a useful safety baseline: `sudo`, destructive `rm -rf` patterns, `git push --force` against protected branches, reads of secrets directories (`~/.ssh`, `~/.aws`, etc.). Cortex-command does not prescribe a specific list — compose your own. For a starting template, see the pre-117 version of `claude/settings.json` in this repo's git history (it contains roughly 80 curated entries). Do not paste that list blindly; review each rule against your own threat model.
-
-For the exact historical template including the maintainer's personal allow list, see `git show HEAD:claude/settings.json` on the pre-117 commit.
+A conservative deny list is a useful safety baseline: `sudo`, destructive `rm -rf` patterns, `git push --force` against protected branches, reads of secrets directories (`~/.ssh`, `~/.aws`, etc.). Cortex-command does not prescribe a specific list — compose your own. Do not paste any list blindly; review each rule against your own threat model.
 
 ### Adding an MCP Server
 
