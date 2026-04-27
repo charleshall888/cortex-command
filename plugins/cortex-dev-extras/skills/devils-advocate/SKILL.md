@@ -1,6 +1,6 @@
 ---
 name: devils-advocate
-description: Inline devil's advocate — argues against the current direction from the current agent's context (no fresh agent). Use when the user says "challenge this", "poke holes", "devil's advocate", "argue against this", "what could go wrong", or "stress-test this". Works in any phase — no lifecycle required.
+description: Inline single-agent devil's advocate — argues against the current direction from the current agent's context with no sub-agent dispatch, for a lightweight solo deliberation. Use when the user says "challenge this", "poke holes", "devil's advocate", "argue against this", "what could go wrong", or "stress-test this". Works in any phase — no lifecycle required. For heavyweight multi-angle parallel review with fresh reviewer agents, use /critical-review instead.
 ---
 
 # Devil's Advocate
