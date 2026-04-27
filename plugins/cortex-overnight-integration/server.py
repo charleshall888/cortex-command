@@ -799,6 +799,147 @@ def _maybe_run_upgrade(
 
 
 # ---------------------------------------------------------------------------
+# R13 — Synchronous schema-floor gate (Task 10)
+# ---------------------------------------------------------------------------
+
+
+def _schema_floor_violated(cortex_root_payload: dict[str, Any]) -> bool:
+    """Return True iff ``MCP_REQUIRED_CLI_VERSION`` major > CLI major.
+
+    Spec R13: closes the bidirectional staleness window during
+    plugin-update + CLI-update interaction. The CLI's reported
+    ``version`` comes from the discovery cache (Task 6); that cache
+    never expires for the MCP-server lifetime.
+
+    Returns ``False`` when the discovery payload has no parseable
+    version (defensive: the caller falls through to the regular R8
+    throttle path; ``_check_version`` will surface the malformed-version
+    error during tool dispatch).
+    """
+    cli_version = cortex_root_payload.get("version")
+    if cli_version is None:
+        return False
+    try:
+        cli_major, _ = _parse_major_minor(cli_version)
+        required_major, _ = _parse_major_minor(MCP_REQUIRED_CLI_VERSION)
+    except (ValueError, TypeError):
+        return False
+    return required_major > cli_major
+
+
+def _orchestrate_schema_floor_upgrade(
+    cortex_root_payload: dict[str, Any],
+) -> None:
+    """Run ``cortex upgrade`` synchronously under R11 flock + R12 probe.
+
+    Spec R13 requires that when the schema floor is violated, the MCP
+    runs ``cortex upgrade`` synchronously before delegating any tool
+    call — regardless of throttle policy. Skip predicates (R9) do NOT
+    apply: a schema-floor mismatch must be resolved or the MCP cannot
+    serve any tool call.
+
+    Reuses the same flock acquisition (R11) and verification-probe
+    (R12) machinery as :func:`_orchestrate_upgrade`, but skips:
+
+    * the post-flock fresh ls-remote / rev-parse comparison — even if
+      another MCP advanced HEAD during our wait, the schema-floor
+      violation is the trigger here, not upstream advance, so the
+      ``cortex upgrade`` invocation is still the correct response.
+
+    On successful upgrade: invoke the verification probe (R12) and
+    invalidate the R8 update-check cache (same hook as R10) so the
+    next tool call re-checks against the upgraded local HEAD.
+
+    Spec R13 + Technical Constraints "Cache invalidation rules for
+    R8's instance cache" — "On any successful upgrade (R10 or R13),
+    the cache MUST be marked unset".
+    """
+    cortex_root = cortex_root_payload.get("root")
+    if not cortex_root:
+        return
+
+    lock_path = Path(str(cortex_root)) / ".git" / "cortex-update.lock"
+    fd = _acquire_update_flock(lock_path)
+    if fd is None:
+        # R11 flock-budget expiry. Log to stderr and invalidate the
+        # cache so the next tool call retries.
+        print(
+            f"cortex MCP: flock wait budget exceeded "
+            f"({_FLOCK_WAIT_BUDGET_SECONDS:.0f}s) on {lock_path} "
+            f"during schema-floor upgrade; proceeding without upgrade",
+            file=sys.stderr,
+        )
+        _invalidate_update_cache()
+        return
+
+    try:
+        try:
+            completed = _run_cortex_upgrade()
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            print(
+                f"cortex MCP: schema-floor `cortex upgrade` failed: "
+                f"{exc.__class__.__name__}: {exc}; "
+                f"falling through to on-disk CLI",
+                file=sys.stderr,
+            )
+            return
+
+        if completed.returncode != 0:
+            print(
+                f"cortex MCP: schema-floor `cortex upgrade` exited "
+                f"{completed.returncode}; "
+                f"stderr={completed.stderr!r}; "
+                f"falling through to on-disk CLI",
+                file=sys.stderr,
+            )
+            return
+
+        # R13 success path: run the verification probe (R12), then
+        # invalidate the R8 cache (same hook as R10).
+        _run_verification_probe()
+        _invalidate_update_cache()
+    finally:
+        _release_update_flock(fd)
+
+
+def _gate_dispatch(
+    cortex_root_payload: Optional[dict[str, Any]] = None,
+) -> None:
+    """Per-tool-call gate-dispatch entry point.
+
+    Spec Technical Constraints "Gate dispatch order on every tool call":
+
+    1. R13 schema-floor check first. If ``MCP_REQUIRED_CLI_VERSION``'s
+       major > CLI's reported major, run ``cortex upgrade``
+       synchronously under R11 flock + R12 probe — regardless of
+       throttle policy. Skip predicates (R9) do NOT apply to R13.
+
+    2. R8 throttle check + R9 skip-predicates second, only if R13 did
+       not fire.
+
+    3. R10 + R11 + R12 fire if R8 detected upstream advance and
+       predicates didn't fire.
+
+    Replaces the bare ``_maybe_run_upgrade()`` call at each tool
+    dispatch site.
+    """
+    if cortex_root_payload is None:
+        try:
+            cortex_root_payload = _get_cortex_root_payload()
+        except (RuntimeError, subprocess.SubprocessError, OSError):
+            return
+
+    # (1) R13 schema-floor check first — bypasses throttle + skip
+    # predicates per spec.
+    if _schema_floor_violated(cortex_root_payload):
+        _orchestrate_schema_floor_upgrade(cortex_root_payload)
+        return
+
+    # (2) + (3) R8 throttle check; on upstream-advance, R10/R11/R12.
+    _maybe_run_upgrade(cortex_root_payload)
+
+
+# ---------------------------------------------------------------------------
 # Pydantic models — ported verbatim from the legacy
 # `cortex_command.mcp_server.schema` (R1 forbids importing them).
 # Each output model carries ``extra="ignore"`` so minor-greater payloads
@@ -1042,9 +1183,8 @@ def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
     # input model's ``Literal[True]`` rejects missing/false confirmations
     # before we get here).
 
-    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration;
-    # Tasks 10/16 will gate further branches.
-    _maybe_run_upgrade()
+    # R13/R8/R9/R10/R11 gate dispatch (Task 10 wires R13 ahead of R8).
+    _gate_dispatch()
 
     argv: list[str] = ["overnight", "start", "--format", "json"]
     if payload.state_path is not None:
@@ -1103,8 +1243,8 @@ def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
 def _delegate_overnight_status(payload: StatusInput) -> StatusOutput:
     """Subprocess delegation for ``overnight_status``."""
 
-    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration.
-    _maybe_run_upgrade()
+    # R13/R8/R9/R10/R11 gate dispatch (Task 10 wires R13 ahead of R8).
+    _gate_dispatch()
 
     argv: list[str] = ["overnight", "status", "--format", "json"]
     # The CLI's ``--session-dir`` override is the way to target a
@@ -1194,8 +1334,8 @@ def _delegate_overnight_logs(payload: LogsInput) -> LogsOutput:
     the CLI once per file in ``payload.files`` and aggregate.
     """
 
-    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration.
-    _maybe_run_upgrade()
+    # R13/R8/R9/R10/R11 gate dispatch (Task 10 wires R13 ahead of R8).
+    _gate_dispatch()
 
     aggregated_lines: list[dict[str, Any]] = []
     next_cursor: str | None = None
@@ -1288,8 +1428,8 @@ def _delegate_overnight_cancel(payload: CancelInput) -> CancelOutput:
     error envelope onto the matching reason code.
     """
 
-    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration.
-    _maybe_run_upgrade()
+    # R13/R8/R9/R10/R11 gate dispatch (Task 10 wires R13 ahead of R8).
+    _gate_dispatch()
 
     argv: list[str] = [
         "overnight",
@@ -1359,8 +1499,8 @@ def _delegate_overnight_list_sessions(
 ) -> ListSessionsOutput:
     """Subprocess delegation for ``overnight_list_sessions``."""
 
-    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration.
-    _maybe_run_upgrade()
+    # R13/R8/R9/R10/R11 gate dispatch (Task 10 wires R13 ahead of R8).
+    _gate_dispatch()
 
     argv: list[str] = ["overnight", "list-sessions", "--format", "json"]
     if payload.status is not None:

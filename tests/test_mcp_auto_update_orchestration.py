@@ -1272,3 +1272,209 @@ def test_verification_probe_failure_falls_through_to_on_disk_cli(
         f"upgrade attempt; got upgrade_idx={upgrade_idx} "
         f"user_call_idx={user_call_idx}; calls={calls}"
     )
+
+
+# ---------------------------------------------------------------------------
+# R13 — Synchronous schema-floor gate (Task 10)
+# ---------------------------------------------------------------------------
+
+
+def test_schema_floor_triggers_synchronous_upgrade(
+    server_module,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """R13 acceptance: schema-floor mismatch triggers synchronous upgrade.
+
+    Spec R13 acceptance:
+    ``test_schema_floor_triggers_synchronous_upgrade``.
+
+    With the discovery cache reporting ``version="0.9"`` and the MCP
+    declaring ``MCP_REQUIRED_CLI_VERSION="1.0"`` (major 0 < major 1),
+    the gate-dispatch helper MUST run ``cortex upgrade`` synchronously
+    BEFORE delegating any tool call — regardless of throttle-cache
+    state and regardless of skip-predicate state (R9 does NOT apply
+    to R13).
+
+    The test sets ``CORTEX_DEV_MODE=1`` (R9 predicate (a) — would
+    normally short-circuit any R8 throttle/upgrade orchestration) and
+    pre-populates the R8 throttle cache with a "no upstream advance"
+    sentinel (would normally suppress R10/R11). Both signals must be
+    overridden by R13.
+    """
+    # CLI reports a major-0 version while MCP requires major-1.
+    cortex_root = tmp_path / "cortex"
+    (cortex_root / ".git").mkdir(parents=True)
+    server_module._CORTEX_ROOT_CACHE = {
+        "version": "0.9",
+        "root": str(cortex_root),
+        "remote_url": "git@github.com:user/cortex-command.git",
+        "head_sha": "a" * 40,
+    }
+
+    # Pre-populate R8 cache with "upstream matches local" (would normally
+    # suppress upgrade orchestration). R13 must NOT consult this cache.
+    cache_key = (str(cortex_root), "git@github.com:user/cortex-command.git", "HEAD")
+    server_module._UPDATE_CHECK_CACHE[cache_key] = False
+
+    # Set CORTEX_DEV_MODE=1 (R9 predicate (a)) — would normally suppress
+    # R8 entirely. R13 must NOT consult skip predicates.
+    monkeypatch.setenv("CORTEX_DEV_MODE", "1")
+
+    calls: list[list[str]] = []
+
+    def _fake_run(argv, **kwargs):
+        calls.append(list(argv))
+        if argv[:2] == ["cortex", "upgrade"]:
+            return _completed(stdout="", returncode=0)
+        # Default: success with empty stdout.
+        return _completed(stdout="", returncode=0)
+
+    probe_invoked = {"v": False}
+
+    def _probe_ok() -> bool:
+        probe_invoked["v"] = True
+        return True
+
+    with (
+        patch.object(server_module.subprocess, "run", side_effect=_fake_run),
+        patch.object(
+            server_module, "_run_verification_probe", side_effect=_probe_ok
+        ),
+    ):
+        server_module._gate_dispatch()
+
+    # `cortex upgrade` was invoked exactly once, synchronously, despite
+    # CORTEX_DEV_MODE=1 and a "no advance" R8 cache entry.
+    upgrade_calls = [c for c in calls if c[:2] == ["cortex", "upgrade"]]
+    assert len(upgrade_calls) == 1, (
+        f"R13 must invoke `cortex upgrade` exactly once when schema "
+        f"floor is violated; got {len(upgrade_calls)}: {calls}"
+    )
+
+    # Verification probe (R12) fired after the upgrade.
+    assert probe_invoked["v"], (
+        "R13 must run the R12 verification probe after a successful "
+        "schema-floor upgrade"
+    )
+
+    # Cache invalidation hook (R10/R13 contract): cache cleared.
+    assert server_module._UPDATE_CHECK_CACHE == {}, (
+        f"R13 must invalidate the R8 update-check cache on successful "
+        f"upgrade (same hook as R10); got {server_module._UPDATE_CHECK_CACHE!r}"
+    )
+
+    # R8 throttle MUST NOT have been consulted: no `git ls-remote` calls.
+    ls_remote_calls = _ls_remote_calls(calls)
+    assert ls_remote_calls == [], (
+        f"R13 must NOT consult R8's throttle path (no `git ls-remote` "
+        f"shell-out should occur on the schema-floor path); got "
+        f"{ls_remote_calls}"
+    )
+
+
+def test_schema_floor_tool_call_runs_after_upgrade(
+    server_module,
+    tmp_path: Path,
+) -> None:
+    """R13 acceptance: tool call argv appears AFTER upgrade-and-probe.
+
+    Spec R13 acceptance:
+    ``test_schema_floor_tool_call_runs_after_upgrade``.
+
+    Drives ``_delegate_overnight_status`` end-to-end with the discovery
+    cache reporting a major-mismatched CLI version. Asserts the recorded
+    argv order is:
+
+      1. ``cortex upgrade``                        (R13 trigger)
+      2. (verification probe — invoked via patched function)
+      3. ``cortex overnight status --format json`` (user's tool call)
+
+    The probe is mocked to return ``True``; argv-order is asserted via
+    the recorder's call list.
+    """
+    # CLI reports a major-0 version while MCP requires major-1.
+    cortex_root = tmp_path / "cortex"
+    (cortex_root / ".git").mkdir(parents=True)
+    server_module._CORTEX_ROOT_CACHE = {
+        "version": "0.9",
+        "root": str(cortex_root),
+        "remote_url": "git@github.com:user/cortex-command.git",
+        "head_sha": "a" * 40,
+    }
+
+    status_payload = json.dumps(
+        {
+            "version": "1.0",
+            "session_id": "alpha",
+            "phase": "executing",
+            "current_round": 1,
+            "features": {},
+        }
+    )
+
+    calls: list[list[str]] = []
+
+    def _fake_run(argv, **kwargs):
+        calls.append(list(argv))
+        if argv[:2] == ["cortex", "upgrade"]:
+            return _completed(stdout="", returncode=0)
+        if (
+            argv[:1] == ["cortex"]
+            and len(argv) >= 4
+            and argv[1] == "overnight"
+            and argv[2] == "status"
+        ):
+            return _completed(stdout=status_payload, returncode=0)
+        return _completed(stdout="", returncode=0)
+
+    probe_callcount_at_invoke: list[int] = []
+
+    def _record_probe() -> bool:
+        probe_callcount_at_invoke.append(len(calls))
+        return True
+
+    with (
+        patch.object(server_module.subprocess, "run", side_effect=_fake_run),
+        patch.object(
+            server_module, "_run_verification_probe", side_effect=_record_probe
+        ),
+    ):
+        result = server_module._delegate_overnight_status(
+            server_module.StatusInput(session_id=None)
+        )
+
+    # User tool call returned a parseable StatusOutput.
+    assert isinstance(result, server_module.StatusOutput)
+    assert result.phase == "executing"
+
+    # Argv order: upgrade BEFORE user tool call.
+    upgrade_idx = next(
+        i for i, c in enumerate(calls) if c[:2] == ["cortex", "upgrade"]
+    )
+    user_call_idx = next(
+        i
+        for i, c in enumerate(calls)
+        if c[:1] == ["cortex"]
+        and len(c) >= 4
+        and c[1] == "overnight"
+        and c[2] == "status"
+    )
+    assert upgrade_idx < user_call_idx, (
+        f"R13: `cortex upgrade` must precede user tool call; "
+        f"got upgrade_idx={upgrade_idx} user_call_idx={user_call_idx}; "
+        f"calls={calls}"
+    )
+
+    # Probe fired AFTER upgrade and BEFORE user tool call.
+    assert probe_callcount_at_invoke, "verification probe was not invoked"
+    assert probe_callcount_at_invoke[0] > upgrade_idx, (
+        f"R13: verification probe must fire after upgrade; "
+        f"probe_callcount_at_invoke={probe_callcount_at_invoke[0]} "
+        f"upgrade_idx={upgrade_idx}; calls={calls}"
+    )
+    assert probe_callcount_at_invoke[0] <= user_call_idx, (
+        f"R13: verification probe must fire before user tool call; "
+        f"probe_callcount_at_invoke={probe_callcount_at_invoke[0]} "
+        f"user_call_idx={user_call_idx}; calls={calls}"
+    )
