@@ -53,11 +53,17 @@ from typing import Iterable, List
 
 
 # Directories to exclude from the walk. Matched on path components.
-EXCLUDED_DIR_NAMES = frozenset({".git"})
+# `.venv` excluded because virtual environments contain vendored markdown docs
+# from packages — not part of the project's citation graph.
+EXCLUDED_DIR_NAMES = frozenset({".git", ".venv"})
+# `.claude/worktrees/` excluded because each worktree is a separate working
+# copy on a separate branch; rewriting their files from the main worktree
+# corrupts in-progress agent work that is owned by other sessions.
 EXCLUDED_REL_PREFIXES = (
     Path("lifecycle") / "archive",
     Path("lifecycle") / "sessions",
     Path("retros"),
+    Path(".claude") / "worktrees",
 )
 
 
