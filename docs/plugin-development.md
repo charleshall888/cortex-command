@@ -1,85 +1,105 @@
 # Plugin Development: Local Dogfooding Workflow
 
-This doc covers the maintainer workflow for installing in-repo plugins
-(starting with `cortex-overnight-integration`) directly from this checkout,
-before ticket 122 publishes the production marketplace manifest.
+[← Back to README](../README.md)
 
-## Why this exists
+This guide covers the steady-state maintainer workflow for developing,
+building, and installing plugins directly from this checkout.
 
-Per epic decisions:
+## Plugin classification
 
-- **DR-9**: This repo (`cortex-command`) publishes the four core plugins
-  (`cortex-interactive`, `cortex-overnight-integration`, `cortex-ui-extras`,
-  `cortex-pr-review`) via the in-tree `cortex-command` marketplace; the
-  separate companion-extras repo now holds only `android-dev-extras`.
-- **DR-2**: The runner boundary splits the agentic layer into two plugins:
-  `cortex-interactive` (already shipped in ticket 120) and
-  `cortex-overnight-integration` (this ticket's plugin —
-  overnight + morning-review skills + runner-only hooks).
+Every `plugins/*/` directory is classified as one of two kinds:
 
-Until ticket 122 lands the production marketplace manifest, maintainers
-need a way to install the in-repo plugin reproducibly from any commit.
-The committed stub at `.claude-plugin/marketplace.json` (ticket 121,
-Task 10) is the marketplace anchor — no off-tree maintainer-authored
-file is required, and there is no cleanup ritual.
+- **Build-output plugins** (`cortex-interactive`, `cortex-overnight-integration`)
+  — assembled from top-level sources (`skills/`, `bin/cortex-*`,
+  `hooks/cortex-*.sh`, `claude/hooks/cortex-*.sh`) by `just build-plugin`.
+  The assembled tree is committed; never edit it by hand.
+
+- **Hand-maintained plugins** (`cortex-pr-review`, `cortex-ui-extras`)
+  — edited in place inside `plugins/*/`; `just build-plugin` leaves them
+  untouched.
+
+The classification lives in `justfile` as `BUILD_OUTPUT_PLUGINS` and
+`HAND_MAINTAINED_PLUGINS`. Every `plugins/*/` directory must appear in one
+list or the pre-commit hook will reject the commit.
 
 ## Prerequisites
 
-- The repo is checked out at `/Users/charlie.hall/Workspaces/cortex-command`
-  (substitute your own path; `$PWD` works if you run the commands from the
-  repo root).
-- The plugin tree under `plugins/cortex-overnight-integration/` has been
-  built (`just build-plugin` runs as part of pre-commit; the assembled
-  tree is committed).
-- You are in an interactive Claude Code session (these are slash commands,
-  not shell commands).
+- The repo is checked out locally (commands below use `$PWD`; run them from
+  the repo root, or substitute the absolute path).
+- Python 3 and `uv` are installed (required by hooks and build tooling).
+- `just` is installed (`brew install just`).
+- You are in an active Claude Code session for the slash-command steps.
 
-## Dogfood workflow
+## Setting up the dual-source drift hook
 
-### 1. Register the local marketplace
+Run once after clone (or when `.githooks/` changes):
 
-From inside Claude Code, point the marketplace at this repo:
+    just setup-githooks
 
-    /plugin marketplace add /Users/charlie.hall/Workspaces/cortex-command
+This sets `core.hooksPath` to `.githooks/` so the pre-commit hook activates.
+The hook runs four phases on every commit — see `.githooks/pre-commit` for
+the full logic.
 
-Or, if you launched Claude Code from the repo root:
+## Building plugins
+
+To regenerate all build-output plugin trees from top-level sources:
+
+    just build-plugin
+
+`build-plugin` copies skills, hooks, and `bin/cortex-*` entries into each
+build-output plugin's `plugins/<name>/` tree. Hand-maintained plugin trees
+are not touched. Run this after editing any file under `skills/`,
+`bin/cortex-*`, or the relevant hook scripts.
+
+## Registering the local marketplace
+
+Claude Code reads `.claude-plugin/marketplace.json` at a repo root and
+registers the plugins listed there. To point Claude Code at this checkout,
+run inside a Claude Code session:
 
     /plugin marketplace add $PWD
 
-Claude Code reads `.claude-plugin/marketplace.json` at the repo root and
-registers a marketplace named `cortex-command` (the `name` field in the
-stub manifest).
+After registration, install any plugin the manifest lists with:
 
-### 2. Install the plugin
+    /plugin install <plugin-name>@cortex-command
+
+For example, to install the overnight integration plugin:
 
     /plugin install cortex-overnight-integration@cortex-command
 
-The `@cortex-command` suffix selects the marketplace registered in step 1.
-After install, `/plugin list` shows `cortex-overnight-integration` as
-enabled, and `/cortex-overnight-integration:overnight` becomes invocable.
+## Drift detection and the pre-commit hook
 
-### 3. Verify the install
+The `.githooks/pre-commit` hook enforces that build-output plugin trees
+stay in sync with top-level sources. Its four phases:
 
-In the same session:
+1. **Name validation** — every `plugins/*/.claude-plugin/plugin.json` must
+   have a non-empty `.name` field, and every plugin directory must be
+   classified in `BUILD_OUTPUT_PLUGINS` or `HAND_MAINTAINED_PLUGINS`.
+2. **Short-circuit decision** — checks staged paths to decide whether a build
+   is needed (triggered by changes under `skills/`, `bin/cortex-*`,
+   `hooks/cortex-validate-commit.sh`, or any build-output plugin tree).
+3. **Conditional build** — if a build is needed, runs `just build-plugin`.
+4. **Drift loop** — runs `git diff` on each build-output plugin tree; fails
+   if the freshly-built working tree differs from the index.
 
-- `/plugin list` should show `cortex-overnight-integration` enabled.
-- `/cortex-overnight-integration:overnight` should be available as a slash command.
-- `/mcp` should show the `cortex-overnight` MCP server connected
-  (registered via the plugin's `.mcp.json`).
+### Fixing a drift failure
+
+If the hook reports drift, the built output does not match what is staged.
+The fix is always the same:
+
+1. Edit the top-level source (`skills/`, `bin/cortex-*`, or
+   `hooks/cortex-validate-commit.sh`) — not the plugin tree directly.
+2. Run `just build-plugin` to regenerate the assembled trees.
+3. Stage the regenerated plugin files (`git add plugins/<name>/...`).
+4. Retry the commit.
 
 ## Iterating on plugin source
 
-The plugin's authored sources live under `skills/`, `hooks/`, and friends
-at the repo root; the assembled tree under `plugins/cortex-overnight-integration/`
-is built by `just build-plugin` and committed. To pick up edits during
-development, rebuild and either reinstall or restart the Claude Code
-session — the pre-commit hook enforces that the assembled tree matches
-the canonical sources before any commit lands.
+- For **build-output plugins**: edit under `skills/`, `bin/cortex-*`, or the
+  relevant hook scripts, then run `just build-plugin`. The pre-commit hook
+  will verify the trees match before the commit lands.
+- For **hand-maintained plugins**: edit directly inside `plugins/<name>/`;
+  no build step is required.
 
-## Future plugins
-
-When ticket 122 lands, `.claude-plugin/marketplace.json` will be edited
-in place to add `cortex-interactive` and any sibling plugins. That is a
-normal file edit, not a blocking conflict against this ticket's stub.
-The same `/plugin marketplace add` + `/plugin install <name>@cortex-command`
-pattern will work for any plugin the manifest lists.
+To pick up changes in a running Claude Code session after rebuilding, either
+reinstall the plugin (`/plugin install`) or restart the session.
