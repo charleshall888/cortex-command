@@ -85,7 +85,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Spec R12. The corrupt-install test MUST corrupt the *installed-copy* path that the `cortex` shim actually executes — not the source-tree file. Concretely: under a fresh `uv tool install` test fixture (non-editable), pre-corrupt `<uv-tools-prefix>/cortex-command/lib/python3.X/site-packages/cortex_command/overnight/cli_handler.py` (or whichever path the test fixture's `uv tool dir cortex-command` resolves to). Corrupting the source-checkout `cortex_command/overnight/cli_handler.py` only catches the editable-install case and produces a false pass against the production failure mode the probe is designed to guard. Probe failure compose-with-R14: log+stderr now (placeholder for the NDJSON path that Task 11 fills in), but the user's tool call still proceeds.
 - **Verification**: Run `verdict=$(grep -E '^(PASS|FAIL|PARTIAL)$' lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/sandbox-probe-result.md | head -1); if [ "$verdict" = "PASS" ]; then uv run pytest tests/test_mcp_auto_update_orchestration.py -k "verification_probe" -v; else git log --oneline | grep -F "Task 9 self-skipped"; fi` — exits 0 either way. Active path tests: `test_verification_probe_fails_on_corrupt_install` (uses a per-test `uv tool install` of a tempdir-checkout into a tempdir uv-tools prefix, then corrupts the resulting installed-copy path under that prefix); `test_verification_probe_failure_falls_through_to_on_disk_cli`.
-- **Status**: [ ] pending
+- **Status**: [x] complete (61b6e92)
 
 ### Task 10: Synchronous schema-floor gate + dispatch ordering (R13) [conditional R18=PASS]
 - **Files**: `plugins/cortex-overnight-integration/server.py`, `tests/test_mcp_auto_update_orchestration.py`.
@@ -94,7 +94,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Spec R13 + Technical Constraints "Gate dispatch order on every tool call". CLI version cache from Task 6 (separate from R8 cache; never expires).
 - **Verification**: Run `verdict=$(grep -E '^(PASS|FAIL|PARTIAL)$' lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/sandbox-probe-result.md | head -1); if [ "$verdict" = "PASS" ]; then uv run pytest tests/test_mcp_auto_update_orchestration.py -k "schema_floor" -v; else git log --oneline | grep -F "Task 10 self-skipped"; fi` — exits 0 either way. Active path tests: `test_schema_floor_triggers_synchronous_upgrade`, `test_schema_floor_tool_call_runs_after_upgrade`.
-- **Status**: [ ] pending
+- **Status**: [x] complete (b1421ef)
 
 ### Task 11: NDJSON error log + R8 cache invalidation hooks (R14) [conditional R18=PASS]
 - **Files**: `plugins/cortex-overnight-integration/server.py`, `tests/test_mcp_auto_update_orchestration.py`.
@@ -130,7 +130,7 @@ Refactor the cortex MCP server out of `cortex_command/mcp_server/` into a plugin
 - **Complexity**: simple
 - **Context**: Spec R19 scope-cut. R8 cache invalidation rules from Technical Constraints don't apply on this path (no orchestration to invalidate around). This task and Tasks 8/9/10/11 form a mutually-exclusive pair governed by the R18 verdict pre-flight: on PASS, T8/T9/T10/T11 run their bodies and T16 self-skips; on FAIL/PARTIAL, T16 runs its body and T8/T9/T10/T11 self-skip. Both code paths produce skip-marker commits where they self-skip, satisfying the dispatcher's commit-checkpoint requirement.
 - **Verification**: Run `verdict=$(grep -E '^(PASS|FAIL|PARTIAL)$' lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/sandbox-probe-result.md | head -1); if [ "$verdict" = "PASS" ]; then git log --oneline | grep -F "Task 16 self-skipped"; else grep -F "cortex update available" plugins/cortex-overnight-integration/server.py && ls backlog/*-cortex-init-allowwrite-registration-revisit.md; fi` — exits 0 either way.
-- **Status**: [ ] pending
+- **Status**: [x] complete (acfddbb — self-skipped on R18 verdict PASS)
 
 ### Task 14: Cutover wiring — swap `.mcp.json` and add deprecation stub (R7, partial)
 - **Files**: `plugins/cortex-overnight-integration/.mcp.json` (modify), `cortex_command/cli.py` (modify `_dispatch_mcp_server` at line 71 AND `_dispatch_upgrade` at lines 85-119), `.claude-plugin/marketplace.json` (modify — update the `cortex-overnight-integration` entry's `description` to reflect the broadened scope: the plugin now hosts the canonical MCP server source in addition to overnight runner hooks), `tests/test_cli_mcp_server_deprecated.py` (create).
