@@ -82,6 +82,89 @@ def _dispatch_mcp_server(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_cortex_root() -> str:
+    """Resolve the absolute path to the Cortex Command checkout (R3, R16).
+
+    Discovery chain:
+      1. ``CORTEX_COMMAND_ROOT`` env var (override).
+      2. Editable-install ``.pth`` resolution — the ``cortex_command`` package
+         is imported from the checkout, so ``cortex_command.__file__`` points
+         into the editable source tree; its parent's parent is the repo root.
+      3. ``$HOME/.cortex`` default.
+      4. Hard-fail with a clear stderr message if none of the above resolve
+         to an existing directory.
+    """
+
+    import os
+    from pathlib import Path
+
+    override = os.environ.get("CORTEX_COMMAND_ROOT")
+    if override:
+        return str(Path(override).resolve())
+
+    try:
+        import cortex_command
+
+        pkg_file = getattr(cortex_command, "__file__", None)
+        if pkg_file:
+            candidate = Path(pkg_file).resolve().parent.parent
+            if (candidate / "pyproject.toml").is_file():
+                return str(candidate)
+    except Exception:  # pragma: no cover - defensive: import-time edge cases
+        pass
+
+    home_default = Path.home() / ".cortex"
+    if home_default.is_dir():
+        return str(home_default)
+
+    print(
+        "cortex: unable to resolve cortex_root; set CORTEX_COMMAND_ROOT or "
+        "install via `uv tool install -e <path>`",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+def _dispatch_print_root(_args: argparse.Namespace) -> int:
+    """Emit versioned JSON describing this Cortex install (R3, R16).
+
+    The JSON shape — ``version``, ``root``, ``remote_url``, ``head_sha`` — is
+    forever-public-API: append-only after publication; existing fields never
+    change semantics or types without a major bump.
+    """
+
+    import json
+    import subprocess
+
+    root = _resolve_cortex_root()
+
+    # Per spec Technical Constraints, no `check=True` on shell-outs here.
+    remote_proc = subprocess.run(
+        ["git", "-C", root, "remote", "get-url", "origin"],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    remote_url = remote_proc.stdout.strip() if remote_proc.returncode == 0 else ""
+
+    head_proc = subprocess.run(
+        ["git", "-C", root, "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    head_sha = head_proc.stdout.strip() if head_proc.returncode == 0 else ""
+
+    payload = {
+        "version": "1.0",
+        "root": root,
+        "remote_url": remote_url,
+        "head_sha": head_sha,
+    }
+    print(json.dumps(payload))
+    return 0
+
+
 def _dispatch_upgrade(args: argparse.Namespace) -> int:
     import os
     import subprocess
@@ -125,6 +208,15 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Cortex Command CLI — orchestrates overnight runs and the MCP server.",
         epilog=EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    # Top-level --print-root flag (R3, R16) — emits versioned JSON to stdout
+    # describing this Cortex install. Forever-public-API: append-only.
+    parser.add_argument(
+        "--print-root",
+        dest="print_root",
+        action="store_true",
+        help="Print versioned JSON {version, root, remote_url, head_sha} and exit",
     )
 
     subparsers = parser.add_subparsers(dest="command", metavar="<command>")
@@ -328,6 +420,10 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = _build_parser()
     args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+
+    # Intercept --print-root before subcommand dispatch (R3).
+    if getattr(args, "print_root", False):
+        return _dispatch_print_root(args)
 
     if not getattr(args, "func", None):
         parser.print_help(sys.stderr)
