@@ -84,7 +84,7 @@ Vendor `android-dev-extras` and `cortex-dev-extras` (devils-advocate only) into 
 - **Complexity**: simple
 - **Context**: Depends on Task 7 because the cross-artifact consistency check requires the marketplace.json to already contain the new entries. Current table format established by the four existing rows in lines 97-108. Maintain markdown table column layout (leading `|`, plugin name, description, link). Removing line 108's companion-repo reference is the last residual mention of cortex-command-plugins in the file.
 - **Verification**: `grep -cE 'six plugins|6 plugins' /Users/charlie.hall/Workspaces/cortex-command/README.md` ≥ 1 AND `grep -c cortex-command-plugins /Users/charlie.hall/Workspaces/cortex-command/README.md` = 0 AND `grep -cE '^\| *android-dev-extras *\|' /Users/charlie.hall/Workspaces/cortex-command/README.md` ≥ 1 AND `grep -cE '^\| *cortex-dev-extras *\|' /Users/charlie.hall/Workspaces/cortex-command/README.md` ≥ 1 AND **cross-artifact consistency**: the count of plugin rows in the README plugin-roster table equals the count in marketplace.json — `[ "$(grep -cE '^\| *[a-z][a-z0-9-]+ *\|' /Users/charlie.hall/Workspaces/cortex-command/README.md)" = "$(jq '.plugins | length' /Users/charlie.hall/Workspaces/cortex-command/.claude-plugin/marketplace.json)" ]` exits 0 — pass if all five hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Port validate.yml workflow to cortex-command
 
