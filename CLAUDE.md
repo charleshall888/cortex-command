@@ -15,7 +15,7 @@ An opinionated AI workflow framework for Claude Code. Provides skills (slash com
 - `docs/` - Documentation (setup guide, agentic layer, overnight, skills reference)
 - `tests/` - Automated test suite for skills, hooks, and overnight runner
 - `retros/` - Session retrospectives (dated problem-only logs)
-- `bin/` - Global CLI utilities (migrate to `cortex-interactive` plugin bin/ in ticket 120)
+- `bin/` - Global CLI utilities; canonical source mirrored into the `cortex-interactive` plugin's `bin/` via dual-source enforcement
 
 ## Distribution
 
@@ -44,7 +44,7 @@ Run `just` to see all available recipes. Key commands:
 - Agent-specific config goes in `claude/`
 - Settings JSON must remain valid JSON
 - Hook/notification scripts must be executable (`chmod +x`)
-- New global utilities ship via the `cortex-interactive` plugin's `bin/` directory (ticket 120 scope); see `just --list` for available recipes.
+- New global utilities ship via the `cortex-interactive` plugin's `bin/` directory; see `just --list` for available recipes.
 - Run `just setup-githooks` after clone to enable the dual-source drift pre-commit hook.
 - Use `cortex-jcc <recipe>` to invoke cortex-command recipes from any directory. The wrapper (shipped in `plugins/cortex-interactive/bin/`) runs recipes in this repo's directory context, so it's suitable for repo-specific operations (`cortex-jcc backlog-index`, `cortex-jcc validate-commit`), not for operations that should act on another repo's files (use `cortex-update-item`, `cortex-generate-backlog-index`, etc. for those — also shipped via the cortex-interactive plugin's `bin/`).
 - Overnight docs source of truth: `docs/overnight-operations.md` owns the round loop and orchestrator behavior, `docs/pipeline.md` owns pipeline-module internals, and `docs/sdk.md` owns SDK model-selection mechanics. When editing overnight-related docs, update the owning doc and link from the others rather than duplicating content.

@@ -57,5 +57,4 @@ The remote-access area covers the capabilities that allow development work to co
 
 ## Open Questions
 
-- `docs/setup.md` references `remote/SETUP.md` (line 286) as "Full step-by-step instructions," but that file does not exist in the repository. Users following the setup guide encounter a broken link. This documentation gap should be addressed as a separate task.
 - The tool currently providing session persistence (tmux skill) is under review. The requirements above describe the capability that must be preserved regardless of which tool provides it.
