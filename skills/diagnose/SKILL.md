@@ -144,8 +144,10 @@ ALWAYS find root cause before attempting fixes. No fixes without completing Phas
 
 1. **Form a Single Hypothesis**
    - State clearly: "I think X is the root cause because Y"
-   - Be specific: "The hook isn't running because the path in settings.json uses
-     `~/.claude/hooks/` but the sandbox allowlist expects an absolute path"
+   - Be specific: "The session writes are failing because the entry in
+     `sandbox.filesystem.allowWrite` uses `~/Workspaces/myrepo/lifecycle/sessions/`
+     but the sandbox allowlist expects an absolute path (e.g.
+     `/Users/me/Workspaces/myrepo/lifecycle/sessions/`)"
 
 2. **Test Minimally**
    - Make the SMALLEST possible change to test the hypothesis
