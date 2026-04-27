@@ -544,3 +544,17 @@ Both phases use the same event payload (built once inside `ensure_sdk_auth` with
 #### Propagation
 
 `dispatch.py` forwards both variables into SDK subprocesses. Note the asymmetry — `CLAUDE_CODE_OAUTH_TOKEN` works only for `claude -p` and the SDK; standalone tools (including most scripts invoked from within a task) still need `ANTHROPIC_API_KEY`. If a worker subprocess reports auth errors but the orchestrator is fine, inspect which variable is reaching it.
+
+### Lifecycle-archive recovery procedure
+
+The `just lifecycle-archive` recipe (housekeeping that moves long-completed feature directories from `lifecycle/` into `lifecycle/archive/` and rewrites cross-references) is git-recoverable by design. There is no manifest-driven rollback — recovery is a single git command from the main repo CWD.
+
+The recipe asserts a clean working tree on entry (`git diff --quiet HEAD && git diff --quiet --cached HEAD`) so that any subsequent change in the working tree is unambiguously attributable to this run. If that precheck fails, the recipe aborts before touching anything; if a mid-run abort occurs (a `set -euo pipefail` exit, a partial `mv`, a `sed`/path-rewrite error, or operator interrupt), the working tree contains only this run's incomplete edits.
+
+Recovery is three steps:
+
+1. **Confirm the failure mode** — either the precheck error (recipe never ran) or a mid-run abort (partial moves and/or rewrites visible in `git status`).
+2. **Revert from the main repo CWD**: `git checkout -- .` discards all uncommitted moves and `*.md` rewrites since the clean-tree baseline. This restores the pre-run state in one command.
+3. **Treat the manifest as audit-only** — `lifecycle/archive/.archive-manifest.jsonl` (NDJSON, appended atomically before each `mv`) records what the recipe attempted, but it exists for inspection and audit (e.g., morning-report integration) only. Do NOT script a manifest-driven rollback; the supported recovery path is `git checkout -- .` and nothing else. The manifest persists across the abort because it lives under `lifecycle/archive/` (which the recipe creates outside the moved-set), so it remains readable for post-mortem after the checkout.
+
+For larger archive runs, prefer the two-phase pattern documented in N6.4 of the apply-post-113-audit-follow-ups spec (a deterministic 5-dir sample run, commit, then the full run on remaining dirs), which keeps each commit boundary small enough that a `git checkout -- .` recovery never crosses a successful prior phase.
