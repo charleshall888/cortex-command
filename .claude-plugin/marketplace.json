@@ -16,7 +16,7 @@
     {
       "name": "cortex-overnight-integration",
       "source": "./plugins/cortex-overnight-integration",
-      "description": "Overnight skill runner hooks that integrate with the cortex CLI on PATH and the cortex-interactive plugin to drive autonomous lifecycle execution"
+      "description": "Hosts the canonical cortex MCP server (PEP 723 single-file server.py) plus overnight skill runner hooks; integrates with the cortex CLI on PATH and the cortex-interactive plugin to drive autonomous lifecycle execution"
     },
     {
       "name": "cortex-pr-review",

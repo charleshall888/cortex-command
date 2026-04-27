@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "cortex-overnight": {
-      "command": "cortex",
-      "args": ["mcp-server"]
+      "command": "uvx",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/server.py"]
     }
   }
 }

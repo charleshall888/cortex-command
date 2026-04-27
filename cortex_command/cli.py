@@ -74,18 +74,95 @@ def _dispatch_overnight_list_sessions(args: argparse.Namespace) -> int:
     return cli_handler.handle_list_sessions(args)
 
 
-def _dispatch_mcp_server(_args: argparse.Namespace) -> int:
-    """Launch the stdio MCP control-plane server (R1).
+_MCP_SERVER_DEPRECATION_BASE = (
+    "cortex mcp-server is removed; install the cortex-overnight-integration "
+    "plugin (/plugin install cortex-overnight-integration@cortex-command) "
+    "and update your .mcp.json to point at uvx ${CLAUDE_PLUGIN_ROOT}/server.py"
+)
 
-    Imports :mod:`cortex_command.mcp_server.server` lazily so ``cortex
-    --help`` and other subcommands do not pay the ``mcp`` SDK import
-    cost. Blocks until the transport closes.
+_MCP_SERVER_RESTART_ADVISORY = (
+    " Restart Claude Code after editing your .mcp.json — existing sessions "
+    "will not pick up the change automatically."
+)
+
+_MCP_SERVER_T12_VERDICT_PATH = (
+    "lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-"
+    "orchestration/plugin-refresh-semantics.md"
+)
+
+
+def _read_t12_restart_required() -> bool:
+    """Return True iff T12's verdict indicates session-restart-required.
+
+    Locates ``plugin-refresh-semantics.md`` relative to the resolved
+    ``cortex_root`` and parses the trailing ``## Verdict`` section. Any
+    error (file missing, parse failure, root unresolvable) yields False so
+    the deprecation stub still emits the baseline message.
     """
 
-    from cortex_command.mcp_server.server import build_server
+    import os
+    from pathlib import Path
 
-    build_server().run(transport="stdio")
-    return 0
+    try:
+        override = os.environ.get("CORTEX_COMMAND_ROOT")
+        if override:
+            root = Path(override)
+        else:
+            try:
+                import cortex_command
+
+                pkg_file = getattr(cortex_command, "__file__", None)
+                if pkg_file:
+                    candidate = Path(pkg_file).resolve().parent.parent
+                    if (candidate / "pyproject.toml").is_file():
+                        root = candidate
+                    else:
+                        root = Path.home() / ".cortex"
+                else:
+                    root = Path.home() / ".cortex"
+            except Exception:
+                root = Path.home() / ".cortex"
+
+        verdict_file = root / _MCP_SERVER_T12_VERDICT_PATH
+        if not verdict_file.is_file():
+            return False
+        text = verdict_file.read_text(encoding="utf-8")
+        # Find the last "## Verdict" section and read the verdict line that
+        # follows it (the conventional shape — see plugin-refresh-semantics.md).
+        marker = "## Verdict"
+        idx = text.rfind(marker)
+        if idx < 0:
+            return False
+        tail = text[idx + len(marker):]
+        for line in tail.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+            return stripped == "session_restart_required"
+        return False
+    except Exception:
+        return False
+
+
+def _dispatch_mcp_server(_args: argparse.Namespace) -> int:
+    """Deprecation stub for the removed ``cortex mcp-server`` verb (R7).
+
+    The MCP server now ships as a plugin-bundled PEP 723 single-file at
+    ``plugins/cortex-overnight-integration/server.py`` invoked via
+    ``uvx ${CLAUDE_PLUGIN_ROOT}/server.py`` from the plugin's ``.mcp.json``.
+    A user who manually runs ``cortex mcp-server`` from a terminal sees this
+    migration message in their shell. Claude Code does NOT surface MCP-server
+    stderr to users (verified via Claude Code GitHub issues #25751, #34744,
+    #17653) — the failure is shown as a generic "MCP server failed" status —
+    so this stderr message is a terminal-debugging channel, not a Claude
+    Code UI channel.
+    """
+
+    message = _MCP_SERVER_DEPRECATION_BASE
+    if _read_t12_restart_required():
+        message = message + _MCP_SERVER_RESTART_ADVISORY
+    print(message, file=sys.stderr)
+    return 1
 
 
 def _resolve_cortex_root() -> str:
@@ -205,6 +282,15 @@ def _dispatch_upgrade(args: argparse.Namespace) -> int:
         if exc.stderr:
             print(exc.stderr, file=sys.stderr)
         return 1
+    # Post-upgrade migration notice (R7 / Task 14). Proactive channel for
+    # users who upgrade before noticing that their .mcp.json still points at
+    # the removed `cortex mcp-server` verb.
+    print(
+        "Note: if you have a stale .mcp.json from before this upgrade, "
+        "update it to point at uvx ${CLAUDE_PLUGIN_ROOT}/server.py — "
+        "see docs/mcp-contract.md.",
+        file=sys.stderr,
+    )
     return 0
 
 
