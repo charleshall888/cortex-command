@@ -24,7 +24,7 @@ Vendor `android-dev-extras` and `cortex-dev-extras` (devils-advocate only) into 
 - **Complexity**: simple
 - **Context**: Source tree inventory in `research.md:15-20`. CFA-PATCH guard placement (the `<!-- CFA-PATCH: see plugins/android-dev-extras/HOW-TO-SYNC.md §Accepted divergences -->` comment in `skills/android-cli/SKILL.md`) must land immediately after the closing frontmatter `---` and before the first heading — the source already has this placement; `cp -a` preserves it byte-for-byte. The `!command -v android` dynamic injection in `android-cli/SKILL.md` is repo-agnostic and survives unchanged. Plain copy without `git subtree`/`filter-repo` per spec Technical Constraint (research Alt 5b).
 - **Verification**: `find /Users/charlie.hall/Workspaces/cortex-command/plugins/android-dev-extras -type f | wc -l` ≥ 14 — pass if true. AND `diff -r --brief /Users/charlie.hall/Workspaces/cortex-command-plugins/plugins/android-dev-extras /Users/charlie.hall/Workspaces/cortex-command/plugins/android-dev-extras` reports no differences (run BEFORE Tasks 3/4 modify NOTICE/HOW-TO-SYNC.md) — pass if exit 0 with empty stdout.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Rewrite android-dev-extras NOTICE for cortex-command repo
 
@@ -54,7 +54,7 @@ Vendor `android-dev-extras` and `cortex-dev-extras` (devils-advocate only) into 
 - **Complexity**: simple
 - **Context**: Source `plugin.json` at `/Users/charlie.hall/Workspaces/cortex-command-plugins/plugins/cortex-dev-extras/.claude-plugin/plugin.json` is a 30-byte minimal `{"name": "cortex-dev-extras"}`. Source `skills/devils-advocate/SKILL.md` is 6.1 KB. Per research file inventory, devils-advocate has no `references/` subdir. The skill-creator directory in source contains `SKILL.md` plus 5 reference files and is intentionally dropped. The description frontmatter inside `devils-advocate/SKILL.md` will be edited in Task 6 (separate task because it's a bilateral edit with critical-review).
 - **Verification**: `! test -d /Users/charlie.hall/Workspaces/cortex-command/plugins/cortex-dev-extras/skills/skill-creator` (exit 0 — directory absent) AND `test -f /Users/charlie.hall/Workspaces/cortex-command/plugins/cortex-dev-extras/.claude-plugin/plugin.json` (exit 0) AND `test -f /Users/charlie.hall/Workspaces/cortex-command/plugins/cortex-dev-extras/skills/devils-advocate/SKILL.md` (exit 0) — pass if all three exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Bilateral description rewrite — devils-advocate ↔ critical-review niche differentiation
 
