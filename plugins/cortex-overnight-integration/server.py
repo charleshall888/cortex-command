@@ -34,10 +34,14 @@ first tool call and never expires for the MCP-server lifetime. It is
 
 from __future__ import annotations
 
+import errno
+import fcntl
 import json
 import os
+import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any, Literal, Optional
 
@@ -432,6 +436,295 @@ def _maybe_check_upstream(
 
 
 # ---------------------------------------------------------------------------
+# R10/R11 upgrade orchestration with flock + post-flock re-verify (Task 8)
+# ---------------------------------------------------------------------------
+
+#: Wait budget (seconds) for acquiring the cross-process upgrade flock at
+#: ``$cortex_root/.git/cortex-update.lock``. Spec R11.
+_FLOCK_WAIT_BUDGET_SECONDS = 30.0
+
+#: Polling interval (seconds) used by the non-blocking flock acquisition
+#: loop. Small enough that contention drops sub-second; large enough that
+#: a contending process does not burn CPU.
+_FLOCK_POLL_INTERVAL_SECONDS = 0.1
+
+#: Timeout (seconds) for the ``cortex upgrade`` subprocess. Spec R10.
+_CORTEX_UPGRADE_TIMEOUT_SECONDS = 60.0
+
+#: Timeout (seconds) for the post-flock fresh ``git ls-remote`` re-verify.
+_POST_FLOCK_LS_REMOTE_TIMEOUT_SECONDS = 5.0
+
+#: Timeout (seconds) for the post-flock fresh ``git rev-parse HEAD``
+#: re-verify.
+_POST_FLOCK_REV_PARSE_TIMEOUT_SECONDS = 5.0
+
+
+def _acquire_update_flock(lock_path: Path) -> Optional[int]:
+    """Acquire ``fcntl.flock(LOCK_EX)`` on ``lock_path`` with a 30s budget.
+
+    Uses non-blocking polling (``fcntl.LOCK_EX | fcntl.LOCK_NB``) so the
+    wait budget is enforced cooperatively without depending on signal
+    delivery (which is process-wide and incompatible with the FastMCP
+    runtime's own signal handlers).
+
+    Returns the open file descriptor on success. Returns ``None`` when
+    the budget expires; the caller is responsible for the no-upgrade
+    fallback path.
+
+    Caller must release via ``fcntl.flock(fd, fcntl.LOCK_UN)`` and
+    ``os.close(fd)`` in a ``try/finally`` block.
+
+    Spec R11. Pattern derived from
+    ``cortex_command/init/settings_merge.py:69-85``.
+    """
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+    deadline = time.monotonic() + _FLOCK_WAIT_BUDGET_SECONDS
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return fd
+            except OSError as exc:
+                if exc.errno not in (errno.EWOULDBLOCK, errno.EAGAIN):
+                    # Genuine flock failure (not contention) — surface.
+                    os.close(fd)
+                    raise
+            if time.monotonic() >= deadline:
+                os.close(fd)
+                return None
+            time.sleep(_FLOCK_POLL_INTERVAL_SECONDS)
+    except BaseException:
+        # Defensive: if anything raises before we return, ensure we don't
+        # leak the fd. The success path returns above without closing.
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
+
+
+def _release_update_flock(fd: int) -> None:
+    """Release the flock acquired by :func:`_acquire_update_flock`."""
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
+def _post_flock_remote_sha(remote_url: str) -> Optional[str]:
+    """Run a *fresh* ``git ls-remote <remote-url> HEAD`` post-flock.
+
+    Per spec Technical Constraints "R11 post-acquire HEAD re-verification
+    reference point": the freshness comparison MUST use a fresh
+    ``git ls-remote`` (not the captured pre-flock remote_sha) so that an
+    R10/R13-triggered upgrade by another MCP that landed past the
+    captured pre-flock remote_sha during the wait is correctly detected
+    as up-to-date.
+
+    Returns the remote HEAD sha on success, ``None`` on failure.
+    """
+    try:
+        completed = subprocess.run(
+            ["git", "ls-remote", str(remote_url), "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=_POST_FLOCK_LS_REMOTE_TIMEOUT_SECONDS,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    if completed.returncode != 0:
+        return None
+    first_line = completed.stdout.splitlines()[0] if completed.stdout else ""
+    sha = first_line.split()[0] if first_line.strip() else ""
+    return sha or None
+
+
+def _post_flock_local_head(cortex_root: str) -> Optional[str]:
+    """Run a *fresh* ``git -C <cortex_root> rev-parse HEAD`` post-flock."""
+    try:
+        completed = subprocess.run(
+            ["git", "-C", cortex_root, "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=_POST_FLOCK_REV_PARSE_TIMEOUT_SECONDS,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    if completed.returncode != 0:
+        return None
+    sha = completed.stdout.strip()
+    return sha or None
+
+
+def _run_cortex_upgrade() -> subprocess.CompletedProcess[str]:
+    """Spawn ``cortex upgrade`` as a subprocess (timeout 60s).
+
+    Spec R10. Spec Technical Constraints: ``capture_output=True,
+    text=True``, explicit ``timeout``, no ``check=True``.
+    """
+    return subprocess.run(
+        _resolve_cortex_argv() + ["upgrade"],
+        capture_output=True,
+        text=True,
+        timeout=_CORTEX_UPGRADE_TIMEOUT_SECONDS,
+    )
+
+
+def _run_verification_probe() -> bool:
+    """R12 verification probe stub — Task 9 fills in the body.
+
+    Returns ``True`` on success (or on the Task 8 stub-path) so that
+    Task 8's invocation-order test sees the call site fire. Task 9
+    replaces this with the real two-step probe (``cortex --print-root``
+    followed by ``cortex overnight status --format json``) and the
+    fall-through-to-on-disk semantics on failure.
+    """
+    # Stub: invoke a no-op subprocess so the call-order test can record
+    # the call site. Task 9 swaps this for the real probe.
+    return True
+
+
+def _orchestrate_upgrade(cortex_root_payload: dict[str, Any]) -> None:
+    """Orchestrate ``cortex upgrade`` under the cross-process flock (R10/R11).
+
+    Called by :func:`_maybe_run_upgrade` after R8 detected upstream
+    advance and skip predicates did not fire. Pre-conditions: the caller
+    has confirmed (a) ``_maybe_check_upstream()`` returned ``True`` and
+    (b) skip predicates did not fire.
+
+    Behavior:
+
+    1. Acquire ``fcntl.flock(LOCK_EX)`` on
+       ``$cortex_root/.git/cortex-update.lock`` with a 30-second wait
+       budget (spec R11). On budget expiry: log a one-liner to stderr,
+       call ``_invalidate_update_cache()`` (so the next tool call
+       retries), and return without upgrading.
+
+    2. Post-acquire re-verify: run a *fresh* ``git ls-remote
+       <remote-url> HEAD`` and ``git -C $cortex_root rev-parse HEAD``
+       and compare. If they match, another MCP already applied the
+       update — skip the redundant ``cortex upgrade`` invocation, call
+       ``_invalidate_update_cache()`` (so the next tool call re-checks
+       against the now-current local), and return.
+
+    3. Otherwise: spawn ``subprocess.run(["cortex", "upgrade"], ...,
+       timeout=60)``. On non-zero exit: log to stderr (placeholder for
+       Task 11's NDJSON path) and return without invalidating the cache
+       (the cache will be invalidated by the Task 11 NDJSON-error
+       branch once that lands; for Task 8 we leave the cache alone so
+       the next tool call doesn't infinite-loop on a broken upgrade).
+
+    4. On successful upgrade: invoke the verification probe (R12 — the
+       Task 9 implementation lives in :func:`_run_verification_probe`),
+       then call ``_invalidate_update_cache()`` so the next tool call
+       re-checks against the upgraded local HEAD.
+
+    The lock is released in a ``try/finally`` block in all paths.
+
+    Spec R10, R11, plus Technical Constraints "Cache invalidation rules
+    for R8's instance cache".
+    """
+    cortex_root = cortex_root_payload.get("root")
+    remote_url = cortex_root_payload.get("remote_url")
+    if not cortex_root or not remote_url:
+        # Defensive: discovery payload missing required fields. The
+        # caller (``_maybe_check_upstream``) already filters on these,
+        # but be safe.
+        return
+
+    lock_path = Path(str(cortex_root)) / ".git" / "cortex-update.lock"
+    fd = _acquire_update_flock(lock_path)
+    if fd is None:
+        # R11 flock-budget expiry. Log to stderr (one-liner per spec)
+        # and invalidate the cache so the next tool call retries.
+        print(
+            f"cortex MCP: flock wait budget exceeded "
+            f"({_FLOCK_WAIT_BUDGET_SECONDS:.0f}s) on {lock_path}; "
+            f"proceeding without upgrade",
+            file=sys.stderr,
+        )
+        _invalidate_update_cache()
+        return
+
+    try:
+        # Post-flock re-verification: fresh ls-remote + rev-parse,
+        # compared to each other (NOT to the captured pre-flock
+        # remote_sha — see spec Technical Constraints).
+        fresh_remote_sha = _post_flock_remote_sha(str(remote_url))
+        fresh_local_head = _post_flock_local_head(str(cortex_root))
+
+        if (
+            fresh_remote_sha is not None
+            and fresh_local_head is not None
+            and fresh_remote_sha == fresh_local_head
+        ):
+            # Another MCP already applied the update during our flock
+            # wait. Skip the redundant `cortex upgrade` invocation;
+            # invalidate the cache so the next tool call sees the new
+            # local HEAD.
+            _invalidate_update_cache()
+            return
+
+        # Upstream is still ahead post-flock. Run `cortex upgrade`.
+        try:
+            completed = _run_cortex_upgrade()
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            print(
+                f"cortex MCP: `cortex upgrade` failed: "
+                f"{exc.__class__.__name__}: {exc}; "
+                f"falling through to on-disk CLI",
+                file=sys.stderr,
+            )
+            return
+
+        if completed.returncode != 0:
+            print(
+                f"cortex MCP: `cortex upgrade` exited "
+                f"{completed.returncode}; "
+                f"stderr={completed.stderr!r}; "
+                f"falling through to on-disk CLI",
+                file=sys.stderr,
+            )
+            return
+
+        # R10 success path: run the verification probe (R12, Task 9),
+        # then invalidate the R8 cache so the next tool call re-checks.
+        _run_verification_probe()
+        _invalidate_update_cache()
+    finally:
+        _release_update_flock(fd)
+
+
+def _maybe_run_upgrade(
+    cortex_root_payload: Optional[dict[str, Any]] = None,
+) -> None:
+    """R8/R10/R11 entry point: check upstream, orchestrate upgrade if needed.
+
+    Wired from each MCP tool dispatch site (replacing the bare
+    ``_maybe_check_upstream()`` informational call from Task 7). The
+    return value is intentionally ``None`` — this helper either
+    successfully orchestrates an upgrade (or skips because no upgrade
+    is needed / a predicate fired / a budget expired) and the caller
+    delegates the user's intended tool call against the on-disk CLI in
+    all paths.
+    """
+    if cortex_root_payload is None:
+        try:
+            cortex_root_payload = _get_cortex_root_payload()
+        except (RuntimeError, subprocess.SubprocessError, OSError):
+            return
+
+    upstream_ahead = _maybe_check_upstream(cortex_root_payload)
+    if upstream_ahead is not True:
+        # Either skip-predicate fired (None), upstream matches local
+        # (False), or ls-remote failed (None). No orchestration needed.
+        return
+
+    _orchestrate_upgrade(cortex_root_payload)
+
+
+# ---------------------------------------------------------------------------
 # Pydantic models — ported verbatim from the legacy
 # `cortex_command.mcp_server.schema` (R1 forbids importing them).
 # Each output model carries ``extra="ignore"`` so minor-greater payloads
@@ -675,9 +968,9 @@ def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
     # input model's ``Literal[True]`` rejects missing/false confirmations
     # before we get here).
 
-    # R8/R9 wiring point. Return value is informational-only in Task 7;
-    # Tasks 8/10/16 will branch on it.
-    _maybe_check_upstream()
+    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration;
+    # Tasks 10/16 will gate further branches.
+    _maybe_run_upgrade()
 
     argv: list[str] = ["overnight", "start", "--format", "json"]
     if payload.state_path is not None:
@@ -736,8 +1029,8 @@ def _delegate_overnight_start_run(payload: StartRunInput) -> StartRunOutput:
 def _delegate_overnight_status(payload: StatusInput) -> StatusOutput:
     """Subprocess delegation for ``overnight_status``."""
 
-    # R8/R9 wiring point. Return value is informational-only in Task 7.
-    _maybe_check_upstream()
+    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration.
+    _maybe_run_upgrade()
 
     argv: list[str] = ["overnight", "status", "--format", "json"]
     # The CLI's ``--session-dir`` override is the way to target a
@@ -827,8 +1120,8 @@ def _delegate_overnight_logs(payload: LogsInput) -> LogsOutput:
     the CLI once per file in ``payload.files`` and aggregate.
     """
 
-    # R8/R9 wiring point. Return value is informational-only in Task 7.
-    _maybe_check_upstream()
+    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration.
+    _maybe_run_upgrade()
 
     aggregated_lines: list[dict[str, Any]] = []
     next_cursor: str | None = None
@@ -921,8 +1214,8 @@ def _delegate_overnight_cancel(payload: CancelInput) -> CancelOutput:
     error envelope onto the matching reason code.
     """
 
-    # R8/R9 wiring point. Return value is informational-only in Task 7.
-    _maybe_check_upstream()
+    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration.
+    _maybe_run_upgrade()
 
     argv: list[str] = [
         "overnight",
@@ -992,8 +1285,8 @@ def _delegate_overnight_list_sessions(
 ) -> ListSessionsOutput:
     """Subprocess delegation for ``overnight_list_sessions``."""
 
-    # R8/R9 wiring point. Return value is informational-only in Task 7.
-    _maybe_check_upstream()
+    # R8/R9/R10/R11 wiring point. Task 8 wired upgrade orchestration.
+    _maybe_run_upgrade()
 
     argv: list[str] = ["overnight", "list-sessions", "--format", "json"]
     if payload.status is not None:
