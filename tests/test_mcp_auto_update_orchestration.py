@@ -95,7 +95,7 @@ def _completed(
 
 
 @pytest.fixture
-def server_module(monkeypatch: pytest.MonkeyPatch):
+def server_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     """Load server.py and reset its caches + skip latch per test.
 
     Also primes the discovery cache (``_get_cortex_root_payload``) with
@@ -108,6 +108,10 @@ def server_module(monkeypatch: pytest.MonkeyPatch):
 
     ``CORTEX_DEV_MODE`` is unset (and restored on teardown) so an
     inherited environment variable does not leak between tests.
+
+    ``XDG_STATE_HOME`` is redirected to ``tmp_path`` so the R14 NDJSON
+    error log (Task 11) writes into a per-test temp directory rather
+    than the user's real ``~/.local/state/cortex-command/last-error.log``.
     """
 
     mod = _load_server_module()
@@ -130,6 +134,11 @@ def server_module(monkeypatch: pytest.MonkeyPatch):
 
     # Ensure CORTEX_DEV_MODE is not inherited from the outer shell.
     monkeypatch.delenv("CORTEX_DEV_MODE", raising=False)
+
+    # Redirect the R14 NDJSON error-log path into the per-test tmp
+    # directory so Task 11's audit-record writes don't pollute the
+    # user's real ``~/.local/state/cortex-command/`` tree.
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
 
     yield mod
 
@@ -1478,3 +1487,323 @@ def test_schema_floor_tool_call_runs_after_upgrade(
         f"probe_callcount_at_invoke={probe_callcount_at_invoke[0]} "
         f"user_call_idx={user_call_idx}; calls={calls}"
     )
+
+
+# ---------------------------------------------------------------------------
+# R14 — NDJSON error log + cache invalidation hooks (Task 11)
+# ---------------------------------------------------------------------------
+
+
+def _read_error_log_records(server_module) -> list[dict[str, Any]]:
+    """Read the R14 NDJSON error log produced under ``$XDG_STATE_HOME``.
+
+    Returns the parsed JSON record per line, in append order. Returns
+    an empty list when the log file does not yet exist (no errors
+    appended this test).
+    """
+    log_path = server_module._last_error_log_path()
+    if not log_path.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for line in log_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        records.append(json.loads(line))
+    return records
+
+
+def test_ls_remote_timeout_appends_error_log(server_module) -> None:
+    """R14 acceptance: ls-remote ``TimeoutExpired`` appends a JSON line.
+
+    Spec R14 acceptance:
+    ``test_ls_remote_timeout_appends_error_log``.
+
+    Mocks ``subprocess.run`` to raise ``subprocess.TimeoutExpired`` for
+    ``git ls-remote`` and asserts a JSON line with
+    ``stage="git_ls_remote"`` lands in the NDJSON log path.
+    """
+    fake_run, _ = _make_subprocess_recorder(
+        raise_on_ls_remote=subprocess.TimeoutExpired(
+            cmd=["git", "ls-remote"], timeout=5
+        )
+    )
+
+    with patch.object(server_module.subprocess, "run", side_effect=fake_run):
+        result = server_module._maybe_check_upstream()
+
+    # Helper returned None per spec Edge Cases.
+    assert result is None
+
+    records = _read_error_log_records(server_module)
+    assert len(records) == 1, (
+        f"expected exactly one NDJSON record after ls-remote timeout; "
+        f"got {records}"
+    )
+    rec = records[0]
+    assert rec["stage"] == "git_ls_remote", (
+        f"NDJSON record must carry stage='git_ls_remote'; got {rec!r}"
+    )
+    assert "TimeoutExpired" in rec["error"], (
+        f"NDJSON record's error message must reference TimeoutExpired; "
+        f"got {rec['error']!r}"
+    )
+    # Schema check: required keys per spec R14.
+    for key in ("ts", "stage", "error", "context"):
+        assert key in rec, f"NDJSON record missing required key {key!r}: {rec!r}"
+    assert isinstance(rec["context"], dict)
+
+
+def test_ls_remote_nonzero_returncode_appends_error_log(
+    server_module,
+) -> None:
+    """R14 acceptance: ls-remote non-zero exit appends an NDJSON line.
+
+    Per spec Technical Constraints "never `check=True`; catch and
+    handle errors explicitly" the non-zero-returncode branch is a
+    SEPARATE handler from ``TimeoutExpired`` (which raises before the
+    child runs). DNS failure / TCP RST / TLS error / auth failure all
+    return a non-zero exit (typically 128 from ``git``) without
+    raising — this test exercises that branch.
+    """
+    calls: list[list[str]] = []
+
+    def _fake_run(argv, **kwargs):
+        calls.append(list(argv))
+        if argv[:2] == ["git", "ls-remote"]:
+            return _completed(
+                stdout="", stderr="fatal: TLS handshake failed", returncode=128
+            )
+        if (
+            len(argv) >= 5
+            and argv[0] == "git"
+            and argv[1] == "-C"
+            and argv[3] == "status"
+            and argv[4] == "--porcelain"
+        ):
+            return _completed(stdout="")
+        if (
+            len(argv) >= 5
+            and argv[0] == "git"
+            and argv[1] == "-C"
+            and argv[3] == "rev-parse"
+        ):
+            return _completed(stdout="main\n")
+        return _completed(stdout="")
+
+    with patch.object(server_module.subprocess, "run", side_effect=_fake_run):
+        result = server_module._maybe_check_upstream()
+
+    assert result is None
+
+    records = _read_error_log_records(server_module)
+    assert len(records) == 1, (
+        f"expected exactly one NDJSON record after ls-remote non-zero "
+        f"exit; got {records}"
+    )
+    rec = records[0]
+    assert rec["stage"] == "git_ls_remote", (
+        f"NDJSON record must carry stage='git_ls_remote'; got {rec!r}"
+    )
+    # The non-zero branch is distinct from the TimeoutExpired branch:
+    # it must NOT mention the exception class.
+    assert "TimeoutExpired" not in rec["error"], (
+        f"non-zero returncode branch must be a SEPARATE handler from "
+        f"TimeoutExpired; got error={rec['error']!r}"
+    )
+    assert "128" in rec["error"], (
+        f"NDJSON record's error message should mention exit code 128; "
+        f"got {rec['error']!r}"
+    )
+    assert rec["context"].get("returncode") == 128
+
+
+def test_ls_remote_timeout_tool_call_still_returns(
+    server_module,
+) -> None:
+    """R14 acceptance: user's tool call still completes after ls-remote timeout.
+
+    Spec R14 acceptance:
+    ``test_ls_remote_timeout_tool_call_still_returns``.
+
+    The orchestration error must not block the user's intended tool
+    call — they see a degraded path (delegate against on-disk CLI),
+    not a crash.
+    """
+    status_payload = json.dumps(
+        {
+            "version": "1.0",
+            "session_id": "alpha",
+            "phase": "executing",
+            "current_round": 1,
+            "features": {},
+        }
+    )
+
+    timeout_exc = subprocess.TimeoutExpired(
+        cmd=["git", "ls-remote"], timeout=5
+    )
+
+    def _fake_run(argv, **kwargs):
+        if argv[:2] == ["git", "ls-remote"]:
+            raise timeout_exc
+        if (
+            len(argv) >= 5
+            and argv[0] == "git"
+            and argv[1] == "-C"
+            and argv[3] == "status"
+            and argv[4] == "--porcelain"
+        ):
+            return _completed(stdout="")
+        if (
+            len(argv) >= 5
+            and argv[0] == "git"
+            and argv[1] == "-C"
+            and argv[3] == "rev-parse"
+        ):
+            return _completed(stdout="main\n")
+        if (
+            argv[:1] == ["cortex"]
+            and len(argv) >= 4
+            and argv[1] == "overnight"
+            and argv[2] == "status"
+        ):
+            return _completed(stdout=status_payload)
+        return _completed(stdout="")
+
+    with patch.object(server_module.subprocess, "run", side_effect=_fake_run):
+        result = server_module._delegate_overnight_status(
+            server_module.StatusInput(session_id=None)
+        )
+
+    # The user's intended tool call still returned a parseable
+    # StatusOutput — the ls-remote timeout did not abort the path.
+    assert isinstance(result, server_module.StatusOutput)
+    assert result.phase == "executing"
+
+
+def test_orchestration_error_invalidates_cache_for_retry(
+    server_module,
+) -> None:
+    """R14 cache-invalidation: errors trigger ``_invalidate_update_cache()``.
+
+    Per spec Technical Constraints "Cache invalidation rules for R8's
+    instance cache":
+
+      On any update-orchestration error (R14 NDJSON-logged failure),
+      the cache MUST be marked unset so the next tool call retries.
+
+    This test exercises the contract behaviorally: after an
+    orchestration error (timeout), the next tool call MUST re-run
+    ``git ls-remote`` rather than be served from a cached value. We
+    patch ``_invalidate_update_cache`` to record invocations and then
+    drive a second call that succeeds, asserting:
+
+    1. The error site invoked ``_invalidate_update_cache`` at least once.
+    2. The cache is empty after the error (no negative caching).
+    3. A subsequent successful call does shell out to ``git ls-remote``.
+    """
+    invalidate_calls: list[None] = []
+    real_invalidate = server_module._invalidate_update_cache
+
+    def _record_invalidate() -> None:
+        invalidate_calls.append(None)
+        real_invalidate()
+
+    fake_run_1, _ = _make_subprocess_recorder(
+        raise_on_ls_remote=subprocess.TimeoutExpired(
+            cmd=["git", "ls-remote"], timeout=5
+        )
+    )
+    with (
+        patch.object(server_module.subprocess, "run", side_effect=fake_run_1),
+        patch.object(
+            server_module,
+            "_invalidate_update_cache",
+            side_effect=_record_invalidate,
+        ),
+    ):
+        first = server_module._maybe_check_upstream()
+    assert first is None
+
+    # (1) Orchestration-error path invoked the invalidation hook.
+    assert invalidate_calls, (
+        "orchestration-error path must invoke "
+        "`_invalidate_update_cache` so the next tool call retries; "
+        "got zero invocations"
+    )
+    # (2) Cache is empty after the error (no negative caching).
+    assert server_module._UPDATE_CHECK_CACHE == {}, (
+        f"orchestration-error path must leave the R8 cache empty; "
+        f"got {server_module._UPDATE_CHECK_CACHE!r}"
+    )
+
+    # (3) A subsequent ls-remote-succeeds call shells out and caches
+    #     the new value — proving the error path did not poison the
+    #     cache.
+    fake_run_2, calls_2 = _make_subprocess_recorder()
+    with patch.object(server_module.subprocess, "run", side_effect=fake_run_2):
+        second = server_module._maybe_check_upstream()
+
+    assert second is True
+    assert len(_ls_remote_calls(calls_2)) == 1, (
+        f"after orchestration-error invalidation, the next call must "
+        f"shell out to `git ls-remote`; got calls={calls_2}"
+    )
+
+
+def test_ls_remote_nonzero_returncode_invalidates_cache(
+    server_module,
+) -> None:
+    """R14 cache-invalidation: non-zero ls-remote also invokes the hook.
+
+    Companion to ``test_orchestration_error_invalidates_cache_for_retry``
+    — covers the second branch of "any orchestration error" (the
+    non-zero-returncode handler is a separate code path from the
+    TimeoutExpired handler per spec Technical Constraints "never
+    `check=True`").
+    """
+    invalidate_calls: list[None] = []
+    real_invalidate = server_module._invalidate_update_cache
+
+    def _record_invalidate() -> None:
+        invalidate_calls.append(None)
+        real_invalidate()
+
+    def _fake_run(argv, **kwargs):
+        if argv[:2] == ["git", "ls-remote"]:
+            return _completed(
+                stdout="", stderr="fatal: ...", returncode=128
+            )
+        if (
+            len(argv) >= 5
+            and argv[0] == "git"
+            and argv[1] == "-C"
+            and argv[3] == "status"
+            and argv[4] == "--porcelain"
+        ):
+            return _completed(stdout="")
+        if (
+            len(argv) >= 5
+            and argv[0] == "git"
+            and argv[1] == "-C"
+            and argv[3] == "rev-parse"
+        ):
+            return _completed(stdout="main\n")
+        return _completed(stdout="")
+
+    with (
+        patch.object(server_module.subprocess, "run", side_effect=_fake_run),
+        patch.object(
+            server_module,
+            "_invalidate_update_cache",
+            side_effect=_record_invalidate,
+        ),
+    ):
+        result = server_module._maybe_check_upstream()
+
+    assert result is None
+    assert invalidate_calls, (
+        "non-zero-returncode error path must invoke "
+        "`_invalidate_update_cache`; got zero invocations"
+    )
+    assert server_module._UPDATE_CHECK_CACHE == {}

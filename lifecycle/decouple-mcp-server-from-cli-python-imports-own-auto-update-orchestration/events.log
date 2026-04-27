@@ -37,3 +37,5 @@
 {"ts": "2026-04-27T03:50:02Z", "event": "batch_dispatch", "feature": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration", "batch": 6, "tasks": [9]}
 {"ts": "2026-04-27T04:00:00Z", "event": "task_complete", "feature": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration", "task": 9, "batch": 6, "status": "success", "note": "R12 verification probe wired with corrected invocation form (no trailing empty positional); 2 active-path tests; commit 61b6e92"}
 {"ts": "2026-04-27T04:00:01Z", "event": "batch_dispatch", "feature": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration", "batch": 7, "tasks": [10]}
+{"ts": "2026-04-27T04:15:00Z", "event": "task_complete", "feature": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration", "task": 10, "batch": 7, "status": "success", "note": "R13 schema-floor gate + gate-dispatch ordering wired; 2 active-path tests + 18 file total pass"}
+{"ts": "2026-04-27T04:15:01Z", "event": "batch_dispatch", "feature": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration", "batch": 8, "tasks": [11]}

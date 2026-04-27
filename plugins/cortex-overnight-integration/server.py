@@ -34,6 +34,7 @@ first tool call and never expires for the MCP-server lifetime. It is
 
 from __future__ import annotations
 
+import datetime as _datetime
 import errno
 import fcntl
 import json
@@ -262,25 +263,113 @@ _SKIP_REASON_LOGGED: set[str] = set()
 
 
 def _invalidate_update_cache() -> None:
-    """Mark the R8 update-check cache as stale (placeholder no-op).
+    """Mark the R8 update-check cache as stale.
 
-    This helper is the cache-invalidation contract surface that future
-    tasks (Task 8 upgrade orchestration, Task 10 schema-floor gate,
-    Task 11 NDJSON failure surface) will fill in. For Task 7 it clears
-    the cache wholesale — that is technically correct (the next tool
-    call will re-check) but the actual call-sites where invalidation
-    must fire are wired by the dependent tasks.
-
-    Spec Technical Constraints "Cache invalidation rules for R8's
-    instance cache":
+    Clears the in-memory cache wholesale so the next tool call re-shells
+    out to ``git ls-remote``. Wired at every site enumerated by spec
+    Technical Constraints "Cache invalidation rules for R8's instance
+    cache":
 
     * On any successful upgrade (R10 or R13), the cache MUST be marked
       unset so the next tool call re-checks.
     * On R11 flock-budget expiry, the cache MUST be marked unset.
     * On any update-orchestration error (R14 NDJSON-logged failure),
       the cache MUST be marked unset.
+
+    Tasks 8 and 10 wired the success-path and flock-expiry calls;
+    Task 11 wired the orchestration-error sites alongside the NDJSON
+    error-log surface.
     """
     _UPDATE_CHECK_CACHE.clear()
+
+
+# ---------------------------------------------------------------------------
+# R14 — NDJSON error log + stderr summary (Task 11)
+# ---------------------------------------------------------------------------
+
+#: Spec R14 stage values. Validated at append time so a typo in a call
+#: site surfaces during development rather than landing as a malformed
+#: audit record.
+_NDJSON_ERROR_STAGES = frozenset(
+    {
+        "git_ls_remote",
+        "cortex_upgrade",
+        "verification_probe",
+        "flock_timeout",
+    }
+)
+
+
+def _last_error_log_path() -> Path:
+    """Return ``${XDG_STATE_HOME:-$HOME/.local/state}/cortex-command/last-error.log``.
+
+    Per spec R14 the log lives under XDG state home with a fallback to
+    ``$HOME/.local/state``. Resolved fresh on each call so tests can
+    redirect ``HOME`` / ``XDG_STATE_HOME`` via ``monkeypatch``.
+    """
+    xdg_state = os.environ.get("XDG_STATE_HOME")
+    if xdg_state:
+        base = Path(xdg_state)
+    else:
+        base = Path(os.environ.get("HOME", str(Path.home()))) / ".local" / "state"
+    return base / "cortex-command" / "last-error.log"
+
+
+def _append_error_ndjson(
+    *,
+    stage: str,
+    error: str,
+    context: Optional[dict[str, Any]] = None,
+) -> None:
+    """Append a single-line JSON record to the R14 error log.
+
+    Schema (spec R14):
+
+    .. code-block:: json
+
+        {"ts": "<ISO 8601>", "stage": "<stage>",
+         "error": "<message>", "context": {...}}
+
+    Defensive: the helper itself never raises out to the caller. If the
+    filesystem write fails (sandbox denial, disk full, etc.), the
+    failure is logged to stderr and swallowed — the audit record is
+    best-effort, but a failed audit-write must never collapse the
+    user's tool call.
+    """
+    if stage not in _NDJSON_ERROR_STAGES:
+        # Defensive: an unknown stage indicates a typo at the call site.
+        # Log to stderr (one-liner) and substitute "unknown" so the
+        # forensic record still lands rather than getting silently
+        # dropped on a strict-validation branch.
+        print(
+            f"cortex MCP: NDJSON error-log received unknown stage "
+            f"{stage!r}; recording as 'unknown'",
+            file=sys.stderr,
+        )
+        stage = "unknown"
+
+    record = {
+        "ts": _datetime.datetime.now(_datetime.timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z"),
+        "stage": stage,
+        "error": error,
+        "context": context or {},
+    }
+
+    log_path = _last_error_log_path()
+    try:
+        os.makedirs(log_path.parent, exist_ok=True)
+        with open(log_path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record) + "\n")
+    except OSError as exc:
+        # Best-effort: failed audit-write must never break the user's
+        # tool call. Surface to stderr so the issue is at least visible.
+        print(
+            f"cortex MCP: failed to append NDJSON error record "
+            f"({exc.__class__.__name__}: {exc}); continuing",
+            file=sys.stderr,
+        )
 
 
 def _log_skip_reason_once(reason: str) -> None:
@@ -405,6 +494,12 @@ def _maybe_check_upstream(
         return cached
 
     # First call for this key in this lifetime: run `git ls-remote`.
+    # Per spec Technical Constraints, `subprocess.run` is invoked
+    # without ``check=True``; both the exception path (TimeoutExpired /
+    # OSError — DNS failure raising before the child process exists)
+    # and the non-zero-returncode path (TCP RST / TLS error / auth
+    # failure — child exited 128) require separate handler branches
+    # that each emit an R14 NDJSON record and invalidate the cache.
     try:
         completed = subprocess.run(
             ["git", "ls-remote", str(remote_url), "HEAD"],
@@ -412,14 +507,56 @@ def _maybe_check_upstream(
             text=True,
             timeout=5,
         )
-    except (subprocess.TimeoutExpired, OSError):
-        # Network failure / timeout: do not cache. Next tool call
-        # retries. The user's tool call proceeds against the on-disk
-        # CLI (per spec Edge Cases: "git ls-remote timeout / network
-        # failure: skip predicate fires implicitly").
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        # Network failure / timeout: do not cache. The user's tool call
+        # proceeds against the on-disk CLI (per spec Edge Cases: "git
+        # ls-remote timeout / network failure: skip predicate fires
+        # implicitly"). Append the failure to the R14 NDJSON log and
+        # invalidate the cache so the next tool call retries.
+        print(
+            f"cortex auto-update failed at git_ls_remote: "
+            f"{exc.__class__.__name__}; "
+            f"falling through to on-disk CLI",
+            file=sys.stderr,
+        )
+        _append_error_ndjson(
+            stage="git_ls_remote",
+            error=f"{exc.__class__.__name__}: {exc}",
+            context={
+                "remote_url": str(remote_url),
+                "cortex_root": str(cortex_root),
+                "exception": exc.__class__.__name__,
+            },
+        )
+        _invalidate_update_cache()
         return None
 
     if completed.returncode != 0:
+        # Non-zero returncode (DNS resolution success but TCP RST /
+        # TLS error / auth failure) — separate handler branch from
+        # TimeoutExpired per spec Technical Constraints "never
+        # `check=True`; catch and handle errors explicitly". Same
+        # NDJSON + invalidate behavior as the exception branch.
+        print(
+            f"cortex auto-update failed at git_ls_remote: "
+            f"exit={completed.returncode}; "
+            f"falling through to on-disk CLI",
+            file=sys.stderr,
+        )
+        _append_error_ndjson(
+            stage="git_ls_remote",
+            error=(
+                f"non-zero returncode {completed.returncode}; "
+                f"stderr={completed.stderr!r}"
+            ),
+            context={
+                "remote_url": str(remote_url),
+                "cortex_root": str(cortex_root),
+                "returncode": completed.returncode,
+                "stderr": completed.stderr,
+            },
+        )
+        _invalidate_update_cache()
         return None
 
     # `git ls-remote <remote> HEAD` emits one line:
@@ -632,13 +769,20 @@ def _run_verification_probe() -> bool:
 
     ok, summary = _run_probe(["--print-root"])
     if not ok:
-        # Placeholder for the NDJSON path Task 11 fills in.
         print(
-            f"cortex MCP: verification probe failed at "
+            f"cortex auto-update failed at verification_probe: "
             f"`cortex --print-root`: {summary}; "
             f"falling through to on-disk CLI",
             file=sys.stderr,
         )
+        _append_error_ndjson(
+            stage="verification_probe",
+            error=summary,
+            context={
+                "probe_step": "cortex --print-root",
+            },
+        )
+        _invalidate_update_cache()
         return False
 
     # NOTE: NO trailing empty-string positional. See the architectural-
@@ -649,11 +793,19 @@ def _run_verification_probe() -> bool:
     ok, summary = _run_probe(["overnight", "status", "--format", "json"])
     if not ok:
         print(
-            f"cortex MCP: verification probe failed at "
+            f"cortex auto-update failed at verification_probe: "
             f"`cortex overnight status --format json`: {summary}; "
             f"falling through to on-disk CLI",
             file=sys.stderr,
         )
+        _append_error_ndjson(
+            stage="verification_probe",
+            error=summary,
+            context={
+                "probe_step": "cortex overnight status --format json",
+            },
+        )
+        _invalidate_update_cache()
         return False
 
     return True
@@ -710,13 +862,25 @@ def _orchestrate_upgrade(cortex_root_payload: dict[str, Any]) -> None:
     lock_path = Path(str(cortex_root)) / ".git" / "cortex-update.lock"
     fd = _acquire_update_flock(lock_path)
     if fd is None:
-        # R11 flock-budget expiry. Log to stderr (one-liner per spec)
-        # and invalidate the cache so the next tool call retries.
+        # R11 flock-budget expiry. Log to stderr (one-liner per spec),
+        # append a `flock_timeout` audit record, and invalidate the
+        # cache so the next tool call retries.
         print(
-            f"cortex MCP: flock wait budget exceeded "
-            f"({_FLOCK_WAIT_BUDGET_SECONDS:.0f}s) on {lock_path}; "
-            f"proceeding without upgrade",
+            f"cortex auto-update failed at flock_timeout: "
+            f"{_FLOCK_WAIT_BUDGET_SECONDS:.0f}s budget exceeded on "
+            f"{lock_path}; falling through to on-disk CLI",
             file=sys.stderr,
+        )
+        _append_error_ndjson(
+            stage="flock_timeout",
+            error=(
+                f"wait budget {_FLOCK_WAIT_BUDGET_SECONDS:.0f}s exceeded"
+            ),
+            context={
+                "lock_path": str(lock_path),
+                "wait_budget_seconds": _FLOCK_WAIT_BUDGET_SECONDS,
+                "trigger": "r10_upgrade",
+            },
         )
         _invalidate_update_cache()
         return
@@ -745,21 +909,44 @@ def _orchestrate_upgrade(cortex_root_payload: dict[str, Any]) -> None:
             completed = _run_cortex_upgrade()
         except (subprocess.TimeoutExpired, OSError) as exc:
             print(
-                f"cortex MCP: `cortex upgrade` failed: "
+                f"cortex auto-update failed at cortex_upgrade: "
                 f"{exc.__class__.__name__}: {exc}; "
                 f"falling through to on-disk CLI",
                 file=sys.stderr,
             )
+            _append_error_ndjson(
+                stage="cortex_upgrade",
+                error=f"{exc.__class__.__name__}: {exc}",
+                context={
+                    "cortex_root": str(cortex_root),
+                    "exception": exc.__class__.__name__,
+                    "trigger": "r10_upgrade",
+                },
+            )
+            _invalidate_update_cache()
             return
 
         if completed.returncode != 0:
             print(
-                f"cortex MCP: `cortex upgrade` exited "
-                f"{completed.returncode}; "
-                f"stderr={completed.stderr!r}; "
+                f"cortex auto-update failed at cortex_upgrade: "
+                f"exit={completed.returncode}; "
                 f"falling through to on-disk CLI",
                 file=sys.stderr,
             )
+            _append_error_ndjson(
+                stage="cortex_upgrade",
+                error=(
+                    f"non-zero returncode {completed.returncode}; "
+                    f"stderr={completed.stderr!r}"
+                ),
+                context={
+                    "cortex_root": str(cortex_root),
+                    "returncode": completed.returncode,
+                    "stderr": completed.stderr,
+                    "trigger": "r10_upgrade",
+                },
+            )
+            _invalidate_update_cache()
             return
 
         # R10 success path: run the verification probe (R12, Task 9),
@@ -861,13 +1048,26 @@ def _orchestrate_schema_floor_upgrade(
     lock_path = Path(str(cortex_root)) / ".git" / "cortex-update.lock"
     fd = _acquire_update_flock(lock_path)
     if fd is None:
-        # R11 flock-budget expiry. Log to stderr and invalidate the
-        # cache so the next tool call retries.
+        # R11 flock-budget expiry on the R13 schema-floor path. Log to
+        # stderr, append a `flock_timeout` audit record, and invalidate
+        # the cache.
         print(
-            f"cortex MCP: flock wait budget exceeded "
-            f"({_FLOCK_WAIT_BUDGET_SECONDS:.0f}s) on {lock_path} "
-            f"during schema-floor upgrade; proceeding without upgrade",
+            f"cortex auto-update failed at flock_timeout: "
+            f"{_FLOCK_WAIT_BUDGET_SECONDS:.0f}s budget exceeded on "
+            f"{lock_path} during schema-floor upgrade; "
+            f"falling through to on-disk CLI",
             file=sys.stderr,
+        )
+        _append_error_ndjson(
+            stage="flock_timeout",
+            error=(
+                f"wait budget {_FLOCK_WAIT_BUDGET_SECONDS:.0f}s exceeded"
+            ),
+            context={
+                "lock_path": str(lock_path),
+                "wait_budget_seconds": _FLOCK_WAIT_BUDGET_SECONDS,
+                "trigger": "r13_schema_floor",
+            },
         )
         _invalidate_update_cache()
         return
@@ -877,21 +1077,44 @@ def _orchestrate_schema_floor_upgrade(
             completed = _run_cortex_upgrade()
         except (subprocess.TimeoutExpired, OSError) as exc:
             print(
-                f"cortex MCP: schema-floor `cortex upgrade` failed: "
-                f"{exc.__class__.__name__}: {exc}; "
+                f"cortex auto-update failed at cortex_upgrade: "
+                f"{exc.__class__.__name__}: {exc} (schema-floor); "
                 f"falling through to on-disk CLI",
                 file=sys.stderr,
             )
+            _append_error_ndjson(
+                stage="cortex_upgrade",
+                error=f"{exc.__class__.__name__}: {exc}",
+                context={
+                    "cortex_root": str(cortex_root),
+                    "exception": exc.__class__.__name__,
+                    "trigger": "r13_schema_floor",
+                },
+            )
+            _invalidate_update_cache()
             return
 
         if completed.returncode != 0:
             print(
-                f"cortex MCP: schema-floor `cortex upgrade` exited "
-                f"{completed.returncode}; "
-                f"stderr={completed.stderr!r}; "
+                f"cortex auto-update failed at cortex_upgrade: "
+                f"exit={completed.returncode} (schema-floor); "
                 f"falling through to on-disk CLI",
                 file=sys.stderr,
             )
+            _append_error_ndjson(
+                stage="cortex_upgrade",
+                error=(
+                    f"non-zero returncode {completed.returncode}; "
+                    f"stderr={completed.stderr!r}"
+                ),
+                context={
+                    "cortex_root": str(cortex_root),
+                    "returncode": completed.returncode,
+                    "stderr": completed.stderr,
+                    "trigger": "r13_schema_floor",
+                },
+            )
+            _invalidate_update_cache()
             return
 
         # R13 success path: run the verification probe (R12), then
