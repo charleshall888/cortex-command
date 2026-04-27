@@ -1,19 +1,60 @@
 {
-  "ts": "2026-04-27T18:00:00Z",
+  "ts": "2026-04-27T19:15:04Z",
   "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening",
-  "artifact": "lifecycle/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/spec.md",
+  "artifact": "lifecycle/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
-    {"class": "B", "finding": "Rewrite scope omits docs/, README.md, SKILL.md citers; acceptance grep also scoped to four dirs hides the gap", "reviewer_angle": "Path-rewriting fragility in N6.3", "evidence_quote": "any remaining files under lifecycle/, backlog/, research/, and retros/ that cite the moved dir"},
-    {"class": "B", "finding": ".bak cleanup specified only for success path; failure path leaves stranded *.md.bak files with no specified cleanup", "reviewer_angle": "Path-rewriting fragility in N6.3", "evidence_quote": "Implementation: sed -i.bak with explicit pattern; .bak files are removed on success."},
-    {"class": "B", "finding": "Per-tool-call attempt counter unsafe under asyncio concurrency; concurrent calls can race on _CORTEX_ROOT_CACHE", "reviewer_angle": "S1+S5 retry/error coupling", "evidence_quote": "attempt counter scoped per-tool-call"},
-    {"class": "B", "finding": "FNF from missing shebang interpreter (e.g., python3 not on PATH) misdiagnosed as cortex CLI missing", "reviewer_angle": "S1+S5 retry/error coupling", "evidence_quote": "The new FNF handler only fires when subprocess.run([cortex, ...]) itself can't find cortex"},
-    {"class": "B", "finding": "N4.1 example pedagogy is about tilde-vs-absolute paths in sandbox allowlists; relative-path substitution invalidates the teaching content", "reviewer_angle": "Advisory-text scope drift in N3.1/N4.1", "evidence_quote": "skills/diagnose/SKILL.md:148 no longer references ~/.claude/hooks/. The illustrative context is updated to point at claude/hooks/"},
-    {"class": "B", "finding": "Path list excludes claude/statusline.py; bin/cortex-* glob excludes non-cortex-prefixed bin scripts; brittle to future additions", "reviewer_angle": "Advisory-text scope drift in N3.1/N4.1", "evidence_quote": "Required before editing any file in skills/, hooks/, claude/hooks/, bin/cortex-*, or claude/common.py"},
-    {"class": "B", "finding": "Substantial gate-fire volume increase with no overnight-mode escape hatch (only escape is 'user explicitly says to skip', no autonomous equivalent)", "reviewer_angle": "Advisory-text scope drift in N3.1/N4.1", "evidence_quote": "Skip only if the user explicitly says to."},
-    {"class": "B", "finding": "Sample-selection mechanism undefined; qualitative descriptors have no operational measure", "reviewer_angle": "N6 sample-then-full sequencing", "evidence_quote": "5 representative dirs (one with broad cross-refs, one isolated, one out-of-band-closed/minimal-content, one recent, one very old)"},
-    {"class": "B", "finding": "Cross-reference volume is ~1869 lines (not ~30); sed surface 2 orders of magnitude larger than initial framing assumed", "reviewer_angle": "N6 sample-then-full sequencing", "evidence_quote": "the recipe is run on a 5-directory representative sample first"},
-    {"class": "B", "finding": "N6.5 rollback acceptance has 'code review at plan' escape hatch — never integration-tested", "reviewer_angle": "N6 sample-then-full sequencing", "evidence_quote": "verified during sample run by intentionally interrupting if practical, otherwise by recipe code review during plan"}
+    {
+      "class": "B",
+      "finding": "Task 1 introduces cache-clear write-from-outside-the-helper but _get_cortex_root_payload's check-then-act idiom (server.py:213-215, 242) lacks any lock; pre-existing race becomes newly exploitable once external clears land.",
+      "reviewer_angle": "Concurrency safety in S1.3 retry-and-cache mutation under asyncio",
+      "evidence_quote": "add a per-tool-call retry counter (local variable, not module-global) that on CortexCliMissing clears _CORTEX_ROOT_CACHE and retries once."
+    },
+    {
+      "class": "B",
+      "finding": "Task 3 _retry_on_cli_missing helper risks except OSError footgun given CortexCliMissing(OSError); a careless except OSError silently absorbs PermissionError into retry loop, contradicting Task 4 case (c).",
+      "reviewer_angle": "Concurrency safety in S1.3 retry-and-cache mutation under asyncio",
+      "evidence_quote": "extract a small _retry_on_cli_missing(func, *args) helper if it cleans up the call sites, otherwise inline the try/except at each site"
+    },
+    {
+      "class": "B",
+      "finding": "Trap find . -name '*.md.bak' -delete unscoped \u2014 runs against entire repo tree, silently deletes editor backups unrelated to recipe.",
+      "reviewer_angle": "Path-rewriting fragility in N6.3 (Task 12)",
+      "evidence_quote": "Trap: trap 'find . -name \"*.md.bak\" -delete' EXIT INT TERM set near the top of the recipe"
+    },
+    {
+      "class": "B",
+      "finding": "Path-rewriting scope restricted to *.md but lifecycle slugs are cited in non-markdown files (bin/cortex-* shell scripts, claude/hooks/*.sh, tests/*.py, plugins/**/server.py); after archive runs those references break with no signal.",
+      "reviewer_angle": "Path-rewriting fragility in N6.3 (Task 12)",
+      "evidence_quote": "rewrite scope INCLUDES docs/, README.md, SKILL.md citers because the find/grep walks all *.md under repo root with only the four exclusions"
+    },
+    {
+      "class": "B",
+      "finding": "Plan asserts slug values must be regex-escaped before substitution but does not specify the escape helper or character set; latent footgun if slug naming evolves to include regex metacharacters.",
+      "reviewer_angle": "Path-rewriting fragility in N6.3 (Task 12)",
+      "evidence_quote": "Three regex anchored substitutions per archived slug \u2014 slug values must be regex-escaped before substitution"
+    },
+    {
+      "class": "B",
+      "finding": "Task 16 acceptance (>=100 dir moves + zero .md.bak) satisfiable by recipe-repair commits without a distinct lifecycle-archive full run commit existing; verification framework allows recipe-repair commit to silently substitute for labeled full-run commit.",
+      "reviewer_angle": "Destructive sample-then-full sequencing under recipe-repair scope creep",
+      "evidence_quote": "Spec N6.4 acceptance: >=100 directory moves under lifecycle/archive/ compared to pre-run state."
+    },
+    {
+      "class": "B",
+      "finding": "No diagnostic procedure distinguishes recipe-bug from data-bug after a sample-run failure; implementer must classify without guidance, and a data-bug-mistaken-as-recipe-bug bakes the data fault into the repaired recipe.",
+      "reviewer_angle": "Destructive sample-then-full sequencing under recipe-repair scope creep",
+      "evidence_quote": "if the sample run surfaces bugs in Tasks 11 or 12, fix the recipe with a clearly-labeled lifecycle-archive recipe repair (post-sample) commit before proceeding to Task 16."
+    },
+    {
+      "class": "B",
+      "finding": "5-of-124 (~4%) sample against ~1869 cross-reference lines undersized for catching rare citation patterns (refs in fenced code blocks, tables, trailing punctuation breaking word-boundary).",
+      "reviewer_angle": "Destructive sample-then-full sequencing under recipe-repair scope creep",
+      "evidence_quote": "Plan-residue noted the cross-reference volume is ~1869 lines, two orders of magnitude larger than the recipe's initial framing assumed."
+    }
   ]
 }
