@@ -13,3 +13,8 @@
 {"ts": "2026-04-27T19:20:00Z", "event": "batch_dispatch", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "batch": 1, "tasks": [2, 5]}
 {"ts": "2026-04-27T19:22:54Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 2, "batch": 1, "status": "success"}
 {"ts": "2026-04-27T19:22:54Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 5, "batch": 1, "status": "success"}
+{"ts": "2026-04-27T19:23:07Z", "event": "batch_dispatch", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "batch": 2, "tasks": [3, 4, 6, 7]}
+{"ts": "2026-04-27T19:28:47Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 3, "batch": 2, "status": "success"}
+{"ts": "2026-04-27T19:28:47Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 4, "batch": 2, "status": "success"}
+{"ts": "2026-04-27T19:28:47Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 6, "batch": 2, "status": "success"}
+{"ts": "2026-04-27T19:28:47Z", "event": "task_complete", "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command", "task": 7, "batch": 2, "status": "success"}
