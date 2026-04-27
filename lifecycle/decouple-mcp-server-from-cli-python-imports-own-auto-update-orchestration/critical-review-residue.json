@@ -1,0 +1,42 @@
+{
+  "ts": "2026-04-25T21:50:00Z",
+  "feature": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration",
+  "artifact": "lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 3,
+    "dispatched": 3
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Veto Surface item 1 explicitly asserts that the prior critical review's residue is resolved ('the plan's `Depends on` annotations express this correctly') — but the dependency graph as written carries no conditional gate. Even after the A-class fixes land, this prose claim must be retracted or it will mislead future readers.",
+      "reviewer_angle": "Conditional-path correctness and dependency-graph soundness",
+      "evidence_quote": "Task 1 (R18 sandbox probe) is hard-gating Tasks 8–11 **via the dependency graph** (rather than only \"first task\" procedural ordering, which the critical-review B-class residue flagged as unenforced). ... The plan's `Depends on` annotations express this correctly."
+    },
+    {
+      "class": "B",
+      "finding": "Task 11's `test_ls_remote_timeout_appends_error_log` mocks only `subprocess.TimeoutExpired`, leaving the non-exception non-zero-returncode failure paths (DNS failure, TCP RST, TLS error) untested. If the implementation's error handler checks `returncode != 0` separately from the exception catch — which it should per spec's 'never check=True; catch and handle errors explicitly' — those branches have no test coverage, and the NDJSON append and `_invalidate_update_cache()` calls may be silently absent for those cases.",
+      "reviewer_angle": "Mocking vs. integration reality",
+      "evidence_quote": "Task 11's test_ls_remote_timeout_appends_error_log — mocks `subprocess.TimeoutExpired`"
+    },
+    {
+      "class": "B",
+      "finding": "No task in the plan produces an automated integration test that runs the full update-check → flock → upgrade → verification → user-tool-call pipeline against real subprocesses. The only end-to-end validation is tagged 'Interactive/session-dependent: requires a live MCP server and a real Claude Code session', making it non-automatable and outside the regression gate that 'just test exits 0' would enforce.",
+      "reviewer_angle": "Mocking vs. integration reality",
+      "evidence_quote": "Auto-update orchestration smoke (PASS path only) ... Interactive/session-dependent: requires a live MCP server and a real Claude Code session."
+    },
+    {
+      "class": "B",
+      "finding": "Task 12's plugin-refresh verdict — specifically whether MCP restart requires a Claude Code session restart — can change what the Task 14 deprecation message must say. If T12 finds restart is required, the deprecation stub should advise users to restart Claude Code after updating `.mcp.json`. The plan routes T12's findings only to a `docs/mcp-contract.md` follow-up edit (Veto Surface #4), not to a conditional branch in the T14 deprecation message content.",
+      "reviewer_angle": "Transition-window safety and migration UX",
+      "evidence_quote": "That doesn't block the spec but does affect end-user messaging in `docs/mcp-contract.md` (Task 4 may need a follow-up edit after Task 12 completes)."
+    },
+    {
+      "class": "B",
+      "finding": "Synthesizer re-classified finding from A→B (evidence-quote misattribution): the underlying mechanism is real — Task 14's verification only asserts subprocess-level stderr containment; nothing tests whether Claude Code surfaces MCP server stderr in user-visible UI. The fail-fast non-zero-exit design forecloses the structured-tool-response alternative. The plan inherits the assumption implicitly via Task 14's design, but the original envelope cited spec text rather than plan text.",
+      "reviewer_angle": "Transition-window safety and migration UX",
+      "evidence_quote": "Test invokes `cortex mcp-server` via `subprocess.run`, asserts non-zero exit AND stderr contains the literal substring `cortex-overnight-integration`."
+    }
+  ]
+}
