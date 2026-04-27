@@ -1,5 +1,6 @@
 """R8/R9 throttled-update-check + skip-predicate tests (Task 7) plus
-R10/R11 upgrade-orchestration tests (Task 8).
+R10/R11 upgrade-orchestration tests (Task 8) plus R12 verification-probe
+tests (Task 9).
 
 Task 7 spec-named acceptance tests:
 
@@ -16,8 +17,16 @@ Task 8 spec-named acceptance tests:
 * ``test_concurrent_upgrade_both_processes_return_success``
                                                           — R11 contention loser.
 
-Future tasks (9/10/11) will add verification probe, schema-floor gate,
-and NDJSON failure-surface tests to this same file.
+Task 9 spec-named acceptance tests:
+
+* ``test_verification_probe_fails_on_corrupt_install``    — R12 corrupt install
+  (``@pytest.mark.slow`` — opt in via ``--run-slow``; runs a per-test
+  ``uv tool install`` of a tempdir-checkout into a tempdir uv-tools prefix).
+* ``test_verification_probe_failure_falls_through_to_on_disk_cli``
+                                                          — R12 degraded path.
+
+Future tasks (10/11) will add schema-floor gate and NDJSON
+failure-surface tests to this same file.
 """
 
 from __future__ import annotations
@@ -1042,4 +1051,224 @@ def test_concurrent_upgrade_both_processes_return_success(
     assert invoked_workers == 1, (
         f"exactly one worker must have invoked the upgrade; "
         f"got {invoked_workers}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# R12 — verification probe (Task 9)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.slow
+def test_verification_probe_fails_on_corrupt_install(
+    tmp_path: Path, server_module
+) -> None:
+    """R12 acceptance: probe returns False when installed-copy is corrupt.
+
+    Spec R12 acceptance:
+    ``test_verification_probe_fails_on_corrupt_install``.
+
+    Marked ``@pytest.mark.slow`` (opt in via ``--run-slow``) because the
+    body runs a real ``uv tool install`` of the source-tree checkout
+    into a tempdir uv-tools prefix — that's a multi-second operation
+    that involves dependency resolution, venv creation, and a full
+    package install; gating it behind ``--run-slow`` keeps ``just test``
+    fast.
+
+    Per the Task 9 plan brief, the corrupt-install MUST be in the
+    *installed-copy* tree (the path the ``cortex`` shim actually
+    executes), not the source-checkout tree. Corrupting the source
+    checkout only catches the editable-install case and produces a
+    false pass against the production failure mode the probe is
+    designed to guard (a partial ``uv tool install --force`` that
+    succeeded at the shim layer but failed mid-rewrite of the module
+    files).
+
+    Body:
+
+    1. Use ``UV_TOOL_DIR`` + ``UV_TOOL_BIN_DIR`` to redirect ``uv tool
+       install`` into a tempdir prefix.
+    2. Run ``uv tool install <REPO_ROOT>`` (non-editable) — this builds
+       a wheel from the source tree and copies the package files into
+       ``<UV_TOOL_DIR>/cortex-command/lib/python*/site-packages/``.
+    3. Locate the installed ``cortex_command/overnight/cli_handler.py``
+       under the tempdir prefix and overwrite it with garbage Python
+       (an unparseable token sequence at module top-level so the
+       lazy import in ``cortex_command/cli.py`` raises ``SyntaxError``
+       on the second probe invocation).
+    4. Patch ``PATH`` so ``cortex`` resolves to the tempdir-installed
+       shim, and call ``server_module._run_verification_probe()``.
+    5. Assert it returns ``False`` — the second probe step (``cortex
+       overnight status --format json``) must fail because the
+       lazy-imported ``cli_handler`` module is corrupt.
+
+    The first probe step (``cortex --print-root``) is expected to
+    succeed because that flag is implemented entirely inside
+    ``cortex_command/cli.py`` and does not transit ``cli_handler``.
+    """
+
+    uv_tool_dir = tmp_path / "uv-tools"
+    uv_bin_dir = tmp_path / "uv-bin"
+    uv_tool_dir.mkdir()
+    uv_bin_dir.mkdir()
+
+    install_env = os.environ.copy()
+    install_env["UV_TOOL_DIR"] = str(uv_tool_dir)
+    install_env["UV_TOOL_BIN_DIR"] = str(uv_bin_dir)
+
+    install_result = subprocess.run(
+        ["uv", "tool", "install", "--force", str(REPO_ROOT)],
+        env=install_env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    if install_result.returncode != 0:
+        pytest.skip(
+            f"uv tool install failed in test fixture (returncode="
+            f"{install_result.returncode}); stderr={install_result.stderr!r}"
+        )
+
+    # Locate the installed cli_handler.py under the tempdir prefix.
+    candidates = list(
+        uv_tool_dir.glob(
+            "cortex-command/lib/python*/site-packages/"
+            "cortex_command/overnight/cli_handler.py"
+        )
+    )
+    assert candidates, (
+        f"could not find installed cli_handler.py under {uv_tool_dir}; "
+        f"directory contents: "
+        f"{list(uv_tool_dir.rglob('cli_handler.py'))}"
+    )
+    cli_handler_path = candidates[0]
+
+    # Corrupt it with garbage Python — unparseable so a `SyntaxError`
+    # raises at module-load time when `cortex overnight status` does its
+    # lazy import. This exactly mirrors the partial-install failure
+    # mode the probe is designed to detect.
+    cli_handler_path.write_text(
+        "this is not valid python @@@@@@\n"
+        "def def def\n"
+        "import import import\n",
+        encoding="utf-8",
+    )
+
+    # Patch PATH so the bare ``cortex`` token in
+    # ``_run_verification_probe`` resolves to the tempdir-installed
+    # shim (NOT the user's globally-installed ``cortex``).
+    original_path = os.environ.get("PATH", "")
+    new_path = f"{uv_bin_dir}:{original_path}"
+
+    captured_env = {"PATH": None}
+
+    real_run = subprocess.run
+
+    def _run_with_patched_path(argv, **kwargs):
+        # Inject our tempdir bin as the first PATH entry so the bare
+        # ``cortex`` resolves to the corrupted install.
+        env = kwargs.pop("env", None) or os.environ.copy()
+        env["PATH"] = new_path
+        captured_env["PATH"] = env["PATH"]
+        return real_run(argv, env=env, **kwargs)
+
+    with patch.object(
+        server_module.subprocess, "run", side_effect=_run_with_patched_path
+    ):
+        result = server_module._run_verification_probe()
+
+    assert result is False, (
+        f"verification probe must return False when installed-copy "
+        f"cli_handler.py is corrupt; got {result!r}"
+    )
+    # Sanity: PATH was actually patched (otherwise we'd be testing
+    # against the user's globally-installed cortex, not the corrupt
+    # tempdir install).
+    assert captured_env["PATH"] is not None
+    assert str(uv_bin_dir) in captured_env["PATH"]
+
+
+def test_verification_probe_failure_falls_through_to_on_disk_cli(
+    server_module, tmp_path: Path
+) -> None:
+    """R12 acceptance: orchestrator continues against on-disk CLI on probe failure.
+
+    Spec R12 acceptance:
+    ``test_verification_probe_failure_falls_through_to_on_disk_cli``.
+
+    With probe mocked to return ``False`` after a successful ``cortex
+    upgrade``, the MCP must still delegate the user's intended tool
+    call against the on-disk CLI (degraded path: user sees the
+    upgrade-failure error in the tool-call response, but the call
+    still executes). This is asserted by driving
+    ``_delegate_overnight_status`` end-to-end and checking that the
+    ``cortex overnight status --format json`` argv is recorded in the
+    subprocess call list AFTER the probe (mocked) fires.
+    """
+
+    fake_run, calls = _make_upgrade_recorder(
+        pre_flock_remote_sha="b" * 40,
+        post_flock_remote_sha="c" * 40,
+        post_flock_local_head="a" * 40,
+    )
+
+    # Point the discovery cache at a real tmp dir so the lock file path
+    # under ``$cortex_root/.git/cortex-update.lock`` is creatable.
+    cortex_root = tmp_path / "cortex"
+    (cortex_root / ".git").mkdir(parents=True)
+    server_module._CORTEX_ROOT_CACHE = {
+        "version": "1.0",
+        "root": str(cortex_root),
+        "remote_url": "git@github.com:user/cortex-command.git",
+        "head_sha": "a" * 40,
+    }
+
+    probe_call_count = {"n": 0}
+
+    def _probe_returns_false() -> bool:
+        probe_call_count["n"] += 1
+        return False
+
+    with (
+        patch.object(server_module.subprocess, "run", side_effect=fake_run),
+        patch.object(
+            server_module,
+            "_run_verification_probe",
+            side_effect=_probe_returns_false,
+        ),
+    ):
+        result = server_module._delegate_overnight_status(
+            server_module.StatusInput(session_id=None)
+        )
+
+    # The user's intended tool call still returned a StatusOutput
+    # (i.e. the orchestrator did not raise; the tool-call dispatch
+    # proceeded against the on-disk CLI despite the probe failure).
+    assert isinstance(result, server_module.StatusOutput)
+    assert result.phase == "executing"
+
+    # Probe was actually invoked.
+    assert probe_call_count["n"] == 1, (
+        f"verification probe should have been invoked exactly once; "
+        f"got {probe_call_count['n']}"
+    )
+
+    # The user-intended ``cortex overnight status --format json`` was
+    # recorded AFTER ``cortex upgrade`` — confirms the fall-through
+    # path.
+    upgrade_idx = next(
+        i for i, c in enumerate(calls) if c[:2] == ["cortex", "upgrade"]
+    )
+    user_call_idx = next(
+        i
+        for i, c in enumerate(calls)
+        if c[:1] == ["cortex"]
+        and len(c) >= 4
+        and c[1] == "overnight"
+        and c[2] == "status"
+    )
+    assert upgrade_idx < user_call_idx, (
+        f"on probe failure, user tool call must STILL fire after the "
+        f"upgrade attempt; got upgrade_idx={upgrade_idx} "
+        f"user_call_idx={user_call_idx}; calls={calls}"
     )

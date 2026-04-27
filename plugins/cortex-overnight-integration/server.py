@@ -571,17 +571,91 @@ def _run_cortex_upgrade() -> subprocess.CompletedProcess[str]:
     )
 
 
-def _run_verification_probe() -> bool:
-    """R12 verification probe stub — Task 9 fills in the body.
+#: Timeout (seconds) for each verification-probe subprocess. The probes
+#: are read-only CLI invocations (``--print-root`` + ``overnight status``)
+#: that are bounded by argparse + a single state-file read; 30s is the
+#: same envelope the per-tool delegations use.
+_VERIFICATION_PROBE_TIMEOUT_SECONDS = 30.0
 
-    Returns ``True`` on success (or on the Task 8 stub-path) so that
-    Task 8's invocation-order test sees the call site fire. Task 9
-    replaces this with the real two-step probe (``cortex --print-root``
-    followed by ``cortex overnight status --format json``) and the
-    fall-through-to-on-disk semantics on failure.
+
+def _run_verification_probe() -> bool:
+    """R12 verification probe — invoked after a successful ``cortex upgrade``.
+
+    Runs two subprocess invocations against the upgraded on-disk CLI:
+
+    1. ``cortex --print-root`` — must exit 0 with parseable JSON.
+    2. ``cortex overnight status --format json`` (NO trailing positional
+       — see the plan-task architectural-context callout: the spec text
+       "against an empty/unknown session id" describes the
+       session-discovery state, not a literal empty-string positional;
+       the current CLI's ``overnight status`` subparser does not accept a
+       positional session_id, only ``--session-dir``). This invocation
+       forces import of ``cortex_command.overnight.cli_handler`` and
+       catches the lazy-import failure mode from a partial
+       ``uv tool install --force`` that succeeded at the shim layer but
+       failed mid-rewrite of the module files.
+
+    Returns ``True`` on success (both probes exit 0 with parseable JSON)
+    so the orchestrator continues normally. Returns ``False`` on any
+    probe failure: the orchestrator's caller falls through to delegating
+    against the on-disk CLI (degraded path; user sees the upgrade-failure
+    error in the tool-call response). On failure, a one-line summary is
+    written to stderr — Task 11 will replace this with the NDJSON error
+    log path (R14).
+
+    Spec R12.
     """
-    # Stub: invoke a no-op subprocess so the call-order test can record
-    # the call site. Task 9 swaps this for the real probe.
+
+    def _run_probe(argv: list[str]) -> tuple[bool, str]:
+        """Run one probe step; return (ok, error_summary)."""
+        try:
+            completed = subprocess.run(
+                _resolve_cortex_argv() + argv,
+                capture_output=True,
+                text=True,
+                timeout=_VERIFICATION_PROBE_TIMEOUT_SECONDS,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            return False, f"{exc.__class__.__name__}: {exc}"
+        if completed.returncode != 0:
+            return False, (
+                f"exit={completed.returncode} "
+                f"stderr={completed.stderr!r}"
+            )
+        try:
+            json.loads(completed.stdout)
+        except json.JSONDecodeError as exc:
+            return False, (
+                f"unparseable JSON: {exc}; stdout={completed.stdout!r}"
+            )
+        return True, ""
+
+    ok, summary = _run_probe(["--print-root"])
+    if not ok:
+        # Placeholder for the NDJSON path Task 11 fills in.
+        print(
+            f"cortex MCP: verification probe failed at "
+            f"`cortex --print-root`: {summary}; "
+            f"falling through to on-disk CLI",
+            file=sys.stderr,
+        )
+        return False
+
+    # NOTE: NO trailing empty-string positional. See the architectural-
+    # context callout in the Task 9 plan brief: "against an empty/unknown
+    # session id" describes the session-discovery state, not a literal
+    # argv element. The R18 sandbox probe corrected this; the
+    # verification probe matches that corrected form.
+    ok, summary = _run_probe(["overnight", "status", "--format", "json"])
+    if not ok:
+        print(
+            f"cortex MCP: verification probe failed at "
+            f"`cortex overnight status --format json`: {summary}; "
+            f"falling through to on-disk CLI",
+            file=sys.stderr,
+        )
+        return False
+
     return True
 
 
