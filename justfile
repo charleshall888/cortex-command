@@ -401,7 +401,7 @@ dangerous:
 # --- Plugin ---
 
 BUILD_OUTPUT_PLUGINS := "cortex-interactive cortex-overnight-integration"
-HAND_MAINTAINED_PLUGINS := "cortex-pr-review cortex-ui-extras"
+HAND_MAINTAINED_PLUGINS := "cortex-pr-review cortex-ui-extras android-dev-extras cortex-dev-extras"
 
 _list-build-output-plugins:
     #!/usr/bin/env bash
