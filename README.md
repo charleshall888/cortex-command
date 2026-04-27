@@ -137,7 +137,7 @@ The overnight runner reads this file automatically when no `apiKeyHelper` is con
 
 Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth token at `~/.claude/personal-oauth-token`. The runner uses `apiKeyHelper` when present, falls back to the OAuth token when not. See [`docs/overnight-operations.md`](docs/overnight-operations.md#auth-resolution-apikeyhelper-and-env-var-fallback-order) for the full precedence chain.
 
-> **Note:** OAuth tokens work with `claude -p` and the Agent SDK. Standalone utilities (`count-tokens`, `audit-doc`) call the Anthropic API directly and require an API key.
+> **Note:** OAuth tokens work with `claude -p` and the Agent SDK. Standalone utilities (`cortex-count-tokens`, `cortex-audit-doc`) call the Anthropic API directly and require an API key.
 
 ## What's Inside
 
@@ -150,7 +150,7 @@ Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth
 | `lifecycle/` | Feature state machine -- research, specify, plan, implement, review, complete |
 | `backlog/` | YAML-frontmatter backlog items with overnight readiness gates |
 | `claude/reference/` | Reference docs loaded conditionally by agent instructions |
-| `bin/` | CLI utilities deployed to `~/.local/bin/` -- `jcc` (recipe wrapper), `count-tokens`, `audit-doc`, `overnight-start` |
+| `plugins/cortex-interactive/bin/` | CLI utilities on `PATH` via the plugin -- `cortex-jcc` (recipe wrapper), `cortex-count-tokens`, `cortex-audit-doc`, `cortex-update-item`, `cortex-generate-backlog-index`, `cortex-create-backlog-item`, `cortex-git-sync-rebase` |
 
 ## Customization
 
@@ -172,8 +172,8 @@ Run `just --list` to see all operational recipes. Key commands:
 ```
 just test                  # Run all test suites
 just overnight-run         # Run overnight in foreground
-just overnight-start       # Run overnight in detached tmux
-just overnight-status      # Live status display
+cortex overnight start     # Run overnight in detached tmux
+cortex overnight status    # Print session status (use --format json for machine-readable)
 just dashboard             # Start the web dashboard
 just validate-commit       # Test commit message hook
 just validate-skills       # Check skill frontmatter

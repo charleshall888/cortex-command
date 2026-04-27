@@ -28,7 +28,7 @@ For mechanics, state files, recovery, and debugging procedures, see [overnight-o
 - [ ] Python venv is set up (`just python-setup` if not done)
 - [ ] Run `/overnight` in Claude Code — review and approve the session plan
 - [ ] (Optional) Launch the [dashboard](dashboard.md) in a separate terminal: `just dashboard`
-- [ ] Run `overnight-start` in a terminal
+- [ ] Run `cortex overnight start` in a terminal
 
 ### Morning (after the session)
 
@@ -75,7 +75,7 @@ Other fields:
 
 ### Launching from another repo
 
-**From the cortex-command repo:** both `overnight-start` and `just overnight-start` work. Use whichever is convenient.
+**From the cortex-command repo:** run `cortex overnight start`.
 
 **From any other repo:**
 
@@ -84,15 +84,15 @@ Other fields:
 3. Run `/overnight` — it will generate the session plan and write the state file to `lifecycle/sessions/{session_id}/overnight-state.json` inside that repo.
 4. In a terminal, launch the runner with the explicit state file path:
    ```bash
-   overnight-start lifecycle/sessions/{session_id}/overnight-state.json
+   cortex overnight start --state lifecycle/sessions/{session_id}/overnight-state.json
    ```
 
-**Status and log tools are cortex-command tools** — invoke them via `jcc` from any terminal:
+**Status and log:**
 
 ```bash
-jcc overnight-status
-jcc overnight-logs
-jcc overnight-smoke-test
+cortex overnight status               # current session status
+cortex overnight logs                 # tail event log
+cortex-jcc overnight-smoke-test       # pre-launch sanity check (Just recipe via plugin wrapper)
 ```
 
 ---
@@ -187,7 +187,7 @@ On approval, the skill:
 5. Logs `SESSION_START` to the event log
 6. Prints the runner command
 
-You then run `overnight-start` in a terminal (or a separate Ghostty/tmux window). That's it for the evening.
+You then run `cortex overnight start` in a terminal (or a separate Ghostty/tmux window). That's it for the evening.
 
 ---
 
@@ -239,11 +239,11 @@ session end. `/morning-review` surfaces its URL so you can review and merge.
 
 | Command | What it does |
 |---------|-------------|
-| `overnight-start` | Launch runner in a detached tmux session (recommended) |
-| `overnight-start --max-rounds 5` | Launch with round cap |
+| `cortex overnight start` | Launch runner in a detached tmux session (recommended) |
+| `cortex overnight start --max-rounds 5` | Launch with round cap |
 | `just overnight-run` | Launch runner in foreground (useful for debugging) |
-| `just overnight-status` | Live auto-refreshing status display |
-| `just overnight-logs` | Tail the active session's event log |
+| `cortex overnight status` | Print session status (`--format json` for machine-readable) |
+| `cortex overnight logs` | Tail the active session's event log |
 | `just overnight-smoke-test` | Verify worker commit round-trip (pre-launch sanity check) |
 | `tmux attach -t overnight-runner` | Attach to running session to watch output |
 | `/overnight resume` | Check state and relaunch a paused session |
@@ -272,8 +272,8 @@ closes lifecycle artifacts and archives backlog items in the right order. Then m
 ### If something goes wrong mid-session
 
 - Attach to the runner: `tmux attach -t overnight-runner`
-- Check state: `just overnight-status`
-- If stalled: Ctrl-C exits gracefully. Then `/overnight resume` + `overnight-start`
+- Check state: `cortex overnight status`
+- If stalled: Ctrl-C exits gracefully. Then `/overnight resume` + `cortex overnight start`
 - Check `deferred/` for blocking questions that paused features
 
 ### Readiness gate: file existence, not quality

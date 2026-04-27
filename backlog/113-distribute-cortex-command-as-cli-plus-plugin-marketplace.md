@@ -2,13 +2,13 @@
 schema_version: "1"
 uuid: 3f12ca5d-0eef-480a-804d-fcbe2dd57223
 title: "Distribute cortex-command as cortex CLI + plugin marketplace"
-status: backlog
+status: complete
 priority: high
 type: epic
 tags: [distribution, plugin, cli, overnight-layer-distribution]
 areas: [install, overnight-runner, skills]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-27
 lifecycle_slug: null
 lifecycle_phase: null
 session_id: null

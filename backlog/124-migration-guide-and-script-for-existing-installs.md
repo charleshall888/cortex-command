@@ -2,19 +2,19 @@
 schema_version: "1"
 uuid: 29c04548-afdd-4a84-a50f-7b973065f9c0
 title: "Migration guide + script for existing symlink-based installs"
-status: backlog
+status: wontfix
 priority: medium
 type: chore
 parent: 113
 tags: [distribution, migration, overnight-layer-distribution]
 areas: [install]
 created: 2026-04-21
-updated: 2026-04-25
+updated: 2026-04-27
 lifecycle_slug: null
-lifecycle_phase: null
+lifecycle_phase: complete
 session_id: null
 blocks: []
-blocked-by: [118, 122]
+blocked-by: [118]
 discovery_source: research/overnight-layer-distribution/research.md
 ---
 

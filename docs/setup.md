@@ -51,7 +51,7 @@ The four plugins are:
 #### Plugin-specific prerequisites
 
 - **`cortex-overnight-integration`** requires the `${CORTEX_COMMAND_ROOT}` environment variable exported and pointing at your cortex-command checkout, plus the `cortex` CLI on your `PATH` (the MCP server resolves the CLI from there). Export it in your shell rc file, e.g. `export CORTEX_COMMAND_ROOT=$HOME/.cortex`.
-- **`cortex-interactive`** shell-side bin shims (`jcc` and friends) require `${CORTEX_COMMAND_ROOT}` exported as well; the in-Claude skills work without it, but the bin shims will error explicitly if it is unset.
+- **`cortex-interactive`** shell-side bin shims (`cortex-jcc` and the other `cortex-*` tools) require `${CORTEX_COMMAND_ROOT}` exported as well; the in-Claude skills work without it, but the bin shims will error explicitly if it is unset.
 - **`cortex-ui-extras`** has no extra prerequisites.
 - **`cortex-pr-review`** has no extra prerequisites.
 
@@ -100,7 +100,7 @@ For work repos billed through the Anthropic Console:
    }
    ```
 
-This path also enables `count-tokens` and `audit-doc`, which call the Anthropic API directly.
+This path also enables `cortex-count-tokens` and `cortex-audit-doc`, which call the Anthropic API directly.
 
 ### Option B: OAuth Token (Claude Pro / Max subscription)
 
@@ -120,7 +120,7 @@ For personal repos using your Claude subscription:
 
 The overnight runner reads this file automatically when no `apiKeyHelper` is configured. No settings.json changes needed.
 
-> **Note:** `CLAUDE_CODE_OAUTH_TOKEN` is recognized by Claude Code CLI (`claude -p`, Agent SDK) but **not** by the Anthropic Python SDK. Standalone utilities like `count-tokens` and `audit-doc` require an API key (Option A).
+> **Note:** `CLAUDE_CODE_OAUTH_TOKEN` is recognized by Claude Code CLI (`claude -p`, Agent SDK) but **not** by the Anthropic Python SDK. Standalone utilities like `cortex-count-tokens` and `cortex-audit-doc` require an API key (Option A).
 
 ### Using Both
 
@@ -240,7 +240,7 @@ If you don't use direnv, a shell alias (`alias cc-shadow='CLAUDE_CONFIG_DIR=$HOM
 
 **Cortex-command foot-guns.** Each of the following is a known failure mode this pattern surfaces. None of them are managed automatically — treat each as a rule to follow, not a problem the shadow resolves for you:
 
-- **Evolve, auto-memory, audit-doc, and count-tokens walk from host**: these tools fall back to `~/.claude` rather than `$CLAUDE_CONFIG_DIR`. Auto-memory under a shadow writes to the host scope. Treat their output as host-scoped.
+- **Evolve, auto-memory, cortex-audit-doc, and cortex-count-tokens walk from host**: these tools fall back to `~/.claude` rather than `$CLAUDE_CONFIG_DIR`. Auto-memory under a shadow writes to the host scope. Treat their output as host-scoped.
 - **Concurrent sessions and scope confusion**: Claude Code's `/context` (an upstream bug) shows the host path even when a shadow is active, so you cannot verify the live scope from inside a session. Run `echo $CLAUDE_CONFIG_DIR` in your shell before launching each session.
 
 **Upstream Claude Code partial-support bugs.** Even with `CLAUDE_CONFIG_DIR` set, several Claude Code subsystems do not fully honor it:

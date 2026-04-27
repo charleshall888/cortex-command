@@ -204,43 +204,6 @@
     "repo": null
   },
   {
-    "id": 113,
-    "title": "Distribute cortex-command as cortex CLI + plugin marketplace",
-    "status": "backlog",
-    "priority": "high",
-    "type": "epic",
-    "tags": [
-      "distribution",
-      "plugin",
-      "cli",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "install",
-      "overnight-runner",
-      "skills"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-21",
-    "blocks": [
-      "102",
-      "103",
-      "104"
-    ],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "3f12ca5d-0eef-480a-804d-fcbe2dd57223",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 135,
     "title": "Shared git index race between parallel Claude sessions causes wrong files to land in commits",
     "status": "backlog",
@@ -558,38 +521,6 @@
     "discovery_source": "research/extract-scripts-from-agent-tool-sequences/research.md",
     "plan": null,
     "uuid": "bf914d38-1079-454f-b3dc-3ce680e5a7b6",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 124,
-    "title": "Migration guide + script for existing symlink-based installs",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "distribution",
-      "migration",
-      "overnight-layer-distribution"
-    ],
-    "areas": [
-      "install"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-27",
-    "blocks": [],
-    "blocked_by": [
-      "118"
-    ],
-    "parent": "113",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/overnight-layer-distribution/research.md",
-    "plan": null,
-    "uuid": "29c04548-afdd-4a84-a50f-7b973065f9c0",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
