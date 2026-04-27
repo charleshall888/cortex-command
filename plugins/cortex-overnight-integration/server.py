@@ -39,6 +39,7 @@ import errno
 import fcntl
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -179,6 +180,47 @@ def _check_version(payload: dict, *, verb: str) -> None:
 # Latch so we only emit the unversioned-status warning once per server
 # lifetime (avoids stderr spam on tight polling loops).
 _STATUS_LEGACY_VERSION_WARNED: bool = False
+
+
+# ---------------------------------------------------------------------------
+# Cortex CLI presence (S1 + S5)
+# ---------------------------------------------------------------------------
+
+#: Canonical user-facing error string emitted when the ``cortex`` CLI is
+#: not discoverable on PATH. Shared by the module-import-time stderr
+#: warning (S5) and the tool-body string-return path (S1) so the message
+#: is byte-equal across surfaces. Per the Anthropic MCP Python reference
+#: pattern, tool bodies return this verbatim (FastMCP wraps it into
+#: ``CallToolResult(isError=True, content=[TextContent(text=...)])``).
+_CORTEX_CLI_MISSING_ERROR = (
+    "Error: cortex CLI not found on PATH. Install: see "
+    "https://github.com/charleshall888/cortex-command#install "
+    "(or `uv tool install -e .` from a local checkout for dev mode)."
+)
+
+
+class CortexCliMissing(OSError):
+    """Internal disambiguator for ``FileNotFoundError`` on ``cortex`` argv0.
+
+    Subclasses :class:`OSError` so existing handlers that catch
+    ``OSError`` (e.g. ``_maybe_check_upstream``, ``_maybe_run_upgrade``)
+    continue to work unchanged. Surfaces only at retry-site catch
+    handlers (Task 3) — never raised through to the MCP framework, since
+    tool bodies return :data:`_CORTEX_CLI_MISSING_ERROR` as a string and
+    rely on FastMCP's documented error wrapping for the wire envelope.
+    """
+
+
+# Module-import-time best-effort visibility check (S5). If ``cortex`` is
+# not on PATH right now, log the canonical missing-CLI message to stderr
+# so operators see the issue at server start. We do *not* raise — the
+# CLI may appear on PATH later in the process lifetime, and tool bodies
+# will surface the same error string at call time if it remains absent.
+if shutil.which("cortex") is None:
+    print(
+        f"cortex MCP: {_CORTEX_CLI_MISSING_ERROR}",
+        file=sys.stderr,
+    )
 
 
 # ---------------------------------------------------------------------------
