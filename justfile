@@ -135,13 +135,54 @@ backlog-close feature="":
     python3 backlog/update_item.py {{ feature }} status=complete
 
 # Move completed lifecycle dirs (events.log contains "feature_complete") to lifecycle/archive/
-lifecycle-archive:
+# Flags:
+#   --dry-run               Print archive + rewrite candidates without performing mv or sed.
+#   --from-file <path>      Limit iteration to slugs (basenames) listed in <path>, one per line.
+# Recovery on mid-run failure: `git checkout -- .` (working-tree changes since precheck baseline).
+# The manifest at lifecycle/archive/.archive-manifest.jsonl is for audit/inspection only.
+lifecycle-archive *args:
     #!/usr/bin/env bash
     set -euo pipefail
+    # --- Parse flags ---
+    dry_run=0
+    from_file=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --dry-run) dry_run=1; shift ;;
+            --from-file) from_file="${2:-}"; shift 2 ;;
+            --from-file=*) from_file="${1#--from-file=}"; shift ;;
+            *) echo "lifecycle-archive: unknown arg: $1" >&2; exit 2 ;;
+        esac
+    done
+    # --- Clean-tree precheck (applies to BOTH dry-run and real-run; spec §N6.5 + edge case) ---
+    if ! git diff --quiet HEAD || ! git diff --quiet --cached HEAD; then
+        echo "lifecycle-archive: working tree is dirty; commit or stash before running (this applies to --dry-run too)." >&2
+        exit 1
+    fi
+    # --- Load --from-file slug filter (if given) ---
+    declare -A from_file_slugs
+    use_from_file=0
+    if [ -n "$from_file" ]; then
+        if [ ! -f "$from_file" ]; then
+            echo "lifecycle-archive: --from-file path not found: $from_file" >&2
+            exit 1
+        fi
+        use_from_file=1
+        while IFS= read -r line || [ -n "$line" ]; do
+            # Strip whitespace and skip blanks/comments
+            slug="${line%%#*}"
+            slug="$(echo "$slug" | awk '{$1=$1; print}')"
+            [ -z "$slug" ] && continue
+            from_file_slugs["$slug"]=1
+        done < "$from_file"
+    fi
     mkdir -p lifecycle/archive
+    manifest="lifecycle/archive/.archive-manifest.jsonl"
+    lockdir="lifecycle/archive/.archive-manifest.lock"
     # Build list of active worktree paths to avoid moving checked-out worktrees
     worktree_paths=$(git worktree list --porcelain | awk '/^worktree / {print $2}')
-    count=0
+    # --- Pass 1: build candidate slug list ---
+    candidates=()
     for events_log in lifecycle/*/events.log; do
         [ -f "$events_log" ] || continue
         dir=$(dirname "$events_log")
@@ -149,6 +190,8 @@ lifecycle-archive:
         case "$dir" in
             lifecycle/archive|lifecycle/archive/*|lifecycle/sessions|lifecycle/sessions/*) continue ;;
         esac
+        # Stale-symlink guard: skip broken symlinks before realpath (spec edge case "N6 stale symlinks")
+        [ -e "$dir" ] || continue
         # Skip if this dir is an active git worktree
         abs_dir=$(realpath "$dir")
         skip=0
@@ -160,10 +203,107 @@ lifecycle-archive:
         done <<< "$worktree_paths"
         [ "$skip" -eq 1 ] && continue
         # Only archive if events.log contains feature_complete
-        if grep -q '"feature_complete"' "$events_log"; then
-            mv "$dir" lifecycle/archive/
-            count=$((count + 1))
+        grep -q '"feature_complete"' "$events_log" || continue
+        slug="$(basename "$dir")"
+        # Apply --from-file slug filter if set
+        if [ "$use_from_file" -eq 1 ] && [ -z "${from_file_slugs[$slug]:-}" ]; then
+            continue
         fi
+        candidates+=("$dir")
+    done
+    # --- Dry-run: print candidates + rewrite candidates and exit ---
+    if [ "$dry_run" -eq 1 ]; then
+        echo "archive candidates:"
+        if [ "${#candidates[@]}" -eq 0 ]; then
+            echo "  (none)"
+        else
+            for d in "${candidates[@]}"; do
+                echo "  $d"
+            done
+        fi
+        echo "rewrite candidates:"
+        if [ "${#candidates[@]}" -eq 0 ]; then
+            echo "  (none)"
+        else
+            # Use the same boundary-anchored pattern the helper (T12) will use:
+            # boundary char class [A-Za-z0-9_/-] treats hyphens as word-equivalent
+            # so prefix-substring slugs (add-foo vs add-foo-bar) do not collide.
+            for d in "${candidates[@]}"; do
+                slug="$(basename "$d")"
+                # Pattern matches lifecycle/<slug> not preceded/followed by [A-Za-z0-9_/-].
+                pat='(^|[^A-Za-z0-9_/-])lifecycle/'"$slug"'($|[^A-Za-z0-9_/-])'
+                # Search *.md under repo root, excluding .git, lifecycle/archive,
+                # lifecycle/sessions, and retros (retros are immutable).
+                files=$(grep -rlE "$pat" \
+                    --include='*.md' \
+                    --exclude-dir=.git \
+                    --exclude-dir=archive \
+                    --exclude-dir=sessions \
+                    --exclude-dir=retros \
+                    . 2>/dev/null || true)
+                if [ -n "$files" ]; then
+                    echo "  [$slug]"
+                    echo "$files" | sed 's|^|    |'
+                fi
+            done
+        fi
+        echo "(dry-run: no mv or sed performed; ${#candidates[@]} candidate dir(s))"
+        exit 0
+    fi
+    # --- Real run: per-slug rewrite + mv + manifest append ---
+    count=0
+    ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    for dir in "${candidates[@]}"; do
+        slug="$(basename "$dir")"
+        # --- Rewrite step ---
+        # REPLACED by bin/cortex-archive-rewrite-paths in T12.
+        # T11 leaves the rewrite step as a no-op placeholder so that T12 can
+        # swap in the helper without re-touching this recipe's structure.
+        # The boundary-anchored grep below mirrors the dry-run pattern and
+        # captures rewritten_files for the manifest entry.
+        pat='(^|[^A-Za-z0-9_/-])lifecycle/'"$slug"'($|[^A-Za-z0-9_/-])'
+        rewritten_list=$(grep -rlE "$pat" \
+            --include='*.md' \
+            --exclude-dir=.git \
+            --exclude-dir=archive \
+            --exclude-dir=sessions \
+            --exclude-dir=retros \
+            . 2>/dev/null || true)
+        # --- Build manifest entry (NDJSON; rewritten_files reflects on-disk reality after rewrite) ---
+        rewritten_json="[]"
+        if [ -n "$rewritten_list" ]; then
+            rewritten_json=$(printf '%s\n' "$rewritten_list" | python3 -c 'import json,sys; print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
+        fi
+        src="$dir"
+        dst="lifecycle/archive/$slug"
+        line=$(python3 -c 'import json,sys; print(json.dumps({"ts": sys.argv[1], "src": sys.argv[2], "dst": sys.argv[3], "rewritten_files": json.loads(sys.argv[4])}))' "$ts" "$src" "$dst" "$rewritten_json")
+        # --- Atomic append under mkdir-based lock (portable; flock unavailable on macOS) ---
+        # Acquire lock (busy-wait briefly; mkdir is atomic on POSIX).
+        attempts=0
+        until mkdir "$lockdir" 2>/dev/null; do
+            attempts=$((attempts + 1))
+            if [ "$attempts" -gt 50 ]; then
+                echo "lifecycle-archive: could not acquire manifest lock at $lockdir" >&2
+                exit 1
+            fi
+            sleep 0.1
+        done
+        trap 'rmdir "$lockdir" 2>/dev/null || true' EXIT
+        # Tempfile + mv for atomic durable append: copy current manifest (if any),
+        # append the new line, then mv into place.
+        tmp_manifest="${manifest}.tmp.$$"
+        if [ -f "$manifest" ]; then
+            cp "$manifest" "$tmp_manifest"
+        else
+            : > "$tmp_manifest"
+        fi
+        printf '%s\n' "$line" >> "$tmp_manifest"
+        mv "$tmp_manifest" "$manifest"
+        rmdir "$lockdir" 2>/dev/null || true
+        trap - EXIT
+        # --- Move the directory ---
+        mv "$dir" lifecycle/archive/
+        count=$((count + 1))
     done
     echo "$count lifecycle directories archived"
 
