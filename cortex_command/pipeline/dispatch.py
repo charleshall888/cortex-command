@@ -15,7 +15,7 @@ import re
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional, get_args
 
 try:
     from claude_agent_sdk import (
@@ -148,6 +148,20 @@ _MODEL_MATRIX: dict[tuple[str, str], str] = {
 }
 
 _VALID_CRITICALITY = {"low", "medium", "high", "critical"}
+
+# Closed vocabulary of dispatch-call sites, emitted on dispatch_start so
+# downstream aggregators can group by skill (Req: per-skill pipeline aggregates).
+# Add new skills here only after wiring the corresponding caller; runtime guard
+# in dispatch_task rejects values not in this set.
+Skill = Literal[
+    "implement",
+    "review",
+    "review-fix",
+    "conflict-repair",
+    "merge-test-repair",
+    "integration-recovery",
+    "brain",
+]
 
 # Model escalation ladder used by the retry loop (Req 8).
 # Maps each model name to the next higher tier, or None when already at max.
@@ -343,6 +357,12 @@ async def dispatch_task(
     effort_override: Optional[str] = None,
     integration_base_path: Optional[Path] = None,
     repo_root: Optional[Path] = None,
+    *,
+    skill: Skill,
+    attempt: int = 1,
+    escalated: bool = False,
+    escalation_event: bool = False,
+    cycle: int | None = None,
 ) -> DispatchResult:
     """Dispatch a task to a Claude agent via the Agent SDK.
 
@@ -370,6 +390,21 @@ async def dispatch_task(
             resolving from the complexity tier via EFFORT_MAP.  Accepts any
             value accepted by ClaudeAgentOptions ("low", "medium", "high",
             "max").
+        skill: Closed-vocabulary identifier for the dispatch-call site (one of
+            the values in the ``Skill`` Literal). Required keyword-only
+            argument; emitted on ``dispatch_start`` so downstream aggregators
+            can group dispatches by ``(skill, tier)``. New skills must be
+            added to the ``Skill`` Literal at module scope before use.
+        attempt: 1-based retry attempt number for this dispatch. Defaults to
+            ``1`` for the first attempt.
+        escalated: True when this dispatch is running on an escalated model
+            tier (e.g. Sonnet → Opus) relative to the original tier choice.
+        escalation_event: True when this dispatch represents the boundary
+            event where the escalation actually occurred (distinct from
+            subsequent attempts that merely run on the escalated tier).
+        cycle: Review cycle number for ``review-fix`` dispatches only.
+            Must be ``None`` for every other skill; passing a non-None value
+            with any other ``skill`` raises ``ValueError``.
 
     Returns:
         DispatchResult with success status, collected output, error info,
@@ -377,7 +412,9 @@ async def dispatch_task(
 
     Raises:
         RuntimeError: If claude_agent_sdk is not installed.
-        ValueError: If complexity or criticality is not a recognized value.
+        ValueError: If complexity or criticality is not a recognized value,
+            if ``skill`` is not in the ``Skill`` Literal vocabulary, or if
+            ``cycle`` is non-None for any skill other than ``review-fix``.
     """
     if not _SDK_AVAILABLE:
         raise RuntimeError(
@@ -391,6 +428,11 @@ async def dispatch_task(
             f"Unknown complexity tier {complexity!r}; "
             f"must be one of {sorted(TIER_CONFIG)}"
         )
+
+    if skill not in get_args(Skill):
+        raise ValueError(f"unregistered skill {skill!r}; must be one of {sorted(get_args(Skill))}")
+    if cycle is not None and skill != "review-fix":
+        raise ValueError(f"cycle is only valid for skill='review-fix'; got skill={skill!r} with cycle={cycle!r}")
 
     model = model_override if model_override is not None else resolve_model(complexity, criticality)
     effort = effort_override if effort_override is not None else EFFORT_MAP[complexity]
@@ -442,16 +484,23 @@ async def dispatch_task(
     )
 
     if log_path:
-        log_event(log_path, {
+        event_dict: dict[str, Any] = {
             "event": "dispatch_start",
             "feature": feature,
-            "complexity": complexity,
-            "criticality": criticality,
-            "model": model,
-            "effort": effort,
-            "max_turns": tier["max_turns"],
-            "max_budget_usd": tier["max_budget_usd"],
-        })
+            "skill": skill,
+            "attempt": attempt,
+            "escalated": escalated,
+            "escalation_event": escalation_event,
+        }
+        if cycle is not None:
+            event_dict["cycle"] = cycle
+        event_dict["complexity"] = complexity
+        event_dict["criticality"] = criticality
+        event_dict["model"] = model
+        event_dict["effort"] = effort
+        event_dict["max_turns"] = tier["max_turns"]
+        event_dict["max_budget_usd"] = tier["max_budget_usd"]
+        log_event(log_path, event_dict)
 
     output_parts: list[str] = []
     cost_usd: float | None = None
