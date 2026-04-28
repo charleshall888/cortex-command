@@ -616,18 +616,31 @@ def lint(
     allowlisted: dict[str, AllowlistRow] = {r.script: r for r in rows}
 
     # 2. Gather scan corpus.
-    file_corpus: list[tuple[str, str]]
+    # In --staged mode, the corpus is the working-tree scan with staged blobs
+    # overlaid on top: each staged in-scope file replaces its working-tree
+    # contents. Unstaged files still contribute. This matches R13 intent
+    # ("referenced set from staged blobs PLUS working-tree wiring") and
+    # avoids spurious W003 reports when a commit stages only out-of-scope
+    # files (e.g., a comment-only edit to bin/.parity-exceptions.md).
+    file_corpus: list[tuple[str, str]] = []
+    staged_overlay: dict[str, str] = {}
     if staged:
-        file_corpus = _gather_staged_inscope_texts(root)
-    else:
-        file_corpus = []
-        for p in gather_scan_files(root):
-            try:
-                text = p.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                continue
-            rel = str(p.relative_to(root)) if p.is_absolute() else str(p)
-            file_corpus.append((rel, text))
+        for rel, text in _gather_staged_inscope_texts(root):
+            staged_overlay[rel] = text
+    for p in gather_scan_files(root):
+        rel = str(p.relative_to(root)) if p.is_absolute() else str(p)
+        if rel in staged_overlay:
+            file_corpus.append((rel, staged_overlay.pop(rel)))
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        file_corpus.append((rel, text))
+    # Any staged-only paths (newly added files not yet in the working-tree
+    # glob enumeration) are appended last.
+    for rel, text in staged_overlay.items():
+        file_corpus.append((rel, text))
 
     # 3. Wiring + candidate sets.
     wired: dict[str, list[tuple[str, int, int]]] = {}
