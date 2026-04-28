@@ -1242,6 +1242,7 @@ def main(argv: list[str] | None = None) -> None:
         all_paired.extend(paired)
 
     model_tier_dispatch_aggregates = compute_model_tier_dispatch_aggregates(all_paired)
+    skill_tier_dispatch_aggregates = compute_skill_tier_dispatch_aggregates(all_paired)
     print(f"  Dispatch aggregation: {len(all_paired)} paired record(s), {len(model_tier_dispatch_aggregates)} bucket(s)")
 
     # ---- Assemble and write output ----
@@ -1251,6 +1252,7 @@ def main(argv: list[str] | None = None) -> None:
         "aggregates": aggregates,
         "calibration": calibration,
         "model_tier_dispatch_aggregates": model_tier_dispatch_aggregates,
+        "skill_tier_dispatch_aggregates": skill_tier_dispatch_aggregates,
     }
 
     if args.since is not None:
