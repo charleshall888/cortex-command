@@ -76,7 +76,8 @@ graph TD
 
     LC["/lifecycle\nfull interactive · single feature\nClarify → Research → Specify → Plan → Implement → Review → Complete"]
     DISC["/discovery\nresearch + decompose\ncreates backlog tickets"]
-    BACKLOG[("Backlog")]
+    BACKLOG[("Backlog<br/>draft → refined → complete")]
+    REQ([requirements/project.md])
 
     REFINE["/refine\nClarify → Research → Specify\nsets status: refined"]
     GATE{"Readiness\ngate\nresearch ✓  spec ✓"}
@@ -91,13 +92,15 @@ graph TD
     MAIN([main branch])
 
     START --> DEV
-    DEV -->|"single feature"| LC
+    DEV -->|"interactive · single feature"| LC
     DEV -->|"vague / research"| DISC
     DEV -->|"batch / what's next"| BACKLOG
 
     DISC -->|"creates tickets"| BACKLOG
 
-    BACKLOG -->|"pick item"| REFINE
+    REQ -->|"informs scope"| DISC
+
+    BACKLOG -->|"autonomous · pick item"| REFINE
     REFINE -->|"status: refined + artifacts"| GATE
     GATE -->|"eligible"| OVN
     GATE -->|"needs more prep"| REFINE

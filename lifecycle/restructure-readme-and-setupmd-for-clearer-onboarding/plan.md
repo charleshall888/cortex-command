@@ -23,7 +23,7 @@ Two notes that apply to every task's Verification field below; do not duplicate 
 - **Complexity**: simple
 - **Context**: Existing diagram region: `README.md:9-43` (35 lines of box-drawing ASCII). Lifecycle phase flow diagram at `README.md:45-63` is preserved. The pitch lives between the README's top-of-file content and `## Prerequisites`. The pitch must mention all four pipeline stages (`discovery`, `backlog`, `refine`/`lifecycle`, `overnight`) so the prose carries the same conceptual surface as the deleted diagram. Link target uses the form `[docs/agentic-layer.md](docs/agentic-layer.md#diagram-a--main-workflow-flow)` or `docs/agentic-layer.md` (anchor optional but preferred). Spec requirements covered: R5.
 - **Verification**: `grep -cE '^[ ]*[┌┐└┘├┤┬┴┼─│]{5,}' README.md` returns ≤ 6 — pass if count ≤ 6 (allows the lifecycle phase flow diagram at L45-63 to remain while flagging any reintroduction of a 35-line ASCII pipeline diagram); AND scoped to the pre-Prerequisites pitch region: `awk '/^## Prerequisites/{exit} {print}' README.md | grep -cE 'discovery.*backlog.*(refine|lifecycle).*overnight|discovery.*backlog.*overnight'` returns ≥ 1 — pass if pitch prose contains the four-stage narrative; AND `awk '/^## Prerequisites/{exit} {print}' README.md | grep -c 'docs/agentic-layer.md'` returns ≥ 1 — pass if pitch links to agentic-layer.md (scoped to pitch region so existing doc-index links elsewhere don't satisfy this).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Overhaul README Quick Start (marketplace-add precondition, scoped install form, plugin count consistency, verification reference)
 - **Files**: `README.md`
