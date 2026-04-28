@@ -40,6 +40,19 @@ PLUGIN_NAMES: frozenset[str] = frozenset(
     }
 )
 
+# R5(c) extension: reserved cortex-prefixed identifiers that are NOT bin
+# scripts. Project name (``cortex-command``) and MCP server name
+# (``cortex-overnight``) appear in fenced code blocks (e.g. ``claude mcp add
+# cortex-overnight``) that cannot be path-qualified, so candidacy must be
+# excluded by name. Future names require an explicit edit here — same
+# intentional friction as PLUGIN_NAMES.
+RESERVED_NON_BIN_NAMES: frozenset[str] = frozenset(
+    {
+        "cortex-command",
+        "cortex-overnight",
+    }
+)
+
 # R5(d): the linter's own filename — never a candidate.
 SELF_REFERENCE = "cortex-check-parity"
 
@@ -330,8 +343,13 @@ def _collect_inline_code_tokens(text: str) -> set[str]:
             continue
         # Strip any leading ``bin/`` for purposes of token extraction; the
         # path-qualified path still wires via PATH_QUALIFIED_RE as well.
-        for tok in TOKEN_RE.findall(body):
-            out.add(tok)
+        for m in TOKEN_RE.finditer(body):
+            # R5(e): exclude tokens preceded immediately by ``.`` —
+            # ``.cortex-init`` and ``.cortex-update.lock`` are file/marker
+            # names, not script invocations.
+            if m.start() > 0 and body[m.start() - 1] == ".":
+                continue
+            out.add(m.group(0))
     return out
 
 
@@ -346,6 +364,9 @@ def _collect_fenced_code_tokens(text: str) -> set[str]:
             tok = m.group(0)
             tail = cleaned[m.end() : m.end() + 3]
             if tail.startswith(".sh"):
+                continue
+            # R5(e): exclude tokens preceded immediately by ``.``.
+            if m.start() > 0 and cleaned[m.start() - 1] == ".":
                 continue
             out.add(tok)
     return out
@@ -472,7 +493,7 @@ def collect_wiring_signals(text: str) -> set[str]:
 
 
 def collect_reference_candidates(text: str) -> set[str]:
-    """Return the set of tokens that pass R5(a)-(d) filters.
+    """Return the set of tokens that pass R5(a)-(e) filters.
 
     These are candidates for E002/W003 evaluation. R5 is the inverse of R4 —
     it identifies which tokens should be checked against the deployed bin/
@@ -482,11 +503,17 @@ def collect_reference_candidates(text: str) -> set[str]:
     candidates: set[str] = set()
     # Path-qualified tokens always candidates (after R5(a) strip).
     candidates |= _collect_path_qualified_tokens(cleaned)
-    # Inline-code and fenced-code tokens.
+    # Inline-code and fenced-code tokens (R5(b) and R5(e) applied internally).
     candidates |= _collect_inline_code_tokens(cleaned)
     candidates |= _collect_fenced_code_tokens(cleaned)
-    # Drop R5(c) plugin names and R5(d) self-reference.
-    candidates = {t for t in candidates if t not in PLUGIN_NAMES and t != SELF_REFERENCE}
+    # Drop R5(c) plugin names + reserved non-bin names; drop R5(d) self-reference.
+    candidates = {
+        t
+        for t in candidates
+        if t not in PLUGIN_NAMES
+        and t not in RESERVED_NON_BIN_NAMES
+        and t != SELF_REFERENCE
+    }
     return candidates
 
 
@@ -709,6 +736,8 @@ SELF_TEST_CASES = [
     "exclude-plugin-name",
     "exclude-hook-path",
     "exclude-self-reference",
+    "exclude-leading-dot",
+    "exclude-reserved-non-bin-name",
     "invalid-allowlist-row",
     "invalid-drift",
     "invalid-orphan",
@@ -773,10 +802,29 @@ def _run_self_test_case(name: str) -> tuple[bool, str]:
         cands = collect_reference_candidates("`cortex-check-parity`")
         if "cortex-check-parity" in cands:
             return False, "R5(d) failed: self-reference not excluded"
-        # Also wiring side excludes it.
-        wired = collect_wiring_signals(text)
-        if "cortex-check-parity" in wired:
-            return False, "R5(d) failed: self-reference present in wiring"
+        # Wiring side intentionally retains the self-reference so a
+        # ``bin/cortex-check-parity`` mention in justfile counts as wiring.
+        wired = collect_wiring_signals("`bin/cortex-check-parity`")
+        if "cortex-check-parity" not in wired:
+            return False, "R5(d) misapplied to wiring set: self-reference dropped from wired"
+        return True, ""
+    if name == "exclude-leading-dot":
+        # R5(e): tokens preceded immediately by ``.`` are file/marker names.
+        text_inline = "The `.cortex-init` marker file is checked."
+        cands = collect_reference_candidates(text_inline)
+        if "cortex-init" in cands:
+            return False, "R5(e) failed (inline): .cortex-init produced cortex-init candidate"
+        text_fenced = "```\nfoo .cortex-update.lock bar\n```\n"
+        cands_f = collect_reference_candidates(text_fenced)
+        if "cortex-update" in cands_f:
+            return False, "R5(e) failed (fenced): .cortex-update produced cortex-update candidate"
+        return True, ""
+    if name == "exclude-reserved-non-bin-name":
+        # R5(c) extension: reserved cortex-prefixed identifiers not deployed as bin scripts.
+        for tok in ("cortex-command", "cortex-overnight"):
+            cands = collect_reference_candidates(f"See `{tok}` in docs.")
+            if tok in cands:
+                return False, f"R5(c) reserved-name failed: {tok} not excluded"
         return True, ""
     if name == "invalid-allowlist-row":
         cases = [
