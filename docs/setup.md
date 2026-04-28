@@ -376,6 +376,18 @@ For desktop notifications when Claude Code needs attention:
 
 ---
 
+## Maintaining this document
+
+### Maintaining duplicated surfaces
+
+Some content in this guide is intentionally duplicated across files and must be kept in sync manually. When any of the following surfaces changes, update **both files atomically** in the same commit:
+
+1. **plugin roster** — the table of available plugins appears in both `README.md` and `docs/setup.md` (the Install section above). Adding, removing, or renaming a plugin requires edits to both files.
+2. **CLI utilities list** — the list of `cortex-*` bin utilities is documented in `README.md`. When a new utility is added to the `cortex-interactive` plugin's `bin/`, update the README entry in the same commit.
+3. **auth pointer** — `README.md` contains a short pointer to the authentication options; `docs/setup.md` carries the canonical auth content (Option A / Option B / Using Both). If the auth mechanics change, update the canonical content in `docs/setup.md` and refresh the README pointer to match.
+
+---
+
 ## Dependencies
 
 Commands shown use Homebrew (macOS); the project is primarily developed and tested on macOS.
