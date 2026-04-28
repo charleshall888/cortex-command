@@ -376,8 +376,6 @@ For desktop notifications when Claude Code needs attention:
 
 ---
 
-## Maintaining this document
-
 ### Maintaining duplicated surfaces
 
 Some content in this guide is intentionally duplicated across files and must be kept in sync manually. When any of the following surfaces changes, update **both files atomically** in the same commit:
