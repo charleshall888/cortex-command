@@ -6,7 +6,7 @@ status: backlog
 priority: medium
 type: feature
 parent: "101"
-blocked-by: [103]
+blocked-by: []
 tags: [harness, scripts, dev]
 created: 2026-04-21
 updated: 2026-04-28

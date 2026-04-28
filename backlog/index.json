@@ -57,35 +57,6 @@
     "repo": null
   },
   {
-    "id": 103,
-    "title": "Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7)",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "harness",
-      "scripts",
-      "discoverability",
-      "observability"
-    ],
-    "areas": [],
-    "created": "2026-04-21",
-    "updated": "2026-04-28",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "101",
-    "research": null,
-    "spec": "lifecycle/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md",
-    "discovery_source": "research/extract-scripts-from-agent-tool-sequences/research.md",
-    "plan": null,
-    "uuid": "38c23f6f-3126-484a-9143-4ca176f801b7",
-    "lifecycle_slug": "add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7",
-    "session_id": "1bddc468-8c33-4dfb-9ea2-3bff4778c4d4",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 104,
     "title": "Instrument skill-name on dispatch_start for per-skill pipeline aggregates",
     "status": "refined",
@@ -130,9 +101,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-28",
     "blocks": [],
-    "blocked_by": [
-      "103"
-    ],
+    "blocked_by": [],
     "parent": "101",
     "research": null,
     "spec": null,
@@ -328,9 +297,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-28",
     "blocks": [],
-    "blocked_by": [
-      "103"
-    ],
+    "blocked_by": [],
     "parent": "101",
     "research": null,
     "spec": null,
@@ -358,9 +325,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-28",
     "blocks": [],
-    "blocked_by": [
-      "103"
-    ],
+    "blocked_by": [],
     "parent": "101",
     "research": null,
     "spec": null,
@@ -388,9 +353,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-28",
     "blocks": [],
-    "blocked_by": [
-      "103"
-    ],
+    "blocked_by": [],
     "parent": "101",
     "research": null,
     "spec": null,
@@ -418,9 +381,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-28",
     "blocks": [],
-    "blocked_by": [
-      "103"
-    ],
+    "blocked_by": [],
     "parent": "101",
     "research": null,
     "spec": null,
@@ -448,9 +409,7 @@
     "created": "2026-04-21",
     "updated": "2026-04-28",
     "blocks": [],
-    "blocked_by": [
-      "103"
-    ],
+    "blocked_by": [],
     "parent": "101",
     "research": null,
     "spec": null,

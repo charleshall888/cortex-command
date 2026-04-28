@@ -2,7 +2,7 @@
 feature: add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7
 parent_backlog_uuid: 38c23f6f-3126-484a-9143-4ca176f801b7
 parent_backlog_id: 103
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [harness, scripts, discoverability, observability]
 created: 2026-04-27
 updated: 2026-04-28
@@ -15,3 +15,4 @@ Feature lifecycle for [[103-add-runtime-adoption-telemetry-via-pretooluse-bash-h
 - Research: [[add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/research|research.md]]
 - Spec: [[add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec|spec.md]]
 - Plan: [[add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/plan|plan.md]]
+- Review: [[add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/review|review.md]]

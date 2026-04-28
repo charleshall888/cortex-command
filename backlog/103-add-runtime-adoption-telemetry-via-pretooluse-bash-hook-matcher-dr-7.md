@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 38c23f6f-3126-484a-9143-4ca176f801b7
 title: "Add runtime adoption telemetry via per-script invocation shim (DR-7)"
-status: in_progress
+status: complete
 priority: high
 type: feature
 parent: "101"
@@ -11,8 +11,8 @@ tags: [harness, scripts, discoverability, observability]
 created: 2026-04-21
 updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
-session_id: 1bddc468-8c33-4dfb-9ea2-3bff4778c4d4
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: complete
 lifecycle_slug: add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7
 complexity: complex
 criticality: high
