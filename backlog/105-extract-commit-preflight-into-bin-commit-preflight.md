@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 7670916c-a5ed-472d-8d8d-80dd9dc0f70c
 title: "Extract /commit preflight into bin/commit-preflight"
-status: in_progress
+status: complete
 priority: high
 type: feature
 parent: "101"
@@ -11,8 +11,8 @@ tags: [harness, scripts, commit]
 created: 2026-04-21
 updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
-session_id: faf7be3b-3c5c-457b-bb5b-fe2092dd2a82
-lifecycle_phase: plan
+session_id: null
+lifecycle_phase: complete
 lifecycle_slug: extract-commit-preflight-into-bin-commit-preflight
 complexity: simple
 criticality: high

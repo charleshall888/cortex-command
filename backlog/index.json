@@ -57,64 +57,6 @@
     "repo": null
   },
   {
-    "id": 104,
-    "title": "Instrument skill-name on dispatch_start for per-skill pipeline aggregates",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "harness",
-      "observability",
-      "pipeline"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-28",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "101",
-    "research": null,
-    "spec": "lifecycle/instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates/spec.md",
-    "discovery_source": "research/extract-scripts-from-agent-tool-sequences/research.md",
-    "plan": null,
-    "uuid": "70d0865d-4d7d-4627-ae59-08a0d41ec8a3",
-    "lifecycle_slug": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates",
-    "session_id": "078a8e62-d76d-4cec-a13a-bdb0146e5543",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 105,
-    "title": "Extract /commit preflight into bin/commit-preflight",
-    "status": "backlog",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "harness",
-      "scripts",
-      "commit"
-    ],
-    "areas": [],
-    "created": "2026-04-21",
-    "updated": "2026-04-28",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "101",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/extract-scripts-from-agent-tool-sequences/research.md",
-    "plan": null,
-    "uuid": "7670916c-a5ed-472d-8d8d-80dd9dc0f70c",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 112,
     "title": "Migrate overnight-schedule to a LaunchAgent-based scheduler",
     "status": "in_progress",
@@ -306,7 +248,7 @@
     "uuid": "ab917a16-dbcc-47f2-9541-56d29bbee26a",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -334,7 +276,7 @@
     "uuid": "5e36f351-6787-4ab8-910f-3d6c3dad3325",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -362,7 +304,7 @@
     "uuid": "1bc38be0-1b0e-4c5f-9757-5df413d37b44",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -390,7 +332,7 @@
     "uuid": "c5cf3e45-4ed2-495e-afda-aebacbf5490f",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
@@ -436,11 +378,9 @@
     ],
     "areas": [],
     "created": "2026-04-21",
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "blocks": [],
-    "blocked_by": [
-      "104"
-    ],
+    "blocked_by": [],
     "parent": "101",
     "research": null,
     "spec": null,

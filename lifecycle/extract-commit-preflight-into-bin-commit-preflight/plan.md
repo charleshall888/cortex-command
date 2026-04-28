@@ -30,7 +30,7 @@ Build `bin/cortex-commit-preflight` (Python, JSON output, hardened git env, exit
   - `grep -F 'ensure_ascii=False' bin/cortex-commit-preflight | wc -l` — pass if ≥ 1.
   - `grep -E 'subprocess\.run\(.*text=True' bin/cortex-commit-preflight | wc -l` — pass if = 0.
   - Exit-code probe outside any repo: `PFLT="$PWD/bin/cortex-commit-preflight"; (cd /tmp && "$PFLT"); echo $?` — pass if = 2.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2a: Drive-by realpath fix in archive/audit Python scripts (group A)
 
@@ -51,7 +51,7 @@ Build `bin/cortex-commit-preflight` (Python, JSON output, hardened git env, exit
   - `for f in bin/cortex-archive-rewrite-paths bin/cortex-archive-sample-select bin/cortex-audit-doc; do grep -c 'os.path.realpath(__file__)' "$f"; done` — pass if prints `1` three times.
   - `for f in bin/cortex-archive-rewrite-paths bin/cortex-archive-sample-select bin/cortex-audit-doc; do grep -c 'os.path.abspath(__file__)' "$f"; done` — pass if prints `0` three times.
   - Shim window invariant: `for f in bin/cortex-archive-rewrite-paths bin/cortex-archive-sample-select bin/cortex-audit-doc; do head -50 "$f" | grep -F 'cortex-log-invocation' | wc -l; done` — pass if prints `1` three times (shim still within first 50 lines after edit).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2b: Drive-by realpath fix in check/count/validate Python scripts (group B)
 
@@ -70,7 +70,7 @@ Build `bin/cortex-commit-preflight` (Python, JSON output, hardened git env, exit
   - `for f in bin/cortex-check-parity bin/cortex-count-tokens bin/cortex-validate-spec; do grep -c 'os.path.realpath(__file__)' "$f"; done` — pass if prints `1` three times.
   - `for f in bin/cortex-check-parity bin/cortex-count-tokens bin/cortex-validate-spec; do grep -c 'os.path.abspath(__file__)' "$f"; done` — pass if prints `0` three times.
   - Shim window invariant: `for f in bin/cortex-check-parity bin/cortex-count-tokens bin/cortex-validate-spec; do head -50 "$f" | grep -F 'cortex-log-invocation' | wc -l; done` — pass if prints `1` three times.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Replace `skills/commit/SKILL.md` Step 1 with single-sentence inline-code wiring
 
@@ -97,7 +97,7 @@ assert 'git log --oneline' not in w, 'git log --oneline leftover'
 assert 'git diff HEAD' not in w, 'git diff HEAD leftover'
 "` — pass if exit 0.
   - `grep -c 'cortex-commit-preflight' skills/commit/SKILL.md` — pass if ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Sync plugin mirror via `just build-plugin` and confirm cross-plugin cleanliness
 
@@ -115,7 +115,7 @@ assert 'git diff HEAD' not in w, 'git diff HEAD leftover'
   - `test -x plugins/cortex-interactive/bin/cortex-commit-preflight` — pass if exit 0 (mode preserved).
   - Cross-plugin drift check: `git status --porcelain plugins/cortex-interactive/ plugins/cortex-overnight-integration/ | grep -v -E '(plugins/cortex-interactive/bin/|plugins/cortex-interactive/skills/commit/SKILL\.md)' | wc -l` — pass if = 0 (every working-tree change in either plugin tree is either staged in Task 5 or absent; the grep -v filters out the expected Task 5 stage paths).
   - Pre-commit parity check (no actual commit): `bin/cortex-check-parity --staged 2>&1; echo $?` — pass if = 0 (verifies parity linter accepts the new bin/cortex-commit-preflight ↔ skills/commit/SKILL.md pairing before bootstrap commit attempts the same gate).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Bootstrap commit (single atomic commit of canonical + plugin mirror + SKILL.md)
 
@@ -134,7 +134,7 @@ assert 'git diff HEAD' not in w, 'git diff HEAD leftover'
   - `git log -1 --name-only --format= | sort -u | grep -c -E '^(bin/cortex-(commit-preflight|archive-rewrite-paths|archive-sample-select|audit-doc|check-parity|count-tokens|validate-spec)|skills/commit/SKILL.md|plugins/cortex-interactive/(bin/cortex-(commit-preflight|archive-rewrite-paths|archive-sample-select|audit-doc|check-parity|count-tokens|validate-spec)|skills/commit/SKILL\.md))$'` — pass if = 16 (7 canonical bin + 7 plugin-mirror bin + canonical SKILL.md + plugin-mirror SKILL.md).
   - Pre-flight commit-existence check: `git log -1 --format=%s | head -c 200` — capture the commit subject; the implementer must visually confirm this matches the just-authored bootstrap commit and not an unrelated prior commit. (The cross-plugin and parity gates above already make pre-commit-abort the dominant failure mode; this check defends against silent verification false-positives by confirming the expected commit is the latest.)
   - `git status --porcelain | wc -l` — pass if = 0 (no leftover unstaged or untracked changes after the bootstrap commit).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Create `tests/test_commit_preflight.py` with six required test functions
 
@@ -155,7 +155,7 @@ assert 'git diff HEAD' not in w, 'git diff HEAD leftover'
 - **Verification**:
   - `python3 -m pytest tests/test_commit_preflight.py -v 2>&1 | grep -E 'PASSED|FAILED' | grep -E 'test_normal_repo_emits_valid_json|test_bare_repo_exits_3|test_empty_repo_emits_empty_repo_note|test_binary_diff_no_crash|test_shim_records_invocation|test_git_env_hardening' | grep -c PASSED` — pass if = 6.
   - `python3 -m pytest tests/test_commit_preflight.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Commit tests
 
@@ -169,7 +169,7 @@ assert 'git diff HEAD' not in w, 'git diff HEAD leftover'
 - **Verification**:
   - `git log -1 --name-only --format= | grep -c -E '^tests/test_commit_preflight\.py$'` — pass if = 1.
   - `git log -1 --name-only --format= | grep -v '^$' | wc -l` — pass if = 1 (only one file in the commit).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: End-to-end verification (parity, shim aggregator, plugin byte-identity, JSONL telemetry)
 
@@ -187,7 +187,7 @@ assert 'git diff HEAD' not in w, 'git diff HEAD leftover'
   - `bin/cortex-invocation-report --check-shims; echo $?` — pass if = 0.
   - `for f in cortex-commit-preflight cortex-archive-rewrite-paths cortex-archive-sample-select cortex-audit-doc cortex-check-parity cortex-count-tokens cortex-validate-spec; do cmp "bin/$f" "plugins/cortex-interactive/bin/$f" || echo "DRIFT: $f"; done | grep -c DRIFT` — pass if = 0.
   - `SID="lifecycle-105-verify-$(python3 -c 'import uuid; print(uuid.uuid4())')"; LOG="lifecycle/sessions/$SID/bin-invocations.jsonl"; mkdir -p "$(dirname "$LOG")"; LIFECYCLE_SESSION_ID="$SID" bin/cortex-commit-preflight >/dev/null 2>&1; grep -c '"script":"cortex-commit-preflight"' "$LOG"` — pass if ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

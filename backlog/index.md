@@ -4,8 +4,6 @@
 |-----|-------|--------|----------|------|------------|--------|------|
 | 128 | Install pre-commit hook rejecting main commits during overnight sessions | backlog | critical | feature | — | 126 | — |
 | 82 | Adapt harness to Opus 4.7 (prompt delta + capability adoption) | backlog | high | epic | — | — | — |
-| 104 | Instrument skill-name on dispatch_start for per-skill pipeline aggregates | refined | high | feature | — | 101 | ✓ |
-| 105 | Extract /commit preflight into bin/commit-preflight | backlog | high | feature | — | 101 | — |
 | 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | — |
 | 135 | Shared git index race between parallel Claude sessions causes wrong files to land in commits | backlog | high | bug | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
@@ -17,7 +15,7 @@
 | 108 | Extract /backlog pick ready-set into bin/backlog-ready | backlog | medium | feature | — | 101 | — |
 | 109 | Extract /refine resolution into bin/resolve-backlog-item with bailout | backlog | medium | feature | — | 101 | — |
 | 110 | Unify lifecycle phase detection around claude.common with statusline exception | backlog | medium | feature | — | 101 | — |
-| 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | 104 | 101 | — |
+| 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | — | 101 | — |
 | 141 | Non-editable wheel install support for cortex-command | backlog | medium | feature | — | — | — |
 | 149 | Fix runner.pid takeover race in ipc.py:write_runner_pid | backlog | medium | bug | — | — | — |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | 92 | 82 | — |
@@ -28,13 +26,11 @@
 
 ## Refined
 
-- **104** Instrument skill-name on dispatch_start for per-skill pipeline aggregates
 
 ## Backlog
 
 - **128** Install pre-commit hook rejecting main commits during overnight sessions
 - **82** Adapt harness to Opus 4.7 (prompt delta + capability adoption)
-- **105** Extract /commit preflight into bin/commit-preflight
 - **135** Shared git index race between parallel Claude sessions causes wrong files to land in commits
 - **8** Auto-rename Claude Code session to active lifecycle feature name
 - **86** Extend output-floors.md with M1 Subagent Disposition section
@@ -45,6 +41,7 @@
 - **108** Extract /backlog pick ready-set into bin/backlog-ready
 - **109** Extract /refine resolution into bin/resolve-backlog-item with bailout
 - **110** Unify lifecycle phase detection around claude.common with statusline exception
+- **111** Extract overnight orchestrator-round state read into bin/orchestrator-context
 - **141** Non-editable wheel install support for cortex-command
 - **149** Fix runner.pid takeover race in ipc.py:write_runner_pid
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
