@@ -12,3 +12,29 @@
 {"ts": "2026-04-28T13:35:00Z", "event": "critical_review_apply", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "phase": "plan", "applies": 7, "dismisses": 0, "asks": 1}
 {"ts": "2026-04-28T13:40:00Z", "event": "phase_transition", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "from": "specify", "to": "plan"}
 {"ts": "2026-04-28T13:40:00Z", "event": "phase_transition", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "from": "plan", "to": "implement"}
+{"ts": "2026-04-28T15:50:37Z", "event": "batch_dispatch", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "batch": 0, "tasks": [1, 10]}
+{"ts": "2026-04-28T15:55:37Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-28T15:55:37Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 10, "batch": 0, "status": "success"}
+{"ts": "2026-04-28T15:55:49Z", "event": "batch_dispatch", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "batch": 1, "tasks": [2, 4, 5, 6, 7, 12]}
+{"ts": "2026-04-28T16:01:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-28T16:01:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 4, "batch": 1, "status": "success"}
+{"ts": "2026-04-28T16:01:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 5, "batch": 1, "status": "success"}
+{"ts": "2026-04-28T16:01:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 6, "batch": 1, "status": "success"}
+{"ts": "2026-04-28T16:01:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 7, "batch": 1, "status": "success"}
+{"ts": "2026-04-28T16:01:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 12, "batch": 1, "status": "success"}
+{"ts": "2026-04-28T16:01:29Z", "event": "batch_dispatch", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "batch": 2, "tasks": [3, 8, 9, 11]}
+{"ts": "2026-04-28T16:09:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 3, "batch": 2, "status": "success"}
+{"ts": "2026-04-28T16:09:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 8, "batch": 2, "status": "success"}
+{"ts": "2026-04-28T16:09:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 9, "batch": 2, "status": "success"}
+{"ts": "2026-04-28T16:09:17Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 11, "batch": 2, "status": "success"}
+{"ts": "2026-04-28T16:09:22Z", "event": "batch_dispatch", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "batch": 3, "tasks": [13]}
+{"ts": "2026-04-28T16:23:12Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 13, "batch": 3, "status": "success"}
+{"ts": "2026-04-28T16:23:12Z", "event": "batch_dispatch", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "batch": 4, "tasks": [14]}
+{"ts": "2026-04-28T16:35:52Z", "event": "task_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "task": 14, "batch": 4, "status": "success"}
+{"ts": "2026-04-28T16:35:52Z", "event": "phase_transition", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-28T16:43:56Z", "event": "review_verdict", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-28T16:43:56Z", "event": "phase_transition", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "from": "review", "to": "implement"}
+{"ts": "2026-04-28T16:51:42Z", "event": "phase_transition", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "from": "implement", "to": "review"}
+{"ts": "2026-04-28T16:54:05Z", "event": "review_verdict", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "verdict": "APPROVED", "cycle": 2, "requirements_drift": "none"}
+{"ts": "2026-04-28T16:54:05Z", "event": "phase_transition", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "from": "review", "to": "complete"}
+{"ts": "2026-04-28T16:54:28Z", "event": "feature_complete", "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates", "tasks_total": 14, "rework_cycles": 1}

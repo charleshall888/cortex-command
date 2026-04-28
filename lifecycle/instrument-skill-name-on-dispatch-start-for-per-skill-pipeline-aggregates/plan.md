@@ -20,7 +20,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
   - `dispatch_start` emission lives at lines 444-454. Replace the dict literal with one that interleaves the new keys in this order: `event, feature, skill, attempt, escalated, escalation_event, [cycle if not None], complexity, criticality, model, effort, max_turns, max_budget_usd`. Use a conditional dict construction (e.g., build the dict, then `if cycle is not None: event_dict["cycle"] = cycle` inserted before `complexity` — Python dict insertion order is the JSONL key order so `cycle` must be inserted before `complexity` is added when cycle is non-None).
   - Pattern reference: existing complexity validation at `dispatch.py:388-394` for the `raise ValueError` shape.
 - **Verification**: Run all four checks; pass if all exit 0 (or grep returns documented count): `python3 -c "from cortex_command.pipeline.dispatch import Skill; from typing import get_args; assert set(get_args(Skill)) == {'implement', 'review', 'review-fix', 'conflict-repair', 'merge-test-repair', 'integration-recovery', 'brain'}"` (R1 acceptance, exit 0); `python3 -c "import inspect; from cortex_command.pipeline.dispatch import dispatch_task; sig = inspect.signature(dispatch_task); p = sig.parameters; assert p['skill'].default is inspect.Parameter.empty and p['skill'].kind == inspect.Parameter.KEYWORD_ONLY; assert p['attempt'].default == 1; assert p['escalated'].default is False; assert p['escalation_event'].default is False; assert p['cycle'].default is None"` (R2 acceptance, exit 0); `grep -nE "raise ValueError\\(.*unregistered skill" cortex_command/pipeline/dispatch.py | wc -l` returns ≥ 1 (R3 guard present); `grep -nE "raise ValueError\\(.*cycle.*review-fix" cortex_command/pipeline/dispatch.py | wc -l` returns ≥ 1 (R14 guard present).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Update `retry.py` — accept `skill` kwarg, snapshot `initial_model`/`previous_attempt_model`, thread attempt/escalated/escalation_event into `dispatch_task` call
 
@@ -43,7 +43,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
     - **Pre-mutation placement**: insert `previous_attempt_model = current_model` ONLY in the escalate arm, immediately BEFORE `current_model = next_model` at retry.py:~412. The retry arm and other arms do not update `previous_attempt_model` because `current_model` is unchanged on those paths and the comparison naturally evaluates `current_model != previous_attempt_model = False`. Trade-off vs top-of-loop: less visually obvious and easier to break in future refactors.
   - Trace verification under Task 8's expected sequence (Sonnet→Opus escalation followed by retry-class failures at Opus) under top-of-loop placement: iter 1 enters with `prev=None, current=Sonnet → escalation_event=False, dispatch (1, F, F), failure escalates current=Opus`; iter 2 enters with `prev=Sonnet (snapshotted at top), current=Opus → escalation_event=(Opus≠Sonnet)=True, dispatch (2, T, T)`; iter 3 enters with `prev=Opus (snapshotted at top), current=Opus → escalation_event=False, dispatch (3, T, F)`; iter 4 same shape → `(4, T, F)`. Matches Task 8's expected sequence exactly.
 - **Verification**: Run all three checks; pass if all exit 0: `python3 -c "import inspect; from cortex_command.pipeline.retry import retry_task; sig = inspect.signature(retry_task); assert sig.parameters['skill'].kind == inspect.Parameter.KEYWORD_ONLY and sig.parameters['skill'].default is inspect.Parameter.empty"` (skill kwarg required); `grep -nE "initial_model = current_model" cortex_command/pipeline/retry.py | wc -l` returns ≥ 1 (snapshot present); `grep -nE "previous_attempt_model" cortex_command/pipeline/retry.py | wc -l` returns ≥ 3 (initialized + compared + updated).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Update `feature_executor.py` — pass `skill="implement"` to `retry_task` call site
 
@@ -54,7 +54,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
 - **Context**:
   - Single-call edit. Locate `retry_task(...)` at line 587 and append `skill="implement"` as a kwarg to the call.
 - **Verification**: `grep -nE "retry_task\\(" cortex_command/overnight/feature_executor.py | grep -v "skill=" | wc -l` returns 0 (every retry_task call site includes a `skill=` kwarg).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Update `review_dispatch.py` — pass skill+cycle at three call sites
 
@@ -65,7 +65,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
 - **Context**:
   - Three call-site edits in one file. Each `dispatch_task(...)` invocation gains a `skill=...` kwarg; the two review-fix sites also gain `cycle=...`.
 - **Verification**: `grep -nE "dispatch_task\\(" cortex_command/pipeline/review_dispatch.py | grep -v "skill=" | wc -l` returns 0; `grep -nE "cycle=1" cortex_command/pipeline/review_dispatch.py | wc -l` returns ≥ 1; `grep -nE "cycle=2" cortex_command/pipeline/review_dispatch.py | wc -l` returns ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Update `conflict.py`, `merge_recovery.py`, `integration_recovery.py`, `brain.py` — pass skill at four caller sites
 
@@ -76,7 +76,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
 - **Context**:
   - Four single-call edits across four files. Each follows the same shape: locate the `dispatch_task(...)` invocation at the cited line and append the matching `skill=` kwarg.
 - **Verification**: `grep -nE "dispatch_task\\(" cortex_command/pipeline/conflict.py cortex_command/pipeline/merge_recovery.py cortex_command/overnight/integration_recovery.py cortex_command/overnight/brain.py | grep -v "skill=" | wc -l` returns 0 (every dispatch_task call site in these four files includes a `skill=` kwarg).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Add `dispatch_task` validation tests to `test_dispatch.py`
 
@@ -90,7 +90,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
   - Second test calls `dispatch_task(skill="implement", cycle=2, ...)` inside `pytest.raises(ValueError, match="cycle")`.
   - Use the file's existing async-test pattern; `dispatch_task` is an async function so wrap with `@pytest.mark.asyncio` per the file's existing conventions.
 - **Verification**: Run both tests; pass if exit 0: `pytest cortex_command/pipeline/tests/test_dispatch.py -k "test_dispatch_task_rejects_unregistered_skill or test_dispatch_task_rejects_cycle_for_non_review_fix" -v` (exit 0); `grep -E 'pytest\\.raises\\(ValueError.*"not-a-real-skill"' cortex_command/pipeline/tests/test_dispatch.py | wc -l` returns ≥ 1 (R3.b); `grep -E 'pytest\\.raises\\(ValueError.*cycle' cortex_command/pipeline/tests/test_dispatch.py | wc -l` returns ≥ 1 (R14.b).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Add `dispatch_start` emission test to `test_dispatch_instrumentation.py`
 
@@ -102,7 +102,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
   - File already exists with `dispatch_start`-shaped tests; reuse the file's existing event-capture pattern (likely a `tmp_path` log file + `parse_events()` call). Inspect the file's existing test scaffolding before authoring.
   - Expected key order for `cycle is not None` case: `["event", "feature", "skill", "attempt", "escalated", "escalation_event", "cycle", "complexity", "criticality", "model", "effort", "max_turns", "max_budget_usd"]`. For `cycle is None` case: same minus `cycle`.
 - **Verification**: `pytest cortex_command/pipeline/tests/test_dispatch_instrumentation.py -k test_dispatch_start_includes_skill_fields -v` exit 0 (R4.b).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Add retry threading test to `test_retry.py`
 
@@ -116,7 +116,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
   - Assertions, one per attempt: assert `kwargs["attempt"]`, `kwargs["escalated"]`, `kwargs["escalation_event"]` match the expected tuple for each call (4 attempts → 4 assertion blocks).
   - Expected sequence: `(1, False, False)` → `(2, True, True)` → `(3, True, False)` → `(4, True, False)`.
 - **Verification**: `pytest cortex_command/pipeline/tests/test_retry.py -k test_retry_threads_attempt_escalated_and_escalation_event -v` exit 0; `grep -E "kwargs\\[['\\\"]escalation_event['\\\"]\\]" cortex_command/pipeline/tests/test_retry.py | wc -l` returns ≥ 4 (R6.b).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Add cycle-threading test to `test_review_dispatch.py`
 
@@ -129,7 +129,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
   - Drive at least two cycles of CHANGES_REQUESTED→fix→re-review so both call sites fire.
   - Use `mock.call_args_list` to retrieve all calls; assert `mock.call_args_list[i].kwargs["cycle"]` == expected for the two review-fix calls. The initial review at line 252 (skill="review", no cycle) should NOT have `cycle` in its kwargs — verify this absence as well to defend against accidental cycle-pollution at the non-review-fix site.
 - **Verification**: `pytest cortex_command/pipeline/tests/test_review_dispatch.py -k test_cycle_threaded_at_review_fix_sites -v` exit 0; `grep -E "kwargs\\[['\\\"]cycle['\\\"]\\]" cortex_command/pipeline/tests/test_review_dispatch.py | wc -l` returns ≥ 2 (R13.b).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Add `compute_skill_tier_dispatch_aggregates()` function to `metrics.py`
 
@@ -147,7 +147,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
   - Reuse the same statistics-computation block from the existing aggregator. If the existing function has internal helpers (e.g., `_compute_bucket_stats()`), call them directly; otherwise, copy the block (acceptable per spec — research §"Tradeoffs & Alternatives" justified parallel-function over generic-refactor for this ticket).
   - Pattern reference: `compute_model_tier_dispatch_aggregates()` at metrics.py:442-561.
 - **Verification**: `python3 -c "from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates; assert callable(compute_skill_tier_dispatch_aggregates)"` exit 0; `grep -nE "def compute_skill_tier_dispatch_aggregates" cortex_command/pipeline/metrics.py | wc -l` returns 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Add `--report skill-tier-dispatch` CLI mode and `_format_skill_tier_dispatch_report()` formatter to `metrics.py`
 
@@ -162,7 +162,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
   - argparse update at line 1042-1046: replace `choices=["tier-dispatch"]` with `choices=["tier-dispatch", "skill-tier-dispatch"]`.
   - Conditional print at line 1118+: add `elif args.report == "skill-tier-dispatch":` branch that mirrors the existing tier-dispatch branch but calls the new formatter.
 - **Verification**: `python3 -m cortex_command.pipeline.metrics --report skill-tier-dispatch --help 2>&1 | grep -c skill-tier-dispatch` returns ≥ 1 (R9 acceptance); `python3 -m cortex_command.pipeline.metrics --report skill-tier-dispatch 2>&1 | grep -E "idempot|orphan" | wc -l` returns ≥ 2 (R11 acceptance, after the empty-data path is exercised — the header always prints regardless of bucket count).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Wire both aggregators into `metrics.py` `main()` output
 
@@ -174,7 +174,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
   - Two-line addition. Mirrors the surrounding `model_tier_dispatch_aggregates` lines exactly.
   - Pattern reference: lines 1081 and 1090 (existing model-tier wiring).
 - **Verification**: `python3 -m cortex_command.pipeline.metrics && python3 -c "import json; d = json.load(open('lifecycle/metrics.json')); assert 'skill_tier_dispatch_aggregates' in d and 'model_tier_dispatch_aggregates' in d"` exit 0 (R10 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Add `TestSkillTierDispatchAggregates` class to `test_metrics.py`
 
@@ -191,7 +191,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
     - The other four methods follow the same pattern: fixture → `compute_skill_tier_dispatch_aggregates(...)` → behavioral assertion on the result dict.
   - Legacy-bucket test must construct the start event directly (not via `_start()`) so the `skill` key is genuinely absent rather than defaulting to `"implement"`.
 - **Verification**: Run all checks; pass if all exit 0 (or grep returns documented count): `pytest cortex_command/pipeline/tests/test_metrics.py::TestSkillTierDispatchAggregates -v` exit 0 (Cycle 1 functional gate); `python3 -c "from cortex_command.pipeline.tests.test_metrics import TestSkillTierDispatchAggregates; methods = {m for m in dir(TestSkillTierDispatchAggregates) if m.startswith('test_')}; required = {'test_single_bucket_grouping_non_review_fix', 'test_multi_bucket_grouping_across_skills', 'test_review_fix_cycle_disentanglement', 'test_review_fix_legacy_cycle_bucketing', 'test_legacy_bucket_for_missing_skill', 'test_p95_suppression_below_threshold'}; assert required <= methods, f'missing: {required - methods}'"` exit 0 (method-name enumeration gate, replaces the bypassable count-only check); `grep -E 'compute_skill_tier_dispatch_aggregates\\(' cortex_command/pipeline/tests/test_metrics.py | wc -l` returns ≥ 7 (one definition + at least one call per of the six new test methods, satisfies R7.c); `grep -E '"review-fix,.*,1"' cortex_command/pipeline/tests/test_metrics.py | wc -l` returns ≥ 1 AND `grep -E '"review-fix,.*,2"' cortex_command/pipeline/tests/test_metrics.py | wc -l` returns ≥ 1 (R7.d, source-string presence); `grep -E '"legacy,' cortex_command/pipeline/tests/test_metrics.py | wc -l` returns ≥ 1 (R8.b strengthened: bucket-key-shape `"legacy,` rather than bare `"legacy"`, eliminates collision with comments / unrelated occurrences).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14: Run full test suite and confirm no regressions
 
@@ -203,7 +203,7 @@ Thread a closed-vocabulary `skill: Skill` Literal kwarg (plus retry-aware `attem
   - Running `just test` is the canonical project-wide regression sweep per CLAUDE.md.
   - If any pre-existing tier-dispatch test breaks, inspect first whether the `_start()` helper-signature change (Task 13) accidentally altered event-dict shape — it should not, because `skill` is added as an additional key, not a replacement for any existing key.
 - **Verification**: `just test` exit 0 (R12 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
