@@ -374,6 +374,8 @@ For desktop notifications when Claude Code needs attention:
 
 ## Dependencies
 
+Commands shown use Homebrew (macOS); the project is primarily developed and tested on macOS.
+
 | Tool | Install |
 |------|---------|
 | [just](https://just.systems/) | `brew install just` |
