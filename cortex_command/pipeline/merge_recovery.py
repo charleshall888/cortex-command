@@ -338,6 +338,7 @@ async def recover_test_failure(
                 log_path=pipeline_log_path,
                 model_override=model,
                 repo_root=repo_path,
+                skill="merge-test-repair",
             )
             agent_output = (dispatch_result.output or "")[:500] or "(no agent output captured)"
 

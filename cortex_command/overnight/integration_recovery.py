@@ -220,6 +220,7 @@ def main() -> int:
             complexity="complex",
             system_prompt=prompt,
             log_path=Path(events_path) if events_path else None,
+            skill="integration-recovery",
         )
     )
 

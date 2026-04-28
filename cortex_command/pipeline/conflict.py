@@ -334,6 +334,7 @@ async def dispatch_repair_agent(
             log_path=config.pipeline_events_path,
             model_override=model,
             repo_root=repo_root,
+            skill="conflict-repair",
         )
         if result.cost_usd is not None:
             costs.append(result.cost_usd)
