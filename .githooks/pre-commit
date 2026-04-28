@@ -1,10 +1,14 @@
 #!/bin/bash
 # .githooks/pre-commit — policy-aware dual-source drift enforcement
 #
-# Four phases:
+# Five phases:
 #   1. Validate every plugins/*/.claude-plugin/plugin.json has a non-empty
 #      .name field, and fail closed if any discovered plugin dir is not
 #      classified in BUILD_OUTPUT_PLUGINS or HAND_MAINTAINED_PLUGINS.
+#   1.5. When staged paths match the parity trigger pattern (skills/, bin/cortex-,
+#      justfile, bin/.parity-exceptions.md, CLAUDE.md, requirements/, tests/,
+#      hooks/cortex-, claude/hooks/cortex-), run the parity linter against
+#      the staged blob view to enforce SKILL.md-to-bin parity.
 #   2. Decide whether a build is needed based on staged paths. Build is
 #      needed when any staged path is a top-level source (skills/, bin/cortex-,
 #      hooks/cortex-validate-commit.sh) or under a build-output plugin tree.
@@ -61,6 +65,29 @@ for pj in plugins/*/.claude-plugin/plugin.json; do
     fi
 done
 shopt -u nullglob
+
+# -----------------------------------------------------------------------------
+# Phase 1.5 — SKILL.md-to-bin parity enforcement
+# -----------------------------------------------------------------------------
+# When any staged path matches the parity trigger pattern, invoke the parity
+# linter against the staged blob view. The linter exits non-zero on any
+# violation; propagate that exit code so the commit is blocked.
+parity_triggered=0
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+        skills/*|bin/cortex-*|justfile|bin/.parity-exceptions.md|CLAUDE.md|requirements/*|tests/*|hooks/cortex-*|claude/hooks/cortex-*)
+            parity_triggered=1
+            break
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMRD)
+
+if [ "$parity_triggered" -eq 1 ]; then
+    if ! just check-parity --staged; then
+        exit 1
+    fi
+fi
 
 # -----------------------------------------------------------------------------
 # Phase 2 — Short-circuit decision
