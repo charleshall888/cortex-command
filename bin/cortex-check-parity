@@ -11,7 +11,7 @@ Stdlib-only. Operates on ``os.getcwd()``. See lifecycle/ship-dr-5-... for the
 full spec (R1–R18).
 """
 
-import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.abspath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
 
 import argparse
 import json

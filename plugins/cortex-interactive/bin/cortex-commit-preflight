@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Preflight probe for ``/cortex-interactive:commit`` Step 1.
+
+Runs three deterministic git probes (``git status``, ``git diff HEAD``,
+``git log --oneline -10``) and emits a single-line JSON document on stdout::
+
+    {"status": str, "diff": str, "recent_log": str, "notes": list[str]}
+
+Replaces three parallel Bash tool-call slots in ``skills/commit/SKILL.md``
+Step 1 with one deterministic invocation -- collapses tool budget and
+makes the preflight shape testable.
+
+Encoding: ``ensure_ascii=False`` (preserves UTF-8 without ``\\uXXXX``
+inflation). Git outputs are captured as raw bytes (no ``text=True``) and
+decoded with ``errors="replace"`` so binary diffs cannot crash the
+decoder. Consumers MUST parse the JSON envelope; raw substring search
+will be confused by JSON escaping inside the ``diff`` field.
+
+Exit codes (DR-2 distinct-non-zero-per-failure-class):
+
+  0  success, OR empty repo (no HEAD; ``notes=["empty_repo"]``)
+  2  not inside a git repository
+  3  bare repository (no working tree)
+  5  any other partial git failure (no partial JSON emitted)
+
+No CLI flags. Extra positional arguments are ignored.
+"""
+
+import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+
+import json
+import os
+import subprocess
+import sys
+
+
+# Hardened git environment: ``GIT_OPTIONAL_LOCKS=0`` avoids index-lock
+# contention with concurrent IDE/git activity; ``LC_ALL=C.UTF-8`` makes
+# locale-sensitive output (e.g. dates) deterministic. Merged with
+# ``os.environ`` so PATH and other harness vars survive.
+GIT_ENV = {
+    **os.environ,
+    "GIT_OPTIONAL_LOCKS": "0",
+    "LC_ALL": "C.UTF-8",
+}
+
+# Six-element prefix prepended to every git argv. ``-c color.ui=never``
+# strips ANSI; ``-c log.decorate=auto`` keeps decoration policy explicit;
+# ``--no-pager`` prevents the pager from blocking on TTYs.
+_GIT_PREFIX = ["git", "-c", "color.ui=never", "-c", "log.decorate=auto", "--no-pager"]
+
+
+def _run_git(*args: str) -> subprocess.CompletedProcess:
+    """Run ``git <args>`` with the hardened prefix and env.
+
+    Captures stdout and stderr as raw bytes (no ``text=True``); callers
+    decode with ``errors="replace"``. ``check=False`` so callers can
+    inspect ``returncode`` and shape the exit-code taxonomy themselves.
+    """
+    return subprocess.run(
+        ["git", "-c", "color.ui=never", "-c", "log.decorate=auto", "--no-pager", *args],
+        env=GIT_ENV,
+        capture_output=True,
+        check=False,
+    )
+
+
+def _decode(b: bytes) -> str:
+    """Decode bytes as UTF-8, replacing invalid sequences with ``?``."""
+    return b.decode("utf-8", errors="replace")
+
+
+def main() -> int:
+    # Probe 1: are we inside a working tree at all?
+    inside = subprocess.run(
+        ["git", "-c", "color.ui=never", "-c", "log.decorate=auto", "--no-pager", "rev-parse", "--is-inside-work-tree"],
+        env=GIT_ENV,
+        capture_output=True,
+        check=False,
+    )
+    if inside.returncode != 0 or _decode(inside.stdout).strip() != "true":
+        # Either truly outside any repo, OR inside a bare repo's GIT_DIR.
+        # Distinguish bare via a separate probe below; here, treat
+        # rev-parse failure or non-"true" stdout as "not in a worktree".
+        bare = subprocess.run(
+            ["git", "-c", "color.ui=never", "-c", "log.decorate=auto", "--no-pager", "rev-parse", "--is-bare-repository"],
+            env=GIT_ENV,
+            capture_output=True,
+            check=False,
+        )
+        if bare.returncode == 0 and _decode(bare.stdout).strip() == "true":
+            sys.stderr.write("bare repository -- no working tree\n")
+            return 3
+        sys.stderr.write("not inside a git repository\n")
+        return 2
+
+    # Probe 2: bare-repo guard (covers the rare worktree-inside-bare edge).
+    bare = _run_git("rev-parse", "--is-bare-repository")
+    if bare.returncode == 0 and _decode(bare.stdout).strip() == "true":
+        sys.stderr.write("bare repository -- no working tree\n")
+        return 3
+
+    # Probe 3: does HEAD exist? Empty repos (fresh ``git init``) have no
+    # HEAD until the first commit; ``git diff HEAD`` and ``git log`` would
+    # error. We branch the JSON shape on this signal.
+    head = _run_git("rev-parse", "--verify", "HEAD")
+    head_exists = head.returncode == 0
+
+    # ``git status`` works in both empty and non-empty repos.
+    status_proc = _run_git("status")
+    if status_proc.returncode != 0:
+        sys.stderr.write(_decode(status_proc.stderr))
+        return 5
+    status_out = _decode(status_proc.stdout)
+
+    notes: list[str] = []
+    diff_out = ""
+    log_out = ""
+
+    if not head_exists:
+        # Empty repo -- emit a partial-but-explicit envelope. Diff and
+        # log fields stay empty strings; the agent reads ``notes`` and
+        # adapts (e.g. composes the first commit on the repo).
+        notes.append("empty_repo")
+    else:
+        diff_proc = _run_git("diff", "HEAD")
+        if diff_proc.returncode != 0:
+            sys.stderr.write(_decode(diff_proc.stderr))
+            return 5
+        diff_out = _decode(diff_proc.stdout)
+
+        log_proc = _run_git("log", "--oneline", "-10")
+        if log_proc.returncode != 0:
+            sys.stderr.write(_decode(log_proc.stderr))
+            return 5
+        log_out = _decode(log_proc.stdout)
+
+    payload = {
+        "status": status_out,
+        "diff": diff_out,
+        "recent_log": log_out,
+        "notes": notes,
+    }
+    sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
