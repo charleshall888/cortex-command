@@ -1,11 +1,11 @@
 """R26 sync-rebase coverage for post-merge sync semantics.
 
 Closes the R16 [M]-tagged pipeline.md gap: "Post-session sync via
-``bin/git-sync-rebase.sh`` + ``sync-allowlist.conf`` — script-level; no
+``bin/cortex-git-sync-rebase`` + ``sync-allowlist.conf`` — script-level; no
 pytest today".
 
 The test creates a fixture git repo with a bare ``origin`` remote, then
-invokes the real ``git-sync-rebase.sh`` to exercise the rebase pipeline.
+invokes the real ``cortex-git-sync-rebase`` to exercise the rebase pipeline.
 Verification asserts the script exits 0 and the local branch is rebased
 correctly on top of origin/main.
 

@@ -145,7 +145,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - `lifecycle/deferred/` — deferral question files
 - `lifecycle/sessions/{session_id}/escalations.jsonl` — escalation audit log
 - `cortex_command/overnight/sync-allowlist.conf` — glob patterns for auto-resolvable files during post-merge sync
-- `bin/git-sync-rebase.sh` — post-merge sync script (deployed to `~/.local/bin/`)
+- `bin/cortex-git-sync-rebase` — post-merge sync script
 - Multi-agent orchestration (see `requirements/multi-agent.md`) — agent spawning, worktrees, model selection
 - Smoke test gate (`cortex_command/overnight/smoke_test.py`) — post-merge verification
 - `lifecycle/sessions/{session_id}/runner.pid` — per-session IPC contract (JSON `{schema_version, magic, pid, pgid, start_time, session_id, session_dir, repo_path}`, mode 0o600, atomic write). Cleared on clean shutdown; cancel verifies magic + start_time (±2s via psutil) before signalling to close the PID-reuse race. Stable contract for the MCP control plane (versioned runner IPC).
