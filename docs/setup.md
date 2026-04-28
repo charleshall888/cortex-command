@@ -71,11 +71,34 @@ Use the `owner/repo` git form (`/plugin marketplace add charleshall888/cortex-co
 
 ### 3. Per-repo setup
 
-Run `cortex init` once in each repo where you want to use the overnight runner or interactive dashboard; this scaffolds `lifecycle/`, `backlog/`, `retros/`, `requirements/` templates and registers the repo's `lifecycle/sessions/` path in your sandbox allowWrite list.
+Run `cortex init` once in each repo where you want to use the overnight runner or interactive dashboard:
 
 ```bash
 cortex init
 ```
+
+`cortex init` runs seven side effects in order:
+
+**1. Git repo root resolution / submodule refusal**
+Resolves the git repo root via `git rev-parse --show-toplevel`. If the current directory is not inside a git repository, init exits with an error. If it is inside a submodule (detected via `git rev-parse --show-superproject-working-tree`), init refuses and tells you to run at the top-level repo instead.
+
+**2. Symlink-safety gate**
+Checks that the `lifecycle/` path inside the repo does not resolve through a symlink. This validation captures the canonical path used for sandbox registration in step 7, eliminating a TOCTOU gap between path-resolution and write.
+
+**3. `~/.claude/settings.local.json` validation**
+Validates `~/.claude/settings.local.json` before any mutation. If the file exists but is malformed JSON, init stops here rather than corrupting it. This is a read-only pre-flight — no changes are made at this step.
+
+**4. `.cortex-init` marker check**
+Checks for a `.cortex-init` marker file in the repo root. If the marker is present and neither `--update` nor `--force` is passed, init declines to re-scaffold so a second accidental `cortex init` does not overwrite local customizations. Pass `--update` for an additive (no-overwrite) re-run, or `--force` to back up and overwrite.
+
+**5. Scaffold dispatch**
+Creates the directory structure and starter templates: `lifecycle/`, `backlog/`, `retros/`, and `requirements/`. Behavior depends on the flag combination and whether the `.cortex-init` marker is present (see step 4). After scaffolding, `cortex init` writes or refreshes the `.cortex-init` marker file to record the timestamp of the last successful run.
+
+**6. Idempotent `.gitignore` append**
+Appends cortex-specific ignore patterns to the repo's `.gitignore`. This step always runs regardless of which scaffold branch was taken above. It is idempotent — running `cortex init` a second time will not duplicate entries.
+
+**7. Sandbox registration into `~/.claude/settings.local.json`**
+This step additively registers the repo's `lifecycle/` path in `~/.claude/settings.local.json` under `sandbox.filesystem.allowWrite`. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs (validation in step 3 is read-only). Concurrent calls to `cortex init` across multiple repos are safe: the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
 
 ---
 
