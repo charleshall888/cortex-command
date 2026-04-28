@@ -100,6 +100,38 @@ Appends cortex-specific ignore patterns to the repo's `.gitignore`. This step al
 **7. Sandbox registration into `~/.claude/settings.local.json`**
 This step additively registers the repo's `lifecycle/` path in `~/.claude/settings.local.json` under `sandbox.filesystem.allowWrite`. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs (validation in step 3 is read-only). Concurrent calls to `cortex init` across multiple repos are safe: the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
 
+#### lifecycle.config.md schema
+
+`cortex init` scaffolds a `lifecycle/lifecycle.config.md` file in your repo with project-specific overrides for the lifecycle skill and overnight runner. The file uses YAML frontmatter with 6 keys, split into 3 active (consumed by code today) and 3 advisory (present in the scaffold but not yet enforced by any code path):
+
+**Active keys** — consumed by code or skill prose today:
+
+- **`test-command`** — Read by `cortex_command/overnight/daytime_pipeline.py`. Specifies the shell command used to run the repo's test suite during a daytime pipeline run. Defaults to `just test` when the key is missing or empty.
+
+- **`commit-artifacts`** — Read by the lifecycle skill's commit step (`skills/lifecycle/references/{complete,research,plan,specify}.md`). Controls whether lifecycle artifacts (research, spec, plan, etc.) are included in the staged commit. Set `commit-artifacts: false` to exclude lifecycle artifacts from staging.
+
+- **`demo-commands`** — Read by the morning-review skill (`skills/morning-review/SKILL.md` and `skills/morning-review/references/walkthrough.md`). Used for the post-overnight demo offer shown during morning review. Accepts a list of `{label, command}` entries:
+
+  ```yaml
+  demo-commands:
+    - label: "Dashboard"
+      command: "just dashboard"
+    - label: "Run tests"
+      command: "just test"
+  ```
+
+  When both `demo-commands:` (list) and the legacy `demo-command:` (single-string) keys are present, `demo-commands:` takes precedence.
+
+**Advisory keys** — present in the scaffold template but not consumed by any code path or skill prose at present:
+
+- **`type`** — Currently advisory. Intended to classify the repo type (e.g., `other`, `library`, `service`). No code reads this key today.
+
+- **`skip-specify`** — Currently advisory. Intended to skip the specify phase in the lifecycle flow when set to `true`. No code enforces this today.
+
+- **`skip-review`** — Currently advisory. Intended to skip the review phase in the lifecycle flow when set to `true`. No code enforces this today.
+
+> **Note:** If a future ticket activates one of the advisory keys by adding a code consumer, the description above must be updated from `Currently advisory` to describe the consumer. That update is the responsibility of whichever ticket adds the consumer.
+
 ---
 
 ## Authentication
