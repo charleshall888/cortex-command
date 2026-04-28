@@ -51,7 +51,7 @@ Stop.
 
 Derive the memory path from the cortex-command repo root:
 
-1. **Resolve the repo root** using `REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)` — the repo's canonical repo-root resolver, matching sibling skills (`critical-review`) and utilities (`bin/git-sync-rebase.sh`). This keeps invocation subdirectory-safe.
+1. **Resolve the repo root** using `REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)` — the repo's canonical repo-root resolver, matching sibling skills (`critical-review`) and utilities (`bin/cortex-git-sync-rebase`). This keeps invocation subdirectory-safe.
 2. **Validate the cortex-command marker**: check that `$REPO_ROOT/skills/evolve/SKILL.md` exists. If it does not, emit the following two-line error to stderr and exit non-zero:
    - Line 1: `/cortex-interactive:evolve must be invoked from inside a cortex-command checkout (git rev-parse --show-toplevel resolved to "<resolved-path>" but skills/evolve/SKILL.md not found there)`
    - Line 2: `Fix: cd into a cortex-command clone and re-invoke.`

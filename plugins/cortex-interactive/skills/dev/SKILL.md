@@ -134,7 +134,7 @@ When routing to backlog triage:
 
 ### 3a. Regenerate the Index
 
-Run the global shell command `cortex-generate-backlog-index` directly (it is a binary at `~/.local/bin/generate-backlog-index` — do NOT use `uv run`, `python`, or any interpreter prefix, and do NOT look for a project-local script). If it fails, warn that `index.json` may not be produced.
+Run the global shell command `cortex-generate-backlog-index` directly (do NOT use a project-local script). If it fails, warn that `index.json` may not be produced.
 
 If it fails:
 - Warn the user: "Index generation failed. Falling back to the existing index."
