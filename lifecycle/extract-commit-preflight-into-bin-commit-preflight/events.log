@@ -1,0 +1,40 @@
+{"ts":"2026-04-28T13:43:40Z","event":"discovery_reference","feature":"extract-commit-preflight-into-bin-commit-preflight","epic_research":"research/extract-scripts-from-agent-tool-sequences/research.md","epic_spec":null}
+- ts: 2026-04-28T13:47:37Z
+  event: clarify_critic
+  feature: extract-commit-preflight-into-bin-commit-preflight
+  findings:
+    - "Intent rating HIGH treats the output shape {status, diff, recent_log} as settled; the source names the fields but never specifies the wire format (JSON vs text vs key/value), and downstream claims about verifiability depend on a format the ticket never names."
+    - "Intent rating HIGH papers over the source's own savings arithmetic — three parallel Bash calls already complete in one turn, so the cited '3 parallel -> 1 serial = ~1 turn saved' rationale is not self-consistent within the ticket."
+    - "Scope rating HIGH treats 'verify 102 passes post-change; verify 103 records the invocation' as bounded checkboxes; the source provides no acceptance criteria for either verification activity, so 'verify' could expand into instrumentation work if 103's shim does not already capture this pattern."
+    - "Scope rating HIGH elevates a single Out-of-scope sentence excluding stage/compose/commit; the source is silent on adjacent surfaces (tests for the new script, docs/skills-reference, justfile filter validation, hooks), and the assertion that build-plugin's --include='cortex-*' filter already works is unverified in the ticket."
+    - "Requirements rating HIGH cites SKILL.md-to-bin parity enforcement and Context efficiency constraints from project.md but provides no evidence those constraints exist with that wording — the rating is grounded in agent recollection rather than file evidence."
+    - "Complexity rating 'simple' with '2 files, one obvious approach' ignores design choices the source leaves open: output encoding, error handling on bare-repo / no-HEAD / no-commits-yet states, and pager/color behavior. Each is a real implementation decision."
+    - "Criticality rating 'medium' with 'no downstream consumers' is contradicted by the ticket's own requirement that 102 (parity linter) and 103 (runtime telemetry) must continue to work — both observe bin/cortex-* scripts as a class, so this script inherits cross-cutting infrastructure expectations."
+  dispositions:
+    apply: 3
+    dismiss: 4
+    ask: 0
+  applied_fixes:
+    - "Recorded that wire format is JSON per epic research DR-2 (multi-field => JSON) and surfaced exact JSON shape as an Open Question for Research."
+    - "Surfaced implementation decisions (output shape, error-handling for bare-repo/no-HEAD/empty-stage, pager/color flags) as Open Questions for Research; auto-escalation rule will lift the tier to complex if >=2 open questions land in research.md."
+    - "Escalated criticality from medium to high — clarify.md section 5 item 3 names skill changes as the default-high case; /cortex-interactive:commit is a hot-path skill, so the high default applies."
+  dismissals:
+    - finding_index: 1
+      rationale: "Dismissed: the intent of what to build (extract three git calls into one deterministic script) is clear regardless of whether the cited per-commit savings is exactly one turn or one tool-call slot. The savings framing is a value-case quibble that does not change build scope."
+    - finding_index: 2
+      rationale: "Dismissed: 'verify 102 passes' has a clear bounded reading (run the parity linter and confirm exit 0) and 'verify 103 records the invocation' has a clear bounded reading (trigger the script and inspect the rolling JSONL). If 103's shim fails to capture, that is a 103 bug, not in scope here."
+    - finding_index: 3
+      rationale: "Dismissed: scope boundaries are explicit for the artifacts the ticket targets. Tests for new scripts and incremental doc updates are normal-sized spec-time decisions, not unbounded scope. The build-plugin filter assertion is verifiable during research without expanding scope."
+    - finding_index: 4
+      rationale: "Dismissed: I read requirements/project.md before the assessment. The 'SKILL.md-to-bin parity enforcement' constraint exists at line 27 and the 'Context efficiency' quality attribute exists at line 35 — the alignment claim is grounded in source, not recollection."
+  status: ok
+{"ts":"2026-04-28T13:47:37Z","event":"lifecycle_start","feature":"extract-commit-preflight-into-bin-commit-preflight","tier":"simple","criticality":"high"}
+{"ts":"2026-04-28T13:47:37Z","event":"phase_transition","feature":"extract-commit-preflight-into-bin-commit-preflight","from":"clarify","to":"research"}
+{"ts":"2026-04-28T16:05:51Z","event":"complexity_override","feature":"extract-commit-preflight-into-bin-commit-preflight","from":"simple","to":"complex"}
+{"ts":"2026-04-28T16:05:51Z","event":"phase_transition","feature":"extract-commit-preflight-into-bin-commit-preflight","from":"research","to":"specify"}
+{"ts":"2026-04-28T16:10:25Z","event":"orchestrator_review","feature":"extract-commit-preflight-into-bin-commit-preflight","phase":"specify","verdict":"pass","cycle":1,"issues":[]}
+{"ts":"2026-04-28T17:14:29Z","event":"phase_transition","feature":"extract-commit-preflight-into-bin-commit-preflight","from":"specify","to":"plan"}
+{"ts":"2026-04-28T17:21:33Z","event":"orchestrator_review","feature":"extract-commit-preflight-into-bin-commit-preflight","phase":"plan","verdict":"flag","cycle":1,"issues":["P1: Task 2 touches 6 files exceeding 5-file split rule","P5: Task 1 Context contains verbatim copy-pasteable shim line","P6: Task 4 Verification implies 6 mirror files not listed in Files"]}
+{"ts":"2026-04-28T17:21:33Z","event":"orchestrator_dispatch_fix","feature":"extract-commit-preflight-into-bin-commit-preflight","phase":"plan","mode":"same_context","issue":"P1 split Task 2 into two; P5 replace verbatim shim with file reference; P6 narrow Task 4 verification or move multi-mirror cmp to Task 8"}
+{"ts":"2026-04-28T17:24:06Z","event":"orchestrator_review","feature":"extract-commit-preflight-into-bin-commit-preflight","phase":"plan","verdict":"pass","cycle":2,"issues":[]}
+{"ts":"2026-04-28T17:58:26Z","event":"phase_transition","feature":"extract-commit-preflight-into-bin-commit-preflight","from":"plan","to":"implement"}
