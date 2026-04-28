@@ -347,7 +347,18 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                 "num_turns": int | None,
                 "error_type": str | None,
                 "untiered": bool,
+                "skill": str | None,    # propagated from the matched start event;
+                                        # absent on orphan completion/error records
+                                        # (no start to read from).
+                "cycle": int | None,    # propagated from the matched start event;
+                                        # absent on orphan completion/error records.
             }
+
+        The ``skill`` and ``cycle`` keys are populated only on the
+        matched-start branches.  Orphan completions/errors (no preceding
+        unmatched start) omit these keys entirely so downstream aggregators
+        bucket them as ``skill="legacy"`` via the
+        ``rec.get("skill") or "legacy"`` fallback.
     """
     # Filter to the three pairable event types then sort deterministically.
     pairable = [
@@ -386,6 +397,8 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                     "num_turns": evt.get("num_turns"),
                     "error_type": None,
                     "untiered": False,
+                    "skill": start.get("skill"),
+                    "cycle": start.get("cycle"),
                 })
             else:
                 warnings.warn(
@@ -418,6 +431,8 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                     "num_turns": None,
                     "error_type": evt.get("error_type"),
                     "untiered": False,
+                    "skill": start.get("skill"),
+                    "cycle": start.get("cycle"),
                 })
             else:
                 warnings.warn(
