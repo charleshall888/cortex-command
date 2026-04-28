@@ -229,6 +229,7 @@ async def request_brain_decision(
             system_prompt=rendered_prompt,
             log_path=log_path,
             criticality="medium",
+            skill="brain",
         )
 
         # Report rate limits without acquiring the semaphore
