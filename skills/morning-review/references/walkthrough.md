@@ -561,7 +561,7 @@ while remote main has the PR merge commit. This step reconciles the two.
 
 1. Run:
    ```
-   git-sync-rebase.sh cortex_command/overnight/sync-allowlist.conf
+   cortex-git-sync-rebase cortex_command/overnight/sync-allowlist.conf
    ```
 
 2. Handle the exit code:
@@ -607,11 +607,11 @@ After this section, the review is complete.
 | `gh pr merge` fails | Show error, leave PR open for manual resolution |
 | `open` command fails | Run `open {url} 2>/dev/null || true` — review continues |
 | `worktree_path` in state doesn't exist on disk | Skip worktree removal silently, continue |
-| `git-sync-rebase.sh` exits 0 | Report synced and pushed — fully up to date |
-| `git-sync-rebase.sh` exits 1 (unresolvable conflicts) | Report diverged — resolve manually with `git pull --rebase origin main` |
-| `git-sync-rebase.sh` exits 2 (push failed) | Report rebase succeeded — run `git push origin main` when network available |
+| `cortex-git-sync-rebase` exits 0 | Report synced and pushed — fully up to date |
+| `cortex-git-sync-rebase` exits 1 (unresolvable conflicts) | Report diverged — resolve manually with `git pull --rebase origin main` |
+| `cortex-git-sync-rebase` exits 2 (push failed) | Report rebase succeeded — run `git push origin main` when network available |
 | Merge was declined or skipped | Skip Section 6a entirely |
-| `git-sync-rebase.sh` not found | Report missing script, skip sync, note "install the `cortex-interactive` plugin" |
+| `cortex-git-sync-rebase` not found | Report missing script, skip sync, note "install the `cortex-interactive` plugin" |
 | Dirty `.git/rebase-merge/` detected | Script auto-aborts stale rebase, warns user, proceeds with sync |
 | Push fails after rebase | Report error, note local main is clean but not pushed |
 | All conflicts auto-resolved | Report "N files auto-resolved via allowlist" |
