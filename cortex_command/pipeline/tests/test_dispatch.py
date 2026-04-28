@@ -26,6 +26,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 # conftest.py runs before this module under pytest and installs the SDK stub.
 # Under plain unittest, we call _install_sdk_stub() directly here.
 from cortex_command.pipeline.tests.conftest import _install_sdk_stub
@@ -798,6 +800,51 @@ class TestDispatchTaskStderrRedaction(unittest.IsolatedAsyncioTestCase):
             line = stderr_lines[-1]
             self.assertIn("sk-ant-<redacted>", line)
             self.assertNotIn("sk-ant-abc123def", line)
+
+
+# ---------------------------------------------------------------------------
+# Tests: dispatch_task runtime validation guards (R3, R14)
+# ---------------------------------------------------------------------------
+
+
+class TestDispatchTaskValidation(unittest.IsolatedAsyncioTestCase):
+    """Tests that dispatch_task raises ValueError on invalid skill / cycle args.
+
+    These exercise the two runtime guards in dispatch.py (R3 + R14):
+      - skill string not in get_args(Skill) -> ValueError mentioning the value.
+      - cycle is not None and skill != "review-fix" -> ValueError mentioning cycle.
+    Both guards must trigger before any sub-agent is launched, so no real
+    SDK call is made.
+    """
+
+    async def test_dispatch_task_rejects_unregistered_skill(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree = Path(tmp) / "feature-worktree"
+            worktree.mkdir()
+            with pytest.raises(ValueError, match="not-a-real-skill"):
+                await _dispatch_module.dispatch_task(
+                    feature="validation-test",
+                    task="do something",
+                    worktree_path=worktree,
+                    complexity="simple",
+                    system_prompt="",
+                    skill="not-a-real-skill",  # type: ignore[arg-type]
+                )
+
+    async def test_dispatch_task_rejects_cycle_for_non_review_fix(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            worktree = Path(tmp) / "feature-worktree"
+            worktree.mkdir()
+            with pytest.raises(ValueError, match="cycle"):
+                await _dispatch_module.dispatch_task(
+                    feature="validation-test",
+                    task="do something",
+                    worktree_path=worktree,
+                    complexity="simple",
+                    system_prompt="",
+                    skill="implement",
+                    cycle=2,
+                )
 
 
 if __name__ == "__main__":
