@@ -596,6 +596,7 @@ async def execute_feature(
                 activity_log_path=activity_log_path,
                 integration_base_path=Path.cwd(),
                 repo_path=repo_path,
+                skill="implement",
             )
 
             if result.success and not result.paused:
