@@ -1,0 +1,33 @@
+{"ts": "2026-04-27T22:49:52Z", "event": "discovery_reference", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "epic_research": "research/docs-setup-audit/research.md", "epic_spec": null}
+- ts: 2026-04-27T22:51:30Z
+  event: clarify_critic
+  feature: restructure-readme-and-setupmd-for-clearer-onboarding
+  findings:
+    - "The HIGH intent clarity rating treats OE-1 through OE-6 as 'chosen direction' but the source explicitly says 'Recommendations from research. Plan phase confirms or revises' — recommendations are not commitments. OE-6 also leaves canonical install-command equivalence as an open verification step."
+    - "Scope boundedness rated HIGH but the source does not enumerate a closed in-scope file list. Cross-platform delivery (apt/pacman/terminal-notifier) is net-new authorship the maintainer has not personally validated; OE-3 implicitly extends scope to whatever lifecycle.config.md schema requires surfacing."
+    - "Requirements alignment HIGH cherry-picks 'shared publicly for others to clone or fork' but elides 'Primarily personal tooling' and 'Favors a highly customized, iteratively improved system over generic solutions' — those clauses cut against polished cross-platform onboarding. No evidence of forker complaints cited."
+    - "Criticality medium discounts that documenting cortex init's 7 side effects creates a doc/code contract requiring future sync, and that standardizing plugin install command form could break existing user setups if bare and @cortex-command forms are not behaviorally equivalent."
+    - "Complexity complex is the right tier but the reasoning omits that OE-3's 'worked first-invocation example' that doubles as end-to-end verification (per OE-5) requires actually running cortex init and the first lifecycle invocation on a clean checkout — execution work, not prose."
+  dispositions:
+    apply: 1
+    dismiss: 3
+    ask: 1
+  applied_fixes:
+    - "Revised complexity reasoning: added that OE-3's worked first-invocation example doubles as end-to-end verification per OE-5 and requires actual execution on a clean checkout (not just prose authoring)."
+  dismissals:
+    - finding_index: 0
+      rationale: "Intent ≠ implementation path. The goal (restructure docs to fix specific defects + close per-repo flow gap) is unambiguous. 'Plan phase confirms or revises' applies to which recommended option survives, not to whether the goal is clear. OE-6's open verification is a research-phase question to resolve, not an intent ambiguity."
+    - finding_index: 2
+      rationale: "Codebase-verified defects (plugin command conflict, count drift, undocumented CLI utilities) are correctness bugs regardless of project posture — the share-publicly clause is one of two reasons, not the sole one. The cross-platform substantive concern is captured separately under Finding 1's Ask. The maintainer's act of creating the ticket from his own discovery research is the relevant evidence of value commitment."
+    - finding_index: 3
+      rationale: "Doc-only changes are recoverable (git revert) and have no downstream skill/hook/lifecycle consumers. The plugin install verification is contained by OE-6's explicit verification requirement. Doc/code contract creation is an ongoing low-grade maintenance tax, not a one-time critical risk. Medium fits."
+  status: ok
+{"ts": "2026-04-27T22:55:48Z", "event": "lifecycle_start", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "tier": "complex", "criticality": "medium"}
+{"ts": "2026-04-27T22:55:48Z", "event": "phase_transition", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "from": "clarify", "to": "research"}
+{"ts": "2026-04-27T23:03:02Z", "event": "phase_transition", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "from": "research", "to": "specify"}
+{"ts": "2026-04-27T23:13:36Z", "event": "orchestrator_review", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-27T23:31:25Z", "event": "phase_transition", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "from": "specify", "to": "plan"}
+{"ts": "2026-04-27T23:38:22Z", "event": "orchestrator_review", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "phase": "plan", "verdict": "flag", "cycle": 1, "issues": ["T8 P4: Verification clause 1 uses pre-edit baseline delta — not binary-checkable post-hoc", "T9 P4: field-name grep is unscoped — returns 4 trivially because version/root appear elsewhere in setup.md"]}
+{"ts": "2026-04-27T23:38:22Z", "event": "orchestrator_dispatch_fix", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "phase": "plan", "mode": "fresh_subagent", "issue": "T8 and T9 P4: rewrite verification fields to be binary-checkable without baseline state and properly scoped to target sections"}
+{"ts": "2026-04-27T23:42:22Z", "event": "orchestrator_review", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "phase": "plan", "verdict": "pass", "cycle": 2, "issues": []}
+{"ts": "2026-04-28T00:01:24Z", "event": "phase_transition", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "from": "plan", "to": "implement"}
