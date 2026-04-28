@@ -150,20 +150,19 @@ If no items are in the Ready section:
 
 **Epic detection and child map construction** (must complete before any output is rendered):
 
-Read `backlog/index.json` once at the start of triage. If missing after Step 3a ran, warn and fall back to reading `index.md` using the existing table columns.
-
-Look up `type` for each Ready item from `index.json` (loaded once). No per-file reads. If `type: epic`, mark the item for epic grouping.
+Invoke `cortex-build-epic-map` to produce the deterministic epic→children map. The script reads `backlog/index.json`, auto-detects `type: epic` items, and groups non-epic items under their normalized parent epic (handling quote-stripping, UUID-format parent references, and integer comparison internally). Capture stdout as JSON.
 
 **Schema note**: The Refined section contains `status: refined` items (spec-approved, overnight-eligible). The Backlog section contains `status: backlog` items (not yet refined).
 
-For each detected epic, build its child list by scanning `index.json` entries (active items only — archive items are not included in the index). For each entry, read the `parent` field and apply the following four-step normalization:
+**Output schema**: The script emits an envelope `{"schema_version": "1", "epics": {...}}` where each `epics[epic_id]` contains a `children` array. Each child entry has four fields: `id` (numeric), `title` (string), `status` (string), and `spec` (string or null). A non-null `spec` indicates a refined child; Step 3c reads this field directly to render the `[refined]` indicator.
 
-1. **Null/missing check**: If `parent:` is absent or its value is `null`, skip the file — it is not a child of any epic.
-2. **Strip quotes**: If the value is surrounded by quotes (e.g., `"103"`), remove them to get the bare value (e.g., `103`).
-3. **Skip UUIDs**: If the bare value contains a `-` character (UUID format, e.g., `58f9eb72-...`), skip it — UUID-format parent references belong to a deprecated schema era and do not match epic IDs.
-4. **Integer comparison**: Parse the remaining value as an integer and compare it to the epic's numeric ID. If they match, add the entry's fields (ID, title, status, and the `spec` field from `index.json` — non-null means refined) to that epic's child list.
+**Ready intersection**: The script emits ALL detected epics from `index.json`. Step 3b filters by intersecting the script's emitted `epics` keys with the IDs already extracted from the Ready section above. Only Ready set epics are passed to Step 3c for rendering.
 
-The result is a `epic_id → [children]` map where each child entry contains: ID, title, status, and a boolean indicating whether the item has been through `/cortex-interactive:refine` (i.e., `spec` field is non-null in `index.json`). This map is an intermediate artifact required by Step 3c for deduplication and grouped rendering.
+**Fallback for missing index**: If `index.json` is missing after Step 3a ran, warn and fall back to reading `index.md` using the existing table columns. The script signals this case via exit 1.
+
+**Exit-code handling**:
+- Exit 1 — missing or malformed `index.json`: warn the user, then fall back to reading `index.md` table columns as in the missing-index case above.
+- Exit 2 — `schema_version` mismatch: report the mismatch and halt triage. Do not silently fall back, because that would mask the schema-bump signal and let stale parsing logic run against a newer envelope.
 
 ### 3c. Present Ready Items with Workflow Recommendations
 
