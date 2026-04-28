@@ -66,16 +66,16 @@ Verify the install with the smoke test in [Setup guide § Verify install](docs/s
 
 ### Plugin roster
 
-Cortex-command ships six plugins in this repo, split into core and extras tiers:
+Cortex-command ships six plugins in this repo:
 
-| Plugin | Tier | Notes |
-|--------|------|-------|
-| cortex-interactive | core | Interactive skills + hooks (lifecycle, commit, pr, etc.) |
-| cortex-overnight-integration | core | Autonomous overnight runner integration |
-| cortex-ui-extras | extras | Experimental — UI design skills |
-| cortex-pr-review | extras | PR-review automation |
-| android-dev-extras | extras | Android development helpers |
-| cortex-dev-extras | extras | Cortex-command development helpers |
+| Plugin | Description |
+|--------|-------------|
+| android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
+| cortex-dev-extras | Devil's advocate inline challenge for solo deliberation |
+| cortex-interactive | Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows |
+| cortex-overnight-integration | Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution |
+| cortex-pr-review | Multi-agent GitHub pull request review pipeline for Claude Code |
+| cortex-ui-extras | Experimental UI design skills for Claude Code interactive workflows |
 
 For installation specifics and per-project enablement, see [`docs/setup.md`](docs/setup.md).
 

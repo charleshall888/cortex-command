@@ -31,7 +31,7 @@ This puts the `cortex` binary on your `PATH`. It clones the repo to `$HOME/.cort
 
 ### 2. Add and install the plugins from inside Claude Code
 
-Launch `claude`, then add the marketplace once and install whichever of the four plugins you want:
+Launch `claude`, then add the marketplace once and install whichever plugins you want:
 
 ```
 /plugin marketplace add charleshall888/cortex-command
@@ -41,12 +41,16 @@ Launch `claude`, then add the marketplace once and install whichever of the four
 /plugin install cortex-pr-review@cortex-command
 ```
 
-The four plugins are:
+The six available plugins are:
 
-- **`cortex-interactive`** — core plugin: skills, hooks, statusline.
-- **`cortex-overnight-integration`** — overnight runner MCP server and the `/cortex-overnight-integration:overnight` and `/cortex-overnight-integration:morning-review` skills.
-- **`cortex-ui-extras`** — opt-in UI design stack.
-- **`cortex-pr-review`** — opt-in PR review tooling.
+| Plugin | Description |
+|--------|-------------|
+| android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
+| cortex-dev-extras | Devil's advocate inline challenge for solo deliberation |
+| cortex-interactive | Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows |
+| cortex-overnight-integration | Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution |
+| cortex-pr-review | Multi-agent GitHub pull request review pipeline for Claude Code |
+| cortex-ui-extras | Experimental UI design skills for Claude Code interactive workflows |
 
 #### Plugin-specific prerequisites
 
