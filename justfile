@@ -328,7 +328,7 @@ validate-skill-preconditions skill:
 
 # Validate spec.md structural compliance (pre-flight before orchestrator review)
 validate-spec *args:
-    python3 bin/validate-spec {{args}}
+    python3 bin/cortex-validate-spec {{args}}
 
 # --- Testing ---
 
