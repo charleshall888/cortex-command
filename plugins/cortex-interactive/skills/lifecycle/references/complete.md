@@ -41,7 +41,6 @@ If no backlog item was found, skip this silently.
 2. Attempt index regeneration in order:
    - Run `test -f backlog/generate_index.py` — if it exists, run `python3 backlog/generate_index.py` and emit: `"Index regenerated via backlog/generate_index.py"`
    - Else run `command -v cortex-generate-backlog-index` — if found on PATH, run `cortex-generate-backlog-index` and emit: `"Index regenerated via cortex-generate-backlog-index"`
-   - Else run `test -f ~/.local/bin/generate-backlog-index` — if that absolute path exists, run `python3 ~/.local/bin/generate-backlog-index` and emit: `"Index regenerated via ~/.local/bin/generate-backlog-index"`
    - Else emit: `"WARNING: Could not regenerate backlog index — no generate_index.py script found. Index may be stale."`
 
 Each fallback is a separate Bash tool call using `test -f` or `command -v` to check availability before running.
@@ -65,7 +64,6 @@ if no match (silently acceptable — not all features originate from backlog ite
 2. Attempt index regeneration in order:
    - Run `test -f backlog/generate_index.py` — if it exists, run `python3 backlog/generate_index.py` and emit: `"Index regenerated via backlog/generate_index.py"`
    - Else run `command -v cortex-generate-backlog-index` — if found on PATH, run `cortex-generate-backlog-index` and emit: `"Index regenerated via cortex-generate-backlog-index"`
-   - Else run `test -f ~/.local/bin/generate-backlog-index` — if that absolute path exists, run `python3 ~/.local/bin/generate-backlog-index` and emit: `"Index regenerated via ~/.local/bin/generate-backlog-index"`
    - Else emit: `"WARNING: Could not regenerate backlog index — no generate_index.py script found. Index may be stale."`
 
 Each fallback is a separate Bash tool call using `test -f` or `command -v` to check availability before running.
