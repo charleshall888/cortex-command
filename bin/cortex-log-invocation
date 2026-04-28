@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# cortex-log-invocation — fail-open shim that appends one JSONL record per bin/cortex-* invocation.
+#
+# Usage: cortex-log-invocation <script_path> [argv...]
+#
+# Writes one JSON line to lifecycle/sessions/<LIFECYCLE_SESSION_ID>/bin-invocations.jsonl.
+# Always exits 0. On any failure, records a breadcrumb to ~/.cache/cortex/log-invocation-errors.log
+# with one of: no_session_id, no_repo_root, session_dir_missing, write_denied, other.
+#
+# JSON-string escaping: script (basename) and session_id (UUID-shaped) require no escaping in
+# practice; if either contains a quote or backslash, no record is emitted (failure class: other).
+
+# Always exit 0 — fail-open contract.
+trap 'exit 0' EXIT
+
+_log_breadcrumb() {
+    local category="$1"
+    local snippet="${2:-}"
+    local cache_dir="${HOME}/.cache/cortex"
+    {
+        mkdir -p "$cache_dir"
+        printf '%s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$category" "$snippet" \
+            >> "$cache_dir/log-invocation-errors.log"
+    } 2>/dev/null || true
+}
+
+if [ -z "${LIFECYCLE_SESSION_ID:-}" ]; then
+    _log_breadcrumb no_session_id ""
+    exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$repo_root" ]; then
+    _log_breadcrumb no_repo_root ""
+    exit 0
+fi
+
+session_dir="$repo_root/lifecycle/sessions/$LIFECYCLE_SESSION_ID"
+mkdir -p "$session_dir" 2>/dev/null
+if [ ! -d "$session_dir" ]; then
+    _log_breadcrumb session_dir_missing "$session_dir"
+    exit 0
+fi
+
+script_path="${1:-}"
+script_name="$(basename "$script_path" 2>/dev/null)"
+argv_count=$(( $# - 1 ))
+[ "$argv_count" -lt 0 ] && argv_count=0
+ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+case "$script_name$LIFECYCLE_SESSION_ID" in
+    *\"*|*\\*)
+        _log_breadcrumb other "$session_dir"
+        exit 0
+        ;;
+esac
+
+log_file="$session_dir/bin-invocations.jsonl"
+if ! {
+    printf '{"ts":"%s","script":"%s","argv_count":%d,"session_id":"%s"}\n' \
+        "$ts" "$script_name" "$argv_count" "$LIFECYCLE_SESSION_ID" \
+        >> "$log_file"
+} 2>/dev/null; then
+    _log_breadcrumb write_denied "$log_file"
+    exit 0
+fi
+
+exit 0

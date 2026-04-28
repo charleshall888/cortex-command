@@ -5,6 +5,8 @@
 # Cortex Command repository root. Set it in your shell profile:
 #   export CORTEX_COMMAND_ROOT="$HOME/cortex-command"
 
+"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true
+
 if [ -z "$CORTEX_COMMAND_ROOT" ]; then
     echo "jcc: CORTEX_COMMAND_ROOT is not set" >&2
     echo "     Set it in your shell profile to the Cortex Command repo root" >&2

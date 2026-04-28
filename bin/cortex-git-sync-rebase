@@ -9,6 +9,7 @@
 #   1 — conflict (rebase aborted, user must resolve manually)
 #   2 — push failed (rebase succeeded but push to origin/main failed)
 
+"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"

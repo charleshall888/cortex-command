@@ -1,4 +1,5 @@
 #!/bin/bash
+"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true
 set -euo pipefail
 
 # Branch (a): packaged form — cortex_command.backlog.generate_index

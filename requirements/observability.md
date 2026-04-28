@@ -50,6 +50,14 @@ The observability area covers five subsystems that give the developer visibility
   - Dashboard-triggered notifications respect the same deduplication (stall fires once; clears when resolved)
 - **Priority**: must-have
 
+### Runtime Adoption Telemetry
+
+- **Description**: Per-script invocation shim (`bin/cortex-log-invocation`) writes one JSONL record per `bin/cortex-*` invocation to `lifecycle/sessions/<id>/bin-invocations.jsonl`. Aggregator CLI (`bin/cortex-invocation-report`) reads the per-session logs and reports adoption (default human-readable, `--json`, `--check-shims`, `--self-test` modes). Composed with DR-5 static parity lint (ticket 102) for full coverage of script-adoption failure modes — DR-5 catches missing wiring; runtime telemetry catches wired-but-never-invoked scripts.
+- **Inputs**: helper invocation calls from each `bin/cortex-*` script's shim line; `LIFECYCLE_SESSION_ID` environment variable; aggregator scans `lifecycle/sessions/*/bin-invocations.jsonl` glob.
+- **Outputs**: per-session JSONL log file (`lifecycle/sessions/<id>/bin-invocations.jsonl`); aggregator stdout (default + `--json` modes); error breadcrumb at `~/.cache/cortex/log-invocation-errors.log` recording fail-open categories.
+- **Acceptance criteria**: Spec R1–R18 acceptance criteria from `lifecycle/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md` (helper fail-open contract, JSONL schema, sessions inventory, aggregator output structure, `--check-shims` pre-commit gate, `--self-test` round-trip, plugin distribution byte-identity).
+- **Priority**: P1 (closes the runtime-adoption-failure detection gap that DR-5 cannot reach).
+
 ### In-Session Status CLI
 
 - **Description**: A standalone bash script (`bin/overnight-status`, deployed to `~/.local/bin/overnight-status`) that produces a one-shot status report of the active overnight session from within a sandboxed Claude Code session. Also invocable as `/overnight status` via the overnight skill.

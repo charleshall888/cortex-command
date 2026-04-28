@@ -1,0 +1,248 @@
+#!/usr/bin/env bash
+# cortex-invocation-report — aggregate bin/cortex-* invocation telemetry from per-session logs.
+#
+# Usage:
+#   cortex-invocation-report                Default human-readable report.
+#   cortex-invocation-report --json         JSON document.
+#   cortex-invocation-report --check-shims  Exit non-zero if any bin/cortex-* lacks the shim line.
+#   cortex-invocation-report --self-test    End-to-end probe (writes one probe record).
+#   cortex-invocation-report --help, -h     Show this help.
+#
+# Recent window: v1 reports all retained sessions (no time-based filter).
+# Note: --self-test writes one record per run with script name "cortex-self-test-probe";
+# this is excluded from inventory tallies but appears in the raw log file.
+
+set -uo pipefail
+shopt -s nullglob
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -z "$REPO_ROOT" ]; then
+    echo "cortex-invocation-report: not inside a git repository" >&2
+    exit 1
+fi
+
+_inventory() {
+    local f n
+    for f in "$REPO_ROOT"/bin/cortex-*; do
+        [ -f "$f" ] || continue
+        n="$(basename "$f")"
+        case "$n" in
+            cortex-log-invocation|cortex-invocation-report) continue ;;
+        esac
+        printf '%s\n' "$n"
+    done
+}
+
+_errors_recorded() {
+    local f="$HOME/.cache/cortex/log-invocation-errors.log"
+    if [ -f "$f" ]; then
+        wc -l < "$f" | tr -d ' '
+    else
+        echo 0
+    fi
+}
+
+# _count_invocations: consume inventory list as $1 (newline-separated string)
+# and remaining args as log file paths. Emits TSV to stdout:
+#   RECORDS\t<n>
+#   NON_INVENTORY\t<n>
+#   MALFORMED\t<n>
+#   SCRIPT\t<name>\t<count>   (one per inventory entry)
+_count_invocations() {
+    local inv_str="$1"; shift
+    # awk -v cannot accept newlines on macOS BSD awk; use ENVIRON instead.
+    INV_STR="$inv_str" awk '
+        BEGIN {
+            n = split(ENVIRON["INV_STR"], arr, "\n")
+            for (i = 1; i <= n; i++) if (arr[i] != "") inv[arr[i]] = 0
+        }
+        {
+            matched = 0
+            for (name in inv) {
+                if (index($0, "\"script\":\"" name "\"") > 0) {
+                    inv[name]++
+                    total++
+                    matched = 1
+                    break
+                }
+            }
+            if (!matched) {
+                if (match($0, /"script":"[^"]*"/)) non_inventory++
+                else malformed++
+            }
+        }
+        END {
+            printf "RECORDS\t%d\n", (total + 0)
+            printf "NON_INVENTORY\t%d\n", (non_inventory + 0)
+            printf "MALFORMED\t%d\n", (malformed + 0)
+            for (name in inv) printf "SCRIPT\t%s\t%d\n", name, inv[name]
+        }
+    ' "$@"
+}
+
+_self_test() {
+    if [ -z "${LIFECYCLE_SESSION_ID:-}" ]; then
+        echo "step 1 (LIFECYCLE_SESSION_ID resolution): unset — run from inside a Claude Code session" >&2
+        exit 1
+    fi
+    # Step 2 (repo root) is enforced by the top-level REPO_ROOT check; reaching here means it's set.
+
+    local session_dir="$REPO_ROOT/lifecycle/sessions/$LIFECYCLE_SESSION_ID"
+    if ! mkdir -p "$session_dir" 2>/dev/null; then
+        echo "step 3 (session dir create): permission denied — run \`cortex init\` to register the log path in sandbox.filesystem.allowWrite" >&2
+        exit 1
+    fi
+
+    "$REPO_ROOT/bin/cortex-log-invocation" /tmp/cortex-self-test-probe || true
+    local logfile="$session_dir/bin-invocations.jsonl"
+    if ! tail -1 "$logfile" 2>/dev/null | grep -q '"script":"cortex-self-test-probe"'; then
+        echo "step 4 (probe write/read): probe record not found in log — run \`cortex init\` to register the log path in sandbox.filesystem.allowWrite" >&2
+        exit 1
+    fi
+
+    echo "Self-test passed."
+    exit 0
+}
+
+_check_shims() {
+    local f n checked=0 missing=0
+    for f in "$REPO_ROOT"/bin/cortex-*; do
+        [ -f "$f" ] || continue
+        n="$(basename "$f")"
+        case "$n" in
+            cortex-log-invocation|cortex-invocation-report) continue ;;
+        esac
+        checked=$((checked + 1))
+        if ! head -50 "$f" | grep -q "cortex-log-invocation"; then
+            echo "$n" >&2
+            missing=$((missing + 1))
+        fi
+    done
+    echo "Checked $checked scripts; $missing missing shim line."
+    exit "$missing"
+}
+
+_json_mode() {
+    local logs sessions errors_recorded inventory_str counts records malformed
+    logs=( "$REPO_ROOT"/lifecycle/sessions/*/bin-invocations.jsonl )
+    sessions=${#logs[@]}
+    errors_recorded="$(_errors_recorded)"
+    inventory_str="$(_inventory | sort)"
+    records=0
+    malformed=0
+
+    if [ "$sessions" -gt 0 ]; then
+        counts="$(_count_invocations "$inventory_str" "${logs[@]}")"
+        records="$(printf '%s\n' "$counts" | awk -F'\t' '$1=="RECORDS"{print $2}')"
+        malformed="$(printf '%s\n' "$counts" | awk -F'\t' '$1=="MALFORMED"{print $2}')"
+        [ -z "$records" ] && records=0
+        [ -z "$malformed" ] && malformed=0
+    else
+        counts="$(printf '%s\n' "$inventory_str" | awk '$0!="" {printf "SCRIPT\t%s\t0\n", $0}')"
+    fi
+
+    local inventory_json scripts_json candidates_json
+    inventory_json="$(printf '%s\n' "$inventory_str" | jq -Rs 'split("\n") | map(select(length > 0))')"
+    scripts_json="$(printf '%s\n' "$counts" | awk -F'\t' '$1=="SCRIPT" {printf "{\"script\":\"%s\",\"count\":%s}\n", $2, $3}' | sort | jq -s .)"
+    candidates_json="$(printf '%s\n' "$counts" | awk -F'\t' '$1=="SCRIPT" && $3=="0" {print $2}' | sort | jq -Rs 'split("\n") | map(select(length > 0))')"
+
+    jq -n \
+        --argjson sessions "$sessions" \
+        --argjson records "$records" \
+        --argjson errors_recorded "$errors_recorded" \
+        --argjson skipped "$malformed" \
+        --argjson inventory "$inventory_json" \
+        --argjson scripts "$scripts_json" \
+        --argjson candidates "$candidates_json" \
+        '{
+            metadata: {sessions_scanned: $sessions, records: $records, errors_recorded: $errors_recorded, skipped_malformed_lines: $skipped},
+            inventory: $inventory,
+            scripts: $scripts,
+            candidates_for_review: $candidates
+        }'
+}
+
+_default_mode() {
+    local logs sessions records errors_recorded inventory_str counts
+    logs=( "$REPO_ROOT"/lifecycle/sessions/*/bin-invocations.jsonl )
+    sessions=${#logs[@]}
+    errors_recorded="$(_errors_recorded)"
+    inventory_str="$(_inventory)"
+
+    if [ "$sessions" -eq 0 ]; then
+        echo "Runtime Adoption Telemetry — bin/cortex-* invocations"
+        echo "Sessions scanned: 0      Records: 0      Errors recorded: $errors_recorded"
+        echo ""
+        echo "No invocations logged."
+        echo ""
+        echo "CANDIDATES FOR REVIEW"
+        printf '%s\n' "$inventory_str" | sort | while IFS= read -r n; do
+            [ -z "$n" ] && continue
+            printf '  %-32s (zero invocations in retained sessions)\n' "$n"
+        done
+        return 0
+    fi
+
+    counts="$(_count_invocations "$inventory_str" "${logs[@]}")"
+    records="$(printf '%s\n' "$counts" | awk -F'\t' '$1=="RECORDS"{print $2}')"
+    [ -z "$records" ] && records=0
+
+    echo "Runtime Adoption Telemetry — bin/cortex-* invocations"
+    echo "Sessions scanned: $sessions      Records: $records      Errors recorded: $errors_recorded"
+    echo ""
+    echo "PER-SCRIPT INVOCATION COUNTS"
+    printf '%s\n' "$counts" \
+        | awk -F'\t' '$1=="SCRIPT" {print $2 "\t" $3}' \
+        | sort -k1,1 \
+        | while IFS=$'\t' read -r name count; do
+            printf '  %-32s %s\n' "$name" "$count"
+        done
+    echo ""
+    echo "CANDIDATES FOR REVIEW"
+    printf '%s\n' "$counts" \
+        | awk -F'\t' '$1=="SCRIPT" && $3=="0" {print $2}' \
+        | sort \
+        | while IFS= read -r name; do
+            printf '  %-32s (zero invocations in retained sessions)\n' "$name"
+        done
+}
+
+case "${1:-}" in
+    --json)
+        if ! command -v jq >/dev/null 2>&1; then
+            echo "--json mode requires jq" >&2
+            exit 2
+        fi
+        _json_mode
+        ;;
+    --check-shims)
+        _check_shims
+        ;;
+    --self-test)
+        _self_test
+        ;;
+    --help|-h)
+        cat <<'EOF'
+cortex-invocation-report — aggregate bin/cortex-* invocation telemetry from per-session logs.
+
+Usage:
+  cortex-invocation-report                Default human-readable report.
+  cortex-invocation-report --json         JSON document.
+  cortex-invocation-report --check-shims  Exit non-zero if any bin/cortex-* lacks the shim line.
+  cortex-invocation-report --self-test    End-to-end probe (writes one probe record).
+  cortex-invocation-report --help, -h     Show this help.
+
+Recent window: v1 reports all retained sessions (no time-based filter).
+Note: --self-test writes one record per run with script name "cortex-self-test-probe".
+EOF
+        exit 0
+        ;;
+    "")
+        _default_mode
+        ;;
+    *)
+        echo "cortex-invocation-report: unknown option '$1'" >&2
+        echo "Try 'cortex-invocation-report --help' for usage." >&2
+        exit 2
+        ;;
+esac
