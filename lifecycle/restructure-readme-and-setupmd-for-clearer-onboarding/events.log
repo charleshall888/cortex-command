@@ -31,3 +31,4 @@
 {"ts": "2026-04-27T23:38:22Z", "event": "orchestrator_dispatch_fix", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "phase": "plan", "mode": "fresh_subagent", "issue": "T8 and T9 P4: rewrite verification fields to be binary-checkable without baseline state and properly scoped to target sections"}
 {"ts": "2026-04-27T23:42:22Z", "event": "orchestrator_review", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "phase": "plan", "verdict": "pass", "cycle": 2, "issues": []}
 {"ts": "2026-04-28T00:01:24Z", "event": "phase_transition", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "from": "plan", "to": "implement"}
+{"ts": "2026-04-28T00:05:06Z", "event": "batch_dispatch", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "batch": 0, "tasks": [1, 5, 6]}

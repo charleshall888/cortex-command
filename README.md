@@ -6,41 +6,7 @@ The front half of the lifecycle is deliberately human-driven. You run discovery 
 
 Skills are slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. Cortex-command ships as a CLI (installed via `uv tool install -e .`) plus Claude Code plugins (installed via `/plugin install`) — everything lives in version control and is distributed without host-level symlinks.
 
-```
- ┌──────────────────────────────────────────────────────────────────────────┐
- │  REQUIREMENTS   requirements/project.md  ·  requirements/{area}.md       │
- └────────────────────────────────────┬─────────────────────────────────────┘
-                                      │ informs scope
- ┌────────────────────────────────────▼─────────────────────────────────────┐
- │  DISCOVERY   /cortex-interactive:discovery [topic]                                          │
- │  Researches problem space, decomposes into epics and backlog tickets     │
- └────────────────────────────────────┬─────────────────────────────────────┘
-                                      │
- ┌────────────────────────────────────▼─────────────────────────────────────┐
- │  BACKLOG   backlog/NNN-feature.md                                        │
- │  status: draft → refined → complete                                      │
- └──────────────────────┬───────────────────────────┬───────────────────────┘
-                        │ interactive               │ autonomous
-                        │                  ┌────────▼─────────────────────┐
-                        │                  │  /cortex-interactive:refine [item] × N          │
-                        │                  │  each in a separate session  │
-                        │                  │  run in parallel per ticket  │
-                        │                  │  Clarify → Research → Spec   │
-                        │                  │  sets status:refined         │
-                        │                  └────────┬─────────────────────┘
-          ┌─────────────▼────────────┐    ┌─────────▼────────────────────┐
-          │  /cortex-interactive:lifecycle              │    │  /overnight                  │
-          │  one feature at a time   │    │  selects status:refined items│
-          │  human-in-the-loop       │    │  runs features in parallel   │
-          └──────────────────────────┘    └───────────────┬──────────────┘
-                                                          │
-                                         ┌────────────────▼───────────────┐
-                                         │  /morning-review               │
-                                         │  review artifacts              │
-                                         │  answer deferred Q&A           │
-                                         │  advance to complete           │
-                                         └────────────────────────────────┘
-```
+Work flows through four stages: **discovery** maps the problem space and decomposes it into backlog tickets; **backlog** items progress from draft to refined as scope is clarified; **refine/lifecycle** drives each feature through research, spec, plan, implement, and review phases; and **overnight** executes refined items autonomously in parallel so you wake up to a morning report with PRs ready to review. For a visual of the full pipeline, see [docs/agentic-layer.md](docs/agentic-layer.md#diagram-a--main-workflow-flow).
 
 ```
         ┌──────────── /cortex-interactive:refine ──────┐
