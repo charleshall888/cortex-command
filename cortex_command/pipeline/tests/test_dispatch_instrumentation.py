@@ -272,6 +272,126 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
                 f"dispatch should succeed despite log errors: {result.error_detail}",
             )
 
+    async def test_dispatch_start_includes_skill_fields(self):
+        """dispatch_start JSONL emission contains new keys in spec'd order.
+
+        Verifies (a) review-fix invocation with cycle=1 produces keys in the
+        order: event, feature, skill, attempt, escalated, escalation_event,
+        cycle, complexity, criticality, model, effort, max_turns,
+        max_budget_usd; and (b) non-review-fix invocation (skill='implement')
+        omits the cycle key entirely.
+        """
+        expected_with_cycle = [
+            "event",
+            "feature",
+            "skill",
+            "attempt",
+            "escalated",
+            "escalation_event",
+            "cycle",
+            "complexity",
+            "criticality",
+            "model",
+            "effort",
+            "max_turns",
+            "max_budget_usd",
+        ]
+        expected_without_cycle = [k for k in expected_with_cycle if k != "cycle"]
+
+        # Case 1: review-fix with cycle -> cycle key present.
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "pipeline-events.log"
+
+            assistant_msg = AssistantMessage(
+                content=[TextBlock(text="done")],
+                model="sonnet",
+            )
+            result_msg = ResultMessage(
+                subtype="success",
+                duration_ms=100,
+                duration_api_ms=80,
+                is_error=False,
+                num_turns=1,
+                session_id="sess-rf",
+                total_cost_usd=0.0,
+            )
+
+            async def mock_query(**kwargs):
+                async for m in _async_gen(assistant_msg, result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="test-feat",
+                    task="review-fix task",
+                    worktree_path=Path(tmp),
+                    complexity="simple",
+                    system_prompt="",
+                    log_path=log_path,
+                    skill="review-fix",
+                    attempt=1,
+                    escalated=False,
+                    escalation_event=False,
+                    cycle=1,
+                )
+
+            events = _read_jsonl(log_path)
+            start_evts = [e for e in events if e["event"] == "dispatch_start"]
+            self.assertEqual(len(start_evts), 1, f"expected 1 dispatch_start, got {len(start_evts)}")
+            start_evt = start_evts[0]
+            self.assertEqual(
+                list(start_evt.keys()),
+                expected_with_cycle,
+                f"key order mismatch for review-fix dispatch_start: {list(start_evt.keys())}",
+            )
+            self.assertEqual(start_evt["skill"], "review-fix")
+            self.assertEqual(start_evt["cycle"], 1)
+
+        # Case 2: non-review-fix (cycle=None) -> cycle key absent.
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "pipeline-events.log"
+
+            assistant_msg = AssistantMessage(
+                content=[TextBlock(text="done")],
+                model="sonnet",
+            )
+            result_msg = ResultMessage(
+                subtype="success",
+                duration_ms=100,
+                duration_api_ms=80,
+                is_error=False,
+                num_turns=1,
+                session_id="sess-impl",
+                total_cost_usd=0.0,
+            )
+
+            async def mock_query(**kwargs):
+                async for m in _async_gen(assistant_msg, result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="test-feat",
+                    task="implement task",
+                    worktree_path=Path(tmp),
+                    complexity="simple",
+                    system_prompt="",
+                    log_path=log_path,
+                    skill="implement",
+                )
+
+            events = _read_jsonl(log_path)
+            start_evts = [e for e in events if e["event"] == "dispatch_start"]
+            self.assertEqual(len(start_evts), 1, f"expected 1 dispatch_start, got {len(start_evts)}")
+            start_evt = start_evts[0]
+            self.assertNotIn("cycle", start_evt, "cycle must be absent for non-review-fix dispatch_start")
+            self.assertEqual(
+                list(start_evt.keys()),
+                expected_without_cycle,
+                f"key order mismatch for non-review-fix dispatch_start: {list(start_evt.keys())}",
+            )
+            self.assertEqual(start_evt["skill"], "implement")
+
     async def test_no_activity_log_path_does_not_write_file(self):
         """When activity_log_path is None, no JSONL file is created."""
         with tempfile.TemporaryDirectory() as tmp:
