@@ -147,6 +147,7 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
                     complexity="simple",
                     system_prompt="",
                     activity_log_path=log_path,
+                    skill="implement",
                 )
 
             # Assertions inside the 'with' block so the temp dir still exists.
@@ -208,6 +209,7 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
                     complexity="simple",
                     system_prompt="",
                     activity_log_path=log_path,
+                    skill="implement",
                 )
 
             # Assertions inside 'with' so temp dir still exists.
@@ -264,6 +266,7 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
                         complexity="simple",
                         system_prompt="",
                         activity_log_path=log_path,
+                        skill="implement",
                     )
 
             # dispatch must succeed even though all log writes raised
@@ -423,6 +426,7 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
                     complexity="simple",
                     system_prompt="",
                     activity_log_path=None,
+                    skill="implement",
                 )
 
             self.assertFalse(log_path.exists())

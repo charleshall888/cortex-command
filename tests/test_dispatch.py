@@ -64,6 +64,7 @@ class TestBudgetExhaustedDispatchPath(unittest.TestCase):
                     worktree_path=Path("/tmp"),
                     complexity="simple",
                     system_prompt="test",
+                    skill="implement",
                 )
 
         result = asyncio.run(_run())
@@ -122,6 +123,7 @@ class TestStderrAccumulatorIntegration(unittest.TestCase):
                         worktree_path=Path("/tmp"),
                         complexity="simple",
                         system_prompt="test",
+                        skill="implement",
                     )
 
         result = asyncio.run(_run())

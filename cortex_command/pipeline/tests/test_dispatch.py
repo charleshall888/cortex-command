@@ -295,6 +295,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     worktree_path=worktree,
                     complexity="simple",
                     system_prompt="",
+                    skill="implement",
                 )
 
             options = captured.get("options")
@@ -337,6 +338,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     worktree_path=worktree,
                     complexity="simple",
                     system_prompt="",
+                    skill="implement",
                 )
 
             options = captured.get("options")
@@ -373,6 +375,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     worktree_path=worktree,
                     complexity="simple",
                     system_prompt="",
+                    skill="implement",
                 )
 
             options = captured.get("options")
@@ -418,6 +421,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     complexity="simple",
                     system_prompt="",
                     integration_base_path=integration_base,
+                    skill="implement",
                 )
 
             options = captured.get("options")
@@ -461,6 +465,7 @@ class TestDispatchTaskSandboxSettings(unittest.IsolatedAsyncioTestCase):
                     complexity="simple",
                     system_prompt="",
                     integration_base_path=integration_base,
+                    skill="implement",
                 )
 
             options = captured.get("options")
@@ -516,6 +521,7 @@ class TestProjectSettingsPropagation(unittest.IsolatedAsyncioTestCase):
                 complexity="simple",
                 system_prompt="",
                 repo_root=repo_root,
+                skill="implement",
                 **kwargs,
             )
 
@@ -666,6 +672,7 @@ class TestDispatchTaskBudgetExhausted(unittest.IsolatedAsyncioTestCase):
                     worktree_path=worktree,
                     complexity="simple",
                     system_prompt="",
+                    skill="implement",
                 )
 
             self.assertFalse(result.success)
@@ -702,6 +709,7 @@ class TestDispatchTaskBudgetExhausted(unittest.IsolatedAsyncioTestCase):
                     worktree_path=worktree,
                     complexity="simple",
                     system_prompt="",
+                    skill="implement",
                 )
 
             self.assertTrue(result.success)
@@ -735,6 +743,7 @@ class TestDispatchTaskBudgetExhausted(unittest.IsolatedAsyncioTestCase):
                     complexity="simple",
                     system_prompt="",
                     log_path=log_file,
+                    skill="implement",
                 )
 
             import json as _json
@@ -785,6 +794,7 @@ class TestDispatchTaskStderrRedaction(unittest.IsolatedAsyncioTestCase):
                     worktree_path=worktree,
                     complexity="simple",
                     system_prompt="",
+                    skill="implement",
                 )
 
             # _stderr_lines is a closure cell on the _on_stderr callback.

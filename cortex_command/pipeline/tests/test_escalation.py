@@ -161,6 +161,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",   # → haiku (medium criticality)
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -194,6 +195,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",   # → haiku initially
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -229,6 +231,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -257,6 +260,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -286,6 +290,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -320,6 +325,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",   # → haiku
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -354,6 +360,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -387,6 +394,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -417,6 +425,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     criticality="high",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -448,6 +457,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",   # starts at haiku
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=5,          # allow enough budget
                 )
 
@@ -487,6 +497,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     log_path=log_path,
                     max_retries=3,
                 )
@@ -523,6 +534,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     log_path=log_path,
                     max_retries=3,
                 )
@@ -558,6 +570,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     log_path=log_path,
                     max_retries=5,
                 )
@@ -602,6 +615,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -630,6 +644,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     max_retries=3,
                 )
 
@@ -659,6 +674,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
                     complexity="trivial",
                     system_prompt="",
                     learnings_dir=Path(tmp) / "learnings",
+                    skill="implement",
                     log_path=log_file,
                     max_retries=3,
                 )
