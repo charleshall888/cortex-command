@@ -93,7 +93,7 @@ Authentication setup (API key vs. OAuth token) is documented in [Setup guide § 
 | `cortex_command/dashboard/` | FastAPI web dashboard for monitoring overnight sessions |
 | `lifecycle/` | Feature state machine -- research, specify, plan, implement, review, complete |
 | `backlog/` | YAML-frontmatter backlog items with overnight readiness gates |
-| `plugins/cortex-interactive/bin/` | CLI utilities on `PATH` via the plugin -- `cortex-jcc` (recipe wrapper), `cortex-count-tokens`, `cortex-audit-doc`, `cortex-update-item`, `cortex-generate-backlog-index`, `cortex-create-backlog-item`, `cortex-git-sync-rebase` |
+| `plugins/cortex-interactive/bin/` | CLI utilities on `PATH` via the plugin -- `cortex-archive-rewrite-paths`, `cortex-archive-sample-select`, `cortex-audit-doc`, `cortex-count-tokens`, `cortex-create-backlog-item`, `cortex-generate-backlog-index`, `cortex-git-sync-rebase`, `cortex-jcc`, `cortex-update-item` |
 
 ## Customization
 
