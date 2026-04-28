@@ -132,6 +132,42 @@ This step additively registers the repo's `lifecycle/` path in `~/.claude/settin
 
 > **Note:** If a future ticket activates one of the advisory keys by adding a code consumer, the description above must be updated from `Currently advisory` to describe the consumer. That update is the responsibility of whichever ticket adds the consumer.
 
+#### Worked example: `cortex init` + first lifecycle invocation
+
+After installing the plugins, run `cortex init` once in your repo root:
+
+```
+cortex init
+```
+
+After `cortex init` completes, the following structure is created in your repo:
+
+```
+lifecycle/
+lifecycle/README.md
+lifecycle.config.md
+backlog/
+backlog/README.md
+retros/
+retros/README.md
+requirements/
+requirements/project.md
+.cortex-init
+.gitignore   ← updated with cortex ignore entries
+```
+
+The `.cortex-init` marker records the cortex version and timestamp of the run. `lifecycle.config.md` in the repo root holds per-repo configuration overrides (see the schema section above). The `lifecycle/sessions/` write path is also registered in `~/.claude/settings.local.json` so the overnight runner can write session logs without a sandbox prompt.
+
+Then run `/cortex-interactive:lifecycle <feature>` to begin a new feature, which produces a `lifecycle/<feature>/` directory containing the feature's lifecycle artifacts (research, spec, plan, implementation, events log). For example:
+
+```
+/cortex-interactive:lifecycle my-feature
+```
+
+This command initiates the research phase for `my-feature` and guides you through research → spec → plan → implementation → review. Running `/cortex-interactive:lifecycle my-feature` with no prior artifacts starts fresh; re-running it in a later session resumes from the current phase recorded in `lifecycle/my-feature/events.log`.
+
+This sequence — `cortex init` followed by `/cortex-interactive:lifecycle <feature>` — is the end-to-end verification that both the CLI scaffold and the lifecycle skill are working in your environment.
+
 ---
 
 ## Authentication
