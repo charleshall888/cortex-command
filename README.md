@@ -4,7 +4,7 @@ Cortex Command is an AI workflow framework for Claude Code built on a single ins
 
 The front half of the lifecycle is deliberately human-driven. You run discovery to understand the problem space, collaborate with agents to write tight specs, and mark features ready only when the scope is genuinely clear. Once that work is done, the handoff is earned. Run `/cortex-interactive:lifecycle` to stay in the loop for interactive development, or queue a batch for `/overnight` and wake up to a morning report with PRs ready to review. The overnight runner is the natural payoff of doing the front half well.
 
-Skills are slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. Cortex-command ships as a CLI (installed via `uv tool install -e .`) plus Claude Code plugins (installed via `/plugin install`) — everything lives in version control and is distributed without host-level symlinks.
+Skills are slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. Cortex-command ships as a CLI (installed via `uv tool install -e .`) plus Claude Code plugins (each installed as `<name>@cortex-command` after adding the marketplace) — everything lives in version control and is distributed without host-level symlinks.
 
 Work flows through four stages: **discovery** maps the problem space and decomposes it into backlog tickets; **backlog** items progress from draft to refined as scope is clarified; **refine/lifecycle** drives each feature through research, spec, plan, implement, and review phases; and **overnight** executes refined items autonomously in parallel so you wake up to a morning report with PRs ready to review. For a visual of the full pipeline, see [docs/agentic-layer.md](docs/agentic-layer.md#diagram-a--main-workflow-flow).
 
@@ -48,15 +48,21 @@ curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/
 # 2. One-time: ensure the uv tool bin directory is on PATH
 uv tool update-shell
 
-# 3. In Claude Code, install the plugin marketplace, then the plugins
+# 3. In Claude Code, add the plugin marketplace
 claude /plugin marketplace add charleshall888/cortex-command
-claude /plugin install cortex-interactive
-claude /plugin install cortex-overnight-integration
-claude /plugin install cortex-ui-extras
-claude /plugin install cortex-pr-review
+
+# 4. Install the recommended core plugins to start
+claude /plugin install cortex-interactive@cortex-command
+claude /plugin install cortex-overnight-integration@cortex-command
+claude /plugin install cortex-ui-extras@cortex-command
+claude /plugin install cortex-pr-review@cortex-command
 ```
 
+The [Plugin roster](#plugin-roster) below lists all 6 available plugins — install `android-dev-extras@cortex-command` and `cortex-dev-extras@cortex-command` to add the extras tier.
+
 No symlinks into `~/.claude/` are created — plugins are discovered by Claude Code directly.
+
+Verify the install with the smoke test in [Setup guide § Verify install](docs/setup.md#verify-install).
 
 ### Plugin roster
 
