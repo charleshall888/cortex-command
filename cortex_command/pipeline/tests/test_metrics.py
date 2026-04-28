@@ -809,6 +809,99 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
         self.assertEqual(bucket["max_turns_observed"], 5)
 
 
+class TestPairAggregatorEndToEnd(unittest.TestCase):
+    """End-to-end coverage of the production data flow:
+    raw events -> ``pair_dispatch_events`` -> ``compute_skill_tier_dispatch_aggregates``.
+
+    These tests guard the integration boundary that the unit tests in
+    :class:`TestSkillTierDispatchAggregates` deliberately bypass.  Those tests
+    construct paired records directly with explicit ``skill``/``cycle`` keys
+    to test the aggregator in isolation; this class instead synthesizes raw
+    ``dispatch_start`` / ``dispatch_complete`` events and runs them through
+    the real pairing layer.  Without ``skill``/``cycle`` propagation in
+    :func:`pair_dispatch_events`, every paired record buckets as
+    ``legacy,<tier>`` regardless of what the new instrumentation emits — this
+    test class catches that regression class.
+    """
+
+    def _start(self, feature, skill="implement", complexity="simple",
+               model="sonnet", cycle=None, ts="2026-04-01T00:00:00Z"):
+        evt = {
+            "event": "dispatch_start",
+            "ts": ts,
+            "feature": feature,
+            "complexity": complexity,
+            "criticality": "high",
+            "model": model,
+            "skill": skill,
+            "effort": "high",
+            "max_turns": 30,
+            "max_budget_usd": 50.0,
+        }
+        if cycle is not None:
+            evt["cycle"] = cycle
+        return evt
+
+    def _complete(self, feature, cost_usd=1.0, num_turns=4,
+                  ts="2026-04-01T00:01:00Z"):
+        return {
+            "event": "dispatch_complete",
+            "ts": ts,
+            "feature": feature,
+            "cost_usd": cost_usd,
+            "duration_ms": 5000,
+            "num_turns": num_turns,
+        }
+
+    def test_pair_propagates_skill_to_aggregator_non_review_fix(self):
+        """A dispatch_start carrying skill="implement" + matching complete,
+        run through pair_dispatch_events then compute_skill_tier_dispatch_aggregates,
+        produces an "implement,simple" bucket key — NOT "legacy,simple"."""
+        from cortex_command.pipeline.metrics import (
+            compute_skill_tier_dispatch_aggregates,
+            pair_dispatch_events,
+        )
+        events = [
+            self._start("feat-a", skill="implement", complexity="simple",
+                        model="sonnet"),
+            self._complete("feat-a", cost_usd=1.5, num_turns=5),
+        ]
+        paired = pair_dispatch_events(events)
+        result = compute_skill_tier_dispatch_aggregates(paired)
+
+        self.assertIn(
+            "implement,simple", result,
+            f"Expected 'implement,simple' bucket; got {sorted(result.keys())}",
+        )
+        self.assertNotIn("legacy,simple", result)
+        self.assertEqual(result["implement,simple"]["n_completes"], 1)
+
+    def test_pair_propagates_skill_and_cycle_to_aggregator_review_fix(self):
+        """A dispatch_start with skill="review-fix", cycle=2 + matching complete
+        produces a 'review-fix,simple,2' three-dimensional bucket key after
+        the full pair -> aggregate pipeline."""
+        from cortex_command.pipeline.metrics import (
+            compute_skill_tier_dispatch_aggregates,
+            pair_dispatch_events,
+        )
+        events = [
+            self._start("feat-rf", skill="review-fix", complexity="simple",
+                        model="sonnet", cycle=2),
+            self._complete("feat-rf", cost_usd=2.0, num_turns=6),
+        ]
+        paired = pair_dispatch_events(events)
+        result = compute_skill_tier_dispatch_aggregates(paired)
+
+        self.assertIn(
+            "review-fix,simple,2", result,
+            f"Expected 'review-fix,simple,2' bucket; got {sorted(result.keys())}",
+        )
+        self.assertNotIn("review-fix,simple,1", result)
+        self.assertNotIn("review-fix,simple,legacy-cycle", result)
+        self.assertNotIn("legacy,simple", result)
+        self.assertEqual(result["review-fix,simple,2"]["n_completes"], 1)
+
+
 class TestReportTierDispatch(unittest.TestCase):
     """Tests for the --report tier-dispatch CLI output."""
 
