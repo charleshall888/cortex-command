@@ -28,6 +28,7 @@ from cortex_command.pipeline.dispatch import (
     dispatch_task,
     ERROR_RECOVERY,
     MODEL_ESCALATION_LADDER,
+    Skill,
     resolve_model,
 )
 from cortex_command.pipeline.state import log_event
@@ -175,6 +176,8 @@ async def retry_task(
     activity_log_path: Optional[Path] = None,
     integration_base_path: Optional[Path] = None,
     repo_path: Path | None = None,
+    *,
+    skill: Skill,
 ) -> RetryResult:
     """Execute a task with Ralph Loop retry logic.
 
@@ -210,6 +213,8 @@ async def retry_task(
     # upgrade it on each "escalate" recovery path (Req 8).
     _criticality_val = criticality if criticality is not None else "medium"
     current_model: str = resolve_model(complexity, _criticality_val)
+    initial_model = current_model
+    previous_attempt_model: Optional[str] = None
 
     for attempt in range(1, total_attempts + 1):
         # Build the prompt for this attempt, including learnings
@@ -235,6 +240,17 @@ async def retry_task(
                 "model": current_model,
             })
 
+        # Compute escalation metadata for this attempt:
+        # - is_escalated (sticky): true on every attempt at a non-initial tier.
+        # - is_escalation_event (one-shot): true on the first attempt at a
+        #   newly-escalated tier. Guarded so the very first attempt
+        #   (previous_attempt_model is None) never reports True.
+        is_escalated = current_model != initial_model
+        is_escalation_event = (
+            previous_attempt_model is not None
+            and current_model != previous_attempt_model
+        )
+
         # Dispatch the task, forwarding the active model so that escalation
         # overrides take effect even if complexity/criticality stay constant.
         result = await dispatch_task(
@@ -249,7 +265,17 @@ async def retry_task(
             model_override=current_model,
             integration_base_path=integration_base_path,
             repo_root=repo_path,
+            skill=skill,
+            attempt=attempt,
+            escalated=is_escalated,
+            escalation_event=is_escalation_event,
         )
+
+        # Snapshot the model used in this just-completed dispatch BEFORE any
+        # subsequent escalate arm in this iteration can mutate current_model.
+        # The next iteration's is_escalation_event compares the next attempt's
+        # current_model against this snapshot.
+        previous_attempt_model = current_model
 
         total_cost += result.cost_usd or 0.0
 
