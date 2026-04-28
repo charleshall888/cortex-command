@@ -330,6 +330,10 @@ validate-skill-preconditions skill:
 validate-spec *args:
     python3 bin/cortex-validate-spec {{args}}
 
+# Check SKILL.md-to-bin parity (per DR-5 / lifecycle 102)
+check-parity *args:
+    python3 bin/cortex-check-parity {{args}}
+
 # --- Testing ---
 
 # Run skill contract tests (validates SKILL.md frontmatter across all skills)
