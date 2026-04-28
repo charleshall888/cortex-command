@@ -258,6 +258,7 @@ async def dispatch_review(
         log_path=log_path,
         criticality=criticality,
         repo_root=repo_path,
+        skill="review",
     )
 
     # (5) Parse verdict from review.md
@@ -389,6 +390,8 @@ async def dispatch_review(
             log_path=log_path,
             criticality=criticality,
             repo_root=repo_path,
+            skill="review-fix",
+            cycle=1,
         )
 
         # Handle fix agent failure — defer with cycle 1 feedback + failure reason
@@ -502,6 +505,8 @@ async def dispatch_review(
             log_path=log_path,
             criticality=criticality,
             repo_root=repo_path,
+            skill="review-fix",
+            cycle=2,
         )
 
         # (9g) Parse cycle 2 verdict
