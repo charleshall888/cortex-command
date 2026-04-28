@@ -35,7 +35,7 @@ You ──► Clarify ──► Research ──► Spec ──► Plan ──►
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) package manager (`brew install uv`)
 
-> These instructions target macOS. For Linux or Windows setup, see [`docs/setup.md`](docs/setup.md).
+> These instructions target macOS.
 
 ## Quick Start
 
@@ -81,35 +81,7 @@ For installation specifics and per-project enablement, see [`docs/setup.md`](doc
 
 ## Authentication
 
-The overnight runner and some CLI utilities need API credentials. Choose based on your account type:
-
-### API Key (work / Console billing)
-
-```bash
-printf '%s' 'sk-ant-api03-...' > ~/.claude/work-api-key
-chmod 600 ~/.claude/work-api-key
-```
-
-Add to `~/.claude/settings.local.json`:
-```json
-{ "apiKeyHelper": "cat ~/.claude/work-api-key" }
-```
-
-### OAuth Token (Claude Pro / Max subscription)
-
-```bash
-claude setup-token                  # opens browser, prints token (valid 1 year)
-printf '%s' 'sk-ant-oat01-...' > ~/.claude/personal-oauth-token
-chmod 600 ~/.claude/personal-oauth-token
-```
-
-The overnight runner reads this file automatically when no `apiKeyHelper` is configured.
-
-### Using Both
-
-Set `apiKeyHelper` in work repos' `.claude/settings.local.json`. Store the OAuth token at `~/.claude/personal-oauth-token`. The runner uses `apiKeyHelper` when present, falls back to the OAuth token when not. See [`docs/overnight-operations.md`](docs/overnight-operations.md#auth-resolution-apikeyhelper-and-env-var-fallback-order) for the full precedence chain.
-
-> **Note:** OAuth tokens work with `claude -p` and the Agent SDK. Standalone utilities (`cortex-count-tokens`, `cortex-audit-doc`) call the Anthropic API directly and require an API key.
+Authentication setup (API key vs. OAuth token) is documented in [Setup guide § Authentication](docs/setup.md#authentication).
 
 ## What's Inside
 
