@@ -2,15 +2,22 @@
 schema_version: "1"
 uuid: 38c23f6f-3126-484a-9143-4ca176f801b7
 title: "Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7)"
-status: backlog
+status: in_progress
 priority: high
 type: feature
 parent: "101"
 blocked-by: []
 tags: [harness, scripts, discoverability, observability]
 created: 2026-04-21
-updated: 2026-04-27
+updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+session_id: b0ac6fb6-c263-4e72-9f6d-dba48e1a448e
+lifecycle_phase: implement
+lifecycle_slug: add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7
+complexity: complex
+criticality: high
+spec: lifecycle/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md
+areas: []
 ---
 
 # Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7)
