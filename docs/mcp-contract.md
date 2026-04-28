@@ -188,7 +188,7 @@ The full requirement is R22 in this feature's spec.
 
 ## Cross-tool serialization carve-out
 
-The MCP holds a single flock at `$cortex_root/.git/cortex-update.lock` while it runs `cortex upgrade`. This serializes concurrent **MCP-driven** upgrades — multiple Claude Code sessions racing to apply the same upstream advance. Only one MCP wins the lock; the others observe the post-acquire HEAD re-verification (R11) and skip the redundant invocation.
+The MCP holds a single flock at $cortex_root/.git/cortex-update.lock while it runs `cortex upgrade`. This serializes concurrent **MCP-driven** upgrades — multiple Claude Code sessions racing to apply the same upstream advance. Only one MCP wins the lock; the others observe the post-acquire HEAD re-verification (R11) and skip the redundant invocation.
 
 There is intentionally **no second flock** at `~/.local/share/uv/tools/cortex-command/.cortex-update.lock` (or any equivalent location) for cross-tool serialization. An external `uv tool upgrade cortex-command` invoked from a separate shell — concurrent with an MCP-orchestrated upgrade — may produce indeterminate results: partial installs, conflicting module rewrites, or shim-layer mismatches.
 

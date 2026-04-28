@@ -635,7 +635,7 @@ def test_upgrade_orchestration_invocation_order(
     )
 
     # Point the discovery cache at a real tmp dir so the lock file path
-    # under ``$cortex_root/.git/cortex-update.lock`` is creatable.
+    # under $cortex_root/.git/cortex-update.lock is creatable.
     cortex_root = tmp_path / "cortex"
     (cortex_root / ".git").mkdir(parents=True)
     server_module._CORTEX_ROOT_CACHE = {
@@ -1222,7 +1222,7 @@ def test_verification_probe_failure_falls_through_to_on_disk_cli(
     )
 
     # Point the discovery cache at a real tmp dir so the lock file path
-    # under ``$cortex_root/.git/cortex-update.lock`` is creatable.
+    # under $cortex_root/.git/cortex-update.lock is creatable.
     cortex_root = tmp_path / "cortex"
     (cortex_root / ".git").mkdir(parents=True)
     server_module._CORTEX_ROOT_CACHE = {
