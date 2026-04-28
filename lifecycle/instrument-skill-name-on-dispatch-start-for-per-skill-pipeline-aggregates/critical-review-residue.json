@@ -1,0 +1,45 @@
+{
+  "ts": "2026-04-28T13:30:00Z",
+  "feature": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates",
+  "artifact": "lifecycle/instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {"completed": 4, "dispatched": 4},
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Tasks 3, 4, 5's grep-only verifications are scoped per-file and cannot detect that a sibling file in the same dependency chain still has an un-updated call site. Each task individually verifies green against its own scope while the tree as a whole still has broken callers.",
+      "reviewer_angle": "Per-task verification gaps",
+      "evidence_quote": "grep -nE \"retry_task\\(\" cortex_command/overnight/feature_executor.py | grep -v \"skill=\" | wc -l returns 0"
+    },
+    {
+      "class": "B",
+      "finding": "Verification Strategy three-layer gate names Task 14 as the regression sweep but Task 14 depends on Tasks 3-13 already complete. There is no mechanism in the plan to defer per-task commits until Task 14 passes, nor stipulation that Tasks 1-5 run just test before claiming pass. Broken-intermediate-state commits land before regression runs.",
+      "reviewer_angle": "Per-task verification gaps",
+      "evidence_quote": "End-to-end verification proceeds in three layers"
+    },
+    {
+      "class": "B",
+      "finding": "Task 2 has the same literal Caller Enumeration violation as Task 1: makes retry_task's skill kwarg required but lists only retry.py in Files; feature_executor.py is not enumerated. Task 3 separately updates it.",
+      "reviewer_angle": "Caller Enumeration rule compliance",
+      "evidence_quote": "Files: cortex_command/pipeline/retry.py / What: Add required `skill: Skill` keyword-only parameter to retry_task signature"
+    },
+    {
+      "class": "B",
+      "finding": "Task 11's Depends on is [10] but its verification command requires Task 12's main() wiring (which adds metrics_data['skill_tier_dispatch_aggregates']). When orchestrator dispatches Tasks 11 and 12 in parallel after Task 10 completes, Task 11's verification can fire before Task 12's wiring exists and fail with KeyError or empty grep result.",
+      "reviewer_angle": "Caller Enumeration rule compliance",
+      "evidence_quote": "Depends on: [10]"
+    },
+    {
+      "class": "B",
+      "finding": "Task 13 does not specify where in the _start() kwarg list to insert skill: str = 'implement'. While every current TestPairDispatchEvents caller uses keyword args, the absence of guidance leaves a regression seed for future contributors refactoring or extending the helper.",
+      "reviewer_angle": "Task 13 regression risk and test depth",
+      "evidence_quote": "Add `skill: str = \"implement\"` to its kwargs and pass through to the constructed event dict"
+    },
+    {
+      "class": "B",
+      "finding": "Task 13's verification of the new aggregator's legacy bucket relies on grep -E '\"legacy\"' returning ≥ 1, which can fire on unrelated occurrences (a comment, an error message, an unrelated assertion). The grep does not bind to bucket-key shape 'legacy,<tier>'.",
+      "reviewer_angle": "Task 13 regression risk and test depth",
+      "evidence_quote": "grep -E '\"legacy\"' cortex_command/pipeline/tests/test_metrics.py | wc -l returns ≥ 1"
+    }
+  ]
+}

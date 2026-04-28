@@ -2,15 +2,22 @@
 schema_version: "1"
 uuid: 70d0865d-4d7d-4627-ae59-08a0d41ec8a3
 title: "Instrument skill-name on dispatch_start for per-skill pipeline aggregates"
-status: backlog
+status: refined
 priority: high
 type: feature
 parent: "101"
 blocked-by: []
 tags: [harness, observability, pipeline]
 created: 2026-04-21
-updated: 2026-04-27
+updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+session_id: 078a8e62-d76d-4cec-a13a-bdb0146e5543
+lifecycle_phase: implement
+lifecycle_slug: instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates
+complexity: complex
+criticality: high
+spec: lifecycle/instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates/spec.md
+areas: [overnight-runner]
 ---
 
 # Instrument skill-name on dispatch_start for per-skill pipeline aggregates
