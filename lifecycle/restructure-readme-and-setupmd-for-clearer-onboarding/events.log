@@ -33,3 +33,27 @@
 {"ts": "2026-04-28T00:01:24Z", "event": "phase_transition", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "from": "plan", "to": "implement"}
 {"ts": "2026-04-28T00:05:06Z", "event": "batch_dispatch", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "batch": 0, "tasks": [1, 5, 6]}
 {"ts": "2026-04-28T00:06:39Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-04-28T00:08:25Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 5, "batch": 0, "status": "success"}
+{"ts": "2026-04-28T00:10:24Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 6, "batch": 0, "status": "success"}
+{"ts": "2026-04-28T00:10:24Z", "event": "batch_dispatch", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "batch": 1, "tasks": [2, 7]}
+
+{"ts": "2026-04-28T00:12:35Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 2, "batch": 1, "status": "success"}
+{"ts": "2026-04-28T00:14:43Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 7, "batch": 1, "status": "success"}
+{"ts": "2026-04-28T00:14:43Z", "event": "batch_dispatch", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "batch": 2, "tasks": [3, 8]}
+{"ts": "2026-04-28T00:16:02Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 3, "batch": 2, "status": "success"}
+{"ts": "2026-04-28T00:18:10Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 8, "batch": 2, "status": "success"}
+{"ts": "2026-04-28T00:18:10Z", "event": "batch_dispatch", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "batch": 3, "tasks": [4, 9]}
+{"ts": "2026-04-28T00:19:19Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 4, "batch": 3, "status": "success"}
+{"ts": "2026-04-28T00:21:16Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 9, "batch": 3, "status": "success"}
+{"ts": "2026-04-28T00:21:16Z", "event": "batch_dispatch", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "batch": 4, "tasks": [10]}
+{"ts": "2026-04-28T00:22:08Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 10, "batch": 4, "status": "success", "note": "no-op — setup.md already canonical"}
+{"ts": "2026-04-28T00:22:08Z", "event": "batch_dispatch", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "batch": 5, "tasks": [11]}
+{"ts": "2026-04-28T00:23:20Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 11, "batch": 5, "status": "success"}
+{"ts": "2026-04-28T00:23:20Z", "event": "batch_dispatch", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "batch": 6, "tasks": [12]}
+{"ts": "2026-04-28T00:26:29Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 12, "batch": 6, "status": "success"}
+{"ts": "2026-04-28T00:26:29Z", "event": "batch_dispatch", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "batch": 7, "tasks": [13]}
+{"ts": "2026-04-28T00:30:09Z", "event": "task_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "task": 13, "batch": 7, "status": "success"}
+{"ts": "2026-04-28T00:30:09Z", "event": "phase_transition", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-28T00:37:16Z", "event": "review_verdict", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-04-28T00:37:16Z", "event": "phase_transition", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "from": "review", "to": "complete"}
+{"ts": "2026-04-28T00:39:26Z", "event": "feature_complete", "feature": "restructure-readme-and-setupmd-for-clearer-onboarding", "tasks_total": 13, "rework_cycles": 1}

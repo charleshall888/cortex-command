@@ -586,37 +586,6 @@
     "repo": null
   },
   {
-    "id": 150,
-    "title": "Restructure README and setup.md for clearer onboarding",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "docs-setup-audit",
-      "documentation",
-      "onboarding",
-      "setup"
-    ],
-    "areas": [
-      "docs"
-    ],
-    "created": "2026-04-27",
-    "updated": "2026-04-27",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/restructure-readme-and-setupmd-for-clearer-onboarding/spec.md",
-    "discovery_source": "research/docs-setup-audit/research.md",
-    "plan": null,
-    "uuid": "5cc1ab08-5283-41fa-bd29-02f7e89423a2",
-    "lifecycle_slug": "restructure-readme-and-setupmd-for-clearer-onboarding",
-    "session_id": "906bc2d3-0e63-43cd-83f5-fb7d3acac966",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 90,
     "title": "Adopt xhigh effort default for overnight lifecycle implement",
     "status": "backlog",

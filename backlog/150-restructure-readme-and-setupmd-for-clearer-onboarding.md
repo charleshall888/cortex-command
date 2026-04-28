@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 5cc1ab08-5283-41fa-bd29-02f7e89423a2
 title: "Restructure README and setup.md for clearer onboarding"
-status: in_progress
+status: complete
 priority: medium
 type: feature
 tags: [docs-setup-audit, documentation, onboarding, setup]
@@ -12,7 +12,7 @@ updated: 2026-04-27
 blocks: []
 blocked-by: []
 discovery_source: research/docs-setup-audit/research.md
-session_id: 906bc2d3-0e63-43cd-83f5-fb7d3acac966
+session_id: null
 lifecycle_phase: implement
 lifecycle_slug: restructure-readme-and-setupmd-for-clearer-onboarding
 complexity: complex
