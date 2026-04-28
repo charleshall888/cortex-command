@@ -57,38 +57,9 @@
     "repo": null
   },
   {
-    "id": 102,
-    "title": "Ship DR-5 SKILL.md-to-bin parity linter with zero existing violations",
-    "status": "backlog",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "harness",
-      "scripts",
-      "discoverability",
-      "enforcement"
-    ],
-    "areas": [],
-    "created": "2026-04-21",
-    "updated": "2026-04-27",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "101",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/extract-scripts-from-agent-tool-sequences/research.md",
-    "plan": null,
-    "uuid": "e634fb4a-f683-4141-9cd9-2373d1690711",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 103,
     "title": "Add runtime adoption telemetry via PreToolUse Bash hook matcher (DR-7)",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -99,25 +70,25 @@
     ],
     "areas": [],
     "created": "2026-04-21",
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "blocks": [],
     "blocked_by": [],
     "parent": "101",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md",
     "discovery_source": "research/extract-scripts-from-agent-tool-sequences/research.md",
     "plan": null,
     "uuid": "38c23f6f-3126-484a-9143-4ca176f801b7",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7",
+    "session_id": "b0ac6fb6-c263-4e72-9f6d-dba48e1a448e",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 104,
     "title": "Instrument skill-name on dispatch_start for per-skill pipeline aggregates",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -125,20 +96,22 @@
       "observability",
       "pipeline"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner"
+    ],
     "created": "2026-04-21",
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "blocks": [],
     "blocked_by": [],
     "parent": "101",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates/spec.md",
     "discovery_source": "research/extract-scripts-from-agent-tool-sequences/research.md",
     "plan": null,
     "uuid": "70d0865d-4d7d-4627-ae59-08a0d41ec8a3",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates",
+    "session_id": "078a8e62-d76d-4cec-a13a-bdb0146e5543",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -155,10 +128,9 @@
     ],
     "areas": [],
     "created": "2026-04-21",
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "blocks": [],
     "blocked_by": [
-      "102",
       "103"
     ],
     "parent": "101",
@@ -354,10 +326,9 @@
     ],
     "areas": [],
     "created": "2026-04-21",
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "blocks": [],
     "blocked_by": [
-      "102",
       "103"
     ],
     "parent": "101",
@@ -385,10 +356,9 @@
     ],
     "areas": [],
     "created": "2026-04-21",
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "blocks": [],
     "blocked_by": [
-      "102",
       "103"
     ],
     "parent": "101",
@@ -416,10 +386,9 @@
     ],
     "areas": [],
     "created": "2026-04-21",
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "blocks": [],
     "blocked_by": [
-      "102",
       "103"
     ],
     "parent": "101",
@@ -447,10 +416,9 @@
     ],
     "areas": [],
     "created": "2026-04-21",
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "blocks": [],
     "blocked_by": [
-      "102",
       "103"
     ],
     "parent": "101",
@@ -478,10 +446,9 @@
     ],
     "areas": [],
     "created": "2026-04-21",
-    "updated": "2026-04-27",
+    "updated": "2026-04-28",
     "blocks": [],
     "blocked_by": [
-      "102",
       "103"
     ],
     "parent": "101",

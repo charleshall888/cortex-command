@@ -27,3 +27,8 @@
 {"ts": "2026-04-28T09:00:01Z", "event": "task_complete", "feature": "ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations", "task": 5, "batch": 3, "status": "success"}
 {"ts": "2026-04-28T09:00:02Z", "event": "task_complete", "feature": "ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations", "task": 6, "batch": 3, "status": "success"}
 {"ts": "2026-04-28T09:00:03Z", "event": "task_complete", "feature": "ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations", "task": 13, "batch": 3, "status": "success"}
+{"ts": "2026-04-28T09:05:00Z", "event": "phase_transition", "feature": "ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-04-28T09:30:00Z", "event": "review_verdict", "feature": "ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-04-28T09:30:01Z", "event": "requirements_updated", "feature": "ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations", "file": "requirements/project.md", "section": "## Architectural Constraints", "content": "Added SKILL.md-to-bin parity enforcement bullet describing cortex-check-parity gate, allowlist schema, and intentional friction in plugin list."}
+{"ts": "2026-04-28T09:30:02Z", "event": "phase_transition", "feature": "ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations", "from": "review", "to": "complete"}
+{"ts": "2026-04-28T09:35:00Z", "event": "feature_complete", "feature": "ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations", "tasks_total": 13, "rework_cycles": 0}

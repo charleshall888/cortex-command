@@ -6,10 +6,10 @@ status: backlog
 priority: high
 type: feature
 parent: "101"
-blocked-by: ["102", "103"]
+blocked-by: [103]
 tags: [harness, scripts, commit]
 created: 2026-04-21
-updated: 2026-04-27
+updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 

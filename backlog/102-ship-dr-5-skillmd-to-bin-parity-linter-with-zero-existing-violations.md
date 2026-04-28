@@ -2,15 +2,22 @@
 schema_version: "1"
 uuid: e634fb4a-f683-4141-9cd9-2373d1690711
 title: "Ship DR-5 SKILL.md-to-bin parity linter with zero existing violations"
-status: backlog
+status: complete
 priority: high
 type: feature
 parent: "101"
 blocked-by: []
 tags: [harness, scripts, discoverability, enforcement]
 created: 2026-04-21
-updated: 2026-04-27
+updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+session_id: null
+lifecycle_phase: complete
+lifecycle_slug: ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations
+complexity: complex
+criticality: high
+spec: lifecycle/ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations/spec.md
+areas: [skills]
 ---
 
 # Ship DR-5 SKILL.md-to-bin parity linter with zero existing violations
