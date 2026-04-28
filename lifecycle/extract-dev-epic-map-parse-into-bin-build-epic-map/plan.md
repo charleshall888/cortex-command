@@ -25,7 +25,7 @@ Land a freestanding `bin/cortex-build-epic-map` (bash wrapper → `backlog/build
   - `v2_schema.json`: at least one active item with `schema_version: "2"` to trigger the hard-error path (Requirement 7).
   - Hand-write rather than copy-from-real `index.json`; fixtures must remain stable when the live index churns.
 - **Verification**: `python3 -c 'import json,glob; [json.load(open(p)) for p in glob.glob("tests/fixtures/build_epic_map/*.json") if "malformed" not in p]'` exit code = 0 — pass if all non-malformed fixtures parse as JSON.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Implement `backlog/build_epic_map.py`
 - **Files**: `backlog/build_epic_map.py`
@@ -50,8 +50,8 @@ Land a freestanding `bin/cortex-build-epic-map` (bash wrapper → `backlog/build
   - Active-items access: `backlog/index.json` is a **bare JSON array** of item dicts. `backlog/generate_index.py:148-150`'s `generate_json()` confirms — it returns `json.dumps(items, ...)` on a plain Python list with no wrapping object. Parse with `items = json.loads(text)`; iterate `items` directly. There is no top-level key to dereference. (The plan's earlier draft incorrectly cited `generate_index.py:154-227`, which is the markdown emitter `generate_md`, not the JSON producer.)
   - Pure-stdlib imports only: `json`, `argparse`, `sys`, `pathlib.Path`. No `claude/common.py`.
   - Module docstring summarizes purpose and exit codes; an `--help` line ending mentions `index.json` (Requirement 2's substring assertion).
-- **Verification**: `python3 -c 'from cortex_command.backlog.build_epic_map import main, build_epic_map, normalize_parent'` exit code = 0 — pass if all three symbols are importable.
-- **Status**: [ ] pending
+- **Verification**: `python3 -c 'from backlog.build_epic_map import main, build_epic_map, normalize_parent'` exit code = 0 — pass if all three symbols are importable. (Run from repo root. The `cortex_command.backlog.*` form cited in earlier drafts of the spec/plan was incorrect — `cortex_command/backlog/` is not a package; existing siblings `update_item.py`, `create_item.py`, `generate_index.py` import via `backlog.*` per `tests/test_backlog_worktree_routing.py:18`. Wrapper branch (a) `python3 -c "import cortex_command.backlog.build_epic_map"` will silently fall through to branch (b) — same as every existing `bin/cortex-*` wrapper does today. Package-layout cleanup tracked in a separate backlog item.)
+- **Status**: [x] complete (commit `9f7dda4` — verification amended post-implementation)
 
 ### Task 3: Create `bin/cortex-build-epic-map` wrapper
 - **Files**: `bin/cortex-build-epic-map`
@@ -67,7 +67,7 @@ Land a freestanding `bin/cortex-build-epic-map` (bash wrapper → `backlog/build
   - Branch (c): exit-2 message: `echo "cortex-command CLI not found — run 'cortex setup' or point CORTEX_COMMAND_ROOT at a cortex-command checkout" >&2 ; exit 2`.
   - After writing, set executable bit: must end up `-rwxr-xr-x` and tracked as such by git (`git update-index --chmod=+x bin/cortex-build-epic-map` if filemode tracking does not auto-set; verify with `git ls-files -s bin/cortex-build-epic-map` showing mode `100755`).
 - **Verification**: `head -1 bin/cortex-build-epic-map | grep -c '^#!/bin/bash'` = 1 AND `test -x bin/cortex-build-epic-map` exit 0 AND `grep -c 'cortex_command.backlog.build_epic_map' bin/cortex-build-epic-map` ≥ 1 — all three must pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `aece31d` — bundled with Task 5 per parity-gate coupling)
 
 ### Task 4: Write `tests/test_build_epic_map.py`
 - **Files**: `tests/test_build_epic_map.py`
@@ -91,9 +91,10 @@ Land a freestanding `bin/cortex-build-epic-map` (bash wrapper → `backlog/build
     - `test_deterministic_output` — invoke twice against `multi_epic.json`; assert stdout bytes identical (sha256 or direct equality).
     - `test_width_mixed_epic_ordering` — width-mixed ordering coverage (Requirement 6's "integer-id ascending"). Build a `tmp_path` fixture as a bare JSON array containing two epic items with IDs `9` and `100` (and a child for each). Invoke the wrapper; parse stdout JSON; assert `list(parsed["epics"].keys()) == ["9", "100"]` (integer-ascending order, NOT lexicographic which would yield `["100", "9"]`). This test fails under any `sort_keys=True` implementation and is the regression guard for the Sorting contract in Task 2.
   - Use `pytest`'s `subprocess.run(..., timeout=10)` to avoid hangs.
-  - For the `--help` substring check (Requirement 2), add `test_help_mentions_index_json` invoking `python3 -m cortex_command.backlog.build_epic_map --help` and asserting `"index.json" in result.stdout`. Module-level argparse description or epilog must include the substring.
+  - For the `--help` substring check (Requirement 2), add `test_help_mentions_index_json` invoking `python3 backlog/build_epic_map.py --help` (file-path form, not `-m cortex_command.backlog.*` which is not a real package — see Task 2 verification note) and asserting `"index.json" in result.stdout`. Module-level argparse description or epilog must include the substring.
+  - **Direct imports**: when importing the script's symbols for unit tests (e.g., `normalize_parent`), use `from backlog.build_epic_map import ...` (matches existing `tests/test_backlog_worktree_routing.py:18` pattern). Do NOT use `from cortex_command.backlog.*`.
 - **Verification**: `pytest tests/test_build_epic_map.py -v` exit code = 0 — pass if all tests pass; AND `pytest tests/test_build_epic_map.py --collect-only -q | grep -c '::test_'` ≥ 8.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `0509144` — 17 tests passing; regex pattern relaxed to accept `repr()` quote style)
 
 ### Task 5: Rewrite `skills/dev/SKILL.md` Step 3b
 - **Files**: `skills/dev/SKILL.md`
@@ -123,7 +124,7 @@ Land a freestanding `bin/cortex-build-epic-map` (bash wrapper → `backlog/build
   - **(c) Step 3c unchanged (Requirement 9g)**: `git diff -U0 -- skills/dev/SKILL.md | python3 -c "import re,sys; d=sys.stdin.read(); hunks=re.findall(r'^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@', d, re.MULTILINE); bad=[(s,c) for s,c in hunks if (int(s) + (int(c) if c else 1) - 1) >= 168]; sys.exit(1 if bad else 0)"` exit 0 — no diff hunks reach line 168 or beyond.
 
   (Hunk-range checks parse the `@@ -N,M +N,M @@` headers and assert no hunk touches the protected line ranges. Pure-stdlib Python; no external tools.)
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `aece31d` — bundled with Task 3)
 
 ### Task 6: Regenerate plugin mirror via `just build-plugin`
 - **Files**: `plugins/cortex-interactive/bin/cortex-build-epic-map`
@@ -136,7 +137,7 @@ Land a freestanding `bin/cortex-build-epic-map` (bash wrapper → `backlog/build
   - Verify before staging: `cmp bin/cortex-build-epic-map plugins/cortex-interactive/bin/cortex-build-epic-map`.
   - Stage the mirror file alongside the canonical wrapper.
 - **Verification**: `cmp bin/cortex-build-epic-map plugins/cortex-interactive/bin/cortex-build-epic-map` exit code = 0 — pass if files are byte-identical.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit `aece31d` — pre-commit drift hook auto-regenerated and staged the mirror as part of Task 5's commit)
 
 ### Task 7: End-to-end live integration check
 - **Files**: (no edits — runs against the working tree)
@@ -150,7 +151,7 @@ Land a freestanding `bin/cortex-build-epic-map` (bash wrapper → `backlog/build
   - `just build-plugin && git diff --exit-code -- plugins/cortex-interactive/bin/` exit 0 (drift hook simulation).
   - This task is the gate for declaring implementation complete; if any verification fails, the corresponding upstream task is reopened.
 - **Verification**: `bin/cortex-build-epic-map backlog/index.json | jq -r '.schema_version'` returns the literal string `1` AND `pytest tests/test_build_epic_map.py` exit 0 AND `bin/cortex-check-parity` exit 0 AND `just build-plugin && git diff --exit-code -- plugins/cortex-interactive/bin/` exit 0 — all four must pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete (verified live: live invocation returns `schema_version: "1"` with epics map; pytest 17 passed; parity exit 0; build-plugin + drift check exit 0)
 
 ## Verification Strategy
 

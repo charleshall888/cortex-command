@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 5e36f351-6787-4ab8-910f-3d6c3dad3325
 title: "Extract /dev epic-map parse into bin/build-epic-map"
-status: in_progress
+status: complete
 priority: medium
 type: feature
 parent: "101"
@@ -15,8 +15,8 @@ complexity: complex
 criticality: high
 spec: lifecycle/extract-dev-epic-map-parse-into-bin-build-epic-map/spec.md
 areas: [skills]
-session_id: 2c275871-4334-4618-98d9-2347ee142068
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Extract /dev epic-map parse into bin/build-epic-map (C4)
