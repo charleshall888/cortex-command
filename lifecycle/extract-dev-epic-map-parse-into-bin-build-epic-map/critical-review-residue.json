@@ -1,0 +1,27 @@
+{
+  "ts": "2026-04-28T17:35:00Z",
+  "feature": "extract-dev-epic-map-parse-into-bin-build-epic-map",
+  "artifact": "lifecycle/extract-dev-epic-map-parse-into-bin-build-epic-map/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {"completed": 3, "dispatched": 3},
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Test suite cannot detect ordering violation: multi_epic.json fixture uses IDs 100/101 (same digit width); no width-mixed fixture or test specified, so lexicographic vs integer ordering coincide and pass regardless of correctness.",
+      "reviewer_angle": "Sort-key strategy contradicts Requirement 6",
+      "evidence_quote": "test_multi_epic_subprocess — invoke bin/cortex-build-epic-map tests/fixtures/build_epic_map/multi_epic.json; assert exit 0, parse stdout JSON, assert epic keys are '100','101' (sorted)"
+    },
+    {
+      "class": "B",
+      "finding": "Task 1's fixture spec instructs production of 'a JSON object with version + items list' — neither is emitted by generate_json(), which dumps a bare list. Fixtures built to this description will be uniformly mis-shaped, masking the parser bug until Task 7's live invocation.",
+      "reviewer_angle": "Envelope shape and active-items key are unverified",
+      "evidence_quote": "Each fixture is a JSON object with the same top-level shape backlog/generate_index.py emits (i.e., a version field plus a list of items with id, title, status, priority, type, parent, spec, schema_version etc.)."
+    },
+    {
+      "class": "B",
+      "finding": "Spec's runnable git diff -U0 verifications for Requirements 9f and 9g are dropped from Task 5's verification field, leaving the line-region invariant as prose-only guidance with no machine-checkable test.",
+      "reviewer_angle": "Spec Requirement 9f/9g (Step 3a/3c untouched) has no verification step",
+      "evidence_quote": "(f) Step 3a is unchanged. Verifiable: git diff -U0 skills/dev/SKILL.md shows no edits to lines 135-141 (Step 3a region). (g) Step 3c is unchanged. Verifiable: git diff -U0 skills/dev/SKILL.md shows no edits to lines 168 onward."
+    }
+  ]
+}

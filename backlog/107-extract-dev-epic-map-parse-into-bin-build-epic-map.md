@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 5e36f351-6787-4ab8-910f-3d6c3dad3325
 title: "Extract /dev epic-map parse into bin/build-epic-map"
-status: backlog
+status: in_progress
 priority: medium
 type: feature
 parent: "101"
@@ -11,6 +11,12 @@ tags: [harness, scripts, dev]
 created: 2026-04-21
 updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/extract-dev-epic-map-parse-into-bin-build-epic-map/spec.md
+areas: [skills]
+session_id: 2c275871-4334-4618-98d9-2347ee142068
+lifecycle_phase: implement
 ---
 
 # Extract /dev epic-map parse into bin/build-epic-map (C4)
