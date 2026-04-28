@@ -62,7 +62,7 @@ class TestPairDispatchEvents(unittest.TestCase):
     # Helpers for building synthetic events
     # ------------------------------------------------------------------
 
-    def _start(self, feature, complexity="complex", model="opus", ts="2026-04-01T00:00:00Z"):
+    def _start(self, feature, complexity="complex", model="opus", skill="implement", ts="2026-04-01T00:00:00Z"):
         return {
             "event": "dispatch_start",
             "ts": ts,
@@ -70,6 +70,7 @@ class TestPairDispatchEvents(unittest.TestCase):
             "complexity": complexity,
             "criticality": "high",
             "model": model,
+            "skill": skill,
             "effort": "high",
             "max_turns": 30,
             "max_budget_usd": 50.0,
@@ -594,6 +595,218 @@ class TestModelTierAggregates(unittest.TestCase):
         self.assertIsNone(bucket["over_cap_rate"])
         self.assertIsNone(bucket["turn_cap_observed_rate"])
         self.assertEqual(bucket["n_completes"], 1)
+
+
+class TestSkillTierDispatchAggregates(unittest.TestCase):
+    """Tests for compute_skill_tier_dispatch_aggregates.
+
+    Exercises the conditional bucket-key behavior:
+        * non-review-fix skills group as "<skill>,<tier>"
+        * review-fix groups as "<skill>,<tier>,<cycle>" (or
+          "<skill>,<tier>,legacy-cycle" when cycle is absent)
+        * historical events without a skill field bucket as "legacy,<tier>"
+    """
+
+    def _paired_complete(
+        self,
+        skill,
+        tier,
+        cost_usd,
+        num_turns,
+        model="sonnet",
+        cycle=None,
+        feature="feat-x",
+        ts="2026-04-01T00:01:00Z",
+        include_skill=True,
+    ):
+        """Build one paired-dispatch record (outcome=complete) directly.
+
+        Mirrors :class:`TestModelTierAggregates._make_complete` but adds the
+        skill/cycle keys that the new aggregator reads.  When
+        ``include_skill=False``, the ``skill`` key is omitted entirely so the
+        legacy-bucket behavior can be exercised.
+        """
+        rec = {
+            "ts": ts,
+            "feature": feature,
+            "model": model,
+            "tier": tier,
+            "outcome": "complete",
+            "cost_usd": cost_usd,
+            "num_turns": num_turns,
+            "error_type": None,
+            "untiered": False,
+        }
+        if include_skill:
+            rec["skill"] = skill
+        if cycle is not None:
+            rec["cycle"] = cycle
+        return rec
+
+    # ------------------------------------------------------------------
+    # (a) Single non-review-fix skill: bucket key is "<skill>,<tier>"
+    # ------------------------------------------------------------------
+
+    def test_single_bucket_grouping_non_review_fix(self):
+        """Three implement/simple completes group into a single
+        'implement,simple' bucket with n_completes=3 and correct cost mean.
+        Also asserts the aggregator returns an empty dict for empty input,
+        confirming there are no implicit/unconditional bucket keys.
+        """
+        from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates
+        # Sanity: empty input → no buckets.
+        self.assertEqual(compute_skill_tier_dispatch_aggregates([]), {})
+
+        paired = [
+            self._paired_complete("implement", "simple", cost_usd=1.0, num_turns=4, feature="f1"),
+            self._paired_complete("implement", "simple", cost_usd=2.0, num_turns=6, feature="f2"),
+            self._paired_complete("implement", "simple", cost_usd=3.0, num_turns=8, feature="f3"),
+        ]
+        result = compute_skill_tier_dispatch_aggregates(paired)
+
+        self.assertIn("implement,simple", result)
+        # No three-dimensional key for non-review-fix skill.
+        self.assertNotIn("implement,simple,1", result)
+        bucket = result["implement,simple"]
+        self.assertEqual(bucket["n_completes"], 3)
+        self.assertAlmostEqual(bucket["estimated_cost_usd_mean"], 2.0)
+        self.assertAlmostEqual(bucket["num_turns_mean"], 6.0)
+
+    # ------------------------------------------------------------------
+    # (b) Multi-bucket grouping: distinct skills produce distinct buckets
+    # ------------------------------------------------------------------
+
+    def test_multi_bucket_grouping_across_skills(self):
+        """Records spanning two non-review-fix skills produce two distinct
+        buckets, each with its own n_completes."""
+        from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates
+        paired = [
+            self._paired_complete("implement", "simple", cost_usd=1.0, num_turns=4, feature="i1"),
+            self._paired_complete("implement", "simple", cost_usd=2.0, num_turns=5, feature="i2"),
+            self._paired_complete("conflict-repair", "complex", cost_usd=10.0, num_turns=20,
+                                  model="opus", feature="c1"),
+        ]
+        result = compute_skill_tier_dispatch_aggregates(paired)
+
+        self.assertIn("implement,simple", result)
+        self.assertIn("conflict-repair,complex", result)
+        self.assertEqual(result["implement,simple"]["n_completes"], 2)
+        self.assertEqual(result["conflict-repair,complex"]["n_completes"], 1)
+        # Buckets do not bleed into each other.
+        self.assertNotEqual(
+            result["implement,simple"]["estimated_cost_usd_mean"],
+            result["conflict-repair,complex"]["estimated_cost_usd_mean"],
+        )
+
+    # ------------------------------------------------------------------
+    # (c) review-fix cycle disentanglement: cycle 1 vs cycle 2 → two buckets
+    # ------------------------------------------------------------------
+
+    def test_review_fix_cycle_disentanglement(self):
+        """Two review-fix paired records at the SAME tier — one with cycle=1,
+        one with cycle=2 — produce two distinct three-dimensional buckets,
+        not a single collapsed bucket."""
+        from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates
+        paired = [
+            self._paired_complete("review-fix", "simple", cost_usd=1.0, num_turns=4,
+                                  cycle=1, feature="rf1"),
+            self._paired_complete("review-fix", "simple", cost_usd=2.0, num_turns=6,
+                                  cycle=2, feature="rf2"),
+        ]
+        result = compute_skill_tier_dispatch_aggregates(paired)
+
+        self.assertIn("review-fix,simple,1", result)
+        self.assertIn("review-fix,simple,2", result)
+        review_fix_keys = [k for k in result if k.startswith("review-fix,")]
+        self.assertEqual(len(review_fix_keys), 2)
+        # Each cycle bucket holds exactly one record.
+        self.assertEqual(result["review-fix,simple,1"]["n_completes"], 1)
+        self.assertEqual(result["review-fix,simple,2"]["n_completes"], 1)
+
+    # ------------------------------------------------------------------
+    # (d) review-fix legacy-cycle bucketing: missing cycle on review-fix
+    # ------------------------------------------------------------------
+
+    def test_review_fix_legacy_cycle_bucketing(self):
+        """A review-fix record without a cycle field buckets as
+        '<skill>,<tier>,legacy-cycle' (the spec's escape hatch for historical
+        review-fix events emitted before the cycle field was added)."""
+        from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates
+        paired = [
+            self._paired_complete("review-fix", "simple", cost_usd=1.5, num_turns=5,
+                                  cycle=None, feature="rf-legacy"),
+        ]
+        result = compute_skill_tier_dispatch_aggregates(paired)
+
+        self.assertIn("review-fix,simple,legacy-cycle", result)
+        # Not bucketed under the cycle-1 or cycle-2 keys.
+        self.assertNotIn("review-fix,simple,1", result)
+        self.assertNotIn("review-fix,simple,2", result)
+        self.assertEqual(
+            result["review-fix,simple,legacy-cycle"]["n_completes"], 1,
+        )
+
+    # ------------------------------------------------------------------
+    # (e) Missing-skill historical event: bucketed as "legacy,<tier>"
+    # ------------------------------------------------------------------
+
+    def test_legacy_bucket_for_missing_skill(self):
+        """A paired record whose start event lacked the skill field buckets
+        as 'legacy,<tier>' — NOT as 'unknown' (which would collide with the
+        existing untiered sentinel) and NOT as the bare string 'legacy'.
+
+        The fixture is constructed directly (not via :func:`_start`) so the
+        ``skill`` key is genuinely absent rather than defaulting to
+        ``"implement"`` — exercises the historical-event compatibility path
+        that the aggregator must handle for pre-instrumentation logs.
+        """
+        from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates
+        paired = [
+            self._paired_complete(
+                skill=None,  # ignored when include_skill=False
+                tier="simple",
+                cost_usd=0.75,
+                num_turns=3,
+                feature="legacy-feat",
+                include_skill=False,
+            ),
+        ]
+        result = compute_skill_tier_dispatch_aggregates(paired)
+
+        legacy_keys = [k for k in result if k.startswith("legacy,")]
+        self.assertTrue(
+            any(k.startswith("legacy,") for k in result),
+            f"Expected a key starting with 'legacy,'; got {sorted(result.keys())}",
+        )
+        # Must be the bucket-key-shaped form 'legacy,<tier>', not bare 'legacy'.
+        self.assertIn("legacy,simple", result)
+        self.assertNotIn("legacy", result)
+        self.assertEqual(len(legacy_keys), 1)
+        self.assertEqual(result["legacy,simple"]["n_completes"], 1)
+
+    # ------------------------------------------------------------------
+    # (f) p95 suppression below the 30-complete threshold
+    # ------------------------------------------------------------------
+
+    def test_p95_suppression_below_threshold(self):
+        """A bucket with n_completes < 30 has p95_suppressed=True,
+        num_turns_p95=None, and max_turns_observed set to the largest
+        observed num_turns (inheriting the model-tier aggregator's rule)."""
+        from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates
+        paired = [
+            self._paired_complete("implement", "simple",
+                                  cost_usd=float(i), num_turns=i + 1,
+                                  feature=f"feat-{i}")
+            for i in range(5)
+        ]
+        result = compute_skill_tier_dispatch_aggregates(paired)
+
+        self.assertIn("implement,simple", result)
+        bucket = result["implement,simple"]
+        self.assertEqual(bucket["n_completes"], 5)
+        self.assertTrue(bucket["p95_suppressed"])
+        self.assertIsNone(bucket["num_turns_p95"])
+        self.assertEqual(bucket["max_turns_observed"], 5)
 
 
 class TestReportTierDispatch(unittest.TestCase):
