@@ -59,7 +59,7 @@ The four plugins are:
 
 Use the `owner/repo` git form (`/plugin marketplace add charleshall888/cortex-command`). Do **not** add the marketplace by passing a raw `marketplace.json` URL — relative-path `source` fields only resolve against a git checkout, so the URL form silently breaks plugin installs.
 
-#### Verify install
+#### Troubleshooting plugin install
 
 1. Run `/plugin list` to confirm the plugins you installed are listed.
 2. If a skill is missing after install, run `/reload-plugins` to refresh the plugin metadata cache.
@@ -167,6 +167,24 @@ Then run `/cortex-interactive:lifecycle <feature>` to begin a new feature, which
 This command initiates the research phase for `my-feature` and guides you through research → spec → plan → implementation → review. Running `/cortex-interactive:lifecycle my-feature` with no prior artifacts starts fresh; re-running it in a later session resumes from the current phase recorded in `lifecycle/my-feature/events.log`.
 
 This sequence — `cortex init` followed by `/cortex-interactive:lifecycle <feature>` — is the end-to-end verification that both the CLI scaffold and the lifecycle skill are working in your environment.
+
+#### Verify install
+
+After completing the three steps above, run these two commands to confirm the cortex CLI and plugins are both wired correctly:
+
+```bash
+cortex --print-root
+claude /plugin list
+```
+
+`cortex --print-root` should print a JSON object with four fields:
+
+- **`version`** — the cortex-command release version (e.g. `"1.0"`)
+- **`root`** — the absolute path to your cortex-command checkout
+- **`remote_url`** — the git remote URL for the repo
+- **`head_sha`** — the full SHA of the current HEAD commit
+
+`claude /plugin list` should list the plugins you installed from the `cortex-command` marketplace (e.g. `cortex-interactive`, `cortex-overnight-integration`, etc.). If a plugin you installed is missing, run `/reload-plugins` inside Claude Code to refresh the plugin metadata cache.
 
 ---
 
