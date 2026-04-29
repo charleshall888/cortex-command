@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: c5cf3e45-4ed2-495e-afda-aebacbf5490f
 title: "Extract /refine resolution into bin/resolve-backlog-item with bailout"
-status: backlog
+status: complete
 priority: medium
 type: feature
 parent: "101"
@@ -11,6 +11,12 @@ tags: [harness, scripts, refine]
 created: 2026-04-21
 updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout/spec.md
+areas: [skills]
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Extract /refine resolution into bin/resolve-backlog-item with bailout (C5)

@@ -33,3 +33,14 @@
 - {"ts": "2026-04-28T00:00:00Z", "event": "orchestrator_review", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-28T00:00:00Z", "event": "orchestrator_review", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
 {"ts": "2026-04-28T00:00:00Z", "event": "phase_transition", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "from": "plan", "to": "implement"}
+{"ts": "2026-04-28T00:00:00Z", "event": "batch_dispatch", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "batch": 0, "tasks": [1, 5]}
+{"ts": "2026-04-28T00:00:00Z", "event": "task_complete", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "task": 5, "batch": 0, "status": "success"}
+{"ts": "2026-04-28T00:00:00Z", "event": "task_complete", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "task": 1, "batch": 0, "status": "deferred_commit_to_t3"}
+{"ts": "2026-04-28T00:00:00Z", "event": "batch_dispatch", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "batch": 1, "tasks": [3]}
+{"ts": "2026-04-28T00:00:00Z", "event": "task_complete", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "task": 3, "batch": 1, "status": "success"}
+{"ts": "2026-04-28T00:00:00Z", "event": "batch_dispatch", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "batch": 2, "tasks": [2, 4]}
+{"ts": "2026-04-28T00:00:00Z", "event": "task_complete", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "task": 2, "batch": 2, "status": "success"}
+{"ts": "2026-04-28T00:00:00Z", "event": "task_complete", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "task": 4, "batch": 2, "status": "success"}
+{"ts": "2026-04-28T00:00:00Z", "event": "task_complete", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "task": 6, "batch": 3, "status": "success"}
+{"ts": "2026-04-28T00:00:00Z", "event": "phase_transition", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "tier": "simple", "from": "implement", "to": "complete"}
+{"ts": "2026-04-28T00:00:00Z", "event": "feature_complete", "feature": "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout", "tasks_total": 6, "rework_cycles": 0}

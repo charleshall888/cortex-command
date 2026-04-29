@@ -10,10 +10,8 @@
 | 86 | Extend output-floors.md with M1 Subagent Disposition section | backlog | medium | feature | 85 | 82 | — |
 | 92 | Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1) | backlog | medium | feature | — | 82 | — |
 | 101 | Extract deterministic tool-call sequences into agent-invokable scripts | backlog | medium | epic | — | — | — |
-| 106 | Extract morning-review deterministic sequences (C11-C15 bundle) | backlog | medium | feature | — | 101 | — |
-| 107 | Extract /dev epic-map parse into bin/build-epic-map | backlog | medium | feature | — | 101 | — |
-| 108 | Extract /backlog pick ready-set into bin/backlog-ready | backlog | medium | feature | — | 101 | — |
-| 109 | Extract /refine resolution into bin/resolve-backlog-item with bailout | backlog | medium | feature | — | 101 | — |
+| 106 | Extract morning-review deterministic sequences (C11-C15 bundle) | refined | medium | feature | — | 101 | ✓ |
+| 108 | Extract /backlog pick ready-set into bin/backlog-ready | in_progress | medium | feature | — | 101 | ✓ |
 | 110 | Unify lifecycle phase detection around claude.common with statusline exception | backlog | medium | feature | — | 101 | — |
 | 111 | Extract overnight orchestrator-round state read into bin/orchestrator-context | backlog | medium | feature | — | 101 | — |
 | 141 | Non-editable wheel install support for cortex-command | backlog | medium | feature | — | — | — |
@@ -26,6 +24,7 @@
 
 ## Refined
 
+- **106** Extract morning-review deterministic sequences (C11-C15 bundle)
 
 ## Backlog
 
@@ -36,10 +35,6 @@
 - **86** Extend output-floors.md with M1 Subagent Disposition section
 - **92** Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)
 - **101** Extract deterministic tool-call sequences into agent-invokable scripts
-- **106** Extract morning-review deterministic sequences (C11-C15 bundle)
-- **107** Extract /dev epic-map parse into bin/build-epic-map
-- **108** Extract /backlog pick ready-set into bin/backlog-ready
-- **109** Extract /refine resolution into bin/resolve-backlog-item with bailout
 - **110** Unify lifecycle phase detection around claude.common with statusline exception
 - **111** Extract overnight orchestrator-round state read into bin/orchestrator-context
 - **141** Non-editable wheel install support for cortex-command
@@ -52,3 +47,4 @@
 ## In-Progress
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
+- **108** Extract /backlog pick ready-set into bin/backlog-ready (in_progress)
