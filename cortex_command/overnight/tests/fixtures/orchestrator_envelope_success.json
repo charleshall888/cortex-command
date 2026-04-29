@@ -1,0 +1,39 @@
+{
+  "_cli_version": "synthetic",
+  "_comment": "Synthetic success-shaped envelope based on the canonical claude -p --output-format=json shape observed from CLI 2.1.123. Hand-constructed because live capture under an authenticated session was not available at fixture-creation time. Refresh from a real captured envelope when one becomes available; preserve the same key set so the telemetry tests' .get() chains continue to exercise the full extraction path.",
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "api_error_status": null,
+  "duration_ms": 18432,
+  "duration_api_ms": 17215,
+  "num_turns": 4,
+  "result": "Round complete. See session log for details.",
+  "stop_reason": "end_turn",
+  "session_id": "a7f3b9e2-5c4d-4e1a-9b8f-2d6e7c1a3f4b",
+  "total_cost_usd": 0.0421,
+  "usage": {
+    "input_tokens": 1842,
+    "cache_creation_input_tokens": 5120,
+    "cache_read_input_tokens": 23450,
+    "output_tokens": 612,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 5120
+    },
+    "inference_geo": "",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "model": "claude-opus-4-7",
+  "modelUsage": {},
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e"
+}

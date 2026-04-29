@@ -1,0 +1,38 @@
+{
+  "_cli_version": "2.1.123 (Claude Code)",
+  "_comment": "Captured live from `claude -p --output-format=json 'Say only the word ok and nothing else.'` on 2026-04-29. Envelope is error-shaped because the capture environment was not authenticated; the CLI returned is_error: true with result indicating login is required. Shape is canonical for the error branch — usage zeros and total_cost_usd: 0 are typical for pre-API-call failures.",
+  "type": "result",
+  "subtype": "success",
+  "is_error": true,
+  "api_error_status": null,
+  "duration_ms": 48,
+  "duration_api_ms": 0,
+  "num_turns": 1,
+  "result": "Not logged in · Please run /login",
+  "stop_reason": "stop_sequence",
+  "session_id": "c68d5c0b-610a-48ae-8116-36f7c194a96c",
+  "total_cost_usd": 0,
+  "usage": {
+    "input_tokens": 0,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 0,
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 0,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "",
+    "iterations": [],
+    "speed": "standard"
+  },
+  "modelUsage": {},
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "uuid": "0ed1c465-a9b7-494d-9bfe-e853da524af4"
+}
