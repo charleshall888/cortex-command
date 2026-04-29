@@ -19,7 +19,7 @@ Every backlog item file uses this YAML frontmatter contract. Frontmatter must be
 | `created` | date | yes | `YYYY-MM-DD` |
 | `updated` | date | yes | `YYYY-MM-DD` |
 | `lifecycle_slug` | string | no | Slug of associated lifecycle feature, or `null` |
-| `lifecycle_phase` | string | no | Current lifecycle phase, or `null` |
+| `lifecycle_phase` | string | no | Current lifecycle phase, or `null`. Value set: `research`, `specify`, `plan`, `implement`, `implement-rework`, `review`, `complete`, `escalated`. (`implement-rework` was added when lifecycle phase detection was unified around `claude/common.py`.) |
 | `session_id` | string | no | Overnight session ID, or `null` |
 | `blocks` | array | no | Inline YAML only: `[1, 5]` (numeric IDs) |
 | `blocked-by` | array | no | Inline YAML only: `[3, 7]` (numeric IDs) |

@@ -144,6 +144,11 @@ def collect_items() -> tuple[list[dict], set[int], set[int], list[dict]]:
 
         lc_slug = fm.get("lifecycle_slug", "").strip().strip("\"'") or slugify(title)
         lc_dir = LIFECYCLE_DIR / lc_slug if lc_slug else None
+        # `lifecycle_phase` value set: {"research", "specify", "plan",
+        # "implement", "implement-rework", "review", "complete", "escalated"}.
+        # `"implement-rework"` was added when phase detection was unified
+        # around `claude/common.py`. See skills/backlog/references/schema.md
+        # for the full backlog schema.
         if lc_dir and lc_dir.is_dir():
             lifecycle_phase: str | None = detect_lifecycle_phase(lc_dir)["phase"]
         else:
