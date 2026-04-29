@@ -41,12 +41,8 @@ def _write_minimal_state(session_dir: Path) -> OvernightState:
 # R3: dict shape — 5 top-level keys (merge_conflict_events dropped per plan deviation)
 # ---------------------------------------------------------------------------
 
-def test_dict_shape_returns_six_top_level_keys(tmp_path: Path) -> None:
-    """R3: aggregate_round_context returns a dict with exactly 5 top-level keys.
-
-    The test name says 'six' per spec R10 naming convention, but the plan's Task 1
-    deviation dropped merge_conflict_events, so the assertion is for 5 keys.
-    """
+def test_dict_shape_returns_five_top_level_keys(tmp_path: Path) -> None:
+    """R3: aggregate_round_context returns a dict with exactly 5 top-level keys."""
     _write_minimal_state(tmp_path)
 
     result = aggregate_round_context(tmp_path, round_number=1)
