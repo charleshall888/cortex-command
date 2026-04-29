@@ -1,0 +1,45 @@
+{
+  "ts": "2026-04-28T17:55:00Z",
+  "feature": "extract-backlog-pick-ready-set-into-bin-backlog-ready",
+  "artifact": "lifecycle/extract-backlog-pick-ready-set-into-bin-backlog-ready/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {"completed": 4, "dispatched": 4},
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Reason-string contract is consumed at plan.py:217 and backlog.py:1119 but no renderer-side format-equality test exists; existing substring assertions admit malformed output.",
+      "reviewer_angle": "Wire-contract propagation untested",
+      "evidence_quote": "Reason-string contract is a wire format consumed by `cortex_command/overnight/plan.py:217`, `cortex_command/overnight/backlog.py:1119`, and the new script's `--include-blocked` output."
+    },
+    {
+      "class": "B",
+      "finding": "No fixture-based test exercises generate_index.generate_md; section-routing and Warnings-emission left unprotected against future drift.",
+      "reviewer_angle": "Task 3 verification gap",
+      "evidence_quote": "`pytest tests/ -q -k 'generate_index'` exits 0 if any such tests exist (none today; if pytest reports 0 deselected matches, that's still pass)."
+    },
+    {
+      "class": "B",
+      "finding": "external-blocker grep is substring-presence; cannot detect duplicate emission or items appearing in both Warnings and Backlog.",
+      "reviewer_angle": "Task 3 verification gap",
+      "evidence_quote": "`python3 backlog/generate_index.py && grep -c 'external blocker' backlog/index.md` ≥ 1 — pass if grep count ≥ 1 (item 8's external ref surfaces)."
+    },
+    {
+      "class": "B",
+      "finding": "Importing BacklogItem from cortex_command.overnight.backlog into pre-commit-path generate_index.py drags the eager overnight fan-out (orchestrator, throttle, report) plus install-guard side effects.",
+      "reviewer_angle": "Cross-package circular-import risk",
+      "evidence_quote": "Option 2 is preferred: it reuses the dataclass already in the codebase and matches `filter_ready`'s caller pattern."
+    },
+    {
+      "class": "B",
+      "finding": "Task 4's bin/cortex-backlog-ready triggers full overnight package fan-out for one dataclass on every interactive shell invocation.",
+      "reviewer_angle": "Cross-package circular-import risk",
+      "evidence_quote": "Imports: `from cortex_command.backlog import partition_ready`; `from cortex_command.overnight.backlog import BacklogItem`; `from cortex_command.common import TERMINAL_STATUSES`."
+    },
+    {
+      "class": "B",
+      "finding": "Tasks 5 and 7 have closed-set Files lists that exclude plugin-mirror paths even though the pre-commit hook requires them co-staged in the same commit as the source.",
+      "reviewer_angle": "Plugin-mirror commit choreography",
+      "evidence_quote": "These boundaries are enforced by the file lists above: every task's **Files** field is closed-set, and tasks have no escape hatch to edit out-of-scope files."
+    }
+  ]
+}

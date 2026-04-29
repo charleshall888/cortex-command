@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 1bc38be0-1b0e-4c5f-9757-5df413d37b44
 title: "Extract /backlog pick ready-set into bin/backlog-ready"
-status: backlog
+status: complete
 priority: medium
 type: feature
 parent: "101"
@@ -11,6 +11,12 @@ tags: [harness, scripts, backlog]
 created: 2026-04-21
 updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/extract-backlog-pick-ready-set-into-bin-backlog-ready/spec.md
+areas: [backlog]
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Extract /backlog pick ready-set into bin/backlog-ready (C7)
