@@ -1,0 +1,37 @@
+# Release workflow — builds a wheel and publishes a GitHub Release on tag push.
+#
+# Trigger: pushing a tag matching v[0-9]+.[0-9]+.[0-9]+ (e.g. v0.1.0).
+# Output: a GitHub Release for the tag, with dist/*.whl attached as an asset.
+#
+# Local verification: tests/test_no_clone_install.py::test_target_state (R6c)
+# exercises the wheel-build + install path locally. The CI integration test for
+# the tag-trigger path requires an actual tag push and is therefore not run on
+# every PR — it only fires when a maintainer pushes a release tag.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Build wheel
+        run: uv build --wheel
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl
