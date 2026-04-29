@@ -225,36 +225,6 @@
     "repo": null
   },
   {
-    "id": 106,
-    "title": "Extract morning-review deterministic sequences (C11-C15 bundle)",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "harness",
-      "scripts",
-      "morning-review"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-04-28",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "101",
-    "research": null,
-    "spec": "lifecycle/extract-morning-review-deterministic-sequences-c11-c15-bundle/spec.md",
-    "discovery_source": "research/extract-scripts-from-agent-tool-sequences/research.md",
-    "plan": null,
-    "uuid": "ab917a16-dbcc-47f2-9541-56d29bbee26a",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 108,
     "title": "Extract /backlog pick ready-set into bin/backlog-ready",
     "status": "in_progress",
@@ -308,7 +278,7 @@
     "uuid": "111b819b-1129-40d4-bf59-9845fe4b6d01",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -337,7 +307,7 @@
     "uuid": "bf914d38-1079-454f-b3dc-3ce680e5a7b6",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -396,6 +366,34 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 151,
+    "title": "Resolve cortex_command.backlog packaged-dispatch dead branch in bin/cortex-* wrappers",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "bug",
+    "tags": [
+      "scripts",
+      "backlog",
+      "plugins"
+    ],
+    "areas": [],
+    "created": "2026-04-29",
+    "updated": "2026-04-28",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "35d35337-7372-4f11-b135-3d5b3756ce88",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },

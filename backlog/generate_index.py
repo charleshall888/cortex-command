@@ -15,12 +15,14 @@ import json
 import re
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 # Resolve project root so imports work when called from any directory.
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
+from cortex_command.backlog import is_item_ready  # noqa: E402
 from cortex_command.common import TERMINAL_STATUSES, atomic_write, detect_lifecycle_phase, normalize_status, slugify  # noqa: E402
 
 BACKLOG_DIR = Path.cwd() / "backlog"
@@ -31,6 +33,14 @@ _PRIORITY_RANK: dict[str, int] = {"critical": 1, "high": 2, "medium": 3, "low": 
 
 # Frontmatter extraction: matches block between first pair of --- delimiters
 _FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---", re.DOTALL)
+
+# UUID v4-style pattern, mirrored from cortex_command.backlog.readiness so
+# external-blocker classification in generate_md matches the helper's
+# disambiguation between "external ref" and "blocker not found: <uuid>".
+_UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+    r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+)
 
 
 def _parse_frontmatter(text: str) -> dict[str, str]:
@@ -67,22 +77,35 @@ def _opt(fm: dict[str, str], key: str) -> str | None:
     return v if v and v.lower() != "null" else None
 
 
-def collect_items() -> tuple[list[dict], set[int], set[int]]:
-    """Scan BACKLOG_DIR and return (active_items, active_ids, archive_ids).
+def collect_items() -> tuple[list[dict], set[int], set[int], list[dict]]:
+    """Scan BACKLOG_DIR and return (active_items, active_ids, archive_ids, all_items).
 
-    active_items is sorted by priority rank then ID ascending.
+    active_items is sorted by priority rank then ID ascending. all_items is
+    a parallel list of minimal records (id, status, uuid) covering ALL
+    backlog markdown files — active, terminal-status, and archived — used
+    by the shared readiness helper to resolve blocker references.
     """
     if not BACKLOG_DIR.is_dir():
-        return [], set(), set()
+        return [], set(), set(), []
 
-    # Build archive ID set for stale-reference detection in warnings.
+    # Build archive ID set + minimal records for stale-reference detection
+    # and helper blocker-resolution. Archived items participate in the
+    # full-corpus all_items map so that a blocker pointing to an archived
+    # (terminal) ID resolves as resolved rather than "not found".
     archive_ids: set[int] = set()
+    all_items: list[dict] = []
     archive_dir = BACKLOG_DIR / "archive"
     if archive_dir.is_dir():
-        for path in archive_dir.glob("[0-9]*-*.md"):
+        for path in sorted(archive_dir.glob("[0-9]*-*.md")):
             m = re.match(r"^(\d+)-", path.name)
-            if m:
-                archive_ids.add(int(m.group(1)))
+            if not m:
+                continue
+            arc_id = int(m.group(1))
+            archive_ids.add(arc_id)
+            fm = _parse_frontmatter(path.read_text(encoding="utf-8"))
+            arc_status = normalize_status(fm.get("status", "complete")) if fm else "complete"
+            arc_uuid = _opt(fm, "uuid") if fm else None
+            all_items.append({"id": arc_id, "status": arc_status, "uuid": arc_uuid})
 
     items: list[dict] = []
     active_ids: set[int] = set()
@@ -102,6 +125,16 @@ def collect_items() -> tuple[list[dict], set[int], set[int]]:
             continue
 
         status = normalize_status(fm.get("status", "open"))
+        # Track every non-archived item (active + terminal) in the full corpus
+        # so the helper resolves blocker references against terminal items
+        # the same way the legacy `int(b) not in active_ids` short-circuit
+        # silently treated them as resolved.
+        all_items.append({
+            "id": item_id,
+            "status": status,
+            "uuid": _opt(fm, "uuid"),
+        })
+
         if status in TERMINAL_STATUSES:
             continue
 
@@ -142,7 +175,7 @@ def collect_items() -> tuple[list[dict], set[int], set[int]]:
         })
 
     items.sort(key=lambda x: (_PRIORITY_RANK.get(x["priority"], 9), x["id"]))
-    return items, active_ids, archive_ids
+    return items, active_ids, archive_ids, all_items
 
 
 def generate_json(items: list[dict]) -> str:
@@ -150,7 +183,12 @@ def generate_json(items: list[dict]) -> str:
     return json.dumps(items, indent=2, ensure_ascii=False) + "\n"
 
 
-def generate_md(items: list[dict], active_ids: set[int], archive_ids: set[int]) -> str:
+def generate_md(
+    items: list[dict],
+    active_ids: set[int],
+    archive_ids: set[int],
+    all_items: list[dict],
+) -> str:
     """Produce index.md summary table with Ready, In-Progress, and Warnings sections."""
     lines: list[str] = ["# Backlog Index", ""]
     lines.append("| ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |")
@@ -166,37 +204,39 @@ def generate_md(items: list[dict], active_ids: set[int], archive_ids: set[int]) 
             f"{parent_display} | {spec_display} |"
         )
 
+    # Wrap each full-corpus record as a SimpleNamespace so the shared helper
+    # can resolve blocker references via attribute access. SimpleNamespace
+    # avoids importing cortex_command.overnight.backlog (and its eager
+    # __init__ fan-out) on every pre-commit run.
+    all_items_ns = [SimpleNamespace(**rec) for rec in all_items]
+
     # --- Refined section ---
     lines += ["", "## Refined", ""]
     for item in items:
         if item["status"] != "refined":
             continue
-        if not item["blocked_by"]:
+        ready, _ = is_item_ready(
+            SimpleNamespace(**item),
+            all_items_ns,
+            eligible_statuses={"refined"},
+            treat_external_blockers_as="blocking",
+        )
+        if ready:
             lines.append(f"- **{item['id']}** {item['title']}")
-        else:
-            all_resolved = all(
-                int(b) not in active_ids
-                for b in item["blocked_by"]
-                if b.isdigit()
-            )
-            if all_resolved:
-                lines.append(f"- **{item['id']}** {item['title']}")
 
     # --- Backlog section ---
     lines += ["", "## Backlog", ""]
     for item in items:
         if item["status"] not in ("backlog", "open", "blocked"):
             continue
-        if not item["blocked_by"]:
+        ready, _ = is_item_ready(
+            SimpleNamespace(**item),
+            all_items_ns,
+            eligible_statuses={"backlog", "open", "blocked"},
+            treat_external_blockers_as="blocking",
+        )
+        if ready:
             lines.append(f"- **{item['id']}** {item['title']}")
-        else:
-            all_resolved = all(
-                int(b) not in active_ids
-                for b in item["blocked_by"]
-                if b.isdigit()
-            )
-            if all_resolved:
-                lines.append(f"- **{item['id']}** {item['title']}")
 
     # --- In-Progress section ---
     lines += ["", "## In-Progress", ""]
@@ -212,6 +252,15 @@ def generate_md(items: list[dict], active_ids: set[int], archive_ids: set[int]) 
         item_id_num = item["id"]
         for b in item["blocked_by"]:
             if not b.isdigit():
+                # External (non-digit, non-UUID) reference. Surface it here
+                # since the Refined/Backlog passes now exclude such items.
+                # UUID-shaped references map to "blocker not found" semantics
+                # in the helper but are not surfaced as external-blocker
+                # warnings (no fixture today; keep this conservative).
+                if not _UUID_RE.match(b):
+                    warnings.append(
+                        f"- **{item['id']}**: external blocker ({b})"
+                    )
                 continue
             b_num = int(b)
             if b_num == item_id_num:
@@ -231,9 +280,12 @@ def generate_md(items: list[dict], active_ids: set[int], archive_ids: set[int]) 
 
 
 def main() -> None:
-    items, active_ids, archive_ids = collect_items()
+    items, active_ids, archive_ids, all_items = collect_items()
     atomic_write(BACKLOG_DIR / "index.json", generate_json(items))
-    atomic_write(BACKLOG_DIR / "index.md", generate_md(items, active_ids, archive_ids))
+    atomic_write(
+        BACKLOG_DIR / "index.md",
+        generate_md(items, active_ids, archive_ids, all_items),
+    )
     print(f"Generated index.json ({len(items)} items) and index.md")
 
 
