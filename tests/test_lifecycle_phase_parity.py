@@ -19,13 +19,21 @@ Layer 12b — Statusline ladder + parser vs canonical Python
     `_lc_single_phase` case statement) handles every R12a wire-format
     value without crashing or producing malformed output.
 
-Layer 12c (hook end-to-end) is delivered by a sibling task; this file is
-the home for that test class when it lands.
+Layer 12c — Hook end-to-end vs glue prediction
+    For each fixture dir, invoke `bash hooks/cortex-scan-lifecycle.sh` in a
+    temporary working directory where `lifecycle/{slug}/` is the fixture
+    and assert the hook's emitted wire-format token matches what the R3
+    glue table predicts when given `detect_lifecycle_phase(fixture)` as
+    input. This catches integration bugs between the inline-batch Python
+    invocation and the bash glue function.
 """
 
 from __future__ import annotations
 
+import json
+import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -401,3 +409,184 @@ def test_statusline_parser_handles_wire_values(wire_value: str) -> None:
                     f"empty _lc_display for wire value {wire_value!r}."
                 )
                 break
+
+
+# ---------------------------------------------------------------------------
+# R12c — Hook end-to-end (canonical Python -> glue -> emit) vs hook output
+# ---------------------------------------------------------------------------
+#
+# For each fixture directory created in Task 13, set up a temporary working
+# directory with `lifecycle/{slug}/` populated as a copy of the fixture, then
+# invoke `bash hooks/cortex-scan-lifecycle.sh` from that working directory.
+# The hook's stdout (a JSON envelope) carries a human-readable Phase label
+# derived from the wire-format string. We parse the label back into the
+# wire-format token and assert byte-equality against what R3's glue table
+# predicts when given `detect_lifecycle_phase(fixture)` as input.
+#
+# This catches integration bugs between the inline-batch Python subprocess
+# (which produces the (phase, checked, total, cycle) tuple) and the bash
+# glue function (which encodes that tuple into the wire format) — issues
+# that neither layer 12a nor 12b would surface in isolation.
+
+
+def _expected_wire_from_canonical(fixture_dir: Path) -> str:
+    """R3 normative encoding: combine canonical detector output with glue table.
+
+    Mirrors the bash `encode_phase` function in hooks/cortex-scan-lifecycle.sh
+    so the test independently predicts what the hook should emit.
+    """
+    r = detect_lifecycle_phase(fixture_dir)
+    phase = r["phase"]
+    checked = int(r["checked"])
+    total = int(r["total"])
+    cycle = int(r["cycle"])
+    if phase == "implement":
+        if total > 0:
+            return f"implement:{checked}/{total}"
+        return "implement:0/0"
+    if phase == "implement-rework":
+        return f"implement-rework:{cycle}"
+    return phase
+
+
+def _label_to_wire(label: str) -> str:
+    """Reverse the hook's `phase_label` bash function.
+
+    The hook emits human-readable labels in its context output. To assert
+    byte-equality with the R3 wire format, we convert the label back. This
+    mapping mirrors the `phase_label` cases in hooks/cortex-scan-lifecycle.sh
+    L207-220.
+    """
+    label = label.strip()
+    # implement:N/M -> "Implement (N/M tasks done)"
+    m = re.fullmatch(r"Implement \((\d+/\d+) tasks done\)", label)
+    if m:
+        return f"implement:{m.group(1)}"
+    # implement-rework:K -> "Implement — rework (review cycle K)"
+    m = re.fullmatch(r"Implement — rework \(review cycle (\d+)\)", label)
+    if m:
+        return f"implement-rework:{m.group(1)}"
+    # Bare phase labels.
+    bare = {
+        "Research": "research",
+        "Specify": "specify",
+        "Plan": "plan",
+        "Review": "review",
+        "Complete": "complete",
+        "Escalated (REJECTED — needs user direction)": "escalated",
+    }
+    if label in bare:
+        return bare[label]
+    raise AssertionError(f"Unrecognised hook phase label: {label!r}")
+
+
+def _invoke_hook_for_fixture(fixture_dir: Path, tmp_path: Path) -> dict[str, str]:
+    """Set up a tmpdir lifecycle/ tree, run the hook, return parsed output.
+
+    Returns a dict with keys:
+      - `wire`: the wire-format string parsed from the hook's Phase label, or
+        the sentinel `"complete"` if the feature was filtered out (the hook
+        skips `complete` features at L308 and they do not appear in context).
+      - `raw_context`: the full additional_context for diagnostic surfacing.
+    """
+    slug = "test-feature"
+    work = tmp_path / "work"
+    lifecycle = work / "lifecycle" / slug
+    lifecycle.mkdir(parents=True)
+    # Copy fixture contents into lifecycle/{slug}/.
+    for entry in fixture_dir.iterdir():
+        if entry.is_file():
+            shutil.copy2(entry, lifecycle / entry.name)
+        elif entry.is_dir():
+            shutil.copytree(entry, lifecycle / entry.name)
+
+    # The hook reads stdin (JSON with session_id and cwd) and requires
+    # `cortex_command` to be importable. We pass PYTHONPATH so the
+    # subprocess inherits the canonical package location.
+    env = os.environ.copy()
+    pythonpath_parts = [str(REPO_ROOT)]
+    if env.get("PYTHONPATH"):
+        pythonpath_parts.append(env["PYTHONPATH"])
+    env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+    env["AGENT"] = "claude"
+
+    stdin_payload = json.dumps({
+        "session_id": "parity-r12c-test",
+        "cwd": str(work),
+    })
+
+    proc = subprocess.run(
+        ["bash", str(HOOK_PATH)],
+        input=stdin_payload,
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(work),
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise AssertionError(
+            f"Hook exited {proc.returncode} for fixture {fixture_dir.name}: "
+            f"stderr={proc.stderr!r}"
+        )
+
+    stdout = proc.stdout.strip()
+    # When the only feature is `complete`, the hook filters it out and emits
+    # nothing (no context to inject). That is the expected behavior for the
+    # `complete` wire-format. We surface it as a sentinel.
+    if not stdout:
+        return {"wire": "complete", "raw_context": ""}
+
+    payload = json.loads(stdout)
+    # Claude format wraps in hookSpecificOutput.additionalContext.
+    if "hookSpecificOutput" in payload:
+        ctx = payload["hookSpecificOutput"].get("additionalContext", "")
+    else:
+        ctx = payload.get("additional_context", "")
+
+    # Extract `Phase: <label>` from the active-feature line.
+    m = re.search(r"Phase:\s*(.+?)(?:\n|$)", ctx)
+    if not m:
+        raise AssertionError(
+            f"Could not find 'Phase: <label>' in hook context for "
+            f"{fixture_dir.name}. Context: {ctx!r}"
+        )
+    label = m.group(1)
+    return {"wire": _label_to_wire(label), "raw_context": ctx}
+
+
+_e2e_fixture_dirs = sorted(
+    [d for d in PARITY_FIXTURE_DIR.iterdir() if d.is_dir()]
+) if PARITY_FIXTURE_DIR.is_dir() else []
+
+
+@pytest.mark.parametrize(
+    "fixture_dir",
+    _e2e_fixture_dirs,
+    ids=[d.name for d in _e2e_fixture_dirs],
+)
+def test_hook_end_to_end_emit_matches_glue_prediction(
+    fixture_dir: Path,
+    tmp_path: Path,
+) -> None:
+    """R12c: hook emit equals glue table prediction for canonical detector input.
+
+    Drives the actual `bash hooks/cortex-scan-lifecycle.sh` against each
+    fixture dir (placed under `lifecycle/{slug}/` in a tmpdir CWD) and
+    asserts the emitted wire-format string matches what the R3 glue table
+    predicts when given `detect_lifecycle_phase(fixture)` as input.
+
+    Catches integration bugs between the inline-batch Python invocation
+    (which produces the structured tuple) and the bash glue function
+    (which encodes the tuple). Layer 12a tests the glue with synthetic
+    inputs; layer 12b tests the statusline-side ladder; this layer tests
+    the integration of subprocess + glue end-to-end on real fixture dirs.
+    """
+    expected = _expected_wire_from_canonical(fixture_dir)
+    result = _invoke_hook_for_fixture(fixture_dir, tmp_path)
+    actual = result["wire"]
+    assert actual == expected, (
+        f"Hook end-to-end emit for {fixture_dir.name}: "
+        f"expected wire-format {expected!r}, got {actual!r}. "
+        f"Raw context: {result['raw_context']!r}"
+    )
