@@ -100,3 +100,8 @@
   feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
   from: plan
   to: implement
+- ts: 2026-04-29T00:00:11Z
+  event: batch_dispatch
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  batch: 0
+  tasks: [1, 2, 3]

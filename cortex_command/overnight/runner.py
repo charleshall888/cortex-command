@@ -683,9 +683,18 @@ def _spawn_orchestrator(
     filled_prompt: str,
     coord: RunnerCoordination,
     spawned_procs: list[tuple[subprocess.Popen, str]],
+    stdout_path: Path,
 ) -> tuple[subprocess.Popen, WatchdogContext, WatchdogThread]:
-    """Spawn the per-round ``claude -p`` orchestrator with a watchdog."""
+    """Spawn the per-round ``claude -p`` orchestrator with a watchdog.
+
+    ``stdout_path`` receives the subprocess stdout (``--output-format=json``
+    envelope). The file handle is held by ``Popen.stdout`` so the caller
+    can close it after ``_poll_subprocess`` returns; redirecting to a
+    file (not an OS pipe) sidesteps the buffer-fill deadlock on long
+    sessions whose envelope exceeds ~64 KB.
+    """
     claude_path = "claude"
+    stdout_handle = open(stdout_path, "wb")
     proc = subprocess.Popen(
         [
             claude_path,
@@ -694,10 +703,11 @@ def _spawn_orchestrator(
             "--dangerously-skip-permissions",
             "--max-turns",
             str(ORCHESTRATOR_MAX_TURNS),
+            "--output-format=json",
         ],
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=stdout_handle,
+        stderr=subprocess.DEVNULL,
         start_new_session=True,
         # R28: mark this child as runner-spawned so the install guard
         # carve-out (b) fires on any cortex-package import inside it.
@@ -714,6 +724,135 @@ def _spawn_orchestrator(
     )
     watchdog.start()
     return proc, wctx, watchdog
+
+
+def _emit_orchestrator_round_telemetry(
+    envelope_text: str | None,
+    exit_code: int | None,
+    round_num: int,
+    log_path: Path,
+) -> None:
+    """Parse the orchestrator stdout envelope and emit dispatch telemetry.
+
+    Fire-and-forget per ``docs/overnight-operations.md``: any exception
+    during parse or ``pipeline_log_event`` is swallowed with a
+    ``[telemetry]``-prefixed stderr breadcrumb; never re-raises.
+
+    Branch decision: emit ``dispatch_complete`` iff ``exit_code == 0``
+    AND the envelope is a dict AND not error-shaped (``is_error`` falsy
+    AND ``subtype`` does not start with ``"error_"``). Otherwise emit
+    ``dispatch_error`` covering non-zero exit, error envelope, parse
+    failure, and shape drift.
+    """
+    feature = f"<orchestrator-round-{round_num}>"
+    try:
+        from cortex_command.pipeline.state import (
+            log_event as pipeline_log_event,
+        )
+
+        envelope: Any = None
+        parse_reason: str | None = None
+        top_level_type: str | None = None
+        if envelope_text is None:
+            parse_reason = "parse_failure"
+        else:
+            try:
+                envelope = json.loads(envelope_text)
+            except Exception:
+                parse_reason = "parse_failure"
+                envelope = None
+
+        if envelope is not None and not isinstance(envelope, dict):
+            top_level_type = type(envelope).__name__
+            print(
+                f"[telemetry] envelope-shape-drift "
+                f"top_level_type={top_level_type}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+        if isinstance(envelope, dict):
+            usage = envelope.get("usage", {}) or {}
+            cost_usd = envelope.get("total_cost_usd")
+            duration_ms = envelope.get("duration_ms")
+            num_turns = envelope.get("num_turns")
+            model = envelope.get("model") or envelope.get("model_id")
+            input_tokens = usage.get("input_tokens")
+            output_tokens = usage.get("output_tokens")
+            cache_creation_input_tokens = usage.get(
+                "cache_creation_input_tokens"
+            )
+            cache_read_input_tokens = usage.get("cache_read_input_tokens")
+            is_error = bool(envelope.get("is_error", False))
+            subtype = str(envelope.get("subtype", ""))
+        else:
+            cost_usd = None
+            duration_ms = None
+            num_turns = None
+            model = None
+            input_tokens = None
+            output_tokens = None
+            cache_creation_input_tokens = None
+            cache_read_input_tokens = None
+            is_error = False
+            subtype = ""
+
+        success_shaped = (
+            exit_code == 0
+            and isinstance(envelope, dict)
+            and not is_error
+            and not subtype.startswith("error_")
+        )
+
+        if success_shaped:
+            event_dict: dict[str, Any] = {
+                "event": "dispatch_complete",
+                "feature": feature,
+                "cost_usd": cost_usd,
+                "duration_ms": duration_ms,
+                "num_turns": num_turns,
+                "model": model,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cache_creation_input_tokens": cache_creation_input_tokens,
+                "cache_read_input_tokens": cache_read_input_tokens,
+            }
+        else:
+            if parse_reason == "parse_failure":
+                reason = "parse_failure"
+            elif top_level_type is not None:
+                reason = "envelope_shape_drift"
+            elif isinstance(envelope, dict) and (
+                is_error or subtype.startswith("error_")
+            ):
+                reason = "is_error"
+            else:
+                reason = "non_zero_exit"
+            details: dict[str, Any] = {"reason": reason}
+            if top_level_type is not None:
+                details["top_level_type"] = top_level_type
+            event_dict = {
+                "event": "dispatch_error",
+                "feature": feature,
+                "cost_usd": cost_usd,
+                "duration_ms": duration_ms,
+                "num_turns": num_turns,
+                "model": model,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cache_creation_input_tokens": cache_creation_input_tokens,
+                "cache_read_input_tokens": cache_read_input_tokens,
+                "details": details,
+            }
+
+        pipeline_log_event(log_path, event_dict)
+    except Exception as exc:
+        print(
+            f"[telemetry] orchestrator-round telemetry emission failed: "
+            f"{exc!r}",
+            file=sys.stderr,
+            flush=True,
+        )
 
 
 def _spawn_batch_runner(
@@ -1623,45 +1762,114 @@ def run(
                 f"Spawning orchestrator agent for round {round_num}...",
                 flush=True,
             )
-            o_proc, o_wctx, _o_watchdog = _spawn_orchestrator(
-                filled_prompt=filled,
-                coord=coord,
-                spawned_procs=spawned_procs,
+            # R2/R8: emit dispatch_start AFTER the dry-run gate and BEFORE
+            # _spawn_orchestrator. Per-session pipeline-events.log per
+            # feature_executor.py's config.pipeline_events_path
+            # convention; auto-discovered by discover_pipeline_event_logs.
+            orchestrator_stdout_path = (
+                session_dir / f"orchestrator-round-{round_num}.stdout.json"
             )
-            exit_code = _poll_subprocess(o_proc, coord)
-            if exit_code is None:
-                # Shutdown intercepted; fall through to cleanup.
-                break
-
-            if o_wctx.stall_flag.is_set():
+            pipeline_events_path = session_dir / "pipeline-events.log"
+            try:
+                from cortex_command.pipeline.state import (
+                    log_event as pipeline_log_event,
+                )
+                pipeline_log_event(
+                    pipeline_events_path,
+                    {
+                        "event": "dispatch_start",
+                        "feature": f"<orchestrator-round-{round_num}>",
+                        "skill": "orchestrator-round",
+                        "complexity": tier,
+                        "criticality": "medium",
+                        "model": None,
+                        "attempt": 1,
+                    },
+                )
+            except Exception as exc:
                 print(
-                    "Warning: watchdog killed orchestrator due to event "
-                    "log silence (stall timeout)",
+                    f"[telemetry] orchestrator-round dispatch_start "
+                    f"emission failed: {exc!r}",
+                    file=sys.stderr,
                     flush=True,
                 )
-                _transition_paused(
-                    state_path=state_path,
-                    events_path=events_path,
+            o_proc = None
+            try:
+                o_proc, o_wctx, _o_watchdog = _spawn_orchestrator(
+                    filled_prompt=filled,
                     coord=coord,
-                    reason="stall_timeout",
-                    round_num=round_num,
+                    spawned_procs=spawned_procs,
+                    stdout_path=orchestrator_stdout_path,
                 )
-                _notify(
-                    f"Overnight session stalled — orchestrator watchdog "
-                    f"fired. Session paused. Session: {session_id}"
+                exit_code = _poll_subprocess(o_proc, coord)
+
+                # R3/R6: read the envelope and emit terminal telemetry
+                # before the stall/non-zero branches. Helper is
+                # fire-and-forget; failures here never abort the loop.
+                envelope_text: str | None = None
+                try:
+                    envelope_text = orchestrator_stdout_path.read_text()
+                except Exception as exc:
+                    print(
+                        f"[telemetry] orchestrator-round stdout read "
+                        f"failed: {exc!r}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+                _emit_orchestrator_round_telemetry(
+                    envelope_text,
+                    exit_code,
+                    round_num,
+                    pipeline_events_path,
                 )
-                break
-            elif exit_code != 0:
-                print(
-                    f"Warning: orchestrator agent exited with code {exit_code}",
-                    flush=True,
-                )
-                events.log_event(
-                    events.ORCHESTRATOR_FAILED,
-                    round=round_num,
-                    details={"exit_code": exit_code},
-                    log_path=events_path,
-                )
+
+                if exit_code is None:
+                    # Shutdown intercepted; fall through to cleanup.
+                    break
+
+                if o_wctx.stall_flag.is_set():
+                    print(
+                        "Warning: watchdog killed orchestrator due to event "
+                        "log silence (stall timeout)",
+                        flush=True,
+                    )
+                    _transition_paused(
+                        state_path=state_path,
+                        events_path=events_path,
+                        coord=coord,
+                        reason="stall_timeout",
+                        round_num=round_num,
+                    )
+                    _notify(
+                        f"Overnight session stalled — orchestrator watchdog "
+                        f"fired. Session paused. Session: {session_id}"
+                    )
+                    break
+                elif exit_code != 0:
+                    print(
+                        f"Warning: orchestrator agent exited with code {exit_code}",
+                        flush=True,
+                    )
+                    events.log_event(
+                        events.ORCHESTRATOR_FAILED,
+                        round=round_num,
+                        details={"exit_code": exit_code},
+                        log_path=events_path,
+                    )
+            finally:
+                # Close the orchestrator stdout write handle on every exit
+                # branch (success, non-zero, stall, shutdown, exception).
+                # Fire-and-forget telemetry must not leak fds across
+                # rounds in a multi-hour overnight session.
+                if (
+                    o_proc is not None
+                    and o_proc.stdout is not None
+                    and not o_proc.stdout.closed
+                ):
+                    try:
+                        o_proc.stdout.close()
+                    except Exception:
+                        pass
 
             # -----------------------------------------------------------
             # Spawn batch_runner + watchdog (if a batch plan was produced).
