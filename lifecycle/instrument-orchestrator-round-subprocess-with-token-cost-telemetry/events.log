@@ -1,0 +1,102 @@
+- ts: 2026-04-29T00:00:00Z
+  event: clarify_critic
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  findings:
+    - "Intent clarity High asserts a single unambiguous outcome ('bucket exists in the per-skill rollup'), but Open Question 2 in the source explicitly leaves open whether to extend the dispatch schema, mint a synthetic feature value, or emit a separate orchestrator-scope event with a parallel aggregator — these are materially different deliverables, not just *how* questions."
+    - "Intent clarity High treats the ticket 111 R11/R12 motivation as concrete, but Open Question 4 explicitly raises that the inline-read prompt may already be retired by the time this is worked, making the originating value case potentially moot — an intent that may be obsolete before implementation is not 'unambiguous and complete.'"
+    - "Scope boundedness High cites Affected files as authoritative, but the open questions show the actual file footprint is contingent on design choices: schema-mapping option B (parallel aggregator) requires new aggregator code beyond 'confirm aggregator handles a session-scope record,' and the emission-point question contemplates a dispatch.py wrapper that exceeds a Literal extension."
+    - "Requirements alignment High cites pipeline.md 'Metrics and Cost Tracking,' but the requirement specifies 'per-feature metrics, tier aggregates, and calibration summaries' — the ticket explicitly notes orchestrator-round 'has model+tier ... but no feature — it operates at session scope.' That is a partial conflict (data-model extension), not clean alignment."
+    - "Criticality High applies the rubric mechanically without engaging with the ticket's own signals to the contrary: priority is `low` in frontmatter, and the ticket scopes itself as observational (no optimization, no model-tier reshuffling, no backfill)."
+    - "Intent clarity High treats the work as purely additive telemetry, but Open Question 1 (output-format choice) flags that switching Popen invocation flags could disrupt existing real-time stdout consumers like NOTIFY: parsing — meaning the implementation may regress unrelated runner functionality."
+  dispositions:
+    apply: 4
+    dismiss: 2
+    ask: 0
+  applied_fixes:
+    - "Added research open question covering design choice between extending dispatch.py's per-skill schema (with synthetic <session> feature value) vs adding a parallel session-scope event channel with its own aggregator (Finding 0)."
+    - "Acknowledged file-footprint contingency in scope boundedness reasoning: behavioral scope (forward-going telemetry; excludes batch-runner, optimization, backfill) is bounded, but file count varies with the design choice surfaced in Finding 0 (Finding 2)."
+    - "Revised Requirements alignment from High to Partial: pipeline.md 'Metrics and Cost Tracking' is per-feature; this ticket extends the data model to session scope. Not a conflict — an extension (Finding 3)."
+    - "Added research open question covering output-format choice's compatibility with existing NOTIFY: stdout parsing in the runner; choice between stream-json and end-of-run json must be evaluated against real-time stdout consumers (Finding 5)."
+  dismissals:
+    - finding_index: 1
+      rationale: "The body's opening paragraph establishes a standalone value case independent of R11/R12: orchestrator-round token costs are 'invisible to the per-skill rollup' regardless of any specific consumer. R11/R12 closure is a bonus, not load-bearing motivation. If research discovers R11/R12 is moot the §4 complexity/value gate will catch over-engineering; intent clarity at the goal level is unaffected."
+    - finding_index: 4
+      rationale: "Priority (when to work on it) and criticality (blast radius if broken) are orthogonal axes per the lifecycle rubric. Overnight-runner subprocess changes default to high criticality regardless of priority. The 'observational' framing is undermined by Finding 5's NOTIFY regression risk — switching Popen flags is not purely additive. Criticality High stands."
+  status: ok
+- ts: 2026-04-29T00:00:01Z
+  event: orchestrator_review
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  phase: specify
+  verdict: flag
+  cycle: 1
+  issues:
+    - "S1: R1 acceptance grep is brittle — `grep -n 'stdout=subprocess.PIPE' | grep -E '_spawn_orchestrator|line 69[0-9]'` searches the post-filter output for literal '_spawn_orchestrator' or 'line 69x' which never appears in grep -n output, so the check always passes regardless of code state. Need a scoped check anchored to _spawn_orchestrator function body."
+    - "S1: R2 acceptance + spec body — `model=<configured-or-detected>` is ambiguous on dispatch_start. The orchestrator subprocess hasn't run yet, so the actual model is unknown until the envelope arrives. Spec must define what model field carries on dispatch_start (omit/sentinel/config-read) vs. dispatch_complete (envelope-extracted)."
+    - "S1: R7 acceptance is vague — `or the orphan-start path documented behavior holds` is unverifiable. metrics.py emits no warning for orphan dispatch_start (warns only for dispatch_complete and dispatch_error); the test should assert pair_dispatch_events returns exactly one paired record (R2) with zero logger warnings."
+- ts: 2026-04-29T00:00:02Z
+  event: orchestrator_dispatch_fix
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  phase: specify
+  mode: fresh_subagent
+  issue: "Three S1 acceptance-criteria flaws: brittle R1 grep, ambiguous R2 model field, vague R7 orphan assertion. Dispatching sonnet fix agent to rewrite spec.md."
+- ts: 2026-04-29T00:00:03Z
+  event: orchestrator_review
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  phase: specify
+  verdict: pass
+  cycle: 2
+  issues: []
+- ts: 2026-04-29T00:00:05Z
+  event: orchestrator_review
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  phase: plan
+  verdict: flag
+  cycle: 1
+  issues:
+    - "P1: Task 6 has 0 files modified — outside the 1-5 file sizing range. Verification-only task should be folded into Verification Strategy."
+    - "P5: Task 4 Context contains an import statement (`from cortex_command.pipeline.state import log_event as pipeline_log_event`) and copy-paste-ready snippets (`usage = envelope.get('usage', {}) if isinstance(envelope, dict) else {}`, parse code, stderr print line). Forbidden by code budget; rewrite as pattern references and prose."
+- ts: 2026-04-29T00:00:06Z
+  event: orchestrator_dispatch_fix
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  phase: plan
+  mode: same_context
+  issue: "Two mechanical compliance fixes: (a) fold Task 6 into Verification Strategy; (b) replace Task 4 Context import statement and copy-paste-ready snippets with pattern references."
+- ts: 2026-04-29T00:00:07Z
+  event: orchestrator_review
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  phase: plan
+  verdict: pass
+  cycle: 2
+  issues: []
+- ts: 2026-04-29T00:00:09Z
+  event: critical_review
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  phase: plan
+  reviewers_completed: 4
+  reviewers_dispatched: 4
+  synthesis_status: ok
+  a_class_findings: 6
+  b_class_findings: 13
+  c_class_findings: 1
+  dispositions:
+    apply: 9
+    dismiss: 1
+    ask: 0
+  applied_fixes:
+    - "Mandated proc.stdout.close() inside try/finally — eliminated 'either closes or simply re-opens' alternative (R1.A1)"
+    - "Wrapped spawn-and-poll in try/finally so close fires on shutdown (1632-1634), stall (1636-1653), non-zero, success, exception (R1.A2, R1.A3)"
+    - "Merged signature change, helper extraction, and caller wiring into atomic Task 3 — eliminated intermediate-broken-commit window (R2.A→B downgraded; structural fix applied)"
+    - "Replaced grep -A 30 with ast.parse/walk/unparse-bounded structural check on _spawn_orchestrator (R4.A1)"
+    - "Replaced line-number-hardcoded emission grep with pytest-deferred functional verification (R4.A2)"
+    - "Committed Task 4 to helper-direct + hand-constructed-events strategy; extracted _emit_orchestrator_round_telemetry module-level helper (R3#1, R3#5)"
+    - "Strengthened dry-run test from tautological events-absent to AST-walk structural gate-correctness (R3#2, R4#4)"
+    - "Added test_fd_lifecycle_* group asserting proc.stdout.closed on each branch (R1#5, R1#6)"
+    - "Removed misleading 'follow that style' precedent claim; replaced with accurate scope description (R3#3)"
+  dismissals:
+    - finding: "Tasks 1 and 2 commit-grouping unspecified"
+      rationale: "Reviewer conceded 'not breaking individually'. Task 1 is documentation-only per plan's Veto Surface; Task 2 is fixture data with no consumer until Task 4 lands. No fix needed."
+- ts: 2026-04-29T00:00:10Z
+  event: phase_transition
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  from: plan
+  to: implement
