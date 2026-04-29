@@ -94,34 +94,22 @@ _MCP_SERVER_T12_VERDICT_PATH = (
 def _read_t12_restart_required() -> bool:
     """Return True iff T12's verdict indicates session-restart-required.
 
-    Locates ``plugin-refresh-semantics.md`` relative to the resolved
-    ``cortex_root`` and parses the trailing ``## Verdict`` section. Any
-    error (file missing, parse failure, root unresolvable) yields False so
-    the deprecation stub still emits the baseline message.
+    Locates ``plugin-refresh-semantics.md`` relative to the resolved user
+    project root and parses the trailing ``## Verdict`` section. Any error
+    (file missing, parse failure, root unresolvable) yields False so the
+    deprecation stub still emits the baseline message.
     """
 
-    import os
-    from pathlib import Path
-
     try:
-        override = os.environ.get("CORTEX_COMMAND_ROOT")
-        if override:
-            root = Path(override)
-        else:
-            try:
-                import cortex_command
+        from cortex_command.common import (
+            CortexProjectRootError,
+            _resolve_user_project_root,
+        )
 
-                pkg_file = getattr(cortex_command, "__file__", None)
-                if pkg_file:
-                    candidate = Path(pkg_file).resolve().parent.parent
-                    if (candidate / "pyproject.toml").is_file():
-                        root = candidate
-                    else:
-                        root = Path.home() / ".cortex"
-                else:
-                    root = Path.home() / ".cortex"
-            except Exception:
-                root = Path.home() / ".cortex"
+        try:
+            root = _resolve_user_project_root()
+        except CortexProjectRootError:
+            return False
 
         verdict_file = root / _MCP_SERVER_T12_VERDICT_PATH
         if not verdict_file.is_file():
@@ -165,63 +153,52 @@ def _dispatch_mcp_server(_args: argparse.Namespace) -> int:
     return 1
 
 
-def _resolve_cortex_root() -> str:
-    """Resolve the absolute path to the Cortex Command checkout (R3, R16).
-
-    Discovery chain:
-      1. ``CORTEX_COMMAND_ROOT`` env var (override).
-      2. Editable-install ``.pth`` resolution — the ``cortex_command`` package
-         is imported from the checkout, so ``cortex_command.__file__`` points
-         into the editable source tree; its parent's parent is the repo root.
-      3. ``$HOME/.cortex`` default.
-      4. Hard-fail with a clear stderr message if none of the above resolve
-         to an existing directory.
-    """
-
-    import os
-    from pathlib import Path
-
-    override = os.environ.get("CORTEX_COMMAND_ROOT")
-    if override:
-        return str(Path(override).resolve())
-
-    try:
-        import cortex_command
-
-        pkg_file = getattr(cortex_command, "__file__", None)
-        if pkg_file:
-            candidate = Path(pkg_file).resolve().parent.parent
-            if (candidate / "pyproject.toml").is_file():
-                return str(candidate)
-    except Exception:  # pragma: no cover - defensive: import-time edge cases
-        pass
-
-    home_default = Path.home() / ".cortex"
-    if home_default.is_dir():
-        return str(home_default)
-
-    print(
-        "cortex: unable to resolve cortex_root; set CORTEX_COMMAND_ROOT or "
-        "install via `uv tool install -e <path>`",
-        file=sys.stderr,
-    )
-    sys.exit(1)
-
-
 def _dispatch_print_root(_args: argparse.Namespace) -> int:
-    """Emit versioned JSON describing this Cortex install (R3, R16).
+    """Emit versioned JSON describing this Cortex install (R3, R16, R2d).
 
-    The JSON shape — ``version``, ``root``, ``remote_url``, ``head_sha`` — is
-    forever-public-API: append-only after publication; existing fields never
-    change semantics or types without a major bump.
+    Envelope shape (version 1.1):
+      - ``version``: JSON envelope version (currently ``"1.1"``). Distinct
+        from the schema major used by the MCP plugin's ``CLI_PIN``.
+      - ``root``: the user's cortex project root (resolved via
+        :func:`cortex_command.common._resolve_user_project_root`). This is
+        the single-source-of-truth contract — under non-editable wheel
+        install ``root`` is the user's project (containing ``lifecycle/``
+        and/or ``backlog/``), NOT the package install location.
+      - ``package_root``: the package install location (via
+        ``Path(cortex_command.__file__).resolve().parent``) — useful for
+        diagnostic introspection.
+      - ``remote_url`` / ``head_sha``: populated from
+        ``git -C <root> remote get-url origin`` and
+        ``git -C <root> rev-parse HEAD`` when ``root`` is a git repo;
+        empty strings otherwise.
+
+    Bumping ``version`` to ``"1.1"`` is purely additive: ``1.0`` consumers
+    that ignore unknown fields continue to work.
+
+    On unresolvable project root, prints an error to stderr and exits 2.
     """
 
     import json
     import subprocess
+    from pathlib import Path
 
-    root = _resolve_cortex_root()
+    import cortex_command
+    from cortex_command.common import (
+        CortexProjectRootError,
+        _resolve_user_project_root,
+    )
+
+    try:
+        root = str(_resolve_user_project_root().resolve())
+    except CortexProjectRootError as exc:
+        print(f"cortex --print-root: {exc}", file=sys.stderr)
+        return 2
+
+    package_root = str(Path(cortex_command.__file__).resolve().parent)
 
     # Per spec Technical Constraints, no `check=True` on shell-outs here.
+    # Probe git unconditionally; if root is not a git repo, both fields stay
+    # empty (returncode-tolerant).
     remote_proc = subprocess.run(
         ["git", "-C", root, "remote", "get-url", "origin"],
         capture_output=True,
@@ -239,8 +216,9 @@ def _dispatch_print_root(_args: argparse.Namespace) -> int:
     head_sha = head_proc.stdout.strip() if head_proc.returncode == 0 else ""
 
     payload = {
-        "version": "1.0",
+        "version": "1.1",
         "root": root,
+        "package_root": package_root,
         "remote_url": remote_url,
         "head_sha": head_sha,
     }
@@ -248,44 +226,33 @@ def _dispatch_print_root(_args: argparse.Namespace) -> int:
     return 0
 
 
-def _dispatch_upgrade(args: argparse.Namespace) -> int:
-    import os
-    import subprocess
-    from pathlib import Path
+def _dispatch_upgrade(_args: argparse.Namespace) -> int:
+    """Advisory printer for `cortex upgrade` (R2c).
+
+    The CLI cannot self-upgrade — a wheel for version `vN` can only declare
+    "I am vN" and has no mechanism to know about newer tags. The actual
+    upgrade arrow flows plugin → CLI via the MCP first-install hook, OR via
+    a bare-shell `uv tool install --reinstall` invocation by the user.
+
+    This handler keeps the in-flight install guard (so the message isn't
+    even printed while a runner is mid-session) and the legacy `.mcp.json`
+    migration notice (still useful during the transition).
+    """
 
     from cortex_command.install_guard import check_in_flight_install
 
     check_in_flight_install()
 
-    cortex_root = os.environ.get("CORTEX_COMMAND_ROOT") or str(Path.home() / ".cortex")
-    try:
-        dirty = subprocess.run(
-            ["git", "status", "--porcelain"],
-            cwd=cortex_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        if dirty.stdout.strip():
-            print(
-                f"uncommitted changes in {cortex_root}; commit or stash before upgrading",
-                file=sys.stderr,
-            )
-            return 1
-        subprocess.run(
-            ["git", "-C", cortex_root, "pull", "--ff-only"],
-            check=True,
-        )
-        # --force regenerates console scripts per the EPILOG note (see cli.py:21-23).
-        subprocess.run(
-            ["uv", "tool", "install", "-e", cortex_root, "--force"],
-            check=True,
-        )
-    except subprocess.CalledProcessError as exc:
-        print(f"command failed: {' '.join(exc.cmd)}", file=sys.stderr)
-        if exc.stderr:
-            print(exc.stderr, file=sys.stderr)
-        return 1
+    print(
+        "Run /plugin update cortex-overnight-integration@cortex-command in "
+        "Claude Code to upgrade via the MCP-driven path."
+    )
+    print(
+        "Or run `uv tool install --reinstall git+https://github.com/"
+        "charleshall888/cortex-command.git@<tag>` for the bare-shell path; "
+        "see https://github.com/charleshall888/cortex-command/releases for "
+        "current tags."
+    )
     # Post-upgrade migration notice (R7 / Task 14). Proactive channel for
     # users who upgrade before noticing that their .mcp.json still points at
     # the removed `cortex mcp-server` verb.
@@ -312,7 +279,20 @@ def _build_parser() -> argparse.ArgumentParser:
         "--print-root",
         dest="print_root",
         action="store_true",
-        help="Print versioned JSON {version, root, remote_url, head_sha} and exit",
+        help=(
+            "Print versioned JSON {version, root, package_root, remote_url, "
+            "head_sha} and exit"
+        ),
+    )
+    # Top-level --format flag — accepted but advisory: --print-root always
+    # emits JSON regardless. Required so MCP first-install verification
+    # (`cortex --print-root --format json`) parses cleanly.
+    parser.add_argument(
+        "--format",
+        dest="top_format",
+        choices=("human", "json"),
+        default=None,
+        help=argparse.SUPPRESS,
     )
 
     subparsers = parser.add_subparsers(dest="command", metavar="<command>")
