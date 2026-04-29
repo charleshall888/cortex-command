@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import importlib.resources
 import json
 import logging
 import os
@@ -60,7 +61,7 @@ from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
-IMPLEMENT_TEMPLATE = Path(__file__).resolve().parents[1] / "pipeline/prompts/implement.md"
+IMPLEMENT_TEMPLATE = importlib.resources.files("cortex_command.pipeline.prompts").joinpath("implement.md")
 
 
 # ---------------------------------------------------------------------------
