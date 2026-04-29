@@ -374,7 +374,20 @@ if [ -d "$_lc_base" ]; then
     _lc_fname="${_lc_fdir%/}"
     _lc_fname="${_lc_fname##*/}"
 
-    # --- Phase detection (fast, mirrors cortex-scan-lifecycle.sh) ---
+    # --- Phase detection (bash-only mirror of cortex_command.common.detect_lifecycle_phase) ---
+    #
+    # STRUCTURAL EXCEPTION: This is a deliberate bash-only mirror of
+    # cortex_command.common.detect_lifecycle_phase(). The statusline operates under
+    # a < 500ms render latency budget (see requirements/observability.md:23, 91),
+    # which prohibits subprocessing to a Python interpreter on every render. All
+    # other lifecycle phase detection in the codebase delegates to the canonical
+    # Python implementation; the statusline is the documented exception.
+    #
+    # Equivalence between this bash ladder and the canonical Python function is
+    # enforced by the parity test at tests/test_lifecycle_phase_parity.py. If you
+    # change the phase detection logic here, update the canonical implementation
+    # in cortex_command.common AND ensure the parity test still passes. Do not
+    # "fix" this apparent duplication by collapsing it into a Python call.
     _lc_phase=""
     if [ -f "$_lc_fdir/events.log" ] && grep -q '"feature_complete"' "$_lc_fdir/events.log" 2>/dev/null; then
       _lc_phase="complete"
