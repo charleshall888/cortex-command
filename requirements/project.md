@@ -4,7 +4,7 @@
 
 ## Overview
 
-Agentic workflow toolkit for AI-assisted software development. Defines the global skills, lifecycle state machine, pipeline orchestrator, and overnight execution framework for Claude Code. The north star is autonomous multi-hour development: send Claude to work with a plan, let it spin up its own teams, and review results afterward. Primarily personal tooling, shared publicly for others to clone or fork. Favors a highly customized, iteratively improved system over generic solutions.
+Agentic workflow toolkit for AI-assisted software development. Defines the global skills, lifecycle state machine, pipeline orchestrator, and overnight execution framework for Claude Code. The north star is autonomous multi-hour development: send Claude to work with a plan, let it spin up its own teams, and review results afterward. Distributed CLI-first as a non-editable wheel installed from a tag-pinned git URL (`uv tool install git+<url>@<tag>`); cloning or forking the repo remains a secondary path for advanced users who want to modify the source. Favors a highly customized, iteratively improved system over generic solutions.
 
 ## Philosophy of Work
 
@@ -52,7 +52,7 @@ Agentic workflow toolkit for AI-assisted software development. Defines the globa
 
 - Dotfiles and machine configuration (terminals, shells, prompts, fonts, git) — those belong in machine-config
 - Application code or libraries — those belong in their own repos
-- Published packages or reusable modules for others — the `cortex` CLI ships as a local editable install (`uv tool install -e .`) for self-hosted use; publishing to PyPI or other registries is out of scope.
+- Published packages or reusable modules for others — the `cortex` CLI ships as a non-editable wheel installed from a tag-pinned git URL via `uv tool install git+<url>@<tag>`; PyPI publication remains out of scope.
 - Setup automation for new machines (owned by machine-config)
 
 ### Deferred
