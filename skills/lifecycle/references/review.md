@@ -200,7 +200,7 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
   ```
 - CHANGES_REQUESTED cycle 1 → log the transition and return to Implement automatically — do not ask the user for confirmation:
   ```
-  {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "implement"}
+  {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "implement-rework"}
   ```
 - Otherwise → log the escalation, then present findings to user and await direction (user input required — this is a genuine concern):
   ```

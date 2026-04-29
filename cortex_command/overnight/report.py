@@ -629,7 +629,7 @@ def render_pending_drift(data: ReportData) -> str:
         phase_transitions = [
             e for e in events if e.get("event") == "phase_transition"
         ]
-        if phase_transitions and phase_transitions[-1].get("to") == "implement":
+        if phase_transitions and phase_transitions[-1].get("to") in {"implement", "implement-rework"}:
             reimplementing.add(feature)
 
     # 3. Scan lifecycle/*/review.md, skip merged and re-implementing

@@ -71,7 +71,7 @@ class BacklogItem:
         lifecycle_slug: Optional kebab-case slug linking to lifecycle/{slug}/.
         session_id: Optional session ID of the session currently working on this item.
         lifecycle_phase: Optional current lifecycle phase (research, specify, plan,
-            implement, review, complete).
+            implement, implement-rework, review, complete, escalated).
         schema_version: Optional schema version string (e.g. "1").
     """
 

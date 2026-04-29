@@ -296,8 +296,9 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
           recent ``phase_transition`` event, or None if absent.
         - ``phase_transitions`` (list[dict]): each entry has ``from``,
           ``to``, and ``ts`` keys.
-        - ``rework_cycles`` (int): count of ``to == "implement"``
-          transitions that follow a ``to == "review"`` transition.
+        - ``rework_cycles`` (int): count of ``to in {"implement",
+          "implement-rework"}`` transitions that follow a
+          ``to == "review"`` transition.
 
         Returns ``{"current_phase": None, "phase_transitions": [],
         "rework_cycles": 0}`` when the file is absent or unreadable.
@@ -321,13 +322,13 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
     feature_dir = lifecycle_dir / feature_slug
     current_phase: str | None = detect_lifecycle_phase(feature_dir)["phase"]
 
-    # Count rework cycles: number of "implement" transitions that follow a
-    # "review" transition immediately before them.
+    # Count rework cycles: number of "implement" or "implement-rework"
+    # transitions that follow a "review" transition immediately before them.
     rework_cycles = 0
     for i in range(1, len(transitions)):
         prev_to = transitions[i - 1].get("to")
         curr_to = transitions[i].get("to")
-        if prev_to == "review" and curr_to == "implement":
+        if prev_to == "review" and curr_to in ("implement", "implement-rework"):
             rework_cycles += 1
 
     return {

@@ -255,7 +255,7 @@ If re-entering from a Review phase with CHANGES_REQUESTED:
 
 Append a `phase_transition` event to `lifecycle/{feature}/events.log` to capture the rework cycle start:
 ```
-{"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "implement"}
+{"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "implement-rework"}
 ```
 
 1. Read `lifecycle/{feature}/review.md` for the reviewer's feedback
