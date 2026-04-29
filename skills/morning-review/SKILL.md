@@ -30,50 +30,37 @@ Locate the session to update:
 2. If the pointer file does not exist, is not readable, or its `phase` is not `"executing"`, fall back to resolving `lifecycle/sessions/latest-overnight/overnight-state.json` (via the `latest-overnight` symlink).
 3. If neither path resolves to a readable file, skip Step 0 entirely — do not error.
 
-If a session is found with `phase == "executing"`, write `phase: "complete"` to it:
+If `<resolved_state_path>` resolves to a readable file, mark the session complete by invoking the C11 helper. The helper owns the `phase == "executing"` precondition (silent-skip on any other phase per spec R5), the canonical state-machine transition, the atomic write, and the optional pointer-file cleanup.
 
-First, verify the phase is `"executing"`:
+- If you used the active-session pointer (the path-resolution branch above selected line 1's pointer because its `phase == "executing"`), invoke the helper WITH `--pointer` so the pointer file is unlinked on success:
+
+  ```
+  cortex-morning-review-complete-session <resolved_state_path> --pointer <pointer_path>
+  ```
+
+- If you used the `lifecycle/sessions/latest-overnight` fallback (line 2 above), invoke the helper WITHOUT `--pointer` — there is no pointer file to clean up:
+
+  ```
+  cortex-morning-review-complete-session <resolved_state_path>
+  ```
+
+Read the current session ID from the resolved state file (its `session_id` field is invariant under the C11 helper — only `phase` mutates — so the read is safe to perform after the helper runs):
 
 ```
-jq -r '.phase' <resolved_state_path>
+session_id="$(jq -r '.session_id' <resolved_state_path>)"
 ```
-
-If the output is not `executing`, skip the update. Otherwise, write the updated state to a temp file and move it into place:
-
-```
-jq '.phase = "complete"' <resolved_state_path> > <resolved_state_path>.tmp
-mv <resolved_state_path>.tmp <resolved_state_path>
-```
-
-After updating `overnight-state.json`, remove the active-session pointer file: `rm -f <pointer_path>`. Skip if Step 0 used the fallback path (no pointer file).
 
 #### Garbage sweep: stale demo worktrees
 
-After marking the session complete, sweep stale demo worktrees left behind by prior overnight sessions. The sweep is intentionally narrow — it only touches worktrees under `$TMPDIR` whose path matches the canonical demo-worktree pattern created by Section 2a of the walkthrough, so it cannot collide with unrelated user worktrees.
+After marking the session complete, sweep stale demo worktrees left behind by prior overnight sessions. The sweep is intentionally narrow — it only touches worktrees under `$TMPDIR` whose path matches the canonical demo-worktree pattern created by Section 2a of the walkthrough, so it cannot collide with unrelated user worktrees. The C12 helper handles the `$TMPDIR` resolution, prefix matching, active-session exclusion, uncommitted-state precondition, per-worktree `git worktree remove`, and the trailing single `git worktree prune` ordering invariant internally.
 
-Implementation notes for the path-matching regex used in step 4 below:
+The C12 sweep runs AFTER the C11 helper invocation. Pass the resolved active session ID as the script's positional argument:
 
-- The regex is POSIX ERE. Match it via `grep -E`, `awk` (ERE by default), or a Bash `[[ "$path" =~ ... ]]` test (also ERE). Do NOT use plain `grep` without `-E` (BRE `{n}` quantifier semantics differ), and do NOT use a `case` glob (no ERE character-class support).
-- The `{resolved_tmpdir}` placeholder is a shell-variable substitution performed at sweep-script construction time, not an ERE group. The `{n}` quantifiers (e.g., `[0-9]{4}`) are ERE syntax. Build the regex by string concatenation to avoid confusion, e.g.:
+```
+cortex-morning-review-gc-demo-worktrees "$session_id"
+```
 
-  ```
-  prefix="$(realpath "$TMPDIR")/demo-overnight-"
-  if [[ "$path" =~ ^${prefix}[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}-[0-9]{8}T[0-9]{6}Z$ ]]; then
-    # candidate for removal — check session-ID exclusion, then invoke the remove command with no `--force`
-  fi
-  ```
-
-Skip this sweep sub-step silently if `$TMPDIR` is unset or `realpath` fails.
-
-Perform the following steps in order. The ordering between steps 4 and 5 is load-bearing: the prune call must run AFTER all per-worktree removals complete, not before and not interleaved.
-
-1. Read the current session ID (already resolved by Step 0 from `overnight-state.json`).
-2. Resolve `$TMPDIR` via `realpath "$TMPDIR"` and store it as `resolved_tmpdir`.
-3. Run `git worktree list --porcelain`. For each line beginning with `worktree `, extract the path.
-4. For each path matching the ERE regex `^{resolved_tmpdir}/demo-overnight-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}-[0-9]{8}T[0-9]{6}Z$`: if the path does NOT begin with `{resolved_tmpdir}/demo-{current_session_id}-`, run `git worktree remove "{path}"` (no `--force`). On failure (dirty worktree, locked worktree, etc.), print the stderr and continue with the next path — do not abort the sweep.
-5. **AFTER all per-worktree removals in step 4 have finished** (not before, not interleaved): run `git worktree prune` to clean orphaned admin metadata. Errors are non-fatal — log and continue.
-
-Skip Step 0 entirely if no session is found or the session phase is already terminal (anything other than `"executing"`).
+Skip Step 0 entirely if neither path-resolution branch resolved to a readable state file (line 31). Otherwise invoke the C11 helper unconditionally — the helper itself silent-skips when phase is anything other than `"executing"` (per spec R5), and is safe to call repeatedly.
 
 ### Step 1: Locate Report
 

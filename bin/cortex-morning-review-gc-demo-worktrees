@@ -1,0 +1,81 @@
+#!/bin/bash
+"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true
+set -euo pipefail
+
+# cortex-morning-review-gc-demo-worktrees — sweep stale demo-overnight-* worktrees under $TMPDIR.
+#
+# Usage: cortex-morning-review-gc-demo-worktrees <active-session-id>
+#
+# Sweeps stale demo-overnight-* worktrees rooted under $TMPDIR, excluding the worktree
+# associated with the currently-active session. Worktrees with uncommitted state are
+# skipped (R9). All per-worktree `git worktree remove` calls run before a single
+# trailing `git worktree prune` (R10).
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: cortex-morning-review-gc-demo-worktrees <active-session-id>" >&2
+    exit 2
+fi
+
+active_session_id="$1"
+
+# Silent skip when $TMPDIR is unset or unresolvable (preserves SKILL.md silent-skip).
+if [[ -z "${TMPDIR:-}" ]]; then
+    exit 0
+fi
+if ! resolved_tmpdir="$(realpath "$TMPDIR" 2>/dev/null)"; then
+    exit 0
+fi
+
+# Best-effort cleanup: if `git worktree list` fails, log and exit 0.
+if ! porcelain="$(git worktree list --porcelain 2>/dev/null)"; then
+    echo "[gc-demo-worktrees] git worktree list failed; skipping sweep" >&2
+    exit 0
+fi
+
+# Collect candidate paths from `worktree <path>` lines.
+candidates=()
+while IFS= read -r line; do
+    if [[ "$line" == "worktree "* ]]; then
+        candidates+=("${line#worktree }")
+    fi
+done <<< "$porcelain"
+
+# Per-worktree removal pass.
+for path in "${candidates[@]}"; do
+    basename="$(basename "$path")"
+
+    # Must be under resolved $TMPDIR.
+    if [[ "$path" != "${resolved_tmpdir}/"* ]]; then
+        continue
+    fi
+
+    # Must match demo-overnight- prefix (ERE via Bash =~).
+    if [[ ! "$basename" =~ ^demo-overnight- ]]; then
+        continue
+    fi
+
+    # Active-session exclusion (silent skip).
+    if [[ "$basename" == "demo-${active_session_id}-"* ]]; then
+        continue
+    fi
+
+    # Spec R9: skip if uncommitted state present.
+    dirty_status="$(git -C "$path" status --porcelain --ignored=traditional 2>/dev/null || true)"
+    if [[ -n "$dirty_status" ]]; then
+        echo "[gc-demo-worktrees] skipping $path: uncommitted state" >&2
+        continue
+    fi
+
+    echo "[gc-demo-worktrees] removing $path" >&2
+    if ! git worktree remove "$path" 2>&1 >/dev/null; then
+        echo "[gc-demo-worktrees] removal failed for $path; continuing" >&2
+        continue
+    fi
+done
+
+# Spec R10: single trailing prune AFTER all per-worktree removals.
+echo "[gc-demo-worktrees] pruning" >&2
+if ! git worktree prune 2>/dev/null; then
+    echo "[gc-demo-worktrees] prune failed; non-fatal" >&2
+    exit 0
+fi

@@ -1,0 +1,19 @@
+#!/bin/bash
+"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true
+set -euo pipefail
+
+# Branch (a): packaged form — cortex_command.overnight.complete_morning_review_session
+if python3 -c "import cortex_command.overnight.complete_morning_review_session" 2>/dev/null; then
+    exec python3 -m cortex_command.overnight.complete_morning_review_session "$@"
+fi
+
+# Branch (b): CORTEX_COMMAND_ROOT points at a cortex-command checkout
+if [ -n "${CORTEX_COMMAND_ROOT:-}" ] \
+    && grep -q '^name = "cortex-command"' "$CORTEX_COMMAND_ROOT/pyproject.toml" 2>/dev/null \
+    && [ -f "$CORTEX_COMMAND_ROOT/cortex_command/overnight/complete_morning_review_session.py" ]; then
+    exec env PYTHONPATH="$CORTEX_COMMAND_ROOT:${PYTHONPATH:-}" python3 -m cortex_command.overnight.complete_morning_review_session "$@"
+fi
+
+# Branch (c): not found
+echo "cortex-morning-review-complete-session: cortex-command CLI not found — install cortex-interactive plugin or set CORTEX_COMMAND_ROOT" >&2
+exit 2
