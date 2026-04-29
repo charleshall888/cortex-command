@@ -400,6 +400,36 @@
     "repo": null
   },
   {
+    "id": 153,
+    "title": "Instrument orchestrator-round subprocess with token-cost telemetry",
+    "status": "backlog",
+    "priority": "low",
+    "type": "feature",
+    "tags": [
+      "overnight",
+      "pipeline",
+      "observability"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-04-29",
+    "updated": "2026-04-29",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "686003ea-c115-4a5c-82c1-9a01619711ee",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 142,
     "title": "Multi-session host concurrency registry for cortex overnight",
     "status": "backlog",
