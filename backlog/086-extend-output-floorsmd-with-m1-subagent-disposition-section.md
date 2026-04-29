@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: f90dd3eb-bd20-4f98-98db-63377b8b40a6
 title: "Extend output-floors.md with M1 Subagent Disposition section"
-status: blocked
+status: wontfix
 priority: medium
 type: feature
 created: 2026-04-18
-updated: 2026-04-18
+updated: 2026-04-29
 parent: "82"
 tags: [opus-4-7-harness-adaptation, reference-docs]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
@@ -15,10 +15,16 @@ lifecycle_phase: null
 lifecycle_slug: extend-output-floorsmd-with-m1-subagent-disposition-section
 complexity: simple
 criticality: high
-blocked-by: [85]
+blocked-by: []
 ---
 
 # Extend output-floors.md with M1 Subagent Disposition section
+
+## Closure note (2026-04-29)
+
+Closed wontfix. The target file `claude/reference/output-floors.md` was deleted in commit `08d1102` (2026-04-23) along with the rest of `claude/reference/` and `claude/rules/`, as part of retiring shareable-install scaffolding (spec R4/R5). The deletion commit notes that rule and reference content migrations are tracked under tickets #120 and #121, but M1 Subagent Disposition codification was preventive ("for a hypothetical future dispatch-skill site" — see deferred clause below) and the harm is already prevented: F1/F4/F5 fixes shipped via #067/#068/#069 (all complete).
+
+The original blocker #85 has since reached `status: complete`, but the target file's removal makes the ticket as written non-executable. If a future dispatch-skill site surfaces the same M1 mechanism, file a fresh ticket against the new home for skill-authoring guidance (likely `~/.claude/rules/cortex-*.md` per the rules-only deployment model — see #120/#121).
 
 ## Motivation
 

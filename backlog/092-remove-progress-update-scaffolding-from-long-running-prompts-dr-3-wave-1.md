@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 0a2f1fee-dd42-49ff-b393-bd16d1fa5607
 title: "Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)"
-status: backlog
+status: wontfix
 priority: medium
 type: feature
 created: 2026-04-18
-updated: 2026-04-21
+updated: 2026-04-29
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
@@ -14,6 +14,10 @@ blocked-by: []
 ---
 
 # Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)
+
+## Closure note (2026-04-29)
+
+Closed wontfix. Path (2) from the 2026-04-21 status update was taken: without #088's baseline data, the DR-3 Wave 1 premise ("scaffolding becomes counterproductive — verify by comparing") cannot be validated, and the lifecycle was archived at `lifecycle/archive/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/`. The one remaining ambiguous site (`implement.md` Progress tail) is now tracked separately in #133. No other progress-update scaffolding sites in the codebase warrant action — see the archived research for the per-site analysis.
 
 ## Status update (2026-04-21)
 

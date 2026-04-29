@@ -1,21 +1,21 @@
 ---
 schema_version: "1"
 uuid: daf2f648-6cf3-4322-9971-a7cee01cce6f
-title: "Evaluate implement.md:180 progress-tail narration under Opus 4.7"
+title: "Evaluate implement.md:119 progress-tail narration under Opus 4.7"
 status: backlog
 priority: low
 type: feature
 created: 2026-04-22
-updated: 2026-04-22
+updated: 2026-04-29
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 ---
 
-# Evaluate implement.md:180 progress-tail narration under Opus 4.7
+# Evaluate implement.md:119 progress-tail narration under Opus 4.7
 
 ## Motivation
 
-Spun out from #092's research on 2026-04-22. #092 was closed wontfix after research confirmed the canonical Anthropic target ("summarize every N tool calls") is not present in the codebase. One ambiguous site remains: `skills/lifecycle/references/implement.md:178-181` — the daytime-dispatch polling loop's per-iteration step (b):
+Spun out from #092's research on 2026-04-22. #092 was closed wontfix after research confirmed the canonical Anthropic target ("summarize every N tool calls") is not present in the codebase. One ambiguous site remains: `skills/lifecycle/references/implement.md:117-120` — the daytime-dispatch polling loop's per-iteration step (b):
 
 ```
 (b) Progress tail: `tail -n 5 lifecycle/{feature}/events.log` and surface a brief summary of the 5 most recent events to the user. The tail is capped at 5 (not 20) to limit context accumulation over long runs.
@@ -33,8 +33,12 @@ Apply Anthropic's 3-step 4.7 guidance (Opus 4.7 migration guide, item 4) to this
 
 ## Scope
 
-- `skills/lifecycle/references/implement.md:178-181` only
+- `skills/lifecycle/references/implement.md:117-120` only
 - No other prompt changes
+
+## Note on line drift
+
+This ticket was originally filed against `implement.md:178-181` on 2026-04-22. Upstream edits to `implement.md` shifted the same content to `:117-120` by 2026-04-29; the line numbers above were updated then. Verify the target text ("(b) Progress tail: `tail -n 5 ...`") at the cited lines before acting; if it has drifted again, search for the verbatim text rather than trusting the line number.
 
 ## Scope bounds
 

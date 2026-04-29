@@ -6,18 +6,24 @@ status: backlog
 priority: low
 type: chore
 created: 2026-04-18
-updated: 2026-04-18
+updated: 2026-04-29
 parent: "82"
 tags: [opus-4-7-harness-adaptation, policy]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [85]
+blocked-by: []
 ---
 
 # Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
 
+## Update (2026-04-29)
+
+- Blocker #85 reached `status: complete` — its dispatch-skill audit findings are now available as the empirical input for OQ3 (see `lifecycle/archive/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/`).
+- `claude/reference/` was deleted in commit `08d1102` (2026-04-23) as part of retiring shareable-install scaffolding. The remaining viable target for these durable policy entries is `CLAUDE.md` (or, if cortex-deploys-only-rules conventions apply, `~/.claude/rules/cortex-*.md` — see #120/#121).
+- `blocked-by: [85]` cleared.
+
 ## Motivation
 
-Two open policy questions emerged from discovery that aren't technical decisions — they're durable policy choices about how the harness should work under 4.7. Consolidated here to reduce ticket count (both likely touch CLAUDE.md or `claude/reference/` files).
+Two open policy questions emerged from discovery that aren't technical decisions — they're durable policy choices about how the harness should work under 4.7. Consolidated here to reduce ticket count (both likely target `CLAUDE.md` — `claude/reference/` was deleted in commit `08d1102` and is no longer a candidate location).
 
 ## Research context
 
@@ -27,11 +33,12 @@ Two open policy questions emerged from discovery that aren't technical decisions
 
 ## Deliverable
 
-Short written policy entries, likely in `CLAUDE.md` or a new/existing `claude/reference/` file, answering both questions. Keep each to a paragraph or two — these are durable norms, not prescriptions.
+Short written policy entries in `CLAUDE.md` (or `~/.claude/rules/cortex-*.md` if scoped to global rules per the cortex deployment model — see #120/#121), answering both questions. Keep each to a paragraph or two — these are durable norms, not prescriptions.
 
 ## Dependencies
 
-- Blocked by #085 only. The audit is the sole source of OQ3-relevant evidence (sites where `MUST` might be masking a real problem). Previously also listed #083 and #084; those were removed after critical review flagged them as evidence-mismatched blockers — #083 produces migration automation diff and #084 produces reference-loading semantics, neither of which calibrates the MUST-escalation policy. OQ6 (tone regression) needs no evidence; it's a user-preference decision that could ship independently, but stays in this consolidated ticket.
+- Originally blocked by #085 (now `status: complete` as of 2026-04-21). Its dispatch-skill audit produced the empirical input for OQ3. OQ6 (tone regression) needs no evidence; it's a user-preference decision that could ship independently, but stays in this consolidated ticket.
+- Previously also listed #083 and #084; those were removed after critical review flagged them as evidence-mismatched blockers — #083 produces migration automation diff and #084 produces reference-loading semantics, neither of which calibrates the MUST-escalation policy.
 
 ## Scope
 

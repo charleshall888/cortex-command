@@ -6,11 +6,11 @@ status: backlog
 priority: low
 type: feature
 created: 2026-04-18
-updated: 2026-04-20
+updated: 2026-04-29
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
-blocked-by: [92]
+blocked-by: []
 ---
 
 # Adopt xhigh effort default for overnight lifecycle implement
@@ -47,7 +47,7 @@ DR-3 Wave 2's framing ("lifecycle implement phase") argues against option (1). O
 
 ## Dependencies
 
-- Blocked by #092 (scaffolding removal must complete so effort-level change isn't compounded). #088 (baseline snapshot) was closed as wontfix on 2026-04-21, so #092's own DR-4 blocker is gone; #092 now ships (or doesn't) on its own terms — see #092's status-update section. The rollback trigger below continues to reference a local pre-flip baseline captured at flip time, which is independent of #088.
+- Originally blocked by #092 (scaffolding removal must complete so effort-level change isn't compounded). **Cleared 2026-04-29**: #092 was closed wontfix — DR-3 Wave 1 will not ship. With no scaffolding-removal change in flight, the "don't compound" ordering rationale no longer applies, and #090 ships on its own terms. The rollback trigger below continues to reference a local pre-flip baseline captured at flip time.
 
 ## Scope bounds
 

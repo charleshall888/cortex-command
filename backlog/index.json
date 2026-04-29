@@ -141,62 +141,6 @@
     "repo": null
   },
   {
-    "id": 86,
-    "title": "Extend output-floors.md with M1 Subagent Disposition section",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "opus-4-7-harness-adaptation",
-      "reference-docs"
-    ],
-    "areas": [],
-    "created": "2026-04-18",
-    "updated": "2026-04-18",
-    "blocks": [],
-    "blocked_by": [
-      "85"
-    ],
-    "parent": "82",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
-    "plan": null,
-    "uuid": "f90dd3eb-bd20-4f98-98db-63377b8b40a6",
-    "lifecycle_slug": "extend-output-floorsmd-with-m1-subagent-disposition-section",
-    "session_id": null,
-    "lifecycle_phase": "specify",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 92,
-    "title": "Remove progress-update scaffolding from long-running prompts (DR-3 Wave 1)",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "opus-4-7-harness-adaptation",
-      "capability-adoption"
-    ],
-    "areas": [],
-    "created": "2026-04-18",
-    "updated": "2026-04-21",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "82",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
-    "plan": null,
-    "uuid": "0a2f1fee-dd42-49ff-b393-bd16d1fa5607",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 141,
     "title": "Non-editable wheel install support for cortex-command",
     "status": "backlog",
@@ -266,11 +210,9 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-20",
+    "updated": "2026-04-29",
     "blocks": [],
-    "blocked_by": [
-      "92"
-    ],
+    "blocked_by": [],
     "parent": "82",
     "research": null,
     "spec": null,
@@ -295,11 +237,9 @@
     ],
     "areas": [],
     "created": "2026-04-18",
-    "updated": "2026-04-18",
+    "updated": "2026-04-29",
     "blocks": [],
-    "blocked_by": [
-      "85"
-    ],
+    "blocked_by": [],
     "parent": "82",
     "research": null,
     "spec": null,
@@ -344,7 +284,7 @@
   },
   {
     "id": 133,
-    "title": "Evaluate implement.md:180 progress-tail narration under Opus 4.7",
+    "title": "Evaluate implement.md:119 progress-tail narration under Opus 4.7",
     "status": "backlog",
     "priority": "low",
     "type": "feature",
@@ -354,7 +294,7 @@
     ],
     "areas": [],
     "created": "2026-04-22",
-    "updated": "2026-04-22",
+    "updated": "2026-04-29",
     "blocks": [],
     "blocked_by": [],
     "parent": "82",
