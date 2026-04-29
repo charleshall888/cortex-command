@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "groups": [
+    {
+      "priority": "critical",
+      "items": [
+        {
+          "id": 1,
+          "title": "critical refined",
+          "status": "refined",
+          "type": "feature",
+          "blocked_by": [],
+          "parent": null
+        },
+        {
+          "id": 2,
+          "title": "critical backlog",
+          "status": "backlog",
+          "type": "feature",
+          "blocked_by": [],
+          "parent": null
+        }
+      ]
+    },
+    {
+      "priority": "high",
+      "items": [
+        {
+          "id": 3,
+          "title": "high refined",
+          "status": "refined",
+          "type": "feature",
+          "blocked_by": [],
+          "parent": null
+        },
+        {
+          "id": 5,
+          "title": "high backlog",
+          "status": "backlog",
+          "type": "feature",
+          "blocked_by": [],
+          "parent": null
+        }
+      ]
+    },
+    {
+      "priority": "medium",
+      "items": [
+        {
+          "id": 7,
+          "title": "medium backlog",
+          "status": "backlog",
+          "type": "feature",
+          "blocked_by": [],
+          "parent": null
+        }
+      ]
+    },
+    {
+      "priority": "low",
+      "items": []
+    },
+    {
+      "priority": "contingent",
+      "items": [
+        {
+          "id": 8,
+          "title": "contingent backlog",
+          "status": "backlog",
+          "type": "feature",
+          "blocked_by": [],
+          "parent": null
+        }
+      ]
+    }
+  ],
+  "ineligible": [
+    {
+      "priority": "critical",
+      "items": []
+    },
+    {
+      "priority": "high",
+      "items": [
+        {
+          "id": 4,
+          "title": "high external-blocked",
+          "status": "backlog",
+          "type": "feature",
+          "blocked_by": [
+            "anthropics/claude-code#999"
+          ],
+          "parent": null,
+          "reason": "external blocker: anthropics/claude-code#999",
+          "rejection": "blocker"
+        }
+      ]
+    },
+    {
+      "priority": "medium",
+      "items": [
+        {
+          "id": 6,
+          "title": "medium internal-blocked",
+          "status": "backlog",
+          "type": "feature",
+          "blocked_by": [
+            "7"
+          ],
+          "parent": null,
+          "reason": "blocked by non-terminal internal blocker",
+          "rejection": "blocker"
+        }
+      ]
+    },
+    {
+      "priority": "low",
+      "items": []
+    },
+    {
+      "priority": "contingent",
+      "items": []
+    }
+  ]
+}
