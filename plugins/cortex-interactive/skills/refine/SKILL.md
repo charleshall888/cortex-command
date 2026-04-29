@@ -23,16 +23,21 @@ Topic: $ARGUMENTS (backlog item slug, title, or description). If empty, prompt u
 
 Determine the feature topic from the invocation argument.
 
-Read `references/clarify.md` §1 (Resolve Input) and follow its protocol to identify the backlog item and input context (Context A — backlog item, or Context B — ad-hoc prompt).
+Run:
 
-Record:
-- `backlog-filename-slug`: the backlog filename without `.md` (e.g., `119-create-refine-skill`) — used for `update_item.py` calls
-- `item-title`: the `title:` field from the backlog item frontmatter — used to derive the lifecycle slug
-- `lifecycle-slug`: derived from `item-title` using the canonical `slugify()` from `claude/common.py`: lowercase, convert underscores and slashes to spaces, strip remaining non-alphanumeric except hyphens/spaces, collapse runs of spaces/hyphens to single hyphen. Underscores become hyphens, not stripped (e.g., `session_panel` → `session-panel`, not `sessionpanel`). Leading/trailing hyphens are stripped.
+```bash
+cortex-resolve-backlog-item <input>
+```
 
-Example: title `"Create /cortex-interactive:refine skill (Clarify → Research → Spec)"` → lifecycle-slug `create-refine-skill-clarify-research-spec`
+Where `<input>` is the `$ARGUMENTS` value (backlog item ID, slug, or title phrase). If `$ARGUMENTS` is empty, prompt the user for input before invoking the script.
 
-These two slugs are often different. Do not conflate them.
+Branch on the exit code:
+
+- **Exit 0** — unambiguous match. Parse stdout JSON; the object contains exactly four fields: `filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`. Use these directly in Step 2 and subsequent phases. Do not re-derive slugs from scratch.
+- **Exit 2** — ambiguous match. Read the `<filename>\t<title>` candidate lines from stderr. Present them to the user and ask them to select one. Re-invoke `cortex-resolve-backlog-item` with the chosen filename slug, or treat the user's selection directly as the resolved item.
+- **Exit 3** — no match. Switch to Context B (ad-hoc topic) per `references/clarify.md` §1 and treat the input as the topic name.
+- **Exit 64** — usage error (e.g., empty or malformed input). Halt and surface the stderr usage diagnostic to the user. Do NOT fall through to disambiguation.
+- **Exit 70** — internal software error (malformed frontmatter, missing backlog directory, or other IO failure). Halt and surface the stderr diagnostic to the user. Do NOT fall through to disambiguation.
 
 ## Step 2: Check State
 
