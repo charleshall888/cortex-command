@@ -69,7 +69,7 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 
 **Consumers** (who reads):
 
-- **Orchestrator prompt, round start.** The orchestrator reads the whole file as session context — particularly `recovery_log_summary` and `round_history_notes` for continuity between rounds.
+- **Orchestrator prompt, round start.** Round-startup state assembly is mediated by `aggregate_round_context` (see [aggregate_round_context — round-startup state aggregator](#aggregate_round_context--round-startup-state-aggregator)), which reads `overnight-strategy.json` (alongside `overnight-state.json`, `escalations.jsonl`, and `session-plan.md`) and returns a single dict. The orchestrator accesses `recovery_log_summary` and `round_history_notes` via the `strategy` key of that dict rather than reading the file directly.
 - **`batch_runner.execute_feature()`.** Reads `hot_files` for the trivial-fast-path decision in [Conflict Recovery](#conflict-recovery-trivial-fast-path-and-repair-fallback): a conflicted file that appears in `hot_files` disqualifies the trivial path and forces a repair dispatch.
 
 `load_strategy()` tolerates missing files, invalid JSON, and unexpected shapes by returning a default instance — safe to read at any time, including from external tooling.
@@ -306,7 +306,7 @@ The field-by-field writer and reader map is documented under [Strategy File (ove
 
 - **`hot_files`** — a string list of paths the orchestrator treats as "do not auto-resolve conflicts on." Inflating the list makes the trivial fast-path fire less often (more repair dispatches, more Claude cost); leaving it empty makes every conflict eligible for the trivial path (faster, but higher risk of a stale resolution on a frequently-touched file). The orchestrator prompt populates this from observed round history — manual tuning is rarely needed, but the field is plain JSON and can be edited between sessions.
 - **`integration_health`** — `healthy` or `degraded`; consulted by downstream rounds' conflict-recovery decisions. Not typically tuned by hand; `runner.sh` sets `degraded` after an `integration_recovery` failure and the next round treats the integration branch with more caution.
-- **`recovery_log_summary`** and **`round_history_notes`** — narrative context threaded from the orchestrator prompt into the next round's context window. Keep them short — the orchestrator prompt budget includes them, so a ballooning `round_history_notes` reduces remaining room for the actual work.
+- **`recovery_log_summary`** and **`round_history_notes`** — narrative context threaded from the orchestrator prompt into the next round's context window. These fields are surfaced to the orchestrator via the `strategy` key returned by `aggregate_round_context` (see [aggregate_round_context — round-startup state aggregator](#aggregate_round_context--round-startup-state-aggregator)) rather than via a direct file read. Keep them short — the orchestrator prompt budget includes them, so a ballooning `round_history_notes` reduces remaining room for the actual work.
 
 ---
 
@@ -495,6 +495,30 @@ Overnight runs autonomously against a live working tree on a developer workstati
 **Files**: `cortex_command/overnight/orchestrator_io.py` (source of truth — `__all__`), consumed by `cortex_command/overnight/prompts/orchestrator-round.md`.
 
 Convention: any new orchestrator-callable I/O primitive is added here rather than imported directly from `claude.overnight.state` or `claude.overnight.deferral` by the orchestrator. This keeps the orchestrator's blast radius for internal refactors bounded to one file.
+
+### aggregate_round_context — round-startup state aggregator
+
+`aggregate_round_context` consolidates the four scattered file reads that the orchestrator-round prompt previously performed at round startup into a single in-process function call. It is the canonical way to assemble round-startup state; direct file reads from orchestrator code are not the supported path.
+
+**Import surface**: `from cortex_command.overnight.orchestrator_io import aggregate_round_context` (re-exported via `orchestrator_io.py`; do not import directly from `cortex_command.overnight.orchestrator_context`).
+
+**Files**: `cortex_command/overnight/orchestrator_context.py` (implementation), `cortex_command/overnight/orchestrator_io.py` (re-export).
+
+**Signature**: `aggregate_round_context(session_dir: Path, round_number: int) -> dict`
+
+`session_dir` is the path to the session directory (e.g. `lifecycle/sessions/<session_id>/`). `round_number` is the current round number; it is included for schema-version tracing and is not used for filtering — callers retain round-filter logic.
+
+The returned dict has five top-level keys:
+
+| Key | Type | Content |
+|-----|------|---------|
+| `schema_version` | `int` | Contract version (currently `1`). Consumers must check this and handle drift explicitly — do not assume the value. |
+| `state` | `dict` | Full overnight state from `asdict(load_state(session_dir / "overnight-state.json"))` — phase, per-feature status, round counter. |
+| `strategy` | `dict` | Full overnight strategy from `asdict(load_strategy(session_dir / "overnight-strategy.json"))` — `hot_files`, `integration_health`, `recovery_log_summary`, `round_history_notes`. |
+| `escalations` | `dict` | Pre-computed escalation sets: `{"unresolved": [...], "all_entries": [...]}`. `unresolved` is the set of escalation entries with no matching resolution or promoted entry (same logic as orchestrator-round.md Steps 0a–0d). `all_entries` is the full entry list from `escalations.jsonl`; the cycle-breaker reads `all_entries` directly. |
+| `session_plan_text` | `str` | Contents of `session_dir / "session-plan.md"`, or `""` if the file is absent. |
+
+**Error behavior**: `aggregate_round_context` raises `FileNotFoundError` if `overnight-state.json` is missing (propagated from `load_state`). It raises `RuntimeError` with the substring `"schema_version drift"` if the assembled dict's `schema_version` does not match the module-level `_EXPECTED_SCHEMA_VERSION` constant — this is the in-process safety net for contract changes. `load_strategy` tolerates missing/invalid `overnight-strategy.json` by returning a default instance; escalation lines that fail JSON parsing are skipped with a stderr warning. The function is read-only with respect to all state files and performs no in-process caching — each call reads fresh from disk.
 
 ### lifecycle.config.md consumers and absence behavior
 
