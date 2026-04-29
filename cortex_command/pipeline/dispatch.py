@@ -161,6 +161,7 @@ Skill = Literal[
     "merge-test-repair",
     "integration-recovery",
     "brain",
+    "orchestrator-round",  # documentation-only: never passed to dispatch_task; runner.py emits via pipeline.state.log_event
 ]
 
 # Model escalation ladder used by the retry loop (Req 8).
