@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: ab917a16-dbcc-47f2-9541-56d29bbee26a
 title: "Extract morning-review deterministic sequences (C11-C15 bundle)"
-status: backlog
+status: refined
 priority: medium
 type: feature
 parent: "101"
@@ -11,6 +11,10 @@ tags: [harness, scripts, morning-review]
 created: 2026-04-21
 updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/extract-morning-review-deterministic-sequences-c11-c15-bundle/spec.md
+areas: [skills]
 ---
 
 # Extract morning-review deterministic sequences (C11–C15 bundle)

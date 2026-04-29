@@ -1,0 +1,37 @@
+{"ts":"2026-04-28T17:18:39Z","event":"discovery_reference","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","epic_research":"research/extract-scripts-from-agent-tool-sequences/research.md","epic_spec":null}
+- ts: 2026-04-28T17:18:39Z
+  event: clarify_critic
+  feature: extract-morning-review-deterministic-sequences-c11-c15-bundle
+  findings:
+    - "Intent rated High citing 'each candidate has a specific line range and an extraction shape from research.md Feasibility table' — but the source body itself leaves C12 ('new bin/cortex-worktree-gc or extension of bin/cortex-git-sync-rebase') and C14 ('may be SKILL.md edit only') as open implementation questions, and the assessment leans on an external research artifact to fill that gap."
+    - "Intent framing 'extract into scripts' is contradicted by the source for at least three of five candidates — C13 is described as a gap-closing audit ('already adopted in current SKILLs; close any remaining gaps'), C14 may be a SKILL.md edit only, and C15 is described as removing a dead fallback in complete.md. Calling all five 'extractions' papers over heterogeneous shapes."
+    - "Intent rated High while the assessment simultaneously notes the bundle 'may split at plan phase' — a goal that may bifurcate at the next phase is not unambiguous in any operational sense; the unit of work itself is undecided."
+    - "Scope rated Low only on the three flagged ambiguities (C12, C14, C15) — but the source contains additional unbounded scope: walkthrough.md drift count ('5 occurrences') is unvalidated, C13's 'close any remaining gaps' is not enumerated, and C15's invariant 'requires cortex-generate-backlog-index in PATH' has no named owner."
+    - "Requirements alignment rated High citing 'no conflict with pipeline.md (morning-review is a daytime skill, not pipeline-runner)' — but the criticality reasoning admits the ticket touches bin/cortex-git-sync-rebase which is a documented overnight post-merge-sync dependency in requirements/pipeline.md, so the change does intersect pipeline behavior."
+    - "Requirements alignment rated High based on external claims ('parent 101 is open, prerequisites 102 + 113 are both status: complete') that aren't quoted from the ticket body the critic was given."
+    - "Complexity rated 'complex (4+ files)' with an enumerated lower bound of 1–4 new scripts — actual file count could be 7–9 if every candidate produces a script and every walkthrough drift is its own edit, which understates the bundle's true scale."
+    - "Criticality rated 'high' citing daytime-skill blast radius — but bin/cortex-git-sync-rebase is also the overnight post-merge-sync script per pipeline.md, so the blast radius extends to the overnight runner, supporting a stronger criticality framing."
+  dispositions:
+    apply: 4
+    dismiss: 4
+    ask: 0
+  applied_fixes:
+    - "Refined the clarified intent statement from 'extract C11–C15 into scripts' to 'harden the five deterministic sequences in morning-review — extract where extraction pays, fold/repoint where it doesn't (C14 may be SKILL.md edit only), and remove dead fallbacks (C15)' to reflect the heterogeneous shapes."
+    - "Added C12 implementation-shape question (new script vs. fold into cortex-git-sync-rebase) to Open Questions for Research."
+    - "Added walkthrough.md drift verification, C13 gap enumeration, and C15 PATH-invariant ownership questions to Open Questions for Research."
+    - "Added C14 pipeline-interaction question (does adding a preflight mode to cortex-git-sync-rebase interact with its overnight post-merge-sync usage?) to Open Questions for Research; surfaced this as a cross-area concern in the requirements-alignment note rather than treating pipeline.md as 'no conflict'."
+  dismissals:
+    - finding_index: 2
+      rationale: "Dismissed: the may-split-at-plan-phase clause is a known acknowledged downstream trade-off, not unresolved current intent. The body explicitly defers the decision; the unit being refined is the bundle, with a plan-phase split as the documented contingency."
+    - finding_index: 5
+      rationale: "Dismissed: the orchestrator legitimately read requirements/project.md and requirements/pipeline.md as part of clarify §2 Load Requirements Context. The critic is deprived of those files by design, but the orchestrator's reasoning was source-grounded for the broader assessment."
+    - finding_index: 6
+      rationale: "Dismissed: 'complex' is the maximum tier in the lifecycle complexity rubric — there is no 'more complex than complex.' Whether the bundle is 4 files or 9, the tier classification is the same."
+    - finding_index: 7
+      rationale: "Dismissed: the clarify rubric (§5 item 3) explicitly names 'any change to shared skills / workflow infrastructure / overnight runner / hooks that other capabilities depend on' as the default-high case. 'Critical' is reserved for security, data loss, financial, or loss of a core capability everything else depends on. A bug in cortex-git-sync-rebase would pause the overnight session via the existing recovery path, not cause data loss or a loss-of-core-capability event. The pipeline-interaction concern is captured as a research question rather than a tier escalation."
+  status: ok
+{"ts":"2026-04-28T17:18:39Z","event":"lifecycle_start","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","tier":"complex","criticality":"high"}
+{"ts":"2026-04-28T17:18:39Z","event":"phase_transition","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","from":"clarify","to":"research"}
+{"ts":"2026-04-28T20:59:53Z","event":"phase_transition","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","from":"research","to":"specify"}
+{"ts":"2026-04-28T20:59:53Z","event":"orchestrator_review","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","phase":"specify","verdict":"pass","cycle":1,"issues":[]}
+{"ts":"2026-04-28T21:18:00Z","event":"orchestrator_review","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","phase":"plan","verdict":"pass","cycle":1,"issues":[]}
