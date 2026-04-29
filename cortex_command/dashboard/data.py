@@ -319,7 +319,7 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
     ]
 
     feature_dir = lifecycle_dir / feature_slug
-    current_phase: str | None = detect_lifecycle_phase(feature_dir)
+    current_phase: str | None = detect_lifecycle_phase(feature_dir)["phase"]
 
     # Count rework cycles: number of "implement" transitions that follow a
     # "review" transition immediately before them.

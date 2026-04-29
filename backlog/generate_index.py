@@ -145,7 +145,7 @@ def collect_items() -> tuple[list[dict], set[int], set[int], list[dict]]:
         lc_slug = fm.get("lifecycle_slug", "").strip().strip("\"'") or slugify(title)
         lc_dir = LIFECYCLE_DIR / lc_slug if lc_slug else None
         if lc_dir and lc_dir.is_dir():
-            lifecycle_phase: str | None = detect_lifecycle_phase(lc_dir)
+            lifecycle_phase: str | None = detect_lifecycle_phase(lc_dir)["phase"]
         else:
             lifecycle_phase = _opt(fm, "lifecycle_phase")
 
