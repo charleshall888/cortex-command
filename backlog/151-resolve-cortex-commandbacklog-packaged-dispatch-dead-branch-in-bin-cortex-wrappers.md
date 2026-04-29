@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 35d35337-7372-4f11-b135-3d5b3756ce88
 title: "Resolve cortex_command.backlog packaged-dispatch dead branch in bin/cortex-* wrappers"
-status: in_progress
+status: complete
 priority: medium
 type: bug
 blocked-by: []
@@ -14,7 +14,7 @@ criticality: high
 spec: lifecycle/resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers/spec.md
 areas: [scripts]
 lifecycle_phase: implement
-session_id: 1350a338-c816-47ca-b797-b0f217f60660
+session_id: null
 ---
 
 # Resolve cortex_command.backlog packaged-dispatch dead branch in bin/cortex-* wrappers

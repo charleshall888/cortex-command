@@ -255,36 +255,6 @@
     "repo": null
   },
   {
-    "id": 151,
-    "title": "Resolve cortex_command.backlog packaged-dispatch dead branch in bin/cortex-* wrappers",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "bug",
-    "tags": [
-      "scripts",
-      "backlog",
-      "plugins"
-    ],
-    "areas": [
-      "scripts"
-    ],
-    "created": "2026-04-29",
-    "updated": "2026-04-29",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "35d35337-7372-4f11-b135-3d5b3756ce88",
-    "lifecycle_slug": null,
-    "session_id": "1350a338-c816-47ca-b797-b0f217f60660",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 90,
     "title": "Adopt xhigh effort default for overnight lifecycle implement",
     "status": "backlog",
@@ -425,7 +395,7 @@
     "uuid": "686003ea-c115-4a5c-82c1-9a01619711ee",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
