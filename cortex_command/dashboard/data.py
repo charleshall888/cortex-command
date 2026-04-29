@@ -579,6 +579,8 @@ def build_swim_lane_data(
         "specify→plan": "→plan",
         "plan→implement": "→impl",
         "implement→review": "→rev",
+        "review→implement-rework": "→rework",
+        "implement-rework→review": "→rev",
         "review→complete": "→done",
     }
 
