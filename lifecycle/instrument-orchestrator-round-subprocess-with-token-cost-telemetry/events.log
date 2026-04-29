@@ -105,3 +105,26 @@
   feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
   batch: 0
   tasks: [1, 2, 3]
+- ts: 2026-04-29T00:00:12Z
+  event: task_complete
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  task: 1
+  batch: 0
+  status: success
+- ts: 2026-04-29T00:00:13Z
+  event: task_complete
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  task: 2
+  batch: 0
+  status: success
+- ts: 2026-04-29T00:00:14Z
+  event: task_complete
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  task: 3
+  batch: 0
+  status: success
+- ts: 2026-04-29T00:00:15Z
+  event: batch_dispatch
+  feature: instrument-orchestrator-round-subprocess-with-token-cost-telemetry
+  batch: 1
+  tasks: [4]

@@ -17,7 +17,7 @@ Instrument `_spawn_orchestrator` to redirect its stdout to a session-scoped file
   - The runtime guard at `dispatch.py:432` rejects unknown skills only inside `dispatch_task`; runner.py emits via `pipeline.state.log_event` and is unaffected.
   - `metrics.py:668` falls back to `"legacy"` for unknown skills — this entry is documentation-only — but the in-place comment must say so to prevent a future reader from threading `dispatch_task("orchestrator-round", ...)` calls.
 - **Verification**: `python -c "from cortex_command.pipeline.dispatch import Skill; from typing import get_args; assert 'orchestrator-round' in get_args(Skill)"` — pass if exit 0. Plus `grep -A 1 '"orchestrator-round"' cortex_command/pipeline/dispatch.py | grep -c 'documentation-only'` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add pinned envelope fixtures
 - **Files**: `cortex_command/overnight/tests/fixtures/orchestrator_envelope_success.json`, `cortex_command/overnight/tests/fixtures/orchestrator_envelope_error.json`
@@ -29,7 +29,7 @@ Instrument `_spawn_orchestrator` to redirect its stdout to a session-scoped file
   - Error-fixture required keys: same shape but with `is_error: true` (or `subtype` starting with `error_`); usage may be absent or zero.
   - Captured-from-live-CLI is the goal; if live capture is impractical, hand-construct a shape consistent with the headless docs (https://code.claude.com/docs/en/headless) and annotate `_cli_version: "synthetic"`.
 - **Verification**: `python -c "import json; e=json.load(open('cortex_command/overnight/tests/fixtures/orchestrator_envelope_success.json')); assert isinstance(e, dict) and 'usage' in e and 'total_cost_usd' in e and not e.get('is_error', False)"` — pass if exit 0. Plus `python -c "import json; e=json.load(open('cortex_command/overnight/tests/fixtures/orchestrator_envelope_error.json')); assert isinstance(e, dict) and (e.get('is_error') is True or str(e.get('subtype', '')).startswith('error_'))"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Modify `_spawn_orchestrator`, extract emission helper, and wire round-loop caller (R1, R2, R3, R6, R8)
 - **Files**: `cortex_command/overnight/runner.py`
@@ -60,7 +60,7 @@ Instrument `_spawn_orchestrator` to redirect its stdout to a session-scoped file
   - **AST-based helper presence check**: `python -c "import ast; tree = ast.parse(open('cortex_command/overnight/runner.py').read()); names = [n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]; assert '_emit_orchestrator_round_telemetry' in names"` — pass if exit 0.
   - **Caller-arity smoke check**: `python -c "import inspect; from cortex_command.overnight.runner import _spawn_orchestrator; assert 'stdout_path' in inspect.signature(_spawn_orchestrator).parameters"` — pass if exit 0 (proves the new parameter is wired at the API boundary; signature mismatch with the call site would fail Task 4 tests).
   - Functional verification of dispatch_start placement, dispatch_complete/error branching, fire-and-forget, and dry-run silence is deferred to Task 4 tests (`pytest cortex_command/overnight/tests/test_orchestrator_round_telemetry.py`).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add telemetry test module (R2, R3, R5, R6, R7, R8 + fd-lifecycle)
 - **Files**: `cortex_command/overnight/tests/test_orchestrator_round_telemetry.py`
