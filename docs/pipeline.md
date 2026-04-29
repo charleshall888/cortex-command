@@ -111,6 +111,8 @@ merge conflicts, post-merge recovery) is documented in
 [docs/overnight-operations.md](overnight-operations.md). This document retains only the
 pipeline-module internals summarized in the module reference table above.
 
+Round-startup state assembly is documented in `docs/overnight-operations.md` (see `aggregate_round_context`).
+
 ---
 
 ## Keeping This Document Current
