@@ -1,0 +1,28 @@
+- ts: 2026-04-29T16:48:07Z
+  event: clarify_critic
+  feature: shared-git-index-race-between-parallel-claude-sessions-causes-wrong-files-to-land-in-commits
+  findings:
+    - "Intent clarity rated HIGH papers over a load-bearing ambiguity: must the fix cover only `/commit` invocations, or every harness path that touches the index? Candidate #1's hedge ('if all harness entry points go through /commit, coverage is complete') implies the author is unsure."
+    - "Scope boundedness rated HIGH despite the four candidate fixes having radically different blast radii (verify-before-commit vs. GIT_INDEX_FILE isolation vs. commit-tree restructuring); the spec-phase choice itself is a scope decision, not a design decision within fixed scope."
+    - "Requirements alignment rated HIGH on an absence-of-evidence basis ('no requirements file forbids the proposed mitigation classes') rather than a positive mandate; the assessment paraphrases multi-agent.md and pipeline.md without quoting either."
+    - "Complexity rated COMPLEX understates risk because the rubric is binary while the actual implementation breadth could range from a five-line guard (candidate #2) to restructuring the staging model (candidates #3/#4)."
+    - "Criticality rated HIGH but-not-critical dismisses 'critical' too quickly — silent corruption of git history that the morning report and PR descriptions consume downstream is precisely the failure mode where 'silent' is the dangerous part in an autonomous overnight runner."
+    - "The regression-test acceptance criterion is treated as 'explicit and verifiable' but a one-sentence description of how to simulate concurrent staging does not address whether the test can be made deterministic in CI."
+  dispositions:
+    apply: 1
+    dismiss: 5
+    ask: 0
+  applied_fixes:
+    - "Revised requirements alignment phrasing from 'Aligned with multi-agent.md and pipeline.md' to 'Consistent with the goals of multi-agent.md (parallel dispatch correctness) and pipeline.md (artifact-commit integrity); no requirements file mandates or constrains the specific mitigation' — the alignment is by non-conflict and goal-compatibility, not by explicit requirement."
+  dismissals:
+    - finding_index: 0
+      rationale: "Acceptance criteria 1 and 3 are the binding scope statement: parallel `/commit` invocations and the overnight runner's artifact-commit path. Candidate #1's 'anywhere else' prose is hedge within one option, not normative scope. Other harness paths surface as a research enumeration question, not a scope ambiguity."
+    - finding_index: 1
+      rationale: "Scope boundedness in the lifecycle rubric is what's in/out, not how big the chosen implementation is. The four candidates are explicitly deferred to the spec phase by the ticket itself. The outcome (no subject/content mismatch on shared index) and the surfaces covered (/commit + overnight artifact-commit) are bounded; the implementation choice space is the spec phase's job."
+    - finding_index: 3
+      rationale: "The complexity rubric in clarify.md §5 is binary (simple|complex). COMPLEX is the correct ceiling and matches the rubric's 'modifies shared infrastructure / cross-cutting behavioral effects / requires judgment calls about design trade-offs' criteria regardless of which candidate wins."
+    - finding_index: 4
+      rationale: "Per clarify.md §5 criticality rubric, 'critical' is reserved for security, data loss, financial, or loss of a core capability everything else depends on. The bug is misattribution — staged files remain on disk after the failed commit (per the bug report) — not data loss. Shared-skill/workflow-infra changes default to HIGH per the rubric, which this fits cleanly."
+    - finding_index: 5
+      rationale: "Test determinism is exactly the kind of implementation detail the spec phase is for. A research-then-spec gate that pre-decides test architecture would invert the gates."
+  status: ok

@@ -2,11 +2,13 @@
 schema_version: "1"
 uuid: ebdcac83-1152-4caa-9aae-7499771961c1
 title: "Shared git index race between parallel Claude sessions causes wrong files to land in commits"
-status: backlog
+status: wontfix
 priority: high
 type: bug
 created: 2026-04-22
-updated: 2026-04-22
+updated: 2026-04-29
+complexity: complex
+criticality: high
 ---
 
 ## Problem
@@ -50,3 +52,14 @@ Quickest path: #2 catches the bug, #1 prevents it. #2 + #1 together is belt-and-
 
 - Exposed during lifecycle 127 (`disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape`) on 2026-04-22.
 - Associated commits: `053ef22` (mislabeled — subject says 127 but content is #097), `c35355c` (the real 127 artifacts commit with an explanatory note in its body).
+
+## Resolution: wontfix (2026-04-29)
+
+Closed `wontfix` after running the value/complexity gate during refine. Rationale:
+
+- **Value is small**. Bug observed once. Recoverable by re-staging and re-committing. Audit-trail mislabeling is real but has not been a pattern.
+- **Lock-based fix is incomplete**. The chosen-and-rejected approach (Candidate 1, advisory `flock`) addresses only the **index** race. The pre-commit hook runs `just build-plugin`, which writes files into the **shared working tree** — two parallel sessions race on those writes regardless of any lock. Industry consensus across Cursor / Aider / Claude Code / Augment is per-agent worktree isolation, not locking.
+- **Realistic complexity is much higher than the ticket suggests**. The research adversarial review surfaced lockfile-location, hook-side enforcement, `O_CLOEXEC`, NFS detection, head-of-line-blocking visibility, and ongoing per-caller upkeep. ~250 LOC plus tests, not the original "~50 LOC" framing.
+- **The right architectural answer is daytime-worktree isolation** (extending the existing per-feature worktree pattern from overnight to interactive sessions), not locks. That is a separate, larger epic and is not pre-built for a once-observed bug.
+
+**Research preserved** at `lifecycle/shared-git-index-race-between-parallel-claude-sessions-causes-wrong-files-to-land-in-commits/research.md`. Two latent fixes the research uncovered (`GIT_DIR` strip in `runner.py:_commit_followup_in_worktree`; `O_CLOEXEC` on `settings_merge.py` lockfile fd) and a worktree-parallelism guideline are filed as separate backlog items.
