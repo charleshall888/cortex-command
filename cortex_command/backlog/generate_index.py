@@ -6,7 +6,7 @@ Produces:
   - backlog/index.md    — summary table sorted by priority then ID
 
 Usage:
-    python3 backlog/generate_index.py
+    cortex-generate-backlog-index
 """
 
 from __future__ import annotations
@@ -17,13 +17,9 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-# Resolve project root so imports work when called from any directory.
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
-from cortex_command.backlog import is_item_ready  # noqa: E402
-from cortex_command.common import TERMINAL_STATUSES, atomic_write, detect_lifecycle_phase, normalize_status, slugify  # noqa: E402
+from cortex_command.backlog import _telemetry
+from cortex_command.backlog.readiness import is_item_ready
+from cortex_command.common import TERMINAL_STATUSES, atomic_write, detect_lifecycle_phase, normalize_status, slugify
 
 BACKLOG_DIR = Path.cwd() / "backlog"
 LIFECYCLE_DIR = Path.cwd() / "lifecycle"
@@ -284,7 +280,8 @@ def generate_md(
     return "\n".join(lines) + "\n"
 
 
-def main() -> None:
+def main() -> int:
+    _telemetry.log_invocation("cortex-generate-backlog-index")
     items, active_ids, archive_ids, all_items = collect_items()
     atomic_write(BACKLOG_DIR / "index.json", generate_json(items))
     atomic_write(
@@ -292,7 +289,8 @@ def main() -> None:
         generate_md(items, active_ids, archive_ids, all_items),
     )
     print(f"Generated index.json ({len(items)} items) and index.md")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

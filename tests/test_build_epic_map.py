@@ -1,9 +1,9 @@
-"""Tests for ``bin/cortex-build-epic-map`` and ``backlog/build_epic_map.py``.
+"""Tests for ``cortex-build-epic-map`` and ``cortex_command.backlog.build_epic_map``.
 
 Covers (per Requirement 11):
   - ``normalize_parent`` unit cases for the four normalization rules
     (null/missing → None, quote-strip, UUID skip, integer match).
-  - End-to-end subprocess invocations of the wrapper against fixtures
+  - End-to-end subprocess invocations of the entry point against fixtures
     in ``tests/fixtures/build_epic_map/``.
   - Schema-version validation (only ``"1"`` accepted; others exit 2).
   - Malformed-input handling (invalid JSON, missing path → exit 1).
@@ -13,11 +13,9 @@ Covers (per Requirement 11):
   - Deterministic output across repeated runs.
   - ``--help`` mentions ``index.json`` (Requirement 2).
 
-The wrapper script (``bin/cortex-build-epic-map``) is invoked via
-``subprocess.run`` with ``CORTEX_COMMAND_ROOT`` set so its branch (b) routes
-back to ``backlog/build_epic_map.py`` in this checkout. Direct unit tests of
-``normalize_parent`` import from ``backlog.build_epic_map`` (matches the
-pattern in ``tests/test_backlog_worktree_routing.py:18``).
+The packaged module is invoked via ``python -m
+cortex_command.backlog.build_epic_map`` in subprocess. Direct unit tests
+of ``normalize_parent`` import from ``cortex_command.backlog.build_epic_map``.
 """
 
 from __future__ import annotations
@@ -30,21 +28,19 @@ from pathlib import Path
 
 import pytest
 
-from backlog.build_epic_map import normalize_parent
+from cortex_command.backlog.build_epic_map import normalize_parent
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-WRAPPER = REPO_ROOT / "bin" / "cortex-build-epic-map"
-SCRIPT = REPO_ROOT / "backlog" / "build_epic_map.py"
 FIXTURES = REPO_ROOT / "tests" / "fixtures" / "build_epic_map"
 
 
 def _run_wrapper(*args: str) -> subprocess.CompletedProcess:
-    """Invoke the wrapper with CORTEX_COMMAND_ROOT pointed at this checkout."""
+    """Invoke the packaged module via ``python -m``."""
     env = os.environ.copy()
     env["CORTEX_COMMAND_ROOT"] = str(REPO_ROOT)
     return subprocess.run(
-        [str(WRAPPER), *args],
+        [sys.executable, "-m", "cortex_command.backlog.build_epic_map", *args],
         capture_output=True,
         text=True,
         timeout=10,
@@ -313,9 +309,9 @@ def test_width_mixed_epic_ordering(tmp_path: Path) -> None:
 
 
 def test_help_mentions_index_json() -> None:
-    """``python3 backlog/build_epic_map.py --help`` mentions ``index.json``."""
+    """``cortex-build-epic-map --help`` mentions ``index.json``."""
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), "--help"],
+        [sys.executable, "-m", "cortex_command.backlog.build_epic_map", "--help"],
         capture_output=True,
         text=True,
         timeout=10,

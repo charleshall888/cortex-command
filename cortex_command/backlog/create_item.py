@@ -6,7 +6,7 @@ appends a status_changed event to the sidecar .events.jsonl, and regenerates
 the index.
 
 Usage:
-    python3 backlog/create_item.py --title "My feature" --status backlog --type feature
+    cortex-create-backlog-item --title "My feature" --status backlog --type feature
 
 Exit 0 = item created successfully.
 Exit 1 = error.
@@ -22,24 +22,11 @@ import subprocess
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
-
-from cortex_command.common import slugify
 from typing import Any
 from uuid import uuid4
 
-# Resolve project root so imports work when called from any directory.
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
-from cortex_command.common import atomic_write  # noqa: E402
-
-
-def _resolve_generate_index(backlog_dir: Path) -> Path:
-    """Return the generate_index.py script path for the given backlog_dir."""
-    local_py = backlog_dir / "generate_index.py"
-    skill_py = Path.home() / ".claude" / "skills" / "backlog" / "generate_index.py"
-    return local_py if local_py.exists() else skill_py
+from cortex_command.backlog import _telemetry
+from cortex_command.common import atomic_write, slugify
 
 
 # ---------------------------------------------------------------------------
@@ -143,9 +130,10 @@ def create_item(
         details={"from": None, "to": status},
     )
 
-    generate_index = _resolve_generate_index(backlog_dir)
-    if generate_index.exists():
-        subprocess.run([sys.executable, str(generate_index)], check=False)
+    subprocess.run(
+        [sys.executable, "-m", "cortex_command.backlog.generate_index"],
+        check=False,
+    )
 
     return item_path
 
@@ -154,7 +142,8 @@ def create_item(
 # CLI
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+def main() -> int:
+    _telemetry.log_invocation("cortex-create-backlog-item")
     parser = argparse.ArgumentParser(
         description="Create a new backlog item with the next available ID."
     )
@@ -183,10 +172,11 @@ def main() -> None:
             parent=args.parent,
         )
         print(str(item_path))
+        return 0
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

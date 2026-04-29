@@ -122,6 +122,55 @@ _check_shims() {
     exit "$missing"
 }
 
+_check_entry_points() {
+    # Static assertion that each entry-point module's def main() body
+    # opens with a _telemetry.log_invocation(...) call (Spec R8 / R12).
+    # Sibling to _check_shims; the two telemetry gates ride together
+    # in pre-commit so a packaged-dispatch entry point can never
+    # silently regress its bin-invocation telemetry.
+    local checked=0 missing=0
+    local backlog_dir="$REPO_ROOT/cortex_command/backlog"
+    for module in update_item create_item generate_index build_epic_map; do
+        local path="$backlog_dir/$module.py"
+        if [ ! -f "$path" ]; then
+            echo "$path: file missing" >&2
+            missing=$((missing + 1))
+            continue
+        fi
+        checked=$((checked + 1))
+        local first_stmt
+        first_stmt=$(awk '
+            /^def main\(/ { in_main = 1; next }
+            in_main {
+                stripped = $0
+                sub(/^[[:space:]]+/, "", stripped)
+                if (stripped == "") next
+                if (substr(stripped, 1, 1) == "#") next
+                if (substr(stripped, 1, 3) == "\"\"\"") {
+                    rest = substr(stripped, 4)
+                    if (index(rest, "\"\"\"") > 0) next
+                    while (getline line) {
+                        if (index(line, "\"\"\"") > 0) break
+                    }
+                    next
+                }
+                print stripped
+                exit
+            }
+        ' "$path")
+        case "$first_stmt" in
+            _telemetry.log_invocation\(*)
+                ;;
+            *)
+                echo "$path: first statement of main() must be _telemetry.log_invocation(...) — got: $first_stmt" >&2
+                missing=$((missing + 1))
+                ;;
+        esac
+    done
+    echo "Checked $checked entry-point modules; $missing missing telemetry call."
+    exit "$missing"
+}
+
 _json_mode() {
     local logs sessions errors_recorded inventory_str counts records malformed
     logs=( "$REPO_ROOT"/lifecycle/sessions/*/bin-invocations.jsonl )
@@ -218,6 +267,9 @@ case "${1:-}" in
     --check-shims)
         _check_shims
         ;;
+    --check-entry-points)
+        _check_entry_points
+        ;;
     --self-test)
         _self_test
         ;;
@@ -226,11 +278,12 @@ case "${1:-}" in
 cortex-invocation-report — aggregate bin/cortex-* invocation telemetry from per-session logs.
 
 Usage:
-  cortex-invocation-report                Default human-readable report.
-  cortex-invocation-report --json         JSON document.
-  cortex-invocation-report --check-shims  Exit non-zero if any bin/cortex-* lacks the shim line.
-  cortex-invocation-report --self-test    End-to-end probe (writes one probe record).
-  cortex-invocation-report --help, -h     Show this help.
+  cortex-invocation-report                       Default human-readable report.
+  cortex-invocation-report --json                JSON document.
+  cortex-invocation-report --check-shims         Exit non-zero if any bin/cortex-* lacks the shim line.
+  cortex-invocation-report --check-entry-points  Exit non-zero if any backlog entry-point module's def main() does not begin with _telemetry.log_invocation(...).
+  cortex-invocation-report --self-test           End-to-end probe (writes one probe record).
+  cortex-invocation-report --help, -h            Show this help.
 
 Recent window: v1 reports all retained sessions (no time-based filter).
 Note: --self-test writes one record per run with script name "cortex-self-test-probe".

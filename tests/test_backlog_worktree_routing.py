@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from backlog.update_item import update_item
+from cortex_command.backlog.update_item import update_item
 from cortex_command.overnight.report import (
     NewBacklogItem,
     ReportData,

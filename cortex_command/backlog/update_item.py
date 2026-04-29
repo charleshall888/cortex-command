@@ -6,12 +6,12 @@ frontmatter updates, sidecar event logging, and dependency cascade — all
 without moving any file.
 
 Usage:
-    python3 backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
+    cortex-update-item <slug-or-uuid> key=value [key=value ...]
 
 Examples:
-    python3 backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete
-    python3 backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete session_id=null
-    python3 backlog/update_item.py 550e8400-... lifecycle_phase=implement
+    cortex-update-item 030-cf-tunnel-fallback-polish status=complete
+    cortex-update-item 030-cf-tunnel-fallback-polish status=complete session_id=null
+    cortex-update-item 550e8400-... lifecycle_phase=implement
 
 Exit 0 = item updated successfully.
 Exit 1 = item not found or no fields provided.
@@ -28,23 +28,8 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-# Resolve project root so imports work when called from any directory.
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
-from cortex_command.common import TERMINAL_STATUSES, atomic_write  # noqa: E402
-
-
-def _resolve_generate_index(backlog_dir: Path) -> Path:
-    """Return the generate_index.py script path for the given backlog_dir.
-
-    Prefers the project-local script; falls back to the globally-deployed
-    ``~/.local/bin/generate-backlog-index``.
-    """
-    local_py = backlog_dir / "generate_index.py"
-    skill_py = Path.home() / ".local" / "bin" / "generate-backlog-index"
-    return local_py if local_py.exists() else skill_py
+from cortex_command.backlog import _telemetry
+from cortex_command.common import TERMINAL_STATUSES, atomic_write
 
 
 # ---------------------------------------------------------------------------
@@ -428,32 +413,31 @@ def update_item(
             print(f"Parent epic also closed: {parent_closed}")
 
     # Regenerate index (non-fatal)
-    generate_index = _resolve_generate_index(backlog_dir)
-    if generate_index.exists():
-        result = subprocess.run(
-            [sys.executable, str(generate_index)],
-            capture_output=True,
+    result = subprocess.run(
+        [sys.executable, "-m", "cortex_command.backlog.generate_index"],
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        if result.stderr:
+            print(result.stderr.decode(errors="replace"), file=sys.stderr, end="")
+        print(
+            f"WARNING: Index regeneration failed (exit {result.returncode})",
+            file=sys.stderr,
         )
-        if result.returncode != 0:
-            if result.stderr:
-                print(result.stderr.decode(errors="replace"), file=sys.stderr, end="")
-            print(
-                f"WARNING: Index regeneration failed (exit {result.returncode})",
-                file=sys.stderr,
-            )
 
 
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+def main() -> int:
+    _telemetry.log_invocation("cortex-update-item")
     if len(sys.argv) < 3:
         print(
-            "Usage: python3 backlog/update_item.py <slug-or-uuid> key=value [key=value ...]",
+            "Usage: cortex-update-item <slug-or-uuid> key=value [key=value ...]",
             file=sys.stderr,
         )
-        sys.exit(1)
+        return 1
 
     # CLI-layer cwd resolution — internal callers must pass backlog_dir
     # explicitly (see spec R3 / update_item signature).
@@ -467,7 +451,7 @@ def main() -> None:
     for arg in field_args:
         if "=" not in arg:
             print(f"Invalid argument (expected key=value): {arg}", file=sys.stderr)
-            sys.exit(1)
+            return 1
         key, value = arg.split("=", 1)
         # Handle null/None values
         if value.lower() in ("null", "none", ""):
@@ -479,11 +463,12 @@ def main() -> None:
     item_path = _find_item(slug_or_uuid, BACKLOG_DIR)
     if item_path is None:
         print(f"Item not found: {slug_or_uuid}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
     update_item(item_path, fields, BACKLOG_DIR)
     print(f"Updated: {item_path}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

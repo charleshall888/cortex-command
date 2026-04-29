@@ -163,23 +163,57 @@ def gather_scan_files(root: Path) -> list[Path]:
     return sorted(out, key=lambda p: str(p))
 
 
-def gather_deployed(root: Path) -> set[str]:
-    """R10 / Edge Cases: deployed = files in ``bin/`` with execute bit set."""
-    bin_dir = root / "bin"
-    if not bin_dir.is_dir():
+def gather_entry_point_names(root: Path) -> set[str]:
+    """Return ``[project.scripts]`` keys from ``pyproject.toml``.
+
+    Empty set if the file is missing or unparseable. After
+    ``uv tool install -e .`` runs, each key in this table becomes a
+    console-script binary on PATH — i.e., a deployed command.
+    """
+    pyproject = root / "pyproject.toml"
+    if not pyproject.is_file():
         return set()
+    try:
+        import tomllib
+
+        with open(pyproject, "rb") as f:
+            data = tomllib.load(f)
+        scripts = data.get("project", {}).get("scripts", {})
+        if isinstance(scripts, dict):
+            return set(scripts.keys())
+    except Exception:
+        return set()
+    return set()
+
+
+def gather_deployed(root: Path) -> set[str]:
+    """Deployed-command set = ``bin/`` exec files ∪ ``[project.scripts]`` keys.
+
+    The ``bin/``-side reflects committed-tree wrapper scripts (a
+    filesystem fact); the ``[project.scripts]``-side reflects
+    entry-point binaries that ``uv tool install -e .`` generates (a
+    declarative ``pyproject.toml`` fact). Both halves are valid sources
+    of truth for "this repo claims to ship command X"; the linter's
+    job is committed-source drift detection, which both halves serve.
+    W005 (allowlist-superfluous) stays scoped to ``bin/``-discovered
+    commands only — entry-point names are out of scope for the
+    allowlist mechanism.
+    """
     out: set[str] = set()
-    for entry in os.scandir(bin_dir):
-        if entry.name.startswith("."):
-            continue
-        if not (entry.is_file(follow_symlinks=True) or entry.is_symlink()):
-            continue
-        try:
-            st = entry.stat(follow_symlinks=True)
-        except OSError:
-            continue
-        if st.st_mode & 0o111:
-            out.add(entry.name)
+    bin_dir = root / "bin"
+    if bin_dir.is_dir():
+        for entry in os.scandir(bin_dir):
+            if entry.name.startswith("."):
+                continue
+            if not (entry.is_file(follow_symlinks=True) or entry.is_symlink()):
+                continue
+            try:
+                st = entry.stat(follow_symlinks=True)
+            except OSError:
+                continue
+            if st.st_mode & 0o111:
+                out.add(entry.name)
+    out |= gather_entry_point_names(root)
     return out
 
 
@@ -756,6 +790,7 @@ SELF_TEST_CASES = [
     "invalid-allowlist-row",
     "invalid-drift",
     "invalid-orphan",
+    "invalid-entry-point-orphan",
     "invalid-allowlist-superfluous",
     "plugin-list-matches-justfile",
 ]
@@ -907,6 +942,39 @@ def _run_self_test_case(name: str) -> tuple[bool, str]:
         wired = collect_wiring_signals(text)
         if wired:
             return False, f"unexpected wiring tokens: {wired}"
+        return True, ""
+    if name == "invalid-entry-point-orphan":
+        # Synthetic: pyproject.toml declares cortex-orphan-test as a
+        # [project.scripts] entry point, but nothing in scope wires it.
+        # gather_deployed must surface it (so W003 has something to fire on)
+        # AND the lint pass must produce a W003 for it.
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "bin").mkdir()
+            (root / "pyproject.toml").write_text(
+                "[project]\n"
+                'name = "fixture"\n'
+                "version = \"0.0.0\"\n\n"
+                "[project.scripts]\n"
+                'cortex-orphan-test = "cortex_command.test:main"\n',
+                encoding="utf-8",
+            )
+            deployed = gather_deployed(root)
+            if "cortex-orphan-test" not in deployed:
+                return False, (
+                    "expected cortex-orphan-test in deployed via "
+                    "[project.scripts]"
+                )
+            _errors, warnings = lint(root)
+            w003 = [
+                v
+                for v in warnings
+                if v.code == "W003" and "cortex-orphan-test" in v.message
+            ]
+            if not w003:
+                return False, "expected W003 to fire on unwired entry point"
         return True, ""
     if name == "invalid-allowlist-superfluous":
         # cortex-foo wired AND allowlisted → emit W005 in lint().

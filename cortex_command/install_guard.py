@@ -1,28 +1,30 @@
 """Pre-install in-flight guard (R28).
 
-This module aborts the ``cortex`` CLI entry point when a live overnight
-runner is mid-session, so a concurrent ``uv tool install --reinstall
-cortex-command`` cannot clobber the running package on disk mid-run.
+This module aborts the ``cortex upgrade`` CLI dispatch path when a live
+overnight runner is mid-session, so a concurrent ``uv tool install
+--reinstall cortex-command`` cannot clobber the running package on disk
+mid-run.
 
-The guard is invoked from :mod:`cortex_command.__init__` but must only
-fire on *entry-point CLI invocations*; ``__init__.py`` also runs during
-pytest collection, dashboard boot, runner-spawned children, and IDE
-introspection, any of which would be broken by a blind abort. Five
-carve-outs (first-match-wins) short-circuit the check:
+The guard is invoked **only** from the install-mutation dispatch path
+(:func:`cortex_command.cli._dispatch_upgrade`), not on package import.
+This makes ``import cortex_command`` (and read-only entry points such
+as ``cortex overnight status``) safe to execute while a runner is
+alive, and it removes the need for blanket import-time carve-outs
+(pytest collection, dashboard boot, runner-spawned children, IDE
+introspection). Future maintainers introducing a new
+install-mutation entry point must call :func:`check_in_flight_install`
+explicitly from that handler.
 
-1. ``"pytest" in sys.modules`` OR ``"PYTEST_CURRENT_TEST" in os.environ``
-   — skip during pytest collection/run.
-2. ``os.environ.get("CORTEX_RUNNER_CHILD") == "1"`` — skip in
-   subprocesses spawned by the runner (orchestrator, batch_runner).
-3. ``"uvicorn" in sys.argv[0]`` OR the dashboard module is the
-   import-initiator — skip FastAPI boot so the dashboard can observe
-   in-flight sessions.
-4. ``CORTEX_ALLOW_INSTALL_DURING_RUN=1`` — explicit user opt-out.
-5. Argparse pre-parse of ``sys.argv[1:]``: the cancel-bypass.
+Two carve-outs (first-match-wins) remain on the upgrade path itself:
+
+1. ``CORTEX_ALLOW_INSTALL_DURING_RUN=1`` — explicit user opt-out.
+   Pass INLINE; do not ``export`` it, because exporting inherits into
+   spawned children and silently re-disables R28 across the whole
+   shell session.
+2. Argparse pre-parse of ``sys.argv[1:]``: the cancel-bypass.
    ``overnight cancel <session_id> --force`` (any valid argparse
-   ordering of positional/flag) returns immediately so the user can
-   always clear a stale pointer even while the guard thinks a run is
-   active.
+   ordering) returns immediately so the user can always clear a stale
+   pointer.
 
 A further guard narrowing is the **liveness check**: even with an
 ``active-session.json`` whose ``phase != "complete"``, the guard reads
@@ -30,9 +32,9 @@ the named session's ``runner.pid`` and calls
 :func:`cortex_command.overnight.ipc.verify_runner_pid`. If the PID is
 dead/missing/magic-mismatch, the active-session pointer is treated as
 stale — the guard returns and emits a stderr warning recommending
-``cortex overnight cancel <id> --force`` to clear the stale state. This
-reuses the self-heal pattern at ``cli_handler.py:382-397`` so a crashed
-runner cannot permanently lock out reinstalls.
+``cortex overnight cancel <id> --force``. This reuses the self-heal
+pattern at ``cli_handler.py:382-397`` so a crashed runner cannot
+permanently lock out reinstalls.
 """
 
 from __future__ import annotations
@@ -46,12 +48,9 @@ from pathlib import Path
 # Mirror of ``cortex_command.overnight.ipc.ACTIVE_SESSION_PATH``. We
 # duplicate the path derivation rather than importing ``ipc`` because
 # ``ipc`` transitively imports ``psutil`` at module load — and the guard
-# runs from system-python invocations (e.g. ``python3
-# backlog/update_item.py``) where ``psutil`` is not on sys.path. Pulling
-# in ``ipc`` unconditionally turned the guard into a hard ImportError
-# for every system-python entry point. The ``ipc`` import is now
-# deferred to the live-runner branch where ``verify_runner_pid`` is
-# actually called.
+# may be called from environments where ``psutil`` is not on sys.path.
+# The ``ipc`` import is deferred to the live-runner branch where
+# ``verify_runner_pid`` is actually called.
 _ACTIVE_SESSION_PATH = (
     Path.home() / ".local" / "share" / "overnight-sessions" / "active-session.json"
 )
@@ -128,75 +127,26 @@ def _is_cancel_force_invocation(argv: list[str]) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Dashboard import-initiator detection
-# ---------------------------------------------------------------------------
-
-def _is_dashboard_initiator() -> bool:
-    """Return True when the dashboard (FastAPI/uvicorn) is booting.
-
-    Two signals are checked:
-
-    * ``sys.argv[0]`` contains ``uvicorn`` — covers the direct
-      ``uvicorn cortex_command.dashboard.app:app`` launch.
-    * The ``cortex_command.dashboard`` module is present on any frame
-      of the current import stack — covers ``python -m
-      cortex_command.dashboard`` and indirect imports of the dashboard
-      entry point that might occur before argv reflects the reality.
-    """
-    argv0 = sys.argv[0] if sys.argv else ""
-    if "uvicorn" in argv0:
-        return True
-
-    # If the dashboard module has already been imported, treat that as
-    # the import-initiator. This is conservative — if anything else has
-    # imported dashboard first, we still skip the guard — but dashboards
-    # are the main rightful in-flight observer and this is the safer
-    # default.
-    if "cortex_command.dashboard" in sys.modules:
-        return True
-    if "cortex_command.dashboard.app" in sys.modules:
-        return True
-
-    return False
-
-
-# ---------------------------------------------------------------------------
 # Main guard entry point
 # ---------------------------------------------------------------------------
 
-def _check_in_flight_install_core() -> None:
-    """Core guard logic.
+def check_in_flight_install() -> None:
+    """Abort if an overnight session is live and this is an install-mutation path.
 
-    Separated from :func:`check_in_flight_install` so the guard's own
-    tests can exercise every non-pytest carve-out and the main path
-    from within a live pytest process, where the pytest carve-out
-    would otherwise short-circuit immediately. Production code always
-    calls :func:`check_in_flight_install` (which runs the pytest
-    carve-out first).
+    Carve-outs evaluated top-to-bottom; first match returns immediately:
 
-    Carve-outs evaluated in order: (b) runner-child, (c) dashboard,
-    (d) explicit opt-out, (e) cancel-force bypass. Then the main
-    active-session + liveness check.
+    1. ``CORTEX_ALLOW_INSTALL_DURING_RUN=1`` — explicit user opt-out.
+    2. ``overnight cancel <id> --force`` cancel-bypass.
+
+    Then the main active-session + liveness check.
     """
-    # (b) runner-child carve-out — subprocess inherited the env var from
-    # a parent runner process. The runner sets this on every spawn of
-    # batch_runner / orchestrator / smoke_test; see runner.py.
-    if os.environ.get("CORTEX_RUNNER_CHILD") == "1":
-        return
-
-    # (c) dashboard carve-out — FastAPI/uvicorn boot must be able to
-    # observe in-flight sessions.
-    if _is_dashboard_initiator():
-        return
-
-    # (d) explicit user opt-out. Documented in the fail message:
-    # PASS INLINE, do not `export` in the shell, because exporting
-    # inherits into spawned children and silently re-disables R28
-    # across the whole shell session.
+    # (1) explicit user opt-out. PASS INLINE; do not `export` in the
+    # shell, because exporting inherits into spawned children and
+    # silently re-disables R28 across the whole shell session.
     if os.environ.get("CORTEX_ALLOW_INSTALL_DURING_RUN") == "1":
         return
 
-    # (e) cancel-bypass — a user mid-run must always be able to run
+    # (2) cancel-bypass — a user mid-run must always be able to run
     # ``cortex overnight cancel <id> --force`` to clear a pointer.
     if _is_cancel_force_invocation(sys.argv[1:]):
         return
@@ -204,8 +154,8 @@ def _check_in_flight_install_core() -> None:
     # -------------------------------------------------------------------
     # Main check: read the active-session pointer directly. Defer the
     # ``ipc`` import (which pulls in psutil) until we actually need
-    # ``verify_runner_pid`` — that way system-python invocations with
-    # no overnight session in flight don't trip on a missing psutil.
+    # ``verify_runner_pid`` — that way invocations with no overnight
+    # session in flight don't trip on a missing psutil.
     # -------------------------------------------------------------------
     if not _ACTIVE_SESSION_PATH.exists():
         return
@@ -281,24 +231,3 @@ def _check_in_flight_install_core() -> None:
         f"inherited by spawned children and silently re-disable R28 "
         f"across the whole shell session).\n"
     )
-
-
-def check_in_flight_install() -> None:
-    """Abort if an overnight session is live and this looks like install-time.
-
-    Carve-outs evaluated top-to-bottom; first match returns immediately.
-    Called from ``cortex_command/__init__.py`` so every entry-point
-    invocation funnels through — but the carve-outs are what make this
-    safe to call unconditionally at import time.
-
-    Order: (a) pytest, (b) runner-child, (c) dashboard, (d) explicit
-    opt-out, (e) cancel-force bypass. Then the main active-session +
-    liveness check.
-    """
-    # (a) pytest carve-out — must be first because pytest collection
-    # imports the package transitively for every test module, and a
-    # misfire here would break the entire test suite at collection.
-    if "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ:
-        return
-
-    _check_in_flight_install_core()

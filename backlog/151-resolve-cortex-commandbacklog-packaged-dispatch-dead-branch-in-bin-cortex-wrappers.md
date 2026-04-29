@@ -13,8 +13,8 @@ complexity: complex
 criticality: high
 spec: lifecycle/resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers/spec.md
 areas: [scripts]
-lifecycle_phase: plan
-session_id: 2390e0d5-6983-4806-b3b8-c297284f673e
+lifecycle_phase: implement
+session_id: 1350a338-c816-47ca-b797-b0f217f60660
 ---
 
 # Resolve cortex_command.backlog packaged-dispatch dead branch in bin/cortex-* wrappers

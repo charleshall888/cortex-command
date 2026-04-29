@@ -9,7 +9,7 @@ ascending, children ordered by id ascending, per-child fields ordered
 lexicographically.
 
 Usage:
-    python3 backlog/build_epic_map.py [INDEX_PATH]
+    cortex-build-epic-map [INDEX_PATH]
 
 INDEX_PATH defaults to ``backlog/index.json`` resolved relative to the
 current working directory.
@@ -28,10 +28,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# Resolve project root so imports work when called from any directory.
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
+from cortex_command.backlog import _telemetry
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +197,7 @@ def _build_argparser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point. See module docstring for exit-code semantics."""
+    _telemetry.log_invocation("cortex-build-epic-map")
     parser = _build_argparser()
     args = parser.parse_args(argv)
 

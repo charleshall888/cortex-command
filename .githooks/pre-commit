@@ -115,6 +115,32 @@ if [ "$shim_triggered" -eq 1 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# Phase 1.7 — backlog entry-point telemetry-call enforcement
+# -----------------------------------------------------------------------------
+# When any staged path is one of the four cortex_command/backlog/<mod>.py
+# entry-point modules, invoke --check-entry-points to verify the first
+# statement of each def main() is _telemetry.log_invocation(...). Catches
+# regressions where an entry-point is added without wiring telemetry,
+# preserving byte-equivalence with bin/cortex-log-invocation.
+entry_points_triggered=0
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+        cortex_command/backlog/update_item.py|cortex_command/backlog/create_item.py|cortex_command/backlog/generate_index.py|cortex_command/backlog/build_epic_map.py|cortex_command/backlog/_telemetry.py)
+            entry_points_triggered=1
+            break
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "$entry_points_triggered" -eq 1 ]; then
+    if ! bin/cortex-invocation-report --check-entry-points; then
+        echo "pre-commit: backlog entry-point module's def main() must begin with _telemetry.log_invocation(...) — fix each module listed above." >&2
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Phase 2 — Short-circuit decision
 # -----------------------------------------------------------------------------
 staged=$(git diff --cached --name-only --diff-filter=ACMR)

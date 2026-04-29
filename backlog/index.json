@@ -279,7 +279,7 @@
     "plan": null,
     "uuid": "35d35337-7372-4f11-b135-3d5b3756ce88",
     "lifecycle_slug": null,
-    "session_id": "2390e0d5-6983-4806-b3b8-c297284f673e",
+    "session_id": "1350a338-c816-47ca-b797-b0f217f60660",
     "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
@@ -425,7 +425,7 @@
     "uuid": "686003ea-c115-4a5c-82c1-9a01619711ee",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },

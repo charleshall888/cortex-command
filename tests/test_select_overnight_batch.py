@@ -12,7 +12,6 @@ Covers:
 
 from __future__ import annotations
 
-import importlib.util
 import json
 from pathlib import Path
 
@@ -31,15 +30,12 @@ from cortex_command.overnight.plan import _detect_risks
 
 
 # ---------------------------------------------------------------------------
-# Load generate_index.py (no __init__.py in backlog/)
+# Load generate_index from the packaged cortex_command.backlog subpackage.
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).parent.parent
-_GEN_INDEX_PATH = REPO_ROOT / "backlog" / "generate_index.py"
 
-_spec = importlib.util.spec_from_file_location("generate_index", _GEN_INDEX_PATH)
-_gen_index = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_gen_index)
+from cortex_command.backlog import generate_index as _gen_index  # noqa: E402
 
 
 # ---------------------------------------------------------------------------

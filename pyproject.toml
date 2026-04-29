@@ -19,12 +19,16 @@ dependencies = [
 [project.scripts]
 cortex = "cortex_command.cli:main"
 cortex-batch-runner = "cortex_command.overnight.batch_runner:main"
+cortex-update-item = "cortex_command.backlog.update_item:main"
+cortex-create-backlog-item = "cortex_command.backlog.create_item:main"
+cortex-generate-backlog-index = "cortex_command.backlog.generate_index:main"
+cortex-build-epic-map = "cortex_command.backlog.build_epic_map:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["cortex_command"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "cortex_command/dashboard/tests", "cortex_command/pipeline/tests", "cortex_command/overnight/tests", "cortex_command/init/tests"]
+testpaths = ["tests", "cortex_command/dashboard/tests", "cortex_command/pipeline/tests", "cortex_command/overnight/tests", "cortex_command/init/tests", "cortex_command/backlog/tests"]
 pythonpath = ["."]
 markers = [
     "slow: opt-in tests that invoke live models (use --run-slow to enable)",

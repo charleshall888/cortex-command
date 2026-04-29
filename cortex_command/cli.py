@@ -253,6 +253,10 @@ def _dispatch_upgrade(args: argparse.Namespace) -> int:
     import subprocess
     from pathlib import Path
 
+    from cortex_command.install_guard import check_in_flight_install
+
+    check_in_flight_install()
+
     cortex_root = os.environ.get("CORTEX_COMMAND_ROOT") or str(Path.home() / ".cortex")
     try:
         dirty = subprocess.run(

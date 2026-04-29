@@ -119,6 +119,32 @@ The observability area covers five subsystems that give the developer visibility
 - **`settings.local.json` array clobber**: Adding `allowUnixSockets` via naive jq write could destroy `filesystem.allowWrite`; setup recipe uses deep merge to preserve sibling keys
 - **tmux socket grants broad access**: Allowlisting the default tmux socket grants access to ALL tmux sessions, not just the overnight runner; acceptable for single-user personal tooling
 
+## Install-mutation invocations
+
+The pre-install in-flight guard at `cortex_command.install_guard.check_in_flight_install`
+is opt-in by callers — not invoked at package import. New install-mutation entry points
+must call it explicitly. Maintainers introducing one should re-run the audit greps below
+and classify any new match.
+
+**Audit sweeps** (run from repo root):
+
+```sh
+# Module-form invocations (python -m cortex_command.<module>)
+grep -rn "python3 -m cortex_command\." --include="*.md" --include="*.sh" --include="*.toml" --include="Justfile" --include="justfile" .
+
+# Shell-form invocations (cortex upgrade subcommand)
+grep -rn "cortex upgrade" --include="*.md" --include="*.sh" --include="*.toml" --include="Justfile" --include="justfile" --include="*.py" .
+```
+
+**Current classification** (reviewed 2026-04-29 during ticket 151 implementation):
+
+- **Install-mutation**: only `cortex_command.cli._dispatch_upgrade()` — runs `uv tool install -e ... --force`. The guard is invoked as the first statement of that handler.
+- **Install-mutation orchestrator**: `plugins/cortex-overnight-integration/server.py` spawns `cortex upgrade` as a subprocess (R10/R11/R12 in MCP auto-update flow). The guard fires inside the spawned `_dispatch_upgrade` process, not at the MCP server layer — no separate guard call needed at the call site.
+- **Non-install-mutation** (no guard call needed): `python3 -m cortex_command.overnight.smoke_test` (justfile), `python3 -m cortex_command.dashboard.seed [--clean]` (justfile), `python3 -m cortex_command.overnight.report` (morning-review), `python3 -m cortex_command.pipeline.metrics` (cortex-scan-lifecycle hook), `python3 -m cortex_command.common detect-phase` (lifecycle skill), `python3 -m cortex_command.overnight.daytime_pipeline` (lifecycle implement skill), `python3 -m cortex_command.overnight.daytime_result_reader` (lifecycle implement skill), `python3 -m cortex_command.overnight.batch_runner` (runner.sh, batch dispatch).
+- **Documentation/comments only** (not invocation sites): `install.sh:64` error message, `cortex_command/install_guard.py` docstring, research/spec/backlog notes.
+
+**Stale-pointer self-heal warning narrowing**: pre-ticket-151, `import cortex_command` fired the guard, so a stale active-session pointer would emit the self-heal warning on every package import — including IDE introspection and pytest collection. Post-ticket-151 the warning emits only when `_dispatch_upgrade` runs against a stale pointer. This is the intended narrowing. Future telemetry/UX work may surface stale pointers through a different channel (e.g., `cortex overnight status` advisory).
+
 ## Open Questions
 
 - None

@@ -319,8 +319,8 @@ def set_backlog_dir(path: Path) -> None:
     _backlog_dir = path
 
 
-from backlog.update_item import update_item as _backlog_update_item  # noqa: E402
-from backlog.update_item import _find_item as _backlog_find_item  # noqa: E402
+from cortex_command.backlog.update_item import update_item as _backlog_update_item  # noqa: E402
+from cortex_command.backlog.update_item import _find_item as _backlog_find_item  # noqa: E402
 
 # Mapping from overnight internal status to canonical backlog fields (R13).
 # Keys: overnight status; Values: dict of backlog fields to write.

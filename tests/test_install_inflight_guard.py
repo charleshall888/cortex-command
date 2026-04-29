@@ -1,15 +1,15 @@
 """Tests for the pre-install in-flight guard (R28).
 
 Covers :func:`cortex_command.install_guard.check_in_flight_install` and
-the carve-outs it uses. The guard's job is to abort entry-point CLI
-invocations while an overnight runner is alive mid-session so a
+the carve-outs it uses. The guard's job is to abort the upgrade
+dispatch path while an overnight runner is alive mid-session so a
 concurrent ``uv tool install --reinstall`` cannot clobber the running
-package on disk. Carve-outs keep it from misfiring on pytest, dashboard
-boot, runner-spawned children, and explicit user opt-outs — and a
-liveness check prevents a permanent lockout when the runner crashes
-leaving a stale pointer behind.
+package on disk. Carve-outs keep it from misfiring on explicit user
+opt-out and the cancel-force bypass — and a liveness check prevents a
+permanent lockout when the runner crashes leaving a stale pointer
+behind.
 
-Test matrix (R28 acceptance):
+Test matrix:
 
 * ``test_install_aborts_on_executing_phase_with_live_runner`` — real
   in-flight (phase=``executing`` + live pid).
@@ -22,23 +22,6 @@ Test matrix (R28 acceptance):
   unblocks.
 * ``test_cancel_force_bypass`` — the three argparse-equivalent
   orderings of ``overnight cancel <id> --force`` all bypass.
-* ``test_pytest_context_skip`` — ``PYTEST_CURRENT_TEST`` triggers the
-  (a) carve-out.
-* ``test_runner_child_skip`` — ``CORTEX_RUNNER_CHILD=1`` triggers the
-  (b) carve-out.
-* ``test_dashboard_skip`` — the dashboard import-initiator detection
-  triggers the (c) carve-out.
-
-**Test-harness note**: pytest itself sets the ``PYTEST_CURRENT_TEST``
-env var for every test function. That is exactly what the (a) carve-out
-is designed to detect — in production, ``check_in_flight_install()``
-invoked from a pytest-run process correctly short-circuits. To test
-the rest of the logic from within pytest we call the private
-``_check_in_flight_install_core()`` directly; it has the same carve-outs
-(b)-(e) and the same main check, but skips the pytest short-circuit.
-The public ``check_in_flight_install()`` is still tested via the
-``test_pytest_context_skip`` case, which asserts the pytest carve-out
-actually returns even with a live in-flight pointer set up.
 """
 
 from __future__ import annotations
@@ -56,7 +39,6 @@ import pytest
 from cortex_command import install_guard
 from cortex_command.install_guard import (
     InstallInFlightError,
-    _check_in_flight_install_core,
     check_in_flight_install,
 )
 from cortex_command.overnight import ipc
@@ -68,40 +50,12 @@ from cortex_command.overnight import ipc
 
 @pytest.fixture(autouse=True)
 def _isolate_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """Clear env vars and module state so each test is in a clean slate.
-
-    The pytest carve-out signals (``PYTEST_CURRENT_TEST`` /
-    ``"pytest" in sys.modules``) are *not* cleared here — pytest sets
-    them itself as part of test invocation. Tests that exercise the
-    main guard path therefore call
-    :func:`_check_in_flight_install_core` directly; the public entry
-    point's pytest carve-out is tested separately by
-    ``test_pytest_context_skip``.
-
-    Dashboard module entries in ``sys.modules`` are temporarily
-    removed: other tests in the full suite import
-    ``cortex_command.dashboard.app``, which would otherwise make the
-    dashboard carve-out (c) match for every non-dashboard test here.
-    The saved entries are restored on teardown so later tests aren't
-    broken.
-    """
+    """Clear env vars so each test is in a clean slate."""
     for var in (
         "CORTEX_ALLOW_INSTALL_DURING_RUN",
-        "CORTEX_RUNNER_CHILD",
     ):
         monkeypatch.delenv(var, raising=False)
-
-    saved_modules: dict[str, object] = {}
-    for name in list(sys.modules):
-        if name == "cortex_command.dashboard" or name.startswith(
-            "cortex_command.dashboard."
-        ):
-            saved_modules[name] = sys.modules.pop(name)
-    try:
-        yield
-    finally:
-        for name, mod in saved_modules.items():
-            sys.modules[name] = mod  # type: ignore[assignment]
+    yield
 
 
 @pytest.fixture
@@ -229,7 +183,7 @@ def test_install_aborts_on_executing_phase_with_live_runner(
     monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
 
     with pytest.raises(SystemExit) as excinfo:
-        _check_in_flight_install_core()
+        check_in_flight_install()
     assert excinfo.value.code == 1
 
     captured = capsys.readouterr()
@@ -261,7 +215,7 @@ def test_install_succeeds_when_phase_complete(
     monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
 
     # Must not raise.
-    _check_in_flight_install_core()
+    check_in_flight_install()
 
 
 # ---------------------------------------------------------------------------
@@ -295,7 +249,7 @@ def test_install_succeeds_when_runner_pid_dead(
     monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
 
     # Must not raise — stale pointer is warned about, not fatal.
-    _check_in_flight_install_core()
+    check_in_flight_install()
 
     captured = capsys.readouterr()
     assert "stale" in captured.err
@@ -322,7 +276,7 @@ def test_install_succeeds_when_runner_pid_missing(
     )
     monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
     # Must not raise — missing runner.pid is treated as crashed-runner.
-    _check_in_flight_install_core()
+    check_in_flight_install()
 
 
 # ---------------------------------------------------------------------------
@@ -339,7 +293,7 @@ def test_bypass_via_env_var(
     monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
 
     # Must not raise — env var overrides.
-    _check_in_flight_install_core()
+    check_in_flight_install()
 
 
 # ---------------------------------------------------------------------------
@@ -378,7 +332,7 @@ def test_cancel_force_bypass(
     monkeypatch.setattr(sys, "argv", argv)
 
     # Must not raise — cancel-bypass applies.
-    _check_in_flight_install_core()
+    check_in_flight_install()
 
 
 def test_cancel_without_force_does_not_bypass(
@@ -400,104 +354,7 @@ def test_cancel_without_force_does_not_bypass(
         sys, "argv", ["cortex", "overnight", "cancel", session_id]
     )
     with pytest.raises(SystemExit):
-        _check_in_flight_install_core()
-
-
-# ---------------------------------------------------------------------------
-# (vi) pytest carve-out — use the PUBLIC check_in_flight_install here
-# ---------------------------------------------------------------------------
-
-def test_pytest_context_skip(
-    isolated_home: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """``PYTEST_CURRENT_TEST`` env is set by pytest itself; the public
-    entry point must return immediately even with a live in-flight
-    pointer present.
-    """
-    _setup_live_inflight(tmp_path, session_id="session-test-20260424-000007")
-    # Verify the preconditions — pytest env var should be set for this
-    # test function; that's what the carve-out detects.
-    assert "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules
-    monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
-
-    # Must not raise — pytest carve-out short-circuits.
-    check_in_flight_install()
-
-
-def test_pytest_current_test_env_var_alone_triggers_carveout(
-    isolated_home: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Even without ``pytest`` in sys.modules, the env-var half of the
-    (a) carve-out stands on its own. Exercise it by forcing the env
-    var and calling the PUBLIC entry point.
-    """
-    _setup_live_inflight(tmp_path, session_id="session-test-20260424-000008")
-    monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
-    # Explicit: even though autouse didn't set it, pytest does.
-    monkeypatch.setenv("PYTEST_CURRENT_TEST", "fake_test_node_id")
-
-    check_in_flight_install()  # Must not raise.
-
-
-# ---------------------------------------------------------------------------
-# (vii) Runner-child carve-out
-# ---------------------------------------------------------------------------
-
-def test_runner_child_skip(
-    isolated_home: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _setup_live_inflight(tmp_path, session_id="session-test-20260424-000009")
-    monkeypatch.setenv("CORTEX_RUNNER_CHILD", "1")
-    monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
-
-    # Must not raise — runner spawned this child; its import of
-    # cortex_command must not bomb.
-    _check_in_flight_install_core()
-
-
-# ---------------------------------------------------------------------------
-# (viii) Dashboard carve-out
-# ---------------------------------------------------------------------------
-
-def test_dashboard_skip_via_uvicorn_argv(
-    isolated_home: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _setup_live_inflight(tmp_path, session_id="session-test-20260424-000010")
-    # Simulate ``uvicorn cortex_command.dashboard.app:app`` launch.
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["/usr/local/bin/uvicorn", "cortex_command.dashboard.app:app"],
-    )
-
-    # Must not raise — dashboard is a legit observer of live sessions.
-    _check_in_flight_install_core()
-
-
-def test_dashboard_skip_via_module_import(
-    isolated_home: Path,
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Dashboard module presence in ``sys.modules`` also carves out."""
-    _setup_live_inflight(tmp_path, session_id="session-test-20260424-000011")
-
-    import types
-
-    fake_dashboard = types.ModuleType("cortex_command.dashboard")
-    monkeypatch.setitem(sys.modules, "cortex_command.dashboard", fake_dashboard)
-    monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
-
-    # Must not raise.
-    _check_in_flight_install_core()
+        check_in_flight_install()
 
 
 # ---------------------------------------------------------------------------
@@ -513,7 +370,7 @@ def test_install_succeeds_with_no_active_session(
     monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
 
     # Must not raise.
-    _check_in_flight_install_core()
+    check_in_flight_install()
 
 
 # ---------------------------------------------------------------------------
@@ -531,4 +388,4 @@ def test_malformed_active_pointer_is_lenient(
         json.dumps({"phase": "executing"}), encoding="utf-8"
     )
     monkeypatch.setattr(sys, "argv", ["cortex", "upgrade"])
-    _check_in_flight_install_core()  # Must not raise.
+    check_in_flight_install()  # Must not raise.
