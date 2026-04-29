@@ -85,14 +85,14 @@ def slugify(title: str) -> str:
 # detect_lifecycle_phase
 # ---------------------------------------------------------------------------
 
-def detect_lifecycle_phase(feature_dir: Path) -> str:
+def detect_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
     """Detect the current lifecycle phase for a feature directory.
 
     Artifact-presence state machine:
       1. events.log contains "feature_complete" -> "complete"
       2. review.md has verdict:
            APPROVED          -> "complete"
-           CHANGES_REQUESTED -> "implement"
+           CHANGES_REQUESTED -> "implement-rework"
            REJECTED          -> "escalated"
       3. plan.md exists:
            all **Status**: [x] (and at least one) -> "review"
@@ -106,54 +106,115 @@ def detect_lifecycle_phase(feature_dir: Path) -> str:
                      (e.g. Path("lifecycle/my-feature")).
 
     Returns:
-        One of: "research", "specify", "plan", "implement",
-                "review", "complete", "escalated".
+        A dict with keys:
+          - phase: one of "research", "specify", "plan", "implement",
+            "implement-rework", "review", "complete", "escalated".
+          - checked: integer count of completed plan tasks (0 when no plan.md).
+          - total: integer count of total plan tasks (0 when no plan.md).
+          - cycle: integer review-cycle number (1 when no review.md, otherwise
+            the count of `verdict` regex matches in review.md).
     """
+    # Compute plan progress (used by the dict return regardless of phase).
+    plan_md = feature_dir / "plan.md"
+    checked = 0
+    total = 0
+    if plan_md.is_file():
+        plan_content = plan_md.read_text(errors="replace")
+        total = len(re.findall(r'\*\*Status\*\*:.*\[[ x]\]', plan_content))
+        checked = len(re.findall(r'\*\*Status\*\*:.*\[x\]', plan_content))
+
+    # Compute cycle from review.md verdict matches (default 1 when absent).
+    review_md = feature_dir / "review.md"
+    review_content: str | None = None
+    cycle = 1
+    verdict_matches: list[str] = []
+    if review_md.is_file():
+        review_content = review_md.read_text(errors="replace")
+        verdict_matches = re.findall(
+            r'"verdict"\s*:\s*"([A-Z_]+)"', review_content
+        )
+        if verdict_matches:
+            cycle = len(verdict_matches)
+
     # Step 1: event-based completion check
     events_log = feature_dir / "events.log"
     if events_log.is_file():
         content = events_log.read_text(errors="replace")
         if '"feature_complete"' in content:
-            return "complete"
+            return {
+                "phase": "complete",
+                "checked": checked,
+                "total": total,
+                "cycle": cycle,
+            }
 
     # Step 2: review.md verdict
-    review_md = feature_dir / "review.md"
-    if review_md.is_file():
-        content = review_md.read_text(errors="replace")
-        matches = re.findall(r'"verdict"\s*:\s*"([A-Z_]+)"', content)
-        if matches:
-            verdict = matches[-1]
-            if verdict == "APPROVED":
-                return "complete"
-            elif verdict == "CHANGES_REQUESTED":
-                return "implement"
-            elif verdict == "REJECTED":
-                return "escalated"
+    if verdict_matches:
+        verdict = verdict_matches[-1]
+        if verdict == "APPROVED":
+            return {
+                "phase": "complete",
+                "checked": checked,
+                "total": total,
+                "cycle": cycle,
+            }
+        elif verdict == "CHANGES_REQUESTED":
+            return {
+                "phase": "implement-rework",
+                "checked": checked,
+                "total": total,
+                "cycle": cycle,
+            }
+        elif verdict == "REJECTED":
+            return {
+                "phase": "escalated",
+                "checked": checked,
+                "total": total,
+                "cycle": cycle,
+            }
 
     # Step 3: plan.md task completion
-    plan_md = feature_dir / "plan.md"
     if plan_md.is_file():
-        content = plan_md.read_text(errors="replace")
-        total_matches = re.findall(r'\*\*Status\*\*:.*\[[ x]\]', content)
-        total = len(total_matches)
-        checked_matches = re.findall(r'\*\*Status\*\*:.*\[x\]', content)
-        checked = len(checked_matches)
-
         if total > 0 and checked == total:
-            return "review"
+            return {
+                "phase": "review",
+                "checked": checked,
+                "total": total,
+                "cycle": cycle,
+            }
         else:
-            return "implement"
+            return {
+                "phase": "implement",
+                "checked": checked,
+                "total": total,
+                "cycle": cycle,
+            }
 
     # Step 4: spec.md exists -> plan phase
     if (feature_dir / "spec.md").is_file():
-        return "plan"
+        return {
+            "phase": "plan",
+            "checked": checked,
+            "total": total,
+            "cycle": cycle,
+        }
 
     # Step 5: research.md exists -> specify phase
     if (feature_dir / "research.md").is_file():
-        return "specify"
+        return {
+            "phase": "specify",
+            "checked": checked,
+            "total": total,
+            "cycle": cycle,
+        }
 
     # Step 6: default -> research phase
-    return "research"
+    return {
+        "phase": "research",
+        "checked": checked,
+        "total": total,
+        "cycle": cycle,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -455,7 +516,8 @@ def _cli_detect_phase(args: list[str]) -> None:
     if len(args) != 1:
         print("Usage: python3 -m cortex_command.common detect-phase <dir>", file=sys.stderr)
         sys.exit(1)
-    print(detect_lifecycle_phase(Path(args[0])))
+    result = detect_lifecycle_phase(Path(args[0]))
+    sys.stdout.write(json.dumps(result, separators=(",", ":")) + "\n")
 
 
 def _cli_normalize_status(args: list[str]) -> None:
