@@ -15,7 +15,7 @@ complexity: complex
 criticality: high
 spec: lifecycle/non-editable-wheel-install-support-for-cortex-command/spec.md
 areas: [install,overnight-runner,mcp-server,docs]
-session_id: 90d30114-3b89-4a3f-8be4-a2c9025d5dd5
+session_id: 4dc7954b-c983-418a-a72a-804137211eee
 lifecycle_phase: implement
 ---
 

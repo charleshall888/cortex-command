@@ -18,7 +18,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - Define `class CortexProjectRootError(RuntimeError)` near the helper for typed catch sites later.
   - Naming distinct from `cortex_command/init/handler.py:_resolve_repo_root` (git-based; reserved for `cortex init` dispatch) per spec Technical Constraints.
 - **Verification**: `python3 -c "from cortex_command.common import _resolve_user_project_root, CortexProjectRootError; import os, tempfile; from pathlib import Path; d=tempfile.mkdtemp(); (Path(d)/'lifecycle').mkdir(); os.chdir(d); assert _resolve_user_project_root() == Path(d).resolve()"` — pass if exit 0. Plus `grep -E "_resolve_user_project_root|CORTEX_REPO_ROOT" cortex_command/common.py | wc -l` ≥ 2 — pass if count ≥ 2. Plus `grep -E "git init && cortex init|requires a git repository" cortex_command/common.py | wc -l` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Convert package-internal `Path(__file__)` sites in `init/`, `pipeline/` to `importlib.resources`
 
@@ -33,7 +33,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - Pattern reference: `cortex_command/overnight/runner.py:33` and `cortex_command/overnight/fill_prompt.py:13-34` already use this idiom.
   - Use `.read_text(encoding="utf-8")` for consumers that read content; use `.joinpath(...)` and `.is_file()` / `.iterdir()` for directory traversal. Avoid `pathlib.Path`-only methods (`.stat()`, `.glob()`, `.resolve()`); if a real `pathlib.Path` is needed by an external API (e.g., Jinja2 loader paths), use `importlib.resources.as_file()`.
 - **Verification**: `grep -rn "Path(__file__)" cortex_command/init/scaffold.py cortex_command/pipeline/conflict.py cortex_command/pipeline/review_dispatch.py | grep -v tests | wc -l` = 0 — pass if count = 0. Plus `python3 -c "from cortex_command.pipeline.review_dispatch import *; from cortex_command.pipeline.conflict import *; from cortex_command.init.scaffold import *"` — pass if exit 0 (imports succeed without error).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Convert package-internal `Path(__file__)` sites in `overnight/`, `dashboard/` to `importlib.resources`
 
@@ -47,7 +47,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - `dashboard/app.py:49` (`parent / "templates"` for Jinja2): use `importlib.resources.as_file(importlib.resources.files("cortex_command.dashboard.templates"))` inside a context manager that wraps the Jinja2 environment construction; the wheel build unpacks templates so `as_file()` returns the real filesystem path under non-editable install.
   - Touch only line 49 in `dashboard/app.py` for this task; lines 42 and 184 are out of scope for Task 3 (line 42 is user-data — Task 5; line 184 is dev-only `.pid` — out of scope per spec Non-Requirements).
 - **Verification**: `grep -E "Path\\(__file__\\)" cortex_command/overnight/brain.py cortex_command/overnight/feature_executor.py | wc -l` = 0 — pass if count = 0. Plus `grep -c "importlib.resources" cortex_command/dashboard/app.py` ≥ 1 — pass if count ≥ 1. Plus `python3 -c "from cortex_command.overnight.brain import *; from cortex_command.overnight.feature_executor import *; from cortex_command.dashboard.app import *"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Convert overnight user-data `Path(__file__)` sites to call-time `_resolve_user_project_root()`
 
@@ -65,12 +65,12 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - **Caller enumeration for `DEFAULT_PLAN_PATH` / `DEFAULT_LOG_PATH` / `DEFAULT_STATE_PATH`**: `grep -rn "DEFAULT_PLAN_PATH\|DEFAULT_LOG_PATH\|DEFAULT_STATE_PATH" cortex_command/ tests/` — enumerate every consumer (default arg, function body reference, test fixture) and update each.
   - **R3c AST-gate scope clarification**: spec R3c forbids module-level `ast.Assign` whose RHS calls `_resolve_user_project_root()`. The `field(default_factory=lambda: _resolve_user_project_root() / ...)` pattern is permitted because the call is inside the lambda body (deferred until instance construction). Document this in the verification command's comment so future maintainers understand why the lambda escape is intentional.
 - **Verification**: `grep -rn "_LIFECYCLE_ROOT" cortex_command/overnight/plan.py cortex_command/overnight/events.py cortex_command/overnight/orchestrator.py cortex_command/overnight/state.py | wc -l` = 0 — pass if count = 0. Plus `grep -rn "_LIFECYCLE_ROOT \\*\\* \\| _LIFECYCLE_ROOT /" cortex_command/overnight/ | wc -l` = 0 — pass if count = 0 (no remaining indirect captures). Plus `python3 -c "from cortex_command.overnight import plan, events, orchestrator, state, report"` — pass if exit 0 (note: report.py included; Task 5 fixes it).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Convert remaining user-data sites and delete vestigial `sys.path.insert` in `outcome_router.py`
 
-- **Files**: `cortex_command/overnight/report.py`, `cortex_command/dashboard/seed.py`, `cortex_command/dashboard/app.py`, `cortex_command/overnight/outcome_router.py`
-- **What**: Replace all remaining user-data `Path(__file__)` and `_LIFECYCLE_ROOT` references with `_resolve_user_project_root()` calls inside function bodies. Delete the `_PROJECT_ROOT` + `sys.path.insert(0, str(_PROJECT_ROOT))` block in `outcome_router.py:307-309`. Replace `_PROJECT_ROOT / "backlog"` references on lines 360 and 417 with `_resolve_user_project_root() / "backlog"` evaluated in-function.
+- **Files**: `cortex_command/overnight/report.py`, `cortex_command/overnight/status.py`, `cortex_command/dashboard/seed.py`, `cortex_command/dashboard/app.py`, `cortex_command/overnight/outcome_router.py`
+- **What**: Replace all remaining user-data `Path(__file__)` and `_LIFECYCLE_ROOT` references with `_resolve_user_project_root()` calls inside function bodies. Delete the `_PROJECT_ROOT` + `sys.path.insert(0, str(_PROJECT_ROOT))` block in `outcome_router.py:307-309`. Replace `_PROJECT_ROOT / "backlog"` references on lines 360 and 417 with `_resolve_user_project_root() / "backlog"` evaluated in-function. Convert `status.py`'s module-level `EVENTS_SYMLINK` to a deferred function and replace `_LIFECYCLE_ROOT` references with call-time resolution (scope expansion: status.py was missing from the original Task 5 file list — Task 4's report flagged it; status.py is broken on main without this fix).
 - **Depends on**: [1, 4]
 - **Complexity**: complex
 - **Context**:
@@ -85,6 +85,12 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
     - Line 1457-1458: `state_path: Path = DEFAULT_STATE_PATH` and `events_path: Path = DEFAULT_LOG_PATH` — same treatment as lines 89-90.
     - Line 1496: `_LIFECYCLE_ROOT.parent / "backlog"` → `_resolve_user_project_root() / "backlog"` evaluated inside the enclosing function (note: this drops the `.parent` because `_LIFECYCLE_ROOT` was `<root>/lifecycle` and the existing code's `_LIFECYCLE_ROOT.parent` reaches `<root>` to then descend into `backlog`; the new helper already returns `<root>`).
     - Line 1507: `session_dir(..., lifecycle_root=_LIFECYCLE_ROOT)` — same treatment as lines 122, 140.
+  - **`overnight/status.py` — full reference enumeration** (scope expansion from Task 4 follow-up):
+    - Line 19-24: `from cortex_command.overnight.state import (_LIFECYCLE_ROOT, latest_symlink_path, load_state, session_dir,)` — drop `_LIFECYCLE_ROOT` from the import (Task 4 deleted the symbol).
+    - Line 31: `EVENTS_SYMLINK = latest_symlink_path("overnight", lifecycle_root=_LIFECYCLE_ROOT) / "overnight-events.log"` — module-level binding prohibited per spec R3c. Convert to a function `_events_symlink_path() -> Path` that resolves `_resolve_user_project_root() / "lifecycle"` at call time, and update consumers at lines 68, 69, 73, 75 (all inside `_resolve_events_log()`) to call `_events_symlink_path()` instead of referencing the module-level constant.
+    - Line 78: `session_dir(session_id, lifecycle_root=_LIFECYCLE_ROOT)` → `session_dir(session_id, lifecycle_root=_resolve_user_project_root() / "lifecycle")` evaluated at the call site.
+    - Line 191: `sessions_dir = _LIFECYCLE_ROOT / "sessions"` (inside `_find_latest_state_path()`) → `sessions_dir = _resolve_user_project_root() / "lifecycle" / "sessions"` evaluated in-function.
+    - Add `from cortex_command.common import _resolve_user_project_root` import.
   - **`dashboard/seed.py:25`** (`parents[2]` — REPO_ROOT) → `_resolve_user_project_root()`.
   - **`dashboard/app.py:42`** (`parents[2]` — root) → `_resolve_user_project_root()` (line 42 only; line 49 was handled in Task 3, line 184 is out of scope).
   - **`overnight/outcome_router.py:307-309`** (`_PROJECT_ROOT = Path(__file__)... sys.path.insert(0, str(_PROJECT_ROOT))`) — DELETE the three lines entirely. **Rationale (corrected from prior plan revision)**: the deleted line was inserting `parents[2]` (the repo root, NOT the `cortex_command` package directory) onto `sys.path`. Under wheel install, `site-packages/` is on `sys.path` and contains `cortex_command/`, so qualified imports like `from cortex_command.backlog.update_item import ...` (lines 322-323) resolve correctly without the manual insert. Deletion is safe; the security delta is **neutral** on the deleted code (which was file-anchored, not CWD-derived). The CWD-as-import-root concern raised in research Adversarial #5 applies to the *replacement* helper (`_resolve_user_project_root()`), not to the deleted scaffold; the helper's `lifecycle/` + `backlog/` sanity check (Task 1) is the mitigation for that surface.
@@ -92,8 +98,8 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - **`overnight/outcome_router.py:360, 417`** (`_PROJECT_ROOT / "backlog"` fallback for `_backlog_dir`) → `_resolve_user_project_root() / "backlog"` evaluated inside the enclosing function. Note the semantic shift: `_PROJECT_ROOT / "backlog"` was the cortex-command repo's own backlog under editable install (and broken under wheel install — resolved into site-packages's parent). The new helper anchors to the user's project root via env-var or CWD, which matches the actual intended behavior across both install modes.
   - **Caller enumeration for `_PROJECT_ROOT` (cross-module)**: `grep -rn "outcome_router._PROJECT_ROOT\\|from cortex_command.overnight.outcome_router import _PROJECT_ROOT" cortex_command/` — orchestrator.py:189 references `outcome_router._PROJECT_ROOT / "backlog"` inside an exception-logging block. After deletion, that branch raises `AttributeError` (swallowed by `except Exception: pass`). Update orchestrator.py:189 to reference `_resolve_user_project_root() / "backlog"` directly.
   - Add `from cortex_command.common import _resolve_user_project_root` to each file (and to `orchestrator.py` if not already added by Task 4).
-- **Verification**: `grep -c "sys.path.insert" cortex_command/overnight/outcome_router.py` = 0 — pass if count = 0. Plus `grep -c "_PROJECT_ROOT" cortex_command/overnight/outcome_router.py cortex_command/overnight/orchestrator.py` = 0 — pass if count = 0. Plus `grep -c "_LIFECYCLE_ROOT" cortex_command/overnight/report.py` = 0 — pass if count = 0. Plus `grep -rn "Path(__file__).resolve().parents\\[2\\]" cortex_command/ --include='*.py' | grep -v tests | wc -l` = 0 — pass if count = 0. Plus AST gate from spec R3c: run `python3 -c "import ast; from pathlib import Path; failures = [f'{p}:{n.lineno}' for p in Path('cortex_command').rglob('*.py') if 'tests' not in str(p) for n in ast.walk(ast.parse(p.read_text())) if isinstance(n, ast.Assign) and any((isinstance(c, ast.Call) and getattr(c.func, 'attr', getattr(c.func, 'id', '')) == '_resolve_user_project_root') for c in ast.walk(n) if not isinstance(c, ast.Lambda))]; assert not failures, failures"` — pass if exit 0 (note: lambdas are excluded so `field(default_factory=lambda: _resolve_user_project_root() / ...)` is permitted; only direct module-level invocation is rejected). Plus `python3 -c "from cortex_command.overnight import report"` — pass if exit 0 (broken import on report.py:36 detected here; verification was previously absent).
-- **Status**: [ ] pending
+- **Verification**: `grep -c "sys.path.insert" cortex_command/overnight/outcome_router.py` = 0 — pass if count = 0. Plus `grep -c "_PROJECT_ROOT" cortex_command/overnight/outcome_router.py cortex_command/overnight/orchestrator.py` = 0 — pass if count = 0. Plus `grep -c "_LIFECYCLE_ROOT" cortex_command/overnight/report.py` = 0 — pass if count = 0. Plus `grep -rn "Path(__file__).resolve().parents\\[2\\]" cortex_command/ --include='*.py' | grep -v tests | wc -l` = 0 — pass if count = 0. Plus AST gate from spec R3c: run `python3 -c "import ast; from pathlib import Path; failures = [f'{p}:{n.lineno}' for p in Path('cortex_command').rglob('*.py') if 'tests' not in str(p) for n in ast.walk(ast.parse(p.read_text())) if isinstance(n, ast.Assign) and any((isinstance(c, ast.Call) and getattr(c.func, 'attr', getattr(c.func, 'id', '')) == '_resolve_user_project_root') for c in ast.walk(n) if not isinstance(c, ast.Lambda))]; assert not failures, failures"` — pass if exit 0 (note: lambdas are excluded so `field(default_factory=lambda: _resolve_user_project_root() / ...)` is permitted; only direct module-level invocation is rejected). Plus `python3 -c "from cortex_command.overnight import report"` — pass if exit 0 (broken import on report.py:36 detected here; verification was previously absent). Plus `python3 -c "from cortex_command.overnight import status"` — pass if exit 0 (status.py scope-expansion smoke test). Plus `grep -c "_LIFECYCLE_ROOT" cortex_command/overnight/status.py` = 0 — pass if count = 0.
+- **Status**: [x] complete
 
 ### Task 6: Rewrite `cortex upgrade` as advisory; rework `cortex --print-root` JSON envelope (project-root + new `package_root` field)
 
@@ -117,7 +123,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - `install_guard.py`: scan for `~/.cortex`, `CORTEX_COMMAND_ROOT`, and `_resolve_cortex_root` references; replace with the new helper or delete.
   - **MCP-side consumer impact** (handled in new Task 16): `plugins/cortex-overnight-integration/server.py:1614` (overnight_status session-dir construction) and `server.py:529-538` (R8 throttle cache key) consume `root` from this envelope. Under the new semantic, `root` is the user's project root — so session-dir resolution `Path(root) / "lifecycle" / "sessions" / session_id` correctly targets the user's project lifecycle tree. R8 throttle keying still requires non-empty `head_sha`/`remote_url`, which holds when the user's project is itself a git repo (the common case); when it isn't, the throttle skips silently — Task 16 resolves this by short-circuiting R8 explicitly under wheel install rather than relying on empty-string sentinel behavior.
 - **Verification**: `grep -E "git pull|git status|~/\\.cortex|CORTEX_COMMAND_ROOT" cortex_command/cli.py | wc -l` = 0 — pass if count = 0. Plus `grep -E "subprocess.*uv.*tool.*install" cortex_command/cli.py | wc -l` = 0 — pass if count = 0. Plus `grep -c "_resolve_cortex_root" cortex_command/cli.py` = 0 — pass if count = 0. Plus `grep -E "/plugin update|--reinstall" cortex_command/cli.py | wc -l` ≥ 2 — pass if count ≥ 2. Plus `python3 -m cortex_command.cli upgrade` — pass if exit 0 (advisory printer exits cleanly). Plus `cd /tmp && python3 -m cortex_command.cli --print-root --format json 2>&1 | grep -E "lifecycle/ AND no backlog/|cortex project"` — pass if grep finds the error message (verifying the sanity-check raise propagates cleanly when CWD is unsuitable). Plus `cd $(git rev-parse --show-toplevel) && python3 -m cortex_command.cli --print-root --format json | python3 -c "import json, sys; d = json.loads(sys.stdin.read()); assert d['version'] == '1.1' and 'root' in d and 'package_root' in d"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Simplify `install.sh` to ensure `uv` and run `uv tool install git+<url>@<tag>`
 
@@ -234,7 +240,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - Pattern reference: any existing workflow files in `.github/workflows/` — check `ls .github/workflows/` for prior conventions.
   - Comment in workflow file documenting that `tests/test_no_clone_install.py::test_target_state` (R6c) exercises the wheel-build + install path locally; the CI integration test for tag-trigger requires an actual tag push and is not run on every PR.
 - **Verification**: `test -f .github/workflows/release.yml` — pass if file exists. Plus `grep -c "tags:" .github/workflows/release.yml` ≥ 1 — pass if count ≥ 1. Plus `grep -E "uv build|softprops/action-gh-release|gh release create" .github/workflows/release.yml | wc -l` ≥ 2 — pass if count ≥ 2.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14: Cut and push tag `v0.1.0` (tag-before-coupling pivot); verify GitHub Release published
 
@@ -272,7 +278,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - **Caller enumeration for `_orchestrate_upgrade`**: `grep -rn "_orchestrate_upgrade\\|_orchestrate_schema_floor_upgrade" plugins/cortex-overnight-integration/server.py` to enumerate every call site; each gets the early-return treatment or is deleted as part of the dead-code removal.
   - Document the short-circuit decision in a server.py module-level comment near the changed code: "Under non-editable wheel install, R8 throttle and R10 orchestration are dormant; the upgrade arrow flows plugin → CLI via R4 (`_ensure_cortex_installed`) on schema-floor mismatch (R13)."
 - **Verification**: `grep -E "deprecated under wheel install|R8 throttle|wheel install" plugins/cortex-overnight-integration/server.py | wc -l` ≥ 1 — pass if count ≥ 1 (short-circuit comment / log message present). Plus, run a smoke probe in a tmp env where `cortex_root` is a non-git directory: `python3 -c "import sys; sys.path.insert(0, 'plugins/cortex-overnight-integration'); from server import _maybe_check_upstream; assert _maybe_check_upstream() is None"` — pass if exit 0 (R8 returns None cleanly without raising).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 15: Full regression run (`just test`) and post-merge sanity probes; rewrite tests broken by Task 6
 
