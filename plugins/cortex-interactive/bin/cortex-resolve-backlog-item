@@ -204,7 +204,17 @@ def _backlog_dir() -> Path:
     env_override = os.environ.get("CORTEX_BACKLOG_DIR")
     if env_override:
         return Path(env_override)
-    # Two levels up from this script (bin/ → repo root → backlog/)
+    # Walk up looking for a sibling backlog/. The script lives at canonical
+    # <repo>/bin/ but is also auto-mirrored into
+    # <repo>/plugins/cortex-interactive/bin/, which is one level deeper;
+    # a fixed parent.parent walk would resolve to the wrong place under
+    # the mirror.
+    here = Path(__file__).resolve().parent
+    while here != here.parent:
+        candidate = here / "backlog"
+        if candidate.is_dir():
+            return candidate
+        here = here.parent
     return Path(__file__).resolve().parent.parent / "backlog"
 
 
