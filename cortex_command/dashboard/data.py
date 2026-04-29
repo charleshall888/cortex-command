@@ -9,7 +9,6 @@ Functions:
     parse_pipeline_state   -- reads lifecycle/pipeline-state.json
     tail_jsonl             -- byte-offset-aware JSONL tail utility
     parse_feature_events   -- reads lifecycle/{feature}/events.log
-    parse_plan_progress    -- reads lifecycle/{feature}/plan.md
     parse_agent_activity   -- reads lifecycle/{feature}/agent-activity.jsonl
     get_last_activity_ts   -- most recent event timestamp for a feature
     parse_fleet_cards      -- builds agent fleet cards for running features
@@ -292,18 +291,35 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
     Returns:
         Dict with keys:
 
-        - ``current_phase`` (str | None): the ``to`` field of the most
-          recent ``phase_transition`` event, or None if absent.
+        - ``current_phase`` (str | None): the ``phase`` field from the
+          canonical ``detect_lifecycle_phase`` detector, or None when the
+          feature events.log read fails.
         - ``phase_transitions`` (list[dict]): each entry has ``from``,
           ``to``, and ``ts`` keys.
         - ``rework_cycles`` (int): count of ``to in {"implement",
           "implement-rework"}`` transitions that follow a
           ``to == "review"`` transition.
+        - ``checked`` (int): count of completed plan tasks from the
+          canonical detector (0 when plan.md is absent).
+        - ``total`` (int): count of total plan tasks from the canonical
+          detector (0 when plan.md is absent).
 
-        Returns ``{"current_phase": None, "phase_transitions": [],
-        "rework_cycles": 0}`` when the file is absent or unreadable.
+        On events.log read failure, returns ``current_phase=None``,
+        ``phase_transitions=[]``, ``rework_cycles=0`` with ``checked``
+        and ``total`` still pulled from the canonical detector.
     """
-    default: dict = {"current_phase": None, "phase_transitions": [], "rework_cycles": 0}
+    feature_dir = lifecycle_dir / feature_slug
+    detector = detect_lifecycle_phase(feature_dir)
+    checked = detector["checked"]
+    total = detector["total"]
+
+    default: dict = {
+        "current_phase": None,
+        "phase_transitions": [],
+        "rework_cycles": 0,
+        "checked": checked,
+        "total": total,
+    }
     path = lifecycle_dir / feature_slug / "events.log"
     try:
         from cortex_command.pipeline.metrics import parse_events  # local import to stay testable
@@ -319,8 +335,7 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
         for t in transitions
     ]
 
-    feature_dir = lifecycle_dir / feature_slug
-    current_phase: str | None = detect_lifecycle_phase(feature_dir)["phase"]
+    current_phase: str | None = detector["phase"]
 
     # Count rework cycles: number of "implement" or "implement-rework"
     # transitions that follow a "review" transition immediately before them.
@@ -335,32 +350,9 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
         "current_phase": current_phase,
         "phase_transitions": phase_transitions,
         "rework_cycles": rework_cycles,
+        "checked": checked,
+        "total": total,
     }
-
-
-def parse_plan_progress(
-    feature_slug: str, lifecycle_dir: Path
-) -> tuple[int, int] | None:
-    """Count completed and total checkbox items in a feature's plan.md.
-
-    Args:
-        feature_slug: Feature directory name under ``lifecycle/``.
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
-
-    Returns:
-        ``(completed, total)`` tuple where ``completed`` is the count of
-        ``[x]`` occurrences and ``total`` is completed + pending (``[ ]``).
-        Returns ``None`` if the file is absent or unreadable.
-    """
-    path = lifecycle_dir / feature_slug / "plan.md"
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return None
-
-    completed = len(re.findall(r"\[x\]", text, re.IGNORECASE))
-    pending = len(re.findall(r"\[ \]", text))
-    return (completed, completed + pending)
 
 
 def parse_agent_activity(

@@ -531,7 +531,8 @@ def write_feature_files(repo_root: Path, slug: str, status: str) -> None:
 
     # ------------------------------------------------------------------
     # plan.md — 6 checkboxes (3 checked, 3 unchecked)
-    # parse_plan_progress() counts [x] and [ ] occurrences.
+    # The canonical detector (cortex_command.common.detect_lifecycle_phase)
+    # counts **Status**: [x] / [ ] occurrences for plan progress.
     # ------------------------------------------------------------------
     plan_content = (
         "- [x] Task 1: Research existing patterns\n"

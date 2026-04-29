@@ -5,8 +5,6 @@ Tests cover:
   - tail_jsonl: second call with saved offset returns only new lines
   - tail_jsonl: malformed JSON lines are skipped
   - tail_jsonl: absent file returns ([], 0)
-  - parse_plan_progress: checkbox counting
-  - parse_plan_progress: absent file returns None
   - parse_backlog_counts: counts by status field from YAML frontmatter
   - parse_backlog_counts: skips malformed/missing frontmatter files
   - parse_overnight_state: returns None for absent path
@@ -37,7 +35,6 @@ from cortex_command.dashboard.data import (
     parse_overnight_state,
     parse_pipeline_dispatch,
     parse_pipeline_state,
-    parse_plan_progress,
     parse_round_timestamps,
     tail_jsonl,
 )
@@ -172,99 +169,6 @@ class TestTailJsonl(unittest.TestCase):
 
             self.assertEqual(len(events), 2)
             self.assertEqual([e["ok"] for e in events], [1, 2])
-
-
-# ---------------------------------------------------------------------------
-# Tests: parse_plan_progress
-# ---------------------------------------------------------------------------
-
-class TestParsePlanProgress(unittest.TestCase):
-    """Tests for parse_plan_progress checkbox counting."""
-
-    def test_returns_completed_and_total_for_mixed_checkboxes(self):
-        """3 checked + 2 unchecked boxes -> (3, 5)."""
-        with tempfile.TemporaryDirectory() as tmp:
-            lifecycle_dir = Path(tmp)
-            feature_dir = lifecycle_dir / "my-feature"
-            feature_dir.mkdir()
-            plan = feature_dir / "plan.md"
-            plan.write_text(
-                "# Plan\n\n"
-                "- [x] Task one\n"
-                "- [x] Task two\n"
-                "- [x] Task three\n"
-                "- [ ] Task four\n"
-                "- [ ] Task five\n",
-                encoding="utf-8",
-            )
-
-            result = parse_plan_progress("my-feature", lifecycle_dir)
-
-            self.assertEqual(result, (3, 5))
-
-    def test_returns_none_for_absent_file(self):
-        """Returns None when plan.md does not exist."""
-        with tempfile.TemporaryDirectory() as tmp:
-            lifecycle_dir = Path(tmp)
-            (lifecycle_dir / "no-feature").mkdir()
-
-            result = parse_plan_progress("no-feature", lifecycle_dir)
-
-            self.assertIsNone(result)
-
-    def test_returns_none_for_absent_feature_directory(self):
-        """Returns None when the feature directory itself does not exist."""
-        with tempfile.TemporaryDirectory() as tmp:
-            lifecycle_dir = Path(tmp)
-
-            result = parse_plan_progress("missing-feature", lifecycle_dir)
-
-            self.assertIsNone(result)
-
-    def test_case_insensitive_checked_boxes(self):
-        """[X] (uppercase) is counted as completed."""
-        with tempfile.TemporaryDirectory() as tmp:
-            lifecycle_dir = Path(tmp)
-            feature_dir = lifecycle_dir / "feat"
-            feature_dir.mkdir()
-            (feature_dir / "plan.md").write_text(
-                "- [X] Done\n- [x] Also done\n- [ ] Not done\n",
-                encoding="utf-8",
-            )
-
-            result = parse_plan_progress("feat", lifecycle_dir)
-
-            self.assertEqual(result, (2, 3))
-
-    def test_all_completed(self):
-        """All tasks checked -> (n, n)."""
-        with tempfile.TemporaryDirectory() as tmp:
-            lifecycle_dir = Path(tmp)
-            feature_dir = lifecycle_dir / "feat"
-            feature_dir.mkdir()
-            (feature_dir / "plan.md").write_text(
-                "- [x] A\n- [x] B\n",
-                encoding="utf-8",
-            )
-
-            result = parse_plan_progress("feat", lifecycle_dir)
-
-            self.assertEqual(result, (2, 2))
-
-    def test_no_checkboxes(self):
-        """File with no checkboxes returns (0, 0)."""
-        with tempfile.TemporaryDirectory() as tmp:
-            lifecycle_dir = Path(tmp)
-            feature_dir = lifecycle_dir / "feat"
-            feature_dir.mkdir()
-            (feature_dir / "plan.md").write_text(
-                "# No checkboxes here\n",
-                encoding="utf-8",
-            )
-
-            result = parse_plan_progress("feat", lifecycle_dir)
-
-            self.assertEqual(result, (0, 0))
 
 
 # ---------------------------------------------------------------------------

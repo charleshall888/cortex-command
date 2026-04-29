@@ -34,7 +34,6 @@ from cortex_command.dashboard.data import (
     parse_overnight_state,
     parse_pipeline_dispatch,
     parse_pipeline_state,
-    parse_plan_progress,
     parse_round_timestamps,
     tail_jsonl,
 )
@@ -57,8 +56,10 @@ class DashboardState:
         overnight_events: Accumulated events from overnight-events.log.
         overnight_events_offset: Byte offset for incremental JSONL tailing.
         feature_states: Per-feature parsed data keyed by feature slug.
-            Each value is a dict combining keys from parse_feature_events
-            and parse_plan_progress.
+            Each value is a dict from parse_feature_events with an
+            additional ``plan_progress`` key — a ``(checked, total)``
+            tuple sourced from the canonical detector when ``plan.md``
+            exists, else ``None``.
         backlog_counts: Status -> count mapping from backlog/ directory.
         last_updated: ISO 8601 timestamp of the most recent successful poll.
     """
@@ -175,7 +176,10 @@ async def _poll_state_files(state: DashboardState, root: Path) -> None:
                 features_raw = state.overnight.get("features", {})
                 for slug in features_raw:
                     fe = parse_feature_events(slug, project_lifecycle_dir)
-                    pp = parse_plan_progress(slug, project_lifecycle_dir)
+                    # Preserve the prior contract: plan_progress is None
+                    # when plan.md is absent, else (checked, total).
+                    plan_md = project_lifecycle_dir / slug / "plan.md"
+                    pp = (fe["checked"], fe["total"]) if plan_md.is_file() else None
                     state.feature_states[slug] = {
                         **fe,
                         "plan_progress": pp,
