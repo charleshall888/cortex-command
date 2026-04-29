@@ -95,11 +95,21 @@ from pydantic import BaseModel, ConfigDict, Field  # noqa: E402
 # Schema-version constants (R15)
 # ---------------------------------------------------------------------------
 
+#: Plugin/CLI version coupling (R5a). A two-element tuple binding the
+#: git tag this plugin pins for CLI auto-install (element 0) and the
+#: print-root JSON envelope schema major it requires (element 1). The
+#: CLI does NOT consume this constant — the plugin tree is outside the
+#: CLI's import path. Updates flow plugin -> CLI: bumping ``CLI_PIN``
+#: and shipping a new plugin version drives the next MCP tool call to
+#: reinstall the matching CLI tag via R4's ``_ensure_cortex_installed``.
+CLI_PIN = ("v0.1.0", "1.0")
+
 #: Schema floor the MCP refuses to operate below. ``M.m`` per Terraform's
 #: ``format_version`` precedent: a *major* mismatch is hard-rejected
 #: (breaking change); *minor* drift is silently tolerated for
 #: forward-compat (Pydantic's ``extra="ignore"`` drops unknown fields).
-MCP_REQUIRED_CLI_VERSION = "1.0"
+#: Derived from :data:`CLI_PIN` (R5a) so a single bump propagates.
+MCP_REQUIRED_CLI_VERSION = CLI_PIN[1]
 
 
 class SchemaVersionError(RuntimeError):
@@ -173,7 +183,10 @@ def _check_version(payload: dict, *, verb: str) -> None:
         raise SchemaVersionError(
             f"{verb}: major-version mismatch — CLI emitted {version!r}, "
             f"MCP requires major={required_major} "
-            f"(MCP_REQUIRED_CLI_VERSION={MCP_REQUIRED_CLI_VERSION!r})"
+            f"(MCP_REQUIRED_CLI_VERSION={MCP_REQUIRED_CLI_VERSION!r}); "
+            f"downgrade plugin OR run `uv tool install --reinstall "
+            f"git+https://github.com/charleshall888/cortex-command.git"
+            f"@{CLI_PIN[0]}` to upgrade cortex CLI to the matching version."
         )
 
 
@@ -221,6 +234,31 @@ if shutil.which("cortex") is None:
         f"cortex MCP: {_CORTEX_CLI_MISSING_ERROR}",
         file=sys.stderr,
     )
+
+
+# R4g — startup probe for ``uv``. The auto-install hook (R4) shells out
+# to ``uv tool install --reinstall git+...@<tag>``; without ``uv`` on
+# PATH that hook cannot run, and the most common failure mode on macOS
+# is the GUI-app + Homebrew + ``~/.zshrc`` misconfiguration: Homebrew
+# adds ``uv`` to PATH from ``~/.zshrc``, which is only sourced for
+# interactive login shells. A Claude Code GUI-app launch inherits the
+# launchd environment, which does not load ``~/.zshrc``. The fix is to
+# move the Homebrew PATH export into ``~/.zshenv`` (sourced by every
+# zsh invocation, including non-interactive subshells spawned by GUI
+# apps). Refuse to start so the operator sees the structured error
+# rather than a confusing R4 install failure on first tool call.
+if shutil.which("uv") is None:
+    sys.stderr.write(
+        "cortex MCP: `uv` not found on PATH. The cortex plugin requires "
+        "`uv` to auto-install the cortex CLI on first tool call. On macOS, "
+        "if you launched Claude Code as a GUI app and installed `uv` via "
+        "Homebrew, the GUI launchd environment does not source `~/.zshrc` "
+        "— move the Homebrew PATH export into `~/.zshenv` (sourced by "
+        "every zsh invocation, including non-interactive subshells "
+        "spawned by GUI apps), then restart Claude Code. "
+        "See https://docs.astral.sh/uv/ for install options.\n"
+    )
+    sys.exit(2)
 
 
 # ---------------------------------------------------------------------------
