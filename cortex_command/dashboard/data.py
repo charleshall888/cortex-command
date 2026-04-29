@@ -1193,7 +1193,7 @@ def compute_slow_flags(
         tier: str = pipeline_dispatch.get(slug, {}).get("complexity") or "simple"
 
         # Select phase key based on phase and tier
-        if current_phase == "implement":
+        if current_phase in ("implement", "implement-rework"):
             if tier == "complex":
                 phase_key = "implement_to_review"
             else:

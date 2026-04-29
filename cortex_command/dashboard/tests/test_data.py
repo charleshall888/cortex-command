@@ -1183,6 +1183,27 @@ class TestComputeSlowFlags(unittest.TestCase):
         self.assertIn("feat-a", result)
         self.assertTrue(result["feat-a"])
 
+    def test_implement_rework_simple_slow_returns_true(self):
+        """Feature in implement-rework + simple tier + current duration 250s > 3x median(60s) -> True."""
+        ts = self._make_transition_ts(250)
+        result = compute_slow_flags(
+            feature_states={
+                "feat-a": {
+                    "current_phase": "implement-rework",
+                    "phase_transitions": [{"from": "review", "to": "implement-rework", "ts": ts}],
+                }
+            },
+            overnight={"features": {"feat-a": {"status": "running"}}},
+            metrics={
+                "features": [
+                    {"tier": "simple", "phase_durations": {"implement_to_complete": 60.0}},
+                ]
+            },
+            pipeline_dispatch={"feat-a": {"model": "m", "complexity": "simple"}},
+        )
+        self.assertIn("feat-a", result)
+        self.assertTrue(result["feat-a"])
+
     def test_research_phase_not_in_result(self):
         """A feature in research phase has no phase key mapping and is excluded."""
         ts = self._make_transition_ts(250)
