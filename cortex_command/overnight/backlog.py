@@ -24,6 +24,7 @@ from typing import Optional
 # and tuple unpacking/indexing for backward compatibility.
 IneligibleItem = collections.namedtuple('IneligibleItem', ['item', 'reason'])
 
+from cortex_command.backlog import is_item_ready
 from cortex_command.common import TERMINAL_STATUSES, normalize_status, slugify
 
 
@@ -437,31 +438,19 @@ def filter_ready(
 ) -> ReadinessResult:
     """Partition backlog items into eligible and ineligible for overnight execution.
 
-    Uses ``item.lifecycle_slug`` (falling back to ``slugify(item.title)``)
-    to derive artifact paths under ``lifecycle/{slug}/``.  Does not rely on
-    deprecated ``item.research``, ``item.spec``, or ``item.plan`` fields.
+    Uses ``item.lifecycle_slug`` (falling back to ``slugify(item.title)``) to
+    derive artifact paths under ``lifecycle/{slug}/``.
 
-    Readiness checks are applied in this order:
-    1. **Status** — only items in ``ELIGIBLE_STATUSES`` are eligible.
-    2. **Blocked** — items whose ``blocked_by`` list contains any item with
-       a non-terminal status are ineligible.
-    3. **Type (epics excluded)** — items with ``type == "epic"`` are
-       non-implementable and excluded.
-    4. **Research artifact** — ``lifecycle/{slug}/research.md`` must exist
-       on disk (resolved relative to *project_root*).
-    5. **Spec artifact** — ``lifecycle/{slug}/spec.md`` must exist on disk.
-       ``plan.md`` is not required — it is generated during the overnight
-       session if missing.
+    Readiness gates: (1) status in ``ELIGIBLE_STATUSES`` and (2) blockers
+    delegate to :func:`cortex_command.backlog.is_item_ready`. (3) epics are
+    excluded. (4) ``research.md`` and (5) ``spec.md`` must exist under
+    ``lifecycle/{slug}/`` (``plan.md`` is generated during the session).
 
     Args:
         items: Backlog items to evaluate.
-        all_items: Full backlog set used to resolve ``blocked_by`` references.
-            If *None*, *items* is used as the full set.
-        project_root: Root directory for resolving relative file paths.
-            Defaults to the current working directory.
-
-    Returns:
-        A :class:`ReadinessResult` with eligible and ineligible lists.
+        all_items: Full backlog set used to resolve ``blocked_by`` references
+            (defaults to *items*).
+        project_root: Root for relative file paths (defaults to ``Path.cwd()``).
     """
     if all_items is None:
         all_items = items
@@ -496,19 +485,15 @@ def filter_ready(
     pending_blocked: list[BacklogItem] = []
 
     for item in items:
-        # 1. Status check
-        if item.status not in ELIGIBLE_STATUSES:
-            result.ineligible.append(IneligibleItem(item, f"status: {item.status}"))
-            continue
-
-        # 2. Blocked check (preliminary) — collect non-terminal blocker IDs
-        blocking_ids = [
-            bid for bid in item.blocked_by
-            if status_by_id.get(bid, "backlog") not in TERMINAL_STATUSES
-        ]
-        if blocking_ids:
-            # Defer to Phase 2 BFS — may still be promotable
-            pending_blocked.append(item)
+        # Gates 1+2 via shared helper; (False, None) sentinel defers to Phase 2 BFS.
+        is_ready, reason = is_item_ready(
+            item, all_items, eligible_statuses=ELIGIBLE_STATUSES,
+            treat_external_blockers_as="blocking")
+        if not is_ready:
+            if reason is None:
+                pending_blocked.append(item)
+            else:
+                result.ineligible.append(IneligibleItem(item, reason))
             continue
 
         # 3. Type check — epics are non-implementable

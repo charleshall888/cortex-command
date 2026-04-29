@@ -580,3 +580,120 @@ class TestResolveSlug:
             title="Fix inline style violations in session_panel and feature_cards templates",
         )
         assert item.resolve_slug() == "fix-inline-style-violations-in-session-panel-and-feature-cards-templates"
+
+
+# ---------------------------------------------------------------------------
+# (j) Reason-string format equality (wire contract for renderers)
+# ---------------------------------------------------------------------------
+
+class TestReasonStringFormat:
+    """Pin the exact reason strings produced by filter_ready.
+
+    These format-equality tests guard the wire contract consumed by
+    cortex_command/overnight/plan.py:217 and
+    cortex_command/overnight/backlog.py:1119, which interpolate
+    IneligibleItem.reason directly into rendered output. Substring
+    assertions alone admit malformed output (e.g. a missing colon, a
+    swapped field order, or extra whitespace would still pass an
+    "036 in reason" check); equality pins the contract.
+    """
+
+    def test_status_terminal_reason_equals(self, tmp_path):
+        """Item with status='done' produces the exact reason 'status: done'."""
+        item = _make_item(
+            id=200,
+            title="Done Item",
+            status="done",
+            lifecycle_slug="done-item",
+        )
+        result = filter_ready([item], all_items=[item], project_root=tmp_path)
+        assert len(result.ineligible) == 1
+        reason = result.ineligible[0][1]
+        assert reason == "status: done"
+
+    def test_external_blocker_reason_equals(self, tmp_path):
+        """A non-digit, non-UUID blocker reference produces the exact
+        'external blocker: <ref>' reason."""
+        item = _make_item(
+            id=201,
+            title="External-Blocked Item",
+            status="ready",
+            lifecycle_slug="external-blocked",
+            blocked_by=["anthropics/claude-code#34243"],
+        )
+        _stub_lifecycle(tmp_path, "external-blocked")
+        result = filter_ready([item], all_items=[item], project_root=tmp_path)
+        assert len(result.ineligible) == 1
+        reason = result.ineligible[0][1]
+        assert reason == "external blocker: anthropics/claude-code#34243"
+
+    def test_uuid_blocker_not_found_reason_equals(self, tmp_path):
+        """A UUID-shaped blocker absent from all_items produces the exact
+        'blocker not found: <uuid>' reason."""
+        item = _make_item(
+            id=202,
+            title="UUID-Blocked Item",
+            status="ready",
+            lifecycle_slug="uuid-blocked",
+            blocked_by=["00000000-0000-0000-0000-000000000999"],
+        )
+        _stub_lifecycle(tmp_path, "uuid-blocked")
+        result = filter_ready([item], all_items=[item], project_root=tmp_path)
+        assert len(result.ineligible) == 1
+        reason = result.ineligible[0][1]
+        assert reason == "blocker not found: 00000000-0000-0000-0000-000000000999"
+
+    def test_self_referential_blocker_reason_equals(self, tmp_path):
+        """An item that references its own id in blocked_by produces the
+        exact 'self-referential blocker: <id>' reason."""
+        item = _make_item(
+            id=7,
+            title="Self-Blocked Item",
+            status="ready",
+            lifecycle_slug="self-blocked",
+            blocked_by=["7"],
+        )
+        _stub_lifecycle(tmp_path, "self-blocked")
+        result = filter_ready([item], all_items=[item], project_root=tmp_path)
+        assert len(result.ineligible) == 1
+        reason = result.ineligible[0][1]
+        assert reason == "self-referential blocker: 7"
+
+    def test_phase2_bfs_blocked_by_format_equals(self, tmp_path):
+        """Phase-2 BFS produces the exact 'blocked by <ids> (not in session)'
+        reason for items whose blockers stay out of the session."""
+        # Two blockers (ids 36 and 42), both status='backlog' with no lifecycle
+        # artifacts so they remain ineligible (not in session).
+        blocker_a = _make_item(
+            id=36,
+            title="Blocker A",
+            status="backlog",
+            lifecycle_slug="blocker-a",
+            blocked_by=[],
+        )
+        blocker_b = _make_item(
+            id=42,
+            title="Blocker B",
+            status="backlog",
+            lifecycle_slug="blocker-b",
+            blocked_by=[],
+        )
+        blocked = _make_item(
+            id=300,
+            title="Phase-2 Blocked Item",
+            status="ready",
+            lifecycle_slug="phase2-blocked",
+            blocked_by=["36", "42"],
+        )
+        _stub_lifecycle(tmp_path, "phase2-blocked")
+        # Intentionally do NOT stub lifecycle for blocker-a / blocker-b — they
+        # must remain out of the session-eligible set.
+
+        all_items = [blocker_a, blocker_b, blocked]
+        result = filter_ready(all_items, all_items=all_items, project_root=tmp_path)
+
+        reason = next(
+            r for item, r in result.ineligible
+            if item.title == "Phase-2 Blocked Item"
+        )
+        assert reason == "blocked by 036, 042 (not in session)"
