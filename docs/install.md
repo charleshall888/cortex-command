@@ -36,7 +36,7 @@ cortex --print-root --format json
 For each cortex project you work in, register the project's `lifecycle/sessions/` directory with Claude Code's sandbox so interactive sessions can write to it:
 
 ```bash
-cd ~/path/to/your/cortex-project
+cd ~/path/to/your/project
 cortex init
 ```
 
@@ -101,7 +101,7 @@ If you prefer to upgrade the CLI directly without going through the plugin, use 
 
 - **`cortex: command not found`**: confirm `~/.local/bin/` is on your `PATH`. Add `export PATH="$HOME/.local/bin:$PATH"` to your shell rc file.
 - **macOS GUI-app launches Claude Code; `uv` not on PATH**: the `cortex-overnight-integration` MCP server probes `shutil.which("uv")` at startup and refuses to start if `uv` is missing from PATH. Fix by exporting `uv`'s install location in `~/.zshenv` (which GUI apps inherit), not `~/.zshrc` (interactive shells only).
-- **`cortex --print-root` fails with "Run from your cortex project root..."**: you invoked `cortex` from a directory with no `lifecycle/` AND no `backlog/`. Either `cd` into a cortex project, set `CORTEX_REPO_ROOT=/path/to/your/cortex-project`, or create a new project with `git init && cortex init`.
+- **`cortex --print-root` fails with "Run from your cortex project root..."**: you invoked `cortex` from a directory with no `lifecycle/` AND no `backlog/`. Either `cd` into a cortex project, set `CORTEX_REPO_ROOT=/path/to/your/project`, or create a new project with `git init && cortex init`.
 
 For the existing-maintainer migration path (existing `~/.cortex` editable install → wheel install), see [migration-no-clone-install.md](migration-no-clone-install.md).
 

@@ -137,7 +137,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - Hardcode `v0.1.0` for the initial implementation; a follow-up can wire `gh release view` once tag discipline is established.
   - Pattern reference: read existing logging/error-handling style in `install.sh` and match it.
 - **Verification**: `grep -E "git clone|uv tool install -e" install.sh | wc -l` = 0 — pass if count = 0. Plus `grep -E "uv tool install git\\+" install.sh | wc -l` ≥ 1 — pass if count ≥ 1. Plus `bash -n install.sh` — pass if exit 0 (script parses without syntax error).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Add `CLI_PIN` constant and `uv` startup probe to MCP `server.py`
 
@@ -152,7 +152,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - Startup probe (placed after the existing `shutil.which("cortex") is None` check at server.py:219): `if shutil.which("uv") is None: sys.stderr.write(<<<error message pointing at the macOS GUI-app + Homebrew + ~/.zshenv fix>>>); sys.exit(2)`. Error message must include the keywords `zshenv` and `GUI` per spec R4g grep verification.
   - Schema-mismatch error (existing site at server.py:170-180 or wherever the floor check raises): extend message to include `"downgrade plugin OR run \`uv tool install --reinstall git+<url>@<expected-tag>\` to upgrade cortex CLI to the matching version."` per spec R5b.
 - **Verification**: `grep -E "^CLI_PIN = \\(" plugins/cortex-overnight-integration/server.py` returns ≥ 1 — pass if count ≥ 1. Plus `grep -E "MCP_REQUIRED_CLI_VERSION = CLI_PIN\\[1\\]" plugins/cortex-overnight-integration/server.py` returns ≥ 1 — pass if count ≥ 1. Plus `grep -E "shutil.which.*uv|zshenv|GUI" plugins/cortex-overnight-integration/server.py | wc -l` ≥ 2 — pass if count ≥ 2. Plus `grep -E "downgrade plugin|--reinstall" plugins/cortex-overnight-integration/server.py | wc -l` ≥ 1 — pass if count ≥ 1. Plus `grep -E "CLI_PIN|MCP_REQUIRED_CLI_VERSION" cortex_command/cli.py | wc -l` = 0 — pass if count = 0 (CLI never references plugin constants).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Add `_ensure_cortex_installed()` hook with flock, sentinel, and post-install verification; wire into tool handlers
 
@@ -173,7 +173,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - **Caller enumeration for `_resolve_cortex_argv`**: `grep -rn "_resolve_cortex_argv" plugins/cortex-overnight-integration/server.py` returns server.py:245, 270, 760, 806, 1405. All five sites benefit from the hook transparently — no per-handler changes required.
   - **Schema-mismatch flow**: when post-install verification succeeds but the installed CLI's `cortex --print-root` reports a `version` major below `CLI_PIN[1]`'s major, the existing R13 schema-floor check (server.py:1050+) fires. The hook does not re-handle this case; it relies on the existing path.
 - **Verification**: `grep -c "_ensure_cortex_installed" plugins/cortex-overnight-integration/server.py` ≥ 2 — pass if count ≥ 2 (definition + call site). Plus `grep -E "shutil.which.*cortex|uv.*tool.*install.*reinstall" plugins/cortex-overnight-integration/server.py | wc -l` ≥ 2 — pass if count ≥ 2. Plus `grep -E "install.lock|XDG_STATE_HOME" plugins/cortex-overnight-integration/server.py | wc -l` ≥ 1 — pass if count ≥ 1. Plus `grep -E "install-failed|sentinel" plugins/cortex-overnight-integration/server.py | wc -l` ≥ 1 — pass if count ≥ 1. Plus `grep -E "first_install" plugins/cortex-overnight-integration/server.py | wc -l` ≥ 1 — pass if count ≥ 1. Plus `grep -E "cortex.*--print-root|print-root.*--format" plugins/cortex-overnight-integration/server.py | wc -l` ≥ 1 — pass if count ≥ 1. Plus `grep -E "CORTEX_AUTO_INSTALL" plugins/cortex-overnight-integration/server.py | wc -l` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Add target-state and transition-mechanism tests in `tests/test_no_clone_install.py`
 
@@ -196,7 +196,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
     - Use `tmp_path` + `monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))` to isolate sentinel/lock files.
   - Pattern reference: `tests/test_cli_upgrade.py:37-84` (subprocess mock pattern) and `tests/test_cli_print_root.py` (CLI invocation pattern).
 - **Verification**: `pytest tests/test_no_clone_install.py::test_target_state -v` — pass if exit 0. Plus `pytest tests/test_no_clone_install.py::test_mcp_first_install_hook -v` — pass if exit 0. Plus `test -f tests/test_no_clone_install.py` — pass if file exists.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Update existing project documentation (CLAUDE.md, requirements/project.md, requirements/observability.md)
 
@@ -210,7 +210,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - `requirements/observability.md` L139-142: replace the `-e` reference in the install-mutation classification; add a new entry for the MCP first-install hook (`_ensure_cortex_installed`) with `stage: "first_install"` per spec R7f.
   - Word-level tracking: read each file before editing; preserve adjacent paragraphs that are not part of the change.
 - **Verification**: `grep -E "uv tool install -e" CLAUDE.md requirements/project.md requirements/observability.md` returns 0 — pass if zero matches. Plus `grep -E "uv tool install git\\+" CLAUDE.md requirements/project.md` returns ≥ 2 — pass if count ≥ 2. Plus `grep -E "first_install|first install hook" requirements/observability.md` returns ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Add new documentation files (docs/install.md, docs/migration-no-clone-install.md, docs/release-process.md, CHANGELOG.md)
 
@@ -225,7 +225,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - `CHANGELOG.md`: minimal Keep-a-Changelog format; first entry `## [v0.1.0]` with bullet points referencing the migration (no-clone install, MCP first-install hook, `Path(__file__)` audit).
   - Length target: 50-200 lines per file.
 - **Verification**: `test -f docs/install.md && grep -c "uv tool install git\\+" docs/install.md` ≥ 1 — pass if file exists and count ≥ 1. Plus `test -f docs/migration-no-clone-install.md && grep -c "uv tool uninstall" docs/migration-no-clone-install.md` ≥ 1 — pass if file exists and count ≥ 1. Plus `test -f docs/release-process.md && grep -c "uv build\\|tag\\|release" docs/release-process.md` ≥ 3 — pass if file exists and count ≥ 3. Plus `test -f CHANGELOG.md && grep -c "v0.1.0" CHANGELOG.md` ≥ 1 — pass if file exists and count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Add GitHub Actions release workflow (`.github/workflows/release.yml`)
 
@@ -264,7 +264,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
     4. Re-run Task 14 after the fix.
   - This is a publishing operation visible to other users of the repo — confirm with the user before pushing the tag. Tag deletion at this stage is recoverable; deletion AFTER subsequent tasks land would orphan their `v0.1.0` references, so deletion windows close once Task 7 merges.
 - **Verification**: `git tag -l "v0.1.0" | wc -l` = 1 — pass if count = 1. Plus `gh release list --limit 5 | grep -c "v0.1.0"` ≥ 1 — pass if count ≥ 1. Plus `gh release view v0.1.0 --json assets -q '[.assets[].name] | length'` ≥ 1 — pass if count ≥ 1 (release asset published, not just an empty release).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 16: Short-circuit R8 throttle and R10 orchestration paths in MCP `server.py` under wheel install
 

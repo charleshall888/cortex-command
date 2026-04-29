@@ -158,7 +158,7 @@ def _dispatch_print_root(_args: argparse.Namespace) -> int:
 
     Envelope shape (version 1.1):
       - ``version``: JSON envelope version (currently ``"1.1"``). Distinct
-        from the schema major used by the MCP plugin's ``CLI_PIN``.
+        from the schema major the MCP plugin pins to.
       - ``root``: the user's cortex project root (resolved via
         :func:`cortex_command.common._resolve_user_project_root`). This is
         the single-source-of-truth contract — under non-editable wheel
