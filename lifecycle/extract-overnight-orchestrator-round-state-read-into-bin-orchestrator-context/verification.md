@@ -62,3 +62,28 @@ captured_at: 2026-04-29T00:00:00Z
   `skill`-tagged dispatch events predating the current `orchestrator-round.md` prompt.
 - R12 (post-merge note) will append `post_merge_tokens`, `ratio`, and `notes` to this
   file after the first overnight session running the rewritten prompt.
+
+## Method Divergence (post-ticket-153)
+
+After ticket 153 (`instrument-orchestrator-round-subprocess-with-token-cost-telemetry`)
+ships, the orchestrator-round subprocess emits `dispatch_complete` records carrying
+real `usage.input_tokens` values from `claude -p --output-format=json`. R12 measurements
+will read those live values; R11's `baseline_tokens: 7063` is a static character-count
+estimate (28,254 chars / 4 chars-per-token Anthropic approximation), not a live BPE
+token count.
+
+**These two methods are not directly comparable.** The 4-char/token assumption can be
+off by 15–30% on code-heavy prompts (orchestrator-round prompts are mixed prose +
+pseudocode). When R12 lands, the `ratio` field MUST cite both numbers and the methods
+behind them — do not treat the post-merge live measurement as a drop-in replacement
+for the pre-merge static estimate. Possible framings:
+
+- Report both as separate numbers (`pre_merge_estimate: 7063`, `post_merge_measured: N`)
+  with an explicit `method: "char-count-estimate"` vs `"live-usage-input-tokens"` tag.
+- If a ratio is reported, qualify it with the divergence: `ratio_caveat: "denominator
+  is a static char-count estimate; numerator is a live BPE measurement; the ratio
+  reflects method divergence as well as prompt-size delta"`.
+
+The pre-merge inline-read prompt is no longer obtainable in main as of commits
+`ec55340` and `296e451` (ticket 111 closing); a live re-baseline of the original
+prompt is not possible. R12's role is forward-looking comparison only.
