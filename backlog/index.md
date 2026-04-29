@@ -2,33 +2,29 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 128 | Install pre-commit hook rejecting main commits during overnight sessions | backlog | critical | feature | — | 126 | — |
+| 128 | Install pre-commit hook rejecting main commits during overnight sessions | refined | critical | feature | — | 126 | ✓ |
 | 82 | Adapt harness to Opus 4.7 (prompt delta + capability adoption) | backlog | high | epic | — | — | — |
 | 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | — |
-| 135 | Shared git index race between parallel Claude sessions causes wrong files to land in commits | backlog | high | bug | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
-| 141 | Non-editable wheel install support for cortex-command | backlog | medium | feature | — | — | — |
-| 149 | Fix runner.pid takeover race in ipc.py:write_runner_pid | backlog | medium | bug | — | — | — |
-| 90 | Adopt xhigh effort default for overnight lifecycle implement | backlog | low | feature | — | 82 | — |
-| 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | — | 82 | — |
-| 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
-| 133 | Evaluate implement.md:119 progress-tail narration under Opus 4.7 | backlog | low | feature | — | 82 | — |
+| 149 | Fix runner.pid takeover race in ipc.py:write_runner_pid | refined | medium | bug | — | — | ✓ |
+| 90 | Adopt xhigh effort default for overnight lifecycle implement | refined | low | feature | — | 82 | ✓ |
+| 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | refined | low | chore | — | 82 | ✓ |
+| 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | refined | low | feature | — | — | ✓ |
+| 133 | Evaluate implement.md:119 progress-tail narration under Opus 4.7 | refined | low | feature | — | 82 | ✓ |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
 
 ## Refined
 
-
-## Backlog
-
 - **128** Install pre-commit hook rejecting main commits during overnight sessions
-- **82** Adapt harness to Opus 4.7 (prompt delta + capability adoption)
-- **135** Shared git index race between parallel Claude sessions causes wrong files to land in commits
-- **141** Non-editable wheel install support for cortex-command
 - **149** Fix runner.pid takeover race in ipc.py:write_runner_pid
 - **90** Adopt xhigh effort default for overnight lifecycle implement
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
 - **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release
 - **133** Evaluate implement.md:119 progress-tail narration under Opus 4.7
+
+## Backlog
+
+- **82** Adapt harness to Opus 4.7 (prompt delta + capability adoption)
 - **142** Multi-session host concurrency registry for cortex overnight
 
 ## In-Progress

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: afb7fd7b-d127-46d1-a126-34c77e33b3da
 title: "No-clone install for cortex CLI via MCP auto-install"
-status: in_progress
+status: complete
 priority: medium
 type: feature
 tags: [distribution, packaging, mcp, install]
@@ -15,7 +15,7 @@ complexity: complex
 criticality: high
 spec: lifecycle/non-editable-wheel-install-support-for-cortex-command/spec.md
 areas: [install,overnight-runner,mcp-server,docs]
-session_id: 4dc7954b-c983-418a-a72a-804137211eee
+session_id: null
 lifecycle_phase: implement
 ---
 
