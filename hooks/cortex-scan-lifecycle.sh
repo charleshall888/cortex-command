@@ -165,45 +165,33 @@ if [[ -f "$PIPELINE_STATE" ]]; then
 fi
 
 # --- Phase detection ---
-# Mirrors claude.common.detect_lifecycle_phase — keep in sync if phase model changes
+# Inline-batches cortex_command.common.detect_lifecycle_phase across all lifecycle/*/ dirs
+# in one Python invocation. Statusline (claude/statusline.sh) is a separate documented
+# bash-only mirror — see DR-6 / parity test tests/test_lifecycle_phase_parity.py.
 
-determine_phase() {
-  local dir="$1"
-
-  # Event-based completion check — covers all tiers (including simple which skips review)
-  if [[ -f "$dir/events.log" ]] && grep -q '"feature_complete"' "$dir/events.log" 2>/dev/null; then
-    echo "complete"; return
-  fi
-
-  if [[ -f "$dir/review.md" ]]; then
-    local verdict cycle
-    verdict=$(sed -n 's/.*"verdict"[[:space:]]*:[[:space:]]*"\([A-Z_]*\)".*/\1/p' "$dir/review.md" 2>/dev/null | tail -1)
-    cycle=$(sed -n 's/.*"cycle"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$dir/review.md" 2>/dev/null | tail -1)
-    [[ -n "$cycle" ]] || cycle=1
-
-    case "$verdict" in
-      APPROVED)          echo "complete"; return ;;
-      CHANGES_REQUESTED) echo "implement-rework:$cycle"; return ;;
-      REJECTED)          echo "escalated"; return ;;
-    esac
-  fi
-
-  if [[ -f "$dir/plan.md" ]]; then
-    local total checked
-    total=$(grep -cE '\*\*Status\*\*:.*\[[ x]\]' "$dir/plan.md" 2>/dev/null) || total=0
-    checked=$(grep -cE '\*\*Status\*\*:.*\[x\]' "$dir/plan.md" 2>/dev/null) || checked=0
-
-    if (( total > 0 && checked == total )); then
-      echo "review"
-    else
-      echo "implement:$checked/$total"
-    fi
-    return
-  fi
-
-  if [[ -f "$dir/spec.md" ]]; then echo "plan"; return; fi
-  if [[ -f "$dir/research.md" ]]; then echo "specify"; return; fi
-  echo "research"
+# Bash glue: encode pre-parsed (phase, checked, total, cycle) into the wire format
+# consumed by downstream code per R3:
+#   phase=="implement"        AND total>0  -> "implement:$checked/$total"
+#   phase=="implement"        AND total==0 -> "implement:0/0"
+#   phase=="implement-rework"              -> "implement-rework:$cycle"
+#   any other phase                        -> bare phase string verbatim
+encode_phase() {
+  local phase="$1" checked="$2" total="$3" cycle="$4"
+  case "$phase" in
+    implement)
+      if (( total > 0 )); then
+        echo "implement:$checked/$total"
+      else
+        echo "implement:0/0"
+      fi
+      ;;
+    implement-rework)
+      echo "implement-rework:$cycle"
+      ;;
+    *)
+      echo "$phase"
+      ;;
+  esac
 }
 
 # Human-readable phase label for context output
@@ -224,9 +212,9 @@ phase_label() {
 
 # --- Scan feature directories ---
 
-incomplete_features=()
-incomplete_phases=()
-
+# Collect candidate lifecycle dirs (skipping archive + morning-review-suppressed features).
+candidate_dirs=()
+candidate_features=()
 for dir in "$LIFECYCLE_DIR"/*/; do
   [[ -d "$dir" ]] || continue
   feature=$(basename "$dir")
@@ -244,13 +232,77 @@ for dir in "$LIFECYCLE_DIR"/*/; do
     [[ "$skip" == true ]] && continue
   fi
 
-  phase=$(determine_phase "$dir")
-
-  [[ "$phase" != "complete" ]] || continue
-
-  incomplete_features+=("$feature")
-  incomplete_phases+=("$phase")
+  candidate_dirs+=("$dir")
+  candidate_features+=("$feature")
 done
+
+incomplete_features=()
+incomplete_phases=()
+
+if (( ${#candidate_dirs[@]} > 0 )); then
+  # Inline-batch: one python3 -c invocation processes all candidate dirs and emits
+  # one tab-separated record per dir: <dir>\t<phase>\t<checked>\t<total>\t<cycle>.
+  # This pays the ~30-80ms Python cold start once regardless of N (vs N invocations).
+  batch_output=$(python3 -c '
+import sys
+from pathlib import Path
+from cortex_command.common import detect_lifecycle_phase
+
+for raw in sys.argv[1:]:
+    r = detect_lifecycle_phase(Path(raw))
+    sys.stdout.write(
+        "{}\t{}\t{}\t{}\t{}\n".format(
+            raw, r["phase"], r["checked"], r["total"], r["cycle"]
+        )
+    )
+' "${candidate_dirs[@]}" 2>/dev/null) || batch_output=""
+
+  # Index batch output by dir (parallel arrays — bash 3.2 lacks associative arrays).
+  batch_dirs=()
+  batch_phases=()
+  batch_checked=()
+  batch_totals=()
+  batch_cycles=()
+  while IFS=$'\t' read -r b_dir b_phase b_checked b_total b_cycle; do
+    [[ -n "$b_dir" ]] || continue
+    batch_dirs+=("$b_dir")
+    batch_phases+=("$b_phase")
+    batch_checked+=("$b_checked")
+    batch_totals+=("$b_total")
+    batch_cycles+=("$b_cycle")
+  done <<< "$batch_output"
+
+  # Iterate candidate dirs and apply R3 wire-format encoding via the glue function.
+  for i in "${!candidate_dirs[@]}"; do
+    dir="${candidate_dirs[$i]}"
+    feature="${candidate_features[$i]}"
+
+    # Look up batch result for this dir.
+    phase=""
+    checked=0
+    total=0
+    cycle=1
+    for j in "${!batch_dirs[@]}"; do
+      if [[ "${batch_dirs[$j]}" == "$dir" ]]; then
+        phase="${batch_phases[$j]}"
+        checked="${batch_checked[$j]}"
+        total="${batch_totals[$j]}"
+        cycle="${batch_cycles[$j]}"
+        break
+      fi
+    done
+
+    # Missing batch result: skip (precondition guard in Task 8 surfaces the root cause).
+    [[ -n "$phase" ]] || continue
+
+    encoded=$(encode_phase "$phase" "$checked" "$total" "$cycle")
+
+    [[ "$encoded" != "complete" ]] || continue
+
+    incomplete_features+=("$feature")
+    incomplete_phases+=("$encoded")
+  done
+fi
 
 # No incomplete features and no pipeline context — nothing to inject
 if (( ${#incomplete_features[@]} == 0 )) && [[ -z "$pipeline_context" ]]; then
