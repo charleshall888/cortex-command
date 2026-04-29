@@ -77,7 +77,7 @@ def _dispatch_overnight_list_sessions(args: argparse.Namespace) -> int:
 _MCP_SERVER_DEPRECATION_BASE = (
     "cortex mcp-server is removed; install the cortex-overnight-integration "
     "plugin (/plugin install cortex-overnight-integration@cortex-command) "
-    "and update your .mcp.json to point at uvx ${CLAUDE_PLUGIN_ROOT}/server.py"
+    "and update your .mcp.json to point at uv run ${CLAUDE_PLUGIN_ROOT}/server.py"
 )
 
 _MCP_SERVER_RESTART_ADVISORY = (
@@ -149,7 +149,7 @@ def _dispatch_mcp_server(_args: argparse.Namespace) -> int:
 
     The MCP server now ships as a plugin-bundled PEP 723 single-file at
     ``plugins/cortex-overnight-integration/server.py`` invoked via
-    ``uvx ${CLAUDE_PLUGIN_ROOT}/server.py`` from the plugin's ``.mcp.json``.
+    ``uv run ${CLAUDE_PLUGIN_ROOT}/server.py`` from the plugin's ``.mcp.json``.
     A user who manually runs ``cortex mcp-server`` from a terminal sees this
     migration message in their shell. Claude Code does NOT surface MCP-server
     stderr to users (verified via Claude Code GitHub issues #25751, #34744,
@@ -291,7 +291,7 @@ def _dispatch_upgrade(args: argparse.Namespace) -> int:
     # the removed `cortex mcp-server` verb.
     print(
         "Note: if you have a stale .mcp.json from before this upgrade, "
-        "update it to point at uvx ${CLAUDE_PLUGIN_ROOT}/server.py — "
+        "update it to point at uv run ${CLAUDE_PLUGIN_ROOT}/server.py — "
         "see docs/mcp-contract.md.",
         file=sys.stderr,
     )

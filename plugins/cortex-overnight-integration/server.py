@@ -55,7 +55,7 @@ def _enforce_plugin_root() -> None:
     ``${CLAUDE_PLUGIN_ROOT}``. On mismatch (or absent env var), refuse
     to start: print ``"plugin path mismatch"`` to stderr and exit
     non-zero. This prevents an attacker who can override
-    ``CLAUDE_PLUGIN_ROOT`` from pointing uvx at arbitrary Python.
+    ``CLAUDE_PLUGIN_ROOT`` from pointing uv run at arbitrary Python.
     """
 
     plugin_root_env = os.environ.get("CLAUDE_PLUGIN_ROOT")

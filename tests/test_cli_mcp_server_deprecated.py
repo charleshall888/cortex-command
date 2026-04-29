@@ -5,7 +5,7 @@ Verifies three behaviors required by spec R7 / plan Task 14:
   (a) ``cortex mcp-server`` exits non-zero and stderr names the migration
       target ``cortex-overnight-integration``.
   (b) After a successful ``cortex upgrade``, stderr emits a one-line notice
-      pointing users at the new ``uvx ${CLAUDE_PLUGIN_ROOT}/server.py``
+      pointing users at the new ``uv run ${CLAUDE_PLUGIN_ROOT}/server.py``
       invocation form.
   (c) When T12's verdict file (``plugin-refresh-semantics.md``) reports
       ``session_restart_required``, the deprecation message is augmented
@@ -112,7 +112,7 @@ class TestPostUpgradeMigrationNotice(unittest.TestCase):
     """Tests for the post-`cortex upgrade` migration notice."""
 
     def test_post_upgrade_notice_emitted(self):
-        """After a successful upgrade, stderr names the new uvx invocation."""
+        """After a successful upgrade, stderr names the new uv run invocation."""
 
         # Mock subprocess.run for the three calls inside _dispatch_upgrade so
         # the test does not actually mutate the system. Pattern matches the
@@ -133,7 +133,7 @@ class TestPostUpgradeMigrationNotice(unittest.TestCase):
             c.args[0] for c in mock_stderr.write.call_args_list if c.args
         )
         self.assertIn(
-            "update it to point at uvx",
+            "update it to point at uv run",
             written,
             msg=f"stderr missing post-upgrade migration notice: {written!r}",
         )
