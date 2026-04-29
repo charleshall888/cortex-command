@@ -1,0 +1,90 @@
+- ts: 2026-04-28T00:00:00Z
+  event: clarify_critic
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  findings:
+    - "The HIGH intent-clarity rating ignores that the ticket title still says `claude.common` after the 2026-04-27 amendment moved the module to `cortex_command.common`, and the 2026-04-22 amendment explicitly instructs `/refine` to re-evaluate scope against the reduced post-#097 surface — both signals that intent is not as settled as HIGH suggests."
+    - "Scope-boundedness HIGH overlooks the 2026-04-27 amendment introducing a new build-system surface (`just build-plugin`, `.githooks/pre-commit` drift hook, `plugins/cortex-overnight-integration/hooks/cortex-scan-lifecycle.sh`) that the original in/out scope lists never anticipated, and concedes line-number drift in the original citations."
+    - "Requirements-alignment ALIGNED rating cites `requirements/observability.md` and a 500ms latency budget that the ticket body itself never quotes; the ~100ms figure is attributed to the discovery research, not to a requirements file, so the alignment claim is asserted rather than grounded in the source the assessment is rating."
+    - "Complexity rating carried forward the pre-amendment 4-file count without re-deriving it post-#097, even though the amendment instructed `/refine` to re-evaluate the reduced surface — the skill-side patch may now be smaller than the complexity tier reflects."
+    - "Intent treats the return-shape extension as settled, but the source leaves the CLI's actual output format (JSON dict vs. key=value vs. legacy `implement:N/M` string) unspecified — a real ambiguity in intent that HIGH does not capture."
+  dispositions:
+    apply: 1
+    dismiss: 4
+    ask: 0
+  applied_fixes:
+    - "Added open research question: what output format should `python3 -m cortex_command.common detect-phase <dir>` emit, and how does the hook reconstruct `implement:N/M` from it?"
+  dismissals:
+    - finding_index: 0
+      rationale: "The 2026-04-22 amendment is itself the scope re-evaluation; reduced skill-side surface narrows the patch without muddling intent. The title-vs-body path mismatch is cosmetic — the amendment makes the corrected path (`cortex_command.common`) explicit, and the goal (canonicalize phase detection with a documented bash-statusline exception) remains unambiguous."
+    - finding_index: 1
+      rationale: "Plugin distribution and the drift hook are documented inside the 2026-04-27 amendment itself, which is part of the source material; the scope is bounded, just expanded by the amendment. Line drift is corrected in the same amendment (L170-205)."
+    - finding_index: 2
+      rationale: "Clarify protocol §2 requires loading `requirements/observability.md`; the file was loaded and confirms the statusline `< 500ms` acceptance criterion. Requirements alignment is assessed against requirements/ context, not against ticket-body citations."
+    - finding_index: 3
+      rationale: "Surface still spans 4 files (`cortex_command/common.py`, top-level hook, skill, statusline comment-only). Post-#097 deleted override logic but did not eliminate the skill-side ladder replacement. Complexity dimensions (4+ files, shared infra, cross-cutting) still trigger `complex`."
+  status: ok
+- ts: 2026-04-28T00:00:00Z
+  event: orchestrator_review
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-28T00:00:00Z
+  event: critical_review
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  phase: specify
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  a_class_findings: 7
+  b_class_findings: 6
+  c_class_findings: 4
+  a_class_ratified: 4
+  a_class_downgraded: 0
+  apply_count: 10
+  dismiss_count: 0
+  ask_count: 0
+  residue_path: lifecycle/unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception/critical-review-residue.json
+  status: ok
+- ts: 2026-04-29T10:05:00Z
+  event: orchestrator_review
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  phase: plan
+  verdict: flag
+  cycle: 1
+  issues:
+    - "P1 sizing: Task 12 (three-layer parity test with ≥10 fixture cases per layer) targets 30-45 min, outside the 5-15 min budget. Split into 12a (glue unit), 12b (statusline-vs-canonical), 12c (hook end-to-end), each adding a test class to the same shared test file."
+- ts: 2026-04-29T10:05:00Z
+  event: orchestrator_dispatch_fix
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  phase: plan
+  mode: same_context
+  issue: "P1 sizing: Task 12 oversized; split into three subtasks per spec R12a/R12b/R12c."
+- ts: 2026-04-29T10:06:30Z
+  event: orchestrator_review
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  phase: plan
+  verdict: pass
+  cycle: 2
+  issues: []
+- ts: 2026-04-29T10:15:00Z
+  event: critical_review
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  phase: plan
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  a_class_findings: 4
+  b_class_findings: 9
+  c_class_findings: 4
+  a_class_ratified: 3
+  a_class_downgraded: 0
+  apply_count: 12
+  dismiss_count: 2
+  ask_count: 1
+  residue_path: lifecycle/unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception/critical-review-residue.json
+  status: ok
+- ts: 2026-04-29T10:25:00Z
+  event: phase_transition
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  from: plan
+  to: implement

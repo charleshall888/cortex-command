@@ -1,0 +1,24 @@
+{
+  "ts": "2026-04-29T10:15:00Z",
+  "feature": "unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception",
+  "artifact": "lifecycle/unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "_phase_transition_abbrev label lookup at cortex_command/dashboard/data.py:584-590 has no entry for 'review\u2192implement-rework'; display falls through to raw_label. Cosmetic only \u2014 not a regression \u2014 but means rework transitions show as 'review\u2192implement-rework' instead of an abbreviated form. Adding a key is a one-line follow-up if the dashboard's transition labels start looking inconsistent.",
+      "reviewer_angle": "Vocabulary expansion silently breaks string-comparison consumers",
+      "evidence_quote": "_phase_transition_abbrev = {\"research\u2192specify\": \"\u2192spec\", \"specify\u2192plan\": \"\u2192plan\", \"plan\u2192implement\": \"\u2192impl\", \"implement\u2192review\": \"\u2192rev\", \"review\u2192complete\": \"\u2192done\"}"
+    },
+    {
+      "class": "B",
+      "finding": "Existing test fixtures at cortex_command/dashboard/tests/test_data.py:1150,1171,1212 hard-code phase_transitions with 'to: implement' for stall-detection scenarios. After Task 5 lands, additional test cases exercising 'to: implement-rework' transitions through parse_feature_events should be added \u2014 Task 5's verification (pytest cortex_command/dashboard/tests/ -x) will catch breakage in existing tests but does not enforce coverage of the new vocabulary in parse_feature_events.",
+      "reviewer_angle": "Vocabulary expansion silently breaks string-comparison consumers",
+      "evidence_quote": "Task 4 adds exactly one rework test for compute_slow_flags, but the rework-equivalent test fixtures for parse_feature_events (the function that produces rework_cycles and current_phase) are not added."
+    }
+  ]
+}
