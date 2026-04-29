@@ -1,0 +1,2 @@
+{"ts": "2026-01-01T00:00:00Z", "event": "lifecycle_start", "feature": "test"}
+{"ts": "2026-01-02T00:00:00Z", "event": "feature_complete", "feature": "test"}
