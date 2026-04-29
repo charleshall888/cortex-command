@@ -1,0 +1,160 @@
+- ts: 2026-04-28T00:00:00Z
+  event: clarify_critic
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  findings:
+    - "Intent clarity rated High treats the original Scope as authoritative, but the 2026-04-27 amendment opens three artifact shapes (bin/ script vs. cortex CLI subcommand vs. inter-plugin dependency); the deliverable form is not fixed."
+    - "Intent clarity rated High partly cites quantified ROI, but the ticket itself flags the ROI as gated on 104 and confirmable only post-ship; that is an asserted estimate, not a measured outcome."
+    - "Scope boundedness rated Low attributes the rating solely to the distribution amendment, but the original Scope items 'Validate: mid-round resume behavior unchanged' and 'Confirm ROI using 104's aggregator' lack defined methods/criteria and are independently unbounded."
+    - "Requirements alignment rated High pre-decided Option 1 ('natural fit') even though the ticket explicitly says 'Refine to decide'; alignment is contingent on the unresolved distribution choice rather than independent."
+    - "Requirements alignment cites 'ROI matters' principle to bless work whose ROI is admittedly unconfirmed at ship time, which is circular."
+    - "Complex tier rating includes 'cross-plugin distribution decision' as a complexity driver, but that decision is unresolved design (not implementation complexity); under Option 1 there is no cross-plugin work at all."
+  dispositions:
+    apply: 4
+    dismiss: 2
+    ask: 0
+  applied_fixes:
+    - "Revised Intent clarity from High to Low — the artifact shape (bin/ script vs. cortex subcommand vs. dependency declaration) is genuinely unresolved per the 2026-04-27 amendment."
+    - "Expanded Scope boundedness reasoning — beyond the distribution amendment, the validation method for 'no regression' and the ROI-confirmation criterion are also unbounded; these will need resolution in research/spec."
+    - "Neutralized Requirements alignment reasoning — removed Option 1 pre-decision; alignment now reads 'aligned with project context-efficiency goals; the distribution mechanic is a scope decision, not a requirements conflict.'"
+    - "Revised complex-tier reasoning — removed the cross-plugin distribution justification; tier remains complex because the change touches 4+ files in shared overnight-runner orchestration infrastructure (orchestrator-round prompt + map_results.py + new CLI/subcommand surface + regression coverage)."
+  dismissals:
+    - finding_index: 1
+      rationale: "Intent clarity asks whether the goal is unambiguous; conditional post-ship ROI verification does not make the goal ambiguous, only the success measurement deferred. The ticket's gating language is a measurement plan, not a goal ambiguity."
+    - finding_index: 4
+      rationale: "The 'ROI matters' principle supports doing work with credible measurement plans; the ticket has one (104's aggregator on a full overnight session). Citing the principle is not circular when a verification path is named."
+  status: ok
+- ts: 2026-04-28T00:01:00Z
+  event: orchestrator_review
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-28T00:02:00Z
+  event: critical_review
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  phase: specify
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  total_findings: 17
+  class_counts: {A: 9, B: 6, C: 2}
+  synthesis_status: ok
+  dispositions:
+    apply: 8
+    dismiss: 0
+    ask: 1
+  applied_fixes:
+    - "R4 truncation removed entirely; strategy passes through unchanged"
+    - "R7 added positive-survival greps for round-filter, escalation cap, cycle-breaker rewire"
+    - "R7 removed Acceptance-by-inspection bullet; replaced with grep on ctx[escalations][all_entries]"
+    - "R7 narrowed load_strategy=0 grep to fenced code block scope (import + call lines)"
+    - "R7 narrowed Changes-to-Existing-Behavior line-range citation to file-read pseudocode only"
+    - "R8 inverted from prompt-side text-assert to in-process RuntimeError raise inside aggregate_round_context"
+    - "R10 added contract-test fixture pinning dict top-level key set (catches additive drift)"
+    - "R9 added acceptance requiring amendment of obsolete docs/overnight-operations.md:72 whole-file prose"
+  ask_items:
+    - "R11 framing: drop / observability-note / keep-with-mitigations"
+  ask_resolution:
+    - "R11 reframed as observability note pair: R11 pre-merge baseline-capture + R12 post-merge informational note. Neither blocks ticket close."
+  status: ok
+- ts: 2026-04-29T00:00:00Z
+  event: orchestrator_review
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-29T00:01:00Z
+  event: critical_review
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  phase: plan
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  total_findings: 18
+  class_counts: {A: 2, B: 8, C: 8}
+  synthesis_status: ok
+  status: ok
+- ts: 2026-04-29T00:02:00Z
+  event: phase_transition
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  from: plan
+  to: implement
+- ts: 2026-04-29T00:03:00Z
+  event: batch_dispatch
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  batch: 0
+  tasks: [1, 4]
+- ts: 2026-04-29T00:04:00Z
+  event: task_complete
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  task: 1
+  batch: 0
+  status: success
+- ts: 2026-04-29T00:04:01Z
+  event: task_complete
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  task: 4
+  batch: 0
+  status: success
+- ts: 2026-04-29T00:04:30Z
+  event: batch_dispatch
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  batch: 1
+  tasks: [2, 3, 6]
+- ts: 2026-04-29T00:05:00Z
+  event: task_complete
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  task: 2
+  batch: 1
+  status: success
+- ts: 2026-04-29T00:05:01Z
+  event: task_complete
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  task: 3
+  batch: 1
+  status: success
+- ts: 2026-04-29T00:05:02Z
+  event: task_complete
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  task: 6
+  batch: 1
+  status: success
+- ts: 2026-04-29T00:05:30Z
+  event: batch_dispatch
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  batch: 2
+  tasks: [5, 7]
+- ts: 2026-04-29T00:06:00Z
+  event: task_complete
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  task: 5
+  batch: 2
+  status: success
+- ts: 2026-04-29T00:06:01Z
+  event: task_complete
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  task: 7
+  batch: 2
+  status: success
+- ts: 2026-04-29T00:07:00Z
+  event: phase_transition
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  tier: complex
+  from: implement
+  to: review
+- ts: 2026-04-29T00:08:00Z
+  event: review_verdict
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  verdict: APPROVED
+  cycle: 1
+  requirements_drift: none
+- ts: 2026-04-29T00:08:01Z
+  event: phase_transition
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  from: review
+  to: complete
+- ts: 2026-04-29T00:09:00Z
+  event: feature_complete
+  feature: extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context
+  tasks_total: 7
+  rework_cycles: 0

@@ -2,13 +2,13 @@
 schema_version: "1"
 uuid: df196f7b-b9c6-4206-bb04-0866cbe25643
 title: "Extract deterministic tool-call sequences into agent-invokable scripts"
-status: backlog
+status: complete
 priority: medium
 type: epic
 blocked-by: []
 tags: [harness, scripts, discoverability]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-04-29
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 

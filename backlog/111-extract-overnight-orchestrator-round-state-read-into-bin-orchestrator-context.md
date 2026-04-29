@@ -2,15 +2,21 @@
 schema_version: "1"
 uuid: bf914d38-1079-454f-b3dc-3ce680e5a7b6
 title: "Extract overnight orchestrator-round state read into bin/orchestrator-context"
-status: backlog
+status: complete
 priority: medium
 type: feature
 parent: "101"
 blocked-by: []
 tags: [harness, scripts, overnight, pipeline]
 created: 2026-04-21
-updated: 2026-04-28
+updated: 2026-04-29
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context/spec.md
+areas: [overnight-runner]
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Extract overnight orchestrator-round state read into bin/orchestrator-context (C8)
