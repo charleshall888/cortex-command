@@ -108,12 +108,20 @@ def _resolve_lifecycle_slug(fm: dict, title: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _resolve_numeric(input_str: str, items: List[Path]) -> List[Path]:
-    """Match items by ``^NNN-`` filename prefix.
+    """Match items by leading-digit ID, ignoring zero-padding on either side.
 
     Only called when ``input_str`` is ``re.fullmatch(r'\\d+', input_str)``.
+    Filenames 1-99 are zero-padded (``091-...``) but 100+ are not, so
+    string-prefix matching against the raw input would miss padded files
+    queried by their unpadded ID.
     """
-    prefix = f"{input_str}-"
-    return [p for p in items if p.name.startswith(prefix)]
+    target = int(input_str)
+    matches: List[Path] = []
+    for p in items:
+        m = re.match(r"^(\d+)-", p.name)
+        if m and int(m.group(1)) == target:
+            matches.append(p)
+    return matches
 
 
 def _resolve_kebab(input_str: str, items: List[Path]) -> List[Path]:
