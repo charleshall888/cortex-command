@@ -15,6 +15,7 @@ import json
 import os
 import subprocess
 from dataclasses import dataclass, field
+from importlib.resources import files
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
@@ -26,7 +27,23 @@ from cortex_command.pipeline.dispatch import dispatch_task
 from cortex_command.pipeline.merge_recovery import write_recovery_log_entry
 from cortex_command.pipeline.state import log_event as pipeline_log_event
 
-_REPAIR_TEMPLATE = Path(__file__).resolve().parents[1] / "overnight/prompts/repair-agent.md"
+
+def __getattr__(name: str):
+    """Module-level lazy resolver for ``_REPAIR_TEMPLATE``.
+
+    Resolving the repair-agent prompt eagerly at module load triggers an
+    ``import cortex_command.overnight`` (the parent of the resource
+    package), which cycles back through ``feature_executor`` into this
+    module while it is still initializing. Defer the lookup until first
+    attribute access so the cycle is broken without changing the public
+    surface (``tests/test_repair_agent.py`` imports ``_REPAIR_TEMPLATE``
+    directly).
+    """
+    if name == "_REPAIR_TEMPLATE":
+        return files("cortex_command.overnight.prompts").joinpath(
+            "repair-agent.md"
+        )
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 @dataclass
@@ -268,7 +285,11 @@ async def dispatch_repair_agent(
 
     # Render prompt template.
     try:
-        template = _REPAIR_TEMPLATE.read_text(encoding="utf-8")
+        template = (
+            files("cortex_command.overnight.prompts")
+            .joinpath("repair-agent.md")
+            .read_text(encoding="utf-8")
+        )
     except OSError as exc:
         _cleanup_repair_worktree(worktree_path, repair_branch, repo, delete_branch=True)
         error = f"prompt_template_missing: {exc}"
