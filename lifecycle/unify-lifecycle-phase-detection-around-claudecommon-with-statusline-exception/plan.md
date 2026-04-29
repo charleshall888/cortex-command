@@ -22,7 +22,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
 - **Verification**:
   - `python3 -c "from cortex_command.common import detect_lifecycle_phase; from pathlib import Path; r = detect_lifecycle_phase(Path('lifecycle/unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception')); assert isinstance(r, dict) and set(r.keys()) == {'phase', 'checked', 'total', 'cycle'}, r"` exits 0.
   - `python3 -m cortex_command.common detect-phase lifecycle/unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); assert set(d.keys())=={'phase','checked','total','cycle'}, d"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Boundary projection at dashboard and backlog index
 
@@ -38,7 +38,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
 - **Verification**:
   - `python3 -c "from cortex_command.common import detect_lifecycle_phase; from pathlib import Path; r = detect_lifecycle_phase(Path('lifecycle/unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception')); print(r['phase'])"` exits 0 with a single phase string.
   - `python3 backlog/generate_index.py && python3 -c "import json; data = json.load(open('backlog/index.json')); items = data.get('items', data) if isinstance(data, dict) else data; phases = [i.get('lifecycle_phase') for i in (items if isinstance(items, list) else items.values()) if i.get('lifecycle_phase') is not None]; assert all(isinstance(p, str) for p in phases), phases"` exits 0 (asserts `lifecycle_phase` remains a scalar string in `backlog/index.json` after the change).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Fold `parse_plan_progress` into canonical detector
 
@@ -54,7 +54,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - `grep -c 'def parse_plan_progress' cortex_command/dashboard/data.py` returns 0.
   - `grep -rc 'parse_plan_progress' cortex_command/dashboard/` returns 0.
   - `pytest cortex_command/dashboard/tests/ -x` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Update `compute_slow_flags` to handle `implement-rework`
 
@@ -69,7 +69,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
 - **Verification**:
   - `grep -E 'current_phase == "implement-rework"|current_phase in \(.*"implement-rework"' cortex_command/dashboard/data.py` returns ≥1 match.
   - `pytest cortex_command/dashboard/tests/test_data.py -x -k slow` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Align rework vocabulary across writers and consumers
 
@@ -92,7 +92,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - `grep -E 'curr_to in \(.*"implement-rework"|curr_to == "implement-rework"' cortex_command/dashboard/data.py` returns ≥1 match in the `parse_feature_events` rework-cycle counter.
   - `grep -c 'implement-rework' cortex_command/overnight/backlog.py` returns ≥1.
   - `pytest cortex_command/overnight/tests/ cortex_command/dashboard/tests/ -x` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Delete sibling Python implementation; re-point consumers
 
@@ -108,7 +108,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - `test ! -f tests/lifecycle_phase.py` exits 0.
   - `grep -rc 'tests.lifecycle_phase\|from .lifecycle_phase\|from tests.lifecycle_phase' tests/` returns 0.
   - `pytest tests/test_lifecycle_state.py -x` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Replace bash hook ladder with inline-batch Python + glue
 
@@ -137,7 +137,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - `bash -n hooks/cortex-scan-lifecycle.sh` exits 0 (syntax check).
   - `just build-plugin && git diff --quiet plugins/cortex-overnight-integration/hooks/cortex-scan-lifecycle.sh` exits 0 (mirror byte-identity after regen).
   - End-to-end smoke test: `time bash hooks/cortex-scan-lifecycle.sh </dev/null` exits 0 in this repo (with N=34 lifecycle dirs) in **< 500ms wall clock**, confirming the inline-batch design pays the cold start once.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Add hook precondition check after lifecycle-dir guard
 
@@ -155,7 +155,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - In a fresh tmpdir without `lifecycle/`: `cd "$(mktemp -d)" && PATH=/usr/bin bash <repo>/hooks/cortex-scan-lifecycle.sh </dev/null; echo $?` returns 0 (silent exit at L21 guard).
   - In a fresh tmpdir with `mkdir lifecycle`: `cd "$(mktemp -d)" && mkdir lifecycle && PATH=/usr/bin bash <repo>/hooks/cortex-scan-lifecycle.sh </dev/null 2>&1; echo $?` returns non-zero with the diagnostic on stderr (Python without `cortex_command` installed under restricted PATH).
   - `just build-plugin && git diff --quiet plugins/cortex-overnight-integration/hooks/cortex-scan-lifecycle.sh` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Replace skill prose ladder with CLI invocation
 
@@ -172,7 +172,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - `grep -cE 'plan\.md exists with all \[x\]' skills/lifecycle/SKILL.md` returns 0.
   - `grep -c 'implement-rework' skills/lifecycle/SKILL.md` returns ≥1 (reference table includes the new phase).
   - `just build-plugin && git diff --quiet plugins/cortex-interactive/skills/lifecycle/SKILL.md` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Document statusline structural exception
 
@@ -186,7 +186,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
 - **Verification**:
   - `sed -n '370,410p' claude/statusline.sh | grep -cE 'bash-only mirror|< 500ms|parity test|cortex_command\.common'` returns ≥3 (one match per searched substring; passes when at least three of the four are present, but all four are required by R11 — implementation should aim for all four).
   - `bash -n claude/statusline.sh` exits 0 (syntax check unaffected).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Document `implement-rework` vocabulary expansion
 
@@ -199,7 +199,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - Existence of `skills/backlog/references/schema.md` is uncertain — implementer should `test -f` first; if absent, inline comment is sufficient per R10.
 - **Verification**:
   - `grep -c 'implement-rework' backlog/generate_index.py` returns ≥1, OR `grep -c 'implement-rework' skills/backlog/references/schema.md` returns ≥1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Parity test layer 12a — hook glue unit test
 
@@ -215,7 +215,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
 - **Verification**:
   - `pytest tests/test_lifecycle_phase_parity.py::test_hook_glue -v` (or matching test class) exits 0.
   - `grep -cE 'def test_.*glue' tests/test_lifecycle_phase_parity.py` returns ≥1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Parity test layer 12b — statusline ladder + parser vs canonical Python
 
@@ -235,7 +235,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - `pytest tests/test_lifecycle_phase_parity.py -k statusline -v` exits 0.
   - `grep -cE 'def test_.*statusline' tests/test_lifecycle_phase_parity.py` returns ≥2 (one for ladder, one for parser).
   - `ls tests/fixtures/lifecycle_phase_parity/ | wc -l` returns ≥9.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14: Parity test layer 12c — hook end-to-end
 
@@ -251,7 +251,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - `pytest tests/test_lifecycle_phase_parity.py -x` exits 0 (full file passes; covers all three layers together).
   - `grep -cE 'def test_.*hook_end_to_end' tests/test_lifecycle_phase_parity.py` returns ≥1.
   - `grep -cE 'def test_.*glue|def test_.*statusline|def test_.*hook_end_to_end' tests/test_lifecycle_phase_parity.py` returns ≥3 (R12 acceptance — three layers represented).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 15: Final byte-identity sanity check
 
@@ -267,7 +267,7 @@ Promote `cortex_command.common.detect_lifecycle_phase()` to a structured-dict ca
   - `just build-plugin` exits 0 with no working-tree changes (`git diff --quiet plugins/`).
   - `diff hooks/cortex-scan-lifecycle.sh plugins/cortex-overnight-integration/hooks/cortex-scan-lifecycle.sh` exits 0.
   - `diff skills/lifecycle/SKILL.md plugins/cortex-interactive/skills/lifecycle/SKILL.md` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
