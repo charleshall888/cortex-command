@@ -40,30 +40,26 @@ Scan for `lifecycle/{feature}/` at the project root.
 
 ### Artifact-Based Phase Detection
 
-Determine the current phase by checking artifacts in reverse order:
+If no `lifecycle/{feature}/` directory exists, `phase = none` — start from the beginning. Otherwise, invoke the canonical detector and route on the returned `phase` field:
 
+```bash
+python3 -m cortex_command.common detect-phase lifecycle/{feature}
 ```
-if no lifecycle/{feature}/ directory exists:
-    phase = none (start from beginning)
-elif events.log contains a feature_complete event:
-    phase = complete (feature is done)
-elif review.md exists with APPROVED verdict:
-    phase = complete (feature is done)
-elif review.md exists with CHANGES_REQUESTED:
-    phase = implement (re-entry for rework)
-elif review.md exists with REJECTED:
-    phase = escalated (present reviewer analysis, ask user for direction)
-elif plan.md exists with all [x] checked:
-    phase = review
-elif plan.md exists:
-    phase = implement (check [x] count for progress)
-elif spec.md exists:
-    phase = plan
-elif research.md exists:
-    phase = specify
-else:
-    phase = research
-```
+
+The command emits a single JSON object on stdout, e.g. `{"phase":"implement","checked":2,"total":5,"cycle":1}`. Parse the `phase` field and route accordingly. The `checked`/`total` fields report plan-task progress; `cycle` reports the review-cycle number.
+
+Reference table (one line per `phase` value):
+
+| `phase`            | Semantic meaning                                                                                  |
+|--------------------|---------------------------------------------------------------------------------------------------|
+| `research`         | No artifacts yet — start the Research phase.                                                      |
+| `specify`          | `research.md` exists; advance to the Specify phase.                                               |
+| `plan`             | `spec.md` exists; advance to the Plan phase.                                                      |
+| `implement`        | `plan.md` exists with at least one task unchecked; run/resume the Implement phase.                |
+| `implement-rework` | `review.md` verdict is `CHANGES_REQUESTED`; re-enter Implement to address review feedback.        |
+| `review`           | `plan.md` exists with all tasks checked; run the Review phase.                                    |
+| `complete`         | `events.log` has a `feature_complete` event, or `review.md` verdict is `APPROVED` — feature done. |
+| `escalated`        | `review.md` verdict is `REJECTED`; present reviewer analysis and ask the user for direction.      |
 
 **Detect criticality**: After determining the phase, read criticality from `events.log`. Scan for the most recent event with a `criticality` field (either `lifecycle_start` or `criticality_override`). If no criticality field is found (pre-existing lifecycle), default to `medium`. Report the detected criticality alongside the detected phase when resuming.
 
