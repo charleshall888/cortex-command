@@ -6,10 +6,10 @@ status: backlog
 priority: medium
 type: feature
 parent: "101"
-blocked-by: ["104"]
+blocked-by: []
 tags: [harness, scripts, overnight, pipeline]
 created: 2026-04-21
-updated: 2026-04-27
+updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 
