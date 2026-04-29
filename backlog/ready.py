@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import traceback
 import types
@@ -81,6 +82,16 @@ _ELIGIBLE_STATUSES: tuple[str, ...] = (
 )
 
 _STALE_WARNING_CAP = 5
+
+# Minimal frontmatter probes for the full-corpus scan. We only need id
+# (from filename), status, and uuid — anything richer comes from
+# index.json. Mirrors the regex-light parsing pattern used inline in
+# backlog/generate_index.py:80-178 without re-importing its private
+# helpers (kept ready.py independent of generate_index.py).
+_FILENAME_ID_RE = re.compile(r"^(\d+)-")
+_FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(\n|$)", re.DOTALL)
+_STATUS_LINE_RE = re.compile(r"^status:\s*(.+?)\s*$", re.MULTILINE)
+_UUID_LINE_RE = re.compile(r"^uuid:\s*(.+?)\s*$", re.MULTILINE)
 
 
 def _emit_error(reason: str) -> int:
@@ -231,6 +242,60 @@ def _build_namespace(raw: dict[str, Any]) -> types.SimpleNamespace:
     return types.SimpleNamespace(**raw)
 
 
+def _load_full_corpus(backlog_dir: Path) -> list[types.SimpleNamespace]:
+    """Scan source .md files for minimal {id, status, uuid} records.
+
+    Covers ``backlog/[0-9]*-*.md`` (active + terminal-status) and
+    ``backlog/archive/[0-9]*-*.md`` (archived) so blockers pointing to
+    terminal items resolve as resolved inside ``partition_ready``
+    instead of being misclassified as ``blocker not found`` or
+    ``external blocker``. ``index.json`` filters terminal items out, so
+    the helper's status-lookup map needs this richer corpus to match
+    ``backlog/generate_index.py``'s built-in behavior.
+
+    Returned records expose ``id`` (int), ``status`` (str), and ``uuid``
+    (str | None) as attributes — the minimum the helper needs.
+    Anything richer comes from ``index.json`` via ``_build_namespace``.
+    """
+    records: list[types.SimpleNamespace] = []
+    if not backlog_dir.is_dir():
+        return records
+
+    paths: list[Path] = list(sorted(backlog_dir.glob("[0-9]*-*.md")))
+    archive_dir = backlog_dir / "archive"
+    if archive_dir.is_dir():
+        paths.extend(sorted(archive_dir.glob("[0-9]*-*.md")))
+
+    for path in paths:
+        match = _FILENAME_ID_RE.match(path.name)
+        if not match:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        fm = _FRONTMATTER_RE.match(text)
+        if not fm:
+            continue
+        block = fm.group(1)
+        status_match = _STATUS_LINE_RE.search(block)
+        uuid_match = _UUID_LINE_RE.search(block)
+        status = ""
+        if status_match:
+            status = status_match.group(1).strip().strip("\"'")
+        uuid_val: str | None = None
+        if uuid_match:
+            uuid_val = uuid_match.group(1).strip().strip("\"'") or None
+        records.append(
+            types.SimpleNamespace(
+                id=int(match.group(1)),
+                status=status,
+                uuid=uuid_val,
+            )
+        )
+    return records
+
+
 def _ineligible_transform(raw: dict[str, Any], reason: str, rejection: str):
     payload = _item_payload(raw)
     payload["reason"] = reason
@@ -238,8 +303,19 @@ def _ineligible_transform(raw: dict[str, Any], reason: str, rejection: str):
     return payload
 
 
-def _build_result(records: list[dict[str, Any]], *, include_blocked: bool) -> dict[str, Any]:
-    """Run partition_ready over *records* and build the wire-format dict."""
+def _build_result(
+    records: list[dict[str, Any]],
+    all_items_ns: list[types.SimpleNamespace],
+    *,
+    include_blocked: bool,
+) -> dict[str, Any]:
+    """Run partition_ready over *records* and build the wire-format dict.
+
+    *records* is the active set from ``index.json`` (used as the
+    classification input); *all_items_ns* is the full-corpus minimal
+    record list (active + terminal + archived) used by the helper to
+    resolve blocker references against terminal items as resolved.
+    """
     namespaces = [_build_namespace(r) for r in records]
     # Map id(namespace) → original dict so the output projection uses the
     # raw JSON record (per task context: "Preserve the original dict
@@ -250,7 +326,7 @@ def _build_result(records: list[dict[str, Any]], *, include_blocked: bool) -> di
 
     partition = partition_ready(
         namespaces,
-        namespaces,
+        all_items_ns,
         eligible_statuses=_ELIGIBLE_STATUSES,
         treat_external_blockers_as="blocking",
     )
@@ -341,7 +417,12 @@ def main(argv: list[str] | None = None) -> int:
         if not isinstance(records, list):
             return _emit_error("backlog/index.json must be a JSON array")
 
-        result = _build_result(records, include_blocked=args.include_blocked)
+        all_items_ns = _load_full_corpus(BACKLOG_DIR)
+        result = _build_result(
+            records,
+            all_items_ns,
+            include_blocked=args.include_blocked,
+        )
     except Exception as exc:  # pragma: no cover - last-resort error path
         traceback.print_exc(file=sys.stderr)
         return _emit_error(f"unexpected error: {exc}")

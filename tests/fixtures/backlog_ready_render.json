@@ -53,6 +53,16 @@
           "type": "feature",
           "blocked_by": [],
           "parent": null
+        },
+        {
+          "id": 10,
+          "title": "medium blocked by terminal",
+          "status": "backlog",
+          "type": "feature",
+          "blocked_by": [
+            "9"
+          ],
+          "parent": null
         }
       ]
     },
