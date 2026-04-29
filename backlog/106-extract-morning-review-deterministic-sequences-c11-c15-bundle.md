@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: ab917a16-dbcc-47f2-9541-56d29bbee26a
 title: "Extract morning-review deterministic sequences (C11-C15 bundle)"
-status: refined
+status: complete
 priority: medium
 type: feature
 parent: "101"
@@ -15,6 +15,8 @@ complexity: complex
 criticality: high
 spec: lifecycle/extract-morning-review-deterministic-sequences-c11-c15-bundle/spec.md
 areas: [skills]
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Extract morning-review deterministic sequences (C11–C15 bundle)

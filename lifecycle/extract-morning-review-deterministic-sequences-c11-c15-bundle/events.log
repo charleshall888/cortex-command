@@ -37,3 +37,20 @@
 {"ts":"2026-04-28T21:18:00Z","event":"orchestrator_review","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","phase":"plan","verdict":"pass","cycle":1,"issues":[]}
 {"ts":"2026-04-29T02:12:20Z","event":"phase_transition","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","from":"specify","to":"plan"}
 {"ts":"2026-04-29T02:12:20Z","event":"plan_approved","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","note":"user approved plan but deferred implementation"}
+{"ts":"2026-04-29T02:16:53Z","event":"batch_dispatch","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","batch":0,"tasks":[1,4]}
+{"ts":"2026-04-29T02:19:28Z","event":"task_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","task":1,"batch":0,"status":"success"}
+{"ts":"2026-04-29T02:28:18Z","event":"task_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","task":4,"batch":0,"status":"success"}
+{"ts":"2026-04-29T02:28:18Z","event":"batch_dispatch","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","batch":1,"tasks":[2,6,7],"note":"bundled to satisfy parity hook"}
+{"ts":"2026-04-29T02:28:18Z","event":"task_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","task":2,"batch":1,"status":"success"}
+{"ts":"2026-04-29T02:28:18Z","event":"task_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","task":6,"batch":1,"status":"success"}
+{"ts":"2026-04-29T02:28:18Z","event":"task_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","task":7,"batch":1,"status":"success"}
+{"ts":"2026-04-29T02:29:15Z","event":"batch_dispatch","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","batch":2,"tasks":[3,5]}
+{"ts":"2026-04-29T02:34:20Z","event":"task_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","task":3,"batch":2,"status":"success"}
+{"ts":"2026-04-29T02:34:20Z","event":"task_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","task":5,"batch":2,"status":"success"}
+{"ts":"2026-04-29T02:39:04Z","event":"task_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","task":8,"batch":3,"status":"success","note":"parity exit 0; pytest 426 passed 6 skipped 1 xfailed 1 xpassed"}
+{"ts":"2026-04-29T02:39:30Z","event":"task_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","task":9,"batch":4,"status":"success","note":"per-task commits absorbed Task 9 final-commit role; nothing remaining"}
+{"ts":"2026-04-29T02:39:38Z","event":"phase_transition","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","tier":"complex","from":"implement","to":"review"}
+{"ts":"2026-04-29T02:45:04Z","event":"review_verdict","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","verdict":"APPROVED","cycle":1,"requirements_drift":"detected"}
+{"ts":"2026-04-29T02:45:14Z","event":"requirements_updated","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","file":"requirements/project.md","section":"Quality Attributes","content":"Destructive operations preserve uncommitted state — cleanup scripts skip rather than destroy when target has dirty state"}
+{"ts":"2026-04-29T02:45:15Z","event":"phase_transition","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","from":"review","to":"complete"}
+{"ts":"2026-04-29T02:47:15Z","event":"feature_complete","feature":"extract-morning-review-deterministic-sequences-c11-c15-bundle","tasks_total":9,"rework_cycles":0}

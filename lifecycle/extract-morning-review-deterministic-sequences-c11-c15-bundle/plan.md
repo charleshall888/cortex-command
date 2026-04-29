@@ -30,7 +30,7 @@ Extract the C11 session-completion sequence into a Python module + bash shim tha
   - The pointer unlink is only attempted when `--pointer` is supplied AND `save_state` returned normally (i.e., only on the case-3 success path).
   - Required imports: `argparse`, `sys`, `json` (for `json.JSONDecodeError`), `pathlib.Path`, plus `from cortex_command.overnight.state import load_state, save_state, transition`. `FileNotFoundError`, `KeyError`, `ValueError`, `OSError` are builtins. No re-implementing of state I/O.
 - **Verification**: `cd /Users/charlie.hall/Workspaces/cortex-command && python3 -c "from cortex_command.overnight.complete_morning_review_session import main; raise SystemExit(0 if callable(main) else 1)"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Create C11 bash shim
 - **Files**: `bin/cortex-morning-review-complete-session`
@@ -49,7 +49,7 @@ Extract the C11 session-completion sequence into a Python module + bash shim tha
     - **Branch (c) — not found**: stderr message naming the helper plus the install fix `install cortex-interactive plugin or set CORTEX_COMMAND_ROOT`, then `exit 2`.
   - File mode: `chmod +x` (the dual-source pre-commit hook checks executability for canonical `bin/cortex-*`).
 - **Verification**: `cd /Users/charlie.hall/Workspaces/cortex-command && test -x bin/cortex-morning-review-complete-session && [ "$(head -3 bin/cortex-morning-review-complete-session | grep -c 'cortex-log-invocation')" -ge 1 ] && [ "$(grep -c 'python3 -m cortex_command\.overnight\.complete_morning_review_session' bin/cortex-morning-review-complete-session)" -ge 1 ] && [ "$(grep -c 'CORTEX_COMMAND_ROOT' bin/cortex-morning-review-complete-session)" -ge 1 ]` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Write C11 pytest tests
 - **Files**: `tests/test_cortex_morning_review_complete_session.py`
@@ -71,7 +71,7 @@ Extract the C11 session-completion sequence into a Python module + bash shim tha
   - All `subprocess.run` calls pass `text=True, capture_output=True`. Each test uses `tmp_path` fixture for isolation.
   - The shim is invoked directly (not `python3 bin/...`) so the dispatcher path coverage is real.
 - **Verification**: `cd /Users/charlie.hall/Workspaces/cortex-command && uv run pytest tests/test_cortex_morning_review_complete_session.py -v` — pass if exit 0 (all collected tests pass) AND `[ "$(grep -c '^def test_' tests/test_cortex_morning_review_complete_session.py)" -ge 6 ]`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Create C12 narrow bash leaf script
 - **Files**: `bin/cortex-morning-review-gc-demo-worktrees`
@@ -105,7 +105,7 @@ Extract the C11 session-completion sequence into a Python module + bash shim tha
   - Bash regex: use `[[ "$basename" =~ ^demo-overnight- ]]` (ERE via `=~`).
   - File mode: `chmod +x`.
 - **Verification**: `cd /Users/charlie.hall/Workspaces/cortex-command && test -x bin/cortex-morning-review-gc-demo-worktrees && [ "$(head -3 bin/cortex-morning-review-gc-demo-worktrees | grep -c 'cortex-log-invocation')" -ge 1 ] && [ "$(grep -c 'set -euo pipefail' bin/cortex-morning-review-gc-demo-worktrees)" -ge 1 ] && [ "$(grep -c 'demo-overnight-' bin/cortex-morning-review-gc-demo-worktrees)" -ge 1 ] && [ "$(grep -c 'status --porcelain --ignored=traditional' bin/cortex-morning-review-gc-demo-worktrees)" -ge 1 ] && ! grep -q -- '--force' bin/cortex-morning-review-gc-demo-worktrees && bin/cortex-morning-review-gc-demo-worktrees 2>&1 >/dev/null | grep -q '^Usage:' && ! bin/cortex-morning-review-gc-demo-worktrees >/dev/null 2>&1` — pass if exit 0 (the final `!` inverts the expected non-zero exit when called with no args).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Write C12 pytest tests
 - **Files**: `tests/test_cortex_morning_review_gc_demo_worktrees.py`
@@ -131,7 +131,7 @@ Extract the C11 session-completion sequence into a Python module + bash shim tha
   - **Fixture teardown**: each test must use a `yield`-based pytest fixture (or equivalent `addfinalizer` registration) that, in teardown, runs `git -C <parent_repo> worktree remove --force <wt>` for each worktree path created during setup, then `git -C <parent_repo> worktree prune` once. This prevents orphaned admin entries under `<parent_repo>/.git/worktrees/` from breaking subsequent test runs with "already registered" errors when a test crashes or is interrupted mid-fixture. The parent repo itself MUST live under `tmp_path` (not a shared per-module fixture) so its `.git/worktrees/` directory is cleaned up by pytest's tmpdir GC.
   - Skip tests on Windows (the script is bash-only); follow `tests/test_git_sync_rebase.py`'s skip pattern if present.
 - **Verification**: `cd /Users/charlie.hall/Workspaces/cortex-command && uv run pytest tests/test_cortex_morning_review_gc_demo_worktrees.py -v` — pass if exit 0 AND `[ "$(grep -c '^def test_' tests/test_cortex_morning_review_gc_demo_worktrees.py)" -ge 6 ]`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Update SKILL.md to invoke new scripts
 - **Files**: `skills/morning-review/SKILL.md`
@@ -152,7 +152,7 @@ Extract the C11 session-completion sequence into a Python module + bash shim tha
   - `walkthrough.md` references at lines 162, 195, 209, 543 are about Section 2a (creating demo worktrees) and Section 6 (post-review user cleanup), NOT the inline regex/loop. They are not callers of the inline patterns being removed and require no changes.
   - Caller enumeration confirmed: `grep -nrE "jq '\.phase = " skills/ requirements/ docs/ claude/ hooks/ tests/` and `grep -nrE 'demo-overnight-\[0-9\]\{4\}' skills/ requirements/ docs/` are expected to return zero matches outside `skills/morning-review/SKILL.md` itself.
 - **Verification**: `cd /Users/charlie.hall/Workspaces/cortex-command && [ "$(grep -c 'cortex-morning-review-complete-session' skills/morning-review/SKILL.md)" -ge 1 ] && [ "$(grep -c 'cortex-morning-review-gc-demo-worktrees' skills/morning-review/SKILL.md)" -ge 1 ] && [ "$(grep -c "jq '\.phase = " skills/morning-review/SKILL.md)" -eq 0 ] && [ "$(grep -cE 'demo-overnight-\[0-9\]\{4\}' skills/morning-review/SKILL.md)" -eq 0 ] && [ "$(grep -cE 'cortex-morning-review-gc-demo-worktrees \S' skills/morning-review/SKILL.md)" -ge 1 ] && [ "$(grep -cE "jq -r '\.session_id'" skills/morning-review/SKILL.md)" -ge 1 ] && [ "$(grep -c 'session phase is already terminal' skills/morning-review/SKILL.md)" -eq 0 ]` — pass if exit 0. The added `jq -r '.session_id'` grep verifies the new explicit session-id read step is present (per the rewrite above); the negative grep on "session phase is already terminal" verifies the dangling line-76 phrase has been replaced.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Mirror new scripts into the cortex-interactive plugin
 - **Files**: `plugins/cortex-interactive/bin/cortex-morning-review-complete-session`, `plugins/cortex-interactive/bin/cortex-morning-review-gc-demo-worktrees`
@@ -163,7 +163,7 @@ Extract the C11 session-completion sequence into a Python module + bash shim tha
   - `just build-plugin` runs `rsync -a --delete --include='cortex-*' --exclude='*' bin/ plugins/cortex-interactive/bin/`. New `cortex-morning-review-*` files are auto-included.
   - The dual-source pre-commit hook (enabled by `just setup-githooks`) runs the same rsync at commit time and refuses to commit if the working tree differs from the rsync output. Running `just build-plugin` here keeps the working tree clean before the Task 9 commit.
 - **Verification**: `cd /Users/charlie.hall/Workspaces/cortex-command && just build-plugin && git diff --exit-code plugins/cortex-interactive/bin/` — pass if exit 0 (no unstaged drift after the rsync).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Run parity check and full test suite
 - **Files**: (verification-only — no files modified)
@@ -175,7 +175,7 @@ Extract the C11 session-completion sequence into a Python module + bash shim tha
   - `just test` (per repo justfile) runs the full pytest suite. Adds the two new test files from Tasks 3 and 5 alongside existing coverage.
   - No new entries in `bin/.parity-exceptions.md` should be needed.
 - **Verification**: `cd /Users/charlie.hall/Workspaces/cortex-command && bin/cortex-check-parity && just test` — pass if exit 0 from both commands run sequentially.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Commit via /cortex-interactive:commit
 - **Files**: (commit-only — invokes the commit skill, no direct edits)
@@ -186,7 +186,7 @@ Extract the C11 session-completion sequence into a Python module + bash shim tha
   - Files to stage: `bin/cortex-morning-review-complete-session`, `bin/cortex-morning-review-gc-demo-worktrees`, `cortex_command/overnight/complete_morning_review_session.py`, `tests/test_cortex_morning_review_complete_session.py`, `tests/test_cortex_morning_review_gc_demo_worktrees.py`, `skills/morning-review/SKILL.md`, `plugins/cortex-interactive/bin/cortex-morning-review-complete-session`, `plugins/cortex-interactive/bin/cortex-morning-review-gc-demo-worktrees`. Lifecycle artifacts (`research.md`, `spec.md`, `plan.md`, `events.log`, `index.md`) are committed separately by the lifecycle skill at phase boundaries.
   - Per CLAUDE.md, never invoke `git commit` directly; use the `/cortex-interactive:commit` skill.
 - **Verification**: Interactive/session-dependent: the `/cortex-interactive:commit` skill is interactive (it composes the message, runs pre-commit hooks, and reports the resulting `git log -1`); success is observable in the post-commit `git log` output but the commit step itself runs through the skill.
-- **Status**: [ ] pending
+- **Status**: [x] complete (absorbed by per-task commits 3a219e8, eb41ea1, 3a04813, f525ac6)
 
 ## Verification Strategy
 
