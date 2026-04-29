@@ -2,15 +2,21 @@
 schema_version: "1"
 uuid: 111b819b-1129-40d4-bf59-9845fe4b6d01
 title: "Unify lifecycle phase detection around claude.common with statusline exception"
-status: backlog
+status: complete
 priority: medium
 type: feature
 parent: "101"
 blocked-by: []
 tags: [harness, scripts, lifecycle]
 created: 2026-04-21
-updated: 2026-04-28
+updated: 2026-04-29
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception/spec.md
+areas: [lifecycle]
+session_id: null
+lifecycle_phase: implement
 ---
 
 # Unify lifecycle phase detection around claude.common with statusline exception (C2+C3)

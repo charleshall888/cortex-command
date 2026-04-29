@@ -209,3 +209,19 @@
   tier: complex
   from: implement
   to: review
+- ts: 2026-04-29T19:35:00Z
+  event: review_verdict
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  verdict: APPROVED
+  cycle: 1
+  requirements_drift: none
+- ts: 2026-04-29T19:35:30Z
+  event: phase_transition
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  from: review
+  to: complete
+- ts: 2026-04-29T19:40:00Z
+  event: feature_complete
+  feature: unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception
+  tasks_total: 15
+  rework_cycles: 0
