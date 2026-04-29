@@ -302,6 +302,18 @@ def _get_cortex_root_payload() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # R8/R9 throttled update-check + skip-predicate state (Task 7)
 # ---------------------------------------------------------------------------
+#
+# Wheel-install dormancy (Task 16):
+# Under non-editable wheel install, R8 throttle and R10 orchestration are
+# dormant; the upgrade arrow flows plugin -> CLI via R4
+# (``_ensure_cortex_installed``) on schema-floor mismatch (R13). The R8
+# entry point (``_maybe_check_upstream``) and the R10 orchestration paths
+# (``_orchestrate_upgrade`` / ``_orchestrate_schema_floor_upgrade``)
+# detect wheel install via ``not (cortex_root / ".git").is_dir()`` and
+# short-circuit early so consumers do not rely on empty-string-sentinel
+# side effects. The detection is a simple filesystem probe — no NDJSON
+# error log, no stderr noise — because wheel install is intended
+# behavior, not a fault.
 
 #: Per-MCP-server-lifetime cache for the upstream "is upstream ahead?"
 #: check. The cache key is ``(cortex_root abs path, remote_url, "HEAD")``
@@ -529,11 +541,23 @@ def _maybe_check_upstream(
     cortex_root = cortex_root_payload.get("root")
     remote_url = cortex_root_payload.get("remote_url")
     head_sha = cortex_root_payload.get("head_sha")
-    if not cortex_root or not remote_url or not head_sha:
-        # Missing fields in discovery payload — cannot construct the
-        # cache key or compare. Skip silently; this is a defensive
-        # branch (R3 acceptance asserts these fields are populated by
-        # the CLI, but we don't want a half-formed payload to crash
+
+    # R8 throttle short-circuit under wheel install (Task 16): if the
+    # discovery payload's ``root`` is not a git working tree, the CLI is
+    # installed via non-editable wheel and there is no upstream to
+    # probe. Return None silently — no NDJSON log, no stderr noise.
+    # Schema-floor escalation (R13) calling R4's ``_ensure_cortex_installed``
+    # is the upgrade arrow under wheel install; R8/R9/R10 are dormant.
+    # This explicit check replaces the prior empty-string-sentinel
+    # branch so consumers do not rely on the half-populated-payload
+    # side effect to skip the throttle.
+    if not cortex_root or not (Path(str(cortex_root)) / ".git").is_dir():
+        return None
+    if not remote_url or not head_sha:
+        # Missing remote_url / head_sha despite a present .git/ —
+        # defensive: cannot construct the cache key or compare. Skip
+        # silently (R3 acceptance asserts the CLI populates these for
+        # a clone install, but a half-formed payload must not crash
         # tool dispatch).
         return None
 
@@ -915,6 +939,20 @@ def _orchestrate_upgrade(cortex_root_payload: dict[str, Any]) -> None:
         # but be safe.
         return
 
+    # R10 orchestration deprecated under wheel install (Task 16):
+    # ``cortex upgrade`` is now an advisory printer (Task 6) that exits
+    # 0 without doing anything, and the flock path
+    # ``$cortex_root/.git/cortex-update.lock`` does not exist when the
+    # CLI is installed via non-editable wheel. R4's first-install hook
+    # (``_ensure_cortex_installed``) plus R13's schema-floor gate is the
+    # upgrade arrow. Short-circuit silently here so consumers do not
+    # exercise the dead path.
+    if not (Path(str(cortex_root)) / ".git").is_dir():
+        # R10 orchestration deprecated under wheel install; R4
+        # first-install hook + R13 schema-floor gate is the upgrade
+        # arrow.
+        return
+
     lock_path = Path(str(cortex_root)) / ".git" / "cortex-update.lock"
     fd = _acquire_update_flock(lock_path)
     if fd is None:
@@ -1099,6 +1137,19 @@ def _orchestrate_schema_floor_upgrade(
     """
     cortex_root = cortex_root_payload.get("root")
     if not cortex_root:
+        return
+
+    # R10 orchestration deprecated under wheel install (Task 16): the
+    # schema-floor upgrade path reuses R10/R11/R12 machinery that
+    # depends on a git working tree at ``cortex_root``. Under wheel
+    # install the CLI is reinstalled by R4's ``_ensure_cortex_installed``
+    # rather than by ``cortex upgrade`` under a flock — so short-circuit
+    # this legacy orchestration. Task 9's R4 first-install hook handles
+    # the schema-floor major-mismatch reinstall under wheel install.
+    if not (Path(str(cortex_root)) / ".git").is_dir():
+        # R10 orchestration deprecated under wheel install; R4
+        # first-install hook + R13 schema-floor gate is the upgrade
+        # arrow.
         return
 
     lock_path = Path(str(cortex_root)) / ".git" / "cortex-update.lock"
