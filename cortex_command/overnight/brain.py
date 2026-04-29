@@ -10,6 +10,7 @@ extraction, and request_brain_decision() async entry point.
 
 from __future__ import annotations
 
+import importlib.resources
 import json
 import logging
 import re
@@ -100,12 +101,15 @@ def _default_decision() -> BrainDecision:
 # Prompt rendering helper
 # ---------------------------------------------------------------------------
 
-_BRAIN_TEMPLATE = Path(__file__).resolve().parent / "prompts/batch-brain.md"
+_BRAIN_TEMPLATE = (
+    importlib.resources.files("cortex_command.overnight.prompts")
+    .joinpath("batch-brain.md")
+    .read_text(encoding="utf-8")
+)
 
 
-def _render_template(template_path: Path, variables: dict[str, str]) -> str:
-    """Read a prompt template and fill in {placeholders}."""
-    template = template_path.read_text(encoding="utf-8")
+def _render_template(template: str, variables: dict[str, str]) -> str:
+    """Fill in {placeholders} in a prompt template string."""
     for key, value in variables.items():
         template = template.replace(f"{{{key}}}", value)
     return template

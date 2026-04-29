@@ -16,10 +16,11 @@ from __future__ import annotations
 import asyncio
 import atexit
 import errno
+import importlib.resources
 import os
 import socket
 import sys
-from contextlib import asynccontextmanager
+from contextlib import ExitStack, asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -46,7 +47,12 @@ state: DashboardState = DashboardState()
 # Jinja2 templates
 # ---------------------------------------------------------------------------
 
-templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+_template_resource_stack = ExitStack()
+atexit.register(_template_resource_stack.close)
+_templates_dir = _template_resource_stack.enter_context(
+    importlib.resources.as_file(importlib.resources.files("cortex_command.dashboard.templates"))
+)
+templates = Jinja2Templates(directory=str(_templates_dir))
 
 # ---------------------------------------------------------------------------
 # Jinja2 helper filters
