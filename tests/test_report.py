@@ -180,7 +180,7 @@ class Test_critical_review_residue:
             json.dumps(residue), encoding="utf-8"
         )
 
-        monkeypatch.setattr(_report_mod, "_LIFECYCLE_ROOT", lifecycle)
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         data = ReportData()
         output = render_critical_review_residue(data)
@@ -200,7 +200,7 @@ class Test_critical_review_residue:
             json.dumps(residue), encoding="utf-8"
         )
 
-        monkeypatch.setattr(_report_mod, "_LIFECYCLE_ROOT", lifecycle)
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         data = ReportData()
         output = render_critical_review_residue(data)
@@ -217,7 +217,7 @@ class Test_critical_review_residue:
             json.dumps(residue), encoding="utf-8"
         )
 
-        monkeypatch.setattr(_report_mod, "_LIFECYCLE_ROOT", lifecycle)
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         data = ReportData()
         output = render_critical_review_residue(data)
@@ -235,7 +235,7 @@ class Test_critical_review_residue:
             json.dumps(residue), encoding="utf-8"
         )
 
-        monkeypatch.setattr(_report_mod, "_LIFECYCLE_ROOT", lifecycle)
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         data = ReportData()
         output = render_critical_review_residue(data)
@@ -248,7 +248,7 @@ class Test_critical_review_residue:
         lifecycle = tmp_path / "lifecycle"
         lifecycle.mkdir(parents=True)
 
-        monkeypatch.setattr(_report_mod, "_LIFECYCLE_ROOT", lifecycle)
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         data = ReportData()
         output = render_critical_review_residue(data)
@@ -265,7 +265,7 @@ class Test_critical_review_residue:
             "{ this is not valid json }", encoding="utf-8"
         )
 
-        monkeypatch.setattr(_report_mod, "_LIFECYCLE_ROOT", lifecycle)
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         data = ReportData()
         output = render_critical_review_residue(data)
@@ -290,7 +290,7 @@ class Test_critical_review_residue:
             json.dumps(sparse), encoding="utf-8"
         )
 
-        monkeypatch.setattr(_report_mod, "_LIFECYCLE_ROOT", lifecycle)
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         data = ReportData()
         # Should not raise — graceful default for missing fields
@@ -307,7 +307,7 @@ class Test_critical_review_residue:
         lifecycle = tmp_path / "lifecycle"
         lifecycle.mkdir(parents=True)
 
-        monkeypatch.setattr(_report_mod, "_LIFECYCLE_ROOT", lifecycle)
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         # Minimal ReportData with a valid state so all sections render
         state = OvernightState(
@@ -375,7 +375,7 @@ class Test_critical_review_residue:
         payload = _make_residue(feature="roundtrip-feature", synthesis_status="failed")
         atomic_write(residue_path, json.dumps(payload))
 
-        monkeypatch.setattr(_report_mod, "_LIFECYCLE_ROOT", lifecycle)
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
         data = ReportData()
         output = render_critical_review_residue(data)

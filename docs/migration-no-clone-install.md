@@ -59,9 +59,9 @@ cortex --print-root --format json
 ```json
 {
   "version": "1.1",
-  "root": "/path/to/your/cortex-project",
+  "root": "/path/to/your/my_cortex_project",
   "package_root": "/Users/you/.local/share/uv/tools/cortex-command/lib/python3.12/site-packages/cortex_command",
-  "remote_url": "git@github.com:you/your-cortex-project.git",
+  "remote_url": "git@github.com:you/your-my_cortex_project.git",
   "head_sha": "abc123..."
 }
 ```

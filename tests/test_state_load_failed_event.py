@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 import pytest
 
-from cortex_command.overnight import orchestrator, outcome_router
+from cortex_command.overnight import orchestrator
 from cortex_command.overnight.orchestrator import BatchConfig, run_batch
 from cortex_command.pipeline.parser import MasterPlan, MasterPlanConfig
 
@@ -33,7 +33,9 @@ def _read_events(log_path: Path) -> list[dict]:
     return events
 
 
-def test_state_load_failed_event_emitted_on_corrupt_state(tmp_path: Path):
+def test_state_load_failed_event_emitted_on_corrupt_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Corrupted overnight-state.json → state_load_failed event in pipeline log.
 
     The event must include:
@@ -42,6 +44,13 @@ def test_state_load_failed_event_emitted_on_corrupt_state(tmp_path: Path):
       - subsequent_writes_target: operator signal pointing at the home-repo
         backlog where silent-misdirection writes will land per spec R6.
     """
+    # Pin user project root to tmp_path so BatchConfig defaults that resolve
+    # `_resolve_user_project_root()` and the orchestrator's
+    # `subsequent_writes_target` lookup both land inside tmp_path.
+    (tmp_path / "lifecycle").mkdir()
+    (tmp_path / "backlog").mkdir()
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
+
     # Corrupted state — invalid JSON so json.load raises.
     state_path = tmp_path / "overnight-state.json"
     state_path.write_text("{not valid json")
@@ -86,8 +95,9 @@ def test_state_load_failed_event_emitted_on_corrupt_state(tmp_path: Path):
     assert evt["state_path"] == str(state_path)
 
     # subsequent_writes_target is the key operator signal from spec R6 —
-    # points at the home-repo backlog fallback the silent-misdirection path uses.
-    expected_target = str(outcome_router._PROJECT_ROOT / "backlog")
+    # points at the home-repo backlog fallback the silent-misdirection path
+    # uses. Resolved at call time from CORTEX_REPO_ROOT (set above to tmp_path).
+    expected_target = str(tmp_path / "backlog")
     assert evt["subsequent_writes_target"] == expected_target, (
         f"expected subsequent_writes_target={expected_target!r}, "
         f"got {evt.get('subsequent_writes_target')!r}"

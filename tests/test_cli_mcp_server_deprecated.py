@@ -89,8 +89,13 @@ class TestMcpServerDeprecationStub(unittest.TestCase):
                 encoding="utf-8",
             )
 
+            # _read_t12_restart_required resolves the verdict file under
+            # ``_resolve_user_project_root()`` which honors ``CORTEX_REPO_ROOT``
+            # (the user-project env var name post wheel-install migration).
+            # The pre-migration test set ``CORTEX_COMMAND_ROOT`` which is no
+            # longer consulted by any production code.
             proc = _invoke_mcp_server(
-                env_overrides={"CORTEX_COMMAND_ROOT": str(tmp_path)},
+                env_overrides={"CORTEX_REPO_ROOT": str(tmp_path)},
             )
 
         self.assertNotEqual(

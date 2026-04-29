@@ -370,7 +370,7 @@ def test_f_maybe_check_upstream_swallows_cortex_cli_missing(
 def _reload_server_under_which_none(
     server_module, capsys: pytest.CaptureFixture[str]
 ) -> str:
-    """Re-execute server.py with ``shutil.which`` patched to return ``None``.
+    """Re-execute server.py with ``shutil.which("cortex")`` patched to ``None``.
 
     Returns the captured stderr text. We cannot use :func:`importlib.reload`
     because the module was loaded via :func:`importlib.util.spec_from_file_location`
@@ -380,17 +380,32 @@ def _reload_server_under_which_none(
     The re-execution re-runs the confused-deputy guard (already passing
     because ``CLAUDE_PLUGIN_ROOT`` is set) and the S5.1
     ``shutil.which("cortex")`` check.
+
+    Task 8 added a separate ``shutil.which("uv")`` startup probe that calls
+    ``sys.exit(2)`` when ``uv`` is missing on PATH. Patching ``shutil.which``
+    to return ``None`` unconditionally would trip that probe and prevent the
+    cortex-missing branch from emitting cleanly. So we patch via a side
+    effect that returns ``None`` only for the ``cortex`` argument and
+    delegates to the real ``shutil.which`` for any other lookup.
     """
     spec = importlib.util.spec_from_file_location(
         "cortex_plugin_server", SERVER_PATH
     )
     assert spec is not None and spec.loader is not None
     fresh = importlib.util.module_from_spec(spec)
-    # Patch shutil.which globally so the module-body lookup of
-    # ``shutil.which("cortex")`` returns None during exec_module.
+    # Patch shutil.which so only "cortex" is missing — any other lookup
+    # (notably "uv") delegates to the real implementation so Task 8's
+    # uv-startup-probe does not trip and exit non-zero.
     import shutil as _shutil
 
-    with patch.object(_shutil, "which", return_value=None):
+    real_which = _shutil.which
+
+    def _which(cmd, *args, **kwargs):
+        if cmd == "cortex":
+            return None
+        return real_which(cmd, *args, **kwargs)
+
+    with patch.object(_shutil, "which", side_effect=_which):
         spec.loader.exec_module(fresh)
     captured = capsys.readouterr()
     return captured.err

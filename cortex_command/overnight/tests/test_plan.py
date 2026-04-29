@@ -291,16 +291,24 @@ class TestInitializeOvernightState(unittest.TestCase):
         Pre-Task 2: FAILS because plan.py uses Path(__file__) to find the
         project root rather than Path.cwd().
         Post-Task 2: PASSES once plan.py is changed to use Path.cwd().
+
+        Wheel-install migration (Task 4): ``_resolve_user_project_root``
+        rejects a CWD that lacks ``lifecycle/`` and ``backlog/``. Patching
+        ``Path.cwd`` to a bare ``/tmp/fake-repo`` would now hit that
+        rejection, so we materialize the fake-repo as a real tmp directory
+        with ``lifecycle/`` for the duration of the test.
         """
+        fake_repo = Path(self._fake_tmpdir) / "fake-repo"
+        (fake_repo / "lifecycle").mkdir(parents=True)
         selection = _make_selection("Feature CWD")
         mock_run = MagicMock(return_value=MagicMock(returncode=0))
-        cwd_patch = patch("pathlib.Path.cwd", return_value=Path("/tmp/fake-repo"))
+        cwd_patch = patch("pathlib.Path.cwd", return_value=fake_repo)
         subprocess_patch = patch("cortex_command.overnight.plan.subprocess.run", mock_run)
         env_patch = patch.dict(os.environ, {"TMPDIR": self._fake_tmpdir})
         with env_patch, subprocess_patch, cwd_patch:
             state = initialize_overnight_state(selection)
 
-        self.assertEqual(next(iter(state.integration_branches)), str(Path("/tmp/fake-repo").resolve()))
+        self.assertEqual(next(iter(state.integration_branches)), str(fake_repo.resolve()))
 
     def test_integration_branches_home_repo_regression(self):
         """integration_branches first key matches Path.cwd().resolve() — regression guard.

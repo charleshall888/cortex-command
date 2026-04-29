@@ -124,9 +124,19 @@ def server_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
 
     # Prime the discovery cache with a stable payload so tool-dispatch
     # tests don't need to mock `cortex --print-root` themselves.
+    #
+    # Task 16 short-circuited ``_maybe_check_upstream`` and
+    # ``_orchestrate_upgrade`` under wheel install: a payload whose
+    # ``root`` is not a git working tree returns ``None`` early. The
+    # fixture creates a real ``.git/`` directory under tmp_path so the
+    # legacy throttle/orchestration tests still exercise the deep
+    # logic. Tests that need to assert the wheel-install short-circuit
+    # specifically can override the cache themselves.
+    fake_root = tmp_path / "fake-cortex-root"
+    (fake_root / ".git").mkdir(parents=True)
     fake_payload = {
         "version": "1.0",
-        "root": "/fake/cortex/root",
+        "root": str(fake_root),
         "remote_url": "git@github.com:user/cortex-command.git",
         "head_sha": "a" * 40,
     }
@@ -450,23 +460,32 @@ def test_skip_reason_latched_to_one_stderr_log(
 
 def test_throttle_cache_key_includes_cortex_root_and_remote(
     server_module,
+    tmp_path: Path,
 ) -> None:
     """Cache keys are ``(cortex_root, remote_url, "HEAD")``.
 
     Two different cortex_root payloads must each pay the ls-remote cost
     independently (multi-fork-install case from spec R8).
+
+    Both payloads must point at real ``.git/``-bearing directories under
+    tmp_path so Task 16's wheel-install short-circuit does not fire.
     """
+    fork_a = tmp_path / "fork-a-cortex"
+    fork_b = tmp_path / "fork-b-cortex"
+    (fork_a / ".git").mkdir(parents=True)
+    (fork_b / ".git").mkdir(parents=True)
+
     fake_run, calls = _make_subprocess_recorder()
 
     payload_a = {
         "version": "1.0",
-        "root": "/fork-a/cortex",
+        "root": str(fork_a),
         "remote_url": "git@github.com:user-a/cortex.git",
         "head_sha": "a" * 40,
     }
     payload_b = {
         "version": "1.0",
-        "root": "/fork-b/cortex",
+        "root": str(fork_b),
         "remote_url": "git@github.com:user-b/cortex.git",
         "head_sha": "a" * 40,
     }
