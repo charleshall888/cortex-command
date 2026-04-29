@@ -79,7 +79,7 @@ Instrument `_spawn_orchestrator` to redirect its stdout to a session-scoped file
   - **fd-lifecycle test group** (`test_fd_lifecycle_*`): construct a `Popen`-shaped fake whose `stdout` attribute is a real `tempfile.NamedTemporaryFile` opened in write-mode. Invoke the round-loop spawn-and-emit code path (or a thin testable wrapper exposing the try/finally close protocol), force each branch (success, non-zero exit, stall flag set, shutdown via `exit_code=None`, exception raised inside the try block), and assert `proc.stdout.closed is True` after each branch. This is the regression guard against fd leak across rounds.
   - Use `tmp_path` fixture for ephemeral session directories.
 - **Verification**: `pytest cortex_command/overnight/tests/test_orchestrator_round_telemetry.py -v` — pass if exit 0 and all named test groups present and passing.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

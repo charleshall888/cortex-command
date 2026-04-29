@@ -15,7 +15,6 @@
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | backlog | low | chore | 85 | 82 | — |
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | backlog | low | feature | — | — | — |
 | 133 | Evaluate implement.md:180 progress-tail narration under Opus 4.7 | backlog | low | feature | — | 82 | — |
-| 153 | Instrument orchestrator-round subprocess with token-cost telemetry | in_progress | low | feature | — | — | ✓ |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
 
 ## Refined
@@ -38,7 +37,6 @@
 ## In-Progress
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
-- **153** Instrument orchestrator-round subprocess with token-cost telemetry (in_progress)
 
 ## Warnings
 

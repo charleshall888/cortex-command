@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 686003ea-c115-4a5c-82c1-9a01619711ee
 title: "Instrument orchestrator-round subprocess with token-cost telemetry"
-status: in_progress
+status: complete
 priority: low
 type: feature
 blocked-by: []
@@ -13,8 +13,8 @@ updated: 2026-04-29
 complexity: complex
 criticality: high
 spec: lifecycle/instrument-orchestrator-round-subprocess-with-token-cost-telemetry/spec.md
-session_id: 157138c0-cc98-419b-a987-deaaf056c325
-lifecycle_phase: plan
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Instrument orchestrator-round subprocess with token-cost telemetry
