@@ -280,6 +280,373 @@ if shutil.which("uv") is None:
 _CORTEX_ROOT_CACHE: Optional[dict[str, Any]] = None
 
 
+# ---------------------------------------------------------------------------
+# R4 — first-install hook (Task 9)
+# ---------------------------------------------------------------------------
+
+#: Wait budget (seconds) for acquiring the cross-process first-install
+#: flock at ``${XDG_STATE_HOME}/cortex-command/install.lock``. Spec R4c.
+_INSTALL_FLOCK_WAIT_BUDGET_SECONDS = 60.0
+
+#: Polling interval (seconds) used by the non-blocking install-flock
+#: acquisition loop. Same trade-off as the R11 update flock.
+_INSTALL_FLOCK_POLL_INTERVAL_SECONDS = 0.1
+
+#: Timeout (seconds) for ``uv tool install --reinstall git+<url>@<tag>``.
+#: A network-bound first install of the wheel; budget mirrors uv's own
+#: default install behaviour for a fresh resolve + download.
+_INSTALL_SUBPROCESS_TIMEOUT_SECONDS = 300.0
+
+#: Timeout (seconds) for the post-install ``cortex --print-root --format
+#: json`` verification probe. Bounded by argparse + a single state-file
+#: read; 10s is generous.
+_INSTALL_VERIFY_TIMEOUT_SECONDS = 10.0
+
+#: Window (seconds) during which a recent ``install-failed.<ts>`` sentinel
+#: short-circuits a re-attempt. Spec R4d: callers within 60s of a prior
+#: failure surface the previous error rather than retrying on partial
+#: state. After the window expires the sentinel is ignored and a fresh
+#: install attempt is made.
+_INSTALL_SENTINEL_WINDOW_SECONDS = 60.0
+
+
+class CortexInstallFailed(RuntimeError):
+    """Raised when first-install fails (subprocess error or verification).
+
+    Carries a structured-failure context the MCP runtime surfaces to the
+    Claude Code client. The hook returns silently on success; this
+    exception is the only failure surface (apart from the hook being
+    skipped via ``CORTEX_AUTO_INSTALL=0``, which falls through to the
+    notice-only path that ``_CORTEX_CLI_MISSING_ERROR`` already covers).
+    """
+
+
+def _install_state_dir() -> Path:
+    """Return ``${XDG_STATE_HOME:-$HOME/.local/state}/cortex-command``.
+
+    Resolved fresh on each call so tests can redirect ``HOME`` /
+    ``XDG_STATE_HOME`` via ``monkeypatch`` (mirrors
+    :func:`_last_error_log_path`).
+    """
+    xdg_state = os.environ.get("XDG_STATE_HOME")
+    if xdg_state:
+        base = Path(xdg_state)
+    else:
+        base = Path(os.environ.get("HOME", str(Path.home()))) / ".local" / "state"
+    return base / "cortex-command"
+
+
+def _install_lock_path() -> Path:
+    """Return the install-lock path under XDG state home (R4c)."""
+    return _install_state_dir() / "install.lock"
+
+
+def _recent_install_failed_sentinel() -> Optional[Path]:
+    """Return a sentinel path if any ``install-failed.*`` is fresh.
+
+    "Fresh" means the file's mtime is within
+    :data:`_INSTALL_SENTINEL_WINDOW_SECONDS` of now (R4d). Returns the
+    most recent qualifying sentinel so the caller can surface its
+    context. Returns ``None`` when the state dir is missing or no
+    qualifying sentinel exists.
+    """
+    state_dir = _install_state_dir()
+    if not state_dir.is_dir():
+        return None
+    cutoff = time.time() - _INSTALL_SENTINEL_WINDOW_SECONDS
+    candidates: list[tuple[float, Path]] = []
+    try:
+        for entry in state_dir.iterdir():
+            if not entry.name.startswith("install-failed."):
+                continue
+            try:
+                mtime = entry.stat().st_mtime
+            except OSError:
+                continue
+            if mtime >= cutoff:
+                candidates.append((mtime, entry))
+    except OSError:
+        return None
+    if not candidates:
+        return None
+    candidates.sort(reverse=True)
+    return candidates[0][1]
+
+
+def _write_install_failed_sentinel(error: str) -> Path:
+    """Create ``${XDG_STATE_HOME}/cortex-command/install-failed.<ts>``.
+
+    The sentinel body is the failure summary so a subsequent reader can
+    surface the prior failure context (R4d). Best-effort: directory
+    creation and write failures are swallowed and the would-be path is
+    still returned, so the caller can include it in the user-facing
+    error even when the on-disk write itself failed.
+    """
+    state_dir = _install_state_dir()
+    sentinel_path = state_dir / f"install-failed.{int(time.time())}"
+    try:
+        state_dir.mkdir(parents=True, exist_ok=True)
+        sentinel_path.write_text(error, encoding="utf-8")
+    except OSError as exc:
+        print(
+            f"cortex MCP: failed to write install-failed sentinel "
+            f"({exc.__class__.__name__}: {exc}); continuing",
+            file=sys.stderr,
+        )
+    return sentinel_path
+
+
+def _acquire_install_flock(lock_path: Path) -> Optional[int]:
+    """Acquire ``fcntl.flock(LOCK_EX)`` on ``lock_path`` with a 60s budget.
+
+    Pattern derived from R11 / ``cortex_command/init/settings_merge.py``:
+    non-blocking poll so the wait budget is enforced cooperatively
+    without depending on signal delivery (incompatible with the FastMCP
+    runtime's signal handlers).
+
+    Returns the open file descriptor on success. Returns ``None`` on
+    budget expiry; the caller raises :class:`CortexInstallFailed` after
+    logging the timeout.
+    """
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(lock_path, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
+    deadline = time.monotonic() + _INSTALL_FLOCK_WAIT_BUDGET_SECONDS
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return fd
+            except OSError as exc:
+                if exc.errno not in (errno.EWOULDBLOCK, errno.EAGAIN):
+                    os.close(fd)
+                    raise
+            if time.monotonic() >= deadline:
+                os.close(fd)
+                return None
+            time.sleep(_INSTALL_FLOCK_POLL_INTERVAL_SECONDS)
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
+
+
+def _release_install_flock(fd: int) -> None:
+    """Release the install flock acquired by :func:`_acquire_install_flock`."""
+    try:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
+def _ensure_cortex_installed() -> None:
+    """R4 — auto-install the ``cortex`` CLI on first MCP tool call.
+
+    Behaviour:
+
+    * If ``cortex`` is already on PATH, return silently.
+    * If ``CORTEX_AUTO_INSTALL=0``, fall through to the notice-only path
+      (return silently; the existing missing-CLI surface in
+      :data:`_CORTEX_CLI_MISSING_ERROR` handles user messaging).
+    * If a recent ``install-failed.*`` sentinel exists (within
+      :data:`_INSTALL_SENTINEL_WINDOW_SECONDS`), raise
+      :class:`CortexInstallFailed` with the prior failure context
+      instead of retrying on partial state.
+    * Otherwise acquire ``${XDG_STATE_HOME}/cortex-command/install.lock``
+      with a 60s budget, re-verify CLI presence (skip install if a
+      contending process landed it), and shell out to
+      ``uv tool install --reinstall git+<url>@CLI_PIN[0]``. Verify
+      success via ``cortex --print-root --format json``. On any
+      failure, write a sentinel + append a ``stage="first_install"``
+      record to ``last-error.log`` and raise.
+
+    Wired into :func:`_resolve_cortex_argv` so every cortex subprocess
+    invocation triggers the hook implicitly (zero per-handler call-site
+    additions).
+    """
+
+    if shutil.which("cortex") is not None:
+        return
+
+    if os.environ.get("CORTEX_AUTO_INSTALL") == "0":
+        # R19 notice-only path: the missing-CLI error string already
+        # documents the user-facing remediation. Returning silently
+        # lets the downstream subprocess raise FileNotFoundError, which
+        # the existing CortexCliMissing handlers translate into the
+        # canonical user-facing error.
+        return
+
+    sentinel = _recent_install_failed_sentinel()
+    if sentinel is not None:
+        try:
+            prior = sentinel.read_text(encoding="utf-8").strip()
+        except OSError:
+            prior = "<sentinel unreadable>"
+        raise CortexInstallFailed(
+            f"cortex auto-install previously failed (sentinel "
+            f"{sentinel.name} written within the last "
+            f"{int(_INSTALL_SENTINEL_WINDOW_SECONDS)}s); "
+            f"not retrying. Prior failure: {prior}. "
+            f"Run `uv tool install --reinstall "
+            f"git+https://github.com/charleshall888/cortex-command.git"
+            f"@{CLI_PIN[0]}` manually to recover."
+        )
+
+    lock_path = _install_lock_path()
+    fd = _acquire_install_flock(lock_path)
+    if fd is None:
+        error = (
+            f"timed out waiting "
+            f"{int(_INSTALL_FLOCK_WAIT_BUDGET_SECONDS)}s for "
+            f"{lock_path}"
+        )
+        _append_error_ndjson(
+            stage="first_install",
+            error=error,
+            context={
+                "cli_pin": CLI_PIN[0],
+                "exit_code": -1,
+                "phase": "flock_timeout",
+            },
+        )
+        raise CortexInstallFailed(
+            f"cortex auto-install: {error}; another MCP session is "
+            f"holding the install lock."
+        )
+
+    try:
+        # Re-verify under the lock: a contending process may have just
+        # finished installing. If so, skip the install.
+        if shutil.which("cortex") is not None:
+            return
+
+        install_argv = [
+            "uv",
+            "tool",
+            "install",
+            "--reinstall",
+            f"git+https://github.com/charleshall888/cortex-command.git"
+            f"@{CLI_PIN[0]}",
+        ]
+        try:
+            install_result = subprocess.run(
+                install_argv,
+                timeout=_INSTALL_SUBPROCESS_TIMEOUT_SECONDS,
+                capture_output=True,
+                text=True,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            error = f"{exc.__class__.__name__}: {exc}"
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage="first_install",
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": -1,
+                    "phase": "uv_tool_install",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(
+                f"cortex auto-install (`uv tool install --reinstall "
+                f"git+...@{CLI_PIN[0]}`) failed: {error}"
+            ) from exc
+
+        if install_result.returncode != 0:
+            error = (
+                f"uv tool install exit={install_result.returncode}; "
+                f"stderr={install_result.stderr!r}"
+            )
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage="first_install",
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": install_result.returncode,
+                    "phase": "uv_tool_install",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(
+                f"cortex auto-install (`uv tool install --reinstall "
+                f"git+...@{CLI_PIN[0]}`) failed: {error}"
+            )
+
+        # Post-install verification — `cortex --print-root --format json`.
+        try:
+            verify_result = subprocess.run(
+                ["cortex", "--print-root", "--format", "json"],
+                timeout=_INSTALL_VERIFY_TIMEOUT_SECONDS,
+                capture_output=True,
+                text=True,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            error = (
+                f"post-install verification "
+                f"(`cortex --print-root --format json`) raised: "
+                f"{exc.__class__.__name__}: {exc}"
+            )
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage="first_install",
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": -1,
+                    "phase": "verify_print_root",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(error) from exc
+
+        if verify_result.returncode != 0:
+            error = (
+                f"post-install verification "
+                f"(`cortex --print-root --format json`) exit="
+                f"{verify_result.returncode}; "
+                f"stderr={verify_result.stderr!r}"
+            )
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage="first_install",
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": verify_result.returncode,
+                    "phase": "verify_print_root",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(error)
+
+        try:
+            json.loads(verify_result.stdout)
+        except json.JSONDecodeError as exc:
+            error = (
+                f"post-install verification "
+                f"(`cortex --print-root --format json`) emitted "
+                f"unparseable JSON: {exc}; "
+                f"stdout={verify_result.stdout!r}"
+            )
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage="first_install",
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": verify_result.returncode,
+                    "phase": "verify_print_root_parse",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(error) from exc
+    finally:
+        _release_install_flock(fd)
+
+
 def _resolve_cortex_argv() -> list[str]:
     """Return the argv prefix that invokes the ``cortex`` CLI.
 
@@ -287,7 +654,13 @@ def _resolve_cortex_argv() -> list[str]:
     runtime is reachable only when uv has resolved the user's
     ``cortex-command`` install, so ``cortex`` is on PATH by
     construction.
+
+    R4 wiring: every cortex subprocess invocation passes through this
+    helper, so calling :func:`_ensure_cortex_installed` here makes the
+    first-install hook fire transparently for all five tool handlers
+    without per-handler call-site additions.
     """
+    _ensure_cortex_installed()
     return ["cortex"]
 
 
@@ -402,6 +775,7 @@ _NDJSON_ERROR_STAGES = frozenset(
         "cortex_upgrade",
         "verification_probe",
         "flock_timeout",
+        "first_install",
     }
 )
 
