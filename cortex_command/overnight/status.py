@@ -16,8 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from cortex_command.common import _resolve_user_project_root
 from cortex_command.overnight.state import (
-    _LIFECYCLE_ROOT,
     latest_symlink_path,
     load_state,
     session_dir,
@@ -28,8 +28,18 @@ from cortex_command.overnight.state import (
 # Constants
 # ---------------------------------------------------------------------------
 
-EVENTS_SYMLINK = latest_symlink_path("overnight", lifecycle_root=_LIFECYCLE_ROOT) / "overnight-events.log"
 WATCHDOG_TIMEOUT_MINUTES = 30
+
+
+def _events_symlink_path() -> Path:
+    """Resolve the latest-overnight events.log symlink path at call time.
+
+    Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
+    every consumer must invoke this function so the user's project root is
+    resolved at the moment the path is needed.
+    """
+    lifecycle_root = _resolve_user_project_root() / "lifecycle"
+    return latest_symlink_path("overnight", lifecycle_root=lifecycle_root) / "overnight-events.log"
 
 
 # ---------------------------------------------------------------------------
@@ -64,18 +74,19 @@ def _resolve_events_log(session_id: str) -> Path | None:
     missing (broken), falls back to the per-session file derived from
     session_id. Returns None if neither is readable.
     """
+    events_symlink = _events_symlink_path()
     # Check if symlink exists and its target is readable
-    if EVENTS_SYMLINK.is_symlink():
-        target = EVENTS_SYMLINK.resolve() if EVENTS_SYMLINK.exists() else None
+    if events_symlink.is_symlink():
+        target = events_symlink.resolve() if events_symlink.exists() else None
         if target is not None and target.exists():
-            return EVENTS_SYMLINK
+            return events_symlink
         # Symlink is broken — fall back to per-session file
-    elif EVENTS_SYMLINK.exists():
+    elif events_symlink.exists():
         # Regular file (pre-Task-1 layout) — use it directly
-        return EVENTS_SYMLINK
+        return events_symlink
 
     # Fall back to per-session file
-    per_session = session_dir(session_id, lifecycle_root=_LIFECYCLE_ROOT) / "overnight-events.log"
+    per_session = session_dir(session_id, lifecycle_root=_resolve_user_project_root() / "lifecycle") / "overnight-events.log"
     if per_session.exists():
         return per_session
 
@@ -188,7 +199,7 @@ def _find_latest_state_path() -> Optional[Path]:
     Falls back to the most recently modified session of any phase.
     Never reads through the latest-overnight symlink to avoid stale data.
     """
-    sessions_dir = _LIFECYCLE_ROOT / "sessions"
+    sessions_dir = _resolve_user_project_root() / "lifecycle" / "sessions"
     if not sessions_dir.exists():
         return None
 

@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from cortex_command.common import atomic_write, slugify
+from cortex_command.common import _resolve_user_project_root, atomic_write, slugify
 
 from cortex_command.overnight.deferral import (
     DEFAULT_DEFERRED_DIR,
@@ -32,15 +32,22 @@ from cortex_command.overnight.deferral import (
     DeferralQuestion,
     read_deferrals,
 )
-from cortex_command.overnight.events import DEFAULT_LOG_PATH, read_events
-from cortex_command.overnight.state import DEFAULT_STATE_PATH, OvernightState, _LIFECYCLE_ROOT, load_state, session_dir
+from cortex_command.overnight.events import _default_log_path, read_events
+from cortex_command.overnight.state import OvernightState, _default_state_path, load_state, session_dir
 
 
 # ---------------------------------------------------------------------------
 # Report data collection
 # ---------------------------------------------------------------------------
 
-DEFAULT_REPORT_PATH = _LIFECYCLE_ROOT / "morning-report.md"
+
+def _default_report_path() -> Path:
+    """Resolve the default morning-report.md path at call time.
+
+    Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
+    every consumer must invoke this function (or supply an explicit path).
+    """
+    return _resolve_user_project_root() / "lifecycle" / "morning-report.md"
 
 
 @dataclass
@@ -86,8 +93,8 @@ class ReportData:
 
 
 def collect_report_data(
-    state_path: Path = DEFAULT_STATE_PATH,
-    events_path: Path = DEFAULT_LOG_PATH,
+    state_path: Optional[Path] = None,
+    events_path: Optional[Path] = None,
     deferred_dir: Path = DEFAULT_DEFERRED_DIR,
     results_dir: Optional[Path] = None,
     pipeline_events_path: Optional[Path] = None,
@@ -95,8 +102,10 @@ def collect_report_data(
     """Collect all data sources needed for the morning report.
 
     Args:
-        state_path: Path to overnight-state.json.
-        events_path: Path to overnight-events.log.
+        state_path: Path to overnight-state.json. Defaults to
+            ``_default_state_path()`` resolved at call time.
+        events_path: Path to overnight-events.log. Defaults to
+            ``_default_log_path()`` resolved at call time.
         deferred_dir: Directory containing deferral markdown files.
         results_dir: Directory containing batch-*-results.json files.
             When None, resolved from session_id via session_dir().
@@ -107,6 +116,9 @@ def collect_report_data(
     Returns:
         ReportData with all fields populated from available sources.
     """
+    state_path = state_path or _default_state_path()
+    events_path = events_path or _default_log_path()
+    lifecycle_root = _resolve_user_project_root() / "lifecycle"
     data = ReportData()
 
     # Load state
@@ -119,7 +131,7 @@ def collect_report_data(
     # Resolve results_dir from session_id when not provided
     if results_dir is None:
         if data.session_id:
-            sdir = session_dir(data.session_id, lifecycle_root=_LIFECYCLE_ROOT)
+            sdir = session_dir(data.session_id, lifecycle_root=lifecycle_root)
             if sdir.is_dir():
                 results_dir = sdir
             else:
@@ -137,7 +149,7 @@ def collect_report_data(
     # Resolve pipeline_events_path from session_id when not provided
     if pipeline_events_path is None:
         if data.session_id:
-            sdir = session_dir(data.session_id, lifecycle_root=_LIFECYCLE_ROOT)
+            sdir = session_dir(data.session_id, lifecycle_root=lifecycle_root)
             candidate = sdir / "pipeline-events.log"
             if candidate.exists():
                 pipeline_events_path = candidate
@@ -490,7 +502,7 @@ def render_completed_features(data: ReportData) -> str:
     if data.state.integration_branches:
         home_repo_name = Path(next(iter(data.state.integration_branches))).name
     else:
-        home_repo_name = Path(__file__).resolve().parent.parent.parent.name
+        home_repo_name = _resolve_user_project_root().name
 
     # Build groups: Optional[repo_path] -> list[feature_name]
     groups: dict[Optional[str], list[str]] = {}
@@ -886,7 +898,8 @@ def render_deferred_questions(data: ReportData) -> str:
 
 def render_critical_review_residue(data: ReportData) -> str:
     """Render the critical review residue section from lifecycle residue files."""
-    residue_paths = sorted((_LIFECYCLE_ROOT).glob("*/critical-review-residue.json"))
+    lifecycle_root = _resolve_user_project_root() / "lifecycle"
+    residue_paths = sorted(lifecycle_root.glob("*/critical-review-residue.json"))
     total = len(residue_paths)
     lines: list[str] = [f"## Critical Review Residue ({total})", ""]
 
@@ -1410,12 +1423,18 @@ def generate_report(data: ReportData) -> str:
 
 def write_report(
     report: str,
-    path: Path = DEFAULT_REPORT_PATH,
+    path: Optional[Path] = None,
 ) -> Path:
     """Atomically write the morning report to disk.
 
     Uses temp file + os.replace for safe writes.
+
+    Args:
+        report: Rendered report text.
+        path: Destination path. Defaults to ``_default_report_path()``
+            resolved at call time.
     """
+    path = path if path is not None else _default_report_path()
     path.parent.mkdir(parents=True, exist_ok=True)
 
     fd, tmp_path = tempfile.mkstemp(
@@ -1454,8 +1473,8 @@ def notify(message: str) -> None:
 
 
 def generate_and_write_report(
-    state_path: Path = DEFAULT_STATE_PATH,
-    events_path: Path = DEFAULT_LOG_PATH,
+    state_path: Optional[Path] = None,
+    events_path: Optional[Path] = None,
     deferred_dir: Path = DEFAULT_DEFERRED_DIR,
     pr_urls: Optional[dict[str, str]] = None,
     report_dir: Optional[Path] = None,
@@ -1468,6 +1487,10 @@ def generate_and_write_report(
         python3 -c "from cortex_command.overnight.report import generate_and_write_report; generate_and_write_report()"
 
     Args:
+        state_path: Path to overnight-state.json. Defaults to
+            ``_default_state_path()`` resolved at call time.
+        events_path: Path to overnight-events.log. Defaults to
+            ``_default_log_path()`` resolved at call time.
         pr_urls: Optional mapping of os.path.realpath(repo_path) -> PR URL.
             Written to data.pr_urls before rendering. When provided, PR URLs
             appear in the completed features section and notification.
@@ -1481,8 +1504,13 @@ def generate_and_write_report(
         project_root: Optional target project root.  When provided, the
             latest-copy morning report is written to
             ``project_root / "lifecycle" / "morning-report.md"`` instead
-            of the default ``_LIFECYCLE_ROOT / "morning-report.md"``.
+            of ``_default_report_path()`` (the user's project root resolved
+            at call time).
     """
+    state_path = state_path or _default_state_path()
+    events_path = events_path or _default_log_path()
+    user_root = _resolve_user_project_root()
+    lifecycle_root = user_root / "lifecycle"
     data = collect_report_data(
         state_path=state_path,
         events_path=events_path,
@@ -1493,7 +1521,7 @@ def generate_and_write_report(
     if data.state and data.state.worktree_path:
         followup_backlog_dir = Path(data.state.worktree_path) / "backlog"
     else:
-        followup_backlog_dir = _LIFECYCLE_ROOT.parent / "backlog"
+        followup_backlog_dir = user_root / "backlog"
     data.new_backlog_items = create_followup_backlog_items(
         data, backlog_dir=followup_backlog_dir
     )
@@ -1504,7 +1532,7 @@ def generate_and_write_report(
     if report_dir is not None:
         report_path = report_dir / "morning-report.md"
     elif data.state and data.state.session_id:
-        sdir = session_dir(data.state.session_id, lifecycle_root=_LIFECYCLE_ROOT)
+        sdir = session_dir(data.state.session_id, lifecycle_root=lifecycle_root)
         if sdir.is_dir():
             report_path = sdir / "morning-report.md"
         else:
@@ -1526,7 +1554,7 @@ def generate_and_write_report(
         latest_copy_path = (
             project_root / "lifecycle" / "morning-report.md"
             if project_root is not None
-            else _LIFECYCLE_ROOT / "morning-report.md"
+            else lifecycle_root / "morning-report.md"
         )
         write_report(report, path=latest_copy_path)
 
@@ -1543,7 +1571,7 @@ def generate_and_write_report(
         notify(f"Overnight run complete — report not written (no session dir)\n{pr_lines}")
     else:
         notify("Overnight run complete — report not written (no session dir)")
-    return DEFAULT_REPORT_PATH
+    return _default_report_path()
 
 
 # ---------------------------------------------------------------------------
@@ -1567,8 +1595,11 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    _cli_user_root = _resolve_user_project_root()
+    _cli_lifecycle_root = _cli_user_root / "lifecycle"
+
     if args.session:
-        sdir = session_dir(args.session, lifecycle_root=_LIFECYCLE_ROOT)
+        sdir = session_dir(args.session, lifecycle_root=_cli_lifecycle_root)
         state_path = sdir / "overnight-state.json"
         events_path = sdir / "overnight-events.log"
         pipeline_events_path = sdir / "pipeline-events.log"
@@ -1582,7 +1613,7 @@ if __name__ == "__main__":
     if data.state and data.state.worktree_path:
         followup_backlog_dir = Path(data.state.worktree_path) / "backlog"
     else:
-        followup_backlog_dir = _LIFECYCLE_ROOT.parent / "backlog"
+        followup_backlog_dir = _cli_user_root / "backlog"
     data.new_backlog_items = create_followup_backlog_items(
         data, backlog_dir=followup_backlog_dir
     )
@@ -1596,7 +1627,7 @@ if __name__ == "__main__":
     # Determine report output path from session dir
     report_path = None
     if data.state and data.state.session_id:
-        sdir = session_dir(data.state.session_id, lifecycle_root=_LIFECYCLE_ROOT)
+        sdir = session_dir(data.state.session_id, lifecycle_root=_cli_lifecycle_root)
         if sdir.is_dir():
             report_path = sdir / "morning-report.md"
         else:

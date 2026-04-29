@@ -11,7 +11,6 @@ import asyncio
 import logging
 import os
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
@@ -20,6 +19,7 @@ if TYPE_CHECKING:
     from cortex_command.overnight.orchestrator import BatchResult, BatchConfig
 
 from cortex_command.common import (
+    _resolve_user_project_root,
     read_criticality,
     read_tier,
     requires_review,
@@ -303,13 +303,11 @@ def _classify_no_commit(feature: str, branch: str, base_branch: str) -> str:
 # Backlog write-back (R13)
 # ---------------------------------------------------------------------------
 
-# Ensure project root is importable for backlog/update_item.py
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-
 # Runtime backlog directory — set from overnight state so write-backs find items
-# in external repos. Falls back to _PROJECT_ROOT / "backlog" when unset.
+# in external repos. Falls back to ``_resolve_user_project_root() / "backlog"``
+# (resolved at call time) when unset, which anchors the lookup at the user's
+# project root via the CORTEX_REPO_ROOT env var or CWD probe rather than at a
+# module-anchored path.
 _backlog_dir: Optional[Path] = None
 
 
@@ -357,7 +355,7 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
       2. If *backlog_id* is provided, match ``backlog/{NNN}-*.md``
       3. Substring match via ``_find_item(feature)``
     """
-    backlog_dir = _backlog_dir if _backlog_dir is not None else _PROJECT_ROOT / "backlog"
+    backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "backlog"
 
     # 1. Exact slug match
     for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
@@ -414,7 +412,7 @@ def _write_back_to_backlog(
             else:
                 fields[key] = value
 
-        backlog_dir = _backlog_dir if _backlog_dir is not None else _PROJECT_ROOT / "backlog"
+        backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "backlog"
         _backlog_update_item(
             item_path, fields, backlog_dir=backlog_dir, session_id=session_id
         )

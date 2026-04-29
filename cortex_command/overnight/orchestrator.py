@@ -198,7 +198,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                     "exception_message": str(exc),
                     "state_path": str(config.overnight_state_path),
                     "subsequent_writes_target": str(
-                        outcome_router._PROJECT_ROOT / "backlog"
+                        _resolve_user_project_root() / "backlog"
                     ),
                 },
             )

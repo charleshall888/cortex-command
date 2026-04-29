@@ -28,6 +28,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 
+from cortex_command.common import _resolve_user_project_root
 from cortex_command.dashboard.data import (
     build_swim_lane_data,
     parse_last_session,
@@ -40,8 +41,17 @@ from cortex_command.dashboard.poller import DashboardState, run_polling
 # Module-level singletons: created at import time so routes can reference them
 # ---------------------------------------------------------------------------
 
-root: Path = Path(__file__).resolve().parents[2]
 state: DashboardState = DashboardState()
+
+
+def _root() -> Path:
+    """Resolve the user's cortex project root at request time.
+
+    Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
+    every consumer must invoke this function so the user's project root is
+    resolved at the moment the path is needed.
+    """
+    return _resolve_user_project_root()
 
 # ---------------------------------------------------------------------------
 # Jinja2 templates
@@ -216,6 +226,7 @@ async def lifespan(app: FastAPI):
     port = int(os.environ.get("DASHBOARD_PORT", "8080"))
     _check_port(port)
 
+    root = _root()
     if not (root / ".claude").exists():
         raise RuntimeError(
             f"Dashboard lifecycle root appears wrong: {root}. "
@@ -245,7 +256,7 @@ async def health() -> JSONResponse:
 @app.get("/")
 async def index(request: Request):
     """Render the main dashboard page."""
-    last_session = parse_last_session(root / "lifecycle")
+    last_session = parse_last_session(_root() / "lifecycle")
     return templates.TemplateResponse(
         "base.html",
         {"request": request, "state": state, "last_session": last_session},
@@ -255,7 +266,7 @@ async def index(request: Request):
 @app.get("/sessions")
 async def sessions_list(request: Request):
     """Render the session history list page."""
-    sessions = parse_session_list(root / "lifecycle")
+    sessions = parse_session_list(_root() / "lifecycle")
     return templates.TemplateResponse(
         "sessions_list.html",
         {"request": request, "sessions": sessions},
@@ -265,7 +276,7 @@ async def sessions_list(request: Request):
 @app.get("/sessions/{session_id}")
 async def session_detail(session_id: str, request: Request):
     """Render the detail page for a single session."""
-    detail = parse_session_detail(session_id, root / "lifecycle")
+    detail = parse_session_detail(session_id, _root() / "lifecycle")
     status_code = 404 if detail is None else 200
     return templates.TemplateResponse(
         "session_detail.html",
@@ -295,7 +306,7 @@ async def alerts_banner(request: Request):
 @app.get("/partials/session-panel")
 async def session_panel(request: Request):
     """Return the session panel HTML fragment for HTMX polling."""
-    last_session = parse_last_session(root / "lifecycle")
+    last_session = parse_last_session(_root() / "lifecycle")
     return templates.TemplateResponse(
         "session_panel.html",
         {"request": request, "state": state, "last_session": last_session},
@@ -327,7 +338,7 @@ async def swim_lane(request: Request):
         state.overnight,
         state.overnight_events,
         state.feature_states,
-        root / "lifecycle",
+        _root() / "lifecycle",
     )
     return templates.TemplateResponse(
         "swim-lane.html",

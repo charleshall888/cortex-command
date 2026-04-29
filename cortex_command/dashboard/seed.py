@@ -15,14 +15,13 @@ from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from cortex_command.common import _resolve_user_project_root
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 SEED_PREFIX = "overnight-seed"
-
-# Repo root: seed.py is at cortex_command/dashboard/seed.py, so 2 levels up from here
-REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # All timestamps in fixture data are anchored so the session appears to have
 # started ~90 minutes ago
@@ -178,14 +177,15 @@ def write_overnight_state(session_dir: Path, session_id: str) -> None:
     session_path.write_text(json.dumps(state, indent=2))
 
     # Copy to canonical path (must be a regular file, not a symlink)
-    canonical = REPO_ROOT / "lifecycle" / "overnight-state.json"
+    repo_root = _resolve_user_project_root()
+    canonical = repo_root / "lifecycle" / "overnight-state.json"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     # Remove symlink or existing file before copy so shutil.copy2 writes a fresh regular file
     if canonical.exists() or canonical.is_symlink():
         canonical.unlink()
     shutil.copy2(str(session_path), str(canonical))
 
-    print(f"  Wrote {session_path.relative_to(REPO_ROOT)}")
+    print(f"  Wrote {session_path.relative_to(repo_root)}")
     print(f"  Copied to lifecycle/overnight-state.json")
 
 
@@ -278,14 +278,15 @@ def write_overnight_events(session_dir: Path, session_id: str) -> None:
     session_path.write_text(content)
 
     # Copy to canonical path (must be a regular file, not a symlink)
-    canonical = REPO_ROOT / "lifecycle" / "overnight-events.log"
+    repo_root = _resolve_user_project_root()
+    canonical = repo_root / "lifecycle" / "overnight-events.log"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     # Remove symlink or existing file before copy so shutil.copy2 writes a fresh regular file
     if canonical.exists() or canonical.is_symlink():
         canonical.unlink()
     shutil.copy2(str(session_path), str(canonical))
 
-    print(f"  Wrote {session_path.relative_to(REPO_ROOT)} ({len(events)} events)")
+    print(f"  Wrote {session_path.relative_to(repo_root)} ({len(events)} events)")
     print(f"  Copied to lifecycle/overnight-events.log")
 
 
@@ -646,7 +647,7 @@ def write_all(repo_root: Path, session_id: str) -> None:
 def run_seed() -> None:
     """Write all fixture files to their canonical locations."""
     print(f"Seeding dashboard fixtures (session: {SESSION_ID}) …")
-    write_all(REPO_ROOT, SESSION_ID)
+    write_all(_resolve_user_project_root(), SESSION_ID)
     print("Done.")
 
 
@@ -748,7 +749,7 @@ def clean_all(repo_root: Path) -> None:
 def run_clean() -> None:
     """Remove all files created by a previous seed run."""
     print("Cleaning seed fixture files …")
-    clean_all(REPO_ROOT)
+    clean_all(_resolve_user_project_root())
     print("Done.")
 
 
