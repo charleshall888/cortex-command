@@ -417,10 +417,12 @@ def _commit_followup_in_worktree(
     """
     if not worktree_path.is_dir():
         return
+    env = {k: v for k, v in os.environ.items() if k != "GIT_DIR"}
     try:
         subprocess.run(
             ["git", "add", "backlog/"],
             cwd=str(worktree_path),
+            env=env,
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -428,6 +430,7 @@ def _commit_followup_in_worktree(
         diff = subprocess.run(
             ["git", "diff", "--cached", "--quiet"],
             cwd=str(worktree_path),
+            env=env,
             check=False,
         )
         if diff.returncode == 0:
@@ -440,6 +443,7 @@ def _commit_followup_in_worktree(
                 f"Overnight session {session_id}: record followup",
             ],
             cwd=str(worktree_path),
+            env=env,
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

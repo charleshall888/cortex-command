@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 8205b953-aa85-4129-ae6a-627244d6b071
 title: "Strip GIT_DIR in runner followup-commit + add O_CLOEXEC to settings_merge lockfile fd"
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-04-29

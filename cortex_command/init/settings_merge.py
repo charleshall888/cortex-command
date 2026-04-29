@@ -76,7 +76,7 @@ def _acquire_lock(home: Path | None) -> int:
     claude_dir = _claude_dir(home)
     claude_dir.mkdir(parents=True, exist_ok=True)
     lockfile_path = _lockfile_path(home)
-    lock_fd = os.open(lockfile_path, os.O_RDWR | os.O_CREAT, 0o600)
+    lock_fd = os.open(lockfile_path, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600)
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
     except BaseException:
