@@ -20,6 +20,14 @@ LIFECYCLE_DIR="$CWD/lifecycle"
 # No lifecycle directory — nothing to inject
 [[ -d "$LIFECYCLE_DIR" ]] || exit 0
 
+# --- Precondition: cortex_command must be importable ---
+# Non-cortex repos exit silently above. Cortex repos (lifecycle/ exists) require
+# the cortex CLI; fail loudly with remediation rather than producing empty output.
+if ! (command -v python3 >/dev/null && python3 -c "import cortex_command.common" 2>/dev/null); then
+  echo "cortex_command not available; cortex-scan-lifecycle hook requires the cortex CLI — install via 'uv tool install -e .' from the cortex-command repo" >&2
+  exit 1
+fi
+
 # --- Session migration (survives /clear) ---
 # When SESSION_ID (fresh, from JSON) differs from LIFECYCLE_SESSION_ID (stale, from env),
 # both being non-empty means this is a /clear, not a fresh session. Migrate .session files
