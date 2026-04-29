@@ -759,3 +759,37 @@ class TestFdLifecycle:
             "Expected `<proc>.stdout.close()` call in runner.run — "
             "the fd-lifecycle close protocol must remain in production code"
         )
+
+    def test_stall_branch_emits_orchestrator_failed(self) -> None:
+        """The stall branch in runner.run emits ORCHESTRATOR_FAILED with reason=stall_timeout.
+
+        Structural pin: stalled orchestrator rounds are orchestrator-scope
+        failures and must emit ``ORCHESTRATOR_FAILED`` so downstream
+        consumers (morning report, dashboard) classify them alongside
+        non-zero-exit failures. The existing CIRCUIT_BREAKER emission via
+        ``_transition_paused`` records session-scope state transition;
+        ORCHESTRATOR_FAILED records the orchestrator-scope failure.
+        """
+        from cortex_command.overnight import runner as runner_module
+
+        source = Path(runner_module.__file__).read_text(encoding="utf-8")
+        # Locate the stall branch by its print-warning text and check the
+        # immediately-following events.log_event(...) call carries the
+        # ORCHESTRATOR_FAILED event with reason=stall_timeout.
+        assert "watchdog killed orchestrator" in source, (
+            "Could not locate stall-branch warning text in runner.py — "
+            "test anchor needs updating"
+        )
+        # Slice the source from the stall warning to the next `_notify` call
+        # to scope the assertion to the stall branch body.
+        stall_start = source.index("watchdog killed orchestrator")
+        notify_after = source.index("_notify", stall_start)
+        stall_body = source[stall_start:notify_after]
+        assert "events.ORCHESTRATOR_FAILED" in stall_body, (
+            "Expected events.log_event(events.ORCHESTRATOR_FAILED, ...) "
+            "call in the stall branch of runner.run"
+        )
+        assert '"reason": "stall_timeout"' in stall_body, (
+            "Expected ORCHESTRATOR_FAILED emission to carry "
+            'details={"reason": "stall_timeout"} in the stall branch'
+        )

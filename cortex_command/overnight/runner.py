@@ -1833,6 +1833,12 @@ def run(
                         "log silence (stall timeout)",
                         flush=True,
                     )
+                    events.log_event(
+                        events.ORCHESTRATOR_FAILED,
+                        round=round_num,
+                        details={"reason": "stall_timeout"},
+                        log_path=events_path,
+                    )
                     _transition_paused(
                         state_path=state_path,
                         events_path=events_path,
