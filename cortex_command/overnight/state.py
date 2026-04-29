@@ -19,13 +19,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
-from cortex_command.common import durable_fsync
+from cortex_command.common import _resolve_user_project_root, durable_fsync
 
 if TYPE_CHECKING:
     from cortex_command.overnight.orchestrator import BatchResult
-
-# Lifecycle root (resolved from this file's location)
-_LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"
 
 # Valid overnight feature statuses
 FEATURE_STATUSES = (
@@ -284,7 +281,13 @@ class OvernightState:
 # Default state path
 # ---------------------------------------------------------------------------
 
-DEFAULT_STATE_PATH = _LIFECYCLE_ROOT / "overnight-state.json"
+def _default_state_path() -> Path:
+    """Resolve the default overnight-state.json path at call time.
+
+    Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
+    every consumer must invoke this function (or supply an explicit path).
+    """
+    return _resolve_user_project_root() / "lifecycle" / "overnight-state.json"
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +296,7 @@ DEFAULT_STATE_PATH = _LIFECYCLE_ROOT / "overnight-state.json"
 
 def session_dir(
     session_id: str,
-    lifecycle_root: Path = _LIFECYCLE_ROOT,
+    lifecycle_root: Optional[Path] = None,
 ) -> Path:
     """Return the canonical directory for a session's artifacts.
 
@@ -301,17 +304,19 @@ def session_dir(
 
     Args:
         session_id: Unique session identifier (e.g. "overnight-2026-03-02-2200").
-        lifecycle_root: Root of the lifecycle directory tree.
+        lifecycle_root: Root of the lifecycle directory tree. Defaults to
+            the user's project lifecycle/, resolved at call time.
 
     Returns:
         ``lifecycle_root / "sessions" / session_id``
     """
+    lifecycle_root = lifecycle_root or _resolve_user_project_root() / "lifecycle"
     return lifecycle_root / "sessions" / session_id
 
 
 def latest_symlink_path(
     session_type: str,
-    lifecycle_root: Path = _LIFECYCLE_ROOT,
+    lifecycle_root: Optional[Path] = None,
 ) -> Path:
     """Return the canonical path for a latest-session symlink.
 
@@ -319,11 +324,13 @@ def latest_symlink_path(
 
     Args:
         session_type: Session type label, e.g. ``"overnight"`` or ``"pipeline"``.
-        lifecycle_root: Root of the lifecycle directory tree.
+        lifecycle_root: Root of the lifecycle directory tree. Defaults to
+            the user's project lifecycle/, resolved at call time.
 
     Returns:
         ``lifecycle_root / "sessions" / f"latest-{session_type}"``
     """
+    lifecycle_root = lifecycle_root or _resolve_user_project_root() / "lifecycle"
     return lifecycle_root / "sessions" / f"latest-{session_type}"
 
 
@@ -331,11 +338,12 @@ def latest_symlink_path(
 # Persistence
 # ---------------------------------------------------------------------------
 
-def load_state(state_path: Path = DEFAULT_STATE_PATH) -> OvernightState:
+def load_state(state_path: Optional[Path] = None) -> OvernightState:
     """Read overnight state from a JSON file.
 
     Args:
-        state_path: Path to the overnight-state.json file.
+        state_path: Path to the overnight-state.json file. Defaults to
+            ``_default_state_path()`` resolved at call time.
 
     Returns:
         Deserialized OvernightState with nested dataclass instances.
@@ -344,6 +352,7 @@ def load_state(state_path: Path = DEFAULT_STATE_PATH) -> OvernightState:
         FileNotFoundError: If the state file does not exist.
         json.JSONDecodeError: If the file is not valid JSON.
     """
+    state_path = state_path or _default_state_path()
     raw = json.loads(state_path.read_text(encoding="utf-8"))
 
     # Rehydrate nested OvernightFeatureStatus dicts
@@ -403,7 +412,7 @@ def load_state(state_path: Path = DEFAULT_STATE_PATH) -> OvernightState:
 
 def save_state(
     state: OvernightState,
-    state_path: Path = DEFAULT_STATE_PATH,
+    state_path: Optional[Path] = None,
 ) -> None:
     """Atomically write overnight state to a JSON file.
 
@@ -412,8 +421,10 @@ def save_state(
 
     Args:
         state: The OvernightState to persist.
-        state_path: Destination path for the JSON file.
+        state_path: Destination path for the JSON file. Defaults to
+            ``_default_state_path()`` resolved at call time.
     """
+    state_path = state_path or _default_state_path()
     state_path.parent.mkdir(parents=True, exist_ok=True)
 
     data = asdict(state)

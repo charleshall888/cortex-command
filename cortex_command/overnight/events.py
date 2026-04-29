@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-_LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"
+from cortex_command.common import _resolve_user_project_root
 
 
 # ---------------------------------------------------------------------------
@@ -138,25 +138,33 @@ EVENT_TYPES = (
 # Default log path
 # ---------------------------------------------------------------------------
 
-DEFAULT_LOG_PATH = _LIFECYCLE_ROOT / "overnight-events.log"
+def _default_log_path() -> Path:
+    """Resolve the default overnight-events.log path at call time.
+
+    Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
+    every consumer must invoke this function (or supply an explicit path).
+    """
+    return _resolve_user_project_root() / "lifecycle" / "overnight-events.log"
 
 
 def events_log_path(
     session_id: str,
-    lifecycle_root: Path = _LIFECYCLE_ROOT,
+    lifecycle_root: Optional[Path] = None,
 ) -> Path:
     """Return the per-session events log path for the given session ID.
 
-    The canonical path (DEFAULT_LOG_PATH) is a symlink maintained by
+    The canonical path (`_default_log_path()`) is a symlink maintained by
     runner.sh; this function returns the real per-session file.
 
     Args:
         session_id: Session ID from OvernightState (e.g. overnight-2025-01-15-2200).
-        lifecycle_root: Root lifecycle directory (defaults to the home repo's lifecycle/).
+        lifecycle_root: Root lifecycle directory (defaults to the user's
+            project lifecycle/, resolved at call time).
 
     Returns:
         Path to lifecycle/overnight-events-{session_id}.log.
     """
+    lifecycle_root = lifecycle_root or _resolve_user_project_root() / "lifecycle"
     return lifecycle_root / f"overnight-events-{session_id}.log"
 
 
@@ -174,7 +182,7 @@ def log_event(
     round: int,
     feature: Optional[str] = None,
     details: Optional[dict] = None,
-    log_path: Path = DEFAULT_LOG_PATH,
+    log_path: Optional[Path] = None,
 ) -> None:
     """Append a JSONL event line to the overnight events log.
 
@@ -196,6 +204,7 @@ def log_event(
             f"Unknown event type {event!r}; must be one of {EVENT_TYPES}"
         )
 
+    log_path = log_path or _default_log_path()
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     session_id = os.environ.get("LIFECYCLE_SESSION_ID", "manual")
@@ -222,7 +231,7 @@ def log_event(
 # Readers
 # ---------------------------------------------------------------------------
 
-def read_events(log_path: Path = DEFAULT_LOG_PATH) -> list[dict[str, Any]]:
+def read_events(log_path: Optional[Path] = None) -> list[dict[str, Any]]:
     """Read the JSONL events log and return parsed event dicts.
 
     Follows the pattern from ``cortex_command/pipeline/metrics.py:parse_events()``:
@@ -235,6 +244,7 @@ def read_events(log_path: Path = DEFAULT_LOG_PATH) -> list[dict[str, Any]]:
         List of event dicts. Returns an empty list if the file does not
         exist.
     """
+    log_path = log_path or _default_log_path()
     if not log_path.exists():
         return []
 
@@ -264,7 +274,7 @@ def read_events(log_path: Path = DEFAULT_LOG_PATH) -> list[dict[str, Any]]:
 
 def read_events_for_round(
     round_number: int,
-    log_path: Path = DEFAULT_LOG_PATH,
+    log_path: Optional[Path] = None,
 ) -> list[dict[str, Any]]:
     """Read events and return only those for a specific round.
 

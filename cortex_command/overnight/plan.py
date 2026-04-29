@@ -18,13 +18,18 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from cortex_command.common import atomic_write, slugify
+from cortex_command.common import _resolve_user_project_root, atomic_write, slugify
 from cortex_command.overnight.backlog import BacklogItem, Batch, SelectionResult
 from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState, save_state, session_dir
 
-_LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"
 
-DEFAULT_PLAN_PATH = _LIFECYCLE_ROOT / "overnight-plan.md"
+def _default_plan_path() -> Path:
+    """Resolve the default overnight-plan.md path at call time.
+
+    Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
+    every consumer must invoke this function (or supply an explicit path).
+    """
+    return _resolve_user_project_root() / "lifecycle" / "overnight-plan.md"
 
 
 def _format_item_row(
@@ -252,7 +257,7 @@ def write_session_plan(
     Args:
         content: The rendered session plan markdown string.
         plan_dir: Directory to write ``overnight-plan.md`` into.
-            Defaults to the parent of ``DEFAULT_PLAN_PATH`` for
+            Defaults to the parent of ``_default_plan_path()`` for
             backward compatibility during the transition to
             session directories.
 
@@ -260,7 +265,7 @@ def write_session_plan(
         The path the plan was written to.
     """
     if plan_dir is None:
-        plan_dir = DEFAULT_PLAN_PATH.parent
+        plan_dir = _default_plan_path().parent
 
     plan_dir.mkdir(parents=True, exist_ok=True)
     plan_path = plan_dir / "overnight-plan.md"
@@ -495,7 +500,7 @@ def initialize_overnight_state(
 
     return OvernightState(
         session_id=session_id,
-        plan_ref=str(DEFAULT_PLAN_PATH),
+        plan_ref=str(_default_plan_path()),
         plan_hash=plan_hash,
         phase="executing",
         features=features,

@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from cortex_command.common import _resolve_user_project_root
 from cortex_command.pipeline.parser import parse_master_plan
 from cortex_command.pipeline.state import log_event as pipeline_log_event
 from cortex_command.pipeline.worktree import create_worktree
@@ -49,8 +50,6 @@ from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
 from cortex_command.overnight.feature_executor import execute_feature
 from cortex_command.overnight import outcome_router
 from cortex_command.overnight.outcome_router import OutcomeContext
-
-_LIFECYCLE_ROOT = Path(__file__).resolve().parents[2] / "lifecycle"
 
 logger = logging.getLogger(__name__)
 
@@ -87,10 +86,23 @@ class BatchConfig:
     plan_path: Path
     test_command: Optional[str] = None
     base_branch: str = "main"
-    overnight_state_path: Path = _LIFECYCLE_ROOT / "overnight-state.json"
-    overnight_events_path: Path = _LIFECYCLE_ROOT / "overnight-events.log"
-    result_dir: Path = _LIFECYCLE_ROOT
-    pipeline_events_path: Path = _LIFECYCLE_ROOT / "pipeline-events.log"
+    # Spec R3c permits `field(default_factory=lambda: _resolve_user_project_root() / ...)`
+    # because the call is inside the lambda body (deferred until instance
+    # construction); module-level binding (`x = _resolve_user_project_root() / ...`)
+    # is what's prohibited. The lambda escape hatch is intentional — see
+    # spec R3c "AST-gate scope clarification".
+    overnight_state_path: Path = field(
+        default_factory=lambda: _resolve_user_project_root() / "lifecycle" / "overnight-state.json"
+    )
+    overnight_events_path: Path = field(
+        default_factory=lambda: _resolve_user_project_root() / "lifecycle" / "overnight-events.log"
+    )
+    result_dir: Path = field(
+        default_factory=lambda: _resolve_user_project_root() / "lifecycle"
+    )
+    pipeline_events_path: Path = field(
+        default_factory=lambda: _resolve_user_project_root() / "lifecycle" / "pipeline-events.log"
+    )
     throttle_tier: Optional[str] = None
     session_id: str = ""
     session_dir: Optional[Path] = None
