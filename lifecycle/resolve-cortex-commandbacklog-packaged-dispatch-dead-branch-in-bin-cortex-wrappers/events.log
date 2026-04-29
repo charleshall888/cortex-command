@@ -1,0 +1,51 @@
+- ts: 2026-04-29T00:00:00Z
+  event: clarify_critic
+  feature: resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers
+  findings:
+    - "The High rating for intent clarity treats 'resolve the dead branch' as the goal, but the source's Open Question (a) explicitly enumerates two opposed resolution directions — delete Branch (a) or make it live by packaging the backlog scripts into `cortex_command.backlog`. The assessment anchored on the delete reading without source support."
+    - "The High rating for scope boundedness reframes Open Question (b) ('are there other wrappers with the same dead branch we missed?') as bounded scoping, but it is an admission that the affected-file set is not yet known. Additionally, if Open Question (a) resolves toward packaging (option b), scope expands from 4 wrapper edits to a packaging restructure touching pyproject.toml, the cortex_command package, dual-source enforcement, and tests."
+    - "The High rating for requirements alignment cites the simplicity principle from `requirements/project.md` but does not examine the SKILL.md-to-bin parity constraint it invokes — alignment is asserted, not demonstrated. Worse, alignment with the simplicity principle depends on which resolution direction is chosen; option (b) would directly conflict with it."
+    - "The 'simple' complexity rating presupposes option (a) (delete Branch a). Option (b) (packaging restructure) is unambiguously complex — pyproject.toml, dual-source enforcement, multiple subsystems. Rating complexity while the resolution direction is undecided is an artifact of the agent picking option (a) on the ticket's behalf."
+    - "The dead-branch diagnosis itself ('the cortex_command.backlog namespace does not exist') is treated as a load-bearing fact for intent clarity without verification."
+  dispositions:
+    apply: 4
+    dismiss: 1
+    ask: 0
+  applied_fixes:
+    - "Revised intent clarity from High to Low — resolution direction (delete vs. package-and-vivify) is genuinely undecided in the source."
+    - "Revised scope boundedness from High to Low — affected file set is open (per Open Question (b)) and resolution direction inverts scope."
+    - "Revised requirements alignment from High to Partial — simplicity-principle alignment depends on chosen resolution direction; parity-constraint compliance was asserted but not examined."
+    - "Revised complexity from simple to complex — when resolution direction is undecided, the worst-case (option b: packaging restructure) is complex per clarify.md §5 ('When in doubt, prefer complex')."
+  dismissals:
+    - finding_index: 4
+      rationale: "The namespace-absence diagnosis was verified during ticket drafting — `python3 -c \"import cortex_command.backlog.update_item\"` raised ModuleNotFoundError, and the actual scripts were located at `<repo>/backlog/<module>.py`. The diagnosis is correct, not merely accepted. The resolution-direction concern within this objection is already covered by the Apply on Finding 1."
+  status: ok
+- ts: 2026-04-29T00:00:00Z
+  event: orchestrator_review
+  feature: resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-29T00:00:00Z
+  event: critical_review
+  feature: resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers
+  phase: specify
+  reviewers_dispatched: 3
+  reviewers_completed: 3
+  findings_a_class: 7
+  findings_b_class: 6
+  findings_c_class: 4
+  synthesis_status: ok_inline
+  through_lines:
+    - "Subcommand spec-fiction: R6/R13 reference cortex setup/install which do not exist in cli.py; actual install-mutation path is cortex upgrade (_dispatch_upgrade)"
+    - "Atomicity claim unsatisfiable: Phase 4 dual-source drift on first commit; R11 dispatch test requires manual uv tool install -e . --reinstall"
+    - "Linter/telemetry extensions incoherent: R9 either-or both broken; R8 extends wired set but not deployed set so W003 dies; W005 allowlist schema lacks bash/entry-point distinction"
+  residue_write: skipped_no_session
+  status: ok
+{"ts": "2026-04-29T10:35:56Z", "event": "criticality_override", "feature": "resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers", "from": "medium", "to": "high"}
+{"ts": "2026-04-29T10:35:56Z", "event": "complexity_override", "feature": "resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers", "from": "simple", "to": "complex"}
+{"ts": "2026-04-29T10:35:56Z", "event": "phase_transition", "feature": "resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers", "from": "specify", "to": "plan"}
+{"ts": "2026-04-29T10:42:03Z", "event": "orchestrator_review", "feature": "resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-04-29T10:56:55Z", "event": "critical_review", "feature": "resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers", "phase": "plan", "reviewers_dispatched": 4, "reviewers_completed": 4, "findings_a_class": 2, "findings_b_class": 6, "findings_c_class": 4, "synthesis_status": "ok_inline", "through_lines": ["Telemetry byte-equivalence is the main fault line: wrong field list in T9 plus broken jq acceptance command in spec R12 plus no drift-detection gate", "Verification gaps cluster in pre-commit gating: missing self-test fixture for entry-point-orphan path; missing shadow-detection for bin/+pyproject overlap"], "residue_write": "ok", "status": "ok"}
+{"ts": "2026-04-29T11:35:04Z", "event": "phase_transition", "feature": "resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers", "from": "plan", "to": "implement"}
