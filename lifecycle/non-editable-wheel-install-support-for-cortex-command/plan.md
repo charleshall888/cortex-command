@@ -282,10 +282,10 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
 
 ### Task 15: Full regression run (`just test`) and post-merge sanity probes; rewrite tests broken by Task 6
 
-- **Files**: `tests/test_cli_print_root.py`, `tests/test_cli_upgrade.py` (rewrite if Task 6 breaks them); plus full regression run.
-- **What**: Run the full test suite via `just test` to confirm the migration doesn't regress existing tests. Update specific tests broken by Task 6's `_dispatch_print_root` and `_dispatch_upgrade` rewrites. Spot-check `cortex --print-root --format json` and `cortex upgrade` (advisory mode) for sanity.
+- **Files**: `tests/test_cli_print_root.py`, `tests/test_cli_upgrade.py`, `tests/test_report.py`, `tests/test_state_load_failed_event.py`, `tests/test_mcp_auto_update_orchestration.py`, `tests/test_mcp_cortex_cli_missing.py`, `cortex_command/overnight/tests/test_exit_report.py`, `tests/test_build_epic_map.py` (rewrite as needed); plus full regression run.
+- **What**: Run the full test suite via `just test` to confirm the migration doesn't regress existing tests. Update tests broken by the migration: Task 6's `_dispatch_print_root` and `_dispatch_upgrade` rewrites; Task 4's `_LIFECYCLE_ROOT`/`DEFAULT_*_PATH` deletions and `BatchConfig` field-factory changes; Task 16's R8/R10 short-circuits; Task 8's uv probe and CLI_PIN constant; Task 9's first-install hook. Tests that monkeypatch deleted symbols or construct `BatchConfig` in tmpdirs without `lifecycle/`+`backlog/` need updating. Spot-check `cortex --print-root --format json` and `cortex upgrade` (advisory mode) for sanity. (Scope expansion from original plan: 30 failures across 7 test files surfaced after Tasks 1-14 merged.)
 - **Depends on**: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16]
-- **Complexity**: simple
+- **Complexity**: complex
 - **Context**:
   - `tests/test_cli_print_root.py:84-103` asserts `len(head_sha) == 40`, `all(c in HEX_CHARS for c in head_sha)`, `len(remote_url) > 0` — these break under Task 6 when `CORTEX_REPO_ROOT` is unset (both fields become empty strings). Update the test to either (a) set `CORTEX_REPO_ROOT` to a real git clone in the fixture and keep the existing assertions, or (b) parameterize: with-`CORTEX_REPO_ROOT` asserts populated git fields; without asserts empty strings.
   - `tests/test_cli_upgrade.py` asserts subprocess invocations of `git pull` + `uv tool install -e`. Rewrite to assert the new advisory printer output (stdout contains `/plugin update` and `--reinstall`; exit 0; no subprocess invocation).
