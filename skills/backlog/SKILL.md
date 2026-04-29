@@ -79,16 +79,15 @@ regardless of current status.
 
 Interactive item selector. Presents open backlog items as a selectable list.
 
-1. Read `backlog/index.json`. If missing, report "Run `/cortex-interactive:backlog reindex` first" and stop.
-2. Filter to actionable items: `status` is `backlog`, `refined`, or `in_progress`, and `blocked_by` is empty (`[]`) or all blockers resolved. Prefer `status: refined` items (spec-approved, overnight-eligible) — list them first within each priority tier.
-3. Sort by priority (critical → low), then ID ascending
-5. If no actionable items exist, report that the backlog is clear
-6. If only 1 item exists, present it directly and ask if the user wants to start it
-7. If 2-4 items exist, present all via `AskUserQuestion` with one question:
+1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-interactive:backlog reindex` if the error indicates a missing or malformed backlog index.
+2. Iterate `groups` in order (`critical → contingent`); within each group, iterate `items`. The first non-empty group's items form the selection set. (Group ordering preserves `critical → low` priority; within a group, refined items come first.)
+3. If no actionable items exist, report that the backlog is clear
+4. If only 1 item exists, present it directly and ask if the user wants to start it
+5. If 2-4 items exist, present all via `AskUserQuestion` with one question:
    - Each option's `label` is `"NNN — Title"` (ID and title)
    - Each option's `description` includes priority and type from the index
-8. If 5+ items exist, present the top 4 by priority via `AskUserQuestion` and note how many additional items were omitted
-9. After the user selects an item, ask what they'd like to do with it using a second `AskUserQuestion`:
+6. If 5+ items exist, present the top 4 by priority via `AskUserQuestion` and note how many additional items were omitted
+7. After the user selects an item, ask what they'd like to do with it using a second `AskUserQuestion`:
    - **Start lifecycle** — invoke `/cortex-interactive:lifecycle {{item}}` to begin structured development
    - **View details** — read and present the full item file
    - **Mark in-progress** — update the item's status to `in_progress` and `updated` date
@@ -97,9 +96,8 @@ Interactive item selector. Presents open backlog items as a selectable list.
 
 Report which items are ready to work on.
 
-1. Read `backlog/index.md`
-2. Present items from the **Refined** and **Backlog** sections (items with no unresolved `blocked-by` entries)
-3. If `backlog/index.md` does not exist, suggest running `reindex` first
+1. Run `cortex-backlog-ready`. If exit code is non-zero, parse the error JSON and report the message — suggest running `/cortex-interactive:backlog reindex` if the error indicates a missing or malformed backlog index.
+2. For each non-empty group in `groups`, render a markdown subsection: `### {Priority Title}` heading (e.g. `### Critical`, `### High`, `### Medium`, `### Low`, `### Contingent`) followed by `- **{id}** {title}` bullets, in iteration order. If all groups are empty, report `Backlog is clear`.
 
 ### reindex
 
