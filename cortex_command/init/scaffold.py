@@ -38,11 +38,13 @@ import json
 import os
 import re
 from collections.abc import Iterable
+from importlib.resources import files
+from importlib.resources.abc import Traversable
 from pathlib import Path
 
 from cortex_command.common import atomic_write
 
-_TEMPLATE_ROOT = Path(__file__).resolve().parent / "templates"
+_TEMPLATE_ROOT: Traversable = files("cortex_command.init.templates")
 
 _MARKER_FILENAME = ".cortex-init"
 _BACKUP_DIR_PATTERN = ".cortex-init-backup/"
@@ -182,9 +184,31 @@ def check_symlink_safety(repo_root: Path) -> str:
 _ORPHAN_RE = re.compile(r"^\.cortex-init(?:-backup)?.*$")
 
 
-def _iter_template_files() -> list[Path]:
-    """Return every regular file under ``_TEMPLATE_ROOT``, sorted for stability."""
-    return sorted(p for p in _TEMPLATE_ROOT.rglob("*") if p.is_file())
+def _iter_template_files() -> list[tuple[Traversable, Path]]:
+    """Return every regular file under ``_TEMPLATE_ROOT``, sorted for stability.
+
+    Each entry is ``(traversable, relative_path)`` where ``traversable`` is
+    the resource handle (suitable for ``.read_text()`` / ``.read_bytes()``)
+    and ``relative_path`` is the path relative to ``_TEMPLATE_ROOT`` used to
+    derive on-disk destinations under ``repo_root``.
+
+    Walks the package resource tree via ``iterdir()`` recursively so the
+    traversal works under both editable and non-editable wheel installs
+    (``importlib.resources.Traversable`` does not expose ``rglob``).
+    """
+    results: list[tuple[Traversable, Path]] = []
+
+    def _walk(node: Traversable, rel: Path) -> None:
+        for child in node.iterdir():
+            child_rel = rel / child.name
+            if child.is_file():
+                results.append((child, child_rel))
+            elif child.is_dir():
+                _walk(child, child_rel)
+
+    _walk(_TEMPLATE_ROOT, Path())
+    results.sort(key=lambda entry: entry[1])
+    return results
 
 
 def scaffold(
@@ -226,20 +250,18 @@ def scaffold(
         # collapse anyway, but this is cleaner and avoids the edge case
         # where two iterations of the loop straddle a second boundary).
         existing_targets: list[Path] = []
-        for template_path in _iter_template_files():
-            rel = template_path.relative_to(_TEMPLATE_ROOT)
+        for _template, rel in _iter_template_files():
             dest = repo_root / rel
             if dest.exists():
                 existing_targets.append(dest)
         if existing_targets:
             backup_existing(repo_root, targets=existing_targets)
 
-    for template_path in _iter_template_files():
-        rel = template_path.relative_to(_TEMPLATE_ROOT)
+    for template, rel in _iter_template_files():
         dest = repo_root / rel
         if dest.exists() and not overwrite:
             continue
-        content = template_path.read_text(encoding="utf-8")
+        content = template.read_text(encoding="utf-8")
         atomic_write(dest, content)
         written.append(dest)
     return written
@@ -315,13 +337,12 @@ def drift_files(repo_root: Path) -> list[Path]:
         normalization. Empty list means no drift.
     """
     drifted: list[Path] = []
-    for template_path in _iter_template_files():
-        rel = template_path.relative_to(_TEMPLATE_ROOT)
+    for template, rel in _iter_template_files():
         dest = repo_root / rel
         if not dest.exists():
             # Missing files are a scaffold concern, not a drift concern.
             continue
-        shipped = template_path.read_bytes().replace(b"\r\n", b"\n")
+        shipped = template.read_bytes().replace(b"\r\n", b"\n")
         on_disk = dest.read_bytes().replace(b"\r\n", b"\n")
         if shipped != on_disk:
             drifted.append(rel)

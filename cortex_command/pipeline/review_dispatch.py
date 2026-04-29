@@ -13,6 +13,7 @@ import logging
 import re
 import subprocess
 from dataclasses import dataclass, field
+from importlib.resources import files
 from pathlib import Path
 
 from cortex_command.overnight.deferral import DeferralQuestion, write_deferral
@@ -83,7 +84,7 @@ def parse_verdict(review_path: Path) -> dict:
 # Prompt template
 # ---------------------------------------------------------------------------
 
-_PROMPT_TEMPLATE_PATH = Path(__file__).resolve().parent / "prompts" / "review.md"
+_PROMPT_TEMPLATE_PATH = files("cortex_command.pipeline.prompts").joinpath("review.md")
 
 
 def _load_review_prompt(
