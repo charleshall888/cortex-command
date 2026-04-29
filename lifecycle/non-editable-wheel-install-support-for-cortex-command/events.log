@@ -1,0 +1,48 @@
+- ts: 2026-04-29T00:00:00Z
+  event: clarify_critic
+  feature: non-editable-wheel-install-support-for-cortex-command
+  findings:
+    - "The HIGH intent-clarity rating papers over the source's silence on what 'usable Traversable' means: the failure modes for importlib.resources differ across wheel layouts (zipped vs. unpacked) and across API surfaces (`.is_file()`, `.read_text()`, `.iterdir()`), and the source does not say which must pass."
+    - "The 'at least cortex overnight start prompt-template loading path end-to-end' phrase carries a load-bearing 'at least' qualifier the assessment dropped. End-to-end against what — a real API call, a mocked SDK, just import-and-resolve? The source does not pin this down."
+    - "Scope boundedness is rated HIGH on the strength of one Out-of-scope bullet (PyPI/Homebrew). The third Scope bullet — 'Identify any remaining on-disk path assumptions... and convert them' — is open-ended across the codebase with no file-set boundary or definition of 'all of them'. Citing one explicit exclusion as evidence of bounded inclusions conflates the two."
+    - "The assessment cites cortex_command/overnight, /pipeline, and /dashboard as the audit surface to support its boundedness claim. Those packages do not appear in the source — only cortex_command/overnight/prompts/ is named in References. The assessment is inventing the audit perimeter and then citing its own invention."
+    - "Requirements alignment is rated PARTIAL with a 'defensive correctness validation, not deployment shift' reconciliation. That reconciliation is the assessment's gloss, not the source's. requirements/project.md says cortex ships editable; the ticket's smoke test (build wheel, install non-editable) extends the supported install matrix, plausibly into CONFLICT territory rather than reconciled-PARTIAL."
+    - "The assessment cites the ticket's R21 reference at face value without reading 115's review.md. If R21 deferred non-editable on the grounds that it is not a supported configuration, this ticket is reopening a settled out-of-scope decision rather than completing deferred work."
+    - "Complex/high criticality is rated on the worst-case audit surface. The ticket frames this as a verification ticket — if the audit finds zero remaining Path(__file__) issues, the work collapses to one smoke test, not a complex change. Criticality is contingent on findings the source does not predict."
+    - "The assessment notes 'introduces a new test pattern' but does not flag CI/integration cost as unspecified — where the wheel-build smoke test runs (per-PR / nightly / manual), wheel-build duration, isolation, and flake surface are all undefined in the source."
+  dispositions:
+    apply: 2
+    dismiss: 4
+    ask: 3
+  applied_fixes:
+    - "Revised scope boundedness from HIGH to LOW: the third Scope bullet (audit-and-convert remaining Path(__file__) usages) is genuinely open-ended across the package, not file-set bounded. Out-of-scope explicitness alone does not imply in-scope explicitness."
+    - "Removed the invented audit perimeter (overnight/pipeline/dashboard) from the assessment reasoning. Source only names cortex_command/overnight/prompts/ as the primary package-resource surface; the broader audit perimeter must be agreed with the user, not asserted."
+  dismissals:
+    - finding_index: 4
+      rationale: "Requirements alignment as PARTIAL holds. project.md forbids PyPI publication, not local non-editable wheel installation. The ticket's smoke test (uv build then uv tool install <wheel>) does not require PyPI and does not commit to shipping cortex via wheel by default. The reconciliation is consistent with 115's R21+R27 trail (deferred but tracked). The user-facing question about value case will surface in §4 if the user wants to revisit the deferral; raising it as CONFLICT here would re-litigate a decision already recorded in 115's spec.md and review.md."
+    - finding_index: 5
+      rationale: "Reclassified from Ask to Dismiss during self-resolution: read lifecycle/archive/rebuild-overnight-runner-under-cortex-cli/spec.md (R21: 'Editable install only (documented). Non-editable wheel support is out of scope for 115; a follow-up backlog item is filed before 115 merges per R27.') and review.md (R21 PARTIAL — spec doc-path typo only; R27 PASS — backlog/141 confirmed filed). The body's framing of 115's R21 acceptance is faithful — this ticket is completing deferred work, not reopening a settled decision."
+    - finding_index: 6
+      rationale: "Per Clarify §5.3, criticality defaults to HIGH for changes to overnight runner / shared workflow infrastructure that other capabilities depend on. The audit-finding-contingent argument is true at the work level (a zero-finding outcome would shrink the change), but criticality is rated against the surface the change touches, not the eventual diff size. HIGH stands by protocol default."
+    - finding_index: 7
+      rationale: "Smoke test CI/infra cost is real but is an implementation detail for Spec, not a Clarify-time intent or scope ambiguity. Will surface during specify §3 (Acceptance Criteria) and §3b (tier-aware test obligations); not gating Clarify."
+  status: ok
+- ts: 2026-04-29T00:00:00Z
+  event: orchestrator_review
+  feature: non-editable-wheel-install-support-for-cortex-command
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-29T00:00:00Z
+  event: orchestrator_review
+  feature: non-editable-wheel-install-support-for-cortex-command
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-29T00:00:00Z
+  event: phase_transition
+  feature: non-editable-wheel-install-support-for-cortex-command
+  from: plan
+  to: implement
