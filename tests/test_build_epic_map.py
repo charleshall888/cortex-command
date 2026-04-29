@@ -36,9 +36,16 @@ FIXTURES = REPO_ROOT / "tests" / "fixtures" / "build_epic_map"
 
 
 def _run_wrapper(*args: str) -> subprocess.CompletedProcess:
-    """Invoke the packaged module via ``python -m``."""
+    """Invoke the packaged module via ``python -m``.
+
+    Pins ``CORTEX_REPO_ROOT`` to this repo so any user-project-rooted
+    resolution inside the build_epic_map module lands here. The legacy
+    ``CORTEX_COMMAND_ROOT`` name was renamed to ``CORTEX_REPO_ROOT`` as part
+    of the non-editable-wheel-install migration; no production code consults
+    the old name.
+    """
     env = os.environ.copy()
-    env["CORTEX_COMMAND_ROOT"] = str(REPO_ROOT)
+    env["CORTEX_REPO_ROOT"] = str(REPO_ROOT)
     return subprocess.run(
         [sys.executable, "-m", "cortex_command.backlog.build_epic_map", *args],
         capture_output=True,

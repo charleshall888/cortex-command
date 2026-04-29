@@ -293,7 +293,7 @@ Migrate the cortex CLI from editable clone-install to non-editable wheel-install
   - `just test` invokes the project's standard test runner. Existing tests must pass under the converted code per spec R3g and R6d.
   - Sanity probes: `cortex --print-root --format json | jq .` returns valid JSON; `cortex upgrade` exits 0 with the advisory message on stdout.
 - **Verification**: `just test` — pass if exit 0. Plus `cortex --print-root --format json | python3 -c "import json, sys; d = json.loads(sys.stdin.read()); assert 'version' in d and 'root' in d"` — pass if exit 0. Plus `cortex upgrade; echo $?` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

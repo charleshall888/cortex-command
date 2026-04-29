@@ -122,6 +122,14 @@ class TestValidationLoop(unittest.IsolatedAsyncioTestCase):
         # chdir so lifecycle/ relative paths resolve inside the temp dir.
         os.chdir(self._tmpdir.name)
 
+        # Task 4 reworked BatchConfig to call ``_resolve_user_project_root()``
+        # at construction time via ``default_factory`` lambdas. That helper
+        # raises ``CortexProjectRootError`` when cwd lacks ``lifecycle/`` and
+        # ``backlog/``. Create them up front so the unset path-default fields
+        # (``overnight_state_path``, ``result_dir``) resolve cleanly.
+        Path(self._tmpdir.name, "lifecycle").mkdir()
+        Path(self._tmpdir.name, "backlog").mkdir()
+
         self._stub_plan = FeaturePlan(
             feature="test-feat",
             overview="test overview",

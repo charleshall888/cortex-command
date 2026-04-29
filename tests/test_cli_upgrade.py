@@ -1,165 +1,81 @@
-"""Unit tests for the `cortex upgrade` handler in cortex_command.cli.
+"""Unit tests for the advisory `cortex upgrade` handler in cortex_command.cli.
 
-Covers four scenarios from spec R13–R15 of the curl|sh bootstrap installer
-ticket:
-  (a) happy path — three subprocess.run calls succeed in the documented order;
-  (b) dirty-tree abort — non-empty stdout from `git status --porcelain` aborts
-      after a single subprocess call;
-  (c) subprocess failure on `git pull` — a CalledProcessError on call 2
-      prevents the third (`uv tool install`) call from running;
-  (d) `CORTEX_COMMAND_ROOT` override — env var overrides the `~/.cortex`
-      default and is propagated as the `cwd=` argument.
+The original handler ran `git pull` + `uv tool install -e` against a local
+clone. Under the wheel-install migration (Tasks 1–14) the CLI ships from a
+tag-pinned wheel and cannot self-upgrade — instead `cortex upgrade` is an
+advisory printer that points users at:
 
-NOTE: subprocess is lazy-imported inside `_dispatch_upgrade`, so the spec's
-suggested patch target `cortex_command.cli.subprocess.run` does not exist at
-module scope. We patch `subprocess.run` directly instead — same patched
-function object is used by the handler's local `import subprocess`.
+  1. ``/plugin update cortex-overnight-integration@cortex-command`` for the
+     MCP-driven path (the auto-install hook in the MCP server reinstalls the
+     CLI on first tool call after the plugin updates).
+  2. ``uv tool install --reinstall git+...@<tag>`` for the bare-shell path.
+
+These tests verify:
+  (a) the handler exits 0;
+  (b) stdout contains the ``/plugin update`` substring (MCP path advisory);
+  (c) stdout contains the ``--reinstall`` substring (bare-shell path advisory);
+  (d) the handler does NOT shell out to ``git`` or ``uv`` (no
+      ``subprocess.run([...])`` calls under the new advisory contract).
 """
 
 from __future__ import annotations
 
-import os
-import subprocess
+import io
+import sys
 import unittest
-from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from cortex_command.cli import _dispatch_upgrade
 
 
 class TestCortexUpgrade(unittest.TestCase):
-    """Tests for `_dispatch_upgrade` covering R13–R15."""
+    """Tests for the advisory ``_dispatch_upgrade`` (post wheel-install migration)."""
 
-    # ------------------------------------------------------------------
-    # (a) Happy path — R13 contract: three calls in order.
-    # ------------------------------------------------------------------
+    def _capture_dispatch(self):
+        """Run ``_dispatch_upgrade`` with stdout/stderr captured.
 
-    def test_happy_path_runs_three_calls_in_order(self):
-        """Three subprocess.run calls execute in the documented order; exit 0."""
-        cortex_root = str(Path.home() / ".cortex")
-        side_effects = [
-            MagicMock(stdout="", returncode=0),  # git status --porcelain (clean)
-            MagicMock(returncode=0),              # git pull --ff-only
-            MagicMock(returncode=0),              # uv tool install
-        ]
-        mock_run = MagicMock(side_effect=side_effects)
-
-        env_patch = patch.dict(os.environ, {}, clear=False)
-        # Ensure CORTEX_COMMAND_ROOT is unset so the default `~/.cortex` is used.
-        if "CORTEX_COMMAND_ROOT" in os.environ:
-            env_patch = patch.dict(
-                os.environ,
-                {k: v for k, v in os.environ.items() if k != "CORTEX_COMMAND_ROOT"},
-                clear=True,
-            )
-
-        with env_patch, patch("subprocess.run", mock_run):
+        Returns ``(rc, stdout, stderr, mock_run)`` so each test can make its
+        own assertions without duplicating the wiring.
+        """
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        mock_run = MagicMock()
+        with patch("subprocess.run", mock_run), \
+                patch.object(sys, "stdout", stdout), \
+                patch.object(sys, "stderr", stderr):
             rc = _dispatch_upgrade(MagicMock())
+        return rc, stdout.getvalue(), stderr.getvalue(), mock_run
 
+    def test_exit_zero(self):
+        """Advisory printer always exits 0."""
+        rc, _stdout, _stderr, _run = self._capture_dispatch()
         self.assertEqual(rc, 0)
-        self.assertEqual(mock_run.call_count, 3)
-        self.assertEqual(
-            mock_run.call_args_list[0],
-            call(
-                ["git", "status", "--porcelain"],
-                cwd=cortex_root,
-                check=True,
-                capture_output=True,
-                text=True,
-            ),
-        )
-        self.assertEqual(
-            mock_run.call_args_list[1],
-            call(
-                ["git", "-C", cortex_root, "pull", "--ff-only"],
-                check=True,
-            ),
-        )
-        self.assertEqual(
-            mock_run.call_args_list[2],
-            call(
-                ["uv", "tool", "install", "-e", cortex_root, "--force"],
-                check=True,
-            ),
-        )
 
-    # ------------------------------------------------------------------
-    # (b) Dirty-tree abort — R14: stdout non-empty -> abort after 1 call.
-    # ------------------------------------------------------------------
+    def test_stdout_contains_plugin_update_advisory(self):
+        """Stdout advises the MCP-driven `/plugin update` path."""
+        _rc, stdout, _stderr, _run = self._capture_dispatch()
+        self.assertIn("/plugin update", stdout)
 
-    def test_dirty_tree_aborts_after_single_call(self):
-        """Non-empty `git status --porcelain` output aborts before pull/install."""
-        side_effects = [
-            MagicMock(stdout="M file.py\n", returncode=0),
-        ]
-        mock_run = MagicMock(side_effect=side_effects)
+    def test_stdout_contains_reinstall_advisory(self):
+        """Stdout advises the bare-shell `--reinstall` path."""
+        _rc, stdout, _stderr, _run = self._capture_dispatch()
+        self.assertIn("--reinstall", stdout)
 
-        with patch("subprocess.run", mock_run):
-            with patch("sys.stderr") as mock_stderr:
-                rc = _dispatch_upgrade(MagicMock())
+    def test_no_git_or_uv_subprocess_invocations(self):
+        """Advisory contract: no `git` or `uv` shell-outs from this handler.
 
-        self.assertEqual(rc, 1)
-        self.assertEqual(mock_run.call_count, 1)
-        # Reconstruct the stderr write payload to assert "uncommitted changes" appeared.
-        written = "".join(
-            c.args[0] for c in mock_stderr.write.call_args_list if c.args
-        )
-        self.assertIn("uncommitted changes", written)
-
-    # ------------------------------------------------------------------
-    # (c) Subprocess failure on call 2 — R15: pull fails, install does not run.
-    # ------------------------------------------------------------------
-
-    def test_pull_failure_skips_uv_tool_install(self):
-        """A CalledProcessError on `git pull` aborts before `uv tool install`."""
-        cortex_root = str(Path.home() / ".cortex")
-        pull_cmd = ["git", "-C", cortex_root, "pull", "--ff-only"]
-        side_effects = [
-            MagicMock(stdout="", returncode=0),  # git status --porcelain (clean)
-            subprocess.CalledProcessError(returncode=128, cmd=pull_cmd),
-        ]
-        mock_run = MagicMock(side_effect=side_effects)
-
-        with patch("subprocess.run", mock_run):
-            rc = _dispatch_upgrade(MagicMock())
-
-        self.assertEqual(rc, 1)
-        self.assertEqual(mock_run.call_count, 2)
-        # The third call (uv tool install) must not have been invoked.
-        for call_args in mock_run.call_args_list:
-            self.assertNotIn("uv", call_args.args[0])
-
-    # ------------------------------------------------------------------
-    # (d) CORTEX_COMMAND_ROOT override — env var propagates to cwd= and -C.
-    # ------------------------------------------------------------------
-
-    def test_cortex_command_root_env_override(self):
-        """CORTEX_COMMAND_ROOT replaces the `~/.cortex` default in cwd= and -C."""
-        override_root = "/opt/custom/cortex"
-        side_effects = [
-            MagicMock(stdout="", returncode=0),
-            MagicMock(returncode=0),
-            MagicMock(returncode=0),
-        ]
-        mock_run = MagicMock(side_effect=side_effects)
-
-        with patch.dict(os.environ, {"CORTEX_COMMAND_ROOT": override_root}):
-            with patch("subprocess.run", mock_run):
-                rc = _dispatch_upgrade(MagicMock())
-
-        self.assertEqual(rc, 0)
-        # Call 1: cwd=override_root (not $HOME/.cortex).
-        self.assertEqual(mock_run.call_args_list[0].kwargs.get("cwd"), override_root)
-        # Call 2: `git -C <override_root> pull --ff-only`.
-        self.assertEqual(
-            mock_run.call_args_list[1].args[0],
-            ["git", "-C", override_root, "pull", "--ff-only"],
-        )
-        # Call 3: `uv tool install -e <override_root> --force`.
-        self.assertEqual(
-            mock_run.call_args_list[2].args[0],
-            ["uv", "tool", "install", "-e", override_root, "--force"],
-        )
+        The pre-migration handler ran three subprocesses
+        (`git status`, `git pull`, `uv tool install`). Under the wheel-install
+        migration the CLI cannot self-upgrade, so any subprocess call here
+        would be a regression toward the old behavior.
+        """
+        _rc, _stdout, _stderr, mock_run = self._capture_dispatch()
+        for invocation in mock_run.call_args_list:
+            argv = invocation.args[0] if invocation.args else []
+            self.assertNotIn("git", argv,
+                             f"unexpected git invocation: {invocation}")
+            self.assertNotIn("uv", argv,
+                             f"unexpected uv invocation: {invocation}")
 
 
 if __name__ == "__main__":
