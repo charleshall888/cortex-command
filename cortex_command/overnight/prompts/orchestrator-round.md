@@ -27,64 +27,40 @@ You are the overnight orchestrator agent for round {round_number}. Your job is t
 
 If `{session_dir}/escalations.jsonl` does not exist, skip Step 0 entirely and proceed to Step 1.
 
-**Step 0b — Compute unresolved entries**:
-
-Read `{session_dir}/escalations.jsonl`. Each line is a JSON object with a `type` field. Compute the unresolved set:
+**Step 0b — Load round context**:
 
 ```python
-import json
+from cortex_command.overnight.orchestrator_io import aggregate_round_context
 from pathlib import Path
-from cortex_command.overnight.orchestrator_io import save_state, update_feature_status, write_escalation
 
-escalations_path = Path("{session_dir}/escalations.jsonl")
-entries = []
-for line in escalations_path.read_text().splitlines():
-    line = line.strip()
-    if not line:
-        continue
-    try:
-        entries.append(json.loads(line))
-    except json.JSONDecodeError:
-        # Malformed line — skip with a logged warning, do not crash
-        print(f"WARNING: Skipping malformed {session_dir}/escalations.jsonl line: {line[:80]}")
-        continue
-
-# Collect all escalation IDs and subtract those with a resolution or promoted entry
-escalation_ids = {
-    e["escalation_id"] for e in entries
-    if e.get("type") == "escalation" and "escalation_id" in e
-}
-resolved_ids = {
-    e["escalation_id"] for e in entries
-    if e.get("type") in ("resolution", "promoted") and "escalation_id" in e
-}
-unresolved_ids = escalation_ids - resolved_ids
-
-if not unresolved_ids:
-    # No unresolved escalations — skip Step 0 entirely
-    pass  # proceed to Step 1
+ctx = aggregate_round_context(Path("{session_dir}"), {round_number})
 ```
 
-If `unresolved_ids` is empty, skip the rest of Step 0 and proceed to Step 1.
+If `ctx["escalations"]["unresolved"]` is empty, skip the rest of Step 0 and proceed to Step 1.
 
 **Step 0c — Apply escalation cap**:
 
 If more than 5 unresolved entries exist, process only the oldest 5 by `ts` timestamp. Leave the rest for the next round.
 
 ```python
-unresolved_entries = [
-    e for e in entries
-    if e.get("type") == "escalation" and e.get("escalation_id") in unresolved_ids
-]
-unresolved_entries.sort(key=lambda e: e.get("ts", ""))
-to_process = unresolved_entries[:5]
+unresolved_entries = sorted(ctx["escalations"]["unresolved"], key=lambda e: e.get("ts", ""))[:5]
+to_process = unresolved_entries
 ```
 
 **Step 0d — Process each unresolved escalation**:
 
 For each entry in `to_process`, wrap the entire processing in a try/except so that a single malformed or problematic entry never crashes the round.
 
-**Cycle-breaking check**: Before attempting resolution, count entries in `{session_dir}/escalations.jsonl` with `"type": "resolution"` and the same `feature` field as this escalation. If count >= 1 (the orchestrator already resolved a question for this feature in a prior round, but the worker asked again), this is a cycle — do **not** attempt resolution:
+**Cycle-breaking check**: Before attempting resolution, check for prior resolutions. Use:
+
+```python
+prior_resolutions = [
+    e for e in ctx["escalations"]["all_entries"]
+    if e.get("type") == "resolution" and e.get("feature") == entry["feature"]
+]
+```
+
+If `len(prior_resolutions) >= 1` (the orchestrator already resolved a question for this feature in a prior round, but the worker asked again), this is a cycle — do **not** attempt resolution:
 
 1. Delete `lifecycle/{feature}/learnings/orchestrator-note.md` if it exists (prevents stale answers from polluting future sessions).
 2. Append a `promoted` entry to `{session_dir}/escalations.jsonl`:
@@ -151,10 +127,10 @@ Using the content of these files, determine whether the worker's `question` can 
 
 ### 1. Read Current State
 
-Read `{state_path}` and identify features with status `pending`, `running`, or `paused`. Also extract:
+Use `ctx["state"]` (assembled at Step 0b) to identify features with status `pending`, `running`, or `paused`. Also extract:
 
 ```python
-integration_branch = state.get("integration_branch") or "main"
+integration_branch = ctx["state"].get("integration_branch") or "main"
 ```
 
 If no features have status `pending`, `running`, or `paused`, exit — the session is complete.
@@ -164,7 +140,7 @@ If no features have status `pending`, `running`, or `paused`, exit — the sessi
 ```python
 current_round = {round_number}
 features_to_run = [
-    f for f in features
+    f for f in ctx["state"]["features"].values()
     if f.get("status") == "paused"
     or (f.get("round_assigned") or 0) <= current_round
 ]
@@ -176,21 +152,14 @@ If `features_to_run` is empty but features with `pending`, `running`, or `paused
 
 ### 1a. Read Session Strategy
 
-Load the session strategy file to make `hot_files` and `round_history` available to later sections:
+Use `ctx["strategy"]` (assembled at Step 0b) to access `hot_files` and `round_history`:
 
 ```python
-from cortex_command.overnight.strategy import load_strategy
-from pathlib import Path
-
-strategy_path = Path("{session_dir}") / "overnight-strategy.json"
-strategy = load_strategy(strategy_path)
-hot_files = strategy.hot_files
-round_history = strategy.round_history_notes
+hot_files = ctx["strategy"]["hot_files"]
+round_history = ctx["strategy"]["round_history_notes"]
 ```
 
-`load_strategy` requires `from cortex_command.overnight.strategy import load_strategy`. The `strategy_path` is a `Path` constructed from the parent directory of `state_path`.
-
-If `overnight-strategy.json` is absent (first round or new session), `load_strategy()` returns defaults:
+If `overnight-strategy.json` was absent (first round or new session), the aggregator returns defaults:
 - `hot_files = []`
 - `integration_health = "healthy"`
 - `round_history_notes = []`
@@ -213,7 +182,7 @@ The `hot_files` list feeds into §1b's conflict recovery trivial fast-path check
 
 ### 2. Read Session Plan
 
-Read `{session_plan_path}` to understand batch assignments and the tier-based parallel dispatch limits. Identify which features are assigned to the current round.
+Use `ctx["session_plan_text"]` (assembled at Step 0b) to understand batch assignments and the tier-based parallel dispatch limits. Identify which features are assigned to the current round.
 
 ### 2a. Intra-Session Dependency Gate
 
@@ -221,7 +190,7 @@ Before proceeding to plan generation, filter `features_to_run` (from §1) for un
 
 For each feature F in `features_to_run`:
     blocked = [s for s in F.intra_session_blocked_by
-               if state.features.get(s) and state.features[s].status != "merged"]
+               if ctx["state"]["features"].get(s) and ctx["state"]["features"][s].get("status") != "merged"]
     if blocked:
         Leave F as `pending` — do NOT include it in this round's feature list.
 
