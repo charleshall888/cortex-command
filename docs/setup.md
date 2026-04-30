@@ -19,15 +19,25 @@ Before installing cortex-command, make sure you have:
 
 ## Install
 
-Cortex-command ships as a Python CLI plus a set of Claude Code plugins. Installation is three steps: clone the repo, install the CLI, and enable the plugins from inside Claude.
+Cortex-command ships as a Python CLI plus a set of Claude Code plugins. Installation has three steps: install the CLI from a tag-pinned git URL, install the plugins from inside Claude, and run `cortex init` once per repo.
 
 ### 1. Install the `cortex` CLI
+
+```bash
+uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0
+```
+
+This installs the CLI as a non-editable `uv tool` directly from the tagged git URL — no clone is required. The `cortex` binary lands on your `PATH` (run `uv tool update-shell` once if it does not).
+
+If you do not have `uv` available yet, the `install.sh` bootstrap script installs `uv` first and runs the same command:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
 ```
 
-This puts the `cortex` binary on your `PATH`. It clones the repo to `$HOME/.cortex` (or wherever `install.sh` places it), and is the surface you use for per-repo setup (see step 3).
+The cortex-overnight-integration MCP server also auto-installs the CLI on first tool call when `cortex` is missing from `PATH`. Users who only interact with cortex through Claude Code never need an explicit install step. Set `CORTEX_AUTO_INSTALL=0` to opt out of the auto-install behavior (the MCP will then surface a notice instead of running `uv tool install`).
+
+To upgrade later: run `/plugin update cortex-overnight-integration@cortex-command` from inside Claude (MCP-driven), or `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<new-tag>` from a bare shell. See [docs/release-process.md](release-process.md) for the tag-before-coupling discipline that keeps plugin and CLI versions in sync.
 
 ### 2. Add and install the plugins from inside Claude Code
 
@@ -54,8 +64,8 @@ The six available plugins are:
 
 #### Plugin-specific prerequisites
 
-- **`cortex-overnight-integration`** requires the `${CORTEX_COMMAND_ROOT}` environment variable exported and pointing at your cortex-command checkout, plus the `cortex` CLI on your `PATH` (the MCP server resolves the CLI from there). Export it in your shell rc file, e.g. `export CORTEX_COMMAND_ROOT=$HOME/.cortex`.
-- **`cortex-interactive`** shell-side bin shims (`cortex-jcc` and the other `cortex-*` tools) require `${CORTEX_COMMAND_ROOT}` exported as well; the in-Claude skills work without it, but the bin shims will error explicitly if it is unset.
+- **`cortex-overnight-integration`** requires `uv` and the `cortex` CLI on your `PATH`. The MCP server auto-installs `cortex` on first tool call when it is missing (set `CORTEX_AUTO_INSTALL=0` to opt out and receive a notice instead). It also probes for `uv` at startup and refuses to run if `uv` is not on `PATH`. macOS GUI-launched Claude Code processes do not inherit the same `PATH` as a Terminal session — if `uv` is on `PATH` in your shell but the MCP server still reports it missing, see the auto-install error message and add `uv`'s install directory to `~/.zshenv` (or `~/.bash_profile`) so GUI-launched processes pick it up.
+- **`cortex-interactive`** shell-side bin shims (`cortex-jcc` and the other `cortex-*` tools) need to be invoked from inside a cortex project directory (one containing `lifecycle/` or `backlog/`), or with `CORTEX_REPO_ROOT=/path/to/your/project` exported. The in-Claude skills work without setup. The shims error explicitly with the missing-project message when neither condition holds.
 - **`cortex-ui-extras`** has no extra prerequisites.
 - **`cortex-pr-review`** has no extra prerequisites.
 
@@ -181,12 +191,13 @@ cortex --print-root
 claude /plugin list
 ```
 
-`cortex --print-root` should print a JSON object with four fields:
+`cortex --print-root` should print a JSON object with five fields:
 
-- **`version`** — the cortex-command release version (e.g. `"1.0"`)
-- **`root`** — the absolute path to your cortex-command checkout
-- **`remote_url`** — the git remote URL for the repo
-- **`head_sha`** — the full SHA of the current HEAD commit
+- **`version`** — the print-root JSON envelope schema version (currently `"1.1"`)
+- **`root`** — the absolute path to your cortex project (the directory where you ran `cortex init`, resolved via `CORTEX_REPO_ROOT` env override or CWD with a `lifecycle/`+`backlog/` sanity check)
+- **`package_root`** — the absolute path to the cortex-command package install (under `uv` tool, this lives inside `~/.local/share/uv/tools/cortex-command/`); useful for diagnostic introspection
+- **`remote_url`** — the git remote URL of your project, if it is a git repository (empty string otherwise)
+- **`head_sha`** — the full SHA of your project's current HEAD commit (empty string if it is not a git repository)
 
 `claude /plugin list` should list the plugins you installed from the `cortex-command` marketplace (e.g. `cortex-interactive`, `cortex-overnight-integration`, etc.). If a plugin you installed is missing, run `/reload-plugins` inside Claude Code to refresh the plugin metadata cache.
 
@@ -292,15 +303,15 @@ The minimum set cortex-command needs: GitHub API for `gh` operations, raw.github
 
 You do not need to hand-edit this. Run `cortex init` in each repo where you want cortex-command active — it appends the per-repo overnight-session write paths automatically. Hand-editing is error-prone because the paths are repo-scoped and resolve relative to each project.
 
-**`statusLine.command`** (optional)
+**`statusLine.command`** (optional, requires a clone)
 
 ```json
 "statusLine": {
-  "command": "$HOME/.cortex/claude/statusline.sh"
+  "command": "/path/to/your/cortex-command-clone/claude/statusline.sh"
 }
 ```
 
-Point to the `statusline.sh` inside your cortex-command clone (adjust the absolute path if you cloned somewhere other than `$HOME/.cortex`). This is optional — it shows cortex-specific session state in the Claude Code statusline. Skip it if you don't want that coupling.
+This shows cortex-specific session state in the Claude Code statusline. The script ships in the cortex-command source tree at `claude/statusline.sh`, but the wheel-install path does not extract it onto disk anywhere a user can point at. To use this you need a clone of the repo (i.e., the forker path); point at the `claude/statusline.sh` inside your clone. Skip this entirely if you do not have a clone.
 
 **`permissions.deny`**
 

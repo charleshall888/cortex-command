@@ -4,7 +4,7 @@ Cortex Command is an AI workflow framework for Claude Code built on a single ins
 
 The front half of the lifecycle is deliberately human-driven. You run discovery to understand the problem space, collaborate with agents to write tight specs, and mark features ready only when the scope is genuinely clear. Once that work is done, the handoff is earned. Run `/cortex-interactive:lifecycle` to stay in the loop for interactive development, or queue a batch for `/overnight` and wake up to a morning report with PRs ready to review. The overnight runner is the natural payoff of doing the front half well.
 
-Skills are slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. Cortex-command ships as a CLI (installed via `uv tool install -e .`) plus Claude Code plugins (each installed as `<name>@cortex-command` after adding the marketplace) — everything lives in version control and is distributed without host-level symlinks.
+Skills are slash commands you invoke from Claude Code. Hooks wire them into the development environment at the right moments. State files let the system resume across sessions and tool invocations. Cortex-command ships as a CLI (installed via `uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0`) plus Claude Code plugins (each installed as `<name>@cortex-command` after adding the marketplace) — everything lives in version control and is distributed without host-level symlinks.
 
 Work flows through four stages: **discovery** maps the problem space and decomposes it into backlog tickets; **backlog** items progress from draft to refined as scope is clarified; **refine/lifecycle** drives each feature through research, spec, plan, implement, and review phases; and **overnight** executes refined items autonomously in parallel so you wake up to a morning report with PRs ready to review. For a visual of the full pipeline, see [docs/agentic-layer.md](docs/agentic-layer.md#diagram-a--main-workflow-flow).
 
@@ -39,11 +39,11 @@ You ──► Clarify ──► Research ──► Spec ──► Plan ──►
 
 ## Quick Start
 
-Cortex-command ships as a CLI (installed as an editable `uv tool`) plus Claude Code plugins (skills + hooks + utilities). Installation has three steps:
+Cortex-command ships as a CLI (installed via a tag-pinned git URL — no clone required) plus Claude Code plugins (skills + hooks + utilities):
 
 ```bash
-# 1. Bootstrap: clones the repo to ~/.cortex and installs the `cortex` CLI
-curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
+# 1. Install the `cortex` CLI from the v0.1.0 tag
+uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0
 
 # 2. One-time: ensure the uv tool bin directory is on PATH
 uv tool update-shell
@@ -57,6 +57,14 @@ claude /plugin install cortex-overnight-integration@cortex-command
 claude /plugin install cortex-ui-extras@cortex-command
 claude /plugin install cortex-pr-review@cortex-command
 ```
+
+If you do not have `uv` available, the `install.sh` bootstrap script installs `uv` first and then runs the same command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
+```
+
+The cortex-overnight-integration MCP server also auto-installs the CLI on first tool call when it detects `cortex` is missing from `PATH` — interactive Claude Code users who only use cortex through plugins never need to run an explicit install step.
 
 The [Plugin roster](#plugin-roster) below lists all 6 available plugins — install `android-dev-extras@cortex-command` and `cortex-dev-extras@cortex-command` to add the extras tier.
 
@@ -101,12 +109,12 @@ Cortex-command does not own `~/.claude/settings.json`. Edit it directly as perso
 
 ## Distribution
 
-The `cortex` CLI is installed as an editable `uv tool`; a few constraints apply:
+The `cortex` CLI is installed as a non-editable `uv tool` from a tag-pinned git URL. To upgrade to a newer release, run `/plugin update cortex-overnight-integration@cortex-command` from inside Claude Code (the MCP-driven path) or `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<tag>` from a bare shell. `cortex upgrade` itself is now an advisory printer that points at those two paths. A few operational notes:
 
 - When cortex invokes `uv run` internally, it operates on the user's current project, not cortex's own tool venv.
 - Do not run `uv tool uninstall uv` — removing uv via itself breaks the tool environment.
-- Adding or renaming `[project.scripts]` entries requires re-running `uv tool install -e . --force` to refresh shims.
 - Run `uv tool update-shell` once after the first `uv tool install` to add the tool bin directory to your `PATH`.
+- Forkers (advanced users developing against a fork of cortex-command) install via `uv tool install git+https://github.com/<your-fork>/cortex-command.git@<branch-or-tag>` instead of the upstream URL.
 
 ## Commands
 

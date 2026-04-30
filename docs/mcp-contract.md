@@ -34,19 +34,21 @@ Source: `cortex_command/cli.py::_dispatch_print_root` (around lines 128–165).
 
 ```json
 {
-  "version": "1.0",
-  "root": "/abs/path/to/cortex/checkout",
-  "remote_url": "git@github.com:user/cortex-command.git",
+  "version": "1.1",
+  "root": "/abs/path/to/user/project",
+  "package_root": "/abs/path/to/site-packages/cortex_command",
+  "remote_url": "git@github.com:user/their-project.git",
   "head_sha": "<40-hex-char git sha>"
 }
 ```
 
 Field semantics:
 
-- `version` — schema-floor stamp; see [Schema versioning](#schema-versioning).
-- `root` — absolute path to the Cortex checkout that this `cortex` shim resolves to. Resolution chain (in order): `CORTEX_COMMAND_ROOT` env override → editable-install discovery via `cortex_command.__file__` → `~/.cortex` fallback → hard-fail on stderr.
-- `remote_url` — output of `git -C $root remote get-url origin`, stripped. Empty string if the git command fails (e.g. `.git` is missing). Never `null`.
-- `head_sha` — output of `git -C $root rev-parse HEAD`, stripped. Empty string if the git command fails. Never `null`.
+- `version` — schema-floor stamp; see [Schema versioning](#schema-versioning). Bumped from `"1.0"` to `"1.1"` in ticket 141 when `package_root` was added (additive change — `1.0` consumers ignore the new field).
+- `root` — absolute path to the **user's project** (the directory where they ran `cortex init`). Resolution chain: `CORTEX_REPO_ROOT` env override → CWD when CWD contains either `lifecycle/` or `backlog/` → hard-fail on stderr (exit 2) with a guidance message. Note that under non-editable wheel install this is **not** the cortex-command install location — see `package_root` for that.
+- `package_root` — absolute path to the cortex-command package install (e.g. inside `~/.local/share/uv/tools/cortex-command/lib/python<ver>/site-packages/cortex_command/`). Resolved via `Path(cortex_command.__file__).resolve().parent`. Useful for diagnostic introspection; not consumed by R8 throttle keying or R13 schema-floor checks.
+- `remote_url` — output of `git -C $root remote get-url origin`, stripped (where `$root` is the user's project root, not the package install). Empty string if the user's project is not a git repository or the git command fails. Never `null`.
+- `head_sha` — output of `git -C $root rev-parse HEAD`, stripped. Empty string if the user's project is not a git repository. Never `null`.
 
 This payload is the MCP's canonical source of truth for the upstream URL and local HEAD that R8 and R13 compare against.
 
@@ -197,6 +199,6 @@ This is accepted for two reasons:
 1. **External `uv tool upgrade` is a hostile concurrency partner.** It does not know about the MCP's flock, will not honor it, and the MCP cannot block it. A second flock at the uv tool path would only serialize cooperating processes; an actually-concurrent `uv` invocation would either bypass or deadlock on it.
 2. **The user is the cross-tool serialization mechanism.** A user who runs `uv tool upgrade cortex-command` from a shell while a Claude Code session is mid-tool-call has chosen to race the two paths. The MCP's threat model already trusts the user with auto-RCE on every tool call (see [Threat model](#threat-model)); requiring them to not race their own upgrade tools is a strictly weaker ask.
 
-Recovery after an indeterminate result: run `cortex upgrade` (or `uv tool install -e <path> --force`) once from a bare shell after the MCP and any external invocations have settled. The verification probe (R12) on the next MCP tool call will catch any partial-install corruption and surface it through the NDJSON error log (R14).
+Recovery after an indeterminate result: run `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<tag>` once from a bare shell after the MCP and any external invocations have settled. (`cortex upgrade` is now an advisory printer that points at this command — it does not perform the install itself.) The verification probe (R12) on the next MCP tool call will catch any partial-install corruption and surface it through the NDJSON error log (R14).
 
 This carve-out is documented under "Non-Requirements" in this feature's spec; it is not a future TODO.
