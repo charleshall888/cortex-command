@@ -430,8 +430,11 @@ def handle_cancel(args: argparse.Namespace) -> int:
 
     if not ipc.verify_runner_pid(pid_data):
         # Self-heal stale state (spec Edge Cases line 234).
+        # Pass the verified-stale session_id so a takeover that wrote a
+        # new claim between our verify and clear is rejected by CAS.
+        stale_session_id = pid_data.get("session_id")
         try:
-            ipc.clear_runner_pid(session_dir)
+            ipc.clear_runner_pid(session_dir, expected_session_id=stale_session_id)
         except OSError:
             pass
         try:
@@ -452,8 +455,11 @@ def handle_cancel(args: argparse.Namespace) -> int:
         os.killpg(pgid, signal.SIGTERM)
     except ProcessLookupError:
         # Race: the PGID died between verify and signal. Self-heal.
+        # Pass the verified session_id so CAS rejects if a takeover
+        # wrote a new claim between our verify and clear.
+        verified_session_id = pid_data.get("session_id")
         try:
-            ipc.clear_runner_pid(session_dir)
+            ipc.clear_runner_pid(session_dir, expected_session_id=verified_session_id)
         except OSError:
             pass
         try:

@@ -540,8 +540,10 @@ def _cleanup(
             _kill_subprocess_group(proc, coord)
 
     # (5) Clear per-session runner.pid — R8 clean-shutdown contract.
+    # CAS on session_id so a displaced-owner cleanup cannot clobber a
+    # successor's just-written claim during a takeover transition.
     try:
-        ipc.clear_runner_pid(session_dir)
+        ipc.clear_runner_pid(session_dir, expected_session_id=session_id)
     except Exception:
         pass
 
@@ -581,8 +583,11 @@ def _check_concurrent_start(
         return None
     if ipc.verify_runner_pid(pid_data):
         return "session already running"
-    # Stale — self-heal.
-    ipc.clear_runner_pid(session_dir)
+    # Stale — self-heal. Pass the stale claim's session_id for
+    # defense-in-depth CAS even though the takeover lock serializes
+    # the read-verify-claim critical section.
+    stale_session_id = pid_data.get("session_id")
+    ipc.clear_runner_pid(session_dir, expected_session_id=stale_session_id)
     ipc.clear_active_session()
     return None
 
@@ -1537,7 +1542,7 @@ def _post_loop(
     except Exception:
         pass
     try:
-        ipc.clear_runner_pid(session_dir)
+        ipc.clear_runner_pid(session_dir, expected_session_id=session_id)
     except Exception:
         pass
 

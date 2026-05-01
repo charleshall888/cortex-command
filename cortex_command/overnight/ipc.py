@@ -346,8 +346,35 @@ def _write_runner_pid_locked(
         raise ConcurrentRunnerError(existing_session_id, existing_pid)
 
 
-def clear_runner_pid(session_dir: Path) -> None:
-    """Remove ``runner.pid`` from ``session_dir`` if present."""
+def clear_runner_pid(
+    session_dir: Path,
+    expected_session_id: str | None = None,
+) -> None:
+    """Remove ``runner.pid`` from ``session_dir`` if present.
+
+    When ``expected_session_id`` is ``None`` (the default), the unlink is
+    unconditional — appropriate for lock-covered call sites that have
+    already verified ownership under the takeover lock.
+
+    When ``expected_session_id`` is provided, perform a compare-and-swap
+    by reading the on-disk ``runner.pid`` first and only unlinking if
+    the JSON's ``session_id`` field equals ``expected_session_id``.
+    Otherwise no-op silently. This closes the residual race where a
+    displaced owner's unlocked clear could clobber a new owner's
+    just-written claim during a takeover transition. If the file is
+    absent or its payload is unreadable, the read returns ``None`` and
+    this function no-ops (mirroring :func:`read_runner_pid`'s
+    semantics).
+    """
+    if expected_session_id is None:
+        (session_dir / "runner.pid").unlink(missing_ok=True)
+        return
+
+    pid_data = read_runner_pid(session_dir)
+    if pid_data is None:
+        return
+    if pid_data.get("session_id") != expected_session_id:
+        return
     (session_dir / "runner.pid").unlink(missing_ok=True)
 
 
