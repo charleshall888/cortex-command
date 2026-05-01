@@ -14,9 +14,12 @@ invocations cannot both win the lock (R8 / Adversarial §1).
 
 from __future__ import annotations
 
+import errno
+import fcntl
 import json
 import os
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -45,6 +48,33 @@ class ConcurrentRunnerError(Exception):
         )
 
 
+class ConcurrentRunnerLockTimeoutError(ConcurrentRunnerError):
+    """Raised when the takeover lock cannot be acquired within budget.
+
+    Distinguishes the lock-acquisition timeout failure mode from the
+    base :class:`ConcurrentRunnerError` "third party beat us on the
+    recreate path" signal. Operators retrying a wedged-holder scenario
+    can match on this subclass (or on the explicit timeout substring in
+    the message) and escalate to ``cortex overnight cancel --force``.
+    """
+
+    def __init__(
+        self,
+        session_id: str = "<unknown>",
+        existing_pid: int = -1,
+    ) -> None:
+        self.session_id = session_id
+        self.existing_pid = existing_pid
+        # Skip ConcurrentRunnerError.__init__ — we want a distinct
+        # message that the spec requires to contain the literal
+        # substring "takeover lock acquire timed out".
+        Exception.__init__(
+            self,
+            "takeover lock acquire timed out after 5s; "
+            "another starter holds .runner.pid.takeover.lock",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Module constants
 # ---------------------------------------------------------------------------
@@ -54,9 +84,73 @@ _SCHEMA_VERSION = 1
 MAX_KNOWN_RUNNER_PID_SCHEMA_VERSION = 1
 _START_TIME_TOLERANCE_SECONDS = 2.0
 
+_TAKEOVER_LOCK_FILENAME = ".runner.pid.takeover.lock"
+_TAKEOVER_LOCK_BUDGET_SECONDS = 5.0
+_TAKEOVER_LOCK_POLL_INTERVAL_SECONDS = 0.05
+
 ACTIVE_SESSION_PATH: Path = (
     Path.home() / ".local" / "share" / "overnight-sessions" / "active-session.json"
 )
+
+
+# ---------------------------------------------------------------------------
+# Takeover-lock helper
+# ---------------------------------------------------------------------------
+
+def _acquire_takeover_lock(session_dir: Path) -> int:
+    """Acquire the per-session takeover lock with a 5-second budget.
+
+    Opens ``session_dir / ".runner.pid.takeover.lock"`` with
+    ``O_RDWR | O_CREAT | 0o600`` and performs a polling
+    ``fcntl.flock(LOCK_EX | LOCK_NB)`` acquire with a 5-second total
+    budget and 50 ms sleep cadence. Returns the held file descriptor on
+    success.
+
+    Caller is responsible for releasing via the nested-finally pattern::
+
+        fd = _acquire_takeover_lock(session_dir)
+        try:
+            ...work...
+        finally:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            finally:
+                os.close(fd)
+
+    On budget exhaustion, raises
+    :class:`ConcurrentRunnerLockTimeoutError` with
+    ``existing_session_id="<unknown>"`` and ``existing_pid=-1`` and an
+    explicit timeout message so operators can distinguish timeout from
+    a genuine concurrent-runner collision. Pattern reference:
+    ``cortex_command/init/settings_merge.py:_acquire_lock`` (sibling
+    lockfile rationale) and
+    ``plugins/cortex-overnight-integration/server.py:_acquire_update_flock``
+    (polling-with-budget shape).
+    """
+    session_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = session_dir / _TAKEOVER_LOCK_FILENAME
+    fd = os.open(str(lock_path), os.O_RDWR | os.O_CREAT, 0o600)
+    deadline = time.monotonic() + _TAKEOVER_LOCK_BUDGET_SECONDS
+    try:
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return fd
+            except OSError as exc:
+                if exc.errno not in (errno.EWOULDBLOCK, errno.EAGAIN):
+                    raise
+            if time.monotonic() >= deadline:
+                raise ConcurrentRunnerLockTimeoutError(
+                    session_id="<unknown>",
+                    existing_pid=-1,
+                )
+            time.sleep(_TAKEOVER_LOCK_POLL_INTERVAL_SECONDS)
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +238,7 @@ def write_runner_pid(
     start_time: str,
     session_id: str,
     repo_path: Path,
+    lock_fd: int | None = None,
 ) -> None:
     """Atomically claim ``runner.pid`` in ``session_dir`` via O_EXCL.
 
@@ -164,6 +259,17 @@ def write_runner_pid(
        us to the recreated file — re-read, run verify, and raise
        :class:`ConcurrentRunnerError` regardless of liveness. The
        retry budget is exactly one; the loop never spins.
+
+    The full read-verify-claim sequence (initial ``O_EXCL`` AND retry
+    path) is serialized under the per-session takeover lock
+    (``.runner.pid.takeover.lock``). When ``lock_fd`` is ``None``, the
+    function acquires its own takeover lock for the entire claim
+    sequence and releases it via ``fcntl.flock(LOCK_UN)`` followed by
+    ``os.close`` in nested ``finally`` blocks (so ``os.close`` runs
+    unconditionally even if ``LOCK_UN`` raises). When ``lock_fd is not
+    None``, the function operates inside the caller's critical section
+    and does NOT acquire its own lock; the caller is responsible for
+    release.
     """
     payload = {
         "schema_version": _SCHEMA_VERSION,
@@ -176,6 +282,34 @@ def write_runner_pid(
         "repo_path": str(repo_path),
     }
     path = session_dir / "runner.pid"
+
+    if lock_fd is None:
+        owned_fd = _acquire_takeover_lock(session_dir)
+        try:
+            _write_runner_pid_locked(path, payload, session_id)
+        finally:
+            try:
+                fcntl.flock(owned_fd, fcntl.LOCK_UN)
+            finally:
+                os.close(owned_fd)
+    else:
+        _write_runner_pid_locked(path, payload, session_id)
+
+
+def _write_runner_pid_locked(
+    path: Path,
+    payload: dict,
+    session_id: str,
+) -> None:
+    """Run the read-verify-claim sequence under a held takeover lock.
+
+    Caller must already hold the per-session takeover lock for
+    ``path.parent``. Both the initial ``O_EXCL`` claim and the
+    unlink-then-retry path execute inside the same critical section so
+    the re-verify step is the load-bearing CAS detecting any
+    third-party live claim that arrived between attempts.
+    """
+    session_dir = path.parent
 
     try:
         _exclusive_create_runner_pid(path, payload)
