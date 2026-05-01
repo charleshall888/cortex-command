@@ -231,6 +231,68 @@ def test_two_starters_with_stale_preexisting_lock(tmp_path: Path) -> None:
     assert on_disk["session_id"] == session_id
 
 
+def test_post_fix_detects_pre_fix_runner_pid(tmp_path: Path) -> None:
+    """Backwards-compat: post-fix code reads a pre-fix ``runner.pid``.
+
+    Synthesizes the pre-fix on-disk state — a ``runner.pid`` file with
+    the unchanged R8 payload schema (``schema_version, magic, pid,
+    pgid, start_time, session_id, session_dir, repo_path``) and **no**
+    sibling ``.runner.pid.takeover.lock`` (pre-fix code never created
+    one). The payload points at this live test process so
+    :func:`ipc.verify_runner_pid` returns True.
+
+    Invokes post-fix :func:`runner._check_concurrent_start` and asserts:
+
+    * the live-session collision path is taken (returns
+      ``("session already running", None)``) — this is the post-Task 4
+      signature equivalent of "``ConcurrentRunnerError`` is raised"
+      from the spec's pre-Task 4 wording; the function now reports the
+      collision via its return tuple instead of raising;
+    * the new ``.runner.pid.takeover.lock`` sibling file is
+      ``O_CREAT``-ed by the post-fix ``_acquire_takeover_lock`` on
+      first acquire (proof the post-fix code creates the lockfile when
+      encountering a pre-fix payload that has none).
+
+    The reverse direction (pre-fix code reading post-fix on-disk state)
+    is covered by source-level proof: pre-fix ``ipc.py`` does not
+    reference ``.runner.pid.takeover.lock`` anywhere, so the file is
+    tautologically ignored. See implementation.md for the grep evidence.
+    """
+    # Local import: avoids a top-level import that could hide a
+    # collection-time failure if runner.py grows new heavy imports.
+    from cortex_command.overnight.runner import _check_concurrent_start
+
+    session_id = "2026-04-30-pre-fix-payload"
+    pre_fix_payload = _alive_pid_payload(tmp_path, session_id)
+
+    # Pre-fix on-disk state: runner.pid present, lockfile absent.
+    (tmp_path / "runner.pid").write_text(json.dumps(pre_fix_payload))
+    lockfile = tmp_path / ".runner.pid.takeover.lock"
+    assert not lockfile.exists(), (
+        "fixture invariant: pre-fix state must not include the lockfile"
+    )
+
+    error_message, lock_fd = _check_concurrent_start(tmp_path)
+
+    # Live-session collision path: the post-fix function detects the
+    # live runner via verify_runner_pid and returns the error message
+    # with lock_fd=None (function released the lock before returning).
+    assert error_message == "session already running", (
+        f"expected live-session collision message, got {error_message!r}"
+    )
+    assert lock_fd is None, (
+        f"expected lock_fd=None on live-session collision path, got {lock_fd!r}"
+    )
+
+    # The post-fix _acquire_takeover_lock O_CREAT'd the sibling lockfile
+    # on first acquire — proof post-fix code handles a pre-fix payload
+    # (no lockfile) correctly by creating it on demand.
+    assert lockfile.exists(), (
+        "post-fix _acquire_takeover_lock must O_CREAT "
+        ".runner.pid.takeover.lock on first acquire"
+    )
+
+
 def test_starter_against_alive_lock(tmp_path: Path) -> None:
     """A single starter against an alive lock raises immediately.
 
