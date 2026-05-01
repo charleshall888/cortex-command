@@ -307,7 +307,7 @@ You do not need to hand-edit this. Run `cortex init` in each repo where you want
 
 ```json
 "statusLine": {
-  "command": "/path/to/your/cortex-command-clone/claude/statusline.sh"
+  "command": "/path/to/your/cortex-command/claude/statusline.sh"
 }
 ```
 
