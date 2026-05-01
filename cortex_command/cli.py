@@ -385,6 +385,16 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Cancel the active overnight session via SIGTERM to its PGID.",
     )
     cancel.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help=(
+            "Skip the 5s takeover-lock acquire (escape hatch for "
+            "wedged-holder scenarios; accepts <100ms 'no active session' "
+            "race window during a concurrent takeover)."
+        ),
+    )
+    cancel.add_argument(
         "session_id",
         nargs="?",
         default=None,

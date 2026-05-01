@@ -15,6 +15,7 @@ level entry and performs the final ``sys.exit``.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import signal
@@ -424,65 +425,84 @@ def handle_cancel(args: argparse.Namespace) -> int:
 
     assert session_dir is not None  # for type-checkers
 
-    pid_data = ipc.read_runner_pid(session_dir)
-    if pid_data is None:
-        return _cancel_error(fmt, "no_active_session", "no active session")
-
-    if not ipc.verify_runner_pid(pid_data):
-        # Self-heal stale state (spec Edge Cases line 234).
-        # Pass the verified-stale session_id so a takeover that wrote a
-        # new claim between our verify and clear is rejected by CAS.
-        stale_session_id = pid_data.get("session_id")
-        try:
-            ipc.clear_runner_pid(session_dir, expected_session_id=stale_session_id)
-        except OSError:
-            pass
-        try:
-            ipc.clear_active_session()
-        except OSError:
-            pass
-        return _cancel_error(
-            fmt,
-            "stale_lock_cleared",
-            "stale lock cleared — session was not running",
-        )
-
-    pgid = pid_data.get("pgid")
-    if not isinstance(pgid, int):
-        return _cancel_error(fmt, "no_active_session", "no active session")
+    # Serialize the read-verify-act critical section against concurrent
+    # starters/takers via the per-session takeover lock. The --force
+    # escape hatch skips the acquire for wedged-holder scenarios. Tests
+    # construct argparse.Namespace directly and may omit ``force``, so
+    # default-via-hasattr before reading ``args.force`` literally.
+    if not hasattr(args, "force"):
+        args.force = False
+    try:
+        lock_fd = None if args.force else ipc._acquire_takeover_lock(session_dir)
+    except ipc.ConcurrentRunnerLockTimeoutError as exc:
+        return _cancel_error(fmt, "lock_timeout", str(exc))
 
     try:
-        os.killpg(pgid, signal.SIGTERM)
-    except ProcessLookupError:
-        # Race: the PGID died between verify and signal. Self-heal.
-        # Pass the verified session_id so CAS rejects if a takeover
-        # wrote a new claim between our verify and clear.
-        verified_session_id = pid_data.get("session_id")
-        try:
-            ipc.clear_runner_pid(session_dir, expected_session_id=verified_session_id)
-        except OSError:
-            pass
-        try:
-            ipc.clear_active_session()
-        except OSError:
-            pass
-        return _cancel_error(
-            fmt,
-            "stale_lock_cleared",
-            "stale lock cleared — session was not running",
-        )
-    except PermissionError as exc:
-        return _cancel_error(fmt, "cancel_failed", f"cancel failed: {exc}")
+        pid_data = ipc.read_runner_pid(session_dir)
+        if pid_data is None:
+            return _cancel_error(fmt, "no_active_session", "no active session")
 
-    if fmt == "json":
-        session_id = pid_data.get("session_id") if isinstance(pid_data, dict) else None
-        payload: dict = {
-            "cancelled": True,
-            "session_id": session_id if isinstance(session_id, str) else "",
-            "pgid": pgid,
-        }
-        _emit_json(payload)
-    return 0
+        if not ipc.verify_runner_pid(pid_data):
+            # Self-heal stale state (spec Edge Cases line 234).
+            # Pass the verified-stale session_id so a takeover that wrote a
+            # new claim between our verify and clear is rejected by CAS.
+            stale_session_id = pid_data.get("session_id")
+            try:
+                ipc.clear_runner_pid(session_dir, expected_session_id=stale_session_id)
+            except OSError:
+                pass
+            try:
+                ipc.clear_active_session()
+            except OSError:
+                pass
+            return _cancel_error(
+                fmt,
+                "stale_lock_cleared",
+                "stale lock cleared — session was not running",
+            )
+
+        pgid = pid_data.get("pgid")
+        if not isinstance(pgid, int):
+            return _cancel_error(fmt, "no_active_session", "no active session")
+
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+        except ProcessLookupError:
+            # Race: the PGID died between verify and signal. Self-heal.
+            # Pass the verified session_id so CAS rejects if a takeover
+            # wrote a new claim between our verify and clear.
+            verified_session_id = pid_data.get("session_id")
+            try:
+                ipc.clear_runner_pid(session_dir, expected_session_id=verified_session_id)
+            except OSError:
+                pass
+            try:
+                ipc.clear_active_session()
+            except OSError:
+                pass
+            return _cancel_error(
+                fmt,
+                "stale_lock_cleared",
+                "stale lock cleared — session was not running",
+            )
+        except PermissionError as exc:
+            return _cancel_error(fmt, "cancel_failed", f"cancel failed: {exc}")
+
+        if fmt == "json":
+            session_id = pid_data.get("session_id") if isinstance(pid_data, dict) else None
+            payload: dict = {
+                "cancelled": True,
+                "session_id": session_id if isinstance(session_id, str) else "",
+                "pgid": pgid,
+            }
+            _emit_json(payload)
+        return 0
+    finally:
+        if lock_fd is not None:
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            finally:
+                os.close(lock_fd)
 
 
 # ---------------------------------------------------------------------------
