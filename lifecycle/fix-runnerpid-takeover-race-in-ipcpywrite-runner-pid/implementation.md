@@ -45,3 +45,33 @@ with the lockfile under any input — the source-level proof substitutes
 for the previously-planned "deploy two installs side-by-side" rollback
 verification (which is unrunnable under the project's non-editable
 wheel distribution model).
+
+## Task 8: One-shot 1000-iteration stress validation (macOS)
+
+**Timestamp**: 2026-05-01T18:55:00Z
+
+**Host**:
+
+```
+uname -srvm:  Darwin 25.4.0 Darwin Kernel Version 25.4.0: Thu Mar 19 19:31:17 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T6020 arm64
+uv run python --version:  Python 3.13.8
+```
+
+**Command**:
+
+```
+uv run pytest tests/test_runner_concurrent_start_race.py::test_two_starters_with_stale_preexisting_lock --count=1000 -p no:cacheprovider
+```
+
+**Result**:
+
+```
+======================= 1000 passed in 81.18s (0:01:21) ========================
+```
+
+1000/1000 isolated runs passed. Pre-fix flake rate was ~20% (4 of 20
+isolated runs failing), so a clean 1000/1000 is `0.8^1000 ≈ 1.2×10⁻⁹⁷`
+under the null hypothesis of no fix — a strong signal that the race is
+closed under the documented Thread A/B trace. Recurring detection
+signal lives in Task 7's `--count=50` `just test` gate; this is the
+deeper one-shot validation per spec R9.

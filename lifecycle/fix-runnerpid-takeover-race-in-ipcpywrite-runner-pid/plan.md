@@ -89,7 +89,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: simple
 - **Context**: Decorator location is the function-scoped block immediately above `def test_two_starters_with_stale_preexisting_lock` (lines 155–158). `justfile` `test` recipe currently runs `uv run pytest`; the `--count=50` invocation can be a second pytest line in the same recipe targeting the takeover test specifically, or a `pytest -m stress` if a `stress` marker is added to the test file. Either approach satisfies the spec; keep the rest of the suite at default count to avoid blowing up overall runtime. Task 5 is intentionally NOT a dependency — the takeover test exercises start (`_check_concurrent_start`), not cancel.
 - **Verification**: `grep -nE '@pytest\.mark\.xfail' -A1 tests/test_runner_concurrent_start_race.py | grep -E 'test_two_starters_with_stale_preexisting_lock'` returns zero matches AND `grep -nE 'count=50|--count 50' justfile` returns at least one match AND `uv run just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: One-shot 1000-iteration stress validation (macOS only)
 
@@ -99,7 +99,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: simple
 - **Context**: This is the deeper one-shot validation; the recurring detection signal lives in Task 7's `--count=50` `just test` gate. macOS is the implementer's primary host (per `requirements/remote-access.md:41`) and the host the original ~20% flake was characterized on, so the 1000-iteration run on macOS is the highest-value single validation.
 - **Verification**: Interactive/session-dependent: the 1000-iteration run is a manual implementer-driven validation; the implementation.md log entry is the audit trail (per the spec's R9 acceptance which classifies the gate as session-dependent). Programmatic verification of the recurring signal is enforced by Task 7's `uv run just test` gate.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Backwards-compat unit test for pre-fix `runner.pid` files
 
@@ -109,7 +109,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: simple
 - **Context**: Pre-fix payload format is unchanged from the spec's R10 description (JSON with `schema_version, magic, pid, pgid, start_time, session_id, session_dir, repo_path`). The test fixture creates a tmp_path session_dir, writes the synthesized pre-fix `runner.pid` directly via `(session_dir / "runner.pid").write_text(json.dumps(payload))` (NOT via the new `write_runner_pid` which would acquire the lock and `O_CREAT` the lockfile prematurely), and confirms post-fix code does the right thing on first encounter. The reverse-direction grep substitutes for the previously-planned "rollback to pre-fix while new-fix runner is alive" deploy verification — the source-level proof (pre-fix source doesn't reference the lockfile) is sufficient and runs in a single command.
 - **Verification**: `grep -nE 'def test_post_fix_detects_pre_fix_runner_pid' tests/test_runner_concurrent_start_race.py` returns exactly one match AND `uv run pytest tests/test_runner_concurrent_start_race.py::test_post_fix_detects_pre_fix_runner_pid -x` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Document `.runner.pid.takeover.lock` in `docs/overnight-operations.md`
 
