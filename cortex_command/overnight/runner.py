@@ -21,6 +21,7 @@ entry via ``importlib.resources`` (R19).
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import signal
@@ -571,25 +572,57 @@ def _cleanup(
 
 def _check_concurrent_start(
     session_dir: Path,
-) -> Optional[str]:
+) -> tuple[Optional[str], Optional[int]]:
     """Check for a live session via ``runner.pid`` + ``verify_runner_pid``.
 
-    Returns an error message when a live session is detected (caller
-    should print to stderr and exit nonzero). Returns ``None`` after a
-    successful stale-self-heal or when no PID file exists.
+    Acquires the per-session takeover lock at the start of the function
+    so the read-verify-clear sequence runs serialized against any other
+    runner starter. The lock is held across the read of ``runner.pid``,
+    the ``verify_runner_pid`` decision, and (when stale) the
+    ``clear_runner_pid`` self-heal. The caller propagates the held FD
+    into the subsequent :func:`ipc.write_runner_pid` call so the entire
+    read-verify-claim critical section runs under one lock.
+
+    Returns a ``(error_message, lock_fd)`` tuple:
+
+    * On a live-session collision: ``(error_message, None)``. The
+      function releases the lock before returning so the caller does not
+      need to.
+    * On the no-PID-file path or successful stale self-heal:
+      ``(None, lock_fd)``. The caller MUST release via the nested
+      ``try: LOCK_UN ... finally: os.close(fd)`` pattern after
+      :func:`ipc.write_runner_pid` returns.
     """
-    pid_data = ipc.read_runner_pid(session_dir)
-    if pid_data is None:
-        return None
-    if ipc.verify_runner_pid(pid_data):
-        return "session already running"
-    # Stale — self-heal. Pass the stale claim's session_id for
-    # defense-in-depth CAS even though the takeover lock serializes
-    # the read-verify-claim critical section.
-    stale_session_id = pid_data.get("session_id")
-    ipc.clear_runner_pid(session_dir, expected_session_id=stale_session_id)
-    ipc.clear_active_session()
-    return None
+    lock_fd = ipc._acquire_takeover_lock(session_dir)
+    try:
+        pid_data = ipc.read_runner_pid(session_dir)
+        if pid_data is None:
+            return None, lock_fd
+        if ipc.verify_runner_pid(pid_data):
+            # Live runner — release the lock before returning the error
+            # so the caller never needs to handle the fd on the error
+            # path.
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            finally:
+                os.close(lock_fd)
+            return "session already running", None
+        # Stale — self-heal under the held lock. Pass the stale claim's
+        # session_id for defense-in-depth CAS even though the takeover
+        # lock serializes the read-verify-claim critical section.
+        stale_session_id = pid_data.get("session_id")
+        ipc.clear_runner_pid(session_dir, expected_session_id=stale_session_id)
+        ipc.clear_active_session()
+        return None, lock_fd
+    except BaseException:
+        try:
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            finally:
+                os.close(lock_fd)
+        except OSError:
+            pass
+        raise
 
 
 def _start_session(
@@ -598,12 +631,16 @@ def _start_session(
     repo_path: Path,
     events_path: Path,
     coord: RunnerCoordination,
-) -> tuple[state_module.OvernightState, dict, str]:
+) -> tuple[Optional[state_module.OvernightState], Optional[dict], Optional[str]]:
     """Run R8/R9/R14 session startup: interrupt recovery, PID + pointer writes.
 
     Returns the loaded state, the pid_data payload used to write
     ``runner.pid`` (reused for pointer updates), and the ``start_time``
-    string used for PID-reuse detection.
+    string used for PID-reuse detection. Returns ``(None, None, None)``
+    when the locked concurrent-start guard detects a live runner already
+    owns the session — the caller MUST treat this as the
+    "session already running" exit path (already printed to stderr by
+    this function) and return a nonzero exit code.
     """
     # R14 interrupt recovery for features stuck in "running".
     interrupt.handle_interrupted_features(state_path)
@@ -631,16 +668,39 @@ def _start_session(
         "repo_path": str(repo_path),
     }
 
+    # The takeover-lock acquire and release live inside the
+    # ``deferred_signals`` block so SIGTERM that arrives during the
+    # ``_acquire_takeover_lock`` polling loop is stashed by the context
+    # manager and replayed on exit. PEP 475 means ``time.sleep(0.05)``
+    # retries to completion across signals — the 50 ms cadence (not
+    # EINTR) is what bounds signal-response latency. The lock spans
+    # ``_check_concurrent_start`` (read-verify-clear) AND the subsequent
+    # ``write_runner_pid`` claim so the entire read-verify-claim
+    # critical section runs under one held lock; the re-verify under
+    # the held lock inside ``write_runner_pid``'s retry path is the
+    # load-bearing CAS that closes the documented unlink-then-recreate
+    # TOCTOU.
     with deferred_signals(coord):
-        ipc.write_runner_pid(
-            session_dir=session_dir,
-            pid=pid,
-            pgid=pgid,
-            start_time=start_time,
-            session_id=session_id,
-            repo_path=repo_path,
-        )
-        ipc.write_active_session(pid_data, phase="executing")
+        concurrent_err, lock_fd = _check_concurrent_start(session_dir)
+        if concurrent_err is not None:
+            print(concurrent_err, file=sys.stderr, flush=True)
+            return None, None, None
+        try:
+            ipc.write_runner_pid(
+                session_dir=session_dir,
+                pid=pid,
+                pgid=pgid,
+                start_time=start_time,
+                session_id=session_id,
+                repo_path=repo_path,
+                lock_fd=lock_fd,
+            )
+            ipc.write_active_session(pid_data, phase="executing")
+        finally:
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            finally:
+                os.close(lock_fd)
 
     events.log_event(
         events.SESSION_START,
@@ -1591,11 +1651,20 @@ def run(
     state = state_module.load_state(state_path)
     session_id = state.session_id
 
-    # Concurrent-start guard (spec Edge Cases + R8).
-    concurrent_err = _check_concurrent_start(session_dir)
-    if concurrent_err is not None:
-        print(concurrent_err, file=sys.stderr, flush=True)
-        return 1
+    # Dry-run concurrent-start guard. The non-dry-run path takes the
+    # locked, authoritative check inside ``_start_session`` (which
+    # propagates the held FD into ``write_runner_pid``). Dry-run skips
+    # ``_start_session`` entirely and never claims ``runner.pid``, so it
+    # only needs an advisory read-only check to fail fast when a live
+    # runner already owns the session.
+    if dry_run:
+        existing_pid_data = ipc.read_runner_pid(session_dir)
+        if (
+            existing_pid_data is not None
+            and ipc.verify_runner_pid(existing_pid_data)
+        ):
+            print("session already running", file=sys.stderr, flush=True)
+            return 1
 
     # Dry-run rejection with pending features (R15).
     if dry_run and _reject_dry_run_with_pending(state):
@@ -1654,6 +1723,11 @@ def run(
                 events_path=events_path,
                 coord=coord,
             )
+            if state is None:
+                # ``_start_session`` already printed
+                # "session already running" to stderr after detecting a
+                # live runner under the takeover lock.
+                return 1
         else:
             state = state_module.load_state(state_path)
 
