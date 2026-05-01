@@ -38,4 +38,5 @@ markers = [
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-repeat>=0.9.3",
 ]
