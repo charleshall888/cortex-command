@@ -40,3 +40,6 @@
 {"ts":"2026-05-01T18:39:02Z","event":"task_complete","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","task":10,"batch":1,"status":"success"}
 {"ts":"2026-05-01T18:39:02Z","event":"task_complete","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","task":11,"batch":1,"status":"success"}
 {"ts":"2026-05-01T18:39:02Z","event":"batch_dispatch","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","batch":2,"tasks":[4,5]}
+{"ts":"2026-05-01T18:52:30Z","event":"task_complete","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","task":4,"batch":2,"status":"success"}
+{"ts":"2026-05-01T18:52:30Z","event":"task_complete","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","task":5,"batch":2,"status":"success"}
+{"ts":"2026-05-01T18:52:30Z","event":"batch_dispatch","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","batch":3,"tasks":[7,9]}

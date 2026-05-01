@@ -59,7 +59,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: simple
 - **Context**: Existing `_check_concurrent_start` at `runner.py:570`. The `write_runner_pid` call site at `runner.py:630` is wrapped in `with deferred_signals(coord)` (line 629); the lock acquire and release must live inside that `with` block so SIGTERM during the polling loop is stashed and replayed on exit. PEP 475 means `time.sleep(0.05)` retries to completion across signals — the 50 ms cadence (not EINTR) is what bounds signal-response latency. With Task 3 in place, the `clear_runner_pid` call inside `_check_concurrent_start` (line 581) passes `expected_session_id` either as defense-in-depth or as `None` (the caller is already lock-covered).
 - **Verification**: `grep -nE '_acquire_takeover_lock' cortex_command/overnight/runner.py` returns at least one match AND `grep -nE 'lock_fd=lock_fd|lock_fd=' cortex_command/overnight/runner.py` returns at least one match AND `uv run pytest tests/test_runner_concurrent_start_race.py -x` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Add `--force` to cancel CLI; wire takeover lock through `handle_cancel` non-force path; map JSON error code
 
@@ -69,7 +69,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: simple
 - **Context**: `handle_cancel` exists at `cli_handler.py:378`. `args.force` does NOT currently exist on the cancel parser — Task 5 adds it. The two `clear_runner_pid` call sites in `handle_cancel` (`cli_handler.py:434, 456`) are updated by Task 3 to pass `expected_session_id`; this task only wraps the surrounding region with the lock for the non-force path. Pre-flight unlocked read at `cli_handler.py:178` (inside `handle_start`) is intentionally NOT modified — pre-flight is advisory; the authoritative serialization lives in Task 4's lock-covered `_check_concurrent_start`. `install_guard.py:74–104` runs a separate argparse instance that pre-parses argv to detect the `cancel ... --force` invocation form before `cli.py` imports — it is intentionally independent. After Task 5 lands, verify `install_guard.py`'s shadow parser still recognizes `--force` (it was authored with `cancel.add_argument("--force", action="store_true", default=False)` at `install_guard.py:88`; the canonical parser change here matches that shape, so no install_guard edit is required, but the parity should be confirmed).
 - **Verification**: `grep -B5 'add_argument.*"--force"' cortex_command/cli.py | grep -E 'cancel = overnight_sub.add_parser'` returns at least one match (confirms the new `--force` is in the cancel parser block, not elsewhere) AND `grep -nE '_acquire_takeover_lock' cortex_command/overnight/cli_handler.py` returns at least one match AND `grep -nE 'args\.force' cortex_command/overnight/cli_handler.py` returns at least one match AND `grep -nE '"lock_timeout"' cortex_command/overnight/cli_handler.py` returns at least one match AND `grep -nE 'add_argument\("--force"' cortex_command/install_guard.py` returns at least one match (confirms the shadow parser still has its `--force` definition, no inadvertent regression).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Replace `pid=0` stale fixture with portable spawn-and-kill
 
