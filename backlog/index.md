@@ -6,7 +6,7 @@
 | 82 | Adapt harness to Opus 4.7 (prompt delta + capability adoption) | backlog | high | epic | — | — | — |
 | 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
-| 149 | Fix runner.pid takeover race in ipc.py:write_runner_pid | refined | medium | bug | — | — | ✓ |
+| 149 | Fix runner.pid takeover race in ipc.py:write_runner_pid | in_progress | medium | bug | — | — | ✓ |
 | 90 | Adopt xhigh effort default for overnight lifecycle implement | refined | low | feature | — | 82 | ✓ |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | refined | low | chore | — | 82 | ✓ |
 | 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | refined | low | feature | — | — | ✓ |
@@ -16,7 +16,6 @@
 ## Refined
 
 - **128** Install pre-commit hook rejecting main commits during overnight sessions
-- **149** Fix runner.pid takeover race in ipc.py:write_runner_pid
 - **90** Adopt xhigh effort default for overnight lifecycle implement
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
 - **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release
@@ -30,6 +29,7 @@
 ## In-Progress
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
+- **149** Fix runner.pid takeover race in ipc.py:write_runner_pid (in_progress)
 
 ## Warnings
 

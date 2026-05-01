@@ -1,0 +1,33 @@
+- ts: 2026-04-29T16:32:27Z
+  event: clarify_critic
+  feature: fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid
+  findings:
+    - "The assessment rates intent clarity HIGH and asserts the success criterion is named (existing xfail passes 100/100 + 1000/1000 with pytest-repeat), but the source places that criterion under 'Proposed lifecycle' as a 'Stress test target,' not as a fixed acceptance gate, and the ticket explicitly directs /cortex-interactive:refine first because 'the design tradeoffs above are real and warrant a research+spec phase.'"
+    - "The assessment narrows the goal to 'eliminate the TOCTOU race in write_runner_pid's unlink-and-retry path,' but the source describes failure modes any chosen fix must navigate beyond the documented Thread A/B race: takeover-lock 'leaks the takeover lock at a fixed path; future starts can't take over a stale claim until manual cleanup,' and rename-CAS variants risk a window where 'a third thread takes over and writes a live claim.' The actual goal is 'eliminate this race without introducing a stale-lock-leak regression or a new takeover-of-live-claim window.'"
+    - "Scope boundedness HIGH frames 'takeover path only vs all runner.pid access' as merely 'a research question,' but the source flags this as an explicit fork: 'Decide scope: takeover path only, or all runner.pid access' and the recommended primitive 'deserves its own design phase that decides whether ipc.py switches locking models repo-wide or only for the takeover path.' A repo-wide locking-model switch is not bounded scope; labeling it 'a research question' concedes scope is unbounded."
+    - "Scope boundedness HIGH locates the problem at write_runner_pid's takeover path, but the source explicitly anticipates cross-cutting work: 'macOS vs Linux flock behavior verification (may need a small platform-test harness)' and review of 'macOS-specific flock semantics against the existing psutil-based liveness check.' A platform-test harness and re-review of psutil liveness are neither in write_runner_pid nor in the takeover path; the assessment's own 'multi-file impact possible' note contradicts its scope-HIGH rationale."
+    - "Requirements alignment HIGH on the basis that 'this ticket continues the same hardening line' is a narrative claim, not an alignment check. The source never quotes pipeline.md, never establishes that pipeline.md sanctions a primitive change (fcntl.flock or sidecar .takeover file), and never confirms the documented IPC contract permits new on-disk artifacts or repo-wide primitive switches. 'No conflict' is asserted by analogy rather than by citation."
+    - "Complexity rated 'complex' with rationale 'primitive choice has cross-platform implications, multi-file impact possible' is in tension with scope-HIGH on the same source material. If primitive choice has cross-platform implications and multi-file impact is possible — both drawn from 'macOS vs Linux flock behavior verification' and the repo-wide-vs-takeover-only fork — then scope is not bounded to one function; the HIGH rating relabels the unresolved scope fork as 'a research question' rhetorically."
+  dispositions:
+    apply: 4
+    dismiss: 1
+    ask: 1
+  applied_fixes:
+    - "Refined the clarified intent to include avoidance of the regression modes flagged in the tradeoff table (stale-lock-leak at fixed path; takeover-of-live-claim window). The fix must close the documented race without opening these adjacent failure modes (Finding 1)."
+    - "Downgraded scope boundedness from HIGH to LOW. The ticket itself flags 'takeover path only vs all runner.pid access' and a contingent platform-test harness as open scope decisions. These are scope forks, not research questions — they will be folded into the §4 Q&A (Findings 2, 3, 5)."
+    - "Refined requirements alignment from 'Aligned' to 'No conflict — pipeline.md documents the current runner.pid IPC contract but is silent on primitive choice and does not prohibit sidecar artifacts.' Self-resolved against the requirements text: the contract is described as JSON-payload + atomic-write but does not constrain locking mechanism, so a new primitive or sidecar file would extend rather than conflict (Finding 4)."
+  dismissals:
+    - finding_index: 0
+      rationale: "The 100/1000 stress-test target is appropriately a spec-phase exit criterion; clarify intent measures whether the goal is unambiguous, not whether the exit-bar is locked. The goal — eliminate the documented race — is unambiguous; finalizing the bar is downstream of primitive choice and belongs to the spec-phase requirements interview."
+  status: ok
+- ts: 2026-04-29T19:59:40Z
+  event: orchestrator_review
+  feature: fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+{"ts":"2026-05-01T14:45:36Z","event":"lifecycle_start","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","tier":"complex","criticality":"high"}
+{"ts":"2026-05-01T14:49:42Z","event":"orchestrator_review","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","phase":"plan","verdict":"pass","cycle":1,"issues":[]}
+{"ts":"2026-05-01T15:56:59Z","event":"orchestrator_review","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","phase":"plan","verdict":"pass","cycle":2,"issues":[]}
+{"ts":"2026-05-01T18:03:27Z","event":"phase_transition","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","from":"plan","to":"implement"}
