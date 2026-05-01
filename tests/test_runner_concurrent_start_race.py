@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -61,17 +63,48 @@ def _alive_pid_payload(session_dir: Path, session_id: str) -> dict:
     }
 
 
+def _reaped_dead_pid() -> int:
+    """Return a PID that was alive but is now reaped and confirmed dead.
+
+    Spawns a short-lived ``python -c "pass"`` subprocess, waits for the
+    kernel to reap it, then asserts ``psutil.Process(pid)`` raises
+    ``psutil.NoSuchProcess`` to defend against PID recycle on busy
+    hosts. Retries up to 3 times before failing the test with a clear
+    test-side message. Works identically on macOS and Linux.
+    """
+    last_err: Exception | None = None
+    for _ in range(3):
+        proc = subprocess.Popen([sys.executable, "-c", "pass"])
+        pid = proc.pid
+        proc.wait()  # ensure the kernel has reaped it
+        try:
+            psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            return pid
+        except Exception as exc:  # noqa: BLE001 — surface unexpected errors
+            last_err = exc
+            continue
+        # PID was recycled to a live process between wait() and now; retry.
+    raise AssertionError(
+        "test fixture: could not obtain a reaped-dead PID after 3 attempts "
+        f"(last error: {last_err!r})"
+    )
+
+
 def _stale_pid_payload(session_dir: Path, session_id: str) -> dict:
     """Return a runner.pid payload pointing at a guaranteed-dead PID.
 
-    PID 0 is reserved on POSIX; ``psutil.Process(0)`` raises
-    ``NoSuchProcess`` so :func:`verify_runner_pid` returns ``False``.
+    Uses :func:`_reaped_dead_pid` to obtain a PID that was alive but is
+    now reaped and confirmed dead via ``psutil.NoSuchProcess``. The
+    ``start_time`` is fixed at the Unix epoch so it falls definitionally
+    outside the ±2 s tolerance window in :func:`verify_runner_pid`.
     """
+    dead_pid = _reaped_dead_pid()
     return {
         "schema_version": 1,
         "magic": "cortex-runner-v1",
-        "pid": 0,
-        "pgid": 0,
+        "pid": dead_pid,
+        "pgid": dead_pid,
         "start_time": "1970-01-01T00:00:00+00:00",
         "session_id": session_id,
         "session_dir": str(session_dir),
@@ -174,7 +207,8 @@ def test_two_starters_with_stale_preexisting_lock(tmp_path: Path) -> None:
     """
     session_id = "2026-04-24-12-00-01"
 
-    # Pre-seed a stale runner.pid (pid=0 is guaranteed dead per psutil).
+    # Pre-seed a stale runner.pid using a spawned-then-reaped PID
+    # (confirmed dead via psutil.NoSuchProcess; see _reaped_dead_pid).
     stale = _stale_pid_payload(tmp_path, "stale-prior-run")
     (tmp_path / "runner.pid").write_text(json.dumps(stale))
 
