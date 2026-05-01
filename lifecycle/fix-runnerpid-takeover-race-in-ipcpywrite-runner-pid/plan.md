@@ -49,7 +49,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: complex
 - **Context**: Existing `clear_runner_pid` at `ipc.py:215–217` is an unconditional unlink with `FileNotFoundError` rescue. Adding the CAS path requires a `read_runner_pid` call before unlink; the existing `read_runner_pid` at `ipc.py:220` already returns `None` on missing/corrupt — match that semantics by no-op'ing when read returns `None` or session_id mismatches. The signature stays backwards-compatible: `clear_runner_pid(session_dir: Path, expected_session_id: str | None = None) -> None`. Caller-site search confirmed sites enumerated above; no other callers exist in production code (`grep -rn "clear_runner_pid" cortex_command/ tests/` is the way to confirm before editing).
 - **Verification**: `grep -nE 'def clear_runner_pid' cortex_command/overnight/ipc.py` returns exactly one match AND `grep -E 'expected_session_id' cortex_command/overnight/ipc.py` returns at least two matches (signature + body) AND `grep -nE 'clear_runner_pid\(session_dir, expected_session_id=' cortex_command/overnight/runner.py cortex_command/overnight/cli_handler.py` returns at least four matches (covering 540, 1536, 434, 456) AND `uv run pytest tests/test_runner_concurrent_start_race.py -x` exits 0 AND `uv run pytest tests/test_ipc_verify_runner_pid.py -x` exits 0 (regression coverage).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Wire takeover lock through `_check_concurrent_start`
 
@@ -119,7 +119,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: simple
 - **Context**: Existing doc location at `docs/overnight-operations.md:212`. The discipline rules describe an obligation each future code site must honor (a passive doc paragraph cannot prevent a `*.lock` glob from matching the lockfile — only the glob caller's exclusion logic can); the rule's framing in this doc is "every production module other than `ipc.py` MUST NOT do X to this path", and Task 11 is the gate that enforces it. Audit at `cortex_command/overnight/daytime_pipeline.py:152` shows the existing `*.lock` rglob targets per-feature `worktree_path`, not session_dir, so the two paths do not currently overlap.
 - **Verification**: `grep -nE 'runner\.pid\.takeover\.lock' docs/overnight-operations.md` returns at least one match AND `grep -cE 'never written|never unlinked|never durable_fsync|never.*\*\.lock' docs/overnight-operations.md` returns at least 3 (one per discipline obligation).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Static gate test for `.runner.pid.takeover.lock` discipline
 
@@ -129,7 +129,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: simple
 - **Context**: Pattern reference: `tests/test_check_parity.py` (existing static gate for SKILL.md-to-bin parity). Implementation shape: walk `cortex_command/` recursively, read each `.py` file, scan lines for the literal substring `runner.pid.takeover.lock`, collect violations; assert empty violations list with a clear message naming each violating file:line. The test is fast (<1s) and runs as part of the default `just test` gate via the existing pytest collection.
 - **Verification**: `grep -nE 'def test_takeover_lock_discipline' tests/test_takeover_lock_discipline.py` returns at least one match AND `uv run pytest tests/test_takeover_lock_discipline.py -x` exits 0 (passes when only `cortex_command/overnight/ipc.py` references the path) AND introducing a synthetic violation (e.g., temporarily adding the substring to `cortex_command/overnight/runner.py`) causes the test to fail with a violation-naming message — restore the file before committing.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
