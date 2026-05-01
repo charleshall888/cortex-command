@@ -50,3 +50,4 @@
 {"ts":"2026-05-01T19:12:42Z","event":"phase_transition","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","tier":"complex","from":"implement","to":"review"}
 {"ts":"2026-05-01T19:18:14Z","event":"review_verdict","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","verdict":"APPROVED","cycle":1,"requirements_drift":"none"}
 {"ts":"2026-05-01T19:18:14Z","event":"phase_transition","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","from":"review","to":"complete"}
+{"ts":"2026-05-01T19:20:50Z","event":"feature_complete","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","tasks_total":11,"rework_cycles":0}

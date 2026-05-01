@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 7904d493-5986-459b-8bc2-b3bb3e125b7c
 title: "Fix runner.pid takeover race in ipc.py:write_runner_pid"
-status: in_progress
+status: complete
 priority: medium
 type: bug
 tags: [overnight, runner, concurrency, ipc]
@@ -12,7 +12,7 @@ updated: 2026-05-01
 complexity: complex
 criticality: high
 spec: lifecycle/fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid/spec.md
-session_id: 85b945e4-96a9-46f9-a4f4-89d9c47ff12d
+session_id: null
 lifecycle_phase: implement
 ---
 
