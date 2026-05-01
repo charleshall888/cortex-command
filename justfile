@@ -413,6 +413,7 @@ test:
     run_test "test-init" just test-init
     run_test "test-install" bash tests/test_install.sh
     run_test "tests" .venv/bin/pytest tests/ -q
+    run_test "tests-takeover-stress" .venv/bin/pytest tests/test_runner_concurrent_start_race.py::test_two_starters_with_stale_preexisting_lock --count=50 -p no:cacheprovider -q
     total=$((passed + failed))
     echo ""
     echo "Test suite: $passed/$total passed"
