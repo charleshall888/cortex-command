@@ -31,3 +31,7 @@
 {"ts":"2026-05-01T14:49:42Z","event":"orchestrator_review","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","phase":"plan","verdict":"pass","cycle":1,"issues":[]}
 {"ts":"2026-05-01T15:56:59Z","event":"orchestrator_review","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","phase":"plan","verdict":"pass","cycle":2,"issues":[]}
 {"ts":"2026-05-01T18:03:27Z","event":"phase_transition","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","from":"plan","to":"implement"}
+{"ts":"2026-05-01T18:08:53Z","event":"batch_dispatch","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","batch":0,"tasks":[1,2,6]}
+{"ts":"2026-05-01T18:30:33Z","event":"task_complete","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","task":1,"batch":0,"status":"success"}
+{"ts":"2026-05-01T18:30:33Z","event":"task_complete","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","task":2,"batch":0,"status":"success"}
+{"ts":"2026-05-01T18:30:33Z","event":"task_complete","feature":"fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid","task":6,"batch":0,"status":"success"}

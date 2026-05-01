@@ -14,7 +14,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: simple
 - **Context**: Add the entry under `[project.optional-dependencies] dev` (or the equivalent dev/test extras section in `pyproject.toml`) in the same alphabetical/grouped position as adjacent test deps. After `uv sync` the import name is `pytest_repeat`.
 - **Verification**: `grep -nE 'pytest-repeat' pyproject.toml` returns at least one match AND `uv run python -c "import pytest_repeat; print(pytest_repeat.__version__)"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add `_acquire_takeover_lock` helper, `ConcurrentRunnerLockTimeoutError`, and `lock_fd` parameter on `write_runner_pid`
 
@@ -34,7 +34,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
           os.close(fd)
   ```
 - **Verification**: `grep -nE 'def _acquire_takeover_lock' cortex_command/overnight/ipc.py` returns exactly one match AND `grep -nE 'class ConcurrentRunnerLockTimeoutError\b' cortex_command/overnight/ipc.py` returns exactly one match AND `grep -nE 'fcntl\.flock\(.*LOCK_EX *\| *LOCK_NB' cortex_command/overnight/ipc.py` returns exactly one match AND `grep -nE 'takeover lock acquire timed out' cortex_command/overnight/ipc.py` returns at least one match AND `grep -E 'lock_fd: int \| None = None' cortex_command/overnight/ipc.py` returns at least one match AND `grep -nE 'write|unlink|fsync|f_fullfsync' cortex_command/overnight/ipc.py | grep -i 'takeover\.lock'` returns zero matches.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Make `clear_runner_pid` session-aware (CAS); thread `expected_session_id` through every caller
 
@@ -79,7 +79,7 @@ Adopt `fcntl.flock` on a sibling `.runner.pid.takeover.lock` to serialize the re
 - **Complexity**: simple
 - **Context**: Existing `_stale_pid_payload` helper at `tests/test_runner_concurrent_start_race.py:64`. Existing misleading comment at line 187 inside `test_two_starters_with_stale_preexisting_lock`. The fixture must work identically on macOS and Linux without conditional branches. `subprocess`, `sys`, and `psutil` are already imported in this test module — confirm by reading the top of the file before editing.
 - **Verification**: `grep -nE '"pid": 0|pid=0' tests/test_runner_concurrent_start_race.py` returns zero matches AND `grep -nE 'NoSuchProcess' tests/test_runner_concurrent_start_race.py` returns at least one match AND `uv run pytest tests/test_runner_concurrent_start_race.py -x` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Remove `xfail`; wire `--count=50` recurring gate into `just test`
 
