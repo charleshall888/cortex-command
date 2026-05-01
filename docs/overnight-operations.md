@@ -207,15 +207,26 @@ Behavior: scan the state file for features whose status is `running`. For each, 
 
 The reset is conservative: `interrupt.py` never changes features in `complete`, `failed`, or `deferred` states, so an ambiguous `running` row is the only trigger. If the state file is missing or malformed, `interrupt.py` exits cleanly with a logged warning — it cannot create state, only reconcile it.
 
-### Runner Lock (.runner.lock)
+### Runner concurrency guard (runner.pid + .runner.pid.takeover.lock)
 
-`cortex_command/overnight/runner.sh` writes its own PID to `$SESSION_DIR/.runner.lock` (i.e. `lifecycle/sessions/{id}/.runner.lock`) before entering the round loop, and relies on it to serialize runners against the same session.
+The legacy `$SESSION_DIR/.runner.lock` PID file written by the retired `runner.sh` no longer exists — `runner.sh` was retired in favor of the `cortex overnight {start|status|cancel|logs}` Python CLI per `requirements/pipeline.md:28`. The runner-concurrency guard is now the per-session `runner.pid` JSON artifact written by `cortex_command/overnight/ipc.py` plus a sibling `flock`-based lockfile that serializes the read-verify-claim critical section.
 
-**Files**: `cortex_command/overnight/runner.sh` (the "Concurrency guard" block that sets `LOCK_FILE`).
+**Files**: `cortex_command/overnight/ipc.py` (`_acquire_takeover_lock`, `_check_concurrent_start`, `write_runner_pid`, `verify_runner_pid`, `handle_cancel`).
 
-**Inputs**: `$SESSION_DIR` derived from the resolved state path.
+**Inputs**: `session_dir` (`lifecycle/sessions/{id}/`).
 
-Behavior: at startup, if `.runner.lock` already exists, `runner.sh` reads the PID and runs `kill -0 $LOCK_PID` to test liveness. A live PID causes an immediate abort with a message pointing at `tmux attach -t overnight-runner`; a dead PID (orphaned after SIGKILL, crash, or reboot) is treated as stale, logged, and overwritten. The file content is just the bare PID — no JSON, no timestamp — so `cat .runner.lock` is the debugging move. The lock is not removed on clean exit; a fresh startup always overwrites whatever PID is there, which means a stale lock never blocks the next session and the check exists only to prevent *two concurrent* runners, not to assert cleanup hygiene.
+`runner.pid` carries the magic header, schema version, session id, OS pid, and `start_time` that `verify_runner_pid` cross-checks against `psutil.Process.create_time()` before any signal is sent.
+
+`{session_dir}/.runner.pid.takeover.lock` is a sibling lockfile whose sole purpose is to serialize the read-verify-claim critical section across `_check_concurrent_start`, `write_runner_pid`, and the non-force path of `handle_cancel`. The file is `O_CREAT | O_RDWR`'d at mode `0o600` and held under `fcntl.flock(LOCK_EX | LOCK_NB)` with a 5-second polling budget; only the kernel `flock` state is load-bearing, the file content is unused.
+
+Discipline obligations on every future production code site (the static gate at Task 11 enforces these):
+
+- The lockfile is **never written** to by any production module other than `ipc.py:_acquire_takeover_lock`. Production code never appends, truncates, or otherwise modifies its bytes.
+- The lockfile is **never unlinked** by production code. `clear_runner_pid` removes `runner.pid` but leaves the takeover lockfile in place; the file persists for the lifetime of the session directory.
+- The lockfile is **never durable_fsync**'d (nor `os.fsync`'d, `F_FULLFSYNC`'d, or otherwise flushed for durability). It carries no content worth persisting — kernel `flock` state is in-memory coordination, not durable file content.
+- The lockfile must **never be matched by a `*.lock` glob** in any auto-cleanup, archival, or worktree-teardown sweep outside `ipc.py`. The audit at `cortex_command/overnight/daytime_pipeline.py:152` shows that today's `*.lock` rglob targets per-feature `worktree_path` rather than `session_dir`, so the two paths do not currently overlap; future glob callers must keep that invariant or explicitly exclude `.runner.pid.takeover.lock`.
+
+The file persists indefinitely under current archival policy: this project does not auto-archive `lifecycle/sessions/`, so directories (and their lockfiles) accumulate until manually cleaned. After a reboot the kernel `flock` state is gone but the 0-byte file remains; the next runner reopens it on a fresh inode-with-no-locks and acquires immediately. This is benign for correctness and is the documented backwards-compat / rollback path.
 
 ### Scheduled Launch subsystem
 
