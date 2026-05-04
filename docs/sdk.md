@@ -67,6 +67,50 @@ async for message in query(prompt=task, options=options):
 
 Max turns and budget scale on the complexity axis only; criticality affects model selection.
 
+**Effort selection matrix (`_EFFORT_MATRIX`):**
+
+Effort is resolved centrally in `cortex_command/pipeline/dispatch.py` via `resolve_effort(complexity, criticality, skill, model)`. The 2D `_EFFORT_MATRIX` constant replaces the legacy 1D `EFFORT_MAP` (which keyed only on complexity). The matrix has 12 cells (3 complexity × 4 criticality):
+
+| (complexity, criticality) | Resolved model | Effort |
+|---|---|---|
+| (trivial, low) | haiku | low |
+| (trivial, medium) | haiku | low |
+| (trivial, high) | sonnet | high |
+| (trivial, critical) | sonnet | high |
+| (simple, low) | sonnet | high |
+| (simple, medium) | sonnet | high |
+| (simple, high) | sonnet | high |
+| (simple, critical) | sonnet | high |
+| (complex, low) | sonnet | high |
+| (complex, medium) | sonnet | high |
+| (complex, high) | opus | xhigh |
+| (complex, critical) | opus | xhigh |
+
+`xhigh` aligns with Anthropic's Opus 4.7 guidance (*"Start with `xhigh` for coding and agentic use cases"*). Effort is a behavioral signal that caps the *maximum* reasoning depth — the model adapts thinking down for simpler tasks rather than always spending the full ceiling.
+
+**Skill-based effort overrides (applied after matrix lookup, gated on resolved model == "opus"):**
+
+| Skill | Effort override | Applies when |
+|---|---|---|
+| `review-fix` | max | Resolved post-`model_override` model is opus; otherwise the matrix value applies |
+| `integration-recovery` | max | Resolved post-`model_override` model is opus. The dispatch site at `integration_recovery.py` forces `model_override="opus"`, so this override fires reliably for every integration-recovery dispatch. |
+
+The `model` argument to `resolve_effort` is the *effective* model — `model_override` (passed by callers like `merge_recovery.py` and `conflict.py`) takes precedence over `_MODEL_MATRIX` resolution before the override gate is evaluated. All other skills (`implement`, `review`, `conflict-repair`, `merge-test-repair`, `brain`) use the matrix value with no override.
+
+**Coverage caveat — `review-fix → max` fires for ~25% of review-fix dispatches.** `requires_review()` returns true for `(complex, *) OR (*, high|critical)` — six cells trigger review. Of these, only `(complex, high)` and `(complex, critical)` resolve to Opus; the remaining four resolve to Sonnet. So the `review-fix → max` override only fires for that ~25% subset; the other ~75% of review-fix dispatches run on Sonnet at the matrix value (`high`). Operators reading aggregate cost metrics should account for this when interpreting per-skill cost shape.
+
+**Effort vocabulary support per model:**
+
+| Model | Supported effort levels |
+|---|---|
+| haiku | low, medium, high (xhigh/max unverified — assume not supported) |
+| sonnet | low, medium, high, max (xhigh NOT supported — silently downgrades) |
+| opus 4.7 | low, medium, high, xhigh, max |
+
+The matrix and overrides are designed so no cell + override combination requests `xhigh` on a non-Opus model. A runtime guard in `resolve_effort` asserts this invariant and raises `AssertionError` at dispatch time if violated, surfacing as a feature-level pause via the existing dispatch error path.
+
+For the post-flip rollback monitoring procedure (querying `metrics.json` per-effort cost buckets, the >2× threshold for human investigation, and the matrix-flip revert path), see [overnight-operations.md](overnight-operations.md).
+
 **Error classification and recovery:**
 
 Classification is heuristic — triggers are substring matches against lowercased agent output, not structured signals. Misclassification is possible, particularly for refusals (Claude's refusal language varies across model versions) and test failures (any output mentioning "pytest" matches, including success messages).
