@@ -458,7 +458,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
 
     # Write batch result (include throttle stats)
     result_path = config.result_dir / f"batch-{config.batch_id}-results.json"
-    save_batch_result(batch_result, result_path, extra_fields={"throttle_stats": manager.stats})
+    save_batch_result(batch_result, result_path)
 
     overnight_log_event(
         BATCH_COMPLETE,
