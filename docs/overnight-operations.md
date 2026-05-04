@@ -87,7 +87,7 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 | `batch_plan.py` | Per-batch master plan generation; maps pipeline results back to overnight state |
 | `batch_runner.py` | Batch execution: dispatches pipeline workers, handles deferrals, merges |
 | `brain.py` | Post-retry triage agent (SKIP/DEFER/PAUSE decisions via Claude API) |
-| `throttle.py` | Subscription-aware `ConcurrencyManager` with adaptive rate-limit backoff |
+| `throttle.py` | Subscription-aware ConcurrencyManager enforcing tier-bound concurrency cap |
 | `interrupt.py` | Startup recovery: resets `running` features to `pending` with reason logging |
 | `deferral.py` | Question deferral file writer (blocking/non-blocking/informational) |
 | `report.py` | Morning report generator (reads state + events + deferrals) |
@@ -278,7 +278,7 @@ The `--tier` CLI flag on `batch_runner.py` selects a throttle profile. Accepted 
 
 Defaults live in `cortex_command/overnight/throttle.py` (`load_throttle_config`); the tier value is wired through `BatchConfig.throttle_tier` and consumed by `ConcurrencyManager`. The limit is a hard ceiling — agents cannot raise it at runtime (orchestrator owns parallelism; agents never spawn peer agents).
 
-Adaptive downshift: `report_rate_limit()` prunes a 300-second sliding window; after 3 rate-limit events the effective concurrency drops by 1 (floor of 1). `report_success()` restores the shift after 10 consecutive successes. The escalation ladder itself (haiku → sonnet → opus) does not downgrade.
+Rate-limit pauses are routed through the pipeline api_rate_limit → pause_session path; no in-process shrinkage.
 
 Tune by matching your API plan's parallelism ceiling to the tier. Picking `max_200` on a plan only capable of `max_5` throughput starves into the adaptive downshift before the first round finishes.
 
