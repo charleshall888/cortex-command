@@ -176,6 +176,35 @@
     "repo": null
   },
   {
+    "id": 157,
+    "title": "Empirically test rules-file tone leverage under Opus 4.7+",
+    "status": "backlog",
+    "priority": "low",
+    "type": "chore",
+    "tags": [
+      "opus-4-7-harness-adaptation",
+      "policy"
+    ],
+    "areas": [],
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "blocks": [],
+    "blocked_by": [
+      "91"
+    ],
+    "parent": "82",
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "4ca8d1fe-5592-47b2-9d63-d748d499167f",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 142,
     "title": "Multi-session host concurrency registry for cortex overnight",
     "status": "backlog",

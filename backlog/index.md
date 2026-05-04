@@ -8,6 +8,7 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | in_progress | low | chore | — | 82 | ✓ |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | backlog | low | feature | — | — | — |
+| 157 | Empirically test rules-file tone leverage under Opus 4.7+ | backlog | low | chore | 91 | 82 | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
 
 ## Refined
