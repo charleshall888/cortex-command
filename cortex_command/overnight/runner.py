@@ -498,6 +498,100 @@ def _commit_followup_in_worktree(
         pass
 
 
+def _commit_morning_report_in_repo(
+    project_root: Path,
+    session_id: str,
+    events_path: Path,
+) -> None:
+    """Commit ``lifecycle/morning-report.md`` to local main from the runner.
+
+    Ports the morning-report runner-side commit step from the legacy
+    ``runner.sh`` (Req 9 of the
+    install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions
+    spec). The function runs in the runner process — not in any spawned
+    child — so the subprocess inherits the runner's ``os.environ`` which
+    contains no ``CORTEX_RUNNER_CHILD``. Phase 0 therefore does not fire
+    and the legitimate runner-direct commit is allowed to land on local
+    ``main``.
+
+    Stages only the tracked top-level copy ``lifecycle/morning-report.md``
+    (the load-bearing path per ticket 129's relocation). The per-session
+    path ``lifecycle/sessions/<session_id>/morning-report.md`` is
+    intentionally skipped: it is gitignored at ``.gitignore:41`` by design
+    as a session-archive artifact, so attempting to ``git add`` it would
+    be a no-op without ``-f`` and the archive is not meant to land in
+    history.
+
+    On non-zero ``git commit`` exit, emits a structured
+    ``morning_report_commit_failed`` event to ``events_path``; on success
+    emits ``morning_report_commit_result``. All exceptions are swallowed
+    to preserve the same best-effort contract as ``_generate_morning_report``.
+    """
+    env = {k: v for k, v in os.environ.items() if k != "GIT_DIR"}
+    try:
+        subprocess.run(
+            ["git", "add", "lifecycle/morning-report.md"],
+            cwd=str(project_root),
+            env=env,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        diff = subprocess.run(
+            ["git", "diff", "--cached", "--quiet"],
+            cwd=str(project_root),
+            env=env,
+            check=False,
+        )
+        if diff.returncode == 0:
+            return
+        commit_result = subprocess.run(
+            [
+                "git",
+                "commit",
+                "-m",
+                f"Overnight session {session_id}: morning report",
+            ],
+            cwd=str(project_root),
+            env=env,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if commit_result.returncode == 0:
+            try:
+                events.log_event(
+                    events.MORNING_REPORT_COMMIT_RESULT,
+                    round=0,
+                    details={
+                        "session_id": session_id,
+                        "project_root": str(project_root),
+                        "outcome": "committed",
+                    },
+                    log_path=events_path,
+                )
+            except Exception:
+                pass
+        else:
+            try:
+                events.log_event(
+                    events.MORNING_REPORT_COMMIT_FAILED,
+                    round=0,
+                    details={
+                        "session_id": session_id,
+                        "project_root": str(project_root),
+                        "returncode": commit_result.returncode,
+                        "stderr": commit_result.stderr,
+                    },
+                    log_path=events_path,
+                )
+            except Exception:
+                pass
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
 # ---------------------------------------------------------------------------
 # Cleanup (R14)
 # ---------------------------------------------------------------------------
@@ -1622,6 +1716,7 @@ def _post_loop(
             repo_path=repo_path,
             events_path=events_path,
         )
+        _commit_morning_report_in_repo(repo_path, session_id, events_path)
 
         # Commit followup backlog items to worktree (runner.sh:1491-1504).
         try:
