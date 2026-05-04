@@ -228,6 +228,39 @@ Discipline obligations on every future production code site (the static gate at 
 
 The file persists indefinitely under current archival policy: this project does not auto-archive `lifecycle/sessions/`, so directories (and their lockfiles) accumulate until manually cleaned. After a reboot the kernel `flock` state is gone but the 0-byte file remains; the next runner reopens it on a fresh inode-with-no-locks and acquires immediately. This is benign for correctness and is the documented backwards-compat / rollback path.
 
+### Scheduled Launch (LaunchAgent-based scheduler)
+
+`cortex overnight schedule <target>` schedules a single overnight run at a future time without requiring tmux or a persistent shell session. Under the hood it delegates to `MacOSLaunchAgentBackend.schedule()`, which renders a plist into `$TMPDIR/cortex-overnight-launch/`, writes a paired bash launcher alongside it, and calls `launchctl bootstrap gui/$(id -u)` to register the job with launchd. At fire time launchd executes the launcher, which detaches `cortex overnight start --launchd` into its own process group. No tmux session is created or required; the runner writes its own `runner.pid` artifact and operates identically to a manually-launched session.
+
+**Usage**:
+
+```sh
+# Schedule for a specific time (ISO-8601 or plain HH:MM on today's date)
+cortex overnight schedule 23:30
+
+# List pending scheduled runs
+cortex overnight schedule --list
+
+# Cancel a pending scheduled run
+cortex overnight schedule --cancel
+```
+
+**Operational caveats**:
+
+- **Machine must be powered on and awake at fire time.** macOS lid-close sleep suspends launchd job firing. A laptop closed before the scheduled time will not fire until the machine wakes — by which point the scheduled time has passed and the job will not retry. Keep the machine powered on and not sleeping (display sleep is fine; system sleep is not).
+- **Locked screen is fine.** A locked screen does not block launchd execution; scheduled runs fire normally when the screen is locked.
+- **Reboot drops pending schedules.** launchd's bootstrap namespace is rebuilt on each boot from persistent plist sources in `/Library/LaunchAgents/` and `~/Library/LaunchAgents/`; cortex registers into the per-session `gui/$(id -u)` namespace using plists in `$TMPDIR`, which is not persisted across reboots. After a reboot, re-schedule any pending runs with `cortex overnight schedule <target>`.
+- **SSH and headless contexts are not supported.** The LaunchAgent backend targets the logged-in GUI session (`gui/$(id -u)`). Running `cortex overnight schedule` over SSH or in a headless CI context where no GUI session exists will fail at bootstrap time.
+
+**TCC / Full Disk Access requirement**: the cortex binary needs Full Disk Access on macOS to read and write `lifecycle/` paths during overnight execution. Grant access to the binary path printed by `which cortex` in **System Settings → Privacy & Security → Full Disk Access**. TCC authorization is not checked at schedule time — a missing grant surfaces only at fire time as a fail marker in the morning report, not as an error when you run `cortex overnight schedule`.
+
+**Cancel and list**:
+
+```sh
+cortex overnight schedule --list    # show pending LaunchAgent jobs and their fire times
+cortex overnight schedule --cancel  # unbootstrap and remove the pending job
+```
+
 ---
 
 ## Code Layout
