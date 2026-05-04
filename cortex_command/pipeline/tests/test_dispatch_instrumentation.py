@@ -432,5 +432,149 @@ class TestActivityLogJSONL(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(log_path.exists())
 
 
+# ---------------------------------------------------------------------------
+# Module-level async tests for stop_reason / dispatch_truncation (Task 5).
+#
+# Placed as module-level functions (not class methods) so the
+# `pytest <file>::<name>` selector in the spec verification command works
+# without a class prefix. Use pytest.mark.asyncio via asyncio.run inside
+# a sync wrapper to keep the unittest module structure intact.
+# ---------------------------------------------------------------------------
+
+
+def test_max_tokens_truncation_emits_dispatch_truncation_event_via_dispatch_task():
+    """SDK-path: stop_reason=='max_tokens' emits dispatch_truncation BEFORE dispatch_complete.
+
+    Mocks a ``ResultMessage(stop_reason="max_tokens", ...)`` and asserts that
+    a ``dispatch_truncation`` event is logged before ``dispatch_complete``,
+    and that ``dispatch_complete`` carries ``stop_reason`` per spec Req #8.
+    """
+    import asyncio
+
+    async def _run():
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "pipeline-events.log"
+
+            assistant_msg = AssistantMessage(
+                content=[TextBlock(text="partial output before truncation")],
+                model="opus",
+            )
+            result_msg = ResultMessage(
+                subtype="success",
+                duration_ms=900,
+                duration_api_ms=850,
+                is_error=False,
+                num_turns=1,
+                session_id="sess-trunc",
+                total_cost_usd=0.02,
+                stop_reason="max_tokens",
+            )
+
+            async def mock_query(**kwargs):
+                async for m in _async_gen(assistant_msg, result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="test-feat",
+                    task="task that gets truncated",
+                    worktree_path=Path(tmp),
+                    complexity="complex",
+                    criticality="high",
+                    system_prompt="",
+                    log_path=log_path,
+                    skill="implement",
+                )
+
+            events = _read_jsonl(log_path)
+            event_types = [e["event"] for e in events]
+            assert "dispatch_truncation" in event_types, (
+                f"expected dispatch_truncation in events, got {event_types}"
+            )
+            assert "dispatch_complete" in event_types, (
+                f"expected dispatch_complete in events, got {event_types}"
+            )
+            # Truncation must come BEFORE complete.
+            trunc_idx = event_types.index("dispatch_truncation")
+            complete_idx = event_types.index("dispatch_complete")
+            assert trunc_idx < complete_idx, (
+                f"dispatch_truncation must precede dispatch_complete; got order {event_types}"
+            )
+
+            trunc_evt = next(e for e in events if e["event"] == "dispatch_truncation")
+            assert trunc_evt["feature"] == "test-feat"
+            assert trunc_evt["stop_reason"] == "max_tokens"
+            assert "model" in trunc_evt
+            assert "effort" in trunc_evt
+
+            complete_evt = next(e for e in events if e["event"] == "dispatch_complete")
+            assert complete_evt["stop_reason"] == "max_tokens"
+
+    asyncio.run(_run())
+
+
+def test_dispatch_complete_exact_key_list():
+    """dispatch_complete events have exactly {event, feature, cost_usd, duration_ms, num_turns, stop_reason}.
+
+    Spec Req #9: new exact-key-list assertion test for dispatch_complete (no
+    such test existed before; line 287/302 lists are for dispatch_start).
+    """
+    import asyncio
+
+    async def _run():
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "pipeline-events.log"
+
+            assistant_msg = AssistantMessage(
+                content=[TextBlock(text="done")],
+                model="sonnet",
+            )
+            result_msg = ResultMessage(
+                subtype="success",
+                duration_ms=100,
+                duration_api_ms=80,
+                is_error=False,
+                num_turns=1,
+                session_id="sess-keys",
+                total_cost_usd=0.0,
+                stop_reason="end_turn",
+            )
+
+            async def mock_query(**kwargs):
+                async for m in _async_gen(assistant_msg, result_msg):
+                    yield m
+
+            with patch.object(_dispatch_module, "query", mock_query):
+                await _dispatch_module.dispatch_task(
+                    feature="test-feat",
+                    task="implement task",
+                    worktree_path=Path(tmp),
+                    complexity="simple",
+                    system_prompt="",
+                    log_path=log_path,
+                    skill="implement",
+                )
+
+            events = _read_jsonl(log_path)
+            complete_evts = [e for e in events if e["event"] == "dispatch_complete"]
+            assert len(complete_evts) == 1, (
+                f"expected 1 dispatch_complete, got {len(complete_evts)}"
+            )
+            keys = set(complete_evts[0].keys())
+            expected = {
+                "event",
+                "feature",
+                "cost_usd",
+                "duration_ms",
+                "num_turns",
+                "stop_reason",
+            }
+            assert keys == expected, (
+                f"dispatch_complete key set mismatch; expected {expected}, got {keys}"
+            )
+
+    asyncio.run(_run())
+
+
 if __name__ == "__main__":
     unittest.main()

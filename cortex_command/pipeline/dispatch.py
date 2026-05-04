@@ -644,12 +644,30 @@ async def dispatch_task(
                     output_parts.append(f"[budget_exhausted: subtype={message.subtype}]")
 
                 if log_path:
+                    # Truncation allow-list is intentionally a LOCAL set literal
+                    # (per spec Edge Cases) so future stop_reason values pass
+                    # through to dispatch_complete unchanged but do not generate
+                    # spurious truncation events.
+                    _truncation_reasons = {
+                        "max_tokens",
+                        "model_context_window_exceeded",
+                    }
+                    _stop_reason = getattr(message, "stop_reason", None)
+                    if _stop_reason in _truncation_reasons:
+                        log_event(log_path, {
+                            "event": "dispatch_truncation",
+                            "feature": feature,
+                            "stop_reason": _stop_reason,
+                            "model": model,
+                            "effort": effort,
+                        })
                     log_event(log_path, {
                         "event": "dispatch_complete",
                         "feature": feature,
                         "cost_usd": cost_usd,
                         "duration_ms": message.duration_ms,
                         "num_turns": message.num_turns,
+                        "stop_reason": _stop_reason,
                     })
 
                 if activity_log_path is not None:

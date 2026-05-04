@@ -793,3 +793,73 @@ class TestFdLifecycle:
             "Expected ORCHESTRATOR_FAILED emission to carry "
             'details={"reason": "stall_timeout"} in the stall branch'
         )
+
+
+# ---------------------------------------------------------------------------
+# Runner-path truncation event (Task 5)
+# ---------------------------------------------------------------------------
+
+
+def test_max_tokens_truncation_emits_dispatch_truncation_event_via_orchestrator_round(
+    tmp_path: Path,
+) -> None:
+    """Runner path: stop_reason=='max_tokens' in envelope emits dispatch_truncation.
+
+    Feeds a synthetic envelope dict with ``"stop_reason": "max_tokens"`` to
+    ``_emit_orchestrator_round_telemetry`` and asserts that a
+    ``dispatch_truncation`` event is logged BEFORE ``dispatch_complete``,
+    and that ``dispatch_complete`` carries ``stop_reason`` per spec Req #8.
+    """
+    from cortex_command.overnight.runner import (
+        _emit_orchestrator_round_telemetry,
+    )
+
+    envelope = {
+        "type": "result",
+        "subtype": "success",
+        "is_error": False,
+        "duration_ms": 1234,
+        "num_turns": 2,
+        "stop_reason": "max_tokens",
+        "session_id": "trunc-sess",
+        "total_cost_usd": 0.05,
+        "usage": {
+            "input_tokens": 100,
+            "output_tokens": 200,
+            "cache_creation_input_tokens": None,
+            "cache_read_input_tokens": None,
+        },
+        "model": "claude-opus-4-7",
+        "effort": "xhigh",
+    }
+    log_path = tmp_path / "pipeline-events.log"
+
+    _emit_orchestrator_round_telemetry(
+        envelope_text=json.dumps(envelope),
+        exit_code=0,
+        round_num=1,
+        log_path=log_path,
+    )
+
+    records = _read_jsonl(log_path)
+    event_types = [r["event"] for r in records]
+    assert "dispatch_truncation" in event_types, (
+        f"expected dispatch_truncation in events, got {event_types}"
+    )
+    assert "dispatch_complete" in event_types, (
+        f"expected dispatch_complete in events, got {event_types}"
+    )
+    trunc_idx = event_types.index("dispatch_truncation")
+    complete_idx = event_types.index("dispatch_complete")
+    assert trunc_idx < complete_idx, (
+        f"dispatch_truncation must precede dispatch_complete; got {event_types}"
+    )
+
+    trunc = records[trunc_idx]
+    assert trunc["feature"] == "<orchestrator-round-1>"
+    assert trunc["stop_reason"] == "max_tokens"
+    assert trunc["model"] == "claude-opus-4-7"
+    assert trunc["effort"] == "xhigh"
+
+    complete = records[complete_idx]
+    assert complete["stop_reason"] == "max_tokens"

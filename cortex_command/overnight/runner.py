@@ -854,6 +854,8 @@ def _emit_orchestrator_round_telemetry(
             cache_read_input_tokens = usage.get("cache_read_input_tokens")
             is_error = bool(envelope.get("is_error", False))
             subtype = str(envelope.get("subtype", ""))
+            stop_reason = envelope.get("stop_reason")
+            effort = envelope.get("effort")
         else:
             cost_usd = None
             duration_ms = None
@@ -865,6 +867,8 @@ def _emit_orchestrator_round_telemetry(
             cache_read_input_tokens = None
             is_error = False
             subtype = ""
+            stop_reason = None
+            effort = None
 
         success_shaped = (
             exit_code == 0
@@ -874,6 +878,25 @@ def _emit_orchestrator_round_telemetry(
         )
 
         if success_shaped:
+            # Truncation allow-list is intentionally a LOCAL set literal (per
+            # spec Edge Cases) so future stop_reason values pass through to
+            # dispatch_complete unchanged but do not generate spurious
+            # truncation events.
+            _truncation_reasons = {
+                "max_tokens",
+                "model_context_window_exceeded",
+            }
+            if stop_reason in _truncation_reasons:
+                pipeline_log_event(
+                    log_path,
+                    {
+                        "event": "dispatch_truncation",
+                        "feature": feature,
+                        "stop_reason": stop_reason,
+                        "model": model,
+                        "effort": effort,
+                    },
+                )
             event_dict: dict[str, Any] = {
                 "event": "dispatch_complete",
                 "feature": feature,
@@ -885,6 +908,7 @@ def _emit_orchestrator_round_telemetry(
                 "output_tokens": output_tokens,
                 "cache_creation_input_tokens": cache_creation_input_tokens,
                 "cache_read_input_tokens": cache_read_input_tokens,
+                "stop_reason": stop_reason,
             }
         else:
             if parse_reason == "parse_failure":
@@ -1857,6 +1881,18 @@ def run(
                 from cortex_command.pipeline.state import (
                     log_event as pipeline_log_event,
                 )
+                from cortex_command.pipeline.dispatch import (
+                    resolve_effort,
+                )
+                # The orchestrator-round dispatch starts with model=None because
+                # the actual model is only known after the envelope is parsed.
+                # Resolve effort against "sonnet" as a stable fallback so paired
+                # records carry a non-None effort axis through pair_dispatch_events
+                # and the bucket-by-effort signal fires for orchestrator-round
+                # dispatches (Task 5/Task 6 of the xhigh-effort feature).
+                _round_effort = resolve_effort(
+                    tier, "medium", "orchestrator-round", "sonnet"
+                )
                 pipeline_log_event(
                     pipeline_events_path,
                     {
@@ -1866,6 +1902,7 @@ def run(
                         "complexity": tier,
                         "criticality": "medium",
                         "model": None,
+                        "effort": _round_effort,
                         "attempt": 1,
                     },
                 )
