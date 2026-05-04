@@ -42,7 +42,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 - **Outputs**: Per-feature execution results; updated session state; batch result accumulation
 - **Acceptance criteria**:
   - Features execute concurrently via `asyncio.gather()` with semaphore-based slot enforcement
-  - Concurrency limit is 1–3 agents, adaptive: reduces by 1 after 3 rate-limit errors within 5 minutes, restores after 10 consecutive successes
+  - Concurrency limit is 1–3 agents, fixed at the tier cap (`SubscriptionTier`-bound). Rate limits surface via the pipeline `api_rate_limit` error type and pause the session per the Model Selection Matrix.
   - Circuit breaker fires after 3 consecutive feature pauses, preventing further dispatches in the session
   - One feature's failure does not abort other in-flight features (fail-forward model)
   - Features with `intra_session_blocked_by` dependencies are excluded from dispatch until all named blockers reach `merged` status — this filtering happens at round-planning time (orchestrator prompt), not at dispatch time
