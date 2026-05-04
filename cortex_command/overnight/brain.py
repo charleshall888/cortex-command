@@ -195,9 +195,8 @@ async def request_brain_decision(
 ) -> BrainDecision:
     """Render the brain prompt, dispatch the brain agent, and return a decision.
 
-    Calls ``dispatch_task`` directly (not ``throttled_dispatch``) because the
-    caller already holds the semaphore slot — re-acquiring via
-    ``throttled_dispatch`` would deadlock at MAX_5.
+    Calls ``dispatch_task`` directly because that is the only dispatch path
+    the runner uses.
 
     On any failure (dispatch error, parse failure, exception), falls back to
     ``_default_decision`` and logs a ``brain_unavailable`` event. Always
@@ -205,15 +204,13 @@ async def request_brain_decision(
 
     Args:
         context: Full context for the brain agent decision.
-        manager: Optional ConcurrencyManager for rate limit reporting.
+        manager: Optional ConcurrencyManager (retained for caller-side
+            compatibility; not used in the body).
         log_path: Path to the JSONL event log for logging failures.
 
     Returns:
         A BrainDecision (always; never raises).
     """
-    # Lazy import to avoid circular dependency at module level
-    from cortex_command.overnight.throttle import ConcurrencyManager as _CM
-
     try:
         rendered_prompt = _render_template(_BRAIN_TEMPLATE, {
             "feature": context.feature,
@@ -235,10 +232,6 @@ async def request_brain_decision(
             criticality="medium",
             skill="brain",
         )
-
-        # Report rate limits without acquiring the semaphore
-        if result.error_type == "infrastructure_failure" and manager is not None:
-            manager.report_rate_limit()
 
         if result.success:
             decision = _parse_brain_response(result.output)
