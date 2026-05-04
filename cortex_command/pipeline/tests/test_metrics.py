@@ -1418,5 +1418,115 @@ def test_metrics_json_exposes_effort_bucket(tmp_path):
     assert model_aggs["opus,complex,xhigh"]["estimated_cost_usd_mean"] == 5.0
 
 
+def test_plan_comparison_v2_round_trip(tmp_path):
+    """A v2 ``plan_comparison`` event written to events.log and read back
+    through ``parse_events`` round-trips with all five new v2 fields and
+    ``schema_version: 2`` intact.
+
+    The v2 schema is additive: it preserves all v1 fields (``ts``,
+    ``event``, ``feature``, ``variants``, ``selected``) and adds five new
+    fields (``selection_rationale``, ``selector_confidence``,
+    ``position_swap_check_result``, ``disposition``, ``operator_choice``)
+    plus ``schema_version: 2``.  ``parse_events`` is a generic JSONL
+    parser — it must surface every key present on the JSON line without
+    dropping or coercing the new fields.
+    """
+    import json as _json
+
+    from cortex_command.pipeline.metrics import parse_events
+
+    v2_event = {
+        "ts": "2026-05-04T12:34:56Z",
+        "event": "plan_comparison",
+        "feature": "feat-v2",
+        "variants": ["A", "B", "C"],
+        "selected": "B",
+        "selection_rationale": "Variant B isolates the synthesizer prompt fragment cleanly.",
+        "selector_confidence": "high",
+        "position_swap_check_result": "agreed",
+        "disposition": "rubber_stamp",
+        "operator_choice": None,
+        "schema_version": 2,
+    }
+    log_path = tmp_path / "events.log"
+    log_path.write_text(_json.dumps(v2_event) + "\n", encoding="utf-8")
+
+    parsed = parse_events(log_path)
+
+    assert len(parsed) == 1, f"Expected 1 parsed event; got {len(parsed)}"
+    evt = parsed[0]
+    # All v1 fields preserved.
+    assert evt["ts"] == "2026-05-04T12:34:56Z"
+    assert evt["event"] == "plan_comparison"
+    assert evt["feature"] == "feat-v2"
+    assert evt["variants"] == ["A", "B", "C"]
+    assert evt["selected"] == "B"
+    # All five new v2 fields preserved on the parsed event dict.
+    assert evt["selection_rationale"] == "Variant B isolates the synthesizer prompt fragment cleanly."
+    assert evt["selector_confidence"] == "high"
+    assert evt["position_swap_check_result"] == "agreed"
+    assert evt["disposition"] == "rubber_stamp"
+    assert evt["operator_choice"] is None
+    # schema_version field round-trips intact.
+    assert evt["schema_version"] == 2
+
+
+def test_v2_tolerance_downstream_filter_unaffected(tmp_path):
+    """A mixed events.log containing one v2 ``plan_comparison`` event and
+    one ``feature_complete`` event: callers that filter the parsed list
+    by ``event == "feature_complete"`` get exactly the ``feature_complete``
+    event back — the v2 ``plan_comparison`` event does not contaminate
+    name-keyed filters.
+
+    Adjacent readers (``cortex_command/dashboard/data.py``,
+    ``claude/statusline.sh``, ``bin/cortex-archive-sample-select``,
+    ``hooks/cortex-scan-lifecycle.sh``) all key on the ``event`` field
+    name; this test guards that downstream filtering invariant against
+    the additive v2 schema.
+    """
+    import json as _json
+
+    from cortex_command.pipeline.metrics import parse_events
+
+    v2_plan_comparison = {
+        "ts": "2026-05-04T10:00:00Z",
+        "event": "plan_comparison",
+        "feature": "feat-mixed",
+        "variants": ["A", "B"],
+        "selected": "A",
+        "selection_rationale": "A is simpler.",
+        "selector_confidence": "medium",
+        "position_swap_check_result": "agreed",
+        "disposition": "auto_select",
+        "operator_choice": None,
+        "schema_version": 2,
+    }
+    feature_complete = {
+        "ts": "2026-05-04T11:00:00Z",
+        "event": "feature_complete",
+        "feature": "feat-mixed",
+    }
+    log_path = tmp_path / "events.log"
+    log_path.write_text(
+        _json.dumps(v2_plan_comparison) + "\n" + _json.dumps(feature_complete) + "\n",
+        encoding="utf-8",
+    )
+
+    parsed = parse_events(log_path)
+
+    # Sanity: both events parsed.
+    assert len(parsed) == 2
+
+    # Downstream-filter invariant: filtering by event == "feature_complete"
+    # returns exactly the feature_complete event, no v2 contamination.
+    filtered = [e for e in parsed if e["event"] == "feature_complete"]
+    assert len(filtered) == 1, f"Expected exactly 1 feature_complete event; got {len(filtered)}"
+    assert filtered[0]["event"] == "feature_complete"
+    assert filtered[0]["feature"] == "feat-mixed"
+    # No v2-only field bled into the filtered slice.
+    assert "selection_rationale" not in filtered[0]
+    assert "schema_version" not in filtered[0]
+
+
 if __name__ == "__main__":
     unittest.main()
