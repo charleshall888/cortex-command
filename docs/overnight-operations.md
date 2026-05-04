@@ -239,10 +239,10 @@ The file persists indefinitely under current archival policy: this project does 
 cortex overnight schedule 23:30
 
 # List pending scheduled runs
-cortex overnight schedule --list
+cortex overnight cancel --list
 
-# Cancel a pending scheduled run
-cortex overnight schedule --cancel
+# Cancel a pending scheduled run by session_id
+cortex overnight cancel <session_id>
 ```
 
 **Operational caveats**:
@@ -257,8 +257,8 @@ cortex overnight schedule --cancel
 **Cancel and list**:
 
 ```sh
-cortex overnight schedule --list    # show pending LaunchAgent jobs and their fire times
-cortex overnight schedule --cancel  # unbootstrap and remove the pending job
+cortex overnight cancel --list    # show pending LaunchAgent jobs and their fire times (also shows active runners)
+cortex overnight cancel <session_id>  # unbootstrap and remove the pending job by session_id
 ```
 
 ---
