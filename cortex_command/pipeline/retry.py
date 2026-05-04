@@ -381,7 +381,7 @@ async def retry_task(
             # Pause immediately so the runner can stop new dispatches.
             if log_path:
                 log_event(log_path, {
-                    "event": "retry_paused_budget_exhausted",
+                    "event": "retry_paused_session",
                     "feature": feature,
                     "attempt": attempt,
                     "error_type": error_type,
@@ -395,7 +395,7 @@ async def retry_task(
                 learnings_path=learnings_path,
                 paused=True,
                 total_cost_usd=total_cost,
-                error_type="budget_exhausted",
+                error_type=error_type,
             )
 
         elif recovery_path == "escalate":

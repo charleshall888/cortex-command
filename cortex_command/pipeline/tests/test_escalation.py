@@ -653,8 +653,8 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.attempts, 1)
         self.assertEqual(dispatch_calls[0], 1, "Must not have retried after budget_exhausted")
 
-    async def test_budget_exhausted_logs_retry_paused_budget_exhausted_event(self):
-        """budget_exhausted logs a retry_paused_budget_exhausted event to the log file."""
+    async def test_budget_exhausted_logs_retry_paused_session_event(self):
+        """budget_exhausted logs a retry_paused_session event to the log file."""
         import json as _json
 
         async def mock_dispatch(**kwargs) -> DispatchResult:
@@ -681,7 +681,7 @@ class TestRetryTaskEscalation(unittest.IsolatedAsyncioTestCase):
 
             events = [_json.loads(line) for line in log_file.read_text().splitlines() if line.strip()]
 
-        pause_events = [e for e in events if e.get("event") == "retry_paused_budget_exhausted"]
+        pause_events = [e for e in events if e.get("event") == "retry_paused_session"]
         self.assertEqual(len(pause_events), 1)
         self.assertEqual(pause_events[0]["error_type"], "budget_exhausted")
         self.assertEqual(pause_events[0]["recovery"], "pause_session")
