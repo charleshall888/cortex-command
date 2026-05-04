@@ -1,0 +1,73 @@
+- ts: 2026-04-29T16:49:56Z
+  event: clarify_critic
+  feature: adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+  findings:
+    - "Intent clarity rated HIGH cannot coexist with scope boundedness rated LOW on the same undecided question — the source says 'decide before implementing' and three options produce materially different artifacts."
+    - "Intent clarity reasoning cites 'path-to-completion is laid out (commit + docs update + monitor 2-3 rounds)' as evidence, but that is procedural rollout discipline, not architectural decisiveness."
+    - "Scope boundedness rated LOW solely on the three-option choice, but Deliverable 3 (max_tokens stop_reason detection in dispatch event logging) is a separate observability change with its own surface area that the assessment never weighs."
+    - "Requirements alignment rated HIGH by analogy ('effort is the analogue dispatch knob to model'), but no quote from requirements/multi-agent.md is provided and the matrix posture does not obviously generalize across all three flip options (option 1 is explicitly not matrix-shaped)."
+    - "Requirements alignment cites 'graceful partial failure' from requirements/pipeline.md as satisfied by the rollback trigger, but that phrase typically governs in-flight degradation, not retrospective revert after 2-3 overnight rounds."
+    - "Requirements alignment cites 'complexity must earn its place' as satisfied by 'a small surface change', but option 2 (new 2D config surface) and option 3 (new effort_override parameter threaded through retry_task) are not unambiguously small — assessment is using its preferred narrowest reading as evidence."
+    - "Complexity rated 'complex' partly because of max_tokens logging detection, but that detail is absent from scope boundedness analysis — the two ratings are not derived from a consistent read of the deliverables."
+    - "Criticality rated 'high' because change 'affects every overnight session until reverted', but that silently assumes option 1 or 2 — option 3 (per-phase override) would only affect implement-phase dispatches."
+  dispositions:
+    apply: 3
+    dismiss: 5
+    ask: 0
+  applied_fixes:
+    - "Softened requirements alignment from full HIGH to 'Partial alignment' — effort is an analogous dispatch knob to model selection but requirements/multi-agent.md does not explicitly mandate matrix-shaped effort selection."
+    - "Dropped 'graceful partial failure' citation from requirements alignment reasoning — rollback-after-2-3-rounds is not what that quality attribute governs; kept the metrics-and-cost-tracking citation."
+    - "Updated scope boundedness reasoning to acknowledge max_tokens stop_reason logging as part of the explicitly-enumerated deliverable set rather than treating only the option-choice as the sole boundedness consideration; on self-resolution scope boundedness rises to HIGH because the Scope bounds section ('Applies only to lifecycle implement phase') pins the in/out boundary independently of the option-choice mechanism."
+  dismissals:
+    - finding_index: 0
+      rationale: "Self-resolved against the source's Scope bounds section, which explicitly states 'Applies only to lifecycle implement phase, not every dispatch — per DR-3's scoping' and rules out option 1. The intent (lifecycle implement phase uses xhigh) is unambiguous at the outcome level. Options 2 and 3 differ in mechanism, not in what's in/out of scope, so the LOW scope rating that motivated this finding is itself revised to HIGH on self-resolution. Intent clarity stays HIGH."
+    - finding_index: 1
+      rationale: "Reasoning quibble that does not change the rating. Intent clarity at HIGH is supported by the unambiguous outcome statement in the title and Scope bounds section, independent of the path-to-completion citation. Removing this citation does not alter the rating."
+    - finding_index: 5
+      rationale: "Self-resolved by Scope bounds section pinning the in/out boundary. Surface-size differences between option 2 and option 3 are mechanism-level, not scope-level. The 'small surface change' framing applies to the bounded scope (implement-phase only) regardless of which mechanism is chosen."
+    - finding_index: 6
+      rationale: "Resolved by treating max_tokens logging as part of the scope (now reflected in updated scope reasoning under applied_fixes). Both ratings are now derived from the full deliverable set."
+    - finding_index: 7
+      rationale: "Per the protocol, 'high is the appropriate default for most skill and agentic layer changes' — any change to the overnight runner's dispatch path qualifies as shared workflow infrastructure regardless of which of the three options is implemented. Option 3 still modifies the dispatch path, just with a narrower behavioral footprint. Criticality HIGH applies to all three options."
+  status: ok
+- ts: 2026-04-29T20:15:42Z
+  event: orchestrator_review
+  feature: adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-04-29T20:47:59Z
+  event: orchestrator_review
+  feature: adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+  phase: specify
+  verdict: pass
+  cycle: 2
+  issues: []
+- ts: 2026-04-29T20:47:59Z
+  event: spec_approved
+  feature: adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+  approval_choice: "Approve as written — full comprehensive policy"
+- ts: 2026-05-04T11:21:44Z
+  event: orchestrator_review
+  feature: adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-05-04T12:15:59Z
+  event: plan_deviation_from_spec
+  feature: adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+  spec_section: "Technical Constraints §3 (runtime guard)"
+  deviation: "spec mandates `assert` raising `AssertionError`; plan uses `raise ValueError` instead"
+  rationale: "assert is stripped under python -O / PYTHONOPTIMIZE=1 so spec MUST-fail-loudly property is conditional on __debug__; ValueError matches existing dispatch.py convention (resolve_model lines 191/196, dispatch_task 428/434/436); spec owns intent not primitive choice"
+  approval_choice: "user requested critical-thinking deliberation; applied per delegate-load-bearing-decisions feedback"
+- ts: 2026-05-04T12:17:35Z
+  event: plan_approved
+  feature: adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+  approval_choice: "Approved with critical-review fixes applied; runtime guard primitive switched from assert to ValueError per implementer pushback"
+- ts: 2026-05-04T12:17:35Z
+  event: phase_transition
+  feature: adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+  from: plan
+  to: implement

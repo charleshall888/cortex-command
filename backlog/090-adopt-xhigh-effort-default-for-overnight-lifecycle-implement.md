@@ -2,15 +2,21 @@
 schema_version: "1"
 uuid: 16d4061e-a90c-480e-947b-d08458d40e1a
 title: "Adopt xhigh effort default for overnight lifecycle implement"
-status: backlog
+status: in_progress
 priority: low
 type: feature
 created: 2026-04-18
-updated: 2026-04-29
+updated: 2026-05-04
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
 blocked-by: []
+complexity: complex
+criticality: high
+spec: lifecycle/adopt-xhigh-effort-default-for-overnight-lifecycle-implement/spec.md
+areas: [overnight-runner]
+session_id: 73b37803-e9ba-4116-a27f-eadad3421978
+lifecycle_phase: implement
 ---
 
 # Adopt xhigh effort default for overnight lifecycle implement
