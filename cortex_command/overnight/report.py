@@ -33,6 +33,8 @@ from cortex_command.overnight.deferral import (
     read_deferrals,
 )
 from cortex_command.overnight.events import _default_log_path, read_events
+from cortex_command.overnight import fail_markers as fail_markers_module
+from cortex_command.overnight.fail_markers import FailedFire
 from cortex_command.overnight.state import OvernightState, _default_state_path, load_state, session_dir
 
 
@@ -90,6 +92,7 @@ class ReportData:
     new_backlog_items: list[NewBacklogItem] = field(default_factory=list)
     tool_failures: dict[str, dict] = field(default_factory=dict)
     pr_urls: dict[str, str] = field(default_factory=dict)
+    scheduled_fire_failures: list[FailedFire] = field(default_factory=list)
 
 
 def collect_report_data(
@@ -200,6 +203,15 @@ def collect_report_data(
         # Fall back to today's date-based key (mirrors the hook's fallback)
         date_key = f"date-{datetime.now(timezone.utc).strftime('%Y%m%d')}"
         data.tool_failures = collect_tool_failures(date_key)
+
+    # Scan sibling session dirs for scheduled-fire-failed.json markers
+    # written by the launchd-fired launcher script when fire-time spawn
+    # fails (Task 3, spec §R13). The morning report surfaces these in a
+    # dedicated section so TCC denials and missing-binary failures don't
+    # hide behind the macOS notification alone.
+    data.scheduled_fire_failures = fail_markers_module.scan_session_dirs(
+        lifecycle_root,
+    )
 
     return data
 
@@ -1179,6 +1191,47 @@ def render_tool_failures(data: ReportData) -> str:
     return "\n".join(lines)
 
 
+def render_scheduled_fire_failures(data: ReportData) -> str:
+    """Render the scheduled-fire failures section (spec §R13).
+
+    When the launchd-fired launcher script (Task 3) cannot spawn the
+    cortex binary at fire time (TCC EPERM, missing binary, etc.), it
+    writes a sentinel ``<session_dir>/scheduled-fire-failed.json``. This
+    section surfaces every such marker found by
+    :func:`fail_markers.scan_session_dirs`, with timestamp, error class,
+    session id, and the absolute path to the marker JSON for diagnostics.
+
+    Returns the empty string when the list is empty so the section is
+    omitted entirely from the report.
+    """
+    failures = data.scheduled_fire_failures
+    if not failures:
+        return ""
+
+    total = len(failures)
+    plural = "s" if total != 1 else ""
+    lines: list[str] = [f"## Scheduled-Fire Failures ({total})", ""]
+    lines.append(
+        "The launchd-fired launcher could not spawn the cortex runner at fire "
+        f"time for {total} scheduled overnight{plural}. Inspect each marker "
+        "for the error class and text, then grant Full Disk Access to the "
+        "cortex binary or fix the binary path before the next schedule."
+    )
+    lines.append("")
+
+    for failure in failures:
+        marker_path = Path(failure.session_dir) / "scheduled-fire-failed.json"
+        lines.append(f"### {failure.session_id} — {failure.error_class}")
+        lines.append(f"- Time: {failure.ts}")
+        lines.append(f"- Error class: {failure.error_class}")
+        lines.append(f"- Error text: {failure.error_text}")
+        lines.append(f"- launchd label: `{failure.label}`")
+        lines.append(f"- Marker: `{marker_path}`")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def render_new_backlog_items(data: ReportData) -> str:
     """Render the new backlog items section."""
     lines: list[str] = ["## New Backlog Items", ""]
@@ -1420,6 +1473,10 @@ def generate_report(data: ReportData) -> str:
         render_action_checklist(data),
         render_run_statistics(data),
     ]
+    # Scheduled-fire failures section is omitted entirely when empty.
+    fire_failures_section = render_scheduled_fire_failures(data)
+    if fire_failures_section:
+        sections.append(fire_failures_section)
     # Tool failures section is omitted entirely when there are no failures
     tool_failures_section = render_tool_failures(data)
     if tool_failures_section:

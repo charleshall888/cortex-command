@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from cortex_command.overnight import fail_markers as fail_markers_module
 from cortex_command.overnight import ipc
 from cortex_command.overnight import logs as logs_module
 from cortex_command.overnight import runner as runner_module
@@ -674,6 +675,13 @@ def handle_status(args: argparse.Namespace) -> int:
         and not (resolved_session_dir / "runner.pid").exists()
     )
 
+    # Scan sibling session dirs for scheduled-fire-failed.json markers
+    # (Task 12, spec §R13). The lifecycle root is the parent of the
+    # sessions root; resolve it from the current state_path's grandparent
+    # (state_path is always <state_root>/sessions/<session_id>/overnight-state.json).
+    state_root_for_scan = resolved_session_dir.parent.parent
+    fire_failures = fail_markers_module.scan_session_dirs(state_root_for_scan)
+
     # Emit status.
     if fmt == "json":
         try:
@@ -691,6 +699,7 @@ def handle_status(args: argparse.Namespace) -> int:
             "scheduled_start": (
                 scheduled_start if isinstance(scheduled_start, str) else None
             ),
+            "fire_failures": [f.to_dict() for f in fire_failures],
         }
         print(json.dumps(payload))
         return 0
@@ -712,6 +721,19 @@ def handle_status(args: argparse.Namespace) -> int:
     scheduled_start = data.get("scheduled_start")
     if isinstance(scheduled_start, str) and scheduled_start:
         print(f"Scheduled fire: {scheduled_start}")
+
+    # Surface scheduled-fire failures (Task 12, spec §R13). One-line
+    # summary pointing the user at the full marker via `cortex overnight
+    # logs` or the absolute marker path on disk.
+    if fire_failures:
+        n = len(fire_failures)
+        latest_marker = (
+            Path(fire_failures[-1].session_dir) / "scheduled-fire-failed.json"
+        )
+        print(
+            f"⚠ Recent scheduled-fire failures: {n} "
+            f"(run `cortex overnight logs` or see `{latest_marker}` for details)"
+        )
     return 0
 
 
