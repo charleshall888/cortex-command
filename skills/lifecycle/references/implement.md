@@ -116,8 +116,7 @@ This ensures the on-disk dispatch file reflects the actual subprocess PID for li
 
 **Per-iteration steps** (each a separate Bash call):
 - (a) Liveness: `kill -0 $pid 2>/dev/null`. Non-zero exit means the process has exited — break out of the polling loop and proceed to result surfacing.
-- (b) Progress tail: `tail -n 5 lifecycle/{feature}/events.log` and surface a brief summary of the 5 most recent events to the user. The tail is capped at 5 (not 20) to limit context accumulation over long runs.
-- (c) Inter-iteration sleep: `sleep 120` Bash call with `timeout: 130000` (130 seconds — ample margin over the 120-second sleep).
+- (b) Inter-iteration sleep: `sleep 120` Bash call with `timeout: 130000` (130 seconds — ample margin over the 120-second sleep).
 
 **Termination bound**: 120 iterations (~4 hours). Context window exhaustion — not iteration count — is the practical binding constraint for long runs. At **30 iterations (~1 hour)**, pause and offer the user the option to suspend polling: "Subprocess still running after 30 iterations (~1 hour). Continue polling or stop? (The process continues in background — monitor `lifecycle/{feature}/daytime.log` and `events.log` directly.)" If the user chooses to stop, exit the polling loop (the subprocess keeps running; skip result surfacing and log `dispatch_complete` with outcome `"paused"` only if the subprocess is still alive — otherwise surface results normally). On reaching 120 iterations without the subprocess exiting: surface "Polling timeout — subprocess may still be running (PID {pid}). Check `lifecycle/{feature}/daytime.log` directly for status." and exit the polling loop.
 
