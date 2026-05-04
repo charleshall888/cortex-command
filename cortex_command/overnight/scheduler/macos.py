@@ -6,15 +6,16 @@ bootstraps the agent via ``launchctl bootstrap gui/$(id -u)``, then
 verifies registration via ``launchctl print`` (looking for the
 ``state = waiting`` substring).
 
-Task 2 fills in plist render, env snapshot, target-time validation,
-and bootstrap-and-verify. The launcher script body (Task 3) and the
-sidecar/GC writes (Task 4) are out of scope here — their seams are
-left as no-op stubs so they can be wired without re-touching this
-file's plist/bootstrap mechanics.
+Task 2 filled in plist render, env snapshot, target-time validation,
+and bootstrap-and-verify. Task 3 filled the launcher-script seam.
+Task 4 wires the sidecar / GC seams and wraps the entire ``schedule()``
+body in :func:`schedule_lock` so concurrent schedule calls cannot
+race on GC vs. sidecar-entry writes.
 """
 
 from __future__ import annotations
 
+import logging
 import os
 import plistlib
 import shutil
@@ -24,11 +25,23 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from cortex_command.overnight.scheduler.labels import mint_label
+from cortex_command.overnight.scheduler import sidecar as _sidecar
+from cortex_command.overnight.scheduler.labels import mint_label, parse_label
+from cortex_command.overnight.scheduler.lock import schedule_lock
 from cortex_command.overnight.scheduler.protocol import (
     CancelResult,
     ScheduledHandle,
 )
+
+
+logger = logging.getLogger(__name__)
+
+
+# launchctl print exit code 113 means "job not registered" — the
+# canonical signal that a plist on disk is no longer tracked by launchd
+# and is therefore safe to GC. Centralized as a module constant so the
+# tests and the GC path agree on the magic number.
+_LAUNCHCTL_PRINT_NOT_REGISTERED_EXIT = 113
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -251,9 +264,13 @@ class MacOSLaunchAgentBackend:
     ) -> ScheduledHandle:
         """Schedule a one-shot launchd agent firing at ``target``.
 
-        See class docstring for the high-level flow. Sidecar writes,
-        plist GC, and launcher-script copying are wired in Tasks 3 & 4;
-        the corresponding seams are no-op stubs in this implementation.
+        Wraps the entire critical section (GC pass → launcher install
+        → plist write → ``launchctl bootstrap`` + verify → sidecar
+        write) in :func:`schedule_lock`. Holding the lock across the
+        whole sequence prevents the race where a concurrent
+        ``schedule()`` invocation's GC observes this call's
+        just-written plist as orphan (label not yet in sidecar) and
+        removes it before the sidecar entry lands.
 
         Args:
             target: Wall-clock fire time. Must be in the future.
@@ -280,36 +297,38 @@ class MacOSLaunchAgentBackend:
         plist_dir = self._plist_dir()
         plist_dir.mkdir(parents=True, exist_ok=True)
 
-        # GC seam — Task 4 wires this. No-op here.
-        self._gc_pass()
-
         sess_dir = session_dir(session_id)
-
         env_snapshot = self._snapshot_env(env)
 
-        # Mint label and try to bootstrap; on collision retry once with
-        # epoch+1 (R6). After that, surface the collision.
-        label, plist_path, launcher_path = self._mint_and_install(
-            session_id=session_id,
-            target=target,
-            session_dir_=sess_dir,
-            env_snapshot=env_snapshot,
-            repo_root=repo_root,
-            plist_dir=plist_dir,
-        )
+        # Acquire the cross-process schedule lock BEFORE the GC pass
+        # and hold it through bootstrap+verify and the sidecar write.
+        # See module docstring + schedule_lock() docstring for the
+        # rationale.
+        with schedule_lock():
+            self._gc_pass()
 
-        # Sidecar seam — Task 4 wires this. No-op here.
-        created_at_iso = datetime.now().isoformat()
-        scheduled_for_iso = target.isoformat()
-        handle = ScheduledHandle(
-            label=label,
-            session_id=session_id,
-            plist_path=plist_path,
-            launcher_path=launcher_path,
-            scheduled_for_iso=scheduled_for_iso,
-            created_at_iso=created_at_iso,
-        )
-        self._write_sidecar_entry(handle)
+            # Mint label and try to bootstrap; on collision retry once
+            # with epoch+1 (R6). After that, surface the collision.
+            label, plist_path, launcher_path = self._mint_and_install(
+                session_id=session_id,
+                target=target,
+                session_dir_=sess_dir,
+                env_snapshot=env_snapshot,
+                repo_root=repo_root,
+                plist_dir=plist_dir,
+            )
+
+            created_at_iso = datetime.now().isoformat()
+            scheduled_for_iso = target.isoformat()
+            handle = ScheduledHandle(
+                label=label,
+                session_id=session_id,
+                plist_path=plist_path,
+                launcher_path=launcher_path,
+                scheduled_for_iso=scheduled_for_iso,
+                created_at_iso=created_at_iso,
+            )
+            self._write_sidecar_entry(handle)
 
         return handle
 
@@ -600,12 +619,115 @@ class MacOSLaunchAgentBackend:
             pass
 
     def _write_sidecar_entry(self, handle: ScheduledHandle) -> None:
-        """Stub seam — Task 4 fills this in."""
-        return None
+        """Persist ``handle`` to the sidecar index.
+
+        Must be called inside :func:`schedule_lock` — the lock
+        guarantees no concurrent ``_gc_pass`` can observe this call's
+        just-written plist as orphan before the sidecar entry lands.
+        """
+        _sidecar.add_entry(handle)
+
+    def _remove_sidecar_entry(self, label: str) -> bool:
+        """Remove the sidecar entry for ``label``.
+
+        Returns:
+            ``True`` if the entry was removed, ``False`` if it was
+            already absent. Idempotent.
+        """
+        return _sidecar.remove_entry(label)
 
     def _gc_pass(self) -> int:
-        """Stub seam — Task 4 fills this in. Returns count of removed files."""
-        return 0
+        """Remove orphan plists and launcher scripts from ``$TMPDIR``.
+
+        For each ``*.plist`` under ``$TMPDIR/cortex-overnight-launch/``:
+          - If its label is absent from the sidecar index OR
+            ``launchctl print gui/$(id -u)/<label>`` exits 113 (job not
+            registered), remove the plist file.
+          - Also remove the paired ``launcher-<label>.sh`` regardless
+            of whether it exists (it may have been removed already by
+            the launcher itself per R9).
+
+        Corruption guard: if :func:`sidecar.read_sidecar` returns an
+        empty list because the file is corrupt (warning logged
+        internally), we cannot distinguish "no schedules" from "lost
+        all sidecar state". To fail closed in that case, this method
+        consults the sidecar file's existence: if the file exists but
+        ``read_sidecar`` returned ``[]``, we skip GC entirely and log
+        a warning. (When the file simply does not exist — first-use —
+        the safe interpretation IS "no tracked schedules" so GC
+        proceeds normally; an absent file cannot be the result of
+        corruption, only of never having been written.)
+
+        Returns:
+            Count of files removed (plists + launchers combined).
+
+        MUST only be called inside :func:`schedule_lock` — the lock is
+        the load-bearing guard against the cross-process race
+        described in the module docstring. Standalone invocation is
+        not part of the contract.
+        """
+        plist_dir = self._plist_dir()
+        if not plist_dir.is_dir():
+            return 0
+
+        # Fail closed on a corrupt sidecar: if the file is present but
+        # decodes to an empty list (corruption signal — the warning
+        # was logged inside read_sidecar), refuse to GC. A genuinely
+        # empty sidecar with no schedules has the file simply absent
+        # in the first-use case; once the first add_entry runs the
+        # file always contains at least the placeholder ``[]`` — so
+        # "file exists but read returned []" is a corruption signal
+        # for files that were previously valid lists too. Pragmatic
+        # rule: if the file exists AND we cannot json-decode it as a
+        # non-empty list, AND there is at least one plist in
+        # plist_dir, refuse to GC (worst case: leaks a few stale
+        # plists until corruption is repaired by the next successful
+        # add_entry write).
+        sidecar_file = _sidecar.sidecar_path()
+        tracked_labels = {h.label for h in _sidecar.read_sidecar()}
+        if sidecar_file.exists() and not tracked_labels:
+            if _sidecar_json_is_corrupt(sidecar_file):
+                logger.warning(
+                    "skipping GC: sidecar %s appears corrupt",
+                    sidecar_file,
+                )
+                return 0
+
+        removed = 0
+        uid = os.getuid()
+        for plist_path in sorted(plist_dir.glob("*.plist")):
+            label = plist_path.stem
+            # Validate that the label looks like one of ours; ignore
+            # foreign plists that may have ended up in this dir.
+            try:
+                parse_label(label)
+            except ValueError:
+                continue
+
+            if label in tracked_labels:
+                # Tracked — but still GC if launchctl confirms it's
+                # not registered (e.g. fired and completed without a
+                # cancel call). Probe launchctl print.
+                if not _is_launchctl_registered(label, uid):
+                    if _safe_unlink(plist_path):
+                        removed += 1
+                    launcher_path = plist_path.parent / f"launcher-{label}.sh"
+                    if _safe_unlink(launcher_path):
+                        removed += 1
+                continue
+
+            # Untracked — orphan. Remove unconditionally.
+            if _safe_unlink(plist_path):
+                removed += 1
+            launcher_path = plist_path.parent / f"launcher-{label}.sh"
+            if _safe_unlink(launcher_path):
+                removed += 1
+
+        if removed:
+            logger.info(
+                "GC removed %d orphan plist/launcher file(s)", removed
+            )
+        return removed
 
 
 # ---------------------------------------------------------------------------
@@ -650,6 +772,70 @@ def _read_launcher_template() -> str:
     """
     template_path = Path(__file__).resolve().parent / "launcher.sh"
     return template_path.read_text(encoding="utf-8")
+
+
+def _is_launchctl_registered(label: str, uid: int) -> bool:
+    """Return True iff ``launchctl print gui/<uid>/<label>`` exits 0.
+
+    Used by :meth:`MacOSLaunchAgentBackend._gc_pass` to distinguish
+    plists whose launchd job is still alive (preserve) from ones that
+    have completed or been booted out (collect). An exit of
+    :data:`_LAUNCHCTL_PRINT_NOT_REGISTERED_EXIT` (113) means "job not
+    registered" — the GC trigger condition. Any other non-zero exit
+    is treated conservatively as "still registered" so we never GC a
+    plist whose status we cannot determine.
+    """
+    try:
+        result = subprocess.run(
+            ["launchctl", "print", f"gui/{uid}/{label}"],
+            capture_output=True,
+        )
+    except OSError:
+        # launchctl not available; assume registered to fail closed.
+        return True
+    return result.returncode == 0
+
+
+def _safe_unlink(path: Path) -> bool:
+    """Remove ``path`` if present. Return True iff a file was removed.
+
+    Tolerates ``FileNotFoundError`` (returns False) and ``OSError``
+    other than not-found (logs at WARNING and returns False). Used by
+    GC to drive the removed-files counter without letting a single
+    permission error halt the whole sweep.
+    """
+    try:
+        path.unlink()
+        return True
+    except FileNotFoundError:
+        return False
+    except OSError as exc:
+        logger.warning("GC could not remove %s: %s", path, exc)
+        return False
+
+
+def _sidecar_json_is_corrupt(sidecar_file: Path) -> bool:
+    """Return True iff ``sidecar_file`` cannot be JSON-decoded as a list.
+
+    Helper for :meth:`MacOSLaunchAgentBackend._gc_pass`'s fail-closed
+    path. Distinct from :func:`sidecar.read_sidecar` which already
+    swallows corruption — here we need a yes/no signal to gate GC.
+    """
+    import json
+
+    try:
+        text = sidecar_file.read_text(encoding="utf-8")
+    except OSError:
+        return True
+    if not text.strip():
+        # Empty file — treat as corrupt for the purpose of GC
+        # (a properly-written empty sidecar contains "[]\n").
+        return True
+    try:
+        decoded = json.loads(text)
+    except json.JSONDecodeError:
+        return True
+    return not isinstance(decoded, list)
 
 
 def _resolve_cortex_bin() -> str:
