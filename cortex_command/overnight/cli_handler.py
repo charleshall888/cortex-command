@@ -468,6 +468,43 @@ def handle_start(args: argparse.Namespace) -> int:
     plan_path = session_dir / "overnight-plan.md"
     events_path = session_dir / "overnight-events.log"
 
+    # Cross-cancel guard (R14): refuse to start when a scheduled
+    # launch is pending for this session, unless ``--force`` is set.
+    # The dry-run path is exempt (mirrors the historical contract that
+    # dry-run never touches scheduling). The launchd-internal flag is
+    # also exempt: by the time the LaunchAgent fires, its own sidecar
+    # entry is the schedule that just ran — the runner must NOT
+    # cross-cancel-guard itself.
+    session_id_for_guard = session_dir.name
+    if (
+        not getattr(args, "dry_run", False)
+        and not getattr(args, "launchd", False)
+        and not getattr(args, "force", False)
+    ):
+        from cortex_command.overnight.scheduler import sidecar as _sidecar
+
+        pending_handle = _sidecar.find_by_session_id(session_id_for_guard)
+        if pending_handle is not None:
+            message = (
+                f"pending schedule for session_id={session_id_for_guard} "
+                f"(label={pending_handle.label}, "
+                f"scheduled_for_iso={pending_handle.scheduled_for_iso}); "
+                f"cancel pending schedule(s) first or use --force"
+            )
+            if fmt == "json":
+                _emit_json(
+                    {
+                        "error": "pending_schedule",
+                        "session_id": session_id_for_guard,
+                        "label": pending_handle.label,
+                        "scheduled_for_iso": pending_handle.scheduled_for_iso,
+                        "message": message,
+                    }
+                )
+            else:
+                print(message, file=sys.stderr, flush=True)
+            return 1
+
     # (1) PINNED: the dry-run short-circuit takes the existing inline
     # path. The 11 ``test_runner_pr_gating.py`` assertions depend on
     # ``DRY-RUN`` lines streaming to ``result.stdout`` from the parent
@@ -645,21 +682,36 @@ def handle_status(args: argparse.Namespace) -> int:
             print(json.dumps({"active": False}))
             return 0
         phase_value = "starting" if starting_window else data.get("phase", "")
+        scheduled_start = data.get("scheduled_start")
         payload = {
             "session_id": data.get("session_id", ""),
             "phase": phase_value,
             "current_round": data.get("current_round", 0),
             "features": data.get("features", {}),
+            "scheduled_start": (
+                scheduled_start if isinstance(scheduled_start, str) else None
+            ),
         }
         print(json.dumps(payload))
         return 0
 
     # Human format: delegate to status_module for the display logic.
+    # Also surface scheduled_start (Task 7): this is the observability
+    # hook the schedule path now writes; without rendering it here the
+    # field is invisible to operators.
     try:
         status_module.render_status()
     except Exception as exc:
         print(f"Error reading status: {exc}", file=sys.stderr, flush=True)
         return 1
+
+    try:
+        data = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return 0
+    scheduled_start = data.get("scheduled_start")
+    if isinstance(scheduled_start, str) and scheduled_start:
+        print(f"Scheduled fire: {scheduled_start}")
     return 0
 
 
@@ -737,6 +789,148 @@ def _cancel_error(fmt: str, code: str, message: str) -> int:
     return 1
 
 
+def _cancel_scheduled_launch(
+    fmt: str,
+    session_id: str,
+    session_dir: Path,
+) -> int:
+    """Cancel a pending scheduled launch for ``session_id``.
+
+    Resolution: looks up the sidecar entry via
+    :func:`sidecar.find_by_session_id`. If found, invokes the macOS
+    backend's :meth:`cancel` (which performs ``launchctl bootout``,
+    sidecar entry removal, plist + launcher unlink under the schedule
+    lock), then clears ``scheduled_start`` from the session state file
+    via the existing atomic :func:`state.save_state` helper.
+
+    Returns 0 on successful cancel; non-zero with an error envelope
+    when no sidecar entry matches.
+    """
+    from cortex_command.overnight import state as state_module
+    from cortex_command.overnight.scheduler import get_backend
+    from cortex_command.overnight.scheduler import sidecar as _sidecar
+
+    handle = _sidecar.find_by_session_id(session_id)
+    if handle is None:
+        return _cancel_error(
+            fmt,
+            "no_active_session",
+            "no active session",
+        )
+
+    backend = get_backend()
+    if not backend.is_supported():
+        return _cancel_error(
+            fmt,
+            "unsupported_platform",
+            "cortex overnight scheduling requires macOS",
+        )
+
+    try:
+        result = backend.cancel(handle.label)
+    except Exception as exc:  # noqa: BLE001 — surface uniformly
+        return _cancel_error(fmt, "cancel_failed", f"cancel failed: {exc}")
+
+    # Clear scheduled_start in the session state file (best-effort).
+    state_path = session_dir / "overnight-state.json"
+    if state_path.exists():
+        try:
+            st = state_module.load_state(state_path)
+            st.scheduled_start = None
+            state_module.save_state(st, state_path)
+        except (OSError, json.JSONDecodeError, KeyError) as exc:
+            print(
+                f"warning: scheduled_start state clear failed: {exc}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    if fmt == "json":
+        _emit_json(
+            {
+                "cancelled": True,
+                "session_id": session_id,
+                "label": result.label,
+                "bootout_exit_code": result.bootout_exit_code,
+                "sidecar_removed": result.sidecar_removed,
+                "plist_removed": result.plist_removed,
+                "launcher_removed": result.launcher_removed,
+                "kind": "scheduled",
+            }
+        )
+    else:
+        print(f"cancelled scheduled launch: {session_id} (label={result.label})")
+    return 0
+
+
+def _list_active_and_scheduled(fmt: str) -> int:
+    """Implement ``cortex overnight cancel --list``.
+
+    Reads the sidecar for pending schedules and the active-session
+    pointer for the running runner (if any), prints both, and returns
+    0. Never cancels.
+    """
+    from cortex_command.overnight.scheduler import sidecar as _sidecar
+
+    schedules = _sidecar.read_sidecar()
+
+    active_runner: Optional[dict] = None
+    active_pointer = ipc.read_active_session()
+    if active_pointer is not None:
+        sd_str = active_pointer.get("session_dir")
+        if isinstance(sd_str, str):
+            sd = Path(sd_str)
+            pid_data = ipc.read_runner_pid(sd)
+            if pid_data is not None and ipc.verify_runner_pid(pid_data):
+                active_runner = {
+                    "session_id": (
+                        pid_data.get("session_id")
+                        if isinstance(pid_data.get("session_id"), str)
+                        else ""
+                    ),
+                    "pid": pid_data.get("pid"),
+                    "session_dir": sd_str,
+                }
+
+    if fmt == "json":
+        _emit_json(
+            {
+                "active_runner": active_runner,
+                "scheduled": [
+                    {
+                        "label": h.label,
+                        "session_id": h.session_id,
+                        "scheduled_for_iso": h.scheduled_for_iso,
+                        "created_at_iso": h.created_at_iso,
+                        "plist_path": str(h.plist_path),
+                    }
+                    for h in schedules
+                ],
+            }
+        )
+        return 0
+
+    if active_runner is not None:
+        print("Active runner:")
+        print(
+            f"  session_id={active_runner['session_id']} "
+            f"pid={active_runner['pid']}"
+        )
+    else:
+        print("Active runner: (none)")
+
+    if schedules:
+        print("Scheduled launches:")
+        for h in schedules:
+            print(
+                f"  session_id={h.session_id}  label={h.label}  "
+                f"scheduled_for_iso={h.scheduled_for_iso}"
+            )
+    else:
+        print("Scheduled launches: (none)")
+    return 0
+
+
 def handle_cancel(args: argparse.Namespace) -> int:
     """Implement ``cortex overnight cancel``.
 
@@ -747,6 +941,14 @@ def handle_cancel(args: argparse.Namespace) -> int:
     nonzero with ``stale lock cleared — session was not running`` on
     stderr, per the R3/R18 + edge-case-line-234 contract.
 
+    Task 7 extension: also handles pending scheduled launches. When the
+    resolved session has no active runner-pid but DOES have a sidecar
+    entry, cancels the schedule via the macOS backend (``launchctl
+    bootout`` + plist/launcher/sidecar removal) and clears
+    ``scheduled_start`` from the state file. With ``--list``, prints
+    both active runners and pending schedules without canceling
+    anything.
+
     When ``args.session_dir`` is provided, the session-id is the
     directory's ``name`` and containment is asserted against the parent.
 
@@ -756,6 +958,10 @@ def handle_cancel(args: argparse.Namespace) -> int:
     "error": <code>, "message": ...}`` with non-zero exit.
     """
     fmt = getattr(args, "format", "human")
+
+    # ``--list`` short-circuits before any session-id resolution.
+    if getattr(args, "list_only", False):
+        return _list_active_and_scheduled(fmt)
 
     # Validate positional session-id up-front so R3 acceptance tests
     # (`cortex overnight cancel "; rm -rf ~"` and
@@ -781,6 +987,20 @@ def handle_cancel(args: argparse.Namespace) -> int:
     repo_path = _resolve_repo_path()
     session_dir, err = _resolve_cancel_target(args, repo_path)
     if err is not None:
+        # If no active runner could be located via the takeover-target
+        # resolver but the caller passed a positional session_id, fall
+        # through to the sidecar lookup — the user may be canceling a
+        # pending scheduled launch on a session that has never had a
+        # live runner.
+        if (
+            err == "no active session"
+            and getattr(args, "session_id", None) is not None
+        ):
+            sched_session_id = str(args.session_id)
+            sched_dir = (
+                repo_path / "lifecycle" / "sessions" / sched_session_id
+            )
+            return _cancel_scheduled_launch(fmt, sched_session_id, sched_dir)
         code = "invalid_session_id" if err == "invalid session id" else "no_active_session"
         return _cancel_error(fmt, code, err)
 
@@ -801,7 +1021,12 @@ def handle_cancel(args: argparse.Namespace) -> int:
     try:
         pid_data = ipc.read_runner_pid(session_dir)
         if pid_data is None:
-            return _cancel_error(fmt, "no_active_session", "no active session")
+            # No live runner-pid — fall through to the sidecar path so
+            # we can cancel a pending scheduled launch for this session.
+            session_id_for_sched = session_dir.name
+            return _cancel_scheduled_launch(
+                fmt, session_id_for_sched, session_dir
+            )
 
         if not ipc.verify_runner_pid(pid_data):
             # Self-heal stale state (spec Edge Cases line 234).
@@ -1115,23 +1340,55 @@ def handle_list_sessions(args: argparse.Namespace) -> int:
 # schedule (R1) — macOS LaunchAgent-backed scheduling
 # ---------------------------------------------------------------------------
 
+# Maximum age of the ``runner.spawn-pending`` sentinel file before it is
+# treated as stale. The async-spawn handshake budget is 5 seconds (see
+# :data:`_SPAWN_HANDSHAKE_TIMEOUT_SECONDS`); we allow a generous 30-second
+# window so brief clock skew or filesystem latency cannot turn a fresh
+# sentinel into a false-stale read.
+_SPAWN_PENDING_SENTINEL_MAX_AGE_SECONDS: float = 30.0
+
+
 def _check_no_active_runner(session_dir: Path) -> bool:
-    """Stub for the cross-cancel runner-active check (R14).
+    """Return True if no runner is active and no spawn is pending (R14).
 
-    Task 7 will replace this with the real check that consults
-    :func:`ipc.read_runner_pid` + :func:`ipc.verify_runner_pid` and exits
-    non-zero with the spec's "active runner present" message when a live
-    runner is detected. Until then this returns ``True`` so the schedule
-    path is exercisable end-to-end.
+    Performs two checks in sequence:
 
-    Args:
-        session_dir: Per-session directory; the live runner-PID file lives
-            at ``session_dir / "runner.pid"``.
+      1. ``runner.pid`` exists AND :func:`ipc.verify_runner_pid` confirms
+         the recorded process is alive — the canonical "runner active"
+         signal.
+      2. ``runner.spawn-pending`` sentinel exists AND its mtime is within
+         :data:`_SPAWN_PENDING_SENTINEL_MAX_AGE_SECONDS` — closes the
+         5-second handshake gap between the parent CLI's sentinel write
+         and the runner's own ``runner.pid`` claim. Sentinels older than
+         the threshold are ignored (treated as orphan from a crashed
+         spawn) so a stale file does not block scheduling forever.
 
     Returns:
-        ``True`` if no active runner blocks the schedule (always, until
-        Task 7 wires the real check).
+        ``True`` when neither signal fires (safe to schedule); ``False``
+        when a live runner OR a fresh spawn-pending sentinel is detected.
     """
+    pid_data = ipc.read_runner_pid(session_dir)
+    if pid_data is not None and ipc.verify_runner_pid(pid_data):
+        return False
+
+    sentinel_path = session_dir / _SPAWN_PENDING_SENTINEL
+    try:
+        mtime = sentinel_path.stat().st_mtime
+    except FileNotFoundError:
+        return True
+    except OSError:
+        # Conservative: any other stat failure (permission, device error)
+        # is treated as "sentinel present" so we do not race past a
+        # genuinely-active spawn during transient filesystem hiccups.
+        return False
+
+    import time as _time
+
+    age = _time.time() - mtime
+    if age <= _SPAWN_PENDING_SENTINEL_MAX_AGE_SECONDS:
+        # Fresh spawn-pending — handshake window still in progress.
+        return False
+    # Sentinel exists but is older than the threshold; treat as orphan.
     return True
 
 

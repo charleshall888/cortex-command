@@ -361,6 +361,16 @@ def _build_parser() -> argparse.ArgumentParser:
         default="human",
         help="Output format (default: human). 'json' emits versioned JSON on collisions.",
     )
+    start.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help=(
+            "Bypass the pending-schedule cross-cancel guard (R14): start "
+            "now even when a scheduled fire is registered for this "
+            "session. Does NOT cancel the schedule — both will run."
+        ),
+    )
     # Internal flag used by the async-spawn fork in
     # ``cli_handler._spawn_runner_async`` and by the LaunchAgent
     # launcher script (Task 3). Signals to ``handle_start`` that the
@@ -410,6 +420,16 @@ def _build_parser() -> argparse.ArgumentParser:
             "Skip the 5s takeover-lock acquire (escape hatch for "
             "wedged-holder scenarios; accepts <100ms 'no active session' "
             "race window during a concurrent takeover)."
+        ),
+    )
+    cancel.add_argument(
+        "--list",
+        dest="list_only",
+        action="store_true",
+        default=False,
+        help=(
+            "List both active runners and pending scheduled launches "
+            "without canceling anything."
         ),
     )
     cancel.add_argument(

@@ -333,16 +333,52 @@ class MacOSLaunchAgentBackend:
         return handle
 
     def cancel(self, label: str) -> CancelResult:
-        """Out of scope for Task 2 — implemented by Task 7."""
-        raise NotImplementedError(
-            "MacOSLaunchAgentBackend.cancel() is implemented in Task 7"
+        """Cancel a previously-scheduled launchd agent (Task 7).
+
+        Sequence:
+          1. ``launchctl bootout gui/$(id -u)/<label>`` — unloads the
+             agent. Exit codes are reported in the returned dataclass;
+             non-zero is NOT treated as fatal because the agent may
+             already be gone (e.g. fired and completed).
+          2. Remove the sidecar entry for ``label`` (idempotent).
+          3. Remove the plist file from ``$TMPDIR/cortex-overnight-launch/``
+             (idempotent).
+          4. Remove the launcher script (idempotent).
+
+        Held under :func:`schedule_lock` so it serializes against
+        concurrent ``schedule()`` calls' GC + sidecar writes.
+        """
+        plist_dir = self._plist_dir()
+        plist_path = plist_dir / f"{label}.plist"
+        launcher_path = plist_dir / f"launcher-{label}.sh"
+
+        with schedule_lock():
+            uid = os.getuid()
+            try:
+                bootout_result = subprocess.run(
+                    ["launchctl", "bootout", f"gui/{uid}/{label}"],
+                    capture_output=True,
+                )
+                bootout_exit = bootout_result.returncode
+            except OSError as exc:
+                logger.warning("launchctl bootout failed for %s: %s", label, exc)
+                bootout_exit = -1
+
+            sidecar_removed = self._remove_sidecar_entry(label)
+            plist_removed = _safe_unlink(plist_path)
+            launcher_removed = _safe_unlink(launcher_path)
+
+        return CancelResult(
+            label=label,
+            bootout_exit_code=bootout_exit,
+            sidecar_removed=sidecar_removed,
+            plist_removed=plist_removed,
+            launcher_removed=launcher_removed,
         )
 
     def list_active(self) -> list[ScheduledHandle]:
-        """Out of scope for Task 2 — implemented by Task 7."""
-        raise NotImplementedError(
-            "MacOSLaunchAgentBackend.list_active() is implemented in Task 7"
-        )
+        """Return the current sidecar entries (Task 7)."""
+        return list(_sidecar.read_sidecar())
 
     @staticmethod
     def is_supported() -> bool:
