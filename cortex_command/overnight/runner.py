@@ -840,6 +840,19 @@ def _start_session(
             finally:
                 os.close(lock_fd)
 
+    # Async-spawn handshake (Task 6 / spec R18): the parent CLI (or the
+    # launchd launcher) wrote ``runner.spawn-pending`` before forking
+    # this runner. Delete it AFTER ``runner.pid`` is durable so a
+    # ``cortex overnight status`` query never observes both files
+    # absent during a live spawn — the only valid intermediate state
+    # is sentinel-present-and-pid-absent ("phase: starting").
+    try:
+        (session_dir / "runner.spawn-pending").unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        pass
+
     events.log_event(
         events.SESSION_START,
         round=state.current_round,

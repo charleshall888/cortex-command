@@ -172,8 +172,61 @@ def _find_event(events_path: Path, event_type: str) -> dict | None:
     return found
 
 
+def _read_runner_pid(session_dir: Path, timeout: float = 10.0) -> int:
+    """Poll ``session_dir/runner.pid`` until it appears, return the recorded pid.
+
+    Under async-spawn (Task 6), the original ``proc.pid`` is the parent
+    shim that exits within ~5s of the handshake. The runner runs under
+    a fresh process group as the child of that fork. Tests that need
+    to send signals to the runner read the post-handshake
+    ``runner.pid`` and signal that pid directly.
+    """
+    pid_path = session_dir / "runner.pid"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if pid_path.exists():
+            try:
+                payload = json.loads(pid_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                time.sleep(0.1)
+                continue
+            pid = payload.get("pid")
+            if isinstance(pid, int):
+                return pid
+        time.sleep(0.1)
+    raise AssertionError(
+        f"runner.pid never appeared at {pid_path} within {timeout}s"
+    )
+
+
+def _wait_for_pid_exit(pid: int, timeout: float) -> bool:
+    """Poll until ``os.kill(pid, 0)`` raises ProcessLookupError or timeout.
+
+    Returns ``True`` when the pid exited within the budget, ``False``
+    on timeout. Used in place of ``proc.wait()`` for the runner's pid,
+    since the runner is a grandchild of the test process under
+    async-spawn and ``Popen.wait`` is unavailable.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        time.sleep(0.1)
+    return False
+
+
 def test_sighup_triggers_cleanup(runner_env: dict):
-    """Send SIGHUP to ``cortex overnight start``; verify R14 cleanup behavior."""
+    """Send SIGHUP to the runner; verify R14 cleanup behavior.
+
+    Behavioral surface change (Task 6 / spec R18): under async-spawn
+    ``proc.pid`` is the parent shim and exits within 5s of returning
+    from the handshake. The runner runs under a new process group; the
+    test reads ``<session_dir>/runner.pid`` post-handshake and signals
+    that pid instead. ``proc.returncode`` is no longer the runner's
+    exit code (the shim returns 0 on a successful handshake).
+    """
     overall_deadline = time.monotonic() + 30.0
 
     proc = subprocess.Popen(
@@ -200,31 +253,23 @@ def test_sighup_triggers_cleanup(runner_env: dict):
             "may have failed during setup"
         )
 
-        os.kill(proc.pid, signal.SIGHUP)
+        # Under async-spawn, the runner is a grandchild of this test
+        # process (the parent shim exits within ~5s after the
+        # handshake). Read runner.pid and signal the runner directly.
+        runner_pid = _read_runner_pid(runner_env["session_dir"], timeout=10.0)
+        os.kill(runner_pid, signal.SIGHUP)
 
-        # Cleanup should complete well within the remaining budget.
+        # Wait for the runner's pid (not proc.pid) to exit.
         remaining = max(1.0, overall_deadline - time.monotonic())
-        try:
-            proc.wait(timeout=min(10.0, remaining))
-        except subprocess.TimeoutExpired:
-            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-            proc.wait(timeout=5)
+        exited = _wait_for_pid_exit(runner_pid, timeout=min(10.0, remaining))
+        if not exited:
+            try:
+                os.kill(runner_pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             pytest.fail(
-                "cortex overnight start did not exit within 10s after SIGHUP"
+                "cortex overnight runner did not exit within 10s after SIGHUP"
             )
-
-        # (a) Exit code: SIGHUP canonical signal-death code is 129
-        # (128 + SIGHUP=1) under shell convention. Python's
-        # ``subprocess.Popen.returncode`` reports killed-by-signal-N as
-        # ``-N`` — so for SIGHUP (signum=1) the expected value is ``-1``.
-        # The spec prose at R14.5 says "130" but that is SIGINT's code;
-        # cleanup replays the actual signal received (here SIGHUP), so
-        # the signal-death code is 129 / ``-1``. See module docstring
-        # for the discrepancy note.
-        assert proc.returncode == -signal.SIGHUP, (
-            f"Expected returncode == -SIGHUP ({-signal.SIGHUP}) "
-            f"(shell convention 129), got {proc.returncode}"
-        )
 
         # (b) Last circuit_breaker event has reason: signal.
         cb_event = _find_event(runner_env["events_path"], "circuit_breaker")
@@ -263,10 +308,30 @@ def test_sighup_triggers_cleanup(runner_env: dict):
         )
 
     finally:
-        # Safety net: ensure process is dead.
+        # Safety net: ensure both the parent shim and any runner
+        # grandchild are dead. Under async-spawn the parent shim has
+        # usually exited cleanly; the runner pid (if known) is the
+        # signal target that may still be lingering on a failed test.
         if proc.poll() is None:
             try:
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
             except (ProcessLookupError, PermissionError):
                 pass
-            proc.wait(timeout=5)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+        # Best-effort kill of the runner grandchild if a previous step
+        # raised before signaling it.
+        pid_file = runner_env["session_dir"] / "runner.pid"
+        if pid_file.exists():
+            try:
+                payload = json.loads(pid_file.read_text(encoding="utf-8"))
+                pid = payload.get("pid")
+                if isinstance(pid, int):
+                    try:
+                        os.kill(pid, signal.SIGKILL)
+                    except (ProcessLookupError, PermissionError):
+                        pass
+            except (OSError, json.JSONDecodeError):
+                pass

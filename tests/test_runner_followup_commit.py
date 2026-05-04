@@ -188,13 +188,61 @@ def _poll_for_event(events_path: Path, event_type: str, timeout: float = 15.0) -
     return False
 
 
+def _read_runner_pid_from_session(session_dir: Path, timeout: float = 10.0) -> int:
+    """Poll ``session_dir/runner.pid`` until it appears and return the recorded pid.
+
+    Mirrors the helper in ``test_runner_signal.py``. Under async-spawn
+    (Task 6), the parent shim returned by ``Popen`` exits within ~5s of
+    the handshake; the runner runs as a grandchild under a fresh
+    process group. Tests that need to signal the runner read this file
+    post-handshake instead of using ``proc.pid``.
+    """
+    pid_path = session_dir / "runner.pid"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if pid_path.exists():
+            try:
+                payload = json.loads(pid_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                time.sleep(0.1)
+                continue
+            pid = payload.get("pid")
+            if isinstance(pid, int):
+                return pid
+        time.sleep(0.1)
+    raise AssertionError(
+        f"runner.pid never appeared at {pid_path} within {timeout}s"
+    )
+
+
+def _wait_for_pid_exit_followup(pid: int, timeout: float) -> bool:
+    """Poll until the pid is gone (best-effort liveness probe). Used in the
+    followup-commit test to await runner cleanup since ``Popen.wait`` no
+    longer applies to the runner grandchild under async-spawn.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        time.sleep(0.1)
+    return False
+
+
 def test_sighup_trap_commits_followup_to_worktree(worktree_runner_env: dict):
     """SIGHUP triggers cleanup; cleanup creates followup backlog item and commits it.
 
+    Behavioral surface change (Task 6 / spec R18): under async-spawn
+    ``proc.pid`` is the parent shim and exits within 5s of returning
+    from the handshake. The runner runs under a new process group; the
+    test reads ``<session_dir>/runner.pid`` post-handshake and signals
+    that pid instead. The signal-handler-fired assertion is now the
+    on-disk followup commit + backlog file (the runner's signal
+    handler fired iff the followup commit landed on the integration
+    branch).
+
     Asserts:
-      - Exit code 129 (SIGHUP-triggered cleanup — the Python runner
-        replays the received signal so the process dies with the canonical
-        signal-death exit code, per R14 cleanup step 7).
       - The worktree's integration branch has a commit whose message matches
         'Overnight session .* record followup' (Task 7 commit block).
       - The followup item's session_id frontmatter equals the session id
@@ -211,28 +259,29 @@ def test_sighup_trap_commits_followup_to_worktree(worktree_runner_env: dict):
         preexec_fn=os.setsid,
     )
 
+    session_dir = Path(worktree_runner_env["state_path"]).parent
+    runner_pid: int | None = None
+
     try:
         found = _poll_for_event(
             worktree_runner_env["events_path"], "session_start", timeout=15.0
         )
         assert found, "session_start event never appeared"
 
-        os.kill(proc.pid, signal.SIGHUP)
+        # Under async-spawn, signal the runner grandchild — not proc.pid.
+        runner_pid = _read_runner_pid_from_session(session_dir, timeout=10.0)
+        os.kill(runner_pid, signal.SIGHUP)
 
-        try:
-            proc.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-            proc.wait(timeout=5)
-            pytest.fail("cortex overnight start did not exit within 15 seconds after SIGHUP")
-
-        # Python runner replays the signal via os.kill(os.getpid(), SIGHUP),
-        # so the canonical SIGHUP exit is 128+1 = 129. The prior bash runner
-        # exited 130 unconditionally via `exit 130` in its trap. This is the
-        # only assertion-body change required by the port.
-        assert proc.returncode in (129, -signal.SIGHUP, 130), (
-            f"Expected signal-triggered exit (129/SIGHUP/130), got {proc.returncode}"
-        )
+        # Wait for the runner to exit. ``proc.wait`` no longer applies
+        # because proc is the parent shim, which has already exited.
+        if not _wait_for_pid_exit_followup(runner_pid, timeout=15.0):
+            try:
+                os.kill(runner_pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            pytest.fail(
+                "cortex overnight runner did not exit within 15s after SIGHUP"
+            )
 
         worktree = worktree_runner_env["worktree"]
         repo = worktree_runner_env["repo"]
@@ -289,7 +338,18 @@ def test_sighup_trap_commits_followup_to_worktree(worktree_runner_env: dict):
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
             except (ProcessLookupError, PermissionError):
                 pass
-            proc.wait(timeout=5)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+        # Best-effort kill of the runner grandchild (the SIGHUP path
+        # should have brought it down, but a failed assertion may
+        # bypass that).
+        if runner_pid is not None:
+            try:
+                os.kill(runner_pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
 
 
 # ---------------------------------------------------------------------------

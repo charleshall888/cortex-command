@@ -355,6 +355,18 @@ def _build_parser() -> argparse.ArgumentParser:
         default="human",
         help="Output format (default: human). 'json' emits versioned JSON on collisions.",
     )
+    # Internal flag used by the async-spawn fork in
+    # ``cli_handler._spawn_runner_async`` and by the LaunchAgent
+    # launcher script (Task 3). Signals to ``handle_start`` that the
+    # current process IS the runner and must take the inline blocking
+    # path rather than performing yet another fork. Hidden from
+    # operator help so it is not promoted as a public knob.
+    start.add_argument(
+        "--launchd",
+        dest="launchd",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
     start.set_defaults(func=_dispatch_overnight_start)
 
     # cortex overnight status (R2)

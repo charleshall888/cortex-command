@@ -29,6 +29,24 @@ from cortex_command.overnight import logs as logs_module
 from cortex_command.overnight import runner as runner_module
 from cortex_command.overnight import session_validation
 from cortex_command.overnight import status as status_module
+from cortex_command.overnight.scheduler.spawn import wait_for_pid_file
+
+
+# Sentinel filename written by the parent CLI between ``runner.spawn-pending``
+# write and the runner's own ``runner.pid`` claim. Surfaces phase
+# ``starting`` to ``cortex overnight status`` for the brief async-spawn
+# handshake window (Task 6, spec R18).
+_SPAWN_PENDING_SENTINEL = "runner.spawn-pending"
+
+# Async-spawn handshake budget. Spec R18: caller returns within 5 seconds
+# with the runner's PID once verified live, or with
+# ``error_class: spawn_timeout`` / ``spawn_died`` if the handshake fails.
+_SPAWN_HANDSHAKE_TIMEOUT_SECONDS: float = 5.0
+
+# Grace window after ``SIGTERM`` before escalating to ``SIGKILL`` when
+# tearing down an orphan runner that did not write ``runner.pid`` within
+# the handshake budget.
+_ORPHAN_KILL_GRACE_SECONDS: float = 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -124,13 +142,294 @@ def _auto_discover_state(lifecycle_sessions_root: Path) -> Optional[Path]:
 # start (R1)
 # ---------------------------------------------------------------------------
 
+def _run_runner_inline(
+    *,
+    state_path: Path,
+    session_dir: Path,
+    repo_path: Path,
+    plan_path: Path,
+    events_path: Path,
+    args: argparse.Namespace,
+) -> int:
+    """Invoke the blocking runner in-process (dry-run / launchd paths).
+
+    Renamed from the original blocking ``handle_start`` body; the only
+    callers are:
+      - the ``--dry-run`` short-circuit (preserves the inline DRY-RUN
+        echoes that ``test_runner_pr_gating.py`` asserts on stdout);
+      - the ``--launchd`` internal flag, which signals "you ARE the
+        runner now — skip the spawn-handshake fork".
+
+    The async-spawn fork in :func:`_spawn_runner_async` does NOT call
+    this helper; it execs ``cortex overnight start --launchd`` in the
+    child so the returning shim and the runner are distinct processes.
+    """
+    return runner_module.run(
+        state_path=state_path,
+        session_dir=session_dir,
+        repo_path=repo_path,
+        plan_path=plan_path,
+        events_path=events_path,
+        time_limit_seconds=args.time_limit,
+        max_rounds=args.max_rounds,
+        tier=args.tier,
+        dry_run=args.dry_run,
+    )
+
+
+def _build_async_spawn_argv(args: argparse.Namespace, state_path: Path) -> list[str]:
+    """Build the child ``argv`` for the async-spawn fork.
+
+    Re-invokes the same ``cortex overnight start`` entry with the
+    internal ``--launchd`` flag set, which signals to the child that it
+    is the runner itself and must skip the spawn-handshake step. The
+    state file path is forwarded explicitly so the child does not need
+    to re-run auto-discovery against a possibly-different cwd.
+    """
+    argv: list[str] = [
+        sys.executable,
+        "-m",
+        "cortex_command.cli",
+        "overnight",
+        "start",
+        "--launchd",
+        "--state",
+        str(state_path),
+        "--tier",
+        str(getattr(args, "tier", "simple")),
+    ]
+    time_limit = getattr(args, "time_limit", None)
+    if isinstance(time_limit, int):
+        argv.extend(["--time-limit", str(time_limit)])
+    max_rounds = getattr(args, "max_rounds", None)
+    if isinstance(max_rounds, int):
+        argv.extend(["--max-rounds", str(max_rounds)])
+    return argv
+
+
+def _terminate_orphan_child(child: subprocess.Popen) -> None:
+    """Tear down an orphan async-spawn child whose handshake timed out.
+
+    The child was spawned with ``start_new_session=True``, which made it
+    the leader of its own process group. ``os.killpg(pgid, SIGTERM)``
+    delivers the signal to the entire group so any subprocesses the
+    child already spawned receive the same shutdown intent. Escalates
+    to ``SIGKILL`` after :data:`_ORPHAN_KILL_GRACE_SECONDS` if the child
+    has not exited.
+
+    All ``ProcessLookupError`` / ``OSError`` exceptions from the kill
+    path are swallowed — the goal is best-effort cleanup before the
+    parent CLI returns ``started: false``; a failure to signal a
+    process that is already dead is not actionable.
+    """
+    try:
+        pgid = os.getpgid(child.pid)
+    except (ProcessLookupError, OSError):
+        pgid = None
+
+    if pgid is not None:
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
+
+    try:
+        child.wait(timeout=_ORPHAN_KILL_GRACE_SECONDS)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+
+    if pgid is not None:
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
+    try:
+        child.wait(timeout=_ORPHAN_KILL_GRACE_SECONDS)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def _cleanup_spawn_sentinel(session_dir: Path) -> None:
+    """Best-effort unlink of the spawn-pending sentinel.
+
+    The runner deletes this on its own startup path after writing
+    ``runner.pid``, but the parent shim is responsible for cleanup on
+    every error branch (timeout, runner-died) so a status query never
+    sees a stale sentinel.
+    """
+    try:
+        (session_dir / _SPAWN_PENDING_SENTINEL).unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        pass
+
+
+def _spawn_runner_async(
+    *,
+    state_path: Path,
+    session_dir: Path,
+    repo_path: Path,
+    args: argparse.Namespace,
+) -> dict:
+    """Fork the runner and return after the liveness-checked handshake.
+
+    Implements the spec R2 / R18 async-spawn contract:
+
+    1. Write ``<session_dir>/runner.spawn-pending`` so a concurrent
+       ``cortex overnight status`` call can report ``phase: starting``.
+    2. ``subprocess.Popen`` the runner with ``start_new_session=True``,
+       ``stdin=DEVNULL``, and stdout/stderr redirected to per-session
+       log files. The child re-invokes the CLI with ``--launchd`` so it
+       skips the handshake fork.
+    3. Poll for ``<session_dir>/runner.pid`` appearance up to
+       :data:`_SPAWN_HANDSHAKE_TIMEOUT_SECONDS` via
+       :func:`wait_for_pid_file`, which performs the
+       ``os.kill(pid, 0)`` liveness probe before returning.
+
+    Returns a dict matching the JSON envelope shape:
+      - on success: ``{"started": True, "session_id": ..., "pid": ...}``;
+      - on liveness-probe failure: ``{"started": False, "error_class":
+        "spawn_died", "session_id": ...}``;
+      - on timeout: ``{"started": False, "error_class":
+        "spawn_timeout", "session_id": ...}``.
+    """
+    session_id = state_path.parent.name
+    sentinel_path = session_dir / _SPAWN_PENDING_SENTINEL
+    pid_path = session_dir / "runner.pid"
+    stdout_log = session_dir / "runner-stdout.log"
+    stderr_log = session_dir / "runner-stderr.log"
+
+    session_dir.mkdir(parents=True, exist_ok=True)
+
+    # (3) Write the spawn-pending sentinel BEFORE Popen so the status
+    # surface can attribute the gap to "starting" if a query lands
+    # within the handshake window.
+    try:
+        sentinel_path.write_text("", encoding="utf-8")
+    except OSError as exc:
+        return {
+            "started": False,
+            "error_class": "spawn_sentinel_write_failed",
+            "session_id": session_id,
+            "message": str(exc),
+        }
+
+    argv = _build_async_spawn_argv(args, state_path)
+
+    # (4) Fork the runner detached. ``start_new_session=True`` makes the
+    # child the leader of its own process group + session, so SIGINT
+    # delivered to the parent's TTY does NOT propagate to the runner.
+    # That is the intended behavior under async-spawn — the parent shim
+    # exits within 5s and is no longer the right signal target.
+    stdout_fd = open(stdout_log, "ab")
+    stderr_fd = open(stderr_log, "ab")
+    try:
+        child = subprocess.Popen(
+            argv,
+            stdin=subprocess.DEVNULL,
+            stdout=stdout_fd,
+            stderr=stderr_fd,
+            start_new_session=True,
+            close_fds=True,
+        )
+    except (OSError, ValueError) as exc:
+        try:
+            stdout_fd.close()
+        finally:
+            stderr_fd.close()
+        _cleanup_spawn_sentinel(session_dir)
+        return {
+            "started": False,
+            "error_class": "spawn_failed",
+            "session_id": session_id,
+            "message": str(exc),
+        }
+    finally:
+        # The child has inherited the FDs; the parent does not need to
+        # keep them open. Closing the parent's handles avoids an FD
+        # leak across handshake retries.
+        try:
+            stdout_fd.close()
+        except OSError:
+            pass
+        try:
+            stderr_fd.close()
+        except OSError:
+            pass
+
+    # (5) Poll for runner.pid + liveness.
+    pid = wait_for_pid_file(
+        pid_path,
+        timeout=_SPAWN_HANDSHAKE_TIMEOUT_SECONDS,
+    )
+
+    if pid is not None:
+        # Verified-live: clean up the sentinel (the runner SHOULD also
+        # delete it, but the parent's cleanup is the authoritative one
+        # the spec contract guarantees) and return started: true.
+        _cleanup_spawn_sentinel(session_dir)
+        return {
+            "started": True,
+            "session_id": session_id,
+            "pid": pid,
+        }
+
+    # (6) Distinguish runner-died vs timeout. If runner.pid exists at
+    # this point, wait_for_pid_file returned None because the liveness
+    # probe raised ProcessLookupError — the runner crashed in the first
+    # second after writing its PID. Otherwise the file never appeared:
+    # terminate the orphan child before returning so a late
+    # runner.pid write cannot contradict our started: false answer.
+    if pid_path.exists():
+        # Runner died. Reap the dead Popen handle so we do not leak a
+        # zombie. ``poll()`` is sufficient since the child has exited.
+        try:
+            child.poll()
+        except OSError:
+            pass
+        # The child also died, but its process-group leader status may
+        # have left grandchildren alive. Best-effort group-kill anyway.
+        _terminate_orphan_child(child)
+        _cleanup_spawn_sentinel(session_dir)
+        return {
+            "started": False,
+            "error_class": "spawn_died",
+            "session_id": session_id,
+        }
+
+    # Timeout-with-orphan-kill (spec R18 step 7).
+    _terminate_orphan_child(child)
+    _cleanup_spawn_sentinel(session_dir)
+    return {
+        "started": False,
+        "error_class": "spawn_timeout",
+        "session_id": session_id,
+    }
+
+
 def handle_start(args: argparse.Namespace) -> int:
     """Implement ``cortex overnight start``.
 
     Resolves the home repo, auto-discovers the session state file when
-    ``--state`` is absent, derives session-relative paths, and hands off
-    to :func:`runner_module.run`. Per R20, this is the single site that
-    owns user-repo path resolution.
+    ``--state`` is absent, derives session-relative paths, and routes
+    to one of three branches:
+
+      - ``--dry-run`` PINNED INLINE: takes the existing blocking inline
+        path that writes ``DRY-RUN`` lines to the parent's stdout. Tests
+        in ``test_runner_pr_gating.py`` (11 assertions on
+        ``result.stdout``) depend on the dry-run echoes streaming back
+        through the parent process.
+      - ``--launchd`` internal flag: takes the inline path because the
+        caller IS the runner (a child of the async-spawn fork or
+        launcher script) and there is no further fork to perform.
+      - default (run-now path): runs the async-spawn handshake and
+        returns within :data:`_SPAWN_HANDSHAKE_TIMEOUT_SECONDS`.
+
+    The pre-flight concurrent-runner JSON refusal (R4) runs BEFORE the
+    async-spawn fork so a JSON-format consumer always sees a
+    ``concurrent_runner`` envelope rather than racing the fork.
 
     When ``--format json`` is set and the atomic-claim collides with an
     already-alive runner, emits a versioned ``{"error":
@@ -169,12 +468,28 @@ def handle_start(args: argparse.Namespace) -> int:
     plan_path = session_dir / "overnight-plan.md"
     events_path = session_dir / "overnight-events.log"
 
-    # Pre-flight concurrent-runner detection so JSON consumers see a
-    # structured ``concurrent_runner`` refusal before runner.run prints
-    # its stderr-only "session already running" message (R4). The check
-    # mirrors :func:`runner._check_concurrent_start` semantics: only
-    # treat verifiably-alive PIDs as a collision; stale PIDs fall
-    # through and let runner.run self-heal.
+    # (1) PINNED: the dry-run short-circuit takes the existing inline
+    # path. The 11 ``test_runner_pr_gating.py`` assertions depend on
+    # ``DRY-RUN`` lines streaming to ``result.stdout`` from the parent
+    # subprocess — the async-spawn fork would redirect them into the
+    # child's per-session stdout log instead.
+    if getattr(args, "dry_run", False):
+        return _run_runner_inline(
+            state_path=state_path,
+            session_dir=session_dir,
+            repo_path=repo_path,
+            plan_path=plan_path,
+            events_path=events_path,
+            args=args,
+        )
+
+    # (2) PINNED: the JSON-format concurrent-runner refusal MUST run
+    # before the async-spawn fork. ``test_cli_overnight_format_json.py``
+    # prepopulates a live runner.pid to trigger this branch and depends
+    # on ordering. The check mirrors
+    # :func:`runner._check_concurrent_start` semantics: only treat
+    # verifiably-alive PIDs as a collision; stale PIDs fall through and
+    # let runner.run self-heal in the spawned child.
     if fmt == "json":
         existing_pid_data = ipc.read_runner_pid(session_dir)
         if (
@@ -196,17 +511,45 @@ def handle_start(args: argparse.Namespace) -> int:
             _emit_json(payload)
             return 1
 
-    return runner_module.run(
+    # (8) ``--launchd``: the caller IS the runner. The async-spawn fork
+    # in :func:`_spawn_runner_async` re-invokes the CLI with this flag
+    # set so the child takes the inline path without performing yet
+    # another fork. The launcher script (Task 3) sets this flag too.
+    if getattr(args, "launchd", False):
+        return _run_runner_inline(
+            state_path=state_path,
+            session_dir=session_dir,
+            repo_path=repo_path,
+            plan_path=plan_path,
+            events_path=events_path,
+            args=args,
+        )
+
+    # Default run-now path: async-spawn with liveness handshake.
+    result = _spawn_runner_async(
         state_path=state_path,
         session_dir=session_dir,
         repo_path=repo_path,
-        plan_path=plan_path,
-        events_path=events_path,
-        time_limit_seconds=args.time_limit,
-        max_rounds=args.max_rounds,
-        tier=args.tier,
-        dry_run=args.dry_run,
+        args=args,
     )
+
+    if fmt == "json":
+        _emit_json(result)
+    else:
+        if result.get("started"):
+            print(
+                f"overnight session started: {result.get('session_id')} "
+                f"(pid={result.get('pid')})"
+            )
+        else:
+            print(
+                f"overnight session start failed: "
+                f"{result.get('error_class', 'unknown')}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    return 0 if result.get("started") else 1
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +580,11 @@ def handle_status(args: argparse.Namespace) -> int:
     points at a completed session. For human format, delegates to
     :func:`status_module.render_status`; for JSON format, emits an
     object with ``session_id``, ``phase``, ``current_round``, ``features``.
+
+    When ``runner.spawn-pending`` exists in the resolved session_dir
+    AND ``runner.pid`` does not, the phase is reported as ``starting``
+    (Task 6 / spec R18) — covers the brief async-spawn handshake window
+    between the CLI sentinel write and the runner's own PID claim.
     """
     fmt = args.format
 
@@ -277,6 +625,18 @@ def handle_status(args: argparse.Namespace) -> int:
                 return 0
             state_path = latest
 
+    # Detect the async-spawn handshake window: spawn-pending sentinel
+    # written by the parent CLI is still present and runner.pid has
+    # not yet appeared. ``cortex overnight status`` reports
+    # ``phase: starting`` so consumers (the MCP plugin, operators) can
+    # distinguish "runner has not yet acked the spawn" from a
+    # genuinely stuck or failed session.
+    resolved_session_dir = state_path.parent
+    starting_window = (
+        (resolved_session_dir / _SPAWN_PENDING_SENTINEL).exists()
+        and not (resolved_session_dir / "runner.pid").exists()
+    )
+
     # Emit status.
     if fmt == "json":
         try:
@@ -284,9 +644,10 @@ def handle_status(args: argparse.Namespace) -> int:
         except (OSError, json.JSONDecodeError):
             print(json.dumps({"active": False}))
             return 0
+        phase_value = "starting" if starting_window else data.get("phase", "")
         payload = {
             "session_id": data.get("session_id", ""),
-            "phase": data.get("phase", ""),
+            "phase": phase_value,
             "current_round": data.get("current_round", 0),
             "features": data.get("features", {}),
         }
