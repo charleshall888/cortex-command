@@ -26,6 +26,26 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
 # -----------------------------------------------------------------------------
+# Phase 0 — overnight main-branch guard
+# -----------------------------------------------------------------------------
+# Threat model: this guard is a defense-in-depth check against accidental
+# overnight commits to main. It is NOT a defense against an adversarial actor
+# who controls the runner process. Known bypass surface includes: --no-verify,
+# per-command core.hooksPath overrides, GIT_DIR= manipulation, git update-ref,
+# git commit-tree against an alternate index, and self-modification of this
+# hook before invoking commit. The canonical adversarial defense against any
+# of those surfaces is GitHub branch protection on main; this hook only
+# protects against well-behaved runner children that honor the local hook.
+branch=$(git symbolic-ref --quiet HEAD 2>/dev/null || true)
+if [ "${CORTEX_RUNNER_CHILD:-}" = "1" ] && [ "$branch" = "refs/heads/main" ]; then
+    echo "pre-commit: Phase 0 — overnight main-branch guard rejected commit." >&2
+    echo "  resolved branch: refs/heads/main" >&2
+    echo "  gate signal:     CORTEX_RUNNER_CHILD=1" >&2
+    echo "  bypass:          re-run the commit with --no-verify if you intend this." >&2
+    exit 1
+fi
+
+# -----------------------------------------------------------------------------
 # Phase 1 — Name validation and classification guard
 # -----------------------------------------------------------------------------
 # Populate BO/HM from helper recipes. `mapfile -t` is the natural idiom but is
