@@ -1,5 +1,67 @@
 [
   {
+    "id": 162,
+    "title": "Sandbox overnight agents at the OS layer",
+    "status": "refined",
+    "priority": "critical",
+    "type": "epic",
+    "tags": [
+      "overnight-runner",
+      "sandbox",
+      "os-enforcement",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
+    "plan": null,
+    "uuid": "0aac4173-e024-454b-a9c2-71bd06947190",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 163,
+    "title": "Apply per-spawn sandbox.filesystem.denyWrite at overnight orchestrator spawn",
+    "status": "refined",
+    "priority": "critical",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "sandbox",
+      "os-enforcement",
+      "orchestrator-worktree-escape"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "162",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
+    "plan": null,
+    "uuid": "759eb26e-55fd-4cc6-9528-f7c84845e8e2",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 112,
     "title": "Migrate overnight-schedule to a LaunchAgent-based scheduler",
     "status": "in_progress",
@@ -24,7 +86,7 @@
     "plan": null,
     "uuid": "3565ffe8-5041-4c2b-9f91-d14fa9d4c1cd",
     "lifecycle_slug": "migrate-overnight-schedule-to-a-launchagent-based-scheduler",
-    "session_id": "80901555-2567-4d25-af83-17f63c3e7037",
+    "session_id": "8852fbdd-d470-4919-8020-c42c14f0d6ae",
     "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
@@ -69,27 +131,32 @@
       "lifecycle",
       "plan"
     ],
-    "areas": [],
+    "areas": [
+      "skills",
+      "lifecycle"
+    ],
     "created": "2026-05-04",
     "updated": "2026-05-04",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "160"
+    ],
     "parent": "158",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction/spec.md",
     "discovery_source": "research/competing-plan-synthesis/research.md",
     "plan": null,
     "uuid": "38ad783b-8ad4-4e57-97d2-2d21970bad6c",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 160,
     "title": "Build shared synthesizer for critical-tier dual-plan flow (interactive + overnight)",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -99,17 +166,53 @@
       "synthesizer",
       "overnight"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner"
+    ],
     "created": "2026-05-04",
     "updated": "2026-05-04",
     "blocks": [],
     "blocked_by": [],
     "parent": "158",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight/spec.md",
     "discovery_source": "research/competing-plan-synthesis/research.md",
     "plan": null,
     "uuid": "8bd85abf-abca-4a85-b0d7-c961213e269b",
+    "lifecycle_slug": null,
+    "session_id": "a48fb253-3195-4d41-8eec-db443dcf7503",
+    "lifecycle_phase": "implement",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 166,
+    "title": "Convert dispatch.py granular sandbox shape to simplified, fix cross-repo allowlist inversion at feature_executor.py:603",
+    "status": "refined",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "pipeline",
+      "sandbox",
+      "cross-repo"
+    ],
+    "areas": [
+      "overnight-runner",
+      "pipeline"
+    ],
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "blocks": [],
+    "blocked_by": [
+      "163"
+    ],
+    "parent": "162",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
+    "plan": null,
+    "uuid": "767f7775-136d-4c4b-99ab-3e7e87964fd0",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -147,6 +250,69 @@
     "repo": null
   },
   {
+    "id": 161,
+    "title": "Add parent-epic alignment check to refine's clarify-critic",
+    "status": "in_progress",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "refine",
+      "clarify-critic",
+      "epic-alignment",
+      "drift"
+    ],
+    "areas": [],
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/refine-load-epic-context/research.md",
+    "plan": null,
+    "uuid": "3d0dcb32-5995-49f6-83f2-89184a8c6c46",
+    "lifecycle_slug": "add-parent-epic-alignment-check-to-refine-clarify-critic",
+    "session_id": "e9da4bd7-74e0-4196-8259-b522cf433775",
+    "lifecycle_phase": "specify",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 164,
+    "title": "Add sandbox-violation tracker hook for PostToolUse(Bash)",
+    "status": "refined",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "sandbox",
+      "observability",
+      "hook"
+    ],
+    "areas": [
+      "overnight-runner",
+      "observability"
+    ],
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "blocks": [],
+    "blocked_by": [
+      "163"
+    ],
+    "parent": "162",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
+    "plan": null,
+    "uuid": "88aa1935-073e-434b-8ffb-a179174b20ce",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 156,
     "title": "Make cortex-check-parity context-aware (skip tokens inside fenced code blocks)",
     "status": "deferred",
@@ -173,6 +339,108 @@
     "lifecycle_slug": "make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks",
     "session_id": null,
     "lifecycle_phase": "specify",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 165,
+    "title": "Add Linux bubblewrap preflight and failIfUnavailable for overnight sandbox",
+    "status": "refined",
+    "priority": "low",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "sandbox",
+      "cross-platform",
+      "linux"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "blocks": [],
+    "blocked_by": [
+      "163"
+    ],
+    "parent": "162",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
+    "plan": null,
+    "uuid": "59de6f26-d6ad-4d2c-aceb-73d446bee723",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 167,
+    "title": "Document overnight sandbox threat-model boundary and Linux setup prereqs",
+    "status": "refined",
+    "priority": "low",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "sandbox",
+      "docs"
+    ],
+    "areas": [
+      "overnight-runner",
+      "docs"
+    ],
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "blocks": [],
+    "blocked_by": [
+      "163",
+      "164",
+      "165",
+      "166"
+    ],
+    "parent": "162",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
+    "plan": null,
+    "uuid": "a64f0544-0663-451e-8da5-3de0339f70e6",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 168,
+    "title": "Tighten overnight sandbox from deny-list to narrower allowOnly",
+    "status": "deferred",
+    "priority": "low",
+    "type": "feature",
+    "tags": [
+      "overnight-runner",
+      "sandbox",
+      "hardening"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-05-04",
+    "updated": "2026-05-04",
+    "blocks": [],
+    "blocked_by": [
+      "163",
+      "164"
+    ],
+    "parent": "162",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
+    "plan": null,
+    "uuid": "a3e827af-79f9-4bbb-ac30-53c20fc4532e",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },

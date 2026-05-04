@@ -1845,6 +1845,28 @@ class ListSessionsOutput(BaseModel):
     next_cursor: str | None = None
 
 
+# overnight_schedule_run ----------------------------------------------------
+
+
+class ScheduleRunInput(BaseModel):
+    """Input for the ``overnight_schedule_run`` tool."""
+
+    confirm_dangerously_skip_permissions: Literal[True]
+    target_time: str
+    state_path: str | None = None
+
+
+class ScheduleRunOutput(BaseModel):
+    """Output for the ``overnight_schedule_run`` tool."""
+
+    model_config = _FORWARD_COMPAT
+
+    scheduled: bool
+    session_id: str | None = None
+    label: str | None = None
+    scheduled_for_iso: str | None = None
+
+
 # ---------------------------------------------------------------------------
 # Subprocess helpers
 # ---------------------------------------------------------------------------
@@ -1949,6 +1971,7 @@ def _parse_json_payload(
 # disk-pressure cases without producing spurious MCP failures.
 _DEFAULT_TOOL_TIMEOUT = 30.0
 _START_RUN_TOOL_TIMEOUT = 30.0
+_SCHEDULE_RUN_TOOL_TIMEOUT = 30.0
 
 
 def _delegate_overnight_start_run(
@@ -2043,6 +2066,61 @@ def _delegate_overnight_start_run(
         started_at=None,
         reason=None,
         existing_session_id=None,
+    )
+
+
+def _delegate_overnight_schedule_run(
+    payload: ScheduleRunInput,
+) -> ScheduleRunOutput | str:
+    """Subprocess delegation for ``overnight_schedule_run``.
+
+    Calls ``cortex overnight schedule <target_time> --format json`` and
+    parses the JSON envelope.  On a non-zero exit the delegate returns
+    ``ScheduleRunOutput(scheduled=False)``; on a subprocess timeout the
+    exception propagates to the MCP layer (prefer an explicit tool error
+    over a silent ``scheduled=False`` in case the plist was already
+    written).
+
+    On unrecovered :class:`CortexCliMissing` (S1.3 retry exhausted),
+    returns :data:`_CORTEX_CLI_MISSING_ERROR` (S5.2).
+    """
+
+    # Validation gate is enforced at the FastMCP wrapper layer (the
+    # input model's ``Literal[True]`` rejects missing/false confirmations
+    # before we get here).
+
+    _gate_dispatch()
+
+    argv: list[str] = ["overnight", "schedule", payload.target_time, "--format", "json"]
+    if payload.state_path is not None:
+        argv.extend(["--state", payload.state_path])
+
+    # Per-tool-call retry budget for CortexCliMissing (S1.3).
+    cli_retry_budget: list[int] = [1]
+    try:
+        completed = _retry_on_cli_missing(
+            cli_retry_budget,
+            _run_cortex,
+            argv,
+            timeout=_SCHEDULE_RUN_TOOL_TIMEOUT,
+        )
+    except CortexCliMissing:
+        return _CORTEX_CLI_MISSING_ERROR
+
+    if completed.returncode != 0:
+        return ScheduleRunOutput(
+            scheduled=False,
+            session_id=None,
+            label=None,
+            scheduled_for_iso=None,
+        )
+
+    parsed = _parse_json_payload(completed, verb="overnight_schedule_run")
+    return ScheduleRunOutput(
+        scheduled=True,
+        session_id=parsed.get("session_id"),
+        label=parsed.get("label"),
+        scheduled_for_iso=parsed.get("scheduled_for_iso"),
     )
 
 
@@ -2415,13 +2493,18 @@ def _delegate_overnight_list_sessions(
 
 
 server = FastMCP("cortex-overnight")
-"""Stdio FastMCP instance with the five overnight tools registered."""
+"""Stdio FastMCP instance with the six overnight tools registered."""
 
 
 _START_RUN_WARNING = (
     "This tool spawns a multi-hour autonomous agent that bypasses "
     "permission prompts and consumes Opus tokens. Only call when the "
     "user has explicitly asked to start an overnight run."
+)
+
+_SCHEDULE_RUN_WARNING = (
+    "This tool schedules a future overnight run via a LaunchAgent plist. "
+    "Only call when the user has explicitly asked to schedule an overnight run."
 )
 
 
@@ -2441,6 +2524,24 @@ async def overnight_start_run(
     ``CallToolResult(isError=True, ...)`` envelope.
     """
     return _delegate_overnight_start_run(payload)
+
+
+@server.tool(
+    name="overnight_schedule_run",
+    description=_SCHEDULE_RUN_WARNING,
+)
+async def overnight_schedule_run(
+    payload: ScheduleRunInput,
+) -> ScheduleRunOutput | str:
+    """Schedule a future overnight run via subprocess delegation.
+
+    Return type union with ``str`` accommodates the
+    :data:`_CORTEX_CLI_MISSING_ERROR` graceful-degrade path (S5.2):
+    when the cortex CLI is unrecoverably missing, the delegate
+    returns the canonical error string and FastMCP wraps it as a
+    ``CallToolResult(isError=True, ...)`` envelope.
+    """
+    return _delegate_overnight_schedule_run(payload)
 
 
 @server.tool(
