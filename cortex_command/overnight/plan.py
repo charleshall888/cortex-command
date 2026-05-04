@@ -203,7 +203,7 @@ def render_session_plan(
     lines.append("## Execution Strategy")
     lines.append("")
     lines.append(f"- **Rounds**: {num_rounds}")
-    lines.append("- **Parallel dispatch**: Tier-based adaptive throttle (1-3 workers depending on API subscription tier)")
+    lines.append("- **Parallel dispatch**: Tier-based concurrency cap (1-3 workers depending on API subscription tier)")
     lines.append(f"- **Estimated duration**: ~{est_minutes} minutes")
     lines.append(f"- **Time limit**: {time_limit_hours} hours")
     lines.append("")

@@ -103,7 +103,7 @@ render_session_plan(
 
 This produces a formatted markdown session plan with:
 - Selected features table (round, feature, backlog number, type, priority, pre-work status)
-- Execution strategy (rounds, tier-based adaptive throttle, feature count)
+- Execution strategy (rounds, tier-based concurrency cap, feature count)
 - Not-ready items with reasons
 - Risk assessment (file overlap, dependency concerns)
 - Stop conditions (zero progress in a round, time limit)
