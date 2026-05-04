@@ -128,11 +128,11 @@ dashboard-seed-clean:
 
 # Regenerate the backlog index
 backlog-index:
-    python3 backlog/generate_index.py
+    cortex-generate-backlog-index
 
 # Mark a backlog item as complete by name, ID, or UUID (updates frontmatter in place, cleans blocked-by, regenerates index)
 backlog-close feature="":
-    python3 backlog/update_item.py {{ feature }} status=complete
+    cortex-update-item {{ feature }} status=complete
 
 # Move completed lifecycle dirs (events.log contains "feature_complete") to lifecycle/archive/
 # Flags:
