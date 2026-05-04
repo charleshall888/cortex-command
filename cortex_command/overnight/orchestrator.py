@@ -47,7 +47,10 @@ from cortex_command.overnight.events import (
     log_event as overnight_log_event,
 )
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
-from cortex_command.overnight.feature_executor import execute_feature
+from cortex_command.overnight.feature_executor import (
+    _SESSION_HALT_ERROR_TYPES,
+    execute_feature,
+)
 from cortex_command.overnight import outcome_router
 from cortex_command.overnight.outcome_router import OutcomeContext
 
@@ -290,17 +293,17 @@ async def run_batch(config: BatchConfig) -> BatchResult:
         # outcome router.
         if (
             result.status == "paused"
-            and result.error == "budget_exhausted"
+            and result.error in _SESSION_HALT_ERROR_TYPES
             and not batch_result.global_abort_signal
         ):
             batch_result.global_abort_signal = True
-            batch_result.abort_reason = "budget_exhausted"
+            batch_result.abort_reason = result.error
             try:
                 _state = load_state(config.overnight_state_path)
                 _fs = _state.features.get(name)
                 if _fs is not None:
                     _fs.status = "paused"
-                    _fs.error = "budget_exhausted"
+                    _fs.error = result.error
                     save_state(_state, config.overnight_state_path)
             except Exception:
                 pass  # Don't let state-write failure abort the batch
@@ -308,7 +311,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                 BATCH_BUDGET_EXHAUSTED,
                 config.batch_id,
                 feature=name,
-                details={"abort_reason": "budget_exhausted"},
+                details={"abort_reason": result.error},
                 log_path=config.overnight_events_path,
             )
             return
@@ -391,16 +394,16 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             # reach the outcome router.
             if (
                 failed_result.status == "paused"
-                and failed_result.error == "budget_exhausted"
+                and failed_result.error in _SESSION_HALT_ERROR_TYPES
                 and not batch_result.global_abort_signal
             ):
                 batch_result.global_abort_signal = True
-                batch_result.abort_reason = "budget_exhausted"
+                batch_result.abort_reason = failed_result.error
                 overnight_log_event(
                     BATCH_BUDGET_EXHAUSTED,
                     config.batch_id,
                     feature=n,
-                    details={"abort_reason": "budget_exhausted"},
+                    details={"abort_reason": failed_result.error},
                     log_path=config.overnight_events_path,
                 )
                 continue
@@ -442,7 +445,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
             state_for_pause = load_state(config.overnight_state_path)
             if state_for_pause.phase not in ("paused", "complete"):
                 transition(state_for_pause, "paused")
-                state_for_pause.paused_reason = "budget_exhausted"
+                state_for_pause.paused_reason = batch_result.abort_reason
                 save_state(state_for_pause, config.overnight_state_path)
                 overnight_log_event(
                     SESSION_BUDGET_EXHAUSTED,
