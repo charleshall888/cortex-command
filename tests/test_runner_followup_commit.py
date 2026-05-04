@@ -290,3 +290,130 @@ def test_sighup_trap_commits_followup_to_worktree(worktree_runner_env: dict):
             except (ProcessLookupError, PermissionError):
                 pass
             proc.wait(timeout=5)
+
+
+# ---------------------------------------------------------------------------
+# Failure-logging tests (lifecycle 130-style ticket Task 5/10):
+# Asserts that when the inner ``git commit`` is rejected (e.g., by a
+# pre-commit hook), ``_commit_followup_in_worktree`` writes both a
+# ``runner: followup commit failed`` stderr line and a structured
+# ``followup_commit_failed`` event to ``events_path``.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def rejecting_hook_env(tmp_path: Path):
+    """Build a worktree configured to always reject commits via pre-commit hook.
+
+    Topology:
+      - repo/ (home repo, default branch)
+      - worktree/ (worktree on 'integration-branch')
+      - repo/.githooks/pre-commit — exits 1 unconditionally
+      - core.hooksPath set to .githooks in both repo + worktree configs
+
+    Stages a tracked change under ``worktree/backlog/`` so the
+    ``git diff --cached --quiet`` precheck inside
+    ``_commit_followup_in_worktree`` returns non-zero and the function
+    proceeds to the (rejected) ``git commit`` invocation.
+    """
+    repo = tmp_path / "repo"
+    worktree = tmp_path / "worktree"
+
+    _init_repo(repo)
+    _git(repo, "branch", "integration-branch")
+    _git(repo, "worktree", "add", str(worktree), "integration-branch")
+
+    for d in (repo, worktree):
+        _git(d, "config", "user.email", "t@t")
+        _git(d, "config", "user.name", "T")
+        _git(d, "config", "commit.gpgsign", "false")
+
+    # Install the rejecting hook. core.hooksPath is repo-relative, so
+    # configuring it in the worktree's local config (which shares the
+    # gitdir with the home repo) routes hook resolution to repo/.githooks/.
+    hooks_dir = repo / ".githooks"
+    hooks_dir.mkdir()
+    pre_commit = hooks_dir / "pre-commit"
+    pre_commit.write_text(
+        "#!/bin/bash\n"
+        "echo 'pre-commit: rejected by test fixture' >&2\n"
+        "exit 1\n"
+    )
+    pre_commit.chmod(pre_commit.stat().st_mode | stat.S_IEXEC)
+
+    _git(repo, "config", "core.hooksPath", str(hooks_dir))
+
+    # Stage a backlog change so the diff --cached precheck doesn't no-op.
+    (worktree / "backlog").mkdir(exist_ok=True)
+    (worktree / "backlog" / "fixture-followup.md").write_text(
+        "# fixture followup\n"
+    )
+
+    session_id = "overnight-test-followup-fail"
+    session_dir = repo / "lifecycle" / "sessions" / session_id
+    session_dir.mkdir(parents=True)
+    events_path = session_dir / "overnight-events.log"
+
+    yield {
+        "repo": repo,
+        "worktree": worktree,
+        "session_id": session_id,
+        "events_path": events_path,
+    }
+
+
+def test_followup_commit_failure_emits_stderr_and_event(
+    rejecting_hook_env: dict,
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Simulated commit rejection produces stderr line + events.log entry.
+
+    Asserts:
+      - captured stderr contains ``runner: followup commit failed``.
+      - ``events_path`` JSONL contains a line whose ``event`` field equals
+        ``events.FOLLOWUP_COMMIT_FAILED``.
+    """
+    # Import here so the test fails with a clear error if the module path
+    # is broken, rather than at collection time.
+    from cortex_command.overnight import events
+    from cortex_command.overnight.runner import _commit_followup_in_worktree
+
+    # Pin LIFECYCLE_SESSION_ID so events.log_event has a stable session_id
+    # field (events_path is explicit, so this is cosmetic but matches the
+    # runner's runtime invariant).
+    monkeypatch.setenv("LIFECYCLE_SESSION_ID", rejecting_hook_env["session_id"])
+
+    _commit_followup_in_worktree(
+        rejecting_hook_env["worktree"],
+        rejecting_hook_env["session_id"],
+        rejecting_hook_env["events_path"],
+    )
+
+    captured = capsys.readouterr()
+    assert "runner: followup commit failed" in captured.err, (
+        f"expected stderr to contain 'runner: followup commit failed'; got: "
+        f"{captured.err!r}"
+    )
+
+    events_path = rejecting_hook_env["events_path"]
+    assert events_path.exists(), (
+        f"events log was never written at {events_path}"
+    )
+
+    matched = False
+    for line in events_path.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            evt = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if evt.get("event") == events.FOLLOWUP_COMMIT_FAILED:
+            matched = True
+            break
+    assert matched, (
+        f"no event with type={events.FOLLOWUP_COMMIT_FAILED!r} found in "
+        f"{events_path}; contents:\n{events_path.read_text()}"
+    )
