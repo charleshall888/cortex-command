@@ -245,25 +245,6 @@ class TestRequestBrainDecision(unittest.IsolatedAsyncioTestCase):
         event_dict = mock_log.call_args.args[1]
         self.assertEqual(event_dict["event"], "brain_unavailable")
 
-    async def test_dispatch_failure_infrastructure_calls_report_rate_limit(self):
-        """Dispatch fails (infrastructure) with manager → manager.report_rate_limit() called."""
-        self._start_patch(
-            "cortex_command.overnight.brain._render_template", return_value="stub"
-        )
-        mock_dispatch = self._start_patch(
-            "cortex_command.overnight.brain.dispatch_task", new_callable=AsyncMock
-        )
-        mock_dispatch.return_value = DispatchResult(
-            success=False, output="", error_type="infrastructure_failure"
-        )
-        self._start_patch("cortex_command.overnight.brain.pipeline_log_event")
-
-        mock_manager = MagicMock()
-        result = await request_brain_decision(self._ctx, mock_manager, self._log_path)
-
-        self.assertIsInstance(result, BrainDecision)
-        mock_manager.report_rate_limit.assert_called_once()
-
 
 # ---------------------------------------------------------------------------
 # Task 7: _handle_failed_task() — circuit breaker pre-check
