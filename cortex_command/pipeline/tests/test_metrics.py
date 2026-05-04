@@ -416,8 +416,9 @@ class TestModelTierAggregates(unittest.TestCase):
         ]
         result = self._fn(paired)
 
-        self.assertIn("sonnet,simple", result)
-        bucket = result["sonnet,simple"]
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("sonnet,simple,legacy-effort", result)
+        bucket = result["sonnet,simple,legacy-effort"]
         self.assertEqual(bucket["n_completes"], 3)
         self.assertTrue(bucket["p95_suppressed"])
         self.assertEqual(bucket["max_turns_observed"], 15)
@@ -438,8 +439,9 @@ class TestModelTierAggregates(unittest.TestCase):
         ]
         result = self._fn(paired)
 
-        self.assertIn("sonnet,simple", result)
-        bucket = result["sonnet,simple"]
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("sonnet,simple,legacy-effort", result)
+        bucket = result["sonnet,simple,legacy-effort"]
         self.assertEqual(bucket["n_completes"], 100)
         self.assertFalse(bucket["p95_suppressed"])
         self.assertIsNone(bucket["max_turns_observed"])
@@ -466,8 +468,9 @@ class TestModelTierAggregates(unittest.TestCase):
         paired = pair_dispatch_events(events)
         result = self._fn(paired)
 
-        self.assertIn("opus,complex", result)
-        bucket = result["opus,complex"]
+        # Fixture's dispatch_start carries effort="xhigh"; bucket key reflects it.
+        self.assertIn("opus,complex,xhigh", result)
+        bucket = result["opus,complex,xhigh"]
         self.assertEqual(bucket["n_completes"], 4)
         self.assertAlmostEqual(bucket["over_cap_rate"], 0.5)
 
@@ -489,8 +492,9 @@ class TestModelTierAggregates(unittest.TestCase):
         ]
         result = self._fn(paired)
 
-        self.assertIn("sonnet,simple", result)
-        bucket = result["sonnet,simple"]
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("sonnet,simple,legacy-effort", result)
+        bucket = result["sonnet,simple,legacy-effort"]
         self.assertEqual(bucket["n_completes"], 2)
         self.assertEqual(bucket["n_errors"], 3)
         self.assertEqual(bucket["error_counts"], {"agent_timeout": 2, "api_rate_limit": 1})
@@ -509,8 +513,9 @@ class TestModelTierAggregates(unittest.TestCase):
         ]
         result = self._fn(paired)
 
-        self.assertIn("sonnet,simple", result)
-        bucket = result["sonnet,simple"]
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("sonnet,simple,legacy-effort", result)
+        bucket = result["sonnet,simple,legacy-effort"]
         self.assertEqual(bucket["n_completes"], 0)
         self.assertEqual(bucket["error_counts"], {"agent_timeout": 2})
         self.assertIsNone(bucket["num_turns_mean"])
@@ -535,14 +540,15 @@ class TestModelTierAggregates(unittest.TestCase):
         ]
         result = self._fn(paired)
 
-        self.assertIn("sonnet,simple", result)
-        self.assertIn("opus,complex", result)
-        self.assertEqual(result["sonnet,simple"]["n_completes"], 2)
-        self.assertEqual(result["opus,complex"]["n_completes"], 1)
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("sonnet,simple,legacy-effort", result)
+        self.assertIn("opus,complex,legacy-effort", result)
+        self.assertEqual(result["sonnet,simple,legacy-effort"]["n_completes"], 2)
+        self.assertEqual(result["opus,complex,legacy-effort"]["n_completes"], 1)
         # Buckets don't bleed into each other
         self.assertNotEqual(
-            result["sonnet,simple"]["estimated_cost_usd_mean"],
-            result["opus,complex"]["estimated_cost_usd_mean"],
+            result["sonnet,simple,legacy-effort"]["estimated_cost_usd_mean"],
+            result["opus,complex,legacy-effort"]["estimated_cost_usd_mean"],
         )
 
     # ------------------------------------------------------------------
@@ -564,8 +570,9 @@ class TestModelTierAggregates(unittest.TestCase):
         ]
         result = self._fn(paired)
 
-        self.assertIn("sonnet,simple", result)
-        bucket = result["sonnet,simple"]
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("sonnet,simple,legacy-effort", result)
+        bucket = result["sonnet,simple,legacy-effort"]
         self.assertEqual(bucket["n_errors"], 4)
         self.assertEqual(
             bucket["error_counts"],
@@ -666,10 +673,11 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
         ]
         result = compute_skill_tier_dispatch_aggregates(paired)
 
-        self.assertIn("implement,simple", result)
-        # No three-dimensional key for non-review-fix skill.
-        self.assertNotIn("implement,simple,1", result)
-        bucket = result["implement,simple"]
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("implement,simple,legacy-effort", result)
+        # No four-dimensional cycle key for non-review-fix skill.
+        self.assertNotIn("implement,simple,legacy-effort,1", result)
+        bucket = result["implement,simple,legacy-effort"]
         self.assertEqual(bucket["n_completes"], 3)
         self.assertAlmostEqual(bucket["estimated_cost_usd_mean"], 2.0)
         self.assertAlmostEqual(bucket["num_turns_mean"], 6.0)
@@ -690,14 +698,15 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
         ]
         result = compute_skill_tier_dispatch_aggregates(paired)
 
-        self.assertIn("implement,simple", result)
-        self.assertIn("conflict-repair,complex", result)
-        self.assertEqual(result["implement,simple"]["n_completes"], 2)
-        self.assertEqual(result["conflict-repair,complex"]["n_completes"], 1)
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("implement,simple,legacy-effort", result)
+        self.assertIn("conflict-repair,complex,legacy-effort", result)
+        self.assertEqual(result["implement,simple,legacy-effort"]["n_completes"], 2)
+        self.assertEqual(result["conflict-repair,complex,legacy-effort"]["n_completes"], 1)
         # Buckets do not bleed into each other.
         self.assertNotEqual(
-            result["implement,simple"]["estimated_cost_usd_mean"],
-            result["conflict-repair,complex"]["estimated_cost_usd_mean"],
+            result["implement,simple,legacy-effort"]["estimated_cost_usd_mean"],
+            result["conflict-repair,complex,legacy-effort"]["estimated_cost_usd_mean"],
         )
 
     # ------------------------------------------------------------------
@@ -706,8 +715,8 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
 
     def test_review_fix_cycle_disentanglement(self):
         """Two review-fix paired records at the SAME tier — one with cycle=1,
-        one with cycle=2 — produce two distinct three-dimensional buckets,
-        not a single collapsed bucket."""
+        one with cycle=2 — produce two distinct four-dimensional buckets
+        (skill,tier,effort,cycle), not a single collapsed bucket."""
         from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates
         paired = [
             self._paired_complete("review-fix", "simple", cost_usd=1.0, num_turns=4,
@@ -717,13 +726,14 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
         ]
         result = compute_skill_tier_dispatch_aggregates(paired)
 
-        self.assertIn("review-fix,simple,1", result)
-        self.assertIn("review-fix,simple,2", result)
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("review-fix,simple,legacy-effort,1", result)
+        self.assertIn("review-fix,simple,legacy-effort,2", result)
         review_fix_keys = [k for k in result if k.startswith("review-fix,")]
         self.assertEqual(len(review_fix_keys), 2)
         # Each cycle bucket holds exactly one record.
-        self.assertEqual(result["review-fix,simple,1"]["n_completes"], 1)
-        self.assertEqual(result["review-fix,simple,2"]["n_completes"], 1)
+        self.assertEqual(result["review-fix,simple,legacy-effort,1"]["n_completes"], 1)
+        self.assertEqual(result["review-fix,simple,legacy-effort,2"]["n_completes"], 1)
 
     # ------------------------------------------------------------------
     # (d) review-fix legacy-cycle bucketing: missing cycle on review-fix
@@ -731,8 +741,9 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
 
     def test_review_fix_legacy_cycle_bucketing(self):
         """A review-fix record without a cycle field buckets as
-        '<skill>,<tier>,legacy-cycle' (the spec's escape hatch for historical
-        review-fix events emitted before the cycle field was added)."""
+        '<skill>,<tier>,<effort>,legacy-cycle' (the spec's escape hatch for
+        historical review-fix events emitted before the cycle field was added).
+        Records synthesized without an effort field bucket as legacy-effort."""
         from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates
         paired = [
             self._paired_complete("review-fix", "simple", cost_usd=1.5, num_turns=5,
@@ -740,12 +751,12 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
         ]
         result = compute_skill_tier_dispatch_aggregates(paired)
 
-        self.assertIn("review-fix,simple,legacy-cycle", result)
+        self.assertIn("review-fix,simple,legacy-effort,legacy-cycle", result)
         # Not bucketed under the cycle-1 or cycle-2 keys.
-        self.assertNotIn("review-fix,simple,1", result)
-        self.assertNotIn("review-fix,simple,2", result)
+        self.assertNotIn("review-fix,simple,legacy-effort,1", result)
+        self.assertNotIn("review-fix,simple,legacy-effort,2", result)
         self.assertEqual(
-            result["review-fix,simple,legacy-cycle"]["n_completes"], 1,
+            result["review-fix,simple,legacy-effort,legacy-cycle"]["n_completes"], 1,
         )
 
     # ------------------------------------------------------------------
@@ -754,13 +765,14 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
 
     def test_legacy_bucket_for_missing_skill(self):
         """A paired record whose start event lacked the skill field buckets
-        as 'legacy,<tier>' — NOT as 'unknown' (which would collide with the
-        existing untiered sentinel) and NOT as the bare string 'legacy'.
+        as 'legacy,<tier>,<effort>' — NOT as 'unknown' (which would collide
+        with the existing untiered sentinel) and NOT as the bare string 'legacy'.
 
         The fixture is constructed directly (not via :func:`_start`) so the
         ``skill`` key is genuinely absent rather than defaulting to
         ``"implement"`` — exercises the historical-event compatibility path
         that the aggregator must handle for pre-instrumentation logs.
+        Records synthesized without an effort field bucket as legacy-effort.
         """
         from cortex_command.pipeline.metrics import compute_skill_tier_dispatch_aggregates
         paired = [
@@ -780,11 +792,11 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
             any(k.startswith("legacy,") for k in result),
             f"Expected a key starting with 'legacy,'; got {sorted(result.keys())}",
         )
-        # Must be the bucket-key-shaped form 'legacy,<tier>', not bare 'legacy'.
-        self.assertIn("legacy,simple", result)
+        # Must be the bucket-key-shaped form 'legacy,<tier>,<effort>', not bare 'legacy'.
+        self.assertIn("legacy,simple,legacy-effort", result)
         self.assertNotIn("legacy", result)
         self.assertEqual(len(legacy_keys), 1)
-        self.assertEqual(result["legacy,simple"]["n_completes"], 1)
+        self.assertEqual(result["legacy,simple,legacy-effort"]["n_completes"], 1)
 
     # ------------------------------------------------------------------
     # (f) p95 suppression below the 30-complete threshold
@@ -803,8 +815,9 @@ class TestSkillTierDispatchAggregates(unittest.TestCase):
         ]
         result = compute_skill_tier_dispatch_aggregates(paired)
 
-        self.assertIn("implement,simple", result)
-        bucket = result["implement,simple"]
+        # Records synthesized without an effort field bucket as legacy-effort.
+        self.assertIn("implement,simple,legacy-effort", result)
+        bucket = result["implement,simple,legacy-effort"]
         self.assertEqual(bucket["n_completes"], 5)
         self.assertTrue(bucket["p95_suppressed"])
         self.assertIsNone(bucket["num_turns_p95"])
@@ -860,11 +873,18 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
     def test_pair_propagates_skill_to_aggregator_non_review_fix(self):
         """A dispatch_start carrying skill="implement" + matching complete,
         run through pair_dispatch_events then compute_skill_tier_dispatch_aggregates,
-        produces an "implement,simple" bucket key — NOT "legacy,simple"."""
+        produces an "implement,simple,<effort>" bucket key — NOT a legacy-skill bucket.
+
+        The effort axis is resolved by the start helper via resolve_effort(),
+        so the bucket key picks up the matrix-derived effort suffix.
+        """
+        from cortex_command.pipeline.dispatch import resolve_effort
         from cortex_command.pipeline.metrics import (
             compute_skill_tier_dispatch_aggregates,
             pair_dispatch_events,
         )
+        expected_effort = resolve_effort("simple", "high", "implement", "sonnet")
+        expected_key = f"implement,simple,{expected_effort}"
         events = [
             self._start("feat-a", skill="implement", complexity="simple",
                         model="sonnet"),
@@ -874,20 +894,28 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
         result = compute_skill_tier_dispatch_aggregates(paired)
 
         self.assertIn(
-            "implement,simple", result,
-            f"Expected 'implement,simple' bucket; got {sorted(result.keys())}",
+            expected_key, result,
+            f"Expected {expected_key!r} bucket; got {sorted(result.keys())}",
         )
-        self.assertNotIn("legacy,simple", result)
-        self.assertEqual(result["implement,simple"]["n_completes"], 1)
+        self.assertNotIn(f"legacy,simple,{expected_effort}", result)
+        self.assertEqual(result[expected_key]["n_completes"], 1)
 
     def test_pair_propagates_skill_and_cycle_to_aggregator_review_fix(self):
         """A dispatch_start with skill="review-fix", cycle=2 + matching complete
-        produces a 'review-fix,simple,2' three-dimensional bucket key after
-        the full pair -> aggregate pipeline."""
+        produces a 'review-fix,simple,<effort>,2' four-dimensional bucket key
+        after the full pair -> aggregate pipeline.
+
+        The effort axis is resolved by the start helper via resolve_effort(),
+        so the bucket key picks up the matrix-derived effort suffix between
+        tier and cycle.
+        """
+        from cortex_command.pipeline.dispatch import resolve_effort
         from cortex_command.pipeline.metrics import (
             compute_skill_tier_dispatch_aggregates,
             pair_dispatch_events,
         )
+        expected_effort = resolve_effort("simple", "high", "review-fix", "sonnet")
+        expected_key = f"review-fix,simple,{expected_effort},2"
         events = [
             self._start("feat-rf", skill="review-fix", complexity="simple",
                         model="sonnet", cycle=2),
@@ -897,13 +925,13 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
         result = compute_skill_tier_dispatch_aggregates(paired)
 
         self.assertIn(
-            "review-fix,simple,2", result,
-            f"Expected 'review-fix,simple,2' bucket; got {sorted(result.keys())}",
+            expected_key, result,
+            f"Expected {expected_key!r} bucket; got {sorted(result.keys())}",
         )
-        self.assertNotIn("review-fix,simple,1", result)
-        self.assertNotIn("review-fix,simple,legacy-cycle", result)
-        self.assertNotIn("legacy,simple", result)
-        self.assertEqual(result["review-fix,simple,2"]["n_completes"], 1)
+        self.assertNotIn(f"review-fix,simple,{expected_effort},1", result)
+        self.assertNotIn(f"review-fix,simple,{expected_effort},legacy-cycle", result)
+        self.assertNotIn(f"legacy,simple,{expected_effort}", result)
+        self.assertEqual(result[expected_key]["n_completes"], 1)
 
 
 class TestReportTierDispatch(unittest.TestCase):

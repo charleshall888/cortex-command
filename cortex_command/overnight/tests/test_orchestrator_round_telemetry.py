@@ -420,8 +420,10 @@ class TestAggregatorBucket:
         assert paired[0]["tier"] == "complex"
 
         aggregates = compute_skill_tier_dispatch_aggregates(paired)
-        assert "orchestrator-round,complex" in aggregates
-        bucket = aggregates["orchestrator-round,complex"]
+        # The synthetic dispatch_start above omits the effort field, so the
+        # paired record buckets under the legacy-effort sentinel.
+        assert "orchestrator-round,complex,legacy-effort" in aggregates
+        bucket = aggregates["orchestrator-round,complex,legacy-effort"]
         assert bucket["n_completes"] == 1
         # cost and num_turns make it through.
         assert bucket.get("estimated_cost_usd_mean") is not None
