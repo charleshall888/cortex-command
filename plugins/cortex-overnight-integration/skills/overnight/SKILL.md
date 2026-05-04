@@ -315,7 +315,7 @@ A successful `/overnight` invocation satisfies all of the following:
 3. **Session manifest written**: `lifecycle/sessions/{session_id}/session.json` exists with correct `session_id`, `type: overnight`, and feature slugs.
 4. **Integration branch created**: `git branch overnight/{session_id}` exists in the repository.
 5. **Symlink deferred to runner**: The `latest-overnight` symlink is updated by the runner on startup, not by the skill.
-6. **Runner command executed**: Either `overnight-start` (run now) or `overnight-schedule` (scheduled) was executed via Bash tool with an absolute state path using `$CORTEX_COMMAND_ROOT` and the correct time limit.
+6. **Runner command executed**: `overnight-start` was executed via Bash tool with an absolute state path using `$CORTEX_COMMAND_ROOT` and the correct time limit.
 7. **Session start event logged**: `overnight-events.log` has a `SESSION_START` entry.
 
 A successful `/overnight resume` satisfies:

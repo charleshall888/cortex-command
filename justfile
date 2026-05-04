@@ -60,7 +60,7 @@ setup-tmux-socket:
 
 # --- Overnight ---
 
-# Run the overnight round-loop runner
+# Async-spawn the overnight round-loop runner (detaches; use `cortex overnight status` to track)
 # Usage: just overnight-run <state-path> <time-limit-seconds>  (args are positional)
 overnight-run state="lifecycle/sessions/latest-overnight/overnight-state.json" time-limit="21600" max-rounds="10" tier="simple":
     #!/usr/bin/env bash
@@ -73,10 +73,6 @@ overnight-run state="lifecycle/sessions/latest-overnight/overnight-state.json" t
         exit 1
     fi
     cortex overnight start --state {{ state }} --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}
-
-# Schedule an overnight run to start at a specific time (e.g. just overnight-schedule 23:00)
-overnight-schedule target-time state="" time-limit="6" max-rounds="10" tier="max_100":
-    overnight-schedule "{{ target-time }}" "{{ state }}" "{{ time-limit }}" "{{ max-rounds }}" "{{ tier }}"
 
 # Run the overnight smoke test (verifies worker commit round-trip)
 overnight-smoke-test:

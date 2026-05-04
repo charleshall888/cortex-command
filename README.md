@@ -122,7 +122,7 @@ Run `just --list` to see all operational recipes. Key commands:
 
 ```
 just test                  # Run all test suites
-just overnight-run         # Run overnight in foreground
+just overnight-run         # Async-spawn overnight runner (detaches; returns within 5s)
 cortex overnight start     # Run overnight in detached tmux
 cortex overnight status    # Print session status (use --format json for machine-readable)
 just dashboard             # Start the web dashboard

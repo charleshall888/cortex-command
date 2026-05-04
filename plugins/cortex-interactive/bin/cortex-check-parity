@@ -89,7 +89,7 @@ NON_BIN_PATH_PREFIX_RE = re.compile(
 )
 
 # Token regex (R5 base): ``cortex-[a-z][a-z0-9-]*``. Allowlist also accepts
-# bare ``[a-z][a-z0-9-]*`` (only ``overnight-schedule`` qualifies today).
+# bare ``[a-z][a-z0-9-]*`` (no un-prefixed scripts ship in bin/ currently).
 SCRIPT_NAME_RE = re.compile(r"^cortex-[a-z][a-z0-9-]*$")
 LOOSE_SCRIPT_NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 TOKEN_RE = re.compile(r"cortex-[a-z][a-z0-9-]*")
@@ -712,8 +712,7 @@ def lint(
     # 6. W003 orphan: deployed cortex-* but no wiring signal anywhere.
     for name in sorted(deployed):
         if not name.startswith("cortex-"):
-            # Un-prefixed scripts (e.g. ``overnight-schedule``) — only
-            # flagged if not allowlisted.
+            # Un-prefixed scripts — only flagged if not allowlisted.
             if name in allowlisted:
                 continue
             # Check loose token search across the corpus.

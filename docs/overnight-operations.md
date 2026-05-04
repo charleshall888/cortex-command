@@ -228,16 +228,6 @@ Discipline obligations on every future production code site (the static gate at 
 
 The file persists indefinitely under current archival policy: this project does not auto-archive `lifecycle/sessions/`, so directories (and their lockfiles) accumulate until manually cleaned. After a reboot the kernel `flock` state is gone but the 0-byte file remains; the next runner reopens it on a fresh inode-with-no-locks and acquires immediately. This is benign for correctness and is the documented backwards-compat / rollback path.
 
-### Scheduled Launch subsystem
-
-`bin/overnight-schedule` is the delayed-start wrapper that defers invocation of `overnight-start` until a specific wall-clock time, so operators can queue an overnight from the evening for a late-night kickoff without leaving a shell open.
-
-**Files**: `bin/overnight-schedule` (user-facing setup path + internal `__launch` path), `bin/overnight-start` (invoked via `exec` when the delay elapses).
-
-**Inputs**: target time as `HH:MM` or `YYYY-MM-DDTHH:MM`, plus the same positional args `overnight-start` accepts (state path, time limit, max rounds, tier).
-
-Behavior: the setup path validates the target time (rejects past times, caps delay at 7 days, rolls `HH:MM` forward to tomorrow if today has passed), writes `scheduled_start` into the state file for dashboard visibility, and spawns a detached `tmux` session named `overnight-scheduled[-N]` that re-execs itself with a `__launch` argument. Inside `__launch`, the script runs `caffeinate -i sleep $DELAY` to keep the Mac awake through the wait, clears `scheduled_start` from the state file, and `exec`s `overnight-start` with the forwarded args. There is no dedicated log file — the tmux pane is the log; `tmux attach -t overnight-scheduled` is the only way to see what it is doing before the handoff to `overnight-start`.
-
 ---
 
 ## Code Layout
