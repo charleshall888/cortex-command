@@ -73,6 +73,97 @@ def _resolve_repo_path() -> Path:
         return Path.cwd()
 
 
+def _verify_hook_guard(repo_path: Path) -> Optional[str]:
+    """Verify the Phase 0 pre-commit hook guard is installed.
+
+    Reads ``lifecycle.config.md`` under ``repo_path`` and looks for the
+    top-level ``overnight_hook_required:`` field. When the value is
+    ``"true"``, performs the three-part verification:
+
+      (i)   ``git config --get core.hooksPath`` returns a non-empty value;
+      (ii)  the ``pre-commit`` file at that path exists and is executable;
+      (iii) the hook file contains the sentinel string
+            ``Phase 0 — overnight main-branch guard``.
+
+    Returns ``None`` on success, when ``overnight_hook_required`` is
+    false/missing, when the config file is missing, or when the config
+    file is present but unparseable (the latter emits a stderr warning
+    and skips verification). Returns a single-line error string when any
+    of the three checks fails.
+    """
+    config_path = repo_path / "lifecycle.config.md"
+    try:
+        text = config_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return None
+    except OSError:
+        print(
+            "cortex overnight: lifecycle.config.md present but unparseable; "
+            "hook verification skipped",
+            file=sys.stderr,
+            flush=True,
+        )
+        return None
+
+    required = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("overnight_hook_required:"):
+            value = stripped[len("overnight_hook_required:"):].strip()
+            # Strip surrounding quotes if present.
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                value = value[1:-1]
+            if value == "true":
+                required = True
+            break
+
+    if not required:
+        return None
+
+    error_msg = (
+        "cortex overnight: hook guard not installed but lifecycle.config.md "
+        "requires it. Run 'just setup-githooks' to enable the pre-commit hook "
+        "before launching overnight."
+    )
+
+    # (i) core.hooksPath is set and non-empty.
+    try:
+        result = subprocess.run(
+            ["git", "config", "--get", "core.hooksPath"],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (FileNotFoundError, OSError):
+        return error_msg
+    if result.returncode != 0:
+        return error_msg
+    hooks_path_str = result.stdout.strip()
+    if not hooks_path_str:
+        return error_msg
+
+    # (ii) pre-commit file present and executable.
+    hooks_path = Path(hooks_path_str)
+    if not hooks_path.is_absolute():
+        hooks_path = (repo_path / hooks_path).resolve()
+    hook_file = hooks_path / "pre-commit"
+    if not hook_file.is_file():
+        return error_msg
+    if not os.access(str(hook_file), os.X_OK):
+        return error_msg
+
+    # (iii) sentinel string present in hook file.
+    try:
+        hook_text = hook_file.read_text(encoding="utf-8")
+    except OSError:
+        return error_msg
+    if "Phase 0 — overnight main-branch guard" not in hook_text:
+        return error_msg
+
+    return None
+
+
 def _auto_discover_state(lifecycle_sessions_root: Path) -> Optional[Path]:
     """Return the most relevant ``overnight-state.json`` path or ``None``.
 
