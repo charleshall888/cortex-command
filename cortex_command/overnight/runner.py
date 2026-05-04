@@ -37,6 +37,7 @@ from typing import Any, Optional
 
 import psutil
 
+from cortex_command.common import read_criticality
 from cortex_command.overnight import auth
 from cortex_command.overnight import events
 from cortex_command.overnight import fill_prompt
@@ -49,6 +50,7 @@ from cortex_command.overnight import report
 from cortex_command.overnight import smoke_test
 from cortex_command.overnight import state as state_module
 from cortex_command.overnight.batch_runner import main as batch_runner_main  # noqa: F401  (R5: in-process import list)
+from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD
 from cortex_command.overnight.orchestrator import run_batch  # noqa: F401  (R5: in-process import list)
 from cortex_command.overnight.runner_primitives import (
     DEFAULT_KILL_ESCALATION_SECONDS,
@@ -310,6 +312,32 @@ def _count_pending(state: state_module.OvernightState) -> int:
 def _count_merged(state: state_module.OvernightState) -> int:
     """Count merged features (terminal success status)."""
     return sum(1 for fs in state.features.values() if fs.status == "merged")
+
+
+def _count_synthesizer_deferred(events_path: Path, session_id: str) -> int:
+    """Count ``PLAN_SYNTHESIS_DEFERRED`` events for the given session.
+
+    Reads the JSONL events log at ``events_path`` and returns the number
+    of entries whose ``event`` field matches
+    :data:`events.PLAN_SYNTHESIS_DEFERRED` AND whose ``session_id`` field
+    matches the provided ``session_id``. The per-session events log path
+    is the file the runner already writes to; the ``session_id`` filter
+    is defensive because ``read_events`` reads the file directly and the
+    file is per-session by construction, but the filter shields against
+    archived entries from a re-used path.
+
+    Returns 0 when the log does not exist or contains no matching
+    entries. The helper is extracted (not inline) so the circuit-breaker
+    test can call it directly with a synthetic events log.
+    """
+    matched = 0
+    for evt in events.read_events(events_path):
+        if evt.get("event") != events.PLAN_SYNTHESIS_DEFERRED:
+            continue
+        if evt.get("session_id") != session_id:
+            continue
+        matched += 1
+    return matched
 
 
 def _save_state_locked(
@@ -2268,6 +2296,65 @@ def run(
                 },
                 log_path=events_path,
             )
+
+            # Synthesizer defer-count circuit breaker. Mirrors the
+            # 3-pause batch circuit breaker semantics at
+            # orchestrator.py:241,249-253,269-273. When the count of
+            # PLAN_SYNTHESIS_DEFERRED events for this session reaches
+            # CIRCUIT_BREAKER_THRESHOLD, transition the session to
+            # paused with reason "synthesizer_circuit_breaker", mark
+            # all remaining critical-tier features as paused so they
+            # are not re-dispatched, and break the round loop. The
+            # per-session events log already filters by session, but
+            # the helper applies the session_id filter defensively.
+            synthesizer_deferred_count = _count_synthesizer_deferred(
+                events_path, session_id
+            )
+            if synthesizer_deferred_count >= CIRCUIT_BREAKER_THRESHOLD:
+                print(
+                    "Circuit breaker: synthesizer deferred "
+                    f"{synthesizer_deferred_count} times — stopping",
+                    flush=True,
+                )
+                events.log_event(
+                    events.SYNTHESIZER_CIRCUIT_BREAKER_FIRED,
+                    round=round_num,
+                    details={
+                        "session_id": session_id,
+                        "deferred_count": synthesizer_deferred_count,
+                    },
+                    log_path=events_path,
+                )
+                _transition_paused(
+                    state_path=state_path,
+                    events_path=events_path,
+                    coord=coord,
+                    reason="synthesizer_circuit_breaker",
+                    round_num=round_num,
+                )
+                # Mark remaining critical-tier features as paused so
+                # the orchestrator's resume path does not re-dispatch
+                # them. read_criticality() defaults to "medium" when no
+                # lifecycle/{feature}/events.log carries a criticality
+                # entry, so non-critical features are unaffected.
+                state = state_module.load_state(state_path)
+                for name, fs in list(state.features.items()):
+                    if fs.status in ("merged", "failed", "deferred", "paused"):
+                        continue
+                    try:
+                        criticality = read_criticality(name)
+                    except Exception:
+                        criticality = "medium"
+                    if criticality != "critical":
+                        continue
+                    state = state_module.update_feature_status(
+                        state,
+                        name,
+                        "paused",
+                        error="synthesizer_circuit_breaker",
+                    )
+                _save_state_locked(state, state_path, coord)
+                break
 
             if merged_delta <= 0:
                 stall_count += 1
