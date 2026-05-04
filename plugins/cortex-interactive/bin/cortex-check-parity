@@ -52,6 +52,9 @@ RESERVED_NON_BIN_NAMES: frozenset[str] = frozenset(
     {
         "cortex-command",
         "cortex-overnight",
+        # $TMPDIR directory name in docs/overnight-operations.md prose (commit 0168dac);
+        # not a deployable script, hence excluded from candidacy.
+        "cortex-overnight-launch",
     }
 )
 
