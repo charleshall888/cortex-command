@@ -169,13 +169,11 @@ Where literature has validated techniques (short-answer aggregation, code merge)
 ### DR-1.5: Implementation order — interactive first, overnight after validation
 
 - **Context**: Shape (3) ships into two surfaces. Order matters for risk: shipping into overnight first means autonomous-only critical-tier plans land without an interactive-mode dry run. Shipping interactive first means operators exercise the synthesizer in attended mode where they can override misfires before extending to unattended overnight.
-- **Recommendation**: Build → Interactive wiring → Calibration probes → Overnight wiring. Specifically:
-  1. **Tighten §1b plan-agent prompt** (DR-3 Option 4) — independent of synthesizer; can land in parallel with build
-  2. **Build the synthesizer** (DR-2 + DR-4 + DR-5 + DR-7) — reusable component with extended `plan_comparison` event schema
-  3. **Wire into interactive §1b** — replaces user-pick step with auto-synthesis, with operator-override capability
-  4. **Calibrate** — planted-flaw probe, identical-variants tie test, position-swap consistency check; per DR-4
-  5. **Wire into overnight Step 3b** — add criticality branch to `orchestrator-round.md` that invokes the shared synthesizer when feature criticality is `critical`
-- **Trade-offs**: Steps 3-4 must complete before Step 5 ships, per the "interactive proves the design before overnight" principle. Step 1 is a one-line edit and can ship anytime — sequencing is convenience, not dependency.
+- **Recommendation**: Three tickets, parallel where possible:
+  1. **Tighten §1b plan-agent prompt** (DR-3 Option 4) — independent of synthesizer; ships in parallel with #2
+  2. **Build synthesizer + ship in interactive §1b** (DR-2 + DR-4 + DR-5 + DR-7) — synthesizer is built with its first consumer (interactive wiring) in the same ticket; basic probes (identical-variants, swap-consistency, planted-flaw) ship as unit tests inside this ticket, not as a separate calibration epic
+  3. **Wire synthesizer into overnight Step 3b** — criticality branch in `orchestrator-round.md`; gated on operator-disposition data accumulated from #2 in production
+- **Trade-offs**: Combining synthesizer-build with its first consumer (vs. shipping the synthesizer in isolation) trades incremental verification of the standalone library for a complete E2E deliverable per ticket. Per project requirements *"A feature isn't ready until... success criteria are verifiable by an agent with zero prior context"* — a synthesizer with no consumer has weaker E2E success criteria than a synthesizer that visibly improves the §1b interactive flow. Calibration probes ship as unit tests inside #2 rather than as a separate epic; empirical threshold tuning happens against production operator-disposition data, not pre-shipment work.
 
 ### DR-2: If autonomy ships, Architecture A only — but B-prime (constrained graft) is structurally bounded and pre-cleared as future option
 

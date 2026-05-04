@@ -119,7 +119,7 @@
   },
   {
     "id": 160,
-    "title": "Build autonomous synthesizer + extended plan_comparison event schema",
+    "title": "Build autonomous synthesizer and ship into interactive §1b",
     "status": "backlog",
     "priority": "high",
     "type": "feature",
@@ -140,36 +140,6 @@
     "discovery_source": "research/competing-plan-synthesis/research.md",
     "plan": null,
     "uuid": "8bd85abf-abca-4a85-b0d7-c961213e269b",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 161,
-    "title": "Wire synthesizer into interactive §1b (replace user-pick with operator-override)",
-    "status": "backlog",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "competing-plan-synthesis",
-      "lifecycle",
-      "plan"
-    ],
-    "areas": [],
-    "created": "2026-05-04",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [
-      "160"
-    ],
-    "parent": "158",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/competing-plan-synthesis/research.md",
-    "plan": null,
-    "uuid": "146278b8-9913-45e7-9e3f-6290d844c539",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -231,37 +201,6 @@
     "discovery_source": "research/competing-plan-synthesis/research.md",
     "plan": null,
     "uuid": "27465f0f-6937-4209-b465-8cf0024d6873",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 163,
-    "title": "Calibration probes for synthesizer selector confidence",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "competing-plan-synthesis",
-      "lifecycle",
-      "plan",
-      "testing"
-    ],
-    "areas": [],
-    "created": "2026-05-04",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [
-      "160"
-    ],
-    "parent": "158",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/competing-plan-synthesis/research.md",
-    "plan": null,
-    "uuid": "aedb5311-2ade-4292-a40a-1f165e1c91a9",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
