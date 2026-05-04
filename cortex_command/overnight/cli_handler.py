@@ -287,6 +287,11 @@ def handle_start(args: argparse.Namespace) -> int:
             _emit_json(payload)
             return 1
 
+    hook_error = _verify_hook_guard(repo_path)
+    if hook_error is not None:
+        print(hook_error, file=sys.stderr, flush=True)
+        return 1
+
     return runner_module.run(
         state_path=state_path,
         session_dir=session_dir,
