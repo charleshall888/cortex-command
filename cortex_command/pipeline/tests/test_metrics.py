@@ -63,15 +63,17 @@ class TestPairDispatchEvents(unittest.TestCase):
     # ------------------------------------------------------------------
 
     def _start(self, feature, complexity="complex", model="opus", skill="implement", ts="2026-04-01T00:00:00Z"):
+        from cortex_command.pipeline.dispatch import resolve_effort
+        criticality = "high"
         return {
             "event": "dispatch_start",
             "ts": ts,
             "feature": feature,
             "complexity": complexity,
-            "criticality": "high",
+            "criticality": criticality,
             "model": model,
             "skill": skill,
-            "effort": "high",
+            "effort": resolve_effort(complexity, criticality, skill, model),
             "max_turns": 30,
             "max_budget_usd": 50.0,
         }
@@ -826,15 +828,17 @@ class TestPairAggregatorEndToEnd(unittest.TestCase):
 
     def _start(self, feature, skill="implement", complexity="simple",
                model="sonnet", cycle=None, ts="2026-04-01T00:00:00Z"):
+        from cortex_command.pipeline.dispatch import resolve_effort
+        criticality = "high"
         evt = {
             "event": "dispatch_start",
             "ts": ts,
             "feature": feature,
             "complexity": complexity,
-            "criticality": "high",
+            "criticality": criticality,
             "model": model,
             "skill": skill,
-            "effort": "high",
+            "effort": resolve_effort(complexity, criticality, skill, model),
             "max_turns": 30,
             "max_budget_usd": 50.0,
         }
@@ -955,15 +959,20 @@ class TestReportTierDispatch(unittest.TestCase):
                     "duration_ms": 1000,
                 })
             elif rec.get("outcome") == "error":
+                from cortex_command.pipeline.dispatch import resolve_effort
                 start_ts = "2026-04-01T00:00:00Z"
+                _complexity = rec.get("tier", "simple")
+                _criticality = rec.get("criticality", "high")
+                _skill = rec.get("skill", "implement")
+                _model = rec.get("model", "sonnet")
                 raw_events.append({
                     "event": "dispatch_start",
                     "ts": start_ts,
                     "feature": rec["feature"],
-                    "complexity": rec.get("tier", "simple"),
-                    "criticality": "high",
-                    "model": rec.get("model", "sonnet"),
-                    "effort": "high",
+                    "complexity": _complexity,
+                    "criticality": _criticality,
+                    "model": _model,
+                    "effort": resolve_effort(_complexity, _criticality, _skill, _model),
                     "max_turns": 20,
                     "max_budget_usd": 10.0,
                 })
@@ -975,15 +984,20 @@ class TestReportTierDispatch(unittest.TestCase):
                     "error_detail": "test error",
                 })
             else:
+                from cortex_command.pipeline.dispatch import resolve_effort
                 start_ts = "2026-04-01T00:00:00Z"
+                _complexity = rec.get("tier", "simple")
+                _criticality = rec.get("criticality", "high")
+                _skill = rec.get("skill", "implement")
+                _model = rec.get("model", "sonnet")
                 raw_events.append({
                     "event": "dispatch_start",
                     "ts": start_ts,
                     "feature": rec["feature"],
-                    "complexity": rec.get("tier", "simple"),
-                    "criticality": "high",
-                    "model": rec.get("model", "sonnet"),
-                    "effort": "high",
+                    "complexity": _complexity,
+                    "criticality": _criticality,
+                    "model": _model,
+                    "effort": resolve_effort(_complexity, _criticality, _skill, _model),
                     "max_turns": 20,
                     "max_budget_usd": 10.0,
                 })

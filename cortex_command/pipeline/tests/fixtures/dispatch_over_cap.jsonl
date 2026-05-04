@@ -1,8 +1,8 @@
-{"ts": "2026-04-01T00:00:01Z", "event": "dispatch_start", "feature": "feat-alpha", "complexity": "complex", "criticality": "high", "model": "opus", "effort": "high", "max_turns": 30, "max_budget_usd": 50.0}
+{"ts": "2026-04-01T00:00:01Z", "event": "dispatch_start", "feature": "feat-alpha", "complexity": "complex", "criticality": "high", "model": "opus", "effort": "xhigh", "max_turns": 30, "max_budget_usd": 50.0}
 {"ts": "2026-04-01T00:01:01Z", "event": "dispatch_complete", "feature": "feat-alpha", "cost_usd": 30.0, "duration_ms": 60000, "num_turns": 10}
-{"ts": "2026-04-01T00:00:02Z", "event": "dispatch_start", "feature": "feat-beta", "complexity": "complex", "criticality": "high", "model": "opus", "effort": "high", "max_turns": 30, "max_budget_usd": 50.0}
+{"ts": "2026-04-01T00:00:02Z", "event": "dispatch_start", "feature": "feat-beta", "complexity": "complex", "criticality": "high", "model": "opus", "effort": "xhigh", "max_turns": 30, "max_budget_usd": 50.0}
 {"ts": "2026-04-01T00:01:02Z", "event": "dispatch_complete", "feature": "feat-beta", "cost_usd": 55.0, "duration_ms": 70000, "num_turns": 20}
-{"ts": "2026-04-01T00:00:03Z", "event": "dispatch_start", "feature": "feat-gamma", "complexity": "complex", "criticality": "high", "model": "opus", "effort": "high", "max_turns": 30, "max_budget_usd": 50.0}
+{"ts": "2026-04-01T00:00:03Z", "event": "dispatch_start", "feature": "feat-gamma", "complexity": "complex", "criticality": "high", "model": "opus", "effort": "xhigh", "max_turns": 30, "max_budget_usd": 50.0}
 {"ts": "2026-04-01T00:01:03Z", "event": "dispatch_complete", "feature": "feat-gamma", "cost_usd": 20.0, "duration_ms": 50000, "num_turns": 8}
-{"ts": "2026-04-01T00:00:04Z", "event": "dispatch_start", "feature": "feat-delta", "complexity": "complex", "criticality": "high", "model": "opus", "effort": "high", "max_turns": 30, "max_budget_usd": 50.0}
+{"ts": "2026-04-01T00:00:04Z", "event": "dispatch_start", "feature": "feat-delta", "complexity": "complex", "criticality": "high", "model": "opus", "effort": "xhigh", "max_turns": 30, "max_budget_usd": 50.0}
 {"ts": "2026-04-01T00:01:04Z", "event": "dispatch_complete", "feature": "feat-delta", "cost_usd": 60.0, "duration_ms": 80000, "num_turns": 25}
