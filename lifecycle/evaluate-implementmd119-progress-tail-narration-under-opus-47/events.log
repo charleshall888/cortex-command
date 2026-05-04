@@ -1,0 +1,37 @@
+- ts: 2026-04-29T16:32:49Z
+  event: clarify_critic
+  feature: evaluate-implementmd119-progress-tail-narration-under-opus-47
+  findings:
+    - "Intent clarity is rated HIGH because the 3 steps are 'spelled out', but step 1's instruction to 'drop the narration directive' while keeping the `tail` call is internally underspecified — the source text is one sentence and the executor cannot determine from the source alone whether to delete only the post-`and` clause, delete the user-facing framing entirely, or rewrite the sentence to retain a watchdog framing."
+    - "Intent clarity claim leans on 'Anthropic migration-guide reference is cited', but the ticket cites 'Opus 4.7 migration guide, item 4' without quoting item 4's text or providing a verifiable retrieval target — the citation is unverified within the ticket's four corners."
+    - "Scope boundedness HIGH cites enumeration of what NOT to touch, but step 3 of the deliverable contemplates 'add a shaped example in the prompt' which is itself new prompt content; the boundary between 'shaped example at the same site' and 'No other prompt changes' is not drawn in the source."
+    - "Requirements alignment claims alignment with multi-agent.md's context hygiene NFR, but step 3's trigger explicitly lists 'losing the 5-event cap's context-hygiene benefit' as a re-calibration condition — alignment is contingent on observation, not settled."
+    - "Scope boundedness HIGH partly relies on 'Regression detection is qualitative — revert via git', which is a kill-switch criterion rather than a bounded success boundary; no threshold for 'clearly degraded' or observation window is specified."
+    - "Criticality HIGH cites 'shared workflow infrastructure', but the source explicitly marks priority: low and characterizes the change as 'Single-site, opportunistic' with the watchdog `tail` preserved; the assessment defaults to high without engaging with the source's priority signal."
+    - "The deliverable bundles step 2 (behavioral evaluation across daytime runs) and conditional step 3 (prompt-shaping if mis-calibrated), but the ticket does not specify whether step 1 alone is a closeable deliverable or whether the ticket stays open through steps 2–3 — an executor cannot determine from the source whether this is one ticket or three."
+  dispositions:
+    apply: 1
+    dismiss: 5
+    ask: 1
+  applied_fixes:
+    - "Revised Requirements alignment from 'ALIGNED with caveats' to 'Partial alignment: minimal-deletion aligns with project.md simplicity NFR; multi-agent.md context-hygiene NFR preservation is contingent on step-2 observation per the ticket's own step-3 trigger'."
+  dismissals:
+    - finding_index: 0
+      rationale: "The ticket explicitly says 'drop the narration directive' and identifies the exact clause to remove ('surface a brief summary of the 5 most recent events to the user'); the final replacement wording is an implementation/spec detail, not an intent-clarity defect at clarify level."
+    - finding_index: 1
+      rationale: "The parent #092 research artifact, linked as background, quotes Anthropic migration-guide item 4 verbatim — the 3-step structure (try removing → observe → if mis-calibrated, add shaped examples) is verifiable via that linked context, not asserted unsupported."
+    - finding_index: 2
+      rationale: "'No other prompt changes' is most plausibly read as 'no edits outside this site'; step 3's potential shaped example is at the same site (lines 117-120), so the scope is internally consistent."
+    - finding_index: 4
+      rationale: "Scope boundedness in clarify is about the edit target (file/lines/site) — that is clear. Qualitative verification is a handoff-readiness tension, captured under the requirements-alignment caveat rather than a scope defect."
+    - finding_index: 5
+      rationale: "Per clarify protocol: 'Default to high for skill/lifecycle/hook/workflow changes — this is the appropriate default for most skill and agentic layer changes.' Ticket priority (do-now ordering) and criticality (severity if wrong) are different axes; implement.md is in skills/lifecycle/references/."
+  status: ok
+{"ts": "2026-04-29T17:05:00Z", "event": "orchestrator_review", "feature": "evaluate-implementmd119-progress-tail-narration-under-opus-47", "phase": "specify", "verdict": "flag", "cycle": 1, "issues": ["S3: No MoSCoW classification — all 6 requirements unmarked; must-have vs should-have distinction not explicit (R3 'preserve cap rationale' is a candidate for should-have)"]}
+{"ts": "2026-04-29T17:05:01Z", "event": "orchestrator_dispatch_fix", "feature": "evaluate-implementmd119-progress-tail-narration-under-opus-47", "phase": "specify", "mode": "fresh_subagent", "issue": "S3 missing MoSCoW classification — add explicit must-have/should-have labels to each of the 6 requirements; consider whether R3 (preserve cap rationale) should be should-have rather than must-have"}
+{"ts": "2026-04-29T17:08:00Z", "event": "orchestrator_review", "feature": "evaluate-implementmd119-progress-tail-narration-under-opus-47", "phase": "specify", "verdict": "pass", "cycle": 2, "issues": []}
+{"ts": "2026-04-29T18:15:00Z", "event": "critical_review", "feature": "evaluate-implementmd119-progress-tail-narration-under-opus-47", "phase": "specify", "reviewers": {"completed": 4, "dispatched": 4}, "findings": {"A": 8, "B": 5, "C": 8}, "applied": 0, "ask": 0, "rewrite": "approach_B", "note": "User selected Approach B (delete entire (b) step) in response to 8 A-class findings; cycle-1 spec rewritten rather than patched"}
+{"ts": "2026-04-29T18:18:00Z", "event": "orchestrator_review", "feature": "evaluate-implementmd119-progress-tail-narration-under-opus-47", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": [], "note": "Cycle-1 review on materially rewritten spec (post-critical-review rewrite to Approach B); previous cycles 1-2 closed on the superseded artifact"}
+{"ts": "2026-04-29T18:35:00Z", "event": "critical_review", "feature": "evaluate-implementmd119-progress-tail-narration-under-opus-47", "phase": "specify", "reviewers": {"completed": 3, "dispatched": 3}, "findings": {"A": 2, "B": 3, "C": 5}, "applied": 5, "dismissed": 5, "ask": 0, "note": "Re-run on Approach B rewrite. A1 (R3 grep unsatisfiable - kill -0 appears at line 60 too): applied via line-anchored bullet + corrected count target to 2. A2 (R5 diff vacuous - files already byte-identical pre-edit): applied via split into parity check + positive grep against mirror for deletion-landed assertion. C on R1 broader-pattern framing: applied via reworded annotation. B/C on R4 structure: applied via line-anchored bullet pattern. C on Edge Cases inconsistency (30-iteration prompt listed as hang mitigation): applied via removal from mitigation list with explicit disclaim. Dismissed: hang-regression operational tripwire (B; user accepted the regression with eyes open via Approach B selection), out-of-band mitigations framing (C; technically accurate), wrong-question rebuttal (C; Approach-B-as-deletion is the answer), duplicate-label botch (B; covered by Apply fixes), broader-pattern oversells (C; covered by Apply fix)."}
+{"ts": "2026-05-04T11:17:33Z", "event": "orchestrator_review", "feature": "evaluate-implementmd119-progress-tail-narration-under-opus-47", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-04T11:19:50Z", "event": "phase_transition", "feature": "evaluate-implementmd119-progress-tail-narration-under-opus-47", "from": "plan", "to": "implement"}

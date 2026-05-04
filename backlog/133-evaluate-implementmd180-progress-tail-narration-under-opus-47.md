@@ -2,13 +2,19 @@
 schema_version: "1"
 uuid: daf2f648-6cf3-4322-9971-a7cee01cce6f
 title: "Evaluate implement.md:119 progress-tail narration under Opus 4.7"
-status: backlog
+status: in_progress
 priority: low
 type: feature
 created: 2026-04-22
-updated: 2026-04-29
+updated: 2026-05-04
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
+complexity: complex
+criticality: high
+spec: lifecycle/evaluate-implementmd119-progress-tail-narration-under-opus-47/spec.md
+areas: [lifecycle]
+session_id: d448d3b9-4b41-4fa6-8ef8-16e085e52c81
+lifecycle_phase: implement
 ---
 
 # Evaluate implement.md:119 progress-tail narration under Opus 4.7
