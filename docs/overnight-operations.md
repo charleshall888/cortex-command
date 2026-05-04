@@ -280,7 +280,7 @@ Defaults live in `cortex_command/overnight/throttle.py` (`load_throttle_config`)
 
 Rate-limit pauses are routed through the pipeline api_rate_limit → pause_session path; no in-process shrinkage.
 
-Tune by matching your API plan's parallelism ceiling to the tier. Picking `max_200` on a plan only capable of `max_5` throughput starves into the adaptive downshift before the first round finishes.
+Tune by matching your API plan's parallelism ceiling to the tier. Picking `max_200` on a plan only capable of `max_5` throughput surfaces transient 429s as `api_rate_limit` events that pause the session before the first round finishes.
 
 ### Test Gate and integration_health tuning
 
