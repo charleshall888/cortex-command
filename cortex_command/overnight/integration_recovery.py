@@ -221,6 +221,7 @@ def main() -> int:
             system_prompt=prompt,
             log_path=Path(events_path) if events_path else None,
             skill="integration-recovery",
+            model_override="opus",
         )
     )
 
