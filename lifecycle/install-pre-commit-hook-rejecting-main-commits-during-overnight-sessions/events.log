@@ -42,3 +42,37 @@
 {"ts": "2026-05-04T16:02:57Z", "event": "orchestrator_dispatch_fix", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "phase": "plan", "mode": "same_context", "issue": "P6: Add cortex_command/overnight/events.py to Task 9 Files list"}
 {"ts": "2026-05-04T16:03:08Z", "event": "orchestrator_review", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "phase": "plan", "verdict": "pass", "cycle": 2, "issues": []}
 {"ts": "2026-05-04T16:36:39Z", "event": "phase_transition", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "from": "plan", "to": "implement"}
+{"ts": "2026-05-04T16:43:05Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 0, "tasks": [5]}
+{"ts": "2026-05-04T16:46:09Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 5, "batch": 0, "status": "success"}
+{"ts": "2026-05-04T16:46:16Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 1, "tasks": [9]}
+{"ts": "2026-05-04T16:50:34Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 9, "batch": 1, "status": "success"}
+{"ts": "2026-05-04T16:50:34Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 2, "tasks": [11]}
+{"ts": "2026-05-04T16:53:43Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 11, "batch": 2, "status": "success"}
+{"ts": "2026-05-04T16:53:43Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 3, "tasks": [13, 14]}
+{"ts": "2026-05-04T16:55:32Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 13, "batch": 3, "status": "success"}
+{"ts": "2026-05-04T16:58:10Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 14, "batch": 3, "status": "success"}
+{"ts": "2026-05-04T16:58:28Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 4, "tasks": [1]}
+{"ts": "2026-05-04T17:00:40Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 1, "batch": 4, "status": "success"}
+{"ts": "2026-05-04T17:00:40Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 5, "tasks": [6]}
+{"ts": "2026-05-04T17:08:08Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 6, "batch": 5, "status": "success"}
+{"ts": "2026-05-04T17:08:08Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 6, "tasks": [10]}
+{"ts": "2026-05-04T17:11:20Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 10, "batch": 6, "status": "success"}
+{"ts": "2026-05-04T17:11:20Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 7, "tasks": [12]}
+{"ts": "2026-05-04T17:14:16Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 12, "batch": 7, "status": "success"}
+{"ts": "2026-05-04T17:14:16Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 8, "tasks": [2]}
+{"ts": "2026-05-04T17:17:05Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 2, "batch": 8, "status": "success"}
+{"ts": "2026-05-04T17:17:05Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 9, "tasks": [7]}
+{"ts": "2026-05-04T17:19:25Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 7, "batch": 9, "status": "success"}
+{"ts": "2026-05-04T17:19:25Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 10, "tasks": [8]}
+{"ts": "2026-05-04T17:21:44Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 8, "batch": 10, "status": "success"}
+{"ts": "2026-05-04T17:21:44Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 11, "tasks": [3]}
+{"ts": "2026-05-04T17:33:39Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 3, "batch": 11, "status": "success"}
+{"ts": "2026-05-04T17:33:39Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 12, "tasks": [4]}
+{"ts": "2026-05-04T17:36:45Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 4, "batch": 12, "status": "success"}
+{"ts": "2026-05-04T17:36:45Z", "event": "batch_dispatch", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "batch": 13, "tasks": [15]}
+{"ts": "2026-05-04T17:39:10Z", "event": "task_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "task": 15, "batch": 13, "status": "success"}
+{"ts": "2026-05-04T17:39:21Z", "event": "phase_transition", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-04T17:53:28Z", "event": "review_verdict", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-05-04T17:53:54Z", "event": "requirements_updated", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "file": "requirements/pipeline.md", "section": "Session Orchestration", "content": "added bullet documenting overnight_hook_required runner-startup verification (fail-closed, no env override)"}
+{"ts": "2026-05-04T17:53:54Z", "event": "phase_transition", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "from": "review", "to": "complete"}
+{"ts": "2026-05-04T17:55:29Z", "event": "feature_complete", "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions", "tasks_total": 15, "rework_cycles": 0}

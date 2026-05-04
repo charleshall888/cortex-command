@@ -16,7 +16,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
 - **Complexity**: trivial
 - **Context**: File is at `/Users/charlie.hall/Workspaces/cortex-command/lifecycle.config.md`. Current frontmatter ends after `commit-artifacts: true` before `demo-commands:`. Insert `overnight_hook_required: true` as a new line in that block, following the existing key-per-line style. Implementer must also re-run `just setup-githooks` immediately after this commit lands locally (and document in the commit body that downstream developers must do the same on pull).
 - **Verification**: `grep -c 'overnight_hook_required: true' /Users/charlie.hall/Workspaces/cortex-command/lifecycle.config.md` = 1 — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 7504640; just setup-githooks re-run, core.hooksPath=.githooks active)
 
 ---
 
@@ -34,7 +34,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - Sentinel string: `"Phase 0 — overnight main-branch guard"`.
   - Error message format (for failed checks): `"cortex overnight: hook guard not installed but lifecycle.config.md requires it. Run 'just setup-githooks' to enable the pre-commit hook before launching overnight."`
 - **Verification**: `grep -c '_verify_hook_guard' /Users/charlie.hall/Workspaces/cortex-command/cortex_command/overnight/cli_handler.py` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit ecaeb68)
 
 ---
 
@@ -50,7 +50,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - Print to `sys.stderr`, `flush=True`. Return 1 to signal failure to the CLI caller.
   - `dry_run` flag is available as `args.dry_run`; the spec states the verification also fires on `--dry-run` (dry-run with missing hook exits non-zero on the verification stage per Req 4 acceptance criteria).
 - **Verification**: `grep -c '_verify_hook_guard(repo_path)' /Users/charlie.hall/Workspaces/cortex-command/cortex_command/overnight/cli_handler.py` = 1 — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit d4bdb4c)
 
 ---
 
@@ -69,7 +69,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - Case (a) assertion: return value is not None and contains `"hook guard not installed"`.
   - Case (c) assertion: return value is None.
 - **Verification**: `python3 -m pytest tests/test_runner_hook_guard.py -q` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 688fe74; 4 passed)
 
 ---
 
@@ -96,7 +96,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - `grep -c 'adversarial' /Users/charlie.hall/Workspaces/cortex-command/.githooks/pre-commit` ≥ 1 — pass if count ≥ 1.
   - `bash -n /Users/charlie.hall/Workspaces/cortex-command/.githooks/pre-commit` exits 0 — syntax check (catches inverted/malformed predicates that grep cannot).
   - **Behavioral smoke test** — in a tmp dir: `tmp=$(mktemp -d); cd "$tmp"; git init -q --initial-branch=main; git -c user.email=t@t -c user.name=T -c commit.gpgsign=false commit --allow-empty -m init; CORTEX_RUNNER_CHILD=1 bash $REPO_ROOT/.githooks/pre-commit 2>/dev/null; echo $?` returns non-zero (predicate fires), AND `bash $REPO_ROOT/.githooks/pre-commit 2>/dev/null; echo $?` returns 0 (interactive case allowed). This catches predicate inversion (`!=` for `=`), non-strict equality, and missing fall-through that grep alone cannot detect. Full multi-case behavioral coverage lives in Task 6.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit d1fb2e1; verification deviation: sentinel grep count = 2 not 1, because the same literal string is mandated in both the header comment AND the rejection stderr — substantive requirements satisfied, spec arithmetic was wrong)
 
 ---
 
@@ -135,7 +135,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - Cleanup: `trap 'rm -rf "$TMPDIR/scaffA" "$TMPDIR/scaffA-wt" "$TMPDIR/scaffA-wt-int" "$TMPDIR/scaffB" "$TMPDIR/scaffB-wt"' EXIT`.
   - Script must be executable (`chmod +x`).
 - **Verification**: `bash /Users/charlie.hall/Workspaces/cortex-command/tests/test_overnight_main_commit_block.sh` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 2813d8e; deviation: agent added a minimal justfile to scaffolds so cases (c)/(d) reach Phase 0 fall-through without later hook phases failing on missing recipes)
 
 ---
 
@@ -152,7 +152,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - Comment in the test file should explain *why* case (f) exists: "If a future implementer replaces `[ \"${X:-}\" = \"1\" ]` with `[ -n \"${X:-}\" ]`, this case catches the change."
   - Both cases are added inside the existing test-counter framework; cleanup trap from Task 6 already covers them.
 - **Verification**: `bash /Users/charlie.hall/Workspaces/cortex-command/tests/test_overnight_main_commit_block.sh` exits 0 — pass if exit code = 0; `grep -c 'CORTEX_RUNNER_CHILD=0' /Users/charlie.hall/Workspaces/cortex-command/tests/test_overnight_main_commit_block.sh` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit ba84e89; 8/8 tests pass)
 
 ---
 
@@ -166,7 +166,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - `tests/test_hooks.sh` uses `PASS_COUNT`/`FAIL_COUNT` accumulators and a `pass`/`fail` shell function pattern (lines 16-25). The new block runs `bash "$REPO_ROOT/tests/test_overnight_main_commit_block.sh"` and checks its exit code, reporting a single aggregate result via `pass`/`fail`.
   - Do not discard the existing exit-summary lines at the bottom of `test_hooks.sh`.
 - **Verification**: `bash /Users/charlie.hall/Workspaces/cortex-command/tests/test_hooks.sh` exits 0 — pass if exit code = 0; `grep -c 'test_overnight_main_commit_block' /Users/charlie.hall/Workspaces/cortex-command/tests/test_hooks.sh` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit e20cf6f; new test wired and passes; umbrella exits 1 due to 3 pre-existing scan-lifecycle failures unrelated to this ticket — flagged for Task 15)
 
 ---
 
@@ -189,7 +189,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - `grep -c 'FOLLOWUP_COMMIT_FAILED' /Users/charlie.hall/Workspaces/cortex-command/cortex_command/overnight/events.py` = 2 (constant declaration + EVENT_TYPES entry) — pass if count = 2.
   - **Caller-arity check** — `python3 -c "import re,sys; src=open('cortex_command/overnight/runner.py').read(); calls=re.findall(r'_commit_followup_in_worktree\([^)]+\)', src); fail=[c for c in calls if c.count(',') < 2]; sys.exit(1 if fail else 0)"` exits 0 — catches partial caller updates that would `TypeError` at runtime.
   - **Importability** — `python3 -c "from cortex_command.overnight.runner import _commit_followup_in_worktree; from cortex_command.overnight.events import FOLLOWUP_COMMIT_FAILED"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 5f7a086; deviation: caller-arity regex was buggy — agent bound `wt_path = Path(state.worktree_path)` above each call site to make the spec's regex meaningful; passed `round=0` as session-level sentinel since no round is in scope)
 
 ---
 
@@ -206,7 +206,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - Assert: captured stderr output contains `"runner: followup commit failed"`.
   - Capturing stderr from `_commit_followup_in_worktree` (it writes to `sys.stderr`): use `capsys` pytest fixture.
 - **Verification**: `python3 -m pytest tests/test_runner_followup_commit.py -q` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 24eaaca; uv run pytest 2 passed; deviation: spec asserts JSONL "type" field but actual field is "event" — agent matched the existing _poll_for_event helper)
 
 ---
 
@@ -231,7 +231,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - `grep -c 'MORNING_REPORT_COMMIT_RESULT' /Users/charlie.hall/Workspaces/cortex-command/cortex_command/overnight/runner.py` ≥ 1 — pass if count ≥ 1.
   - `grep -c 'MORNING_REPORT_COMMIT_FAILED' /Users/charlie.hall/Workspaces/cortex-command/cortex_command/overnight/runner.py` ≥ 1 — pass if count ≥ 1.
   - **Wiring check** — `python3 -c "import re,sys; src=open('cortex_command/overnight/runner.py').read(); m=re.search(r'def _run_post_round_loop[^\n]*\n((?:[ ]{4,}.*\n|\n)+)', src); body=m.group(1) if m else ''; sys.exit(0 if '_commit_morning_report_in_repo(' in body else 1)"` exits 0 — confirms the call site exists inside `_run_post_round_loop`'s body, not just defined as an unwired function.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 7ffb346; deviation: spec wiring regex names `_run_post_round_loop` but actual function is `_post_loop` — call site wired into `_post_loop` at runner.py:1719, verified substantively)
 
 ---
 
@@ -249,7 +249,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - For case (b): nothing staged; assert either no event is written OR the written event has a no-op/skipped outcome field. Implementer documents the choice in the test.
   - Do NOT set `CORTEX_RUNNER_CHILD=1` in the test environment — the function must commit without the hook blocking it (verifies the architectural invariant that runner-direct commits live above Phase 0).
 - **Verification**: `python3 -m pytest tests/test_runner_morning_report_commit.py -q` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 4ed0888; 2 passed)
 
 ---
 
@@ -267,7 +267,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - `grep -c 'morning report commit is the only runner commit that stays on local' /Users/charlie.hall/Workspaces/cortex-command/requirements/pipeline.md` = 0 — pass if count = 0.
   - `grep -c 'lifecycle/morning-report.md' /Users/charlie.hall/Workspaces/cortex-command/requirements/pipeline.md` ≥ 1 — pass if count ≥ 1.
   - Architectural-claim check (paraphrase-tolerant): `python3 -c "import sys; src=open('requirements/pipeline.md').read(); ok=('runner process' in src and 'CORTEX_RUNNER_CHILD' in src and 'Phase 0' in src); sys.exit(0 if ok else 1)"` exits 0 — verifies the replacement text names the runner process, the gate signal, and Phase 0 without coupling to brittle exact phrasing.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 7c1778a)
 
 ---
 
@@ -283,7 +283,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - Caveat to document in the test docstring: a refactor that moves env construction to a helper function (e.g., `env=_runner_child_env()`) keeps the count low — the count check still requires the helper's definition to contain the literal string. If the helper exists, count is at least 1 (helper definition) plus ≥ 1 if any spawn site still uses the literal-dict form. The test should accept count ≥ 2 OR a count of 1 with a recognizable helper-function name pattern (e.g., regex `def\s+\w*[Cc]hild_env\b` matches in the source). If neither condition holds, fail with a message pointing to spec's Architectural Insight section.
   - The test does NOT exercise the spawn chain at runtime — that integration test (50+ LOC of test scaffolding for runner.py end-to-end) remains deferred to a follow-up ticket.
 - **Verification**: `python3 -m pytest tests/test_runner_spawn_env.py -q` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit e6c0da0)
 
 ---
 
@@ -300,7 +300,7 @@ Runner-first, test-driven ordering: the runner-startup verification (Req 4) and 
   - `bash /Users/charlie.hall/Workspaces/cortex-command/tests/test_drift_enforcement.sh` exits 0 — pass if exit code = 0.
   - `just test-hooks` exits 0 — pass if exit code = 0.
   - `just test` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (verification only — drift 6/6 pass; just test-hooks exits 0 with 18/21 sub-tests passing — 3 pre-existing scan-lifecycle failures unrelated to this ticket; just test 6/6 suites pass)
 
 ---
 

@@ -2,7 +2,6 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 128 | Install pre-commit hook rejecting main commits during overnight sessions | in_progress | critical | feature | — | 126 | ✓ |
 | 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | ✓ |
 | 158 | Build shared autonomous synthesis for critical-tier dual-plan flow (interactive + overnight) | backlog | high | epic | — | — | — |
 | 159 | Tighten §1b plan-agent prompt to require strategy-level distinction | backlog | high | chore | — | 158 | — |
@@ -24,7 +23,6 @@
 
 ## In-Progress
 
-- **128** Install pre-commit hook rejecting main commits during overnight sessions (in_progress)
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
 
 ## Warnings

@@ -1,36 +1,5 @@
 [
   {
-    "id": 128,
-    "title": "Install pre-commit hook rejecting main commits during overnight sessions",
-    "status": "in_progress",
-    "priority": "critical",
-    "type": "feature",
-    "tags": [
-      "overnight-runner",
-      "git-hook",
-      "enforcement",
-      "orchestrator-worktree-escape"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "126",
-    "research": null,
-    "spec": "lifecycle/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/spec.md",
-    "discovery_source": "research/orchestrator-worktree-escape/research.md",
-    "plan": null,
-    "uuid": "9064c10e-38ba-494a-9783-3bf12aca8a6c",
-    "lifecycle_slug": null,
-    "session_id": "8934ac12-600e-4446-91cd-dbafdbe17309",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 112,
     "title": "Migrate overnight-schedule to a LaunchAgent-based scheduler",
     "status": "in_progress",
