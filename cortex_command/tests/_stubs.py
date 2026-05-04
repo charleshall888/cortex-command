@@ -65,6 +65,11 @@ class ResultMessage:
     usage: dict | None = None
     result: str | None = None
     structured_output: Any = None
+    # `stop_reason` was added by claude-agent-sdk v0.1.46 (PR #718). The SDK
+    # places it at position 6 (between session_id and total_cost_usd), but we
+    # append it as the LAST field here so existing positional ResultMessage(...)
+    # constructions in tests keep working unchanged. Spec Req #7.
+    stop_reason: str | None = None
 
 
 @dataclass

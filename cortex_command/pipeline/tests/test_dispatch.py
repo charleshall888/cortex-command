@@ -857,5 +857,69 @@ class TestDispatchTaskValidation(unittest.IsolatedAsyncioTestCase):
                 )
 
 
+# ---------------------------------------------------------------------------
+# Tests: SDK message parser extracts stop_reason
+# ---------------------------------------------------------------------------
+
+def test_sdk_parser_extracts_stop_reason():
+    """Verifies that the upgraded claude-agent-sdk's CLI message parser extracts
+    `stop_reason` from a result-type JSON line into the typed `ResultMessage`.
+
+    This is the load-bearing gate of Spec Req #6: if the upgraded SDK's parser
+    drops `stop_reason`, this test fails and the implementation must add a
+    wrapper/extractor before the truncation observability stack can rely on it.
+
+    The conftest installs a stub at ``sys.modules['claude_agent_sdk']`` for all
+    other tests in this package. We bypass that stub here by temporarily removing
+    the stub modules from sys.modules, importing the real SDK's
+    ``_internal.message_parser`` directly, then restoring the stub so the rest
+    of the test session is unaffected.
+    """
+    import importlib
+
+    # Snapshot and remove any stub/real modules so a fresh import binds to
+    # the real package on disk.
+    saved: dict[str, Any] = {}
+    for key in list(sys.modules):
+        if key == "claude_agent_sdk" or key.startswith("claude_agent_sdk."):
+            saved[key] = sys.modules.pop(key)
+
+    try:
+        real_parser = importlib.import_module(
+            "claude_agent_sdk._internal.message_parser"
+        )
+        real_types = importlib.import_module("claude_agent_sdk.types")
+
+        # Confirm we actually loaded the real SDK (not the stub) — the stub
+        # has the marker attribute set in _stubs.py:_install_sdk_stub.
+        real_sdk_root = sys.modules["claude_agent_sdk"]
+        assert not getattr(real_sdk_root, "_is_test_stub", False), (
+            "Expected to load the real claude_agent_sdk, not the test stub"
+        )
+
+        # Canned CLI JSON line for a result-type message containing
+        # stop_reason="max_tokens". Field shape mirrors what the CLI emits.
+        cli_json_line = (
+            '{"type": "result", "subtype": "success", "duration_ms": 1234,'
+            ' "duration_api_ms": 1000, "is_error": false, "num_turns": 3,'
+            ' "session_id": "sess-abc", "stop_reason": "max_tokens",'
+            ' "total_cost_usd": 0.012, "usage": {"input_tokens": 10},'
+            ' "result": "partial output", "structured_output": null}'
+        )
+        data = json.loads(cli_json_line)
+
+        parsed = real_parser.parse_message(data)
+
+        assert isinstance(parsed, real_types.ResultMessage)
+        assert parsed.stop_reason == "max_tokens"
+    finally:
+        # Restore the stub so subsequent tests in this session see what
+        # they expect.
+        for key in list(sys.modules):
+            if key == "claude_agent_sdk" or key.startswith("claude_agent_sdk."):
+                del sys.modules[key]
+        sys.modules.update(saved)
+
+
 if __name__ == "__main__":
     unittest.main()
