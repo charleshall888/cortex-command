@@ -4,6 +4,9 @@ test-command: just test
 skip-specify: false
 skip-review: false
 commit-artifacts: true
+# Gate for the overnight critical-tier dual-plan synthesizer dispatch path.
+# Default false (fail-closed) until the operator validates the path and flips to true.
+synthesizer_overnight_enabled: false
 demo-commands:
   - label: "Dashboard"
     command: "just dashboard"
