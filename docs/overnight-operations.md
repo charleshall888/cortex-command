@@ -311,6 +311,38 @@ The runner has **two distinct repair caps** with different numbers. They are int
 
 Do not describe these as "the repair cap" in prose — collapsing them to one number misleads readers at 2am when observed behavior does not match.
 
+### Effort policy rationale and rollback monitoring
+
+This subsection covers *why* the effort matrix flipped Sonnet baseline to `high` and lifted Opus complex+high/critical to `xhigh`, *what framing* bounds the cost-regression risk, and *how* an operator detects regression and reverts. The matrix mechanics (the 12 cells, the `review-fix` / `integration-recovery` overrides, the runtime guard) live in [sdk.md](sdk.md) — do not duplicate the table here.
+
+**Anthropic guidance.** Per Anthropic's Claude 4.7 migration guide, `xhigh` is "the best setting for most coding and agentic use cases," and `high` is recommended as the minimum for intelligence-sensitive workloads. Sonnet 4.6 carries an elevated baseline expectation that the prior `medium` setting did not meet. The flip aligns the dispatch policy with that recommendation across the matrix.
+
+**#089 closure rationale.** Backlog ticket #089 previously parked the `xhigh` adoption decision pending a stronger empirical signal. It was closed because the available data — n=1 + a single synthetic task — could not carry the decision weight needed to overturn vendor guidance. The community estimate (~1.5× tokens for ~5–6% quality boost on agentic coding) is the pre-flip prior we accepted in lieu of a controlled local benchmark. The post-flip rollback monitoring procedure below is the empirical check that runs continuously now, replacing the one-shot benchmark that #089 was waiting on.
+
+**Adaptive-thinking framing.** Per Anthropic's effort docs, `effort` is a behavioral signal that caps the *maximum reasoning depth* the model may use — it is not a strict token budget. The model adapts thinking down for simpler tasks: a simple task running under `xhigh` may consume little more than under `high`, while a complex task may meaningfully exceed it. So the cost regression from the flip is bounded by *task complexity*, not by the effort setting alone. This is why the `metrics.json` rollback check below buckets by `(model, tier, skill, effort)` — a per-effort regression at the same complexity is the signal worth investigating; an aggregate cost rise that tracks complexity mix is not.
+
+**Rollback monitoring procedure.** `metrics.py` now buckets dispatch aggregates by `(model, tier, skill, effort)` (see Task 6 of the implementation plan). The post-flip cost watch is a per-bucket comparison against the pre-flip baseline. Query the per-effort cost mean from `metrics.json` like so:
+
+```sh
+# Per-effort cost mean for opus on complex/high dispatches under xhigh:
+jq '.model_tier_dispatch_aggregates["opus,complex,xhigh"].cost_usd_mean' \
+  lifecycle/sessions/<session_id>/metrics.json
+
+# Pre-flip baseline (same skill/tier under high) for direct comparison:
+jq '.model_tier_dispatch_aggregates["opus,complex,high"].cost_usd_mean' \
+  lifecycle/sessions/<previous_session_id>/metrics.json
+
+# Quick sweep across all post-flip buckets:
+jq '.model_tier_dispatch_aggregates | to_entries | map({key, mean: .value.cost_usd_mean})' \
+  lifecycle/sessions/<session_id>/metrics.json
+```
+
+Bucket key shape after Task 6 is `"<model>,<tier>,<effort>"` (e.g. `"opus,complex,xhigh"`, `"sonnet,simple,high"`); skill-specific aggregates use the analogous `skill_tier_dispatch_aggregates` slice with skill in the key. The exact aggregate field names are owned by `cortex_command/pipeline/metrics.py` — if the path above does not resolve in a given `metrics.json`, dump the top-level keys with `jq 'keys' metrics.json` and follow the structure from there.
+
+**Threshold that triggers human investigation: > 2× per-bucket mean cost over 2–3 overnight rounds.** A single round can spike on outliers (one truncated dispatch, one unusually deep reasoning chain); two-to-three consecutive rounds at >2× baseline mean for the same `(model, tier, skill, effort)` bucket is the signal that the flip is paying more than the quality boost is worth on this workload.
+
+**Rollback path.** Revert the matrix flip — the SDK upgrade can stay in place. Concretely: revert the commits that changed cell values in `_EFFORT_MATRIX` and the skill-override gate (the Task 2/3/4 commits in this implementation plan). The SDK pin in `pyproject.toml`, the `stop_reason` plumbing on `dispatch_complete` / `dispatch_truncation` events, and the per-effort `metrics.py` bucketing can all stay — they are observability infrastructure that has value independent of the effort policy and is what enabled the rollback decision in the first place.
+
 ### overnight-strategy.json contents and mutators
 
 The field-by-field writer and reader map is documented under [Strategy File (overnight-strategy.json) — mutators and consumers](#strategy-file-overnight-strategyjson--mutators-and-consumers) in the Architecture section; see [Strategy File (overnight-strategy.json) schema](#strategy-file-overnight-strategyjson-schema) in Observability for the JSON shape. From a tuning perspective, the tunable surfaces are:
