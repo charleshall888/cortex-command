@@ -1,0 +1,122 @@
+- ts: 2026-04-29T16:32:01Z
+  event: clarify_critic
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  findings:
+    - "The assessment rates Intent clarity HIGH on the basis that the goal is unambiguous and complete, citing the Remove and Keep lists as enumerated and evidence-backed. The source itself hedges the Keep list with conditional language: 'load_throttle_config() if it still has non-backoff knobs worth keeping.' That 'if' defers a real decision (does the function survive at all, and which knobs count as 'worth keeping'?) to implementation time. An unambiguous goal would specify whether load_throttle_config() is retained, deleted, or trimmed; the source explicitly does not."
+    - "The assessment rates Scope boundedness HIGH and asserts the boundaries are explicit and grounded in the source. The source's Remove list ends with 'Related tests for the removed surfaces' — an open-ended catch-all, not an enumerated boundary. It also says 'throttled_dispatch() function (throttle.py:206 onward),' where 'onward' is not a bounded range. Further, the source notes a deadlock comment at brain.py:194-196 explaining why dispatch_task is called directly; once throttled_dispatch is deleted, that comment becomes stale and the surrounding code may need follow-up edits — none of which are scoped in."
+    - "The assessment claims Requirements alignment HIGH with 'No requirements conflict detected,' citing requirements/project.md and requirements/pipeline.md, but does not quote any requirements text about throttling, backoff, or rate-limit reactivity. The source asserts 'SDK-level retry already handles 429s for the plain dispatch_task path that production actually uses' — an empirical claim, not a requirements citation. If requirements/pipeline.md describes any rate-limit-handling responsibility for the pipeline (separate from the concurrency cap), removing the backoff machinery could create a gap. The assessment performed no audit of requirements text for backoff/rate-limit/retry obligations before declaring 'no conflict.'"
+    - "The assessment treats 'zero throttle_backoff events across all sessions' as load-bearing for the deletion claim, implicitly endorsing it as a HIGH-confidence signal. Zero events could equally mean the wrapper is dead code, or that production has never hit a 429 burst severe enough to trigger the path, in which case the wrapper is latent insurance rather than dead code. The source acknowledges the wrapper was 'tried, broke things, and was swapped out' at MAX_5 — which is a bug report on the wrapper, not proof the concept is unwanted."
+    - "The assessment rates criticality 'high' on a default basis but pairs it with HIGH intent/scope ratings as if the deletion is well-circumscribed. The source itself says the wrapper 'would deadlock at MAX_5' — meaning the code being deleted has a known interaction with subscription-tier behavior. Yet the Keep list retains SubscriptionTier and tier-based concurrency limits without specifying whether any tier-aware tests, fixtures, or call paths reference the soon-to-be-deleted report_rate_limit / report_success methods."
+  dispositions:
+    apply: 1
+    dismiss: 4
+    ask: 0
+  applied_fixes:
+    - "Revised requirements alignment from 'Aligned with requirements/project.md and requirements/pipeline.md — no conflict detected' to 'Aligned with caveats: requirements/pipeline.md §Quality Attributes states Graceful degradation: Budget exhaustion and rate limits pause the session rather than crashing it. The source claims SDK-level retry covers 429s on the dispatch_task path, but does not demonstrate that the pause-on-rate-limit non-functional requirement is satisfied without the wrapper. Research must confirm.' Carried as open question for research. (from critic finding 3)"
+  dismissals:
+    - finding_index: 0
+      rationale: "load_throttle_config() retention is exactly the kind of ambiguity Clarify routes to research as an open question rather than treating as user-facing intent gap. Clarify §5 explicitly distinguishes 'questions that need investigation (not user answers) — ambiguities best resolved by reading code, not asking' and routes them into the Open Questions for research output. Carried into research open questions list."
+    - finding_index: 1
+      rationale: "'Related tests for the removed surfaces' is standard scope language for deletion tickets and follows from the enumerated Remove list. 'Throttle.py:206 onward' is a function-definition pointer, not a range hedge. The brain.py:194-196 comment cleanup is incidental and trivially in-scope as a follow-up to deleting the referenced symbol; carried as a research open question for explicit confirmation, not a clarify-level scope ambiguity."
+    - finding_index: 3
+      rationale: "Re-litigates the deletion premise that prior critical review (split out of #087) and prior independent investigation (lifecycle/archive/replace-concurrency-cap-with-conflict-aware-round-scheduling/inner-task-investigation.md:57,91) already settled. The source enumerates four converging signals (zero call sites, deadlock comment, zero events, prior independent investigation) that the user accepted before filing this ticket; Clarify gates intent, not premise."
+    - finding_index: 4
+      rationale: "Per-symbol caller enumeration for report_rate_limit / report_success is research's job, not Clarify's. Clarify §3 scope boundedness is satisfied when in-scope and out-of-scope items are explicitly named at the symbol level (which they are); enumeration of every caller is the codebase analysis Research will produce."
+  status: ok
+
+- ts: 2026-04-29T16:51:32Z
+  event: orchestrator_review
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+
+- ts: 2026-04-29T19:56:51Z
+  event: critical_review
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  phase: specify
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  findings_a_class: 5
+  findings_b_class: 11
+  findings_c_class: 1
+  dispositions:
+    apply: 16
+    dismiss: 5
+    ask: 1
+  ask_resolved: "scope expansion (b) — thread paused_reason='api_rate_limit' end-to-end via R15-R19"
+  applied_fixes:
+    - "R3 grep alternation: added _window_seconds; broadened R3 to remove orphan 'import time' and rewrite the class docstring shrinkage language"
+    - "R7: added _CM lazy import deletion and brain.py:204 parameter docstring rewrite"
+    - "R9: tightened grep to verify both clauses landed (api_rate_limit + pause the session)"
+    - "R10: tightened grep to verify pipeline-events.log clause landed"
+    - "R11: replaced vague 'binary check via grep' with concrete ast.get_docstring-based python3 check"
+    - "R7/R13: changed 'python -c' to 'python3 -c' for environment portability"
+    - "Added R14 covering docs/overnight-operations.md line ~90 and ~270 updates"
+    - "Added acceptance-gate sequencing note clarifying greps run as final post-implementation sweep"
+    - "Added MAX_5 fragility analysis to Edge Cases"
+    - "Added morning-report mislabel description to Edge Cases (operator implication documented)"
+    - "Strengthened reversibility to two-pronged mitigation (commit body + 5-line throttle.py comment)"
+    - "Rewrote brain-dispatch Edge Case to accurately describe pre/post-deletion semantics (infrastructure_failure vs api_rate_limit)"
+    - "Removed overstated 'tests construct ThrottleConfig' hedge"
+    - "Added R15 (retry.py:398 propagates upstream error_type)"
+    - "Added R16 (feature_executor _SESSION_HALT_ERROR_TYPES set)"
+    - "Added R17 (orchestrator.py paused_reason/abort_reason fidelity)"
+    - "Added R18 (report.py distinct morning-report text for api_rate_limit)"
+    - "Added R19 (runner.py distinct user-facing notifications for api_rate_limit)"
+    - "Updated Non-Requirement to clarify pause-trigger routing is preserved; R15-R19 only correct label propagation"
+    - "Updated Changes to Existing Behavior with new MODIFIED entries for retry.py, feature_executor.py, orchestrator.py, report.py, runner.py"
+  status: ok
+
+- ts: 2026-05-04T00:00:00Z
+  event: lifecycle_start
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  tier: complex
+  criticality: high
+  note: "Backfilled at plan-phase resume; refine produced research+spec without logging this event. Tier and criticality sourced from originating backlog frontmatter (098)."
+
+- ts: 2026-05-04T00:05:00Z
+  event: orchestrator_review
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+
+- ts: 2026-05-04T00:15:00Z
+  event: critical_review
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  phase: plan
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  findings_a_class: 1
+  findings_b_class: 9
+  findings_c_class: 4
+  dispositions:
+    apply: 5
+    dismiss: 3
+    ask: 2
+  applied_fixes:
+    - "Task 8 expanded to also rename retry_paused_budget_exhausted → retry_paused_session in test_escalation.py:684 and rename the surrounding test method (A-class fix-invalidating: just test would otherwise exit non-zero)"
+    - "Task 10 Context corrected: 'serializing avoids edit conflicts' framing replaced with cross-file symbol-deletion-ordering rationale"
+    - "Task 3 historical-note example: hardcoded literal date 2026-05-04 replaced with <YYYY-MM-DD> placeholder per spec template"
+    - "Added Task 13 (rename throttle_stats fixture key in test_overnight_state.py to remove archaeological vocabulary)"
+    - "Added Task 14 (update unenumerated user-facing strings: cortex_command/overnight/plan.py:206 and plugins/cortex-overnight-integration/skills/overnight/SKILL.md:106)"
+    - "Renumbered final-acceptance-sweep to Task 15 with updated Depends [1-14]"
+    - "Veto Surface extended with the two Ask items (no new tests; no state.schema_version bump for forward-compat)"
+
+- ts: 2026-05-04T00:20:00Z
+  event: critical_review_ask_resolved
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  phase: plan
+  resolutions:
+    - "Test coverage Ask: 'Add one minimal end-to-end test' — added Task 15 covering test_report.py morning-report api_rate_limit branch; renumbered final acceptance sweep to Task 16. Overrides spec Non-Requirement 'Do NOT introduce new tests' for this single test only."
+    - "Forward-compat Ask: 'Accept the edge case' — no code change; risk documented in Veto Surface and (per implementation phase) commit body."
+
+- ts: 2026-05-04T00:25:00Z
+  event: phase_transition
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  from: plan
+  to: implement
+  note: "User approved plan; deferred starting implementation pending explicit go-ahead."

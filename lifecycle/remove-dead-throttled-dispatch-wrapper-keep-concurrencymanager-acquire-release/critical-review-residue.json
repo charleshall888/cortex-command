@@ -1,0 +1,66 @@
+{
+  "ts": "2026-05-04T00:10:00Z",
+  "feature": "remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release",
+  "artifact": "lifecycle/remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 3 grep transitively depends on Task 2 deletion landing; partial Batch 0 integration failure could leave the test method undeleted, failing Task 3's recursive grep through no fault of Task 3.",
+      "reviewer_angle": "Same-file edit serialization & parallel-dispatch hazards",
+      "evidence_quote": "Deleting it here unblocks Task 3's `grep -rn 'report_rate_limit' cortex_command/` acceptance gate, which would otherwise still hit this file."
+    },
+    {
+      "class": "B",
+      "finding": "Tasks 11 and 12 add new branches on paused_reason==api_rate_limit but no existing test covers paused_reason / API rate / API budget; verification is per-line regex + just test, neither of which witnesses the additive branch reachability or propagation fidelity.",
+      "reviewer_angle": "Verification gates: tautology and behavioral blind spots",
+      "evidence_quote": "**NOT introducing** new tests beyond modifying/deleting existing ones \u2014 deletion shrinks the test surface."
+    },
+    {
+      "class": "B",
+      "finding": "Tasks 11/12 verification regex paused_reason.*api_rate_limit|api_rate_limit.*paused_reason is line-scoped, missing implementations that split tokens across adjacent lines and passing trivially for unrelated single lines mentioning both strings.",
+      "reviewer_angle": "Verification gates: tautology and behavioral blind spots",
+      "evidence_quote": "`grep -cE 'paused_reason.*api_rate_limit|api_rate_limit.*paused_reason' cortex_command/overnight/report.py` \u2265 1"
+    },
+    {
+      "class": "B",
+      "finding": "Task 10 verification (literal-absence + symbol-presence \u22652) is satisfiable by deleting branches rather than rewriting them; the api_rate_limit propagation case has no test coverage.",
+      "reviewer_angle": "Verification gates: tautology and behavioral blind spots",
+      "evidence_quote": "`grep -cE '\"budget_exhausted\"' cortex_command/overnight/orchestrator.py` = 0 (the 8 verified sites all replaced) AND `grep -c '_SESSION_HALT_ERROR_TYPES' cortex_command/overnight/orchestrator.py` \u2265 2"
+    },
+    {
+      "class": "B",
+      "finding": "Task 3 deletion + Task 2 test removal leaves no end-to-end runtime witness for post-deletion 429 dispatch behavior in brain.py \u2192 orchestrator.py \u2192 runner.py chain.",
+      "reviewer_angle": "Verification gates: tautology and behavioral blind spots",
+      "evidence_quote": "`python3 -c 'from cortex_command.overnight import throttle; ...; m = ConcurrencyManager(ThrottleConfig()); assert hasattr(m, \"acquire\") and hasattr(m, \"release\")'` exits 0"
+    },
+    {
+      "class": "B",
+      "finding": "cortex_command/overnight/plan.py:206 contains live string 'Tier-based adaptive throttle' rendered into the user-facing morning-review session plan; no task in the plan touches plan.py.",
+      "reviewer_angle": "Missed references in unenumerated consumer surfaces",
+      "evidence_quote": "Documentation alignment (R9, R10, R14): the three doc surfaces no longer describe the deleted behavior; new pointers target the surviving `api_rate_limit` \u2192 `pause_session` path."
+    },
+    {
+      "class": "B",
+      "finding": "plugins/cortex-overnight-integration/skills/overnight/SKILL.md:106 contains 'tier-based adaptive throttle' in user-facing copy; Task 3 grep omits plugins/ and no task enumerates this file.",
+      "reviewer_angle": "Missed references in unenumerated consumer surfaces",
+      "evidence_quote": "`grep -rn 'throttled_dispatch' cortex_command/ tests/ claude/ docs/` returns no matches outside historical lifecycle/research artifacts"
+    },
+    {
+      "class": "B",
+      "finding": "Task 4 drops production write of throttle_stats but test_overnight_state.py:185-221 retains the literal as self-supplied fixture in 5 places; surfaces as archaeological vocabulary post-merge.",
+      "reviewer_angle": "State migration & historical artifact compatibility",
+      "evidence_quote": "Drop the `extra_fields={\"throttle_stats\": manager.stats}` argument from the `save_batch_result(batch_result, result_path, ...)` call."
+    },
+    {
+      "class": "B",
+      "finding": "Plan addresses new-runner-reads-new-state for paused_reason='api_rate_limit' but never the reverse (old runner reading state paused by post-PR code falls into the else branch and emits 'Overnight complete' instead of recognizing the pause).",
+      "reviewer_angle": "State migration & historical artifact compatibility",
+      "evidence_quote": "At runner.py:2032 (the round-loop early-out check `if state.paused_reason == \"budget_exhausted\":`), extend the check to recognize both reasons as session-halting"
+    }
+  ]
+}
