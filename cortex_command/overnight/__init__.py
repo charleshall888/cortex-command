@@ -55,5 +55,4 @@ from cortex_command.overnight.throttle import (  # noqa: F401
     ConcurrencyManager,
     ThrottleConfig,
     load_throttle_config,
-    throttled_dispatch,
 )
