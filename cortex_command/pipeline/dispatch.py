@@ -122,14 +122,6 @@ TIER_CONFIG: dict[str, dict] = {
     "complex": {"model": "opus", "max_turns": 30, "max_budget_usd": 50.00},
 }
 
-# Maps complexity tier to effort level for ClaudeAgentOptions.
-# Trivial mechanical tasks get low effort; complex reasoning tasks get high effort.
-EFFORT_MAP: dict[str, str] = {
-    "trivial": "low",
-    "simple":  "medium",
-    "complex": "high",
-}
-
 # 2D model matrix: (complexity, criticality) -> model name
 # Criticality levels: low, medium, high, critical
 _MODEL_MATRIX: dict[tuple[str, str], str] = {
@@ -145,6 +137,47 @@ _MODEL_MATRIX: dict[tuple[str, str], str] = {
     ("complex", "medium"):   "sonnet",
     ("complex", "high"):     "opus",
     ("complex", "critical"): "opus",
+}
+
+# 2D effort matrix: (complexity, criticality) -> effort level for ClaudeAgentOptions.
+# Mirrors the shape of _MODEL_MATRIX. Cell values follow the policy table in
+# spec §1 (lifecycle/adopt-xhigh-effort-default-for-overnight-lifecycle-implement
+# /spec.md). Sonnet-tier dispatches uniformly run at "high" per Anthropic's
+# Sonnet 4.6 baseline guidance; Opus-tier dispatches at (complex, high) and
+# (complex, critical) lift to "xhigh" per Anthropic's "start with xhigh for
+# coding" recommendation.
+_EFFORT_MATRIX: dict[tuple[str, str], str] = {
+    ("trivial", "low"):      "low",
+    ("trivial", "medium"):   "low",
+    ("trivial", "high"):     "high",
+    ("trivial", "critical"): "high",
+    ("simple",  "low"):      "high",
+    ("simple",  "medium"):   "high",
+    ("simple",  "high"):     "high",
+    ("simple",  "critical"): "high",
+    ("complex", "low"):      "high",
+    ("complex", "medium"):   "high",
+    ("complex", "high"):     "xhigh",
+    ("complex", "critical"): "xhigh",
+}
+
+# Skill-based effort overrides applied AFTER matrix lookup, gated on
+# resolved model == "opus". Per spec §2 Technical Constraints: review-fix and
+# integration-recovery on Opus warrant the highest reasoning ceiling. Kept as a
+# small flat dict (not a 3D matrix) per spec Non-Requirements; promote only if
+# a third skill-specific exception lands.
+_SKILL_EFFORT_OVERRIDES: dict[str, str] = {
+    "review-fix":           "max",
+    "integration-recovery": "max",
+}
+
+# Per-model supported effort vocabularies (spec §3 Technical Constraints). Used
+# by the runtime guard in resolve_effort to fail loudly when a resolved effort
+# would not be accepted by the resolved model.
+_MODEL_SUPPORTED_EFFORTS: dict[str, frozenset[str]] = {
+    "haiku":  frozenset({"low", "medium", "high"}),
+    "sonnet": frozenset({"low", "medium", "high", "max"}),
+    "opus":   frozenset({"low", "medium", "high", "xhigh", "max"}),
 }
 
 _VALID_CRITICALITY = {"low", "medium", "high", "critical"}
@@ -198,6 +231,53 @@ def resolve_model(complexity: str, criticality: str = "medium") -> str:
             f"must be one of {sorted(_VALID_CRITICALITY)}"
         )
     return _MODEL_MATRIX[(complexity, criticality)]
+
+
+def resolve_effort(complexity: str, criticality: str, skill: str, model: str) -> str:
+    """Resolve an effort level from the centralized matrix + skill-override gate.
+
+    Looks up ``_EFFORT_MATRIX[(complexity, criticality)]`` for the baseline,
+    then applies the skill-override gate: ``review-fix`` and
+    ``integration-recovery`` on Opus get bumped to ``"max"`` (per spec §2). On
+    any non-Opus model the matrix value applies. Effort is a behavioral signal
+    capping the model's *maximum* reasoning depth — see Anthropic's effort docs
+    and spec §1 for the adaptive-thinking framing.
+
+    Args:
+        complexity: Complexity tier key ("trivial", "simple", or "complex").
+        criticality: Criticality level ("low", "medium", "high", or "critical").
+        skill: The dispatching skill name (e.g. "implement", "review-fix").
+            Used to gate the skill-override; unknown skills receive the matrix
+            value.
+        model: The *effective* (post-``model_override``) model name. Required
+            because the override is gated on ``model == "opus"`` — callers
+            must pass the post-override model so escalation boundaries
+            re-evaluate the gate per spec Edge Cases.
+
+    Returns:
+        An effort level string from the closed vocabulary
+        ``{"low", "medium", "high", "xhigh", "max"}``.
+
+    Raises:
+        ValueError: If the resolved effort is not supported by the resolved
+            model per spec §3 (e.g. ``xhigh`` on Sonnet). Per the Veto Surface
+            in the implementation plan, this is ``raise ValueError`` rather
+            than the ``assert`` literally specified in spec §3 — ``assert`` is
+            stripped under ``python -O`` / ``PYTHONOPTIMIZE=1``, defeating the
+            "MUST fail loudly" intent. ``ValueError`` matches the existing
+            convention in :func:`resolve_model` and ``dispatch_task``.
+    """
+    effort = _EFFORT_MATRIX[(complexity, criticality)]
+    if model == "opus" and skill in _SKILL_EFFORT_OVERRIDES:
+        effort = _SKILL_EFFORT_OVERRIDES[skill]
+    supported = _MODEL_SUPPORTED_EFFORTS.get(model)
+    if supported is not None and effort not in supported:
+        raise ValueError(
+            f"resolved effort {effort!r} is not supported by model {model!r}; "
+            f"supported levels: {sorted(supported)} (complexity={complexity!r}, "
+            f"criticality={criticality!r}, skill={skill!r})"
+        )
+    return effort
 
 
 # Tools available to all dispatched agents
@@ -388,8 +468,8 @@ async def dispatch_task(
             resolving from complexity/criticality.  Used by the retry loop to
             implement model-tier escalation (Haiku → Sonnet → Opus).
         effort_override: If provided, use this effort level directly instead of
-            resolving from the complexity tier via EFFORT_MAP.  Accepts any
-            value accepted by ClaudeAgentOptions ("low", "medium", "high",
+            resolving from the complexity tier via ``_EFFORT_MATRIX``.  Accepts
+            any value accepted by ClaudeAgentOptions ("low", "medium", "high",
             "max").
         skill: Closed-vocabulary identifier for the dispatch-call site (one of
             the values in the ``Skill`` Literal). Required keyword-only
@@ -436,7 +516,7 @@ async def dispatch_task(
         raise ValueError(f"cycle is only valid for skill='review-fix'; got skill={skill!r} with cycle={cycle!r}")
 
     model = model_override if model_override is not None else resolve_model(complexity, criticality)
-    effort = effort_override if effort_override is not None else EFFORT_MAP[complexity]
+    effort = effort_override if effort_override is not None else resolve_effort(complexity, criticality, skill, model)
 
     # Clear CLAUDECODE so the sub-agent doesn't hit the nested-session guard.
     # The SDK merges options.env on top of os.environ (proven by existing CLAUDECODE

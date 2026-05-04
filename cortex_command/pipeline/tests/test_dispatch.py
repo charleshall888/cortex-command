@@ -921,5 +921,178 @@ def test_sdk_parser_extracts_stop_reason():
         sys.modules.update(saved)
 
 
+# ---------------------------------------------------------------------------
+# Tests: _EFFORT_MATRIX policy and resolve_effort()
+# ---------------------------------------------------------------------------
+
+def test_effort_matrix_policy():
+    """Iterates all 12 (complexity, criticality) cells and asserts the policy
+    table from spec §1 Technical Constraints.
+
+    The matrix is the single source of truth for baseline effort resolution
+    (Spec Req #1, #2). Cell values are verbatim from the policy table — 8 of
+    12 cells change effort relative to the previous 1D ``EFFORT_MAP``.
+    """
+    expected: dict[tuple[str, str], str] = {
+        ("trivial", "low"):      "low",
+        ("trivial", "medium"):   "low",
+        ("trivial", "high"):     "high",
+        ("trivial", "critical"): "high",
+        ("simple",  "low"):      "high",
+        ("simple",  "medium"):   "high",
+        ("simple",  "high"):     "high",
+        ("simple",  "critical"): "high",
+        ("complex", "low"):      "high",
+        ("complex", "medium"):   "high",
+        ("complex", "high"):     "xhigh",
+        ("complex", "critical"): "xhigh",
+    }
+    assert len(_dispatch_module._EFFORT_MATRIX) == 12, (
+        "matrix must have exactly 12 cells (3 complexity x 4 criticality)"
+    )
+    assert _dispatch_module._EFFORT_MATRIX == expected, (
+        f"matrix policy mismatch: got {_dispatch_module._EFFORT_MATRIX!r}, "
+        f"expected {expected!r}"
+    )
+
+
+def test_effort_skill_overrides():
+    """Exercises review-fix and integration-recovery on opus and on sonnet.
+
+    Spec Req #3 + §2: ``review-fix`` and ``integration-recovery`` get
+    ``effort="max"`` when the resolved (post-``model_override``) model is opus;
+    on any other model the matrix value applies. No silent downgrade.
+    """
+    # review-fix on opus -> max (overrides the matrix's xhigh).
+    assert _dispatch_module.resolve_effort(
+        complexity="complex", criticality="high",
+        skill="review-fix", model="opus",
+    ) == "max"
+    assert _dispatch_module.resolve_effort(
+        complexity="complex", criticality="critical",
+        skill="review-fix", model="opus",
+    ) == "max"
+
+    # review-fix on sonnet -> matrix value (high), no override.
+    assert _dispatch_module.resolve_effort(
+        complexity="simple", criticality="high",
+        skill="review-fix", model="sonnet",
+    ) == "high"
+    assert _dispatch_module.resolve_effort(
+        complexity="complex", criticality="low",
+        skill="review-fix", model="sonnet",
+    ) == "high"
+
+    # integration-recovery on opus -> max.
+    assert _dispatch_module.resolve_effort(
+        complexity="complex", criticality="high",
+        skill="integration-recovery", model="opus",
+    ) == "max"
+
+    # integration-recovery on sonnet -> matrix value (high).
+    assert _dispatch_module.resolve_effort(
+        complexity="complex", criticality="medium",
+        skill="integration-recovery", model="sonnet",
+    ) == "high"
+
+    # Non-overriding skill on opus -> matrix value (xhigh, no override).
+    assert _dispatch_module.resolve_effort(
+        complexity="complex", criticality="high",
+        skill="implement", model="opus",
+    ) == "xhigh"
+
+
+def test_effort_value_passthrough():
+    """Verifies that each effort value in the closed vocabulary constructs
+    cleanly via ``ClaudeAgentOptions(effort=v)`` AND that the SDK's
+    ``SubprocessCLITransport._build_command`` propagates it as
+    ``["--effort", v]`` in the constructed argv.
+
+    Covers Spec Req #10. Bypasses the conftest stub so we exercise the real
+    SDK's ``ClaudeAgentOptions`` and CLI-argv builder; restores the stub on
+    exit so subsequent tests in this session are unaffected.
+    """
+    import importlib
+
+    saved: dict[str, Any] = {}
+    for key in list(sys.modules):
+        if key == "claude_agent_sdk" or key.startswith("claude_agent_sdk."):
+            saved[key] = sys.modules.pop(key)
+
+    try:
+        real_sdk = importlib.import_module("claude_agent_sdk")
+        # Confirm we have the real SDK, not the stub.
+        assert not getattr(real_sdk, "_is_test_stub", False), (
+            "Expected to load the real claude_agent_sdk, not the test stub"
+        )
+        real_options_cls = real_sdk.ClaudeAgentOptions
+        transport_mod = importlib.import_module(
+            "claude_agent_sdk._internal.transport.subprocess_cli"
+        )
+        SubprocessCLITransport = transport_mod.SubprocessCLITransport
+
+        for value in ("low", "medium", "high", "xhigh", "max"):
+            # Constructs cleanly. The SDK currently types effort as
+            # Literal["low","medium","high","max"], but Python does not enforce
+            # Literal at runtime, so xhigh passes through as an opaque string
+            # (Spec §3, Req #10).
+            opts = real_options_cls(effort=value)
+            assert opts.effort == value
+
+            # Build CLI argv via the SDK's transport. We avoid actually
+            # connecting (which would call the CLI binary) by constructing
+            # the transport with a synthetic cli_path so _build_command
+            # can run without _find_cli failing.
+            opts_with_cli = real_options_cls(
+                effort=value,
+                cli_path="/usr/bin/true",  # any path; we never exec it.
+            )
+            transport = SubprocessCLITransport(
+                prompt="", options=opts_with_cli,
+            )
+            argv = transport._build_command()
+            # The argv must contain the pair `["--effort", value]` in order.
+            for i in range(len(argv) - 1):
+                if argv[i] == "--effort":
+                    assert argv[i + 1] == value, (
+                        f"effort flag value mismatch for {value!r}: argv={argv!r}"
+                    )
+                    break
+            else:
+                raise AssertionError(
+                    f"--effort flag missing from argv for value {value!r}: {argv!r}"
+                )
+    finally:
+        for key in list(sys.modules):
+            if key == "claude_agent_sdk" or key.startswith("claude_agent_sdk."):
+                del sys.modules[key]
+        sys.modules.update(saved)
+
+
+def test_effort_runtime_guard_rejects_unsupported_effort_for_model(monkeypatch):
+    """Asserts the runtime guard fires loudly when a resolved effort is not
+    supported by the resolved model per spec §3.
+
+    The runtime guard MUST be ``raise ValueError`` (not ``assert``) per the
+    plan's Veto Surface — ``assert`` is stripped under ``python -O`` /
+    ``PYTHONOPTIMIZE=1``, defeating spec §3's "MUST fail loudly" intent.
+
+    We force a synthetic matrix entry to ``"xhigh"`` for a (complexity,
+    criticality) pair that resolves to a non-Opus model, then call
+    ``resolve_effort`` for a non-overriding skill so the guard branch fires.
+    """
+    forced = dict(_dispatch_module._EFFORT_MATRIX)
+    forced[("simple", "low")] = "xhigh"
+    monkeypatch.setattr(_dispatch_module, "_EFFORT_MATRIX", forced)
+
+    with pytest.raises(ValueError, match="not supported by model 'haiku'"):
+        _dispatch_module.resolve_effort(
+            complexity="simple",
+            criticality="low",
+            skill="implement",
+            model="haiku",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
