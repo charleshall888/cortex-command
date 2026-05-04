@@ -1942,10 +1942,13 @@ def _parse_json_payload(
 
 
 # Per-tool subprocess timeouts (seconds). 30s is sufficient for all
-# read-only verbs; ``overnight_start_run`` gets 60s because the CLI
-# does real work (loads state, may invoke runner.run).
+# read-only verbs. ``overnight_start_run`` also uses 30s (R12): the
+# spawn path includes plist write + bootstrap + launchctl print verify
+# + sidecar atomic write + concurrent-runner check; typical latency is
+# sub-second, but 30s preserves headroom for slow-disk and
+# disk-pressure cases without producing spurious MCP failures.
 _DEFAULT_TOOL_TIMEOUT = 30.0
-_START_RUN_TOOL_TIMEOUT = 60.0
+_START_RUN_TOOL_TIMEOUT = 30.0
 
 
 def _delegate_overnight_start_run(
@@ -1954,12 +1957,17 @@ def _delegate_overnight_start_run(
     """Subprocess delegation for ``overnight_start_run``.
 
     The CLI either spawns the runner (no JSON envelope on stdout, exit
-    0; runner detached) or refuses with ``concurrent_runner`` (exit
-    non-zero, versioned JSON on stdout). Successful spawn is signalled
-    by parsing the runner.pid that the runner writes; for the MCP
-    delegation we approximate by treating exit-zero as
-    ``started=True`` with best-effort fields filled from the
-    discovery-cache + the state file.
+    0; runner detached under launchd by design — Task 6 async-spawn
+    refactor) or refuses with ``concurrent_runner`` (exit non-zero,
+    versioned JSON on stdout). Successful spawn is confirmed by the
+    spawn-confirmation handshake (R18): the CLI polls for
+    ``runner.pid`` within 5 s before returning exit 0.  The MCP layer
+    treats exit-zero as ``started=True``; downstream consumers should
+    poll ``overnight_status`` for live state.
+
+    The subprocess timeout is 30 s (R12): the spawn path is normally
+    sub-second but 30 s preserves headroom for slow-disk cases without
+    producing spurious MCP failures.
 
     On unrecovered :class:`CortexCliMissing` (S1.3 retry exhausted),
     returns :data:`_CORTEX_CLI_MISSING_ERROR` (S5.2) so FastMCP wraps
