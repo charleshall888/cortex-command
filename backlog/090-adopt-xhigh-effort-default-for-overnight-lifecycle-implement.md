@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 16d4061e-a90c-480e-947b-d08458d40e1a
 title: "Adopt xhigh effort default for overnight lifecycle implement"
-status: in_progress
+status: complete
 priority: low
 type: feature
 created: 2026-04-18
@@ -15,7 +15,7 @@ complexity: complex
 criticality: high
 spec: lifecycle/adopt-xhigh-effort-default-for-overnight-lifecycle-implement/spec.md
 areas: [overnight-runner]
-session_id: 73b37803-e9ba-4116-a27f-eadad3421978
+session_id: null
 lifecycle_phase: implement
 ---
 

@@ -117,38 +117,9 @@
     "repo": null
   },
   {
-    "id": 90,
-    "title": "Adopt xhigh effort default for overnight lifecycle implement",
-    "status": "refined",
-    "priority": "low",
-    "type": "feature",
-    "tags": [
-      "opus-4-7-harness-adaptation",
-      "capability-adoption"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-18",
-    "updated": "2026-04-29",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "82",
-    "research": null,
-    "spec": "lifecycle/adopt-xhigh-effort-default-for-overnight-lifecycle-implement/spec.md",
-    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
-    "plan": null,
-    "uuid": "16d4061e-a90c-480e-947b-d08458d40e1a",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 91,
     "title": "Decide and document post-4.7 policy settings (MUST-escalation, tone regression)",
-    "status": "refined",
+    "status": "in_progress",
     "priority": "low",
     "type": "chore",
     "tags": [
@@ -159,7 +130,7 @@
       "docs"
     ],
     "created": "2026-04-18",
-    "updated": "2026-04-29",
+    "updated": "2026-05-04",
     "blocks": [],
     "blocked_by": [],
     "parent": "82",
@@ -169,15 +140,15 @@
     "plan": null,
     "uuid": "7e6b212e-f74e-4f48-9fd6-30152c27b872",
     "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
+    "session_id": "099a87c4-286f-40b3-8922-1b741c96e298",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 98,
     "title": "Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release",
-    "status": "refined",
+    "status": "in_progress",
     "priority": "low",
     "type": "feature",
     "tags": [
@@ -189,7 +160,7 @@
       "overnight-runner"
     ],
     "created": "2026-04-20",
-    "updated": "2026-04-29",
+    "updated": "2026-05-04",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
@@ -199,37 +170,8 @@
     "plan": null,
     "uuid": "4337b723-4a50-4d3e-811f-ef2709f4a26e",
     "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 133,
-    "title": "Evaluate implement.md:119 progress-tail narration under Opus 4.7",
-    "status": "refined",
-    "priority": "low",
-    "type": "feature",
-    "tags": [
-      "opus-4-7-harness-adaptation",
-      "capability-adoption"
-    ],
-    "areas": [
-      "lifecycle"
-    ],
-    "created": "2026-04-22",
-    "updated": "2026-04-29",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "82",
-    "research": null,
-    "spec": "lifecycle/evaluate-implementmd119-progress-tail-narration-under-opus-47/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "daf2f648-6cf3-4322-9971-a7cee01cce6f",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
+    "session_id": "fa3b4860-5251-4756-ac0f-ffc3cd0abc8a",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -248,7 +190,7 @@
       "tooling"
     ],
     "created": "2026-05-01",
-    "updated": "2026-05-01",
+    "updated": "2026-05-04",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
@@ -257,9 +199,9 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "9cfcaf29-ad85-460c-a44b-aab95905f16b",
-    "lifecycle_slug": null,
+    "lifecycle_slug": "make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks",
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },

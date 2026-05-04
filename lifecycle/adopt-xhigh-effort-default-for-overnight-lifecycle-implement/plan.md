@@ -14,7 +14,7 @@ Replace the 1D `EFFORT_MAP` in `cortex_command/pipeline/dispatch.py` with a cent
 - **Complexity**: complex
 - **Context**: current pin is the bare string `"claude-agent-sdk"` at `pyproject.toml:10`; installed version is `0.1.41` per `uv.lock:113`. Stub at `cortex_command/tests/_stubs.py:56-67` currently ends with `structured_output: Any = None` — the new field MUST be appended after it (spec Req #7). Spec §4 lists known intermediate hazards: v0.1.55 added `int` arm to `ClaudeAgentOptions.effort`, v0.1.67 adds `sniffio>=1.0.0`, v0.1.70 raises `mcp` floor to `>=1.19.0`. Choose the lowest version `>=0.1.46` that resolves cleanly under `uv lock`. Pinning shape: `claude-agent-sdk = ">=X.Y.Z,<W.0"` or equivalent in `pyproject.toml`'s `dependencies` array. Parser test pattern: import the SDK's `_internal/message_parser` directly and exercise it on a synthetic CLI JSON line. Note: the full `just test` sweep cannot pass at the Task 1 boundary because Tasks 2–7 carry the matrix flip and lockstep fixture updates; treat the verification commands below as Task 1's gate, and defer the global suite check to the Verification Strategy step at end-of-feature.
 - **Verification**: `python -c "from claude_agent_sdk.types import ResultMessage; from dataclasses import fields; assert 'stop_reason' in {f.name for f in fields(ResultMessage)}"` exits 0; `python -c "from cortex_command.tests._stubs import ResultMessage; from dataclasses import fields; ff=[f.name for f in fields(ResultMessage)]; assert ff[-1] == 'stop_reason'"` exits 0; `pytest cortex_command/pipeline/tests/test_dispatch.py::test_sdk_parser_extracts_stop_reason` exits 0; `grep -c '"claude-agent-sdk"' pyproject.toml` returns ≥1 with an explicit version constraint string adjacent to it; `uv lock --check` exits 0 (no resolution drift); the project's type-checker (whichever is configured under `just typecheck` or equivalent) exits 0 against `cortex_command/`; `grep -rn '^import mcp\|^from mcp' cortex_command/` returns 0 matches OR every match passes `python -c "import mcp; print(mcp.__version__)"` showing `>=1.19.0` (mcp-floor hazard from spec §4); `uv run --isolated --with claude-agent-sdk==<chosen-version> python -c "from claude_agent_sdk.types import ResultMessage; print('ok')"` exits 0 (clean-environment smoke for the sniffio v0.1.67 transitive dep — confirms the chosen release imports under a fresh resolver pass, not just under the dev-machine's already-warm site-packages).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 1fc58b6; pin set to `>=0.1.46,<0.1.47`)
 
 ### Task 2: Implement `_EFFORT_MATRIX` and `resolve_effort` with skill overrides
 
@@ -24,7 +24,7 @@ Replace the 1D `EFFORT_MAP` in `cortex_command/pipeline/dispatch.py` with a cent
 - **Complexity**: complex
 - **Context**: matrix shape mirrors `_MODEL_MATRIX` at `dispatch.py:135-`. Cell values come verbatim from spec §1 Technical Constraints policy table (8 cells change effort vs. current). Skill override is a small flat module-private dict — name `_SKILL_EFFORT_OVERRIDES`, type `dict[str, str]`, two entries mapping `review-fix` and `integration-recovery` to `max`. Applied AFTER matrix lookup, gated on `model == "opus"`. Do NOT promote it to a 3D `(skill, complexity, criticality)` matrix (spec Non-Requirements). The `model` parameter must be the post-`model_override` effective model — Task 3 wires that. Allowed values per spec §3: haiku → low/medium/high; sonnet → low/medium/high/max; opus 4.7 → low/medium/high/xhigh/max. Helper signature: `def resolve_effort(complexity: str, criticality: str, skill: str, model: str) -> str`. Passthrough test pattern: monkeypatch or use the SDK's `subprocess_cli` entrypoint and inspect the constructed argv; if the SDK does not expose argv directly, capture it via `subprocess.Popen` mock or by reading `_build_cli_args` (whichever the installed SDK version exposes).
 - **Verification**: `pytest cortex_command/pipeline/tests/test_dispatch.py::test_effort_matrix_policy cortex_command/pipeline/tests/test_dispatch.py::test_effort_skill_overrides cortex_command/pipeline/tests/test_dispatch.py::test_effort_value_passthrough` exits 0; `grep -n "_EFFORT_MATRIX" cortex_command/pipeline/dispatch.py` returns ≥1 match; `grep -n "EFFORT_MAP" cortex_command/pipeline/dispatch.py` returns 0 matches; `python -c "from cortex_command.pipeline.dispatch import _EFFORT_MATRIX; assert len(_EFFORT_MATRIX) == 12"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 5bce8c9; absorbed dispatch_task line 519 call-site change because EFFORT_MAP grep verification forced full removal — Task 3 still owns docstring + adaptive-thinking framing)
 
 ### Task 3: Wire `resolve_effort` into `dispatch_task` and update docstring
 
@@ -34,7 +34,7 @@ Replace the 1D `EFFORT_MAP` in `cortex_command/pipeline/dispatch.py` with a cent
 - **Complexity**: simple
 - **Context**: caller order at lines 438–439 must remain `model = ... ; effort = ...` so `resolve_effort` sees the post-override model. The `effort_override` parameter remains a forced-override escape hatch (spec Non-Requirements: not used by overnight callers). Docstring location is the multi-line `"""..."""` block starting around `dispatch.py:391`.
 - **Verification**: `grep -c "resolve_effort(complexity, criticality, skill, model)" cortex_command/pipeline/dispatch.py` returns ≥1; `grep -c 'EFFORT_MAP\[complexity\]' cortex_command/pipeline/dispatch.py` returns 0; `grep -c '"low", "medium", "high", "xhigh", "max"' cortex_command/pipeline/dispatch.py` returns ≥1; `grep -c "Opus 4.7" cortex_command/pipeline/dispatch.py` returns ≥1; `grep -cE "adaptive|maximum|behavioral signal" cortex_command/pipeline/dispatch.py` returns ≥1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 02fd290; docstring updated, call site already wired by Task 2)
 
 ### Task 4: Force Opus on integration-recovery dispatch site
 
@@ -44,7 +44,7 @@ Replace the 1D `EFFORT_MAP` in `cortex_command/pipeline/dispatch.py` with a cent
 - **Complexity**: simple
 - **Context**: existing call at `integration_recovery.py:215-225` currently passes `feature`, `task`, `worktree_path`, `complexity="complex"`, `system_prompt`, `log_path`, `skill="integration-recovery"`. Test pattern: monkeypatch `dispatch_task` with a spy/recorder; trigger the integration-recovery entry point with a synthetic worktree; assert the recorded call kwargs include `model_override="opus"`. The override is the dispatch-site fix that makes Req #3's `integration-recovery → max` policy take effect (spec Req #3a).
 - **Verification**: `grep -n 'model_override="opus"' cortex_command/overnight/integration_recovery.py` returns ≥1 match adjacent to the existing `dispatch_task` call (lines 215–225); `pytest cortex_command/overnight/tests/test_integration_recovery.py::test_integration_recovery_forces_opus` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit b719634; test placed under TestIntegrationRecoveryForcesOpus class — pytest selector requires class prefix)
 
 ### Task 5: Capture `stop_reason` and emit `dispatch_truncation` from both emitters; plumb `effort` into runner-path `dispatch_start`
 
@@ -54,7 +54,7 @@ Replace the 1D `EFFORT_MAP` in `cortex_command/pipeline/dispatch.py` with a cent
 - **Complexity**: complex
 - **Context**: `dispatch_complete` from the SDK path has 5 keys today (`event`, `feature`, `cost_usd`, `duration_ms`, `num_turns`); after this task it has 6 (+`stop_reason`). `dispatch_complete` from `runner.py` already has more keys (`model`, token counts) — only `stop_reason` is added. The exact-key-list test for `dispatch_complete` is new (existing line-287/302 lists in `test_dispatch_instrumentation.py` are for `dispatch_start`). Test fixtures already include `"stop_reason": "end_turn"` at `cortex_command/overnight/tests/fixtures/orchestrator_envelope_success.json:12`. The truncation allow-list lives as an explicit set literal in both files; do NOT centralize it (spec Edge Cases keeps the set local so future stop_reason values pass through to dispatch_complete unchanged but do not generate spurious truncation events). Test names per spec Req #8: `test_max_tokens_truncation_emits_dispatch_truncation_event_via_dispatch_task`, `test_max_tokens_truncation_emits_dispatch_truncation_event_via_orchestrator_round`, `test_dispatch_complete_exact_key_list`. The SDK-path test mocks a `ResultMessage(stop_reason="max_tokens", ...)`; the runner-path test feeds a synthetic envelope dict with `"stop_reason": "max_tokens"`. Effort field is available at the SDK-path emit site as the local `effort` variable (set in Task 3); for the runner-path `dispatch_complete` emitter, surface `effort` from the orchestrator envelope if present, else `None`. Runner-path `dispatch_start` (lines 1860-1871) currently emits `event/feature/skill/complexity/criticality/model/attempt`; this task adds `effort` so `pair_dispatch_events` reads a non-None value for orchestrator-round records.
 - **Verification**: `pytest cortex_command/pipeline/tests/test_dispatch_instrumentation.py::test_max_tokens_truncation_emits_dispatch_truncation_event_via_dispatch_task cortex_command/pipeline/tests/test_dispatch_instrumentation.py::test_dispatch_complete_exact_key_list cortex_command/overnight/tests/test_orchestrator_round_telemetry.py::test_max_tokens_truncation_emits_dispatch_truncation_event_via_orchestrator_round` exits 0; `grep -c "dispatch_truncation" cortex_command/pipeline/dispatch.py cortex_command/overnight/runner.py` returns ≥2 (≥1 in each file); `grep -c "stop_reason" cortex_command/overnight/runner.py` returns ≥1; `grep -nE '"effort"' cortex_command/overnight/runner.py` returns ≥2 matches (≥1 inside the orchestrator-round dispatch_start emit at lines ~1860-1871, ≥1 inside `_emit_orchestrator_round_telemetry`).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit ec7b9ee; runner-path dispatch_start effort uses "sonnet" fallback because model unknown at emit time)
 
 ### Task 6: Extend `metrics.py` aggregator to bucket by effort
 
@@ -64,7 +64,7 @@ Replace the 1D `EFFORT_MAP` in `cortex_command/pipeline/dispatch.py` with a cent
 - **Complexity**: complex
 - **Context**: spec §13's contract is to close the structural cost-observability gap so the post-flip rollback monitoring story has data to query. Per research, no downstream consumer schema-validates the bucket key set; adding the `effort` axis is non-breaking. Existing fixtures and tests that hardcode buckets without `effort` will fail until lockstep-updated in Task 7. Two `dispatch_start` emitters exist: the SDK-path emitter at `cortex_command/pipeline/dispatch.py:489-501` already includes `effort`; the runner-path orchestrator-round emitter at `cortex_command/overnight/runner.py:1860-1871` does NOT include `effort` until Task 5 adds it. T6 depends on T5 specifically because of this — without T5's runner-side `dispatch_start` patch, every orchestrator-round paired record would land at `effort=None`. Verify both emitters with `grep -n '"effort"' cortex_command/pipeline/dispatch.py cortex_command/overnight/runner.py` — expect ≥1 hit per file before this task ships.
 - **Verification**: `pytest cortex_command/pipeline/tests/test_metrics.py::test_aggregator_buckets_by_effort cortex_command/pipeline/tests/test_metrics.py::test_metrics_json_exposes_effort_bucket` exits 0; `grep -c '"effort"' cortex_command/pipeline/metrics.py` returns ≥2 (≥1 inside paired-record schema, ≥1 inside bucket-key construction).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 4080ec5; 15 existing test_metrics.py tests now fail pending Task 7 lockstep updates)
 
 ### Task 7: Update existing fixtures and tests to match new matrix and event schema
 
@@ -74,7 +74,7 @@ Replace the 1D `EFFORT_MAP` in `cortex_command/pipeline/dispatch.py` with a cent
 - **Complexity**: simple
 - **Context**: spec §6 enumerates these exact files and lines. The intent is to keep test fixtures consistent with the new matrix so the policy is self-consistent end-to-end. The helpers' AND `_make_root_with_aggregates`'s shift to `resolve_effort()` future-proofs against further matrix changes — without this, the surrounding `TestReportTierDispatch` aggregate-output tests at lines 1011-1148 (which do not assert on the specific effort value) would silently mask matrix drift inside synthesized events.
 - **Verification**: `pytest cortex_command/pipeline/tests/ cortex_command/overnight/tests/ cortex_command/tests/` exits 0 (entire dispatch + overnight + shared test surface, the canonical sweep that exercises every fixture and helper updated by this task); `grep -c 'effort.*"low"' cortex_command/pipeline/tests/fixtures/dispatch_since_boundary.jsonl` returns 0; `grep -cE '"effort"\s*:\s*"high"' cortex_command/pipeline/tests/test_metrics.py` returns 0 (catches all four pre-existing literals at 74/837/966/986 — drives matrix-policy lockstep beyond what the pytest sweep alone proves, since the surrounding aggregate-output tests do not assert on the synthesized event's effort value).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commits 14360db + 540b4ce; required follow-up to align bucket-key assertions in 16 pre-existing tests beyond original line scope)
 
 ### Task 8: Document effort matrix and skill overrides in docs/sdk.md
 
@@ -84,7 +84,7 @@ Replace the 1D `EFFORT_MAP` in `cortex_command/pipeline/dispatch.py` with a cent
 - **Complexity**: simple
 - **Context**: source-of-truth doc per `CLAUDE.md` ("docs/sdk.md owns SDK model-selection mechanics"). Existing structure: skim the doc first to find the right insertion point next to model selection; do not duplicate content already in overnight-operations.md.
 - **Verification**: `grep -c "_EFFORT_MATRIX" docs/sdk.md` returns ≥1; `grep -c "review-fix" docs/sdk.md` returns ≥1 in proximity to `max` (use `grep -A3 "review-fix" docs/sdk.md | grep -c max` returns ≥1); `grep -c "complex, high" docs/sdk.md` returns ≥1 (the ~25% coverage note).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 8307c7a)
 
 ### Task 9: Document rationale, framing, and rollback procedure in docs/overnight-operations.md
 
@@ -94,7 +94,7 @@ Replace the 1D `EFFORT_MAP` in `cortex_command/pipeline/dispatch.py` with a cent
 - **Complexity**: simple
 - **Context**: source-of-truth doc per `CLAUDE.md` ("docs/overnight-operations.md owns the round loop and orchestrator behavior"). Cross-link to `docs/sdk.md` for matrix mechanics; do not reproduce the matrix table here. Threshold language must match spec §13 backwards-compat note (>2× per-bucket mean cost over 2-3 rounds).
 - **Verification**: `grep -c "xhigh" docs/overnight-operations.md` returns ≥1; `grep -c "rollback" docs/overnight-operations.md` returns ≥1; `grep -cE "adaptive|maximum reasoning|behavioral signal" docs/overnight-operations.md` returns ≥1; `grep -c "metrics.json" docs/overnight-operations.md` returns ≥1; `python3 -c "import re,sys; t=open('docs/overnight-operations.md').read(); m=re.search(r'metrics\.json[\s\S]{0,800}?\`\`\`[\s\S]{40,}?\`\`\`', t); sys.exit(0 if m else 1)"` exits 0 (asserts a non-trivial fenced code block — at least 40 chars between the fences — appears within 800 chars of the first `metrics.json` mention; rules out empty or near-empty placeholder fences).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 9126ec7)
 
 ## Verification Strategy
 
