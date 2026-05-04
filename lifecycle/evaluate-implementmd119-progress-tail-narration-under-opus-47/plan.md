@@ -35,7 +35,7 @@ Single atomic edit: delete the `(b) Progress tail` bullet at `skills/lifecycle/r
   - `diff skills/lifecycle/references/implement.md plugins/cortex-interactive/skills/lifecycle/references/implement.md` exits `0`
   - `grep -c "Progress tail" plugins/cortex-interactive/skills/lifecycle/references/implement.md` outputs `0`
   - `pytest tests/test_daytime_preflight.py::test_skill_contracts -q` exits `0`
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
