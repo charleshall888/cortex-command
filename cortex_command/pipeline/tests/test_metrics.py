@@ -1194,5 +1194,187 @@ class TestReportTierDispatch(unittest.TestCase):
         self.assertIn("rate_limit:1", output)
 
 
+def test_aggregator_buckets_by_effort():
+    """Synthesizing dispatch events at multiple effort levels for the same
+    (model, tier, skill) lands them in distinct aggregator buckets.
+
+    Module-level (non-class) test per spec verification command:
+    ``pytest test_metrics.py::test_aggregator_buckets_by_effort``.
+
+    Builds three dispatch_start/dispatch_complete pairs that are identical
+    except for ``effort`` (``high`` vs ``xhigh`` vs ``max``), runs them
+    through the production ``pair_dispatch_events`` →
+    ``compute_skill_tier_dispatch_aggregates`` (and
+    ``compute_model_tier_dispatch_aggregates``) flow, and asserts that the
+    three records do NOT collapse into a single bucket.  Without effort in
+    the bucket key, all three would land in ``implement,complex`` /
+    ``opus,complex`` and the cost regression signal post-flip would be
+    invisible.
+    """
+    from cortex_command.pipeline.metrics import (
+        compute_model_tier_dispatch_aggregates,
+        compute_skill_tier_dispatch_aggregates,
+        pair_dispatch_events,
+    )
+
+    def _start(feature, effort, ts):
+        return {
+            "event": "dispatch_start",
+            "ts": ts,
+            "feature": feature,
+            "complexity": "complex",
+            "criticality": "high",
+            "model": "opus",
+            "skill": "implement",
+            "effort": effort,
+            "max_turns": 30,
+            "max_budget_usd": 50.0,
+        }
+
+    def _complete(feature, cost_usd, num_turns, ts):
+        return {
+            "event": "dispatch_complete",
+            "ts": ts,
+            "feature": feature,
+            "cost_usd": cost_usd,
+            "duration_ms": 5000,
+            "num_turns": num_turns,
+        }
+
+    events = [
+        _start("feat-high", "high", "2026-04-01T00:00:00Z"),
+        _complete("feat-high", 1.0, 5, "2026-04-01T00:01:00Z"),
+        _start("feat-xhigh", "xhigh", "2026-04-01T00:02:00Z"),
+        _complete("feat-xhigh", 3.0, 10, "2026-04-01T00:03:00Z"),
+        _start("feat-max", "max", "2026-04-01T00:04:00Z"),
+        _complete("feat-max", 5.0, 15, "2026-04-01T00:05:00Z"),
+    ]
+
+    paired = pair_dispatch_events(events)
+    assert len(paired) == 3
+    # Paired records carry the effort field through.
+    efforts_in_paired = sorted(r["effort"] for r in paired)
+    assert efforts_in_paired == ["high", "max", "xhigh"]
+
+    skill_aggs = compute_skill_tier_dispatch_aggregates(paired)
+    # The three records, identical except for effort, must land in three
+    # distinct buckets — not a single collapsed (skill, tier) bucket.
+    assert "implement,complex,high" in skill_aggs, sorted(skill_aggs.keys())
+    assert "implement,complex,xhigh" in skill_aggs, sorted(skill_aggs.keys())
+    assert "implement,complex,max" in skill_aggs, sorted(skill_aggs.keys())
+    # Pre-effort-axis bucket key must NOT exist (would mean effort was dropped).
+    assert "implement,complex" not in skill_aggs
+    # Each bucket holds exactly one complete.
+    assert skill_aggs["implement,complex,high"]["n_completes"] == 1
+    assert skill_aggs["implement,complex,xhigh"]["n_completes"] == 1
+    assert skill_aggs["implement,complex,max"]["n_completes"] == 1
+    # Cost means must differ (each bucket holds a different cost record).
+    assert skill_aggs["implement,complex,high"]["estimated_cost_usd_mean"] == 1.0
+    assert skill_aggs["implement,complex,xhigh"]["estimated_cost_usd_mean"] == 3.0
+    assert skill_aggs["implement,complex,max"]["estimated_cost_usd_mean"] == 5.0
+
+    model_aggs = compute_model_tier_dispatch_aggregates(paired)
+    # Model-tier aggregator also splits by effort.
+    assert "opus,complex,high" in model_aggs, sorted(model_aggs.keys())
+    assert "opus,complex,xhigh" in model_aggs, sorted(model_aggs.keys())
+    assert "opus,complex,max" in model_aggs, sorted(model_aggs.keys())
+    assert "opus,complex" not in model_aggs
+
+
+def test_metrics_json_exposes_effort_bucket(tmp_path):
+    """A realistic mix of pre-flip and post-flip dispatch event records,
+    fed through the full ``main()`` pipeline that writes ``metrics.json``,
+    exposes per-effort cost means in the operator-facing slice.
+
+    Module-level (non-class) test per spec verification command:
+    ``pytest test_metrics.py::test_metrics_json_exposes_effort_bucket``.
+
+    Pre-flip records use ``effort="high"``; post-flip records use
+    ``effort="xhigh"``.  Both share ``(model="opus", tier="complex",
+    skill="implement")``.  After ``main()`` writes ``lifecycle/metrics.json``,
+    the JSON's ``skill_tier_dispatch_aggregates`` and
+    ``model_tier_dispatch_aggregates`` slices must expose distinct
+    per-effort buckets so an operator can compute the >2× cost-regression
+    rollback trigger from §13.
+    """
+    import json as _json
+
+    from cortex_command.pipeline.metrics import main
+
+    lifecycle_dir = tmp_path / "lifecycle"
+    lifecycle_dir.mkdir(parents=True, exist_ok=True)
+
+    def _start(feature, effort, ts):
+        return {
+            "event": "dispatch_start",
+            "ts": ts,
+            "feature": feature,
+            "complexity": "complex",
+            "criticality": "high",
+            "model": "opus",
+            "skill": "implement",
+            "effort": effort,
+            "max_turns": 30,
+            "max_budget_usd": 50.0,
+        }
+
+    def _complete(feature, cost_usd, num_turns, ts):
+        return {
+            "event": "dispatch_complete",
+            "ts": ts,
+            "feature": feature,
+            "cost_usd": cost_usd,
+            "duration_ms": 5000,
+            "num_turns": num_turns,
+        }
+
+    # Mix of pre-flip (high) and post-flip (xhigh) records.  Two of each so
+    # the cost mean differs from any single record's cost.
+    events = [
+        # Pre-flip: high effort, lower costs.
+        _start("pre-1", "high", "2026-04-01T00:00:00Z"),
+        _complete("pre-1", 1.0, 5, "2026-04-01T00:01:00Z"),
+        _start("pre-2", "high", "2026-04-01T00:02:00Z"),
+        _complete("pre-2", 2.0, 7, "2026-04-01T00:03:00Z"),
+        # Post-flip: xhigh effort, higher costs.
+        _start("post-1", "xhigh", "2026-04-02T00:00:00Z"),
+        _complete("post-1", 4.0, 10, "2026-04-02T00:01:00Z"),
+        _start("post-2", "xhigh", "2026-04-02T00:02:00Z"),
+        _complete("post-2", 6.0, 12, "2026-04-02T00:03:00Z"),
+    ]
+
+    log_path = lifecycle_dir / "pipeline-events.log"
+    log_path.write_text(
+        "\n".join(_json.dumps(e) for e in events) + "\n",
+        encoding="utf-8",
+    )
+
+    # Run the full metrics pipeline; main() writes metrics.json under
+    # tmp_path/lifecycle/.
+    main(["--root", str(tmp_path)])
+
+    metrics_path = lifecycle_dir / "metrics.json"
+    assert metrics_path.exists(), f"metrics.json not written at {metrics_path}"
+    metrics_data = _json.loads(metrics_path.read_text(encoding="utf-8"))
+
+    # The operator-facing slice must surface per-effort buckets.
+    skill_aggs = metrics_data["skill_tier_dispatch_aggregates"]
+    assert "implement,complex,high" in skill_aggs, sorted(skill_aggs.keys())
+    assert "implement,complex,xhigh" in skill_aggs, sorted(skill_aggs.keys())
+    # Per-effort cost means are distinct.
+    pre_mean = skill_aggs["implement,complex,high"]["estimated_cost_usd_mean"]
+    post_mean = skill_aggs["implement,complex,xhigh"]["estimated_cost_usd_mean"]
+    assert pre_mean == 1.5  # mean of 1.0 and 2.0
+    assert post_mean == 5.0  # mean of 4.0 and 6.0
+    assert post_mean > pre_mean
+
+    # Model-tier slice mirrors the per-effort split.
+    model_aggs = metrics_data["model_tier_dispatch_aggregates"]
+    assert "opus,complex,high" in model_aggs, sorted(model_aggs.keys())
+    assert "opus,complex,xhigh" in model_aggs, sorted(model_aggs.keys())
+    assert model_aggs["opus,complex,high"]["estimated_cost_usd_mean"] == 1.5
+    assert model_aggs["opus,complex,xhigh"]["estimated_cost_usd_mean"] == 5.0
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -352,9 +352,11 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                                         # (no start to read from).
                 "cycle": int | None,    # propagated from the matched start event;
                                         # absent on orphan completion/error records.
+                "effort": str | None,   # propagated from the matched start event;
+                                        # absent on orphan completion/error records.
             }
 
-        The ``skill`` and ``cycle`` keys are populated only on the
+        The ``skill``, ``cycle``, and ``effort`` keys are populated only on the
         matched-start branches.  Orphan completions/errors (no preceding
         unmatched start) omit these keys entirely so downstream aggregators
         bucket them as ``skill="legacy"`` via the
@@ -399,6 +401,7 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                     "untiered": False,
                     "skill": start.get("skill"),
                     "cycle": start.get("cycle"),
+                    "effort": start.get("effort"),
                 })
             else:
                 warnings.warn(
@@ -433,6 +436,7 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
                     "untiered": False,
                     "skill": start.get("skill"),
                     "cycle": start.get("cycle"),
+                    "effort": start.get("effort"),
                 })
             else:
                 warnings.warn(
@@ -455,16 +459,19 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
 
 
 def compute_model_tier_dispatch_aggregates(paired: list[dict]) -> dict[str, dict]:
-    """Group paired dispatch records by (model, tier) and compute per-bucket aggregates.
+    """Group paired dispatch records by (model, tier, effort) and compute per-bucket aggregates.
 
     Paired records are the output of :func:`pair_dispatch_events`.  Each bucket
     accumulates ``outcome="complete"`` records for cost/turn statistics and
     ``outcome="error"`` records for error counts.
 
-    Bucket keys are formatted as ``"<model>,<tier>"`` strings for JSON
-    compatibility.  Records with ``untiered=True`` (orphaned dispatches with
-    unknown model/tier) are grouped under the literal key ``"untiered,untiered"``
-    with ``is_untiered=True``.
+    Bucket keys are formatted as ``"<model>,<tier>,<effort>"`` strings for JSON
+    compatibility.  ``effort`` is propagated from the ``dispatch_start``
+    event; records whose start event lacked the ``effort`` field (legacy
+    pre-instrumentation logs) bucket as ``effort="legacy-effort"``.  Records
+    with ``untiered=True`` (orphaned dispatches with unknown model/tier) are
+    grouped under the literal key ``"untiered,untiered"`` with
+    ``is_untiered=True``.
 
     Statistical rules:
 
@@ -510,7 +517,8 @@ def compute_model_tier_dispatch_aggregates(paired: list[dict]) -> dict[str, dict
         else:
             model = rec.get("model") or "unknown"
             tier = rec.get("tier") or "unknown"
-            key = f"{model},{tier}"
+            effort = rec.get("effort") or "legacy-effort"
+            key = f"{model},{tier},{effort}"
 
         outcome = rec.get("outcome")
         if outcome == "complete":
@@ -564,8 +572,9 @@ def compute_model_tier_dispatch_aggregates(paired: list[dict]) -> dict[str, dict
             over_cap_rate: float | None = None
             turn_cap_observed_rate: float | None = None
         else:
-            # Extract the tier portion of the key (second element after comma).
-            tier_part = key.split(",", 1)[1] if "," in key else key
+            # Extract the tier portion of the key (second comma-separated element).
+            key_parts = key.split(",")
+            tier_part = key_parts[1] if len(key_parts) >= 2 else key
             tier_cfg = TIER_CONFIG.get(tier_part)
             if tier_cfg is not None:
                 budget_cap_usd = tier_cfg.get("max_budget_usd")
@@ -622,19 +631,24 @@ def compute_model_tier_dispatch_aggregates(paired: list[dict]) -> dict[str, dict
 
 
 def compute_skill_tier_dispatch_aggregates(paired: list[dict]) -> dict[str, dict]:
-    """Group paired dispatch records by (skill, tier[, cycle]) and compute per-bucket aggregates.
+    """Group paired dispatch records by (skill, tier, effort[, cycle]) and compute per-bucket aggregates.
 
     Parallel to :func:`compute_model_tier_dispatch_aggregates` but bucketed by
     the dispatching skill rather than the model.  The bucket key shape is
     conditional:
 
-    * For ``skill != "review-fix"``: bucket key is ``"<skill>,<tier>"``
-      (two-dimensional, mirrors the model-tier aggregator).
+    * For ``skill != "review-fix"``: bucket key is ``"<skill>,<tier>,<effort>"``
+      (three-dimensional, mirrors the model-tier aggregator after the effort
+      axis was added).
     * For ``skill == "review-fix"``: bucket key is
-      ``"<skill>,<tier>,<cycle>"`` (three-dimensional, surfacing the cycle
-      distinction).  When a review-fix dispatch lacks ``cycle`` (legacy
+      ``"<skill>,<tier>,<effort>,<cycle>"`` (four-dimensional, surfacing the
+      cycle distinction).  When a review-fix dispatch lacks ``cycle`` (legacy
       data), the substring ``"legacy-cycle"`` is used in place of the cycle
       number.
+
+    ``effort`` is propagated from the ``dispatch_start`` event; records whose
+    start event lacked the ``effort`` field (legacy pre-instrumentation logs)
+    bucket as ``effort="legacy-effort"``.
 
     Records with the ``skill`` field absent from the start event (historical
     events emitted before this instrumentation landed) are bucketed as
@@ -667,12 +681,13 @@ def compute_skill_tier_dispatch_aggregates(paired: list[dict]) -> dict[str, dict
         else:
             skill = rec.get("skill") or "legacy"
             tier = rec.get("tier") or "unknown"
+            effort = rec.get("effort") or "legacy-effort"
             cycle = rec.get("cycle")
             if skill == "review-fix":
                 cycle_part = cycle if cycle is not None else "legacy-cycle"
-                key = f"{skill},{tier},{cycle_part}"
+                key = f"{skill},{tier},{effort},{cycle_part}"
             else:
-                key = f"{skill},{tier}"
+                key = f"{skill},{tier},{effort}"
 
         outcome = rec.get("outcome")
         if outcome == "complete":
