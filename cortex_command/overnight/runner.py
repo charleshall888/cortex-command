@@ -1606,6 +1606,12 @@ def _post_loop(
                     f"Resume with /overnight resume when Anthropic limit "
                     f"resets. Session: {session_id}"
                 )
+            elif paused_reason == "api_rate_limit":
+                _notify(
+                    f"Overnight session paused — Anthropic API rate limit. "
+                    f"Resume with /overnight resume when retry budget "
+                    f"recovers (typically minutes). Session: {session_id}"
+                )
             else:
                 _notify(
                     f"Overnight complete — "
@@ -2064,17 +2070,17 @@ def run(
                         log_path=events_path,
                     )
 
-                # Budget-exhaustion early-out.
+                # Session-halt early-out (budget_exhausted or api_rate_limit).
                 state = state_module.load_state(state_path)
-                if state.paused_reason == "budget_exhausted":
+                if state.paused_reason in ("budget_exhausted", "api_rate_limit"):
                     print(
-                        "Session paused: API budget exhausted — stopping round loop",
+                        "Session paused — stopping round loop",
                         flush=True,
                     )
                     events.log_event(
                         events.CIRCUIT_BREAKER,
                         round=round_num,
-                        details={"reason": "budget_exhausted"},
+                        details={"reason": state.paused_reason},
                         log_path=events_path,
                     )
                     break
