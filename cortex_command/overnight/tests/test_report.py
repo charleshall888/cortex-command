@@ -4,7 +4,7 @@
 import pytest
 from pathlib import Path
 
-from cortex_command.overnight.report import ReportData, render_completed_features, render_failed_features
+from cortex_command.overnight.report import ReportData, render_completed_features, render_executive_summary, render_failed_features
 from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
 
 
@@ -281,4 +281,53 @@ def test_render_failed_features_recovery_branch_shown_when_no_conflicted_files()
 
     assert "- **Recovery branch**: `pipeline/feature-name`" in output, (
         f"Expected recovery branch line even with empty conflicted_files, got:\n{output[:400]}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Tests for paused_reason rendering in the morning-report executive summary
+# ---------------------------------------------------------------------------
+
+def test_morning_report_distinguishes_api_rate_limit_pause() -> None:
+    """Executive summary emits distinct text for paused_reason="api_rate_limit".
+
+    Witnesses the additive `api_rate_limit` branch in render_executive_summary
+    (Task 11). Catches implementations where the branch is unreachable, the
+    literal is misspelled, or the branch order makes it dead code.
+    """
+    features = {
+        "feature-stalled": OvernightFeatureStatus(status="pending"),
+    }
+    data = ReportData()
+    data.state = OvernightState(
+        session_id="test-session",
+        features=features,
+        paused_reason="api_rate_limit",
+    )
+    data.pr_urls = {}
+    output = render_executive_summary(data)
+
+    assert "API rate limit hit" in output, (
+        f"Expected 'API rate limit hit' in output, got:\n{output[:600]}"
+    )
+    # Negative guard: must not collapse into the budget_exhausted message.
+    assert "API budget exhausted" not in output, (
+        f"Did not expect 'API budget exhausted' for api_rate_limit pause, got:\n{output[:600]}"
+    )
+
+    # Parallel regression guard: budget_exhausted still emits its own message.
+    budget_data = ReportData()
+    budget_data.state = OvernightState(
+        session_id="test-session",
+        features=features,
+        paused_reason="budget_exhausted",
+    )
+    budget_data.pr_urls = {}
+    budget_output = render_executive_summary(budget_data)
+
+    assert "API budget exhausted" in budget_output, (
+        f"Expected 'API budget exhausted' in output, got:\n{budget_output[:600]}"
+    )
+    assert "API rate limit hit" not in budget_output, (
+        f"Did not expect 'API rate limit hit' for budget_exhausted pause, got:\n{budget_output[:600]}"
     )
