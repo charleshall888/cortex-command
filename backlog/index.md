@@ -4,7 +4,6 @@
 |-----|-------|--------|----------|------|------------|--------|------|
 | 162 | Sandbox overnight agents at the OS layer | refined | critical | epic | — | — | — |
 | 163 | Apply per-spawn sandbox.filesystem.denyWrite at overnight orchestrator spawn | refined | critical | feature | — | 162 | — |
-| 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | ✓ |
 | 158 | Build shared autonomous synthesis for critical-tier dual-plan flow (interactive + overnight) | backlog | high | epic | — | — | — |
 | 159 | Tighten §1b plan-agent prompt to require strategy-level distinction | backlog | high | chore | 160 | 158 | ✓ |
 | 160 | Build shared synthesizer for critical-tier dual-plan flow (interactive + overnight) | in_progress | high | feature | — | 158 | ✓ |
@@ -30,7 +29,6 @@
 
 ## In-Progress
 
-- **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
 - **160** Build shared synthesizer for critical-tier dual-plan flow (interactive + overnight) (in_progress)
 - **161** Add parent-epic alignment check to refine's clarify-critic (in_progress)
 

@@ -62,36 +62,6 @@
     "repo": null
   },
   {
-    "id": 112,
-    "title": "Migrate overnight-schedule to a LaunchAgent-based scheduler",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "overnight",
-      "scheduler",
-      "sandbox"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-21",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/migrate-overnight-schedule-to-a-launchagent-based-scheduler/spec.md",
-    "discovery_source": "research/overnight-runner-sandbox-launch/research.md",
-    "plan": null,
-    "uuid": "3565ffe8-5041-4c2b-9f91-d14fa9d4c1cd",
-    "lifecycle_slug": "migrate-overnight-schedule-to-a-launchagent-based-scheduler",
-    "session_id": "8852fbdd-d470-4919-8020-c42c14f0d6ae",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 158,
     "title": "Build shared autonomous synthesis for critical-tier dual-plan flow (interactive + overnight)",
     "status": "backlog",

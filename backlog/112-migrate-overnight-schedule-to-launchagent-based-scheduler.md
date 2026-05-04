@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 3565ffe8-5041-4c2b-9f91-d14fa9d4c1cd
 title: Migrate overnight-schedule to a LaunchAgent-based scheduler
-status: refined
+status: complete
 priority: high
 type: feature
 tags: [overnight, scheduler, sandbox]
@@ -10,7 +10,7 @@ areas: [overnight-runner]
 created: 2026-04-21
 updated: 2026-05-04
 lifecycle_slug: migrate-overnight-schedule-to-a-launchagent-based-scheduler
-lifecycle_phase: plan_approved
+lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: []
