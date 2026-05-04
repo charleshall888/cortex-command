@@ -1,0 +1,57 @@
+{
+  "ts": "2026-05-04T00:00:00Z",
+  "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions",
+  "artifact": "lifecycle/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {"completed": 4, "dispatched": 4},
+  "findings": [
+    {
+      "class": "B",
+      "finding": "The plan never specifies a post-Task-5-merge operator action of re-running `just setup-githooks` in all developer environments. Task 5's verification only checks file content via grep, not that core.hooksPath is wired in git config. Any developer environment where core.hooksPath is unset or stale after Task 5 merges will continue to fail _verify_hook_guard's three-part check.",
+      "reviewer_angle": "Mid-implementation deployment trap",
+      "evidence_quote": "Verification: grep -c 'Phase 0 — overnight main-branch guard' .../.githooks/pre-commit = 1 — pass if count = 1."
+    },
+    {
+      "class": "B",
+      "finding": "Task 2's verification (grep -c '_verify_hook_guard' >= 1) confirms the token exists in cli_handler.py but does not verify any of the three mandated check sub-behaviors (hooksPath configured, hook file executable, sentinel string present). A developer can define the function returning None unconditionally and pass the grep gate.",
+      "reviewer_angle": "Verification-depth gap",
+      "evidence_quote": "Verification: grep -c '_verify_hook_guard' .../cli_handler.py >= 1 — pass if count >= 1."
+    },
+    {
+      "class": "B",
+      "finding": "Task 13's third verification grep checks for the exact string 'runner process (NOT from a runner-spawned child)', but the artifact's Context block describes the replacement in different terms. Correct semantic implementations using slightly different phrasing will fail the grep, while a developer who pastes the exact check-string into a comment without conveying the architectural intent passes the verification.",
+      "reviewer_angle": "Verification-depth gap",
+      "evidence_quote": "grep -c 'runner process (NOT from a runner-spawned child)' .../requirements/pipeline.md >= 1 — pass if count >= 1."
+    },
+    {
+      "class": "B",
+      "finding": "Case (e) mutates Scaffold A's home repo to detached HEAD before case (f) runs. The plan does not specify case ordering, does not specify a state-reset between cases, and does not note in case (f)'s description that the home repo is now in detached-HEAD state. The mutation does not affect the worktree's HEAD (worktrees have independent HEAD files) but the dependency is undocumented.",
+      "reviewer_angle": "Test scaffold mutation and ordering fragility",
+      "evidence_quote": "Case (e) — run git -C scaffA checkout --detach. Case (f) — invoke hook on Scaffold A worktree (branch=main)."
+    },
+    {
+      "class": "B",
+      "finding": "The follow-up commitment (file a follow-up ticket for spawn-site assertion) is unenforceable: it contains no ticket number, no backlog-add invocation, no dependency edge from Task 5, and no pass/fail criterion in Task 5's verification block. An implementer can green-check Task 5 and skip the follow-up with no test or verification failing.",
+      "reviewer_angle": "Spawn-site assertion deferral",
+      "evidence_quote": "Recommend filing the follow-up during Task 5 implementation rather than after PR merge."
+    },
+    {
+      "class": "B",
+      "finding": "The plan defers both the behavioral integration test (legitimately hard, 50+ LOC) and the static grep/source assertion (trivially cheap, ~5-10 LOC, no new infrastructure) without distinguishing them. The spec's Open Decisions section only justifies deferral of the integration test harness; it does not justify deferring a static assertion.",
+      "reviewer_angle": "Spawn-site assertion deferral",
+      "evidence_quote": "Does NOT include an integration test asserting that runner.py spawn sites still set CORTEX_RUNNER_CHILD=1 — deferred to a follow-up ticket per spec's Open Decisions."
+    },
+    {
+      "class": "B",
+      "finding": "Task 12 actively verifies the 'runner-direct commits live above Phase 0' invariant by explicitly prohibiting CORTEX_RUNNER_CHILD=1 in the test environment. This tests one side of the enforcement triangle. The symmetric property — 'runner-spawned children are below Phase 0 because they set CORTEX_RUNNER_CHILD=1' — is never tested.",
+      "reviewer_angle": "Spawn-site assertion deferral",
+      "evidence_quote": "Do NOT set CORTEX_RUNNER_CHILD=1 in the test environment — verifies the architectural invariant that runner-direct commits live above Phase 0."
+    },
+    {
+      "class": "B",
+      "finding": "The plan lumps residue B-1, B-2, and B-3 together as '(spec's Open Decisions)' but B-2 concerns pipeline module spawn surfaces (pipeline/merge.py, pipeline/conflict.py) not mentioned in the spec's Open Decisions section, which explicitly covers only runner.py:714 and runner.py:901.",
+      "reviewer_angle": "Spawn-site assertion deferral",
+      "evidence_quote": "Spawn-site CORTEX_RUNNER_CHILD assertion follow-up: residue findings B-1, B-2, B-3 (spec's Open Decisions) are deferred to a separate ticket."
+    }
+  ]
+}

@@ -2,20 +2,23 @@
 schema_version: "1"
 uuid: 9064c10e-38ba-494a-9783-3bf12aca8a6c
 title: "Install pre-commit hook rejecting main commits during overnight sessions"
-status: backlog
+status: in_progress
 priority: critical
 type: feature
 parent: 126
 tags: [overnight-runner, git-hook, enforcement, orchestrator-worktree-escape]
 areas: [overnight-runner]
 created: 2026-04-21
-updated: 2026-04-21
+updated: 2026-05-04
 lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+lifecycle_phase: plan
+session_id: 640c71d8-0b7d-4b9e-b3f9-684d83d841e0
 blocks: []
 blocked-by: []
 discovery_source: research/orchestrator-worktree-escape/research.md
+complexity: complex
+criticality: critical
+spec: lifecycle/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/spec.md
 ---
 
 # Install pre-commit hook rejecting main commits during overnight sessions
