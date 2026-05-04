@@ -450,6 +450,12 @@ def render_executive_summary(data: ReportData) -> str:
             "will resume on `/overnight resume`."
         )
         lines.append("")
+    elif getattr(data.state, "paused_reason", None) == "api_rate_limit":
+        lines.append(
+            "> **Session paused: API rate limit hit.** Features in `pending` status "
+            "remain queued for resume; consult `pipeline-events.log` for retry context."
+        )
+        lines.append("")
     lines.append("")
 
     return "\n".join(lines)
