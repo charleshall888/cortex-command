@@ -88,7 +88,7 @@
   },
   {
     "id": 160,
-    "title": "Build autonomous synthesizer and ship into interactive §1b",
+    "title": "Build shared synthesizer for critical-tier dual-plan flow (interactive + overnight)",
     "status": "backlog",
     "priority": "high",
     "type": "feature",
@@ -96,7 +96,8 @@
       "competing-plan-synthesis",
       "lifecycle",
       "plan",
-      "synthesizer"
+      "synthesizer",
+      "overnight"
     ],
     "areas": [],
     "created": "2026-05-04",
@@ -143,37 +144,6 @@
     "session_id": null,
     "lifecycle_phase": null,
     "schema_version": null,
-    "repo": null
-  },
-  {
-    "id": 162,
-    "title": "Wire synthesizer into overnight orchestrator-round.md Step 3b (criticality branch)",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "competing-plan-synthesis",
-      "overnight",
-      "plan",
-      "orchestrator"
-    ],
-    "areas": [],
-    "created": "2026-05-04",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [
-      "160"
-    ],
-    "parent": "158",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/competing-plan-synthesis/research.md",
-    "plan": null,
-    "uuid": "27465f0f-6937-4209-b465-8cf0024d6873",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
     "repo": null
   },
   {

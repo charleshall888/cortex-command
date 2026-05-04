@@ -2,3 +2,4 @@
 {"ts":"2026-05-04T16:54:03Z","event":"critical_review","feature":"competing-plan-synthesis","phase":"research","objections_a":4,"objections_b":1,"concerns_c":8,"applied":10,"asked":1}
 {"ts":"2026-05-04T17:21:59Z","event":"discovery_conversation_resolved","feature":"competing-plan-synthesis","shape":"shared-mechanism","surfaces":["interactive-1b","overnight-orchestrator-step-3b"]}
 {"ts":"2026-05-04T17:35:38Z","event":"decomposition_consolidated","feature":"competing-plan-synthesis","from_count":5,"to_count":3,"deleted_tickets":[161,163],"merged_into":160}
+{"ts":"2026-05-04T18:17:31Z","event":"decomposition_consolidated_to_two","feature":"competing-plan-synthesis","from_count":3,"to_count":2,"deleted_tickets":[162],"merged_into":160,"rationale":"synthesizer-is-pure-function-call-site-agnostic-validation-gate-becomes-task-ordering"}

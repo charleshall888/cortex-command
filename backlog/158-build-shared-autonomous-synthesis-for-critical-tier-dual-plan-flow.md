@@ -20,17 +20,16 @@ Discovery `competing-plan-synthesis` (research artifact: `research/competing-pla
 
 ## Scope
 
-A reusable synthesizer component (extracted prompt fragment + Python helper) plus wiring into both call sites. Built and shipped interactively first; extended to overnight after operator-disposition data validates the design.
+A reusable synthesizer component (extracted prompt fragment + Python helper) plus wiring into both call sites — interactive §1b and overnight `orchestrator-round.md` Step 3b. The synthesizer is a pure function over plan variants (call-site-agnostic by design), so the build and both consumers ship in one ticket. Within that ticket the interactive surface is exercised against ≥1 real critical-tier dispatch before the overnight branch is enabled (validation gate as task ordering, not as a ticket boundary).
 
 ## Children
 
 - **#159** Tighten §1b plan-agent prompt to require strategy-level distinction (DR-3 Option 4) — independent quick win, parallel-shippable
-- **#160** Build autonomous synthesizer and ship into interactive §1b (DR-2 + DR-4 + DR-5 + DR-7) — synthesizer + interactive wiring + extended event schema + unit tests
-- **#162** Wire synthesizer into overnight `orchestrator-round.md` Step 3b (criticality branch) — extends the synthesizer from #160 to the unattended path
+- **#160** Build shared synthesizer for critical-tier dual-plan flow (interactive + overnight) (DR-2 + DR-4 + DR-5 + DR-7) — synthesizer + interactive wiring + overnight wiring + extended event schema + unit tests + validation-gate acceptance criterion
 
 ## Suggested implementation order
 
-Per research.md DR-1.5: #159 and #160 in parallel → #162. Operator-disposition data from #160's interactive shipping is the validation signal that gates #162's unattended deployment.
+Per research.md DR-1.5: #159 and #160 in parallel. Inside #160, the validation gate (interactive surface exercised against ≥1 real critical-tier dispatch) is the task-ordering boundary between the interactive wiring and the overnight wiring.
 
 ## Out of scope
 
