@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import plistlib
+import shutil
 import subprocess
 import sys
 import time
@@ -568,16 +569,31 @@ class MacOSLaunchAgentBackend:
         session_id: str,
         repo_root: Path,
     ) -> None:
-        """Stub seam — Task 3 fills this in.
+        """Render the templated bash launcher to ``launcher_path`` (R9 / R13).
 
-        For Task 2 we still need a launcher path on disk so the plist's
-        ``ProgramArguments[0]`` references a real file (some launchd
-        validators check existence). Touching the file with mode 0o755
-        is enough for Task 2's plist/bootstrap mechanics; Task 3
-        replaces this with a templated bash script.
+        Reads the ``launcher.sh`` template shipped alongside this module
+        as package data, substitutes the six template markers
+        (``@@PLIST_PATH@@``, ``@@LAUNCHER_PATH@@``, ``@@SESSION_DIR@@``,
+        ``@@LABEL@@``, ``@@CORTEX_BIN@@``, ``@@SESSION_ID@@``) with their
+        concrete values, writes the result to ``launcher_path``, and
+        marks it executable.
         """
         launcher_path.parent.mkdir(parents=True, exist_ok=True)
-        launcher_path.touch()
+
+        template_text = _read_launcher_template()
+        cortex_bin = _resolve_cortex_bin()
+
+        rendered = (
+            template_text
+            .replace("@@PLIST_PATH@@", str(plist_path))
+            .replace("@@LAUNCHER_PATH@@", str(launcher_path))
+            .replace("@@SESSION_DIR@@", str(session_dir_))
+            .replace("@@LABEL@@", label)
+            .replace("@@CORTEX_BIN@@", cortex_bin)
+            .replace("@@SESSION_ID@@", session_id)
+        )
+
+        launcher_path.write_text(rendered, encoding="utf-8")
         try:
             launcher_path.chmod(0o755)
         except OSError:
@@ -618,3 +634,34 @@ def _is_label_collision(exc: LaunchctlBootstrapError) -> bool:
         or "already exists" in msg
         or "service already loaded" in msg
     )
+
+
+# ---------------------------------------------------------------------------
+# Launcher template helpers (Task 3)
+# ---------------------------------------------------------------------------
+
+
+def _read_launcher_template() -> str:
+    """Load the bash launcher template shipped as package data.
+
+    The template lives alongside this module at
+    ``cortex_command/overnight/scheduler/launcher.sh`` and is rendered
+    at schedule time by :meth:`MacOSLaunchAgentBackend._install_launcher_script`.
+    """
+    template_path = Path(__file__).resolve().parent / "launcher.sh"
+    return template_path.read_text(encoding="utf-8")
+
+
+def _resolve_cortex_bin() -> str:
+    """Resolve the absolute path to the cortex binary launchd will exec.
+
+    Prefers ``shutil.which("cortex")`` so the binary path matches what
+    the user has on their interactive PATH (the same binary they granted
+    Full Disk Access to per R13). Falls back to the literal string
+    ``"cortex"`` if ``which`` returns ``None`` so the launcher's own
+    pre-flight ``[ ! -x ]`` check fires the fail-marker path with a
+    clean ``command_not_found`` error class instead of silently
+    succeeding against a stale PATH lookup.
+    """
+    resolved = shutil.which("cortex")
+    return resolved if resolved is not None else "cortex"

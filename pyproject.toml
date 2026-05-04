@@ -27,6 +27,15 @@ cortex-build-epic-map = "cortex_command.backlog.build_epic_map:main"
 [tool.hatch.build.targets.wheel]
 packages = ["cortex_command"]
 
+# Ensure the bash launcher template (rendered by
+# MacOSLaunchAgentBackend._install_launcher_script at schedule time) is
+# shipped inside the wheel as package data. Hatchling already includes
+# everything under the package tree by default; the explicit entry here
+# documents the dependency and guards against future build-config
+# pruning.
+[tool.hatch.build.targets.wheel.force-include]
+"cortex_command/overnight/scheduler/launcher.sh" = "cortex_command/overnight/scheduler/launcher.sh"
+
 [tool.pytest.ini_options]
 testpaths = ["tests", "cortex_command/dashboard/tests", "cortex_command/pipeline/tests", "cortex_command/overnight/tests", "cortex_command/init/tests", "cortex_command/backlog/tests"]
 pythonpath = ["."]
