@@ -63,6 +63,11 @@ logger = logging.getLogger(__name__)
 
 IMPLEMENT_TEMPLATE = importlib.resources.files("cortex_command.pipeline.prompts").joinpath("implement.md")
 
+# Error types that halt the entire session and bypass brain triage.
+# Imported by orchestrator.py and runner.py for consistent set-membership
+# checks across the session-halt path.
+_SESSION_HALT_ERROR_TYPES = ("budget_exhausted", "api_rate_limit")
+
 
 # ---------------------------------------------------------------------------
 # Internal: prompt rendering
@@ -659,12 +664,12 @@ async def execute_feature(
 
             task, result, task_commit_count = item
             if not result.success or result.paused:
-                # Budget exhaustion bypasses brain triage entirely
-                if getattr(result, "error_type", None) == "budget_exhausted":
+                # Session-halting errors bypass brain triage entirely
+                if getattr(result, "error_type", None) in _SESSION_HALT_ERROR_TYPES:
                     return FeatureResult(
                         name=feature,
                         status="paused",
-                        error="budget_exhausted",
+                        error=result.error_type,
                     )
 
                 # Brain agent triage for failed/paused tasks
