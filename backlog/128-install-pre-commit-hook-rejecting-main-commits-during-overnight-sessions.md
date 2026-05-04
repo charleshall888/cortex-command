@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 9064c10e-38ba-494a-9783-3bf12aca8a6c
 title: "Install pre-commit hook rejecting main commits during overnight sessions"
-status: complete
+status: wontfix
 priority: critical
 type: feature
 parent: 126
@@ -11,7 +11,7 @@ areas: [overnight-runner]
 created: 2026-04-21
 updated: 2026-05-04
 lifecycle_slug: null
-lifecycle_phase: complete
+lifecycle_phase: null
 session_id: null
 blocks: []
 blocked-by: []
@@ -22,6 +22,10 @@ spec: lifecycle/install-pre-commit-hook-rejecting-main-commits-during-overnight-
 ---
 
 # Install pre-commit hook rejecting main commits during overnight sessions
+
+## Reverted (2026-05-04)
+
+Implementation was completed (commits d1fb2e1 through 80bdc0b) and then reverted in favor of an OS-level sandbox approach. Rationale captured in retrospective discussion: the git-pre-commit-hook mechanism enforces only at git's commit boundary (bypassed by `git update-ref`, raw plumbing, `--no-verify`, Edit/Write tool absolute paths), requires per-repo install which doesn't ship through the cortex-overnight plugin's existing distribution channel, and surfaces a hook-clobber problem for users with husky / pre-commit-framework / lefthook. Reverted: Phase 0 hook block in `.githooks/pre-commit`, `_verify_hook_guard` helper and its `handle_start` wiring, `overnight_hook_required: true` field in `lifecycle.config.md`, the regression tests (`test_overnight_main_commit_block.sh`, `test_runner_hook_guard.py`, `test_runner_spawn_env.py`), the wiring into `tests/test_hooks.sh`, and the related `requirements/pipeline.md` AC bullet. KEPT: followup-commit failure logging in `_commit_followup_in_worktree` (commit 5f7a086) and the `_commit_morning_report_in_repo` port closing the ticket-129 gap (commit 7ffb346) — both useful regardless of which enforcement mechanism we ultimately ship. New discovery ticket forthcoming for the sandbox-based replacement approach.
 
 ## Context from discovery
 

@@ -381,19 +381,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# test_overnight_main_commit_block.sh — overnight pre-commit guard regression
-# ---------------------------------------------------------------------------
-
-bash "$REPO_ROOT/tests/test_overnight_main_commit_block.sh" >/dev/null 2>&1
-exit_code=$?
-
-if [[ $exit_code -eq 0 ]]; then
-  pass "test_overnight_main_commit_block"
-else
-  fail "test_overnight_main_commit_block" "script exited $exit_code, expected 0"
-fi
-
-# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
