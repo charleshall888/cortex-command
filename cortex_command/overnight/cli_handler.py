@@ -51,6 +51,53 @@ _ORPHAN_KILL_GRACE_SECONDS: float = 1.0
 
 
 # ---------------------------------------------------------------------------
+# Synthesizer kill-switch gate (Spec R7)
+# ---------------------------------------------------------------------------
+
+def read_synthesizer_gate(config_path: Path) -> bool:
+    """Read ``synthesizer_overnight_enabled`` from lifecycle.config.md frontmatter.
+
+    Mirrors the read pattern in
+    :func:`cortex_command.overnight.daytime_pipeline._read_test_command`:
+    open the file, scan frontmatter lines (between ``---`` delimiters)
+    for the ``synthesizer_overnight_enabled:`` prefix, and parse the
+    trailing value case-insensitively (``true``/``True``/``TRUE`` → True;
+    everything else → False).
+
+    Fail-closed semantics per Spec Requirement 7: returns ``False`` when
+    the file is absent, the frontmatter is malformed, or the field is
+    missing. The orchestrator's parallel-variant dispatch branch (T6)
+    grep-checks for this function name and uses the boolean to gate the
+    overnight synthesizer path until operator validation flips the flag.
+    """
+    try:
+        text = config_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError):
+        return False
+
+    in_frontmatter = False
+    seen_opening_delim = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped == "---":
+            if not seen_opening_delim:
+                seen_opening_delim = True
+                in_frontmatter = True
+                continue
+            # Closing delimiter — frontmatter complete.
+            break
+        if not in_frontmatter:
+            continue
+        if stripped.startswith("synthesizer_overnight_enabled:"):
+            value = stripped[len("synthesizer_overnight_enabled:"):].strip()
+            # Strip surrounding quotes if present.
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                value = value[1:-1]
+            return value.lower() == "true"
+    return False
+
+
+# ---------------------------------------------------------------------------
 # JSON-output helpers (R4, R5, R15)
 # ---------------------------------------------------------------------------
 
