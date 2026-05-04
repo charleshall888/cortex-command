@@ -468,9 +468,14 @@ async def dispatch_task(
             resolving from complexity/criticality.  Used by the retry loop to
             implement model-tier escalation (Haiku → Sonnet → Opus).
         effort_override: If provided, use this effort level directly instead of
-            resolving from the complexity tier via ``_EFFORT_MATRIX``.  Accepts
-            any value accepted by ClaudeAgentOptions ("low", "medium", "high",
-            "max").
+            resolving from the complexity/criticality cell via ``_EFFORT_MATRIX``
+            and skill-based overrides.  Accepts any value accepted by
+            ClaudeAgentOptions ("low", "medium", "high", "xhigh", "max"); note
+            that ``xhigh`` is Opus 4.7-only and is silently downgraded by
+            non-Opus models.  Effort is a behavioral signal capping the
+            maximum reasoning depth — the model adapts thinking down for
+            simpler tasks, so higher effort levels do not impose a fixed
+            token cost.
         skill: Closed-vocabulary identifier for the dispatch-call site (one of
             the values in the ``Skill`` Literal). Required keyword-only
             argument; emitted on ``dispatch_start`` so downstream aggregators
