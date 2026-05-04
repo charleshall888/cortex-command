@@ -79,6 +79,7 @@ MORNING_REPORT_COMMIT_RESULT = "morning_report_commit_result"
 PLAN_GEN_DISPATCHED = "plan_gen_dispatched"
 FEATURE_MERGED = "feature_merged"
 FOLLOWUP_COMMIT_SKIPPED = "followup_commit_skipped"
+FOLLOWUP_COMMIT_FAILED = "followup_commit_failed"
 
 EVENT_TYPES = (
     SESSION_START,
@@ -131,6 +132,7 @@ EVENT_TYPES = (
     PLAN_GEN_DISPATCHED,
     FEATURE_MERGED,
     FOLLOWUP_COMMIT_SKIPPED,
+    FOLLOWUP_COMMIT_FAILED,
 )
 
 

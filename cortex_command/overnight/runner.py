@@ -407,6 +407,7 @@ def _generate_morning_report(
 def _commit_followup_in_worktree(
     worktree_path: Path,
     session_id: str,
+    events_path: Path,
 ) -> None:
     """Commit follow-up backlog items under ``worktree_path/backlog/``.
 
@@ -415,6 +416,10 @@ def _commit_followup_in_worktree(
     <id>: record followup"`` inside the worktree so the follow-ups land
     on the integration branch, not the home repo. Silently no-ops when
     the worktree directory does not exist or has nothing staged.
+
+    On non-zero ``git commit`` exit (e.g. rejected by the Phase 0 hook
+    guard), emits a stderr line and a structured ``followup_commit_failed``
+    event to ``events_path`` so morning review can debug the rejection.
     """
     if not worktree_path.is_dir():
         return
@@ -436,7 +441,7 @@ def _commit_followup_in_worktree(
         )
         if diff.returncode == 0:
             return
-        subprocess.run(
+        commit_result = subprocess.run(
             [
                 "git",
                 "commit",
@@ -447,8 +452,48 @@ def _commit_followup_in_worktree(
             env=env,
             check=False,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
         )
+        if commit_result.returncode != 0:
+            try:
+                branch_result = subprocess.run(
+                    ["git", "symbolic-ref", "--quiet", "HEAD"],
+                    cwd=str(worktree_path),
+                    env=env,
+                    check=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                )
+                branch = (
+                    branch_result.stdout.strip()
+                    if branch_result.returncode == 0
+                    else "unknown"
+                )
+            except (OSError, subprocess.SubprocessError):
+                branch = "unknown"
+            print(
+                f"runner: followup commit failed for session={session_id} "
+                f"branch={branch} rc={commit_result.returncode}",
+                file=sys.stderr,
+                flush=True,
+            )
+            try:
+                events.log_event(
+                    events.FOLLOWUP_COMMIT_FAILED,
+                    round=0,
+                    details={
+                        "session_id": session_id,
+                        "worktree_path": str(worktree_path),
+                        "branch": branch,
+                        "returncode": commit_result.returncode,
+                        "hook_stderr": commit_result.stderr,
+                    },
+                    log_path=events_path,
+                )
+            except Exception:
+                pass
     except (OSError, subprocess.SubprocessError):
         pass
 
@@ -529,9 +574,8 @@ def _cleanup(
     try:
         state = state_module.load_state(state_path)
         if state.worktree_path:
-            _commit_followup_in_worktree(
-                Path(state.worktree_path), session_id
-            )
+            wt_path = Path(state.worktree_path)
+            _commit_followup_in_worktree(wt_path, session_id, events_path)
     except Exception:
         pass
 
@@ -1583,9 +1627,8 @@ def _post_loop(
         try:
             state = state_module.load_state(state_path)
             if state.worktree_path:
-                _commit_followup_in_worktree(
-                    Path(state.worktree_path), session_id
-                )
+                wt_path = Path(state.worktree_path)
+                _commit_followup_in_worktree(wt_path, session_id, events_path)
         except Exception:
             pass
 
