@@ -1,0 +1,188 @@
+- ts: 2026-04-29T16:50:22Z
+  event: clarify_critic
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  findings:
+    - "The HIGH intent-clarity rating leans on 'deliverable is short written policy entries answering both', but OQ3 is framed as a conditional rule ('keep or normalize back and re-observe'), and the ticket does not say how to weight #85's empirical input against Anthropic's two contradictory docs."
+    - "Scope is rated HIGH but the ticket embeds an unresolved target-location decision (CLAUDE.md vs ~/.claude/rules/cortex-*.md if cortex-deploys-only-rules conventions apply) that the assessment dismisses as 'part of the policy decision itself' — the orchestrator's characterization, not the ticket's."
+    - "Requirements alignment cites the auto-memory entry 'Cortex is rules-only, never ships global CLAUDE.md' as evidence the user's personal ~/.claude/CLAUDE.md is ruled out, but that is out-of-source context. The ticket itself names CLAUDE.md without distinguishing repo-CLAUDE.md from global-CLAUDE.md."
+    - "Requirements alignment asserts alignment with project.md, but the ticket body does not reference project.md and the assessment does not quote what in project.md actually applies to a prompt-engineering-policy decision."
+    - "Complexity is rated 'simple' on 'mechanical writing once decisions are made', which brackets out the actual judgment work — squaring two contradictory upstream sources via #85 evidence is precisely a design-trade-off judgment task, not mechanical."
+    - "Criticality is rated medium, but the entries land in CLAUDE.md or ~/.claude/rules/cortex-*.md — both loaded on every session and propagating into every future skill-authoring decision. The 'high default for shared agentic-layer infrastructure' rule was waved off without source-grounded reasoning."
+  dispositions:
+    apply: 5
+    dismiss: 1
+    ask: 0
+  applied_fixes:
+    - "Acknowledged target-file routing (repo CLAUDE.md vs ~/.claude/rules/cortex-*.md) as an Open Question for Research, dependent on each policy's deployment scope; scope rating stays HIGH because the routing is bounded by the in-repo cortex deployment model from #120/#121."
+    - "Reframed requirements-alignment evidence to cite the cortex-deployment-only-rules convention as established by completed tickets #120/#121 (in-repo, verifiable), not auto-memory."
+    - "Softened project.md alignment statement to 'no conflicts detected; project.md is silent on prompt-engineering-policy specifics, so alignment is by absence-of-conflict rather than affirmative endorsement'."
+    - "Escalated complexity from 'simple' to 'complex' — the OQ3 decision is a judgment call requiring synthesis of #85 audit findings with Anthropic's two contradictory upstream guidance docs."
+    - "Escalated criticality from 'medium' to 'high' — entries shape future skill-authoring decisions across the agentic layer; rubric default for shared agentic-layer infrastructure is high."
+  dismissals:
+    - finding_index: 0
+      rationale: "Intent clarity is about whether the goal is unambiguous, not whether the decision is easy. The intent (decide and document the OQ3 reconciliation, decide and document OQ6) is clearly stated. The difficulty of arriving at the decision is a research/spec-phase concern, not an intent-clarity concern."
+  status: ok
+- ts: 2026-04-29T20:11:09Z
+  event: orchestrator_review
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+  notes: "S1 had 3 minor in-context fixes applied before pass: R4 regex was malformed (escaped dots) and reframed as substring grep on the load-bearing 'tone perception' marker; R2/R3 acceptance scope clarified file-wide-equivalent-to-section-local with a Requirements-section preamble. S3 borderline (no explicit MoSCoW labels) resolved by Requirements preamble noting all-must-have given policy-only scope; Non-Requirements is the won't-do set."
+- ts: 2026-04-29T20:11:09Z
+  event: critical_review
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  phase: specify
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  envelopes_well_formed: 4
+  findings_total: 23
+  findings_a_class: 10
+  findings_a_class_after_downgrade: 10
+  findings_b_class: 9
+  findings_c_class: 4
+  synthesis_status: ok
+  dispositions:
+    apply: 14
+    dismiss: 0
+    ask: 0
+  applied_fixes:
+    - "Rewrote R2 from P3 negation-only ('does NOT satisfy') to imperative-positive ('include in the commit body... is rejected at review')"
+    - "Rewrote R3 from P7 hedge ('consider whether') to imperative ('run a dispatch with effort=high'), added artifact channel parallel to R2 (logged events.log entry / transcript), forbade MUST-as-workaround when effort path is unwired"
+    - "Rewrote R4 to broaden the failure-type carve-out from enumerated triple ('correctness, control-flow, routing only') to comprehensive ('all observed-failure types... single exception is tone perception'); defined 'tone perception' explicitly to close the OQ3/OQ6 boundary ambiguity"
+    - "Reformulated R6 (OQ6 user-self-action) with epistemic honesty: keeps the Anthropic phrasing recommendation but adds explicit caveat about CLAUDE.md tone-override inconsistent leverage per support.tools, and notes the structurally-strongest path (output styles / --system-prompt) is unbuilt"
+    - "Added R7 trigger (d) — empirical rules-file leverage test returning positive — and trigger (e) — Anthropic ships official tone-control mechanism"
+    - "Added R8 — explicit OQ3 re-evaluation triggers (parallel to R7, replacing the 'implicitly carries the same discipline' P7 hedge)"
+    - "Reformulated R9 (was R8) bloat trigger from 'next-added policy entry' (P4 multi-condition + P2 ambiguous bypass) to 'including this current edit... fires on the entry that crosses 100', closing the literal-reading bypass"
+    - "Tightened R7 branch (c) and (b) thresholds from 'a retro' / '3+' to '2+ separate retros' (concrete count) for both"
+    - "Added R12 — pre-file follow-up backlog ticket 'Empirically test rules-file tone leverage under Opus 4.7+' so R7 trigger (d) has a concrete re-litigation path"
+    - "Renamed FM-X 'closure' framing → 'FM-X mitigation (norm-level)' across R2, R3, R4 and Changes-to-Existing-Behavior; clarifies documented-norm vs. enforced-norm distinction"
+    - "Added Edge Case for overnight runner needing MUST escalation: defer with TODO comment and surface in morning report; daytime user lands the MUST"
+    - "Added Edge Case revision: artifact-bound discipline is unconditional; 'sustained failure left to author judgment' loophole removed in favor of explicit 'first run a session that produces an artifact, then escalate'"
+    - "Added Requirements-preamble: CLAUDE.md prose hygiene rule (no negation-only, no hedges, no examples-as-exhaustive); plugin-mirror scope clarification (binds at-edit-time in this repo); interactive-review assumption (overnight runners defer)"
+    - "Added Open Decisions section update: explicit acknowledgment that OQ1/OQ5 resolved via §2 interview; I-over-G premise unverified but mitigated by R7 (d) + R12 pre-file"
+  dismissals: []
+  notes: "All 14 applied fixes are spec rewrites — no separate fix-agent dispatch needed since orchestrator could write the imperative form directly. Critical-review surfaced strong A-class through-line: 'spec ships verbatim the failure modes it claims to police' — addressed by the Requirements-preamble prose hygiene rule plus per-requirement imperative rewrites."
+- ts: 2026-05-04T11:19:04Z
+  event: orchestrator_review
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+  notes: "All 7 post-plan checklist items pass. P1 sizing within bounds (1-5 files/task, complex task 1 acknowledged). P2 linear dependency chain complete. P3 context cites spec R-numbers + file paths. P4 grep/wc/git verifications binary-checkable. P5 prose-only, no code budget violations. P6 every verification-referenced file is in Files. P7 verifications check external state or spec-dictated substrings, none self-sealing."
+- ts: 2026-05-04T13:56:46Z
+  event: critical_review
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  phase: plan
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  envelopes_well_formed: 4
+  findings_total: 19
+  findings_a_class: 10
+  findings_a_class_after_downgrade: 10
+  findings_b_class: 5
+  findings_c_class: 4
+  synthesis_status: ok
+  dispositions:
+    apply: 11
+    dismiss: 0
+    ask: 0
+  applied_fixes:
+    - "Removed Tasks 7 and 8 (mid-session status=complete write-back + commit) — keystone fix for Reviewer 4 finding 1; close-out deferred to Complete phase canonically per references/complete.md"
+    - "Added Task 5 to author ## Resolution closing note in #91 body (uncommitted) — Complete phase commits it together with status flip, canonical feature_complete event with tasks_total+rework_cycles, events.log, and index regeneration"
+    - "Inverted Task 4 from manual ID/UUID derivation to cortex-create-backlog-item canonical CLI + post-edit for blocked-by/tags/body — restores .events.jsonl sidecar status_changed event the corpus convention requires"
+    - "Removed confabulated zero-padding-to-neighbor-width rule; canonical algorithm at create_item.py:44 uses unconditional 03d fence at 1000"
+    - "Added hygiene-rule precedence note in Task 1: imperative do-not-X satisfies the spec preamble (which targets descriptive not prescriptive negation); R6 inconsistent leverage is descriptive of empirical claim not hedge softener"
+    - "Itemized line-budget breakdown by requirement and formatting choice (long-line ~22 lines, wrapped ~40-45 lines); long-line form recommended for headroom against R10"
+    - "Strengthened Task 4 verification to require sidecar .events.jsonl + both index files in commit diff (caught Reviewer 2/3 staging gap)"
+    - "Strengthened Task 5 verification to check both ## Resolution presence AND uncommitted state via git status --porcelain"
+    - "Rewrote Veto Surface to surface 5 actually-load-bearing tensions from critical-review instead of the previous trivial-choice list"
+    - "Added Scope Boundary explicitly forbidding mid-session status=complete write-back on #91 — canonicalizes the keystone fix"
+    - "Updated Verification Strategy to describe the Complete-phase handoff explicitly so the spec three-commit atomicity is preserved across phase boundaries"
+  dismissals: []
+  notes: "All 11 applied fixes derive directly from the synthesis. Reviewer 4 finding chain (Task 7 keystone) drove the structural restructuring; Reviewer 3 drove the canonical-CLI switch; Reviewer 1 drove the hygiene-precedence and budget-itemization fixes; Reviewer 2 drove the verification tightening on Task 4 and the Task 7 redundancy removal (now moot)."
+- ts: 2026-05-04T13:58:38Z
+  event: phase_transition
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  from: plan
+  to: implement
+- ts: 2026-05-04T14:50:45Z
+  event: batch_dispatch
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  batch: 0
+  tasks: [1]
+- ts: 2026-05-04T14:53:36Z
+  event: task_complete
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  task: 1
+  batch: 0
+  status: success
+- ts: 2026-05-04T14:54:26Z
+  event: batch_dispatch
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  batch: 1
+  tasks: [2]
+- ts: 2026-05-04T14:54:26Z
+  event: task_complete
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  task: 2
+  batch: 1
+  status: success
+- ts: 2026-05-04T14:54:26Z
+  event: batch_dispatch
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  batch: 2
+  tasks: [3]
+- ts: 2026-05-04T14:55:25Z
+  event: task_complete
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  task: 3
+  batch: 2
+  status: success
+- ts: 2026-05-04T14:55:25Z
+  event: batch_dispatch
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  batch: 3
+  tasks: [4]
+- ts: 2026-05-04T14:58:59Z
+  event: task_complete
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  task: 4
+  batch: 3
+  status: success
+  notes: "CLI normalized slug to opus-47 (not opus-4-7); .events.jsonl is gitignored. Substantive contract met: parent=82, status=backlog, blocked-by=[91], tags=[opus-4-7-harness-adaptation, policy]. Commit 9d2db38."
+- ts: 2026-05-04T14:58:59Z
+  event: batch_dispatch
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  batch: 4
+  tasks: [5]
+- ts: 2026-05-04T14:59:37Z
+  event: task_complete
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  task: 5
+  batch: 4
+  status: success
+- ts: 2026-05-04T14:59:37Z
+  event: phase_transition
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  tier: complex
+  from: implement
+  to: review
+- ts: 2026-05-04T15:02:46Z
+  event: review_verdict
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  verdict: APPROVED
+  cycle: 1
+  requirements_drift: none
+- ts: 2026-05-04T15:02:46Z
+  event: phase_transition
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  from: review
+  to: complete
+- ts: 2026-05-04T15:04:25Z
+  event: feature_complete
+  feature: decide-and-document-post-47-policy-settings-must-escalation-tone-regression
+  tasks_total: 5
+  rework_cycles: 1

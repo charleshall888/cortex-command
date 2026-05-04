@@ -117,35 +117,6 @@
     "repo": null
   },
   {
-    "id": 91,
-    "title": "Decide and document post-4.7 policy settings (MUST-escalation, tone regression)",
-    "status": "in_progress",
-    "priority": "low",
-    "type": "chore",
-    "tags": [
-      "opus-4-7-harness-adaptation",
-      "policy"
-    ],
-    "areas": [
-      "docs"
-    ],
-    "created": "2026-04-18",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "82",
-    "research": null,
-    "spec": "lifecycle/decide-and-document-post-47-policy-settings-must-escalation-tone-regression/spec.md",
-    "discovery_source": "research/opus-4-7-harness-adaptation/research.md",
-    "plan": null,
-    "uuid": "7e6b212e-f74e-4f48-9fd6-30152c27b872",
-    "lifecycle_slug": null,
-    "session_id": "56a17f2a-8eb1-4b1e-b7e8-e4811577537a",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 156,
     "title": "Make cortex-check-parity context-aware (skip tokens inside fenced code blocks)",
     "status": "backlog",
@@ -189,9 +160,7 @@
     "created": "2026-05-04",
     "updated": "2026-05-04",
     "blocks": [],
-    "blocked_by": [
-      "91"
-    ],
+    "blocked_by": [],
     "parent": "82",
     "research": null,
     "spec": null,

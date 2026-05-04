@@ -2,15 +2,21 @@
 schema_version: "1"
 uuid: 7e6b212e-f74e-4f48-9fd6-30152c27b872
 title: "Decide and document post-4.7 policy settings (MUST-escalation, tone regression)"
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-04-18
-updated: 2026-04-29
+updated: 2026-05-04
 parent: "82"
 tags: [opus-4-7-harness-adaptation, policy]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
 blocked-by: []
+complexity: complex
+criticality: high
+spec: lifecycle/decide-and-document-post-47-policy-settings-must-escalation-tone-regression/spec.md
+areas: [docs]
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Decide and document post-4.7 policy settings (MUST-escalation, tone regression)
@@ -44,3 +50,9 @@ Short written policy entries in `CLAUDE.md` (or `~/.claude/rules/cortex-*.md` if
 
 - Policy documentation only, no code changes
 - Two decisions, not three — if another policy question surfaces later, it gets its own ticket
+
+## Resolution (2026-05-04)
+
+OQ3 lands as Alternative A (default soft, escalate on observed failure). FM-1 (drift) is mitigated by the R2 artifact-bound evidence requirement; FM-2 (tone-as-correctness creep) by the R4 "tone perception" carve-out; FM-5 (MUST-as-effort-workaround) by the R3 effort-first dispatch clause. Pre-existing MUSTs are grandfathered. Re-evaluation triggers in R8.
+
+OQ6 lands as Alternative I (no shipped tone directive). R6 records the user-self-action recommendation (`Use a warm, collaborative tone…` in personal `~/.claude/CLAUDE.md`) with an explicit epistemic-honest caveat about CLAUDE.md tone overrides having inconsistent leverage against Claude Code's built-in system-prompt tone section (per support.tools analysis). R7 re-evaluation triggers include (d) — empirical rules-file leverage test — pre-filed as backlog #157.

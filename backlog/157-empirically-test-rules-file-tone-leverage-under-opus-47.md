@@ -8,7 +8,7 @@ type: chore
 created: 2026-05-04
 updated: 2026-05-04
 parent: "82"
-blocked-by: [91]
+blocked-by: []
 tags: [opus-4-7-harness-adaptation, policy]
 ---
 
