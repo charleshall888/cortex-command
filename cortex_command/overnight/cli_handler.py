@@ -1109,3 +1109,220 @@ def handle_list_sessions(args: argparse.Namespace) -> int:
             )
     print(f"total: {total_count}")
     return 0
+
+
+# ---------------------------------------------------------------------------
+# schedule (R1) — macOS LaunchAgent-backed scheduling
+# ---------------------------------------------------------------------------
+
+def _check_no_active_runner(session_dir: Path) -> bool:
+    """Stub for the cross-cancel runner-active check (R14).
+
+    Task 7 will replace this with the real check that consults
+    :func:`ipc.read_runner_pid` + :func:`ipc.verify_runner_pid` and exits
+    non-zero with the spec's "active runner present" message when a live
+    runner is detected. Until then this returns ``True`` so the schedule
+    path is exercisable end-to-end.
+
+    Args:
+        session_dir: Per-session directory; the live runner-PID file lives
+            at ``session_dir / "runner.pid"``.
+
+    Returns:
+        ``True`` if no active runner blocks the schedule (always, until
+        Task 7 wires the real check).
+    """
+    return True
+
+
+def handle_schedule(args: argparse.Namespace) -> int:
+    """Implement ``cortex overnight schedule``.
+
+    Sequence (per spec R1, R5, R7, R10):
+
+      1. Validate target time via :func:`scheduler.macos.parse_target_time`
+         — emits the spec's exact error phrasings for invalid format,
+         past times, Feb-29-in-non-leap-year, and the 7-day ceiling.
+      2. Gate on macOS support via ``backend.is_supported()`` —
+         non-darwin platforms exit non-zero with
+         ``"cortex overnight scheduling requires macOS"``.
+      3. Cross-cancel runner-active check via
+         :func:`_check_no_active_runner` — Task 7 fills the seam.
+      4. Resolve the session_id from the (auto-discovered or
+         ``--state``-overridden) state file path; the directory name IS
+         the session_id (mirrors :func:`handle_start`).
+      5. ``--dry-run`` short-circuits AFTER target-time validation +
+         macOS gate but BEFORE the backend ``schedule()`` call: prints
+         the would-be label and resolved target ISO, then returns 0.
+      6. Otherwise calls ``backend.schedule(...)``, which under the
+         hood: GC-passes orphan plists, mints the label, installs the
+         launcher script, writes+validates the plist, runs
+         ``launchctl bootstrap``, verifies via ``launchctl print``, and
+         persists the sidecar entry — all under the schedule-lock from
+         Task 4.
+      7. ONLY after the backend's ``_write_sidecar_entry`` succeeded
+         (which happens inside ``schedule()``), this handler writes
+         ``scheduled_start = handle.scheduled_for_iso`` to the session
+         state file via the existing atomic
+         :func:`state.save_state` helper. This is the observability
+         hook ``handle_status`` (Task 7) and the cancel-side clear
+         (Task 7) both depend on.
+      8. Prints ``session_id``, ``label``, ``scheduled_for_iso`` to
+         stdout (or a versioned JSON envelope when ``--format json``).
+    """
+    fmt = getattr(args, "format", "human")
+    target_time_str: str = args.target_time
+    dry_run: bool = bool(getattr(args, "dry_run", False))
+
+    # Lazy imports to keep cli.py --help fast (mirrors handle_start).
+    from cortex_command.overnight import state as state_module
+    from cortex_command.overnight.scheduler import get_backend
+    from cortex_command.overnight.scheduler.labels import mint_label
+    from cortex_command.overnight.scheduler.macos import parse_target_time
+
+    # (1) Validate target time first. Errors are spec-exact strings.
+    try:
+        resolved_target = parse_target_time(target_time_str)
+    except ValueError as exc:
+        message = str(exc)
+        if fmt == "json":
+            _emit_json({"error": "invalid_target_time", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    # (2) macOS gate — non-darwin exits with the spec's exact message.
+    backend = get_backend()
+    if not backend.is_supported():
+        message = "cortex overnight scheduling requires macOS"
+        if fmt == "json":
+            _emit_json({"error": "unsupported_platform", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    # (3) Resolve repo root + state path so we can derive the session_id.
+    repo_path = _resolve_repo_path()
+
+    if args.state is not None:
+        state_path = Path(args.state).expanduser().resolve()
+    else:
+        sessions_root = repo_path / "lifecycle" / "sessions"
+        discovered = _auto_discover_state(sessions_root)
+        if discovered is None:
+            message = (
+                "no overnight session found — create a state file or "
+                "pass --state <path>"
+            )
+            if fmt == "json":
+                _emit_json({"error": "no_session", "message": message})
+            else:
+                print(message, file=sys.stderr, flush=True)
+            return 1
+        state_path = discovered
+
+    if not state_path.exists():
+        message = f"state file not found: {state_path}"
+        if fmt == "json":
+            _emit_json({"error": "state_not_found", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    session_dir = state_path.parent
+    session_id = session_dir.name
+
+    # (4) Cross-cancel runner-active check (Task 7 fills this seam).
+    if not _check_no_active_runner(session_dir):
+        message = (
+            f"active runner present (session_id={session_id}); "
+            f"cancel it first"
+        )
+        if fmt == "json":
+            _emit_json({"error": "active_runner_present", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    # (5) --dry-run short-circuits before the backend call.
+    if dry_run:
+        # Mint a would-be label deterministically against the validated
+        # session_id. The epoch defaults to ``int(time.time())`` so two
+        # sequential dry-runs may differ by a second; this is fine for a
+        # preview — the real ``schedule()`` mints its own label.
+        try:
+            preview_label = mint_label(session_id)
+        except ValueError as exc:
+            message = f"invalid session id for label: {exc}"
+            if fmt == "json":
+                _emit_json({"error": "invalid_session_id", "message": message})
+            else:
+                print(message, file=sys.stderr, flush=True)
+            return 1
+        scheduled_for_iso = resolved_target.isoformat()
+        if fmt == "json":
+            _emit_json(
+                {
+                    "dry_run": True,
+                    "session_id": session_id,
+                    "label": preview_label,
+                    "scheduled_for_iso": scheduled_for_iso,
+                }
+            )
+        else:
+            print(f"session_id: {session_id}")
+            print(f"label: {preview_label}")
+            print(f"scheduled_for_iso: {scheduled_for_iso}")
+            print("(dry-run — no LaunchAgent was bootstrapped)")
+        return 0
+
+    # (6) Real schedule path. The backend's schedule() does GC + plist
+    # render + bootstrap + verify + sidecar write under schedule_lock.
+    try:
+        handle = backend.schedule(
+            target=resolved_target,
+            session_id=session_id,
+            env=dict(os.environ),
+            repo_root=repo_path,
+        )
+    except Exception as exc:  # noqa: BLE001 — surface backend errors uniformly
+        message = f"schedule failed: {exc}"
+        if fmt == "json":
+            _emit_json({"error": "schedule_failed", "message": message})
+        else:
+            print(message, file=sys.stderr, flush=True)
+        return 1
+
+    # (7) Write scheduled_start to the session state file via the
+    # existing atomic helper. Per spec R7, this happens AFTER the
+    # backend's _write_sidecar_entry has succeeded — by the time
+    # backend.schedule() has returned, the sidecar entry is persisted.
+    try:
+        st = state_module.load_state(state_path)
+        st.scheduled_start = handle.scheduled_for_iso
+        state_module.save_state(st, state_path)
+    except (OSError, json.JSONDecodeError, KeyError) as exc:
+        # Non-fatal: the LaunchAgent is bootstrapped; the observability
+        # hook is degraded but the run will still fire. Surface a
+        # warning to stderr and continue with the success envelope.
+        print(
+            f"warning: scheduled_start state write failed: {exc}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+    # (8) Emit the success envelope.
+    if fmt == "json":
+        _emit_json(
+            {
+                "scheduled": True,
+                "session_id": handle.session_id,
+                "label": handle.label,
+                "scheduled_for_iso": handle.scheduled_for_iso,
+            }
+        )
+    else:
+        print(f"session_id: {handle.session_id}")
+        print(f"label: {handle.label}")
+        print(f"scheduled_for_iso: {handle.scheduled_for_iso}")
+    return 0

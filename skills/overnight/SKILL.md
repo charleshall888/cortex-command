@@ -228,13 +228,13 @@ On user approval, execute these steps in order:
 
     Args are positional — do not use `--flag=value` syntax. `overnight-start` creates a detached tmux session named `overnight-runner` and returns immediately.
 
-    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}`, target time, and time limit):
+    **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and target time):
 
     ```
-    overnight-schedule <target-time> $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
+    cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json
     ```
 
-    `overnight-schedule` creates a waiting tmux session that launches the runner at the target time and returns immediately.
+    `cortex overnight schedule` registers a one-shot LaunchAgent (no tmux) that fires the runner at the target time and returns immediately. The Bash tool call MUST set `dangerouslyDisableSandbox: true` so the harness can reach `launchctl`.
 
 8. **Inform the user**: After the Bash tool returns successfully, report the outcome:
     - **Run now**: "Overnight session launched. Attach with `tmux attach -t overnight-runner` to monitor progress."

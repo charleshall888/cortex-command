@@ -74,6 +74,12 @@ def _dispatch_overnight_list_sessions(args: argparse.Namespace) -> int:
     return cli_handler.handle_list_sessions(args)
 
 
+def _dispatch_overnight_schedule(args: argparse.Namespace) -> int:
+    from cortex_command.overnight import cli_handler
+
+    return cli_handler.handle_schedule(args)
+
+
 _MCP_SERVER_DEPRECATION_BASE = (
     "cortex mcp-server is removed; install the cortex-overnight-integration "
     "plugin (/plugin install cortex-overnight-integration@cortex-command) "
@@ -515,6 +521,46 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Output format (default: human)",
     )
     list_sessions.set_defaults(func=_dispatch_overnight_list_sessions)
+
+    # cortex overnight schedule (R1) — schedule an overnight session via
+    # the macOS LaunchAgent backend. Mirrors the structural shape of the
+    # ``start`` subparser: positional/optional state resolution feeds
+    # ``handle_schedule`` which validates the target time, gates on
+    # macOS support, calls backend.schedule(), and writes
+    # ``scheduled_start`` to the session state file.
+    schedule = overnight_sub.add_parser(
+        "schedule",
+        help="Schedule an overnight session for a future time",
+        description=(
+            "Schedule a one-shot overnight runner via launchd. Accepts "
+            "HH:MM (24-hour local time) or YYYY-MM-DDTHH:MM (ISO 8601). "
+            "macOS only."
+        ),
+    )
+    schedule.add_argument(
+        "target_time",
+        type=str,
+        help="Target time: HH:MM or YYYY-MM-DDTHH:MM",
+    )
+    schedule.add_argument(
+        "--state",
+        type=str,
+        default=None,
+        help="Path to overnight-state.json (default: auto-discover in cwd's repo)",
+    )
+    schedule.add_argument(
+        "--dry-run",
+        dest="dry_run",
+        action="store_true",
+        help="Validate inputs and print the would-be label/target without scheduling",
+    )
+    schedule.add_argument(
+        "--format",
+        choices=("human", "json"),
+        default="human",
+        help="Output format (default: human)",
+    )
+    schedule.set_defaults(func=_dispatch_overnight_schedule)
 
     # -------------------------------------------------------------------
     # Remaining stubs — not yet implemented.
