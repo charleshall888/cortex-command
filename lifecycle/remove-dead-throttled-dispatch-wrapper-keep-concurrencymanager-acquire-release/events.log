@@ -120,3 +120,172 @@
   from: plan
   to: implement
   note: "User approved plan; deferred starting implementation pending explicit go-ahead."
+
+- ts: '2026-05-04T13:52:57Z'
+  event: batch_dispatch
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  batch: 0
+  tasks:
+  - 1
+  - 2
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 11
+  - 13
+  - 14
+
+- ts: 2026-05-04T13:55:19Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 1
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T13:57:03Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 2
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T13:58:59Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 4
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T14:02:11Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 5
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T14:03:46Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 6
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T14:05:26Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 7
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T14:07:25Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 8
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T14:09:21Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 9
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T14:10:39Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 11
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T14:13:27Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 13
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T14:15:44Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 14
+  batch: 0
+  status: success
+
+- ts: 2026-05-04T14:15:44Z
+  event: batch_dispatch
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  batch: 1
+  tasks: [3, 10, 12, 15]
+
+- ts: 2026-05-04T14:18:56Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 3
+  batch: 1
+  status: success
+
+- ts: 2026-05-04T14:21:58Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 10
+  batch: 1
+  status: success
+
+- ts: 2026-05-04T14:24:42Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 12
+  batch: 1
+  status: success
+
+- ts: 2026-05-04T14:30:58Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 15
+  batch: 1
+  status: success
+
+- ts: 2026-05-04T14:30:58Z
+  event: batch_dispatch
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  batch: 2
+  tasks: [16]
+
+- ts: 2026-05-04T14:33:10Z
+  event: task_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  task: 16
+  batch: 2
+  status: success
+  note: "Final acceptance sweep — all R1-R19 spec greps pass; just test 6/6 passed."
+
+- ts: 2026-05-04T14:33:10Z
+  event: phase_transition
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  tier: complex
+  from: implement
+  to: review
+  note: "All 16 tasks complete. Criticality=high forces Review regardless of tier."
+
+- ts: 2026-05-04T14:44:00Z
+  event: review_verdict
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  verdict: APPROVED
+  cycle: 1
+  requirements_drift: none
+
+- ts: 2026-05-04T14:44:00Z
+  event: phase_transition
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  from: review
+  to: complete
+
+- ts: 2026-05-04T14:45:45Z
+  event: feature_complete
+  feature: remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release
+  tasks_total: 16
+  rework_cycles: 0

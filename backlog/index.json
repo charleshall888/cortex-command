@@ -140,37 +140,7 @@
     "plan": null,
     "uuid": "7e6b212e-f74e-4f48-9fd6-30152c27b872",
     "lifecycle_slug": null,
-    "session_id": "099a87c4-286f-40b3-8922-1b741c96e298",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 98,
-    "title": "Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release",
-    "status": "in_progress",
-    "priority": "low",
-    "type": "feature",
-    "tags": [
-      "cleanup",
-      "overnight",
-      "throttle"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-04-20",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "4337b723-4a50-4d3e-811f-ef2709f4a26e",
-    "lifecycle_slug": null,
-    "session_id": "fa3b4860-5251-4756-ac0f-ffc3cd0abc8a",
+    "session_id": "56a17f2a-8eb1-4b1e-b7e8-e4811577537a",
     "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null

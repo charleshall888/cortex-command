@@ -7,7 +7,6 @@
 | 112 | Migrate overnight-schedule to a LaunchAgent-based scheduler | in_progress | high | feature | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 91 | Decide and document post-4.7 policy settings (MUST-escalation, tone regression) | in_progress | low | chore | — | 82 | ✓ |
-| 98 | Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release | in_progress | low | feature | — | — | ✓ |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | backlog | low | feature | — | — | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
 
@@ -25,7 +24,6 @@
 
 - **112** Migrate overnight-schedule to a LaunchAgent-based scheduler (in_progress)
 - **91** Decide and document post-4.7 policy settings (MUST-escalation, tone regression) (in_progress)
-- **98** Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release (in_progress)
 
 ## Warnings
 

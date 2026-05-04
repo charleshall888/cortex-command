@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4337b723-4a50-4d3e-811f-ef2709f4a26e
 title: "Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release"
-status: in_progress
+status: complete
 priority: low
 type: feature
 created: 2026-04-20
@@ -12,8 +12,8 @@ areas: [overnight-runner]
 complexity: complex
 criticality: high
 spec: lifecycle/remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release/spec.md
-session_id: eaf6cf3a-b038-495d-9bc6-9d20dca8a611
-lifecycle_phase: plan
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Remove dead throttled_dispatch wrapper; keep ConcurrencyManager acquire/release
