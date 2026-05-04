@@ -91,32 +91,52 @@ You are designing an implementation plan for the {feature} feature.
 Target 5-15 minutes per task, 1-5 files each. A typical feature should decompose into 5-15 tasks. Split tasks that touch more than 5 files. Every task must have a Depends on field (use `none` for independent tasks or `[N, M]` for dependencies).
 ```
 
-**c. Collect results**: Wait for all agents to complete. If an agent fails (crash, timeout, garbage output), continue with results from successful agents. If only 1 agent succeeds, use its plan as the sole variant. If all agents fail, fall back to the standard single-plan flow (§2-§3) in the main context.
+**c. Collect results**: Wait for all agents to complete. If an agent fails (crash, timeout, garbage output), continue with results from successful agents. If only 1 agent succeeds, use its plan as the sole variant (skip §1b.d–f synthesizer flow and proceed to §3a). If all agents fail, fall back to the standard single-plan flow (§2-§3) in the main context.
 
-**d. Present comparison table**: Display a comparison table of the plan variants for the user:
+**d. Synthesizer dispatch**: Dispatch one fresh Opus Task sub-agent (no worktree isolation needed; the synthesizer is read-only) to compare the variants and select one with structured rationale. The Task tool invocation:
 
-| | Plan A | Plan B | Plan C |
-|---|---|---|---|
-| **Approach** | [1-2 sentence summary] | [1-2 sentence summary] | [1-2 sentence summary] |
-| **Task count** | [N] | [N] | [N] |
-| **Risk profile** | [key risks] | [key risks] | [key risks] |
-| **Key trade-offs** | [what this approach gains/sacrifices] | [what this approach gains/sacrifices] | [what this approach gains/sacrifices] |
+- **Model**: `opus`
+- **System prompt**: load the canonical synthesizer prompt fragment from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files()` (e.g. `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()`). Do not paraphrase or inline the fragment elsewhere — load the canonical file so both interactive and overnight surfaces stay in lockstep.
+- **User prompt**: inline the variant file paths (e.g. `lifecycle/{feature}/plan-variant-A.md`, `plan-variant-B.md`, optionally `plan-variant-C.md`) plus the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped and require agreement before assigning `confidence: "high"` or `"medium"`. The user prompt must direct the synthesizer to emit a JSON envelope per the schema in the system prompt fragment.
 
-Omit the Plan C column if only 2 agents were dispatched or only 2 succeeded.
+The synthesizer is dispatched as a fresh Task sub-agent — it shares no context with the plan-gen sub-agents from §1b.b — so its judgment is fresh by construction.
 
-**e. User selection**: Ask the user to select which plan variant to use. The user may:
-- **Select a variant**: Write the selected plan as `lifecycle/{feature}/plan.md` and proceed to §3a (Orchestrator Review).
-- **Reject all variants**: Fall back to the standard single-plan flow (§2-§3) in the main context, incorporating lessons learned from the rejected variants.
+**e. Envelope extraction**: After the synthesizer Task sub-agent returns, parse its output using the LAST-occurrence anchor pattern from `plugins/cortex-interactive/skills/critical-review/SKILL.md:176-182`:
 
-**f. Log comparison event**: After the user selects a variant (or rejects all), append a `plan_comparison` event to `lifecycle/{feature}/events.log`:
+1. Locate the `<!--findings-json-->` delimiter using `re.findall(r'^<!--findings-json-->\s*$', output, re.MULTILINE)` and split at the last occurrence (tolerates prose that quotes the delimiter).
+2. `json.loads` the post-delimiter tail. Validate the envelope schema: `schema_version: 2` (int), `per_criterion` (object), `verdict ∈ {"A","B","C"}` (string), `confidence ∈ {"high","medium","low"}` (string), `rationale` (string).
+3. On any extraction or validation failure (no delimiter, JSON decode error, missing required field, invalid enum value), treat the synthesizer result as `confidence: "low"` for routing purposes in §1b.f.
+
+**f. Route on verdict + confidence**:
+
+- **`verdict ∈ {"A","B","C"}` AND `confidence ∈ {"high","medium"}`**: present the chosen variant to the operator with the synthesizer's `rationale`. The default operator action is **rubber-stamp** (Enter to accept the synthesizer's pick); to override, the operator types a different variant label (`A`, `B`, or `C`). On rubber-stamp, write the chosen variant's content to `lifecycle/{feature}/plan.md`. On override, write the operator-chosen variant's content to `lifecycle/{feature}/plan.md`. Verdict `"C"` (tie) at high/medium confidence is a logically impossible state per the synthesizer prompt fragment's instruction to pair `"C"` with `confidence: "low"`; if it occurs, treat as malformed envelope and fall back to the legacy comparison table below.
+
+- **`confidence: "low"` OR malformed envelope**: display the legacy comparison table for manual user-pick. The synthesizer's preliminary rationale is hidden from the comparison table to preserve fresh-judgment freshness — the operator must form an independent verdict from the variant content rather than anchoring on a low-confidence synthesizer recommendation. Render this table:
+
+  | | Plan A | Plan B | Plan C |
+  |---|---|---|---|
+  | **Approach** | [1-2 sentence summary] | [1-2 sentence summary] | [1-2 sentence summary] |
+  | **Task count** | [N] | [N] | [N] |
+  | **Risk profile** | [key risks] | [key risks] | [key risks] |
+  | **Key trade-offs** | [what this approach gains/sacrifices] | [what this approach gains/sacrifices] | [what this approach gains/sacrifices] |
+
+  Omit the Plan C column if only 2 agents were dispatched or only 2 succeeded. Ask the operator to select a variant or reject all. On selection, write the selected variant's content to `lifecycle/{feature}/plan.md`. On rejection, fall back to the standard single-plan flow (§2-§3) in the main context.
+
+**g. Log v2 `plan_comparison` event**: Append a JSONL event to `lifecycle/{feature}/events.log` with `schema_version: 2` plus the five new fields:
 
 ```
-{"ts": "<ISO 8601>", "event": "plan_comparison", "feature": "<name>", "variants": [{"label": "Plan A", "approach": "<summary>", "task_count": <N>, "risk": "<risk summary>"}], "selected": "Plan A|none"}
+{"ts": "<ISO 8601>", "event": "plan_comparison", "schema_version": 2, "feature": "<name>", "variants": [{"label": "Plan A", "approach": "<summary>", "task_count": <N>, "risk": "<risk summary>"}], "selected": "Plan A|none", "selection_rationale": "<synthesizer rationale or 'fallback: low-confidence user-pick' or 'fallback: malformed envelope user-pick'>", "selector_confidence": "high|medium|low", "position_swap_check_result": "agreed|disagreed", "disposition": "rubber_stamp|override|deferred|auto_select", "operator_choice": "Plan A|null"}
 ```
 
-Set `"selected"` to the chosen variant label, or `"none"` if the user rejected all variants.
+Field semantics:
+- `schema_version` (int, always `2`): anchors the v2 sweep. Existing v1 readers tolerate this field-additively.
+- `selection_rationale` (string): the synthesizer's `rationale` on the high/medium-confidence path; a short fallback string on the user-pick path.
+- `selector_confidence` (`"high"`|`"medium"`|`"low"`): the synthesizer's `confidence`; `"low"` when the path was the legacy comparison-table fallback.
+- `position_swap_check_result` (`"agreed"`|`"disagreed"`): derived from the synthesizer's `confidence` (`"high"`/`"medium"` → `"agreed"`; `"low"` → `"disagreed"`); on malformed envelope, set to `"disagreed"`.
+- `disposition` (`"rubber_stamp"`|`"override"`|`"deferred"`|`"auto_select"`): operator action — `"rubber_stamp"` when the operator pressed Enter on the synthesizer's pick, `"override"` when the operator typed a different variant label, `"deferred"` when the operator rejected all variants on the fallback path, `"auto_select"` reserved for the overnight surface (not emitted from interactive §1b).
+- `operator_choice` (string|null): the variant label the operator chose (`"Plan A"`, `"Plan B"`, etc.); `null` when no operator was present (overnight) or the operator rejected all variants.
 
-After logging, proceed to §3a (Orchestrator Review) if a variant was selected, or to §2 (Design the Approach) if the user rejected all variants.
+After logging, proceed to §3a (Orchestrator Review) if a variant was selected, or to §2 (Design the Approach) if the operator rejected all variants on the fallback path.
 
 ### 2. Design the Approach
 
