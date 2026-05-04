@@ -21,6 +21,16 @@
 #   (d) Scaffold A worktree on integration + CORTEX_RUNNER_CHILD=1 → exit 0
 #       (legitimate runner commit on integration branch allowed).
 #
+# Two hardening cases (close B-class critical-review residue):
+#
+#   (f) Scaffold A worktree on main + CORTEX_RUNNER_CHILD=0 → exit 0
+#       (strict-equality preserved; residue B-3).
+#   (e) Scaffold A home repo on detached HEAD + CORTEX_RUNNER_CHILD=1 → exit 0
+#       (fail-open on detached HEAD; residue B-4).
+#
+#   Ordering invariant: case (f) MUST run before case (e); see comment block
+#   above the case (f) section for rationale.
+#
 # Two structural assertions:
 #   - Gitdir sharing: `git -C <worktree> rev-parse --git-common-dir` resolves
 #     to the home repo's `.git/`. Verifies hook resolution flows through the
@@ -290,6 +300,78 @@ if [ "$HOOK_EXIT_D" -ne 0 ]; then
     echo "-------------------"
 else
     report_pass "Case (d): Scaffold A worktree on integration with runner-child gate passed (exit 0)."
+fi
+
+# -----------------------------------------------------------------------------
+# Hardening cases (f) and (e) — close B-class critical-review residue findings.
+#
+# Ordering invariant: case (f) MUST run BEFORE case (e). Rationale: case (e)
+# mutates Scaffold A's home repo state (`git checkout --detach`); while git's
+# worktree-HEAD independence means the worktree at $SCAFF_A_WT is unaffected,
+# this ordering guarantees case (f) operates on a known-clean scaffold.
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Case (f) — CORTEX_RUNNER_CHILD=0 strict-equality (residue B-3)
+#
+# Why this case exists: the hook gates on `[ "${CORTEX_RUNNER_CHILD:-}" = "1" ]`
+# (strict equality, 0 ≠ 1). If a future implementer replaces
+# `[ "${X:-}" = "1" ]` with `[ -n "${X:-}" ]`, this case catches the change.
+# -----------------------------------------------------------------------------
+echo ""
+echo "Case (f): Scaffold A worktree on main, CORTEX_RUNNER_CHILD=0"
+
+echo "case-f-content" > "$SCAFF_A_WT/case-f.txt"
+git -C "$SCAFF_A_WT" add case-f.txt
+
+cd "$SCAFF_A_WT"
+unset GIT_DIR
+set +e
+HOOK_OUTPUT_F="$(CORTEX_RUNNER_CHILD=0 bash "$SCAFF_A/.githooks/pre-commit" 2>&1)"
+HOOK_EXIT_F=$?
+set -e
+cd "$WORK"
+
+if [ "$HOOK_EXIT_F" -ne 0 ]; then
+    report_fail "Case (f): hook exited $HOOK_EXIT_F but CORTEX_RUNNER_CHILD=0 should not trigger Phase 0 (expected 0; strict equality, 0 ≠ 1)."
+    echo "--- hook output ---"
+    echo "$HOOK_OUTPUT_F"
+    echo "-------------------"
+else
+    report_pass "Case (f): Scaffold A worktree on main with CORTEX_RUNNER_CHILD=0 passed (exit 0; strict-equality preserved)."
+fi
+
+# -----------------------------------------------------------------------------
+# Case (e) — Detached HEAD fail-open (residue B-4)
+#
+# Detaches Scaffold A's home repo HEAD, then invokes the hook from $SCAFF_A
+# (now in detached-HEAD state) with CORTEX_RUNNER_CHILD=1. Phase 0 should
+# fail open (exit 0) because `symbolic-ref HEAD` returns non-zero on detached
+# HEAD, and the hook treats that as "not on main".
+# -----------------------------------------------------------------------------
+echo ""
+echo "Case (e): Scaffold A home repo on detached HEAD, CORTEX_RUNNER_CHILD=1"
+
+git -C "$SCAFF_A" checkout --detach >/dev/null 2>&1
+
+echo "case-e-content" > "$SCAFF_A/case-e.txt"
+git -C "$SCAFF_A" add case-e.txt
+
+cd "$SCAFF_A"
+unset GIT_DIR
+set +e
+HOOK_OUTPUT_E="$(CORTEX_RUNNER_CHILD=1 bash "$SCAFF_A/.githooks/pre-commit" 2>&1)"
+HOOK_EXIT_E=$?
+set -e
+cd "$WORK"
+
+if [ "$HOOK_EXIT_E" -ne 0 ]; then
+    report_fail "Case (e): hook exited $HOOK_EXIT_E but detached HEAD should fail open (expected 0)."
+    echo "--- hook output ---"
+    echo "$HOOK_OUTPUT_E"
+    echo "-------------------"
+else
+    report_pass "Case (e): Scaffold A home repo on detached HEAD with runner-child gate passed (exit 0; fail-open)."
 fi
 
 # -----------------------------------------------------------------------------
