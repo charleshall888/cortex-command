@@ -182,7 +182,7 @@ def test_save_batch_result_fields_and_extra_fields() -> None:
             key_files_changed={"feat-a": ["src/main.py"]},
         )
 
-        extra = {"throttle_stats": {"total": 0, "delays": []}}
+        extra = {"extra_diagnostic": {"total": 0, "delays": []}}
         save_batch_result(batch, result_path, extra_fields=extra)
 
         data = json.loads(result_path.read_text(encoding="utf-8"))
@@ -214,9 +214,9 @@ def test_save_batch_result_fields_and_extra_fields() -> None:
             return
 
         # extra_fields must be merged into the top-level JSON
-        if "throttle_stats" not in data:
-            pytest.fail("throttle_stats missing from written JSON")
+        if "extra_diagnostic" not in data:
+            pytest.fail("extra_diagnostic missing from written JSON")
             return
-        if data["throttle_stats"] != {"total": 0, "delays": []}:
-            pytest.fail(f"unexpected throttle_stats: {data['throttle_stats']!r}")
+        if data["extra_diagnostic"] != {"total": 0, "delays": []}:
+            pytest.fail(f"unexpected extra_diagnostic: {data['extra_diagnostic']!r}")
             return
