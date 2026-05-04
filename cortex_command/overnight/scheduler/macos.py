@@ -1,25 +1,245 @@
-"""macOS launchd backend stub.
+"""macOS launchd backend for the overnight scheduler.
 
-Task 1 ships only the importable class skeleton; Task 2 fleshes out the
-launchd plist rendering, ``launchctl bootstrap`` invocation, sidecar
-tracking, and teardown logic. Method bodies raise ``NotImplementedError``
-so accidental early use surfaces loudly.
+Renders a launchd plist via stdlib :mod:`plistlib`, validates it via a
+``dumps``/``loads`` round-trip, writes it to ``$TMPDIR/cortex-overnight-launch/``,
+bootstraps the agent via ``launchctl bootstrap gui/$(id -u)``, then
+verifies registration via ``launchctl print`` (looking for the
+``state = waiting`` substring).
+
+Task 2 fills in plist render, env snapshot, target-time validation,
+and bootstrap-and-verify. The launcher script body (Task 3) and the
+sidecar/GC writes (Task 4) are out of scope here — their seams are
+left as no-op stubs so they can be wired without re-touching this
+file's plist/bootstrap mechanics.
 """
 
 from __future__ import annotations
 
+import os
+import plistlib
+import subprocess
 import sys
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 from pathlib import Path
 
+from cortex_command.overnight.scheduler.labels import mint_label
 from cortex_command.overnight.scheduler.protocol import (
     CancelResult,
     ScheduledHandle,
 )
 
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+# Maximum lookahead window for scheduled fires.
+_MAX_SCHEDULE_HORIZON = timedelta(days=7)
+
+# Environment variables snapshot (R15). PATH always; the rest only if
+# already set in the launching environment. HOME/USER/LOGNAME/TMPDIR are
+# intentionally NOT snapshotted — launchd inherits them from the
+# logged-in session per RQ3.
+_OPTIONAL_ENV_KEYS = (
+    "ANTHROPIC_API_KEY",
+    "CLAUDE_CODE_OAUTH_TOKEN",
+    "CORTEX_REPO_ROOT",
+    "CORTEX_WORKTREE_ROOT",
+)
+
+# Substring to look for in the post-bootstrap `launchctl print` output.
+_VERIFY_STATE_SUBSTRING = b"state = waiting"
+
+# Total wallclock budget for the post-bootstrap verify poll, in seconds.
+_VERIFY_POLL_BUDGET_SEC = 1.0
+_VERIFY_POLL_INTERVAL_SEC = 0.05
+
+
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+
+
+class PlistValidationError(Exception):
+    """Raised when the plist round-trip (``dumps`` then ``loads``) does not
+    match the original dict structure.
+
+    Attributes:
+        label: The launchd label whose plist failed validation.
+        key: The first key whose round-trip value diverged from the
+            original (or ``None`` if the divergence is structural rather
+            than per-key).
+    """
+
+    def __init__(self, label: str, key: str | None) -> None:
+        self.label = label
+        self.key = key
+        if key is None:
+            super().__init__(
+                f"plist round-trip mismatch for label {label!r}"
+            )
+        else:
+            super().__init__(
+                f"plist round-trip mismatch for label {label!r} at key {key!r}"
+            )
+
+
+class LaunchctlBootstrapError(Exception):
+    """Raised when ``launchctl bootstrap`` exits non-zero."""
+
+    def __init__(self, stderr: bytes | str, exit_code: int) -> None:
+        if isinstance(stderr, bytes):
+            stderr_text = stderr.decode("utf-8", errors="replace")
+        else:
+            stderr_text = stderr
+        self.stderr = stderr_text
+        self.exit_code = exit_code
+        super().__init__(
+            f"launchctl bootstrap failed (exit {exit_code}): {stderr_text}"
+        )
+
+
+class LaunchctlVerifyError(Exception):
+    """Raised when post-bootstrap ``launchctl print`` does not yield
+    ``state = waiting`` within the verify-poll budget.
+    """
+
+    def __init__(self, label: str) -> None:
+        self.label = label
+        super().__init__(
+            f"launchctl print did not report 'state = waiting' for "
+            f"label {label!r} within {_VERIFY_POLL_BUDGET_SEC:.2f}s"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Target-time parsing
+# ---------------------------------------------------------------------------
+
+
+def parse_target_time(
+    target: str,
+    now: datetime | None = None,
+) -> datetime:
+    """Resolve a user-supplied target time to a concrete ``datetime``.
+
+    Accepts two forms:
+        - ``HH:MM`` (24-hour local time). Resolved against today; rolls
+          to tomorrow if the resulting time is in the past.
+        - ``YYYY-MM-DDTHH:MM`` (ISO 8601 local time, no tz). Parsed via
+          :meth:`datetime.fromisoformat`.
+
+    Args:
+        target: Target-time string in one of the two accepted forms.
+        now: Optional reference "now" for deterministic tests.
+
+    Returns:
+        Naive local ``datetime`` representing the resolved fire time.
+
+    Raises:
+        ValueError: With one of the spec-mandated phrasings:
+            - ``"target time invalid: Feb 29 not in {year}"``
+            - ``"target time is in the past"``
+            - ``"target time is more than 7 days in the future"``
+            - ``"target time has invalid format ..."``
+    """
+    if now is None:
+        now = datetime.now()
+
+    target = target.strip()
+
+    if "T" in target:
+        # ISO 8601 path. datetime.fromisoformat raises ValueError for
+        # both unparseable strings AND invalid calendar dates (e.g.
+        # Feb 29 in a non-leap year). We need to distinguish the two
+        # so the Feb-29 error gets the spec's exact phrasing.
+        if _is_feb_29_in_non_leap_year(target):
+            year = _extract_year(target)
+            raise ValueError(
+                f"target time invalid: Feb 29 not in {year}"
+            )
+        try:
+            resolved = datetime.fromisoformat(target)
+        except ValueError as exc:
+            # Re-raise generic parse failures with a clearer prefix; the
+            # Feb-29 case is already handled above.
+            raise ValueError(
+                f"target time has invalid format ({target!r}): {exc}"
+            ) from exc
+    else:
+        # HH:MM path.
+        try:
+            hour_str, minute_str = target.split(":", 1)
+            hour = int(hour_str)
+            minute = int(minute_str)
+        except (ValueError, AttributeError) as exc:
+            raise ValueError(
+                f"target time has invalid format ({target!r}); "
+                f"expected HH:MM or YYYY-MM-DDTHH:MM"
+            ) from exc
+        resolved = now.replace(
+            hour=hour, minute=minute, second=0, microsecond=0
+        )
+        if resolved <= now:
+            resolved = resolved + timedelta(days=1)
+
+    if resolved <= now:
+        raise ValueError("target time is in the past")
+
+    if resolved - now > _MAX_SCHEDULE_HORIZON:
+        raise ValueError(
+            "target time is more than 7 days in the future"
+        )
+
+    return resolved
+
+
+def _is_feb_29_in_non_leap_year(target: str) -> bool:
+    """Return True if ``target`` looks like ``YYYY-02-29T...`` and ``YYYY``
+    is not a leap year. Pure-string check — does not call
+    :meth:`datetime.fromisoformat`.
+    """
+    # Expected shape: 'YYYY-02-29T...'
+    if len(target) < 10:
+        return False
+    if target[4:10] != "-02-29":
+        return False
+    try:
+        year = int(target[:4])
+    except ValueError:
+        return False
+    return not _is_leap_year(year)
+
+
+def _extract_year(target: str) -> int:
+    """Extract the year prefix from ``target``. Caller guarantees shape."""
+    return int(target[:4])
+
+
+def _is_leap_year(year: int) -> bool:
+    """Standard Gregorian leap-year rule."""
+    if year % 4 != 0:
+        return False
+    if year % 100 != 0:
+        return True
+    return year % 400 == 0
+
+
+# ---------------------------------------------------------------------------
+# Backend
+# ---------------------------------------------------------------------------
+
 
 class MacOSLaunchAgentBackend:
-    """launchd-backed scheduler. Filled in by Task 2."""
+    """launchd-backed scheduler for macOS.
+
+    Constructor takes no args; environment is snapshotted lazily inside
+    :meth:`schedule`.
+    """
+
+    # ------------------------------------------------------------------
+    # Public surface
+    # ------------------------------------------------------------------
 
     def schedule(
         self,
@@ -28,20 +248,373 @@ class MacOSLaunchAgentBackend:
         env: dict[str, str],
         repo_root: Path,
     ) -> ScheduledHandle:
-        raise NotImplementedError(
-            "MacOSLaunchAgentBackend.schedule() is implemented in Task 2"
+        """Schedule a one-shot launchd agent firing at ``target``.
+
+        See class docstring for the high-level flow. Sidecar writes,
+        plist GC, and launcher-script copying are wired in Tasks 3 & 4;
+        the corresponding seams are no-op stubs in this implementation.
+
+        Args:
+            target: Wall-clock fire time. Must be in the future.
+            session_id: Overnight session identifier.
+            env: Caller-supplied environment mapping. Used only to
+                provide a default if the process environment is missing
+                a key — the canonical snapshot is taken from
+                ``os.environ`` per R15.
+            repo_root: Absolute path to the repository the runner should
+                operate on.
+
+        Returns:
+            ScheduledHandle describing the scheduled job.
+        """
+        from cortex_command.overnight.state import session_dir
+
+        if target <= datetime.now():
+            raise ValueError("target time is in the past")
+        if target - datetime.now() > _MAX_SCHEDULE_HORIZON:
+            raise ValueError(
+                "target time is more than 7 days in the future"
+            )
+
+        plist_dir = self._plist_dir()
+        plist_dir.mkdir(parents=True, exist_ok=True)
+
+        # GC seam — Task 4 wires this. No-op here.
+        self._gc_pass()
+
+        sess_dir = session_dir(session_id)
+
+        env_snapshot = self._snapshot_env(env)
+
+        # Mint label and try to bootstrap; on collision retry once with
+        # epoch+1 (R6). After that, surface the collision.
+        label, plist_path, launcher_path = self._mint_and_install(
+            session_id=session_id,
+            target=target,
+            session_dir_=sess_dir,
+            env_snapshot=env_snapshot,
+            repo_root=repo_root,
+            plist_dir=plist_dir,
         )
 
+        # Sidecar seam — Task 4 wires this. No-op here.
+        created_at_iso = datetime.now().isoformat()
+        scheduled_for_iso = target.isoformat()
+        handle = ScheduledHandle(
+            label=label,
+            session_id=session_id,
+            plist_path=plist_path,
+            launcher_path=launcher_path,
+            scheduled_for_iso=scheduled_for_iso,
+            created_at_iso=created_at_iso,
+        )
+        self._write_sidecar_entry(handle)
+
+        return handle
+
     def cancel(self, label: str) -> CancelResult:
+        """Out of scope for Task 2 — implemented by Task 7."""
         raise NotImplementedError(
-            "MacOSLaunchAgentBackend.cancel() is implemented in Task 2"
+            "MacOSLaunchAgentBackend.cancel() is implemented in Task 7"
         )
 
     def list_active(self) -> list[ScheduledHandle]:
+        """Out of scope for Task 2 — implemented by Task 7."""
         raise NotImplementedError(
-            "MacOSLaunchAgentBackend.list_active() is implemented in Task 2"
+            "MacOSLaunchAgentBackend.list_active() is implemented in Task 7"
         )
 
     @staticmethod
     def is_supported() -> bool:
         return sys.platform == "darwin"
+
+    # ------------------------------------------------------------------
+    # Mint + install + bootstrap (with epoch+1 retry on collision)
+    # ------------------------------------------------------------------
+
+    def _mint_and_install(
+        self,
+        session_id: str,
+        target: datetime,
+        session_dir_: Path,
+        env_snapshot: dict[str, str],
+        repo_root: Path,
+        plist_dir: Path,
+    ) -> tuple[str, Path, Path]:
+        """Mint a label, render+validate the plist, install launcher,
+        bootstrap launchd, and verify registration.
+
+        On the first ``LaunchctlBootstrapError`` consistent with a label
+        collision (R6), retry once with ``epoch + 1``. On a second
+        collision, re-raise so the caller surfaces the failure.
+
+        Returns:
+            ``(label, plist_path, launcher_path)`` triple of the
+            successfully bootstrapped agent.
+        """
+        first_attempt_epoch: int | None = None
+        for attempt in (0, 1):
+            now_epoch = (
+                None
+                if attempt == 0
+                else (first_attempt_epoch or 0) + 1
+            )
+            label = mint_label(session_id, now_epoch=now_epoch)
+            if attempt == 0:
+                # Recover the epoch we just minted so the retry can
+                # increment by exactly one.
+                _, first_attempt_epoch = _split_label_epoch(label)
+
+            plist_path = plist_dir / f"{label}.plist"
+            launcher_path = plist_dir / f"launcher-{label}.sh"
+
+            self._install_launcher_script(
+                launcher_path=launcher_path,
+                plist_path=plist_path,
+                session_dir_=session_dir_,
+                label=label,
+                session_id=session_id,
+                repo_root=repo_root,
+            )
+
+            plist_bytes = self._render_and_validate_plist(
+                label=label,
+                target=target,
+                env_snapshot=env_snapshot,
+                launcher_path=launcher_path,
+                repo_root=repo_root,
+                session_dir_=session_dir_,
+            )
+            plist_path.write_bytes(plist_bytes)
+
+            try:
+                self._bootstrap_and_verify(plist_path, label)
+            except LaunchctlBootstrapError as exc:
+                # On collision-suspected failures, retry once with
+                # epoch+1. If we've already retried, surface.
+                if attempt == 1:
+                    if _is_label_collision(exc):
+                        raise LaunchctlBootstrapError(
+                            "label collision; retry in 1 second",
+                            exc.exit_code,
+                        ) from exc
+                    raise
+                if not _is_label_collision(exc):
+                    raise
+                # Cleanup pre-retry: remove the just-written plist and
+                # launcher so we can re-mint cleanly.
+                plist_path.unlink(missing_ok=True)
+                launcher_path.unlink(missing_ok=True)
+                continue
+            else:
+                return label, plist_path, launcher_path
+
+        # Unreachable: the loop returns on success or raises on second
+        # failure. Defensive raise satisfies type-checkers.
+        raise RuntimeError(
+            "unreachable: _mint_and_install loop exited without return"
+        )
+
+    # ------------------------------------------------------------------
+    # Plist render + round-trip validation
+    # ------------------------------------------------------------------
+
+    def _render_and_validate_plist(
+        self,
+        label: str,
+        target: datetime,
+        env_snapshot: dict[str, str],
+        launcher_path: Path,
+        repo_root: Path,
+        session_dir_: Path,
+    ) -> bytes:
+        """Build the plist dict, dump to bytes, round-trip-validate."""
+        plist_dict = self._build_plist_dict(
+            label=label,
+            target=target,
+            env_snapshot=env_snapshot,
+            launcher_path=launcher_path,
+            repo_root=repo_root,
+            session_dir_=session_dir_,
+        )
+        rendered = plistlib.dumps(plist_dict)
+        roundtrip = plistlib.loads(rendered)
+        if roundtrip != plist_dict:
+            # Identify the first divergent top-level key to populate the
+            # exception. plistlib's ordering is preserved, so we can
+            # iterate the original.
+            divergent_key: str | None = None
+            for key in plist_dict:
+                if key not in roundtrip or roundtrip[key] != plist_dict[key]:
+                    divergent_key = key
+                    break
+            raise PlistValidationError(label, divergent_key)
+        return rendered
+
+    @staticmethod
+    def _build_plist_dict(
+        label: str,
+        target: datetime,
+        env_snapshot: dict[str, str],
+        launcher_path: Path,
+        repo_root: Path,
+        session_dir_: Path,
+    ) -> dict:
+        """Construct the plist dict per the spec (R6 / R7 / R15)."""
+        return {
+            "Label": label,
+            "ProgramArguments": [
+                str(launcher_path),
+                str(repo_root),
+                label,
+            ],
+            "RunAtLoad": False,
+            "StartCalendarInterval": {
+                "Year": target.year,
+                "Month": target.month,
+                "Day": target.day,
+                "Hour": target.hour,
+                "Minute": target.minute,
+            },
+            "EnvironmentVariables": dict(env_snapshot),
+            "StandardOutPath": str(session_dir_ / "launchd-stdout.log"),
+            "StandardErrorPath": str(session_dir_ / "launchd-stderr.log"),
+        }
+
+    # ------------------------------------------------------------------
+    # Env snapshot
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _snapshot_env(caller_env: dict[str, str]) -> dict[str, str]:
+        """Snapshot the schedule-time env per R15.
+
+        Always includes ``PATH`` (preferring the process environment but
+        falling back to the caller-supplied dict). Optional keys
+        (``ANTHROPIC_API_KEY``, ``CLAUDE_CODE_OAUTH_TOKEN``,
+        ``CORTEX_REPO_ROOT``, ``CORTEX_WORKTREE_ROOT``) are included only
+        when set in the process environment. ``HOME``/``USER``/
+        ``LOGNAME``/``TMPDIR`` are NOT included — launchd inherits them.
+        """
+        snapshot: dict[str, str] = {}
+        path_value = os.environ.get("PATH") or caller_env.get("PATH")
+        if path_value is not None:
+            snapshot["PATH"] = path_value
+        for key in _OPTIONAL_ENV_KEYS:
+            value = os.environ.get(key)
+            if value is not None:
+                snapshot[key] = value
+        return snapshot
+
+    # ------------------------------------------------------------------
+    # launchctl bootstrap + verify
+    # ------------------------------------------------------------------
+
+    def _bootstrap_and_verify(
+        self,
+        plist_path: Path,
+        label: str,
+    ) -> None:
+        """Run ``launchctl bootstrap`` then verify with ``launchctl print``.
+
+        Raises:
+            LaunchctlBootstrapError: bootstrap returned non-zero.
+            LaunchctlVerifyError: bootstrap succeeded but the registered
+                job did not appear with ``state = waiting`` within the
+                verify-poll budget.
+        """
+        uid = os.getuid()
+        result = subprocess.run(
+            ["launchctl", "bootstrap", f"gui/{uid}", str(plist_path)],
+            capture_output=True,
+        )
+        if result.returncode != 0:
+            raise LaunchctlBootstrapError(
+                result.stderr, result.returncode
+            )
+
+        # Poll launchctl print up to the budget for the state substring.
+        deadline = time.monotonic() + _VERIFY_POLL_BUDGET_SEC
+        while True:
+            print_result = subprocess.run(
+                ["launchctl", "print", f"gui/{uid}/{label}"],
+                capture_output=True,
+            )
+            if (
+                print_result.returncode == 0
+                and _VERIFY_STATE_SUBSTRING in print_result.stdout
+            ):
+                return
+            if time.monotonic() >= deadline:
+                raise LaunchctlVerifyError(label)
+            time.sleep(_VERIFY_POLL_INTERVAL_SEC)
+
+    # ------------------------------------------------------------------
+    # Seams filled by Tasks 3 & 4
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _plist_dir() -> Path:
+        """Resolve ``$TMPDIR/cortex-overnight-launch/``."""
+        tmpdir = os.environ.get("TMPDIR") or "/tmp"
+        return Path(tmpdir) / "cortex-overnight-launch"
+
+    def _install_launcher_script(
+        self,
+        launcher_path: Path,
+        plist_path: Path,
+        session_dir_: Path,
+        label: str,
+        session_id: str,
+        repo_root: Path,
+    ) -> None:
+        """Stub seam — Task 3 fills this in.
+
+        For Task 2 we still need a launcher path on disk so the plist's
+        ``ProgramArguments[0]`` references a real file (some launchd
+        validators check existence). Touching the file with mode 0o755
+        is enough for Task 2's plist/bootstrap mechanics; Task 3
+        replaces this with a templated bash script.
+        """
+        launcher_path.parent.mkdir(parents=True, exist_ok=True)
+        launcher_path.touch()
+        try:
+            launcher_path.chmod(0o755)
+        except OSError:
+            pass
+
+    def _write_sidecar_entry(self, handle: ScheduledHandle) -> None:
+        """Stub seam — Task 4 fills this in."""
+        return None
+
+    def _gc_pass(self) -> int:
+        """Stub seam — Task 4 fills this in. Returns count of removed files."""
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# Module-private helpers
+# ---------------------------------------------------------------------------
+
+
+def _split_label_epoch(label: str) -> tuple[str, int]:
+    """Local helper that wraps :func:`labels.parse_label` without the
+    full validation surface; used by :meth:`_mint_and_install`'s
+    epoch+1 retry path.
+    """
+    from cortex_command.overnight.scheduler.labels import parse_label
+
+    return parse_label(label)
+
+
+def _is_label_collision(exc: LaunchctlBootstrapError) -> bool:
+    """Heuristic: launchctl returns a stderr message mentioning
+    "already loaded" / "already exists" on a label collision. Treat any
+    such message as a collision so the epoch+1 retry path engages.
+    """
+    msg = (exc.stderr or "").lower()
+    return (
+        "already loaded" in msg
+        or "already exists" in msg
+        or "service already loaded" in msg
+    )
