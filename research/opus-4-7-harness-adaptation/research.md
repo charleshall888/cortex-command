@@ -192,7 +192,7 @@ The 4.5→4.6 migration plugin shipped a tabular rewrite reference at `github.co
 - **Options**: (a) Full harness re-think per original topic framing, (b) Prompt-delta audit + capability adoption only, (c) Wait-and-see — let observed failures surface then fix reactively.
 - **Recommendation**: **(b) Prompt-delta audit + capability adoption.** (a) is scope creep; (c) is defensible (user's "Prefer minimal fixes" preference) but 3 in-flight tickets responding to observed 4.7 failures (#067, #068, #069) already indicate a small proactive sweep pays for itself.
 - **Provisional on OQ5**: Q3 found that `claude/reference/*.md` files are globally loaded and carry more weight than initially assumed. OQ5 flags that 4.7 may change conditional-loading semantics for these files. If OQ5 resolves unfavorably, "prompts" scope expands to include conditional-loading mechanics and reference-file surface, not just SKILL.md files. Keep DR-1 firm for SKILL.md + reference-file audit; revisit if OQ5 shifts the target.
-- **Trade-offs**: We may miss non-prompt regressions (e.g., if 4.7's rate-limit signature differs from 4.6 and our adaptive throttler mis-classifies). Mitigation: monitor `throttle_backoff` event rates post-migration for one week.
+- **Trade-offs**: We may miss non-prompt regressions (e.g., if 4.7's rate-limit signature differs from 4.6 and our adaptive throttler mis-classifies). Mitigation: monitor `api_rate_limit` event rates in `pipeline-events.log` post-migration for one week.
 
 ### DR-2: Skills to audit
 
