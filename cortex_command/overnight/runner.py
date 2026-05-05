@@ -47,6 +47,7 @@ from cortex_command.overnight import ipc
 from cortex_command.overnight import map_results
 from cortex_command.overnight import plan
 from cortex_command.overnight import report
+from cortex_command.overnight import sandbox_settings
 from cortex_command.overnight import smoke_test
 from cortex_command.overnight import state as state_module
 from cortex_command.overnight.batch_runner import main as batch_runner_main  # noqa: F401  (R5: in-process import list)
@@ -932,6 +933,8 @@ def _spawn_orchestrator(
     coord: RunnerCoordination,
     spawned_procs: list[tuple[subprocess.Popen, str]],
     stdout_path: Path,
+    state: state_module.OvernightState,
+    session_dir: Path,
 ) -> tuple[subprocess.Popen, WatchdogContext, WatchdogThread]:
     """Spawn the per-round ``claude -p`` orchestrator with a watchdog.
 
@@ -940,7 +943,39 @@ def _spawn_orchestrator(
     can close it after ``_poll_subprocess`` returns; redirecting to a
     file (not an OS pipe) sidesteps the buffer-fill deadlock on long
     sessions whose envelope exceeds ~64 KB.
+
+    Per-spawn sandbox enforcement (spec Req 1, Req 2): construct the
+    documented ``sandbox.filesystem.{denyWrite,allowWrite}`` JSON shape via
+    the ``sandbox_settings`` layer, write it to a per-spawn tempfile under
+    ``<session_dir>/sandbox-settings/``, register an atexit cleanup, and
+    pass ``--settings <tempfile-path>`` in the orchestrator argv. The
+    ``CORTEX_SANDBOX_SOFT_FAIL`` env var (Req 4) is read at this call;
+    when truthy, ``failIfUnavailable`` downgrades to ``false`` and a
+    ``sandbox_soft_fail_active`` event is recorded on the session
+    events.log.
     """
+    sandbox_settings.emit_linux_warning_if_needed()
+
+    home_repo = (
+        Path(state.project_root) if state.project_root else Path.cwd()
+    )
+    deny_paths = sandbox_settings.build_orchestrator_deny_paths(
+        home_repo=home_repo,
+        integration_worktrees=state.integration_worktrees,
+    )
+    soft_fail = sandbox_settings.read_soft_fail_env()
+    settings = sandbox_settings.build_sandbox_settings_dict(
+        deny_paths=deny_paths,
+        allow_paths=[],
+        soft_fail=soft_fail,
+    )
+    tempfile_path = sandbox_settings.write_settings_tempfile(
+        session_dir, settings
+    )
+    sandbox_settings.register_atexit_cleanup(tempfile_path)
+    if soft_fail:
+        sandbox_settings.record_soft_fail_event(session_dir)
+
     claude_path = "claude"
     stdout_handle = open(stdout_path, "wb")
     proc = subprocess.Popen(
@@ -948,6 +983,8 @@ def _spawn_orchestrator(
             claude_path,
             "-p",
             filled_prompt,
+            "--settings",
+            str(tempfile_path),
             "--dangerously-skip-permissions",
             "--max-turns",
             str(ORCHESTRATOR_MAX_TURNS),
@@ -1860,6 +1897,14 @@ def run(
     state = state_module.load_state(state_path)
     session_id = state.session_id
 
+    # Per-spawn sandbox tempfile cleanup (spec Req 11): startup-scan removes
+    # stale ``cortex-sandbox-*.json`` tempfiles older than runner-start
+    # timestamp. Handles SIGKILL / OOM / kernel-panic crash paths that bypass
+    # ``atexit``.
+    sandbox_settings.cleanup_stale_tempfiles(
+        session_dir, runner_start_ts=time.time()
+    )
+
     # Dry-run concurrent-start guard. The non-dry-run path takes the
     # locked, authoritative check inside ``_start_session`` (which
     # propagates the held FD into ``write_runner_pid``). Dry-run skips
@@ -2105,6 +2150,8 @@ def run(
                     coord=coord,
                     spawned_procs=spawned_procs,
                     stdout_path=orchestrator_stdout_path,
+                    state=state,
+                    session_dir=session_dir,
                 )
                 exit_code = _poll_subprocess(o_proc, coord)
 
