@@ -322,10 +322,6 @@ validate-skills:
 validate-skill-preconditions skill:
     python3 scripts/validate-preconditions.py {{skill}}
 
-# Validate spec.md structural compliance (pre-flight before orchestrator review)
-validate-spec *args:
-    python3 bin/cortex-validate-spec {{args}}
-
 # Check SKILL.md-to-bin parity (per DR-5 / lifecycle 102)
 check-parity *args:
     python3 bin/cortex-check-parity {{args}}
