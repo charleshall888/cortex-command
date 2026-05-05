@@ -1,5 +1,7 @@
 [← Back to README](../README.md)
 
+For full skill descriptions and trigger details, see [skills-reference.md](skills-reference.md).
+
 # Agentic Layer
 
 **For:** Existing users, contributors, or anyone building on or tuning this skill system.  **Assumes:** Basic familiarity with the repo and Claude Code.
@@ -14,54 +16,7 @@ This document is a reference for the full skill inventory, the main workflow dia
 
 Skill count current as of this writing. `skills/` is the authoritative source — run `ls skills/` for the live list.
 
-### Development Workflow
-
-| Skill | Purpose | Triggers | Produces | Agent support |
-|-------|---------|----------|----------|---------------|
-| **dev** | Routing hub for all development requests | `/cortex-core:dev`, "what should I work on", "next task" | Routes based on request classification: vague/uncertain → `/cortex-core:discovery`; single concrete feature → `/cortex-core:lifecycle`; multi-feature or batch → `/pipeline`; trivial single-file change → direct implementation; no request → backlog triage | All agents |
-| **lifecycle** | Structured feature development lifecycle | `/cortex-core:lifecycle <feature>` | `lifecycle/{feature}/*.md` + `events.log` | Claude only |
-| **refine** | Prepare a backlog item for overnight (Clarify → Research → Spec) | `/cortex-core:refine <item>` | `lifecycle/{slug}/research.md`, `lifecycle/{slug}/spec.md`, backlog `status: refined` | Claude only |
-| **overnight** | Autonomous overnight session planning | `/overnight`, `/overnight resume` | `overnight-plan.md`, `overnight-state.json` | Claude only |
-| **morning-review** | Walk overnight report, close lifecycles | `/morning-review` | events.log updates, backlog closures | Claude only |
-| **discovery** | Deep research → backlog decomposition | `/cortex-core:discovery <topic>` | `lifecycle-research/{topic}/*.md` + backlog tickets | All agents |
-| **backlog** | Manage file-based backlog items | `/cortex-core:backlog add/list/pick/archive` | `backlog/NNN-slug.md` YAML frontmatter files | All agents |
-| **research** | Parallel research orchestrator; dispatches 3–5 agents across independent angles and synthesizes findings | `/cortex-core:research topic="..." [lifecycle-slug=...]` | `lifecycle/{slug}/research.md` or conversation output | Claude only |
-
-### Code Quality
-
-| Skill | Purpose | Triggers | Produces | Agent support |
-|-------|---------|----------|----------|---------------|
-| **commit** | Create well-formatted git commits | `/cortex-core:commit`, "commit these changes" | Git commit (signed) | All agents |
-| **pr** | Create GitHub pull requests | `/cortex-core:pr`, "create a pr" | GitHub PR via `gh pr create` | All agents |
-
-> **Note:** `pr-review` ships as the `cortex-pr-review` plugin in the `cortex-command` marketplace. Install via `/plugin install cortex-pr-review@cortex-command`; see [docs/setup.md](setup.md) for the full install walkthrough.
-
-### Thinking Tools
-
-| Skill | Purpose | Triggers | Produces | Agent support |
-|-------|---------|----------|----------|---------------|
-| **critical-review** | Adversarial review from fresh agent | "pressure test this", "adversarial review" | Fresh agent critique (conversational) | Claude only |
-| **requirements** | Gather project/area-level requirements | `/cortex-core:requirements`, `/cortex-core:requirements <area>` | `requirements/project.md`, `requirements/{area}.md` | All agents |
-
-### Session Management
-
-| Skill | Purpose | Triggers | Produces | Agent support |
-|-------|---------|----------|----------|---------------|
-| **fresh** | Capture session state as resume prompt | `/cortex-core:fresh`, "context is full" | Resume prompt (user copies/pastes) | All agents |
-| **retro** | Write session problem log | `/cortex-core:retro`, `/cortex-core:retro <tag>` | `retros/YYYY-MM-DD-HHmm(-tag)?.md` | All agents |
-| **evolve** | Identify retro trends, route to improvements | `/cortex-core:evolve`, `/cortex-core:evolve N` | Routes to /cortex-core:discovery, /cortex-core:lifecycle, /cortex-core:backlog; `retros/.evolve-state.json` | All agents |
-
-### UI Design Enforcement
-
-Several optional skills ship as plugins in the `cortex-command` marketplace: `cortex-ui-extras` (UI skills) and `cortex-pr-review` (`pr-review`). Install via `/plugin install cortex-ui-extras@cortex-command` (or `cortex-pr-review@cortex-command`); see [docs/setup.md](setup.md) for the full walkthrough.
-
-### Utilities
-
-| Skill | Purpose | Triggers | Produces | Agent support |
-|-------|---------|----------|----------|---------------|
-| **diagnose** | Systematic 4-phase debugging for skills, hooks, lifecycle, and overnight runner issues | `/cortex-core:diagnose`, "debug this", "why is this failing", "investigate this error" | Root cause analysis + fix + verification | Claude only |
-
-> **Note on `pipeline`:** `pipeline` is not a user-facing skill and has no entry in `skills/`. It is an internal Python orchestration module (`cortex_command/pipeline/`, `cortex_command/overnight/`) invoked automatically by `/overnight` to manage multi-feature batch execution. Use `/overnight` to trigger pipeline behavior; do not invoke `pipeline` directly.
+For the full skill inventory and per-skill trigger details, see [skills-reference.md](skills-reference.md).
 
 ---
 

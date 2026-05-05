@@ -9,6 +9,8 @@ A grouped inventory of the skills in this repo. Each entry shows what the skill 
 
 See also [Optional Plugins](#optional-plugins) below for UI skills and `pr-review`, which ship as separate plugins in the `cortex-command` marketplace.
 
+> **Note on `pipeline`:** `pipeline` is not a user-facing skill and has no entry in `skills/`. It is an internal Python orchestration module (`cortex_command/pipeline/`, `cortex_command/overnight/`) invoked automatically by `/overnight` to manage multi-feature batch execution. Use `/overnight` to trigger pipeline behavior; do not invoke `pipeline` directly. For internals, see [docs/internals/pipeline.md](internals/pipeline.md).
+
 ---
 
 ## Development Workflow
