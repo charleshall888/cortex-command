@@ -1110,6 +1110,369 @@ def _read_last_exit_code(log_file: Path) -> str:
     return "unknown"
 
 
+# ---------------------------------------------------------------------------
+# Sandbox-denial classifier (spec R3)
+# ---------------------------------------------------------------------------
+
+# Plumbing-tool prefix words used by Layer 2/3 of the classifier.  Per spec R3,
+# this is a closed enumeration; tools NOT in this set with EPERM stderr fall
+# through to ``unclassified_eperm`` (likely non-sandbox: chmod / ACL / EROFS).
+PLUMBING_TOOLS = {"git", "gh", "npm", "pnpm", "yarn", "cargo", "hg", "jj"}
+
+
+# Known-plumbing-write-target subcommand → repo-relative target suffixes.
+# Each entry maps a tuple of leading words (after optional ``cd`` prefix
+# stripping) to a list of target-suffix templates resolved against the
+# inferred repo dir.  ``{HEAD}`` is a placeholder for the current branch
+# name (we do not parse that from disk; we substitute ``*`` so the union
+# match treats any ``refs/heads/<name>`` entry as a candidate).  Templates
+# starting with ``refs/remotes/`` similarly use ``*`` for unknown remote/
+# branch fields when the command does not provide them.
+#
+# Per spec R3 enumeration:
+#   git commit (and --amend, merge, rebase, reset) → refs/heads/<HEAD>,
+#       HEAD, packed-refs, index
+#   git push <remote> <branch>                       → refs/remotes/<remote>/<branch>,
+#                                                      packed-refs
+#   git tag <name>                                   → refs/tags/<name>
+#   git fetch                                        → refs/remotes/..., FETCH_HEAD
+_GIT_COMMIT_TARGETS = (
+    ".git/refs/heads/*",
+    ".git/HEAD",
+    ".git/packed-refs",
+    ".git/index",
+)
+
+
+def collect_sandbox_denials(session_id: str) -> dict[str, int]:
+    """Classify per-session Bash sandbox denials into closed-enum categories.
+
+    Reads ``lifecycle/sessions/<session_id>/tool-failures/bash.log`` (the
+    tracker's per-session bash failure log, with ``command:`` and ``stderr:``
+    fields per spec R3a) and the union of ``lifecycle/sessions/<session_id>/
+    sandbox-deny-lists/*.json`` sidecar deny-lists (per spec R2).  Filters to
+    failures whose stderr contains ``Operation not permitted`` and runs the
+    four-layer classifier:
+
+    - L1 (shell redirection): ``>file``, ``>>file``, ``tee file``,
+      ``echo … > file``, ``cat … > file`` candidate targets.
+    - L2 (plumbing-tool subcommand mapping): leading word in
+      :data:`PLUMBING_TOOLS` and subcommand in the known mapping → generate
+      candidate targets relative to the ``cd`` arg or known repo paths.
+    - L3 (plumbing fallthrough): leading word in :data:`PLUMBING_TOOLS` but
+      no specific subcommand match → ``plumbing_eperm``.
+    - L4 (other fallthrough): no plumbing leader → ``unclassified_eperm``.
+
+    L1/L2 candidate targets are looked up against the union of sidecar
+    ``deny_paths`` and classified by path-pattern (home_repo_*, cross_repo_*,
+    or other_deny_path).  Home/cross repo roots are inferred at classification
+    time from ``lifecycle/overnight-state.json``: home is ``state.project_root``
+    and cross is the set of distinct non-home ``feature.repo_path`` values.
+
+    The entire body is wrapped in a top-level exception envelope that returns
+    ``{}`` on any error (mirrors the existing ``collect_tool_failures``
+    precedent), so a single malformed sidecar or bash.log does not crash the
+    morning report.
+
+    Args:
+        session_id: The overnight session identifier
+            (``overnight-YYYY-MM-DD-HHMM``).
+
+    Returns:
+        Dict mapping category → count.  Categories (closed list per spec):
+        ``home_repo_refs``, ``cross_repo_refs``, ``home_repo_head``,
+        ``home_repo_packed_refs``, ``cross_repo_head``,
+        ``cross_repo_packed_refs``, ``other_deny_path``, ``plumbing_eperm``,
+        ``unclassified_eperm``.  Returns ``{}`` if the session directory is
+        absent, the bash log is missing, or any unhandled error occurs.
+    """
+    try:
+        import yaml  # local import; yaml is already an indirect dep
+
+        session_root = Path(f"lifecycle/sessions/{session_id}")
+        bash_log = session_root / "tool-failures" / "bash.log"
+        sidecar_dir = session_root / "sandbox-deny-lists"
+
+        if not bash_log.is_file():
+            return {}
+
+        # --- Build the union of sidecar deny_paths (per-spawn JSONs). ----
+        deny_union: set[str] = set()
+        if sidecar_dir.is_dir():
+            for sidecar in sorted(sidecar_dir.glob("*.json")):
+                try:
+                    sidecar_data = json.loads(sidecar.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as exc:
+                    print(
+                        f"collect_sandbox_denials: skipping malformed sidecar "
+                        f"{sidecar}: {exc}",
+                        file=sys.stderr,
+                    )
+                    continue
+                deny_paths = (
+                    sidecar_data.get("deny_paths")
+                    if isinstance(sidecar_data, dict)
+                    else None
+                )
+                # Reader-side mirror of T4/T5 writer-side guard.
+                if not (
+                    isinstance(deny_paths, list)
+                    and all(isinstance(p, str) for p in deny_paths)
+                ):
+                    print(
+                        f"collect_sandbox_denials: skipping sidecar {sidecar} "
+                        f"with invalid deny_paths shape",
+                        file=sys.stderr,
+                    )
+                    continue
+                deny_union.update(deny_paths)
+
+        # --- Resolve home/cross repo roots from overnight-state.json. ----
+        home_repo_root: Optional[str] = None
+        cross_repo_roots: list[str] = []
+        try:
+            state = load_state()
+            home_repo_root = state.project_root
+            cross_repo_roots = sorted({
+                feat.repo_path
+                for feat in state.features.values()
+                if feat.repo_path is not None
+                and feat.repo_path != state.project_root
+            })
+        except Exception as exc:
+            print(
+                f"collect_sandbox_denials: unable to load overnight state "
+                f"for {session_id}: {exc}; home/cross classification will "
+                f"collapse to other_deny_path",
+                file=sys.stderr,
+            )
+
+        # --- Iterate failure entries and classify. -----------------------
+        counts: dict[str, int] = {}
+        text = bash_log.read_text(encoding="utf-8")
+        for doc in yaml.safe_load_all(text):
+            # Per-entry shape guard (spec): skip non-dict YAML docs.
+            if not isinstance(doc, dict):
+                continue
+            stderr_blob = doc.get("stderr") or ""
+            if not isinstance(stderr_blob, str):
+                continue
+            if "Operation not permitted" not in stderr_blob:
+                continue
+            command = doc.get("command") or ""
+            if not isinstance(command, str):
+                continue
+
+            category = _classify_sandbox_denial(
+                command=command,
+                deny_union=deny_union,
+                home_repo_root=home_repo_root,
+                cross_repo_roots=cross_repo_roots,
+            )
+            counts[category] = counts.get(category, 0) + 1
+
+        return counts
+    except Exception as exc:  # noqa: BLE001 - documented top-level envelope
+        print(
+            f"collect_sandbox_denials: unhandled error for session "
+            f"{session_id}: {exc}; returning empty dict",
+            file=sys.stderr,
+        )
+        return {}
+
+
+def _strip_cd_prefix(command: str) -> tuple[Optional[str], str]:
+    """Strip an optional ``cd <dir> && …`` prefix.
+
+    Returns ``(cd_dir, remainder)`` where ``cd_dir`` is the argument to
+    ``cd`` (or ``None`` if no prefix was present) and ``remainder`` is the
+    command following ``&&``.  When no ``cd`` prefix is present, returns
+    ``(None, command)``.
+    """
+    # Match: cd <dir> && rest  (allow leading whitespace and quoted dir)
+    m = re.match(r"\s*cd\s+(\"[^\"]+\"|'[^']+'|\S+)\s*&&\s*(.+)", command, re.DOTALL)
+    if not m:
+        return None, command
+    cd_dir = m.group(1).strip().strip("\"'")
+    return cd_dir, m.group(2)
+
+
+def _extract_redirect_targets(command: str) -> list[str]:
+    """Extract candidate redirect targets from a command (Layer 1).
+
+    Recognizes ``>file``, ``>>file``, ``tee file``, ``tee -a file`` forms
+    and returns a list of target tokens (paths as written, before any
+    repo-dir resolution).  Uses a focused tokenizer rather than a full Bash
+    parser (per spec).
+    """
+    targets: list[str] = []
+    # > file or >> file (allow optional whitespace, capture next token)
+    for m in re.finditer(r">>?\s*(\"[^\"]+\"|'[^']+'|[^\s|;&<>]+)", command):
+        token = m.group(1).strip().strip("\"'")
+        # Skip stderr-redirect tokens like &1 / &2.
+        if token.startswith("&"):
+            continue
+        targets.append(token)
+    # tee [-a] file
+    for m in re.finditer(r"\btee\s+(?:-a\s+)?(\"[^\"]+\"|'[^']+'|\S+)", command):
+        token = m.group(1).strip().strip("\"'")
+        targets.append(token)
+    return targets
+
+
+def _resolve_target(repo_dir: Optional[str], target: str) -> str:
+    """Resolve a candidate target relative to a repo dir, if not absolute."""
+    if os.path.isabs(target):
+        return target
+    if repo_dir:
+        return os.path.normpath(os.path.join(repo_dir, target))
+    return target
+
+
+def _layer2_git_targets(repo_dir: Optional[str], remainder: str) -> Optional[list[str]]:
+    """Return Layer-2 candidate targets for known ``git`` subcommands.
+
+    Returns ``None`` if the subcommand is not in the known mapping (caller
+    should fall through to Layer 3 ``plumbing_eperm``).
+    """
+    tokens = remainder.strip().split()
+    if not tokens or tokens[0] != "git":
+        return None
+    if len(tokens) < 2:
+        return None
+    sub = tokens[1]
+    targets: list[str] = []
+    if sub in {"commit", "merge", "rebase", "reset"}:
+        targets = list(_GIT_COMMIT_TARGETS)
+    elif sub == "push":
+        # git push <remote> <branch>
+        remote = tokens[2] if len(tokens) >= 3 else "*"
+        branch = tokens[3] if len(tokens) >= 4 else "*"
+        # Skip flag-style positional args.
+        if remote.startswith("-"):
+            remote = "*"
+        if branch.startswith("-"):
+            branch = "*"
+        targets = [
+            f".git/refs/remotes/{remote}/{branch}",
+            ".git/packed-refs",
+        ]
+    elif sub == "tag":
+        name = tokens[2] if len(tokens) >= 3 else "*"
+        if name.startswith("-"):
+            name = "*"
+        targets = [f".git/refs/tags/{name}"]
+    elif sub == "fetch":
+        targets = [
+            ".git/refs/remotes/*",
+            ".git/FETCH_HEAD",
+        ]
+    else:
+        return None
+    return [_resolve_target(repo_dir, t) for t in targets]
+
+
+def _path_pattern_classify(
+    path: str,
+    home_repo_root: Optional[str],
+    cross_repo_roots: list[str],
+) -> str:
+    """Classify a deny-list-matched path into a closed-enum category."""
+
+    def _match(root: str, path: str, kind: str) -> Optional[str]:
+        # Normalize both for fair comparison.
+        root_n = os.path.normpath(root)
+        # ``.git/HEAD`` exact (one path) vs ``.git/refs/heads/*`` (any ref).
+        head = os.path.join(root_n, ".git", "HEAD")
+        packed = os.path.join(root_n, ".git", "packed-refs")
+        refs_prefix = os.path.join(root_n, ".git", "refs", "heads") + os.sep
+        if path == head:
+            return f"{kind}_head"
+        if path == packed:
+            return f"{kind}_packed_refs"
+        if path.startswith(refs_prefix):
+            return f"{kind}_refs"
+        return None
+
+    if home_repo_root:
+        cat = _match(home_repo_root, path, "home_repo")
+        if cat is not None:
+            return cat
+    for cross in cross_repo_roots:
+        cat = _match(cross, path, "cross_repo")
+        if cat is not None:
+            return cat
+    return "other_deny_path"
+
+
+def _glob_match_in_union(candidate: str, deny_union: set[str]) -> Optional[str]:
+    """Match a candidate target against the deny-list union.
+
+    Supports ``*`` wildcards in the candidate (Layer 2 emits ``*`` for
+    unknown ref/remote/branch fields).  Returns the matched deny-list path,
+    or ``None`` if no entry matches.
+    """
+    if "*" not in candidate:
+        if candidate in deny_union:
+            return candidate
+        return None
+    # Translate the candidate to a regex (only ``*`` needs escaping).
+    parts = candidate.split("*")
+    pattern = ".*".join(re.escape(p) for p in parts)
+    rx = re.compile("^" + pattern + "$")
+    for entry in deny_union:
+        if rx.match(entry):
+            return entry
+    return None
+
+
+def _classify_sandbox_denial(
+    command: str,
+    deny_union: set[str],
+    home_repo_root: Optional[str],
+    cross_repo_roots: list[str],
+) -> str:
+    """Run the four-layer classifier on a single denied command."""
+    cd_dir, remainder = _strip_cd_prefix(command)
+    repo_dir = cd_dir  # may be None
+
+    # Layer 1 — shell redirection.
+    redirect_targets = _extract_redirect_targets(remainder)
+    if redirect_targets:
+        for tgt in redirect_targets:
+            resolved = _resolve_target(repo_dir, tgt)
+            matched = _glob_match_in_union(resolved, deny_union)
+            if matched is not None:
+                return _path_pattern_classify(
+                    matched, home_repo_root, cross_repo_roots
+                )
+        # L1 produced candidates but none matched the deny-list — fall
+        # through to L3/L4 below per spec ("If Layer 1 or Layer 2 produced
+        # a candidate target but the deny-list lookup did NOT match, fall
+        # through to the Layer 3/4 buckets above.").
+
+    # Determine leading command word (after optional cd prefix).
+    leading_match = re.match(r"\s*(\S+)", remainder)
+    leading = leading_match.group(1) if leading_match else ""
+
+    # Layer 2 — plumbing-tool subcommand mapping (currently ``git`` only).
+    if leading in PLUMBING_TOOLS:
+        l2_targets = _layer2_git_targets(repo_dir, remainder)
+        if l2_targets is not None:
+            for tgt in l2_targets:
+                matched = _glob_match_in_union(tgt, deny_union)
+                if matched is not None:
+                    return _path_pattern_classify(
+                        matched, home_repo_root, cross_repo_roots
+                    )
+            # L2 produced candidates but none matched — fall through to L3.
+        # Layer 3 — plumbing fallback.
+        return "plumbing_eperm"
+
+    # Layer 4 — other fallthrough.
+    return "unclassified_eperm"
+
+
 def render_scheduled_fire_failures(data: ReportData) -> str:
     """Render the scheduled-fire failures section (spec §R13).
 
