@@ -1,0 +1,56 @@
+{"ts": "2026-05-05T19:45:38.875056Z", "event": "discovery_reference", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements", "epic_research": "research/repo-spring-cleaning/research.md", "epic_spec": null}
+- ts: 2026-05-05T16:00:00Z
+  event: clarify_critic
+  feature: delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements
+  parent_epic_loaded: true
+  findings:
+    - text: "The HIGH intent clarity rating treats 'each item is citation-backed' as evidence of unambiguous goal, but the ticket contains five investigate-then-decide items and an explicit DR-4 either/or branch ('either retire the requirements line in the same commit, or keep cortex-output-filter.sh + output-filters.conf and only delete cortex-sync-permissions.py') that the assessment's clarified intent ('delete a defined list of post-shift orphans... and retire the paired requirement') asserts a single outcome for."
+      origin: primary
+    - text: "The assessment classifies complexity as 'complex' while the ticket's own frontmatter declares complexity: standard — a direct contradiction the assessment did not acknowledge."
+      origin: primary
+    - text: "Scope boundedness rated HIGH on enumerated paths, but the ticket's title scopes to 'code/scripts/hooks' while the body extends to .gitignore lines, pyproject.toml [tool.pytest.ini_options].testpaths additions, an .mcp.json playwright entry decision, sync-allowlist.conf line removal, a CHANGELOG advisory, and a paired user-global advisory — the title and parent-epic summary do not include these config-hygiene additions."
+      origin: primary
+    - text: "Requirements alignment rated HIGH on the basis that the ticket aligns with requirements/project.md:36 by mandating a paired retire-or-keep decision, but the retire branch deletes a stated Quality Attribute (Context efficiency) without a cited approval from the requirements owner — the ticket asserts this is permissible, framing a unilateral spec change as alignment."
+      origin: primary
+    - text: "Requirements alignment is also claimed via requirements/project.md:27 SKILL.md-to-bin parity by 'surfacing the bin/cortex-validate-spec allowlist-vs-delete decision,' but the ticket leaves the decision unresolved in the investigate-then-decide bucket — surfacing a decision is not alignment with a requirement that calls drift 'a pre-commit-blocking failure mode.'"
+      origin: primary
+    - text: "Criticality medium is justified via the rubric carve-out 'these hooks have no current consumer,' but the ticket itself contradicts that claim in its 'Paired user-global advisory' subsection: 'the maintainer's personal ~/.claude/settings.json may still bind these hooks (legacy from retired cortex setup deploy)' — risk is documented, not eliminated."
+      origin: primary
+    - text: "The intent-clarity case rests on the ticket enumerating confirmed-delete paths, but the ticket has already had to retract one entry (setup-github-pat.sh, previously listed) and amend evidence for another (the 'byte-equivalent dupes' claim at plugins/cortex-overnight-integration/) — the round-1-corrected-in-round-2 pattern is itself evidence the enumeration was not reliably grounded, suggesting un-revisited entries may also need verification."
+      origin: primary
+    - text: "Acceptance signals (3 items) are cited as evidence of bounded scope, but they omit multiple deliverables the ticket commits to: the CHANGELOG advisory, the pyproject.toml testpaths addition, the cortex_command/overnight/sync-allowlist.conf:36 line removal, and the .mcp.json playwright decision. The acceptance checklist is incomplete relative to the ticket's own scope."
+      origin: primary
+    - text: "Parent epic #165's DR-4 decision is recorded as 'Option A with parallel requirements retirement (delete unwired hooks AND retire requirements/project.md:36)' — note the AND. The child ticket downgrades this to OR ('either retire the requirements line in the same commit, or keep cortex-output-filter.sh + output-filters.conf and only delete cortex-sync-permissions.py'). The epic body's #168 line item also says 'Includes parallel retirement of requirements/project.md:36' with no conditional language."
+      origin: alignment
+    - text: "Parent epic claims '#166 (consolidated docs cleanup) and #168 (junk deletion) can run in parallel — different file domains.' The child ticket edits requirements/project.md:36, while #166 edits requirements/pipeline.md:130 — both touch the requirements/ tree, breaking the literal 'different file domains' premise."
+      origin: alignment
+  dispositions:
+    apply: 7
+    dismiss: 3
+    ask: 0
+  applied_fixes:
+    - "F1: Recorded as research consideration — DR-4 AND-vs-OR divergence between child ticket and parent epic must be resolved during plan; intent clarity remains HIGH because deferral pattern is intentional and the ultimate outcome (resolve to one branch) is clear."
+    - "F3: Broadened clarified intent statement to include config-hygiene line cleanups (.gitignore lines, pyproject.toml testpaths, .mcp.json playwright entry, sync-allowlist.conf:36 line) and requirements line retirement alongside code/scripts/hooks deletion; scope-boundedness HIGH stands because body's enumeration is exhaustive."
+    - "F4: Added research consideration — at requirements/project.md:36, decide between (a) preserve 'Context efficiency' QA with reworded mechanism, (b) cut the QA entirely, (c) name a replacement mechanism. Default lean: (a) reword to drop the specific output-filters.conf reference while preserving the QA, since context efficiency remains a project goal."
+    - "F6: Tightened criticality reasoning — medium because the only known stale wiring is the maintainer's personal ~/.claude/settings.json (addressed by CHANGELOG advisory) and missing-hook behavior in Claude Code is graceful-degradation rather than hard-fail. Rubric's hook-default-high override stands but the user-global risk surface is acknowledged explicitly."
+    - "F7: Added research consideration — re-verify each confirmed-delete path with NOT_FOUND grep at implement time; round-1 errors caught in round-2 don't preclude further drift in un-revisited entries. Round-3 verification is standard care for deletion tickets."
+    - "F8 (alignment): Apply per parent epic — DR-4 commits to AND retirement (delete hooks AND retire requirements/project.md:36 line). The child's OR branch is resolved to AND in plan. This is the operative interpretation; the OR phrasing in the child is treated as imprecise."
+    - "F10: Added spec-phase consideration — acceptance criteria must cover all enumerated deliverables (confirmed-deletes, DR-4 hooks + paired tests + paired requirements, investigate-then-decide dispositions, additional cleanups, CHANGELOG advisory, pyproject testpaths addition), not just the three currently listed."
+  dismissals:
+    - finding_index: 1
+      rationale: "complexity: standard in backlog frontmatter is the discovery-time guess in a different taxonomy from the lifecycle's simple/complex. The cortex-update-item write-back during clarify will overwrite the field with the lifecycle complexity (complex), making them consistent. Not a contradiction — a vocabulary normalization."
+    - finding_index: 4
+      rationale: "bin/cortex-validate-spec is parity-compliant via justfile:326-327 reference; requirements/project.md:27 explicitly accepts justfile as a valid wiring reference ('SKILL.md / requirements / docs / hooks / justfile / tests'). The ticket's investigate-then-decide is about whether the recipe itself is dead, not whether the script violates parity now. No current parity violation; HIGH alignment stands."
+    - finding_index: 9
+      rationale: "Parallelism premise survives at file granularity: #168 edits requirements/project.md, #166 edits requirements/pipeline.md. The 'different file domains' phrasing is loose but the operative constraint (different files within requirements/ tree) is preserved. No merge conflict in the parallel-execution scenario."
+  status: ok
+{"ts": "2026-05-05T16:01:00Z", "event": "lifecycle_start", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements", "tier": "complex", "criticality": "medium"}
+{"ts": "2026-05-05T16:01:00Z", "event": "phase_transition", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements", "from": "clarify", "to": "research"}
+{"ts": "2026-05-05T16:30:00Z", "event": "phase_transition", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements", "from": "research", "to": "specify"}
+{"ts": "2026-05-05T16:45:00Z", "event": "orchestrator_review", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-05T17:05:00Z", "event": "critical_review", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements", "phase": "specify", "reviewers_dispatched": 4, "reviewers_completed": 4, "synthesis_status": "ok", "objections_a": 2, "objections_b": 9, "objections_c": 3, "applied_fixes": 9, "dismissals": 0, "asks": 0, "residue_path": "lifecycle/delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements/critical-review-residue.json"}
+{"ts": "2026-05-05T17:15:00Z", "event": "spec_approved", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements"}
+{"ts": "2026-05-05T20:58:23Z", "event": "phase_transition", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements", "from": "specify", "to": "plan"}
+{"ts": "2026-05-05T21:02:52Z", "event": "orchestrator_review", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-05T21:14:55Z", "event": "critical_review", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements", "phase": "plan", "reviewers_dispatched": 4, "reviewers_completed": 4, "synthesis_status": "ok", "objections_a": 4, "objections_b": 2, "objections_c": 2, "residue_path": "lifecycle/delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements/critical-review-residue.json"}
+{"ts": "2026-05-05T21:26:53Z", "event": "plan_approved", "feature": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements"}
