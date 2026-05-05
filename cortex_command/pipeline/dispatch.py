@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import re
+import tempfile
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,6 +37,13 @@ except ImportError:
     _SDK_AVAILABLE = False
 
 from cortex_command.pipeline.state import log_event
+
+# Lazy imports of cortex_command.overnight.sandbox_settings + state (Req 5)
+# inside dispatch_task to avoid the circular-import cycle:
+# cortex_command.overnight.__init__ → orchestrator → feature_executor →
+# cortex_command.pipeline.conflict → cortex_command.pipeline.dispatch.
+# Top-level import of the overnight package would resolve the parent
+# __init__ before dispatch.py finishes loading.
 
 logger = logging.getLogger(__name__)
 
@@ -527,26 +535,55 @@ async def dispatch_task(
     # The SDK merges options.env on top of os.environ (proven by existing CLAUDECODE
     # override behavior). Forward ANTHROPIC_API_KEY if present so SDK subprocesses
     # use API-key billing rather than falling back to subscription.
-    _env: dict[str, str] = {"CLAUDECODE": ""}
+    # TMPDIR is locked into the dispatched-agent env per spec Req 5/Req 10 to
+    # prevent the unset-fallback to /tmp/ that would land outside the per-feature
+    # allowWrite list.
+    _env: dict[str, str] = {
+        "CLAUDECODE": "",
+        "TMPDIR": os.environ.get("TMPDIR") or tempfile.gettempdir(),
+    }
     if _api_key := os.environ.get("ANTHROPIC_API_KEY"):
         _env["ANTHROPIC_API_KEY"] = _api_key
     if _oauth_token := os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
         _env["CLAUDE_CODE_OAUTH_TOKEN"] = _oauth_token
 
-    _allowlist_entries = [
-        str(worktree_path),
-        os.path.realpath(str(worktree_path)),  # canonical form (handles /tmp → /private/tmp)
-    ]
-    if integration_base_path is not None:
-        _allowlist_entries.append(str(integration_base_path))
-        _allowlist_entries.append(os.path.realpath(str(integration_base_path)))
-    _write_allowlist = list(dict.fromkeys(_allowlist_entries))
-    if repo_root is not None:
-        base_settings = _load_project_settings(repo_root)
-        _deep_merge(base_settings, {"sandbox": {"write": {"allowOnly": _write_allowlist}}})
-        _worktree_settings = json.dumps(base_settings)
-    else:
-        _worktree_settings = json.dumps({"sandbox": {"write": {"allowOnly": _write_allowlist}}})
+    # Build the per-dispatch sandbox-settings JSON via the shared layer module
+    # (spec Req 5, REVISED 2026-05-05). The per-feature deny-set is intentionally
+    # empty: the allow-list narrowly bounds writes to the worktree + the six
+    # OUT_OF_WORKTREE_ALLOW_WRITERS, so a deny-set would be redundant. The JSON
+    # is written to a per-dispatch tempfile under <session_dir>/sandbox-settings/
+    # and forwarded to the SDK via ClaudeAgentOptions(settings=str(tempfile_path)).
+    # The SDK transport (claude_agent_sdk/_internal/transport/subprocess_cli.py:111-163)
+    # detects this is a filepath (does not start with "{") and forwards as
+    # `claude --settings <path>`.
+    # Imports are deferred here to avoid the import cycle described at
+    # module top.
+    from cortex_command.overnight.sandbox_settings import (
+        build_dispatch_allow_paths,
+        build_sandbox_settings_dict,
+        write_settings_tempfile,
+        register_atexit_cleanup,
+        read_soft_fail_env,
+        record_soft_fail_event,
+    )
+    from cortex_command.overnight.state import session_dir as _session_dir
+
+    _allow_paths = build_dispatch_allow_paths(
+        worktree_path=Path(worktree_path),
+        integration_base_path=Path(integration_base_path) if integration_base_path is not None else None,
+    )
+    _soft_fail = read_soft_fail_env()
+    _settings_dict = build_sandbox_settings_dict(
+        deny_paths=[],
+        allow_paths=_allow_paths,
+        soft_fail=_soft_fail,
+    )
+    _session_id = os.environ.get("LIFECYCLE_SESSION_ID", "manual")
+    _dispatch_session_dir = _session_dir(_session_id)
+    _settings_tempfile_path = write_settings_tempfile(_dispatch_session_dir, _settings_dict)
+    register_atexit_cleanup(_settings_tempfile_path)
+    if _soft_fail:
+        record_soft_fail_event(_dispatch_session_dir)
 
     _stderr_lines: list[str] = []
 
@@ -564,7 +601,7 @@ async def dispatch_task(
         allowed_tools=_ALLOWED_TOOLS,
         system_prompt=system_prompt,
         env=_env,
-        settings=_worktree_settings,
+        settings=str(_settings_tempfile_path),
         effort=effort,
         stderr=_on_stderr,
     )
