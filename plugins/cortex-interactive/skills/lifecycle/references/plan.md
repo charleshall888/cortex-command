@@ -44,8 +44,9 @@ You are designing an implementation plan for the {feature} feature.
 
 1. Design an independent implementation approach for this feature
 2. Produce a complete plan following the format below — do not deviate from the structure
-3. Your approach should be distinct — explore a different architectural strategy, decomposition, or ordering than the obvious default
-4. Follow the code budget: plans are prose with structural context, not implementation code
+3. Your approach must be architecturally distinct, not merely a different ordering or decomposition of the same strategy. Name your architectural category from this closed list — exactly one: event-driven, pipeline, layered, shared-state, plug-in.
+4. Populate the Plan Format's `**Architectural Pattern**` field with the named category and a one-sentence statement of how this variant differs from the other variants in this `plan_comparison`.
+5. Follow the code budget: plans are prose with structural context, not implementation code
 
 ### Allowed in Context and other fields:
 - File paths and directory structures
@@ -70,6 +71,8 @@ You are designing an implementation plan for the {feature} feature.
 
 ## Overview
 [1-2 sentence summary of the implementation approach and key architectural decisions]
+
+**Architectural Pattern**: {category} — {1-sentence differentiation}
 
 ## Tasks
 
