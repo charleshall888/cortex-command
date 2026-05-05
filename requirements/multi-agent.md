@@ -20,6 +20,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
   - Agent stderr is captured and included in learnings for subsequent retry attempts
   - Agent budget exhaustion halts the current session (no new features dispatched) without crashing
   - Permission mode is always `bypassPermissions` for overnight agents
+  - Per-spawn OS-kernel sandbox enforcement is layered under `bypassPermissions`: every `claude -p` orchestrator spawn and every per-feature dispatch passes `--settings <tempfile>` carrying a `sandbox.filesystem.{denyWrite,allowWrite}` JSON dict (orchestrator denies critical git-state paths per repo; dispatch allows the worktree plus six risk-targeted out-of-worktree writers). The `CORTEX_SANDBOX_SOFT_FAIL=1` env var downgrades `failIfUnavailable` to `false` for sandbox-runtime regression recovery; activation is unconditionally surfaced in the morning report. See `docs/overnight-operations.md` "Per-spawn sandbox enforcement".
 - **Priority**: must-have
 
 ### Worktree Isolation

@@ -155,6 +155,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - `lifecycle/sessions/{session_id}/runner-bootstrap.log` — captures runner stdout/stderr on the MCP-spawned start path so pre-`events.log`-init failures (import errors, missing deps, permission errors) are diagnosable.
 - `~/.cache/cortex-command/scheduled-launches.json` — sidecar index of pending LaunchAgent schedules (one entry per scheduled launch: label, session_id, plist_path, launcher_path, scheduled_for_iso, created_at_iso). Atomic writes via tempfile + `os.replace`. Consumed by `cortex overnight cancel --list` and the GC pass at every `schedule()` call.
 - `~/.cache/cortex-command/scheduled-launches.lock` — companion `fcntl.LOCK_EX` lockfile held across the GC + plist install + `launchctl bootstrap` + verify + sidecar-write critical section to serialize concurrent `cortex overnight schedule` invocations.
+- `lifecycle/sessions/{session_id}/sandbox-settings/cortex-sandbox-*.json` — per-spawn sandbox settings tempfiles (mode 0o600, atomic write). Created by both `_spawn_orchestrator` and per-dispatch in `cortex_command/pipeline/dispatch.py`. Cleaned via `atexit.register` on clean shutdown and via startup-scan in runner-init for SIGKILL/OOM/kernel-panic crash paths. Carries the documented Claude Code `sandbox.filesystem.{denyWrite,allowWrite}` shape; not human-readable state — operators consult `docs/overnight-operations.md` "Per-spawn sandbox enforcement" for the threat model.
 
 ## Edge Cases
 

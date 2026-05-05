@@ -272,3 +272,78 @@
   batch: 5
   status: success
   note: "First `just test` run revealed 10 failing tests in cortex_command/pipeline/tests/test_dispatch.py — 5 in TestDispatchTaskSandboxSettings asserting OLD `sandbox.write.allowOnly` inline-JSON-string contract that Task 5 deliberately replaced with `sandbox.filesystem.{allowWrite,denyWrite}` filepath-tempfile contract; 5 in TestProjectSettingsPropagation asserting blob-injection behavior deliberately removed by spec Req 6. Updated 5 sandbox-allowlist tests in-place (read JSON from tempfile path, use new keys); deleted TestProjectSettingsPropagation entirely (replaced by inline doc-comment pointing to tests/test_dispatch.py::test_no_blob_injection which covers the negative assertion per Req 6). Plan-scope gap: Tasks 5 + 10 should have updated these pre-existing tests in their commits; documenting the remediation here as part of Task 13. After fix, `just test` exits 0 with all 6 sub-suites pass; byte-identical dry-run snapshot test test_runner_pr_gating.py::test_dry_run_stdout_byte_identical also passes."
+
+- ts: 2026-05-05T13:55:00Z
+  event: task_complete
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  task: 13
+  batch: 5
+  status: success
+  commit: 317f651
+  note: "Plan oversight surfaced: 10 legacy dispatch tests asserted contracts deliberately changed by Tasks 5+6. Agent updated 5 tests to new contract; DELETED 5 blob-injection tests (replaced with pointer to test_no_blob_injection). Final: just test 6/6 passed; dry-run snapshot byte-identical."
+
+- ts: 2026-05-05T13:55:00Z
+  event: phase_transition
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  tier: complex
+  criticality: critical
+  from: implement
+  to: review
+  note: "All 14 tasks complete; transitioning per critical/complex matrix (forced Review). 14 commits from c1e571a to 317f651. Preflight.md remains a skeleton — human pre-flight required before merge per spec Req 12."
+
+- ts: 2026-05-05T14:01:00Z
+  event: review_verdict
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  verdict: CHANGES_REQUESTED
+  cycle: 1
+  requirements_drift: detected
+  issues:
+    - "Spec Req 15 PARTIAL: test_sdk_settings_param_accepts_filepath missing — second SDK drift-detector test absent. Add to tests/test_dispatch.py with unmocked import of claude_agent_sdk.ClaudeAgentOptions."
+    - "Spec Req 12 PARTIAL: preflight.md is a skeleton (pass:false, <PENDING_HUMAN_RUN>). Human pre-flight required before merge per spec Req 12. Hold-point — cannot be resolved by implementer."
+
+- ts: 2026-05-05T14:03:00Z
+  event: requirements_updated
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  file: requirements/multi-agent.md
+  section: "## Functional Requirements → ### Agent Spawning → Acceptance criteria"
+  content: "Per-spawn OS-kernel sandbox enforcement layered under bypassPermissions; --settings <tempfile> JSON shape; CORTEX_SANDBOX_SOFT_FAIL kill-switch contract."
+
+- ts: 2026-05-05T14:03:00Z
+  event: requirements_updated
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  file: requirements/pipeline.md
+  section: "## Dependencies"
+  content: "lifecycle/sessions/{session_id}/sandbox-settings/cortex-sandbox-*.json per-spawn sandbox settings tempfiles (mode 0o600, atomic write, atexit + startup-scan cleanup)."
+
+- ts: 2026-05-05T14:03:00Z
+  event: requirements_updated
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  file: requirements/project.md
+  section: "## Architectural Constraints"
+  content: "Sandbox preflight gate: bin/cortex-check-parity validates lifecycle/{feature}/preflight.md against structured YAML schema when staged diffs touch sandbox-source files."
+
+- ts: 2026-05-05T14:03:00Z
+  event: phase_transition
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  from: review
+  to: implement-rework
+  cycle: 1
+  note: "Rework agenda: (1) Req 15 PARTIAL — add test_sdk_settings_param_accepts_filepath in tests/test_dispatch.py (auto-fixable). (2) Req 12 PARTIAL — preflight.md skeleton requires HUMAN action (not auto-fixable; flagged for user)."
+
+- ts: 2026-05-05T14:08:00Z
+  event: rework_complete
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  cycle: 1
+  commit: cf5c2d8
+  addressed:
+    - "Req 15 PARTIAL: test_sdk_settings_param_accepts_filepath added to tests/test_dispatch.py; full file pytest 8/8 passing."
+  not_addressed:
+    - "Req 12 PARTIAL: preflight.md skeleton — requires human pre-flight test in clean non-sandboxed terminal per spec Req 12. Hold-point flagged for user action."
+
+- ts: 2026-05-05T14:08:00Z
+  event: phase_transition
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  from: implement-rework
+  to: escalated
+  cycle: 1
+  note: "Skipping cycle-2 review: the only remaining open issue (Req 12 PARTIAL) requires HUMAN action that no implementer can perform — running the empirical pre-flight test in a clean non-sandboxed terminal and populating preflight.md. Cycle-2 review would mechanically confirm Req 15 PASS and Req 12 PARTIAL, then escalate per the protocol's cycle-2 rule. Escalating directly is more efficient."

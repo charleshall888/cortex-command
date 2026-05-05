@@ -11,7 +11,7 @@ areas: [overnight-runner,pipeline]
 created: 2026-05-04
 updated: 2026-05-05
 lifecycle_slug: null
-lifecycle_phase: implement
+lifecycle_phase: escalated
 session_id: 0758edd4-d834-4125-9f63-6eca3fbc5d94
 blocks: []
 blocked-by: []
