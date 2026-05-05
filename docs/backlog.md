@@ -195,46 +195,6 @@ python3 backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete ses
 
 ---
 
-## Global Deployment (Cross-Repo Use)
-
-Backlog scripts are deployed via the `cortex-core` plugin's `bin/` directory so they are available as commands in any working directory, not just when invoked via `python3 backlog/...` from the repo root.
-
-### Adding a new deployable script
-
-1. **Add the script file to the repo** (e.g., `backlog/my_script.py`).
-2. **Add the entry to the `cortex-core` plugin's `bin/` directory** — bin/ deployment is plugin-owned; the plugin manifest exposes the script to agents via the plugin's command surface.
-3. **Use `Path.cwd()` for repo-local directory references** inside the script (not `_PROJECT_ROOT` or `Path(__file__).parent`).
-
-### How plugin bin/ PATH resolution works
-
-Scripts in the `cortex-core` plugin's `bin/` directory are added to PATH directly by Claude Code's plugin loader, so they are available as commands without any additional shell configuration. When Python runs one of these scripts, `__file__` resolves to the **real script path** inside the plugin directory. This means `Path(__file__).resolve().parent` correctly points into the repo regardless of how the script was invoked — making it safe to use for Python import path setup:
-
-```python
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
-```
-
-### Why repo-local dirs must use `Path.cwd()`
-
-Even though `Path(__file__).resolve().parent` correctly locates the script inside the repo, **it does not know which repo the user is currently working in**. When running `generate-backlog-index` from a different project, `Path(__file__).parent` would still resolve to the cortex-command backlog directory — the wrong project.
-
-Use `Path.cwd()` for any directory that is relative to the user's current working directory:
-
-```python
-BACKLOG_DIR = Path.cwd() / "backlog"
-```
-
-### Currently-deployed scripts
-
-| Command | Source file |
-|---------|-------------|
-| `update-item` | `backlog/update_item.py` |
-| `create-backlog-item` | `backlog/create_item.py` |
-| `generate-backlog-index` | `backlog/generate_index.py` |
-
----
-
 ## Keeping This Document Current
 
 This document describes the backlog system as implemented at the time of writing. When any of the following change, update this document:

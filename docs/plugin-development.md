@@ -103,3 +103,56 @@ The fix is always the same:
 
 To pick up changes in a running Claude Code session after rebuilding, either
 reinstall the plugin (`/plugin install`) or restart the session.
+
+## Adding a deployable bin script
+
+Some scripts (e.g. `update-item`, `create-backlog-item`,
+`generate-backlog-index`) need to be available as commands from any working
+directory, not just when invoked via `python3 backlog/...` from the repo
+root. These are deployed via the `cortex-core` plugin's `bin/` directory.
+
+### Per-script deployment mechanism
+
+1. **Add the script source to the canonical top-level location** (e.g.
+   `backlog/my_script.py`). Build-output plugins are assembled from these
+   top-level sources by `just build-plugin`.
+2. **Expose it via the `cortex-core` plugin's `bin/` directory.** The
+   plugin loader adds `plugins/cortex-core/bin/` to PATH automatically, so
+   the script becomes available as a command in any working directory with
+   no shell configuration. Wrappers and entry points in
+   `plugins/cortex-core/bin/` are the canonical surface; do not rely on
+   adding scripts to a user's PATH manually.
+3. **Run `just build-plugin`** so the assembled tree under
+   `plugins/cortex-core/` is regenerated and the pre-commit drift hook
+   passes.
+
+### `Path.cwd()` vs `Path(__file__).parent` — the repo-local rule
+
+When a script in the `cortex-core` plugin's `bin/` directory runs, `__file__`
+resolves to the **real script path inside the plugin tree**. That makes
+`Path(__file__).resolve().parent` safe for things like Python import-path
+setup, because it correctly locates the script's own source regardless of
+how the script was invoked:
+
+```python
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+```
+
+But `Path(__file__).parent` does **not** know which repo the user is
+currently working in. If the user runs `generate-backlog-index` from a
+different project, `Path(__file__).parent` still resolves to the
+cortex-command repo — the wrong project's `backlog/` directory.
+
+**Rule:** any directory that should be relative to the user's current
+project (not the cortex-command checkout) must use `Path.cwd()`:
+
+```python
+BACKLOG_DIR = Path.cwd() / "backlog"
+```
+
+Use `Path(__file__).resolve().parent` only for resources that genuinely
+live alongside the script in the plugin tree (e.g. sibling Python modules
+imported via `sys.path`). Use `Path.cwd()` for everything that belongs to
+the user's working project.
