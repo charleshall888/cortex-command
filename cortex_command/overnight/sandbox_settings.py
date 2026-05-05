@@ -18,10 +18,18 @@ while bodies are filled in.
 
 from __future__ import annotations
 
+import atexit
+import fcntl
+import json
 import os
+import stat
 import sys
+import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, TextIO
+
+from cortex_command.common import atomic_write
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +234,23 @@ def write_settings_tempfile(session_dir: Path, settings: dict) -> Path:
     Returns:
         Absolute path to the created tempfile.
     """
-    raise NotImplementedError("Implemented in Task 3")
+    settings_dir = session_dir / SETTINGS_DIRNAME
+    settings_dir.mkdir(parents=True, exist_ok=True)
+
+    fd, tmp_path = tempfile.mkstemp(
+        prefix=SETTINGS_TEMPFILE_PREFIX,
+        suffix=SETTINGS_TEMPFILE_SUFFIX,
+        dir=str(settings_dir),
+    )
+    # Close the FD immediately; we will write via atomic_write to honor the
+    # tempfile + os.replace pattern from cortex_command/common.py:498-522.
+    os.close(fd)
+
+    tempfile_path = Path(tmp_path)
+    atomic_write(tempfile_path, json.dumps(settings, indent=2))
+    os.chmod(tempfile_path, stat.S_IRUSR | stat.S_IWUSR)  # 0o600
+
+    return tempfile_path
 
 
 def cleanup_stale_tempfiles(session_dir: Path, runner_start_ts: float) -> None:
@@ -242,7 +266,23 @@ def cleanup_stale_tempfiles(session_dir: Path, runner_start_ts: float) -> None:
         runner_start_ts: Unix timestamp captured at runner-init; tempfiles
             older than this are stale and removed.
     """
-    raise NotImplementedError("Implemented in Task 3")
+    settings_dir = session_dir / SETTINGS_DIRNAME
+    if not settings_dir.exists():
+        return
+
+    pattern = f"{SETTINGS_TEMPFILE_PREFIX}*{SETTINGS_TEMPFILE_SUFFIX}"
+    for stale in settings_dir.glob(pattern):
+        try:
+            mtime = stale.stat().st_mtime
+        except OSError:
+            continue
+        if mtime < runner_start_ts:
+            try:
+                stale.unlink()
+            except OSError:
+                # Best-effort cleanup; ignore races and permission errors so
+                # startup never crashes on stale-tempfile cleanup.
+                pass
 
 
 def register_atexit_cleanup(tempfile_path: Path) -> Callable[[], None]:
@@ -260,7 +300,27 @@ def register_atexit_cleanup(tempfile_path: Path) -> Callable[[], None]:
         The callback that was registered. Tests can call this directly to
         simulate clean shutdown without process-wide handler drainage.
     """
-    raise NotImplementedError("Implemented in Task 3")
+    target = Path(tempfile_path)
+
+    def _cleanup() -> None:
+        try:
+            target.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            # Best-effort: never raise during interpreter shutdown.
+            pass
+
+    atexit.register(_cleanup)
+    return _cleanup
+
+
+# Module-level guard for one-shot Linux-warning emission. Initial state is
+# ``False``; flipped to ``True`` on first emission. ``reset_linux_warning_latch``
+# is a test-only helper that flips this back to its initial state so the
+# ``test_linux_warning_emitted`` and ``test_macos_no_warning`` tests can run in
+# any order without ordering coupling.
+_LINUX_WARNING_EMITTED: bool = False
 
 
 def reset_linux_warning_latch() -> None:
@@ -272,7 +332,8 @@ def reset_linux_warning_latch() -> None:
 
     Not for production use.
     """
-    raise NotImplementedError("Implemented in Task 3")
+    global _LINUX_WARNING_EMITTED
+    _LINUX_WARNING_EMITTED = False
 
 
 def emit_linux_warning_if_needed(stream: TextIO = sys.stderr) -> None:
@@ -286,7 +347,13 @@ def emit_linux_warning_if_needed(stream: TextIO = sys.stderr) -> None:
         stream: The text stream to write to (defaults to ``sys.stderr``;
             parameterized for test capture).
     """
-    raise NotImplementedError("Implemented in Task 3")
+    global _LINUX_WARNING_EMITTED
+    if _LINUX_WARNING_EMITTED:
+        return
+    if sys.platform == "darwin":
+        return
+    print(LINUX_WARNING, file=stream)
+    _LINUX_WARNING_EMITTED = True
 
 
 def record_soft_fail_event(session_dir: Path) -> None:
@@ -303,4 +370,38 @@ def record_soft_fail_event(session_dir: Path) -> None:
     Args:
         session_dir: The overnight session directory containing ``events.log``.
     """
-    raise NotImplementedError("Implemented in Task 3")
+    session_dir.mkdir(parents=True, exist_ok=True)
+    events_path = session_dir / "events.log"
+
+    # Open for read+write+create (no truncation) so we can hold an exclusive
+    # lock across the read-then-conditional-write. ``cortex_command.overnight.events.log_event``
+    # does NOT take a lock, so we implement the lock locally per the task spec.
+    fd = os.open(events_path, os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        try:
+            # Read existing events to check for the idempotency sentinel.
+            existing = b""
+            chunk = os.read(fd, 65536)
+            while chunk:
+                existing += chunk
+                chunk = os.read(fd, 65536)
+            if b"sandbox_soft_fail_active" in existing:
+                return
+
+            entry = {
+                "v": 1,
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "event": "sandbox_soft_fail_active",
+                "session_id": os.environ.get("LIFECYCLE_SESSION_ID", "manual"),
+            }
+            line = (json.dumps(entry) + "\n").encode("utf-8")
+            # Append at end of file. Seek to end before writing to be explicit;
+            # we hold LOCK_EX so no concurrent writer can interleave.
+            os.lseek(fd, 0, os.SEEK_END)
+            os.write(fd, line)
+            os.fsync(fd)
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
