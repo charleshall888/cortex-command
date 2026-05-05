@@ -213,7 +213,6 @@ Hooks in `hooks/` are shared entry points. Hooks in `claude/hooks/` are specific
 | `claude/hooks/cortex-skill-edit-advisor.sh` | PostToolUse (Write\|Edit) | Advise on skill editing best practices when a Write or Edit touches a file inside `skills/` | Claude only |
 | `claude/hooks/cortex-worktree-create.sh` | WorktreeCreate | Create a git worktree with branch isolation for parallel overnight or feature work | Claude only |
 | `claude/hooks/cortex-worktree-remove.sh` | WorktreeRemove | Clean up the worktree directory and merged branch after work completes | Claude only |
-| `claude/hooks/bell.ps1` | Stop, Notification | Flash the WezTerm screen as a visual bell when Claude needs input (Windows) | Claude only |
 
 ### Hooks Architecture
 
