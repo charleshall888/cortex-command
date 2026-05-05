@@ -40,7 +40,7 @@ Atomic-deploy decomposition: the helper and its first reference land in the same
   - Section-anchored invariant: `awk '/^## Event Logging$/,/^## /{print}' skills/refine/references/clarify-critic.md | grep -c "origin.*alignment.*parent_epic_loaded\|MUST have parent_epic_loaded"` ≥ 1.
   - YAML example: `awk '/```yaml/,/```$/{print}' skills/refine/references/clarify-critic.md | grep -c "parent_epic_loaded:" ` ≥ 1 AND `awk '/```yaml/,/```$/{print}' skills/refine/references/clarify-critic.md | grep -c "origin: alignment\|origin: \"alignment\""` ≥ 1.
   - Disposition uniformity: `grep -c "alignment findings flow through" skills/refine/references/clarify-critic.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add rubric-dimension cap principle to clarify-critic.md
 - **Files**: `skills/refine/references/clarify-critic.md`
@@ -49,7 +49,7 @@ Atomic-deploy decomposition: the helper and its first reference land in the same
 - **Complexity**: simple
 - **Context**: place near the existing §"Constraints" table (line ~158). Phrasing template: "Soft rubric-dimension cap: the clarify-critic carries a soft cap of ≤5 rubric dimensions to preserve per-angle attention quality. Current dimensions: (1) intent clarity, (2) scope boundedness, (3) requirements alignment, (4) optional complexity/criticality calibration, (5) optional parent-epic alignment (when parent: is set and resolves to type: epic). Adding a 6th rubric dimension requires either replacing an existing dimension or extracting the new one to a separate critic; do not exceed the cap by simple addition."
 - **Verification**: `grep -cE "≤5|<= 5|five rubric dimensions|five dimension|soft cap of 5" skills/refine/references/clarify-critic.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Update refine/SKILL.md §4 to populate research-considerations
 - **Files**: `skills/refine/SKILL.md`
