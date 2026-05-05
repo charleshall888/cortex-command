@@ -43,7 +43,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Keep aligned with justfile `build-plugin` recipe SKILLS=(...) arrays.
 # Resolve via: grep -n "SKILLS=(" justfile
 PLUGINS: dict[str, tuple[str, ...]] = {
-    "cortex-interactive": (
+    "cortex-core": (
         "commit",
         "pr",
         "lifecycle",
@@ -59,7 +59,7 @@ PLUGINS: dict[str, tuple[str, ...]] = {
         "evolve",
         "critical-review",
     ),
-    "cortex-overnight-integration": (
+    "cortex-overnight": (
         "overnight",
         "morning-review",
     ),

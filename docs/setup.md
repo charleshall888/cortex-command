@@ -35,9 +35,9 @@ If you do not have `uv` available yet, the `install.sh` bootstrap script install
 curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
 ```
 
-The cortex-overnight-integration MCP server also auto-installs the CLI on first tool call when `cortex` is missing from `PATH`. Users who only interact with cortex through Claude Code never need an explicit install step. Set `CORTEX_AUTO_INSTALL=0` to opt out of the auto-install behavior (the MCP will then surface a notice instead of running `uv tool install`).
+The cortex-overnight MCP server also auto-installs the CLI on first tool call when `cortex` is missing from `PATH`. Users who only interact with cortex through Claude Code never need an explicit install step. Set `CORTEX_AUTO_INSTALL=0` to opt out of the auto-install behavior (the MCP will then surface a notice instead of running `uv tool install`).
 
-To upgrade later: run `/plugin update cortex-overnight-integration@cortex-command` from inside Claude (MCP-driven), or `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<new-tag>` from a bare shell. See [docs/release-process.md](release-process.md) for the tag-before-coupling discipline that keeps plugin and CLI versions in sync.
+To upgrade later: run `/plugin update cortex-overnight@cortex-command` from inside Claude (MCP-driven), or `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<new-tag>` from a bare shell. See [docs/release-process.md](release-process.md) for the tag-before-coupling discipline that keeps plugin and CLI versions in sync.
 
 ### 2. Add and install the plugins from inside Claude Code
 
@@ -45,8 +45,8 @@ Launch `claude`, then add the marketplace once and install whichever plugins you
 
 ```
 /plugin marketplace add charleshall888/cortex-command
-/plugin install cortex-interactive@cortex-command
-/plugin install cortex-overnight-integration@cortex-command
+/plugin install cortex-core@cortex-command
+/plugin install cortex-overnight@cortex-command
 /plugin install cortex-ui-extras@cortex-command
 /plugin install cortex-pr-review@cortex-command
 ```
@@ -57,15 +57,15 @@ The six available plugins are:
 |--------|-------------|
 | android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
 | cortex-dev-extras | Devil's advocate inline challenge for solo deliberation |
-| cortex-interactive | Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows |
-| cortex-overnight-integration | Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution |
+| cortex-core | Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows |
+| cortex-overnight | Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution |
 | cortex-pr-review | Multi-agent GitHub pull request review pipeline for Claude Code |
 | cortex-ui-extras | Experimental UI design skills for Claude Code interactive workflows |
 
 #### Plugin-specific prerequisites
 
-- **`cortex-overnight-integration`** requires `uv` and the `cortex` CLI on your `PATH`. The MCP server auto-installs `cortex` on first tool call when it is missing (set `CORTEX_AUTO_INSTALL=0` to opt out and receive a notice instead). It also probes for `uv` at startup and refuses to run if `uv` is not on `PATH`. macOS GUI-launched Claude Code processes do not inherit the same `PATH` as a Terminal session — if `uv` is on `PATH` in your shell but the MCP server still reports it missing, see the auto-install error message and add `uv`'s install directory to `~/.zshenv` (or `~/.bash_profile`) so GUI-launched processes pick it up.
-- **`cortex-interactive`** shell-side bin shims (`cortex-jcc` and the other `cortex-*` tools) need to be invoked from inside a cortex project directory (one containing `lifecycle/` or `backlog/`), or with `CORTEX_REPO_ROOT=/path/to/your/project` exported. The in-Claude skills work without setup. The shims error explicitly with the missing-project message when neither condition holds.
+- **`cortex-overnight`** requires `uv` and the `cortex` CLI on your `PATH`. The MCP server auto-installs `cortex` on first tool call when it is missing (set `CORTEX_AUTO_INSTALL=0` to opt out and receive a notice instead). It also probes for `uv` at startup and refuses to run if `uv` is not on `PATH`. macOS GUI-launched Claude Code processes do not inherit the same `PATH` as a Terminal session — if `uv` is on `PATH` in your shell but the MCP server still reports it missing, see the auto-install error message and add `uv`'s install directory to `~/.zshenv` (or `~/.bash_profile`) so GUI-launched processes pick it up.
+- **`cortex-core`** shell-side bin shims (`cortex-jcc` and the other `cortex-*` tools) need to be invoked from inside a cortex project directory (one containing `lifecycle/` or `backlog/`), or with `CORTEX_REPO_ROOT=/path/to/your/project` exported. The in-Claude skills work without setup. The shims error explicitly with the missing-project message when neither condition holds.
 - **`cortex-ui-extras`** has no extra prerequisites.
 - **`cortex-pr-review`** has no extra prerequisites.
 
@@ -172,15 +172,15 @@ requirements/project.md
 
 The `.cortex-init` marker records the cortex version and timestamp of the run. `lifecycle.config.md` in the repo root holds per-repo configuration overrides (see the schema section above). The `lifecycle/sessions/` write path is also registered in `~/.claude/settings.local.json` so the overnight runner can write session logs without a sandbox prompt.
 
-Then run `/cortex-interactive:lifecycle <feature>` to begin a new feature, which produces a `lifecycle/<feature>/` directory containing the feature's lifecycle artifacts (research, spec, plan, implementation, events log). For example:
+Then run `/cortex-core:lifecycle <feature>` to begin a new feature, which produces a `lifecycle/<feature>/` directory containing the feature's lifecycle artifacts (research, spec, plan, implementation, events log). For example:
 
 ```
-/cortex-interactive:lifecycle my-feature
+/cortex-core:lifecycle my-feature
 ```
 
-This command initiates the research phase for `my-feature` and guides you through research → spec → plan → implementation → review. Running `/cortex-interactive:lifecycle my-feature` with no prior artifacts starts fresh; re-running it in a later session resumes from the current phase recorded in `lifecycle/my-feature/events.log`.
+This command initiates the research phase for `my-feature` and guides you through research → spec → plan → implementation → review. Running `/cortex-core:lifecycle my-feature` with no prior artifacts starts fresh; re-running it in a later session resumes from the current phase recorded in `lifecycle/my-feature/events.log`.
 
-This sequence — `cortex init` followed by `/cortex-interactive:lifecycle <feature>` — is the end-to-end verification that both the CLI scaffold and the lifecycle skill are working in your environment.
+This sequence — `cortex init` followed by `/cortex-core:lifecycle <feature>` — is the end-to-end verification that both the CLI scaffold and the lifecycle skill are working in your environment.
 
 #### Verify install
 
@@ -199,7 +199,7 @@ claude /plugin list
 - **`remote_url`** — the git remote URL of your project, if it is a git repository (empty string otherwise)
 - **`head_sha`** — the full SHA of your project's current HEAD commit (empty string if it is not a git repository)
 
-`claude /plugin list` should list the plugins you installed from the `cortex-command` marketplace (e.g. `cortex-interactive`, `cortex-overnight-integration`, etc.). If a plugin you installed is missing, run `/reload-plugins` inside Claude Code to refresh the plugin metadata cache.
+`claude /plugin list` should list the plugins you installed from the `cortex-command` marketplace (e.g. `cortex-core`, `cortex-overnight`, etc.). If a plugin you installed is missing, run `/reload-plugins` inside Claude Code to refresh the plugin metadata cache.
 
 ---
 
@@ -392,7 +392,7 @@ For desktop notifications when Claude Code needs attention:
 Some content in this guide is intentionally duplicated across files and must be kept in sync manually. When any of the following surfaces changes, update **both files atomically** in the same commit:
 
 1. **plugin roster** — the table of available plugins appears in both `README.md` and `docs/setup.md` (the Install section above). Adding, removing, or renaming a plugin requires edits to both files.
-2. **CLI utilities list** — the list of `cortex-*` bin utilities is documented in `README.md`. When a new utility is added to the `cortex-interactive` plugin's `bin/`, update the README entry in the same commit.
+2. **CLI utilities list** — the list of `cortex-*` bin utilities is documented in `README.md`. When a new utility is added to the `cortex-core` plugin's `bin/`, update the README entry in the same commit.
 3. **auth pointer** — `README.md` contains a short pointer to the authentication options; `docs/setup.md` carries the canonical auth content (Option A / Option B / Using Both). If the auth mechanics change, update the canonical content in `docs/setup.md` and refresh the README pointer to match.
 
 ---

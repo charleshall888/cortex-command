@@ -17,7 +17,7 @@ and MagicMock; no real SDK calls.
 
 Per spec Non-Requirements, the synthesizer has no Python helper module —
 this test file is its only Python footprint. Envelope extraction logic is
-replicated inline from plugins/cortex-interactive/skills/critical-review/
+replicated inline from plugins/cortex-core/skills/critical-review/
 SKILL.md:180 (LAST-occurrence anchor regex).
 """
 
@@ -56,7 +56,7 @@ def _extract_envelope(output: str) -> dict[str, Any]:
     """Locate the LAST <!--findings-json--> delimiter and parse the tail.
 
     Mirrors the LAST-occurrence anchor regex documented in
-    plugins/cortex-interactive/skills/critical-review/SKILL.md:180. Tolerates
+    plugins/cortex-core/skills/critical-review/SKILL.md:180. Tolerates
     prose that quotes the delimiter by splitting at the LAST match.
     """
     matches = list(

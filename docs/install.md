@@ -81,14 +81,14 @@ Replace `v0.1.0` with the tag you want. See https://github.com/charleshall888/co
 
 ## Plugin auto-update and stale-plugin behavior
 
-The `cortex-overnight-integration` plugin's MCP server embeds a `CLI_PIN` constant — a tuple `(tag, schema_version)` — that pairs the plugin with a specific cortex CLI tag. The plugin drives CLI auto-update via tag bump on first MCP tool call (the upgrade arrow flows plugin → CLI, not the other way).
+The `cortex-overnight` plugin's MCP server embeds a `CLI_PIN` constant — a tuple `(tag, schema_version)` — that pairs the plugin with a specific cortex CLI tag. The plugin drives CLI auto-update via tag bump on first MCP tool call (the upgrade arrow flows plugin → CLI, not the other way).
 
 If you have **plugin auto-update enabled** (the default), Claude Code refreshes the plugin in the background; the next MCP tool call detects a `CLI_PIN[0]` bump and auto-installs the matching CLI tag.
 
 If you have **plugin auto-update disabled**, the plugin's embedded `CLI_PIN` stays pinned to whatever tag was current when you installed the plugin. You get a stable plugin/CLI pair until you explicitly run:
 
 ```
-/plugin update cortex-overnight-integration@cortex-command
+/plugin update cortex-overnight@cortex-command
 ```
 
 A stale plugin is the intended state under disabled auto-update — schema versions match between the embedded `CLI_PIN[1]` and the installed CLI's print-root envelope, so everything works. When you eventually update the plugin manually, the next MCP tool call will detect the new `CLI_PIN[0]` and re-install the CLI.
@@ -100,7 +100,7 @@ If you prefer to upgrade the CLI directly without going through the plugin, use 
 ## Troubleshooting
 
 - **`cortex: command not found`**: confirm `~/.local/bin/` is on your `PATH`. Add `export PATH="$HOME/.local/bin:$PATH"` to your shell rc file.
-- **macOS GUI-app launches Claude Code; `uv` not on PATH**: the `cortex-overnight-integration` MCP server probes `shutil.which("uv")` at startup and refuses to start if `uv` is missing from PATH. Fix by exporting `uv`'s install location in `~/.zshenv` (which GUI apps inherit), not `~/.zshrc` (interactive shells only).
+- **macOS GUI-app launches Claude Code; `uv` not on PATH**: the `cortex-overnight` MCP server probes `shutil.which("uv")` at startup and refuses to start if `uv` is missing from PATH. Fix by exporting `uv`'s install location in `~/.zshenv` (which GUI apps inherit), not `~/.zshrc` (interactive shells only).
 - **`cortex --print-root` fails with "Run from your cortex project root..."**: you invoked `cortex` from a directory with no `lifecycle/` AND no `backlog/`. Either `cd` into a cortex project, set `CORTEX_REPO_ROOT=/path/to/your/project`, or create a new project with `git init && cortex init`.
 
 For the existing-maintainer migration path (existing `~/.cortex` editable install → wheel install), see [migration-no-clone-install.md](migration-no-clone-install.md).

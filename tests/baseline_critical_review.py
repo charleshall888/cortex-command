@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Baseline-stability measurement harness for /cortex-interactive:critical-review V2 fixtures.
+Baseline-stability measurement harness for /cortex-core:critical-review V2 fixtures.
 
 Usage:
     python3 tests/baseline_critical_review.py [--runs=N] [--fixture=NAME]
@@ -47,11 +47,11 @@ def get_head_sha() -> str:
 
 def invoke_critical_review(fixture_path: Path) -> tuple[bool, str]:
     """
-    Invoke `claude -p "/cortex-interactive:critical-review {fixture_path}"`.
+    Invoke `claude -p "/cortex-core:critical-review {fixture_path}"`.
     Returns (success: bool, output: str).
     A failed/timed-out invocation returns (False, error_description).
     """
-    prompt = f"/cortex-interactive:critical-review {fixture_path}"
+    prompt = f"/cortex-core:critical-review {fixture_path}"
     try:
         result = subprocess.run(
             ["claude", "-p", prompt],
@@ -151,7 +151,7 @@ def run_fixture(fixture_name: str, fixture_path: Path, runs: int) -> dict:
     print(f"\n[{fixture_name}] Running {runs} invocation(s) against {fixture_path.name}")
 
     for i in range(runs):
-        print(f"  Run {i + 1}/{runs}: invoking claude -p /cortex-interactive:critical-review ...", flush=True)
+        print(f"  Run {i + 1}/{runs}: invoking claude -p /cortex-core:critical-review ...", flush=True)
         ok, output = invoke_critical_review(fixture_path)
 
         if not ok:
@@ -182,7 +182,7 @@ def run_fixture(fixture_name: str, fixture_path: Path, runs: int) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Baseline stability measurement for /cortex-interactive:critical-review")
+    parser = argparse.ArgumentParser(description="Baseline stability measurement for /cortex-core:critical-review")
     parser.add_argument(
         "--runs",
         type=int,

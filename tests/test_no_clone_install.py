@@ -13,7 +13,7 @@ Two distinct surfaces are validated here:
   install (the lifecycle-115 failure mode).
 
 * ``test_mcp_first_install_hook`` — **transition mechanism**: exercises
-  ``plugins/cortex-overnight-integration/server.py:_ensure_cortex_installed``
+  ``plugins/cortex-overnight/server.py:_ensure_cortex_installed``
   with mocked ``subprocess.run`` and ``shutil.which`` to verify the hook's
   control flow without doing a real ``uv tool install``. Asserts: (1) the
   ``uv tool install --reinstall git+...@<CLI_PIN[0]>`` invocation fires
@@ -45,7 +45,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PLUGIN_ROOT = REPO_ROOT / "plugins" / "cortex-overnight-integration"
+PLUGIN_ROOT = REPO_ROOT / "plugins" / "cortex-overnight"
 SERVER_PATH = PLUGIN_ROOT / "server.py"
 
 
@@ -302,7 +302,7 @@ def test_target_state(built_wheel: Path, tmp_path: Path) -> None:
 
 
 def _load_server_module():
-    """Import ``plugins/cortex-overnight-integration/server.py`` as a module.
+    """Import ``plugins/cortex-overnight/server.py`` as a module.
 
     Sets ``CLAUDE_PLUGIN_ROOT`` so the confused-deputy guard at the top
     of the file accepts the load. Mirrors the loader pattern used in

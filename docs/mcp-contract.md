@@ -1,6 +1,6 @@
 # MCP ↔ CLI Contract
 
-This document defines the subprocess + JSON contract between the cortex MCP server (`plugins/cortex-overnight-integration/server.py`) and the cortex CLI (`cortex_command/cli.py`, `cortex_command/overnight/cli_handler.py`). The MCP plugin imports zero `cortex_command.*` modules; its sole interface to the CLI is `subprocess.run(["cortex", ...])` plus parsing the versioned JSON the CLI emits on stdout.
+This document defines the subprocess + JSON contract between the cortex MCP server (`plugins/cortex-overnight/server.py`) and the cortex CLI (`cortex_command/cli.py`, `cortex_command/overnight/cli_handler.py`). The MCP plugin imports zero `cortex_command.*` modules; its sole interface to the CLI is `subprocess.run(["cortex", ...])` plus parsing the versioned JSON the CLI emits on stdout.
 
 The contract exists so the plugin and the CLI can evolve and ship on independent cadences. The plugin is refreshed by Claude Code's `/plugin install`/refresh path; the CLI is refreshed by `cortex upgrade` (or the MCP-orchestrated auto-update flow when the sandbox probe permits it). Schema versioning (below) is what lets the two halves drift apart in version without silently producing wrong results.
 

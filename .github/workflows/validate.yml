@@ -31,6 +31,6 @@ jobs:
             plugins/cortex-pr-review/skills \
             plugins/cortex-ui-extras/skills \
             plugins/cortex-dev-extras/skills \
-            plugins/cortex-interactive/skills \
-            plugins/cortex-overnight-integration/skills \
+            plugins/cortex-core/skills \
+            plugins/cortex-overnight/skills \
             plugins/android-dev-extras/skills

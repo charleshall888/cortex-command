@@ -3,7 +3,7 @@
 # Skills Reference
 
 **For:** All users — quick reference to find the right skill for the job.
-**Assumes:** Claude Code is set up and the cortex-interactive plugin is installed.
+**Assumes:** Claude Code is set up and the cortex-core plugin is installed.
 
 A grouped inventory of the skills in this repo. Each entry shows what the skill does and links to its full SKILL.md for trigger phrases, inputs, outputs, and implementation details.
 
@@ -42,7 +42,7 @@ Ideation research for topics not ready for implementation. Investigates the prob
 ---
 
 ### research
-Parallel research orchestrator for pre-implementation investigation. Dispatches 3–5 agents across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-interactive:research` or invoked automatically by `/cortex-interactive:refine` and `/cortex-interactive:lifecycle`.
+Parallel research orchestrator for pre-implementation investigation. Dispatches 3–5 agents across independent angles (codebase, web, requirements, tradeoffs, adversarial) and synthesizes findings into a structured `research.md` artifact. Used directly via `/cortex-core:research` or invoked automatically by `/cortex-core:refine` and `/cortex-core:lifecycle`.
 
 [skills/research/SKILL.md](../skills/research/SKILL.md)
 
@@ -56,19 +56,19 @@ Manage project backlog items as individual markdown files with YAML frontmatter.
 ---
 
 ### overnight
-Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the bash runner for unattended execution. Requires features to already have research and spec artifacts produced by `/cortex-interactive:refine` or `/cortex-interactive:lifecycle`.
+Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the bash runner for unattended execution. Requires features to already have research and spec artifacts produced by `/cortex-core:refine` or `/cortex-core:lifecycle`.
 
 [skills/overnight/SKILL.md](../skills/overnight/SKILL.md)
 
 ---
 
-### Choosing between `/cortex-interactive:dev`, `/cortex-interactive:lifecycle`, and `/overnight`
+### Choosing between `/cortex-core:dev`, `/cortex-core:lifecycle`, and `/overnight`
 
 These three skills overlap and route to each other — here is when to use each:
 
-- **`/cortex-interactive:dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/cortex-interactive:lifecycle`, `/overnight`, `/cortex-interactive:discovery`, or direct implementation. Start here if you do not already know which workflow you need.
-- **`/cortex-interactive:lifecycle`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete). It is a structured, interactive state machine for a single feature. `/cortex-interactive:dev` routes non-trivial single features here automatically.
-- **`/overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/cortex-interactive:refine` or `/cortex-interactive:lifecycle`) and you want autonomous unattended execution. It handles plan approval and hands off to the bash runner; no interactive research or spec phases occur. `/cortex-interactive:dev` recommends this when all backlog children are refined.
+- **`/cortex-core:dev`** — general entry point when you are not sure what to do next. It analyzes your request, runs backlog triage if invoked bare, and routes automatically to `/cortex-core:lifecycle`, `/overnight`, `/cortex-core:discovery`, or direct implementation. Start here if you do not already know which workflow you need.
+- **`/cortex-core:lifecycle`** — invoke directly when you already know the feature and want to work through it phase by phase (research → spec → plan → implement → review → complete). It is a structured, interactive state machine for a single feature. `/cortex-core:dev` routes non-trivial single features here automatically.
+- **`/overnight`** — invoke directly when features already have their research and spec artifacts (produced by `/cortex-core:refine` or `/cortex-core:lifecycle`) and you want autonomous unattended execution. It handles plan approval and hands off to the bash runner; no interactive research or spec phases occur. `/cortex-core:dev` recommends this when all backlog children are refined.
 
 ---
 
@@ -114,7 +114,7 @@ Gather and document project-level and feature-area requirements through structur
 ## Session Management
 
 ### fresh
-Capture the current session state as a resume prompt you can paste into a fresh context window. Reads the conversation, identifies ephemeral context not captured in files, and outputs a ready-to-paste prompt. Also runs `/cortex-interactive:retro` first for human-initiated sessions.
+Capture the current session state as a resume prompt you can paste into a fresh context window. Reads the conversation, identifies ephemeral context not captured in files, and outputs a ready-to-paste prompt. Also runs `/cortex-core:retro` first for human-initiated sessions.
 
 [skills/fresh/SKILL.md](../skills/fresh/SKILL.md)
 
@@ -128,7 +128,7 @@ Write a dated problem-only log for the current session. Captures user correction
 ---
 
 ### evolve
-Identify recurring problems across retro logs and route each trend to the appropriate skill for investigation or resolution. Clusters problems that appear in two or more retros into trends, classifies each with a proposed route (`/cortex-interactive:discovery`, `/cortex-interactive:lifecycle`, `/cortex-interactive:backlog add`, or direct edit), and dispatches only after explicit user approval.
+Identify recurring problems across retro logs and route each trend to the appropriate skill for investigation or resolution. Clusters problems that appear in two or more retros into trends, classifies each with a proposed route (`/cortex-core:discovery`, `/cortex-core:lifecycle`, `/cortex-core:backlog add`, or direct edit), and dispatches only after explicit user approval.
 
 [skills/evolve/SKILL.md](../skills/evolve/SKILL.md)
 

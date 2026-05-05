@@ -5,7 +5,7 @@ clone. Under the wheel-install migration (Tasks 1–14) the CLI ships from a
 tag-pinned wheel and cannot self-upgrade — instead `cortex upgrade` is an
 advisory printer that points users at:
 
-  1. ``/plugin update cortex-overnight-integration@cortex-command`` for the
+  1. ``/plugin update cortex-overnight@cortex-command`` for the
      MCP-driven path (the auto-install hook in the MCP server reinstalls the
      CLI on first tool call after the plugin updates).
   2. ``uv tool install --reinstall git+...@<tag>`` for the bare-shell path.

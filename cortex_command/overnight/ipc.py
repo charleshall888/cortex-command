@@ -124,7 +124,7 @@ def _acquire_takeover_lock(session_dir: Path) -> int:
     a genuine concurrent-runner collision. Pattern reference:
     ``cortex_command/init/settings_merge.py:_acquire_lock`` (sibling
     lockfile rationale) and
-    ``plugins/cortex-overnight-integration/server.py:_acquire_update_flock``
+    ``plugins/cortex-overnight/server.py:_acquire_update_flock``
     (polling-with-budget shape).
     """
     session_dir.mkdir(parents=True, exist_ok=True)

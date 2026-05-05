@@ -17,7 +17,7 @@ This doc owns the **control-plane interface** plane. It is a sibling of `overnig
 Two install paths exist; both register the same `cortex mcp-server` subprocess:
 
 1. **CLI registration** — `claude mcp add cortex-overnight ...` (covered in [Registration](#registration)). Best for operators who want one-off control without touching plugins.
-2. **Plugin install** — `/plugin install cortex-overnight-integration` from inside Claude Code, which ships a `.mcp.json` registering the same server.
+2. **Plugin install** — `/plugin install cortex-overnight` from inside Claude Code, which ships a `.mcp.json` registering the same server.
 
 The MCP server logs only to `stderr`; `stdout` is reserved for the JSON-RPC stream. Do not redirect `stdout` and do not enable any tooling that writes to it.
 
@@ -33,7 +33,7 @@ claude mcp add cortex-overnight --scope user --transport stdio -- cortex mcp-ser
 
 After registration, restart Claude Code. The five tools listed below become available in any session.
 
-If you prefer plugin-based distribution, run `/plugin install cortex-overnight-integration` from a Claude Code session. The plugin's bundled `.mcp.json` is equivalent to the `claude mcp add` command above.
+If you prefer plugin-based distribution, run `/plugin install cortex-overnight` from a Claude Code session. The plugin's bundled `.mcp.json` is equivalent to the `claude mcp add` command above.
 
 ---
 
