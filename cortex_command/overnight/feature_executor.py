@@ -54,6 +54,7 @@ from cortex_command.overnight.events import (
     log_event as overnight_log_event,
     read_events,
 )
+from cortex_command.overnight.outcome_router import _effective_merge_repo_path
 from cortex_command.overnight.state import load_state, save_state
 from cortex_command.overnight.throttle import ConcurrencyManager
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
@@ -590,6 +591,25 @@ async def execute_feature(
                     pass
                 return task, RetryResult(success=True, attempts=0, final_output="idempotency: already complete", paused=False, idempotency_skipped=True), 0
 
+            # Cross-repo allowlist fix (spec Req 7): when dispatching against
+            # a non-home repo, integration_base_path must point at that repo's
+            # integration worktree (via the canonical
+            # _effective_merge_repo_path helper), not Path.cwd() (the home
+            # repo). Falling back to Path.cwd() preserves same-repo behavior
+            # and covers the case where state is unavailable.
+            if repo_path is not None and _overnight_state is not None:
+                _integration_base_path = (
+                    _effective_merge_repo_path(
+                        repo_path,
+                        _overnight_state.integration_worktrees,
+                        _overnight_state.integration_branches,
+                        _overnight_state.session_id,
+                    )
+                    or Path.cwd()
+                )
+            else:
+                _integration_base_path = Path.cwd()
+
             result = await retry_task(
                 feature=feature,
                 task=task.description,
@@ -600,7 +620,7 @@ async def execute_feature(
                 learnings_dir=learnings_dir,
                 log_path=config.pipeline_events_path,
                 activity_log_path=activity_log_path,
-                integration_base_path=Path.cwd(),
+                integration_base_path=_integration_base_path,
                 repo_path=repo_path,
                 skill="implement",
             )
