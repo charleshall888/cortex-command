@@ -94,7 +94,7 @@ Atomic-deploy decomposition: the helper and its first reference land in the same
 - **Complexity**: simple
 - **Context**: builds on the helper invocation pattern from Task 2 (`subprocess.run(["bin/cortex-load-parent-epic", "<slug>"], env={"CORTEX_BACKLOG_DIR": str(tmp_path)}, ...)`). The "constructed dispatch prompt" is built inline in the test by concatenating: (a) the existing prompt template (read from `skills/refine/references/clarify-critic.md` between `## Confidence Assessment` and `## Instructions`), (b) the new `## Parent Epic Alignment` section (read the post-Task-1 file content). Assertions check the order and presence of the four defense layers. The cross-field invariant check function: `def check_invariant(event: dict) -> bool: return not (any(f.get("origin") == "alignment" for f in event.get("findings", [])) and not event.get("parent_epic_loaded", False))`. This avoids running the live critic agent and keeps the test cost bounded.
 - **Verification**: `pytest tests/test_clarify_critic_alignment_integration.py -v` exits 0 — pass if exit code 0 and all 6 tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
