@@ -4,7 +4,7 @@
 # (classification guard, staged-driven build decision, conditional rebuild,
 # per-build-output-plugin drift loop).
 #
-# Six subtests:
+# Seven subtests:
 #   A) Seed drift in skills/commit/SKILL.md (top-level source) and stage it.
 #      Expect non-zero exit: Phase 2 flags BUILD_NEEDED, Phase 3 rebuilds,
 #      Phase 4 detects working-tree vs index drift.
@@ -25,8 +25,13 @@
 #      build-output-plugin-path check fires, Phase 3 rebuilds from the
 #      unchanged top-level source, Phase 4 detects the regenerated tree
 #      diverges from the staged hand-edit.
+#   G) Seed drift in claude/hooks/cortex-tool-failure-tracker.sh (top-level
+#      source, mirrored into plugins/cortex-overnight/hooks/) and stage it.
+#      Same expected behavior as A and B. Regression guard for the Phase 2
+#      trigger pattern: claude/hooks/cortex-*.sh paths must trigger
+#      BUILD_NEEDED so the mirror cannot drift silently.
 #
-# Exit 0 iff all six subtests pass. On failure, leaves the repo restored.
+# Exit 0 iff all seven subtests pass. On failure, leaves the repo restored.
 
 set -uo pipefail
 
@@ -36,6 +41,7 @@ cd "$REPO_ROOT"
 HOOK="$REPO_ROOT/.githooks/pre-commit"
 SKILL_SRC="skills/commit/SKILL.md"
 HOOK_SRC="hooks/cortex-validate-commit.sh"
+CLAUDE_HOOK_SRC="claude/hooks/cortex-tool-failure-tracker.sh"
 UI_EXTRAS_SKILL="plugins/cortex-ui-extras/skills/ui-lint/SKILL.md"
 PR_REVIEW_SKILL="plugins/cortex-pr-review/skills/pr-review/SKILL.md"
 INTERACTIVE_SKILL="plugins/cortex-core/skills/commit/SKILL.md"
@@ -238,6 +244,39 @@ fi
 
 git restore --staged "$INTERACTIVE_SKILL" 2>/dev/null || true
 git checkout -- "$INTERACTIVE_SKILL" 2>/dev/null || true
+just build-plugin >/dev/null 2>&1 || true
+
+# --- Subtest G: top-level claude/hooks/cortex-* drift ---
+# Regression guard: the Phase 2 trigger pattern must include claude/hooks/cortex-
+# so build-plugin runs when these sources change. The original pattern only
+# covered hooks/cortex-validate-commit.sh, leaving four claude/hooks/cortex-*.sh
+# sources able to drift silently.
+echo "Subtest G: seed drift in $CLAUDE_HOOK_SRC"
+
+printf '\n# drift-test-marker\n' >> "$CLAUDE_HOOK_SRC"
+git add "$CLAUDE_HOOK_SRC"
+
+set +e
+HOOK_OUTPUT_G="$("$HOOK" 2>&1)"
+HOOK_EXIT_G=$?
+set -e
+
+if [ "$HOOK_EXIT_G" -eq 0 ]; then
+    report_fail "Subtest G: hook exited 0 but drift was seeded (expected non-zero)."
+    echo "--- hook output ---"
+    echo "$HOOK_OUTPUT_G"
+    echo "-------------------"
+elif ! echo "$HOOK_OUTPUT_G" | grep -q "plugins/cortex-overnight/hooks/cortex-tool-failure-tracker.sh"; then
+    report_fail "Subtest G: hook exit $HOOK_EXIT_G but output does not mention plugins/cortex-overnight/hooks/cortex-tool-failure-tracker.sh."
+    echo "--- hook output ---"
+    echo "$HOOK_OUTPUT_G"
+    echo "-------------------"
+else
+    report_pass "Subtest G: hook detected claude/hooks/cortex-* drift (exit $HOOK_EXIT_G)."
+fi
+
+git restore --staged "$CLAUDE_HOOK_SRC" 2>/dev/null || true
+git checkout -- "$CLAUDE_HOOK_SRC" 2>/dev/null || true
 just build-plugin >/dev/null 2>&1 || true
 
 TOTAL=$((PASS_COUNT + FAIL_COUNT))

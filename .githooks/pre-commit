@@ -11,7 +11,9 @@
 #      the staged blob view to enforce SKILL.md-to-bin parity.
 #   2. Decide whether a build is needed based on staged paths. Build is
 #      needed when any staged path is a top-level source (skills/, bin/cortex-,
-#      hooks/cortex-validate-commit.sh) or under a build-output plugin tree.
+#      hooks/cortex-, claude/hooks/cortex-) or under a build-output plugin
+#      tree. The pattern must cover every source `just build-plugin` reads —
+#      out-of-sync triggers cause silent mirror drift.
 #   3. When a build is needed, run `just build-plugin` to regenerate all
 #      build-output plugin trees from top-level sources.
 #   4. For each build-output plugin, run `git diff --quiet plugins/$p/` to
@@ -146,7 +148,7 @@ fi
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 BUILD_NEEDED=0
 
-if echo "$staged" | grep -qE '^(skills/|bin/cortex-|hooks/cortex-validate-commit\.sh$)'; then
+if echo "$staged" | grep -qE '^(skills/|bin/cortex-|hooks/cortex-|claude/hooks/cortex-)'; then
     BUILD_NEEDED=1
 fi
 
