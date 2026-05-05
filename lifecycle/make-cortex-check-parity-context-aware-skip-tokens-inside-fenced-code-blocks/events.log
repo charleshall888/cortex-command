@@ -1,0 +1,26 @@
+- ts: 2026-05-04T11:19:34Z
+  event: clarify_critic
+  feature: make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks
+  findings:
+    - "The HIGH intent-clarity rating papers over substantive ambiguity in the source. The 'Proposed approaches' section lists three materially different outcomes (skip fenced blocks entirely, path-segment heuristic, allowlist names) and labels them 'research phase' with only a tentative default — approach (3) does not ignore code-block contexts at all. The intent at the level of 'what behavior should the linter end up with' is genuinely unsettled."
+    - "The HIGH scope-boundedness rating ignores a scope-relevant unknown the source flags: approach (1) carries a 'separate audit of whether code-spanned references are load-bearing for current allowlist entries' as in-scope work, plus the question of whether existing .parity-exceptions.md entries must be revisited. The assessment's scope summary never accounts for these."
+    - "The HIGH requirements-alignment rating asserts 'no conflict' / 'direct alignment' with the parity enforcement constraint, but narrowing what counts as a 'reference' (by ignoring fenced code blocks) is a substantive weakening of the gate's coverage given the ticket's own acknowledgment that real script references can appear in code spans. The constraint targets drift detection, and reducing the linter's input surface trades false-positive reduction for potential false-negative introduction."
+    - "Complexity is rated 'simple — small, single-file linter change with clear approach', but the source presents three approaches with materially different implementation surfaces, defers the choice to research, and conditions the recommendation on a pre-flight audit. Markdown fenced-block detection (nested fences, indented blocks, inline backticks, tilde fences) is not a trivial regex tweak."
+    - "The HIGH intent-clarity rating treats the cited incident as evidence of a reproducible problem class, but the 'Why it matters' justification leans on a forward-looking claim tied to 'the no-clone wheel-install migration where setup.md is still actively edited' — a migration whose status and timing aren't established in the source. Recurrence rate (and therefore robustness requirement) is weaker than the rating suggests."
+  dispositions:
+    apply: 3
+    dismiss: 2
+    ask: 0
+  applied_fixes:
+    - "Added the code-span load-bearing audit and the .parity-exceptions.md revisit question to the in-scope description (per finding 1). Scope rating remains HIGH because the audit step is named, not unbounded."
+    - "Softened the requirements-alignment note from 'no conflict / direct alignment' to acknowledge the false-negative trade-off as a design concern that must be navigated in research/spec to avoid weakening the drift-catching purpose of the gate (per finding 2)."
+    - "Revised complexity from 'simple' to 'complex' (judgment calls about design trade-offs across three candidate approaches, audit work, markdown-parsing edge cases) and criticality from 'medium' to 'high' (bin/cortex-check-parity is hook infrastructure that gates every commit; per clarify.md the default for hook/workflow changes is high) (per finding 3)."
+  dismissals:
+    - finding_index: 0
+      rationale: "The ticket title — 'Make cortex-check-parity context-aware (skip tokens inside fenced code blocks)' — explicitly states the design direction at the user-visible level. The three approaches are framed as research-phase hypotheses about how to achieve context-awareness; per clarify.md §3 note, prescriptive content does not change scope/intent ratings. Approach (3) is correctly understood as a fallback that the title's stated direction would not satisfy."
+    - finding_index: 4
+      rationale: "Recurrence rate is a value/scope-of-solution judgment that belongs to spec phase's complexity/value gate — not a clarify-stage intent-clarity concern. The user-visible design intent (a context-aware linter) is unambiguous independent of how often the failure mode fires."
+  status: ok
+{"ts":"2026-05-04T11:20:20Z","event":"lifecycle_start","feature":"make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks","tier":"complex","criticality":"high"}
+{"ts":"2026-05-04T11:20:20Z","event":"phase_transition","feature":"make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks","from":"clarify","to":"research"}
+{"ts":"2026-05-04T12:18:34Z","event":"feature_deferred","feature":"make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks","reason":"Motivating false positive rephrased away in f817c11 and no recurrence in 17 subsequent commits including the wheel-install migration cited as forward-looking justification. Re-open trigger: 2+ E002 false positives in 60-day window. Recommended fix-on-recurrence: extend RESERVED_NON_BIN_NAMES per bin/cortex-check-parity:45-58 precedent."}

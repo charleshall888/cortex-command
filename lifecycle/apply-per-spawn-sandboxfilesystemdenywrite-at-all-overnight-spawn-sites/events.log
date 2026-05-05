@@ -1,0 +1,51 @@
+- ts: 2026-05-05T00:42:56Z
+  event: clarify_critic
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  findings:
+    - "The HIGH intent-clarity rating treats 'apply per-spawn denyWrite at three named spawn sites' as a single unambiguous outcome, but the acceptance criteria enumerate eight distinct deliverables — including a shape conversion to filesystem.allowWrite for the dispatch path (not denyWrite), a cross-repo allowlist inversion fix swapping Path.cwd() for integration_worktrees[repo_path_str], and doc updates across two surfaces — collapsing distinct enforcement models (deny vs allow) under one 'outcome.'"
+    - "The assessment cites 'DR-1 through DR-7' as grounding the file:line references, but the ticket only references DR-1 r3, DR-2, DR-3, DR-6, DR-7 explicitly. The load-bearing schema claim that sandbox-runtime consumes only the simplified shape and the granular shape is 'structurally a silent no-op today' is sourced to a single external-repo reading without test artifact, transcript, or version pin proving the claim against the Claude Code version cortex actually spawns."
+    - "The HIGH scope-boundedness rating rests on the threat-model-boundary section, but the acceptance criteria require docs that describe the 'operational story when commits fail under sandbox denial' — a narrative that inevitably positions Bash-routed coverage against the carved-out vectors, leaking scope into the very surfaces the boundary excludes. Additionally, the cross-repo enumeration's git-symbolic-ref / .git/HEAD fallback semantics, behavior when neither resolves, and state cache invalidation are unspecified."
+    - "Itemization of eight deliverables is not boundedness. The empirical-acceptance-tests criterion requires 'kernel-layer EPERM verification' without specifying which kernel, sandbox-runtime version, platform, or how the test runs portably under just test in CI. The 'test scaffolding (or equivalent)' line is explicitly hedged, and 'pre-flight (recommended, non-blocking)' is itself a contradiction — a non-blocking acceptance criterion is not an acceptance criterion."
+    - "Requirements alignment HIGH 'no conflicts detected' paraphrases requirements/project.md:34 and requirements/pipeline.md without quoting verbatim, and acknowledges no audit trail of what was checked for conflicts. Substantively, the ticket adds new failIfUnavailable: true semantics escalating failure rigor without citing an events.log F-row, retro entry, or transcript URL of an effort=high dispatch failing first — failing the CLAUDE.md MUST-escalation policy on its face."
+    - "The user's auto-memory states 'Cortex is rules-only, never ships global CLAUDE.md' and cortex-init writes per-repo entries into ~/.claude/settings.local.json's sandbox.filesystem.allowWrite. The ticket's per-spawn --settings <tempfile> writes containing denyWrite for <home_repo>/.git/... materially overlap with the user-owned settings.local.json mechanism. The ticket's central correctness pivot — 'denyWrite > allowWrite precedence is documented; the per-spawn deny correctly overrides cortex-init's user-scope allowWrite across the merge' — cites only 'documented' with no link, version, or test."
+    - "Complexity 'complex' is the correct tier, but the reasoning ('multiple files, shared infrastructure, cross-cutting effects') undersells the actual surface — three runtime spawn sites, one CLI distribution surface (--settings tempfile lifecycle), one cross-repo enumeration mechanism with git-resolution fallbacks, two doc surfaces, two test files (one new), and a kernel-platform-portability question. Tempfile lifecycle is treated in three words ('Tempfile lifecycle handled') — who deletes the file, what happens on orchestrator crash mid-run, whether the path is predictable for sandbox-runtime to read before deletion are all unspecified."
+    - "Criticality 'critical' defers to 'the priority field on ticket itself' — circular justification rather than independent re-derivation from the threat model. If the assessor had re-derived independently, they would have noted the threat model is narrowed to Bash-tool-routed escapes only, with Write/Edit/MCP/plumbing-level mutations remaining unmitigated."
+    - "The parent-epic alignment claim rests on shared file:line citations, but the parent body says this epic is 'per-spawn sandbox.filesystem.denyWrite at OS level as the primary enforcement mechanism' — the child's acceptance criteria perform a shape conversion from write.allowOnly to filesystem.allowWrite for the dispatch path (not denyWrite), silently broadening the epic's denyWrite framing to a mixed denyWrite/allowWrite model. Additionally, the cross-repo allowlist inversion (Problem 3) appears nowhere in the parent epic body provided to this critic, being absorbed into the child as if epic-aligned."
+  dispositions:
+    apply: 2
+    dismiss: 7
+    ask: 0
+  applied_fixes:
+    - "Revised complexity reasoning to enumerate the actual surface — three runtime spawn sites, --settings <tempfile> distribution lifecycle including crash-mid-run cleanup, cross-repo enumeration with git-symbolic-ref/.git/HEAD resolution fallbacks, two doc surfaces, two test files (one new — tests/test_runner_sandbox.py), and macOS Seatbelt enforcement-portability verification. Tier remains complex."
+    - "Re-derived criticality independently from threat model: (a) per-feature dispatch sandbox is structurally a silent no-op today (failed defense-in-depth claim per requirements/project.md:34), (b) cross-repo allowlist inversion grants cross-repo agents write access to the home repo's working tree (active misconfiguration, inverse of multi-repo isolation intent), (c) orchestrator spawn has no per-spawn sandbox at all (session-1708 demonstrated escape vector). Each alone justifies critical; jointly they constitute a security surface where every overnight spawn site is unprotected. Tier remains critical."
+  dismissals:
+    - finding_index: 0
+      rationale: "The intent (apply real OS-level write-sandbox enforcement at every overnight spawn site) is unambiguous. The deny/allow asymmetry is implementation-level — the orchestrator uses broad-context deny against specific git-ref paths while per-feature dispatch uses narrow allowlist against feature-scoped paths; both are OS-layer write-sandbox enforcement and the asymmetry is justified by the differing context shapes. The asymmetry lives in acceptance criteria, not the intent statement, and does not impair intent clarity."
+    - finding_index: 1
+      rationale: "The source ticket explicitly references DR-1 r3, DR-2, DR-3, DR-6, and DR-7 — five of seven, not zero. The load-bearing silent-no-op claim is verified by the ticket's blocking empirical-acceptance-tests criterion (kernel-layer EPERM verification at both spawn sites under just test), which provides the missing test artifact the critic flagged."
+    - finding_index: 2
+      rationale: "Cross-repo git-symbolic-ref / .git/HEAD fallback semantics and 'neither resolves' behavior are spec-phase implementation details, not clarify-phase scope ambiguities. The clarified intent (enumerate cross-repo mains for the deny-set) is bounded; the resolution edge cases are addressed during the structured spec interview."
+    - finding_index: 3
+      rationale: "Kernel platform is bounded by the parent epic (#162) which explicitly drops Linux scope ('no Linux/WSL2 user base for overnight today'). The active development environment is Darwin 25.4.0; tests run macOS Seatbelt. The 'pre-flight (recommended, non-blocking)' wording is procedural noise but does not impair the BLOCKING empirical-acceptance-tests criterion that fully covers the same verification surface."
+    - finding_index: 4
+      rationale: "The MUST-escalation policy in CLAUDE.md governs MUST/CRITICAL/REQUIRED prose escalations in user-facing rules files, requiring evidence-artifact links before adding such language. failIfUnavailable: true is a sandbox-runtime configuration flag (a defensive default that says 'if sandbox can't activate, fail rather than continue without protection'), not a prose MUST escalation in a rules document. The policy is not implicated. Requirements alignment is correct on its substance — the paraphrasing concern is form, not finding."
+    - finding_index: 5
+      rationale: "Per-spawn --settings <tempfile> writes do NOT touch ~/.claude/CLAUDE.md or ~/.claude/settings.local.json. They write to a tempfile passed as a process flag, which is the documented distribution layer (DR-2 in research) and unrelated to the rules-only deployment convention. The denyWrite > allowWrite precedence claim is verified empirically by the blocking acceptance tests; pre-implementation verification is explicitly delegated to spec phase by the ticket's own 'Documented in spec phase' clause on the pre-flight item."
+    - finding_index: 8
+      rationale: "The cortex-load-parent-epic helper truncated the epic body to the introductory paragraph; the full epic body's Children section explicitly enumerates all four deliverables for #163 including the cross-repo allowlist inversion fix. The asymmetric shape choice (allowWrite for narrow per-feature dispatch, denyWrite for broad orchestrator context) is justified by spawn-site semantics; the epic title's 'denyWrite' framing is shorthand for OS-level write-sandbox enforcement, not literal exclusivity to the deny shape."
+  status: ok
+
+- ts: 2026-05-05T02:27:35Z
+  event: orchestrator_review
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+
+- ts: 2026-05-05T11:18:57Z
+  event: lifecycle_start
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  tier: complex
+  criticality: critical
+  note: "retrospective entry — prior lifecycle phases completed before lifecycle_start logging was enforced; tier and criticality match backlog frontmatter and clarify_critic re-derivation"

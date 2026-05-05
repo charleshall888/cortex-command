@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4ca8d1fe-5592-47b2-9d63-d748d499167f
 title: "Empirically test rules-file tone leverage under Opus 4.7+"
-status: backlog
+status: wontfix
 priority: low
 type: chore
 created: 2026-05-04
@@ -38,3 +38,14 @@ One-shot empirical test, not ongoing rules-file deployment. No infrastructure
 changes, no new harness mechanism, no recurring tone-monitoring system. The
 output is a single recorded result that either fires R7 trigger (d) or does
 not.
+
+## Resolution (2026-05-04) — wontfix
+
+Closing without execution. R7 trigger (d) (in-repo empirical test) is
+dominated by triggers (a) (Anthropic publishes guidance) and (e) (Anthropic
+ships an officially-supported tone-control mechanism), which are stronger
+signals for revisiting OQ6. A positive in-repo paired-dispatch result would
+be a weak basis for reversing a policy hedge that's grounded in harness
+architecture; if Anthropic publishes harness-level guidance or ships output
+styles, the policy revisits through those paths without needing this test.
+OQ6 remains functionally revisitable via the stronger triggers.
