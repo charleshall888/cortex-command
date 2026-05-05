@@ -162,6 +162,7 @@ Evaluate against `lifecycle/{feature}/plan.md`:
 | P5 | Code budget respected | Plan contains prose and structural context only — no function bodies, import statements, or copy-paste-ready code |
 | P6 | Files/Verification consistency | Every file implied by Verification is listed in Files; no verification step requires modifying unlisted files |
 | P7 | No self-sealing verification | For each task, cross-reference the Verification field against the Files list: does Verification reference an artifact that the same task creates? If yes, apply the operational test: if the task's stated purpose is to create that artifact (it is the primary deliverable), the self-check is benign. If the task's purpose is to verify an external condition and the artifact is a side-channel for recording that verification, the self-check is harmful — flag it as self-sealing. |
+| P8 | Architectural Pattern field present and in taxonomy | Structural check only (field presence + closed-set membership): the plan contains a `**Architectural Pattern**` field whose value is one of the five categories: event-driven, pipeline, layered, shared-state, plug-in. Gated on `criticality = critical` (when §1b ran); explicitly N/A for non-critical plans. Semantic fit is not checked here — that domain belongs to the synthesizer. |
 
 ## Cycle Cap
 
