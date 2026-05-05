@@ -117,6 +117,8 @@ After classifying every objection, the dispositioning step produces one structur
 - The user-facing response following the dispositioning step is scoped to (a) the §4 Ask-merge invocation (per Ask-to-Q&A Merge Rule below), and (b) silent application of Apply dispositions to the confidence assessment.
 - Dismiss rationales appear only in `dismissals[].rationale` inside the event — never in the user-facing response surface. Because the dispositioning step's only output channel is the structured artifact, there is no prose surface in which a Dismiss rationale could appear.
 
+Note: alignment findings flow through the same Apply/Dismiss/Ask framework as primary findings — same self-resolution check, same Apply/Dismiss/Ask classification, same `dismissals[]` and `applied_fixes` routing.
+
 ## Ask-to-Q&A Merge Rule
 
 Ask items from the critic are **not** presented as a blocking escalation separate from §4. They are folded into the §4 question list and presented alongside any remaining low-confidence dimensions as a single consolidated Q&A round. The user sees one set of questions — not a critic-escalation followed by a separate Q&A.
@@ -133,7 +135,8 @@ Required fields:
 ts: <ISO 8601 timestamp>
 event: clarify_critic
 feature: <feature slug>
-findings: <array of prose strings — one per critic objection>
+parent_epic_loaded: <bool>  # REQUIRED; default false on read for legacy events without this field
+findings: <array of {text: <string>, origin: "primary" | "alignment"} objects — one per critic objection>
 dispositions:
   apply: <count>
   dismiss: <count>
@@ -149,6 +152,12 @@ status: "ok"
 
 If no Dismiss dispositions were made, `dismissals` is an empty array. The invariant `len(dismissals) == dispositions.dismiss` must hold for every success-path event.
 
+`parent_epic_loaded` is REQUIRED on every post-feature event. It is `true` when the orchestrator included the `## Parent Epic Alignment` section in the dispatch prompt (per the Parent Epic Loading branching above) and `false` otherwise. Pre-feature legacy events without this field are read as `false`.
+
+`findings[]` is an array of objects, each with `text: <string>` (the prose objection) and `origin: "primary" | "alignment"`. `origin: "alignment"` is reserved for findings produced from the `## Parent Epic Alignment` sub-rubric; all other critic-dimension findings use `origin: "primary"`. Pre-feature legacy events with bare-string findings are read as `{text: <string>, origin: "primary"}`.
+
+**Cross-field invariant**: any post-feature event whose `findings[]` contains at least one item with `origin: "alignment"` MUST have `parent_epic_loaded: true`. Violation indicates a write-side bug. This invariant sits in parallel to the `len(dismissals) == dispositions.dismiss` invariant; neither is programmatically validated in this version, but a future ticket may add a validator covering both.
+
 Disposition counts reflect post-self-resolution values. If self-resolution reclassifies an Ask item as Apply, the logged `apply` count increases and `ask` count decreases accordingly, and the resulting fix description is appended to `applied_fixes` (the `applied_fixes` array thus carries initial Apply dispositions and Ask→Apply self-resolution reclassifications). If self-resolution reclassifies an Ask item as Dismiss, `ask` decreases and `dismiss` increases; the resolved rationale lands in `dismissals[].rationale` (not in `applied_fixes`) because `dismissals` is the Dismiss-disposition counterpart to `applied_fixes`.
 
 Example (YAML block format, same as other lifecycle events):
@@ -157,15 +166,22 @@ Example (YAML block format, same as other lifecycle events):
 - ts: 2026-03-23T14:05:00Z
   event: clarify_critic
   feature: my-feature
+  parent_epic_loaded: true
   findings:
-    - "The High rating for intent clarity is not grounded in the backlog item body — the item says 'improve the workflow' with no further elaboration."
-    - "Scope boundedness is rated High but the item mentions both the CLI and the web UI without distinguishing them."
-    - "Requirements alignment asserts 'no conflicts' but no requirements file was actually loaded."
-    - "Complexity rated simple despite four distinct subsystems named in the body."
+    - text: "The High rating for intent clarity is not grounded in the backlog item body — the item says 'improve the workflow' with no further elaboration."
+      origin: primary
+    - text: "Scope boundedness is rated High but the item mentions both the CLI and the web UI without distinguishing them."
+      origin: primary
+    - text: "Requirements alignment asserts 'no conflicts' but no requirements file was actually loaded."
+      origin: primary
+    - text: "Complexity rated simple despite four distinct subsystems named in the body."
+      origin: primary
+    - text: "The clarified intent narrows scope to 'CLI commit flow' but the parent epic body explicitly frames the work as 'commit and PR flows together' — divergence unjustified by the source material."
+      origin: alignment
   dispositions:
     apply: 1
     dismiss: 2
-    ask: 1
+    ask: 2
   applied_fixes:
     - "Revised intent clarity from High to Low — the goal phrase is genuinely ambiguous."
   dismissals:
@@ -180,7 +196,7 @@ Example (YAML block format, same as other lifecycle events):
 
 If the critic agent fails, errors, or times out:
 
-1. Write a `clarify_critic` event with `status: "failed"` and empty `findings`, `applied_fixes`, `dismissals`, and zero counts in `dispositions`.
+1. Write a `clarify_critic` event with `status: "failed"` and empty `findings`, `applied_fixes`, `dismissals`, and zero counts in `dispositions`. `parent_epic_loaded` is set per the value determined before dispatch (the result of the Parent Epic Loading branching above) — failure of the critic agent does not retroactively change whether the alignment section was included in the prompt.
 2. Proceed to §4 as if the critic had not run — cover all original low-confidence dimensions in the Q&A. Do not skip questions because the critic was supposed to run.
 3. Do not surface the failure as a blocking error. Note it silently in the event log.
 
