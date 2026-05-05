@@ -94,6 +94,45 @@ without observing a partial write.
 
 ---
 
+## Sandbox shape
+
+Per-feature dispatch in `cortex_command/pipeline/dispatch.py` constructs a per-dispatch sandbox settings JSON file and passes its path via `ClaudeAgentOptions(settings=str(tempfile_path))`. The SDK transport (`claude_agent_sdk/_internal/transport/subprocess_cli.py`) accepts the `settings=` parameter as JSON-string-or-filepath and forwards it as `claude --settings <value>`. The JSON conforms to Claude Code's documented `sandbox.filesystem.{allowWrite,denyWrite}` shape:
+
+```json
+{
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "enableWeakerNestedSandbox": false,
+    "enableWeakerNetworkIsolation": false,
+    "filesystem": {
+      "allowWrite": ["<worktree-path>", "<six risk-targeted writers — see Allowed write paths>"],
+      "denyWrite": []
+    }
+  }
+}
+```
+
+The orchestrator-side spawn at `cortex_command/overnight/runner.py` writes the same JSON shape via `cortex_command/common.py:atomic_write` to `<session_dir>/sandbox-settings/cortex-sandbox-*.json` and passes `--settings <tempfile-path>` in its `subprocess.Popen` argv. Both spawn sites use the single canonical `--settings <tempfile>` mechanism. See [`docs/overnight-operations.md` — Per-spawn sandbox enforcement](overnight-operations.md#per-spawn-sandbox-enforcement) for orchestrator-side deny-set construction, the `CORTEX_SANDBOX_SOFT_FAIL` kill-switch, and the threat-model boundary; this section covers dispatch-side internals only.
+
+**SDK typed-field deviation (spec Req 5).** The originally-specced migration to typed `SandboxSettings` / `SandboxFilesystemSettings` SDK fields was structurally impossible: empirical verification against `claude_agent_sdk@0.1.46` confirmed the `SandboxSettings` TypedDict at `claude_agent_sdk/types.py:683-727` has no `filesystem` key, and the SDK docstring states explicitly that "Filesystem and network restrictions are configured via permission rules, not via these sandbox settings." Both spawn sites therefore use the `--settings <tempfile>` JSON-shape mechanism instead of the typed-field path. A drift detector test (`tests/test_dispatch.py::test_no_typed_sandbox_field_attempted`) guards against accidental re-introduction of the broken typed-field import.
+
+### Allowed write paths
+
+The per-feature dispatch `allowWrite` list contains the worktree path plus six risk-targeted out-of-worktree writers that cortex actively uses. Each entry has a one-sentence rationale:
+
+- `~/.cache/uv/` — SDK package install during retry-resolve flows when the agent reaches for a Python dep that uv has not cached yet.
+- `$TMPDIR/` — Python `tempfile` output directory; on macOS this is per-user (e.g., `/var/folders/.../T/`), and the dispatched-agent env locks `TMPDIR=$TMPDIR` to prevent the unset-fallback to `/tmp/` (which is not on the allow-set).
+- `~/.claude/sessions/` — Claude Agent SDK writes per-session JSON state files here for resume support.
+- `~/.cache/cortex/` — backlog telemetry breadcrumb log written by `cortex_command/backlog/_telemetry.py`.
+- `~/.cache/cortex-command/` — scheduled-launches sidecar plus lock file written by `cortex_command/overnight/scheduler/sidecar.py`.
+- `~/.local/share/overnight-sessions/` — install-guard plus dashboard active-session pointer written by `cortex_command/install_guard.py` and `cortex_command/dashboard/poller.py`.
+
+This is a risk-targeted audit, not an exhaustive enumeration of every potential out-of-worktree writer. Other writers fail loudly with EPERM during the soak period; new entries are added with a one-sentence rationale here as observed signals warrant.
+
+---
+
 ## Integration Branch
 
 Feature branches are named `pipeline/{feature}`. After `batch_runner.py` merges a feature branch,

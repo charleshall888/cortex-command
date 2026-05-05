@@ -223,7 +223,7 @@ def _today() -> str:
 def collect_tool_failures(session_id: str) -> dict[str, dict]:
     """Read tool failure data from the session-scoped /tmp failure directory.
 
-    Reads ``/tmp/claude-tool-failures-{session_id}/`` and parses per-tool
+    Reads ``${TMPDIR:-/tmp}/claude-tool-failures-{session_id}/`` and parses per-tool
     failure counts and last exit codes written by the PostToolUse hook
     (``cortex-tool-failure-tracker.sh``).
 
@@ -1102,7 +1102,7 @@ def render_failed_features(data: ReportData) -> str:
 def collect_tool_failures(session_id: str) -> dict[str, dict[str, Any]]:
     """Collect tool failure data from the session-scoped temp directory.
 
-    Reads ``/tmp/claude-tool-failures-{session_id}/`` for per-tool ``.count``
+    Reads ``${TMPDIR:-/tmp}/claude-tool-failures-{session_id}/`` for per-tool ``.count``
     and ``.log`` files written by the PostToolUse hook.
 
     Args:

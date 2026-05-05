@@ -20,7 +20,7 @@ The runner loops until one of the stop conditions fires:
 
 ```
 while rounds < max_rounds AND features pending:
-    spawn orchestrator agent (--max-turns 50, no permissions sandbox)
+    spawn orchestrator agent (--max-turns 50, per-spawn sandbox via --settings tempfile)
     spawn watchdog (background)
     wait for agent to exit
     count features merged this round
@@ -549,6 +549,30 @@ Overnight runs autonomously against a live working tree on a developer workstati
 - **Dashboard binds `0.0.0.0`, unauthenticated, by design.** The dashboard is read-only and listens on all interfaces without auth. Threat model: anyone on the same layer-2 broadcast domain can read session state, feature names, and log excerpts; do not expose to the public internet and do not treat "local network" as equivalent to "home network" — hotel Wi-Fi, coworking Wi-Fi, and shared office VLANs are all "local" to the dashboard and are not trusted peers.
 - **macOS keychain prompt as a session-blocking failure mode.** If authentication resolution (see [Internal APIs — Auth Resolution](#auth-resolution-apikeyhelper-and-env-var-fallback-order)) falls through to keychain-backed credentials, the first subprocess spawn may trigger a macOS keychain-access dialog. Threat model: the "runs while you sleep" premise breaks silently — the prompt blocks subprocess spawn until acknowledged, the round stalls, and no notification fires because the failure is pre-notification. Resolve by setting `ANTHROPIC_API_KEY` or configuring `apiKeyHelper` before the session starts.
 - **"Local network" ≠ "home network".** This is a corollary of the dashboard boundary but is called out as its own item because the framing trap bites at 2am. Threat model: a reader who conflates the two will expose session state to whatever shared network they happen to be on; the dashboard's design assumes a trusted L2 peer set, which is only true on a network the operator controls end-to-end.
+
+### Per-spawn sandbox enforcement
+
+Overnight spawns two distinct kinds of `claude` subprocess: the per-round orchestrator (via `_spawn_orchestrator` in `cortex_command/overnight/runner.py`) and per-feature dispatched task agents (via `cortex_command/pipeline/dispatch.py`). Both spawn sites construct a per-spawn settings JSON file in `<session_dir>/sandbox-settings/` and pass `--settings <tempfile>` to the subprocess, so that OS-kernel sandbox enforcement (Seatbelt on macOS) is applied to each agent independently. The two surfaces share the same canonical JSON shape; the differences are in the deny-set and allow-set contents.
+
+- **Orchestrator deny-set.** For the home repo and each cross-repo present in `state.integration_worktrees.keys()`, the orchestrator's `sandbox.filesystem.denyWrite` includes four git-state path suffixes per repo:
+  - `<repo>/.git/refs/heads/main`
+  - `<repo>/.git/refs/heads/master`
+  - `<repo>/.git/HEAD`
+  - `<repo>/.git/packed-refs`
+
+  This is a static four-entry enumeration per repo — no dynamic `git symbolic-ref` resolution. Repos with custom default branches (e.g., `develop`, `trunk`) are not covered by V1 and are documented as a limitation. Denying entire `<repo>` paths would override cortex-init's user-scope `allowWrite` for `<repo>/lifecycle/sessions/` under the documented `denyWrite > allowWrite` precedence and crash the runner on the first events-log write; enumerating the specific git paths sidesteps this collision.
+
+- **Dispatch allow-set.** Per-feature dispatch's `sandbox.filesystem.allowWrite` includes the worktree path plus six risk-targeted out-of-worktree writers cortex actively uses: `~/.cache/uv/`, `$TMPDIR/`, `~/.claude/sessions/`, `~/.cache/cortex/`, `~/.cache/cortex-command/`, and `~/.local/share/overnight-sessions/`. Per-entry rationale lives in `docs/pipeline.md`'s "Allowed write paths" subsection. The dispatched-agent env locks `TMPDIR=$TMPDIR` to prevent the unset-TMPDIR fallback to `/tmp/`, which is not on the allow-set.
+
+- **`CORTEX_SANDBOX_SOFT_FAIL` kill-switch.** Set the env var `CORTEX_SANDBOX_SOFT_FAIL=1` to downgrade `sandbox.failIfUnavailable` from `true` to `false` for new spawns within the session. This is the user-facing recovery path for Anthropic open sandbox-runtime regressions [#53085](https://github.com/anthropics/claude-code/issues/53085) and [#53683](https://github.com/anthropics/claude-code/issues/53683). The orchestrator's own per-spawn settings JSON is built once at orchestrator-spawn and is not re-read mid-process; the env var is re-read at each per-feature dispatch's settings-builder invocation, so toggling between dispatches affects only subsequent spawns. The morning report unconditionally surfaces a `CORTEX_SANDBOX_SOFT_FAIL=1 was active for this session` header line whenever the env var was truthy at any builder invocation during the session.
+
+- **Threat-model boundary (Bash-only).** Sandbox enforcement covers Bash-tool subprocess writes via OS-kernel rules. It does NOT cover Write-tool or Edit-tool calls (which run in-process in the SDK and bypass the sandbox per Anthropic [#26616](https://github.com/anthropics/claude-code/issues/26616) and the official sandboxing docs at https://code.claude.com/docs/en/sandboxing) nor MCP-server-routed subprocess writes (MCP servers run unsandboxed at hook trust level). Telemetry on MCP writers is deferred to epic #162's child #164. The Write-then-Bash-execute composite vector (drop a script via Write, then `bash script.sh`) is coincidentally covered for git-state mutations because the deny-set targets the final filesystem write regardless of which tool initiated it.
+
+- **Operational story for sandbox-denial command failures.** When a Bash command attempts a write to a deny-set path, the kernel returns EPERM and the command exits non-zero with `Operation not permitted` in stderr. The orchestrator's tool-failure tracker records the failure under `${TMPDIR:-/tmp}/claude-tool-failures-${SESSION_KEY}/` (migrated from `/tmp/` so the tracker writes are themselves on the allow-set), and the morning report surfaces the failure count by tool. If denial is unexpected (e.g., a legitimate write to a path that should be allowed), confirm whether the path is on the documented allow-set in `docs/pipeline.md` "Allowed write paths" and either migrate the writer to a covered location or open a ticket to extend the allow-set with a one-sentence rationale entry.
+
+- **Cross-repo dispatched agents lose home-repo cortex project hooks.** Pre-conversion, `_load_project_settings` blob-injected the home repo's project hooks at `--settings` top precedence regardless of dispatch CWD. Post-conversion, only the sandbox subtree is plumbed via `--settings`; project hooks merge naturally via Claude Code's multi-scope merge from project scope. For cross-repo dispatches the CWD is `state.integration_worktrees[repo_key]`, so the home cortex repo's `.claude/settings.json` is out of project scope — cortex's project hooks (skill-edit-advisor, tool-failure-tracker) do not load there. This is intentional: those hooks are cortex-internal observability and are not relevant when the dispatched agent is operating on a different repo's files.
+
+- **Linux invocation advisory.** Sandbox enforcement is macOS-Seatbelt-only per parent epic #162. On non-Darwin platforms the settings-builder emits a one-line stderr warning at first invocation and continues; behavior under Linux/bwrap is undefined.
 
 ---
 
