@@ -37,12 +37,15 @@ Within this boundary, V1 directly addresses the historical session-1708 vector a
 
 ## Children
 
-- **#163** Apply per-spawn `sandbox.filesystem.denyWrite` at overnight orchestrator spawn (load-bearing)
-- **#164** Add sandbox-violation tracker hook for PostToolUse(Bash) (observability)
-- **#165** Add Linux bubblewrap preflight + `failIfUnavailable` for overnight sandbox (cross-platform)
-- **#166** Convert dispatch.py granular sandbox shape to simplified, fix cross-repo allowlist inversion at feature_executor.py:603 (per-feature audit)
-- **#167** Document overnight sandbox threat-model boundary and Linux setup prereqs (docs)
-- **#168** Tighten per-spawn sandbox from deny-list to narrower allowOnly (V1c, deferred until observability data available)
+- **#163** Apply per-spawn `sandbox.filesystem.denyWrite` at all overnight spawn sites (load-bearing). Covers: orchestrator spawn at `runner.py:905`, conversion of `dispatch.py:546`'s silent-no-op granular shape to documented simplified shape, fix for `feature_executor.py:603` cross-repo allowlist inversion, cross-repo deny-set enumeration via `state.features[*].repo_path`, and threat-model + design documentation in `docs/overnight-operations.md` and `docs/pipeline.md`.
+- **#164** Add sandbox-violation tracker hook for PostToolUse(Bash) (observability). Includes its own docs subsection in `docs/overnight-operations.md`.
+
+## Out of scope (post-restructure)
+
+The original decomposition included three additional tickets that were dropped or folded:
+- **Linux/bwrap preflight** — dropped (no Linux/WSL2 user base for overnight today).
+- **Standalone docs ticket** — folded into #163 and #164 (each updates its own doc surface).
+- **Allowlist tightening (V1c)** — dropped as a pre-filed placeholder; re-discover from #164's telemetry if data shows the deny-list is insufficient.
 
 ## Research context
 

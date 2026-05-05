@@ -43,6 +43,7 @@ Today, sandbox denials surface as generic Bash failures with no classification (
 - The hook is registered in the cortex-overnight-integration plugin's hooks.json.
 - Morning report aggregator surfaces a count line for `sandbox_denial` events.
 - Hook is gated on `CORTEX_RUNNER_CHILD=1` to limit scope to overnight-spawned children.
+- `docs/overnight-operations.md` is updated with a brief subsection on sandbox-violation telemetry and how it appears in morning reports.
 
 ## Research context
 
