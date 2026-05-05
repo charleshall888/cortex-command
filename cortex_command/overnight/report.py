@@ -392,6 +392,28 @@ def create_followup_backlog_items(
 # Section renderers
 # ---------------------------------------------------------------------------
 
+def render_soft_fail_header(data: ReportData) -> str:
+    """Render the unconditional CORTEX_SANDBOX_SOFT_FAIL header (spec Req 20).
+
+    Scans ``data.events`` for any ``sandbox_soft_fail_active`` entry recorded
+    by the per-spawn settings builder when ``CORTEX_SANDBOX_SOFT_FAIL=1`` was
+    truthy at orchestrator-spawn or per-dispatch construction time. Returns
+    a one-line header string when at least one such event is present, or
+    the empty string otherwise so the caller can omit the section cleanly.
+
+    The header makes operators aware that sandbox enforcement was downgraded
+    for the session so they can correlate any unexpected commits-on-main
+    with the kill-switch state.
+    """
+    for evt in data.events:
+        if evt.get("event") == "sandbox_soft_fail_active":
+            return (
+                "CORTEX_SANDBOX_SOFT_FAIL=1 was active for this session; "
+                "sandbox.failIfUnavailable was downgraded to false."
+            )
+    return ""
+
+
 def render_executive_summary(data: ReportData) -> str:
     """Render the executive summary section."""
     lines: list[str] = ["## Executive Summary", ""]
@@ -1465,6 +1487,16 @@ def generate_report(data: ReportData) -> str:
     sections: list[str] = [
         f"# Morning Report: {data.date}",
         "",
+    ]
+    # Spec Req 20: unconditional header when CORTEX_SANDBOX_SOFT_FAIL=1 was
+    # active at any settings-builder invocation during the session. The event
+    # `sandbox_soft_fail_active` is emitted by the per-spawn settings builder
+    # (cortex_command.overnight.sandbox_settings) at first activation.
+    soft_fail_header = render_soft_fail_header(data)
+    if soft_fail_header:
+        sections.append(soft_fail_header)
+        sections.append("")
+    sections.extend([
         render_executive_summary(data),
         render_completed_features(data),
         render_pending_drift(data),
@@ -1474,7 +1506,7 @@ def generate_report(data: ReportData) -> str:
         render_new_backlog_items(data),
         render_action_checklist(data),
         render_run_statistics(data),
-    ]
+    ])
     # Scheduled-fire failures section is omitted entirely when empty.
     fire_failures_section = render_scheduled_fire_failures(data)
     if fire_failures_section:
