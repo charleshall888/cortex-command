@@ -37,7 +37,7 @@ packages = ["cortex_command"]
 "cortex_command/overnight/scheduler/launcher.sh" = "cortex_command/overnight/scheduler/launcher.sh"
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "cortex_command/dashboard/tests", "cortex_command/pipeline/tests", "cortex_command/overnight/tests", "cortex_command/init/tests", "cortex_command/backlog/tests"]
+testpaths = ["tests", "cortex_command/dashboard/tests", "cortex_command/pipeline/tests", "cortex_command/overnight/tests", "cortex_command/init/tests", "cortex_command/backlog/tests", "cortex_command/tests"]
 pythonpath = ["."]
 markers = [
     "slow: opt-in tests that invoke live models (use --run-slow to enable)",

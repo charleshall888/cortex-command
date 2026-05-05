@@ -96,7 +96,7 @@
   {
     "id": 168,
     "title": "Delete post-shift orphan code/scripts/hooks and retire paired requirements",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -113,13 +113,13 @@
     "blocked_by": [],
     "parent": "165",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements/spec.md",
     "discovery_source": "research/repo-spring-cleaning/research.md",
     "plan": null,
     "uuid": "e4d5251e-3c4f-480c-a69e-f5865878750c",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements",
+    "session_id": "39045fc2-8919-47a6-b0b4-70f289390c08",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
