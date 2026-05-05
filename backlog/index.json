@@ -1,36 +1,5 @@
 [
   {
-    "id": 162,
-    "title": "Sandbox overnight agents at the OS layer",
-    "status": "refined",
-    "priority": "critical",
-    "type": "epic",
-    "tags": [
-      "overnight-runner",
-      "sandbox",
-      "os-enforcement",
-      "orchestrator-worktree-escape"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-05-04",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
-    "plan": null,
-    "uuid": "0aac4173-e024-454b-a9c2-71bd06947190",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -58,38 +27,6 @@
     "session_id": null,
     "lifecycle_phase": null,
     "schema_version": null,
-    "repo": null
-  },
-  {
-    "id": 164,
-    "title": "Add sandbox-violation tracker hook for PostToolUse(Bash)",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "overnight-runner",
-      "sandbox",
-      "observability",
-      "hook"
-    ],
-    "areas": [
-      "overnight-runner",
-      "observability"
-    ],
-    "created": "2026-05-04",
-    "updated": "2026-05-05",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "162",
-    "research": null,
-    "spec": "lifecycle/add-sandbox-violation-tracker-hook-for-posttoolusebash/spec.md",
-    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
-    "plan": null,
-    "uuid": "88aa1935-073e-434b-8ffb-a179174b20ce",
-    "lifecycle_slug": "add-sandbox-violation-tracker-hook-for-posttoolusebash",
-    "session_id": "0876e18a-ebc1-4924-b941-e7673bef36a5",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
     "repo": null
   },
   {

@@ -2,13 +2,13 @@
 schema_version: "1"
 uuid: 0aac4173-e024-454b-a9c2-71bd06947190
 title: "Sandbox overnight agents at the OS layer"
-status: ready
+status: complete
 priority: critical
 type: epic
 tags: [overnight-runner, sandbox, os-enforcement, orchestrator-worktree-escape]
 areas: [overnight-runner]
 created: 2026-05-04
-updated: 2026-05-04
+updated: 2026-05-05
 lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
