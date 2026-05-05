@@ -7,6 +7,7 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 168 | Delete post-shift orphan code/scripts/hooks and retire paired requirements | in_progress | medium | feature | — | 165 | ✓ |
 | 169 | Fix archive predicate and sweep lifecycle/ and research/ dirs | backlog | medium | feature | — | 165 | — |
+| 170 | Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh | backlog | medium | bug | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
 
@@ -18,6 +19,7 @@
 - **165** Repo spring cleaning: share-readiness for installer audience
 - **166** Rewrite README, migrate content to docs/setup.md, reorganize docs/, and fix stale paths
 - **169** Fix archive predicate and sweep lifecycle/ and research/ dirs
+- **170** Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh
 - **142** Multi-session host concurrency registry for cortex overnight
 
 ## In-Progress
