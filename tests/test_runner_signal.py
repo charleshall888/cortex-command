@@ -27,6 +27,7 @@ import os
 import signal
 import stat
 import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -126,7 +127,7 @@ def runner_env(tmp_path: Path):
         "backlog_dir": backlog_dir,
         "repo": repo,
         "proc_args": [
-            "cortex", "overnight", "start",
+            sys.executable, "-m", "cortex_command.cli", "overnight", "start",
             "--state", str(state_path),
             "--time-limit", "3600",
             "--max-rounds", "1",

@@ -24,6 +24,7 @@ import re
 import signal
 import stat
 import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -163,7 +164,7 @@ def worktree_runner_env(tmp_path: Path):
         "worktree": worktree,
         "session_id": session_id,
         "proc_args": [
-            "cortex", "overnight", "start",
+            sys.executable, "-m", "cortex_command.cli", "overnight", "start",
             "--state", str(state_path),
             "--max-rounds", "1",
         ],
