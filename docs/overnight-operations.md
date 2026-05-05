@@ -480,6 +480,34 @@ The `OvernightStrategy` dataclass in `cortex_command/overnight/strategy.py` seri
 
 The morning-report commit is the only runner commit that stays on local `main`; all other artifact commits travel on the integration branch. (Historical reports from 2026-04-07, 2026-04-11, and 2026-04-21 were backfilled retroactively under commits whose subject lines end with `(backfill)`.)
 
+### Sandbox-Violation Telemetry
+
+`render_sandbox_denials` (in `cortex_command/overnight/report.py`) emits the morning report's `## Sandbox Denials` section by classifying Bash-routed `Operation not permitted` failures at render time. There is no separate sandbox-violation hook — classification reuses two existing signal sources:
+
+- **Tool-failure tracker** (`hooks/cortex-tool-failure-tracker.sh`, PostToolUse Bash) writes each failed Bash invocation's `command` and truncated `stderr` to `lifecycle/sessions/<id>/tool-failures/bash.log` as YAML literal block scalars.
+- **Per-spawn sidecar deny-lists** at `lifecycle/sessions/<id>/sandbox-deny-lists/<spawn-id>.json`, written by both overnight spawn sites (`cortex_command/overnight/runner.py` for the orchestrator and `cortex_command/pipeline/dispatch.py` for per-feature dispatches) immediately after each spawn's `--settings` deny-list is constructed. Files are never overwritten — each spawn writes a uniquely-keyed file (e.g. `orchestrator-1.json`, `feature-foo-1.json`) and the aggregator unions them.
+
+`collect_sandbox_denials(session_id)` reads both sources, filters the bash log to entries whose `stderr` contains `Operation not permitted`, and applies a 4-layer classifier to each entry's command:
+
+1. **Shell-redirection layer** — scans the command for `>file`, `>>file`, `tee file`, `echo … > file`, etc., and extracts the redirect target.
+2. **Plumbing-tool mapping layer** — if the leading word (after an optional `cd <dir> && …` prefix) is in `PLUMBING_TOOLS` (`git`, `gh`, `npm`, `pnpm`, `yarn`, `cargo`, `hg`, `jj`) and the subcommand is in the known-target mapping (e.g. `git commit` → `<repo>/.git/refs/heads/<HEAD>`, `<repo>/.git/HEAD`, `<repo>/.git/packed-refs`, `<repo>/.git/index`), generates the candidate write targets relative to the inferred repo root.
+3. **Plumbing-tool fallback layer** — leading word is in `PLUMBING_TOOLS` but the subcommand is unmapped: classify as `plumbing_eperm`.
+4. **Unclassified fallthrough** — none of the above: classify as `unclassified_eperm`.
+
+Layer-1/Layer-2 candidate targets are then matched against the union of all sidecar `deny_paths` and bucketed by path pattern. Categories:
+
+- `home_repo_refs`, `home_repo_head`, `home_repo_packed_refs` — denials against the home cortex repo's `.git/` tree.
+- `cross_repo_refs`, `cross_repo_head`, `cross_repo_packed_refs` — denials against an integration worktree's `.git/` tree.
+- `other_deny_path` — Layer-1/Layer-2 target matched a sidecar path not in the git-ref enumeration above.
+- `plumbing_eperm` — Layer 3: a `PLUMBING_TOOLS` command (likely sandbox, but the subcommand wasn't in the mapping so the precise target is unknown).
+- `unclassified_eperm` — Layer 4: leading command not in `PLUMBING_TOOLS`. Likely non-sandbox EPERM (chmod, ACL, EROFS, gpg against `~/.gnupg/`, cargo link-time, etc.) — disclosed as such in the report's prose paragraph.
+
+**Bash-only scope caveat.** Sandbox enforcement covers Bash-tool subprocess writes only. Write/Edit/MCP escape paths are not observed by this telemetry — see #163's V1 threat-model boundary above. Telemetry on MCP writers is deferred to epic #162's child #164.
+
+**Within-Bash plumbing caveat.** Within Bash scope, `git`/`gh`/`npm`-class plumbing denials are classified by command-target inference, which is precise only when the subcommand appears in the known mapping. Subcommand variants outside the mapping (e.g. `git config --global …`, `git rev-parse … | xargs git update-ref`) fall through to the `plumbing_eperm` bucket — still useful as a flag, but the specific target is not attributed.
+
+**Manual smoke recipe.** This path cannot be exercised in automated CI because it requires a sandboxed `claude -p` invocation. To smoke-test by hand: (1) create a temp git repo and stage it as the home repo for an overnight session; (2) construct a per-spawn deny-list that includes `<repo>/.git/refs/heads/main`; (3) drive a sandboxed `claude -p` invocation whose prompt instructs the orchestrator's Bash tool to run `cd $REPO_ROOT && git commit --allow-empty -m 'sandbox test'`; (4) let the round complete and trigger morning-report generation; (5) confirm `lifecycle/morning-report.md` contains a `## Sandbox Denials` section with a non-zero `Home-repo refs` line (the `home_repo_refs` category). If the count appears under `plumbing_eperm` instead, the sidecar deny-list path did not match the inferred target — re-check the deny-list paths and the inferred home-repo root in `lifecycle/overnight-state.json`.
+
 ### agent-activity.jsonl
 
 `lifecycle/{feature}/agent-activity.jsonl` is a per-feature append-only breadcrumb trail of a dispatched agent's tool interactions during a single run. Writer is `_write_activity_event()` in `cortex_command/pipeline/dispatch.py`; writes are fire-and-forget and swallow exceptions — activity logging never blocks or interrupts the agent. Each line is one JSON object discriminated by `event`.
