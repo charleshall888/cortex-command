@@ -2,7 +2,7 @@
 # PostToolUse hook: track Bash tool failures via exit code inspection.
 #
 # On non-zero exit code: captures tool name, exit code, and stderr to a
-# session-scoped log under /tmp/.
+# session-scoped log under ${TMPDIR:-/tmp}/.
 # On >=3 failures for the same tool in one session: surfaces a warning via
 # additionalContext so it appears in the conversation and morning report.
 #
@@ -41,7 +41,7 @@ else
   SESSION_KEY="date-$(date -u +%Y%m%d)"
 fi
 
-TRACK_DIR="/tmp/claude-tool-failures-${SESSION_KEY}"
+TRACK_DIR="${TMPDIR:-/tmp}/claude-tool-failures-${SESSION_KEY}"
 mkdir -p "$TRACK_DIR" 2>/dev/null || true
 
 # Use a safe filename key (lowercase alphanumeric; extra chars → underscore).

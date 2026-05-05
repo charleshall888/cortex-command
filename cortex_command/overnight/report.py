@@ -243,7 +243,8 @@ def collect_tool_failures(session_id: str) -> dict[str, dict]:
     """
     failures: dict[str, dict] = {}
 
-    track_dir = Path(f"/tmp/claude-tool-failures-{session_id}")
+    tmpdir = os.environ.get("TMPDIR", "/tmp")
+    track_dir = Path(f"{tmpdir}/claude-tool-failures-{session_id}")
     if not track_dir.is_dir():
         return failures
 
@@ -1091,7 +1092,8 @@ def collect_tool_failures(session_id: str) -> dict[str, dict[str, Any]]:
         each tool that has recorded at least one failure.  Returns an empty
         dict when the directory is absent or contains no failure records.
     """
-    track_dir = Path(f"/tmp/claude-tool-failures-{session_id}")
+    tmpdir = os.environ.get("TMPDIR", "/tmp")
+    track_dir = Path(f"{tmpdir}/claude-tool-failures-{session_id}")
     if not track_dir.is_dir():
         return {}
 
@@ -1156,7 +1158,7 @@ def _read_last_exit_code(log_file: Path) -> str:
 def render_tool_failures(data: ReportData) -> str:
     """Render the tool failures section.
 
-    Reads ``/tmp/claude-tool-failures-{session_id}/`` for accumulated failure
+    Reads ``${TMPDIR:-/tmp}/claude-tool-failures-{session_id}/`` for accumulated failure
     data produced by the PostToolUse hook.  The section is omitted entirely
     (returns ``""``) when no failures were recorded, keeping the report clean
     for sessions that ran without Bash tool errors.
