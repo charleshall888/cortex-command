@@ -33,7 +33,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
     - `emit_linux_warning_if_needed(stream: TextIO = sys.stderr) -> None`
     - `record_soft_fail_event(session_dir: Path) -> None` — writes `sandbox_soft_fail_active` to `<session_dir>/events.log` under `fcntl.LOCK_EX` to prevent the read-then-conditional-write TOCTOU race under concurrent dispatch.
 - **Verification**: `python -c "from cortex_command.overnight import sandbox_settings; assert all(hasattr(sandbox_settings, n) for n in ['build_orchestrator_deny_paths','build_dispatch_allow_paths','build_sandbox_settings_dict','read_soft_fail_env','write_settings_tempfile','cleanup_stale_tempfiles','register_atexit_cleanup','reset_linux_warning_latch','emit_linux_warning_if_needed','record_soft_fail_event','SOFT_FAIL_ENV_VAR','GIT_DENY_SUFFIXES','OUT_OF_WORKTREE_ALLOW_WRITERS','LINUX_WARNING'])"` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit c1e571a)
 
 ### Task 2: Implement deny-path / allow-path builders + JSON-shape builder + soft-fail reader
 - **Files**: `cortex_command/overnight/sandbox_settings.py`
@@ -53,7 +53,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - `build_orchestrator_deny_paths` iterates over distinct repo absolute paths (`[home_repo, *integration_worktrees.keys()]` — keys are repo absolute paths per `state.py:228-230`, values are worktree paths).
   - `build_dispatch_allow_paths` returns `[str(worktree_path), str(worktree_path.resolve()), ...integration_base_path entries..., *expanded_out_of_worktree_writers]`.
 - **Verification** (deferred-pytest pattern — full pytest assertions live in Task 9): `grep -cE "refs/heads/main|refs/heads/master|\\.git/HEAD|packed-refs" cortex_command/overnight/sandbox_settings.py` returns ≥ 4 AND `grep -c "filesystem.*denyWrite\|filesystem.*allowWrite" cortex_command/overnight/sandbox_settings.py` returns ≥ 2 AND `grep -c "CORTEX_SANDBOX_SOFT_FAIL" cortex_command/overnight/sandbox_settings.py` returns ≥ 1 — pass if all three counts hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit b235236)
 
 ### Task 3: Implement tempfile lifecycle, atexit registration, startup-scan, Linux warning, and locked soft-fail event emission
 - **Files**: `cortex_command/overnight/sandbox_settings.py`
@@ -67,7 +67,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - Linux-warning module-level guard prevents repeated emission across multiple builder invocations within a single process; `reset_linux_warning_latch` is a test-only helper that flips the flag back to its initial state.
   - `record_soft_fail_event` opens `<session_dir>/events.log` with `fcntl.flock(fd, fcntl.LOCK_EX)`, reads to check for existing `sandbox_soft_fail_active` entry, and conditionally appends — atomic under concurrent per-dispatch invocations. Uses the existing `cortex_command.overnight.events.log_event` helper if it already takes a lock; otherwise implements the lock locally.
 - **Verification** (deferred-pytest pattern — full pytest assertions live in Task 9): `grep -c "fcntl.LOCK_EX\|fcntl.flock" cortex_command/overnight/sandbox_settings.py` returns ≥ 1 AND `grep -c "atexit.register" cortex_command/overnight/sandbox_settings.py` returns ≥ 1 AND `grep -c "reset_linux_warning_latch\|def reset_linux_warning_latch" cortex_command/overnight/sandbox_settings.py` returns ≥ 1 — pass if all three counts hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 18456cd; lock implemented locally — events.log_event uses plain `open("a")` with no lock)
 
 ### Task 4: Wire `_spawn_orchestrator` to consume the sandbox_settings layer
 - **Files**: `cortex_command/overnight/runner.py`
@@ -81,7 +81,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - Call site at `runner.py:2103` — pass `state=state, session_dir=session_dir`. Both are already in the surrounding scope per `runner.py:2034-2064`.
   - Add startup-scan call near runner-init: invoke `cleanup_stale_tempfiles(session_dir, runner_start_ts=time.time())` once at runner entry around `runner.py:1825-1870`.
 - **Verification** (deferred-pytest — full assertions in Task 9): `grep -A 30 "def _spawn_orchestrator" cortex_command/overnight/runner.py | grep -c '"--settings"'` returns ≥ 1 AND `grep -A 30 "def _spawn_orchestrator" cortex_command/overnight/runner.py | grep -c "build_sandbox_settings_dict\|write_settings_tempfile"` returns ≥ 2 — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 8266265; -A 30 heuristic too tight due to docstring + 17-line setup, -A 60 confirms both conditions hold; full pytest assertions in Task 9)
 
 ### Task 5: Convert `dispatch.py` to JSON-shape `--settings <tempfile>` (mirrors orchestrator path)
 - **Files**: `cortex_command/pipeline/dispatch.py`
@@ -100,7 +100,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - `ClaudeAgentOptions(...)` call: drop `settings=_worktree_settings`; add `settings=str(tempfile_path)`. The SDK transport detects this is a filepath (does not start with `{`) and forwards as `claude --settings <path>`.
   - If soft-fail reads truthy, call `record_soft_fail_event(session_dir)`.
 - **Verification** (deferred-pytest — full assertions in Task 10): `grep -c "sandbox.write.allowOnly\|\"write\":" cortex_command/pipeline/dispatch.py` returns 0 (legacy shape removed) AND `grep -c "build_sandbox_settings_dict\|write_settings_tempfile" cortex_command/pipeline/dispatch.py` returns ≥ 2 (layer consumed) AND `grep -c "SandboxSettings\|SandboxFilesystemSettings" cortex_command/pipeline/dispatch.py` returns 0 (no typed-field dependency) AND `grep -c '"TMPDIR"' cortex_command/pipeline/dispatch.py` returns ≥ 1 — pass if all four hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit d993b85; circular import deferred to function-local; session_dir derived from LIFECYCLE_SESSION_ID env var matching codebase pattern)
 
 ### Task 6: Fix cross-repo `integration_base_path` at `feature_executor.py:603` (and audit `retry.py` callers)
 - **Files**: `cortex_command/overnight/feature_executor.py`, `cortex_command/pipeline/retry.py` (audit; modify only if a parallel inversion exists)
@@ -112,7 +112,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - The line `integration_base_path=Path.cwd()` becomes a value derived from: `_effective_merge_repo_path(repo_path, state.integration_worktrees, state.integration_branches, state.session_id) or Path.cwd()` when `repo_path is not None`, else `Path.cwd()`.
   - Retry-path audit: `cortex_command/pipeline/retry.py` is a wrapper around `dispatch_task`. If it constructs its own `integration_base_path` argument, the same conditional applies. If retry simply forwards executor-provided values, no change needed — document outcome in commit message.
 - **Verification** (deferred-pytest — full assertions in Task 10): `grep -A 3 "integration_base_path" cortex_command/overnight/feature_executor.py | grep -c "_effective_merge_repo_path"` returns ≥ 1 AND `grep -c "integration_base_path=Path.cwd()" cortex_command/overnight/feature_executor.py` returns 0 (unconditional inversion removed) — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 4fde145; retry.py audit: no parallel inversion, retry forwards executor value unchanged)
 
 ### Task 7: Migrate tool-failure-tracker hook + readers from `/tmp/` to `$TMPDIR/`
 - **Files**: `claude/hooks/cortex-tool-failure-tracker.sh`, `cortex_command/overnight/report.py` (lines 246, 1094, 1159 per spec Req 19)
@@ -124,7 +124,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - `report.py:246` and `report.py:1094` both construct `Path(f"/tmp/claude-tool-failures-{session_id}")`; update both to read `TMPDIR` from env.
   - `report.py:1159` is in a docstring; update text to reflect new path.
 - **Verification**: `grep -c "/tmp/claude-tool-failures" claude/hooks/cortex-tool-failure-tracker.sh` returns 0 AND `grep -c '\${TMPDIR:-/tmp}/claude-tool-failures' claude/hooks/cortex-tool-failure-tracker.sh` returns ≥ 1 AND `grep -c '"/tmp/claude-tool-failures"' cortex_command/overnight/report.py` returns 0 — pass if all three conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit f790730; spec gap: report.py:226 and 1083 docstrings still reference /tmp/ — agent kept scope tight per spec Req 19 enumeration; flag for follow-up in Task 11 doc updates)
 
 ### Task 8: Add morning-report soft-fail header surfacing
 - **Files**: `cortex_command/overnight/report.py`
@@ -135,7 +135,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - `report.py` morning-report builder gains a function that scans events.log for `sandbox_soft_fail_active`; if present, emit header `"CORTEX_SANDBOX_SOFT_FAIL=1 was active for this session; sandbox.failIfUnavailable was downgraded to false."` at top of report.
   - Reader pattern: existing events.log readers in `cortex_command.overnight.events`.
 - **Verification** (deferred-pytest — full assertions in Task 10): `grep -c "CORTEX_SANDBOX_SOFT_FAIL=1 was active for this session" cortex_command/overnight/report.py` returns ≥ 1 AND `grep -c "sandbox_soft_fail_active" cortex_command/overnight/report.py` returns ≥ 1 — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit f9e8908)
 
 ### Task 9: Author behavior-level test suite for sandbox_settings layer
 - **Files**: `tests/test_runner_sandbox.py` (new)
@@ -159,7 +159,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
     - `test_denywrite_overrides_allowwrite_under_srt` (SECONDARY, skip-allowed)
   - Test pattern reference: existing `cortex_command/pipeline/tests/test_dispatch.py` for SDK-mock structure.
 - **Verification**: `pytest tests/test_runner_sandbox.py -v` exits 0 (synthetic `srt` tests may report as `skipped` but no failures) — pass if exit 0 and `test_synthetic_kernel_eperm_under_sandbox_exec` + `test_denywrite_overrides_allowwrite_under_sandbox_exec` show as `passed` (not skipped) on Darwin.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 82eb4dc; 14 passed, 2 skipped (srt unavailable). PRIMARY sandbox-exec tests passed. Note: synthetic sandbox-exec tests require running outside an enclosing Claude Code sandbox.)
 
 ### Task 10: Author dispatch + feature-executor + morning-report tests
 - **Files**: `tests/test_dispatch.py` (extend), `tests/test_feature_executor.py` (new or extend existing fixture), `tests/test_morning_report.py` (extend)
@@ -171,7 +171,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - `tests/test_feature_executor.py`: add `test_cross_repo_uses_integration_worktree`, `test_same_repo_uses_cwd`. Construct `OvernightState` fixture with populated `integration_worktrees` mapping; mock `dispatch_task` to capture `integration_base_path`.
   - `tests/test_morning_report.py`: add `test_soft_fail_header_emitted` (events.log fixture with `sandbox_soft_fail_active`) and `test_no_soft_fail_no_header`.
 - **Verification**: `pytest tests/test_dispatch.py tests/test_feature_executor.py tests/test_morning_report.py -v` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 52dd7c1; 11 passed total. Substitution: test_sdk_typed_sandbox_symbols_present → test_no_typed_sandbox_field_attempted (symbols don't exist in claude_agent_sdk@0.1.46).)
 
 ### Task 11: Update three documentation surfaces
 - **Files**: `docs/overnight-operations.md`, `docs/pipeline.md`, `docs/sdk.md`
@@ -185,7 +185,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - `docs/pipeline.md` "Allowed write paths" subsection enumerates each of the 6 entries with one-sentence rationale per Req 10.
   - `docs/sdk.md:199`: replace the asymmetric-claim string with the corrected text per #26616 inversion; cross-link to overnight-operations.md.
 - **Verification**: `grep -c "Per-spawn sandbox enforcement" docs/overnight-operations.md` ≥ 1 AND `grep -c "no permissions sandbox" docs/overnight-operations.md` == 0 AND `grep -cE "Sandbox shape|Allowed write paths" docs/pipeline.md` ≥ 2 AND `grep -c "code.claude.com/docs/en/sandboxing" docs/overnight-operations.md` ≥ 1 AND `grep -c "does not constrain what a Bash subprocess" docs/sdk.md` == 0 — pass if all five.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit a2d553c; Task 7 docstring follow-up included; spec line "1083" was actually 1105)
 
 ### Task 12: Extend `bin/cortex-check-parity` with structured pre-flight gate (diff-hunk grep + commit-hash binding + claude-version re-check)
 - **Files**: `bin/cortex-check-parity` (extend), `lifecycle/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/preflight.md` (new artifact)
@@ -230,7 +230,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   2. `bin/cortex-check-parity` exits non-zero when `claude --version` differs from the recorded `claude_version` field, even if `commit_hash` matches.
   3. `bin/cortex-check-parity` exits non-zero against a fixture commit that renames `_spawn_orchestrator` to `_build_orchestrator_argv` (diff-hunk pattern match still triggers via `sandbox` or `--settings` keyword).
   Verify with: `cd $(mktemp -d) && git init && git commit --allow-empty -m init && (printf 'claude-agent-sdk>=0.1.47,<0.1.48\n' > pyproject.toml; git add pyproject.toml) && /Users/charlie.hall/Workspaces/cortex-command/bin/cortex-check-parity` returns non-zero — pass if non-zero exit on each of the three fixtures.
-- **Status**: [ ] pending
+- **Status**: [x] complete (preflight.md authored as schema skeleton with `pass: false` and `<PENDING_HUMAN_RUN>` placeholders per task instructions — human must run actual preflight test in clean non-sandboxed terminal and populate fields; gate fires correctly on all three fixtures: F1 missing-preflight (E100), F2 claude-version-drift (E103), F3 function-rename-via-sandbox-keyword (E100). Self-test still passes; gate is silent on unrelated changes.)
 
 ### Task 13: Run full test suite + dry-run snapshot regression check
 - **Files**: none modified; verification-only task
