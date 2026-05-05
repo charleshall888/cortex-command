@@ -58,7 +58,7 @@ Atomic-deploy decomposition: the helper and its first reference land in the same
 - **Complexity**: simple
 - **Context**: existing §4 Research Phase is at `skills/refine/SKILL.md:82-131`. The Research dispatch invocation today is `/cortex-interactive:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality}` (line 104). Add a sub-section after "### Research Execution" titled "### Alignment-Considerations Propagation" with the populating logic. Bullet format: `\n- consideration text`. Source data: post-disposition state from clarify-critic — filter the `applied_fixes` and Ask-resolved-Apply entries to those whose originating finding had `origin: "alignment"`.
 - **Verification**: `grep -c "research-considerations" skills/refine/SKILL.md` ≥ 1 AND `grep -c "Alignment-Considerations Propagation\|alignment.*considerations" skills/refine/SKILL.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Add research-considerations key to research/SKILL.md Step 1
 - **Files**: `skills/research/SKILL.md`
@@ -85,7 +85,7 @@ Atomic-deploy decomposition: the helper and its first reference land in the same
 - **Complexity**: simple
 - **Context**: existing Step 4 is at `skills/research/SKILL.md:172-219`; the output structure template at lines 191-219 lists sections. Add a new conditional section after `## Open Questions` (line 216-218) reading `## Considerations Addressed\n[Conditional section: emitted only when research-considerations was non-empty AND lifecycle mode. Each input consideration becomes one bullet with a one-sentence note on how research addressed it.]`. Document the emission conditional in Step 5 (Route Output) — only fires in lifecycle mode (where research.md is written); standalone mode does not emit this section.
 - **Verification**: `grep -c "Considerations Addressed" skills/research/SKILL.md` ≥ 1 AND `grep -c "lifecycle mode" skills/research/SKILL.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: End-to-end fixture-based integration test
 - **Files**: `tests/test_clarify_critic_alignment_integration.py`

@@ -7,7 +7,6 @@
 | 158 | Build shared autonomous synthesis for critical-tier dual-plan flow (interactive + overnight) | backlog | high | epic | — | — | — |
 | 159 | Tighten §1b plan-agent prompt to require strategy-level distinction | in_progress | high | chore | — | 158 | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
-| 161 | Add parent-epic alignment check to refine's clarify-critic | in_progress | medium | feature | — | — | ✓ |
 | 164 | Add sandbox-violation tracker hook for PostToolUse(Bash) | refined | medium | feature | 163 | 162 | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
@@ -25,7 +24,6 @@
 ## In-Progress
 
 - **159** Tighten §1b plan-agent prompt to require strategy-level distinction (in_progress)
-- **161** Add parent-epic alignment check to refine's clarify-critic (in_progress)
 
 ## Warnings
 

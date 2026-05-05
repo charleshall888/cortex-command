@@ -121,7 +121,7 @@
     "uuid": "38ad783b-8ad4-4e57-97d2-2d21970bad6c",
     "lifecycle_slug": null,
     "session_id": "9d04b64c-160a-4151-bb5c-c3dc07560ac2",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -153,37 +153,6 @@
     "session_id": null,
     "lifecycle_phase": null,
     "schema_version": null,
-    "repo": null
-  },
-  {
-    "id": 161,
-    "title": "Add parent-epic alignment check to refine's clarify-critic",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "refine",
-      "clarify-critic",
-      "epic-alignment",
-      "drift"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-04",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/add-parent-epic-alignment-check-to-refine-clarify-critic/spec.md",
-    "discovery_source": "research/refine-load-epic-context/research.md",
-    "plan": null,
-    "uuid": "3d0dcb32-5995-49f6-83f2-89184a8c6c46",
-    "lifecycle_slug": "add-parent-epic-alignment-check-to-refine-clarify-critic",
-    "session_id": "03a7fc80-41ca-459f-9749-b7facb799837",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
     "repo": null
   },
   {
