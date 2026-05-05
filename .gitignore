@@ -16,9 +16,6 @@ retros/.retro-written-*
 claude/statusline.sh.log
 claude/statusline.log
 
-# Auto-generated skill registry
-skills/registry.json
-
 # Python
 .venv/
 *.pyc

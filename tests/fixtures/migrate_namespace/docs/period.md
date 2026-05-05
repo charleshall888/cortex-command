@@ -1,1 +1,0 @@
-Use /commit. Then proceed.
