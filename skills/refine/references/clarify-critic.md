@@ -202,6 +202,8 @@ If the critic agent fails, errors, or times out:
 
 ## Constraints
 
+**Soft rubric-dimension cap**: the clarify-critic carries a soft cap of ≤5 rubric dimensions to preserve per-angle attention quality. Current dimensions: (1) intent clarity, (2) scope boundedness, (3) requirements alignment, (4) optional complexity/criticality calibration, (5) optional parent-epic alignment (when `parent:` is set and resolves to `type: epic`). Adding a 6th rubric dimension requires either replacing an existing dimension or extracting the new one to a separate critic; do not exceed the cap by simple addition.
+
 | Thought | Reality |
 |---------|---------|
 | "Skip the critic if all three dimensions are High confidence" | Always runs — the critic's job is to challenge whether those High ratings are deserved, not to rubber-stamp them. |

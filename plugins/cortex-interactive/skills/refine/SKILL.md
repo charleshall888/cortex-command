@@ -114,6 +114,27 @@ Where `{clarified intent}` is the output from Step 3 Clarify, `{lifecycle-slug}`
 
 After `/cortex-interactive:research` returns, verify that `lifecycle/{lifecycle-slug}/research.md` exists and is non-empty. If the file is absent or empty, surface the error to the user and halt — do not proceed to the Research Exit Gate.
 
+### Alignment-Considerations Propagation
+
+After clarify-critic returns and dispositions are applied (see Step 3), collect every finding with `origin: "alignment"` whose disposition is **Apply** (or whose Ask was resolved to Apply via the §4 Q&A flow). Findings dispositioned as **Dismiss** are not propagated. Format the surviving alignment findings as a newline-delimited bullet list:
+
+```
+- consideration text one
+- consideration text two
+```
+
+Each consideration must be a one-sentence paraphrase of the underlying alignment finding. Strip or paraphrase away any embedded `=` or `"` characters so the value remains a well-formed argument string.
+
+Pass the assembled list as `research-considerations="..."` to the `/cortex-interactive:research` invocation:
+
+```
+/cortex-interactive:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality} research-considerations="
+- consideration text one
+- consideration text two"
+```
+
+This argument fires only when at least one Apply'd alignment finding exists. If clarify-critic returned no alignment findings, or every alignment finding was Dismissed, omit the `research-considerations` argument entirely from the research dispatch.
+
 After writing `research.md`, update `lifecycle/{lifecycle-slug}/index.md`:
 - If `"research"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"research"` to the artifacts inline array
