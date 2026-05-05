@@ -18,6 +18,7 @@ while bodies are filled in.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Callable, TextIO
@@ -114,7 +115,16 @@ def build_orchestrator_deny_paths(
     Returns:
         List of absolute deny-paths. Length is ``4 * (1 + len(integration_worktrees))``.
     """
-    raise NotImplementedError("Implemented in Task 2")
+    repo_paths: list[str] = [str(home_repo)]
+    for repo_key in integration_worktrees.keys():
+        if repo_key not in repo_paths:
+            repo_paths.append(repo_key)
+
+    deny_paths: list[str] = []
+    for repo_path in repo_paths:
+        for suffix in GIT_DENY_SUFFIXES:
+            deny_paths.append(str(Path(repo_path) / suffix))
+    return deny_paths
 
 
 def build_dispatch_allow_paths(
@@ -135,7 +145,19 @@ def build_dispatch_allow_paths(
     Returns:
         List of absolute allow-paths.
     """
-    raise NotImplementedError("Implemented in Task 2")
+    allow_paths: list[str] = [str(worktree_path), str(worktree_path.resolve())]
+
+    if integration_base_path is not None:
+        allow_paths.append(str(integration_base_path))
+        allow_paths.append(str(integration_base_path.resolve()))
+
+    tmpdir_value = os.environ.get("TMPDIR", "/tmp")
+    for entry in OUT_OF_WORKTREE_ALLOW_WRITERS:
+        expanded = entry.replace("$TMPDIR", tmpdir_value)
+        expanded = os.path.expanduser(expanded)
+        allow_paths.append(expanded)
+
+    return allow_paths
 
 
 def build_sandbox_settings_dict(
@@ -159,7 +181,19 @@ def build_sandbox_settings_dict(
     Returns:
         Dict with the spec Req 2 / Req 5 shape, ready for JSON serialization.
     """
-    raise NotImplementedError("Implemented in Task 2")
+    return {
+        "sandbox": {
+            "enabled": True,
+            "failIfUnavailable": not soft_fail,
+            "allowUnsandboxedCommands": False,
+            "enableWeakerNestedSandbox": False,
+            "enableWeakerNetworkIsolation": False,
+            "filesystem": {
+                "denyWrite": deny_paths,
+                "allowWrite": allow_paths,
+            },
+        }
+    }
 
 
 def read_soft_fail_env() -> bool:
@@ -173,7 +207,8 @@ def read_soft_fail_env() -> bool:
     Returns:
         ``True`` if the env var is set to a truthy value; ``False`` otherwise.
     """
-    raise NotImplementedError("Implemented in Task 2")
+    value = os.environ.get(SOFT_FAIL_ENV_VAR, "")
+    return value.strip().lower() in ("1", "true", "yes", "on")
 
 
 def write_settings_tempfile(session_dir: Path, settings: dict) -> Path:
