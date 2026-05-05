@@ -53,7 +53,7 @@ This ticket was originally filed against `implement.md:178-181` on 2026-04-22. U
 
 ## Background
 
-- #092 (closed wontfix 2026-04-22): [lifecycle/archive/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md](../lifecycle/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md)
+- #092 (closed wontfix 2026-04-22): [lifecycle/archive/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md](../lifecycle/archive/remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1/research.md)
 - Anthropic migration guide: `platform.claude.com/docs/en/about-claude/models/migration-guide` item 4
 - Epic research: `research/opus-4-7-harness-adaptation/research.md` (DR-3)
 

@@ -22,8 +22,7 @@ The first tagged release of cortex-command. Establishes the no-clone install pat
 - **`_resolve_user_project_root()` helper**: a single source of truth for "where does the user's cortex project live?" — returns `Path(CORTEX_REPO_ROOT)` when set, else `Path.cwd()` after a sanity check that the directory contains `lifecycle/` or `backlog/`.
 - **`package_root` field in `cortex --print-root --format json`**: a new field reporting the package install location, separated from the `root` field (which is now the user's project root). JSON envelope `version` bumped from `"1.0"` to `"1.1"` (additive — `1.0` consumers ignore the new field).
 - **`.github/workflows/release.yml`**: tag-on-push workflow that builds the wheel via `uv build` and publishes a GitHub Release with the wheel as a release asset.
-- **`docs/install.md`**: install guide leading with `uv tool install git+<url>@<tag>` as the primary path.
-- **`docs/migration-no-clone-install.md`**: runbook for existing maintainers migrating from the legacy `~/.cortex` editable install.
+- **`docs/setup.md`**: canonical install/upgrade reference covering the `uv tool install git+<url>@<tag>` path and migration from the legacy `~/.cortex` editable install.
 - **`docs/release-process.md`**: documentation of the version-bump, tag-push, and tag-before-coupling discipline.
 - **`tests/test_no_clone_install.py`**: target-state test (wheel-install + `importlib.resources` smoke) and transition-mechanism test (`_ensure_cortex_installed` end-to-end with mocked subprocess).
 

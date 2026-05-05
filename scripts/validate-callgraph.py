@@ -8,8 +8,7 @@ exists in any scanned root and has ``disable-model-invocation: true``, that's a
 violation.
 
 Rationale: ``disable-model-invocation: true`` also blocks the Skill tool, so a
-skill with that flag cannot be invoked programmatically by another skill. See
-claude/reference/claude-skills.md "Common Mistakes" row 303.
+skill with that flag cannot be invoked programmatically by another skill.
 
 Usage:
     validate-callgraph.py <skill-root> [<skill-root>...]

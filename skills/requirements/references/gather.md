@@ -198,7 +198,7 @@ Area sub-docs do not contain "When to Load" guidance — that belongs in the par
 
 > Last gathered: {date}
 
-**Parent doc**: [requirements/project.md](project.md)
+**Parent doc**: [requirements/project.md](../../../requirements/project.md)
 
 ## Overview
 [What this area covers and how it fits into the project]
