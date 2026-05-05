@@ -928,6 +928,39 @@ def _apply_batch_results(
 # Orchestrator + batch_runner spawn helpers
 # ---------------------------------------------------------------------------
 
+def _write_sandbox_deny_list_sidecar(
+    session_dir: Path,
+    spawn_id: str,
+    spawn_kind: str,
+    deny_paths: list[str],
+) -> None:
+    """Write a per-spawn schema-v2 sandbox deny-list sidecar (spec R2).
+
+    Sidecar lives at
+    ``<session_dir>/sandbox-deny-lists/<spawn-id>.json``. Files are NEVER
+    overwritten — each spawn writes a new file keyed by ``<spawn-id>``.
+    Writes are atomic via tempfile + ``os.replace`` (POSIX ``rename`` is
+    atomic on the same filesystem).
+
+    Caller is responsible for the structural guard asserting
+    ``deny_paths`` is a flat ``list[str]`` — see the spawn-site comment
+    explaining the fail-fast rationale relative to #163's contract.
+    """
+    sidecar_dir = session_dir / "sandbox-deny-lists"
+    sidecar_dir.mkdir(parents=True, exist_ok=True)
+    final_path = sidecar_dir / f"{spawn_id}.json"
+    tmp_path = sidecar_dir / f".{spawn_id}.json.tmp"
+    envelope = {
+        "schema_version": 2,
+        "written_at": datetime.now(timezone.utc).isoformat(),
+        "spawn_kind": spawn_kind,
+        "spawn_id": spawn_id,
+        "deny_paths": deny_paths,
+    }
+    tmp_path.write_text(json.dumps(envelope, indent=2))
+    os.replace(tmp_path, final_path)
+
+
 def _spawn_orchestrator(
     filled_prompt: str,
     coord: RunnerCoordination,
@@ -935,6 +968,7 @@ def _spawn_orchestrator(
     stdout_path: Path,
     state: state_module.OvernightState,
     session_dir: Path,
+    round_num: int,
 ) -> tuple[subprocess.Popen, WatchdogContext, WatchdogThread]:
     """Spawn the per-round ``claude -p`` orchestrator with a watchdog.
 
@@ -962,6 +996,21 @@ def _spawn_orchestrator(
     deny_paths = sandbox_settings.build_orchestrator_deny_paths(
         home_repo=home_repo,
         integration_worktrees=state.integration_worktrees,
+    )
+    # Spec R2: write per-spawn sidecar JSON immediately after constructing
+    # the deny-list so the morning-report classifier (T6) has authoritative
+    # deny-list context for membership tests. Pre-write structural guard
+    # asserts the deny-list value matches the contract — fails fast at
+    # write time rather than producing a sidecar whose ``deny_paths`` value
+    # silently breaks the classifier's membership tests downstream.
+    assert isinstance(deny_paths, list) and all(
+        isinstance(p, str) for p in deny_paths
+    )
+    _write_sandbox_deny_list_sidecar(
+        session_dir=session_dir,
+        spawn_id=f"orchestrator-{round_num}",
+        spawn_kind="orchestrator",
+        deny_paths=deny_paths,
     )
     soft_fail = sandbox_settings.read_soft_fail_env()
     settings = sandbox_settings.build_sandbox_settings_dict(
@@ -2152,6 +2201,7 @@ def run(
                     stdout_path=orchestrator_stdout_path,
                     state=state,
                     session_dir=session_dir,
+                    round_num=round_num,
                 )
                 exit_code = _poll_subprocess(o_proc, coord)
 
