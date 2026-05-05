@@ -93,6 +93,7 @@ class ReportData:
     tool_failures: dict[str, dict] = field(default_factory=dict)
     pr_urls: dict[str, str] = field(default_factory=dict)
     scheduled_fire_failures: list[FailedFire] = field(default_factory=list)
+    sandbox_denials: dict[str, int] = field(default_factory=dict)
 
 
 def collect_report_data(
@@ -199,10 +200,12 @@ def collect_report_data(
     # Collect tool failures from the session-scoped /tmp dir
     if data.session_id:
         data.tool_failures = collect_tool_failures(data.session_id)
+        data.sandbox_denials = collect_sandbox_denials(data.session_id)
     else:
         # Fall back to today's date-based key (mirrors the hook's fallback)
         date_key = f"date-{datetime.now(timezone.utc).strftime('%Y%m%d')}"
         data.tool_failures = collect_tool_failures(date_key)
+        data.sandbox_denials = collect_sandbox_denials(date_key)
 
     # Scan sibling session dirs for scheduled-fire-failed.json markers
     # written by the launchd-fired launcher script when fire-time spawn
@@ -1736,6 +1739,72 @@ def render_tool_failures(data: ReportData) -> str:
     return "\n".join(lines)
 
 
+# Spec R4: ordered list of (category-key, human-readable-label) pairs.  The
+# key matches the closed-enum returned by ``collect_sandbox_denials``; the
+# label is the verbatim bullet prefix from the spec.  Order is load-bearing
+# (home → cross → other → plumbing → unclassified).
+_SANDBOX_DENIAL_CATEGORIES: tuple[tuple[str, str], ...] = (
+    ("home_repo_refs", "Home-repo refs"),
+    ("home_repo_head", "Home-repo HEAD"),
+    ("home_repo_packed_refs", "Home-repo packed-refs"),
+    ("cross_repo_refs", "Cross-repo refs"),
+    ("cross_repo_head", "Cross-repo HEAD"),
+    ("cross_repo_packed_refs", "Cross-repo packed-refs"),
+    ("other_deny_path", "Other deny-list paths"),
+    ("plumbing_eperm", "Plumbing EPERM (likely sandbox, unmapped subcommand)"),
+    (
+        "unclassified_eperm",
+        "Unclassified EPERM (likely non-sandbox: chmod / ACL / EROFS / gpg)",
+    ),
+)
+
+# Spec R4: verbatim disclosure paragraph required by Adversarial #A9 plus the
+# within-Bash plumbing caveat raised by critical review.  Acceptance gates
+# `grep -F 'Bash-routed sandbox denials'` and `grep -F 'V1 scope'` against
+# this exact text.
+_SANDBOX_DENIAL_DISCLOSURE = (
+    "Bash-routed sandbox denials caught by per-spawn `denyWrite` enforcement "
+    "(#163). Within Bash scope, `git`/`gh`/`npm`-class plumbing denials are "
+    "classified by command-target inference (precise) when the subcommand is "
+    "in the known mapping and falls through to the `plumbing_eperm` bucket "
+    "otherwise. Write/Edit/MCP escape paths are NOT covered — see #163 V1 "
+    "scope."
+)
+
+
+def render_sandbox_denials(data: ReportData) -> str:
+    """Render the sandbox-denials section per spec R4.
+
+    Returns the empty string when ``data.sandbox_denials`` is empty (the
+    section is omitted from the morning report).  Otherwise emits a
+    ``## Sandbox Denials (<total>)`` section containing the verbatim
+    disclosure paragraph followed by a bullet list with one line per
+    category whose count is ≥ 1 (zero-count categories are suppressed).
+
+    Args:
+        data: Aggregated report data containing ``sandbox_denials``.
+
+    Returns:
+        Markdown-formatted section string, or ``""`` when no denials exist.
+    """
+    if not data.sandbox_denials:
+        return ""
+
+    total = sum(data.sandbox_denials.values())
+    lines: list[str] = [
+        f"## Sandbox Denials ({total})",
+        "",
+        _SANDBOX_DENIAL_DISCLOSURE,
+        "",
+    ]
+    for key, label in _SANDBOX_DENIAL_CATEGORIES:
+        count = data.sandbox_denials.get(key, 0)
+        if count >= 1:
+            lines.append(f"- {label}: {count}")
+    lines.append("")
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Top-level report generation
 # ---------------------------------------------------------------------------
@@ -1773,6 +1842,11 @@ def generate_report(data: ReportData) -> str:
     tool_failures_section = render_tool_failures(data)
     if tool_failures_section:
         sections.append(tool_failures_section)
+    # Sandbox denials section (spec R4/R5) — omitted entirely when no
+    # classified denials were collected for this session.
+    sandbox_denials_section = render_sandbox_denials(data)
+    if sandbox_denials_section:
+        sections.append(sandbox_denials_section)
     return "\n".join(sections)
 
 
