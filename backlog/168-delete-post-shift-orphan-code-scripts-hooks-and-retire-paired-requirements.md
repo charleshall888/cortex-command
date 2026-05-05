@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: e4d5251e-3c4f-480c-a69e-f5865878750c
 title: "Delete post-shift orphan code/scripts/hooks and retire paired requirements"
-status: in_progress
+status: complete
 priority: medium
 type: feature
 tags: [repo-spring-cleaning, cleanup, hooks, scripts, plugins]
@@ -13,8 +13,8 @@ parent: "165"
 blocks: []
 blocked-by: []
 discovery_source: research/repo-spring-cleaning/research.md
-session_id: 39045fc2-8919-47a6-b0b4-70f289390c08
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: complete
 lifecycle_slug: delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements
 complexity: complex
 criticality: medium

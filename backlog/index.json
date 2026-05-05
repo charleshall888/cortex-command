@@ -94,36 +94,6 @@
     "repo": null
   },
   {
-    "id": 168,
-    "title": "Delete post-shift orphan code/scripts/hooks and retire paired requirements",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "repo-spring-cleaning",
-      "cleanup",
-      "hooks",
-      "scripts",
-      "plugins"
-    ],
-    "areas": [],
-    "created": "2026-05-05",
-    "updated": "2026-05-05",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "165",
-    "research": null,
-    "spec": "lifecycle/delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements/spec.md",
-    "discovery_source": "research/repo-spring-cleaning/research.md",
-    "plan": null,
-    "uuid": "e4d5251e-3c4f-480c-a69e-f5865878750c",
-    "lifecycle_slug": "delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements",
-    "session_id": "39045fc2-8919-47a6-b0b4-70f289390c08",
-    "lifecycle_phase": "complete",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 169,
     "title": "Fix archive predicate and sweep lifecycle/ and research/ dirs",
     "status": "backlog",
