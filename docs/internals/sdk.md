@@ -1,4 +1,4 @@
-[← Back to Agentic Layer](agentic-layer.md)
+[← Back to Agentic Layer](../agentic-layer.md)
 
 # Claude Code SDK Integration
 
@@ -6,9 +6,9 @@
 
 The project uses the SDK in two structurally different ways: direct `Agent` tool calls embedded in skill instruction files (daytime, interactive), and the Python `claude_agent_sdk.query()` API called from the overnight execution pipeline (autonomous). These paths have different control points, different permission models, and different reasons for existing.
 
-> For a full analysis of current SDK usage patterns and evaluated trade-offs, see [`research/claude-code-sdk-usage/research.md`](../research/claude-code-sdk-usage/research.md).
+> For a full analysis of current SDK usage patterns and evaluated trade-offs, see [`research/claude-code-sdk-usage/research.md`](../../research/claude-code-sdk-usage/research.md).
 
-> For overnight runner operations and architecture, see [overnight-operations.md](overnight-operations.md).
+> For overnight runner operations and architecture, see [overnight-operations.md](../overnight-operations.md).
 
 ---
 
@@ -109,7 +109,7 @@ The `model` argument to `resolve_effort` is the *effective* model — `model_ove
 
 The matrix and overrides are designed so no cell + override combination requests `xhigh` on a non-Opus model. A runtime guard in `resolve_effort` asserts this invariant and raises `AssertionError` at dispatch time if violated, surfacing as a feature-level pause via the existing dispatch error path.
 
-For the post-flip rollback monitoring procedure (querying `metrics.json` per-effort cost buckets, the >2× threshold for human investigation, and the matrix-flip revert path), see [overnight-operations.md](overnight-operations.md).
+For the post-flip rollback monitoring procedure (querying `metrics.json` per-effort cost buckets, the >2× threshold for human investigation, and the matrix-flip revert path), see [overnight-operations.md](../overnight-operations.md).
 
 **Error classification and recovery:**
 
@@ -196,7 +196,7 @@ The SDK's `resume: session_id` parameter is a different capability — it restor
 
 **Python orchestration layer over Agent Teams.** The `cortex_command/pipeline/` and `cortex_command/overnight/` modules reinvent some of what Agent Teams provides (lead + worker pattern, parallel dispatch). The Python layer exists because it provides controls the Teams API doesn't expose: the 2D model selection matrix, per-tier budget limits, structured error classification, and repair agent escalation. Agent Teams is also still experimental. This trade-off should be revisited when Teams reaches stable and exposes equivalent control surfaces.
 
-**`bypassPermissions` with `Bash` access.** Overnight agents run with `permission_mode: "bypassPermissions"` and `Bash` in the allowed tool list. This means an overnight agent can execute arbitrary shell commands in its worktree without prompts. The asymmetry between Bash subprocesses and SDK in-process tool calls runs the OPPOSITE direction from what one might intuit: per Anthropic [#26616](https://github.com/anthropics/claude-code/issues/26616) and the official sandboxing docs at https://code.claude.com/docs/en/sandboxing, the sandbox CONSTRAINS Bash subprocess writes via OS-kernel enforcement (Seatbelt on macOS), while Write/Edit tools run in-process in the SDK and bypass the sandbox entirely — they are constrained only by the permission system. This is a deliberate trade-off for autonomous execution — prompts in an unattended session would stall the runner. Operators should be aware that agents operating on real codebases with `bypassPermissions + Bash` have broad execution access for in-process tool calls. Mitigation: agents run in isolated worktrees, not on the main branch directly; `bypassPermissions` is scoped to the Python pipeline path only (interactive skills inherit the parent session's permission model); per-spawn sandbox enforcement applies an OS-kernel deny-set to Bash-routed writes against critical git-state paths. See [`docs/overnight-operations.md` — Per-spawn sandbox enforcement](overnight-operations.md#per-spawn-sandbox-enforcement) for the orchestrator deny-set, dispatch allow-set, and `CORTEX_SANDBOX_SOFT_FAIL` kill-switch.
+**`bypassPermissions` with `Bash` access.** Overnight agents run with `permission_mode: "bypassPermissions"` and `Bash` in the allowed tool list. This means an overnight agent can execute arbitrary shell commands in its worktree without prompts. The asymmetry between Bash subprocesses and SDK in-process tool calls runs the OPPOSITE direction from what one might intuit: per Anthropic [#26616](https://github.com/anthropics/claude-code/issues/26616) and the official sandboxing docs at https://code.claude.com/docs/en/sandboxing, the sandbox CONSTRAINS Bash subprocess writes via OS-kernel enforcement (Seatbelt on macOS), while Write/Edit tools run in-process in the SDK and bypass the sandbox entirely — they are constrained only by the permission system. This is a deliberate trade-off for autonomous execution — prompts in an unattended session would stall the runner. Operators should be aware that agents operating on real codebases with `bypassPermissions + Bash` have broad execution access for in-process tool calls. Mitigation: agents run in isolated worktrees, not on the main branch directly; `bypassPermissions` is scoped to the Python pipeline path only (interactive skills inherit the parent session's permission model); per-spawn sandbox enforcement applies an OS-kernel deny-set to Bash-routed writes against critical git-state paths. See [`docs/overnight-operations.md` — Per-spawn sandbox enforcement](../overnight-operations.md#per-spawn-sandbox-enforcement) for the orchestrator deny-set, dispatch allow-set, and `CORTEX_SANDBOX_SOFT_FAIL` kill-switch.
 
 **`interrupt.py` over SDK session resumption.** The state-machine recovery on restart (resetting stuck features to pending) was purpose-built for the overnight use case and handles correctness without requiring session ID tracking. SDK resumption is a future optimization, not a correctness gap.
 

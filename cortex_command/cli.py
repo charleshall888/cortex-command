@@ -265,7 +265,7 @@ def _dispatch_upgrade(_args: argparse.Namespace) -> int:
     print(
         "Note: if you have a stale .mcp.json from before this upgrade, "
         "update it to point at uv run ${CLAUDE_PLUGIN_ROOT}/server.py — "
-        "see docs/mcp-contract.md.",
+        "see https://github.com/charleshall888/cortex-command/blob/main/docs/internals/mcp-contract.md.",
         file=sys.stderr,
     )
     return 0

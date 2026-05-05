@@ -6,7 +6,7 @@
 
 > **Jump to:** [What this server is](#what-this-server-is) | [Registration](#registration) | [Tool inventory](#tool-inventory) | [Cursor pagination](#cursor-pagination) | [Per-session escalations](#per-session-escalations) | [Recovery](#recovery) | [Caveats](#caveats) | [Diagnostics](#diagnostics) | [Bypassing the in-flight guard](#bypassing-the-in-flight-guard)
 
-This doc owns the **control-plane interface** plane. It is a sibling of `overnight-operations.md` (round loop / orchestrator), `pipeline.md` (per-task pipeline internals), and `sdk.md` (model-selection mechanics). When a question is about *how Claude Code talks to a running overnight session*, it lives here. When the question is about what the runner does *after* it has been told to start, follow the cross-link to `overnight-operations.md`.
+This doc owns the **control-plane interface** plane. It is a sibling of `overnight-operations.md` (round loop / orchestrator), `internals/pipeline.md` (per-task pipeline internals), and `internals/sdk.md` (model-selection mechanics). When a question is about *how Claude Code talks to a running overnight session*, it lives here. When the question is about what the runner does *after* it has been told to start, follow the cross-link to `overnight-operations.md`.
 
 ---
 

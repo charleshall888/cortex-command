@@ -1,4 +1,4 @@
-[← Back to Agentic Layer](agentic-layer.md)
+[← Back to Agentic Layer](../agentic-layer.md)
 
 # Pipeline Execution Module
 
@@ -114,7 +114,7 @@ Per-feature dispatch in `cortex_command/pipeline/dispatch.py` constructs a per-d
 }
 ```
 
-The orchestrator-side spawn at `cortex_command/overnight/runner.py` writes the same JSON shape via `cortex_command/common.py:atomic_write` to `<session_dir>/sandbox-settings/cortex-sandbox-*.json` and passes `--settings <tempfile-path>` in its `subprocess.Popen` argv. Both spawn sites use the single canonical `--settings <tempfile>` mechanism. See [`docs/overnight-operations.md` — Per-spawn sandbox enforcement](overnight-operations.md#per-spawn-sandbox-enforcement) for orchestrator-side deny-set construction, the `CORTEX_SANDBOX_SOFT_FAIL` kill-switch, and the threat-model boundary; this section covers dispatch-side internals only.
+The orchestrator-side spawn at `cortex_command/overnight/runner.py` writes the same JSON shape via `cortex_command/common.py:atomic_write` to `<session_dir>/sandbox-settings/cortex-sandbox-*.json` and passes `--settings <tempfile-path>` in its `subprocess.Popen` argv. Both spawn sites use the single canonical `--settings <tempfile>` mechanism. See [`docs/overnight-operations.md` — Per-spawn sandbox enforcement](../overnight-operations.md#per-spawn-sandbox-enforcement) for orchestrator-side deny-set construction, the `CORTEX_SANDBOX_SOFT_FAIL` kill-switch, and the threat-model boundary; this section covers dispatch-side internals only.
 
 **SDK typed-field deviation (spec Req 5).** The originally-specced migration to typed `SandboxSettings` / `SandboxFilesystemSettings` SDK fields was structurally impossible: empirical verification against `claude_agent_sdk@0.1.46` confirmed the `SandboxSettings` TypedDict at `claude_agent_sdk/types.py:683-727` has no `filesystem` key, and the SDK docstring states explicitly that "Filesystem and network restrictions are configured via permission rules, not via these sandbox settings." Both spawn sites therefore use the `--settings <tempfile>` JSON-shape mechanism instead of the typed-field path. A drift detector test (`tests/test_dispatch.py::test_no_typed_sandbox_field_attempted`) guards against accidental re-introduction of the broken typed-field import.
 
@@ -147,7 +147,7 @@ For overnight sessions, merges target an integration branch `overnight/{session_
 
 Orchestrator-perspective recovery flow (inspecting state, resetting stuck features, resolving
 merge conflicts, post-merge recovery) is documented in
-[docs/overnight-operations.md](overnight-operations.md). This document retains only the
+[docs/overnight-operations.md](../overnight-operations.md). This document retains only the
 pipeline-module internals summarized in the module reference table above.
 
 Round-startup state assembly is documented in `docs/overnight-operations.md` (see `aggregate_round_context`).

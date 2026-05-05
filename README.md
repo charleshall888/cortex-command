@@ -124,7 +124,6 @@ Run `cortex --help` to see all subcommands.
 | [`docs/dashboard.md`](docs/dashboard.md) | Web dashboard for monitoring overnight sessions |
 | [`docs/backlog.md`](docs/backlog.md) | Backlog YAML schema, readiness gates, overnight eligibility |
 | [`docs/interactive-phases.md`](docs/interactive-phases.md) | What to expect at each lifecycle phase -- questions, artifacts, flow |
-| [`docs/pipeline.md`](docs/pipeline.md) | Internal pipeline orchestration module reference |
 | [`docs/skills-reference.md`](docs/skills-reference.md) | Per-skill detailed reference |
 
 ## License
