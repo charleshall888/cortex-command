@@ -347,3 +347,17 @@
   to: escalated
   cycle: 1
   note: "Skipping cycle-2 review: the only remaining open issue (Req 12 PARTIAL) requires HUMAN action that no implementer can perform — running the empirical pre-flight test in a clean non-sandboxed terminal and populating preflight.md. Cycle-2 review would mechanically confirm Req 15 PASS and Req 12 PARTIAL, then escalate per the protocol's cycle-2 rule. Escalating directly is more efficient."
+
+- ts: 2026-05-05T14:42:00Z
+  event: spec_revision
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  triggered_by: empirical_preflight_run_observation
+  revisions:
+    - req: 12
+      change: "Removed 'child exits non-zero' from pass criteria. Empirical observation: claude -p wraps inner Bash-tool EPERM failures gracefully and exits 0; wrapper exit code is not a property of kernel enforcement. Kept target_unmodified + stderr_contains_eperm as load-bearing kernel-enforcement signals; exit_code recorded for forensics but not asserted."
+    - file: bin/cortex-check-parity
+      change: "Dropped 'exit_code \!= 0' assertion from _validate_preflight_schema. Comment explains why kernel-enforcement signals are load-bearing and wrapper exit code is incidental."
+  evidence:
+    - "Manual preflight run via claude -p --settings <denying-tempfile> at 2026-05-05T14:30: target_unmodified=true (kernel enforcement worked), stderr_contains_eperm=true (kernel signal captured), exit_code=0 (claude reported tool failure gracefully)."
+    - "Critical analysis: exit_code \!= 0 was a structural assumption about test transcript shape, not an independent signal. All four schema fields are equally spoofable since gate validates a transcript rather than re-running the test. Real defense-in-depth comes from commit_hash binding (Req 17), not from multi-field redundancy in the recorded values."
+  user_decision: "Approved via 'Think critically about this first to see what is actually the best option' → 'okay'."

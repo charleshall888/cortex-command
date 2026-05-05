@@ -972,10 +972,12 @@ def _validate_preflight_schema(data: dict) -> list[str]:
     if errors:
         return errors
     # Semantic checks: gate only passes when the recorded run actually denied.
+    # exit_code is recorded for forensics but NOT asserted: claude -p wraps inner
+    # tool failures gracefully and exits 0 even when a Bash subprocess hit EPERM.
+    # Kernel-enforcement signals (target_unmodified + stderr_contains_eperm) are
+    # the load-bearing checks; the wrapper's exit code is incidental.
     if data.get("pass") is not True:
         errors.append("field 'pass' must be true (preflight did not record a passing run)")
-    if data.get("exit_code") == 0:
-        errors.append("field 'exit_code' must be non-zero (denied write should fail)")
     if data.get("stderr_contains_eperm") is not True:
         errors.append("field 'stderr_contains_eperm' must be true")
     if data.get("target_unmodified") is not True:
