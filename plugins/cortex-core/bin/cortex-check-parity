@@ -56,7 +56,7 @@ RESERVED_NON_BIN_NAMES: frozenset[str] = frozenset(
         # not a deployable script, hence excluded from candidacy.
         "cortex-overnight-launch",
         # Per-spawn sandbox tempfile prefix (`<session_dir>/sandbox-settings/cortex-sandbox-*.json`)
-        # documented in docs/pipeline.md and docs/overnight-operations.md; the trailing
+        # documented in docs/internals/pipeline.md and docs/overnight-operations.md; the trailing
         # dash captures the token-regex tail. Not a deployable script.
         "cortex-sandbox-",
     }
