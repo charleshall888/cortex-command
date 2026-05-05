@@ -43,7 +43,7 @@ Validate inputs before entering any flow:
 
 ## New Session Flow (`/overnight`)
 
-> **Python module note**: After `uv tool install -e .` from `$CORTEX_COMMAND_ROOT`, the `cortex` console script is available globally and the `cortex_command.*` package is importable from any working directory — no `PYTHONPATH` manipulation required. Invoke planning helpers either through the CLI entry point (`cortex <subcommand>`) or, where subcommands are not yet wired, via `python3 -m cortex_command.<module>`.
+> **Python module note**: After `uv tool install git+<url>@<tag>`, the `cortex` console script is available globally and the `cortex_command.*` package is importable inside the tool venv — no `PYTHONPATH` manipulation required. Invoke planning helpers either through the CLI entry point (`cortex <subcommand>`) or, where subcommands are not yet wired, via `python3 -m cortex_command.<module>`.
 
 ### Step 1: Check for Existing Session
 

@@ -37,7 +37,20 @@ curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/
 
 The cortex-overnight MCP server also auto-installs the CLI on first tool call when `cortex` is missing from `PATH`. Users who only interact with cortex through Claude Code never need an explicit install step. Set `CORTEX_AUTO_INSTALL=0` to opt out of the auto-install behavior (the MCP will then surface a notice instead of running `uv tool install`).
 
-To upgrade later: run `/plugin update cortex-overnight@cortex-command` from inside Claude (MCP-driven), or `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<new-tag>` from a bare shell. See [docs/release-process.md](release-process.md) for the tag-before-coupling discipline that keeps plugin and CLI versions in sync.
+#### Upgrading
+
+To upgrade later: run `/plugin update cortex-overnight@cortex-command` from inside Claude (MCP-driven), or `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<new-tag>` from a bare shell. `cortex upgrade` itself is an advisory printer — the wheel for any version `vN` can only declare "I am vN" and has no way to know about newer tags. See [docs/release-process.md](release-process.md) for the tag-before-coupling discipline.
+
+The `cortex-overnight` plugin's MCP server embeds a `CLI_PIN` constant — a tuple `(tag, schema_version)` — that pairs the plugin with a specific cortex CLI tag. The plugin drives CLI auto-update via tag bump on first MCP tool call (the upgrade arrow flows plugin → CLI, not the other way).
+
+- **Plugin auto-update enabled (default)**: Claude Code refreshes the plugin in the background; the next MCP tool call detects a `CLI_PIN[0]` bump and auto-installs the matching CLI tag.
+- **Plugin auto-update disabled**: the embedded `CLI_PIN` stays pinned to whatever tag was current when you installed the plugin — a stable plugin/CLI pair until you explicitly run `/plugin update cortex-overnight@cortex-command`. A stale plugin is the intended state under disabled auto-update; schema versions match between the embedded `CLI_PIN[1]` and the installed CLI's print-root envelope, so everything works.
+
+#### Troubleshooting CLI install
+
+- **`cortex: command not found`**: confirm `~/.local/bin/` is on your `PATH`. Add `export PATH="$HOME/.local/bin:$PATH"` to your shell rc file, or run `uv tool update-shell` once.
+- **`cortex --print-root` fails with "Run from your cortex project root..."**: you invoked `cortex` from a directory with no `lifecycle/` AND no `backlog/`. Either `cd` into a cortex project, set `CORTEX_REPO_ROOT=/path/to/your/project`, or create a new project with `git init && cortex init`.
+- **macOS GUI-app launches Claude Code; `uv` not on PATH**: see the macOS GUI-launch caveat in the `cortex-overnight` plugin-specific prerequisites below.
 
 ### 2. Add and install the plugins from inside Claude Code
 
@@ -85,7 +98,7 @@ Use the `owner/repo` git form (`/plugin marketplace add charleshall888/cortex-co
 
 ### 3. Per-repo setup
 
-Run `cortex init` once in each repo where you want to use the overnight runner or interactive dashboard:
+Run `cortex init` once in each repo where you want to use cortex. It scaffolds the directories cortex skills and the overnight runner expect (`lifecycle/`, `backlog/`, `retros/`, `requirements/`) and registers the repo's `lifecycle/` path in your Claude Code sandbox allowlist — required for any cortex workflow (lifecycle, refine, backlog, overnight, dashboard).
 
 ```bash
 cortex init
@@ -170,7 +183,7 @@ requirements/project.md
 .gitignore   ← updated with cortex ignore entries
 ```
 
-The `.cortex-init` marker records the cortex version and timestamp of the run. `lifecycle.config.md` in the repo root holds per-repo configuration overrides (see the schema section above). The `lifecycle/sessions/` write path is also registered in `~/.claude/settings.local.json` so the overnight runner can write session logs without a sandbox prompt.
+The `.cortex-init` marker records the cortex version and timestamp of the run. `lifecycle.config.md` in the repo root holds per-repo configuration overrides (see the schema section above). The repo's `lifecycle/` path is also registered in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so the overnight runner and interactive sessions can write under it without sandbox prompts.
 
 Then run `/cortex-core:lifecycle <feature>` to begin a new feature, which produces a `lifecycle/<feature>/` directory containing the feature's lifecycle artifacts (research, spec, plan, implementation, events log). For example:
 
@@ -401,12 +414,24 @@ Some content in this guide is intentionally duplicated across files and must be 
 
 Commands shown use Homebrew (macOS); the project is primarily developed and tested on macOS.
 
+### Required for end users
+
 | Tool | Install |
 |------|---------|
-| [just](https://just.systems/) | `brew install just` |
+| [uv](https://docs.astral.sh/uv/) | `brew install uv` (or installed by `install.sh`) |
 | Python 3.12+ | Pre-installed / `brew install python` |
-| [uv](https://docs.astral.sh/uv/) | `brew install uv` |
-| [gh](https://cli.github.com/) (GitHub CLI) | `brew install gh` |
-| tmux | `brew install tmux` |
-| terminal-notifier (macOS) | `brew install terminal-notifier` |
-| jq (optional) | `brew install jq` |
+| [gh](https://cli.github.com/) (GitHub CLI) | `brew install gh` (used by overnight + PR workflows) |
+
+### Optional
+
+| Tool | When you need it |
+|------|------------------|
+| terminal-notifier | macOS desktop notifications (`brew install terminal-notifier`) |
+| jq | nicer JSON output (`brew install jq`) |
+
+### Contributor-only (require a clone of cortex-command)
+
+| Tool | Used by |
+|------|---------|
+| [just](https://just.systems/) | `just test`, `just dashboard`, `just validate-commit`, etc. |
+| tmux | `just dashboard` and the overnight runner's detached-session model |

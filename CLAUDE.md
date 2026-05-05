@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0`) plus plugins installed via `/plugin install` in Claude Code; `cortex init` additionally writes one entry per repo into `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array to unblock interactive session writes to `lifecycle/sessions/`.
+An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0`) plus plugins installed via `/plugin install` in Claude Code; `cortex init` additionally registers the repo's `lifecycle/` path (the parent of `lifecycle/sessions/`) in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so interactive sessions and the overnight runner can write under it without sandbox prompts.
 
 ## Repository Structure
 

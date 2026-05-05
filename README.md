@@ -31,46 +31,29 @@ You ──► Clarify ──► Research ──► Spec ──► Plan ──►
 ## Prerequisites
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) CLI
-- [just](https://just.systems/) command runner (`brew install just`)
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/) package manager (`brew install uv`)
+- macOS (primary supported platform)
 
-> These instructions target macOS.
-
-## Quick Start
-
-Cortex-command ships as a CLI (installed via a tag-pinned git URL — no clone required) plus Claude Code plugins (skills + hooks + utilities):
+## Quickstart
 
 ```bash
-# 1. Install the `cortex` CLI from the v0.1.0 tag
-uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0
-
-# 2. One-time: ensure the uv tool bin directory is on PATH
-uv tool update-shell
-
-# 3. In Claude Code, add the plugin marketplace
-claude /plugin marketplace add charleshall888/cortex-command
-
-# 4. Install the recommended core plugins to start
-claude /plugin install cortex-core@cortex-command
-claude /plugin install cortex-overnight@cortex-command
-claude /plugin install cortex-ui-extras@cortex-command
-claude /plugin install cortex-pr-review@cortex-command
-```
-
-If you do not have `uv` available, the `install.sh` bootstrap script installs `uv` first and then runs the same command:
-
-```bash
+# 1. Install the cortex CLI (bootstrap installs `uv` first if missing)
 curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
+
+# 2. In Claude Code, add the marketplace and install plugins
+claude /plugin marketplace add charleshall888/cortex-command
+claude /plugin install cortex-overnight@cortex-command   # autonomous overnight runs
+claude /plugin install cortex-core@cortex-command        # interactive skills + hooks
+
+# 3. In each project where you want cortex active
+cd <your-project>
+cortex init
 ```
 
-The cortex-overnight MCP server also auto-installs the CLI on first tool call when it detects `cortex` is missing from `PATH` — interactive Claude Code users who only use cortex through plugins never need to run an explicit install step.
+Once installed, the `cortex-overnight` plugin keeps the cortex CLI tag in sync — when the plugin auto-updates (or you run `/plugin update cortex-overnight@cortex-command`), the next MCP tool call reinstalls the matching CLI tag automatically.
 
-The [Plugin roster](#plugin-roster) below lists all 6 available plugins — install `android-dev-extras@cortex-command` and `cortex-dev-extras@cortex-command` to add the extras tier.
+No symlinks into `~/.claude/` are created — plugins are discovered by Claude Code directly. The [Plugin roster](#plugin-roster) below lists all 6 available plugins; install `cortex-ui-extras`, `cortex-pr-review`, `android-dev-extras`, and `cortex-dev-extras` for the extras tier.
 
-No symlinks into `~/.claude/` are created — plugins are discovered by Claude Code directly.
-
-Verify the install with the smoke test in [Setup guide § Verify install](docs/setup.md#verify-install).
+See [`docs/setup.md`](docs/setup.md) for: alternate install (manual `uv tool install`), authentication setup, plugin-specific prerequisites, troubleshooting, and `CLAUDE_CONFIG_DIR` per-repo scoping. Verify the install with the smoke test in [Setup guide § Verify install](docs/setup.md#verify-install).
 
 ### Plugin roster
 
@@ -118,17 +101,18 @@ The `cortex` CLI is installed as a non-editable `uv tool` from a tag-pinned git 
 
 ## Commands
 
-Run `just --list` to see all operational recipes. Key commands:
-
 ```
-just test                  # Run all test suites
-just overnight-run         # Async-spawn overnight runner (detaches; returns within 5s)
 cortex overnight start     # Run overnight in detached tmux
 cortex overnight status    # Print session status (use --format json for machine-readable)
-just dashboard             # Start the web dashboard
-just validate-commit       # Test commit message hook
-just validate-skills       # Check skill frontmatter
+cortex overnight cancel    # Cancel the active session
+cortex overnight logs      # Read session logs
+cortex init                # Scaffold a repo for cortex (run once per project)
+cortex --print-root        # Verify install (prints {version, root, package_root, ...})
 ```
+
+Run `cortex --help` to see all subcommands.
+
+> **Contributors only:** operational `just` recipes (`just test`, `just dashboard`, `just validate-commit`, `just validate-skills`) require a clone of cortex-command and only work from inside the repo.
 
 ## Documentation
 
