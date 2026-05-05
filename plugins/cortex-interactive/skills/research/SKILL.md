@@ -234,6 +234,9 @@ Omit this section if agent_count < 5.]
 ## Open Questions
 [Unresolved questions surfaced during research, including contradictions between agents.
 Omit this section if no open questions exist.]
+
+## Considerations Addressed
+[Conditional section: emitted only when research-considerations was non-empty AND lifecycle mode. Each input consideration becomes one bullet with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). Appears after `## Open Questions` and before any final references.]
 ```
 
 ## Step 5: Route Output
@@ -241,9 +244,11 @@ Omit this section if no open questions exist.]
 **Lifecycle mode** (`lifecycle-slug` was present in `$ARGUMENTS`):
 1. If `lifecycle/{lifecycle-slug}/` does not exist, create the directory.
 2. Write synthesis output to `lifecycle/{lifecycle-slug}/research.md`.
-3. Announce: "Research complete. Written to `lifecycle/{lifecycle-slug}/research.md`."
+3. If `research-considerations` was non-empty in `$ARGUMENTS`, the synthesis output includes the `## Considerations Addressed` section (per Step 4 output structure) — one bullet per input consideration with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). This section is emitted only in lifecycle mode.
+4. Announce: "Research complete. Written to `lifecycle/{lifecycle-slug}/research.md`."
 
 **Standalone mode** (`lifecycle-slug` absent or empty):
 1. Present synthesis output directly in the conversation.
 2. Do not write any file.
 3. No lifecycle directory is created.
+4. The `## Considerations Addressed` section is NOT emitted in standalone mode (no research.md is written, so the flow-through artifact does not apply).
