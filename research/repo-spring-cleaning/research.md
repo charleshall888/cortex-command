@@ -284,6 +284,64 @@ All open questions resolved during critical review or user decision. Original li
 
 7. ~~Forker affordance triage principle~~ → **P-A: forker affordances stay unless they cause user-facing noise** (user decision, post-critical-review). Load-bearing reasoning: the maintainer's own development workflow IS a clone-and-commit forker workflow — dual-source enforcement (`CLAUDE.md:18`), `just setup-githooks` (`CLAUDE.md:48`), `install.sh:25` `CORTEX_REPO_URL`, statusline manual-wire (`docs/setup.md:319-327`) are infrastructure the maintainer uses themselves. "Main audience" is a primacy claim about cleanup surface optimization, not an exclusivity claim about retained infrastructure. DR-4 deletes (unwired post-shift hooks) ratify under P-A because those hooks are not forker affordances — they're orphans with no current deploy mechanism. Scope under P-A: README placement-noise migrations (Distribution/Customization/Commands move to setup.md/docs/internals), unwired-hook deletes, stale-doc fixes, CHANGELOG repairs, lifecycle/research archive sweep. **Out of scope**: any change to `install.sh:25` `CORTEX_REPO_URL`, `setup-githooks` recipe, dual-source enforcement infrastructure, statusline manual-wire path, `requirements/project.md:7` "clone or fork" language.
 
+## Round 2 audit (post-decompose validation)
+
+User-requested deeper-research pass after initial decomposition. 4 fresh agents dispatched in parallel: comprehensive junk scan beyond round 1, comprehensive stale-reference scan repo-wide, migration safety audit for #166, active-workflow impact audit. Findings updated tickets #166/#168/#169 surgically.
+
+### Critical safety gaps caught (would have broken `just test`)
+
+- `tests/test_output_filter.sh` (8+ hard refs to deleted hook paths) — orphaned by DR-4=A. Now paired-delete in #168.
+- `tests/test_hooks.sh:308-end-of-sync-block` (8+ test cases) + `tests/fixtures/hooks/sync-permissions/` — orphaned by `cortex-sync-permissions.py` deletion. Now paired-delete in #168.
+- `tests/test_migrate_namespace.py` + `tests/fixtures/migrate_namespace/` — orphaned by `migrate-namespace.py` deletion. Now paired-delete in #168.
+
+### Factual corrections to round 1 / decompose findings
+
+- **`claude/hooks/setup-github-pat.sh` already deleted** — verified `ls` ENOENT. The file was retired in `lifecycle/apply-post-113-audit-follow-ups-...` Task 10. Round 1's "true orphan now" classification was based on a stale read of the directory. Removed from #168 confirmed-delete list.
+- **`plugins/cortex-overnight-integration/tests/` are NOT byte-equivalent dupes** — files differ at L34/L42 (path strings reference non-existent `plugins/cortex-overnight-integration/server.py`). Deletion verdict still stands; description corrected in #168.
+- **`docs/agentic-layer.md:183`** does NOT contain bash-runner terminology in current state. The earlier ticket scope listed it; round 2 sweep showed only L187 and L313 are real instances. Plan phase grep will find them.
+- **`CLAUDE.md` doc-ownership rule is at line 50, not line 34** as originally cited. Updated in #166.
+
+### Scope expansions (broader than round 1)
+
+- **"bash runner" terminology drift** is far more pervasive than round 1's 3-line scope. Round 2 sweep found 7+ user-facing instances: `skills/overnight/SKILL.md:3,22,391,400,401`; `skills/diagnose/SKILL.md:62`; `docs/overnight.md:8`; `docs/skills-reference.md:59,71`. All added to #166 scope. Plus 30+ runner.sh provenance comments in `cortex_command/overnight/*.py` (acceptable to leave — internal documentation, not user-facing) and one runtime-narration occurrence in `cortex_command/overnight/prompts/orchestrator-round.md` (flagged for plan-phase investigation).
+- **Hidden non-`.md` coupling on docs/internals/ move**: `cortex_command/cli.py:268` (user-facing CLI stderr message references `docs/mcp-contract.md`) and `bin/cortex-check-parity:59` (script comment). Both added to #166 scope. The CLI message is critical — without update, installers see broken-link error in CLI output.
+- **`docs/overnight-operations.md` cross-refs at L318/326/339/593/599** to pipeline.md/sdk.md path updates — added to #166 scope.
+- **`pipeline-not-a-skill` callout migration**: `docs/agentic-layer.md:64` has the only "internal reference, not a user-facing skill" callout. Skill-table dedup must migrate this to `skills-reference.md`, not silently lose it.
+- **`docs/backlog.md` Global Deployment cut is NOT clean delete**: `plugin-development.md` does not cover the `Path.cwd()` rule for repo-local dirs or the per-script bin-deployment mechanism. Ticket #166 corrected to require substantive migration before cut.
+
+### Net-new junk surfaced beyond round 1's #168 list
+
+- `cortex_command/overnight/sync-allowlist.conf:36` — dead-code line (post-#129 cleanup never landed).
+- `.gitignore:20` `skills/registry.json` — paired cleanup with `generate-registry.py` deletion.
+- `.gitignore:53` `debug/test-*/` and `.gitignore:64` `ui-check-results/` — stale globs (low priority, investigate during plan).
+- `.mcp.json` playwright entry disabled by default — candidate for removal.
+- Add `cortex_command/tests` to `pyproject.toml:[tool.pytest.ini_options].testpaths` — config hygiene.
+- `bin/cortex-validate-spec` decision must couple with `justfile:326-327` `validate-spec` recipe (deleting the script orphans the recipe).
+- `scripts/validate-callgraph.py:12` — stale `claude/reference/` mention in script comment.
+- `skills/requirements/references/gather.md:201` — broken relative link.
+- `backlog/133-...md:56` — broken cross-reference to non-existent lifecycle dir.
+
+### Archive recipe blast-radius mitigation (#169)
+
+`bin/cortex-archive-rewrite-paths` walks every `*.md` outside `.git/`/`.venv/`/`lifecycle/archive/`/`lifecycle/sessions/`/`retros/`. **No `--exclude-dir` flag exists.** Round 2 added two mitigation options to #169:
+1. Add `--exclude-dir` flag (small bin/ scope expansion within #169).
+2. Sequence-and-accept: commit all discovery+epic+ticket artifacts before recipe run; accept rewrites in archived research artifacts as post-archive correct citations.
+
+### Confirmed-clean surfaces (round 2 verified)
+
+- `.github/workflows/{validate,release}.yml` — no path filters, no retired references; tolerate deletes.
+- `.githooks/pre-commit` — all 7 phases load-bearing; none reference delete candidates.
+- `pyproject.toml` — every dep imported, every entry point resolves.
+- `cortex_command/` — no `TODO`/`FIXME`/`XXX` markers anywhere.
+- Marketplace `.claude-plugin/marketplace.json` — no rename leftovers.
+- `cortex_command/cli.py` subparsers: `overnight`, `mcp-server`, `init`, `upgrade` only (no `dashboard` verb — confirms OQ §4 still open).
+- Sandbox preflight gate — no cleanup ticket touches the four watched files.
+- MCP plugin contract — no version bump, no `[project.scripts]` change, MCP discovery cache stable.
+
+### `${CLAUDE_SKILL_DIR}` env-var convention (verified, NOT stale)
+
+Round 2 flagged 11 SKILL.md links using `${CLAUDE_SKILL_DIR}/references/...` template. Spot-checked: this is the documented Claude Code env-var convention used pervasively across the canonical `skills/` source (verified in `skills/{discovery,backlog,morning-review,lifecycle,requirements}/SKILL.md`). Not stale; plugin mirrors regenerate the same convention. **No action needed.**
+
 ## Notes
 
 - **Sandbox lifecycle 164 closed today** (commit `64ec3e3`). Confirm no further commits land in `cortex_command/overnight/sandbox_settings.py` or `bin/cortex-check-parity` before the cleanup commit, or rebase.

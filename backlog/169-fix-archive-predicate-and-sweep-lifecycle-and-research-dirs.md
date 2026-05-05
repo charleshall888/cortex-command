@@ -51,14 +51,32 @@ Produce a citation-backed table covering all 37 top-level lifecycle dirs with co
 After the disposition table is committed:
 1. Run `just lifecycle-archive --dry-run` with new predicate; diff output against expectation.
 2. Archive recipe-eligible (~19 strict + ~11 YAML-form once predicate is fixed) dirs.
-3. Manually archive 3 mis-classified dirs that lack feature_complete events but have complete backlog tickets:
-   - `lifecycle/add-playwright-htmx-test-patterns-to-dev-toolchain/` (backlog #029)
-   - `lifecycle/define-evaluation-rubric-update-lifecycle-spec-template-create-dashboard-context-md/` (backlog #035)
-   - `lifecycle/run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff/` (backlog #083; parent epic #82 alive)
+3. Manually archive 4 dirs that lack feature_complete events but have complete backlog tickets or documentation roles:
+   - `lifecycle/add-playwright-htmx-test-patterns-to-dev-toolchain/` (backlog #029 cites it as research source)
+   - `lifecycle/define-evaluation-rubric-update-lifecycle-spec-template-create-dashboard-context-md/` (backlog #035 complete)
+   - `lifecycle/run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff/` (backlog #083 complete; parent epic #82 alive)
+   - `lifecycle/clean-up-active-sessionjson-when-overnight-session-transitions-to-phasecomplete/` (round 2 disposition: contains only `review.md` — retroactive read-only review of inline hotfix commit `88f4885` for backlog #134; backlog complete; archive manually since no predicate variant matches)
 4. Delete `lifecycle/feat-a/` only (genuine test detritus, no backlog ticket, 42 ERROR-loop events).
-5. Investigate `clean-up-active-sessionjson-...` separately.
 
-**Ordering constraint**: `bin/cortex-archive-rewrite-paths` walks every `*.md` outside `.git/`/`lifecycle/archive/`/`lifecycle/sessions/`/`retros/`. Running while sibling cleanup tickets (#166/#167/#168) have open lifecycle dirs creates churn (path renames in their lifecycle/<slug>/ artifacts). Sequence #169 last in the epic.
+## Critical: rewrite-paths blast radius mitigation
+
+Round 2 audit caught: `bin/cortex-archive-rewrite-paths` walks every `*.md` outside `.git/`/`.venv/`/`lifecycle/archive/`/`lifecycle/sessions/`/`retros/`. The recipe argparse exposes only `--slug`/`--dry-run`/`--root` — **no `--exclude-dir` flag exists**. Without mitigation, the recipe rewrites citations in:
+- `research/repo-spring-cleaning/research.md` (this discovery's artifact)
+- `research/opus-4-7-harness-adaptation/research.md` (alive epic #82 per CLAUDE.md)
+- Any in-flight lifecycle artifacts of #166/#168
+- Backlog ticket bodies that contain inline `lifecycle/<slug>` references (backlog frontmatter `lifecycle_slug:` fields use bare slugs without prefix, so frontmatter is safe)
+
+**Mitigation options** (plan phase picks one):
+
+1. **Add `--exclude-dir` flag to `bin/cortex-archive-rewrite-paths`** (small bin/ scope expansion within this lifecycle): accept a list of directories to prune from the walk; pass `--exclude-dir research/repo-spring-cleaning research/opus-4-7-harness-adaptation` during the sweep. Best defense for live cross-references.
+
+2. **Sequence-and-accept**: stage all discovery + epic + cleanup-ticket artifacts to commit BEFORE running the recipe. Accept rewrites in archived research artifacts (post-archive citations still resolve correctly to `lifecycle/archive/<slug>/`). Verify post-run by visual diff that no live cross-refs break.
+
+Recommended: Option 1 (the bin/ flag is simple to add and provides durable safety for future archive runs).
+
+**Ordering constraint**: regardless of mitigation, sequence #169 last in the epic — after #166 and #168 commit so their in-flight lifecycle artifacts are not in the rewrite scope.
+
+**Code-reference paired update**: `cortex_command/cli.py:268` runtime stderr message `"see docs/mcp-contract.md."` is being updated by #166's docs/internals/ move; verify it's done before #169's rewrite path crosses any archived path that touches `docs/internals/` paths.
 
 ## Scope — F-10: research archive
 

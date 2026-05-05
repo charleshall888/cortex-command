@@ -24,10 +24,9 @@ Active development surfaces (overnight runner, MCP plugin, sandbox stack) verifi
 
 ## Scope
 
-Four children (166–169) cover:
+Three children (166, 168, 169) cover:
 
-- **#166**: README rewrite + `docs/setup.md` content migration. Aggressive cut to ~80 lines (down from 132); move Customization, Distribution, Commands H2s out; cut What's Inside table and ASCII tier/criticality legend. Hard prerequisite: setup.md must gain `uv run` semantics, uv-self-uninstall foot-gun, fork-install URL, and Upgrade & maintenance subsection BEFORE the README cut commit lands.
-- **#167**: `docs/` reorganization, skill-table dedup, and stale-path fixes. Move `pipeline.md`/`sdk.md`/`mcp-contract.md` to `docs/internals/`; merge `agentic-layer.md` skill table into `skills-reference.md`; trim `agentic-layer.md`; fix `requirements/pipeline.md:130` (retired `claude/reference/`), `CHANGELOG.md:21-22` (non-existent doc references), and `docs/agentic-layer.md:183,187,313` (stale "bash runner" terminology).
+- **#166**: README rewrite + `docs/setup.md` content migration + `docs/` reorganization + skill-table dedup + stale-path fixes. Aggressive README cut to ~80 lines (down from 132); move Customization, Distribution, Commands H2s out; cut What's Inside table and ASCII tier/criticality legend. Move `pipeline.md`/`sdk.md`/`mcp-contract.md` to `docs/internals/`; merge `agentic-layer.md` skill table into `skills-reference.md`. Fix `requirements/pipeline.md:130` (retired `claude/reference/`), `CHANGELOG.md:21-22` (non-existent doc references), and `docs/agentic-layer.md:183,187,313` (stale "bash runner" terminology). Hard prerequisite: setup.md must gain `uv run` semantics, uv-self-uninstall foot-gun, fork-install URL, Upgrade & maintenance subsection, Customization content, and Commands subsection BEFORE the README cut commit lands. Originally split across #166+#167; consolidated to one ticket because all changes share the docs/ domain and the README Documentation index needs the new `docs/internals/` paths in the same commit as the README rewrite (atomic landing).
 - **#168**: Code/script/hook deletion. Remove stale `plugins/cortex-overnight-integration/`, completed-migration scripts under `scripts/`, post-`cortex setup`-retirement hooks (`cortex-output-filter.sh`, `cortex-sync-permissions.py`, `setup-github-pat.sh`, `bell.ps1`). Includes parallel retirement of `requirements/project.md:36` (`output-filters.conf` mention) to prevent spec/code drift.
 - **#169**: Lifecycle + research archive sweep. Fix `justfile:212` archive predicate (anchored alternation regex covering YAML-form events.log entries); produce per-dir disposition table; archive ~30 lifecycle dirs and ~30 research dirs; correctly route 3 mis-classified delete candidates (#029/#035/#083 cited backlog tickets) to archive rather than delete.
 
@@ -46,7 +45,7 @@ These are user-decision items the implementing tickets resolve, not research gap
 
 1. `landing-page/` disposition (keep/move/delete) — child #168.
 2. `bin/cortex-validate-spec` keep-and-allowlist vs delete — child #168.
-3. `cortex dashboard` verb policy: ship verb / flag contributor-only / cut `docs/dashboard.md` from installer index — child #167.
+3. `cortex dashboard` verb policy: ship verb / flag contributor-only / cut `docs/dashboard.md` from installer index — child #166.
 
 ## Why now
 
@@ -54,7 +53,7 @@ These are user-decision items the implementing tickets resolve, not research gap
 
 ## Suggested implementation order
 
-#168 (junk deletion) and #167 (doc reorg) can run in parallel — independent file sets. #166 (README + setup.md) depends on #167 finishing first only because the README's Documentation index needs the new `docs/internals/` paths; otherwise independent. #169 (archive sweep) lands last to minimize churn from `cortex-archive-rewrite-paths` rewriting `*.md` across in-flight cleanup ticket artifacts.
+#166 (consolidated docs cleanup) and #168 (junk deletion) can run in parallel — different file domains. #169 (archive sweep) lands last to minimize churn from `cortex-archive-rewrite-paths` rewriting `*.md` across in-flight cleanup ticket artifacts.
 
 ## Research
 

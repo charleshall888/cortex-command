@@ -32,7 +32,7 @@
   },
   {
     "id": 166,
-    "title": "Rewrite README aggressively and migrate content to docs/setup.md",
+    "title": "Rewrite README, migrate content to docs/setup.md, reorganize docs/, and fix stale paths",
     "status": "backlog",
     "priority": "high",
     "type": "feature",
@@ -41,7 +41,8 @@
       "readme",
       "setup",
       "documentation",
-      "share-readiness"
+      "share-readiness",
+      "stale-paths"
     ],
     "areas": [
       "docs"
@@ -90,37 +91,6 @@
     "session_id": null,
     "lifecycle_phase": null,
     "schema_version": null,
-    "repo": null
-  },
-  {
-    "id": 167,
-    "title": "Reorganize docs/, merge skill tables, and fix stale paths",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "repo-spring-cleaning",
-      "documentation",
-      "share-readiness",
-      "stale-paths"
-    ],
-    "areas": [
-      "docs"
-    ],
-    "created": "2026-05-05",
-    "updated": "2026-05-05",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "165",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/repo-spring-cleaning/research.md",
-    "plan": null,
-    "uuid": "4da03d78-468d-4840-8161-b88b4f03727c",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
     "repo": null
   },
   {
