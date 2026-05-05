@@ -19,7 +19,7 @@
 #   E) Create plugins/cortex-unclassified/.claude-plugin/plugin.json with a
 #      valid name but an unclassified plugin dir. Stage it. Expect non-zero
 #      exit and stderr mentioning the fail-closed guard.
-#   F) Seed a no-op marker directly in plugins/cortex-interactive/skills/commit/SKILL.md
+#   F) Seed a no-op marker directly in plugins/cortex-core/skills/commit/SKILL.md
 #      (build-output plugin tree) WITHOUT touching the top-level source, and
 #      stage only the plugin-tree path. Expect non-zero exit: Phase 2's
 #      build-output-plugin-path check fires, Phase 3 rebuilds from the
@@ -38,7 +38,7 @@ SKILL_SRC="skills/commit/SKILL.md"
 HOOK_SRC="hooks/cortex-validate-commit.sh"
 UI_EXTRAS_SKILL="plugins/cortex-ui-extras/skills/ui-lint/SKILL.md"
 PR_REVIEW_SKILL="plugins/cortex-pr-review/skills/pr-review/SKILL.md"
-INTERACTIVE_SKILL="plugins/cortex-interactive/skills/commit/SKILL.md"
+INTERACTIVE_SKILL="plugins/cortex-core/skills/commit/SKILL.md"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -121,8 +121,8 @@ if [ "$HOOK_EXIT_B" -eq 0 ]; then
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_B"
     echo "-------------------"
-elif ! echo "$HOOK_OUTPUT_B" | grep -q "plugins/cortex-interactive/hooks/cortex-validate-commit.sh"; then
-    report_fail "Subtest B: hook exit $HOOK_EXIT_B but output does not mention plugins/cortex-interactive/hooks/cortex-validate-commit.sh."
+elif ! echo "$HOOK_OUTPUT_B" | grep -q "plugins/cortex-core/hooks/cortex-validate-commit.sh"; then
+    report_fail "Subtest B: hook exit $HOOK_EXIT_B but output does not mention plugins/cortex-core/hooks/cortex-validate-commit.sh."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_B"
     echo "-------------------"
@@ -227,8 +227,8 @@ if [ "$HOOK_EXIT_F" -eq 0 ]; then
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_F"
     echo "-------------------"
-elif ! echo "$HOOK_OUTPUT_F" | grep -q "plugins/cortex-interactive/skills/commit/SKILL.md"; then
-    report_fail "Subtest F: hook exit $HOOK_EXIT_F but output does not mention plugins/cortex-interactive/skills/commit/SKILL.md."
+elif ! echo "$HOOK_OUTPUT_F" | grep -q "plugins/cortex-core/skills/commit/SKILL.md"; then
+    report_fail "Subtest F: hook exit $HOOK_EXIT_F but output does not mention plugins/cortex-core/skills/commit/SKILL.md."
     echo "--- hook output ---"
     echo "$HOOK_OUTPUT_F"
     echo "-------------------"

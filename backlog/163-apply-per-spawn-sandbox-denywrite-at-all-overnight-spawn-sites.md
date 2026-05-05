@@ -2,20 +2,23 @@
 schema_version: "1"
 uuid: 759eb26e-55fd-4cc6-9528-f7c84845e8e2
 title: "Apply per-spawn sandbox.filesystem.denyWrite at all overnight spawn sites"
-status: ready
+status: in_progress
 priority: critical
 type: feature
 parent: 162
 tags: [overnight-runner, sandbox, os-enforcement, orchestrator-worktree-escape, pipeline, cross-repo, docs]
-areas: [overnight-runner, pipeline]
+areas: [overnight-runner,pipeline]
 created: 2026-05-04
-updated: 2026-05-04
+updated: 2026-05-05
 lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+lifecycle_phase: plan
+session_id: 03c51bac-eafb-4df5-94b2-ad02791e3b67
 blocks: []
 blocked-by: []
 discovery_source: research/sandbox-overnight-child-agents/research.md
+complexity: complex
+criticality: critical
+spec: lifecycle/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/spec.md
 ---
 
 # Apply per-spawn sandbox.filesystem.denyWrite at all overnight spawn sites

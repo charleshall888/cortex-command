@@ -13,7 +13,7 @@ The first tagged release of cortex-command. Establishes the no-clone install pat
 ### Added
 
 - **No-clone install path**: `uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0` is the primary install command. Cloning the repo is no longer required for the CLI to work; cloning remains supported as the developer/forker secondary path.
-- **MCP first-install hook**: the `cortex-overnight-integration` plugin's MCP server auto-installs the cortex CLI on first tool call when missing. Reuses the flock + NDJSON failure-log + sentinel patterns from earlier upgrade-orchestration work, adapted for the pre-install context.
+- **MCP first-install hook**: the `cortex-overnight` plugin's MCP server auto-installs the cortex CLI on first tool call when missing. Reuses the flock + NDJSON failure-log + sentinel patterns from earlier upgrade-orchestration work, adapted for the pre-install context.
 - **`CLI_PIN` constant**: the plugin's `server.py` embeds a `CLI_PIN = (tag, schema_version)` tuple that pairs the plugin with a specific cortex CLI tag. Plugin auto-update drives CLI auto-update via tag bump.
 - **`_resolve_user_project_root()` helper**: a single source of truth for "where does the user's cortex project live?" — returns `Path(CORTEX_REPO_ROOT)` when set, else `Path.cwd()` after a sanity check that the directory contains `lifecycle/` or `backlog/`.
 - **`package_root` field in `cortex --print-root --format json`**: a new field reporting the package install location, separated from the `root` field (which is now the user's project root). JSON envelope `version` bumped from `"1.0"` to `"1.1"` (additive — `1.0` consumers ignore the new field).

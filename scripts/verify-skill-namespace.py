@@ -6,8 +6,8 @@ Walks the in-scope file set and finds every reference of the form
 `<plugin>:<skill>` pair matches the canonical mapping derived from the
 `justfile` `build-plugin` recipe's case statement:
 
-  cortex-interactive            -> 14 skills
-  cortex-overnight-integration  -> 2 skills
+  cortex-core            -> 14 skills
+  cortex-overnight  -> 2 skills
 
 Old-form references (`/cortex:<skill>`) are surfaced as "old-form survivors"
 and must either be migrated (Task 8) or listed in the carve-out file.
@@ -53,9 +53,9 @@ CORTEX_OVERNIGHT_INTEGRATION_SKILLS = {
 # skill -> owning plugin
 SKILL_OWNER: dict[str, str] = {}
 for s in CORTEX_INTERACTIVE_SKILLS:
-    SKILL_OWNER[s] = "cortex-interactive"
+    SKILL_OWNER[s] = "cortex-core"
 for s in CORTEX_OVERNIGHT_INTEGRATION_SKILLS:
-    SKILL_OWNER[s] = "cortex-overnight-integration"
+    SKILL_OWNER[s] = "cortex-overnight"
 
 # ---------------------------------------------------------------------------
 # Walked file set & exclusions
@@ -70,8 +70,8 @@ INCLUDE_GLOBS: list[str] = [
     "tests/scenarios/**/*.yaml",
     "hooks/cortex-*.sh",
     "cortex_command/init/templates/**/*.md",
-    "plugins/cortex-interactive/skills/**/*.md",
-    "plugins/cortex-overnight-integration/skills/**/*.md",
+    "plugins/cortex-core/skills/**/*.md",
+    "plugins/cortex-overnight/skills/**/*.md",
 ]
 
 # Path prefixes (relative to root) to exclude.
@@ -86,8 +86,8 @@ EXCLUDE_PREFIXES: tuple[str, ...] = (
 # Regexes
 # ---------------------------------------------------------------------------
 
-# Matches /cortex:<skill>, /cortex-interactive:<skill>,
-# /cortex-overnight-integration:<skill>. Does NOT use a leading word-boundary
+# Matches /cortex:<skill>, /cortex-core:<skill>,
+# /cortex-overnight:<skill>. Does NOT use a leading word-boundary
 # because '/' is a non-word char that already provides separation; we instead
 # require either start-of-string or a non-alphanumeric char before the slash.
 SKILL_INVOCATION_RE = re.compile(
@@ -106,8 +106,8 @@ class Match:
     file: str  # path relative to root
     line: int  # 1-based
     column: int  # 1-based
-    raw: str  # full match text, e.g. "/cortex-interactive:commit"
-    plugin: str  # "cortex" | "cortex-interactive" | "cortex-overnight-integration"
+    raw: str  # full match text, e.g. "/cortex-core:commit"
+    plugin: str  # "cortex" | "cortex-core" | "cortex-overnight"
     skill: str  # skill name
 
 
@@ -267,8 +267,8 @@ def run_self_test() -> int:
     """Run three in-process fixtures. Exit non-zero if any classification is wrong."""
     failures: list[str] = []
 
-    # 1. Known-good: cortex-interactive:commit -> VALID (no violation).
-    good_text = "Run /cortex-interactive:commit to save your work"
+    # 1. Known-good: cortex-core:commit -> VALID (no violation).
+    good_text = "Run /cortex-core:commit to save your work"
     good_matches = scan_text(good_text, "<self-test-good>")
     good_violations = [v for v in (classify(m) for m in good_matches) if v is not None]
     if len(good_matches) != 1:
@@ -280,9 +280,9 @@ def run_self_test() -> int:
             f"fixture 1 (known-good): expected NO violation, got {good_violations!r}"
         )
 
-    # 2. Known-bad cross-mapping: cortex-interactive:morning-review -> VIOLATION
-    #    with expected_plugin = cortex-overnight-integration.
-    cross_text = "Run /cortex-interactive:morning-review tomorrow"
+    # 2. Known-bad cross-mapping: cortex-core:morning-review -> VIOLATION
+    #    with expected_plugin = cortex-overnight.
+    cross_text = "Run /cortex-core:morning-review tomorrow"
     cross_matches = scan_text(cross_text, "<self-test-cross>")
     cross_violations = [v for v in (classify(m) for m in cross_matches) if v is not None]
     if len(cross_matches) != 1:
@@ -299,10 +299,10 @@ def run_self_test() -> int:
             failures.append(
                 f"fixture 2 (cross-mapping): kind='{v.kind}', expected 'cross-mapping'"
             )
-        if v.expected_plugin != "cortex-overnight-integration":
+        if v.expected_plugin != "cortex-overnight":
             failures.append(
                 "fixture 2 (cross-mapping): expected_plugin="
-                f"'{v.expected_plugin}', expected 'cortex-overnight-integration'"
+                f"'{v.expected_plugin}', expected 'cortex-overnight'"
             )
 
     # 3. Known-bad old-form: /cortex:lifecycle -> VIOLATION classified as old-form.
@@ -323,10 +323,10 @@ def run_self_test() -> int:
             failures.append(
                 f"fixture 3 (old-form): kind='{v.kind}', expected 'old-form'"
             )
-        if v.expected_plugin != "cortex-interactive":
+        if v.expected_plugin != "cortex-core":
             failures.append(
                 "fixture 3 (old-form): expected_plugin="
-                f"'{v.expected_plugin}', expected 'cortex-interactive'"
+                f"'{v.expected_plugin}', expected 'cortex-core'"
             )
 
     if failures:

@@ -389,7 +389,7 @@ Every overnight session persists state as files under `lifecycle/`. The runner r
 | `lifecycle/sessions/{id}/pipeline-events.log` | `cortex_command/pipeline/events.py` via `batch_runner` | Append-only JSONL of per-task dispatch/merge/test events inside each feature. |
 | `lifecycle/sessions/{id}/overnight-strategy.json` | `cortex_command/overnight/strategy.py` (`save_strategy` — atomic tempfile + `os.replace`) | Cross-round strategy: `hot_files`, `integration_health`, `recovery_log_summary`, `round_history_notes`. |
 | `lifecycle/sessions/{session_id}/escalations.jsonl` | `cortex_command/overnight/deferral.py` (`write_escalation`) | Append-only JSONL of worker escalations, orchestrator resolutions, and cycle-break promotions. |
-| `lifecycle/{feature}/events.log` | `cortex_command/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/cortex-interactive:lifecycle resume` and `/morning-review`. |
+| `lifecycle/{feature}/events.log` | `cortex_command/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/cortex-core:lifecycle resume` and `/morning-review`. |
 | `lifecycle/{feature}/agent-activity.jsonl` | `cortex_command/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
 | `lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
 | `lifecycle/morning-report.md` | `cortex_command/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). Runner emits `morning_report_generate_result` and `morning_report_commit_result` events to `overnight-events.log` around the write + commit so the operator can confirm the file landed on `main`. |
@@ -512,7 +512,7 @@ Overnight writes several JSONL logs at different scopes. Pick the one that match
 |----------|----------------|
 | `lifecycle/overnight-events.log` | Investigating round boundaries, session-level circuit breakers, or feature-start/feature-complete markers — anything that needs a chronological view across all features in one session. |
 | `lifecycle/sessions/{id}/pipeline-events.log` | Investigating dispatch/merge/test outcomes for individual tasks within a feature (`dispatch_start`, `dispatch_complete`, `merge_start`, `merge_success`, `task_idempotency_skip`). |
-| `lifecycle/{feature}/events.log` | Investigating phase transitions, review verdicts, and completion for one feature — what `/cortex-interactive:lifecycle resume` and `/morning-review` read. |
+| `lifecycle/{feature}/events.log` | Investigating phase transitions, review verdicts, and completion for one feature — what `/cortex-core:lifecycle resume` and `/morning-review` read. |
 | `lifecycle/{feature}/agent-activity.jsonl` | Investigating what tools an agent actually invoked inside a dispatch and whether they succeeded — the "what did the worker really do" log. |
 | `lifecycle/sessions/{session_id}/escalations.jsonl` | Investigating which features blocked on questions, how the orchestrator answered, and which were cycle-break-promoted to deferrals. |
 

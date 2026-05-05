@@ -1,4 +1,4 @@
-"""Classifier-validation pytest for /cortex-interactive:critical-review V2 prompts.
+"""Classifier-validation pytest for /cortex-core:critical-review V2 prompts.
 
 Marked @pytest.mark.slow — invokes live models. Opt in via --run-slow.
 
@@ -50,7 +50,7 @@ def _load_pass_criterion():
 def _run_critical_review(fixture_path):
     """Invoke `claude -p '/critical-review {fixture_path}'` and return its synthesis output."""
     proc = subprocess.run(
-        ["claude", "-p", f"/cortex-interactive:critical-review {fixture_path}"],
+        ["claude", "-p", f"/cortex-core:critical-review {fixture_path}"],
         capture_output=True, text=True, timeout=600,
     )
     return proc.stdout, proc.returncode

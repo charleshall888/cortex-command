@@ -24,7 +24,7 @@ For mechanics, state files, recovery, and debugging procedures, see [overnight-o
 
 - [ ] Features in backlog have `status: refined`
 - [ ] Each feature has `research:` and `spec:` frontmatter fields pointing to existing files
-- [ ] `lifecycle/{slug}/spec.md` exists for each feature (run `/cortex-interactive:refine <item>` to produce it)
+- [ ] `lifecycle/{slug}/spec.md` exists for each feature (run `/cortex-core:refine <item>` to produce it)
 - [ ] Python venv is set up (`just python-setup` if not done)
 - [ ] Run `/overnight` in Claude Code — review and approve the session plan
 - [ ] (Optional) Launch the [dashboard](dashboard.md) in a separate terminal: `just dashboard`
@@ -104,10 +104,10 @@ prepared before selection. The readiness gate checks four things:
 
 | Requirement | Where it comes from |
 |-------------|-------------------|
-| `status: refined` in backlog frontmatter | Set by `/cortex-interactive:refine` on spec approval, or manually with `/cortex-interactive:backlog` |
-| `research:` field in backlog YAML pointing to an existing file | Produced by `/cortex-interactive:refine` or `/cortex-interactive:discovery` |
-| `spec:` field in backlog YAML pointing to an existing file | Produced by `/cortex-interactive:refine` or `/cortex-interactive:discovery` |
-| `lifecycle/{slug}/spec.md` exists on disk | Produced by `/cortex-interactive:refine <item>` |
+| `status: refined` in backlog frontmatter | Set by `/cortex-core:refine` on spec approval, or manually with `/cortex-core:backlog` |
+| `research:` field in backlog YAML pointing to an existing file | Produced by `/cortex-core:refine` or `/cortex-core:discovery` |
+| `spec:` field in backlog YAML pointing to an existing file | Produced by `/cortex-core:refine` or `/cortex-core:discovery` |
+| `lifecycle/{slug}/spec.md` exists on disk | Produced by `/cortex-core:refine <item>` |
 
 A feature that passes all four checks is eligible for overnight selection. Features
 that fail the gate are reported as ineligible with a reason — they don't silently drop.
@@ -115,11 +115,11 @@ that fail the gate are reported as ineligible with a reason — they don't silen
 **The typical prep path:**
 
 ```
-/cortex-interactive:discovery <topic>          (optional — for topics not yet broken into tickets)
+/cortex-core:discovery <topic>          (optional — for topics not yet broken into tickets)
     → writes research + spec artifacts
     → creates backlog tickets with research: and spec: frontmatter
 
-/cortex-interactive:refine <item>              (for each backlog ticket you want to run overnight)
+/cortex-core:refine <item>              (for each backlog ticket you want to run overnight)
     → Clarify → Research → Spec phases (interactive, ~15 min)
     → produces lifecycle/{slug}/spec.md
     → sets status: refined on the backlog item
@@ -127,15 +127,15 @@ that fail the gate are reported as ineligible with a reason — they don't silen
 /overnight                  → select features, approve plan, launch
 ```
 
-`/cortex-interactive:refine` is the dedicated prep tool for overnight: it stops at spec, writes `status: refined`,
-and does not proceed to plan or implement. Use `/cortex-interactive:lifecycle <feature>` instead when you want
+`/cortex-core:refine` is the dedicated prep tool for overnight: it stops at spec, writes `status: refined`,
+and does not proceed to plan or implement. Use `/cortex-core:lifecycle <feature>` instead when you want
 the full interactive research-specify-plan-implement flow for a single feature.
 
-See [Interactive Phases Guide](interactive-phases.md) for details on what `/cortex-interactive:refine` asks
+See [Interactive Phases Guide](interactive-phases.md) for details on what `/cortex-core:refine` asks
 during each phase and how artifacts flow to the overnight runner.
 
 `plan.md` is generated automatically by the orchestrator on demand — you don't need to
-run `/cortex-interactive:lifecycle plan` before an overnight session.
+run `/cortex-core:lifecycle plan` before an overnight session.
 
 ---
 
@@ -259,8 +259,8 @@ The runner scales well — you can queue as many features as you like. There is 
 
 ### What to prepare the night before
 
-- Run `/cortex-interactive:backlog pick` → `/cortex-interactive:refine <item>` for each target feature
-- `/cortex-interactive:refine` runs Clarify → Research → Spec and sets `status: refined` — takes ~15 min per feature
+- Run `/cortex-core:backlog pick` → `/cortex-core:refine <item>` for each target feature
+- `/cortex-core:refine` runs Clarify → Research → Spec and sets `status: refined` — takes ~15 min per feature
 - Verify `lifecycle/{slug}/spec.md` exists: `ls lifecycle/*/spec.md`
 - Run `just overnight-smoke-test` once to verify the toolchain is healthy
 
@@ -299,8 +299,8 @@ required preparation:
 | **Spec needed** | Runs it | Must exist already |
 | **Plan** | Runs it | Auto-generated if missing |
 | **Execution** | Interactive | Bash runner + tmux |
-| **Resume** | `/cortex-interactive:lifecycle resume` | `/overnight resume` |
-| **Morning close-out** | Manual or `/cortex-interactive:lifecycle complete` | `/morning-review` |
+| **Resume** | `/cortex-core:lifecycle resume` | `/overnight resume` |
+| **Morning close-out** | Manual or `/cortex-core:lifecycle complete` | `/morning-review` |
 
 **Choose overnight when**: You have a backlog of prepared features and want to make
 progress while not at your computer.

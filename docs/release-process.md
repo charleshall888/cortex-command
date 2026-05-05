@@ -55,10 +55,10 @@ Follow the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 ### 3. Commit the version bump
 
-Use the cortex-interactive commit skill:
+Use the cortex-core commit skill:
 
 ```
-/cortex-interactive:commit
+/cortex-core:commit
 ```
 
 Suggested commit message: `Bump version to v0.2.0` (or similar — imperative mood, capitalized, no trailing period, ≤ 72 chars).
@@ -97,7 +97,7 @@ gh release view v0.2.0 --json assets -q '.assets[].name'
 
 ### 7. (Conditional) Bump the plugin's `CLI_PIN`
 
-**Tag-before-coupling**: only after the tag is pushed AND the release workflow succeeded — never before — bump the `cortex-overnight-integration` plugin's `CLI_PIN` constant in `plugins/cortex-overnight-integration/server.py`:
+**Tag-before-coupling**: only after the tag is pushed AND the release workflow succeeded — never before — bump the `cortex-overnight` plugin's `CLI_PIN` constant in `plugins/cortex-overnight/server.py`:
 
 ```python
 CLI_PIN: tuple[str, str] = ("v0.2.0", "1.0")
@@ -112,7 +112,7 @@ CLI_PIN: tuple[str, str] = ("v0.2.0", "2.0")
 Commit the bump:
 
 ```
-/cortex-interactive:commit
+/cortex-core:commit
 ```
 
 Suggested commit message: `Bump plugin CLI_PIN to v0.2.0`.

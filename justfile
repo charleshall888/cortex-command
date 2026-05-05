@@ -32,7 +32,7 @@ setup-tmux-socket:
         exit 1
     fi
     if [ ! -f "$SETTINGS" ]; then
-        echo "Error: $SETTINGS not found. Install the cortex-interactive plugin first." >&2
+        echo "Error: $SETTINGS not found. Install the cortex-core plugin first." >&2
         exit 1
     fi
     # Check if tmux socket is already in settings.local.json
@@ -455,7 +455,7 @@ dangerous:
 
 # --- Plugin ---
 
-BUILD_OUTPUT_PLUGINS := "cortex-interactive cortex-overnight-integration"
+BUILD_OUTPUT_PLUGINS := "cortex-core cortex-overnight"
 HAND_MAINTAINED_PLUGINS := "cortex-pr-review cortex-ui-extras android-dev-extras cortex-dev-extras"
 
 _list-build-output-plugins:
@@ -476,12 +476,12 @@ build-plugin:
         [[ -d plugins/$p/.claude-plugin ]] || { echo "build-plugin: skipping $p (not yet materialized)" >&2; continue; }
         BIN=()
         case "$p" in
-            cortex-interactive)
+            cortex-core)
                 SKILLS=(commit pr lifecycle backlog requirements research discovery refine retro dev fresh diagnose evolve critical-review)
                 HOOKS=(hooks/cortex-validate-commit.sh claude/hooks/cortex-worktree-create.sh claude/hooks/cortex-worktree-remove.sh)
                 BIN=(cortex-)
                 ;;
-            cortex-overnight-integration)
+            cortex-overnight)
                 BIN=()
                 SKILLS=(overnight morning-review)
                 HOOKS=(hooks/cortex-cleanup-session.sh hooks/cortex-scan-lifecycle.sh claude/hooks/cortex-tool-failure-tracker.sh claude/hooks/cortex-permission-audit-log.sh)

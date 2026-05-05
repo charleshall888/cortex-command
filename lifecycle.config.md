@@ -20,5 +20,5 @@ Project-specific overrides for the lifecycle skill.
 
 - Settings JSON files must remain valid JSON after any changes
 - New hook/notification scripts must be executable (`chmod +x`)
-- New config files ship via the relevant plugin tree (cortex-interactive, cortex-overnight-integration) — never as host-level symlinks
+- New config files ship via the relevant plugin tree (cortex-core, cortex-overnight) — never as host-level symlinks
 - New skills must have `name` and `description` frontmatter

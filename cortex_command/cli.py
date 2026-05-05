@@ -81,8 +81,8 @@ def _dispatch_overnight_schedule(args: argparse.Namespace) -> int:
 
 
 _MCP_SERVER_DEPRECATION_BASE = (
-    "cortex mcp-server is removed; install the cortex-overnight-integration "
-    "plugin (/plugin install cortex-overnight-integration@cortex-command) "
+    "cortex mcp-server is removed; install the cortex-overnight "
+    "plugin (/plugin install cortex-overnight@cortex-command) "
     "and update your .mcp.json to point at uv run ${CLAUDE_PLUGIN_ROOT}/server.py"
 )
 
@@ -142,7 +142,7 @@ def _dispatch_mcp_server(_args: argparse.Namespace) -> int:
     """Deprecation stub for the removed ``cortex mcp-server`` verb (R7).
 
     The MCP server now ships as a plugin-bundled PEP 723 single-file at
-    ``plugins/cortex-overnight-integration/server.py`` invoked via
+    ``plugins/cortex-overnight/server.py`` invoked via
     ``uv run ${CLAUDE_PLUGIN_ROOT}/server.py`` from the plugin's ``.mcp.json``.
     A user who manually runs ``cortex mcp-server`` from a terminal sees this
     migration message in their shell. Claude Code does NOT surface MCP-server
@@ -250,7 +250,7 @@ def _dispatch_upgrade(_args: argparse.Namespace) -> int:
     check_in_flight_install()
 
     print(
-        "Run /plugin update cortex-overnight-integration@cortex-command in "
+        "Run /plugin update cortex-overnight@cortex-command in "
         "Claude Code to upgrade via the MCP-driven path."
     )
     print(
@@ -592,7 +592,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "Serve the Cortex overnight control-plane tools over the "
             "Model Context Protocol via stdio. Intended to be launched "
             "by a Claude Code client via `claude mcp add` or the "
-            "cortex-overnight-integration plugin, not run interactively."
+            "cortex-overnight plugin, not run interactively."
         ),
     )
     mcp_server.set_defaults(func=_dispatch_mcp_server)

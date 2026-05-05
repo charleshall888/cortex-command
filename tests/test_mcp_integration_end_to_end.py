@@ -11,7 +11,7 @@ Originally Task 19's R27 E2E test exercised three sub-cases:
 Sub-cases (a) and (b) were removed when ticket 146 R7 retired the
 in-process ``cortex mcp-server`` subcommand (the deprecation stub now
 exits non-zero rather than serving MCP). The new MCP runtime lives in
-``plugins/cortex-overnight-integration/server.py`` and its E2E coverage
+``plugins/cortex-overnight/server.py`` and its E2E coverage
 is exercised by the plugin-side test surface.
 
 Sub-case (c) survives because it does not depend on the MCP transport —

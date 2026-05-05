@@ -2,20 +2,23 @@
 schema_version: "1"
 uuid: 88aa1935-073e-434b-8ffb-a179174b20ce
 title: "Add sandbox-violation tracker hook for PostToolUse(Bash)"
-status: ready
+status: in_progress
 priority: medium
 type: feature
 parent: 162
 tags: [overnight-runner, sandbox, observability, hook]
-areas: [overnight-runner, observability]
+areas: [overnight-runner,observability]
 created: 2026-05-04
-updated: 2026-05-04
-lifecycle_slug: null
-lifecycle_phase: null
-session_id: null
+updated: 2026-05-05
+lifecycle_slug: add-sandbox-violation-tracker-hook-for-posttoolusebash
+lifecycle_phase: plan
+session_id: 5096ae4b-c620-4920-bfe7-14f4885a7e97
 blocks: []
 blocked-by: [163]
 discovery_source: research/sandbox-overnight-child-agents/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/add-sandbox-violation-tracker-hook-for-posttoolusebash/spec.md
 ---
 
 # Add sandbox-violation tracker hook for PostToolUse(Bash)
