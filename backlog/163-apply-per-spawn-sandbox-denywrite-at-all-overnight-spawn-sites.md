@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 759eb26e-55fd-4cc6-9528-f7c84845e8e2
 title: "Apply per-spawn sandbox.filesystem.denyWrite at all overnight spawn sites"
-status: in_progress
+status: complete
 priority: critical
 type: feature
 parent: 162
@@ -11,8 +11,8 @@ areas: [overnight-runner,pipeline]
 created: 2026-05-04
 updated: 2026-05-05
 lifecycle_slug: null
-lifecycle_phase: escalated
-session_id: 0758edd4-d834-4125-9f63-6eca3fbc5d94
+lifecycle_phase: complete
+session_id: null
 blocks: []
 blocked-by: []
 discovery_source: research/sandbox-overnight-child-agents/research.md

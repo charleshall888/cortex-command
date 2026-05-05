@@ -31,41 +31,6 @@
     "repo": null
   },
   {
-    "id": 163,
-    "title": "Apply per-spawn sandbox.filesystem.denyWrite at all overnight spawn sites",
-    "status": "in_progress",
-    "priority": "critical",
-    "type": "feature",
-    "tags": [
-      "overnight-runner",
-      "sandbox",
-      "os-enforcement",
-      "orchestrator-worktree-escape",
-      "pipeline",
-      "cross-repo",
-      "docs"
-    ],
-    "areas": [
-      "overnight-runner",
-      "pipeline"
-    ],
-    "created": "2026-05-04",
-    "updated": "2026-05-05",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "162",
-    "research": null,
-    "spec": "lifecycle/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/spec.md",
-    "discovery_source": "research/sandbox-overnight-child-agents/research.md",
-    "plan": null,
-    "uuid": "759eb26e-55fd-4cc6-9528-f7c84845e8e2",
-    "lifecycle_slug": null,
-    "session_id": "0758edd4-d834-4125-9f63-6eca3fbc5d94",
-    "lifecycle_phase": "escalated",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -114,9 +79,7 @@
     "created": "2026-05-04",
     "updated": "2026-05-05",
     "blocks": [],
-    "blocked_by": [
-      "163"
-    ],
+    "blocked_by": [],
     "parent": "162",
     "research": null,
     "spec": "lifecycle/add-sandbox-violation-tracker-hook-for-posttoolusebash/spec.md",

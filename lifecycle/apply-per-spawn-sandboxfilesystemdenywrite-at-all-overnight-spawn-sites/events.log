@@ -373,3 +373,32 @@
     stderr_contains_eperm: true
     exit_code: 0
   note: "Manual preflight run via claude -p --settings <denying-tempfile> from inside Claude Code session with dangerouslyDisableSandbox=true to avoid nested Seatbelt apply failure. EPERM signal appeared in claude stdout content (agentic CLI surfaces inner Bash tool failures via content), not process stderr. Kernel-level enforcement verified: target file byte-identical before/after, sandbox config correctly plumbed through --settings to Seatbelt."
+
+- ts: 2026-05-05T15:01:00Z
+  event: phase_transition
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  from: escalated
+  to: review
+  cycle: 2
+  note: "Both cycle-1 PARTIALs resolved (Req 15 in cf5c2d8; Req 12 via spec amendment edd9137 + populated preflight d9f6639). Re-entering review for cycle-2 verification — independent audit of the kernel-signal-only gate amendment + Req 15 test + populated preflight."
+
+- ts: 2026-05-05T15:08:00Z
+  event: review_verdict
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  verdict: APPROVED
+  cycle: 2
+  requirements_drift: none
+  note: "Both cycle-1 PARTIALs resolved. Spec amendment held up under independent audit (kernel-signal-only argument sound; exit_code \!= 0 was not independent evidence; commit_hash binding is the real defense-in-depth). Req 12 fix accepted: dangerouslyDisableSandbox=true is functionally equivalent to clean non-sandboxed terminal for the inner Seatbelt apply test."
+
+- ts: 2026-05-05T15:08:00Z
+  event: phase_transition
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  from: review
+  to: complete
+
+- ts: 2026-05-05T15:11:00Z
+  event: feature_complete
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  tasks_total: 14
+  rework_cycles: 1
+  note: "Cycle 2 APPROVED. Tests 6/6 passed. 19 commits from c1e571a to d9f6639 plus this bookkeeping. Lifecycle complete."
