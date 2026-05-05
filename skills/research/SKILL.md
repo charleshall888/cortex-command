@@ -26,7 +26,7 @@ Topic and options: $ARGUMENTS
 
 ## Step 1: Parse Arguments
 
-Parse `$ARGUMENTS` for key=value pairs. Supported keys: `topic`, `lifecycle-slug`, `tier`, `criticality`.
+Parse `$ARGUMENTS` for key=value pairs. Supported keys: `topic`, `lifecycle-slug`, `tier`, `criticality`, `research-considerations`.
 
 Example invocations:
 - `topic="add rate limiting" lifecycle-slug=add-rate-limiting tier=complex criticality=high`
@@ -40,6 +40,9 @@ Example invocations:
 Defaults:
 - `tier`: `simple`
 - `criticality`: `low`
+- `research-considerations`: empty/absent → no considerations injection
+
+`research-considerations` format: a newline-delimited bullet list, each line starting with `- `. Embedded `=` and `"` characters are not supported in the value. When empty or absent, no considerations are injected into agent prompts.
 
 ## Step 2: Determine Agent Count
 
