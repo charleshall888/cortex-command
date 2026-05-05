@@ -60,8 +60,8 @@
     "plan": null,
     "uuid": "759eb26e-55fd-4cc6-9528-f7c84845e8e2",
     "lifecycle_slug": null,
-    "session_id": "03c51bac-eafb-4df5-94b2-ad02791e3b67",
-    "lifecycle_phase": "plan",
+    "session_id": "0758edd4-d834-4125-9f63-6eca3fbc5d94",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -124,7 +124,7 @@
     "plan": null,
     "uuid": "88aa1935-073e-434b-8ffb-a179174b20ce",
     "lifecycle_slug": "add-sandbox-violation-tracker-hook-for-posttoolusebash",
-    "session_id": "5096ae4b-c620-4920-bfe7-14f4885a7e97",
+    "session_id": "0876e18a-ebc1-4924-b941-e7673bef36a5",
     "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null

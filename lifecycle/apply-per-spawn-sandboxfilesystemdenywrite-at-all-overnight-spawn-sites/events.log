@@ -49,3 +49,67 @@
   tier: complex
   criticality: critical
   note: "retrospective entry — prior lifecycle phases completed before lifecycle_start logging was enforced; tier and criticality match backlog frontmatter and clarify_critic re-derivation"
+
+- ts: 2026-05-05T11:49:22Z
+  event: plan_comparison
+  schema_version: 2
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  variants:
+    - label: "Plan A"
+      approach: "layered — single sandbox_settings.py module with stateless free-function builders consumed by orchestrator/dispatch/feature_executor as thin call sites"
+      task_count: 14
+      risk: "smaller blast radius; relies on module-level Linux-warning latch and atexit (process-global)"
+    - label: "Plan B"
+      approach: "shared-state — SandboxPolicyContext dataclass passed by reference into every spawn site and morning-report builder"
+      task_count: 15
+      risk: "explicit per-session lifetime; refactors _load_project_settings contract more aggressively"
+    - label: "Plan C"
+      approach: "shared-state — SandboxPolicyStore dataclass with methods on it; spawn sites are thin readers"
+      task_count: 15
+      risk: "centralizes state but has Task 6/7 forward-reference coupling and BSD-only sed in Task 13 verification"
+  selected: "Plan A"
+  selection_rationale: "operator graft: Plan A base + Plan B retry.py audit note (Task 6) + Plan B/C _effective_merge_repo_path canonical helper choice (Task 6) + Plan B tempfile.gettempdir() TMPDIR fallback (Task 5). Synthesizer chose Plan A on verification specificity and scope discipline; operator validated by reading all three variants and grafted three small spec-accurate corrections from Plan B without changing the layered architecture."
+  selector_confidence: "medium"
+  position_swap_check_result: "agreed"
+  disposition: "override"
+  operator_choice: "Plan A"
+
+- ts: 2026-05-05T11:50:56Z
+  event: orchestrator_review
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+  assessment: "Plan well-structured: 14 tasks with explicit Depends-on graph (Tasks 1, 6, 7 independent); P1 sizing acknowledges 3 complex tasks (5, 9, 12) explicitly; P4 every Verification is binary-checkable (pytest test names + grep counts + exit codes); P5 prose-only with structural context; P7 self-checks are benign per operational test (task purpose is to create what's verified); P8 Architectural Pattern field present and in taxonomy (layered)."
+
+- ts: 2026-05-05T12:15:53Z
+  event: spec_revision
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  triggered_by: critical_review_objections
+  revisions:
+    - req: 5
+      change: "Replaced typed SandboxSettings/SandboxFilesystemSettings SDK field migration with --settings <tempfile> JSON-shape mechanism mirroring orchestrator path; verified empirically that SandboxFilesystemSettings does not exist in claude_agent_sdk@0.1.46 (.venv/lib/python3.13/site-packages/claude_agent_sdk/types.py:683-727) and SandboxSettings TypedDict has no filesystem key per SDK docstring."
+    - req: 15
+      change: "Replaced test_sdk_typed_sandbox_symbols_present (impossible test — symbols don't exist) with two drift-detector tests: test_no_typed_sandbox_field_attempted (guards against re-introduction) and test_sdk_settings_param_accepts_filepath (catches SDK pin-bump drift on the settings=<filepath> mechanism)."
+    - req: 17
+      change: "Changed pre-flight gate freshness model from 24h calendar-time window to commit-hash binding via git-graph traversal; gate now validates preflight.md commit_hash field matches HEAD's parent AND claude_version matches installed binary; eliminates multi-day-branch bypass pressure."
+  evidence:
+    - "Critical review reviewer A1 (sonnet) verified by reading installed SDK source"
+    - "Orchestrator independently verified at .venv/lib/python3.13/site-packages/claude_agent_sdk/types.py:683-727 (2026-05-05)"
+  user_decision: "delegated to orchestrator with 'think critically and recommend' — applied per OQ delegation rule"
+
+- ts: 2026-05-05T12:20:45Z
+  event: phase_transition
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  from: plan
+  to: implement
+  note: "User approved plan; implementation paused at user's request — Implement phase not yet started"
+
+- ts: 2026-05-05T12:36:37Z
+  event: batch_dispatch
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  batch: 0
+  tasks: [1, 6, 7]
+  dispatch_mode: sequential_current_branch
+  note: "User selected 'Implement on current branch' with uncommitted lifecycle artifacts present — accepted warning. Sequential within batch to avoid git-index race on shared CWD."

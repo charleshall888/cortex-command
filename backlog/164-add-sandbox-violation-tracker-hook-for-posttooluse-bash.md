@@ -11,8 +11,8 @@ areas: [overnight-runner,observability]
 created: 2026-05-04
 updated: 2026-05-05
 lifecycle_slug: add-sandbox-violation-tracker-hook-for-posttoolusebash
-lifecycle_phase: plan
-session_id: 5096ae4b-c620-4920-bfe7-14f4885a7e97
+lifecycle_phase: implement
+session_id: 0876e18a-ebc1-4924-b941-e7673bef36a5
 blocks: []
 blocked-by: [163]
 discovery_source: research/sandbox-overnight-child-agents/research.md

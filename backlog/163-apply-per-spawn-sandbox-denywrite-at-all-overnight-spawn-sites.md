@@ -11,8 +11,8 @@ areas: [overnight-runner,pipeline]
 created: 2026-05-04
 updated: 2026-05-05
 lifecycle_slug: null
-lifecycle_phase: plan
-session_id: 03c51bac-eafb-4df5-94b2-ad02791e3b67
+lifecycle_phase: implement
+session_id: 0758edd4-d834-4125-9f63-6eca3fbc5d94
 blocks: []
 blocked-by: []
 discovery_source: research/sandbox-overnight-child-agents/research.md
