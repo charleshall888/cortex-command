@@ -546,6 +546,12 @@ async def dispatch_task(
         _env["ANTHROPIC_API_KEY"] = _api_key
     if _oauth_token := os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
         _env["CLAUDE_CODE_OAUTH_TOKEN"] = _oauth_token
+    # Propagate LIFECYCLE_SESSION_ID into the dispatched subprocess so the
+    # tool-failure tracker hook (cortex-tool-failure-tracker.sh) can route
+    # its output under lifecycle/sessions/<id>/tool-failures/ instead of
+    # /tmp (spec R9 of #164).
+    if _lifecycle_session_id := os.environ.get("LIFECYCLE_SESSION_ID"):
+        _env["LIFECYCLE_SESSION_ID"] = _lifecycle_session_id
 
     # Build the per-dispatch sandbox-settings JSON via the shared layer module
     # (spec Req 5, REVISED 2026-05-05). The per-feature deny-set is intentionally
@@ -573,8 +579,12 @@ async def dispatch_task(
         integration_base_path=Path(integration_base_path) if integration_base_path is not None else None,
     )
     _soft_fail = read_soft_fail_env()
+    # Per-feature dispatch deny-set is intentionally [] (see comment above);
+    # bind to a local so the sidecar-write below records the same value
+    # actually passed to build_sandbox_settings_dict (spec R2 of #164).
+    deny_paths: list[str] = []
     _settings_dict = build_sandbox_settings_dict(
-        deny_paths=[],
+        deny_paths=deny_paths,
         allow_paths=_allow_paths,
         soft_fail=_soft_fail,
     )
@@ -584,6 +594,39 @@ async def dispatch_task(
     register_atexit_cleanup(_settings_tempfile_path)
     if _soft_fail:
         record_soft_fail_event(_dispatch_session_dir)
+
+    # Mirror runner.py's per-spawn sandbox-deny-list sidecar (spec R2 of #164):
+    # write a JSON record of this dispatch's deny-list under
+    # lifecycle/sessions/<id>/sandbox-deny-lists/ so the morning-report
+    # sandbox-violation classifier can union deny-paths across all spawns and
+    # do membership tests for EPERM classification. Per-feature dispatches run
+    # in parallel, so the sidecar key embeds (feature, skill, attempt[, cycle])
+    # for uniqueness — files are NEVER overwritten. Atomic via tempfile +
+    # os.replace. Pre-write structural guard fails fast on #163 shape drift.
+    from datetime import datetime, timezone
+    from cortex_command.common import slugify as _slugify
+    assert isinstance(deny_paths, list) and all(isinstance(p, str) for p in deny_paths), (
+        f"deny_paths must be list[str] (#163 shape contract); got {type(deny_paths).__name__} "
+        f"with elements {[type(p).__name__ for p in deny_paths] if isinstance(deny_paths, list) else 'n/a'}"
+    )
+    _feature_slug = _slugify(feature)
+    _spawn_id_parts = [f"feature-{_feature_slug}", skill, f"attempt{attempt}"]
+    if cycle is not None:
+        _spawn_id_parts.append(f"cycle{cycle}")
+    _spawn_id = "-".join(_spawn_id_parts)
+    _sidecar_dir = _dispatch_session_dir / "sandbox-deny-lists"
+    _sidecar_dir.mkdir(parents=True, exist_ok=True)
+    _sidecar_payload = {
+        "schema_version": 2,
+        "written_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "spawn_kind": "feature_dispatch",
+        "spawn_id": _spawn_id,
+        "deny_paths": deny_paths,
+    }
+    _sidecar_final_path = _sidecar_dir / f"{_spawn_id}.json"
+    _sidecar_tmp_path = _sidecar_dir / f".{_spawn_id}.json.tmp"
+    _sidecar_tmp_path.write_text(json.dumps(_sidecar_payload, indent=2, sort_keys=True))
+    os.replace(_sidecar_tmp_path, _sidecar_final_path)
 
     _stderr_lines: list[str] = []
 
