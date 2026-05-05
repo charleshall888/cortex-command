@@ -220,80 +220,6 @@ def _today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
-def collect_tool_failures(session_id: str) -> dict[str, dict]:
-    """Read tool failure data from the session-scoped /tmp failure directory.
-
-    Reads ``${TMPDIR:-/tmp}/claude-tool-failures-{session_id}/`` and parses per-tool
-    failure counts and last exit codes written by the PostToolUse hook
-    (``cortex-tool-failure-tracker.sh``).
-
-    Each tool produces two files:
-    - ``{tool_key}.count`` — current failure count (integer, one line).
-    - ``{tool_key}.log``   — YAML-like entries separated by ``---`` lines,
-      each entry containing ``tool:``, ``exit_code:``, ``timestamp:``, and
-      optional ``stderr:`` fields.
-
-    Args:
-        session_id: The session identifier used to locate the failure dir.
-
-    Returns:
-        Dict mapping original tool name to ``{"count": int, "last_exit_code": str}``.
-        Returns an empty dict when the directory is absent, unreadable, or
-        no failures were recorded.
-    """
-    failures: dict[str, dict] = {}
-
-    tmpdir = os.environ.get("TMPDIR", "/tmp")
-    track_dir = Path(f"{tmpdir}/claude-tool-failures-{session_id}")
-    if not track_dir.is_dir():
-        return failures
-
-    for count_file in sorted(track_dir.glob("*.count")):
-        tool_key = count_file.stem  # e.g. "bash"
-
-        # Read failure count
-        count = 0
-        try:
-            raw = count_file.read_text(encoding="utf-8").strip()
-            if raw.isdigit():
-                count = int(raw)
-        except (OSError, ValueError):
-            pass
-
-        if count == 0:
-            continue
-
-        # Read last exit code and original tool name from the .log file
-        log_file = count_file.with_suffix(".log")
-        last_exit_code = "unknown"
-        tool_name = tool_key
-
-        try:
-            if log_file.exists():
-                text = log_file.read_text(encoding="utf-8")
-                # Recover the canonical tool name from any entry
-                m = re.search(r"^tool:\s*(.+)$", text, re.MULTILINE)
-                if m:
-                    tool_name = m.group(1).strip()
-
-                # Walk entries in reverse order to find the last exit_code
-                entries = text.split("---\n")
-                for entry in reversed(entries):
-                    m = re.search(r"^exit_code:\s*(.+)$", entry, re.MULTILINE)
-                    if m:
-                        last_exit_code = m.group(1).strip()
-                        break
-        except OSError:
-            pass
-
-        failures[tool_name] = {
-            "count": count,
-            "last_exit_code": last_exit_code,
-        }
-
-    return failures
-
-
 def create_followup_backlog_items(
     data: ReportData,
     backlog_dir: Path,
@@ -1100,10 +1026,13 @@ def render_failed_features(data: ReportData) -> str:
 
 
 def collect_tool_failures(session_id: str) -> dict[str, dict[str, Any]]:
-    """Collect tool failure data from the session-scoped temp directory.
+    """Collect tool failure data from the session-scoped failure directory.
 
-    Reads ``${TMPDIR:-/tmp}/claude-tool-failures-{session_id}/`` for per-tool ``.count``
-    and ``.log`` files written by the PostToolUse hook.
+    Prefers ``lifecycle/sessions/{session_id}/tool-failures/`` (the post-#163
+    location written by the PostToolUse hook when ``$LIFECYCLE_SESSION_ID`` is
+    set) and falls back to ``${TMPDIR:-/tmp}/claude-tool-failures-{session_id}/``
+    only when the lifecycle path is absent (interactive sessions and pre-#163
+    overnight runs). Reads per-tool ``.count`` and ``.log`` files.
 
     Args:
         session_id: The session identifier used by the hook (may also be a
@@ -1112,10 +1041,14 @@ def collect_tool_failures(session_id: str) -> dict[str, dict[str, Any]]:
     Returns:
         Mapping of tool_key -> ``{"count": int, "last_exit_code": str}`` for
         each tool that has recorded at least one failure.  Returns an empty
-        dict when the directory is absent or contains no failure records.
+        dict when neither directory is present or contains no failure records.
     """
-    tmpdir = os.environ.get("TMPDIR", "/tmp")
-    track_dir = Path(f"{tmpdir}/claude-tool-failures-{session_id}")
+    lifecycle_dir = Path(f"lifecycle/sessions/{session_id}/tool-failures")
+    if lifecycle_dir.is_dir():
+        track_dir = lifecycle_dir
+    else:
+        tmpdir = os.environ.get("TMPDIR", "/tmp")
+        track_dir = Path(f"{tmpdir}/claude-tool-failures-{session_id}")
     if not track_dir.is_dir():
         return {}
 
@@ -1175,44 +1108,6 @@ def _read_last_exit_code(log_file: Path) -> str:
                 return parts[1].strip()
 
     return "unknown"
-
-
-def render_tool_failures(data: ReportData) -> str:
-    """Render the tool failures section.
-
-    Reads ``${TMPDIR:-/tmp}/claude-tool-failures-{session_id}/`` for accumulated failure
-    data produced by the PostToolUse hook.  The section is omitted entirely
-    (returns ``""``) when no failures were recorded, keeping the report clean
-    for sessions that ran without Bash tool errors.
-
-    Args:
-        data: Aggregated report data.  Uses ``data.session_id`` to locate the
-            temp directory.
-
-    Returns:
-        A markdown section string listing per-tool failure counts and last exit
-        code, or an empty string if there are no failures to report.
-    """
-    if not data.session_id:
-        return ""
-
-    failures = collect_tool_failures(data.session_id)
-    if not failures:
-        return ""
-
-    total = sum(info["count"] for info in failures.values())
-    lines: list[str] = [f"## Tool Failures ({total})", ""]
-
-    for tool_key in sorted(failures):
-        info = failures[tool_key]
-        count = info["count"]
-        lines.append(
-            f"- **{tool_key}**: {count} failure{'s' if count != 1 else ''}"
-            f" (last exit code: {info['last_exit_code']})"
-        )
-
-    lines.append("")
-    return "\n".join(lines)
 
 
 def render_scheduled_fire_failures(data: ReportData) -> str:
