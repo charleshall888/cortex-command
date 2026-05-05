@@ -25,7 +25,7 @@ Implement Alternative D from the spec: classify sandbox-routed Bash denials in t
   - `grep -c '^command: |' lifecycle/sessions/overnight-2026-01-01-0000/tool-failures/bash.log` ≥ 1 — pass if count ≥ 1.
   - `bash -c 'unset LIFECYCLE_SESSION_ID; echo {\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"echo hi\"},\"tool_response\":{\"exit_code\":1,\"stderr\":\"y\"},\"session_id\":\"def\"} | claude/hooks/cortex-tool-failure-tracker.sh && [[ -f /tmp/claude-tool-failures-def/bash.log ]] && echo FALLBACK_PASS` — pass if FALLBACK_PASS printed (fallback path still works).
   - **Parser round-trip** (validates the truncation idiom emits parser-safe YAML for the spec edge cases): drive the hook with a multi-line command and a long (>4KB) command; then `python3 -c 'import yaml; docs=list(yaml.safe_load_all(open("lifecycle/sessions/overnight-2026-01-01-0000/tool-failures/bash.log"))); assert all(isinstance(d, dict) for d in docs if d); print("PARSER_PASS")'` — pass if PARSER_PASS printed.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 893af90)
 
 ### Task 2: Tracker shell-test extension
 
@@ -37,7 +37,7 @@ Implement Alternative D from the spec: classify sandbox-routed Bash denials in t
   - Test file follows shell-test conventions in `tests/`. Use the existing test pattern for setup/teardown of fixture directories.
   - Cleanup: ensure the test removes `lifecycle/sessions/overnight-fixture-test/` after assertion.
 - **Verification**: `bash tests/test_tool_failure_tracker.sh` — pass if exit 0 with all assertions passing; `grep -c 'lifecycle/sessions' tests/test_tool_failure_tracker.sh` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 07f74cf)
 
 ### Task 3: Aggregator readers prefer lifecycle path with `/tmp` fallback
 
@@ -58,7 +58,7 @@ Implement Alternative D from the spec: classify sandbox-routed Bash denials in t
   - `grep -c 'lifecycle/sessions/' cortex_command/overnight/report.py` ≥ 4 (at least one per reader site post-fix) — pass if count ≥ 4.
   - `grep -c '/tmp/claude-tool-failures-' cortex_command/overnight/report.py` ≥ 1 (fallback retained) — pass if count ≥ 1.
   - Functional: `python3 -c 'import os, pathlib, shutil; from cortex_command.overnight.report import collect_tool_failures; sid="x-fixture"; d=pathlib.Path(f"lifecycle/sessions/{sid}/tool-failures"); d.mkdir(parents=True, exist_ok=True); (d/"bash.count").write_text("3"); (d/"bash.log").write_text("---\nfailure_num: 3\ntool: Bash\nexit_code: 1\ntimestamp: 2026-05-04T00:00:00Z\nstderr: |\n  x\n"); r=collect_tool_failures(sid); shutil.rmtree(f"lifecycle/sessions/{sid}"); assert r, "expected non-empty"; print("PASS")'` — pass if PASS printed.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 5723d98; dead duplicates deleted, live patched, functional verification PASS)
 
 ### Task 4: Sidecar deny-list write at orchestrator spawn
 
@@ -90,7 +90,7 @@ Implement Alternative D from the spec: classify sandbox-routed Bash denials in t
   - `grep -c 'os.replace' cortex_command/overnight/runner.py` ≥ 1 — pass if count ≥ 1.
   - `grep -c 'isinstance(deny_paths, list)' cortex_command/overnight/runner.py` ≥ 1 — pass if count ≥ 1 (proves the structural guard for #163 shape compatibility is in place).
   - `python3 -c 'import inspect, cortex_command.overnight.runner as m; src=inspect.getsource(m); assert "sandbox-deny-lists" in src and "schema_version" in src and "isinstance(deny_paths" in src; print("PASS")'` — pass if PASS printed.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit b804417)
 
 ### Task 5: Sidecar deny-list write at dispatch + LIFECYCLE_SESSION_ID env propagation
 
@@ -111,7 +111,7 @@ Implement Alternative D from the spec: classify sandbox-routed Bash denials in t
   - `grep -c 'LIFECYCLE_SESSION_ID' cortex_command/pipeline/dispatch.py` ≥ 1 — pass if count ≥ 1.
   - `grep -c 'isinstance(deny_paths, list)' cortex_command/pipeline/dispatch.py` ≥ 1 — pass if count ≥ 1 (structural guard for #163 shape).
   - `python3 -c 'import inspect; from cortex_command.pipeline.dispatch import dispatch_task; src=inspect.getsource(dispatch_task); assert "LIFECYCLE_SESSION_ID" in src; print("PASS")'` — pass if PASS printed.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 3937f13; spawn-id format uses skill+attempt+cycle for per-spawn uniqueness)
 
 ### Task 6: Add `collect_sandbox_denials` classifier
 
@@ -158,7 +158,7 @@ Implement Alternative D from the spec: classify sandbox-routed Bash denials in t
   - **Exception envelope check**: `python3 -c 'from cortex_command.overnight.report import collect_sandbox_denials; r = collect_sandbox_denials("nonexistent-session-fixture-xyz"); assert r == {}; print("ENVELOPE_PASS")'` — pass if ENVELOPE_PASS printed (proves the function returns empty dict on absent session, not raising).
   - **Failure-injection** (proves the top-level envelope holds): construct a fixture session with a deliberately-malformed bash.log (e.g., `lifecycle/sessions/x-malformed/tool-failures/bash.log` containing `not: valid: yaml: at: all: ::: ---\n`); `python3 -c 'from cortex_command.overnight.report import collect_sandbox_denials; r = collect_sandbox_denials("x-malformed"); assert r == {}; print("INJECTION_PASS")'` — pass if INJECTION_PASS printed.
   - Functional positive-control: covered by Task 8's pytest fixture.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 54a23ce)
 
 ### Task 7: Add `render_sandbox_denials` + ReportData/generate_report wiring
 
@@ -187,7 +187,7 @@ Implement Alternative D from the spec: classify sandbox-routed Bash denials in t
   - `python3 -c 'from cortex_command.overnight.report import ReportData, render_sandbox_denials; r=ReportData(); assert "sandbox_denials" in r.__dataclass_fields__; print("PASS")'` — pass if PASS printed.
   - `python3 -c 'from cortex_command.overnight.report import ReportData, render_sandbox_denials; r=ReportData(); r.sandbox_denials={"home_repo_refs": 2, "plumbing_eperm": 1}; out = render_sandbox_denials(r); assert "Bash-routed sandbox denials" in out and "Home-repo refs: 2" in out and "Plumbing EPERM" in out and "V1 scope" in out; print("PASS")'` — pass if PASS printed.
   - `python3 -c 'from cortex_command.overnight.report import ReportData, render_sandbox_denials; r=ReportData(); assert render_sandbox_denials(r) == ""; print("PASS")'` — pass if empty case returns empty string.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 1b4db34)
 
 ### Task 8: Positive-control acceptance test
 
@@ -204,7 +204,7 @@ Implement Alternative D from the spec: classify sandbox-routed Bash denials in t
   - **Fixture scope clarity**: T8's fixture validates classifier reading against hand-authored input — it does NOT verify writer-reader integration (T1 tracker emission ↔ T6 classifier input, or T4/T5 sidecar emission ↔ T6 classifier input). The `home-repo root` field in the fixture's `overnight-state.json` and the flat-list shape of fixture sidecars match the contract T6 reads, but no automated test forces the runtime producers to honor that same contract. Writer-reader integration is verified manually via the smoke recipe in T9; T8 alone passing does not certify production correctness.
   - Cleanup is automatic via `tmp_path`.
 - **Verification**: `pytest -v tests/test_report_sandbox_denials.py` — pass if exit 0 with all test cases PASSED. Acceptance threshold per spec: at least 3 PASSED tests (3 layer assertions or 3 fixture entries).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit abc782b; 4 PASSED, ≥3 threshold met)
 
 ### Task 9: Documentation subsection + manual smoke recipe
 
@@ -221,7 +221,7 @@ Implement Alternative D from the spec: classify sandbox-routed Bash denials in t
 - **Verification**:
   - `grep -c '^### Sandbox-Violation Telemetry' docs/overnight-operations.md` = 1 — pass if exactly 1.
   - `grep -c 'unclassified_eperm' docs/overnight-operations.md` ≥ 1 AND `grep -c 'plumbing_eperm' docs/overnight-operations.md` ≥ 1 AND `grep -c 'Bash-only' docs/overnight-operations.md` ≥ 1 AND `grep -c 'sandbox-deny-lists/' docs/overnight-operations.md` ≥ 1 — pass if all four ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit bf29b7a)
 
 ## Verification Strategy
 
