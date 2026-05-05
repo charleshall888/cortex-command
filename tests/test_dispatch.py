@@ -335,5 +335,60 @@ def test_no_typed_sandbox_field_attempted():
     )
 
 
+# ---------------------------------------------------------------------------
+# Test 8 (spec Req 15): SDK pin-bump drift detector for settings filepath
+#
+# This test imports the REAL ``claude_agent_sdk.ClaudeAgentOptions`` (NOT the
+# test stub) and asserts that the ``settings=`` kwarg accepts a filepath
+# string. The ``--settings <tempfile>`` mechanism on which Req 5 depends
+# requires the SDK to accept a string filepath here; if a future SDK pin bump
+# changes this parameter's type or removes string acceptance, this test fails
+# immediately rather than letting the dispatch path silently break.
+# ---------------------------------------------------------------------------
+
+
+def test_sdk_settings_param_accepts_filepath():
+    """Import the real ``claude_agent_sdk.ClaudeAgentOptions`` (bypassing the
+    test stub installed at module load) and assert
+    ``ClaudeAgentOptions(settings="/tmp/dummy.json")`` constructs without
+    error, preserving the path as a string. Drift detector for SDK pin-bump
+    breakage of the ``--settings <tempfile>`` mechanism (spec Req 15).
+
+    The path does not need to exist on disk: the SDK transport's heuristic
+    (``startswith("{") and endswith("}")``) classifies non-JSON-blob strings
+    as filepaths but does not read the file during option construction; the
+    file is read later when the subprocess starts.
+    """
+    import importlib
+
+    # The test stub has been installed in sys.modules at module load time.
+    # Save it, force a fresh import of the real SDK, then restore the stub
+    # so other tests in this file continue to use the stub as expected.
+    stub_module = sys.modules.pop("claude_agent_sdk", None)
+    try:
+        real_sdk = importlib.import_module("claude_agent_sdk")
+        assert not getattr(real_sdk, "_is_test_stub", False), (
+            "Real claude_agent_sdk must be imported, not the test stub."
+        )
+        RealClaudeAgentOptions = real_sdk.ClaudeAgentOptions
+
+        # Construction must not raise.
+        opts = RealClaudeAgentOptions(settings="/tmp/dummy.json")
+
+        # The string is preserved as-is (not parsed/transformed).
+        assert opts.settings == "/tmp/dummy.json", (
+            f"Expected settings to be preserved as the literal filepath string; "
+            f"got {opts.settings!r}. SDK pin bump may have changed "
+            f"settings= parameter handling — Req 5's --settings <tempfile> "
+            f"mechanism is at risk."
+        )
+    finally:
+        # Restore the stub so subsequent tests / modules see it.
+        if stub_module is not None:
+            sys.modules["claude_agent_sdk"] = stub_module
+        else:
+            sys.modules.pop("claude_agent_sdk", None)
+
+
 if __name__ == "__main__":
     unittest.main()
