@@ -233,6 +233,50 @@ fi
 cleanup_session_dir "$SESSION_CORRUPT"
 
 # ---------------------------------------------------------------------------
+# Test: LIFECYCLE_SESSION_ID set — writes under lifecycle/sessions/<id>/tool-failures
+# (R6a: covers the lifecycle-path branch added by T1; the existing tests above
+# cover the /tmp fallback branch when LIFECYCLE_SESSION_ID is unset.)
+# ---------------------------------------------------------------------------
+
+LIFECYCLE_ID="overnight-fixture-test"
+LIFECYCLE_TRACK_DIR="$REPO_ROOT/lifecycle/sessions/${LIFECYCLE_ID}/tool-failures"
+LIFECYCLE_SESSION_DIR="$REPO_ROOT/lifecycle/sessions/${LIFECYCLE_ID}"
+
+# Pre-test cleanup in case a prior failed run left the dir behind.
+rm -rf "$LIFECYCLE_SESSION_DIR"
+
+SESSION_LIFECYCLE="${TEST_SESSION_BASE}-lifecycle"
+cleanup_session_dir "$SESSION_LIFECYCLE"
+
+exit_code=0
+(
+  cd "$REPO_ROOT"
+  # Export so the var reaches `bash $HOOK` on the right side of the pipe.
+  # (Inline `VAR=val cmd1 | cmd2` only sets VAR for cmd1.)
+  export LIFECYCLE_SESSION_ID="$LIFECYCLE_ID"
+  sed "s|__SESSION_ID__|${SESSION_LIFECYCLE}|g" \
+    "$FIXTURE_DIR/bash-failure.json" | bash "$HOOK"
+) >/dev/null 2>&1 || exit_code=$?
+
+lifecycle_log="$LIFECYCLE_TRACK_DIR/bash.log"
+lifecycle_count="$LIFECYCLE_TRACK_DIR/bash.count"
+fallback_dir="/tmp/claude-tool-failures-${SESSION_LIFECYCLE}"
+
+if [[ $exit_code -eq 0 \
+   && -f "$lifecycle_log" \
+   && -f "$lifecycle_count" \
+   && ! -d "$fallback_dir" ]]; then
+  pass "tool-failure-tracker/lifecycle-session-id-routes-to-lifecycle-path"
+else
+  fail "tool-failure-tracker/lifecycle-session-id-routes-to-lifecycle-path" \
+    "expected exit 0 with lifecycle log/count present and no /tmp fallback; got exit $exit_code, log=$(test -f "$lifecycle_log" && echo yes || echo no), count=$(test -f "$lifecycle_count" && echo yes || echo no), tmp_dir=$(test -d "$fallback_dir" && echo yes || echo no)"
+fi
+
+# Cleanup: remove the lifecycle fixture session dir per task spec.
+rm -rf "$LIFECYCLE_SESSION_DIR"
+cleanup_session_dir "$SESSION_LIFECYCLE"
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
