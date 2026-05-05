@@ -108,9 +108,7 @@
     "created": "2026-05-04",
     "updated": "2026-05-04",
     "blocks": [],
-    "blocked_by": [
-      "160"
-    ],
+    "blocked_by": [],
     "parent": "158",
     "research": null,
     "spec": "lifecycle/tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction/spec.md",
@@ -120,38 +118,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 160,
-    "title": "Build shared synthesizer for critical-tier dual-plan flow (interactive + overnight)",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "competing-plan-synthesis",
-      "lifecycle",
-      "plan",
-      "synthesizer",
-      "overnight"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-05-04",
-    "updated": "2026-05-04",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "158",
-    "research": null,
-    "spec": "lifecycle/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight/spec.md",
-    "discovery_source": "research/competing-plan-synthesis/research.md",
-    "plan": null,
-    "uuid": "8bd85abf-abca-4a85-b0d7-c961213e269b",
-    "lifecycle_slug": null,
-    "session_id": "a48fb253-3195-4d41-8eec-db443dcf7503",
-    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -222,7 +188,7 @@
   {
     "id": 161,
     "title": "Add parent-epic alignment check to refine's clarify-critic",
-    "status": "in_progress",
+    "status": "refined",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -231,20 +197,22 @@
       "epic-alignment",
       "drift"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-05-04",
     "updated": "2026-05-04",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/add-parent-epic-alignment-check-to-refine-clarify-critic/spec.md",
     "discovery_source": "research/refine-load-epic-context/research.md",
     "plan": null,
     "uuid": "3d0dcb32-5995-49f6-83f2-89184a8c6c46",
     "lifecycle_slug": "add-parent-epic-alignment-check-to-refine-clarify-critic",
     "session_id": "e9da4bd7-74e0-4196-8259-b522cf433775",
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

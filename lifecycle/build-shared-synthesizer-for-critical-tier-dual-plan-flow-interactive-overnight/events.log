@@ -1,0 +1,60 @@
+- ts: 2026-05-04T00:00:00Z
+  event: clarify_critic
+  feature: build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight
+  findings:
+    - "Intent clarity HIGH because four deliverables are enumerated, but the central architectural question of how a markdown-prompt Skill (plan.md) invokes a Python helper is never specified — Bash/MCP/Task-subagent/inlined-prompt is left open. The two call surfaces are not symmetric."
+    - "The synthesizer is framed as a 'pure function over plan variants' but its contract is impure: swap-and-require-agreement, label blinding, fresh-agent role separation, and confidence calibration. That is an LLM-dispatch wrapper, not a pure function."
+    - "Validation gate codified as 'task ordering' depends on an exogenous event — a real critical-tier feature dispatch must happen before item 3 ships. The criticality field itself is TBD per research.md Open Questions, so what counts as 'genuinely critical-tier' is undefined."
+    - "Out-of-scope section bounds excluded items but does not bound novel calibration-probe design that the ticket pulls in-scope. research.md OQ-4 says calibration probes 'are not formalized in the retrieved literature, so we'd be designing from scratch'."
+    - "pipeline.md §87-95 specifies deferral inputs as 'Worker exit report action:question; CI gate block; repair agent declaring deferral'. Orchestrator-side synthesizer 'low-confidence' sentinels are not in that input list, and the deferred-features-don't-auto-retry semantics aren't addressed for recurrent low-confidence cases."
+    - "multi-agent.md line 74 says 'agents do not spawn peer agents'. The synthesizer must be a 'fresh agent' that didn't produce any variant. The call layer (orchestrator vs sub-agent vs new layer) determines whether this is allowed at all."
+    - "HIGH ratings on intent + scope while criticality is 'critical' and research.md says 'no published evidence any technique works' for multi-section structured plan synthesis is internally tense — clarity dimensions rated high precisely on the dimensions where the source research says open questions remain load-bearing."
+    - "Two of four deliverables are themselves bundles: deliverable 1 is helper+prompt-fragment (two artifacts sharing a contract across two execution environments); deliverable 4 is schema-extension where research.md OQ-5 leaves backward-compatible-vs-versioned open."
+  dispositions:
+    apply: 0
+    dismiss: 7
+    ask: 1
+  applied_fixes: []
+  dismissals:
+    - finding_index: 0
+      rationale: "Intent clarity measures whether the goal is unambiguous; the Skill-to-Python invocation mechanism is exactly the kind of resolution research is responsible for. Routing this to research's Open Questions, not a clarity downgrade."
+    - finding_index: 1
+      rationale: "The anti-sway protections section explicitly enumerates swap-check, blinding, and fresh-agent role separation — the complexity is documented in the body. 'Pure function' is shorthand for call-site-agnostic, not literal purity."
+    - finding_index: 3
+      rationale: "The ticket lists three probe types (identical-variants, swap-consistency, planted-flaw) in Scope and labels them as unit tests. That is bounded scope even if the design work is novel."
+    - finding_index: 4
+      rationale: "pipeline.md §90 Inputs list describes the canonical deferral sources, but the synthesizer's low-confidence sentinel is the exact 'ambiguous decision that cannot be resolved autonomously' the §87-95 system was designed for. The contract reconciliation (does the synthesizer emit a worker-style exit report or a new orchestrator-side deferral?) is a research question, not a clarity gate."
+    - finding_index: 5
+      rationale: "Existing §1b precedent already dispatches 2-3 sub-agents from inside the lifecycle skill context. Call layer for the synthesizer (orchestrator vs sub-agent vs new layer) is a research question, not an intent question."
+    - finding_index: 6
+      rationale: "Criticality reflects blast radius; clarity reflects whether the goal is decided. They are orthogonal. The decision records (DR-1 through DR-7) are all resolved in the parent research artifact, so the design is decided even though the underlying technique has open empirical questions."
+    - finding_index: 7
+      rationale: "Schema strategy ('additive over current shape') is stated; whether to formalize as v2 or remain implicit is a Spec/implementation detail, not an intent question."
+  status: ok
+{"ts": "2026-05-04T20:11:35Z", "event": "orchestrator_review", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-04T20:30:00Z", "event": "critical_review", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "phase": "specify", "reviewers": {"completed": 4, "dispatched": 4}, "findings_count": {"A": 8, "B": 4, "C": 3}, "applied": 4, "asked": 1, "dismissed": 0}
+{"ts": "2026-05-04T21:15:54Z", "event": "orchestrator_review", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "phase": "specify", "verdict": "pass", "cycle": 2, "issues": []}
+{"ts": "2026-05-04T22:00:00Z", "event": "plan_comparison", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "variants": [{"label": "Plan A", "approach": "Bottom-up shared artifacts; gate via fill_prompt.py token substitution", "task_count": 12, "risk": "fill_prompt signature change broad blast radius; missed canonical/mirror dual-source"}, {"label": "Plan B", "approach": "Inside out; explicit v2 fixture file; lifecycle.config.md template asset task", "task_count": 13, "risk": "missed canonical/mirror dual-source"}, {"label": "Plan C", "approach": "Bottom-up consolidated; dual-source mirror task; gate via cli_handler.py", "task_count": 11, "risk": "missed lifecycle.config.md template asset; mirror-edit direction needed correction"}], "selected": "Plan C (synthesized with elements from Plan B)"}
+{"ts": "2026-05-04T22:05:00Z", "event": "orchestrator_review", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-04T22:30:00Z", "event": "critical_review", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "phase": "plan", "reviewers": {"completed": 4, "dispatched": 4}, "findings_count": {"A": 4, "B": 3, "C": 2}, "applied": null, "asked": null, "dismissed": null}
+{"ts": "2026-05-04T22:45:00Z", "event": "critical_review_applied", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "phase": "plan", "applied": 6, "asked": 0, "dismissed": 1, "dismissed_findings": [{"angle": "Validation gate enforcement", "rationale": "Spec Requirement 7 accepts operator-discipline; Spec Non-Requirements excludes runner.py enforcement-machinery — adding hardening would scope-creep beyond spec."}]}
+{"ts": "2026-05-04T22:50:00Z", "event": "phase_transition", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "from": "plan", "to": "implement"}
+{"ts": "2026-05-04T23:26:55Z", "event": "batch_dispatch", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "batch": 0, "tasks": [1, 2, 3, 11]}
+{"ts": "2026-05-04T23:30:03Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-05-04T23:31:37Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 2, "batch": 0, "status": "success"}
+{"ts": "2026-05-04T23:38:13Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 3, "batch": 0, "status": "success"}
+{"ts": "2026-05-04T23:40:26Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 11, "batch": 0, "status": "success"}
+{"ts": "2026-05-04T23:40:38Z", "event": "batch_dispatch", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "batch": 1, "tasks": [4, 5, 7, 8]}
+{"ts": "2026-05-04T23:42:29Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 4, "batch": 1, "status": "success"}
+{"ts": "2026-05-04T23:45:38Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 5, "batch": 1, "status": "success"}
+{"ts": "2026-05-04T23:50:27Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 7, "batch": 1, "status": "success"}
+{"ts": "2026-05-04T23:53:50Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 8, "batch": 1, "status": "success"}
+{"ts": "2026-05-04T23:53:50Z", "event": "batch_dispatch", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "batch": 2, "tasks": [6, 10]}
+{"ts": "2026-05-04T23:57:51Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 6, "batch": 2, "status": "success"}
+{"ts": "2026-05-05T00:03:46Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 10, "batch": 2, "status": "success"}
+{"ts": "2026-05-05T00:03:46Z", "event": "batch_dispatch", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "batch": 3, "tasks": [9]}
+{"ts": "2026-05-05T00:12:20Z", "event": "task_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "task": 9, "batch": 3, "status": "success"}
+{"ts": "2026-05-05T00:14:49Z", "event": "phase_transition", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-05T00:22:32Z", "event": "review_verdict", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-05T00:22:32Z", "event": "phase_transition", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "from": "review", "to": "complete"}
+{"ts": "2026-05-05T00:24:15Z", "event": "feature_complete", "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight", "tasks_total": 11, "rework_cycles": 1}
