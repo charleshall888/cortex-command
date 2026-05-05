@@ -3,7 +3,7 @@
 **For:** Users creating and managing features in the backlog — including preparing items for overnight execution.
 **Assumes:** Git and Claude Code are set up.
 
-The backlog is a flat directory of numbered markdown files (`backlog/NNN-slug.md`). Each file contains YAML frontmatter describing the item, followed by an optional markdown body. The overnight orchestration system reads these files to select work; the `/cortex-interactive:backlog` skill manages them interactively.
+The backlog is a flat directory of numbered markdown files (`backlog/NNN-slug.md`). Each file contains YAML frontmatter describing the item, followed by an optional markdown body. The overnight orchestration system reads these files to select work; the `/cortex-core:backlog` skill manages them interactively.
 
 ---
 
@@ -28,9 +28,9 @@ Every backlog item uses the following YAML frontmatter contract. Fields listed a
 | `blocks` | array | no | Inline YAML only: `[1, 5]` (numeric IDs of items this item blocks) |
 | `blocked-by` | array | no | Inline YAML only: `[3, 7]` (numeric IDs of items blocking this one) |
 | `parent` | integer | no | Numeric ID of a parent epic item |
-| `research` | string | no | Path to prior research artifact (e.g. `research/topic/research.md`); set by `/cortex-interactive:discovery` |
-| `spec` | string | no | Path to spec artifact; set by `/cortex-interactive:refine` (e.g. `lifecycle/{slug}/spec.md`) |
-| `discovery_source` | string | no | Path to the `/cortex-interactive:discovery` research artifact that produced this ticket; triggers auto-copy to lifecycle on `/cortex-interactive:lifecycle` start |
+| `research` | string | no | Path to prior research artifact (e.g. `research/topic/research.md`); set by `/cortex-core:discovery` |
+| `spec` | string | no | Path to spec artifact; set by `/cortex-core:refine` (e.g. `lifecycle/{slug}/spec.md`) |
+| `discovery_source` | string | no | Path to the `/cortex-core:discovery` research artifact that produced this ticket; triggers auto-copy to lifecycle on `/cortex-core:lifecycle` start |
 | `repo` | string | no | Absolute path to target repository (e.g. `~/Workspaces/wild-light`); `null` = current repo (default) |
 | `complexity` | string | no | Lifecycle complexity tier (`simple`, `standard`, `complex`) |
 | `criticality` | string | no | Criticality tier (`low`, `medium`, `high`, `critical`) |
@@ -62,12 +62,12 @@ Optional markdown body describing the problem and acceptance criteria.
 
 ---
 
-## `/cortex-interactive:backlog` Skill Workflow
+## `/cortex-core:backlog` Skill Workflow
 
-The `/cortex-interactive:backlog` skill manages backlog items interactively. Invoke with a subcommand:
+The `/cortex-core:backlog` skill manages backlog items interactively. Invoke with a subcommand:
 
 ```
-/cortex-interactive:backlog <subcommand>
+/cortex-core:backlog <subcommand>
 ```
 
 When invoked without a subcommand, the skill presents the available actions.
@@ -120,7 +120,7 @@ Before an item is eligible for overnight execution, `filter_ready()` in `cortex_
 
 **Gate 2 — Blocked.** The item's `blocked-by` list must not contain any item that is itself in a non-terminal status. If any blocker is still active, the item is ineligible. Terminal statuses that satisfy this gate are (canonical source: `claude/common.py`): `complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do`.
 
-**Gate 3 — Type (epics excluded).** Items with `type: epic` are non-implementable and always excluded. Epics are containers produced by `/cortex-interactive:discovery`; their children are the actionable items.
+**Gate 3 — Type (epics excluded).** Items with `type: epic` are non-implementable and always excluded. Epics are containers produced by `/cortex-core:discovery`; their children are the actionable items.
 
 **Gate 4 — Research artifact.** The file `lifecycle/{slug}/research.md` must exist on disk, where `{slug}` is taken from `lifecycle_slug` (falling back to a slugified form of the title). The item's `research` frontmatter field is not consulted for this check.
 
@@ -146,17 +146,17 @@ Items that pass all five gates are scored and grouped into batches for overnight
 
 ## Discovery Bootstrapping Lifecycle Artifacts
 
-When `/cortex-interactive:discovery` decomposes research into backlog tickets, it writes a `discovery_source` frontmatter field on each created item pointing to the research artifact (e.g. `research/my-topic/research.md`).
+When `/cortex-core:discovery` decomposes research into backlog tickets, it writes a `discovery_source` frontmatter field on each created item pointing to the research artifact (e.g. `research/my-topic/research.md`).
 
-When `/cortex-interactive:lifecycle` starts on an item that has `discovery_source` set, it automatically loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip). In overnight contexts the skip is applied automatically. If the user declines, the research artifact is loaded as additional context and investigation proceeds normally.
+When `/cortex-core:lifecycle` starts on an item that has `discovery_source` set, it automatically loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip). In overnight contexts the skip is applied automatically. If the user declines, the research artifact is loaded as additional context and investigation proceeds normally.
 
-This coupling means that features discovered via `/cortex-interactive:discovery` arrive at lifecycle with research already in hand, avoiding redundant investigation.
+This coupling means that features discovered via `/cortex-core:discovery` arrive at lifecycle with research already in hand, avoiding redundant investigation.
 
 ---
 
 ## `update_item.py` CLI Reference
 
-`backlog/update_item.py` is the canonical tool for automated write-backs to backlog frontmatter. It is used by the `/cortex-interactive:refine` skill, lifecycle hooks, and the overnight pipeline to update items without manual editing.
+`backlog/update_item.py` is the canonical tool for automated write-backs to backlog frontmatter. It is used by the `/cortex-core:refine` skill, lifecycle hooks, and the overnight pipeline to update items without manual editing.
 
 ```
 python3 backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
@@ -197,17 +197,17 @@ python3 backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete ses
 
 ## Global Deployment (Cross-Repo Use)
 
-Backlog scripts are deployed via the `cortex-interactive` plugin's `bin/` directory so they are available as commands in any working directory, not just when invoked via `python3 backlog/...` from the repo root.
+Backlog scripts are deployed via the `cortex-core` plugin's `bin/` directory so they are available as commands in any working directory, not just when invoked via `python3 backlog/...` from the repo root.
 
 ### Adding a new deployable script
 
 1. **Add the script file to the repo** (e.g., `backlog/my_script.py`).
-2. **Add the entry to the `cortex-interactive` plugin's `bin/` directory** — bin/ deployment is plugin-owned; the plugin manifest exposes the script to agents via the plugin's command surface.
+2. **Add the entry to the `cortex-core` plugin's `bin/` directory** — bin/ deployment is plugin-owned; the plugin manifest exposes the script to agents via the plugin's command surface.
 3. **Use `Path.cwd()` for repo-local directory references** inside the script (not `_PROJECT_ROOT` or `Path(__file__).parent`).
 
 ### How plugin bin/ PATH resolution works
 
-Scripts in the `cortex-interactive` plugin's `bin/` directory are added to PATH directly by Claude Code's plugin loader, so they are available as commands without any additional shell configuration. When Python runs one of these scripts, `__file__` resolves to the **real script path** inside the plugin directory. This means `Path(__file__).resolve().parent` correctly points into the repo regardless of how the script was invoked — making it safe to use for Python import path setup:
+Scripts in the `cortex-core` plugin's `bin/` directory are added to PATH directly by Claude Code's plugin loader, so they are available as commands without any additional shell configuration. When Python runs one of these scripts, `__file__` resolves to the **real script path** inside the plugin directory. This means `Path(__file__).resolve().parent` correctly points into the repo regardless of how the script was invoked — making it safe to use for Python import path setup:
 
 ```python
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent

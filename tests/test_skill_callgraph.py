@@ -29,15 +29,15 @@ def module():
 @pytest.mark.parametrize(
     "line,expected",
     [
-        ("Delegate to `/cortex-interactive:research`:", "research"),
+        ("Delegate to `/cortex-core:research`:", "research"),
         ("1. Invoke `/ui-lint`", "ui-lint"),
-        ("Invoke the `/cortex-interactive:commit` skill to commit all changes", "commit"),
+        ("Invoke the `/cortex-core:commit` skill to commit all changes", "commit"),
         ("invoke the `critical-review` skill with the plan artifact", "critical-review"),
-        ("dispatch the `/cortex-interactive:refine` skill now", "refine"),
-        ("Delegate to `/cortex-overnight-integration:overnight`:", "overnight"),
-        ("Invoke the `/cortex-overnight-integration:morning-review` skill", "morning-review"),
+        ("dispatch the `/cortex-core:refine` skill now", "refine"),
+        ("Delegate to `/cortex-overnight:overnight`:", "overnight"),
+        ("Invoke the `/cortex-overnight:morning-review` skill", "morning-review"),
         ("see the `research.md` file", None),
-        ("the `/cortex-interactive:research` output was useful", None),
+        ("the `/cortex-core:research` output was useful", None),
     ],
 )
 def test_invocation_regex(module, line, expected):

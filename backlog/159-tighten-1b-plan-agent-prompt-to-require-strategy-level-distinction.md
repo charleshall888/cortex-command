@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 38ad783b-8ad4-4e57-97d2-2d21970bad6c
 title: "Tighten §1b plan-agent prompt to require strategy-level distinction"
-status: open
+status: complete
 priority: high
 type: chore
 created: 2026-05-04
@@ -11,6 +11,12 @@ parent: "158"
 blocked-by: []
 tags: [competing-plan-synthesis, lifecycle, plan]
 discovery_source: research/competing-plan-synthesis/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction/spec.md
+areas: [skills, lifecycle]
+session_id: null
+lifecycle_phase: complete
 ---
 
 ## Background

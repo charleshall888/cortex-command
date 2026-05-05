@@ -47,7 +47,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SERVER_PATH = (
     REPO_ROOT
     / "plugins"
-    / "cortex-overnight-integration"
+    / "cortex-overnight"
     / "server.py"
 )
 PLUGIN_ROOT = SERVER_PATH.parent
@@ -61,7 +61,7 @@ PLUGIN_ROOT = SERVER_PATH.parent
 
 
 def _load_server_module():
-    """Import ``plugins/cortex-overnight-integration/server.py`` as a module."""
+    """Import ``plugins/cortex-overnight/server.py`` as a module."""
     if "cortex_plugin_server" in sys.modules:
         return sys.modules["cortex_plugin_server"]
     os.environ["CLAUDE_PLUGIN_ROOT"] = str(PLUGIN_ROOT)

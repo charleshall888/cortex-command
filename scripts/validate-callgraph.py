@@ -27,7 +27,7 @@ import yaml
 INVOCATION_RE = re.compile(
     r"(?:invoke|delegate\s+to|dispatch(?:es|ed)?)"
     r"\s+(?:the\s+)?"
-    r"`(?:/)?(?:cortex(?:-interactive|-overnight-integration)?:)?([a-z][a-z0-9-]+)`",
+    r"`(?:/)?(?:cortex(?:-core|-overnight)?:)?([a-z][a-z0-9-]+)`",
     re.IGNORECASE,
 )
 

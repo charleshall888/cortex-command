@@ -30,7 +30,15 @@ FEATURE_STATUSES = (
 )
 
 # Valid overnight phases
-PHASES = ("planning", "executing", "complete", "paused")
+#
+# ``starting`` is a transient out-of-band phase reported by
+# ``cortex overnight status`` for the window between the CLI writing
+# ``runner.spawn-pending`` and the runner writing ``runner.pid`` (Task 6).
+# It is never persisted to ``overnight-state.json`` — the runner has not
+# yet reached the point where it could write state — so it does not
+# participate in :data:`_FORWARD_TRANSITIONS`.
+PHASES = ("planning", "executing", "complete", "paused", "starting")
+STARTING = "starting"
 
 # Valid forward transitions (source -> set of allowed targets)
 _FORWARD_TRANSITIONS: dict[str, set[str]] = {

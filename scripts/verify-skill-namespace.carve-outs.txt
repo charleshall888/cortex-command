@@ -5,8 +5,8 @@
 skills/retro/SKILL.md:38 "/cortex:retro ---"
 skills/retro/SKILL.md:43 "/cortex:retro !!!"
 # Regenerated plugin-tree twins of the above (build-plugin output).
-plugins/cortex-interactive/skills/retro/SKILL.md:38 "/cortex:retro ---"
-plugins/cortex-interactive/skills/retro/SKILL.md:43 "/cortex:retro !!!"
+plugins/cortex-core/skills/retro/SKILL.md:38 "/cortex:retro ---"
+plugins/cortex-core/skills/retro/SKILL.md:43 "/cortex:retro !!!"
 # tests/test_migrate_namespace.py: tests for the OLD migrate-namespace.py
 # script (converts /skill -> /cortex:skill). The /cortex: references here
 # are expected outputs of that legacy tool, not invocations. Out of R8 scope

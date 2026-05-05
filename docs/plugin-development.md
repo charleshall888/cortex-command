@@ -9,7 +9,7 @@ building, and installing plugins directly from this checkout.
 
 Every `plugins/*/` directory is classified as one of two kinds:
 
-- **Build-output plugins** (`cortex-interactive`, `cortex-overnight-integration`)
+- **Build-output plugins** (`cortex-core`, `cortex-overnight`)
   — assembled from top-level sources (`skills/`, `bin/cortex-*`,
   `hooks/cortex-*.sh`, `claude/hooks/cortex-*.sh`) by `just build-plugin`.
   The assembled tree is committed; never edit it by hand.
@@ -65,7 +65,7 @@ After registration, install any plugin the manifest lists with:
 
 For example, to install the overnight integration plugin:
 
-    /plugin install cortex-overnight-integration@cortex-command
+    /plugin install cortex-overnight@cortex-command
 
 ## Drift detection and the pre-commit hook
 

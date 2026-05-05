@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 8393ea1a-f711-48ac-9c58-5f3b7dc193ca
 title: "Adapt harness to Opus 4.7 (prompt delta + capability adoption)"
-status: backlog
+status: complete
 priority: high
 type: epic
 created: 2026-04-18
-updated: 2026-04-18
+updated: 2026-05-04
 tags: [opus-4-7-harness-adaptation]
 discovery_source: research/opus-4-7-harness-adaptation/research.md
 ---

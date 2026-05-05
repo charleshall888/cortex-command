@@ -27,7 +27,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
 - **Complexity**: simple
 - **Context**: `Protocol` follows `typing.Protocol` (PEP 544). Mirror the dataclass-frozen pattern used in `cortex_command/overnight/state.py:184` (`OvernightState`). `__init__.py` re-exports `Scheduler`, `ScheduledHandle`, `CancelResult`, `get_backend`. `get_backend()` reads `sys.platform`; tests can monkeypatch the platform check. Test file asserts: protocol has the four methods, dataclasses have the listed fields, `get_backend()` returns `_UnsupportedScheduler` on a patched non-darwin and `MacOSLaunchAgentBackend` on darwin (the macOS branch will be importable as a stub class for now — Task 2 fleshes it out).
 - **Verification**: `pytest cortex_command/overnight/tests/test_scheduler_protocol.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: macOS backend — plist render, env snapshot, bootstrap, post-bootstrap verify
 - **Files**:
@@ -52,7 +52,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
     - `test_env_snapshot.py`: covers all five env vars present, none present, partial, and assertion that `HOME`/`USER`/`TMPDIR` are NOT in the dict.
     - `test_target_time_validation.py`: HH:MM today; HH:MM past rolling to tomorrow; ISO 8601 valid; ISO 8601 past; ISO 8601 Feb 29 in 2026 (non-leap); ISO 8601 > 7 days out.
 - **Verification**: `pytest cortex_command/overnight/tests/test_plist_validation.py cortex_command/overnight/tests/test_env_snapshot.py cortex_command/overnight/tests/test_target_time_validation.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Bash launcher script + fail-marker writes + immediate notification
 - **Files**:
@@ -71,7 +71,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - Tests use a fake `cortex` binary path (a tempfile shell stub) and assert: (a) EPERM on the cortex binary triggers fail-marker write; (b) command-not-found triggers fail-marker; (c) successful fork creates expected log files and removes plist + launcher; (d) JSON shape valid (parse with `json.loads`).
   - `pyproject.toml`: add `launcher.sh` to `[tool.setuptools.package-data]` under the `cortex_command.overnight.scheduler` key (or equivalent for the project's existing build-system block — match the convention already in use).
 - **Verification**: `pytest cortex_command/overnight/tests/test_launcher_fail_marker.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Sidecar index + plist garbage collection + cross-process lock
 - **Files**:
@@ -91,7 +91,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - `test_sidecar_index.py`: covers add/remove/find/round-trip; corrupt JSON → empty read; missing parent dir → first call creates it; concurrent writers via threaded test using `os.replace` semantics.
   - `test_plist_gc.py`: stale plist (label absent from sidecar) removed; in-flight plist (label in sidecar AND `launchctl print` exits 0) preserved; orphan launcher.sh paired with stale plist also removed; corrupt sidecar handled gracefully (no crash, no plist removal — fail closed); **concurrent-schedule serialization test**: two threads call `schedule()` simultaneously with mocked `launchctl`; assert both succeed (or one fails cleanly), and that GC does not remove the in-flight plist of either invocation.
 - **Verification**: `pytest cortex_command/overnight/tests/test_sidecar_index.py cortex_command/overnight/tests/test_plist_gc.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: `cortex overnight schedule` CLI subcommand
 - **Files**:
@@ -114,7 +114,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - `pytest cortex_command/overnight/tests/test_cli_schedule.py -v` — pass if exit 0.
   - `grep -c 'cortex overnight schedule' skills/overnight/SKILL.md` ≥ 1.
   - `grep -c 'dangerouslyDisableSandbox' skills/overnight/SKILL.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Async-spawn `cortex overnight start` with liveness-checked handshake
 - **Files**:
@@ -146,7 +146,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - **Caveat on test fidelity**: the runner-crash-in-first-second test cannot reproduce the production kernel-scheduler race in pure-Python — but with the liveness probe added, the failure mode is no longer fixture-dependent: any time `os.kill(pid, 0)` raises ProcessLookupError, the function returns `started: false`. The test asserts the LIVENESS-PROBE BRANCH, not the kernel race, which is the load-bearing behavior.
   - The 5-second budget is for the run-now path. The schedule path's launcher script runs in launchd's detached context; the spawn-pending sentinel is written by the launcher, and the launchd-spawned runner deletes it after writing runner.pid. **Sentinel-deletion ordering**: the launchd-path runner MUST write `runner.pid` BEFORE deleting `runner.spawn-pending`, so a status query never observes both files absent during a live spawn. This ordering is enforced in the runner's existing code path; if it is not currently enforced, add a small change to `runner.py` to enforce it (this is in scope for Task 6 since it touches the same handshake protocol).
 - **Verification**: `pytest cortex_command/overnight/tests/test_spawn_handshake.py tests/test_runner_signal.py tests/test_runner_followup_commit.py tests/test_cli_overnight_format_json.py tests/test_runner_pr_gating.py -v` — pass if exit 0. The expanded suite catches the in-repo callers Task 6 affects.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: `cortex overnight cancel` extension + cross-cancel guards + status surfacing
 - **Files**:
@@ -167,7 +167,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - **`handle_status` surfacing**: the existing JSON envelope at `cli_handler.py:383-389` emits `session_id, phase, current_round, features`. Add `scheduled_start` (None when absent; ISO 8601 string when set). Human output: print "Scheduled fire: <ISO 8601>" when set. The dashboard at `cortex_command/dashboard/data.py` will pick this up via the same status JSON consumed elsewhere — no dashboard-side change required for v1.
   - Tests: `test_cancel_scheduled.py` exercises schedule-then-cancel-then-launchctl-print-exits-113 path (mock subprocess.run for launchctl, real sidecar writes via tmpdir). `test_cross_cancel.py` covers schedule-while-runner-active fails, schedule-while-spawn-pending-sentinel-fresh fails, schedule-while-spawn-pending-sentinel-stale-30s succeeds, start-while-schedule-pending fails, start-while-schedule-pending-with-force succeeds. `test_status_scheduled_start.py` covers handle_status output with scheduled_start absent and present.
 - **Verification**: `pytest cortex_command/overnight/tests/test_cancel_scheduled.py cortex_command/overnight/tests/test_cross_cancel.py cortex_command/overnight/tests/test_status_scheduled_start.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: MCP tool `overnight_schedule_run`
 - **Files**:
@@ -181,7 +181,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - Use the existing `confirm_dangerously_skip_permissions` literal-True gate pattern.
   - Test scenarios: happy path (CLI mocked to return JSON success), CLI nonzero exit → `scheduled: false`, CLI timeout → MCP raises, missing `confirm_dangerously_skip_permissions` → tool refuses.
 - **Verification**: `pytest plugins/cortex-overnight-integration/tests/test_overnight_schedule_run.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: MCP tool `overnight_start_run` async update
 - **Files**:
@@ -195,7 +195,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - **Spec contradiction note** (resolved by this plan): spec R12 specifies 30 s with concrete rationale ("the spawn path includes plist write + bootstrap + launchctl print verify + sidecar atomic write + concurrent-runner check; while typical latency is sub-second, the 30s budget preserves headroom for slow-disk and disk-pressure cases without producing spurious MCP failures"). Spec "Changes to Existing Behavior" line 77 mentions 10 s without rationale. The plan picks **30 s** because R12's reasoning is concrete and the MCP layer favors slow-success over false-failure (a 10 s timeout that fires after launchctl has already bootstrapped the job tells Claude "scheduling failed" while a job is in fact armed — a worse UX than a slower successful return). A separate spec-update ticket should align line 77 to R12's 30 s; that follow-up is mechanical and out of scope for this plan.
   - Test additions: slow-spawn-but-handshake-within-30s succeeds; async-return-shape (caller sees `started: true` immediately) verified via mocked CLI; timeout boundary test at 30 s.
 - **Verification**: `pytest plugins/cortex-overnight-integration/tests/test_overnight_start_run.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Delete `bin/overnight-schedule` and parity-check special cases + update in-repo callers of blocking `cortex overnight start`
 - **Files**:
@@ -215,7 +215,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - `test ! -e bin/overnight-schedule` — pass if exit 0.
   - `grep -rn 'overnight-schedule' bin/ skills/ plugins/cortex-overnight-integration/ docs/ justfile` — pass if zero matches (exit 1 from grep). The listed paths exclude `lifecycle/` and `research/` so historical artifacts are out of scope by construction.
   - `bin/cortex-check-parity --self-test` — pass if exit 0. (The script exposes `--self-test` at `bin/cortex-check-parity:1086` which runs the inline fixture cases via `run_self_test()` at `:1021`.)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Update `docs/overnight-operations.md` scheduling section
 - **Files**:
@@ -229,7 +229,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
 - **Verification**:
   - `grep -c 'launchd\|LaunchAgent' docs/overnight-operations.md` ≥ 3 (per spec R17 acceptance).
   - `grep -c 'Full Disk Access' docs/overnight-operations.md` ≥ 1 (per spec R13 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Fail-marker scanner module + morning-report integration + status surface
 - **Files**:
@@ -249,7 +249,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - `test_fail_marker_scanner.py`: covers parse-happy-path; multiple session dirs with mixed states; corrupt JSON in one of the markers (skip with warning, don't crash); the `since` filter; missing state root (returns empty list).
   - `test_report_fire_failures.py`: exercises `render_scheduled_fire_failures` with empty data (renders nothing), single failure (renders section header + entry), multiple failures (renders all). Verifies the section text contains absolute paths so the user can copy-paste to inspect.
 - **Verification**: `pytest cortex_command/overnight/tests/test_fail_marker_scanner.py cortex_command/overnight/tests/test_report_fire_failures.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: End-to-end smoke + plan completion
 - **Files**:
@@ -261,7 +261,7 @@ Build a new `cortex_command/overnight/scheduler/` package containing a `Schedule
   - Use `pytest`'s `tmp_path` fixture for `$TMPDIR` and `~/.cache/cortex-command/`; monkeypatch `subprocess.run` to fake `launchctl bootstrap`/`bootout`/`print`.
   - This is the final "ship" gate before the plan is considered done.
 - **Verification**: `pytest cortex_command/overnight/tests/test_scheduler_e2e.py -v` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

@@ -1,0 +1,72 @@
+{
+  "ts": "2026-05-04T00:00:00Z",
+  "feature": "tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction",
+  "artifact": "lifecycle/tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Plan \u00a7Context for Task 2 says \"Two opening fences total in \u00a71b\" \u2014 actual count is 4 fence-lines (2 pairs).",
+      "reviewer_angle": "Verification escape robustness",
+      "evidence_quote": "Two opening fences total in \u00a71b: the template fence (line 32) and any code-fence inside the template"
+    },
+    {
+      "class": "B",
+      "finding": "Task 3 verification doesn't assert P8 row position inside Post-Plan Checklist or after P7.",
+      "reviewer_angle": "Verification escape robustness",
+      "evidence_quote": "[ \"$(grep -cE \"^\\\\| P8 \\\\|\" \"$F\")\" = 1 ]"
+    },
+    {
+      "class": "B",
+      "finding": "Task 4 \u226520-collected-items floor cannot discriminate filtered (36) from unfiltered-with-xfail (39).",
+      "reviewer_angle": "Verification escape robustness",
+      "evidence_quote": "pytest tests/test_dual_source_reference_parity.py -v && [ count -ge 20 ]"
+    },
+    {
+      "class": "B",
+      "finding": "try/finally revert handles Python exceptions but not SIGKILL/segfault/OOM/CI timeout.",
+      "reviewer_angle": "Task 4 specification incoherence",
+      "evidence_quote": "reverts the mutation in a try/finally so the working tree is restored regardless of test outcome"
+    },
+    {
+      "class": "B",
+      "finding": "Sentinel target plugins/cortex-interactive/skills/commit/SKILL.md is hardcoded; existence depends on commit remaining in justfile SKILLS array.",
+      "reviewer_angle": "Task 4 specification incoherence",
+      "evidence_quote": "Pick a stable mirror like plugins/cortex-interactive/skills/commit/SKILL.md (existing, small) for the sentinel target"
+    },
+    {
+      "class": "B",
+      "finding": "Spec R8 references /cortex-interactive:refine #159 --revalidate, a flag that does not exist in the refine skill.",
+      "reviewer_angle": "R8 spec-bypass risk",
+      "evidence_quote": "human runs /cortex-interactive:refine #159 --revalidate (or equivalent: re-read this spec)"
+    },
+    {
+      "class": "B",
+      "finding": "Current status: in_progress places #159 inside ELIGIBLE_STATUSES; ticket is overnight-pickup-eligible while plan phase is active.",
+      "reviewer_angle": "R8 spec-bypass risk",
+      "evidence_quote": "status:open is the actual gate excluding it from overnight pickup per cortex_command/overnight/backlog.py:39 ELIGIBLE_STATUSES"
+    },
+    {
+      "class": "B",
+      "finding": "Adversarial review M1 (replay n=4 corpus through edited prompt before shipping) is the only research mitigation deferred entirely; M3-M6 retained.",
+      "reviewer_angle": "Behavioral-vs-structural enforcement gap",
+      "evidence_quote": "M1: Replay the n=4 corpus against the proposed edited prompt before shipping"
+    },
+    {
+      "class": "B",
+      "finding": "No in-cycle dry-run dispatch verifies sonnet under verbatim-template constraints obeys the new soft-positive closed-taxonomy instruction.",
+      "reviewer_angle": "Behavioral-vs-structural enforcement gap",
+      "evidence_quote": "Task 1 Verification: grep -c event-driven, pipeline, layered, shared-state, plug-in $F = 1; Task 3 Verification: grep -cE ^\\| P8 \\| $F = 1"
+    },
+    {
+      "class": "B",
+      "finding": "No existing convention for canonical\u2192mirror byte-equality pytest in cortex tree; plan does not consider both BUILD_OUTPUT_PLUGINS generalization.",
+      "reviewer_angle": "Task 4 specification incoherence",
+      "evidence_quote": "tests/test_check_parity.py is a sibling for naming reference but tests a different concern"
+    }
+  ]
+}

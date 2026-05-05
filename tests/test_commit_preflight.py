@@ -1,6 +1,6 @@
 """Unit tests for ``bin/cortex-commit-preflight``.
 
-Covers the preflight probe used by ``/cortex-interactive:commit`` Step 1.
+Covers the preflight probe used by ``/cortex-core:commit`` Step 1.
 The script runs three deterministic git probes and emits a single-line
 JSON envelope on stdout. See spec.md R14 and plan.md Task 6 for the
 contract.

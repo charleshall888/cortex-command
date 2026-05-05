@@ -147,7 +147,7 @@ fi
 FR_TMPDIR="$TMPDIR/test_hooks_fr_$$"
 mkdir -p "$FR_TMPDIR/lifecycle/test-fr-feature"
 echo "# stub research" > "$FR_TMPDIR/lifecycle/test-fr-feature/research.md"
-printf 'Resume test-fr-feature at specify phase. Run /cortex-interactive:lifecycle test-fr-feature.' \
+printf 'Resume test-fr-feature at specify phase. Run /cortex-core:lifecycle test-fr-feature.' \
   > "$FR_TMPDIR/lifecycle/.fresh-resume"
 
 output=$(sed "s|__TMPDIR__|$FR_TMPDIR|g" "$SCAN_FIXTURE_DIR/pending-resume.json" \

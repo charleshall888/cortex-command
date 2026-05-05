@@ -1,0 +1,433 @@
+#!/usr/bin/env python3
+"""Load a backlog item's parent epic body for clarify-critic alignment evaluation.
+
+Reads a child backlog item's frontmatter, normalizes its ``parent:`` value via
+``cortex_command.backlog.build_epic_map.normalize_parent``, and (if the parent
+resolves to an existing ``type: epic`` file) extracts a token-capped, sanitized
+slice of the parent's body. Prints a closed-set JSON object on stdout.
+
+JSON output shapes (one per status branch):
+
+- ``{"status": "no_parent"}``
+- ``{"status": "missing", "parent_id": <int>}``
+- ``{"status": "non_epic", "parent_id": <int>, "type": "<str>|null"}``
+- ``{"status": "loaded", "parent_id": <int>, "title": "<str>", "body": "<str>"}``
+- ``{"status": "unreadable", "parent_id": <int>, "reason": "frontmatter_parse_error"}``
+
+Exits 0 on no_parent / missing / non_epic / loaded; exits 1 on unreadable.
+
+Body extraction priority:
+  ``## Context from discovery`` → ``## Context`` →
+  ``## Framing (post-discovery)`` → first paragraph after H1 →
+  ``(no body content)`` placeholder.
+
+Token cap: ≤500 tokens via ``tiktoken.get_encoding("cl100k_base")`` if
+importable, else a coarse ≤2000-character fallback. Truncation marker
+``… (truncated)`` is appended on cap hit.
+
+Sanitization: ``</parent_epic_body>`` substrings are replaced with
+``</parent_epic_body_INVALID>`` (case-sensitive); ``<parent_epic_body``
+substrings (case-insensitive) are replaced with ``<parent_epic_body_INVALID``,
+preventing in-body tag injection from escaping the dispatch-prompt envelope.
+"""
+
+from __future__ import annotations
+
+import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+
+import argparse
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+# Make cortex_command importable when running from a checkout. The script
+# lives at <repo>/bin/cortex-load-parent-epic and the package at
+# <repo>/cortex_command/, so prepend the repo root to sys.path.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+# Import normalize_parent rather than re-implementing the rules. See
+# cortex_command/backlog/build_epic_map.py:54-86 for the canonical source.
+from cortex_command.backlog.build_epic_map import normalize_parent
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+TOKEN_CAP = 500
+CHAR_FALLBACK_CAP = 2000
+TRUNCATION_MARKER = "… (truncated)"
+PLACEHOLDER_BODY = "(no body content)"
+
+# Body-extraction heading priority (in order).
+SECTION_PRIORITY: tuple[str, ...] = (
+    "## Context from discovery",
+    "## Context",
+    "## Framing (post-discovery)",
+)
+
+
+# ---------------------------------------------------------------------------
+# Backlog directory resolution
+# Mirrors bin/cortex-resolve-backlog-item:210-226 — CORTEX_BACKLOG_DIR env
+# override first, then walk-up search for a sibling backlog/ dir.
+# ---------------------------------------------------------------------------
+
+def _backlog_dir() -> Path:
+    """Return the backlog directory, honouring CORTEX_BACKLOG_DIR override."""
+    env_override = os.environ.get("CORTEX_BACKLOG_DIR")
+    if env_override:
+        return Path(env_override)
+    here = Path(__file__).resolve().parent
+    while here != here.parent:
+        candidate = here / "backlog"
+        if candidate.is_dir():
+            return candidate
+        here = here.parent
+    return Path(__file__).resolve().parent.parent / "backlog"
+
+
+# ---------------------------------------------------------------------------
+# Frontmatter parser
+# Mirrors bin/cortex-resolve-backlog-item:53-69 precedent.
+# ---------------------------------------------------------------------------
+
+def _parse_frontmatter(path: Path) -> dict:
+    """Return the YAML frontmatter as a dict.
+
+    Reads only the frontmatter (between the two ``---`` fences). Raises
+    ``yaml.YAMLError`` on malformed frontmatter and ``OSError`` on file-access
+    failures.
+    """
+    with open(path, "r", encoding="utf-8") as fh:
+        first_line = fh.readline()
+        if first_line.rstrip("\r\n") != "---":
+            return {}
+        lines: list[str] = []
+        for line in fh:
+            if line.rstrip("\r\n") == "---":
+                break
+            lines.append(line)
+    return yaml.safe_load("".join(lines)) or {}
+
+
+def _read_body(path: Path) -> str:
+    """Return the full body of a backlog file (post-frontmatter)."""
+    text = path.read_text(encoding="utf-8")
+    # Strip the leading frontmatter block. If the file has no frontmatter,
+    # return the whole text.
+    if not text.startswith("---"):
+        return text
+    # Find the closing fence.
+    rest = text[3:]
+    closing = rest.find("\n---")
+    if closing < 0:
+        return ""
+    body = rest[closing + len("\n---"):]
+    # Drop the leading newline if present.
+    if body.startswith("\n"):
+        body = body[1:]
+    return body
+
+
+# ---------------------------------------------------------------------------
+# H1 + body extraction
+# ---------------------------------------------------------------------------
+
+def _extract_h1(body: str) -> str:
+    """Return the first H1 line text (without ``# `` prefix), or ``""``."""
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("# ") and not stripped.startswith("## "):
+            return stripped[2:].strip()
+    return ""
+
+
+def _section_text(body: str, heading: str) -> str | None:
+    """Return the prose under ``heading`` (an H2 line) up to the next H2/H1.
+
+    Returns ``None`` if the heading is not present. Empty-section returns
+    an empty string.
+    """
+    lines = body.splitlines()
+    start: int | None = None
+    for i, line in enumerate(lines):
+        if line.strip() == heading:
+            start = i + 1
+            break
+    if start is None:
+        return None
+    chunk: list[str] = []
+    for line in lines[start:]:
+        stripped = line.strip()
+        # Stop at next H1 or H2.
+        if stripped.startswith("# ") and not stripped.startswith("## "):
+            break
+        if stripped.startswith("## "):
+            break
+        chunk.append(line)
+    return "\n".join(chunk).strip("\n")
+
+
+def _first_paragraph_after_h1(body: str) -> str:
+    """Return the first non-empty paragraph after the H1 line."""
+    lines = body.splitlines()
+    h1_index: int | None = None
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("# ") and not stripped.startswith("## "):
+            h1_index = i
+            break
+    if h1_index is None:
+        return ""
+    paragraph: list[str] = []
+    in_paragraph = False
+    for line in lines[h1_index + 1:]:
+        stripped = line.strip()
+        if stripped.startswith("## ") or stripped.startswith("# "):
+            break
+        if not stripped:
+            if in_paragraph:
+                break
+            continue
+        in_paragraph = True
+        paragraph.append(line)
+    return "\n".join(paragraph).strip()
+
+
+def _extract_body_content(body: str) -> str:
+    """Apply the named-section-priority heuristic and return extracted text."""
+    for heading in SECTION_PRIORITY:
+        text = _section_text(body, heading)
+        if text is not None and text.strip():
+            return text.strip()
+    paragraph = _first_paragraph_after_h1(body)
+    if paragraph:
+        return paragraph
+    return PLACEHOLDER_BODY
+
+
+# ---------------------------------------------------------------------------
+# Token-cap truncation
+# ---------------------------------------------------------------------------
+
+def _truncate(text: str) -> str:
+    """Truncate ``text`` to ≤500 tokens (or ≤2000 chars fallback).
+
+    Appends ``TRUNCATION_MARKER`` on cap hit.
+    """
+    if text == PLACEHOLDER_BODY:
+        return text
+    try:
+        import tiktoken  # type: ignore[import-not-found]
+        enc = tiktoken.get_encoding("cl100k_base")
+        tokens = enc.encode(text)
+        if len(tokens) <= TOKEN_CAP:
+            return text
+        truncated = enc.decode(tokens[:TOKEN_CAP])
+        return truncated.rstrip() + " " + TRUNCATION_MARKER
+    except ImportError:
+        if len(text) <= CHAR_FALLBACK_CAP:
+            return text
+        truncated = text[:CHAR_FALLBACK_CAP]
+        return truncated.rstrip() + " " + TRUNCATION_MARKER
+
+
+# ---------------------------------------------------------------------------
+# Sanitization
+# ---------------------------------------------------------------------------
+
+def _sanitize(text: str) -> str:
+    """Replace boundary-tag substrings with ``_INVALID`` variants."""
+    # Replace close-tag (case-sensitive) first.
+    text = text.replace("</parent_epic_body>", "</parent_epic_body_INVALID>")
+    # Replace open-tag prefix (case-insensitive). Note: this may run after the
+    # close-tag replace and will not re-match the already-replaced close-tag
+    # because the open-tag pattern requires no slash after ``<``.
+    text = re.sub(
+        r"<parent_epic_body",
+        "<parent_epic_body_INVALID",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return text
+
+
+# ---------------------------------------------------------------------------
+# Child-file resolution
+# ---------------------------------------------------------------------------
+
+def _resolve_child(slug: str, backlog_dir: Path) -> Path | None:
+    """Return the child-backlog Path matching ``slug`` (filename stem), or None."""
+    candidate = backlog_dir / f"{slug}.md"
+    if candidate.is_file():
+        return candidate
+    return None
+
+
+def _resolve_parent_by_id(parent_id: int, backlog_dir: Path) -> Path | None:
+    """Return the parent-backlog Path matching ``NNN-*.md`` for ``parent_id``.
+
+    The current backlog convention is uniform 3-digit zero-padding; non-matching
+    widths are not supported.
+    """
+    matches = sorted(backlog_dir.glob(f"{int(parent_id):03d}-*.md"))
+    if not matches:
+        return None
+    return matches[0]
+
+
+# ---------------------------------------------------------------------------
+# Argument parser
+# ---------------------------------------------------------------------------
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="cortex-load-parent-epic",
+        description=(
+            "Load a backlog item's parent epic body for clarify-critic "
+            "alignment evaluation. Prints a closed-set JSON object on stdout."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Status branches:\n"
+            "  no_parent   Child has no parent: field, parent: null, or\n"
+            "              UUID-shape (rejected by normalize_parent). exit 0.\n"
+            "  missing     parent: resolves to an integer but no NNN-*.md\n"
+            "              file matches. exit 0.\n"
+            "  non_epic    Parent file's type: is not 'epic'. exit 0.\n"
+            "  loaded      Parent loaded; .body contains extracted, sanitized,\n"
+            "              token-capped text. exit 0.\n"
+            "  unreadable  Parent file's frontmatter cannot be parsed. exit 1.\n\n"
+            "Override the backlog directory with CORTEX_BACKLOG_DIR (for tests).\n"
+        ),
+    )
+    parser.add_argument(
+        "child_slug",
+        help=(
+            "Backlog filename slug for the child item (e.g. "
+            "'085-audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns')."
+        ),
+    )
+    return parser
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def _emit(payload: dict[str, Any]) -> None:
+    print(json.dumps(payload))
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(sys.argv[1:] if argv is None else argv)
+
+    backlog_dir = _backlog_dir()
+    if not backlog_dir.is_dir():
+        print(
+            f"cortex-load-parent-epic: backlog directory not found at {backlog_dir}",
+            file=sys.stderr,
+        )
+        return 1
+
+    child_path = _resolve_child(args.child_slug, backlog_dir)
+    if child_path is None:
+        print(
+            f"cortex-load-parent-epic: child slug '{args.child_slug}' not found in {backlog_dir}",
+            file=sys.stderr,
+        )
+        return 1
+
+    try:
+        child_fm = _parse_frontmatter(child_path)
+    except (yaml.YAMLError, OSError) as exc:
+        print(
+            f"cortex-load-parent-epic: failed to read child frontmatter: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    parent_id = normalize_parent(child_fm.get("parent"))
+    if parent_id is None:
+        _emit({"status": "no_parent"})
+        return 0
+
+    parent_path = _resolve_parent_by_id(parent_id, backlog_dir)
+    if parent_path is None:
+        _emit({"status": "missing", "parent_id": parent_id})
+        return 0
+
+    try:
+        parent_fm = _parse_frontmatter(parent_path)
+    except yaml.YAMLError:
+        _emit(
+            {
+                "status": "unreadable",
+                "parent_id": parent_id,
+                "reason": "frontmatter_parse_error",
+            }
+        )
+        return 1
+    except OSError as exc:
+        print(
+            f"cortex-load-parent-epic: failed to read parent file: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    parent_type = parent_fm.get("type")
+    if parent_type != "epic":
+        # Type may be missing entirely; coerce non-string to None for JSON.
+        type_value: str | None
+        if isinstance(parent_type, str):
+            type_value = parent_type
+        else:
+            type_value = None
+        _emit(
+            {
+                "status": "non_epic",
+                "parent_id": parent_id,
+                "type": type_value,
+            }
+        )
+        return 0
+
+    try:
+        body_text = _read_body(parent_path)
+    except OSError as exc:
+        print(
+            f"cortex-load-parent-epic: failed to read parent body: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
+    title = _extract_h1(body_text)
+    if not title:
+        # Fall back to frontmatter title field.
+        fm_title = parent_fm.get("title")
+        title = fm_title if isinstance(fm_title, str) else ""
+
+    extracted = _extract_body_content(body_text)
+    truncated = _truncate(extracted)
+    sanitized = _sanitize(truncated)
+
+    _emit(
+        {
+            "status": "loaded",
+            "parent_id": parent_id,
+            "title": title,
+            "body": sanitized,
+        }
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

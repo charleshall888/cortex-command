@@ -33,7 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SERVER_PATH = (
     REPO_ROOT
     / "plugins"
-    / "cortex-overnight-integration"
+    / "cortex-overnight"
     / "server.py"
 )
 PLUGIN_ROOT = SERVER_PATH.parent
@@ -49,7 +49,7 @@ PLUGIN_ROOT = SERVER_PATH.parent
 
 
 def _load_server_module():
-    """Import ``plugins/cortex-overnight-integration/server.py`` as a module.
+    """Import ``plugins/cortex-overnight/server.py`` as a module.
 
     Sets ``CLAUDE_PLUGIN_ROOT`` to the plugin directory so the
     confused-deputy guard at the top of the file accepts the load. The

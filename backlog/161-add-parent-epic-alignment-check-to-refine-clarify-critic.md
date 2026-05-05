@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 3d0dcb32-5995-49f6-83f2-89184a8c6c46
 title: "Add parent-epic alignment check to refine's clarify-critic"
-status: backlog
+status: complete
 priority: medium
 type: feature
 created: 2026-05-04
@@ -10,6 +10,13 @@ updated: 2026-05-04
 blocked-by: []
 tags: [refine, clarify-critic, epic-alignment, drift]
 discovery_source: research/refine-load-epic-context/research.md
+session_id: null
+lifecycle_phase: complete
+lifecycle_slug: add-parent-epic-alignment-check-to-refine-clarify-critic
+complexity: complex
+criticality: high
+spec: lifecycle/add-parent-epic-alignment-check-to-refine-clarify-critic/spec.md
+areas: [skills]
 ---
 
 # Add parent-epic alignment check to refine's clarify-critic

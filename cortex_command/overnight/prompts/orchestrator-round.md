@@ -224,6 +224,177 @@ log_event(
 )
 ```
 
+**Step 3b.1 — Criticality branch (synthesizer dual-plan path)**: Before falling through to the single-agent dispatch template below, partition `missing` into a critical-tier subset that takes the parallel-variant + synthesizer path and a non-critical subset that takes the existing single-agent path unchanged. The branch is gated by `synthesizer_overnight_enabled` in `lifecycle.config.md`; when the gate is `false` (default, fail-closed), all features fall through to the single-agent path.
+
+```python
+from cortex_command.overnight.cli_handler import read_synthesizer_gate
+from cortex_command.overnight.events import (
+    PLAN_SYNTHESIS_DISPATCHED,
+    PLAN_SYNTHESIS_DEFERRED,
+    SYNTHESIZER_ERROR,
+)
+import json
+
+# Repo-root lifecycle.config.md (fail-closed: missing file -> gate False).
+gate_enabled = read_synthesizer_gate(Path("lifecycle.config.md"))
+
+def _read_criticality(feature_slug: str) -> str:
+    """Most-recent ``lifecycle_start`` or ``criticality_override`` event wins.
+
+    Default to ``"medium"`` when no criticality field is found, mirroring
+    ``skills/lifecycle/references/plan.md`` §1a precedent.
+    """
+    events_path = Path(f"lifecycle/{feature_slug}/events.log")
+    if not events_path.exists():
+        return "medium"
+    last = "medium"
+    for line in events_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if entry.get("event") in ("lifecycle_start", "criticality_override"):
+            crit = entry.get("criticality")
+            if isinstance(crit, str):
+                last = crit
+    return last
+
+critical_subset = []
+single_agent_subset = []
+for f in missing:
+    if gate_enabled and _read_criticality(f["slug"]) == "critical":
+        critical_subset.append(f)
+    else:
+        single_agent_subset.append(f)
+```
+
+For each feature in `critical_subset`, run the synthesizer dual-plan flow described in (1)–(8) below. After the critical_subset processing finishes, the surviving features (those that the synthesizer auto-selected a variant for) have their `plan.md` written; deferred features are marked `deferred` in the orchestrator agent's exit-report envelope (worker-style wrapper) so `runner.py` can route them through the existing `cortex_command/overnight/deferral.py:write_deferral` channel. Features in `single_agent_subset` continue to the existing single-agent dispatch template below — no change to non-critical-tier behavior.
+
+(1) **Variant dispatch (criticality == critical branch)**: For each feature whose criticality is `critical`,
+dispatch 2-3 parallel Sonnet plan-gen Task sub-agents writing to `plan-variant-A.md`,
+`plan-variant-B.md`, optionally `plan-variant-C.md` under `lifecycle/{{feature_slug}}/`.
+The orchestrator agent decides 2 vs 3 based on how many distinct approaches are identifiable from spec+research; minimum 2, maximum 3. Each sub-agent uses the **same** plan-agent prompt template as the single-agent path below (lines reading "You are generating an implementation plan ..."), substituting `{{feature_plan_path}}` per variant. Emit `PLAN_SYNTHESIS_DISPATCHED` before dispatch:
+
+```python
+log_event(
+    PLAN_SYNTHESIS_DISPATCHED,
+    round={round_number},
+    feature=f["slug"],
+    details={
+        "variant_count": variant_count,  # 2 or 3
+        "variant_paths": [
+            f"lifecycle/{f['slug']}/plan-variant-A.md",
+            f"lifecycle/{f['slug']}/plan-variant-B.md",
+            # plan-variant-C.md if variant_count == 3
+        ],
+    },
+    log_path=Path("{events_path}"),
+)
+```
+
+(2) **Variant-edge cases**: After all variant sub-agents return:
+- If **only 1 variant** wrote successfully (the others crashed or returned `{"status": "deferred"}`): accept it directly. Copy that variant's content to `lifecycle/{{feature_slug}}/plan.md`, append a v2 `plan_comparison` event with `disposition: "auto_select"`, `selector_confidence: "high"`, `selection_rationale: "single surviving variant"`, `operator_choice: null`, `schema_version: 2`, and `position_swap_check_result: "agreed"`. Skip the synthesizer dispatch for this feature.
+- If **all variants failed**: fall back to the single-agent path — append the feature back to `single_agent_subset` so it goes through the existing dispatch template below.
+- If **≥2 variants succeeded**: proceed to the synthesizer Task sub-agent dispatch in (3) below.
+
+(3) **Synthesizer dispatch**: Dispatch one fresh Opus synthesizer Task sub-agent per critical feature with ≥2 surviving variants. The sub-agent's **system prompt** is the shared fragment loaded from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()` — do not paraphrase or inline. The **user prompt** inlines the surviving variant paths (`lifecycle/{{feature_slug}}/plan-variant-A.md`, etc.) and the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped before assigning `confidence: "high"` or `"medium"`, and to emit a JSON envelope per the schema in the system prompt fragment. The synthesizer is read-only; no worktree isolation is required.
+
+(4) **Envelope extraction (LAST-occurrence anchor)**: Parse the synthesizer Task sub-agent's output using the same LAST-occurrence anchor pattern as the canonical `skills/lifecycle/references/plan.md` §1b:
+
+```python
+import re
+matches = list(re.finditer(r'^<!--findings-json-->\s*$', synth_output, re.MULTILINE))
+if not matches:
+    envelope = None  # malformed: route as confidence=low
+else:
+    tail = synth_output[matches[-1].end():]
+    try:
+        envelope = json.loads(tail)
+        # Validate: schema_version=2, per_criterion (object), verdict in {A,B,C},
+        # confidence in {high,medium,low}, rationale (string).
+        if not (
+            envelope.get("schema_version") == 2
+            and isinstance(envelope.get("per_criterion"), dict)
+            and envelope.get("verdict") in ("A", "B", "C")
+            and envelope.get("confidence") in ("high", "medium", "low")
+            and isinstance(envelope.get("rationale"), str)
+        ):
+            envelope = None
+    except (json.JSONDecodeError, ValueError):
+        envelope = None
+```
+
+The `last occurrence` semantics tolerate prose that quotes the `<!--findings-json-->` delimiter earlier in the response.
+
+(5) **Route on verdict + confidence**:
+
+- **`verdict ∈ {"A","B","C"}` AND `confidence ∈ {"high","medium"}`**: copy the selected variant's content to `lifecycle/{{feature_slug}}/plan.md` (verdict `"A"` → `plan-variant-A.md`, `"B"` → `plan-variant-B.md`, `"C"` → tie at high/medium confidence is a logically impossible state per the synthesizer fragment, so treat as malformed and follow the deferred branch). Then append a v2 `plan_comparison` event to `lifecycle/{{feature_slug}}/events.log`:
+
+  ```python
+  with open(f"lifecycle/{f['slug']}/events.log", "a", encoding="utf-8") as fh:
+      fh.write(json.dumps({
+          "ts": "<ISO 8601 UTC>",
+          "event": "plan_comparison",
+          "schema_version": 2,
+          "feature": f["slug"],
+          "variants": [
+              {"label": "Plan A", "approach": "<summary>", "task_count": <N>, "risk": "<risk summary>"},
+              # plus Plan B (and Plan C if 3 variants survived)
+          ],
+          "selected": "Plan A",  # or "Plan B" / "Plan C"
+          "selection_rationale": envelope["rationale"],
+          "selector_confidence": envelope["confidence"],
+          "position_swap_check_result": "agreed",  # high/medium implies swap probe agreed
+          "disposition": "auto_select",  # overnight surface: no operator
+          "operator_choice": None,
+      }) + "\n")
+  ```
+
+  The `disposition: "auto_select"` value is reserved for the overnight surface; `operator_choice` is always `null` here. The round continues to Step 3c for this feature.
+
+- **`confidence: "low"` OR malformed envelope**: emit `PLAN_SYNTHESIS_DEFERRED` and mark the feature `deferred` in the orchestrator agent's exit-report envelope (worker-style exit-report wrapper):
+
+  ```python
+  log_event(
+      PLAN_SYNTHESIS_DEFERRED,
+      round={round_number},
+      feature=f["slug"],
+      details={
+          "reason": "low_confidence" if envelope else "malformed_envelope",
+          "selector_confidence": (envelope or {}).get("confidence", "low"),
+      },
+      log_path=Path("{events_path}"),
+  )
+  # In the orchestrator agent's final exit-report envelope, mark this feature:
+  #   {"slug": f["slug"], "status": "deferred", "reason": "synthesizer deferred (low confidence)"}
+  # runner.py routes the deferred feature through the existing
+  # cortex_command/overnight/deferral.py:write_deferral channel
+  # (worker-exit-report deferral path). This avoids introducing a new
+  # orchestrator-side deferral source.
+  ```
+
+  Also append a v2 `plan_comparison` event with `disposition: "deferred"`, `selector_confidence: "low"`, `selection_rationale: "synthesizer deferred"`, `position_swap_check_result: "disagreed"`, `selected: "none"`, `operator_choice: null`, `schema_version: 2` so the audit trail records the deferral.
+
+(6) **Synthesizer SDK error**: If the Opus synthesizer Task sub-agent crashes, times out, or the SDK call raises, treat the result as `confidence: "low"` for routing purposes. Emit `SYNTHESIZER_ERROR` **before** the `PLAN_SYNTHESIS_DEFERRED` event so post-session triage has both signals:
+
+```python
+log_event(
+    SYNTHESIZER_ERROR,
+    round={round_number},
+    feature=f["slug"],
+    details={"error": str(exc), "stage": "synthesizer_dispatch"},
+    log_path=Path("{events_path}"),
+)
+# then proceed with the deferred branch in (5) above
+```
+
+(7) **Anti-sway role separation**: The synthesizer Task sub-agent is dispatched fresh — it shares no context with the variant plan-gen sub-agents from (1) and no context with the orchestrator agent itself. Enforced by issuing a NEW Task sub-agent each time, never reusing a prior agent's session.
+
+(8) **Fall-through to single-agent path**: After processing all critical-tier features in `critical_subset`, the orchestrator agent dispatches the **remaining** non-critical features in `single_agent_subset` through the existing single-agent path immediately below. Critical-tier features whose synthesizer auto-selected a variant have already had their `plan.md` written and skip the dispatch template entirely; deferred critical-tier features are marked `deferred` in the exit-report envelope and excluded from this round.
+
 Each sub-agent receives:
 
 <substitution_contract>

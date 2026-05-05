@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 23e7753d-b28a-4413-b5ab-34354f98568a
 title: "Build shared autonomous synthesis for critical-tier dual-plan flow (interactive + overnight)"
-status: open
+status: complete
 priority: high
 type: epic
 created: 2026-05-04

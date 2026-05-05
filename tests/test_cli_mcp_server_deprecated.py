@@ -3,7 +3,7 @@
 Verifies three behaviors required by spec R7 / plan Task 14:
 
   (a) ``cortex mcp-server`` exits non-zero and stderr names the migration
-      target ``cortex-overnight-integration``.
+      target ``cortex-overnight``.
   (b) After a successful ``cortex upgrade``, stderr emits a one-line notice
       pointing users at the new ``uv run ${CLAUDE_PLUGIN_ROOT}/server.py``
       invocation form.
@@ -68,7 +68,7 @@ class TestMcpServerDeprecationStub(unittest.TestCase):
             ),
         )
         self.assertIn(
-            "cortex-overnight-integration",
+            "cortex-overnight",
             proc.stderr,
             msg=f"stderr missing migration target: {proc.stderr!r}",
         )

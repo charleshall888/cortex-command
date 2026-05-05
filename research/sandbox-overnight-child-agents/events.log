@@ -1,0 +1,2 @@
+{"ts": "2026-05-04T16:30:00Z", "event": "orchestrator_review", "feature": "sandbox-overnight-child-agents", "phase": "research", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-04T17:00:00Z", "event": "critical_review_applied", "feature": "sandbox-overnight-child-agents", "phase": "research", "objections_count": 9, "applied": 8, "dismissed": 1, "ask": 1}

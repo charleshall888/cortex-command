@@ -99,7 +99,7 @@ The legacy install path remains functional for users who prefer it; the no-clone
 ## What changed under the hood
 
 - The CLI is now installed as a non-editable wheel, not an editable install pointing at a clone.
-- `cortex upgrade` is now an **advisory wrapper**: it prints instructions and exits 0. The CLI cannot self-upgrade because the wheel for any version `vN` can only declare "I am vN" and has no way to discover newer tags. The actual upgrade arrow flows plugin → CLI via the MCP first-install hook in the `cortex-overnight-integration` plugin.
+- `cortex upgrade` is now an **advisory wrapper**: it prints instructions and exits 0. The CLI cannot self-upgrade because the wheel for any version `vN` can only declare "I am vN" and has no way to discover newer tags. The actual upgrade arrow flows plugin → CLI via the MCP first-install hook in the `cortex-overnight` plugin.
 - `cortex --print-root` JSON envelope bumped from `version: "1.0"` to `"1.1"` — additive: a new `package_root` field was added, and `root` now consistently means "user's project root" (no longer "package install location, which equaled the clone under editable mode").
 - All package-internal data lookups (prompts, templates) now use `importlib.resources.files(...)` so they resolve under both editable and non-editable installs.
 - All user-data lookups (lifecycle/, backlog/, sessions/) now resolve at call time via `_resolve_user_project_root()`, which respects `CORTEX_REPO_ROOT` or falls back to `Path.cwd()`.
@@ -112,7 +112,7 @@ If you hit any issue, the `cortex --print-root --format json` output is the diag
 
 After this migration completes, your normal upgrade path is one of:
 
-- **MCP-driven (recommended)**: keep `cortex-overnight-integration` plugin's auto-update enabled in Claude Code; the plugin's embedded `CLI_PIN[0]` tag bump triggers the MCP first-install hook on the next tool call, which auto-runs `uv tool install --reinstall git+...@<new-tag>`.
+- **MCP-driven (recommended)**: keep `cortex-overnight` plugin's auto-update enabled in Claude Code; the plugin's embedded `CLI_PIN[0]` tag bump triggers the MCP first-install hook on the next tool call, which auto-runs `uv tool install --reinstall git+...@<new-tag>`.
 - **Manual**: run `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<tag>` whenever you want to bump.
 
 `cortex upgrade` from a bare shell will print these two paths as advisory output and exit 0.

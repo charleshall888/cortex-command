@@ -228,15 +228,38 @@ Discipline obligations on every future production code site (the static gate at 
 
 The file persists indefinitely under current archival policy: this project does not auto-archive `lifecycle/sessions/`, so directories (and their lockfiles) accumulate until manually cleaned. After a reboot the kernel `flock` state is gone but the 0-byte file remains; the next runner reopens it on a fresh inode-with-no-locks and acquires immediately. This is benign for correctness and is the documented backwards-compat / rollback path.
 
-### Scheduled Launch subsystem
+### Scheduled Launch (LaunchAgent-based scheduler)
 
-`bin/overnight-schedule` is the delayed-start wrapper that defers invocation of `overnight-start` until a specific wall-clock time, so operators can queue an overnight from the evening for a late-night kickoff without leaving a shell open.
+`cortex overnight schedule <target>` schedules a single overnight run at a future time without requiring tmux or a persistent shell session. Under the hood it delegates to `MacOSLaunchAgentBackend.schedule()`, which renders a plist into `$TMPDIR/cortex-overnight-launch/`, writes a paired bash launcher alongside it, and calls `launchctl bootstrap gui/$(id -u)` to register the job with launchd. At fire time launchd executes the launcher, which detaches `cortex overnight start --launchd` into its own process group. No tmux session is created or required; the runner writes its own `runner.pid` artifact and operates identically to a manually-launched session.
 
-**Files**: `bin/overnight-schedule` (user-facing setup path + internal `__launch` path), `bin/overnight-start` (invoked via `exec` when the delay elapses).
+**Usage**:
 
-**Inputs**: target time as `HH:MM` or `YYYY-MM-DDTHH:MM`, plus the same positional args `overnight-start` accepts (state path, time limit, max rounds, tier).
+```sh
+# Schedule for a specific time (ISO-8601 or plain HH:MM on today's date)
+cortex overnight schedule 23:30
 
-Behavior: the setup path validates the target time (rejects past times, caps delay at 7 days, rolls `HH:MM` forward to tomorrow if today has passed), writes `scheduled_start` into the state file for dashboard visibility, and spawns a detached `tmux` session named `overnight-scheduled[-N]` that re-execs itself with a `__launch` argument. Inside `__launch`, the script runs `caffeinate -i sleep $DELAY` to keep the Mac awake through the wait, clears `scheduled_start` from the state file, and `exec`s `overnight-start` with the forwarded args. There is no dedicated log file — the tmux pane is the log; `tmux attach -t overnight-scheduled` is the only way to see what it is doing before the handoff to `overnight-start`.
+# List pending scheduled runs
+cortex overnight cancel --list
+
+# Cancel a pending scheduled run by session_id
+cortex overnight cancel <session_id>
+```
+
+**Operational caveats**:
+
+- **Machine must be powered on and awake at fire time.** macOS lid-close sleep suspends launchd job firing. A laptop closed before the scheduled time will not fire until the machine wakes — by which point the scheduled time has passed and the job will not retry. Keep the machine powered on and not sleeping (display sleep is fine; system sleep is not).
+- **Locked screen is fine.** A locked screen does not block launchd execution; scheduled runs fire normally when the screen is locked.
+- **Reboot drops pending schedules.** launchd's bootstrap namespace is rebuilt on each boot from persistent plist sources in `/Library/LaunchAgents/` and `~/Library/LaunchAgents/`; cortex registers into the per-session `gui/$(id -u)` namespace using plists in `$TMPDIR`, which is not persisted across reboots. After a reboot, re-schedule any pending runs with `cortex overnight schedule <target>`.
+- **SSH and headless contexts are not supported.** The LaunchAgent backend targets the logged-in GUI session (`gui/$(id -u)`). Running `cortex overnight schedule` over SSH or in a headless CI context where no GUI session exists will fail at bootstrap time.
+
+**TCC / Full Disk Access requirement**: the cortex binary needs Full Disk Access on macOS to read and write `lifecycle/` paths during overnight execution. Grant access to the binary path printed by `which cortex` in **System Settings → Privacy & Security → Full Disk Access**. TCC authorization is not checked at schedule time — a missing grant surfaces only at fire time as a fail marker in the morning report, not as an error when you run `cortex overnight schedule`.
+
+**Cancel and list**:
+
+```sh
+cortex overnight cancel --list    # show pending LaunchAgent jobs and their fire times (also shows active runners)
+cortex overnight cancel <session_id>  # unbootstrap and remove the pending job by session_id
+```
 
 ---
 
@@ -366,7 +389,7 @@ Every overnight session persists state as files under `lifecycle/`. The runner r
 | `lifecycle/sessions/{id}/pipeline-events.log` | `cortex_command/pipeline/events.py` via `batch_runner` | Append-only JSONL of per-task dispatch/merge/test events inside each feature. |
 | `lifecycle/sessions/{id}/overnight-strategy.json` | `cortex_command/overnight/strategy.py` (`save_strategy` — atomic tempfile + `os.replace`) | Cross-round strategy: `hot_files`, `integration_health`, `recovery_log_summary`, `round_history_notes`. |
 | `lifecycle/sessions/{session_id}/escalations.jsonl` | `cortex_command/overnight/deferral.py` (`write_escalation`) | Append-only JSONL of worker escalations, orchestrator resolutions, and cycle-break promotions. |
-| `lifecycle/{feature}/events.log` | `cortex_command/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/cortex-interactive:lifecycle resume` and `/morning-review`. |
+| `lifecycle/{feature}/events.log` | `cortex_command/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/cortex-core:lifecycle resume` and `/morning-review`. |
 | `lifecycle/{feature}/agent-activity.jsonl` | `cortex_command/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
 | `lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
 | `lifecycle/morning-report.md` | `cortex_command/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). Runner emits `morning_report_generate_result` and `morning_report_commit_result` events to `overnight-events.log` around the write + commit so the operator can confirm the file landed on `main`. |
@@ -489,7 +512,7 @@ Overnight writes several JSONL logs at different scopes. Pick the one that match
 |----------|----------------|
 | `lifecycle/overnight-events.log` | Investigating round boundaries, session-level circuit breakers, or feature-start/feature-complete markers — anything that needs a chronological view across all features in one session. |
 | `lifecycle/sessions/{id}/pipeline-events.log` | Investigating dispatch/merge/test outcomes for individual tasks within a feature (`dispatch_start`, `dispatch_complete`, `merge_start`, `merge_success`, `task_idempotency_skip`). |
-| `lifecycle/{feature}/events.log` | Investigating phase transitions, review verdicts, and completion for one feature — what `/cortex-interactive:lifecycle resume` and `/morning-review` read. |
+| `lifecycle/{feature}/events.log` | Investigating phase transitions, review verdicts, and completion for one feature — what `/cortex-core:lifecycle resume` and `/morning-review` read. |
 | `lifecycle/{feature}/agent-activity.jsonl` | Investigating what tools an agent actually invoked inside a dispatch and whether they succeeded — the "what did the worker really do" log. |
 | `lifecycle/sessions/{session_id}/escalations.jsonl` | Investigating which features blocked on questions, how the orchestrator answered, and which were cycle-break-promoted to deferrals. |
 
