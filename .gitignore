@@ -24,7 +24,6 @@ __pycache__/
 # Dashboard dev artifacts
 claude/dashboard/node_modules/
 claude/dashboard/package-lock.json
-claude/dashboard/.pid
 
 # Lifecycle runtime artifacts
 lifecycle/*/agent-activity.jsonl

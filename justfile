@@ -101,7 +101,7 @@ dashboard_port := env_var_or_default("DASHBOARD_PORT", "8080")
 dashboard:
     #!/usr/bin/env bash
     set -e
-    PID_FILE="cortex_command/dashboard/.pid"
+    PID_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid"
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")
         if kill -0 "$PID" 2>/dev/null; then

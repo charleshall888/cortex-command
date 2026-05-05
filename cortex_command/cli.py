@@ -11,6 +11,7 @@ per R1-R4 / R20.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 from cortex_command.init.handler import main as init_main
@@ -229,6 +230,49 @@ def _dispatch_print_root(_args: argparse.Namespace) -> int:
         "head_sha": head_sha,
     }
     print(json.dumps(payload))
+    return 0
+
+
+def _dispatch_dashboard(args: argparse.Namespace) -> int:
+    """Launch the dashboard FastAPI app on localhost via in-process uvicorn.
+
+    Strategy (A) per spec §12 / Task 6: import ``uvicorn`` and call
+    ``uvicorn.run("cortex_command.dashboard.app:app", ...)`` directly,
+    avoiding ``uv run`` subshell ambiguity and orphaned-subprocess risks.
+    Ctrl-C/SIGTERM in the parent shell propagates naturally because the
+    verb itself blocks until uvicorn exits.
+
+    Port resolution priority (highest first):
+      1. ``--port`` flag (verb argparse)
+      2. ``DASHBOARD_PORT`` env var
+      3. Default 8080
+
+    The chosen port is exported to ``DASHBOARD_PORT`` before
+    ``uvicorn.run()`` so that any downstream readers in the FastAPI app
+    see the same value the verb resolved (single source of truth).
+
+    The PID file is written by the FastAPI app's lifespan to the
+    XDG-compliant location resolved by
+    :func:`cortex_command.dashboard.app._resolve_pid_path` —
+    ``$XDG_CACHE_HOME/cortex/dashboard.pid`` with ``~/.cache/cortex/``
+    fallback. The package directory is never written to (works under
+    installed-wheel layout where the package install is read-only).
+    """
+
+    import uvicorn
+
+    port = int(args.port)
+    # Make the resolved port visible to any in-process consumer that reads
+    # ``DASHBOARD_PORT`` (preserves backward compatibility for code that
+    # honored the env var before the ``--port`` flag existed).
+    os.environ["DASHBOARD_PORT"] = str(port)
+
+    uvicorn.run(
+        "cortex_command.dashboard.app:app",
+        host="127.0.0.1",
+        port=port,
+        log_level="info",
+    )
     return 0
 
 
@@ -624,6 +668,28 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Remove the repo from the Cortex registry without modifying files",
     )
     init.set_defaults(func=init_main)
+
+    dashboard = subparsers.add_parser(
+        "dashboard",
+        help="Launch the dashboard web UI on localhost",
+        description=(
+            "Launch the agent monitoring dashboard (FastAPI + uvicorn) "
+            "on localhost. Writes its PID to "
+            "$XDG_CACHE_HOME/cortex/dashboard.pid (or "
+            "~/.cache/cortex/dashboard.pid). Blocks until interrupted; "
+            "Ctrl-C cleanly terminates the server."
+        ),
+    )
+    dashboard.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("DASHBOARD_PORT", "8080")),
+        help=(
+            "TCP port to bind on 127.0.0.1 (default: 8080; honors "
+            "DASHBOARD_PORT env var as fallback)"
+        ),
+    )
+    dashboard.set_defaults(func=_dispatch_dashboard)
 
     upgrade = subparsers.add_parser(
         "upgrade",

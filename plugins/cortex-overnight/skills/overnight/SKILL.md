@@ -205,9 +205,9 @@ On user approval, execute these steps in order:
 
    **Error**: If `log_event()` fails, report: "Failed to log session start event: {error}." Continue — logging failure is non-fatal.
 
-6. **Launch the dashboard** (if not already running): Check whether the dashboard is live by reading `cortex_command/dashboard/.pid`. If the file exists and the stored PID is alive (`kill -0 $(cat cortex_command/dashboard/.pid)` exits 0), the dashboard is already running — note the URL and skip launch. Otherwise, instruct the user to run `just dashboard` in a separate terminal before starting the runner, or explain that they can launch it at any time during the session. Poll `GET http://localhost:8080/health` for a 200 response (up to 5 seconds, 1-second intervals); if successful, note "Dashboard available at http://localhost:8080" in the session start message.
+6. **Launch the dashboard** (if not already running): Check whether the dashboard is live by reading `${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid`. If the file exists and the stored PID is alive (`kill -0 $(cat "${XDG_CACHE_HOME:-$HOME/.cache}/cortex/dashboard.pid")` exits 0), the dashboard is already running — note the URL and skip launch. Otherwise, instruct the user to run `cortex dashboard` (installer-tier) or `just dashboard` (clone-only) in a separate terminal before starting the runner, or explain that they can launch it at any time during the session. Poll `GET http://localhost:8080/health` for a 200 response (up to 5 seconds, 1-second intervals); if successful, note "Dashboard available at http://localhost:8080" in the session start message.
 
-    **Error**: If the dashboard health check times out or the `.pid` file is unreadable, continue without failing — the dashboard is optional. Report: "Dashboard not detected at http://localhost:8080. Run `just dashboard` in a separate terminal to enable live progress monitoring."
+    **Error**: If the dashboard health check times out or the PID file is unreadable, continue without failing — the dashboard is optional. Report: "Dashboard not detected at http://localhost:8080. Run `cortex dashboard` in a separate terminal to enable live progress monitoring."
 
 7. **Execute the runner command**: Ask the user whether to run now or schedule for later using AskUserQuestion:
 

@@ -15,11 +15,8 @@ from __future__ import annotations
 
 import asyncio
 import atexit
-import errno
 import importlib.resources
 import os
-import socket
-import sys
 from contextlib import ExitStack, asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -194,26 +191,29 @@ templates.env.filters["badge_icon"] = _badge_icon
 templates.env.filters["format_date"] = _format_date
 
 # ---------------------------------------------------------------------------
-# PID file path and port conflict check
+# PID file path (XDG-compliant)
 # ---------------------------------------------------------------------------
 
-_pid_file: Path = Path(__file__).parent / ".pid"
+
+def _resolve_pid_path() -> Path:
+    """Return the XDG-compliant dashboard PID-file path.
+
+    Honors ``XDG_CACHE_HOME`` when set, falling back to ``~/.cache``. The
+    parent directory (``<cache>/cortex/``) is created if missing so callers
+    can write the PID without first probing for the directory's existence.
+
+    This resolver is the single source of truth shared across the
+    ``cortex dashboard`` verb (cli.py), the FastAPI app (this module), the
+    overnight runner's liveness probe (skills/overnight/SKILL.md L208), and
+    the contributor-facing ``just dashboard`` recipe (justfile).
+    """
+    cache_home = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+    pid_dir = Path(cache_home) / "cortex"
+    pid_dir.mkdir(parents=True, exist_ok=True)
+    return pid_dir / "dashboard.pid"
 
 
-def _check_port(port: int) -> None:
-    """Exit with code 1 if the given TCP port is already in use."""
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
-            sock.bind(("127.0.0.1", port))
-    except OSError as exc:
-        if exc.errno in (errno.EADDRINUSE, errno.EACCES):
-            print(
-                f"Port {port} is in use. "
-                f"Set DASHBOARD_PORT=<port> to use a different port.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
+_pid_file: Path = _resolve_pid_path()
 
 
 # ---------------------------------------------------------------------------
@@ -223,8 +223,11 @@ def _check_port(port: int) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    port = int(os.environ.get("DASHBOARD_PORT", "8080"))
-    _check_port(port)
+    # Note: no port pre-bind check here — uvicorn binds the port itself in
+    # the parent process before the lifespan runs, so a lifespan-time
+    # ``socket.bind()`` would collide with uvicorn's already-held socket.
+    # Pre-bind availability checks belong in the verb (cli.py) before
+    # ``uvicorn.run()`` is invoked.
 
     root = _root()
     if not (root / ".claude").exists():
