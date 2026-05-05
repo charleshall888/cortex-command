@@ -125,6 +125,8 @@ The synthesizer is dispatched as a fresh Task sub-agent — it shares no context
 
   Omit the Plan C column if only 2 agents were dispatched or only 2 succeeded. Ask the operator to select a variant or reject all. On selection, write the selected variant's content to `lifecycle/{feature}/plan.md`. On rejection, fall back to the standard single-plan flow (§2-§3) in the main context.
 
+  When presenting the comparison, surface to the operator that a `plan_comparison` may also be resolved by **combining variants** — selecting one variant as the base and grafting a named task or module from another variant into it (a cross-graft producing a combined plan). This has historical precedent in past lifecycles where ~1/4 of the chosen variant's tasks came from a sibling variant. Record the graft in the §1b.g event log via `selection_rationale` (e.g. `"operator graft: Plan A base + Plan B Task 3"`) and write the combined plan content to `lifecycle/{feature}/plan.md`.
+
 **g. Log v2 `plan_comparison` event**: Append a JSONL event to `lifecycle/{feature}/events.log` with `schema_version: 2` plus the five new fields:
 
 ```
