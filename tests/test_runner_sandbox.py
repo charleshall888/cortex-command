@@ -103,6 +103,7 @@ def test_orchestrator_spawn_includes_settings_flag(tmp_path: Path) -> None:
             stdout_path=stdout_path,
             state=state,
             session_dir=session_dir,
+            round_num=0,
         )
 
     argv = captured["argv"]
