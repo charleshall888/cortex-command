@@ -241,3 +241,34 @@
   batch: 3
   status: success
   note: "bin/cortex-check-parity extended with _check_sandbox_preflight_gate: (a) staged diff-hunk grep across 4 watched files (dispatch.py, runner.py, sandbox_settings.py, pyproject.toml); (b) structured YAML schema validation (10 required fields, type + semantic checks); (c) commit_hash freshness check vs HEAD~ (resolves to plain HEAD since gate runs pre-commit and recorded hash binds to preflight-time HEAD); (d) claude --version drift check. preflight.md authored as schema skeleton with pass:false + <PENDING_HUMAN_RUN> placeholders per task instructions (real human pre-flight run not feasible in this implementation context). All three fixture tests pass: F1 SDK pin bump → E100 missing-preflight; F2 claude-version drift → E103; F3 _spawn_orchestrator → _build_orchestrator_argv rename → E100 (gate fires via 'sandbox' keyword in renamed docstring/diff hunk). Negative test confirmed: gate silent on unrelated changes. Self-test still passes."
+
+- ts: 2026-05-05T13:38:00Z
+  event: batch_dispatch
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  batch: 4
+  tasks: [14]
+  dispatch_mode: in_orchestrator_no_subagent
+  note: "Task 14 is verification-only (CLAUDE.md line count); handled directly without sub-agent dispatch."
+
+- ts: 2026-05-05T13:38:00Z
+  event: task_complete
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  task: 14
+  batch: 4
+  status: success
+  note: "wc -l CLAUDE.md = 68 (≤ 100). No code change required per task expectation. No commit."
+
+- ts: 2026-05-05T13:38:30Z
+  event: batch_dispatch
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  batch: 5
+  tasks: [13]
+  dispatch_mode: sequential_current_branch
+
+- ts: 2026-05-05T14:05:00Z
+  event: task_complete
+  feature: apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites
+  task: 13
+  batch: 5
+  status: success
+  note: "First `just test` run revealed 10 failing tests in cortex_command/pipeline/tests/test_dispatch.py — 5 in TestDispatchTaskSandboxSettings asserting OLD `sandbox.write.allowOnly` inline-JSON-string contract that Task 5 deliberately replaced with `sandbox.filesystem.{allowWrite,denyWrite}` filepath-tempfile contract; 5 in TestProjectSettingsPropagation asserting blob-injection behavior deliberately removed by spec Req 6. Updated 5 sandbox-allowlist tests in-place (read JSON from tempfile path, use new keys); deleted TestProjectSettingsPropagation entirely (replaced by inline doc-comment pointing to tests/test_dispatch.py::test_no_blob_injection which covers the negative assertion per Req 6). Plan-scope gap: Tasks 5 + 10 should have updated these pre-existing tests in their commits; documenting the remediation here as part of Task 13. After fix, `just test` exits 0 with all 6 sub-suites pass; byte-identical dry-run snapshot test test_runner_pr_gating.py::test_dry_run_stdout_byte_identical also passes."

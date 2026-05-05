@@ -241,7 +241,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - `just test` is the canonical test entry per `CLAUDE.md` Commands section.
   - Dry-run snapshot at `tests/fixtures/dry_run_reference.txt` per `requirements/pipeline.md:27`.
 - **Verification**: `just test` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (full `just test` exits 0, all 6 sub-suites pass; byte-identical dry-run snapshot test `tests/test_runner_pr_gating.py::test_dry_run_stdout_byte_identical` passes. Plan-scope gap: pre-existing tests `cortex_command/pipeline/tests/test_dispatch.py::TestDispatchTaskSandboxSettings` (5 tests) asserted the OLD inline-JSON `sandbox.write.allowOnly` shape that Task 5 deliberately replaced with the `sandbox.filesystem.{allowWrite,denyWrite}` tempfile-path contract; updated those 5 tests in-place to read JSON from the captured tempfile and use the new keys. Pre-existing class `TestProjectSettingsPropagation` (5 tests) asserted blob-injection behavior deliberately removed by spec Req 6; deleted the class and replaced it with a doc-comment pointing at `tests/test_dispatch.py::test_no_blob_injection` which covers the negative assertion. Tasks 5/10 should have included these test updates; documenting the cleanup here.)
 
 ### Task 14: CLAUDE.md 100-line cap check
 - **Files**: `CLAUDE.md`, `docs/policies.md` (created only if cap crossed)
@@ -252,7 +252,7 @@ Centralize all sandbox-settings construction, tempfile lifecycle, deny-set/allow
   - Current CLAUDE.md line count: 68.
   - Threshold check: line that crosses 100 triggers extraction.
 - **Verification**: `[ $(wc -l < CLAUDE.md) -le 100 ]` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (verification-only; CLAUDE.md is 68 lines, well under 100-line cap; no code change needed; no commit)
 
 ## Verification Strategy
 
