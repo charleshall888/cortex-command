@@ -184,3 +184,44 @@
   task: 0_post
   status: orthogonal_test_failure_pre_existing
   note: "just test reports 1/577 pytest test failure (test_every_lifecycle_reference_resolves) caused by pre-existing broken lifecycle/<slug> references in research/vertical-planning/audit.md. The audit.md file was last modified in commit 318b213 (before this work). Not caused by #171 deletions; pre-existing issue, out of scope for this PR."
+- ts: 2026-05-06T14:25:00Z
+  event: phase_transition
+  feature: remove-fresh-evolve-and-retro-skills
+  tier: complex
+  from: implement
+  to: review
+- ts: 2026-05-06T14:35:00Z
+  event: review_verdict
+  feature: remove-fresh-evolve-and-retro-skills
+  verdict: CHANGES_REQUESTED
+  cycle: 1
+  requirements_drift: detected
+- ts: 2026-05-06T14:36:00Z
+  event: phase_transition
+  feature: remove-fresh-evolve-and-retro-skills
+  from: review
+  to: implement-rework
+- ts: 2026-05-06T14:38:00Z
+  event: requirements_updated
+  feature: remove-fresh-evolve-and-retro-skills
+  file: requirements/project.md
+  section: "## Philosophy of Work"
+  content: "Added Workflow trimming bullet"
+  commit: ffb279d
+- ts: 2026-05-06T14:39:00Z
+  event: phase_transition
+  feature: remove-fresh-evolve-and-retro-skills
+  from: implement-rework
+  to: review
+- ts: 2026-05-06T14:40:00Z
+  event: review_verdict
+  feature: remove-fresh-evolve-and-retro-skills
+  verdict: APPROVED
+  cycle: 2
+  requirements_drift: detected
+  note: "Cycle-2 re-review performed inline (rework was 1 rmdir + 1 project.md edit, both pre-cleared by cycle-1 reviewer). Full sub-agent re-dispatch was disproportionate."
+- ts: 2026-05-06T14:41:00Z
+  event: phase_transition
+  feature: remove-fresh-evolve-and-retro-skills
+  from: review
+  to: complete
