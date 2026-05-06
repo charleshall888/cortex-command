@@ -89,7 +89,7 @@
     "uuid": "79d84275-ae0a-4ace-8398-ac14fca43497",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -250,41 +250,6 @@
     "repo": null
   },
   {
-    "id": 178,
-    "title": "Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry)",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "lifecycle",
-      "refine",
-      "critical-review",
-      "discovery",
-      "skill-design",
-      "descriptions",
-      "oq3",
-      "vertical-planning"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-06",
-    "updated": "2026-05-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "172",
-    "research": null,
-    "spec": "lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/spec.md",
-    "discovery_source": "research/vertical-planning/research.md",
-    "plan": null,
-    "uuid": "a978360e-228a-4b86-b9c5-bf059ab8c5a2",
-    "lifecycle_slug": null,
-    "session_id": "ecb72c6d-da94-4e7c-85ef-3dab47c98ac2",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 179,
     "title": "Extract conditional content blocks to references/ (a-b-downgrade-rubric + implement-daytime — trimmed scope)",
     "status": "backlog",
@@ -370,9 +335,7 @@
     "created": "2026-05-06",
     "updated": "2026-05-06",
     "blocks": [],
-    "blocked_by": [
-      "178"
-    ],
+    "blocked_by": [],
     "parent": "172",
     "research": null,
     "spec": "lifecycle/skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/spec.md",

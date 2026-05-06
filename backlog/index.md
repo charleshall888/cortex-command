@@ -10,10 +10,9 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 169 | Fix archive predicate and sweep lifecycle/ and research/ dirs | in_progress | medium | feature | 166, 168 | 165 | — |
 | 170 | Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh | backlog | medium | bug | — | — | — |
-| 178 | Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry) | in_progress | medium | chore | — | 172 | ✓ |
 | 179 | Extract conditional content blocks to references/ (a-b-downgrade-rubric + implement-daytime — trimmed scope) | backlog | medium | chore | 175, 177 | 172 | — |
 | 180 | Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional) | backlog | medium | chore | — | 172 | — |
-| 181 | Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget) | refined | medium | chore | 178 | 172 | ✓ |
+| 181 | Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget) | refined | medium | chore | — | 172 | ✓ |
 | 183 | Migrate Gate 1 (research→specify Open-Questions escalation) to Python hook; remove Gate 2 entirely | backlog | medium | feature | 177 | 172 | — |
 | 184 | Merge clarify and research lifecycle phases into single investigate phase | backlog | medium | feature | — | — | — |
 | 185 | Audit /cortex-core:research skill output shape for token waste in research.md sections | backlog | medium | chore | — | — | — |
@@ -23,6 +22,7 @@
 
 ## Refined
 
+- **181** Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget)
 
 ## Backlog
 
@@ -39,7 +39,6 @@
 ## In-Progress
 
 - **169** Fix archive predicate and sweep lifecycle/ and research/ dirs (in_progress)
-- **178** Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry) (in_progress)
 
 ## Warnings
 
