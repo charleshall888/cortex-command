@@ -64,7 +64,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
   - `grep -c "cortex_command.common" skills/lifecycle/SKILL.md` ≥ 1.
   - `grep -c "underscores become hyphens, not stripped" skills/lifecycle/SKILL.md` = 0.
   - `python3 -c "import yaml; doc = open('skills/lifecycle/SKILL.md').read().split('---',2); fm = yaml.safe_load(doc[1]); d = fm.get('description', ''); print('FAIL: description >1024 chars (%d)' % len(d)) if len(d) > 1024 else print('OK')"` — pass if output is `OK`. (Uses `yaml.safe_load` so multi-line block scalars and folded styles measure correctly.)
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Edit `skills/critical-review/SKILL.md` (R1 TOC + R2 when_to_use + R4 U1 trim + R6 frontmatter symmetry)
 
