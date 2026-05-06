@@ -22,7 +22,7 @@ Three new pytest test files (`test_skill_descriptions.py`, `test_skill_handoff.p
   - **Plugin-mirror dedup**: the cortex-core plugin's SKILL.md files are byte-identical regular-file copies (not symlinks) of canonical. `Path.resolve()` won't dedup them. The generic `enumerate_skills` helper accepts an optional `dedupe_by_content: bool = False` flag; `enumerate_plugin_skills()` passes `dedupe_by_content=True` to remove byte-identical duplicates against the canonical set, preventing dual failure messages on cap breaches. Implementation: hash each file's bytes via `hashlib.sha256`, dedup by hash when the flag is set. The regression-variant test from Task 5 calls the generic `enumerate_skills` directly with `dedupe_by_content=False`.
   - Pattern reference: `tests/test_check_parity.py` for stdlib parsing convention; `tests/test_lifecycle_references_resolve.py` for REPO_ROOT discovery convention.
 - **Verification**: behavioral smoke test — `uv run python3 -c "import sys; sys.path.insert(0, 'tests'); from conftest import repo_root, enumerate_skills, enumerate_canonical_skills, enumerate_plugin_skills, parse_skill_frontmatter; assert callable(repo_root) and callable(enumerate_skills) and callable(enumerate_canonical_skills) and callable(enumerate_plugin_skills) and callable(parse_skill_frontmatter); skills = enumerate_canonical_skills(); assert len(skills) >= 10; fm = parse_skill_frontmatter(skills[0]); assert 'name' in fm or 'description' in fm; print('PASS')"` exits 0 with `PASS` printed — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 2d41857)
 
 ### Task 2: Test #1 — trigger-phrase corpus + canonical assertion + regression fixture
 - **Files**:
@@ -30,7 +30,7 @@ Three new pytest test files (`test_skill_descriptions.py`, `test_skill_handoff.p
   - `tests/test_skill_descriptions.py` (NEW)
   - `tests/fixtures/skill_design/skills/regression-fixture/SKILL.md` (NEW)
   - `tests/fixtures/skill_design/regression_skill_trigger_phrases.yaml` (NEW)
-- **What**: Create the trigger-phrase fixture YAML covering lifecycle/refine/critical-review/discovery skills (sourced from current canonical SKILL.md descriptions on this branch — #178 is `status: complete`), the parametrized canonical-skill assertion test, and a regression-fixture variant that proves the failure-detection path works on a synthetic SKILL.md missing a declared phrase.
+- **What**: Create the trigger-phrase fixture YAML covering the four primary skills (lifecycle, refine, critical-review, discovery — sourced from current canonical SKILL.md descriptions on this branch, #178 is `status: complete`), the parametrized canonical-skill assertion test, and a regression-fixture variant that proves the failure-detection path works on a synthetic SKILL.md missing a declared phrase.
 - **Depends on**: [1]
 - **Complexity**: simple
 - **Context**:
@@ -108,7 +108,7 @@ Three new pytest test files (`test_skill_descriptions.py`, `test_skill_handoff.p
   - **Reading prerequisite**: implementer must read `tests/test_lifecycle_references_resolve.py` in full before editing — the existing `FORM_REGEXES` mapping name and the per-form coverage gate location are derived from current file structure, not pre-pinned in this plan. Plan to spend ~3 minutes on this read before opening the editor.
   - Caller enumeration: `tests/test_lifecycle_references_resolve.py` is a test file with no callers (test runners discover it). Modification is local.
 - **Verification**: `uv run pytest tests/test_lifecycle_references_resolve.py -q` exits 0 (canonical + regression variants); AND `grep -c file_line_citation tests/test_lifecycle_references_resolve.py` returns ≥ 2 — pass if both conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commits 7b2a6f8 + 94f58ba — drift remediation across 6 files)
 
 ### Task 5: Test #4 — size-budget enumerator, cap, marker regex, and regression fixtures
 - **Files**:
