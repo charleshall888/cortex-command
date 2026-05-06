@@ -56,8 +56,8 @@ This artifact therefore treats the effort as a **prompt-delta audit plus targete
 | P2 | Ambiguous conditional bypass (`Only X satisfies this check ... If Y, always run Z`) | `refine/SKILL.md:83`; `lifecycle/SKILL.md:112` | Model conflates skip-condition scope with subsequent unrelated instructions | 4 skills | MED-HIGH |
 | P3 | Negation-only prohibition (`Do not be balanced. Do not cover other angles.`) | `critical-review/SKILL.md:103`; `verification-mindset.md:44-51` | Under 4.6, negation implied inverse; under 4.7, binary negation without inferred positive → drops caveats | 6+ sites | MED |
 | P4 | Multi-condition gate with implicit short-circuit | `lifecycle/SKILL.md:152`; `refine/SKILL.md:69-87` | 4.7 fails to infer implicit control flow when bypass detection is natural-language-stated | 3+ skills | MED-HIGH |
-| P5 | Procedural order dependency (`do not omit, reorder, or paraphrase`) | `pr/SKILL.md:38-46`; `lifecycle/references/implement.md:189` | 4.7 treats "do not reorder" literally → refuses semantically-equivalent reordering | 4+ skills | MED |
-| P6 | Examples-as-exhaustive lists (`Select from this menu`, `such as`) | `critical-review/SKILL.md:32-49` Angle Menu; `lifecycle/references/review.md:59` | 4.7 treats illustrative lists as closed sets → refuses to derive custom angles | 3+ skills | MED |
+| P5 | Procedural order dependency (`do not omit, reorder, or paraphrase`) | `pr/SKILL.md:38-46`; `skills/lifecycle/references/implement.md:189` | 4.7 treats "do not reorder" literally → refuses semantically-equivalent reordering | 4+ skills | MED |
+| P6 | Examples-as-exhaustive lists (`Select from this menu`, `such as`) | `critical-review/SKILL.md:32-49` Angle Menu; `skills/lifecycle/references/review.md:59` | 4.7 treats illustrative lists as closed sets → refuses to derive custom angles | 3+ skills | MED |
 
 ### Five observed-failure patterns (already being remediated in flight)
 

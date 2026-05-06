@@ -12,10 +12,10 @@ A `<slug>` matches `re.fullmatch(r"[a-z0-9][a-z0-9-]*", slug)` (canonical defini
 
 R10's citation extraction recognizes exactly five forms:
 
-- **Slash-path body or frontmatter path field**: `lifecycle/<slug>/<path>` — anchored as `(?:^|[^A-Za-z0-9_/-])lifecycle/(?P<slug>[a-z0-9][a-z0-9-]*)(?:/[\w./-]+)?` (matches `spec: lifecycle/foo/spec.md`, `discovery_source: lifecycle/foo/research.md`, body-text `lifecycle/foo`).
-- **Wikilink with path**: `\[\[lifecycle/(?P<slug>[a-z0-9][a-z0-9-]*)(?:/[^\]\|#]+)(?:#[^\]\|]+)?(?:\|[^\]]+)?\]\]` (matches `[[lifecycle/foo/spec]]`, `[[lifecycle/foo/spec#section]]`, `[[lifecycle/foo/spec|alias]]`).
-- **Wikilink slug-only**: `\[\[lifecycle/(?P<slug>[a-z0-9][a-z0-9-]*)(?:#[^\]\|]+)?(?:\|[^\]]+)?\]\]` (matches `[[lifecycle/foo]]`, `[[lifecycle/foo#section]]`, `[[lifecycle/foo|alias]]`).
-- **Wikilink with `.md` suffix**: `\[\[lifecycle/(?P<slug>[a-z0-9][a-z0-9-]*)\.md(?:#[^\]\|]+)?(?:\|[^\]]+)?\]\]` (matches `[[lifecycle/foo.md]]`).
+- **Slash-path body or frontmatter path field**: `lifecycle/<slug>/<path>` — anchored as `(?:^|[^A-Za-z0-9_/-])lifecycle/(?P<slug>[a-z0-9][a-z0-9-]*)(?:/[\w./-]+)?` (matches a `spec:` field pointing at `lifecycle/<slug>/spec.md`, a `discovery_source:` field pointing at `lifecycle/<slug>/research.md`, and body-text `lifecycle/<slug>` references).
+- **Wikilink with path**: `\[\[lifecycle/(?P<slug>[a-z0-9][a-z0-9-]*)(?:/[^\]\|#]+)(?:#[^\]\|]+)?(?:\|[^\]]+)?\]\]` (matches `[[lifecycle/<slug>/spec]]`, `[[lifecycle/<slug>/spec#section]]`, `[[lifecycle/<slug>/spec|alias]]`).
+- **Wikilink slug-only**: `\[\[lifecycle/(?P<slug>[a-z0-9][a-z0-9-]*)(?:#[^\]\|]+)?(?:\|[^\]]+)?\]\]` (matches `[[lifecycle/<slug>]]`, `[[lifecycle/<slug>#section]]`, `[[lifecycle/<slug>|alias]]`).
+- **Wikilink with `.md` suffix**: `\[\[lifecycle/(?P<slug>[a-z0-9][a-z0-9-]*)\.md(?:#[^\]\|]+)?(?:\|[^\]]+)?\]\]` (matches `[[lifecycle/<slug>.md]]`).
 - **Bare-slug frontmatter field `lifecycle_slug:`**: extracted only when the field is a non-empty scalar string matching `<slug>`. Field values of `null`, empty string, or absent are skipped (no reference). Field values that are lists or non-string scalars cause the test to fail with a `malformed lifecycle_slug:` message naming the file path.
 
 Wikilinks of the form `[[<slug>]]` (no `lifecycle/` prefix) are out of scope — cortex's wikilink convention prefixes with `lifecycle/` per existing artifact patterns.

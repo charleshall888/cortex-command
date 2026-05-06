@@ -451,7 +451,7 @@ Use the overnight batch plan generator to create a temporary master plan for thi
 from cortex_command.overnight.batch_plan import generate_batch_plan
 plan_path, excluded = generate_batch_plan(
     features=["feature-a", "feature-b"],
-    feature_plan_paths={"feature-a": "lifecycle/actual-dir-a/plan.md", "feature-b": "lifecycle/actual-dir-b/plan.md"},
+    feature_plan_paths={"feature-a": "lifecycle/<feature-a-slug>/plan.md", "feature-b": "lifecycle/<feature-b-slug>/plan.md"},
     test_command=None,
     base_branch=integration_branch,
     output_path=Path("{session_dir}") / "batch-plan-round-{round_number}.md",

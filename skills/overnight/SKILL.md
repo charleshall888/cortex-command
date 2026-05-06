@@ -354,7 +354,7 @@ A successful `/overnight resume` satisfies:
 
 | Feature | Reason |
 |---------|--------|
-| Add dark mode | Missing spec (lifecycle/add-dark-mode/spec.md) |
+| Add dark mode | Missing spec (`lifecycle/<feature-slug>/spec.md` not present) |
 
 ## Risk Assessment
 

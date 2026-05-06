@@ -1,7 +1,7 @@
 ---
 schema_version: "1"
 uuid: e2f12538-0606-44ca-a64c-9677389083af
-title: "Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements"
+title: "Add cortex init per-repo scaffolder for lifecycle, backlog, retros, requirements dirs"
 status: complete
 priority: medium
 type: feature
@@ -21,7 +21,7 @@ criticality: high
 spec: lifecycle/archive/add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements/spec.md
 ---
 
-# Add cortex init per-repo scaffolder for lifecycle/backlog/retros/requirements
+# Add cortex init per-repo scaffolder for lifecycle, backlog, retros, requirements dirs
 
 ## Context from discovery
 

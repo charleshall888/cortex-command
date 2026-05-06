@@ -15,7 +15,7 @@ Status: Resolved
 
 ## Phase 1 Findings
 
-- **Observed behavior**: A user ran `/refine` on multiple tickets; overnight failed because `lifecycle/{slug}/research.md` is missing while `spec.md` exists. Example: `lifecycle/design-api-contract-pydantic-schemas-openapi/spec.md` exists, `research.md` does not.
+- **Observed behavior**: A user ran `/refine` on multiple tickets; overnight failed because `lifecycle/{slug}/research.md` is missing while `spec.md` exists. Example: a `lifecycle/<feature-slug>/spec.md` exists for a ticket but its `research.md` does not.
 
 - **Evidence gathered**:
   - `claude/overnight/backlog.py:487` — the overnight selector checks `research.md` BEFORE `spec.md`; if research.md is absent, the item is rejected regardless of spec.md

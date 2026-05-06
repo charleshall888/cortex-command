@@ -8,7 +8,7 @@
 
 **Problem**: Initial grep baseline in the Tradeoffs research agent was 3× undercount (~41 "do not" sites claimed vs. actual ~124 across the 12 surfaces). **Consequence**: Research.md had to document the correction; first OQ framing implied "scope is smaller than ticket claims" when the ticket's 84-work-cell estimate was closer to right.
 
-**Problem**: Codebase agent reported "P5: zero true positives" but missed 3 canonical P5 sites in `lifecycle/references/research.md:57`, `plan.md:27`, `implement.md:189` — the exact sites the epic research cites as the P5 archetype. **Consequence**: Adversarial pass had to surface them; spec's P5 handling was initially wrong; required rewriting R11 mechanism defaults to add P5=SKIP for verbatim contracts.
+**Problem**: Codebase agent reported "P5: zero true positives" but missed 3 canonical P5 sites in `skills/lifecycle/references/research.md:57`, `plan.md:27`, `implement.md:189` — the exact sites the epic research cites as the P5 archetype. **Consequence**: Adversarial pass had to surface them; spec's P5 handling was initially wrong; required rewriting R11 mechanism defaults to add P5=SKIP for verbatim contracts.
 
 **Problem**: Codebase agent validated the ticket's 7-skill audit list without checking whether `overnight` actually dispatches subagents or whether `pr-review` still exists in the repo. **Consequence**: Adversarial had to catch that `overnight/SKILL.md` has zero Agent/Task calls and `pr-review` was extracted to a plugin repo in commit `9ae4a85`; scope reconciliation became a major Research Exit Gate question (OQ1) that changed the audit surface from 7+5 to 6+6.
 

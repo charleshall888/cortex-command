@@ -28,7 +28,7 @@ Four noise locations in the specify phase have no suppress or format constraint:
 
 4. **§3a orchestrator-review fix-agent report**: When orchestrator-review dispatches a fix (Step 5), the fix-agent returns "Report: what you changed and why." `orchestrator-review.md` has no instruction for what the orchestrator does with that report. Agents relay it verbatim. The orchestrator should absorb the fix-agent report, re-run the checklist silently, and only surface the pass/fail result.
 
-Files affected: `lifecycle/references/specify.md` (§2a, §2b, §3a) and `lifecycle/references/orchestrator-review.md` (Step 5 fix-agent disposition instruction).
+Files affected: `skills/lifecycle/references/specify.md` (§2a, §2b, §3a) and `skills/lifecycle/references/orchestrator-review.md` (Step 5 fix-agent disposition instruction).
 
 ## Context from discovery
 
