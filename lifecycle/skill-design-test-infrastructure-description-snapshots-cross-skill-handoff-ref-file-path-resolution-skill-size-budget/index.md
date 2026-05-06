@@ -2,7 +2,7 @@
 feature: skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget
 parent_backlog_uuid: 6da37238-e1c0-4e2d-8f11-24b9cb57d101
 parent_backlog_id: 181
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [tests, skill-design, lifecycle, refine, critical-review, discovery, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
@@ -18,3 +18,4 @@ Parent epic: [[../../backlog/172-lifecycle-skill-and-artifact-densification-and-
 - Research: [[skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/research|research.md]]
 - Spec: [[skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/spec|spec.md]]
 - Plan: [[skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/plan|plan.md]]
+- Review: [[skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/review|review.md]]
