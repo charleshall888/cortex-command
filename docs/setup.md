@@ -91,7 +91,7 @@ Use the `owner/repo` git form (`/plugin marketplace add charleshall888/cortex-co
 
 ### 3. Per-repo setup
 
-Run `cortex init` once in each repo where you want to use cortex. It scaffolds the directories cortex skills and the overnight runner expect (`lifecycle/`, `backlog/`, `retros/`, `requirements/`) and registers the repo's `lifecycle/` path in your Claude Code sandbox allowlist — required for any cortex workflow (lifecycle, refine, backlog, overnight, dashboard).
+Run `cortex init` once in each repo where you want to use cortex. It scaffolds the directories cortex skills and the overnight runner expect (`lifecycle/`, `backlog/`, `requirements/`) and registers the repo's `lifecycle/` path in your Claude Code sandbox allowlist — required for any cortex workflow (lifecycle, refine, backlog, overnight, dashboard).
 
 ```bash
 cortex init
@@ -106,7 +106,7 @@ Resolves the git repo root via `git rev-parse --show-toplevel` (errors out if no
 Checks for a `.cortex-init` marker in the repo root. If present and neither `--update` nor `--force` is passed, init declines to re-scaffold so a second accidental `cortex init` does not overwrite local customizations. Pass `--update` for an additive (no-overwrite) re-run, or `--force` to back up and overwrite.
 
 **3. Scaffold + `.gitignore` append**
-Creates the directory structure and starter templates (`lifecycle/`, `backlog/`, `retros/`, `requirements/`), refreshes the `.cortex-init` marker, and idempotently appends cortex-specific ignore patterns to the repo's `.gitignore` (running twice does not duplicate entries).
+Creates the directory structure and starter templates (`lifecycle/`, `backlog/`, `requirements/`), refreshes the `.cortex-init` marker, and idempotently appends cortex-specific ignore patterns to the repo's `.gitignore` (running twice does not duplicate entries).
 
 **4. Sandbox registration into `~/.claude/settings.local.json`**
 Additively registers the repo's `lifecycle/` path under `sandbox.filesystem.allowWrite`. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs. Concurrent calls across repos are safe — the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
@@ -144,8 +144,6 @@ lifecycle/README.md
 lifecycle.config.md
 backlog/
 backlog/README.md
-retros/
-retros/README.md
 requirements/
 requirements/project.md
 .cortex-init

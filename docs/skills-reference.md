@@ -113,29 +113,6 @@ Gather and document project-level and feature-area requirements through structur
 
 ---
 
-## Session Management
-
-### fresh
-Capture the current session state as a resume prompt you can paste into a fresh context window. Reads the conversation, identifies ephemeral context not captured in files, and outputs a ready-to-paste prompt. Also runs `/cortex-core:retro` first for human-initiated sessions.
-
-[skills/fresh/SKILL.md](../skills/fresh/SKILL.md)
-
----
-
-### retro
-Write a dated problem-only log for the current session. Captures user corrections, mistakes made, things missed, and wrong approaches — each with its consequence. Does not capture what worked; that discipline keeps retros actionable rather than celebratory.
-
-[skills/retro/SKILL.md](../skills/retro/SKILL.md)
-
----
-
-### evolve
-Identify recurring problems across retro logs and route each trend to the appropriate skill for investigation or resolution. Clusters problems that appear in two or more retros into trends, classifies each with a proposed route (`/cortex-core:discovery`, `/cortex-core:lifecycle`, `/cortex-core:backlog add`, or direct edit), and dispatches only after explicit user approval.
-
-[skills/evolve/SKILL.md](../skills/evolve/SKILL.md)
-
----
-
 ## Optional Plugins
 
 Several skills ship as optional plugins in the `cortex-command` marketplace:
