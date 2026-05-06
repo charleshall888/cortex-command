@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 892d71bb-a435-40b7-8b26-296baa4795de
 title: "Collapse byte-identical refine/references files (orchestrator-review.md + specify.md → lifecycle canonical)"
 type: chore
-status: in_progress
+status: complete
 priority: high
 parent: 172
 blocked-by: []
@@ -15,7 +15,7 @@ complexity: complex
 criticality: high
 spec: lifecycle/collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical/spec.md
 areas: [skills]
-session_id: 629596eb-312b-43c4-a077-cb8d81c86691
+session_id: null
 lifecycle_phase: plan
 ---
 

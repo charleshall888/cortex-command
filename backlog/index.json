@@ -63,66 +63,6 @@
     "repo": null
   },
   {
-    "id": 173,
-    "title": "Fix duplicated-block bug in refine/SKILL.md + 5 stale skill references",
-    "status": "backlog",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "lifecycle",
-      "refine",
-      "bugs",
-      "stale-references",
-      "vertical-planning"
-    ],
-    "areas": [],
-    "created": "2026-05-06",
-    "updated": "2026-05-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "172",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/vertical-planning/research.md",
-    "plan": null,
-    "uuid": "97c7ed31-edd1-4ec2-bc2a-df579b92d1c4",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 174,
-    "title": "Collapse byte-identical refine/references files (orchestrator-review.md + specify.md → lifecycle canonical)",
-    "status": "backlog",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "lifecycle",
-      "refine",
-      "dual-source",
-      "deduplication",
-      "vertical-planning"
-    ],
-    "areas": [],
-    "created": "2026-05-06",
-    "updated": "2026-05-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "172",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/vertical-planning/research.md",
-    "plan": null,
-    "uuid": "892d71bb-a435-40b7-8b26-296baa4795de",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 175,
     "title": "Promote refine/references/clarify-critic.md to canonical with schema-aware migration",
     "status": "backlog",
@@ -156,7 +96,7 @@
   {
     "id": 176,
     "title": "Lifecycle adopts cortex-resolve-backlog-item, delete refine/references/clarify.md",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -167,20 +107,22 @@
       "backlog-resolution",
       "vertical-planning"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-05-06",
     "updated": "2026-05-06",
     "blocks": [],
     "blocked_by": [],
     "parent": "172",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd/spec.md",
     "discovery_source": "research/vertical-planning/research.md",
     "plan": null,
     "uuid": "eb7cf492-c35d-4d70-835c-2d7b1b58f844",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -233,7 +175,6 @@
     "updated": "2026-05-06",
     "blocks": [],
     "blocked_by": [
-      "174",
       "175",
       "176"
     ],
@@ -342,36 +283,6 @@
     "repo": null
   },
   {
-    "id": 171,
-    "title": "Remove /fresh, /evolve, and /retro skills",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "skills",
-      "cleanup",
-      "deprecation"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-06",
-    "updated": "2026-05-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/remove-fresh-evolve-and-retro-skills/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "79b9e087-25bd-49fa-93ec-55e2aed015b6",
-    "lifecycle_slug": null,
-    "session_id": "1b75976b-f409-47a8-a410-275fd2f47ac7",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 178,
     "title": "Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry)",
     "status": "backlog",
@@ -400,7 +311,7 @@
     "uuid": "a978360e-228a-4b86-b9c5-bf059ab8c5a2",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -423,7 +334,6 @@
     "updated": "2026-05-06",
     "blocks": [],
     "blocked_by": [
-      "174",
       "175",
       "176",
       "177"
@@ -474,7 +384,7 @@
   {
     "id": 181,
     "title": "Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget)",
-    "status": "backlog",
+    "status": "refined",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -486,20 +396,24 @@
       "discovery",
       "vertical-planning"
     ],
-    "areas": [],
+    "areas": [
+      "tests"
+    ],
     "created": "2026-05-06",
     "updated": "2026-05-06",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "178"
+    ],
     "parent": "172",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/spec.md",
     "discovery_source": "research/vertical-planning/research.md",
     "plan": null,
     "uuid": "6da37238-e1c0-4e2d-8f11-24b9cb57d101",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -522,7 +436,6 @@
     "updated": "2026-05-06",
     "blocks": [],
     "blocked_by": [
-      "174",
       "177"
     ],
     "parent": "172",

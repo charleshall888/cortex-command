@@ -2,7 +2,7 @@
 feature: collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical
 parent_backlog_uuid: 892d71bb-a435-40b7-8b26-296baa4795de
 parent_backlog_id: 174
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [lifecycle, refine, dual-source, deduplication, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
@@ -15,3 +15,4 @@ Feature lifecycle for [[174-collapse-byte-identical-refine-references-files-orch
 - Research: [[collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical/research|research.md]]
 - Spec: [[collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical/spec|spec.md]]
 - Plan: [[collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical/plan|plan.md]]
+- Review: [[collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical/review|review.md]]

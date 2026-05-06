@@ -96,7 +96,7 @@ Apply three localized edits to `skills/refine/SKILL.md` Step 5 (path redirection
 - **Verification**:
   - After `/cortex-core:commit` succeeds: `git log -1 --name-only` shows `skills/refine/SKILL.md` (modified), `skills/refine/references/orchestrator-review.md` (deleted), `skills/refine/references/specify.md` (deleted), `plugins/cortex-core/skills/refine/references/orchestrator-review.md` (deleted), `plugins/cortex-core/skills/refine/references/specify.md` (deleted), `backlog/174-...md` (modified), `lifecycle/{slug}/plan.md` (new), `lifecycle/{slug}/index.md` (modified) — pass if all eight paths appear.
   - `git diff --quiet plugins/` exits 0 (no drift remaining anywhere in the plugin tree post-commit) — pass if exit 0 (R9 acceptance, scope widened from `plugins/cortex-core/skills/refine/` to `plugins/` to match the pre-commit hook's actual diff scope, which is the entire build-output plugin tree).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
