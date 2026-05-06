@@ -61,23 +61,23 @@ Note: requirements drift does NOT influence the verdict. This is an observation 
 ### Write Review
 Write your review to lifecycle/{feature}/review.md using the format below.
 
-CRITICAL: The Verdict section MUST contain a JSON object with exactly these fields:
+The Verdict section is a JSON object with exactly these fields:
 - "verdict": one of "APPROVED", "CHANGES_REQUESTED", or "REJECTED"
 - "cycle": the review cycle number (integer)
 - "issues": array of issue strings (empty array if none)
 
-Do NOT use alternative field names like "overall", "result", or "status".
-Do NOT use alternative values like "PASS", "FAIL", or "APPROVED_WITH_NOTES".
+Alternative field names like "overall", "result", or "status" are not used.
+Alternative values like "PASS", "FAIL", or "APPROVED_WITH_NOTES" are not used.
 
-Your review.md MUST include a ## Requirements Drift section using exactly this format:
+Your review.md includes a ## Requirements Drift section using exactly this format:
 ## Requirements Drift
 **State**: none | detected
 **Findings**:
 - (one bullet per drifted item, or "None" if state is none)
 **Update needed**: (path to requirements file that needs updating, or "None")
-The requirements_drift value in the verdict JSON MUST match: "none" when State is none, "detected" when State is detected.
+The requirements_drift value in the verdict JSON matches: "none" when State is none, "detected" when State is detected.
 
-When drift IS detected, you MUST also include a ## Suggested Requirements Update section immediately after Requirements Drift. This section provides the exact content the orchestrator will append to the named requirements file:
+When drift IS detected, also include a ## Suggested Requirements Update section immediately after Requirements Drift. This section provides the exact content the orchestrator will append to the named requirements file:
 ## Suggested Requirements Update
 **File**: (path to the requirements file to update, e.g. requirements/project.md)
 **Section**: (existing section heading where the content belongs, e.g. "## Quality Attributes")
@@ -211,8 +211,6 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
 
 | Thought | Reality |
 |---------|---------|
-| "The implementation looks good, I can just approve it" | Review each requirement against the spec individually. Gestalt impressions miss specific gaps. |
-| "I'll just fix the issues myself instead of flagging them" | The reviewer does not modify files. Flagging issues preserves separation of concerns and creates a paper trail. |
 | "Code quality issues are minor, I'll let them pass" | Minor issues compound. Flag them as PARTIAL with notes — the implementer can address them quickly. |
 | "I'll use `overall: PASS` for the verdict" | The verdict JSON must use exactly `"verdict": "APPROVED"` (or `CHANGES_REQUESTED` / `REJECTED`). State detection parses this exact field name and these exact values. |
 | "Requirements drift is hard to assess without clear traceability" | Assess against the requirements docs loaded in §1. If uncertain, log `detected` with a note — false positives auto-apply a small update; false negatives silently hide drift. |

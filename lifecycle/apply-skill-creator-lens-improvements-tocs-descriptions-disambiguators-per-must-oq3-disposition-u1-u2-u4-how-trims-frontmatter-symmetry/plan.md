@@ -150,7 +150,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
 - **Verification**:
   - `python3 -c "import re; lines = open('skills/lifecycle/references/review.md').readlines(); soften_targets = [(64,'Verdict section'),(72,'verdict-JSON'),(78,'verdict-JSON'),(80,'verdict-JSON')]; bad = [(n, expected) for n, expected in soften_targets if any(re.search(r'\b(MUST|CRITICAL|REQUIRED)\b', l) for l in lines if expected.lower() in l.lower())]; print('FAIL imperatives near targets:', bad) if bad else print('OK')"` — pass if output is `OK`. (Content-anchored check: locates the soften targets by neighboring keyword "Verdict section"/"verdict-JSON" and asserts no `MUST|CRITICAL|REQUIRED` token appears on those lines, robust to line-number drift.)
   - U2 trim correctness — Interactive/session-dependent: per-row drift detection consolidated in Task 12.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 8: Edit `skills/refine/references/clarify-critic.md` (R3 OQ3 soften + R4 U2 trim)
 
