@@ -80,8 +80,6 @@ Use the AskUserQuestion tool to present the selection. Include "Other" implicitl
 
 | Thought | Reality |
 |---------|---------|
-| "I should create a research file or events log before the user picks" | No state is written until a topic is selected and the normal discovery flow begins. Auto-scan is purely read-only. |
-| "I should run discovery on all the gaps I found" | The user picks one. Parallel discovery on multiple gaps is not supported by this mode. |
 | "I should only check requirements/project.md" | Load all `requirements/*.md` — future area docs benefit automatically. |
 | "I should filter using completed lifecycle directories too" | Filter on in-progress (has research.md or plan.md). Completed lifecycles don't block re-discovery of an area. |
 | "I should present gaps that are already covered so the user can re-explore" | Covered areas are excluded. The user can always call `/cortex-core:discovery <topic>` directly to explore a covered area. |

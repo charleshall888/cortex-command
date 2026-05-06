@@ -219,7 +219,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
   "
   ```
   Pass if output is `OK` and exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 11: Backlog edits (R5 amend 182 + R7 new follow-on + ticket-178 self-amendments)
 
