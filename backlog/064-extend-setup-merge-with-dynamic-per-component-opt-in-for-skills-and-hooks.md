@@ -13,9 +13,9 @@ blocked-by: []
 discovery_source: research/user-configurable-setup/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/spec.md
+spec: lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/spec.md
 areas: [skills]
-research: lifecycle/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/research.md
+research: lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/research.md
 lifecycle_slug: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
 session_id: null
 lifecycle_phase: complete
@@ -29,7 +29,7 @@ lifecycle_phase: complete
 
 ## What this ticket delivers (narrowed scope)
 
-The authoritative source is `lifecycle/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/spec.md`. Summary:
+The authoritative source is `lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/spec.md`. Summary:
 
 1. **R1 — Extend `discover_symlinks` to cover `claude/hooks/`.** `merge_settings.py`'s `discover_symlinks()` (L94-185) walks `hooks/cortex-*` but not `claude/hooks/cortex-*`, so 8 hooks in `claude/hooks/` — including Band C `cortex-sync-permissions.py` — are invisible to `/setup-merge`'s conflict detection. Add a parallel walk of `claude/hooks/cortex-*` with the same target mapping. Non-hook files (`bell.ps1`, `output-filters.conf`, `setup-github-pat.sh`) are excluded by the `cortex-*` prefix.
 
@@ -70,8 +70,8 @@ The original discovery and decomposition that drove the broader scope live in `r
 
 ## References
 
-- **Spec (authoritative for scope)**: `lifecycle/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/spec.md`
-- **Research**: `lifecycle/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/research.md` (full context, including the deferred opt-in analysis and adversarial findings)
-- **Events log**: `lifecycle/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/events.log` (clarify critic, orchestrator reviews, critical review dispositions, scope descope event)
+- **Spec (authoritative for scope)**: `lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/spec.md`
+- **Research**: `lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/research.md` (full context, including the deferred opt-in analysis and adversarial findings)
+- **Events log**: `lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/events.log` (clarify critic, orchestrator reviews, critical review dispositions, scope descope event)
 - **Original discovery (for deferred opt-in work)**: `research/user-configurable-setup/research.md`, `research/user-configurable-setup/decomposed.md`
 - **Primary files touched by implementation**: `.claude/skills/setup-merge/scripts/merge_settings.py` (L14-32 constants, L94-185 `discover_symlinks`), `.claude/skills/setup-merge/SKILL.md` (prompt flow step for optional hooks)

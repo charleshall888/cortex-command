@@ -16,7 +16,7 @@ lifecycle_phase: complete
 lifecycle_slug: add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7
 complexity: complex
 criticality: high
-spec: lifecycle/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md
+spec: lifecycle/archive/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md
 areas: []
 ---
 
@@ -31,7 +31,7 @@ The original 2026-04-21 mechanism — a PreToolUse hook inspecting tool-call com
 ## Research context
 
 - DR-7 in `research/extract-scripts-from-agent-tool-sequences/research.md`.
-- Lifecycle research: `lifecycle/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/research.md` (M2 sandbox-friendly write target, Alt 5 + DR-5 composition).
+- Lifecycle research: `lifecycle/archive/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/research.md` (M2 sandbox-friendly write target, Alt 5 + DR-5 composition).
 - Script inventory extracted from `bin/cortex-*` glob (matches `just build-plugin`'s plugin distribution set).
 - Weekly or on-demand aggregator reports per-script invocation count. Wired-but-never-invoked script = DR-7-detectable failure.
 

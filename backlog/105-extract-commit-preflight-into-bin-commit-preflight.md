@@ -16,7 +16,7 @@ lifecycle_phase: complete
 lifecycle_slug: extract-commit-preflight-into-bin-commit-preflight
 complexity: simple
 criticality: high
-spec: lifecycle/extract-commit-preflight-into-bin-commit-preflight/spec.md
+spec: lifecycle/archive/extract-commit-preflight-into-bin-commit-preflight/spec.md
 areas: [skills]
 ---
 

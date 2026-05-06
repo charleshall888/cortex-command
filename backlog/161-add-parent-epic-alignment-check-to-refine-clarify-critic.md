@@ -15,7 +15,7 @@ lifecycle_phase: complete
 lifecycle_slug: add-parent-epic-alignment-check-to-refine-clarify-critic
 complexity: complex
 criticality: high
-spec: lifecycle/add-parent-epic-alignment-check-to-refine-clarify-critic/spec.md
+spec: lifecycle/archive/add-parent-epic-alignment-check-to-refine-clarify-critic/spec.md
 areas: [skills]
 ---
 

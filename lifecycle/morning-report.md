@@ -79,10 +79,10 @@ No questions were deferred — all ambiguities were resolved by the pipeline.
 - Learnings: `lifecycle/archive/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/learnings/progress.txt`
 - **Suggested next step**: Review learnings, retry or investigate
 
-### fix-daytime-pipeline-worktree-atomicity-and-stderr-logging: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/plan.md'
+### fix-daytime-pipeline-worktree-atomicity-and-stderr-logging: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/archive/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/plan.md'
 - Retry attempts: 0
 - Circuit breaker: not triggered
-- Learnings: `lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/learnings/progress.txt`
+- Learnings: `lifecycle/archive/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/learnings/progress.txt`
 - **Suggested next step**: Review learnings, retry or investigate
 
 ### replace-daytime-log-sentinel-classification-with-structured-result-file: Plan parse error: [Errno 2] No such file or directory: 'lifecycle/archive/replace-daytime-log-sentinel-classification-with-structured-result-file/plan.md'

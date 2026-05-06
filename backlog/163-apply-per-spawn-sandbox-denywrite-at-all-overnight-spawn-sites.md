@@ -18,7 +18,7 @@ blocked-by: []
 discovery_source: research/sandbox-overnight-child-agents/research.md
 complexity: complex
 criticality: critical
-spec: lifecycle/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/spec.md
+spec: lifecycle/archive/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/spec.md
 ---
 
 # Apply per-spawn sandbox.filesystem.denyWrite at all overnight spawn sites
@@ -49,7 +49,7 @@ The overnight orchestrator is spawned at `cortex_command/overnight/runner.py:905
 
 ## Value
 
-Catches the session-1708 escape vector documented in `lifecycle/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/spec.md:5` — orchestrator's `cd $REPO_ROOT && git commit` from Bash tool — at the OS sandbox layer, replacing ticket-128's reverted git-pre-commit-hook approach for the Bash-tool-routed subset of its threat-model coverage. Simultaneously fixes two latent bugs in the per-feature dispatch path (silent-no-op shape; cross-repo allowlist inversion) so per-feature spawns receive real kernel-level write isolation. Citations: `cortex_command/overnight/runner.py:905-922` (no per-spawn sandbox today), `cortex_command/pipeline/dispatch.py:546` (silent-no-op shape), `cortex_command/overnight/feature_executor.py:603` (cross-repo allowlist inversion).
+Catches the session-1708 escape vector documented in `lifecycle/archive/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/spec.md:5` — orchestrator's `cd $REPO_ROOT && git commit` from Bash tool — at the OS sandbox layer, replacing ticket-128's reverted git-pre-commit-hook approach for the Bash-tool-routed subset of its threat-model coverage. Simultaneously fixes two latent bugs in the per-feature dispatch path (silent-no-op shape; cross-repo allowlist inversion) so per-feature spawns receive real kernel-level write isolation. Citations: `cortex_command/overnight/runner.py:905-922` (no per-spawn sandbox today), `cortex_command/pipeline/dispatch.py:546` (silent-no-op shape), `cortex_command/overnight/feature_executor.py:603` (cross-repo allowlist inversion).
 
 ## Threat-model boundary (explicit, per critical-review R2-C)
 

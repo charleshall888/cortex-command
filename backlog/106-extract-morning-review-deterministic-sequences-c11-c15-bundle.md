@@ -13,7 +13,7 @@ updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/extract-morning-review-deterministic-sequences-c11-c15-bundle/spec.md
+spec: lifecycle/archive/extract-morning-review-deterministic-sequences-c11-c15-bundle/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

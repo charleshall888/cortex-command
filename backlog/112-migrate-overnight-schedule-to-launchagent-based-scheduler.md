@@ -17,7 +17,7 @@ blocked-by: []
 discovery_source: research/overnight-runner-sandbox-launch/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/migrate-overnight-schedule-to-a-launchagent-based-scheduler/spec.md
+spec: lifecycle/archive/migrate-overnight-schedule-to-a-launchagent-based-scheduler/spec.md
 ---
 
 # Migrate overnight-schedule to a LaunchAgent-based scheduler

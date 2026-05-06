@@ -13,7 +13,7 @@ updated: 2026-04-29
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception/spec.md
+spec: lifecycle/archive/unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception/spec.md
 areas: [lifecycle]
 session_id: null
 lifecycle_phase: implement

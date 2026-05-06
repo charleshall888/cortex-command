@@ -13,7 +13,7 @@ discovery_source: research/opus-4-7-harness-adaptation/research.md
 blocked-by: []
 complexity: complex
 criticality: high
-spec: lifecycle/decide-and-document-post-47-policy-settings-must-escalation-tone-regression/spec.md
+spec: lifecycle/archive/decide-and-document-post-47-policy-settings-must-escalation-tone-regression/spec.md
 areas: [docs]
 session_id: null
 lifecycle_phase: complete

@@ -11,7 +11,7 @@ tags: [cleanup, overnight, throttle]
 areas: [overnight-runner]
 complexity: complex
 criticality: high
-spec: lifecycle/remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release/spec.md
+spec: lifecycle/archive/remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release/spec.md
 session_id: null
 lifecycle_phase: complete
 ---

@@ -11,7 +11,7 @@ created: 2026-04-27
 updated: 2026-05-01
 complexity: complex
 criticality: high
-spec: lifecycle/fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid/spec.md
+spec: lifecycle/archive/fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid/spec.md
 session_id: null
 lifecycle_phase: implement
 ---

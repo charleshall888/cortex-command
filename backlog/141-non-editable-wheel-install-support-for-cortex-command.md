@@ -13,7 +13,7 @@ blocked-by: []
 lifecycle_slug: non-editable-wheel-install-support-for-cortex-command
 complexity: complex
 criticality: high
-spec: lifecycle/non-editable-wheel-install-support-for-cortex-command/spec.md
+spec: lifecycle/archive/non-editable-wheel-install-support-for-cortex-command/spec.md
 areas: [install,overnight-runner,mcp-server,docs]
 session_id: null
 lifecycle_phase: implement

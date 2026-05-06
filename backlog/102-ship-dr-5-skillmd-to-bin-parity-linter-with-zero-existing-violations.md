@@ -16,7 +16,7 @@ lifecycle_phase: complete
 lifecycle_slug: ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations
 complexity: complex
 criticality: high
-spec: lifecycle/ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations/spec.md
+spec: lifecycle/archive/ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations/spec.md
 areas: [skills]
 ---
 

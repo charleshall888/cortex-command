@@ -13,7 +13,7 @@ discovery_source: research/revisit-lifecycle-implement-preflight-options/researc
 areas: [pipeline]
 complexity: complex
 criticality: high
-spec: lifecycle/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/spec.md
+spec: lifecycle/archive/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/spec.md
 session_id: null
 lifecycle_phase: implement
 ---

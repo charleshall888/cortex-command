@@ -13,7 +13,7 @@ tags: [competing-plan-synthesis, lifecycle, plan]
 discovery_source: research/competing-plan-synthesis/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction/spec.md
+spec: lifecycle/archive/tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction/spec.md
 areas: [skills, lifecycle]
 session_id: null
 lifecycle_phase: complete

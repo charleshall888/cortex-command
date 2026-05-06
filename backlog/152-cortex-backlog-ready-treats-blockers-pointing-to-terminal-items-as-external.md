@@ -51,4 +51,4 @@ Two implementation directions for research:
 
 Discovered during ticket 108 review (cycle 1, APPROVED). Reviewer flagged it as a user-visible divergence between `index.md` (ready) and `cortex-backlog-ready` (blocked) for the same item. Originally classified by-design per the spec's Non-Requirement that `cortex-backlog-ready` is read-only over `index.json`, but on reflection it's a real correctness bug that breaks parity between the two consumer surfaces.
 
-Discovery source: `lifecycle/extract-backlog-pick-ready-set-into-bin-backlog-ready/review.md` (Code Quality section).
+Discovery source: `lifecycle/archive/extract-backlog-pick-ready-set-into-bin-backlog-ready/review.md` (Code Quality section).

@@ -17,7 +17,7 @@ blocked-by: []
 discovery_source: research/post-113-repo-state/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/spec.md
+spec: lifecycle/archive/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/spec.md
 ---
 
 # Apply post-113 audit follow-ups: stale-doc cleanup, lifecycle-archive run, MCP hardening

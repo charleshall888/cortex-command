@@ -13,7 +13,7 @@ tags: [competing-plan-synthesis, lifecycle, plan, synthesizer, overnight]
 discovery_source: research/competing-plan-synthesis/research.md
 complexity: complex
 criticality: critical
-spec: lifecycle/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight/spec.md
+spec: lifecycle/archive/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight/spec.md
 areas: [overnight-runner]
 session_id: null
 lifecycle_phase: complete

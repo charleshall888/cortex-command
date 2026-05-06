@@ -13,7 +13,7 @@ updated: 2026-04-28
 discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout/spec.md
+spec: lifecycle/archive/extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

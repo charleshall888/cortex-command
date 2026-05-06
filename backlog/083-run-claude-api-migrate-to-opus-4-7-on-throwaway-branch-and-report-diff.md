@@ -15,7 +15,7 @@ lifecycle_phase: research
 lifecycle_slug: run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff
 complexity: simple
 criticality: medium
-spec: lifecycle/run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff/spec.md
+spec: lifecycle/archive/run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff/spec.md
 areas: [skills]
 ---
 

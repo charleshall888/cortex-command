@@ -18,7 +18,7 @@ lifecycle_phase: complete
 lifecycle_slug: delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements
 complexity: complex
 criticality: medium
-spec: lifecycle/delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements/spec.md
+spec: lifecycle/archive/delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements/spec.md
 ---
 
 # Delete post-shift orphan code/scripts/hooks and retire paired requirements

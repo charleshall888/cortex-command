@@ -16,7 +16,7 @@ lifecycle_phase: complete
 lifecycle_slug: instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates
 complexity: complex
 criticality: high
-spec: lifecycle/instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates/spec.md
+spec: lifecycle/archive/instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates/spec.md
 areas: [overnight-runner]
 ---
 

@@ -13,7 +13,7 @@ blocked-by: []
 discovery_source: research/user-configurable-setup/research.md
 complexity: simple
 criticality: high
-spec: lifecycle/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/spec.md
+spec: lifecycle/archive/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/spec.md
 areas: [docs]
 session_id: null
 lifecycle_phase: complete
@@ -75,7 +75,7 @@ If the audit is still WARM (both issues open, no Anthropic assignee, no roadmap 
 ## References
 
 - Research artifact: `research/user-configurable-setup/research.md`
-- Lifecycle research: `lifecycle/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/research.md`
-- Spec: `lifecycle/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/spec.md`
+- Lifecycle research: `lifecycle/archive/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/research.md`
+- Spec: `lifecycle/archive/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/spec.md`
 - Decision records: DR-1 (`CLAUDE_CONFIG_DIR` over mutation), DR-7 (audit as gating check, hot→minimal framing), DR-8 (Option D real scope preserved)
 - Upstream tracking issues: [anthropics/claude-code#12962](https://github.com/anthropics/claude-code/issues/12962), [#26489](https://github.com/anthropics/claude-code/issues/26489)

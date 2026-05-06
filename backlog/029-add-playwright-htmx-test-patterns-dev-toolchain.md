@@ -56,4 +56,4 @@ Brief doc on how Claude uses Playwright MCP to evaluate dashboard changes:
 
 ## Prior research note
 
-Research exists at `lifecycle/add-playwright-htmx-test-patterns-to-dev-toolchain/research.md` from the original ticket scope. That research correctly identified that @playwright/mcp is an interactive tool (not a test runner) and recommended TestClient + BeautifulSoup for automated testing. The research's core findings remain valid but were scoped around DOM assertion patterns — visual evaluation via Claude's vision was not explored. A research supplement or re-evaluation may be needed during refinement.
+Research exists at `lifecycle/archive/add-playwright-htmx-test-patterns-to-dev-toolchain/research.md` from the original ticket scope. That research correctly identified that @playwright/mcp is an interactive tool (not a test runner) and recommended TestClient + BeautifulSoup for automated testing. The research's core findings remain valid but were scoped around DOM assertion patterns — visual evaluation via Claude's vision was not explored. A research supplement or re-evaluation may be needed during refinement.

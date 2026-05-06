@@ -52,10 +52,10 @@ After the disposition table is committed:
 1. Run `just lifecycle-archive --dry-run` with new predicate; diff output against expectation.
 2. Archive recipe-eligible (~19 strict + ~11 YAML-form once predicate is fixed) dirs.
 3. Manually archive 4 dirs that lack feature_complete events but have complete backlog tickets or documentation roles:
-   - `lifecycle/add-playwright-htmx-test-patterns-to-dev-toolchain/` (backlog #029 cites it as research source)
-   - `lifecycle/define-evaluation-rubric-update-lifecycle-spec-template-create-dashboard-context-md/` (backlog #035 complete)
-   - `lifecycle/run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff/` (backlog #083 complete; parent epic #82 alive)
-   - `lifecycle/clean-up-active-sessionjson-when-overnight-session-transitions-to-phasecomplete/` (round 2 disposition: contains only `review.md` — retroactive read-only review of inline hotfix commit `88f4885` for backlog #134; backlog complete; archive manually since no predicate variant matches)
+   - `lifecycle/archive/add-playwright-htmx-test-patterns-to-dev-toolchain/` (backlog #029 cites it as research source)
+   - `lifecycle/archive/define-evaluation-rubric-update-lifecycle-spec-template-create-dashboard-context-md/` (backlog #035 complete)
+   - `lifecycle/archive/run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff/` (backlog #083 complete; parent epic #82 alive)
+   - `lifecycle/archive/clean-up-active-sessionjson-when-overnight-session-transitions-to-phasecomplete/` (round 2 disposition: contains only `review.md` — retroactive read-only review of inline hotfix commit `88f4885` for backlog #134; backlog complete; archive manually since no predicate variant matches)
 4. Delete `lifecycle/feat-a/` only (genuine test detritus, no backlog ticket, 42 ERROR-loop events).
 
 ## Critical: rewrite-paths blast radius mitigation

@@ -66,7 +66,7 @@ The §1b critical-tier flow has only ever fired in interactive `/cortex-interact
 
 Four `plan_comparison` events found across `[lifecycle/*/events.log]` (146 features in `lifecycle/`):
 
-- `[lifecycle/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/events.log]` — 3 variants, selected Plan C with Task 6 split
+- `[lifecycle/archive/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/events.log]` — 3 variants, selected Plan C with Task 6 split
 - `[lifecycle/archive/fix-overnight-runner-silent-crash-…/events.log]` — 3 variants, selected Plan B
 - `[lifecycle/archive/disambiguate-orchestrator-prompt-tokens-…/events.log]` — 2 variants, selected Plan A
 - `[lifecycle/archive/rebuild-overnight-runner-under-cortex-cli/events.log]` — 3 variants, selected "Plan A with Plan B runner_primitives.py extraction grafted in"

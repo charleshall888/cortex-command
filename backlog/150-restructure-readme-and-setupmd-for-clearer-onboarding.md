@@ -17,7 +17,7 @@ lifecycle_phase: implement
 lifecycle_slug: restructure-readme-and-setupmd-for-clearer-onboarding
 complexity: complex
 criticality: medium
-spec: lifecycle/restructure-readme-and-setupmd-for-clearer-onboarding/spec.md
+spec: lifecycle/archive/restructure-readme-and-setupmd-for-clearer-onboarding/spec.md
 ---
 
 # Restructure README and setup.md for clearer onboarding
