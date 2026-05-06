@@ -42,6 +42,8 @@ Use `skills/discovery/references/research.md` (the only file currently with a TO
 
 ### 2. Description-trigger fixes + sibling disambiguators
 
+> **Mechanism amendment (post-spec)**: Per spec R2, sibling-disambiguator clauses move to a new `when_to_use` frontmatter field rather than living in the `description` field. This is a structural divergence from the in-description prescription below, justified by Anthropic-canonical alignment + char-cap relief; clauses still land per-skill as listed.
+
 All four SKILL.md `description` fields have measurable trigger gaps and sibling-disambiguation gaps:
 
 - **lifecycle**: missing casual phrasings ("start a feature", "build this properly"); convert path-required clause from MUST-shape to soft routing; add "Different from /cortex-core:refine — refine stops at spec.md; lifecycle continues to plan/implement/review."
@@ -95,8 +97,7 @@ Net additional reduction: ~80–100 lines beyond original ticket scope.
 
 - Each of the 4 large files has a `## Contents` or `## Table of Contents` section near the top
 - `grep "Different from /cortex-core" skills/{lifecycle,refine,critical-review,discovery}/SKILL.md` returns matches in each file
-- `skills/lifecycle/references/review.md:64,72,78,80` MUSTs retained with parser-cite at `metrics.py:221` documented
-- `skills/refine/references/clarify-critic.md:26,155,159` MUSTs softened to positive-routing OR have documented evidence trail
+- All 7 MUSTs in `review.md` and `clarify-critic.md` softened to positive-routing per OQ3 default.
 - `skills/critical-review/SKILL.md:336–365` Apply/Dismiss/Ask body replaced with ~5-line WHAT/WHY directive (U1)
 - Constraints "Thought/Reality" tables across the corpus trimmed to ≤2 retro-cited rows per file (U2)
 - `skills/lifecycle/SKILL.md:33–35` slugify HOW prose replaced with `slugify()` reference (U4)

@@ -7,7 +7,7 @@ status: backlog
 priority: high
 parent: 172
 blocked-by: [175]
-tags: [lifecycle, plan-template, spec-template, vertical-planning, orchestrator-review, parser]
+tags: [lifecycle, plan-template, spec-template, vertical-planning, orchestrator-review, parser, metrics-parser]
 created: 2026-05-06
 updated: 2026-05-06
 discovery_source: research/vertical-planning/research.md
@@ -89,6 +89,10 @@ Add to `skills/lifecycle/references/orchestrator-review.md`:
 - **S7**: Spec contains `## Phases` section with at least 2 phases; each requirement has a `**Phase**` tag matching one of the declared phases.
 
 P9 and S7 fire wherever orchestrator-review runs (not on `low+simple` per existing skip rule). P10 fires only on critical-tier plans.
+
+### 3a. Parser hardening at `metrics.py:221` (per #178 R5 amendment)
+
+`cortex_command/pipeline/metrics.py:221` parses verdict-JSON field names directly. Per #178's R3 OQ3 soften (which removed the parser-cite MUST framing on `review.md`'s 4 verdict-JSON imperatives), this ticket's scope expands to include alias-lookup or normalized field-name parsing in `metrics.py:221` so the consumer tolerates harmless field-name drift without silently degrading `review_verdicts: None` in the morning report. This protects the FM-7 silent-degradation failure mode flagged in #178 spec Edge Cases.
 
 ### 4. Plan parser regression test
 

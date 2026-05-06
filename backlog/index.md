@@ -17,6 +17,7 @@
 | 183 | Migrate Gate 1 (research→specify Open-Questions escalation) to Python hook; remove Gate 2 entirely | backlog | medium | feature | 177 | 172 | — |
 | 184 | Merge clarify and research lifecycle phases into single investigate phase | backlog | medium | feature | — | — | — |
 | 185 | Audit /cortex-core:research skill output shape for token waste in research.md sections | backlog | medium | chore | — | — | — |
+| 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
 

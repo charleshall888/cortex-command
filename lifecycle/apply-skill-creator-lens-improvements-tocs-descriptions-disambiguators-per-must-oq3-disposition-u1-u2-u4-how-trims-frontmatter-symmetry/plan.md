@@ -246,7 +246,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
   - `grep -c "documented evidence trail" backlog/178-*.md` = 0.
   - `grep -c "softened to positive-routing per OQ3" backlog/178-*.md` ≥ 1.
   - `cat backlog/index.json | python3 -c "import json,sys; d=json.load(sys.stdin); assert any('clarify-critic' in i.get('title','').lower() and ('validator' in i.get('title','').lower() or 'schema' in i.get('title','').lower()) for i in d.get('items',[]))"` exits 0 (R7 indexed; broadened to match "schema" or "validator").
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 12: Cross-corpus U2 verification + spec acceptance sweep
 

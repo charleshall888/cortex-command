@@ -135,7 +135,8 @@
       "spec-template",
       "vertical-planning",
       "orchestrator-review",
-      "parser"
+      "parser",
+      "metrics-parser"
     ],
     "areas": [],
     "created": "2026-05-06",
@@ -279,7 +280,7 @@
     "uuid": "a978360e-228a-4b86-b9c5-bf059ab8c5a2",
     "lifecycle_slug": null,
     "session_id": "ecb72c6d-da94-4e7c-85ef-3dab47c98ac2",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -470,6 +471,39 @@
     "discovery_source": "research/epic-172-audit/research.md",
     "plan": null,
     "uuid": "e6002f93-1c9a-4ff6-a7d8-125279879d2a",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 186,
+    "title": "Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on)",
+    "status": "proposed",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "oq3",
+      "schema-validator",
+      "clarify-critic",
+      "follow-on",
+      "events-log"
+    ],
+    "areas": [
+      "skills",
+      "hooks"
+    ],
+    "created": "2026-05-06",
+    "updated": "2026-05-06",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "178",
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "067e739f-eda7-4ea6-88c9-c4c76e219e68",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
