@@ -52,11 +52,8 @@ PLUGINS: dict[str, tuple[str, ...]] = {
         "research",
         "discovery",
         "refine",
-        "retro",
         "dev",
-        "fresh",
         "diagnose",
-        "evolve",
         "critical-review",
     ),
     "cortex-overnight": (

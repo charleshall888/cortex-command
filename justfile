@@ -491,7 +491,7 @@ build-plugin:
         BIN=()
         case "$p" in
             cortex-core)
-                SKILLS=(commit pr lifecycle backlog requirements research discovery refine retro dev fresh diagnose evolve critical-review)
+                SKILLS=(commit pr lifecycle backlog requirements research discovery refine dev diagnose critical-review)
                 HOOKS=(hooks/cortex-validate-commit.sh claude/hooks/cortex-worktree-create.sh claude/hooks/cortex-worktree-remove.sh)
                 BIN=(cortex-)
                 ;;

@@ -6,11 +6,6 @@ worktrees/
 lifecycle/*/.session
 lifecycle/*/.session-owner
 lifecycle/*/.dispatching
-lifecycle/.fresh-resume
-
-# Retros ephemeral files
-retros/.session-lessons.md
-retros/.retro-written-*
 
 # Runtime logs
 claude/statusline.sh.log
