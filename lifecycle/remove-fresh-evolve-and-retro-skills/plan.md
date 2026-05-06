@@ -13,7 +13,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: each dir contains a single `SKILL.md`. No other files. No symlinks to worry about. Verified via research that no canonical-source caller of `CLAUDE_AUTOMATED_SESSION` lives outside these three SKILL.md files. The three directories are referenced by the justfile SKILLS array and the parity test PLUGINS dict — those are deleted in Task 12.
 - **Verification**: `test ! -d skills/fresh && test ! -d skills/evolve && test ! -d skills/retro` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (bundled into commit 7db592a by parallel session)
 
 ### Task 2: Delete plugin-tree skill mirror directories
 - **Files**: `plugins/cortex-core/skills/fresh/` (delete dir), `plugins/cortex-core/skills/evolve/` (delete dir), `plugins/cortex-core/skills/retro/` (delete dir)
@@ -22,7 +22,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: `tests/test_dual_source_reference_parity.py:_discover_pairs` globs canonical-side `skills/*/SKILL.md` and routes each to a plugin via the `PLUGINS` map; an orphan mirror dir without a canonical pair is invisible to the parity test, which is why R2 is a discrete deliverable. The justfile build-plugin recipe is at `justfile:472,498-502` (BUILD_OUTPUT_PLUGINS); inspection during research confirmed `rsync -a --delete` operates per-skill, not across the skills/ root.
 - **Verification**: `test ! -d plugins/cortex-core/skills/fresh && test ! -d plugins/cortex-core/skills/evolve && test ! -d plugins/cortex-core/skills/retro` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 1a5e100)
 
 ### Task 3: Strip both resume mechanisms from `hooks/cortex-scan-lifecycle.sh` and regenerate the cortex-overnight mirror
 - **Files**: `hooks/cortex-scan-lifecycle.sh`, `plugins/cortex-overnight/hooks/cortex-scan-lifecycle.sh` (regenerated, not hand-edited)
@@ -31,7 +31,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: Hook structure post-edit retains: SESSION_ID injection (L7–13), session-migration across `/clear` (L31–65), pipeline-state detection (L77–173), phase detection (L175–313), active-feature determination (L320–353), build-context-message without resume prompt (L365–423), pipeline-context prepend (L425–477), agent-specific JSON output (L479–496). The `context=""` initialization at L359 must remain — only the conditional that overwrote it with `fresh_resume_prompt` is removed. The pre-commit dual-source drift hook fails if canonical and mirror are out of sync; running `just build-plugin` and staging both diffs in the same commit is the rule.
 - **Verification**: `! rg -q 'fresh-resume|fresh_resume_prompt|/clear recovery' hooks/cortex-scan-lifecycle.sh` — pass if exit 0; `! rg -q 'fresh-resume|fresh_resume_prompt|/clear recovery' plugins/cortex-overnight/hooks/cortex-scan-lifecycle.sh` — pass if exit 0; `bash tests/test_hooks.sh` — pass if exit 0 (after Task 4 lands).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 30b63a3)
 
 ### Task 4: Remove `fresh-resume-fires` and `fresh-resume-absent` test cases plus the shared fixture
 - **Files**: `tests/test_hooks.sh`, `tests/fixtures/hooks/scan-lifecycle/pending-resume.json` (delete)
@@ -40,7 +40,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: Both test cases reference the deleted hook code paths; `fresh-resume-fires` is currently failing per `backlog/170` and is being closed by this PR (Task 15 narrows #170's body). The fixture has no other consumer (verified during research). The `tests/test_hooks.sh` runner does not have an "exactly N tests" assertion — deletions are tolerated.
 - **Verification**: `! rg -q 'fresh-resume-(fires|absent)|pending-resume\.json' tests/test_hooks.sh` — pass if exit 0; `test ! -f tests/fixtures/hooks/scan-lifecycle/pending-resume.json` — pass if exit 0; `bash tests/test_hooks.sh` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit c0adc93)
 
 ### Task 5: Stop scaffolding `retros/` in `cortex init` and update the init test suite
 - **Files**: `cortex_command/init/scaffold.py`, `cortex_command/init/templates/retros/` (delete dir + its single `README.md`), `cortex_command/init/tests/test_scaffold.py`, `cortex_command/init/tests/test_settings_merge.py`
@@ -49,7 +49,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: complex
 - **Context**: `_CONTENT_DECLINE_TARGETS` is the tuple of directories where existing user content suppresses scaffold overwrite. Pattern reference: surviving entries (`backlog`, etc.) follow the same shape. `_iter_template_files` walker uses `iterdir()`, so removing a template subdirectory cleanly removes it from the scaffold without further code changes. The `test_update_preserves_user_edits` test verifies that `--update` restores a missing scaffold file — switching the test fixture to `backlog/README.md` (or `lifecycle/README.md` if present) preserves the test's intent. Per Non-Requirements bullet 9, `cortex init --update` is NOT extended to actively prune `retros/README.md` from already-initialized user repos — those users get the manual cleanup instructions in Task 14's CHANGELOG bullet.
 - **Verification**: `uv run pytest cortex_command/init/tests/` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 9f29473)
 
 ### Task 6: Archive this repo's 162 retros into `retros/archive/` via `git mv`, then delete `retros/.gitkeep`
 - **Files**: `retros/*.md` (move), `retros/archive/` (created via git mv destinations), `retros/.gitkeep` (delete)
@@ -58,7 +58,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: `git mv` preserves history per file (renames detected automatically by `git log --follow`). The atomicity rule says `git mv` BEFORE `.gitkeep` delete so a partial state remains git-recoverable via `git checkout`. The `retros/archive/` path is referenced by `bin/cortex-archive-rewrite-paths:5,203` and `bin/cortex-archive-sample-select:18` exclusion logic — those still match `retros/archive/` correctly post-move (the `--exclude-dir=retros` recipe excludes the entire subtree). Existing files: `find retros -maxdepth 1 -name '*.md'` enumerates the 162 retros at PR-creation time.
 - **Verification**: `[ -d retros/archive ] && [ "$(find retros -maxdepth 1 -name '*.md' | wc -l)" -eq 0 ] && [ ! -f retros/.gitkeep ]` — pass if exit 0; `[ "$(find retros/archive -maxdepth 1 -name '*.md' | wc -l)" -ge 50 ]` — pass if exit 0 (lower bound sanity check).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 17a327c)
 
 ### Task 7: Remove the `retro:N` indicator from `claude/statusline.sh`
 - **Files**: `claude/statusline.sh`
@@ -67,7 +67,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: `claude/statusline.sh` is single-source — NOT mirrored to plugin trees, so no `just build-plugin` regeneration required. The other line-3 indicators (which the spec preserves) live in adjacent blocks; verified during research that they share no shell variables with the `_evolve_indicator` block. Users with 10+ accumulated retros will see this indicator vanish silently — the CHANGELOG bullet (Task 14) does not specifically call this out, but the broader `### Removed` entry covers it.
 - **Verification**: `! rg -q 'evolve.*indicator|_evolve_indicator|retros/\.evolve-state' claude/statusline.sh` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 185a94d)
 
 ### Task 8: Rewrite CLAUDE.md OQ3/OQ6/Repository Structure and update `backlog/157` cross-references
 - **Files**: `CLAUDE.md`, `backlog/157-empirically-test-rules-file-tone-leverage-under-opus-47.md`
@@ -76,7 +76,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: The exact pre-edit prose for OQ3/OQ6 is quoted verbatim in `lifecycle/remove-fresh-evolve-and-retro-skills/research.md` Web Research section under "CLAUDE.md exact OQ3/OQ6 quote text". CLAUDE.md is currently 68 lines; this rewrite removes lines, so the 100-line cap and the `docs/policies.md` extraction trigger remain not-engaged. Surviving evidence-artifact options after rewrite: (a) `lifecycle/<feature>/events.log` path + line, and (b) commit-linked transcript URL or quoted excerpt.
 - **Verification**: `! rg -q 'retros' CLAUDE.md` — pass if exit 0; `! rg -q 'three artifact' CLAUDE.md` — pass if exit 0; `! rg -q 'trigger \(d\)' backlog/157-*.md` — pass if exit 0; `[ "$(wc -l < CLAUDE.md)" -le 100 ]` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 40776e3)
 
 ### Task 9: Delete the Self-Improvement Loop section and EVOLVE node from `docs/agentic-layer.md`
 - **Files**: `docs/agentic-layer.md`
@@ -85,7 +85,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: Mermaid diagrams break silently on dangling node references — the deletion is mechanical (remove the node and BOTH inbound/outbound edges symmetrically). Verification of mermaid syntactic coherence is by inspection. The `### 5.` section is the only place in the doc that narrates the feedback loop; no other doc points at it.
 - **Verification**: `! rg -q 'EVOLVE|fresh-resume|Self-Improvement Loop|self-improvement loop' docs/agentic-layer.md` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit f11d53a)
 
 ### Task 10: Scrub `/fresh`, `/evolve`, `/retro`, `retros` from setup, skills-reference, and overnight docs
 - **Files**: `docs/setup.md`, `docs/skills-reference.md`, `docs/overnight-operations.md`
@@ -94,7 +94,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: The `## Session Management` section in `skills-reference.md` exists exclusively to document the three deleted skills; no other doc links into specific subsections of it (verified during research). The `--glob '!docs/internals/**'` exclusion in the verification grep covers internal-docs that may have unrelated retrospective-word usage.
 - **Verification**: `! rg -q '\b(/fresh|/evolve|/retro|retros)\b' docs/ --glob '!docs/internals/**'` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 6c12c11)
 
 ### Task 11: Remove the "Retro surfaces unmet assumption" bullet from `skills/requirements/references/gather.md`
 - **Files**: `skills/requirements/references/gather.md`
@@ -103,7 +103,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: The section is bulleted with `- **Heading**: prose` shape; the four surviving bullets share that shape. The verification awk extracts only the section's bullets (file-wide bullet count is irrelevant because templates elsewhere in the file have identical-shape bullets).
 - **Verification**: `! rg -q 'Retro surfaces unmet assumption' skills/requirements/` — pass if exit 0; `awk '/^## Re-Gather Triggers/{f=1; next} /^## /{f=0} f' skills/requirements/references/gather.md | grep -cE '^- \*\*' | xargs -I{} test {} -eq 4` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit f58b31c)
 
 ### Task 12: Update justfile SKILLS array, `.gitignore`, and the dual-source parity test PLUGINS dict in one commit
 - **Files**: `justfile`, `.gitignore`, `tests/test_dual_source_reference_parity.py`
@@ -112,7 +112,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: The `PLUGINS` dict shape is `{plugin_name: ("skill_a", "skill_b", ...)}`; surviving entries follow the same tuple shape. The parity test uses `_discover_pairs` to glob canonical-side `skills/*/SKILL.md` and route each to a plugin via `PLUGINS` — there is NO "exactly N skills" assertion (verified during research). R13 + R18 atomicity requires both edits in the same commit; staging them separately leaves the parity test silently broken until the next dual-source pre-commit hook fires.
 - **Verification**: `! grep -E '^\s*SKILLS=.*\b(fresh|evolve|retro)\b' justfile` — pass if exit 0; `! rg -q 'fresh-resume|session-lessons|retro-written' .gitignore` — pass if exit 0; `! grep -qE '"(fresh|evolve|retro)"' tests/test_dual_source_reference_parity.py` — pass if exit 0; `uv run pytest tests/test_dual_source_reference_parity.py` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit c7c7e5e; ran ahead of Task 3 due to build-plugin dependency)
 
 ### Task 13: Defensively sweep on-disk runtime artifacts produced by the deleted skills
 - **Files**: `lifecycle/.fresh-resume` (rm -f), `retros/.session-lessons.md` (rm -f), `retros/.retro-written-*` (rm -f), `retros/.evolve-state.json` (rm -f) — none currently exist in this repo per research; the sweep is defensive
@@ -121,7 +121,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: `find . -path ./retros/archive -prune -o ...` is the verification-friendly form; `rm -f` is idempotent and exits 0 even when the target is absent. Users updating cortex on existing checkouts may have these files on disk — the cleanup paths for those users are named in Task 14's CHANGELOG bullet, not auto-removed by this PR (per Non-Requirements bullet 9 on `cortex init --update`).
 - **Verification**: `find . -path ./retros/archive -prune -o \( -name '.fresh-resume' -o -name '.session-lessons.md' -o -name '.retro-written-*' -o -name '.evolve-state.json' \) -print | grep -v '^./retros/archive$' | wc -l | xargs -I{} test {} -eq 0` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (no commit (no on-disk artifacts found))
 
 ### Task 14: Add the `### Removed` CHANGELOG entry under `## [Unreleased]` with replacement-workflow guidance and user-side cleanup paths
 - **Files**: `CHANGELOG.md`
@@ -130,7 +130,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: Existing `## [Unreleased]` section conventions: read CHANGELOG.md before editing to match the file's existing `### Removed` cadence, voice, and bullet shape. The spec's R15 acceptance check parses the `## [Unreleased]` section with awk and counts the removed-command and replacement-workflow tokens; the prose can be free-form provided the named tokens appear.
 - **Verification**: `awk '/^## \[Unreleased\]/{found=1; next} /^## \[/{found=0} found' CHANGELOG.md > /tmp/unreleased.tmp && grep -cE '/(fresh|evolve|retro)\b|/cortex-core:(backlog|discovery)' /tmp/unreleased.tmp | xargs -I{} test {} -ge 2` — pass if exit 0; `grep -q 'retros/README\.md\|\.fresh-resume\|\.evolve-state\.json' /tmp/unreleased.tmp` — pass if exit 0. Bullet prose quality (clarity, user-facing tone, conformance to existing cadence) is verified by inspection — Interactive/session-dependent: prose-quality assessment requires human judgment about voice consistency with prior `### Removed` entries.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 0d43633)
 
 ### Task 15: Narrow `backlog/170` — drop the `fresh-resume-fires` Evidence bullet
 - **Files**: `backlog/170-fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh.md`
@@ -139,7 +139,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: The bullet is closed by Task 4's deletion of the test case. The other two listed failures are unaddressed by this PR and remain in #170's scope.
 - **Verification**: `! grep -q 'fresh-resume-fires' backlog/170-*.md` — pass if exit 0; `grep -cE 'single-incomplete-feature|claude-output-format' backlog/170-*.md | xargs -I{} test {} -ge 2` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit fda047f)
 
 ### Task 16: Final reference sweep — last-gate verification before merge
 - **Files**: none (verification only)
@@ -148,7 +148,7 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Complexity**: simple
 - **Context**: The verification glob excludes `retros/archive/**`, `lifecycle/**`, `research/archive/**`, plugin trees, `CHANGELOG.md`, and `*.pyc`. The `lifecycle/**` exclusion covers this active feature's own documentation and any other in-flight lifecycle artifacts that legitimately reference the deleted surface as scope description; plugin-tree mirrors are excluded because they auto-regenerate from canonical sources, and Task 2's per-requirement check is the structural backstop for partial mirror cleanup. R8's `CLAUDE_AUTOMATED_SESSION` sweep runs over `skills/ hooks/ claude/ bin/ cortex_command/ tests/ docs/ requirements/ CLAUDE.md justfile`.
 - **Verification**: `! rg -q '/fresh\b|/evolve\b|/retro\b|fresh-resume|CLAUDE_AUTOMATED_SESSION' --glob '!retros/archive/**' --glob '!lifecycle/**' --glob '!research/archive/**' --glob '!plugins/cortex-core/**' --glob '!plugins/cortex-overnight/**' --glob '!CHANGELOG.md' --glob '!*.pyc'` — pass if exit 0; `! rg -q 'CLAUDE_AUTOMATED_SESSION' skills/ hooks/ claude/ bin/ cortex_command/ tests/ docs/ requirements/ CLAUDE.md justfile` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (success_with_caveats — see events.log note)
 
 ## Verification Strategy
 
