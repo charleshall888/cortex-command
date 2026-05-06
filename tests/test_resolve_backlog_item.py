@@ -10,6 +10,7 @@ Covers Requirements 5–11 plus edge cases from the spec:
   R10 closed-set JSON schema via subprocess
   R11 lifecycle_slug fallback chain (3 fixture variants)
   Edge  missing_title, empty_after_slugify, empty_title_slugify
+  R5a baseline-capture — pre-removal Predicate-A∪B frozen fixture
 
 Total: ≥30 named test cases.
 """
@@ -29,6 +30,83 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-resolve-backlog-item"
 BACKLOG_DIR = REPO_ROOT / "backlog"
+FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures"
+BASELINE_FIXTURE = FIXTURES_DIR / "predicate_a_baseline.json"
+
+
+# ---------------------------------------------------------------------------
+# R5a: Curated input set — module-level constant shared with Task 4's
+# test_predicate_a_divergences_match_judgment (Step 5b).
+#
+# Categories (spec R5a):
+#   • numeric IDs — unpadded (1, 6, 176) and zero-padded (006, 027, 082)
+#   • kebab slugs — short form and full-length stem
+#   • title fuzzy matches — multi-word phrases
+#   • uppercase inputs — all-caps, mixed-case
+#   • inputs with punctuation — Predicate-A candidates (see below)
+#   • ambiguous-multi inputs — short words that match many items (exit 2)
+#   • no-match inputs (exit 3)
+#   • empty-after-slugify (exit 64)
+#
+# Predicate-A-only candidates — reverse-engineered from live backlog titles
+# by inspecting shapes where slugify strips characters (spec §R5a):
+#
+#   Candidate 1 (backtick): input '`just setup`'
+#     Title 006: 'Make `just setup` additive by default'
+#     lower('`just setup`') IS in lower(title) — Predicate A fires.
+#     slugify('`just setup`') = 'just-setup'; 'just-setup' also in slugify(title)
+#     → Both predicates fire; A is the intuitive mechanism (backtick preserved in raw match).
+#
+#   Candidate 2 (parentheses + underscore): input 'next_question_id()'
+#     Title 027: 'Fix next_question_id() race condition in deferral.py'
+#     lower('next_question_id()') IS in lower(title) — Predicate A fires.
+#     slugify('next_question_id()') = 'next-question-id'; also in slugify(title).
+#     → Both fire; A captures the function-name literal including parens.
+#
+#   Candidate 3 (dot identifier): input 'runner.pid'
+#     Title 149: 'Fix runner.pid takeover race in ipc.py:write_runner_pid'
+#     lower('runner.pid') IS in lower(title) — Predicate A fires.
+#     slugify('runner.pid') = 'runnerpid'; 'runnerpid' also in slugify(title).
+#     → Both fire; A captures the field-access form with dot intact.
+#
+# All three candidates have both predicates fire in the current (pre-removal)
+# helper. The frozen baseline captures the union behavior; Step 5b (Task 2)
+# will assert post-removal (Predicate-B-only) outcomes match or carry judgment.
+# ---------------------------------------------------------------------------
+
+CURATED_INPUTS: list[str] = [
+    # --- Numeric IDs (unpadded) ---
+    "1",    # item 001: Fix overnight watchdog to kill entire process group on stall
+    "6",    # item 006: Make `just setup` additive by default
+    "176",  # item 176: this feature ticket (Lifecycle adopts cortex-resolve-backlog-item)
+    # --- Numeric IDs (zero-padded) ---
+    "006",  # zero-padded: resolves same as "6" via int() comparison
+    "027",  # item 027: Fix next_question_id() race condition in deferral.py
+    "082",  # item 082: Adapt harness to Opus 4.7 (prompt delta + capability adoption)
+    # --- Kebab slugs ---
+    "make-just-setup-additive",  # exact kebab stem of item 006
+    "fix-overnight-watchdog-to-kill-entire-process-group-on-stall",  # full kebab item 001
+    # --- Title fuzzy matches ---
+    "overnight watchdog",           # matches item 001 via title phrase
+    "additive by default",          # matches item 006 via title phrase
+    # --- Uppercase inputs ---
+    "WATCHDOG",   # case-insensitive match → item 001 (Predicate A fires via lower())
+    "OVERNIGHT",  # ambiguous — multiple items contain 'overnight' (exit 2)
+    "CLAUDE",     # ambiguous — multiple items reference CLAUDE (exit 2)
+    # --- Predicate-A candidates (punctuation/special chars in titles) ---
+    "`just setup`",     # Pred-A candidate 1: backtick — item 006
+    "next_question_id()",  # Pred-A candidate 2: parens + underscore — item 027
+    "runner.pid",          # Pred-A candidate 3: dot identifier — item 149
+    # --- Ambiguous-multi inputs (exit 2) ---
+    "fix",       # matches dozens of 'fix' items (ambiguous)
+    "add",       # matches dozens of 'add' items (ambiguous)
+    "overnight", # matches many overnight-related items (ambiguous)
+    # --- No-match inputs (exit 3) ---
+    "xyzzy-nonexistent-99999",  # no item with this pattern
+    "quantum-flux-capacitor",   # no item with this pattern
+    # --- Empty-after-slugify (exit 64) ---
+    "!!!",  # all special chars → slugify gives "" → exit 64
+]
 
 
 # ---------------------------------------------------------------------------
@@ -677,3 +755,76 @@ def test_discovery_no_backlog_exits_70(tmp_path):
     result = _run_no_env(["zorp"], tmp_path)
     assert result.returncode == 70
     assert "backlog directory not found" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# R5a: Pre-removal baseline capture
+# Spec: extend tests/test_resolve_backlog_item.py with test_predicate_a_baseline_capture
+# that runs CURATED_INPUTS against the current helper (Predicate-A∪B) over the live
+# backlog/[0-9]*-*.md items and writes (input, exit-code, resolved-filename-or-None)
+# tuples to tests/fixtures/predicate_a_baseline.json.
+#
+# The fixture is the OQ3 evidence anchor: it freezes pre-removal behavior so
+# Step 5b (test_predicate_a_divergences_match_judgment) can assert post-removal
+# outcomes either match or carry explicit per-case judgment rows.
+# ---------------------------------------------------------------------------
+
+
+def _run_live(input_str: str) -> subprocess.CompletedProcess:
+    """Run the helper against the live backlog/ with CORTEX_BACKLOG_DIR set."""
+    env = {"CORTEX_BACKLOG_DIR": str(BACKLOG_DIR), **os.environ}
+    return subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), input_str],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
+def test_predicate_a_baseline_capture():
+    """Capture pre-removal Predicate-A∪B behavior on CURATED_INPUTS, write fixture.
+
+    Runs each input in CURATED_INPUTS against the current helper over the live
+    backlog/[0-9]*-*.md items.  Records (input, exit_code, resolved_filename_or_None)
+    tuples in tests/fixtures/predicate_a_baseline.json as the frozen baseline.
+
+    Exit-code semantics:
+      0   → unambiguous match; tuple[2] = parsed JSON ``filename`` field
+      2   → ambiguous match;   tuple[2] = None
+      3   → no match;          tuple[2] = None
+      64  → usage error;       tuple[2] = None
+      70  → IO/parse error;    tuple[2] = None
+
+    The fixture is the OQ3 evidence anchor for the Predicate-A removal in Step 5b.
+    """
+    assert BACKLOG_DIR.is_dir(), f"live backlog not found at {BACKLOG_DIR}"
+
+    baseline: list[list] = []  # list of [input, exit_code, filename_or_None]
+    for inp in CURATED_INPUTS:
+        result = _run_live(inp)
+        if result.returncode == 0:
+            try:
+                payload = json.loads(result.stdout)
+                resolved = payload["filename"]
+            except (json.JSONDecodeError, KeyError):
+                resolved = None
+        else:
+            resolved = None
+        baseline.append([inp, result.returncode, resolved])
+
+    # Write fixture (deterministic: CURATED_INPUTS order is fixed)
+    FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
+    BASELINE_FIXTURE.write_text(
+        json.dumps(baseline, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    # Sanity checks on the written fixture
+    assert BASELINE_FIXTURE.exists(), "fixture file was not written"
+    loaded = json.loads(BASELINE_FIXTURE.read_text(encoding="utf-8"))
+    assert len(loaded) >= 10, (
+        f"fixture has only {len(loaded)} entries; expected ≥10 (spec R5a)"
+    )
+    assert len(loaded) == len(CURATED_INPUTS), (
+        f"fixture row count {len(loaded)} != len(CURATED_INPUTS) {len(CURATED_INPUTS)}"
+    )
