@@ -6,7 +6,7 @@ type: feature
 status: backlog
 priority: medium
 parent: 172
-blocked-by: [174, 177]
+blocked-by: [177]
 tags: [lifecycle, hooks, complexity-escalation, token-efficiency, deterministic-execution, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06

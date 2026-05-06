@@ -6,7 +6,7 @@ type: feature
 status: backlog
 priority: high
 parent: 172
-blocked-by: [174, 175, 176]
+blocked-by: [175]
 tags: [lifecycle, plan-template, spec-template, vertical-planning, orchestrator-review, parser]
 created: 2026-05-06
 updated: 2026-05-06

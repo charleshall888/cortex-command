@@ -1,0 +1,49 @@
+- ts: 2026-05-06T18:20:41Z
+  event: clarify_critic
+  feature: skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget
+  parent_epic_loaded: true
+  findings:
+    - text: "Intent clarity rated HIGH but test #1's trigger phrase corpus is unresolved — the body uses literal '...' ellipses and defers selection to ticket #178 (which 'may or may not land') or 'the audit's recommended phrasings'. Two fallback sources are offered without picking one."
+      origin: primary
+    - text: "Intent clarity rated HIGH but the body contains at least three implementer's-choice forks (test_skill_handoff.py NEW vs. extend test_skill_callgraph.py; test_skill_size_budget.py NEW vs. fold into multi-test file; justfile recipe 'may need') plus an Optionally-marked anchor verification refinement. HIGH intent clarity assumes the goal is unambiguous; the source explicitly leaves these shape decisions open."
+      origin: primary
+    - text: "Scope boundedness rated HIGH but test #2 alone defines a four-step end-to-end fixture (discovery → refine → lifecycle → critical-review) without bounding how the fixture is constructed, whether skill invocations are mocked or run live, what counts as 'produces', or how discovery_source field presence is validated. The 'exactly four test classes' framing hides substantial under-specified scope inside test #2."
+      origin: primary
+    - text: "Scope boundedness rated HIGH but test #1's assertion corpus is conditional on ticket #178's landing status; 'both can be done in parallel' hedge expands rather than bounds scope (now the implementer must handle either case)."
+      origin: primary
+    - text: "Requirements alignment rated HIGH but reasoning paraphrases requirements text rather than quoting from a verified read; 'Maintainability through simplicity' is in tension with adding four new test files plus a brittle line-number cross-reference scanner — alignment requires evidence the requirements affirmatively endorse this work, not just absence of conflict."
+      origin: primary
+    - text: "Requirements alignment HIGH partially rests on importing the project's 'high' criticality default for user-facing affordances from outside the ticket, conflating 'this work is in a load-bearing area' with 'requirements specify this work'."
+      origin: primary
+    - text: "Complexity rating 'complex' is asserted via surface metrics (file count, new test patterns) but does not engage with the cross-skill orchestration burden of test #2 (working fixture exercising four different skills end-to-end)."
+      origin: primary
+    - text: "Parent epic 172 frames itself around densification, deduplication of ~700 lines of cross-skill duplication, and vertical-planning adoption — child #181 instead adds four new test files (surface-area-additive, not subtractive) and does not target any of the four named bloat/duplication findings. The audit's 'Test/verification gaps (new class)' section plausibly sanctions this sub-thread, but the parent's 'vertical-planning adoption' half of the title creates an unaddressed expectation that the new test files might themselves adopt vertical-planning structure."
+      origin: alignment
+    - text: "Verification section's two deliberate-regression items are demonstration steps rather than acceptance criteria for the four test classes; 'clear, actionable error message' is qualitative with no rubric — the Verification list is shorter and softer than the HIGH rating implies."
+      origin: primary
+  dispositions:
+    apply: 2
+    dismiss: 5
+    ask: 2
+  applied_fixes:
+    - "Revised Requirements alignment reasoning to cite the existing bin/cortex-check-parity CI-gate pattern (requirements/project.md Architectural Constraints) and clarify.md §3's 'high default for skill/lifecycle/hook/workflow changes' guidance, rather than leaning on the MEMORY user-facing-affordances framing. Rating remains HIGH; reasoning is now grounded in project-doc text and clarify-rubric guidance."
+    - "Propagating the Parent Epic Alignment finding (origin: alignment) as a Research consideration: validate that #181 is a sanctioned sub-thread of the audit's 'Test/verification gaps (new class)' section, and explore whether the parent epic's vertical-planning-adoption theme implies the new test files should themselves adopt a vertical-planning structure rather than conventional pytest layout."
+  dismissals:
+    - finding_index: 1
+      rationale: "The 'or' branches (separate vs. extend test_skill_callgraph; new file vs. fold into multi-test; justfile optional; anchor verification optional) are spec-level structural choices, not intent-level ambiguities. The goal 'catch these four named regression modes' remains unambiguous. Implementation shape is what spec resolves, per clarify.md constraints table ('I should assess technical feasibility — That is Research's job')."
+    - finding_index: 4
+      rationale: "Alignment is grounded in the bin/cortex-check-parity pattern explicitly listed in requirements/project.md Architectural Constraints (a CI-time drift gate that's a 'pre-commit-blocking failure mode'). CI gates that catch regressions cheaply align with 'Maintainability through simplicity' (cheap prevention vs. expensive recovery) — the noted tension is a design consideration, not a misalignment."
+    - finding_index: 5
+      rationale: "Reclassified during self-resolution: the criticality default 'high for skill/lifecycle/hook/workflow changes' is documented in clarify.md §3, not external import. The MEMORY framing is a feedback principle but is not the load-bearing alignment basis — the cortex-check-parity pattern and project.md Quality Attributes are. Applied fix #1 captures the cleaner reasoning."
+    - finding_index: 6
+      rationale: "Complexity is already at the top binary tier ('complex' vs. 'simple'). Cross-skill orchestration burden reinforces the rating rather than changing it. Test #2's depth is an Ask question (separately captured) and a spec-level scope decision."
+    - finding_index: 8
+      rationale: "Deliberate-regression smoke tests are valid verification (they exercise the test surface itself). Qualitative criteria like 'actionable error message' are normal for test infrastructure design and get sharpened during spec. The Verification section is fit-for-purpose for a refine-tier acceptance summary."
+  status: ok
+- ts: 2026-05-06T18:55:22Z
+  event: orchestrator_review
+  feature: skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
