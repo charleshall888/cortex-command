@@ -116,11 +116,11 @@ Land schema_version + JSONL emission contract + Python legacy-tolerance + replay
   - `test ! -f skills/lifecycle/references/clarify-critic.md` — pass if exit 0 (R1)
   - `test ! -f plugins/cortex-core/skills/lifecycle/references/clarify-critic.md` — pass if exit 0 (R2)
   - `[ "$(grep -c '\.\./\.\./refine/references/clarify-critic\.md' skills/lifecycle/references/clarify.md)" = "1" ]` — pass if exit 0 (R3, depth-correct double-`..` form)
-  - `[ "$(grep -cE '(^|[^.])\.\./refine/references/clarify-critic\.md' skills/lifecycle/references/clarify.md)" = "0" ]` — pass if exit 0 (single-`..` broken form is absent — depth-bug regression guard)
+  - `python3 -c "import re; t=open('skills/lifecycle/references/clarify.md').read(); assert len(re.findall(r'(?<![./])\.\./refine/references/clarify-critic\.md', t)) == 0, 'single-..\\bbroken form present'"` — pass if exit 0 (single-`..` broken form is absent — depth-bug regression guard; negative-lookbehind `(?<![./])` rules out the second `..` of `../../` because `[./]` includes both `.` and `/`)
   - `[ "$(grep -c 'skills/lifecycle/references/clarify-critic\.md' docs/internals/sdk.md)" = "0" ] && grep -q 'skills/refine/references/clarify-critic\.md' docs/internals/sdk.md` — pass if exit 0 (live doc updated; no broken path remains)
-  - `[ "$(git show --name-status HEAD -- 'skills/lifecycle/references/clarify-critic.md' 'plugins/cortex-core/skills/lifecycle/references/clarify-critic.md' | grep -c '^D')" = "2" ]` — pass if exit 0 (R13)
-  - `[ -z "$(git show --name-status HEAD -- cortex_command/overnight/events.py)" ]` — pass if exit 0 (R11)
-- **Status**: [ ] pending
+  - `[ "$(git show --name-status --format= HEAD -- 'skills/lifecycle/references/clarify-critic.md' 'plugins/cortex-core/skills/lifecycle/references/clarify-critic.md' | grep -c '^D')" = "2" ]` — pass if exit 0 (R13; `--format=` suppresses the commit header so `Date:` does not match `^D`)
+  - `[ -z "$(git show --name-status --format= HEAD -- cortex_command/overnight/events.py)" ]` — pass if exit 0 (R11)
+- **Status**: [x] complete (commit 058eceb)
 
 ### Task 7: Final integration verification — full test file passes
 
@@ -131,7 +131,7 @@ Land schema_version + JSONL emission contract + Python legacy-tolerance + replay
 - **Context**: This is the R12 acceptance gate. No file modifications. If failure occurs, diagnose the failing test and fix forward — do not revert prior tasks.
 - **Verification**:
   - `pytest tests/test_clarify_critic_alignment_integration.py -x` — pass if exit 0 (R12)
-- **Status**: [ ] pending
+- **Status**: [x] complete (8 passed, 0 failed)
 
 ## Verification Strategy
 
