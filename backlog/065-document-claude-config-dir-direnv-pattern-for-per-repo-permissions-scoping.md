@@ -43,7 +43,7 @@ Each is documented as a "don't do this" or "this has the following failure mode"
 1. **`/setup-merge` hardcodes `~/.claude`** — do not run from a shadowed shell (silently bypasses the shadow).
 2. **`just setup` hardcodes `~/.claude`** — re-run `just setup` from the shadow shell when the host updates, or use `cp -R --update` to refresh.
 3. **`claude/settings.json` notify hook** references `~/.claude/notify.sh` literally — notify hook fires from the host path. Workaround: keep a host install alongside the shadow.
-4. **`skills/evolve/SKILL.md` memory-path prose** references `~/.claude/projects/...` — auto-memory under a shadow writes to the host scope.
+4. **Memory-path prose** in skill references `~/.claude/projects/...` — auto-memory under a shadow writes to the host scope. (Originally cited `skills/evolve/SKILL.md`; that skill was removed in #171, but the underlying shadow-vs-host memory-path concern still applies wherever skill prose touches `~/.claude/projects/...`.)
 5. **`bin/audit-doc` and `bin/count-tokens`** fall back to `~/.claude` — users in a shadow get host results.
 
 ## What is deliberately NOT in this ticket
