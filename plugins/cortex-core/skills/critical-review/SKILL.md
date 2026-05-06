@@ -1,11 +1,28 @@
 ---
 name: critical-review
-description: Dispatches parallel reviewer agents — each focused on a single challenge angle — then synthesizes findings with an Opus agent to deeply challenge a plan, spec, or research artifact from multiple angles before you commit. Domain context from project requirements is injected so reviewers can surface domain-specific failure modes even when the artifact doesn't mention them. Use when the user says "critical review", "pressure test", "adversarial review", "pre-commit challenge", "deeply question", or "challenge from multiple angles". More thorough than a single sequential pass because parallel agents remove anchoring bias and produce deeper per-angle coverage. Also auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval. For a lightweight inline challenge that stays in the current agent's context without dispatching sub-agents, use /devils-advocate.
+description: Dispatches parallel reviewer agents — each focused on a single challenge angle — then synthesizes findings with an Opus agent to deeply challenge a plan, spec, or research artifact from multiple angles before you commit. Domain context from project requirements is injected so reviewers can surface domain-specific failure modes even when the artifact doesn't mention them. Use when the user says "critical review", "pressure test", "adversarial review", "pre-commit challenge", "deeply question", or "challenge from multiple angles". More thorough than a single sequential pass because parallel agents remove anchoring bias and produce deeper per-angle coverage. Also auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval.
+when_to_use: "Use when you want to stress-test a plan, spec, or research artifact before committing (\"poke holes in the plan\", \"stress test the spec\", \"is this actually a good idea\", \"review before I commit\"). Different from /devils-advocate — devils-advocate runs inline in the current agent's context for a lightweight solo deliberation; critical-review dispatches parallel sub-agents and synthesizes the findings."
+argument-hint: "[<artifact-path>]"
+inputs:
+  - "artifact-path: string (optional) — path to plan.md, spec.md, or research.md to review; if omitted, auto-detect from current lifecycle"
+outputs:
+  - "Synthesis prose presented in conversation"
+  - "Optional residue write at lifecycle/{feature}/critical-review-residue.json"
+preconditions:
+  - "Run from project root"
+  - "Artifact path resolves to an existing markdown file"
 ---
 
 # Critical Review
 
 Derives challenge angles from the artifact and domain context, dispatches one fresh reviewer agent per angle in parallel, then synthesizes findings with an Opus agent. Each reviewer works independently with no anchoring to the reasoning that produced the artifact.
+
+## Contents
+
+1. [Step 1: Find the Artifact](#step-1-find-the-artifact)
+2. [Step 2: Review Setup and Dispatch](#step-2-review-setup-and-dispatch)
+3. [Step 3: Present](#step-3-present)
+4. [Step 4: Apply Feedback](#step-4-apply-feedback)
 
 ## Step 1: Find the Artifact
 
@@ -337,29 +354,16 @@ Output the review result directly. Do not soften or editorialize.
 
 Immediately after presenting the synthesis, work through each objection independently. Do not wait for the user.
 
-For each objection, assign one of three dispositions:
-
-**Apply** — the objection identifies a concrete problem and the correct fix is clear and unambiguous. Examples: internal inconsistency, broken logic, missing information the agent can supply, acceptance criteria that are untestable or tautological, ordering dependencies not stated. Fix these without asking.
-
-**Dismiss** — the objection is already addressed in the artifact, misreads the stated constraints, or would expand scope in a direction clearly outside the requirements. State the dismissal reason briefly. **Anchor check**: if your dismissal reason cannot be pointed to in the artifact text and lives only in your memory of the conversation, treat it as Ask instead — that is anchoring, not a legitimate dismissal.
-
-**Ask** — the fix is not for the orchestrator to decide unilaterally. This covers: (a) genuine preference or scope decisions — which of two valid approaches to take, whether to include or exclude something, a priority call between competing values; (b) genuine orchestrator uncertainty about which fix is correct; (c) consequential tie-breaks — two equally reasonable implementations where the choice affects scope, design direction, or is hard to reverse. Hold these for the end. **C-class (framing) findings default to Ask unless self-resolution yields a verifiable fix** — framing concerns often depend on operator intent the orchestrator cannot verify unilaterally.
-
-**Before classifying as Ask, attempt self-resolution.** For each objection you are considering classifying as Ask, do a brief check — not an exhaustive search. Re-read the relevant artifact sections, check related codebase files, and consult any project context loaded in Step 2a. If the answer is supported by verifiable evidence — a specific file path, explicit artifact text, or documented project context — resolve it yourself and classify as Apply or Dismiss instead. Do not resolve based on inferences from general principles or reasoning you already held before investigating. **Anchor check**: if your resolution relies on conclusions from your prior work on this artifact rather than new evidence found during the check, treat it as Ask — that is anchoring, not resolution. Uncertainty still defaults to Ask.
+**Apply** when the fix is unambiguous and confidence is high.
+**Dismiss** when the artifact already addresses the objection or the objection misreads stated constraints.
+**Ask** when the fix involves user preference, scope decision, or genuine uncertainty.
+Default ambiguous to Ask. Anchor-checks: dismissals must be pointable to artifact text, not memory; resolutions must rest on new evidence, not prior reasoning.
 
 After classifying all objections:
 
 1. Re-read the artifact in full.
 2. Write the updated artifact with all "Apply" fixes incorporated. Preserve everything not touched by an accepted objection.
-3. Present a compact summary in the following format:
-
+3. Present a compact summary:
    - **Apply bullets describe the direction of the change**, not the objection text. Use one of these verbs as the first word of each bullet: strengthened, narrowed, clarified, added, removed, inverted.
-   - **Dismiss: N objections** — a single count line. Omit the Dismiss line when N = 0.
+   - **Dismiss: N objections** — a single count line. Omit when N = 0.
    - **Ask items consolidate into a single message when any remain.**
-
-   Worked examples:
-   - Compliant: R10 strengthened from SHOULD to MUST.
-   - Compliant: R3 narrowed from "all endpoints" to "payment endpoints".
-   - Non-compliant: R10 updated. (No direction verb; restates the artifact change as prose.)
-
-**Apply bar**: Apply when and only when the fix is unambiguous and confidence is high. Uncertainty is a legitimate reason to Ask — do not guess and apply. For inconsequential tie-breaks between equally reasonable implementations, pick one and apply. For consequential tie-breaks, Ask. Do not Ask to seek approval for things the orchestrator can determine — keep questions tightly scoped to genuine decisions or genuine uncertainty.

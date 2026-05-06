@@ -86,7 +86,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
   - `grep -c "Default ambiguous" skills/critical-review/SKILL.md` ≥ 1.
   - `grep -c "Compliant: R10 strengthened" skills/critical-review/SKILL.md` = 0.
   - `python3 -c "import re; m = re.search(r'^description:\s*(.+?)\n(?:[a-z_]+:|---)', open('skills/critical-review/SKILL.md').read(), re.M|re.S); print(len(m.group(1).strip().strip('\"')) if m else 'no match')"` ≤ 1024.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Edit `skills/refine/SKILL.md` and `skills/discovery/SKILL.md` (R2 when_to_use)
 
