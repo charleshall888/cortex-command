@@ -110,10 +110,10 @@ After the critic agent returns its list of objections, the orchestrator (not the
 
 ### Dispositioning Output Contract
 
-After classifying every objection, the dispositioning step produces one structured artifact and nothing else. That artifact is the `clarify_critic` event itself — a YAML payload matching the schema defined in `## Event Logging` below, including the `dismissals` array.
+After classifying every objection, the dispositioning step produces one structured artifact and nothing else. That artifact is the `clarify_critic` event itself — a single-line JSONL payload matching the schema defined in `## Event Logging` below, including the `dismissals` array.
 
-- The **sole output** of the dispositioning step is the structured YAML artifact. It is not free-form prose.
-- The orchestrator writes this YAML **verbatim** to `lifecycle/{feature}/events.log` as the `clarify_critic` event.
+- The **sole output** of the dispositioning step is the structured single-line JSONL artifact. It is not free-form prose.
+- The orchestrator writes this single-line JSON object **verbatim** to `lifecycle/{feature}/events.log` as the `clarify_critic` event.
 - The user-facing response following the dispositioning step is scoped to (a) the §4 Ask-merge invocation (per Ask-to-Q&A Merge Rule below), and (b) silent application of Apply dispositions to the confidence assessment.
 - Dismiss rationales appear only in `dismissals[].rationale` inside the event — never in the user-facing response surface. Because the dispositioning step's only output channel is the structured artifact, there is no prose surface in which a Dismiss rationale could appear.
 
@@ -129,9 +129,12 @@ If the critic produces no Ask items, proceed to §4 with only the low-confidence
 
 After the critic agent returns and the orchestrator has applied dispositions, write a `clarify_critic` event to `lifecycle/{feature}/events.log`.
 
+Events are emitted as single-line JSONL — one JSON object per line, written verbatim by the orchestrator to `lifecycle/{feature}/events.log`. Producers SHOULD include `schema_version`; readers MUST tolerate its absence as v1.
+
 Required fields:
 
 ```
+schema_version: <int>  # 2 for current schema; readers MUST tolerate absence as v1
 ts: <ISO 8601 timestamp>
 event: clarify_critic
 feature: <feature slug>
@@ -156,14 +159,27 @@ If no Dismiss dispositions were made, `dismissals` is an empty array. The invari
 
 `findings[]` is an array of objects, each with `text: <string>` (the prose objection) and `origin: "primary" | "alignment"`. `origin: "alignment"` is reserved for findings produced from the `## Parent Epic Alignment` sub-rubric; all other critic-dimension findings use `origin: "primary"`. Pre-feature legacy events with bare-string findings are read as `{text: <string>, origin: "primary"}`.
 
+**Legacy-tolerance — three pre-v2 shapes.** Readers MUST tolerate the following pre-v2 event shapes (described by behavioral effect, not version label):
+
+1. **minimal v1** — events without `schema_version`, without `parent_epic_loaded`, and with bare-string `findings[]` entries. Read `schema_version` as v1, `parent_epic_loaded` as `false`, and each bare-string finding as `{text: <string>, origin: "primary"}`. The `dismissals` array may be absent; read as `[]`.
+2. **v1+dismissals** — events without `schema_version` but with the `dismissals` array present (and the `len(dismissals) == dispositions.dismiss` invariant intended). Apply the same v1 defaults for missing fields; honor the present `dismissals` array as written.
+3. **YAML-block** — events written as a multi-line YAML block on disk rather than single-line JSONL. Tolerate on read; do not rewrite. Producers SHOULD emit single-line JSONL going forward.
+
 **Cross-field invariant**: any post-feature event whose `findings[]` contains at least one item with `origin: "alignment"` has `parent_epic_loaded: true`. Violation indicates a write-side bug. This invariant sits in parallel to the `len(dismissals) == dispositions.dismiss` invariant; neither is programmatically validated in this version, but a future ticket may add a validator covering both.
 
 Disposition counts reflect post-self-resolution values. If self-resolution reclassifies an Ask item as Apply, the logged `apply` count increases and `ask` count decreases accordingly, and the resulting fix description is appended to `applied_fixes` (the `applied_fixes` array thus carries initial Apply dispositions and Ask→Apply self-resolution reclassifications). If self-resolution reclassifies an Ask item as Dismiss, `ask` decreases and `dismiss` increases; the resolved rationale lands in `dismissals[].rationale` (not in `applied_fixes`) because `dismissals` is the Dismiss-disposition counterpart to `applied_fixes`.
 
-Example (YAML block format, same as other lifecycle events):
+Example (single-line JSONL, written verbatim by the orchestrator):
+
+```
+{"schema_version": 2, "ts": "2026-03-23T14:05:00Z", "event": "clarify_critic", "feature": "my-feature", "parent_epic_loaded": true, "findings": [{"text": "The High rating for intent clarity is not grounded in the backlog item body — the item says 'improve the workflow' with no further elaboration.", "origin": "primary"}, {"text": "Scope boundedness is rated High but the item mentions both the CLI and the web UI without distinguishing them.", "origin": "primary"}, {"text": "Requirements alignment asserts 'no conflicts' but no requirements file was actually loaded.", "origin": "primary"}, {"text": "Complexity rated simple despite four distinct subsystems named in the body.", "origin": "primary"}, {"text": "The clarified intent narrows scope to 'CLI commit flow' but the parent epic body explicitly frames the work as 'commit and PR flows together' — divergence unjustified by the source material.", "origin": "alignment"}], "dispositions": {"apply": 1, "dismiss": 2, "ask": 2}, "applied_fixes": ["Revised intent clarity from High to Low — the goal phrase is genuinely ambiguous."], "dismissals": [{"finding_index": 1, "rationale": "The body's second paragraph distinguishes CLI and web UI; the scope claim is grounded, not asserted."}, {"finding_index": 3, "rationale": "Reclassified from Ask to Dismiss during self-resolution: the four subsystems are orchestration layers within one bounded context per project convention in requirements/project.md; the simple rating holds."}], "status": "ok"}
+```
+
+Structural breakdown (for documentation only — the orchestrator emits the single-line JSONL above, not this YAML rendering):
 
 ```yaml
-- ts: 2026-03-23T14:05:00Z
+- schema_version: 2
+  ts: 2026-03-23T14:05:00Z
   event: clarify_critic
   feature: my-feature
   parent_epic_loaded: true
