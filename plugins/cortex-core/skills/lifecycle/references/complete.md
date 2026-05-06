@@ -39,7 +39,7 @@ If no backlog item was found, skip this silently.
 
 1. If `cortex-update-item` was not found (`command -v cortex-update-item` failed), emit: `"WARNING: cortex-update-item not found — backlog item status may not be updated."`
 2. Attempt index regeneration in order:
-   - Run `test -f backlog/generate_index.py` — if it exists, run `python3 backlog/generate_index.py` and emit: `"Index regenerated via backlog/generate_index.py"`
+   - Run `test -f cortex_command/backlog/generate_index.py` — if it exists, run `python3 cortex_command/backlog/generate_index.py` and emit: `"Index regenerated via cortex_command/backlog/generate_index.py"`
    - Else run `command -v cortex-generate-backlog-index` — if found on PATH, run `cortex-generate-backlog-index` and emit: `"Index regenerated via cortex-generate-backlog-index"`
    - Else emit: `"WARNING: Could not regenerate backlog index — no generate_index.py script found. Index may be stale."`
 
@@ -62,7 +62,7 @@ if no match (silently acceptable — not all features originate from backlog ite
 
 1. If `cortex-update-item` was not found (`command -v cortex-update-item` failed), emit: `"WARNING: cortex-update-item not found — backlog item status may not be updated."`
 2. Attempt index regeneration in order:
-   - Run `test -f backlog/generate_index.py` — if it exists, run `python3 backlog/generate_index.py` and emit: `"Index regenerated via backlog/generate_index.py"`
+   - Run `test -f cortex_command/backlog/generate_index.py` — if it exists, run `python3 cortex_command/backlog/generate_index.py` and emit: `"Index regenerated via cortex_command/backlog/generate_index.py"`
    - Else run `command -v cortex-generate-backlog-index` — if found on PATH, run `cortex-generate-backlog-index` and emit: `"Index regenerated via cortex-generate-backlog-index"`
    - Else emit: `"WARNING: Could not regenerate backlog index — no generate_index.py script found. Index may be stale."`
 

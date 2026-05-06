@@ -118,7 +118,7 @@ Before an item is eligible for overnight execution, `filter_ready()` in `cortex_
 
 **Gate 1 — Status.** The item's `status` must be one of the eligible values: `backlog`, `in_progress`, `implementing`, or `refined`. Items in any other status (including `complete`, `abandoned`, `review`) are excluded.
 
-**Gate 2 — Blocked.** The item's `blocked-by` list must not contain any item that is itself in a non-terminal status. If any blocker is still active, the item is ineligible. Terminal statuses that satisfy this gate are (canonical source: `claude/common.py`): `complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do`.
+**Gate 2 — Blocked.** The item's `blocked-by` list must not contain any item that is itself in a non-terminal status. If any blocker is still active, the item is ineligible. Terminal statuses that satisfy this gate are (canonical source: `cortex_command/common.py`): `complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do`.
 
 **Gate 3 — Type (epics excluded).** Items with `type: epic` are non-implementable and always excluded. Epics are containers produced by `/cortex-core:discovery`; their children are the actionable items.
 
@@ -171,7 +171,7 @@ python3 backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
 - Appends `status_changed` or `phase_changed` events to the sidecar `{stem}.events.jsonl` log.
 - Regenerates `backlog/index.json` and `backlog/index.md` via `generate_index.py`.
 
-**Additional side effects for terminal status transitions** (`complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do` — full list in `claude/common.py`):
+**Additional side effects for terminal status transitions** (`complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do` — full list in `cortex_command/common.py`):
 - Removes the closed item's ID and UUID from `blocked-by` arrays across all active backlog items.
 - Auto-closes the parent epic if all sibling items have reached a terminal status.
 

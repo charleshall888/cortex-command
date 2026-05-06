@@ -1,0 +1,36 @@
+- ts: 2026-05-06T00:00:00Z
+  event: clarify_critic
+  feature: fix-duplicated-block-bug-in-refine-skillmd-5-stale-skill-references
+  parent_epic_loaded: true
+  findings:
+    - text: "Intent clarity rated HIGH but two of the six replacement-table rows (cortex-worktree-create.sh and backlog/generate_index.py) use disjunctive 'or' alternatives that the ticket does not adjudicate, requiring a design choice rather than a mechanical substitution."
+      origin: primary
+    - text: "Scope boundedness rated HIGH on the basis of exact line ranges, but the file may contain a third '### Alignment-Considerations Propagation' heading making the duplication more entangled than 'delete one copy' implies."
+      origin: primary
+    - text: "Criticality rated high but the change is described as 'pure cleanup with no behavior change'; the claude/common.py token in skills/lifecycle/SKILL.md:3 sits inside the description-as-gating-rule fence ('Required before editing any file in...'), and replacing a non-existent fenced path with cortex_command/common.py changes which file edits the lifecycle skill claims authority over — that is not behavior-neutral."
+      origin: primary
+    - text: "Requirements alignment claims 'no conflicts detected' but skills/backlog/references/schema.md:22 also references claude/common.py and is NOT in the touch-points list — the same stale token will remain in another tracked file after the fix, contradicting the cleanup goal. (Verified post-critic: also present in docs/overnight-operations.md:101,103,326 and docs/backlog.md:121,174.)"
+      origin: primary
+    - text: "Verification block uses grep-zero existence checks but does not assert that resulting description-field YAML still parses correctly or that the lifecycle skill still triggers — frontmatter well-formedness is not implied by token-count zero."
+      origin: primary
+    - text: "Parent epic 172 enumerated five findings (~700 lines cross-skill duplication, 21-line copy-paste bug, 5 stale references, ~115 lines harness-level duplication, per-feature artifact bloat); child 173 addresses only the smallest two and is bundled as 'zero-risk', without addressing whether mechanical fixes preempt or interfere with later structural work on the same files."
+      origin: alignment
+  dispositions:
+    apply: 2
+    dismiss: 2
+    ask: 2
+  applied_fixes:
+    - "F3 acknowledged as Apply: clarified-intent statement updated to note that replacing claude/common.py in the lifecycle SKILL.md description-fence intentionally re-fences the live cortex_command/common.py shared-helpers path. This is an intended behavior change (gating rule now matches reality), not pure cosmetic."
+    - "F5 acknowledged as Apply: scope-boundedness rating revised from HIGH to LOW. Verified post-critic that claude/common.py also appears at skills/backlog/references/schema.md:22, docs/overnight-operations.md:101/:103/:326, and docs/backlog.md:121/:174 — the ticket's enumerated 5 references are not exhaustive. This becomes a §4 Ask question."
+    - "F6 acknowledged as Apply: spec phase will extend verification to include 'lifecycle SKILL.md frontmatter still parses' and 'plugins/cortex-core/skills/lifecycle/SKILL.md mirror regenerates without error' beyond the existing grep-zero checks."
+  dismissals:
+    - finding_index: 1
+      rationale: "Verified post-critic via grep that skills/refine/SKILL.md contains exactly two '### Alignment-Considerations Propagation' headings (lines 117 and 138), not three. The duplication is exactly as the ticket describes: two byte-identical 20-line blocks separated by a single blank line at 137. 'Delete one copy' is a sufficient and accurate fix description."
+    - finding_index: 5
+      rationale: "Parent epic 172 explicitly tracks the larger structural items (700-line cross-skill duplication, 115-line harness-level duplication, per-feature artifact bloat) as separate findings. Child 173's bundling of the two smallest, zero-risk mechanical fixes is deliberate audit-product decomposition. Mechanical fixes here do not preempt later structural work — they reduce noise that future structural-refactor agents would otherwise have to navigate."
+  status: ok
+{"ts": "2026-05-06T18:44:09Z", "event": "lifecycle_start", "feature": "fix-duplicated-block-bug-in-refine-skillmd-5-stale-skill-references", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-06T18:44:09Z", "event": "phase_transition", "feature": "fix-duplicated-block-bug-in-refine-skillmd-5-stale-skill-references", "from": "specify", "to": "plan"}
+{"ts": "2026-05-06T18:44:09Z", "event": "orchestrator_review", "feature": "fix-duplicated-block-bug-in-refine-skillmd-5-stale-skill-references", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-06T18:44:09Z", "event": "critical_review", "feature": "fix-duplicated-block-bug-in-refine-skillmd-5-stale-skill-references", "phase": "plan", "angle_count": 4, "angles_completed": 4, "a_class_findings_after_rubric": 4, "b_class_findings": 6, "c_class_findings": 3, "dispositions": {"apply": 10, "dismiss": 0, "ask": 0}}
+{"ts": "2026-05-06T18:44:09Z", "event": "phase_transition", "feature": "fix-duplicated-block-bug-in-refine-skillmd-5-stale-skill-references", "from": "plan", "to": "implement"}

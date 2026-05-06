@@ -116,7 +116,7 @@ cortex-update-item {backlog-filename-slug} complexity={value} criticality={value
 
 Where `{backlog-filename-slug}` is the backlog file's name without the `.md` extension (e.g., `119-create-refine-skill`).
 
-If `update_item.py` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs.
+If `cortex-update-item` fails, surface the error and ask the user to resolve it before proceeding. Do not silently skip write-backs.
 
 For Context B (ad-hoc), skip this step — there is no backlog item to update.
 

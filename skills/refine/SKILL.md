@@ -135,27 +135,6 @@ Pass the assembled list as `research-considerations="..."` to the `/cortex-core:
 
 This argument fires only when at least one Apply'd alignment finding exists. If clarify-critic returned no alignment findings, or every alignment finding was Dismissed, omit the `research-considerations` argument entirely from the research dispatch.
 
-### Alignment-Considerations Propagation
-
-After clarify-critic returns and dispositions are applied (see Step 3), collect every finding with `origin: "alignment"` whose disposition is **Apply** (or whose Ask was resolved to Apply via the §4 Q&A flow). Findings dispositioned as **Dismiss** are not propagated. Format the surviving alignment findings as a newline-delimited bullet list:
-
-```
-- consideration text one
-- consideration text two
-```
-
-Each consideration must be a one-sentence paraphrase of the underlying alignment finding. Strip or paraphrase away any embedded `=` or `"` characters so the value remains a well-formed argument string.
-
-Pass the assembled list as `research-considerations="..."` to the `/cortex-core:research` invocation:
-
-```
-/cortex-core:research topic="{clarified intent}" lifecycle-slug="{lifecycle-slug}" tier={tier} criticality={criticality} research-considerations="
-- consideration text one
-- consideration text two"
-```
-
-This argument fires only when at least one Apply'd alignment finding exists. If clarify-critic returned no alignment findings, or every alignment finding was Dismissed, omit the `research-considerations` argument entirely from the research dispatch.
-
 After writing `research.md`, update `lifecycle/{lifecycle-slug}/index.md`:
 - If `"research"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"research"` to the artifacts inline array
@@ -228,6 +207,6 @@ The feature is now ready for overnight execution. The overnight runner will auto
 |---------|---------|
 | "I should generate a plan" | /cortex-core:refine stops at spec. Overnight auto-generates plans from specs. |
 | "I should set status:refined as soon as research is done" | status:refined is set only after the user approves the spec (Step 5). |
-| "I should use the lifecycle-slug as the update_item.py argument" | update_item.py takes the backlog-filename-slug (e.g., 119-create-refine-skill), not the lifecycle-slug. |
-| "If update_item.py fails I can skip it and continue" | Write-back failures must be surfaced and resolved before proceeding. Silent skips corrupt backlog state. |
+| "I should use the lifecycle-slug as the cortex-update-item argument" | cortex-update-item takes the backlog-filename-slug (e.g., 119-create-refine-skill), not the lifecycle-slug. |
+| "If cortex-update-item fails I can skip it and continue" | Write-back failures must be surfaced and resolved before proceeding. Silent skips corrupt backlog state. |
 | "I should do a deep requirements interview during Clarify" | Clarify asks ≤5 targeted questions. The deep interview is Spec's job (Step 5). |

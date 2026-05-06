@@ -98,9 +98,9 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 
 ### Post-Merge Review (review_dispatch)
 
-After a feature merges to the integration branch, `batch_runner.execute_feature()` consults `requires_review(tier, criticality)` in `claude/common.py` — review fires when `tier == "complex"` or `criticality in ("high", "critical")`. Gated features invoke `dispatch_review()` in `cortex_command/pipeline/review_dispatch.py`, which loads `cortex_command/pipeline/prompts/review.md` via `_load_review_prompt()` and runs a review agent against the merged state on the integration branch.
+After a feature merges to the integration branch, `batch_runner.execute_feature()` consults `requires_review(tier, criticality)` in `cortex_command/common.py` — review fires when `tier == "complex"` or `criticality in ("high", "critical")`. Gated features invoke `dispatch_review()` in `cortex_command/pipeline/review_dispatch.py`, which loads `cortex_command/pipeline/prompts/review.md` via `_load_review_prompt()` and runs a review agent against the merged state on the integration branch.
 
-**Files**: `cortex_command/pipeline/review_dispatch.py` (`dispatch_review`, `parse_verdict`, `_write_review_deferral`), `cortex_command/pipeline/prompts/review.md`, `claude/common.py` (`requires_review`), `cortex_command/pipeline/batch_runner.py` (`execute_feature` owns the review/rework loop).
+**Files**: `cortex_command/pipeline/review_dispatch.py` (`dispatch_review`, `parse_verdict`, `_write_review_deferral`), `cortex_command/pipeline/prompts/review.md`, `cortex_command/common.py` (`requires_review`), `cortex_command/pipeline/batch_runner.py` (`execute_feature` owns the review/rework loop).
 
 **Inputs**: integration branch HEAD at merge time; feature metadata; prior orchestrator notes at `lifecycle/{feature}/learnings/orchestrator-note.md`.
 
@@ -323,7 +323,7 @@ This document owns tier × criticality → role *dispatch*; detailed per-role SD
 | `simple` | `high`, `critical` | Yes | Sonnet → Opus on escalation |
 | `complex` | any | Yes | Sonnet → Opus on escalation |
 
-Review gating is implemented by `requires_review(tier, criticality)` in `claude/common.py`: review runs when `tier == "complex" or criticality in ("high", "critical")`. The escalation ladder is one-directional (haiku → sonnet → opus, no downgrade); see [sdk.md](internals/sdk.md) for the concrete model IDs wired into each role.
+Review gating is implemented by `requires_review(tier, criticality)` in `cortex_command/common.py`: review runs when `tier == "complex" or criticality in ("high", "critical")`. The escalation ladder is one-directional (haiku → sonnet → opus, no downgrade); see [sdk.md](internals/sdk.md) for the concrete model IDs wired into each role.
 
 ### Repair caps
 
