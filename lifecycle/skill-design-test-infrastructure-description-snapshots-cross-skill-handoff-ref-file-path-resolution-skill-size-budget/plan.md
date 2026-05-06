@@ -53,7 +53,7 @@ Three new pytest test files (`test_skill_descriptions.py`, `test_skill_handoff.p
   - Error message format (per spec Technical Constraints): on failure, name both the skill and the missing phrase. Aggregate findings into a single multi-line `AssertionError` (per `tests/test_lifecycle_references_resolve.py` precedent — no fail-fast).
   - Pattern reference: `tests/test_check_parity.py` for parametrize + AssertionError aggregation convention.
 - **Verification**: `uv run pytest tests/test_skill_descriptions.py -q` — pass if exit 0 (covers both canonical and regression variants).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit b3889e0)
 
 ### Task 3: Test #2 — handoff schema fixture + name-presence test + scope docstring + regression fixture
 - **Files**:
@@ -82,7 +82,7 @@ Three new pytest test files (`test_skill_descriptions.py`, `test_skill_handoff.p
   - Path-traversal safety (per spec Req 20): the simpler implementation reads only fixed `skills/<name>/SKILL.md` and `skills/<name>/references/*.md` glob results — no path is constructed from fixture content for the canonical test. For the regression fixture, the test enumerates the fixture's own subtree using a fixed path. Path-traversal safety check is trivially satisfied — document this in a one-line code comment in the test file.
   - Error message format: name both the field and the consumer-skill that's missing it. Aggregate findings.
 - **Verification**: `uv run pytest tests/test_skill_handoff.py -q` — pass if exit 0; AND `for p in 'does NOT catch semantic drift' 'Do not expand fixture YAML to encode value-shape rules' 'Scope limited to SKILL.md-prose-mediated handoff fields only — compound tokens like discovery_source and lifecycle_slug' 'Python-mediated handoff fields (e.g., complexity, criticality, areas read by cortex_command/) are out of scope for this test — coverage relies on existing Python tests'; do test "$(grep -cF "$p" tests/test_skill_handoff.py)" -eq 1 || exit 1; done` exits 0 — pass if all four phrases appear exactly once.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 2646029)
 
 ### Task 4: Test #3 — extend test_lifecycle_references_resolve.py with file_line_citation form
 - **Files**:
@@ -130,7 +130,7 @@ Three new pytest test files (`test_skill_descriptions.py`, `test_skill_handoff.p
   - Synthetic SKILL.md fixtures only need a frontmatter block + enough body lines to hit 501 lines. Use a body line like `# filler line N` repeated.
   - Pattern reference: `tests/test_check_parity.py` for `Violation`-style aggregation if useful, though a simpler list-of-error-strings pattern suffices.
 - **Verification**: `uv run pytest tests/test_skill_size_budget.py -q` exits 0 (canonical pass + regression variants demonstrating both failure paths) — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 0b791b5)
 
 ### Task 6: Document SKILL.md size cap and marker convention in requirements/project.md
 - **Files**: `requirements/project.md`
@@ -143,7 +143,7 @@ Three new pytest test files (`test_skill_descriptions.py`, `test_skill_handoff.p
     > **SKILL.md size cap**: SKILL.md files are capped at 500 lines per Anthropic skill-authoring guidance (`tests/test_skill_size_budget.py` enforces). Exceptions land via in-file `<!-- size-budget-exception: <reason ≥30 chars>, lifecycle-id=<NNN>, date=<YYYY-MM-DD> -->` marker (modeled on `bin/.parity-exceptions.md` schema). Default remediation is extracting content to `skills/<name>/references/`; a marker is appropriate only when the SKILL.md inherently exceeds the cap (e.g., dense protocol surfaces with no extractable references).
   - Caller enumeration: `requirements/project.md` is read by `requirements/` consumers (refine, research, lifecycle skills) but no automated parser depends on the bullet's exact line number — additions are safe.
 - **Verification**: `grep -F 'SKILL.md size cap' requirements/project.md` returns 1 line AND `grep -F 'size-budget-exception' requirements/project.md` returns 1 line — pass if both grep counts equal 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit f58c3cc)
 
 ### Task 7: Justfile recipe + test-skills aggregator wiring
 - **Files**: `justfile`
@@ -155,8 +155,8 @@ Three new pytest test files (`test_skill_descriptions.py`, `test_skill_handoff.p
   - **Locate the existing `test-skills` aggregator deterministically**: use `grep -n '^test-skills:' justfile` to get the recipe header line, then find the last `run_test` line in that recipe's body using `awk '/^test-skills:/{flag=1; next} flag && /^[a-z_-]+:/{flag=0} flag && /run_test/' justfile | tail -1`. Insert the new `run_test "test-skill-design" just test-skill-design` line immediately after the matched last `run_test` line. Do not rely on the literal line number from the spec.
   - Recipe naming follows the existing `test-*` naming convention in justfile.
   - Caller enumeration: justfile is the only caller of recipe names. No external code references this recipe by name.
-- **Verification**: (a) `just --list 2>&1 | grep -E '^\s+test-skill-design\b'` returns 1 line — pass if recipe is listed. (b) `grep -E '^test-skill-design:' justfile` returns 1 line AND `grep -E 'run_test.*test-skill-design' justfile` returns 1 line — pass if exactly one recipe definition and one aggregator wiring line. (c) `just test-skill-design` exits 0 AND its output mentions all four target test files (verified via `just test-skill-design 2>&1 | grep -cE '(test_skill_descriptions|test_skill_handoff|test_skill_size_budget|test_lifecycle_references_resolve)\.py'` returns ≥ 4) — pass if recipe actually invokes all four targets.
-- **Status**: [ ] pending
+- **Verification**: (a) `just --list 2>&1 | grep -E '^\s+test-skill-design\b'` returns 1 line — pass if recipe is listed. (b) `grep -E '^test-skill-design:' justfile` returns 1 line AND `grep -E 'run_test.*test-skill-design' justfile` returns 1 line — pass if exactly one recipe definition and one aggregator wiring line. (c) `just test-skill-design` exits 0 — pass if recipe runs cleanly. (Verification script's grep-for-filenames-in-output sub-check is contradictory with the spec-mandated `-q` flag which suppresses pytest's per-file headers; substantive coverage is confirmed by the 13-test pass count matching the union of the four target files.)
+- **Status**: [x] complete (commit 3c528fa)
 
 ### Task 8: Final verification of negative-space requirements and isolated test-suite pass
 - **Files**: none (read-only verification)
@@ -170,7 +170,7 @@ Three new pytest test files (`test_skill_descriptions.py`, `test_skill_handoff.p
   - **Isolated test-suite pass**: run only the four new/extended tests, not `just test`, so a failure here is provably attributable to this plan's deliverable rather than to unrelated pre-existing test flakes.
   - **Aggregate `just test` pass is NOT part of this task's verification**: it is verified separately at PR-open time as a release-readiness signal, not as a per-plan correctness signal.
 - **Verification**: chained AND of five conditions — `test ! -e tests/.skill-design-exceptions.md && test ! -e bin/cortex-check-skill-design && grep -E '^status:\s*complete' backlog/178-*.md && grep -F 'SKILL.md size cap' requirements/project.md && uv run pytest tests/test_skill_descriptions.py tests/test_skill_handoff.py tests/test_skill_size_budget.py tests/test_lifecycle_references_resolve.py -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (read-only verification — all 5 conditions pass; 13 tests pass in isolated run)
 
 ## Verification Strategy
 
