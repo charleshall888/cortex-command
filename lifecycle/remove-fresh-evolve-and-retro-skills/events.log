@@ -1,0 +1,61 @@
+- ts: 2026-05-06T09:30:00Z
+  event: clarify_critic
+  feature: remove-fresh-evolve-and-retro-skills
+  parent_epic_loaded: false
+  findings:
+    - text: "Scope boundedness rated HIGH but the source's touch-points list is materially incomplete: missing justfile line 494 SKILLS array, .gitignore lines 9/12/13 (lifecycle/.fresh-resume, retros/.session-lessons.md, retros/.retro-written-*), cortex_command/init/scaffold.py retros scaffold, cortex_command/init/templates/retros/README.md, cortex_command/init/tests/test_scaffold.py + test_settings_merge.py retros references, docs/agentic-layer.md lines 142/161/255 fresh-resume mentions, and tests/test_hooks.sh scan-lifecycle/fresh-resume-absent test (the source only listed fresh-resume-fires)."
+      origin: primary
+    - text: "Intent clarity rated HIGH but the source contains 'Decide whether the hook keeps a non-fresh resume mechanism or drops it' — a fork in outcome with two materially different end states (preserve /clear-recovery resume vs remove all resume)."
+      origin: primary
+    - text: "Source claims CLAUDE_AUTOMATED_SESSION was 'introduced for /fresh Step 0 to skip auto-retro' but skills/retro/SKILL.md lines 31/112/113 also read it; source's framing makes the env var sound vestigial when in fact two of three callers disappear with the deletions, making removal trivially safe — not a check-and-decide."
+      origin: primary
+    - text: "Requirements alignment rated HIGH on generic 'simplicity' quotes; CLAUDE.md OQ3 and OQ6 policies explicitly cite '2+ separate retros entries' as their re-evaluation trigger. Deleting /retro and /evolve removes the canonical mechanism that produces those triggers — a real conflict with documented policy, not an absence of conflict."
+      origin: primary
+    - text: "Complexity rationale undercounted blast radius: missing dual-source pre-commit hook regeneration, justfile SKILLS array, .gitignore patterns, cortex init scaffold, overnight server hook reading lifecycle/.fresh-resume. Tier 'complex' may still hold but the rationale is supported by an undercount."
+      origin: primary
+    - text: "retros/ directory question framed as binary keep/archive/delete in the source but actual decision space includes 'stop scaffolding retros/ in cortex init' and 'remove retros/README.md template' — a wider scope question the HIGH boundedness rating did not catch."
+      origin: primary
+  dispositions:
+    apply: 3
+    dismiss: 0
+    ask: 3
+  applied_fixes:
+    - "Revised scope boundedness from HIGH to LOW: the source's touch-points enumeration is materially incomplete; research scope must explicitly include codebase-wide grep for /fresh, /evolve, /retro, fresh-resume, CLAUDE_AUTOMATED_SESSION, and retros/ scaffolding rather than treating the source's list as exhaustive."
+    - "Revised CLAUDE_AUTOMATED_SESSION disposition from 'check whether anything else reads it' to 'remove': verified callers are skills/fresh/SKILL.md and skills/retro/SKILL.md only; no other readers in non-mirror code. Both call sites disappear with the skill deletions."
+    - "Revised complexity rationale to enumerate the wider blast radius (dual-source pre-commit mirror regeneration, justfile SKILLS array, .gitignore orphan patterns, cortex init retros scaffold, overnight server fresh-resume hook). Tier remains 'complex'."
+  dismissals: []
+  status: ok
+- ts: 2026-05-06T10:15:00Z
+  event: orchestrator_review
+  feature: remove-fresh-evolve-and-retro-skills
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-05-06T13:30:00Z
+  event: criticality_override
+  feature: remove-fresh-evolve-and-retro-skills
+  from: medium
+  to: high
+- ts: 2026-05-06T13:30:01Z
+  event: complexity_override
+  feature: remove-fresh-evolve-and-retro-skills
+  from: simple
+  to: complex
+- ts: 2026-05-06T13:30:02Z
+  event: phase_transition
+  feature: remove-fresh-evolve-and-retro-skills
+  from: specify
+  to: plan
+- ts: 2026-05-06T13:35:00Z
+  event: orchestrator_review
+  feature: remove-fresh-evolve-and-retro-skills
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-05-06T13:40:00Z
+  event: phase_transition
+  feature: remove-fresh-evolve-and-retro-skills
+  from: plan
+  to: implement
