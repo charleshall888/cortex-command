@@ -11,10 +11,14 @@ The dashboard is a real-time FastAPI web app that monitors overnight autonomous 
 ## Launching the Dashboard
 
 ```
-just dashboard
+cortex dashboard
 ```
 
-Opens at `http://localhost:8080` (or `$DASHBOARD_PORT` if set). Includes a PID check — if an instance is already running, the command prints the URL and exits without starting a second server.
+Opens at `http://localhost:8080` (or `$DASHBOARD_PORT` if set, or `--port <int>`). Includes a PID check — if an instance is already running, the command prints the URL and exits without starting a second server.
+
+**Prerequisite**: `cortex dashboard` requires a cortex-registered project — run `cortex init` once in your project before launching the dashboard, or set `CORTEX_REPO_ROOT` to point at a registered project. The verb fails with a `RuntimeError` if `.claude/` is not present in the resolved root.
+
+Contributors with a clone of cortex-command can alternatively run `just dashboard` (requires a clone of cortex-command) from the repo root.
 
 ### Prerequisites
 
