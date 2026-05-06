@@ -20,7 +20,7 @@ Skills that run daytime dispatch use the `Agent` tool directly inside their SKIL
 |------|-------|
 | `skills/lifecycle/SKILL.md` | `Agent(isolation: "worktree")` — parallel multi-feature execution; each feature gets an isolated branch `worktree/{name}` |
 | `skills/lifecycle/references/implement.md` | `Agent(isolation: "worktree")` — per-task batch isolation during implementation |
-| `skills/lifecycle/references/clarify-critic.md` | `Agent(subagent_type: "general-purpose")` — fresh adversarial critic; read-only, no worktree |
+| `skills/refine/references/clarify-critic.md` | `Agent(subagent_type: "general-purpose")` — fresh adversarial critic; read-only, no worktree |
 | `skills/research/SKILL.md` | Three parallel `Agent` calls — independent research angles; read-only, no worktree |
 | `skills/critical-review/SKILL.md` | `Agent` call — fresh unanchored reviewer |
 
