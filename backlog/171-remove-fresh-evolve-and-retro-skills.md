@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 79b9e087-25bd-49fa-93ec-55e2aed015b6
 title: "Remove /fresh, /evolve, and /retro skills"
-status: in_progress
+status: complete
 priority: medium
 type: chore
 tags: [skills, cleanup, deprecation]
@@ -12,8 +12,8 @@ complexity: complex
 criticality: high
 spec: lifecycle/remove-fresh-evolve-and-retro-skills/spec.md
 areas: [skills]
-session_id: 1b75976b-f409-47a8-a410-275fd2f47ac7
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Remove /fresh, /evolve, and /retro skills

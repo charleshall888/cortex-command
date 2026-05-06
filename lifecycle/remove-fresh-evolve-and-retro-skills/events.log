@@ -225,3 +225,10 @@
   feature: remove-fresh-evolve-and-retro-skills
   from: review
   to: complete
+- ts: 2026-05-06T14:45:00Z
+  event: feature_complete
+  feature: remove-fresh-evolve-and-retro-skills
+  tasks_total: 16
+  rework_cycles: 1
+  test_status: orthogonal_failure_only
+  test_note: "just test reports 1/577 pytest failure (test_every_lifecycle_reference_resolves) on stale lifecycle/<slug> references in research/vertical-planning/audit.md; verified pre-existing (audit.md last touched in commit 318b213 before this work) and confirmed out of #171 scope by cycle-1 reviewer."
