@@ -17,26 +17,28 @@ curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/
 
 # 2. In Claude Code, add the marketplace and install plugins
 claude /plugin marketplace add charleshall888/cortex-command
-claude /plugin install cortex-overnight@cortex-command   # autonomous overnight runs
-claude /plugin install cortex-core@cortex-command        # interactive skills + hooks
+# Recommended to turn on Auto-Update Marketplace Plugins (this will keep CLI auto updated as well)
+claude /plugin install cortex-core@cortex-command        # Base skills + hooks
+claude /plugin install cortex-overnight@cortex-command   # OPTIONAL - autonomous overnight runs
 
-# 3. In each project where you want cortex active
+# 3. OPTIONAL - In each project where you want cortex active.
+# Validation rules, settings, demo-commands, xetc...
 cd <your-project>
 cortex init
 ```
 
-Verify the install with the smoke test in [Setup guide § Verify install](docs/setup.md#verify-install).
+Full Setup Guide[Setup guide](docs/setup.md).
 
 ### Plugin roster
 
 | Plugin | Description |
 |--------|-------------|
-| android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
-| cortex-dev-extras | Devil's advocate inline challenge for solo deliberation |
-| cortex-core | Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows |
+| cortex-core | REQUIRED - Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows |
 | cortex-overnight | Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution |
-| cortex-pr-review | Multi-agent GitHub pull request review pipeline for Claude Code |
-| cortex-ui-extras | Experimental UI design skills for Claude Code interactive workflows |
+| android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
+| cortex-dev-extras | Optional assortment of additional skills |
+| cortex-pr-review | Multi-agent GitHub pull request review pipeline for Claude Code. |
+| cortex-ui-extras | EXPERIMENTAL - UI design skills for Claude Code interactive workflows |
 
 ## Documentation
 

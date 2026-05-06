@@ -185,22 +185,12 @@ claude /plugin list
 
 ## Upgrade & maintenance
 
-There are two upgrade paths once cortex-command is installed:
+Keeping up to date is easy as long as you turn on auto-update in the plugin marketplace.
 
-- **MCP-driven (recommended)** — from inside Claude Code, run `/plugin update cortex-overnight@cortex-command`. The plugin's MCP server detects the embedded `CLI_PIN` tag bump on its next tool call and reinstalls the matching cortex CLI tag automatically.
-- **Bare shell** — when you want to pin or unpin a specific tag yourself, run `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@v0.1.0` (substitute the desired tag). `cortex upgrade` itself is an advisory printer — the wheel for any version `vN` only knows it is `vN` and cannot detect newer tags. See [docs/release-process.md](release-process.md) for the tag-before-coupling discipline.
+From inside Claude Code make sure to turn on auto-updates for the cortex-command marketplace plugins. The plugin's MCP server detects the embedded `CLI_PIN` tag bump on its next tool call and updates to the matching cortex CLI tag automatically. 
 
-The `cortex-overnight` plugin's MCP server embeds a `CLI_PIN` constant (a `(tag, schema_version)` tuple) that pairs the plugin with a specific cortex CLI tag — the upgrade arrow flows plugin → CLI, not the other way. With plugin auto-update enabled (default), Claude Code refreshes the plugin in the background; the next MCP tool call detects a `CLI_PIN[0]` bump and auto-installs the matching CLI tag. With auto-update disabled, the embedded `CLI_PIN` stays pinned to whatever tag was current when you installed the plugin — schema versions match between the embedded `CLI_PIN[1]` and the installed CLI's print-root envelope, so a stale-but-self-consistent plugin/CLI pair keeps working until you explicitly run `/plugin update cortex-overnight@cortex-command`.
+The `cortex-overnight` plugin's MCP server embeds a `CLI_PIN` constant (a `(tag, schema_version)` tuple) that pairs the plugin with a specific cortex CLI tag — the upgrade arrow flows plugin → CLI, not the other way. With plugin auto-update enabled, Claude Code refreshes the plugin in the background; the next MCP tool call detects a `CLI_PIN[0]` bump and auto-installs the matching CLI tag. With auto-update disabled, the embedded `CLI_PIN` stays pinned to whatever tag was current when you installed the plugin — schema versions match between the embedded `CLI_PIN[1]` and the installed CLI's print-root envelope, so a stale-but-self-consistent plugin/CLI pair keeps working.
 
-### Forker fork-install URL
-
-If you are developing against a fork rather than upstream, install from your fork instead of `charleshall888/cortex-command`:
-
-```bash
-uv tool install git+https://github.com/<your-fork>/cortex-command.git@<branch-or-tag>
-```
-
-Both URL forms are valid; pick one or the other per environment. The upstream form (`github.com/charleshall888/cortex-command.git@v0.1.0`) tracks released tags; the fork form (`github.com/<your-fork>/cortex-command.git@<branch-or-tag>`) tracks your fork's branch or tag and is what forkers use to install their in-progress work.
 
 ### `uv` foot-guns
 
@@ -209,16 +199,6 @@ Warning: do **not** run `uv tool uninstall uv`. Removing `uv` via itself breaks 
 When cortex internally invokes `uv run` (for example, the dashboard recipe or the daytime-pipeline test step), `uv run` operates on the user's current project venv, not cortex-command's tool venv. That means a `uv run` call inside a cortex flow uses your project's `pyproject.toml` / `uv.lock` and your project's dependencies — not anything from the cortex-command install.
 
 After the first `uv tool install`, run `uv tool update-shell` once if `cortex` is not yet on your `PATH`.
-
----
-
-## Customization
-
-### `~/.claude/settings.json` ownership
-
-Cortex-command does not own `~/.claude/settings.json`. Edit it directly as personal machine configuration; use `~/.claude/settings.local.json` for per-machine overrides. Plugin-shipped skills and hooks are enabled per project via `.claude/settings.json`'s `enabledPlugins` map.
-
-The maintainer's personal template (allow list, model, env vars, attribution, etc.) is opinionated and not a good default for others. The entries documented under [§ Recommended `~/.claude/settings.json` entries](#recommended-claudesettingsjson-entries) below are the load-bearing generic pieces cortex-command actually depends on — everything else is personal preference.
 
 ### Commands
 
@@ -288,52 +268,8 @@ If you work on both personal and work repos, configure both:
 
 The runner uses `apiKeyHelper` when present (work), and falls back to the OAuth token file when not (personal). See [docs/overnight-operations.md](overnight-operations.md#auth-resolution-apikeyhelper-and-env-var-fallback-order) for the full precedence chain.
 
----
 
-### Recommended `~/.claude/settings.json` entries
 
-The entries below are the load-bearing generic pieces cortex-command actually depends on; everything else (the `permissions.allow` list, `env`, `model`, `effortLevel`, `attribution`, `enableAllProjectMcpServers`, `alwaysThinkingEnabled`, `skipDangerousModePermissionPrompt`, `skipAutoPermissionPrompt`) is personal preference — compose your own.
-
-**`sandbox.excludedCommands`**
-
-```json
-"sandbox": {
-  "excludedCommands": ["gh:*", "git:*", "WebFetch", "WebSearch"]
-}
-```
-
-Critical. `git` and `gh` need to run unsandboxed so GPG signing works and so commit hooks can spawn child processes (e.g., `gpg-agent`) without hitting sandbox denials. Changing this list breaks the sandbox-excluded command contract that cortex-command's git integration relies on.
-
-**`sandbox.autoAllowBashIfSandboxed`**
-
-```json
-"sandbox": {
-  "autoAllowBashIfSandboxed": true
-}
-```
-
-Required for the overnight runner. Without it, every sandboxed Bash call requires interactive approval, which defeats unattended execution.
-
-**`sandbox.network.allowedDomains`**
-
-```json
-"sandbox": {
-  "network": {
-    "allowedDomains": [
-      "api.github.com",
-      "raw.githubusercontent.com",
-      "registry.npmjs.org",
-      "*.anthropic.com"
-    ]
-  }
-}
-```
-
-The minimum set cortex-command needs: GitHub API for `gh` operations, raw.githubusercontent.com for the install bootstrap, npm registry for plugin installs, and Anthropic endpoints for the SDK. Add more domains as your own workflows require.
-
-**`sandbox.filesystem.allowWrite`**
-
-You do not need to hand-edit this. Run `cortex init` in each repo where you want cortex-command active — it appends the per-repo overnight-session write paths automatically. Hand-editing is error-prone because the paths are repo-scoped and resolve relative to each project.
 
 **`statusLine.command`** (optional, requires a clone)
 
@@ -349,64 +285,6 @@ This shows cortex-specific session state in the Claude Code statusline. The scri
 
 A conservative deny list is a useful safety baseline: `sudo`, destructive `rm -rf` patterns, `git push --force` against protected branches, reads of secrets directories (`~/.ssh`, `~/.aws`, etc.). Cortex-command does not prescribe a specific list — compose your own. Do not paste any list blindly; review each rule against your own threat model.
 
-### Adding an MCP Server
-
-Add a `mcpServers` block to `claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "server-name": {
-      "command": "npx",
-      "args": ["-y", "@scope/server-package"]
-    }
-  }
-}
-```
-
-Then add `"mcp__server-name__*"` to the `permissions.allow` list.
-
----
-
-## Per-repo permission scoping
-
-Claude Code's settings merge is strictly additive: `permissions.allow` arrays concatenate across all scopes, `permissions.deny` is monotonic, and there is no subtraction mechanism. If you want a repo to ignore your global allow list, layering alone cannot deliver it. The supported workaround is `CLAUDE_CONFIG_DIR`, an alternate user-scope directory Claude Code reads at launch — by launching from a repo with `CLAUDE_CONFIG_DIR` set to a shadow copy of `~/.claude`, that repo gets its own user scope. Watch upstream issues [#12962](https://github.com/anthropics/claude-code/issues/12962) and [#26489](https://github.com/anthropics/claude-code/issues/26489) for a first-class per-project permissions feature; until one of those lands, this is the recommended workaround.
-
-### How it works
-
-`CLAUDE_CONFIG_DIR` points Claude Code at an alternate user-scope directory instead of `~/.claude`. The value is read at launch time, so a relaunch is required to pick up a new value — direnv loading on `cd` does not affect an already-running session.
-
-### Setup with direnv
-
-1. Copy `~/.claude` to a shadow location: `cp -R ~/.claude ~/.claude-shadow`.
-2. Write `.envrc` in your repo root:
-
-   ```
-   export CLAUDE_CONFIG_DIR=$HOME/.claude-shadow
-   ```
-
-3. Run `direnv allow` once in the repo.
-4. Quit and relaunch Claude Code from the repo. direnv reloads `.envrc` on each `cd`, but Claude Code only reads `CLAUDE_CONFIG_DIR` at launch.
-
-If you don't use direnv, a shell alias (`alias cc-shadow='CLAUDE_CONFIG_DIR=$HOME/.claude-shadow claude'`) or a `./bin/claude` wrapper script work equivalently.
-
-### Limitations and foot-guns
-
-**Cortex-command foot-guns.** Each of the following is a known failure mode this pattern surfaces. None of them are managed automatically — treat each as a rule to follow, not a problem the shadow resolves for you:
-
-- **Evolve, auto-memory, cortex-audit-doc, and cortex-count-tokens walk from host**: these tools fall back to `~/.claude` rather than `$CLAUDE_CONFIG_DIR`. Auto-memory under a shadow writes to the host scope. Treat their output as host-scoped.
-- **Concurrent sessions and scope confusion**: Claude Code's `/context` (an upstream bug) shows the host path even when a shadow is active, so you cannot verify the live scope from inside a session. Run `echo $CLAUDE_CONFIG_DIR` in your shell before launching each session.
-
-**Upstream Claude Code partial-support bugs.** Even with `CLAUDE_CONFIG_DIR` set, several Claude Code subsystems do not fully honor it:
-
-- [#36172](https://github.com/anthropics/claude-code/issues/36172) — skills in `$CLAUDE_CONFIG_DIR/skills/` are not reliably resolved. Most consequential for cortex-command because it undermines the "swap the entire user scope" mental model.
-- [#38641](https://github.com/anthropics/claude-code/issues/38641) — `/context` displays the host path regardless of `CLAUDE_CONFIG_DIR`.
-- [#42217](https://github.com/anthropics/claude-code/issues/42217) — MCP servers from `.mcp.json` are not loaded under a shadow.
-- [#34800](https://github.com/anthropics/claude-code/issues/34800) — IDE lock files always write to `~/.claude/ide/` regardless of the env var.
-
-For the full decision record and failure-mode inventory, see `research/user-configurable-setup/research.md`.
-
----
 
 ## macOS Notifications
 
@@ -417,15 +295,6 @@ For desktop notifications when Claude Code needs attention:
    - **terminal-notifier**: Allow notifications
    - **Your terminal app**: Allow notifications + enable "Badge app icon"
 
----
-
-### Maintaining duplicated surfaces
-
-Some content in this guide is intentionally duplicated across files and must be kept in sync manually. When any of the following surfaces changes, update **both files atomically** in the same commit:
-
-1. **plugin roster** — the table of available plugins appears in both `README.md` and `docs/setup.md` (the Install section above). Adding, removing, or renaming a plugin requires edits to both files.
-2. **CLI utilities list** — the list of `cortex-*` bin utilities is documented in `README.md`. When a new utility is added to the `cortex-core` plugin's `bin/`, update the README entry in the same commit.
-3. **auth pointer** — `README.md` contains a short pointer to the authentication options; `docs/setup.md` carries the canonical auth content (Option A / Option B / Using Both). If the auth mechanics change, update the canonical content in `docs/setup.md` and refresh the README pointer to match.
 
 ---
 
