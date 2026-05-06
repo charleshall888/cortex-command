@@ -399,6 +399,10 @@ test-init:
     [ -f .venv/bin/pytest ] || { echo "venv not found — run 'just python-setup' first"; exit 1; }
     .venv/bin/pytest cortex_command/init/tests/ -q
 
+# Run skill-design test infrastructure (descriptions, handoffs, size budget, lifecycle refs)
+test-skill-design:
+    .venv/bin/pytest tests/test_skill_descriptions.py tests/test_skill_handoff.py tests/test_skill_size_budget.py tests/test_lifecycle_references_resolve.py -q
+
 # Run all pipeline and overnight test suites and print aggregate pass/fail summary
 test:
     #!/usr/bin/env bash
@@ -454,6 +458,7 @@ test-skills:
     run_test "test-hook-commit"     just test-hook-commit
     run_test "test-hooks"           just test-hooks
     run_test "test-lifecycle-state" just test-lifecycle-state
+    run_test "test-skill-design" just test-skill-design
     total=$((passed + failed))
     echo ""
     echo "Test suite: $passed/$total passed"
