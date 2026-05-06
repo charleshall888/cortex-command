@@ -1,0 +1,4 @@
+handoff_fields:
+  - name: discovery_source
+    producer: discovery
+    consumers: [lifecycle, refine]

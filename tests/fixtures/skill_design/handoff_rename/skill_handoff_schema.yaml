@@ -1,0 +1,4 @@
+handoff_fields:
+  - name: synthetic_renamed_field
+    producer: producer-fixture
+    consumers: [consumer-fixture]
