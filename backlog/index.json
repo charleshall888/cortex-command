@@ -65,7 +65,7 @@
   {
     "id": 175,
     "title": "Promote refine/references/clarify-critic.md to canonical with schema-aware migration",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -76,20 +76,22 @@
       "clarify-critic",
       "vertical-planning"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-05-06",
     "updated": "2026-05-06",
     "blocks": [],
     "blocked_by": [],
     "parent": "172",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/spec.md",
     "discovery_source": "research/vertical-planning/research.md",
     "plan": null,
     "uuid": "79d84275-ae0a-4ace-8398-ac14fca43497",
     "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "research",
+    "session_id": "918b4307-d3e2-4dbc-a5a7-a11324494dcc",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -311,40 +313,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 181,
-    "title": "Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget)",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "tests",
-      "skill-design",
-      "lifecycle",
-      "refine",
-      "critical-review",
-      "discovery",
-      "vertical-planning"
-    ],
-    "areas": [
-      "tests"
-    ],
-    "created": "2026-05-06",
-    "updated": "2026-05-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "172",
-    "research": null,
-    "spec": "lifecycle/skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/spec.md",
-    "discovery_source": "research/vertical-planning/research.md",
-    "plan": null,
-    "uuid": "6da37238-e1c0-4e2d-8f11-24b9cb57d101",
-    "lifecycle_slug": null,
-    "session_id": "363d73f9-d244-4d69-aa6a-c5be1781336d",
-    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },

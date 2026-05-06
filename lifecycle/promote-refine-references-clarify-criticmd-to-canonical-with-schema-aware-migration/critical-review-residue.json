@@ -1,0 +1,24 @@
+{
+  "ts": "2026-05-06T23:00:20Z",
+  "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration",
+  "artifact": "lifecycle/promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Plan T5 verification only validates that the cutoff fixture parses as ISO-8601, with no invariant that the cutoff value is later than the max ts of clarify_critic events already on disk in active lifecycle trees.",
+      "reviewer_angle": "Cutoff timestamp self-pollution",
+      "evidence_quote": "test -f tests/fixtures/jsonl_emission_cutoff.txt && python3 -c \"from datetime import datetime; ...\""
+    },
+    {
+      "class": "B",
+      "finding": "T5 pytest -x exit-0 verification is non-load-bearing on the parsing path: a silent parse-failure yields exit-0 because no events are flagged as post-cutoff \u2014 there is no positive-control assertion that the parser SAW the pre-cutoff event.",
+      "reviewer_angle": "R14 YAML-block parsing fragility",
+      "evidence_quote": "pytest tests/test_clarify_critic_alignment_integration.py::test_post_migration_clarify_critic_events_are_jsonl -x \u2014 pass if exit 0 (R14)"
+    }
+  ]
+}

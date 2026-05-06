@@ -1,0 +1,51 @@
+- ts: 2026-05-06T21:47:24Z
+  event: clarify_critic
+  feature: promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration
+  parent_epic_loaded: true
+  findings:
+    - text: "The assessment rates Intent clarity HIGH and asserts that 'Acceptance criteria are listed in Verification and are concrete.' Several Verification bullets — the criticality=critical fresh-run gate and the archived-event replay — are aspirational or harness-dependent and require Spec-phase work to operationalize."
+      origin: primary
+    - text: "The clarified intent bundles 'ensuring legacy clarify_critic events remain readable by all consumers' as a load-bearing goal, but the source ticket narrows the check to bare-string findings shape tolerance only (one example: `finding[\"text\"] if isinstance(finding, dict) else finding`). The intent statement overgeneralizes scope."
+      origin: primary
+    - text: "Scope boundedness MEDIUM understates the problem. clarify_critic is genuinely absent from EVENT_TYPES in cortex_command/overnight/events.py:90-148 and log_event() raises ValueError on unknown types — so Phase 3's prescribed code change is structurally incompatible with the module's API contract, not just 'misplaced.' Adding clarify_critic to EVENT_TYPES first has its own consumer-audit implications across 50+ event types."
+      origin: primary
+    - text: "Phase 3 conflates two schema layers. The canonical clarify_critic schema lives in markdown at skills/refine/references/clarify-critic.md:128-161 and already encodes legacy-tolerance (parent_epic_loaded defaults false on read; bare-string findings auto-promote to {text, origin: primary}). The markdown layer already partially obsoletes the prescribed Phase 3 work — a scope ambiguity larger than 'may be misplaced.'"
+      origin: primary
+    - text: "Requirements alignment HIGH cites the project.md 'Workflow trimming' entry, but that entry targets retiring unused workflows with zero downstream consumers. This ticket consolidates an actively-used duplicate where the destination skill survives. The cited requirement is a category mismatch, not direct support for HIGH alignment."
+      origin: primary
+    - text: "The ticket prescribes specific HOW (exact field name `schema_version`, type `<int>`, location `events.py`, bump value `v2`, branching mechanism). Per the parent epic's 'Prescribe what and why, not how' principle and CLAUDE.md feedback memory, this level of HOW-prescription is what the epic is supposed to be reducing. The HIGH alignment claim is asserted, not demonstrated."
+      origin: primary
+    - text: "Complexity 'complex' papers over a substantive bundling concern: Phase 1+2 (deduplication migration) and Phase 3 (schema-versioning protocol + replay test) are two different changes coupled to the same delivery. The 'complex' tier reflects coupling the ticket itself created, not inherent complexity of either change individually."
+      origin: primary
+    - text: "Criticality HIGH uses the 'default for skill/lifecycle/hook changes' rule to override the actual evidence: zero production-code consumers, one test-file consumer, and archived events that are append-only and structurally cannot be corrupted by a forward-only schema migration. The default is meant as a starting point, not a substitute for analyzing observed blast radius."
+      origin: primary
+    - text: "Parent-epic alignment was implicit (rolled into HIGH on requirements alignment) rather than explicit. Phase 3 (schema-version field + replay test) is not duplication collapse and not vertical-planning adoption — it is an orthogonal test-coverage / schema-versioning addition lifted from a post-decomposition critical review. The clarified intent did not justify Phase 3's inclusion in epic 172's scope."
+      origin: alignment
+  dispositions:
+    apply: 3
+    dismiss: 4
+    ask: 2
+  applied_fixes:
+    - "Narrowed clarified intent: removed the global 'remain readable by all consumers' framing; replaced with 'ensure legacy clarify_critic events (bare-string findings, missing parent_epic_loaded) remain compatible with the existing test consumer and any future replay consumers,' grounded in the actual consumer landscape (one test file, no production-code consumers)."
+    - "Softened Requirements alignment from HIGH to 'Aligned-with-caveats: this ticket follows the project's hard-delete-over-deprecation pattern from project.md, but the cited Workflow trimming entry targets retiring unused workflows; this ticket consolidates an actively-used duplicate where the destination skill survives. Direction-of-fit is consistent; literal text-match is partial.'"
+    - "Added explicit C5/parent-epic linkage to clarified intent: framed Phase 3 (schema_version + replay test) as the safety mechanism for the Phase 2 migration rather than as orthogonal scope. The schema migration is what makes the duplication collapse safe; schema_version is the consumer-facing version boundary."
+  dismissals:
+    - finding_index: 0
+      rationale: "Verification framing — concrete operationalization of acceptance criteria is exactly the Spec phase's job (specify.md §3 Acceptance Criteria interview). Clarify is not the gate that converts aspirational verification into deterministic tests."
+    - finding_index: 3
+      rationale: "The source ticket already acknowledges existing legacy-tolerance via the markdown spec, and frames schema_version as additive (consumers branch on field presence) rather than replacement. The 'two schema layers' observation collapses into Finding 2's events.py-vs-markdown question, which is held as Ask."
+    - finding_index: 5
+      rationale: "The 'prescribe what not how' principle and CLAUDE.md OQ3 MUST-escalation policy are scoped to skill/harness rails (per the feedback memory's own framing and OQ3's text). Backlog tickets are delivery specs, not orchestration rails — they prescribe more specifically by design. This ticket also does not introduce new MUST language; the existing parent_epic_loaded REQUIRED is grandfathered per #85."
+    - finding_index: 7
+      rationale: "Per clarify.md §3 dimension 3: 'high is the appropriate default for most skill and agentic layer changes... default to high for skill/lifecycle/hook/workflow changes.' The default is explicit and applies regardless of immediate consumer count, because shared skill orchestration is invoked on every clarify run by both refine and lifecycle."
+  status: ok
+{"ts": "2026-05-06T22:14:17Z", "event": "orchestrator_review", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-06T22:25:32Z", "event": "critical_review", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "phase": "specify", "reviewers_dispatched": 4, "reviewers_completed": 4, "envelope_well_formed": 1, "envelope_schema_variant": 3, "synthesis_mode": "main_context_pragmatic", "applied": 11, "dismissed": 4, "asked": 1, "residue_note": "B-class residue not written — no active lifecycle context (ad-hoc invocation)"}
+{"ts": "2026-05-06T22:44:24Z", "event": "lifecycle_start", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "tier": "complex", "criticality": "high", "note": "backfilled at plan-entry; refine completed without logging lifecycle_start; tier/criticality sourced from backlog #175 frontmatter"}
+{"ts": "2026-05-06T22:44:24Z", "event": "phase_transition", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "from": "clarify", "to": "research"}
+{"ts": "2026-05-06T22:44:24Z", "event": "phase_transition", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "from": "research", "to": "specify"}
+{"ts": "2026-05-06T22:44:24Z", "event": "phase_transition", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "from": "specify", "to": "plan"}
+{"ts": "2026-05-06T22:50:47Z", "event": "orchestrator_review", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-06T23:00:06Z", "event": "critical_review", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "phase": "plan", "reviewers_dispatched": 4, "reviewers_completed": 4, "envelope_well_formed": 4, "envelope_schema_variant": 0, "synthesis_mode": "main_context_pragmatic", "applied": 0, "dismissed": 0, "asked": 0, "a_class_ratified": 11, "b_class_ratified": 2, "c_class_ratified": 4}
+{"ts": "2026-05-06T23:07:53Z", "event": "critical_review_applied", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "phase": "plan", "applied": 10, "dismissed": 0, "asked": 2, "ask_results": {"t1_scope_expansion": "applied", "t5_cutoff_timing": "kept_current"}, "summary": "10 substantive fixes covering all 11 A-class objections plus both B-class plus C-class framing; one Ask led to T1 scope expansion (producer-prose alignment), one Ask kept T5 cutoff timing as-is"}
+{"ts": "2026-05-06T23:23:34Z", "event": "phase_transition", "feature": "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration", "from": "plan", "to": "implement"}

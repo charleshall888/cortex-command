@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 79d84275-ae0a-4ace-8398-ac14fca43497
 title: "Promote refine/references/clarify-critic.md to canonical with schema-aware migration"
 type: feature
-status: backlog
+status: in_progress
 priority: high
 parent: 172
 blocked-by: []
@@ -11,6 +11,12 @@ tags: [lifecycle, refine, dual-source, schema-migration, clarify-critic, vertica
 created: 2026-05-06
 updated: 2026-05-06
 discovery_source: research/vertical-planning/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/spec.md
+areas: [skills]
+session_id: 918b4307-d3e2-4dbc-a5a7-a11324494dcc
+lifecycle_phase: plan
 ---
 
 # Promote refine/references/clarify-critic.md to canonical with schema-aware migration
