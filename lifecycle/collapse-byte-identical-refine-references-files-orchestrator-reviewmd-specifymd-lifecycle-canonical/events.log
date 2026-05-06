@@ -1,0 +1,51 @@
+- ts: 2026-05-06T18:17:58Z
+  event: clarify_critic
+  feature: collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical
+  parent_epic_loaded: true
+  findings:
+    - text: "Intent clarity HIGH is poorly supported because the ticket prescribes 'Update SKILL.md Step 4 (orchestrator-review invocation) and Step 5 (specify invocation)' but refine SKILL.md Step 4 is the Research phase and contains no orchestrator-review invocation; the assessment itself notes refine SKILL.md only references clarify.md and specify.md directly (lines 38, 65, 86, 177)."
+      origin: primary
+    - text: "Intent clarity HIGH cites 'exactly which paths to update' but the load-bearing edit instruction targets a Step 4 location that does not match refine SKILL.md's actual structure, leaving the actual edit shape (whether to add an explicit orchestrator-review reference, restructure the call chain, or simply correct the ticket's labeling) undefined."
+      origin: primary
+    - text: "Scope boundedness HIGH is sourced from outside the ticket — the assessment cites 'Adjacent A-stream tickets (175, 176)' and 'stream membership' as bounding scope, but the ticket body does not mention 175, 176, or the A-stream label."
+      origin: primary
+    - text: "Scope boundedness HIGH treats 6 'What to land' bullets as scope rigor, but two are descriptive notes rather than work items, one prescribes editing a Step 4 the assessment documents as nonexistent, and the verification list lacks any test that the transitive reference chain (refine SKILL.md → specify.md → orchestrator-review.md) still resolves correctly after deletion."
+      origin: primary
+    - text: "Requirements alignment HIGH asserts 'No conflicts identified' but does not analyze the coupling-vs-clarity tradeoff: refine consumers will now see lifecycle-only content (P8 row, §5 Transition block, ## Hard Gate table) that the dropped refine copies previously filtered out; the source material does not analyze whether refine's existing adaptations cover these additions."
+      origin: primary
+    - text: "Requirements alignment cites parity tests and rsync --delete as safety mechanisms, but those protect mirror drift, not behavioral preservation; the proposed verification 'A fresh refine run completes Clarify → Research → Specify successfully' is a smoke test, not an alignment check that refine's behavior is preserved when reading lifecycle-canonical content with previously-filtered sections."
+      origin: primary
+    - text: "Complexity rated 'complex' resolves an unresolved structural question (the Step 4 edit-instruction error) with the 'when in doubt' default tiebreaker rather than naming the actual complexity drivers (path-resolution semantics for transitive references and dropped-content adaptation gaps)."
+      origin: primary
+    - text: "The clarified intent inherits the parent epic's deduplication framing (~700 lines) but does not address that the parent epic's separate finding — '21-line literal copy-paste bug in refine/SKILL.md' (ticket 173, Z-stream, status: backlog) — also touches refine/SKILL.md; the ordering dependency (Z lands first, then A) is asserted in the epic body but the child does not establish whether 174's SKILL.md edits collide with 173's pending fix."
+      origin: alignment
+    - text: "Intent clarity HIGH credits the ticket's self-description that 'refine SKILL.md Step 5 already enumerates the documented adaptations' without verifying it; refine SKILL.md Step 5 documents §1 context, §2a loop-back, §3b tier detection, §4 Complexity/value gate, and §5 Transition skip — but does not document a Hard Gate adaptation, leaving a potential gap when refine reads lifecycle's specify.md which contains a `## Hard Gate` table."
+      origin: primary
+  dispositions:
+    apply: 8
+    dismiss: 1
+    ask: 0
+  applied_fixes:
+    - "Tightened intent statement: end-state goal (delete two byte-identical files; refine reads lifecycle canonical) is unambiguous; ticket's 'Step 4 (orchestrator-review invocation)' is a labeling error — refine SKILL.md only directly references clarify.md and specify.md, and reaches orchestrator-review transitively via specify.md. Actual SKILL.md edit is Step 5 line 177 only (per finding 0)."
+    - "Removed parent-epic stream-membership reasoning from scope rationale; kept scope HIGH grounded in the ticket's own enumeration of 'What to land' (6 bullets) and 'Touch points' (4 paths) (per finding 2)."
+    - "Added research consideration: verify path-resolution semantics for transitive `references/` references when refine reads lifecycle's specify.md — does the agent resolve the relative `references/orchestrator-review.md` path against the file containing the reference (so it lands at lifecycle/references/) or against refine's directory (which after deletion would not exist) (per findings 1 and 3)."
+    - "Added research consideration: verify that refine SKILL.md's existing Step 5 adaptations (§5 Transition skip, §4 Complexity/value gate addition) are sufficient to handle the lifecycle canonical's `### 5. Transition` block, `## Hard Gate` table, and orchestrator-review.md's P8 row that refine doesn't currently see; identify any new adaptation notes the SKILL.md needs (per findings 4 and 8)."
+    - "Added research consideration: assess whether the ticket's verification list adequately tests behavioral preservation, or whether an explicit behavioral test (refine run reading lifecycle canonical exercising the transitive resolution and adaptation-skip semantics) is needed beyond the proposed smoke test (per finding 5)."
+    - "Strengthened complexity reasoning: cited path-resolution semantics for transitive references and dropped-content adaptation gaps as the actual complexity drivers; complex tier preserved (per finding 6)."
+    - "Added research consideration: investigate whether the SKILL.md edits prescribed by ticket 174 collide with or depend on the SKILL.md copy-paste-bug fix in ticket 173 (Z-stream, currently status:backlog), and document any ordering dependency (per finding 7, alignment)."
+  dismissals:
+    - finding_index: 1
+      rationale: "Subsumed by finding 0 — same ticket Step 4 labeling-error concern, restated in different words. The Apply on finding 0 (correct labeling, document actual edit shape) covers this objection."
+  status: ok
+{"ts":"2026-05-06T18:43:58Z","event":"orchestrator_review","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","phase":"specify","verdict":"pass","cycle":1,"issues":[]}
+{"ts":"2026-05-06T19:07:07Z","event":"orchestrator_review","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","phase":"plan","verdict":"pass","cycle":1,"issues":[]}
+{"ts":"2026-05-06T19:25:12Z","event":"phase_transition","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","from":"plan","to":"implement"}
+{"ts":"2026-05-06T19:37:37Z","event":"batch_dispatch","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","batch":0,"tasks":[1,2,5]}
+{"ts":"2026-05-06T19:39:04Z","event":"task_complete","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","task":1,"batch":0,"status":"success"}
+{"ts":"2026-05-06T19:39:04Z","event":"task_complete","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","task":2,"batch":0,"status":"success"}
+{"ts":"2026-05-06T19:39:04Z","event":"task_complete","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","task":5,"batch":0,"status":"success"}
+{"ts":"2026-05-06T19:39:19Z","event":"batch_dispatch","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","batch":1,"tasks":[3]}
+{"ts":"2026-05-06T19:39:41Z","event":"task_complete","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","task":3,"batch":1,"status":"success"}
+{"ts":"2026-05-06T19:39:41Z","event":"batch_dispatch","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","batch":2,"tasks":[4]}
+{"ts":"2026-05-06T19:40:16Z","event":"task_complete","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","task":4,"batch":2,"status":"success"}
+{"ts":"2026-05-06T19:40:16Z","event":"batch_dispatch","feature":"collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical","batch":3,"tasks":[6]}

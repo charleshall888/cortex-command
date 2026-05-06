@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 892d71bb-a435-40b7-8b26-296baa4795de
 title: "Collapse byte-identical refine/references files (orchestrator-review.md + specify.md → lifecycle canonical)"
 type: chore
-status: backlog
+status: in_progress
 priority: high
 parent: 172
 blocked-by: []
@@ -11,6 +11,12 @@ tags: [lifecycle, refine, dual-source, deduplication, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
 discovery_source: research/vertical-planning/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical/spec.md
+areas: [skills]
+session_id: 629596eb-312b-43c4-a077-cb8d81c86691
+lifecycle_phase: plan
 ---
 
 # Collapse byte-identical refine/references files (orchestrator-review.md + specify.md → lifecycle canonical)
@@ -34,7 +40,7 @@ Audit verified safe by parity tests:
 
 - Delete `skills/refine/references/orchestrator-review.md` (canonical)
 - Delete `skills/refine/references/specify.md` (canonical)
-- Update `skills/refine/SKILL.md` Step 4 (orchestrator-review invocation) and Step 5 (specify invocation) to read from `skills/lifecycle/references/orchestrator-review.md` and `skills/lifecycle/references/specify.md` respectively
+- Update `skills/refine/SKILL.md` Step 5 (specify invocation) to read from lifecycle canonical (`${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md`); orchestrator-review is reached transitively via lifecycle's specify.md (no separate refine SKILL.md edit needed for orchestrator-review)
 - For specify: refine SKILL.md Step 5 already documents the §5 Transition + Hard Gate skip — keep that adaptation note explicit so the reader knows what differs
 - For orchestrator-review: refine never reaches plan phase, so the P8 row is irrelevant for refine's invocations. No adaptation needed; refine just doesn't ever invoke the post-plan checklist.
 - Run `just build-plugin` to regenerate mirror; pre-commit hook will reject drift if mirror not staged

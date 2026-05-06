@@ -153,13 +153,14 @@ If the `## Open Questions` section is absent from `research.md`, the gate passes
 
 ## Step 5: Spec Phase
 
-Read `references/specify.md` and follow its full protocol (§1–§4) with these adaptations:
+Read `${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md` and follow it (its full protocol) with these adaptations:
 
 - **§1 (Load Context)**: Requirements context was loaded during Clarify (Step 3) and research.md was produced in Step 4. Re-read `lifecycle/{lifecycle-slug}/research.md` but skip redundant requirements loading.
 - **§2a loop-back**: If the Research Confidence Check triggers a loop-back, re-enter Step 4 (Research Phase) with the Sufficiency Check bypass described there.
 - **§3b tier detection**: Read `lifecycle/{lifecycle-slug}/events.log` for the most recent `lifecycle_start` or `complexity_override` event to determine the active tier. The caller (`/cortex-core:lifecycle`) may escalate the tier between Research and Spec — do not rely solely on the Clarify output.
 - **§4 (User Approval) — Complexity/value gate**: After the spec is written, before showing the approval surface, check whether complexity is proportional to the value case. Fire this check if the spec has any of: 3+ distinct new state surfaces, a new persistent data format or config section the user must maintain, or a subsystem requiring ongoing per-feature upkeep. This check fires regardless of whether critical-review ran. If the check fires, do NOT proceed to the approval question in the same turn — instead present: (1) a one-sentence value case for the primary outcome, (2) a one-sentence complexity cost, and (3) 2–3 concrete alternatives. Where they naturally exist for this ticket, offer: "drop entirely" (value is achievable another way or too weak), "bugs-only" (strip the feature, keep only latent fix work the spec uncovered), "minimum viable" (identify one concrete scope cut). If an alternative doesn't naturally apply, say so. Wait for the user's response before showing the approval surface.
-- **§5 (Transition)**: Skip — /cortex-core:refine does not log phase transitions. The caller handles transition events if applicable.
+- **§5 (Transition)**: Skip — /cortex-core:refine does not log phase transitions. Do NOT emit the `phase_transition` JSON template embedded in this section, and do NOT run `/cortex-core:commit` from within /cortex-core:refine; the caller (/cortex-core:lifecycle) owns phase-transition logging and commit-artifacts.
+- **`## Hard Gate`**: Applies — refine's spec phase has the same no-implementation-code rule. The Hard Gate's Thought/Reality table from `${CLAUDE_SKILL_DIR}/../lifecycle/references/specify.md` carries through, with one caveat: the row "I'll add this to Open Decisions since I'm not sure" interacts with refine's existing **§4 (User Approval) — Complexity/value gate** adaptation above (which already routes simple specs and "drop entirely" alternatives through an explicit user-presented surface) — when both fire, follow §4's surface flow rather than a separate Open Decisions deferral.
 
 Do NOT set `status: refined` before user approval.
 

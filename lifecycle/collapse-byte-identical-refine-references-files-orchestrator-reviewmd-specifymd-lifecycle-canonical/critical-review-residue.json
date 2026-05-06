@@ -1,0 +1,50 @@
+{
+  "ts": "2026-05-06T19:15:00Z",
+  "feature": "collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical",
+  "artifact": "lifecycle/collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "reviewer_angle": "Cross-skill path-resolution semantics under transitive read",
+      "finding": "Task 4's verification gates are designed only to detect regressions in claim (a) \u2014 the explicit ${CLAUDE_SKILL_DIR}/.. walk in refine SKILL.md \u2014 and silently leave claim (b)'s transitive resolution undetected.",
+      "evidence_quote": "**R8a**: `test -r skills/lifecycle/references/specify.md && test -r skills/lifecycle/references/orchestrator-review.md`."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Cross-skill path-resolution semantics under transitive read",
+      "finding": "R8b \u2014 the only post-merge gate intended to detect a claim (b) regression \u2014 is structurally unable to reliably exercise the second hop because events.log lacks lifecycle_start; the post-merge attestation can pass while testing only the SKIP path, leaving the transitive-resolution bug latent.",
+      "evidence_quote": "Manual runtime smoke (R8b, deferred): at the next genuine /cortex-core:refine invocation post-merge..."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Pre-commit drift hook semantics",
+      "finding": "Task 6's verification gate scopes drift to plugins/cortex-core/skills/refine/, but the hook's Phase 4 diff is over the entire plugins/cortex-core/ tree (and plugins/cortex-overnight/). Unrelated drift elsewhere passes the plan's verification but blocks the hook.",
+      "evidence_quote": "git diff --quiet plugins/cortex-core/skills/refine/ exits 0 (no drift remaining post-commit) \u2014 pass if exit 0 (R9 acceptance)."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Pre-commit drift hook semantics",
+      "finding": "Task 3 uses git add <dir> for mirror deletions while Task 2 uses explicit git rm for canonical deletions \u2014 asymmetric tooling for what should be a uniform staging contract.",
+      "evidence_quote": "Stage with explicit pathspec (plugins/cortex-core/skills/refine/), not git add -A."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Verification adequacy",
+      "finding": "End-user plugin-cache install is the dominant deployment target but neither pre-merge gates nor R8b's post-merge attestation will run there \u2014 R8b runs in the implementer's repo-development environment.",
+      "evidence_quote": "End-user plugin-cache install: refine ships under ~/.claude/plugins/cache/<marketplace>/cortex-core/<version>/skills/refine/...",
+      "straddle_rationale": "Adjacent gap because the plan's verification logic isn't internally inconsistent for the layout it targets \u2014 the issue is that an adjacent deployment target is never exercised."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Adaptation list integrity",
+      "finding": "### 2b. Pre-Write Checks and ### 3a. Orchestrator Review are subsections of ## Protocol that refine's Step 5 adaptation list does not address. \u00a73a is the load-bearing orchestrator-review hop the entire ticket pivots on, and it has no apply/skip/modify row.",
+      "evidence_quote": "Current line 177 reads: Read references/specify.md and follow its full protocol (\u00a71\u2013\u00a74) with these adaptations:",
+      "straddle_rationale": "Tagged B because Task 1's R3+R4+R5 changes are themselves internally consistent at the row-existence level \u2014 the gap is in adjacent ###-level subsections."
+    }
+  ]
+}
