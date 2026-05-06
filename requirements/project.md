@@ -20,6 +20,8 @@ Agentic workflow toolkit for AI-assisted software development. Defines the globa
 
 **Quality bar**: Tests pass and the feature works as specced. ROI matters — the system exists to make shipping faster, not to be a project in itself.
 
+**Workflow trimming**: Workflows that have not earned their place are removed wholesale rather than deprecated in stages. Hard-deletion is preferred over deprecation notices, tombstone skills, or env-var soft-deletes when the surface has zero downstream consumers (verified per-PR). Retired surfaces are documented in `CHANGELOG.md` with replacement entry points and any user-side cleanup paths the scaffolder cannot auto-prune.
+
 ## Architectural Constraints
 
 - **File-based state**: Lifecycle artifacts, backlog items, pipeline state, and session tracking all use plain files (markdown, JSON, YAML frontmatter). No database or server. May evolve if complexity warrants it, but simplicity is preferred.
