@@ -55,7 +55,7 @@
 - **Fake worked-example citations: 6** — `client.py:142`, `auth.py:88`, `cache.py:55`, `migrate.py:212` in `skills/critical-review/SKILL.md` (illustrative bug scenarios pointing at imaginary files); `[src/foo.py:42]`, `[src/bar.py:18]`, `[src/baz.py:88]` in `skills/discovery/references/research.md` (pattern-matching examples).
 - **The audit's framing — `plan.md:107` references `plugins/cortex-core/skills/critical-review/SKILL.md:176-182` — describes citations that live in `lifecycle/{slug}/plan.md`, NOT in `skills/`.** Citations in lifecycle artifacts already have a near-existing test surface (`test_lifecycle_references_resolve.py`).
 
-**Cross-skill handoff fields enumerated** (from `skills/backlog/references/schema.md` + lifecycle/refine/discovery SKILL.md usage):
+**Cross-skill handoff fields enumerated** (from `skills/backlog/references/schema.md` plus the lifecycle, refine, and discovery SKILL.md files):
 
 - Backlog frontmatter: `discovery_source`, `research`, `spec`, `status`, `complexity`, `criticality`, `areas`, `parent`, `blocks`, `blocked-by`, `lifecycle_slug`, `lifecycle_phase`, `session_id`, `tags`, `priority`, `type`
 - Lifecycle artifact filenames: `research.md`, `spec.md`, `plan.md`, `index.md`, `events.log`, `review.md`, `orchestrator-note.md`, `preflight.md`, `learnings/progress.txt`, `deferred/{feature}-q{NNN}.md`
