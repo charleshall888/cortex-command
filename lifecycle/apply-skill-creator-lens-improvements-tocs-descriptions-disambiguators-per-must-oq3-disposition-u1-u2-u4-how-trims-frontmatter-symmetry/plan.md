@@ -20,7 +20,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
     - `skills/discovery/references/decompose.md` (locate by `^## Constraints$`)
     - `skills/lifecycle/references/clarify.md:119`
     - `skills/lifecycle/references/clarify-critic.md:159`
-    - `skills/lifecycle/references/specify.md:181`
+    - `skills/lifecycle/references/specify.md:177`
     - `skills/lifecycle/references/plan.md:303`
     - `skills/lifecycle/references/implement.md:294`
     - `skills/lifecycle/references/review.md:212`

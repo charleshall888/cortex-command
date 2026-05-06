@@ -102,7 +102,7 @@ The 12 tables identified in research (file paths + line numbers below) are the c
 - `skills/discovery/references/decompose.md` (line TBD)
 - `skills/lifecycle/references/clarify.md:119`
 - `skills/lifecycle/references/clarify-critic.md:159`
-- `skills/lifecycle/references/specify.md:181`
+- `skills/lifecycle/references/specify.md:177`
 - `skills/lifecycle/references/plan.md:303`
 - `skills/lifecycle/references/implement.md:294`
 - `skills/lifecycle/references/review.md:212`
