@@ -23,7 +23,7 @@ Branch on the returned `status` field:
 - **`loaded`** — parent file is `type: epic` and the body was extracted, sanitized, and token-capped. Splice `body` into the `<parent_epic_body source="backlog/<filename>" trust="untrusted">…</parent_epic_body>` markers within the dispatch prompt's `## Parent Epic Alignment` section. Set `parent_epic_loaded = true`.
 - **`unreadable`** — parent file exists with `type: epic` but its frontmatter is malformed. Set `parent_epic_loaded = false`. Omit the section. Emit the user-facing warning line `"Parent epic <id> referenced but file is unreadable — alignment evaluation skipped."` (verbatim from the allowlist below).
 
-**Warning-template allowlist.** When emitting a user-facing warning for the `missing` or `unreadable` branches, the orchestrator MUST use one of the two verbatim templates listed above and MUST NOT echo raw filesystem error text or helper stderr output. The allowlist is closed; new branches require a spec amendment.
+**Warning-template allowlist.** When emitting a user-facing warning for the `missing` or `unreadable` branches, the orchestrator uses one of the two verbatim templates listed above and does not echo raw filesystem error text or helper stderr output. The allowlist is closed; new branches require a spec amendment.
 
 ## Agent Dispatch
 
@@ -135,7 +135,7 @@ Required fields:
 ts: <ISO 8601 timestamp>
 event: clarify_critic
 feature: <feature slug>
-parent_epic_loaded: <bool>  # REQUIRED; default false on read for legacy events without this field
+parent_epic_loaded: <bool>  # required; default false on read for legacy events without this field
 findings: <array of {text: <string>, origin: "primary" | "alignment"} objects — one per critic objection>
 dispositions:
   apply: <count>
@@ -152,11 +152,11 @@ status: "ok"
 
 If no Dismiss dispositions were made, `dismissals` is an empty array. The invariant `len(dismissals) == dispositions.dismiss` must hold for every success-path event.
 
-`parent_epic_loaded` is REQUIRED on every post-feature event. It is `true` when the orchestrator included the `## Parent Epic Alignment` section in the dispatch prompt (per the Parent Epic Loading branching above) and `false` otherwise. Pre-feature legacy events without this field are read as `false`.
+`parent_epic_loaded` is present on every post-feature event. It is `true` when the orchestrator included the `## Parent Epic Alignment` section in the dispatch prompt (per the Parent Epic Loading branching above) and `false` otherwise. Pre-feature legacy events without this field are read as `false`.
 
 `findings[]` is an array of objects, each with `text: <string>` (the prose objection) and `origin: "primary" | "alignment"`. `origin: "alignment"` is reserved for findings produced from the `## Parent Epic Alignment` sub-rubric; all other critic-dimension findings use `origin: "primary"`. Pre-feature legacy events with bare-string findings are read as `{text: <string>, origin: "primary"}`.
 
-**Cross-field invariant**: any post-feature event whose `findings[]` contains at least one item with `origin: "alignment"` MUST have `parent_epic_loaded: true`. Violation indicates a write-side bug. This invariant sits in parallel to the `len(dismissals) == dispositions.dismiss` invariant; neither is programmatically validated in this version, but a future ticket may add a validator covering both.
+**Cross-field invariant**: any post-feature event whose `findings[]` contains at least one item with `origin: "alignment"` has `parent_epic_loaded: true`. Violation indicates a write-side bug. This invariant sits in parallel to the `len(dismissals) == dispositions.dismiss` invariant; neither is programmatically validated in this version, but a future ticket may add a validator covering both.
 
 Disposition counts reflect post-self-resolution values. If self-resolution reclassifies an Ask item as Apply, the logged `apply` count increases and `ask` count decreases accordingly, and the resulting fix description is appended to `applied_fixes` (the `applied_fixes` array thus carries initial Apply dispositions and Ask→Apply self-resolution reclassifications). If self-resolution reclassifies an Ask item as Dismiss, `ask` decreases and `dismiss` increases; the resolved rationale lands in `dismissals[].rationale` (not in `applied_fixes`) because `dismissals` is the Dismiss-disposition counterpart to `applied_fixes`.
 
@@ -206,7 +206,6 @@ If the critic agent fails, errors, or times out:
 
 | Thought | Reality |
 |---------|---------|
-| "Skip the critic if all three dimensions are High confidence" | Always runs — the critic's job is to challenge whether those High ratings are deserved, not to rubber-stamp them. |
 | "The critic should classify its own objections as Apply/Dismiss/Ask" | The critic returns prose objections only. The orchestrator applies the disposition framework after the agent returns. |
 | "Ask items from the critic should be presented separately before §4" | Ask items are folded into the §4 Q&A and presented as a single consolidated question set alongside any low-confidence dimension questions. |
 | "The critic should read files or gather additional context" | The critic receives the confidence assessment, the source material, and (Context A only, when the child has a `type: epic` parent loaded by `bin/cortex-load-parent-epic`) a `## Parent Epic Alignment` section containing the sanitized parent epic body inside `<parent_epic_body>` markers. It reads nothing else. |

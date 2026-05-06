@@ -165,7 +165,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
 - **Verification**:
   - `python3 -c "import re; lines = open('skills/refine/references/clarify-critic.md').readlines(); soften_targets = [(26,'closed-allowlist'),(155,'post-feature event'),(159,'parent_epic_loaded')]; bad = [(n, expected) for n, expected in soften_targets if any(re.search(r'\b(MUST|REQUIRED)\b', l) for l in lines if expected.lower() in l.lower())]; print('FAIL imperatives near targets:', bad) if bad else print('OK')"` — pass if output is `OK`. (Content-anchored check, robust to line-number drift from U2 trim at line 207.)
   - U2 trim correctness — Interactive/session-dependent: per-row drift detection consolidated in Task 12.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 9: Apply U2 trims to remaining lifecycle reference files
 
