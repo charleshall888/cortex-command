@@ -409,3 +409,185 @@ def test_cli_rejects_nonexistent_root(tmp_path):
     )
     assert result.returncode == 2
     assert "not a directory" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# R2: --exclude-dir normalization + out-of-root rejection
+# R3: slug-shape validation runs before any file walk
+# R4: research/archive is excluded by default
+# ---------------------------------------------------------------------------
+
+
+def _setup_minimal_repo_with_target(tmp_path: Path) -> Path:
+    """Repo with a single citer in scope so helper has work to do."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "doc.md").write_text(
+        "see lifecycle/foo/research.md\n", encoding="utf-8"
+    )
+    return root
+
+
+def test_exclude_dir_normalization_trailing_slash(tmp_path):
+    """``--exclude-dir research/spring/`` (trailing slash) is normalized
+    and the dir is excluded from the walk."""
+    root = _setup_minimal_repo_with_target(tmp_path)
+    (root / "research" / "spring").mkdir(parents=True)
+    (root / "research" / "spring" / "notes.md").write_text(
+        "lifecycle/foo/research.md (must NOT be rewritten — excluded)\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--slug",
+            "foo",
+            "--exclude-dir",
+            "research/spring/",
+            "--root",
+            str(root),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    parsed = json.loads(result.stdout.strip())
+    assert "research/spring/notes.md" not in parsed["rewritten_files"]
+    assert "lifecycle/foo" in (
+        root / "research" / "spring" / "notes.md"
+    ).read_text(encoding="utf-8")
+
+
+def test_exclude_dir_normalization_leading_dotslash(tmp_path):
+    """``--exclude-dir ./research/spring`` (leading ./) is normalized
+    and the dir is excluded from the walk."""
+    root = _setup_minimal_repo_with_target(tmp_path)
+    (root / "research" / "spring").mkdir(parents=True)
+    (root / "research" / "spring" / "notes.md").write_text(
+        "lifecycle/foo/research.md (must NOT be rewritten — excluded)\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--slug",
+            "foo",
+            "--exclude-dir",
+            "./research/spring",
+            "--root",
+            str(root),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    parsed = json.loads(result.stdout.strip())
+    assert "research/spring/notes.md" not in parsed["rewritten_files"]
+    assert "lifecycle/foo" in (
+        root / "research" / "spring" / "notes.md"
+    ).read_text(encoding="utf-8")
+
+
+def test_exclude_dir_normalization_absolute_path(tmp_path):
+    """An absolute path under --root is normalized to a relative path
+    and the dir is excluded from the walk."""
+    root = _setup_minimal_repo_with_target(tmp_path)
+    (root / "research" / "spring").mkdir(parents=True)
+    (root / "research" / "spring" / "notes.md").write_text(
+        "lifecycle/foo/research.md (must NOT be rewritten — excluded)\n",
+        encoding="utf-8",
+    )
+    abs_path = str((root / "research" / "spring").resolve())
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--slug",
+            "foo",
+            "--exclude-dir",
+            abs_path,
+            "--root",
+            str(root),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    parsed = json.loads(result.stdout.strip())
+    assert "research/spring/notes.md" not in parsed["rewritten_files"]
+
+
+def test_exclude_dir_out_of_root_rejected(tmp_path):
+    """An absolute path outside --root exits 2 with stderr 'out-of-root'."""
+    root = _setup_minimal_repo_with_target(tmp_path)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--slug",
+            "foo",
+            "--exclude-dir",
+            str(outside.resolve()),
+            "--root",
+            str(root),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 2
+    assert "out-of-root" in result.stderr
+
+
+def test_invalid_slug_rejected_no_file_opens(helper, tmp_path, monkeypatch, capsys):
+    """R3: slug-shape validation runs BEFORE any file walk. Monkey-patch
+    ``_iter_markdown_files`` to raise; the in-process helper.main() must
+    still return 2 because slug validation fires first."""
+    def _no_walk(*args, **kwargs):
+        raise AssertionError("_iter_markdown_files called despite invalid slug")
+
+    monkeypatch.setattr(helper, "_iter_markdown_files", _no_walk)
+    rc = helper.main(["--slug", "../etc", "--root", str(tmp_path)])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "invalid slug" in captured.err
+
+
+def test_research_archive_excluded_by_default(tmp_path):
+    """R4: ``research/archive/<slug>/note.md`` containing
+    ``lifecycle/<slug>/...`` must NOT be rewritten."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    (root / "doc.md").write_text(
+        "see lifecycle/foo/spec.md\n", encoding="utf-8"
+    )
+    (root / "research" / "archive" / "old-research").mkdir(parents=True)
+    (root / "research" / "archive" / "old-research" / "note.md").write_text(
+        "see lifecycle/foo/spec.md (in archived research, must NOT be rewritten)\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--slug",
+            "foo",
+            "--root",
+            str(root),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    parsed = json.loads(result.stdout.strip())
+    assert "doc.md" in parsed["rewritten_files"]
+    assert (
+        "research/archive/old-research/note.md" not in parsed["rewritten_files"]
+    )
+    # And the file under research/archive/ is unchanged on disk.
+    assert "lifecycle/foo/spec.md" in (
+        root / "research" / "archive" / "old-research" / "note.md"
+    ).read_text(encoding="utf-8")

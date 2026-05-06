@@ -148,13 +148,22 @@ lifecycle-archive *args:
     # --- Parse flags ---
     dry_run=0
     from_file=""
+    exclude_dir_paths=()
     while [ $# -gt 0 ]; do
         case "$1" in
             --dry-run) dry_run=1; shift ;;
             --from-file) from_file="${2:-}"; shift 2 ;;
             --from-file=*) from_file="${1#--from-file=}"; shift ;;
+            --exclude-dir) exclude_dir_paths+=("${2:-}"); shift 2 ;;
+            --exclude-dir=*) exclude_dir_paths+=("${1#--exclude-dir=}"); shift ;;
             *) echo "lifecycle-archive: unknown arg: $1" >&2; exit 2 ;;
         esac
+    done
+    # Build forwarded helper args from exclude_dir_paths (one --exclude-dir per value).
+    # Bash 3.2 + set -u: bare "${arr[@]}" on empty array triggers unbound; guard with +.
+    exclude_dir_args=()
+    for excl in "${exclude_dir_paths[@]+"${exclude_dir_paths[@]}"}"; do
+        exclude_dir_args+=(--exclude-dir "$excl")
     done
     # --- Clean-tree precheck (applies to BOTH dry-run and real-run; spec §N6.5 + edge case) ---
     if ! git diff --quiet HEAD || ! git diff --quiet --cached HEAD; then
@@ -208,8 +217,8 @@ lifecycle-archive *args:
             fi
         done <<< "$worktree_paths"
         [ "$skip" -eq 1 ] && continue
-        # Only archive if events.log contains feature_complete
-        grep -q '"feature_complete"' "$events_log" || continue
+        # Match both NDJSON-form ("event": "feature_complete") and YAML-block-form (event: feature_complete) entries.
+        grep -qE '"event":[[:space:]]*"feature_complete"|^[[:space:]]*event:[[:space:]]*feature_complete[[:space:]]*$' "$events_log" || continue
         slug="$(basename "$dir")"
         # Apply --from-file slug filter if set (fixed-string membership test
         # against the newline-delimited from_file_slugs sentinel string).
@@ -251,6 +260,15 @@ lifecycle-archive *args:
                     --exclude-dir=sessions \
                     --exclude-dir=retros \
                     . 2>/dev/null || true)
+                # Post-filter: drop paths under any --exclude-dir value.
+                # grep --exclude-dir matches directory names, not paths, so
+                # a value like research/repo-spring-cleaning will not be
+                # honored by grep itself; this filter enforces it.
+                for excl in "${exclude_dir_paths[@]+"${exclude_dir_paths[@]}"}"; do
+                    excl_norm="${excl%/}"
+                    excl_norm="${excl_norm#./}"
+                    files=$(printf '%s\n' "$files" | grep -vE "^\\./?${excl_norm}/" || true)
+                done
                 if [ -n "$files" ]; then
                     echo "  [$slug]"
                     echo "$files" | sed 's|^|    |'
@@ -273,7 +291,7 @@ lifecycle-archive *args:
         # atomic via tempfile + os.replace, so no .bak cleanup is needed.
         # Helper emits one JSON line per slug to stdout: we capture it and
         # extract rewritten_files for the manifest entry below.
-        rewrite_json=$(bin/cortex-archive-rewrite-paths --slug "$slug")
+        rewrite_json=$(bin/cortex-archive-rewrite-paths --slug "$slug" "${exclude_dir_args[@]+"${exclude_dir_args[@]}"}")
         rewritten_json=$(printf '%s' "$rewrite_json" | python3 -c 'import json,sys; print(json.dumps(json.loads(sys.stdin.read())["rewritten_files"]))')
         src="$dir"
         dst="lifecycle/archive/$slug"

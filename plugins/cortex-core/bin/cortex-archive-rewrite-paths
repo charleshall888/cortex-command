@@ -66,18 +66,46 @@ EXCLUDED_REL_PREFIXES = (
     Path("lifecycle") / "sessions",
     Path("retros"),
     Path(".claude") / "worktrees",
+    Path("research") / "archive",
 )
 
+SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 
-def _iter_markdown_files(root: Path) -> Iterable[Path]:
-    """Yield every ``*.md`` file under ``root`` honoring the four exclusions."""
+
+def _normalize_exclude_dir(value: str, root: Path) -> Path:
+    """Normalize a --exclude-dir value to a root-relative Path.
+
+    Trailing slash and leading ``./`` are stripped. Absolute paths are
+    resolved against ``root``. Out-of-root values exit 2 with stderr
+    matching ``out-of-root``.
+    """
+    stripped = value.rstrip("/")
+    if stripped.startswith("./"):
+        stripped = stripped[2:]
+    p = Path(stripped)
+    root_resolved = root.resolve()
+    p_resolved = p.resolve() if p.is_absolute() else (root_resolved / p).resolve()
+    try:
+        return p_resolved.relative_to(root_resolved)
+    except ValueError:
+        print(
+            f"cortex-archive-rewrite-paths: --exclude-dir out-of-root: {value}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+
+def _iter_markdown_files(
+    root: Path, exclude_prefixes: tuple[Path, ...] = EXCLUDED_REL_PREFIXES
+) -> Iterable[Path]:
+    """Yield every ``*.md`` file under ``root`` honoring the exclusions."""
     for dirpath, dirnames, filenames in os.walk(root):
         # Prune excluded directories in-place so os.walk does not descend.
         dirnames[:] = sorted(d for d in dirnames if d not in EXCLUDED_DIR_NAMES)
         rel_dir = Path(dirpath).resolve().relative_to(root.resolve())
         if any(
             rel_dir == prefix or _is_under(rel_dir, prefix)
-            for prefix in EXCLUDED_REL_PREFIXES
+            for prefix in exclude_prefixes
         ):
             continue
         for name in sorted(filenames):
@@ -136,7 +164,12 @@ def _atomic_write(path: Path, new_content: str) -> None:
     os.replace(tmp_path, path)
 
 
-def rewrite_for_slug(root: Path, slug: str, dry_run: bool) -> List[str]:
+def rewrite_for_slug(
+    root: Path,
+    slug: str,
+    dry_run: bool,
+    exclude_prefixes: tuple[Path, ...] = EXCLUDED_REL_PREFIXES,
+) -> List[str]:
     """Walk ``root``, rewrite references to ``slug``, return relative paths.
 
     Returns the list of files whose content was changed (or would have been
@@ -145,7 +178,7 @@ def rewrite_for_slug(root: Path, slug: str, dry_run: bool) -> List[str]:
     """
     rewritten: List[str] = []
     root_resolved = root.resolve()
-    for md_path in _iter_markdown_files(root):
+    for md_path in _iter_markdown_files(root, exclude_prefixes):
         try:
             with open(md_path, "r", encoding="utf-8") as fh:
                 original = fh.read()
@@ -186,6 +219,18 @@ def _parse_args(argv: List[str]) -> argparse.Namespace:
         default=".",
         help="Repo root to walk. Defaults to the current working directory.",
     )
+    parser.add_argument(
+        "--exclude-dir",
+        action="append",
+        default=[],
+        dest="exclude_dir",
+        help=(
+            "Additional directory to exclude from the walk, relative to "
+            "--root. Trailing slash and leading './' are stripped; absolute "
+            "paths are resolved against --root. Out-of-root values exit 2. "
+            "Repeat for multiple."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -198,8 +243,19 @@ def main(argv: List[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
+    # R3: validate slug shape before any file walk so a bad slug never opens a file.
     for slug in args.slug:
-        rewritten = rewrite_for_slug(root, slug, args.dry_run)
+        if not SLUG_RE.fullmatch(slug):
+            print(
+                f"cortex-archive-rewrite-paths: invalid slug: {slug}",
+                file=sys.stderr,
+            )
+            return 2
+    # R2: normalize --exclude-dir values and merge with the static exclusion tuple.
+    extra_excludes = tuple(_normalize_exclude_dir(v, root) for v in args.exclude_dir)
+    runtime_excludes = EXCLUDED_REL_PREFIXES + extra_excludes
+    for slug in args.slug:
+        rewritten = rewrite_for_slug(root, slug, args.dry_run, runtime_excludes)
         sys.stdout.write(
             json.dumps({"slug": slug, "rewritten_files": rewritten}) + "\n"
         )

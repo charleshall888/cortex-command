@@ -83,6 +83,11 @@ def _target_path_for(repo_root: Path) -> str:
     return str(repo_root.resolve() / "lifecycle") + "/"
 
 
+def _research_target_for(repo_root: Path) -> str:
+    """Compute the canonical ``research/`` path string for a repo (R9)."""
+    return str(repo_root.resolve() / "research") + "/"
+
+
 def _settings_path(home: Path) -> Path:
     return home / ".claude" / "settings.local.json"
 
@@ -859,3 +864,198 @@ def test_sigint_mid_merge_releases_lock(
     # in-test register(); afterward, post_bytes is our clean rewrite.
     assert post_bytes != pre_bytes  # our in-test register() did land a change
     assert len(post_bytes) > 0
+
+
+# ---------------------------------------------------------------------------
+# R9 dual-registration: cortex init registers both lifecycle/ and research/
+# Test name substring "dual_registration" is grepped by the Task 5
+# verification check (≥ 8 functions match).
+# ---------------------------------------------------------------------------
+
+
+# (a) happy-path: register-creates-settings; both entries appear
+def test_dual_registration_happy_path_creates_settings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R9: cortex init on a fresh repo writes both lifecycle/ and research/
+    entries to a newly-created settings.local.json."""
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+    assert not _settings_path(fake_home).exists()
+
+    rc = init_main(_make_args(repo))
+    assert rc == 0
+
+    data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
+    allow = data["sandbox"]["filesystem"]["allowWrite"]
+    assert _target_path_for(repo) in allow
+    assert _research_target_for(repo) in allow
+
+
+# (b) sibling-key preservation: other JSON keys untouched
+def test_dual_registration_preserves_sibling_keys(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R9: cortex init preserves sibling settings keys when writing both
+    lifecycle/ and research/ entries."""
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    settings = _settings_path(fake_home)
+    pre_existing = {
+        "sandbox": {"network": {"allowUnixSockets": ["/tmp/x"]}},
+        "permissions": {"allow": ["read"]},
+    }
+    settings.write_text(json.dumps(pre_existing, indent=2) + "\n", encoding="utf-8")
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    rc = init_main(_make_args(repo))
+    assert rc == 0
+
+    data = json.loads(settings.read_text(encoding="utf-8"))
+    assert data["sandbox"]["network"] == {"allowUnixSockets": ["/tmp/x"]}
+    assert data["permissions"] == {"allow": ["read"]}
+    allow = data["sandbox"]["filesystem"]["allowWrite"]
+    assert _target_path_for(repo) in allow
+    assert _research_target_for(repo) in allow
+
+
+# (c) idempotency: running cortex init twice yields one of each entry
+def test_dual_registration_idempotent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R9: a second cortex init --update does not duplicate either entry."""
+    _isolate_home(monkeypatch, tmp_path)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    assert init_main(_make_args(repo)) == 0
+    assert init_main(_make_args(repo, update=True)) == 0
+
+    data = json.loads(
+        _settings_path(tmp_path / "fake-home").read_text(encoding="utf-8")
+    )
+    allow = data["sandbox"]["filesystem"]["allowWrite"]
+    assert allow.count(_target_path_for(repo)) == 1
+    assert allow.count(_research_target_for(repo)) == 1
+
+
+# (d) order preservation: [lifecycle/, research/] (not reversed)
+def test_dual_registration_order_lifecycle_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R9 invariant: lifecycle/ FIRST, research/ SECOND in the array."""
+    _isolate_home(monkeypatch, tmp_path)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    assert init_main(_make_args(repo)) == 0
+
+    data = json.loads(
+        _settings_path(tmp_path / "fake-home").read_text(encoding="utf-8")
+    )
+    allow = data["sandbox"]["filesystem"]["allowWrite"]
+    lifecycle_idx = allow.index(_target_path_for(repo))
+    research_idx = allow.index(_research_target_for(repo))
+    assert lifecycle_idx < research_idx
+
+
+# (e) malformed-sandbox refusal: existing R14 gate still rejects
+def test_dual_registration_malformed_sandbox_refused(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """R9 + R14: malformed sandbox refuses cortex init; settings unchanged."""
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    settings = _settings_path(fake_home)
+    settings.write_text('{"sandbox": "broken"}\n', encoding="utf-8")
+    pre_bytes = settings.read_bytes()
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    rc = init_main(_make_args(repo))
+    assert rc == 2
+    captured = capsys.readouterr()
+    assert "expected" in captured.err
+    assert settings.read_bytes() == pre_bytes
+
+
+# (f) unregister-removes both entries
+def test_dual_registration_unregister_removes_both(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R9: cortex init --unregister removes both lifecycle/ and research/
+    entries that a register pass added."""
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    assert init_main(_make_args(repo)) == 0
+    pre_data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
+    assert _target_path_for(repo) in pre_data["sandbox"]["filesystem"]["allowWrite"]
+    assert _research_target_for(repo) in pre_data["sandbox"]["filesystem"]["allowWrite"]
+
+    assert init_main(_make_args(repo, unregister=True)) == 0
+    post_data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
+    allow = post_data["sandbox"]["filesystem"].get("allowWrite", [])
+    assert _target_path_for(repo) not in allow
+    assert _research_target_for(repo) not in allow
+
+
+# (g) unregister-idempotent: pre-R9 install (only lifecycle/ entry) unregisters cleanly
+def test_dual_registration_unregister_idempotent_pre_r9_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R9: a pre-R9 install only has the lifecycle/ entry. cortex init
+    --unregister succeeds (no error) and removes whatever it finds."""
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    settings = _settings_path(fake_home)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    pre_existing = {
+        "sandbox": {"filesystem": {"allowWrite": [_target_path_for(repo)]}}
+    }
+    settings.write_text(json.dumps(pre_existing, indent=2) + "\n", encoding="utf-8")
+
+    rc = init_main(_make_args(repo, unregister=True))
+    assert rc == 0
+    data = json.loads(settings.read_text(encoding="utf-8"))
+    allow = data["sandbox"]["filesystem"].get("allowWrite", [])
+    assert _target_path_for(repo) not in allow
+
+
+# (h) partial-failure recovery: --update adds missing research/ entry on
+# a half-registered settings file
+def test_dual_registration_partial_failure_recovery_via_update(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R9: pre-R9 settings has only lifecycle/; cortex init --update adds
+    the missing research/ entry without duplicating lifecycle/."""
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    settings = _settings_path(fake_home)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    half_registered = {
+        "sandbox": {"filesystem": {"allowWrite": [_target_path_for(repo)]}}
+    }
+    settings.write_text(json.dumps(half_registered, indent=2) + "\n", encoding="utf-8")
+
+    rc = init_main(_make_args(repo, update=True))
+    assert rc == 0
+    data = json.loads(settings.read_text(encoding="utf-8"))
+    allow = data["sandbox"]["filesystem"]["allowWrite"]
+    assert allow.count(_target_path_for(repo)) == 1
+    assert _research_target_for(repo) in allow
