@@ -1,0 +1,89 @@
+---
+manifest_sha256: 80c4355ac9ea8b6305ebcfbc30247586507bbc6b12f5618c0f956bdffb13a6ce
+---
+# Disposition manifest — #169 archive sweep
+
+Per-dir disposition for the F-9c (lifecycle) and F-10 (research) sweeps. The `manifest_sha256` frontmatter field above is the sha256 of this body (everything after the closing `---`).
+
+| slug | partition | predicate-hit | backlog-ref | cross-refs | recommended-action |
+|------|-----------|---------------|-------------|------------|--------------------|
+| add-parent-epic-alignment-check-to-refine-clarify-critic | lifecycle | json | #161 | 1 | archive-via-recipe |
+| add-playwright-htmx-test-patterns-to-dev-toolchain | lifecycle | none | #029 | 5 | archive-manual |
+| add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7 | lifecycle | json | #103 | 2 | archive-via-recipe |
+| add-sandbox-violation-tracker-hook-for-posttoolusebash | lifecycle | json | #164 | 1 | archive-via-recipe |
+| adopt-xhigh-effort-default-for-overnight-lifecycle-implement | lifecycle | yaml | #090 | 1 | archive-via-recipe |
+| apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites | lifecycle | yaml | #163 | 1 | archive-via-recipe |
+| apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening | lifecycle | json | #148 | 1 | archive-via-recipe |
+| build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight | lifecycle | json | #160 | 1 | archive-via-recipe |
+| clean-up-active-sessionjson-when-overnight-session-transitions-to-phasecomplete | lifecycle | none | #169 | 2 | archive-manual |
+| decide-and-document-post-47-policy-settings-must-escalation-tone-regression | lifecycle | yaml | #091 | 1 | archive-via-recipe |
+| define-evaluation-rubric-update-lifecycle-spec-template-create-dashboard-context-md | lifecycle | none | #169 | 2 | archive-manual |
+| delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements | lifecycle | json | #168 | 1 | archive-via-recipe |
+| document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping | lifecycle | yaml | #065 | 2 | archive-via-recipe |
+| evaluate-implementmd119-progress-tail-narration-under-opus-47 | lifecycle | json | #133 | 1 | archive-via-recipe |
+| extend-output-floorsmd-with-m1-subagent-disposition-section | lifecycle | none | #086 | 1 | keep-toplevel |
+| extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks | lifecycle | yaml | #064 | 1 | archive-via-recipe |
+| extract-backlog-pick-ready-set-into-bin-backlog-ready | lifecycle | yaml | #108 | 2 | archive-via-recipe |
+| extract-commit-preflight-into-bin-commit-preflight | lifecycle | json | #105 | 2 | archive-via-recipe |
+| extract-dev-epic-map-parse-into-bin-build-epic-map | lifecycle | json | #107 | 2 | archive-via-recipe |
+| extract-feature-executor-module-from-batch-runner | lifecycle | none | #075 | 1 | keep-toplevel |
+| extract-morning-review-deterministic-sequences-c11-c15-bundle | lifecycle | json | #106 | 1 | archive-via-recipe |
+| extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context | lifecycle | yaml | #111 | 2 | archive-via-recipe |
+| extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout | lifecycle | json | #109 | 1 | archive-via-recipe |
+| feat | lifecycle | none | none | 7 | keep-toplevel |
+| feat-a | lifecycle | none | #169 | 5 | delete |
+| fix-api-key-helper-reference | lifecycle | none | none | 0 | keep-toplevel |
+| fix-archive-predicate-and-sweep-lifecycle-and-research-dirs | lifecycle | none | #169 | 1 | keep-toplevel |
+| fix-daytime-pipeline-worktree-atomicity-and-stderr-logging | lifecycle | yaml | #094 | 3 | archive-via-recipe |
+| fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid | lifecycle | json | #149 | 1 | archive-via-recipe |
+| install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions | lifecycle | json | #128 | 5 | archive-via-recipe |
+| instrument-orchestrator-round-subprocess-with-token-cost-telemetry | lifecycle | yaml | #153 | 1 | archive-via-recipe |
+| instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates | lifecycle | json | #104 | 1 | archive-via-recipe |
+| lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke | lifecycle | none | #145 | 1 | keep-toplevel |
+| make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks | lifecycle | none | #156 | 1 | keep-toplevel |
+| migrate-overnight-schedule-to-a-launchagent-based-scheduler | lifecycle | json | #112 | 2 | archive-via-recipe |
+| my-feature | lifecycle | none | none | 4 | keep-toplevel |
+| non-editable-wheel-install-support-for-cortex-command | lifecycle | json | #141 | 1 | archive-via-recipe |
+| remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release | lifecycle | yaml | #098 | 1 | archive-via-recipe |
+| resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers | lifecycle | json | #151 | 1 | archive-via-recipe |
+| restructure-readme-and-setupmd-for-clearer-onboarding | lifecycle | json | #150 | 2 | archive-via-recipe |
+| rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths | lifecycle | json | #166 | 1 | archive-via-recipe |
+| run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff | lifecycle | none | #083 | 3 | archive-manual |
+| shared-git-index-race-between-parallel-claude-sessions-causes-wrong-files-to-land-in-commits | lifecycle | none | #135 | 2 | keep-toplevel |
+| ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations | lifecycle | json | #102 | 1 | archive-via-recipe |
+| test-feat | lifecycle | none | none | 3 | keep-toplevel |
+| tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction | lifecycle | json | #159 | 1 | archive-via-recipe |
+| unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception | lifecycle | yaml | #110 | 1 | archive-via-recipe |
+| agent-output-efficiency | research | n/a | #049 | 18 | archive-manual |
+| audit-and-improve-discovery-skill-rigor | research | n/a | #137 | 7 | archive-manual |
+| audit-interactive-phase-output-for-decision-signal | research | n/a | #066 | 12 | archive-manual |
+| claude-code-sdk-usage | research | n/a | none | 3 | archive-manual |
+| competing-plan-synthesis | research | n/a | #158 | 7 | archive-manual |
+| critical-review-scope-expansion-bias | research | n/a | #132 | 4 | archive-manual |
+| docs-setup-audit | research | n/a | #150 | 3 | archive-manual |
+| extract-scripts-from-agent-tool-sequences | research | n/a | #101 | 20 | archive-manual |
+| generative-ui-harness | research | n/a | #029 | 10 | archive-manual |
+| gpg-signing-claude-code-sandbox | research | n/a | #081 | 2 | archive-manual |
+| harness-design-long-running-apps | research | n/a | #018 | 18 | archive-manual |
+| implement-in-autonomous-worktree-overnight-component-reuse | research | n/a | #074 | 17 | archive-manual |
+| indydevdan-multi-agent-patterns | research | n/a | none | 0 | archive-manual |
+| morning-review-demo-setup | research | n/a | #071 | 4 | archive-manual |
+| openspec-for-lifecycle-specs | research | n/a | none | 0 | archive-manual |
+| opus-4-7-harness-adaptation | research | n/a | #082 | 46 | keep-toplevel |
+| orchestrator-worktree-escape | research | n/a | #126 | 16 | archive-manual |
+| overnight-layer-distribution | research | n/a | #112 | 45 | archive-manual |
+| overnight-merge-conflict-prevention | research | n/a | #014 | 8 | archive-manual |
+| overnight-plan-building | research | n/a | #048 | 5 | archive-manual |
+| overnight-runner-sandbox-launch | research | n/a | #112 | 4 | archive-manual |
+| permissions-audit | research | n/a | #054 | 11 | archive-manual |
+| post-113-repo-state | research | n/a | #147 | 6 | archive-manual |
+| refine-load-epic-context | research | n/a | #161 | 3 | archive-manual |
+| repo-spring-cleaning | research | n/a | #165 | 11 | keep-toplevel |
+| requirements-audit | research | n/a | #009 | 10 | archive-manual |
+| revisit-lifecycle-implement-preflight-options | research | n/a | #093 | 8 | archive-manual |
+| sandbox-overnight-child-agents | research | n/a | #162 | 5 | archive-manual |
+| session-window-naming | research | n/a | #008 | 2 | archive-manual |
+| shareable-install | research | n/a | #003 | 11 | archive-manual |
+| subagent-model-routing | research | n/a | #044 | 5 | archive-manual |
+| user-configurable-setup | research | n/a | #063 | 10 | archive-manual |
+| vertical-planning | research | n/a | none | 1 | keep-toplevel |

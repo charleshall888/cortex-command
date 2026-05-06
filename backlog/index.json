@@ -77,7 +77,10 @@
     "created": "2026-05-05",
     "updated": "2026-05-05",
     "blocks": [],
-    "blocked_by": [],
+    "blocked_by": [
+      "166",
+      "168"
+    ],
     "parent": "165",
     "research": null,
     "spec": null,
