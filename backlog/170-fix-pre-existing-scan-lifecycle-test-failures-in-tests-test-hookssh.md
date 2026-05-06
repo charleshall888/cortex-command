@@ -19,7 +19,7 @@ Surfaced during lifecycle 168 review (commits aa3c044..00cf886). Two tests in `b
 - `scan-lifecycle/single-incomplete-feature`: expected exit 0 with test-feature in additionalContext; got exit 0, context=''
 - `scan-lifecycle/claude-output-format`: expected exit 0 with hookSpecificOutput key; got exit 0, has_key=false
 
-(The third historical failure, `scan-lifecycle/fresh-resume-fires`, was closed in lifecycle 171 by deleting the test along with the `/fresh` skill it exercised.)
+(A third historical failure on the deleted `/fresh` resume test was closed in lifecycle 171 by deleting that test along with the skill it exercised.)
 
 ## Evidence
 
