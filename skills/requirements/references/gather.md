@@ -137,7 +137,6 @@ For each major requirement, establish:
 Requirements are living documents. Re-run `/cortex-core:requirements <scope>` when any of these occur:
 
 - **Lifecycle review identifies drift**: a lifecycle review surfaces a gap between what was built and what the requirements say. Run `/cortex-core:requirements <area>` to update the affected area doc, or `/cortex-core:requirements project` if the drift is project-level.
-- **Retro surfaces unmet assumption**: a session retrospective identifies a requirement that was assumed but never documented, or a documented requirement that misled implementation.
 - **Core architectural decision changes**: e.g., the state model changes, a core subsystem is replaced, or a constraint that was "may evolve" actually evolves.
 - **Scope changes after discovery research**: a discovery epic reshapes what the project is doing in a feature area — update before refining tickets from that epic.
 - **Open questions now have answers**: requirements gathered while unknowns existed should be revisited once those unknowns are resolved.
