@@ -5,7 +5,7 @@
 **For:** Users with features ready to run in autonomous overnight sessions.  **Assumes:** Familiarity with the lifecycle skill and at least one backlog item with `status: refined`.
 
 The overnight system runs fully autonomous development sessions while you sleep. You
-select features from the backlog, approve a session plan, launch a bash runner in a
+select features from the backlog, approve a session plan, launch the runner in a
 detached tmux session, and go to bed. In the morning, `/morning-review` walks the
 results, closes completed features, and surfaces any decisions that needed a human.
 

@@ -1,6 +1,6 @@
 ---
 name: overnight
-description: Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the bash runner for unattended execution. Use when user says "/overnight", "/overnight resume", "/overnight status", "start overnight session", "overnight plan", "launch overnight", "overnight status", or wants to run multiple features autonomously overnight.
+description: Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the runner for unattended execution. Use when user says "/overnight", "/overnight resume", "/overnight status", "start overnight session", "overnight plan", "launch overnight", "overnight status", or wants to run multiple features autonomously overnight.
 disable-model-invocation: true
 inputs:
   - "time-limit: string (optional) — Maximum wall-clock duration for the overnight session (e.g. '6h'). Passed as --time-limit to the runner."
@@ -19,7 +19,7 @@ preconditions:
 
 # Overnight Session Planning
 
-Interactive entry point for overnight autonomous orchestration. Guides the user through selecting features from the backlog, reviewing a session plan, and launching overnight execution. The skill itself handles planning and approval; execution is delegated to the bash runner.
+Interactive entry point for overnight autonomous orchestration. Guides the user through selecting features from the backlog, reviewing a session plan, and launching overnight execution. The skill itself handles planning and approval; execution is delegated to the runner.
 
 ## Invocation
 
@@ -195,7 +195,7 @@ On user approval, execute these steps in order:
 
    **Error**: If `bootstrap_session()` raises (worktree creation, disk write, or save failure), report the error and stop. Clean up any orphaned worktree: run `git worktree prune` and then `ls $TMPDIR/overnight-worktrees/` to identify and remove any leftover directory (`rm -rf $TMPDIR/overnight-worktrees/<session_id>`). The session ID is inside the directory name — check modification time to find the orphan.
 
-3. **latest-overnight symlink**: Handled by the runner on startup (line 179 of `runner.sh`). The skill does not create this symlink — it writes to the repo root which is outside the sandbox's write allowlist in sandboxed projects.
+3. **latest-overnight symlink**: Handled by the runner on startup. The skill does not create this symlink — it writes to the repo root which is outside the sandbox's write allowlist in sandboxed projects.
 
 4. **Extract batch spec sections**: Read the worktree path from the initialized state (`state.worktree_path`). Call `extract_batch_specs(state, Path(worktree_path))` from `cortex_command.overnight.plan`, passing the worktree path instead of the repository root so that extracted specs are written into the worktree's `lifecycle/` directory. If the returned list is non-empty, `cd` to the worktree directory, stage each returned path with `git add` (paths are relative to the worktree, not the repo root), and commit using `/commit` with message `"Extract batch spec sections for overnight session {session_id}"` (substituting the actual session ID). This commits the specs on the integration branch, not on main. If the list is empty, skip the commit — no batch-spec items were selected.
 
@@ -388,7 +388,7 @@ The three orchestration skills are complementary:
 
 - **Lifecycle** (`/lifecycle`): Interactive single-feature development. User present throughout all phases.
 - **Pipeline** (`/pipeline`): Batch multi-feature orchestration with an interactive front-end (research, spec, plan) and an execution back-end. User participates in planning, then execution runs autonomously.
-- **Overnight** (`/overnight`): Fully autonomous overnight execution of features that already have research and spec artifacts. No interactive research or spec phases -- features must be ready (have completed discovery) before selection. The skill handles plan approval, then hands off entirely to the bash runner.
+- **Overnight** (`/overnight`): Fully autonomous overnight execution of features that already have research and spec artifacts. No interactive research or spec phases -- features must be ready (have completed discovery) before selection. The skill handles plan approval, then hands off entirely to the runner.
 
 The key difference: pipeline creates research and specs interactively during the session; overnight requires them to already exist (produced by `/discovery` or `/lifecycle` earlier).
 
@@ -397,7 +397,7 @@ The key difference: pipeline creates research and specs interactively during the
 - **Do not contain implementation code.** This skill is a protocol that the agent follows. It references functions by their module paths (`cortex_command.overnight.backlog`, `cortex_command.overnight.plan`, `cortex_command.overnight.state`, `cortex_command.overnight.events`, `cortex_command.overnight.deferral`).
 - **One overnight session at a time.** If a session is active (non-complete state file), the user must resume or abandon it before starting a new one.
 - **Features must have `lifecycle/{slug}/research.md` and `lifecycle/{slug}/spec.md` on disk, and must not be `type: epic` (checked after blocked-by, before artifact checks).** The readiness gate in `select_overnight_batch()` enforces this. Features without all required artifacts are reported as ineligible with a reason. `plan.md` is generated during the session if missing — a plan generation sub-agent runs before dispatch and defers the feature (with a captured reason) if it cannot produce a valid plan.
-- **The skill does not execute features.** It creates the plan and state, then hands off to the bash runner. The runner and batch runner handle actual execution.
-- **Overnight features do not merge directly to main.** They merge to the session's integration branch (`overnight/{session_id}`). The bash runner opens a single PR from the integration branch to main at session end, containing all overnight changes for review.
+- **The skill does not execute features.** It creates the plan and state, then hands off to the runner. The runner and batch runner handle actual execution.
+- **Overnight features do not merge directly to main.** They merge to the session's integration branch (`overnight/{session_id}`). The runner opens a single PR from the integration branch to main at session end, containing all overnight changes for review.
 - **Session plan is immutable after approval.** Once written to the session directory (`lifecycle/sessions/{session_id}/overnight-plan.md`), the plan does not change. Runtime state lives in `lifecycle/sessions/{session_id}/overnight-state.json`.
 - **Parallel agent dispatch uses `Agent isolation: "worktree"`.** When launching features in parallel, always use the `Agent` tool with `isolation: "worktree"`. Do not call `git worktree add` manually — in sandboxed sessions this fails because `.claude/worktrees/` is Seatbelt-restricted, and a failed checkout leaves an orphaned branch requiring `git branch -d <name>` cleanup before retrying.

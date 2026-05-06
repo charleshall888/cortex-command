@@ -59,7 +59,7 @@ ALWAYS find root cause before attempting fixes. No fixes without completing Phas
      Is events.log writable?
    - Lifecycle state: is events.log valid JSON (one object per line)? Does plan.md have
      expected checkbox format?
-   - Overnight runner: did the bash runner exit silently? Is the task agent waiting on stdin?
+   - Overnight runner: did the runner exit silently? Is the task agent waiting on stdin?
 
 5. **Trace Backward to Root Cause**
 
