@@ -97,6 +97,4 @@ The `lifecycle/{feature}/` directory is preserved as project history. It contain
 
 | Thought | Reality |
 |---------|---------|
-| "Tests are probably fine, the review already checked this" | The review checked spec compliance and code quality, not test execution. Run the tests. |
-| "I'll fix failing tests later" | Failing tests mean the feature is not verified. Fix them now while context is fresh. |
 | "Let me clean up the lifecycle directory" | The lifecycle directory is project documentation. Preserve it for future reference. |

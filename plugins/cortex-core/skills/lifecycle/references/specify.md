@@ -177,10 +177,3 @@ After approval, proceed to Plan.
 ## Hard Gate
 
 Do NOT write any implementation code during this phase. The goal is to define WHAT to build, not HOW to build it.
-
-| Thought | Reality |
-|---------|---------|
-| "The requirements are obvious from the research" | Obvious requirements still have hidden edge cases. The interview surfaces what you assume you already know. |
-| "I already know what to build" | Knowing what to build is not the same as having agreed requirements. The spec is the contract. |
-| "This is too simple for a spec" | Even simple features have assumptions worth validating. The interview adapts — if everything is clear, it finishes quickly. |
-| "I'll add this to Open Decisions since I'm not sure" | Not sure = ask the user. The user is present during spec; implementation may run overnight without them. Defer only when implementation-level context is genuinely required and unavailable at spec time. |

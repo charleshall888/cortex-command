@@ -177,8 +177,5 @@ Do not start cycle 3. Escalate with full context per step 6.
 
 | Thought | Reality |
 |---------|---------|
-| "The artifact looks mostly fine, I'll pass it through" | Evaluate every checklist item individually. Gestalt impressions miss specific gaps. A single unflagged issue becomes the user's problem. |
-| "I can fix this issue myself instead of dispatching" | The orchestrator does not edit phase artifacts directly. Dispatching fixes preserves separation of concerns and creates an audit trail via event logging. |
-| "This issue is minor, not worth a fix cycle" | Flag it. The fix agent may resolve it quickly. Letting minor issues pass compounds across phases — a vague spec item becomes a broken plan task becomes a failed implementation. |
 | "The fix made things worse, I should try a third cycle" | The 2-cycle cap is firm. Escalate to the user. More iteration rounds decrease quality, not increase it. |
 | "Criticality is low so I should skip even for complex features" | The skip rule requires BOTH low criticality AND simple complexity. Low-criticality complex features still get reviewed. |

@@ -192,7 +192,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
   "
   ```
   Pass if output is `OK` and exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 10: Apply U2 trims to discovery reference files
 

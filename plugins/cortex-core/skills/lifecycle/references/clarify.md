@@ -127,4 +127,3 @@ For Context B (ad-hoc), skip this step — there is no backlog item to update.
 | "Clarify should check if the research artifact is sufficient" | Research sufficiency is evaluated at Research phase *entry*, not during Clarify. Clarify defines the criteria (§6); Research phase entry applies them. |
 | "I should interview the user like the specify phase does" | Clarify asks ≤5 targeted questions to resolve low-confidence gaps. The deep requirements interview happens in Specify, after Research. These are different gates. |
 | "I should assess technical feasibility" | That is Research's job. Clarify only checks intent, scope, and requirements alignment. |
-| "I should ask questions even when everything is clear" | High confidence on all three dimensions = proceed without questions. Do not manufacture uncertainty. |

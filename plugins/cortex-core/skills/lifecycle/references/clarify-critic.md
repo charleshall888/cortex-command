@@ -158,7 +158,6 @@ If the critic agent fails, errors, or times out:
 
 | Thought | Reality |
 |---------|---------|
-| "Skip the critic if all three dimensions are High confidence" | Always runs — the critic's job is to challenge whether those High ratings are deserved, not to rubber-stamp them. |
 | "The critic should classify its own objections as Apply/Dismiss/Ask" | The critic returns prose objections only. The orchestrator applies the disposition framework after the agent returns. |
 | "Ask items from the critic should be presented separately before §4" | Ask items are folded into the §4 Q&A and presented as a single consolidated question set alongside any low-confidence dimension questions. |
 | "The critic should read files or gather additional context" | The critic receives exactly two inputs: the confidence assessment and the source material. It reads nothing else. |
