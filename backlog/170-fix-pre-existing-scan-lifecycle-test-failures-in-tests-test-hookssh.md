@@ -14,11 +14,12 @@ updated: 2026-05-05
 
 ## Context
 
-Surfaced during lifecycle 168 review (commits aa3c044..00cf886). Three tests in `bash tests/test_hooks.sh` fail and have failed since at least `c019e97` (the commit before the lifecycle 168 scaffold):
+Surfaced during lifecycle 168 review (commits aa3c044..00cf886). Two tests in `bash tests/test_hooks.sh` fail and have failed since at least `c019e97` (the commit before the lifecycle 168 scaffold):
 
 - `scan-lifecycle/single-incomplete-feature`: expected exit 0 with test-feature in additionalContext; got exit 0, context=''
 - `scan-lifecycle/claude-output-format`: expected exit 0 with hookSpecificOutput key; got exit 0, has_key=false
-- `scan-lifecycle/fresh-resume-fires`: expected handoff prompt in context and file deleted; got exit 0, context='', file_exists=no
+
+(The third historical failure, `scan-lifecycle/fresh-resume-fires`, was closed in lifecycle 171 by deleting the test along with the `/fresh` skill it exercised.)
 
 ## Evidence
 
