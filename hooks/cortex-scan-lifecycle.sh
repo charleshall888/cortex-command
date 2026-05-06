@@ -64,16 +64,6 @@ if [[ -n "$SESSION_ID" && -n "$LIFECYCLE_SESSION_ID" && "$SESSION_ID" != "$LIFEC
   fi
 fi
 
-# --- Fresh resume detection ---
-# If lifecycle/.fresh-resume exists (written by /cortex-core:fresh skill before /clear),
-# read the full handoff prompt and inject it directly. Delete after first read.
-fresh_resume_prompt=""
-fresh_resume_file="$LIFECYCLE_DIR/.fresh-resume"
-if [[ -f "$fresh_resume_file" ]]; then
-  fresh_resume_prompt=$(cat "$fresh_resume_file" 2>/dev/null)
-  rm -f "$fresh_resume_file"
-fi
-
 # --- Pipeline state detection ---
 # If an overnight-state.json exists and is non-complete, build a summary line.
 # If phase == "complete" and Morning Review is not dismissed, suppress batch features
@@ -354,22 +344,10 @@ fi
 
 # --- Build context message ---
 
-# Fresh resume: /cortex-core:fresh was invoked before /clear. Inject the full handoff prompt
-# at the top of context so the agent immediately knows how to continue.
 context=""
-if [[ -n "$fresh_resume_prompt" ]]; then
-  context="$fresh_resume_prompt
-"
-fi
 
 if [[ -n "$active_feature" ]]; then
   label=$(phase_label "$active_phase")
-
-  # /clear recovery (no fresh-resume): session_id matched a .session file.
-  if [[ -z "$fresh_resume_prompt" && "$session_matched" == true ]]; then
-    context="This session was working on $active_feature ($label). Resume with \`/cortex-core:lifecycle $active_feature\`.
-"
-  fi
 
   context="${context}Active lifecycle: $active_feature | Phase: $label
 Artifacts: lifecycle/$active_feature/"
