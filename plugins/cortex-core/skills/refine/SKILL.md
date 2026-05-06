@@ -35,7 +35,7 @@ Branch on the exit code:
 
 - **Exit 0** — unambiguous match. Parse stdout JSON; the object contains exactly four fields: `filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`. Use these directly in Step 2 and subsequent phases. Do not re-derive slugs from scratch.
 - **Exit 2** — ambiguous match. Read the `<filename>\t<title>` candidate lines from stderr. Present them to the user and ask them to select one. Re-invoke `cortex-resolve-backlog-item` with the chosen filename slug, or treat the user's selection directly as the resolved item.
-- **Exit 3** — no match. Switch to Context B (ad-hoc topic) per `references/clarify.md` §1 and treat the input as the topic name.
+- **Exit 3** — no match. Switch to Context B (ad-hoc topic) per `../lifecycle/references/clarify.md` §1 and treat the input as the topic name.
 - **Exit 64** — usage error (e.g., empty or malformed input). Halt and surface the stderr usage diagnostic to the user. Do NOT fall through to disambiguation.
 - **Exit 70** — internal software error (malformed frontmatter, missing backlog directory, or other IO failure). Halt and surface the stderr diagnostic to the user. Do NOT fall through to disambiguation.
 
@@ -62,7 +62,7 @@ If both artifacts exist and the user chooses to re-run, re-running will overwrit
 
 ## Step 3: Clarify Phase
 
-Read `references/clarify.md` and follow its full protocol (§2–§7).
+Read `../lifecycle/references/clarify.md` and follow its full protocol (§2–§7).
 
 Key outputs from Clarify (record these for use in subsequent phases):
 - Clarified intent statement
@@ -83,7 +83,7 @@ If `cortex-update-item` fails, surface the error and wait for the user to resolv
 
 ### Sufficiency Check
 
-If `lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
+If `lifecycle/{lifecycle-slug}/research.md` already exists, apply the Research Sufficiency Criteria defined in `../lifecycle/references/clarify.md` §6. Use the clarified intent statement and scope from Clarify as the benchmark.
 
 **Path guard** (explicit rules for what satisfies the Sufficiency Check):
 

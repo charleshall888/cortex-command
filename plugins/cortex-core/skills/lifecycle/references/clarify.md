@@ -6,21 +6,27 @@ Pre-research intent gate. Confirms what is being built and why, aligns with proj
 
 ### 1. Resolve Input
 
-Determine which input context applies:
+Run:
 
-**Context A — Backlog item**: Input is a numeric ID, kebab-slug, or title that resolves to a `backlog/NNN-*.md` file.
+```bash
+cortex-resolve-backlog-item <input>
+```
 
-1. Scan `backlog/[0-9]*-*.md` for a match:
-   - Numeric input (e.g., `119`): match by `id:` frontmatter field
-   - Kebab input (e.g., `create-refine-skill`): match by filename slug (strip `NNN-` prefix and `.md`)
-   - Title/phrase input: fuzzy match against `title:` frontmatter field
-2. If multiple items match: present them and ask the user to select one. Do not proceed silently.
-3. If no match: switch to Context B (ad-hoc prompt) and treat the input as the topic name. Offer to create a backlog item (see R8 in spec) before continuing — if this seems impractical, note it and proceed without.
-4. Read the backlog item's frontmatter (`id`, `title`, `description`, `status`) and body.
+Branch on the exit code:
+
+- **Exit 0** — unambiguous match (**Context A**). Parse stdout JSON; the object contains exactly four fields: `filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`. Use these directly in subsequent phases. Do not re-derive slugs from scratch. Read the backlog item's frontmatter (`title`, `description`, `status`) and body.
+- **Exit 2** — ambiguous match. Read the `<filename>\t<title>` candidate lines from stderr. Present them to the user and ask them to select one. Re-invoke `cortex-resolve-backlog-item` with the chosen filename slug, or treat the user's selection directly as the resolved item (Context A).
+- **Exit 3** — no match. Switch to **Context B** (ad-hoc topic) and treat the input as the topic name. Offer to create a backlog item before continuing — if this seems impractical, note it and proceed without.
+- **Exit 64** — usage error (e.g., empty or malformed input). Halt and surface the stderr usage diagnostic to the user. Do not fall through to disambiguation.
+- **Exit 70** — internal software error (malformed frontmatter, missing backlog directory, or other IO failure). Halt and surface the stderr diagnostic to the user. Do not fall through to disambiguation.
 
 > **Note:** If the body contains implementation suggestions (e.g., a proposed fix or a specific approach), treat them as unvalidated hypotheses for the research phase — not as constraints on scope. Scope is determined by the problem to solve, not the suggested solution.
 
+**Context A — Backlog item**: Input resolved to a `backlog/NNN-*.md` file. Downstream phases use the four named fields (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`) from the exit-0 JSON directly.
+
 **Context B — Ad-hoc prompt**: Input is raw text (a topic name or description) with no matching backlog item. Assess the prompt directly. The output intent statement and complexity/criticality assessments still apply; backlog write-backs are skipped.
+
+**Title-phrase predicate**: The script matches title-phrase input by computing `slugify(input)` and checking whether it is a substring of `slugify(title)` for each backlog item. Both sides are slugified symmetrically so that punctuation, underscores, slashes, and case differences normalize away. The candidate set is deduplicated by filename; n=1 resolves unambiguously (exit 0), n>1 bails with the candidate list (exit 2), and n=0 falls through to no-match (exit 3). To check whether your input will match, apply `slugify(input)` and look for it in `slugify(title)` — this is what the script does.
 
 ### 2. Load Requirements Context
 

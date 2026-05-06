@@ -34,6 +34,13 @@ FIXTURE_DIR = "tests/fixtures/lifecycle_references/"
 # walker so the gate validates only live-tree citations that future-Claude or
 # future-operator might follow.
 ARCHIVED_PREFIXES = ("lifecycle/archive/", "research/archive/")
+# When prose abbreviates `skills/lifecycle/references/<file>.md` to
+# `lifecycle/references/<file>.md`, the slug `references` is a path component
+# inside the lifecycle SKILL, not a feature directory. Same for any future
+# non-feature subdirectory under skills/lifecycle/. Exclude these from the
+# citation grammar so path-abbreviation prose isn't flagged as a broken
+# feature citation.
+NON_FEATURE_SUBDIRS = frozenset({"references"})
 
 # Five citation-form regexes from spec §"Slug-and-citation grammar".
 # Order matters when applied to a single span: more-specific forms must
@@ -108,6 +115,8 @@ def _extract_references(
         for form, pattern in FORM_REGEXES.items():
             for match in pattern.finditer(line):
                 slug = match.group("slug")
+                if slug in NON_FEATURE_SUBDIRS:
+                    continue
                 if _slug_resolves(slug):
                     resolved.append((slug, form, line_no))
                 else:
