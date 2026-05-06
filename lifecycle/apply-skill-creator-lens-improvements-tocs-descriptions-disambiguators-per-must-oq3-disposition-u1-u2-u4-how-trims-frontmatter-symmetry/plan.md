@@ -345,7 +345,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
   echo "ALL PASS"
   ```
 - **Verification**: `chmod +x lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/verify.sh && lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/verify.sh` — pass if exit 0 and final output line is `ALL PASS`.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Verification Strategy
 
