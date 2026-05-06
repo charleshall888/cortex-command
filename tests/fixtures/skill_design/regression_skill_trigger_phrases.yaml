@@ -1,0 +1,13 @@
+# Regression-fixture trigger-phrase corpus paired with
+# tests/fixtures/skill_design/skills/regression-fixture/SKILL.md.
+#
+# The phrase "fixture missing phrase" is deliberately absent from the
+# fixture skill's description so the canonical-substring assertion fires
+# and tests/test_skill_descriptions.py can wrap the call in
+# pytest.raises(AssertionError, match=...) to prove the failure-detection
+# path runs.
+skills:
+  regression-fixture:
+    must_contain:
+      - "fixture present phrase"
+      - "fixture missing phrase"

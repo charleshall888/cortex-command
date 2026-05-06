@@ -1,0 +1,37 @@
+# Trigger-phrase corpus for canonical SKILL.md description regression gate.
+#
+# Each phrase listed under a skill's `must_contain` array must appear as a
+# case-sensitive substring of the corresponding canonical
+# `skills/<skill>/SKILL.md` `description` frontmatter field. The phrases are
+# the high-signal user-facing utterances that route to the skill — silently
+# dropping them from the description breaks routing for users who say them.
+#
+# Sourced from the post-#178 SKILL.md description text on main at the time
+# this file was authored (#181 sub-task last). To add a new skill or phrase,
+# edit this file via standard PR review — `tests/test_skill_descriptions.py`
+# enforces substring presence at CI time.
+skills:
+  lifecycle:
+    must_contain:
+      - "start a lifecycle"
+      - "lifecycle research/specify/plan/implement/review/complete"
+      - "start a feature lifecycle"
+      - "structured phases"
+  refine:
+    must_contain:
+      - "refine backlog item"
+      - "prepare for overnight"
+      - "prepare feature for execution"
+      - "Clarify → Research → Spec"
+  critical-review:
+    must_contain:
+      - "critical review"
+      - "pressure test"
+      - "adversarial review"
+      - "challenge from multiple angles"
+  discovery:
+    must_contain:
+      - "discover this"
+      - "decompose into backlog"
+      - "break this down into tickets"
+      - "find gaps in requirements"
