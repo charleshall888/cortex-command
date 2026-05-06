@@ -695,7 +695,6 @@ def test_partial_failure_recovery_step2(
     SCAFFOLD_FILES = (
         "lifecycle/README.md",
         "backlog/README.md",
-        "retros/README.md",
         "requirements/project.md",
         "lifecycle.config.md",
     )
@@ -727,7 +726,7 @@ def test_partial_failure_recovery_step2(
     present = [rel for rel in SCAFFOLD_FILES if (repo / rel).exists()]
     missing = [rel for rel in SCAFFOLD_FILES if not (repo / rel).exists()]
     assert len(present) == 3
-    assert len(missing) == 2
+    assert len(missing) == 1
     assert not (repo / ".cortex-init").exists()
 
     # Taint one of the partially-landed files so the drift report has

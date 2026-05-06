@@ -66,7 +66,6 @@ def _isolate_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 SCAFFOLD_FILES = (
     "lifecycle/README.md",
     "backlog/README.md",
-    "retros/README.md",
     "requirements/project.md",
     "lifecycle.config.md",
 )
@@ -77,10 +76,10 @@ SCAFFOLD_FILES = (
 # ---------------------------------------------------------------------------
 
 
-def test_happy_path_scaffolds_five_templates(
+def test_happy_path_scaffolds_four_templates(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R4 + R5: default invocation writes five templates + marker + gitignore."""
+    """R4 + R5: default invocation writes four templates + marker + gitignore."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _git_init(repo)
@@ -126,14 +125,14 @@ def test_update_preserves_user_edits(
 
     project = repo / "requirements" / "project.md"
     project.write_text("USER-EDIT-SENTINEL\n", encoding="utf-8")
-    retros = repo / "retros" / "README.md"
-    retros.unlink()
+    backlog_readme = repo / "backlog" / "README.md"
+    backlog_readme.unlink()
 
     assert init_main(_make_args(repo, update=True)) == 0
 
     assert "USER-EDIT-SENTINEL" in project.read_text(encoding="utf-8")
-    assert retros.exists()
-    assert retros.stat().st_size > 0
+    assert backlog_readme.exists()
+    assert backlog_readme.stat().st_size > 0
 
 
 def test_update_emits_drift_report(
@@ -321,7 +320,6 @@ def test_content_aware_decline(
     # No scaffold files were written (lifecycle/unrelated.md persists,
     # but the scaffold targets are absent).
     assert not (repo / "backlog" / "README.md").exists()
-    assert not (repo / "retros" / "README.md").exists()
     assert not (repo / "requirements" / "project.md").exists()
     assert not (repo / "lifecycle.config.md").exists()
     assert not (repo / ".cortex-init").exists()
@@ -601,7 +599,7 @@ def test_partial_scaffold_update_recovery(
     _git_init(repo)
     _isolate_home(monkeypatch, tmp_path)
 
-    # Monkeypatch scaffold.atomic_write to raise after writing 3 of the 5
+    # Monkeypatch scaffold.atomic_write to raise after writing 3 of the 4
     # template files (mirrors Task 12's partial_failure_recovery_step2,
     # scoped to scaffold only — no marker write reached).
     real_atomic_write = scaffold.atomic_write
@@ -625,11 +623,11 @@ def test_partial_scaffold_update_recovery(
     with pytest.raises(OSError):
         init_main(_make_args(repo))
 
-    # Exactly 3 of the 5 template files landed.
+    # Exactly 3 of the 4 template files landed.
     present = [rel for rel in SCAFFOLD_FILES if (repo / rel).exists()]
     missing = [rel for rel in SCAFFOLD_FILES if not (repo / rel).exists()]
     assert len(present) == 3
-    assert len(missing) == 2
+    assert len(missing) == 1
     # Marker never written (scaffold failed before step 4).
     assert not (repo / ".cortex-init").exists()
 

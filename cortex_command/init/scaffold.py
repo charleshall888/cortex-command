@@ -56,7 +56,6 @@ _GITIGNORE_TARGETS = (_MARKER_FILENAME, _BACKUP_DIR_PATTERN)
 _CONTENT_DECLINE_TARGETS = (
     "lifecycle",
     "backlog",
-    "retros",
     "requirements",
     "lifecycle.config.md",
 )
