@@ -2,6 +2,11 @@
 
 Execute the plan by dispatching a fresh implementation sub-task per task. Each sub-task runs with fresh context to prevent stale assumptions.
 
+## Contents
+
+1. [Protocol](#protocol)
+2. [Constraints](#constraints)
+
 ## Protocol
 
 ### 1. Pre-Flight Check
@@ -293,9 +298,5 @@ The `"to"` field is determined by the gating matrix above.
 
 | Thought | Reality |
 |---------|---------|
-| "I should look at other tasks too to understand the full picture" | Each task is self-contained by design. The plan already decomposed the work so each task has everything it needs. Reading other tasks risks scope creep. |
-| "I can optimize by combining tasks" | Combined tasks are harder to verify, harder to revert, and harder to review. One task, one commit, one concern. |
-| "This task is too small, let me do more" | Small tasks with clear scope succeed reliably. Large tasks with vague scope fail unpredictably. Trust the plan's sizing. |
 | "I should dispatch all tasks at once for maximum speed" | Batch ordering respects dependencies. Tasks in batch N+1 must wait for batch N to complete, even if some seem independent. The batch model keeps dispatch simple and checkpoint writes serialized. |
-| "This path would be better organized as X" | Deviating from spec paths breaks traceability between phases. If the spec path is wrong, flag it — don't fix it silently. |
 | "I'll just run `git add` and `git commit` directly" | Always use `/cortex-core:commit` for all commits — orchestrator checkpoints included. Never use raw git commands for staging or committing. Sub-agents in worktrees have full tool access including the Skill tool — uncertainty about this is not a reason to bypass it. |

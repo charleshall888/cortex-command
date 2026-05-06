@@ -134,7 +134,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
 - **Verification**:
   - `head -25 skills/lifecycle/references/implement.md | grep -c '^## Contents$'` = 1.
   - U2 trim correctness — Interactive/session-dependent: per-row drift detection consolidated in Task 12 (cross-corpus check against `u2-decisions.md`).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 7: Edit `skills/lifecycle/references/review.md` (R3 OQ3 soften + R4 U2 trim)
 
