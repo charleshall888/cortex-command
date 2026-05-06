@@ -119,7 +119,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
   - `head -25 skills/lifecycle/references/plan.md | grep -c '^## Contents$'` = 1.
   - `python3 -c "import re; toc = open('skills/lifecycle/references/plan.md').read().split('## Contents',1)[1].split('\n## ',1)[0]; anchors = re.findall(r']\(#([^)]+)\)', toc); print('FAIL: duplicate anchors' if len(anchors) != len(set(anchors)) else 'OK')"` — output `OK` (TOC anchors are unique; duplicate H2 disambiguation applied).
   - U2 trim correctness — Interactive/session-dependent: per-row drift detection requires reading `u2-decisions.md` and asserting each DROP row's Reality-text is absent from the post-edit file; consolidated in Task 12's cross-corpus sweep.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 6: Edit `skills/lifecycle/references/implement.md` (R1 TOC + R4 U2 trim)
 
