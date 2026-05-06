@@ -16,7 +16,7 @@ Surgical, single-commit cleanup: 16 path-string substitutions + 1 sentence delet
   - On non-zero exit: HALT — do not proceed to subsequent tasks. Surface `git diff plugins/` output to the user with a one-line message naming this gate (Spec R10). Resumption requires explicit user direction.
   - On exit 0: proceed.
 - **Verification**: run `just build-plugin && git diff --exit-code plugins/` — pass if exit 0; fail (halt feature) on any non-zero exit.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Dedup byte-identical block in `skills/refine/SKILL.md`
 - **Files**: `skills/refine/SKILL.md`
@@ -29,7 +29,7 @@ Surgical, single-commit cleanup: 16 path-string substitutions + 1 sentence delet
   - Anchor Edit's `old_string` on heading + body content — NOT line numbers (FM-3 in research). Old string must include the blank line (137) before the duplicate heading + the full second copy (138–157), ending at the line preceding "After writing".
   - Edge case (spec Edge Cases): if the agent's `old_string` exact-match fails, re-read the file region and rebuild against actual current content; do NOT fall back to line-range deletion.
 - **Verification**: `grep -c "^### Alignment-Considerations Propagation$" skills/refine/SKILL.md` — pass if output = "1".
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Replace `claude/common.py` with `cortex_command/common.py` across 4 in-scope files
 - **Files**: `skills/lifecycle/SKILL.md`, `skills/backlog/references/schema.md`, `docs/overnight-operations.md`, `docs/backlog.md`
@@ -43,7 +43,7 @@ Surgical, single-commit cleanup: 16 path-string substitutions + 1 sentence delet
 - **Verification**: each command exits 0 with the expected output:
   - Negative (old token gone): `grep -c "claude/common\.py" skills/lifecycle/SKILL.md` = 0; same check on `skills/backlog/references/schema.md`, `docs/overnight-operations.md`, `docs/backlog.md` — all 0.
   - Positive (new token present at expected count): `grep -c "cortex_command/common\.py" skills/lifecycle/SKILL.md` = 2; `grep -c "cortex_command/common\.py" skills/backlog/references/schema.md` = 1; `grep -c "cortex_command/common\.py" docs/overnight-operations.md` = 3; `grep -c "cortex_command/common\.py" docs/backlog.md` = 2. (This catches the typo class — e.g., `cortex_command/common.pyy` — that the negative check alone cannot.)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Qualify `cortex-worktree-create.sh` references with `claude/hooks/` prefix
 - **Files**: `skills/lifecycle/SKILL.md`, `skills/lifecycle/references/implement.md`
@@ -55,7 +55,7 @@ Surgical, single-commit cleanup: 16 path-string substitutions + 1 sentence delet
   - Edit's `old_string` should anchor on enough surrounding context to disambiguate the unqualified hit from any already-qualified `claude/hooks/cortex-worktree-create.sh` mention in the same file.
   - Verification regex below uses PCRE lookbehind (`-P`) because ripgrep's default Rust regex engine rejects look-around with a parse error (Spec R8 footnote).
 - **Verification**: `rg -nP "(?<!hooks/)cortex-worktree-create\.sh" skills/lifecycle/SKILL.md skills/lifecycle/references/implement.md` returns no hits — pass if exit 1 AND empty stdout.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Delete `bin/overnight-status` reference sentence in `implement.md`
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -69,7 +69,7 @@ Surgical, single-commit cleanup: 16 path-string substitutions + 1 sentence delet
 - **Verification**: both commands exit 0 with output "0":
   - `grep -c "bin/overnight-status" skills/lifecycle/references/implement.md`
   - `grep -c "This matches the detection pattern used by" skills/lifecycle/references/implement.md`
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Path-fix `backlog/generate_index.py` references in `complete.md`
 - **Files**: `skills/lifecycle/references/complete.md`
@@ -85,7 +85,7 @@ Surgical, single-commit cleanup: 16 path-string substitutions + 1 sentence delet
   - Positive (new path present): `grep -c "cortex_command/backlog/generate_index\.py" skills/lifecycle/references/complete.md` = 2.
   - CLI fallback intact: `grep -c "cortex-generate-backlog-index" skills/lifecycle/references/complete.md` = 2.
   - Structural guard preserved (more meaningful than counting `test -f` overall, which also matches prose mentions of the construct): `grep -c "Run \`test -f" skills/lifecycle/references/complete.md` = 2 — counts the two literal guard invocations the spec wants preserved (lines 42 and 65 in the bullet form `Run \`test -f X\` ...`), not prose like `using \`test -f\` to check`.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Replace `update_item.py` with `cortex-update-item` across 3 in-scope files
 - **Files**: `skills/lifecycle/references/clarify.md`, `skills/refine/references/clarify.md`, `skills/refine/SKILL.md`
@@ -99,7 +99,7 @@ Surgical, single-commit cleanup: 16 path-string substitutions + 1 sentence delet
 - **Verification**: each command exits 0 with the expected output:
   - Negative (old token gone): `grep -c "update_item\.py" skills/lifecycle/references/clarify.md` = 0; same check on `skills/refine/references/clarify.md` and `skills/refine/SKILL.md` — all 0.
   - Positive (new CLI name present at expected count): `grep -c "cortex-update-item" skills/lifecycle/references/clarify.md` ≥ 1; same for `skills/refine/references/clarify.md`; `grep -c "cortex-update-item" skills/refine/SKILL.md` ≥ 2.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Verify frontmatter parses + scoped sweep + modified-file whitelist
 - **Files**: none modified; reads the 8 in-scope files and `git diff --name-only` output
@@ -119,7 +119,7 @@ Surgical, single-commit cleanup: 16 path-string substitutions + 1 sentence delet
   - `rg -nP "(?<!cortex_command/)backlog/generate_index\.py" skills/lifecycle/references/complete.md` exits 1 with empty stdout.
   - `rg -n "update_item\.py" skills/lifecycle/references/clarify.md skills/refine/references/clarify.md skills/refine/SKILL.md` exits 1 with empty stdout.
   - Whitelist: `(git diff --name-only; git diff --cached --name-only) | sort -u | grep -vE '^(skills/refine/SKILL\.md|skills/lifecycle/SKILL\.md|skills/backlog/references/schema\.md|docs/overnight-operations\.md|docs/backlog\.md|skills/lifecycle/references/implement\.md|skills/lifecycle/references/complete\.md|skills/lifecycle/references/clarify\.md|skills/refine/references/clarify\.md|lifecycle/fix-duplicated-block-bug-in-refine-skillmd-5-stale-skill-references/|plugins/cortex-core/)'` returns empty (exit 1).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Build mirror, stage, commit via `/cortex-core:commit` with description-fence callout
 - **Files**: stages all 8 canonical-source edits + lifecycle artifacts + regenerated `plugins/cortex-core/` mirror; commit message body explicitly cites the description-fence behavior change
@@ -141,7 +141,7 @@ Surgical, single-commit cleanup: 16 path-string substitutions + 1 sentence delet
   - `git diff --exit-code plugins/cortex-core/` exits 0 post-commit (no untracked drift; Spec R9).
   - `git log -1 --format=%B HEAD | grep -F "cortex_command/common.py"` returns at least one match line (substantive new-path mention in body).
   - `git log -1 --format=%B HEAD | grep -iE "gating|fence|trigger"` returns at least one match line (Spec R11 keyword).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

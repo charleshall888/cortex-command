@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 97c7ed31-edd1-4ec2-bc2a-df579b92d1c4
 title: "Fix duplicated-block bug in refine/SKILL.md + 5 stale skill references"
 type: chore
-status: in_progress
+status: complete
 priority: high
 parent: 172
 blocked-by: []
@@ -15,7 +15,7 @@ complexity: complex
 criticality: high
 spec: lifecycle/fix-duplicated-block-bug-in-refine-skillmd-5-stale-skill-references/spec.md
 areas: [skills]
-session_id: 4f84dd76-d00c-4cf2-8d46-802677ccfc16
+session_id: null
 lifecycle_phase: plan
 ---
 
