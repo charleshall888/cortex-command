@@ -238,7 +238,6 @@ fi
 # Scan for active lifecycle feature and display phase/progress.
 # Optimized for speed: test -f artifact detection, single grep -c for progress.
 lifecycle_line=""
-_evolve_indicator=""
 _refined_indicator=""
 
 # Resolve working directory (undo ~ substitution)
@@ -567,39 +566,6 @@ if [ -d "$_lc_base" ]; then
 
   fi  # end _lc_pipeline_handled check
 
-  # ---- Evolve count indicator ----
-  # Count unprocessed retros and show indicator if >= 10.
-  _evolve_indicator=""
-  _retro_dir="$_lc_dir/retros"
-  if [ -d "$_retro_dir" ]; then
-    _last_processed=""
-    _evolve_state="$_retro_dir/.evolve-state.json"
-    if [ -f "$_evolve_state" ] && [ "$HAS_JQ" -eq 1 ]; then
-      _last_processed=$(jq -r '.last_processed // ""' "$_evolve_state" 2>/dev/null)
-    fi
-    # Count .md files (excluding dot-files) lexicographically greater than _last_processed
-    _retro_count=0
-    if [ -z "$_last_processed" ]; then
-      # No state: count all .md files
-      for _rf in $(LC_ALL=C ls "$_retro_dir"/*.md 2>/dev/null); do
-        _rf_base="${_rf##*/}"
-        case "$_rf_base" in .*) continue ;; esac
-        _retro_count=$(( _retro_count + 1 ))
-      done
-    else
-      for _rf in $(LC_ALL=C ls "$_retro_dir"/*.md 2>/dev/null); do
-        _rf_base="${_rf##*/}"
-        case "$_rf_base" in .*) continue ;; esac
-        if [ "$_rf_base" \> "$_last_processed" ]; then
-          _retro_count=$(( _retro_count + 1 ))
-        fi
-      done
-    fi
-    if [ "$_retro_count" -ge 10 ]; then
-      _evolve_indicator=$(printf '%sretro:%s%s' "$(version_color)" "$_retro_count" "$(rst)")
-    fi
-  fi
-
   # ---- Refined backlog count indicator ----
   # Count backlog items with status: refined and show indicator if >= 2.
   # Skip items already active in a lifecycle (avoids duplication).
@@ -633,9 +599,6 @@ _line3=""
 [ -n "$lifecycle_line" ] && _line3="$lifecycle_line"
 [ -n "$agent_indicator" ] && {
   if [ -n "$_line3" ]; then _line3="$_line3  $agent_indicator"; else _line3="$agent_indicator"; fi
-}
-[ -n "$_evolve_indicator" ] && {
-  if [ -n "$_line3" ]; then _line3="$_line3  $_evolve_indicator"; else _line3="$_evolve_indicator"; fi
 }
 [ -n "$_refined_indicator" ] && {
   if [ -n "$_line3" ]; then _line3="$_line3  $_refined_indicator"; else _line3="$_refined_indicator"; fi
