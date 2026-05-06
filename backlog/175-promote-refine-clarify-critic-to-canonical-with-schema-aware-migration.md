@@ -47,6 +47,16 @@ Once Phase 1 confirms consumers are legacy-tolerant:
 
 If Phase 1 finds non-legacy-tolerant consumers, fix them first before deletion (those fixes may need to be sub-tasks of this ticket or a precursor ticket).
 
+### Phase 3: Schema-version field for replay tolerance (per epic-172-audit C5)
+
+The post-decomposition critical-review (`research/epic-172-audit/research.md` C5) identified a structural test-coverage gap: `tests/test_clarify_critic_alignment_integration.py:388–427` hardcode the event shape via injection (not replay), so legacy archived events from before this adoption can break replay-side consumers without producer-side test-failure detection.
+
+Add as part of acceptance:
+- Add a `schema_version: <int>` field to the `clarify_critic` event schema in `cortex_command/overnight/events.py`
+- Bump from implicit `v1` (bare-string findings) to `v2` (`{text, origin}` object findings + `parent_epic_loaded`)
+- Producer emits `schema_version: 2` going forward; consumers branch on field presence to handle legacy events
+- Add a replay test (distinct from existing injection test) that loads an archived `clarify_critic` event from `lifecycle/archive/*/events.log` and verifies downstream consumers process it without error
+
 ## Touch points
 
 - `skills/lifecycle/references/clarify-critic.md` (delete after consumer audit)
@@ -61,3 +71,5 @@ If Phase 1 finds non-legacy-tolerant consumers, fix them first before deletion (
 - `test ! -f skills/lifecycle/references/clarify-critic.md` after Phase 2
 - A fresh lifecycle run with criticality=critical (which triggers clarify-critic) completes without error and emits `clarify_critic` events with the new `{text, origin}` schema + `parent_epic_loaded` field
 - Replaying an archived `clarify_critic` event (from before adoption) through downstream consumers produces no errors
+- New events emit `schema_version: 2`; consumers handle missing/legacy `schema_version` via fallback branch
+- Replay-tolerance test (distinct from injection test) at `tests/test_clarify_critic_alignment_integration.py` covers archived event shape

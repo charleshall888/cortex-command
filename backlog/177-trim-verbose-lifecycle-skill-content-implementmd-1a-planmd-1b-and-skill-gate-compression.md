@@ -21,32 +21,33 @@ Three independent in-skill content trims bundled because each touches a single s
 
 Audit + pressure-test pass identified three in-file content trims with concrete savings:
 
-### 1. `implement.md §1a` Daytime Dispatch (~30–40 lines, preserve guards)
+### 1. `implement.md §1a` Daytime Dispatch (~15 lines, preserve contract prose)
 
-Original audit claimed §1a could collapse from 118 to 25 lines by replacing with a pointer to `cortex_command/overnight/daytime_pipeline.py`. Pressure-test corrected this — §1a contains genuine skill-side logic the pipeline module does NOT implement: uncommitted-changes guard with demote-and-warn logic, runtime probe with explicit fail-open (lines 19–38), double-dispatch guard via PID liveness, overnight-concurrent guard, polling loop with user-pause-at-30-iterations, `dispatch_complete` event log writing.
+Original audit claimed §1a could collapse from 118 to 25 lines. Pressure-test corrected to ~30–40 lines. **Post-decomposition critical-review correction (C4):** the audit's ~30–40 line target itself overstates the cut — lines 82–101 (atomic-write recipe) document the skill↔module contract (dispatch_id semantics, recovery-after-compaction behavior); lines 156–164 (outcome map) document a schema contract Python can't enforce. `tests/test_daytime_preflight.py:326,379` pin this contract.
 
-**Realistic cut: ~30–40 lines** — the atomic-write recipe at lines 82–101 + verbatim outcome map at lines 156–164 — these duplicate what `cortex_command/overnight/daytime_pipeline.py` and `cortex_command/overnight/daytime_result_reader.py` already implement and can be replaced with a one-line "see module for canonical recipe."
+**Realistic cut: ~15 lines** — only the inline Python one-liner can be replaced with a "see module for canonical recipe" pointer. **Preserve**: dispatch_id semantics rationale, outcome map (schema contract), uncommitted-changes guard, runtime probe, double-dispatch guard, overnight-concurrent guard, polling-loop user-pause behavior, `dispatch_complete` log-writing.
 
-**Preserve**: uncommitted-changes guard, runtime probe, double-dispatch guard, overnight-concurrent guard, polling-loop user-pause behavior, `dispatch_complete` log-writing.
+### 2. `plan.md §1b` Competing Plans dedup + HOW-prose trim (~100 lines total)
 
-### 2. `plan.md §1b.b` Plan Format dedup with §3 (~20 lines)
+Original audit claimed 60 lines via §1b.b ↔ §3 dedup; pressure-test corrected to ~20 lines. **Post-decomposition critical-review (DR-5 / U3):** push significantly beyond simple dedup. §1b is ~122 lines of HOW-orchestration prose (envelope schemas, last-occurrence anchor pattern, swap-and-require-agreement, eight worked downgrade examples) that mostly duplicates content in `cortex_command/overnight/prompts/plan-synthesizer.md`.
 
-Original audit claimed 60 lines via dedup. Pressure-test corrected to ~20 lines. §1b.b is the critical-tier dual-plan format — it includes `**Architectural Pattern**: {category} — {1-sentence differentiation}` (line 75) and the closed-enum directive (line 47) that §3 doesn't have. §3 is the standard format with Veto Surface and Scope Boundaries that §1b.b doesn't have.
+**Realistic cut: ~100 lines** — ~20 from §1b.b ↔ §3 dedup + ~80 from collapsing §1b's envelope-schema prose to a pointer at `cortex_command/overnight/prompts/plan-synthesizer.md`. The WHAT (for critical tier, run multiple plans + pick best) and WHY (single Opus plan can be wrong) are ~5 lines; the rest is HOW that capable models can derive from the synthesizer prompt.
 
-**Realistic cut: ~20 lines of overlap** — common task-template structure that can be replaced with a "produce a plan in the §3 format with the additions noted above" pointer.
+**Preserve**: critical-tier-specific Architectural Pattern directive, swap-and-require-agreement WHAT (the gate, not the verbatim regex), §3 Veto Surface and Scope Boundaries.
 
-**Preserve**: the critical-tier-specific Architectural Pattern directive in §1b.b.
-
-### 3. `lifecycle/SKILL.md` complexity-escalation gate descriptions (~40 lines via Tier 1 compression)
+### 3. `lifecycle/SKILL.md` complexity-escalation gate descriptions — single-gate version (~50 lines via Tier 1 compression + Gate 2 removal)
 
 The two complexity-escalation gates (Research → Specify and Specify → Plan) are described **twice** in SKILL.md — once at the inline protocol step (lines 244–260, ~17 lines) AND again in a standalone "Complexity Override" section (lines 294–312, ~19 lines). Same logic, two places. Plus 3 inlined `complexity_override` JSON event examples.
 
-Tier 1 compression:
-- Deduplicate the gate description (delete the standalone "Complexity Override" section's redundant prose, keep the inline protocol-flow version)
-- Collapse the two-gate prose into one unified ~5-line paragraph: *"Auto-escalate `simple` → `complex` if: (a) research.md has ≥2 `## Open Questions` bullets, OR (b) spec.md has ≥3 `## Open Decisions` bullets. Skip if already complex. Append `complexity_override` event (schema in `cortex_command/overnight/events.py`), announce briefly, proceed at complex tier."*
+**Per epic-172-audit Q-A partial reversal: Gate 2 is being removed entirely.** Only Gate 1 (Research → Specify, ≥2 Open Questions) survives.
+
+Tier 1 compression with Gate 2 removal:
+- Delete Gate 2 prose entirely (the Specify→Plan ≥3 Open Decisions check)
+- Deduplicate the surviving Gate 1 description (delete the standalone "Complexity Override" section, keep the inline protocol-flow version)
+- Collapse Gate 1 prose to ~3-line: *"Auto-escalate `simple` → `complex` if research.md has ≥2 `## Open Questions` bullets at end of research phase. Skip if already complex. Append `complexity_override` event (schema in `cortex_command/overnight/events.py`), announce briefly, proceed at complex tier."*
 - Replace the 3 inlined `complexity_override` JSON examples with a single canonical schema pointer
 
-**Realistic cut: ~40 lines** off SKILL.md, zero behavior change.
+**Realistic cut: ~50 lines** off SKILL.md, single-gate behavior preserved, Gate 2 behavior removed (per epic-172-audit DR-2).
 
 ## Touch points
 
@@ -59,12 +60,13 @@ Tier 1 compression:
 
 ## Verification
 
-- `wc -l skills/lifecycle/references/implement.md` shows ~260 lines (down from 301), atomic-write recipe + verbatim outcome map removed, guards still present
-- `wc -l skills/lifecycle/references/plan.md` shows ~290 lines (down from 309)
-- `wc -l skills/lifecycle/SKILL.md` shows ~340 lines (down from 380)
+- `wc -l skills/lifecycle/references/implement.md` shows ~286 lines (down from 301), inline Python recipe removed, contract prose still present
+- `wc -l skills/lifecycle/references/plan.md` shows ~210 lines (down from 309) — §1b orchestration prose collapsed to synthesizer-prompt pointer
+- `wc -l skills/lifecycle/SKILL.md` shows ~330 lines (down from 380) — Gate 2 removed, Gate 1 deduplicated
 - `grep -c "complexity_override" skills/lifecycle/SKILL.md` returns 1–2 (down from ~5 inlined examples)
+- `grep -c "Specify.*Plan.*Open Decisions" skills/lifecycle/SKILL.md` returns 0 (Gate 2 removed)
 - A fresh implement-phase run via daytime dispatch still hits the uncommitted-changes guard, runtime probe, double-dispatch guard
-- A fresh critical-tier plan-phase run still emits a plan with `Architectural Pattern` set to a value in the closed enum
-- A fresh research→specify transition with ≥2 Open Questions still auto-escalates to Complex tier and emits `complexity_override`
-- A fresh specify→plan transition with ≥3 Open Decisions still auto-escalates to Complex tier and emits `complexity_override`
+- A fresh critical-tier plan-phase run still emits a plan with `Architectural Pattern` set to a value in the closed enum (and §1b synthesizer behavior preserved via `cortex_command/overnight/prompts/plan-synthesizer.md`)
+- A fresh research→specify transition with ≥2 Open Questions still auto-escalates to Complex tier and emits `complexity_override` (Gate 1 surviving)
+- A fresh specify→plan transition with ≥3 Open Decisions does NOT auto-escalate (Gate 2 removed; orchestrator-review S-checklist evaluates spec quality in main context)
 - Pre-commit dual-source drift hook passes after `just build-plugin`
