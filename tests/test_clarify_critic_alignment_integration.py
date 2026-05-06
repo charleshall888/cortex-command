@@ -189,6 +189,43 @@ def _build_dispatch_prompt(
     return prompt
 
 
+def _normalize_clarify_critic_event(evt: dict) -> dict:
+    """Normalize a clarify_critic event for legacy-tolerance.
+
+    Applies three field-level normalizations so callers can treat archived
+    pre-schema events and current schema_version:1 events uniformly:
+
+      - ``schema_version`` defaults to ``1`` when absent.
+      - ``parent_epic_loaded`` defaults to ``False`` when absent.
+      - Each item in ``findings`` that is a ``str`` is wrapped as
+        ``{"text": <str>, "origin": "primary"}``; ``dict`` items pass
+        through unchanged. Hybrid lists (mix of ``str`` and ``dict``) are
+        normalized per-element.
+
+    A finding that is neither ``str`` nor ``dict`` raises ``TypeError``
+    with a message identifying the offending item type.
+    """
+    normalized = dict(evt)
+    if "schema_version" not in normalized:
+        normalized["schema_version"] = 1
+    if "parent_epic_loaded" not in normalized:
+        normalized["parent_epic_loaded"] = False
+
+    findings = normalized.get("findings", [])
+    new_findings = []
+    for item in findings:
+        if isinstance(item, str):
+            new_findings.append({"text": item, "origin": "primary"})
+        elif isinstance(item, dict):
+            new_findings.append(item)
+        else:
+            raise TypeError(
+                f"finding item must be str or dict, got {type(item).__name__}"
+            )
+    normalized["findings"] = new_findings
+    return normalized
+
+
 def check_invariant(event: dict) -> bool:
     """Cross-field invariant: any event with origin:"alignment" finding
     MUST have parent_epic_loaded:true.
@@ -197,6 +234,7 @@ def check_invariant(event: dict) -> bool:
     inline check function the spec/plan documents; ships as a regression
     fixture for a future programmatic validator.
     """
+    event = _normalize_clarify_critic_event(event)
     has_alignment_finding = any(
         f.get("origin") == "alignment"
         for f in event.get("findings", [])
