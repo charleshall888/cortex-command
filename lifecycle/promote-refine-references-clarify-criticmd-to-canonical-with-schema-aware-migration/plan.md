@@ -16,12 +16,12 @@ Land schema_version + JSONL emission contract + Python legacy-tolerance + replay
 - **Verification**:
   - `grep -c 'schema_version' skills/refine/references/clarify-critic.md` ≥ 3 — pass if count ≥ 3 (R4)
   - `grep -q 'single-line JSON' skills/refine/references/clarify-critic.md` — pass if exit 0 (R9.a)
-  - `python3 -c "import re; t=open('skills/refine/references/clarify-critic.md').read(); m=re.search(r'## Event Logging.*?(?=^## )', t, re.DOTALL|re.MULTILINE); assert any(line.strip().startswith('{') and '\"event\":' in line and '\"clarify_critic\"' in line for line in m.group().splitlines()), 'no inline single-line JSON clarify_critic example'"` — pass if exit 0 (R9.b)
+  - `python3 -c "import re; t=open('skills/refine/references/clarify-critic.md').read(); m=re.search(r'^## Event Logging.*?(?=^## )', t, re.DOTALL|re.MULTILINE); assert m, 'no ## Event Logging heading found'; assert any(line.strip().startswith('{') and '\"event\":' in line and '\"clarify_critic\"' in line for line in m.group().splitlines()), 'no inline single-line JSON clarify_critic example'"` — pass if exit 0 (R9.b; ^-anchored to match the heading, not inline backticked references)
   - `grep -q 'minimal v1' skills/refine/references/clarify-critic.md && grep -q 'v1+dismissals' skills/refine/references/clarify-critic.md && grep -q 'YAML-block' skills/refine/references/clarify-critic.md` — pass if exit 0 (R10)
   - `! grep -q 'writes this YAML \*\*verbatim\*\*' skills/refine/references/clarify-critic.md` — pass if exit 0 (`## Dispositioning` legacy YAML directive removed)
   - `grep -q 'writes this single-line JSON object \*\*verbatim\*\*' skills/refine/references/clarify-critic.md` — pass if exit 0 (`## Dispositioning` JSONL directive present)
   - `! grep -q '^Example (YAML block format' skills/refine/references/clarify-critic.md` — pass if exit 0 (legacy YAML example header removed)
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit a7aafad)
 
 ### Task 2: Create v1 replay fixture and provenance
 
@@ -34,7 +34,7 @@ Land schema_version + JSONL emission contract + Python legacy-tolerance + replay
   - `test -f tests/fixtures/clarify_critic_v1.json` — pass if exit 0 (R7)
   - `test -f tests/fixtures/clarify_critic_v1.json.provenance && grep -q 'define-output-floors' tests/fixtures/clarify_critic_v1.json.provenance` — pass if exit 0 (R7)
   - `python3 -c "import json; e=json.loads(open('tests/fixtures/clarify_critic_v1.json').read()); assert e.get('event')=='clarify_critic'; assert isinstance(e.get('findings'), list); assert all(isinstance(f, str) for f in e['findings']); assert 'parent_epic_loaded' not in e"` — pass if exit 0 (fixture is structurally a v1 event)
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 87f3894)
 
 ### Task 3: Add `_normalize_clarify_critic_event` helper and rewire `check_invariant`
 
@@ -46,7 +46,7 @@ Land schema_version + JSONL emission contract + Python legacy-tolerance + replay
 - **Verification**:
   - `grep -c '_normalize_clarify_critic_event' tests/test_clarify_critic_alignment_integration.py` ≥ 2 — pass if count ≥ 2 (definition + ≥1 call site, R5)
   - `python3 -c "import sys; sys.path.insert(0, 'tests'); from test_clarify_critic_alignment_integration import check_invariant, _normalize_clarify_critic_event; import json; evt = json.loads(open('tests/fixtures/clarify_critic_v1.json').read()); assert check_invariant(_normalize_clarify_critic_event(evt)) is True"` — pass if exit 0 (R6)
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit a2401c5)
 
 ### Task 4: Add v1 replay test
 
@@ -57,7 +57,7 @@ Land schema_version + JSONL emission contract + Python legacy-tolerance + replay
 - **Context**: Test name carries `_v1_` per spec Edge Cases (a future v2 corpus gets a sibling `_v2_` test). Fixture path resolved via `pathlib.Path(__file__).parent / "fixtures" / "clarify_critic_v1.json"`. Per R8 the test asserts: (a) `schema_version == 1` post-normalization, (b) `parent_epic_loaded is False` post-normalization, (c) every item in `findings` is a `dict` with keys `text` (str) and `origin` (str), (d) every `origin` value is `"primary"` (no alignment findings in v1), (e) `check_invariant(normalized_evt) is True`.
 - **Verification**:
   - `pytest tests/test_clarify_critic_alignment_integration.py::test_clarify_critic_v1_replay_invariant -x` — pass if exit 0 (R8)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Create migration cutoff fixture and add post-migration JSONL emission check test
 
@@ -84,7 +84,7 @@ Land schema_version + JSONL emission contract + Python legacy-tolerance + replay
   - `test -f tests/fixtures/jsonl_emission_cutoff.txt && python3 -c "from datetime import datetime; datetime.fromisoformat(open('tests/fixtures/jsonl_emission_cutoff.txt').read().strip().replace('Z','+00:00'))"` — pass if exit 0 (cutoff file is a valid ISO-8601 line)
   - `python3 -c "from datetime import datetime, timezone; from pathlib import Path; import re,json; cutoff=datetime.fromisoformat(open('tests/fixtures/jsonl_emission_cutoff.txt').read().strip().replace('Z','+00:00')); JR=re.compile(r'^- ts:\s*([0-9T:Z+-]+)\s*$'); maxts=None; [maxts := (ts if (maxts is None or ts>maxts) else maxts) for p in Path('lifecycle').glob('*/events.log') if 'archive' not in p.parts for i,line in enumerate(p.read_text().splitlines()) for m in [JR.match(line)] if m for la in p.read_text().splitlines()[i+1:i+6] if re.match(r'^\s+event:\s*clarify_critic\s*$', la) for ts in [datetime.fromisoformat(m.group(1).replace('Z','+00:00'))]]; assert maxts is None or cutoff > maxts, f'cutoff {cutoff} not strictly greater than max existing clarify_critic ts {maxts}'"` — pass if exit 0 (cutoff > max-existing-ts invariant)
   - `pytest tests/test_clarify_critic_alignment_integration.py::test_post_migration_clarify_critic_events_are_jsonl -x` — pass if exit 0 (R14)
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 9779e9e)
 
 ### Task 6: Migration commit — §3a rewire (depth-correct), live-doc update, legacy delete, plugin mirror staged-rebuild
 

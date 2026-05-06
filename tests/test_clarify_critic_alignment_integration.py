@@ -524,6 +524,51 @@ def test_layered_injection_defense(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# R8: v1 replay invariant
+# ---------------------------------------------------------------------------
+
+
+def test_clarify_critic_v1_replay_invariant():
+    """R8: pinned v1 fixture round-trips through the normalizer cleanly.
+
+    Loads ``tests/fixtures/clarify_critic_v1.json`` (a real archived v1
+    clarify_critic event with bare-string findings, no ``parent_epic_loaded``,
+    no ``schema_version``), applies ``_normalize_clarify_critic_event``, and
+    asserts the legacy-tolerance contract:
+
+      (a) ``schema_version == 1`` post-normalization (default for absent),
+      (b) ``parent_epic_loaded is False`` post-normalization (default for
+          absent),
+      (c) every item in ``findings`` is a ``dict`` with keys ``text`` (str)
+          and ``origin`` (str),
+      (d) every ``origin`` value is ``"primary"`` (no alignment findings in
+          v1),
+      (e) ``check_invariant(normalized_evt) is True``.
+
+    Test name carries ``_v1_`` per spec Edge Cases — a future v2 corpus gets
+    a sibling ``_v2_`` test rather than mutating this one.
+    """
+    fixture_path = Path(__file__).parent / "fixtures" / "clarify_critic_v1.json"
+    evt = json.loads(fixture_path.read_text(encoding="utf-8"))
+
+    normalized = _normalize_clarify_critic_event(evt)
+
+    # (a) schema_version defaults to 1 when absent.
+    assert normalized["schema_version"] == 1
+    # (b) parent_epic_loaded defaults to False when absent.
+    assert normalized["parent_epic_loaded"] is False
+    # (c) every finding is a dict with text:str and origin:str.
+    for f in normalized["findings"]:
+        assert isinstance(f, dict), f"finding must be dict, got {type(f).__name__}"
+        assert isinstance(f.get("text"), str), "finding.text must be str"
+        assert isinstance(f.get("origin"), str), "finding.origin must be str"
+        # (d) every origin is "primary" — no alignment findings in v1.
+        assert f["origin"] == "primary"
+    # (e) check_invariant holds on the normalized event.
+    assert check_invariant(normalized) is True
+
+
+# ---------------------------------------------------------------------------
 # R14: post-migration JSONL emission check
 # ---------------------------------------------------------------------------
 
