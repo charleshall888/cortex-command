@@ -103,7 +103,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
   - `grep -c "Different from /cortex-core:lifecycle" skills/refine/SKILL.md` ≥ 1.
   - `grep -c "Different from /cortex-core:research" skills/discovery/SKILL.md` ≥ 1.
   - `python3 -c "import yaml; bad = [(f, len(yaml.safe_load(open(f).read().split('---',2)[1]).get('description',''))) for f in ['skills/refine/SKILL.md','skills/discovery/SKILL.md'] if len(yaml.safe_load(open(f).read().split('---',2)[1]).get('description','')) > 1024]; print('FAIL', bad) if bad else print('OK')"` — pass if output is `OK`.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Edit `skills/lifecycle/references/plan.md` (R1 TOC + R4 U2 trim)
 
