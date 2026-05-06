@@ -47,3 +47,62 @@
   verdict: pass
   cycle: 1
   issues: []
+- ts: 2026-05-06T21:50:09Z
+  event: lifecycle_start
+  feature: skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget
+  tier: complex
+  criticality: high
+  note: backfilled at plan-phase entry; refine flow did not write this event
+- ts: 2026-05-06T21:50:09Z
+  event: phase_transition
+  feature: skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget
+  from: specify
+  to: plan
+- ts: 2026-05-06T21:54:11Z
+  event: orchestrator_review
+  feature: skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget
+  phase: plan
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-05-06T22:20:10Z
+  event: critical_review
+  feature: skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget
+  phase: plan
+  reviewers_dispatched: 4
+  reviewers_completed: 4
+  synthesis_status: ok
+  objections_total: 6
+  dispositions:
+    apply: 2
+    dismiss: 3
+    ask: 4
+    apply_after_user_resolution: 2
+  applied_fixes:
+    - "Task 1 verification: replaced grep-for-names with behavioral smoke test (calls enumerate_canonical_skills + parse_skill_frontmatter and asserts non-empty results)"
+    - "Task 1 helper signatures: required exact names + added generic enumerate_skills(root, glob_pattern) accepting any path with dedupe_by_content flag for plugin mirror dedup"
+    - "Tasks 2/3/4/5 regression-variant tests: pytest.raises(AssertionError, match=<regex>) instead of bare pytest.raises so failure-detection-path correctness is provable"
+    - "Task 5: added boundary-29-char-reason fixture probing the .{30,} regex boundary"
+    - "Task 4: added explicit reading-prerequisite note for tests/test_lifecycle_references_resolve.py"
+    - "Task 7 (was Task 6): replaced 'around line 435' with deterministic awk-anchor for justfile aggregator insertion"
+    - "Task 7 verification: now checks that the recipe actually invokes all four target test files (not just substring presence)"
+    - "Task 8 (was Task 7) verification: replaced 'just test' (entire suite) with isolated pytest of only the four new/extended tests"
+    - "Veto Surface: plugin-mirror dedup moved from accepted-risk to resolved-in-design (Task 1)"
+    - "Test #2 (Task 3) narrowed from two fields to one field (discovery_source only); lifecycle_slug dropped due to 31+ Python attribute references in test_select_overnight_batch.py providing redundant loud-fail coverage"
+    - "New Task 6: add one bullet to requirements/project.md Architectural Constraints documenting SKILL.md size cap + marker convention; revises spec Non-Requirement 'No documentation file updates'"
+    - "Tasks 6/7/8 verification updated to include doc-paragraph check"
+  dismissals:
+    - finding: "Split Task 2 into test-scaffold + corpus-authoring with mid-task approval gate"
+      rationale: "PR-diff review is the existing approval surface for the corpus content. Mid-execution gates clash with project.md day/night split (overnight is full handoff)."
+    - finding: "Add CHANGELOG entry / commit-trailer convention for trigger-phrase corpus updates"
+      rationale: "Spec Non-Requirements explicitly accepted this risk after Adversarial flagged it during refine. Orchestrator review pass'd. Re-litigating settled scope."
+    - finding: "Pre-extract skills/diagnose/SKILL.md before #181 lands"
+      rationale: "Spec Non-Requirements explicitly rules this out. The next content-additive PR triggering test #4 is the test's intended behavior."
+  user_resolved:
+    - "Test #2 scope: narrow to discovery_source only (option b)"
+    - "Document marker syntax: add 1 paragraph to requirements/project.md Architectural Constraints (option b)"
+- ts: 2026-05-06T22:21:42Z
+  event: phase_transition
+  feature: skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget
+  from: plan
+  to: implement

@@ -3,10 +3,10 @@ schema_version: "1"
 uuid: 6da37238-e1c0-4e2d-8f11-24b9cb57d101
 title: "Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget)"
 type: chore
-status: refined
+status: in_progress
 priority: medium
 parent: 172
-blocked-by: [178]
+blocked-by: []
 tags: [tests, skill-design, lifecycle, refine, critical-review, discovery, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
@@ -15,6 +15,8 @@ complexity: complex
 criticality: high
 spec: lifecycle/skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/spec.md
 areas: [tests]
+session_id: 363d73f9-d244-4d69-aa6a-c5be1781336d
+lifecycle_phase: plan
 ---
 
 # Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget)

@@ -317,7 +317,7 @@
   {
     "id": 181,
     "title": "Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget)",
-    "status": "refined",
+    "status": "in_progress",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -343,7 +343,7 @@
     "plan": null,
     "uuid": "6da37238-e1c0-4e2d-8f11-24b9cb57d101",
     "lifecycle_slug": null,
-    "session_id": null,
+    "session_id": "363d73f9-d244-4d69-aa6a-c5be1781336d",
     "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
