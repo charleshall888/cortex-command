@@ -1,0 +1,78 @@
+- ts: 2026-05-06T00:00:00Z
+  event: clarify_critic
+  feature: apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry
+  parent_epic_loaded: true
+  findings:
+    - text: "Intent clarity HIGH is not uniformly supported — Item 2 lists missing phrasings as illustrative bullets but never specifies exact final description strings; Item 3 hedges with 'SOFTEN ... IF effort=high has been tested and shown to suffice; otherwise document evidence trail'; Item 5 lists precondition_checks as 'Optionally,' leaving inclusion to implementer judgment. 'Exact text-replacement patterns' only applies cleanly to U1 and U4."
+      origin: primary
+    - text: "Scope boundedness MEDIUM-HIGH undercounts the edit surface — the auto-regenerated mirrors line is unverified; Item 1 leaves TOC depth/anchor format/section-naming undefined; Item 2 disambiguator wording is exemplar text not concrete; Touch points lists 8 files plus mirrors plus U2 corpus tables (~10 files), so the true edit surface is ~18+ files."
+      origin: primary
+    - text: "OQ3 application is contested — CLAUDE.md enumerates events.log F-row OR transcript URL/excerpt as evidence forms; the ticket invents 'F-row equivalent' parser-cite framing for KEEP decisions on review.md MUSTs. CLAUDE.md's grandfathering clause may already cover pre-existing MUSTs without new evidence; the ticket does not address grandfathering."
+      origin: primary
+    - text: "Complexity/criticality may understate blast radius — OQ3 sub-item is policy judgment under contested policy; U2 'trim to ≤2 retro-cited rows' requires retro-citation evidence not enumerated; Item 5 frontmatter changes affect skill-loading semantics if precondition_checks is implemented; ticket-175 inline note 'may consolidate this into lifecycle's canonical' implies coordination dependency the assessment doesn't surface."
+      origin: primary
+    - text: "Parent-epic alignment HIGH glosses real divergence — parent epic body's stated key findings are duplication, copy-paste, stale refs, harness duplication; child deliverables are TOCs, descriptions, OQ3 disposition, HOW trims, frontmatter symmetry — different audit lens. The connection is asserted via audit.md anchor, not via quoted parent epic intent."
+      origin: alignment
+    - text: "Verification described as 'thorough' overstates falsifiability — U2 retro-citation verification doesn't specify how a reviewer confirms a citation is valid (commit hash? events.log line? audit.md anchor?); OQ3 'documented evidence trail' has no specified location (commit message? PR description? events.log? SKILL.md comment?); grep substring check confirms presence not correctness/completeness."
+      origin: primary
+  dispositions:
+    apply: 4
+    dismiss: 1
+    ask: 1
+  applied_fixes:
+    - "Revised intent clarity HIGH → LOW: Item 2 final SKILL.md description wording, Item 3 effort=high conditional, Item 5 precondition_checks 'Optionally' all require authorial judgment beyond text-replacement patterns."
+    - "Revised scope boundedness HIGH → LOW: TOC format/depth/anchors undefined across 4 files, disambiguator final wording unspecified, U2 corpus boundary principle-based not enumerated. Mirror regen self-resolved (dual-source convention)."
+    - "Added research open questions for Finding 4 substance: (a) retro-citation existence across U2 corpus, (b) ticket 175 coordination overlap on clarify-critic.md, (c) precondition_checks effect on skill-loading semantics. Rating retained at complex/high (already maxed)."
+    - "Added research open questions for Finding 6 substance: (a) where OQ3 evidence trails live (commit message vs PR vs events.log vs SKILL.md comment), (b) what constitutes a valid retro-citation for U2 retention."
+  dismissals:
+    - finding_index: 4
+      rationale: "Self-resolution: parent epic body explicitly names 'skill-creator-lens additions' via the audit.md reference ('audit.md ... with pressure-test corrections and skill-creator-lens additions'). The child's lens is structurally sourced from the parent's named artifact, not a unilateral redefinition. The divergence in deliverable categories reflects that the parent epic spans both content-density (Stream A) and skill-creator-lens (this child) audits, with the child carved out as a parallel-runnable subset."
+  status: ok
+- ts: 2026-05-06T00:00:01Z
+  event: orchestrator_review
+  feature: apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry
+  phase: specify
+  verdict: pass
+  cycle: 1
+  issues: []
+- ts: 2026-05-06T00:00:02Z
+  event: orchestrator_review
+  feature: apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry
+  phase: plan
+  verdict: flag
+  cycle: 1
+  issues:
+    - "P1: Task 1 sizing exceeds 15-min target (12-table analysis); Task 3 bundles 4 edits"
+    - "P4: Task 5 H2-collision check has prose fallback; Tasks 9, 10 lack per-task verification"
+    - "P6: Task 11 verifies backlog/index.json but omits it from Files list"
+- ts: 2026-05-06T00:00:03Z
+  event: orchestrator_dispatch_fix
+  feature: apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry
+  phase: plan
+  mode: same_context
+  issue: "P1 P4 P6 fixes — Task 1 sizing note, Task 5 deterministic anchor check, Tasks 7-10 option-(c) verification with per-task signal, Task 11 Files list extended to backlog/index.{md,json}"
+- ts: 2026-05-06T00:00:04Z
+  event: orchestrator_review
+  feature: apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry
+  phase: plan
+  verdict: pass
+  cycle: 2
+  issues: []
+- ts: 2026-05-06T00:00:05Z
+  event: critical_review
+  feature: apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry
+  phase: plan
+  reviewers_completed: 4
+  reviewers_dispatched: 4
+  a_class_findings: 8
+  b_class_findings: 9
+  c_class_findings: 2
+  applied: 10
+  dismissed: 1
+  asked: 2
+  residue_path: lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/critical-review-residue.json
+- ts: 2026-05-06T00:00:06Z
+  event: phase_transition
+  feature: apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry
+  from: plan
+  to: implement

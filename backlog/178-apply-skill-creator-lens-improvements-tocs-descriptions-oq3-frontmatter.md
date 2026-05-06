@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: a978360e-228a-4b86-b9c5-bf059ab8c5a2
 title: "Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry)"
 type: chore
-status: backlog
+status: in_progress
 priority: medium
 parent: 172
 blocked-by: []
@@ -11,6 +11,12 @@ tags: [lifecycle, refine, critical-review, discovery, skill-design, descriptions
 created: 2026-05-06
 updated: 2026-05-06
 discovery_source: research/vertical-planning/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/spec.md
+areas: [skills]
+session_id: ecb72c6d-da94-4e7c-85ef-3dab47c98ac2
+lifecycle_phase: plan
 ---
 
 # Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, OQ3 softening, frontmatter symmetry)
