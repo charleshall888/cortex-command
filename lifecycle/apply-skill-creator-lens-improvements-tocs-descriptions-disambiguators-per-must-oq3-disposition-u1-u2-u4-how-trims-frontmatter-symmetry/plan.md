@@ -6,7 +6,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
 
 ## Tasks
 
-### Task 1: Produce u2-decisions.md (analysis-only)
+### Task 1: Produce u2-decisions.md (analysis-only) [COMPLETED]
 
 - **Files**: `lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/u2-decisions.md`
 - **What**: Read all 12 Constraints "Thought/Reality" tables in the U2 corpus and emit a per-row KEEP/DROP decision applying the spec's canonical named-consumer rule (specific identifier — function name, file path, schema key, or named test/validator/contract). No source-file edits in this task; this artifact gates Tasks 5–10.
@@ -43,7 +43,7 @@ Land seven mechanical skill-design improvements (R1–R7) across canonical `skil
   - `grep -cE '^- \[.+:[0-9]+\] \| (KEEP|DROP) \|' lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/u2-decisions.md` — pass if count ≥ 12.
   - `python3 -c "import re; t=open('lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/u2-decisions.md').read(); drops=[l for l in t.splitlines() if re.match(r'^- \[.+:[0-9]+\] \| DROP \|', l)]; bad=[l for l in drops if 'reality_text=' not in l]; print('FAIL: DROP rows missing reality_text:', bad) if bad else print('OK')"` — pass if output is `OK` (every DROP row carries a `reality_text=` field).
   - PR review verifies per-row exhaustiveness against the actual table contents.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Edit `skills/lifecycle/SKILL.md` (R1 TOC + R2 when_to_use + R4 U4 slugify trim)
 
