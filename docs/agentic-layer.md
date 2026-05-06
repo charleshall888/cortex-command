@@ -42,8 +42,6 @@ graph TD
 
     MR["/morning-review\nanswer deferrals\nadvance lifecycles\nmerge PR → main"]
 
-    EVOLVE["/cortex-core:retro → /evolve\nself-improvement loop"]
-
     MAIN([main branch])
 
     START --> DEV
@@ -66,9 +64,6 @@ graph TD
     MR -->|"closes tickets"| BACKLOG
 
     LC -->|"Complete · closes ticket"| MAIN
-
-    MAIN --> EVOLVE
-    EVOLVE -->|"new items"| BACKLOG
 ```
 
 ### Diagram B — Lifecycle Phase Sequence
@@ -139,15 +134,11 @@ When multiple backlog items are ready, the user runs `/cortex-core:refine` per f
 
 ### 3. Autonomous Overnight
 
-In the evening, the user runs `/overnight` to plan a batch of features for unattended execution *(SessionStart hook: `hooks/cortex-scan-lifecycle.sh` fires here, injecting `LIFECYCLE_SESSION_ID`, active feature state, and any fresh-resume prompts into context so the session begins oriented to current work)*. **Prerequisite**: selected features must already have discovery artifacts (`research:` and `spec:` fields in their backlog YAML frontmatter) — `/overnight` does not run interactive research or spec phases. The plan lists the eligible features and estimated duration; after user approval, the runner detaches in a tmux session and begins working. Through the night, the runner selects features from the approved batch, creates branches, and runs lead agents with a tier-based conflict-aware scheduling system to avoid resource contention. Each feature picks up at the plan phase (or implement, if already planned). In the morning, `/morning-review` walks the overnight report: it reads `lifecycle/morning-report.md`, closes completed lifecycles, merges approved PRs, and surfaces any features that need follow-up. For the full architecture and operational guide, see [Overnight: In Depth](overnight.md).
+In the evening, the user runs `/overnight` to plan a batch of features for unattended execution *(SessionStart hook: `hooks/cortex-scan-lifecycle.sh` fires here, injecting `LIFECYCLE_SESSION_ID` and active feature state into context so the session begins oriented to current work)*. **Prerequisite**: selected features must already have discovery artifacts (`research:` and `spec:` fields in their backlog YAML frontmatter) — `/overnight` does not run interactive research or spec phases. The plan lists the eligible features and estimated duration; after user approval, the runner detaches in a tmux session and begins working. Through the night, the runner selects features from the approved batch, creates branches, and runs lead agents with a tier-based conflict-aware scheduling system to avoid resource contention. Each feature picks up at the plan phase (or implement, if already planned). In the morning, `/morning-review` walks the overnight report: it reads `lifecycle/morning-report.md`, closes completed lifecycles, merges approved PRs, and surfaces any features that need follow-up. For the full architecture and operational guide, see [Overnight: In Depth](overnight.md).
 
 ### 4. Discovery to Backlog
 
 The user has a vague topic or area of uncertainty rather than a concrete feature. `/cortex-core:discovery topic` runs a deep research phase — exploring the codebase, reading requirements, and potentially searching external sources — then produces a structured spec and decomposes the work into discrete backlog tickets. Each ticket gets YAML frontmatter that may include `research:` and `spec:` fields pointing to the discovery artifacts. When the user later runs `/cortex-core:backlog pick` on one of those tickets and routes it through `/cortex-core:lifecycle`, the lifecycle skill detects the pre-existing artifacts and skips the research and specify phases, bootstrapping directly into planning.
-
-### 5. Self-Improvement Loop
-
-At the end of a session, `/cortex-core:retro` writes a structured problem log capturing what went wrong, what was slow, and what could be improved. Periodically — or after accumulating enough retro entries — `/cortex-core:evolve` reads the retro archive, clusters recurring themes, and routes each cluster to the appropriate fix path: `/cortex-core:discovery` for problems with unknown root causes, `/cortex-core:lifecycle` for understood fixes, `/cortex-core:backlog add` for simple improvements, and direct `MEMORY.md`/`CLAUDE.md` edits for configuration changes. Problems surface as improvements rather than accumulating as debt.
 
 ---
 
@@ -158,7 +149,7 @@ Hooks in `hooks/` are shared entry points. Hooks in `claude/hooks/` are specific
 | File | Event | Purpose | Agents |
 |------|-------|---------|--------|
 | `hooks/cortex-validate-commit.sh` | PreToolUse | Validate commit message: imperative mood, ≤72 chars subject, no trailing period, blank line before body | Claude only |
-| `hooks/cortex-scan-lifecycle.sh` | SessionStart | Inject `LIFECYCLE_SESSION_ID`, active feature state, overnight execution state, and fresh-resume prompts into context | Claude only |
+| `hooks/cortex-scan-lifecycle.sh` | SessionStart | Inject `LIFECYCLE_SESSION_ID`, active feature state, and overnight execution state into context | Claude only |
 | *desktop notifier* | Stop, Notification | Desktop notifications via terminal-notifier when Claude needs input or completes (macOS) — user/machine-config responsibility; no script shipped by this repo | Claude only |
 | `hooks/cortex-cleanup-session.sh` | SessionEnd | Remove `.session` lock files from `lifecycle/*/` when a Claude Code session ends (skips on `/clear`) | Claude only |
 | `claude/hooks/cortex-sync-permissions.py` | PreToolUse | Merge MCP allow/deny patterns from `settings.json` so permissions stay consistent | Claude only |
@@ -252,7 +243,7 @@ For overnight runner operations and architecture (state schemas, recovery, allow
 
 1. **events.log** — Append-only per-feature lifecycle journal stored at `lifecycle/{feature}/events.log`. Phase transitions write structured entries; `/cortex-core:lifecycle resume` reads the log to determine which phase to restart from. `/morning-review` scans it to identify completions. Powers all progress reporting.
 
-2. **cortex-scan-lifecycle hook** — Runs at SessionStart and injects `LIFECYCLE_SESSION_ID`, the active feature's current phase, overnight execution state, and any fresh-resume prompts into the session context. This is what makes the system appear continuous across `/clear` invocations and new terminal sessions.
+2. **cortex-scan-lifecycle hook** — Runs at SessionStart and injects `LIFECYCLE_SESSION_ID`, the active feature's current phase, and overnight execution state into the session context. This is what makes the system appear continuous across `/clear` invocations and new terminal sessions.
 
 3. **cortex-validate-commit hook** — Pre-execution gate on all `git commit` commands. Enforces imperative mood, ≤72-character subject line, no trailing period, and a blank line before the body.
 
