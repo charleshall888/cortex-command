@@ -35,6 +35,7 @@ import os
 import re
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -520,3 +521,106 @@ def test_layered_injection_defense(tmp_path):
     # envelope-closing one), not twice (which would be the unsanitized
     # injection escaping the envelope).
     assert prompt.count("</parent_epic_body>") == 1
+
+
+# ---------------------------------------------------------------------------
+# R14: post-migration JSONL emission check
+# ---------------------------------------------------------------------------
+
+
+# Regex line-scan helpers (NOT yaml.safe_load_all — see plan Task 5 §"Test
+# parsing strategy"). The live events.log files mix JSONL and YAML-block
+# events with no document separator, which the YAML parser cannot consume.
+_JSONL_RE = re.compile(r'^\{.*"event"\s*:\s*"clarify_critic".*\}\s*$')
+_YAML_HEAD_RE = re.compile(r'^- ts:\s*([0-9T:Z+-]+)\s*$')
+_YAML_EVENT_LINE_RE = re.compile(r'^\s+event:\s*clarify_critic\s*$')
+
+_THIS_FEATURE_SLUG = (
+    "promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration"
+)
+
+
+def _parse_ts(s: str) -> datetime:
+    """Parse an ISO-8601 timestamp string, normalizing trailing ``Z`` to ``+00:00``."""
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+def test_post_migration_clarify_critic_events_are_jsonl():
+    """R14: any post-cutoff clarify_critic event in active lifecycle/*/events.log
+    is single-line JSON, never a YAML-block event.
+
+    Walks ``Path("lifecycle").glob("*/events.log")`` excluding any path whose
+    parts include ``archive``. For each ``clarify_critic`` event found via
+    regex line-scan (both single-line JSONL and multi-line YAML-block forms),
+    compares the event's ``ts`` to the cutoff in
+    ``tests/fixtures/jsonl_emission_cutoff.txt`` and asserts that no YAML-block
+    event has a ``ts`` at-or-after the cutoff.
+
+    Includes a positive-control assertion that ≥1 clarify_critic event was
+    detected when this lifecycle's own events.log is present in the tree —
+    defends against silent parse-skip regressions where a logic bug makes the
+    test trivially pass by detecting nothing.
+    """
+    cutoff_path = REPO_ROOT / "tests" / "fixtures" / "jsonl_emission_cutoff.txt"
+    cutoff = _parse_ts(cutoff_path.read_text(encoding="utf-8").strip())
+
+    violations: list[tuple[str, int, str]] = []  # (file, line_number, ts)
+    detections = 0
+
+    lifecycle_root = REPO_ROOT / "lifecycle"
+    for events_log in lifecycle_root.glob("*/events.log"):
+        if "archive" in events_log.parts:
+            continue
+        lines = events_log.read_text(encoding="utf-8").splitlines()
+        for i, line in enumerate(lines):
+            if _JSONL_RE.match(line):
+                try:
+                    evt = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if evt.get("event") != "clarify_critic":
+                    continue
+                detections += 1
+                # JSONL form is always compliant — no violation possible
+                # regardless of cutoff comparison.
+            else:
+                m = _YAML_HEAD_RE.match(line)
+                if not m:
+                    continue
+                # Look ahead up to 5 lines for the matching ``event:
+                # clarify_critic`` field.
+                found_clarify_critic = False
+                for la in lines[i + 1 : i + 6]:
+                    if _YAML_EVENT_LINE_RE.match(la):
+                        found_clarify_critic = True
+                        break
+                if not found_clarify_critic:
+                    continue
+                detections += 1
+                ts = _parse_ts(m.group(1))
+                if ts >= cutoff:
+                    violations.append(
+                        (str(events_log.relative_to(REPO_ROOT)), i + 1, m.group(1))
+                    )
+
+    if violations:
+        formatted = "\n".join(
+            f"  {f}:{ln} (ts={ts})" for f, ln, ts in violations
+        )
+        raise AssertionError(
+            "Post-migration clarify_critic events MUST be single-line JSONL, "
+            "but YAML-block events were found at-or-after the cutoff "
+            f"({cutoff.isoformat()}):\n{formatted}"
+        )
+
+    # Positive-control: in the development tree where this plan ships, this
+    # lifecycle's own events.log contains a pre-cutoff YAML-block clarify_critic
+    # event, so detections must be ≥1. In a fresh-clone CI tree with no
+    # events.log files, the check is bypassed.
+    this_feature_log = lifecycle_root / _THIS_FEATURE_SLUG / "events.log"
+    if this_feature_log.exists():
+        assert detections >= 1, (
+            "positive-control failure: expected at least 1 clarify_critic "
+            "event detection in the development tree, got 0 — possible "
+            "silent parse-skip regression"
+        )
