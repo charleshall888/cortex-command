@@ -1,10 +1,14 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["pyyaml", "tiktoken"]
+# ///
 """Load a backlog item's parent epic body for clarify-critic alignment evaluation.
 
 Reads a child backlog item's frontmatter, normalizes its ``parent:`` value via
-``cortex_command.backlog.build_epic_map.normalize_parent``, and (if the parent
-resolves to an existing ``type: epic`` file) extracts a token-capped, sanitized
-slice of the parent's body. Prints a closed-set JSON object on stdout.
+an inlined port of ``cortex_command.backlog.build_epic_map.normalize_parent``,
+and (if the parent resolves to an existing ``type: epic`` file) extracts a
+token-capped, sanitized slice of the parent's body. Prints a closed-set JSON
+object on stdout.
 
 JSON output shapes (one per status branch):
 
@@ -43,16 +47,40 @@ from typing import Any
 
 import yaml
 
-# Make cortex_command importable when running from a checkout. The script
-# lives at <repo>/bin/cortex-load-parent-epic and the package at
-# <repo>/cortex_command/, so prepend the repo root to sys.path.
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
-# Import normalize_parent rather than re-implementing the rules. See
-# cortex_command/backlog/build_epic_map.py:54-86 for the canonical source.
-from cortex_command.backlog.build_epic_map import normalize_parent
+# ---------------------------------------------------------------------------
+# Local normalize_parent re-implementation
+# Canonical source: cortex_command/backlog/build_epic_map.py:54-86
+# NOT imported because ``__file__`` resolves into the plugin cache after
+# ``/plugin install`` (no sibling cortex_command/ package available there),
+# and even from a checkout the import would couple this script to
+# cortex_command/__init__.py:13-15 install_guard. Drift is asserted by
+# tests/test_load_parent_epic.py::test_drift_normalize_parent.
+# ---------------------------------------------------------------------------
+
+def normalize_parent(value: Any) -> int | None:
+    """Normalize a backlog item's ``parent`` field to an integer epic id or ``None``.
+
+    Behaviorally equivalent to ``cortex_command.backlog.build_epic_map.normalize_parent``.
+    """
+    if value is None:
+        return None
+
+    if isinstance(value, str):
+        stripped = value
+        if len(stripped) >= 2 and stripped[0] in ("\"", "'") and stripped[-1] == stripped[0]:
+            stripped = stripped[1:-1]
+        if "-" in stripped:
+            return None
+        try:
+            return int(stripped)
+        except ValueError:
+            return None
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -74,8 +102,10 @@ SECTION_PRIORITY: tuple[str, ...] = (
 
 # ---------------------------------------------------------------------------
 # Backlog directory resolution
-# Mirrors bin/cortex-resolve-backlog-item:210-226 — CORTEX_BACKLOG_DIR env
-# override first, then walk-up search for a sibling backlog/ dir.
+# Mirrors bin/cortex-resolve-backlog-item:_backlog_dir — CORTEX_BACKLOG_DIR
+# env override first, then walk-up from cwd. Walks from Path.cwd() (not
+# __file__) so the function works when the script binary lives in a plugin
+# cache path unrelated to the user's checkout.
 # ---------------------------------------------------------------------------
 
 def _backlog_dir() -> Path:
@@ -83,13 +113,15 @@ def _backlog_dir() -> Path:
     env_override = os.environ.get("CORTEX_BACKLOG_DIR")
     if env_override:
         return Path(env_override)
-    here = Path(__file__).resolve().parent
-    while here != here.parent:
+    here = Path.cwd().resolve()
+    while True:
         candidate = here / "backlog"
         if candidate.is_dir():
             return candidate
+        if here == here.parent:
+            break
         here = here.parent
-    return Path(__file__).resolve().parent.parent / "backlog"
+    return Path.cwd() / "backlog"
 
 
 # ---------------------------------------------------------------------------

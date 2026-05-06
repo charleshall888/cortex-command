@@ -624,3 +624,56 @@ def test_edge_empty_title_slugify(resolver, tmp_path):
     # Test the function directly with this edge-case title: predicate A should fire.
     matches = resolver._resolve_title_phrase("!!!", items_with_fm)
     assert item in matches
+
+
+# ---------------------------------------------------------------------------
+# cwd-based backlog discovery — fixes the plugin-cache invocation bug where
+# __file__-anchored walk-up never finds the user's backlog/. Tests run with
+# CORTEX_BACKLOG_DIR explicitly stripped from env so the discovery branch is
+# actually exercised; existing _run() helper sets that env var and would mask
+# this code path.
+# ---------------------------------------------------------------------------
+
+
+def _run_no_env(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
+    """Run the script with cwd set and CORTEX_BACKLOG_DIR removed from env."""
+    env = {k: v for k, v in os.environ.items() if k != "CORTEX_BACKLOG_DIR"}
+    return subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), *args],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(cwd),
+    )
+
+
+def test_discovery_walks_up_from_cwd(tmp_path):
+    """No env var: script walks from cwd, finds backlog/ at cwd root."""
+    backlog = tmp_path / "backlog"
+    backlog.mkdir()
+    _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
+    result = _run_no_env(["zorp"], tmp_path)
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["title"] == "Unique Zorp Widget"
+
+
+def test_discovery_walks_up_from_subdir(tmp_path):
+    """No env var: script walks up from a deep subdir to find backlog/."""
+    backlog = tmp_path / "backlog"
+    backlog.mkdir()
+    _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
+    deep = tmp_path / "nested" / "sub" / "dir"
+    deep.mkdir(parents=True)
+    result = _run_no_env(["zorp"], deep)
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["title"] == "Unique Zorp Widget"
+
+
+def test_discovery_no_backlog_exits_70(tmp_path):
+    """No env var, no backlog/ anywhere up the tree → exit 70 with cwd in msg."""
+    # tmp_path is under /var/folders or /tmp — no backlog/ ancestor exists.
+    result = _run_no_env(["zorp"], tmp_path)
+    assert result.returncode == 70
+    assert "backlog directory not found" in result.stderr

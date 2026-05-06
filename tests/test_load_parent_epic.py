@@ -28,11 +28,15 @@ backlog directory.
 
 from __future__ import annotations
 
+import importlib.machinery
+import importlib.util
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-load-parent-epic"
@@ -353,3 +357,116 @@ def test_unreadable_malformed_yaml(tmp_path):
         "parent_id": 82,
         "reason": "frontmatter_parse_error",
     }
+
+
+# ---------------------------------------------------------------------------
+# cwd-based backlog discovery — fixes the plugin-cache invocation bug where
+# __file__-anchored walk-up never finds the user's backlog/. The existing
+# _run() helper sets CORTEX_BACKLOG_DIR; these tests strip it so the
+# discovery branch is actually exercised.
+# ---------------------------------------------------------------------------
+
+
+def _run_no_env(slug: str, cwd: Path) -> subprocess.CompletedProcess:
+    """Run the script with cwd set and CORTEX_BACKLOG_DIR removed from env."""
+    env = {k: v for k, v in os.environ.items() if k != "CORTEX_BACKLOG_DIR"}
+    return subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), slug],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(cwd),
+    )
+
+
+def test_discovery_walks_up_from_cwd(tmp_path):
+    """No env var: script walks from cwd, finds backlog/ at cwd root."""
+    _write(
+        tmp_path / "backlog" / "300-test-child.md",
+        "---\ntitle: Test child\n---\n",
+    )
+    result = _run_no_env("300-test-child", tmp_path)
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload == {"status": "no_parent"}
+
+
+def test_discovery_walks_up_from_subdir(tmp_path):
+    """No env var: script walks up from a deep subdir to find backlog/."""
+    _write(
+        tmp_path / "backlog" / "300-test-child.md",
+        "---\ntitle: Test child\n---\n",
+    )
+    deep = tmp_path / "nested" / "sub" / "dir"
+    deep.mkdir(parents=True)
+    result = _run_no_env("300-test-child", deep)
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload == {"status": "no_parent"}
+
+
+def test_discovery_no_backlog_exits_1(tmp_path):
+    """No env var, no backlog/ anywhere up the tree → exit 1 with diagnostic."""
+    # Empty tmp_path under /var/folders or /tmp — no backlog/ ancestor exists.
+    result = _run_no_env("300-test-child", tmp_path)
+    assert result.returncode == 1
+    assert "backlog directory not found" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# Drift test — inlined normalize_parent must match canonical implementation.
+# Mirrors the slugify-drift pattern in tests/test_resolve_backlog_item.py.
+# ---------------------------------------------------------------------------
+
+
+def _load_script_module():
+    loader = importlib.machinery.SourceFileLoader(
+        "cortex_load_parent_epic", str(SCRIPT_PATH)
+    )
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_drift_normalize_parent():
+    """Inlined normalize_parent in cortex-load-parent-epic must agree with the
+    canonical cortex_command.backlog.build_epic_map.normalize_parent on a
+    fixed input set covering the four normalization branches.
+    """
+    canonical_mod = pytest.importorskip("cortex_command.backlog.build_epic_map")
+    canonical = canonical_mod.normalize_parent
+    local = _load_script_module().normalize_parent
+
+    cases = [
+        # branch 1: None
+        None,
+        # branch 2: bare-int and stringified-int
+        49, 0, 9999, "49", "0", "9999",
+        # branch 3: quoted-string variants
+        '"49"', "'49'", '"0"',
+        # branch 4: UUID-shaped (contains "-") → None
+        "550e8400-e29b-41d4-a716-446655440000",
+        "abc-def",
+        "-49",
+        "49-",
+        # int() failures → None
+        "abc",
+        "49abc",
+        "abc49",
+        "1.5",
+        "",
+        # bool / float (covered by bare-int branch's int() try)
+        True, False, 49.5, 0.0,
+    ]
+
+    mismatches: list[tuple] = []
+    for case in cases:
+        c = canonical(case)
+        loc = local(case)
+        if c != loc:
+            mismatches.append((case, c, loc))
+    assert not mismatches, (
+        f"normalize_parent drift on {len(mismatches)} input(s): {mismatches}"
+    )

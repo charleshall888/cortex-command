@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["pyyaml"]
+# ///
 """Resolve a fuzzy backlog-item reference to its canonical metadata.
 
 Accepts a numeric ID, kebab-slug, or title-phrase and resolves it against
@@ -208,22 +211,29 @@ def _format_candidates(
 # ---------------------------------------------------------------------------
 
 def _backlog_dir() -> Path:
-    """Return the backlog directory, honouring CORTEX_BACKLOG_DIR override."""
+    """Return the backlog directory, honouring CORTEX_BACKLOG_DIR override.
+
+    Walks up from ``Path.cwd()`` (not ``__file__``) because the script binary
+    lives in a plugin-cache path unrelated to the user's checkout once
+    installed via ``/plugin install``. User intent: operate on the
+    cortex-command checkout the user is currently in.
+    """
     env_override = os.environ.get("CORTEX_BACKLOG_DIR")
     if env_override:
         return Path(env_override)
-    # Walk up looking for a sibling backlog/. The script lives at canonical
-    # <repo>/bin/ but is also auto-mirrored into
-    # <repo>/plugins/cortex-core/bin/, which is one level deeper;
-    # a fixed parent.parent walk would resolve to the wrong place under
-    # the mirror.
-    here = Path(__file__).resolve().parent
-    while here != here.parent:
+    here = Path.cwd().resolve()
+    while True:
         candidate = here / "backlog"
         if candidate.is_dir():
             return candidate
+        if here == here.parent:
+            break
         here = here.parent
-    return Path(__file__).resolve().parent.parent / "backlog"
+    # No backlog/ found anywhere up the tree. Return a cwd-relative path so
+    # the existing exit-70 branch in main() emits an intelligible diagnostic
+    # ("backlog directory not found at <user-cwd>/backlog") rather than a
+    # plugin-cache path the user has never heard of.
+    return Path.cwd() / "backlog"
 
 
 # ---------------------------------------------------------------------------
