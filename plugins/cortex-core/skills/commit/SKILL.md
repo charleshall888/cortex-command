@@ -9,7 +9,7 @@ Create a single git commit from the current working tree changes.
 
 ## Workflow
 
-1. Run `bin/cortex-commit-preflight` to get status, working-tree diff, and last 10 commits as a single JSON document.
+1. Run `cortex-commit-preflight` to get status, working-tree diff, and last 10 commits as a single JSON document.
 2. Stage relevant files with `git add` (specific files, not `-A`)
 3. Compose the commit message following the format below
 4. Run `git commit -m "..."` with the composed message
