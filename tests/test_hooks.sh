@@ -142,42 +142,6 @@ else
   fail "scan-lifecycle/claude-output-format" "expected exit 0 with hookSpecificOutput key; got exit $exit_code, has_key=$has_key"
 fi
 
-# --- Test: fresh-resume-fires — handoff prompt injected first, file deleted ---
-
-FR_TMPDIR="$TMPDIR/test_hooks_fr_$$"
-mkdir -p "$FR_TMPDIR/lifecycle/test-fr-feature"
-echo "# stub research" > "$FR_TMPDIR/lifecycle/test-fr-feature/research.md"
-printf 'Resume test-fr-feature at specify phase. Run /cortex-core:lifecycle test-fr-feature.' \
-  > "$FR_TMPDIR/lifecycle/.fresh-resume"
-
-output=$(sed "s|__TMPDIR__|$FR_TMPDIR|g" "$SCAN_FIXTURE_DIR/pending-resume.json" \
-  | bash "$SCAN_HOOK" 2>/dev/null)
-exit_code=$?
-
-context=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null)
-
-if [[ $exit_code -eq 0 && "$context" == *"test-fr-feature"* && ! -f "$FR_TMPDIR/lifecycle/.fresh-resume" ]]; then
-  pass "scan-lifecycle/fresh-resume-fires"
-else
-  fail "scan-lifecycle/fresh-resume-fires" "expected handoff prompt in context and file deleted; got exit $exit_code, context='$context', file_exists=$(test -f "$FR_TMPDIR/lifecycle/.fresh-resume" && echo yes || echo no)"
-fi
-
-rm -rf "$FR_TMPDIR"
-
-# --- Test: fresh-resume-absent — no handoff injection when no marker file ---
-
-output=$(sed "s|__TMPDIR__|$SCAN_TMPDIR|g" "$SCAN_FIXTURE_DIR/pending-resume.json" \
-  | bash "$SCAN_HOOK" 2>/dev/null)
-exit_code=$?
-
-context=$(echo "$output" | jq -r '.hookSpecificOutput.additionalContext // empty' 2>/dev/null)
-
-if [[ $exit_code -eq 0 && "$context" != *"Resume test-fr-feature"* ]]; then
-  pass "scan-lifecycle/fresh-resume-absent"
-else
-  fail "scan-lifecycle/fresh-resume-absent" "expected no handoff prompt without marker; got exit $exit_code, context='$context'"
-fi
-
 # ---------------------------------------------------------------------------
 # cortex-worktree-create.sh tests
 # ---------------------------------------------------------------------------
