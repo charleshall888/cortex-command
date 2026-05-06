@@ -37,14 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/
 
 The cortex-overnight MCP server also auto-installs the CLI on first tool call when `cortex` is missing from `PATH`. Users who only interact with cortex through Claude Code never need an explicit install step. Set `CORTEX_AUTO_INSTALL=0` to opt out of the auto-install behavior (the MCP will then surface a notice instead of running `uv tool install`).
 
-#### Upgrading
-
-To upgrade later: run `/plugin update cortex-overnight@cortex-command` from inside Claude (MCP-driven), or `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<new-tag>` from a bare shell. `cortex upgrade` itself is an advisory printer — the wheel for any version `vN` can only declare "I am vN" and has no way to know about newer tags. See [docs/release-process.md](release-process.md) for the tag-before-coupling discipline.
-
-The `cortex-overnight` plugin's MCP server embeds a `CLI_PIN` constant — a tuple `(tag, schema_version)` — that pairs the plugin with a specific cortex CLI tag. The plugin drives CLI auto-update via tag bump on first MCP tool call (the upgrade arrow flows plugin → CLI, not the other way).
-
-- **Plugin auto-update enabled (default)**: Claude Code refreshes the plugin in the background; the next MCP tool call detects a `CLI_PIN[0]` bump and auto-installs the matching CLI tag.
-- **Plugin auto-update disabled**: the embedded `CLI_PIN` stays pinned to whatever tag was current when you installed the plugin — a stable plugin/CLI pair until you explicitly run `/plugin update cortex-overnight@cortex-command`. A stale plugin is the intended state under disabled auto-update; schema versions match between the embedded `CLI_PIN[1]` and the installed CLI's print-root envelope, so everything works.
+For upgrade paths and forker fork-install URLs, see [§ Upgrade & maintenance](#upgrade--maintenance) below.
 
 #### Troubleshooting CLI install
 
@@ -104,60 +97,36 @@ Run `cortex init` once in each repo where you want to use cortex. It scaffolds t
 cortex init
 ```
 
-`cortex init` runs seven side effects in order:
+`cortex init` runs four phases in order:
 
-**1. Git repo root resolution / submodule refusal**
-Resolves the git repo root via `git rev-parse --show-toplevel`. If the current directory is not inside a git repository, init exits with an error. If it is inside a submodule (detected via `git rev-parse --show-superproject-working-tree`), init refuses and tells you to run at the top-level repo instead.
+**1. Pre-flight validation**
+Resolves the git repo root via `git rev-parse --show-toplevel` (errors out if not in a git repo; refuses to run inside a submodule), checks the `lifecycle/` path does not resolve through a symlink (closing a TOCTOU gap with phase 4's sandbox write), and validates `~/.claude/settings.local.json` is well-formed JSON before any mutation. All read-only.
 
-**2. Symlink-safety gate**
-Checks that the `lifecycle/` path inside the repo does not resolve through a symlink. This validation captures the canonical path used for sandbox registration in step 7, eliminating a TOCTOU gap between path-resolution and write.
+**2. Re-run guard**
+Checks for a `.cortex-init` marker in the repo root. If present and neither `--update` nor `--force` is passed, init declines to re-scaffold so a second accidental `cortex init` does not overwrite local customizations. Pass `--update` for an additive (no-overwrite) re-run, or `--force` to back up and overwrite.
 
-**3. `~/.claude/settings.local.json` validation**
-Validates `~/.claude/settings.local.json` before any mutation. If the file exists but is malformed JSON, init stops here rather than corrupting it. This is a read-only pre-flight — no changes are made at this step.
+**3. Scaffold + `.gitignore` append**
+Creates the directory structure and starter templates (`lifecycle/`, `backlog/`, `retros/`, `requirements/`), refreshes the `.cortex-init` marker, and idempotently appends cortex-specific ignore patterns to the repo's `.gitignore` (running twice does not duplicate entries).
 
-**4. `.cortex-init` marker check**
-Checks for a `.cortex-init` marker file in the repo root. If the marker is present and neither `--update` nor `--force` is passed, init declines to re-scaffold so a second accidental `cortex init` does not overwrite local customizations. Pass `--update` for an additive (no-overwrite) re-run, or `--force` to back up and overwrite.
-
-**5. Scaffold dispatch**
-Creates the directory structure and starter templates: `lifecycle/`, `backlog/`, `retros/`, and `requirements/`. Behavior depends on the flag combination and whether the `.cortex-init` marker is present (see step 4). After scaffolding, `cortex init` writes or refreshes the `.cortex-init` marker file to record the timestamp of the last successful run.
-
-**6. Idempotent `.gitignore` append**
-Appends cortex-specific ignore patterns to the repo's `.gitignore`. This step always runs regardless of which scaffold branch was taken above. It is idempotent — running `cortex init` a second time will not duplicate entries.
-
-**7. Sandbox registration into `~/.claude/settings.local.json`**
-This step additively registers the repo's `lifecycle/` path in `~/.claude/settings.local.json` under `sandbox.filesystem.allowWrite`. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs (validation in step 3 is read-only). Concurrent calls to `cortex init` across multiple repos are safe: the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
+**4. Sandbox registration into `~/.claude/settings.local.json`**
+Additively registers the repo's `lifecycle/` path under `sandbox.filesystem.allowWrite`. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs. Concurrent calls across repos are safe — the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
 
 #### lifecycle.config.md schema
 
-`cortex init` scaffolds a `lifecycle/lifecycle.config.md` file in your repo with project-specific overrides for the lifecycle skill and overnight runner. The file uses YAML frontmatter with 6 keys, split into 3 active (consumed by code today) and 3 advisory (present in the scaffold but not yet enforced by any code path):
+`cortex init` scaffolds a `lifecycle/lifecycle.config.md` file with YAML frontmatter — project-specific overrides for the lifecycle skill and overnight runner. Six keys total, three active (consumed by code) and three advisory (scaffolded but not yet wired up):
 
-**Active keys** — consumed by code or skill prose today:
+```yaml
+test-command: "just test"      # active: shell command for daytime_pipeline.py test step
+commit-artifacts: true         # active: include lifecycle artifacts in staged commits
+demo-commands:                 # active: morning-review demo offer (list takes precedence
+  - label: "Dashboard"         #         over the legacy single-string demo-command:)
+    command: "just dashboard"
+type: other                    # advisory: repo classification (no consumer yet)
+skip-specify: false            # advisory: skip the specify phase (not enforced yet)
+skip-review: false             # advisory: skip the review phase (not enforced yet)
+```
 
-- **`test-command`** — Read by `cortex_command/overnight/daytime_pipeline.py`. Specifies the shell command used to run the repo's test suite during a daytime pipeline run. Defaults to `just test` when the key is missing or empty.
-
-- **`commit-artifacts`** — Read by the lifecycle skill's commit step (`skills/lifecycle/references/{complete,research,plan,specify}.md`). Controls whether lifecycle artifacts (research, spec, plan, etc.) are included in the staged commit. Set `commit-artifacts: false` to exclude lifecycle artifacts from staging.
-
-- **`demo-commands`** — Read by the morning-review skill (`skills/morning-review/SKILL.md` and `skills/morning-review/references/walkthrough.md`). Used for the post-overnight demo offer shown during morning review. Accepts a list of `{label, command}` entries:
-
-  ```yaml
-  demo-commands:
-    - label: "Dashboard"
-      command: "just dashboard"
-    - label: "Run tests"
-      command: "just test"
-  ```
-
-  When both `demo-commands:` (list) and the legacy `demo-command:` (single-string) keys are present, `demo-commands:` takes precedence.
-
-**Advisory keys** — present in the scaffold template but not consumed by any code path or skill prose at present:
-
-- **`type`** — Currently advisory. Intended to classify the repo type (e.g., `other`, `library`, `service`). No code reads this key today.
-
-- **`skip-specify`** — Currently advisory. Intended to skip the specify phase in the lifecycle flow when set to `true`. No code enforces this today.
-
-- **`skip-review`** — Currently advisory. Intended to skip the review phase in the lifecycle flow when set to `true`. No code enforces this today.
-
-> **Note:** If a future ticket activates one of the advisory keys by adding a code consumer, the description above must be updated from `Currently advisory` to describe the consumer. That update is the responsibility of whichever ticket adds the consumer.
+When a future ticket activates one of the advisory keys, the comment above must be updated to describe the consumer.
 
 #### Worked example: `cortex init` + first lifecycle invocation
 
@@ -216,6 +185,60 @@ claude /plugin list
 
 ---
 
+## Upgrade & maintenance
+
+There are two upgrade paths once cortex-command is installed:
+
+- **MCP-driven (recommended)** — from inside Claude Code, run `/plugin update cortex-overnight@cortex-command`. The plugin's MCP server detects the embedded `CLI_PIN` tag bump on its next tool call and reinstalls the matching cortex CLI tag automatically.
+- **Bare shell** — when you want to pin or unpin a specific tag yourself, run `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@v0.1.0` (substitute the desired tag). `cortex upgrade` itself is an advisory printer — the wheel for any version `vN` only knows it is `vN` and cannot detect newer tags. See [docs/release-process.md](release-process.md) for the tag-before-coupling discipline.
+
+The `cortex-overnight` plugin's MCP server embeds a `CLI_PIN` constant (a `(tag, schema_version)` tuple) that pairs the plugin with a specific cortex CLI tag — the upgrade arrow flows plugin → CLI, not the other way. With plugin auto-update enabled (default), Claude Code refreshes the plugin in the background; the next MCP tool call detects a `CLI_PIN[0]` bump and auto-installs the matching CLI tag. With auto-update disabled, the embedded `CLI_PIN` stays pinned to whatever tag was current when you installed the plugin — schema versions match between the embedded `CLI_PIN[1]` and the installed CLI's print-root envelope, so a stale-but-self-consistent plugin/CLI pair keeps working until you explicitly run `/plugin update cortex-overnight@cortex-command`.
+
+### Forker fork-install URL
+
+If you are developing against a fork rather than upstream, install from your fork instead of `charleshall888/cortex-command`:
+
+```bash
+uv tool install git+https://github.com/<your-fork>/cortex-command.git@<branch-or-tag>
+```
+
+Both URL forms are valid; pick one or the other per environment. The upstream form (`github.com/charleshall888/cortex-command.git@v0.1.0`) tracks released tags; the fork form (`github.com/<your-fork>/cortex-command.git@<branch-or-tag>`) tracks your fork's branch or tag and is what forkers use to install their in-progress work.
+
+### `uv` foot-guns
+
+Warning: do **not** run `uv tool uninstall uv`. Removing `uv` via itself breaks the tool environment that hosts cortex-command (and every other `uv tool`-installed CLI on your machine) — recovery requires reinstalling `uv` from scratch via `brew install uv` or the upstream installer. Use `brew uninstall uv` (or the upstream uninstall path matching your install method) if you genuinely need to remove `uv`.
+
+When cortex internally invokes `uv run` (for example, the dashboard recipe or the daytime-pipeline test step), `uv run` operates on the user's current project venv, not cortex-command's tool venv. That means a `uv run` call inside a cortex flow uses your project's `pyproject.toml` / `uv.lock` and your project's dependencies — not anything from the cortex-command install.
+
+After the first `uv tool install`, run `uv tool update-shell` once if `cortex` is not yet on your `PATH`.
+
+---
+
+## Customization
+
+### `~/.claude/settings.json` ownership
+
+Cortex-command does not own `~/.claude/settings.json`. Edit it directly as personal machine configuration; use `~/.claude/settings.local.json` for per-machine overrides. Plugin-shipped skills and hooks are enabled per project via `.claude/settings.json`'s `enabledPlugins` map.
+
+The maintainer's personal template (allow list, model, env vars, attribution, etc.) is opinionated and not a good default for others. The entries documented under [§ Recommended `~/.claude/settings.json` entries](#recommended-claudesettingsjson-entries) below are the load-bearing generic pieces cortex-command actually depends on — everything else is personal preference.
+
+### Commands
+
+Once installed, the `cortex` CLI exposes these subcommands:
+
+```
+cortex overnight start     # Run overnight in detached tmux
+cortex overnight status    # Print session status (use --format json for machine-readable)
+cortex overnight cancel    # Cancel the active session
+cortex overnight logs      # Read session logs
+cortex init                # Scaffold a repo for cortex (run once per project)
+cortex --print-root        # Verify install (prints {version, root, package_root, ...})
+```
+
+Run `cortex --help` to see all subcommands.
+
+---
+
 ## Authentication
 
 The overnight runner and some CLI utilities need API credentials. There are two modes depending on your account type.
@@ -269,11 +292,9 @@ The runner uses `apiKeyHelper` when present (work), and falls back to the OAuth 
 
 ---
 
-## Customization
-
 ### Recommended `~/.claude/settings.json` entries
 
-Cortex-command no longer ships a `settings.json` into your user scope — you own that file. The maintainer's personal template (allow list, model, env vars, attribution, etc.) is opinionated and not a good default for others. The entries below are the load-bearing generic pieces cortex-command actually depends on; everything else (the `permissions.allow` list, `env`, `model`, `effortLevel`, `attribution`, `enableAllProjectMcpServers`, `alwaysThinkingEnabled`, `skipDangerousModePermissionPrompt`, `skipAutoPermissionPrompt`) is personal preference — compose your own.
+The entries below are the load-bearing generic pieces cortex-command actually depends on; everything else (the `permissions.allow` list, `env`, `model`, `effortLevel`, `attribution`, `enableAllProjectMcpServers`, `alwaysThinkingEnabled`, `skipDangerousModePermissionPrompt`, `skipAutoPermissionPrompt`) is personal preference — compose your own.
 
 **`sandbox.excludedCommands`**
 
