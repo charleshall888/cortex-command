@@ -1,7 +1,7 @@
 ---
 schema_version: "1"
 uuid: a978360e-228a-4b86-b9c5-bf059ab8c5a2
-title: "Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, OQ3 softening, frontmatter symmetry)"
+title: "Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry)"
 type: chore
 status: backlog
 priority: medium

@@ -373,7 +373,7 @@
   },
   {
     "id": 178,
-    "title": "Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, OQ3 softening, frontmatter symmetry)",
+    "title": "Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry)",
     "status": "backlog",
     "priority": "medium",
     "type": "chore",
@@ -442,7 +442,7 @@
   },
   {
     "id": 180,
-    "title": "Artifact template cleanups (Architectural Pattern critical-only + Scope Boundaries deletion + index.md frontmatter-only)",
+    "title": "Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional)",
     "status": "backlog",
     "priority": "medium",
     "type": "chore",

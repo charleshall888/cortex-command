@@ -14,9 +14,9 @@
 | 169 | Fix archive predicate and sweep lifecycle/ and research/ dirs | in_progress | medium | feature | 166, 168 | 165 | — |
 | 170 | Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh | backlog | medium | bug | — | — | — |
 | 171 | Remove /fresh, /evolve, and /retro skills | in_progress | medium | chore | — | — | ✓ |
-| 178 | Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, OQ3 softening, frontmatter symmetry) | backlog | medium | chore | — | 172 | — |
+| 178 | Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry) | backlog | medium | chore | — | 172 | — |
 | 179 | Extract conditional content blocks to references/ (a-b-downgrade-rubric + implement-daytime — trimmed scope) | backlog | medium | chore | 174, 175, 176, 177 | 172 | — |
-| 180 | Artifact template cleanups (Architectural Pattern critical-only + Scope Boundaries deletion + index.md frontmatter-only) | backlog | medium | chore | — | 172 | — |
+| 180 | Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional) | backlog | medium | chore | — | 172 | — |
 | 181 | Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget) | backlog | medium | chore | — | 172 | — |
 | 183 | Migrate Gate 1 (research→specify Open-Questions escalation) to Python hook; remove Gate 2 entirely | backlog | medium | feature | 174, 177 | 172 | — |
 | 184 | Merge clarify and research lifecycle phases into single investigate phase | backlog | medium | feature | — | — | — |
@@ -37,8 +37,8 @@
 - **176** Lifecycle adopts cortex-resolve-backlog-item, delete refine/references/clarify.md
 - **177** Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression)
 - **170** Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh
-- **178** Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, OQ3 softening, frontmatter symmetry)
-- **180** Artifact template cleanups (Architectural Pattern critical-only + Scope Boundaries deletion + index.md frontmatter-only)
+- **178** Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry)
+- **180** Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional)
 - **181** Skill-design test infrastructure (description snapshots + cross-skill handoff + ref-file path resolution + skill-size budget)
 - **184** Merge clarify and research lifecycle phases into single investigate phase
 - **185** Audit /cortex-core:research skill output shape for token waste in research.md sections

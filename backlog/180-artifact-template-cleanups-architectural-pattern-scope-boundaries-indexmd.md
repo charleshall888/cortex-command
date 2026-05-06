@@ -1,7 +1,7 @@
 ---
 schema_version: "1"
 uuid: a5e3d90f-7e20-49ab-8be8-c9fd6bbe45b6
-title: "Artifact template cleanups (Architectural Pattern critical-only + Scope Boundaries deletion + index.md frontmatter-only)"
+title: "Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional)"
 type: chore
 status: backlog
 priority: medium
