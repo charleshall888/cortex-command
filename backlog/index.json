@@ -94,39 +94,6 @@
     "repo": null
   },
   {
-    "id": 176,
-    "title": "Lifecycle adopts cortex-resolve-backlog-item, delete refine/references/clarify.md",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "lifecycle",
-      "refine",
-      "dual-source",
-      "deduplication",
-      "backlog-resolution",
-      "vertical-planning"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-06",
-    "updated": "2026-05-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "172",
-    "research": null,
-    "spec": "lifecycle/lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd/spec.md",
-    "discovery_source": "research/vertical-planning/research.md",
-    "plan": null,
-    "uuid": "eb7cf492-c35d-4d70-835c-2d7b1b58f844",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 177,
     "title": "Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression)",
     "status": "backlog",
@@ -175,8 +142,7 @@
     "updated": "2026-05-06",
     "blocks": [],
     "blocked_by": [
-      "175",
-      "176"
+      "175"
     ],
     "parent": "172",
     "research": null,
@@ -285,7 +251,7 @@
   {
     "id": 178,
     "title": "Apply skill-creator-lens improvements (TOCs, descriptions + disambiguators, per-MUST OQ3 disposition, U1/U2/U4 HOW trims, frontmatter symmetry)",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -298,20 +264,22 @@
       "oq3",
       "vertical-planning"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-05-06",
     "updated": "2026-05-06",
     "blocks": [],
     "blocked_by": [],
     "parent": "172",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/spec.md",
     "discovery_source": "research/vertical-planning/research.md",
     "plan": null,
     "uuid": "a978360e-228a-4b86-b9c5-bf059ab8c5a2",
     "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "research",
+    "session_id": "ecb72c6d-da94-4e7c-85ef-3dab47c98ac2",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -335,7 +303,6 @@
     "blocks": [],
     "blocked_by": [
       "175",
-      "176",
       "177"
     ],
     "parent": "172",

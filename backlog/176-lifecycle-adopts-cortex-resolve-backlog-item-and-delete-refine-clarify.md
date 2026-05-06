@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: eb7cf492-c35d-4d70-835c-2d7b1b58f844
 title: "Lifecycle adopts cortex-resolve-backlog-item, delete refine/references/clarify.md"
 type: feature
-status: backlog
+status: complete
 priority: high
 parent: 172
 blocked-by: []
@@ -11,6 +11,11 @@ tags: [lifecycle, refine, dual-source, deduplication, backlog-resolution, vertic
 created: 2026-05-06
 updated: 2026-05-06
 discovery_source: research/vertical-planning/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd/spec.md
+areas: [skills]
+session_id: null
 ---
 
 # Lifecycle adopts cortex-resolve-backlog-item, delete refine/references/clarify.md

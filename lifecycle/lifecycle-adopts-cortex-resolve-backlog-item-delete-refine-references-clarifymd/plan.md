@@ -13,7 +13,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Test extension to existing 679-line `tests/test_resolve_backlog_item.py`. Curated inputs MUST cover all categories enumerated in spec R5a: numeric IDs (including zero-padded), kebab slugs, title fuzzy matches, uppercase inputs, inputs with punctuation, ambiguous-multi inputs, no-match inputs. Plus ≥3 reverse-engineered Predicate-A-only candidates, derived by inspecting current backlog titles for shapes where slugify strips characters: backticks (e.g. `006-make-just-setup-additive`, title `Make \`just setup\` additive by default`), parentheses, slashes/underscores in titles, dot/period-bearing version numbers (e.g. `v4.7`), internal multi-spaces. Invocation pattern: subprocess `bin/cortex-resolve-backlog-item` with each input, capture (input, returncode, parsed-filename-or-None). Fixture is `json.dumps(list_of_tuples, indent=2)` written to `tests/fixtures/predicate_a_baseline.json`. Use `CORTEX_BACKLOG_DIR` env var if test isolation is needed (helper honors it per `bin/cortex-resolve-backlog-item:213`); otherwise let the helper resolve `backlog/` upward from cwd.
 - **Verification**: `pytest tests/test_resolve_backlog_item.py -v -k baseline_capture` exits 0 — pass if exit code = 0; AND `python3 -c "import json; assert len(json.load(open('tests/fixtures/predicate_a_baseline.json'))) >= 10"` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Commit baseline (cluster A)
 - **Files**: `tests/test_resolve_backlog_item.py`, `tests/fixtures/predicate_a_baseline.json`
@@ -22,7 +22,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: No canonical-mirror paths touched (tests/ is not mirrored), so no `just build-plugin` needed. Use `/cortex-core:commit`. Subject under 72 chars, e.g. "Add Predicate-A baseline capture for #176". Body cites spec R5a and explains the gating-commit role.
 - **Verification**: `git log -1 --pretty=%s` matches the subject pattern; `git show --stat HEAD --name-only` lists exactly the two files above — pass if both checks succeed.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 3337981)
 
 ### Task 3: Remove Predicate A from `_resolve_title_phrase`
 - **Files**: `bin/cortex-resolve-backlog-item`
@@ -31,7 +31,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: The `_resolve_title_phrase` function is module-private (underscore prefix); no external callers. `slug_input = slugify(input_str)` MUST remain — it is also used at L354 and L375 in `main()` for empty-after-slugify detection (do not remove). After this task: function takes `items_with_fm`, computes `slug_input` and per-item `slug_title`, returns items where `slug_input ⊆ slug_title`, dedup by `path.name`. Header comment block at L31-36 ("Local slugify re-implementation") is unrelated and stays. The L376 inline comment ("Predicate A: empty lower(input)...") must also be removed since predicate-A naming is gone.
 - **Verification**: `grep -c 'predicate_a' bin/cortex-resolve-backlog-item` = 0 — pass if count = 0; `grep -c 'lower_input' bin/cortex-resolve-backlog-item` = 0 — pass if count = 0; `grep -ciE 'Predicate A' bin/cortex-resolve-backlog-item` = 0 — pass if count = 0; `grep -c 'slug_input' bin/cortex-resolve-backlog-item` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (also updated test_edge_empty_title_slugify to assert post-removal `[]` behavior — covered by R4 MODIFIED entry)
 
 ### Task 4: Add Step 5b divergence-assertion test
 - **Files**: `tests/test_resolve_backlog_item.py`
@@ -40,7 +40,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Same test file as Task 1. The `documented_divergences` is a Python list literal in the test module; each row is a dict with `input`, `baseline_outcome`, `post_outcome`, `judgment` (`"bug-shaped"` or `"legitimate-feature"`), and `rationale`. Empty list is acceptable when no divergence surfaces. The curated input set is the same one used by Task 1 — define it in a module-level constant (e.g. `CURATED_INPUTS`) shared between both tests so they exercise identical inputs. Helper invocation pattern: same subprocess pattern as Task 1.
 - **Verification**: `grep -c 'documented_divergences' tests/test_resolve_backlog_item.py` ≥ 1 — pass if count ≥ 1; `grep -c 'test_predicate_a_divergences_match_judgment' tests/test_resolve_backlog_item.py` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Curate per-case divergence judgments
 - **Files**: `tests/test_resolve_backlog_item.py` (populate `documented_divergences`)
@@ -49,7 +49,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Per research §F6, the test author of `tests/test_resolve_backlog_item.py:300-389` documented an inability to construct a clean Predicate-A-only case across ~80 lines of comments. Expected outcome: zero divergences or all-bug-shaped, requiring either an empty `documented_divergences` list or a small list of bug-shaped rows. A `legitimate-feature` divergence is the failure mode that triggers the OQ3 escalation branch in spec Edge Cases; surface to user immediately.
 - **Verification**: `pytest tests/test_resolve_backlog_item.py -v -k divergences_match_judgment` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (zero divergences surfaced; documented_divergences = [] is the curated state)
 
 ### Task 6: Rebuild plugin mirror for `bin/` change
 - **Files**: `plugins/cortex-core/bin/cortex-resolve-backlog-item` (regenerated)
@@ -58,7 +58,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Single command. No new files — `cortex-resolve-backlog-item` already exists in the plugin mirror; this just refreshes the content.
 - **Verification**: `just build-plugin` exits 0 — pass if exit code = 0; `diff -q bin/cortex-resolve-backlog-item plugins/cortex-core/bin/cortex-resolve-backlog-item` exits 0 — pass if exit code = 0 (no diff).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Commit helper change + Step 5b assertion (cluster B)
 - **Files**: `bin/cortex-resolve-backlog-item`, `tests/test_resolve_backlog_item.py`, `plugins/cortex-core/bin/cortex-resolve-backlog-item`
@@ -67,7 +67,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Use `/cortex-core:commit`. Subject under 72 chars, e.g. "Simplify cortex-resolve-backlog-item to slugify-only (#176)". Body cites Spec R4 and R5b plus the Task 2 baseline commit SHA. Pre-commit drift hook will pass because Task 6 synced the bin mirror.
 - **Verification**: `git log -1 --pretty=%s` matches the subject pattern; `git show --stat HEAD --name-only` lists the three files above — pass if both checks succeed.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 4e77f8d)
 
 ### Task 8: Rewrite lifecycle clarify.md §1 to invoke the helper
 - **Files**: `skills/lifecycle/references/clarify.md`
@@ -76,7 +76,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Source of the new §1 prose: `skills/refine/references/clarify.md` L7-L29, with one substantive edit — the title-phrase predicate paragraph at refine's L29 currently describes the Predicate A ∪ Predicate B union; rewrite that paragraph to describe the post-#176 single-predicate form: `slugify(input) ⊆ slugify(title)`, with both sides slugified symmetrically so case, punctuation, underscores, and slashes normalize away. Use soft-positive-routing form (no MUST/CRITICAL/REQUIRED) per spec Non-Requirements and CLAUDE.md OQ3 default. The Resolve Input section's heading style (`### 1. Resolve Input`) and the Note callout about implementation suggestions at refine's L23 are preserved verbatim.
 - **Verification**: `grep -c 'cortex-resolve-backlog-item' skills/lifecycle/references/clarify.md` ≥ 1 — pass if count ≥ 1; `grep -c 'Exit 0' skills/lifecycle/references/clarify.md` ≥ 1 — pass if count ≥ 1; `grep -c 'Exit 2' skills/lifecycle/references/clarify.md` ≥ 1 — pass if count ≥ 1; `grep -c 'Exit 3' skills/lifecycle/references/clarify.md` ≥ 1 — pass if count ≥ 1; `grep -c 'Exit 64' skills/lifecycle/references/clarify.md` ≥ 1 — pass if count ≥ 1; `grep -c 'Exit 70' skills/lifecycle/references/clarify.md` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Delete refine clarify.md and retarget refine SKILL.md to bare-relative path
 - **Files**: `skills/refine/references/clarify.md` (delete), `skills/refine/SKILL.md` (modify L38, L65, L86)
@@ -85,7 +85,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Three call sites in `skills/refine/SKILL.md`. The bare-relative form `../lifecycle/references/clarify.md` has no precedent in the repo for cross-skill `..` traversal — its path-resolution semantics are asserted (anchor relative to the SKILL.md file's directory) and verified by Task 13's smoke-test matrix, not just by literal-string presence in this task's verification. After this task, no `references/clarify.md` references remain in `skills/refine/SKILL.md` that lack the `../lifecycle/` prefix.
 - **Verification**: `test ! -f skills/refine/references/clarify.md` exits 0 — pass if exit code = 0; `grep -c '\.\./lifecycle/references/clarify\.md' skills/refine/SKILL.md` = 3 — pass if count = 3; `grep -cE '(^|[^/.])references/clarify\.md' skills/refine/SKILL.md` = 0 — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Rebuild plugin mirror for `skills/` changes
 - **Files**: `plugins/cortex-core/skills/lifecycle/references/clarify.md` (regenerated), `plugins/cortex-core/skills/refine/references/clarify.md` (auto-pruned)
@@ -94,7 +94,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Single command. The mirror's lifecycle clarify.md is regenerated from canonical; the mirror's refine clarify.md is removed because the canonical no longer has it.
 - **Verification**: `just build-plugin` exits 0 — pass if exit code = 0; `test ! -f plugins/cortex-core/skills/refine/references/clarify.md` exits 0 — pass if exit code = 0; `diff -q skills/lifecycle/references/clarify.md plugins/cortex-core/skills/lifecycle/references/clarify.md` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Run dual-source parity + lifecycle reference resolution tests
 - **Files**: (read-only invocation: `tests/test_dual_source_reference_parity.py`, `tests/test_lifecycle_references_resolve.py`)
@@ -103,7 +103,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Both tests are existing — `tests/test_dual_source_reference_parity.py` walks the canonical and mirror trees and asserts byte-identical parity for every collected pair; `tests/test_lifecycle_references_resolve.py` checks that paths referenced from lifecycle's SKILL.md and clarify.md resolve to existing files.
 - **Verification**: `pytest tests/test_dual_source_reference_parity.py tests/test_lifecycle_references_resolve.py` exits 0 — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (test_lifecycle_references_resolve had a pre-existing latent bug exposed by the deletion — the slash-path regex over-matched `lifecycle/references/<file>.md` as feature citations when those are abbreviations for `skills/lifecycle/references/<file>.md`; added NON_FEATURE_SUBDIRS = {"references"} exclusion in `_extract_references`)
 
 ### Task 12: Commit lifecycle adoption + refine deletion + retarget + mirror sync (cluster C)
 - **Files**: `skills/lifecycle/references/clarify.md`, `skills/refine/references/clarify.md` (deletion), `skills/refine/SKILL.md`, `plugins/cortex-core/skills/lifecycle/references/clarify.md`, `plugins/cortex-core/skills/refine/references/clarify.md` (deletion)
@@ -112,7 +112,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Use `/cortex-core:commit`. Subject under 72 chars, e.g. "Lifecycle adopts cortex-resolve-backlog-item; drop refine clarify (#176)". Body summarizes the three coupled requirements (R1 lifecycle §1 rewrite, R2/R3 refine deletion + retarget, R6 mirror auto-prune).
 - **Verification**: `git log -1 --pretty=%s` matches the subject pattern; `git show --stat HEAD --name-only` includes all five files above — pass if both checks succeed.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 8268d08; also includes test_lifecycle_references_resolve.py NON_FEATURE_SUBDIRS fix and plugins/cortex-core/skills/refine/SKILL.md mirror sync)
 
 ### Task 13: Manual two-shot smoke test under both invocation layouts (R8)
 - **Files**: PR description (interactive note recording the smoke-test result)
@@ -121,7 +121,7 @@ Land the spec in three sequenced commits within one PR: (A) gate-commit a frozen
 - **Complexity**: simple
 - **Context**: Refine and lifecycle skill invocations are interactive Claude Code skills that cannot be executed from a shell command. Layout 2 is the runtime layout most likely to expose CWD-vs-file-relative resolution differences because lifecycle's SKILL.md L220 directs Claude to "Read `skills/refine/SKILL.md` verbatim" — the bare-relative path in refine's SKILL.md must resolve correctly when the active skill is lifecycle but the file containing the path is refine's. Cross-load anchor of inner `references/clarify-critic.md` references inside the loaded clarify.md must also be exercised (spec Edge Cases §"Cross-skill load cascade with §3a Critic Review").
 - **Verification**: Interactive/session-dependent: refine and lifecycle invocations are interactive Claude Code skills that cannot be exercised from a shell — verification is a manual two-shot smoke test with the (layout, backlog-id, exit-status) tuple recorded in the PR description.
-- **Status**: [ ] pending
+- **Status**: [x] skipped per user decision (R8 smoke test deferred; confidence based on textual path presence + standard relative-file resolution behavior, not live Layout 1/2 invocation)
 
 ## Verification Strategy
 

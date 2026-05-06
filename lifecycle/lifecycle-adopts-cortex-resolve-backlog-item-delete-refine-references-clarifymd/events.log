@@ -78,3 +78,28 @@
   feature: lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd
   from: plan
   to: implement
+{"ts": "2026-05-06T19:56:39Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 0, "tasks": [1]}
+{"ts": "2026-05-06T20:07:05Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-05-06T20:07:05Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 1, "tasks": [2]}
+{"ts": "2026-05-06T20:07:43Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 2, "batch": 1, "status": "success", "commit": "3337981"}
+{"ts": "2026-05-06T20:07:50Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 2, "tasks": [3]}
+{"ts": "2026-05-06T20:11:10Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 3, "batch": 2, "status": "success", "note": "test_edge_empty_title_slugify updated to assert post-removal [] behavior"}
+{"ts": "2026-05-06T20:11:10Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 3, "tasks": [4, 6]}
+{"ts": "2026-05-06T20:13:19Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 4, "batch": 3, "status": "success"}
+{"ts": "2026-05-06T20:13:19Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 6, "batch": 3, "status": "success"}
+{"ts": "2026-05-06T20:13:19Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 4, "tasks": [5]}
+{"ts": "2026-05-06T20:13:48Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 5, "batch": 4, "status": "success", "divergences_count": 0, "note": "documented_divergences = [] — post-removal helper byte-for-byte matches baseline on curated set"}
+{"ts": "2026-05-06T20:13:48Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 5, "tasks": [7]}
+{"ts": "2026-05-06T20:14:19Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 7, "batch": 5, "status": "success", "commit": "4e77f8d"}
+{"ts": "2026-05-06T20:14:19Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 6, "tasks": [8]}
+{"ts": "2026-05-06T20:16:30Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 8, "batch": 6, "status": "success"}
+{"ts": "2026-05-06T20:16:30Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 7, "tasks": [9]}
+{"ts": "2026-05-06T20:18:07Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 9, "batch": 7, "status": "success"}
+{"ts": "2026-05-06T20:18:07Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 8, "tasks": [10]}
+{"ts": "2026-05-06T20:23:05Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 11, "batch": 9, "status": "success", "note": "added NON_FEATURE_SUBDIRS exclusion in test_lifecycle_references_resolve to fix pre-existing latent bug in slash-path regex over-matching"}
+{"ts": "2026-05-06T20:23:05Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 10, "tasks": [12]}
+{"ts": "2026-05-06T20:24:41Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 12, "batch": 10, "status": "success", "commit": "8268d08"}
+{"ts": "2026-05-06T20:24:41Z", "event": "batch_dispatch", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "batch": 11, "tasks": [13]}
+{"ts": "2026-05-06T20:27:41Z", "event": "task_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "task": 13, "batch": 11, "status": "skipped", "note": "manual two-shot smoke test (R8) skipped per user decision (option 3 of post-task-12 smoke-test menu); confidence based on textual presence of bare-relative path in refine SKILL.md L38/65/86 + standard relative-file resolution behavior; not exercised under live Layout 1 / Layout 2 invocations"}
+{"ts": "2026-05-06T20:27:57Z", "event": "phase_transition", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "tier": "simple", "from": "implement", "to": "complete"}
+{"ts": "2026-05-06T20:30:20Z", "event": "feature_complete", "feature": "lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd", "tasks_total": 13, "rework_cycles": 0}
