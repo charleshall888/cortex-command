@@ -688,20 +688,21 @@ def test_edge_empty_after_slugify(tmp_path):
 
 
 def test_edge_empty_title_slugify(resolver, tmp_path):
-    """Item whose title is all special chars is still matchable via predicate A."""
+    """Empty slug_input no longer matches empty slug_title (post-#176 slugify-only)."""
     backlog = tmp_path / "backlog"
     backlog.mkdir()
-    # Title "!!!" → slugify → "" so predicate B can't fire; predicate A: "!!!" in "!!!" → True
-    item = _make_item(backlog, "001-special.md", "!!!")
+    # Title "!!!" slugifies to ""; input "!!!" slugifies to "". The bool(slug_input)
+    # guard rejects empty-string matches so the function returns []. Pre-#176 this
+    # fired via Predicate A (raw "!!!" in raw "!!!"); post-#176 with A removed, no
+    # match — consistent with main()'s exit-64 guard for empty-after-slugify input.
+    _make_item(backlog, "001-special.md", "!!!")
     _make_item(backlog, "002-normal.md", "Normal ticket")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
         for p in sorted(backlog.glob("[0-9]*-*.md"))
     ]
-    # Direct call with "!!!" would be caught by slug_input check before _resolve_title_phrase.
-    # Test the function directly with this edge-case title: predicate A should fire.
     matches = resolver._resolve_title_phrase("!!!", items_with_fm)
-    assert item in matches
+    assert matches == []
 
 
 # ---------------------------------------------------------------------------
@@ -827,4 +828,105 @@ def test_predicate_a_baseline_capture():
     )
     assert len(loaded) == len(CURATED_INPUTS), (
         f"fixture row count {len(loaded)} != len(CURATED_INPUTS) {len(CURATED_INPUTS)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# R5b: Post-removal divergence assertion
+# Spec: extend tests/test_resolve_backlog_item.py with
+# test_predicate_a_divergences_match_judgment that re-runs CURATED_INPUTS
+# against the post-removal (slugify-only / Predicate-B-only) helper and
+# asserts each (input → outcome) tuple either:
+#   (i)  matches the frozen baseline from tests/fixtures/predicate_a_baseline.json, or
+#   (ii) appears in documented_divergences with a per-case judgment.
+#
+# documented_divergences rows carry:
+#   input            — the CURATED_INPUTS entry that diverged
+#   baseline_outcome — [exit_code, filename_or_None] from the frozen baseline
+#   post_outcome     — [exit_code, filename_or_None] observed post-removal
+#   judgment         — "bug-shaped" or "legitimate-feature"
+#   rationale        — one-sentence explanation
+#
+# Policy (spec R5b): "legitimate-feature" rows block merge until OQ3 evidence
+# or user override; "bug-shaped" rows merge as-is. Judgment is enforced by
+# code review, not by this test.
+# ---------------------------------------------------------------------------
+
+documented_divergences: list[dict] = []
+# Task 5 will populate this list after running the test and observing which
+# inputs diverge from the frozen baseline. Start empty per task instructions.
+
+
+def test_predicate_a_divergences_match_judgment():
+    """Assert post-removal outcomes match baseline or carry an explicit judgment.
+
+    Re-runs each input in CURATED_INPUTS against the current (post-Predicate-A-
+    removal) helper over the live backlog and compares to the frozen baseline in
+    tests/fixtures/predicate_a_baseline.json.
+
+    For each input:
+      - If post_outcome == baseline_outcome: pass (no divergence).
+      - Else: look up documented_divergences by input.
+        - If a matching row exists: pass (divergence is curated, judgment noted).
+        - If no matching row: fail with a descriptive message.
+
+    Any unexpected divergence (differs from baseline AND absent from
+    documented_divergences) is a test failure until Task 5 curates it.
+    """
+    assert BASELINE_FIXTURE.exists(), (
+        f"Baseline fixture not found at {BASELINE_FIXTURE}. "
+        "Run test_predicate_a_baseline_capture first."
+    )
+    assert BACKLOG_DIR.is_dir(), f"live backlog not found at {BACKLOG_DIR}"
+
+    baseline_rows = json.loads(BASELINE_FIXTURE.read_text(encoding="utf-8"))
+    # Build a lookup: input → [exit_code, filename_or_None]
+    baseline_by_input: dict[str, list] = {
+        row[0]: [row[1], row[2]] for row in baseline_rows
+    }
+    # Build a lookup: input → divergence row (for O(1) check)
+    divergence_by_input: dict[str, dict] = {
+        row["input"]: row for row in documented_divergences
+    }
+
+    failures: list[str] = []
+    for inp in CURATED_INPUTS:
+        result = _run_live(inp)
+        if result.returncode == 0:
+            try:
+                payload = json.loads(result.stdout)
+                resolved = payload["filename"]
+            except (json.JSONDecodeError, KeyError):
+                resolved = None
+        else:
+            resolved = None
+        post_outcome = [result.returncode, resolved]
+
+        baseline_outcome = baseline_by_input.get(inp)
+        if baseline_outcome is None:
+            # Input not in baseline — treat as divergence requiring curation
+            if inp not in divergence_by_input:
+                failures.append(
+                    f"Input {inp!r}: not found in baseline fixture AND not in "
+                    f"documented_divergences; post_outcome={post_outcome}"
+                )
+            continue
+
+        if post_outcome == baseline_outcome:
+            continue  # no divergence
+
+        # Divergence detected — must appear in documented_divergences
+        if inp in divergence_by_input:
+            continue  # curated; pass regardless of judgment value
+
+        failures.append(
+            f"Input {inp!r}: post_outcome={post_outcome} differs from "
+            f"baseline_outcome={baseline_outcome} and is not in "
+            f"documented_divergences. Add a curation row with judgment "
+            f"'bug-shaped' or 'legitimate-feature' and a rationale."
+        )
+
+    assert not failures, (
+        f"{len(failures)} uncurated divergence(s) detected:\n"
+        + "\n".join(f"  {i+1}. {msg}" for i, msg in enumerate(failures))
     )

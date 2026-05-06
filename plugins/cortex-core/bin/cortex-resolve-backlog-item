@@ -139,12 +139,11 @@ def _resolve_title_phrase(
     input_str: str,
     items_with_fm: List[Tuple[Path, dict]],
 ) -> List[Path]:
-    """Union of predicate-A and predicate-B matches, deduplicated by filename.
+    """Match items whose slugified title contains slugified input, deduplicated by filename.
 
-    Predicate A: ``lower(input_str)`` is a substring of ``lower(title)``.
-    Predicate B: ``slugify(input_str)`` is a substring of ``slugify(title)``.
+    Returns items where ``slugify(input_str) ⊆ slugify(title)``.
+    Empty ``slug_input`` is handled upstream as exit-64 before reaching here.
     """
-    lower_input = input_str.lower()
     slug_input = slugify(input_str)
 
     seen: set[str] = set()
@@ -153,15 +152,9 @@ def _resolve_title_phrase(
     for path, fm in items_with_fm:
         title = _item_title(path, fm)
 
-        # Predicate A: raw case-folded substring
-        predicate_a = lower_input and lower_input in title.lower()
-
-        # Predicate B: slugified substring (empty slug_input → always matches,
-        # handled upstream as exit-64 before we reach here)
+        # Slugified substring match
         slug_title = slugify(title)
-        predicate_b = bool(slug_input) and slug_input in slug_title
-
-        if predicate_a or predicate_b:
+        if bool(slug_input) and slug_input in slug_title:
             if path.name not in seen:
                 seen.add(path.name)
                 results.append(path)
@@ -261,10 +254,8 @@ def _build_parser() -> argparse.ArgumentParser:
             "Resolution order: numeric → kebab-slug → title-phrase.\n\n"
             "Numeric: matches filenames whose NNN- prefix equals the input.\n"
             "Leading zeros are matched literally (009 → 009-*.md, not 9-*.md).\n\n"
-            "Title-phrase predicate:\n"
-            "  Predicate A (raw): lower(input) ⊆ lower(title)\n"
-            "  Predicate B (slug): slugify(input) ⊆ slugify(title)\n"
-            "Candidate set is the set-theoretic union, deduplicated by filename.\n\n"
+            "Title-phrase predicate: slugify(input) ⊆ slugify(title),\n"
+            "deduplicated by filename.\n\n"
             "Override the backlog directory with CORTEX_BACKLOG_DIR (for tests).\n"
         ),
     )
@@ -373,7 +364,7 @@ def main(argv: List[str] | None = None) -> int:  # noqa: UP007 (Python 3.9 compa
 
         # Empty-after-slugify check for title-phrase path
         if not slug_input:
-            # Predicate A: empty lower(input) is a substring of everything — exit 64
+            # empty slug_input means input slugifies to empty — exit 64
             print(
                 f"input '{input_str}' resolves to empty after normalization; "
                 "provide more characters",
