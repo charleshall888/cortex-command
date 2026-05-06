@@ -1,0 +1,81 @@
+{
+  "ts": "2026-05-05T21:35:00Z",
+  "feature": "fix-archive-predicate-and-sweep-lifecycle-and-research-dirs",
+  "artifact": "lifecycle/fix-archive-predicate-and-sweep-lifecycle-and-research-dirs/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {"completed": 4, "dispatched": 4},
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Veto Surface explicitly documents R7 manifest-divergence revert-and-replay path but is silent on the equivalent R12/R13-revert-post-Commit-3 heavyweight-rewind path; reader following Veto Surface as authoritative catalog won't know R13 failure at Task 10 also requires Commit 3 revert.",
+      "reviewer_angle": "Post-Commit-3 sequencing fragility",
+      "evidence_quote": "Tasks 9–10 abort behavior on R7 binding rule violations: spec R7 specifies that if F-10's research-partition re-validation diverges from the manifest, F-10 aborts AND the operator reverts Commit 3, refreshes the manifest, re-commits Commit 2, and replays from Task 9."
+    },
+    {
+      "class": "B",
+      "finding": "Reviewer claimed R5 sha256 cannot match post-commit because lifecycle/archive/ already exists from Commit 3; this premise is contradicted by git checkout's documented behavior — git stash + git checkout HEAD~1 restores the working tree to the target commit's state, so the dry-run at HEAD~1 (= Commit 2) reproduces the captured sha256.",
+      "reviewer_angle": "Verification destructiveness and non-idempotent sweeps",
+      "evidence_quote": "By the time Verification runs, Commit 3 has already been created — the sweep (git mv loops, rm -rf lifecycle/feat-a/) is already committed."
+    },
+    {
+      "class": "B",
+      "finding": "git stash pop conflict scenario has no documented resolution path if the verification block leaves conflict markers in the tree post-Commit-3.",
+      "reviewer_angle": "Verification destructiveness and non-idempotent sweeps",
+      "evidence_quote": "If the stash pop encounters a merge conflict... git stash pop exits non-zero and leaves conflict markers in the working tree."
+    },
+    {
+      "class": "B",
+      "finding": "R5 automated re-derivation conflates external-reviewer-in-clean-clone intent with in-process executor automation; spec R5 acceptance reads as an external reviewer step but the plan implements it as an inline post-commit sequence.",
+      "reviewer_angle": "Verification destructiveness and non-idempotent sweeps",
+      "evidence_quote": "The spec's R5 acceptance criterion is written as a step an external reviewer performs in a clean environment."
+    },
+    {
+      "class": "B",
+      "finding": "Task 10's git mv research-archive loop has the same non-idempotency gap as Task 9; partial completion + R7 'refresh manifest' recovery legitimizes broken state.",
+      "reviewer_angle": "Verification destructiveness and non-idempotent sweeps",
+      "evidence_quote": "Task 10's research sweep (git mv research/<slug>/ research/archive/<slug>/ for each manifest slug) has no partial-completion detection."
+    },
+    {
+      "class": "B",
+      "finding": "111+ backlog discovery_source: research/<slug> frontmatter fields become dead paths post-F-10; /cortex-core:refine Discovery Bootstrap reads these as agent context, silently failing.",
+      "reviewer_angle": "F-10 silent breakage of research/<slug> citations",
+      "evidence_quote": "git grep shows 111 backlog/*.md lines with discovery_source: research/<slug> pointing to slugs swept by F-10."
+    },
+    {
+      "class": "B",
+      "finding": "~30 in-flight lifecycle artifacts (research.md, spec.md, plan.md outside lifecycle/archive/) cite swept research slugs as escalation targets, DR references, and implementation guides — forward-operational instructions, not historical footnotes.",
+      "reviewer_angle": "F-10 silent breakage of research/<slug> citations",
+      "evidence_quote": "lifecycle/tighten-1b-plan-agent-prompt-*/spec.md:90 directs operators to 'Escalate to research/competing-plan-synthesis/research.md DR-3 Option 3'."
+    },
+    {
+      "class": "B",
+      "finding": "docs/sdk.md:9 hyperlink and docs/setup.md:388 prose citation will produce broken GitHub links post-F-10.",
+      "reviewer_angle": "F-10 silent breakage of research/<slug> citations",
+      "evidence_quote": "docs/sdk.md:9 contains a Markdown hyperlink [research/claude-code-sdk-usage/research.md](../research/claude-code-sdk-usage/research.md) that will 404 on GitHub after F-10."
+    },
+    {
+      "class": "B",
+      "finding": "Spec edge case 82 makes a false claim about R10 catching body-cited archived slugs — R10 only validates lifecycle/<slug> forms, not research/<slug>.",
+      "reviewer_angle": "F-10 silent breakage of research/<slug> citations",
+      "evidence_quote": "Backlog ticket body still cites a now-archived slug after the sweep: R10's integration test catches this; the rewrite recipe handled body-text and frontmatter spec:/discovery_source: fields."
+    },
+    {
+      "class": "B",
+      "finding": "Surviving research artifacts (competing-plan-synthesis, sandbox-overnight-child-agents, post-113-repo-state) contain cross-citations to swept research slugs that go unrewritten.",
+      "reviewer_angle": "F-10 silent breakage of research/<slug> citations",
+      "evidence_quote": "research/competing-plan-synthesis/research.md, research/sandbox-overnight-child-agents/research.md, research/post-113-repo-state/research.md... contain body-text citations to swept slugs."
+    },
+    {
+      "class": "B",
+      "finding": "events.log feature_complete schema does not include commit_sha field in any lifecycle dir; the 'use lifecycle artifact for SHA' alternative is not currently viable without a lifecycle skill change.",
+      "reviewer_angle": "Heuristic prereq SHA discovery",
+      "evidence_quote": "grep -r '\"event\": \"feature_complete\"' lifecycle/ shows ts/feature/tasks_total/rework_cycles fields only; no commit_sha field in any entry."
+    },
+    {
+      "class": "B",
+      "finding": "Task 8 abort guard does not fire for #168 even though #168 is in plan phase with no feature_complete event — c019e97 is returned and trivially passes ancestor check.",
+      "reviewer_angle": "Heuristic prereq SHA discovery",
+      "evidence_quote": "the abort condition does not fire — even though #168 is in plan phase with no feature-complete event."
+    }
+  ]
+}

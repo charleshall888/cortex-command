@@ -63,7 +63,7 @@
   {
     "id": 169,
     "title": "Fix archive predicate and sweep lifecycle/ and research/ dirs",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "feature",
     "tags": [
@@ -84,9 +84,9 @@
     "discovery_source": "research/repo-spring-cleaning/research.md",
     "plan": null,
     "uuid": "924ee1c9-96a9-42a7-8060-9fbf68451681",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "fix-archive-predicate-and-sweep-lifecycle-and-research-dirs",
+    "session_id": "9989f0e6-17df-44ec-8f26-4e22c0face84",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
