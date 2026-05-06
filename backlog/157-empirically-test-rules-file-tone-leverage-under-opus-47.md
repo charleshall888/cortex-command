@@ -14,7 +14,7 @@ tags: [opus-4-7-harness-adaptation, policy]
 
 ## Motivation
 
-Gives R7 trigger (d) a concrete re-litigation path by converting the deferred
+Gives R7 trigger (b) a concrete re-litigation path by converting the deferred
 empirical question from a passive note into an actionable backlog gate. Until
 this test exists, the trigger ("an empirical test of rules-file tone leverage
 under 4.7+ returns a positive result") cannot fire because no test is queued.
@@ -30,18 +30,18 @@ policy and explicitly punted the empirical question to this follow-up.
 - Compare the two outputs for any warmth shift attributable to the directive
   (e.g. softer hedging, more affirming phrasing, differences in sign-off tone).
 - Document the result inline in this ticket; if positive, that finding is the
-  R7 trigger (d) signal that re-opens the OQ6 must/should-escalation decision.
+  R7 trigger (b) signal that re-opens the OQ6 must/should-escalation decision.
 
 ## Out-of-scope
 
 One-shot empirical test, not ongoing rules-file deployment. No infrastructure
 changes, no new harness mechanism, no recurring tone-monitoring system. The
-output is a single recorded result that either fires R7 trigger (d) or does
+output is a single recorded result that either fires R7 trigger (b) or does
 not.
 
 ## Resolution (2026-05-04) — wontfix
 
-Closing without execution. R7 trigger (d) (in-repo empirical test) is
+Closing without execution. R7 trigger (b) (in-repo empirical test) is
 dominated by triggers (a) (Anthropic publishes guidance) and (e) (Anthropic
 ships an officially-supported tone-control mechanism), which are stronger
 signals for revisiting OQ6. A positive in-repo paired-dispatch result would
