@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import importlib
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -29,13 +28,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _invoke_dashboard_help() -> subprocess.CompletedProcess[str]:
-    """Run ``cortex dashboard --help``, falling back to ``python -m`` on PATH miss."""
+    """Run ``cortex dashboard --help`` against the in-tree CLI.
 
-    cortex = shutil.which("cortex")
-    if cortex is not None:
-        argv = [cortex, "dashboard", "--help"]
-    else:
-        argv = [sys.executable, "-m", "cortex_command.cli", "dashboard", "--help"]
+    Always invokes ``sys.executable -m cortex_command.cli`` so the test
+    exercises this checkout's code rather than whatever stale ``cortex``
+    console script the user happens to have installed (a wheel from
+    before the ``dashboard`` verb shipped would fail with ``invalid
+    choice``).
+    """
+
+    argv = [sys.executable, "-m", "cortex_command.cli", "dashboard", "--help"]
     return subprocess.run(
         argv,
         capture_output=True,

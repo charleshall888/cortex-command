@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: c95205c0-a3cf-4c9c-a60d-792c7c8b2a81
 title: "Rewrite README, migrate content to docs/setup.md, reorganize docs/, and fix stale paths"
-status: backlog
+status: complete
 priority: high
 type: feature
 tags: [repo-spring-cleaning, readme, setup, documentation, share-readiness, stale-paths]
@@ -14,8 +14,8 @@ blocks: []
 blocked-by: []
 discovery_source: research/repo-spring-cleaning/research.md
 session_id: null
-lifecycle_phase: null
-lifecycle_slug: null
+lifecycle_phase: implement
+lifecycle_slug: rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths
 complexity: complex
 criticality: high
 ---

@@ -1,0 +1,73 @@
+{"ts": "2026-05-05T19:46:15Z", "event": "discovery_reference", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "epic_research": "research/repo-spring-cleaning/research.md", "epic_spec": null}
+- ts: 2026-05-05T19:56:47Z
+  event: clarify_critic
+  feature: rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths
+  parent_epic_loaded: true
+  findings:
+    - text: "The Intent-clarity HIGH rating cites L52–54 plugin-auto-update bullets as exhaustive specificity, but claims the auto-update content is in docs/setup.md not README.md — implying line citations are mixing files."
+      origin: primary
+    - text: "The Intent-clarity rating treats the nine-step suggested phase sequencing as load-bearing evidence, but step 1 says 'update CLAUDE.md:34 doc-ownership cross-refs' while the body's scope section three paragraphs earlier insists the line is now CLAUDE.md:50 ('NOT line 34 — round 2 corrected line-number drift'). The body contradicts itself."
+      origin: primary
+    - text: "The Scope-boundedness HIGH rating leans on the 'all changes live under docs/, README.md, requirements/, CHANGELOG.md' framing, but the docs/dashboard.md policy sub-section defers to plan phase a fork that includes Option 1 'ship a cortex dashboard verb that wraps the FastAPI server invocation' — a code change to cortex_command/cli.py, not a docs change. The bounding claim is contradicted by an option the body itself enumerates."
+      origin: primary
+    - text: "The Scope-boundedness rating cites verifiable greps as evidence boundaries are testable. The grep 'docs/pipeline.md|docs/sdk.md|docs/mcp-contract.md' --include='*.py' --include='*.sh' is claimed to catch both cli.py:268 and bin/cortex-check-parity:59. It does not — bin/cortex-check-parity has no extension, so the include filter excludes it."
+      origin: primary
+    - text: "The body claims the pipeline-not-a-skill callout at docs/agentic-layer.md:64 reads 'internal reference, not a user-facing skill' — but the actual line reads 'pipeline is not a user-facing skill and has no entry in skills/. It is an internal Python orchestration module...'. The quoted text and the file disagree."
+      origin: primary
+    - text: "The Scope-boundedness rating relies on an out-of-scope enumeration that cites requirements/project.md:7 as 'F-12 dropped post-critical-review (line already balanced)', but the body and the parent epic both quote different phrasings for that line that disagree with each other and with current file content."
+      origin: primary
+    - text: "The Requirements-alignment 'No conflicts detected' rating overlooks a cross-child coupling: requirements/pipeline.md:130's stale claude/reference/output-floors.md reference (in #166's stale-path scope) sits adjacent to requirements/project.md:36's output-filters.conf reference (retired in parallel by #168). The deprecated-pattern-files cluster spans two siblings; the assessment treated them as cleanly partitioned."
+      origin: primary
+    - text: "The 'complex' complexity tier rests on a 20+ file enumeration, but at least one item — 'backlog/133-...md:56 broken cross-reference to non-existent lifecycle dir' — is unverified; the actual file may not be broken if the link target exists under lifecycle/archive/."
+      origin: primary
+    - text: "The criticality 'high' rating cites cortex_command/cli.py:268 user stderr as load-bearing user-facing CLI output, but the actual stderr block is gated by an upgrade-migration notice that fires only when 'cortex upgrade' is invoked on a stale .mcp.json — conditional, not on every CLI invocation. Installers using fresh installs never hit this code path."
+      origin: primary
+    - text: "The Parent-epic alignment leans on the epic's 'streamlined share-ready state' framing, but the child body adds docs/dashboard.md policy decision (potentially a cortex dashboard verb), docs/backlog.md 'Global Deployment' trim with substantive migration of architectural rules to plugin-development.md, and a CLAUDE.md cross-ref edit — none of which appear in the parent epic's enumerated #166 scope."
+      origin: alignment
+  dispositions:
+    apply: 3
+    dismiss: 7
+    ask: 0
+  applied_fixes:
+    - "Noted CLAUDE.md doc-ownership rule is at line 50 (per body's round-2-corrected scope citation), not line 34 — the suggested-sequencing step 1 reference to ':34' is stale and must be treated as ':50' during research/spec/implementation."
+    - "Acknowledged docs/dashboard.md policy decision creates a plan-phase scope fork: Option 1 (ship cortex dashboard verb) expands scope to cortex_command/cli.py code change; Options 2 & 3 stay docs-only. Scope-boundedness rating remains HIGH because the fork is explicitly documented and bounded — the deferral is intentional and ratified by parent epic line 48 — but research and spec must surface this as an explicit decision before plan."
+    - "Noted verifiable grep 'docs/pipeline.md|docs/sdk.md|docs/mcp-contract.md' --include='*.py' --include='*.sh' misses extensionless bin/ scripts; spec must broaden to '--include=*' or drop the file-glob filter so bin/cortex-check-parity is covered."
+  dismissals:
+    - finding_index: 0
+      rationale: "Verified README.md line numbers in the body match actual file content: L11–29 = ASCII pipeline diagram + tier/criticality legend; L52–54 = plugin auto-update mechanics + extras-tier callout; L73 = ## Authentication; L77 = ## What's Inside; L89 = ## Customization; L93 = ## Distribution; L102 = ## Commands; L117–128 = Documentation; L130–132 = License. The critic's claim that L52–54 references docs/setup.md content is incorrect."
+    - finding_index: 4
+      rationale: "Body's quoted phrase is a paraphrase, not an exact quote; actual callout at agentic-layer.md:64 is 'pipeline is not a user-facing skill and has no entry in skills/. It is an internal Python orchestration module...'. The migration-callout requirement is locatable via grep and the spirit ('this note must not be lost during dedup') is preserved."
+    - finding_index: 5
+      rationale: "Verified current requirements/project.md:7 reads 'Distributed CLI-first as a non-editable wheel installed from a tag-pinned git URL... cloning or forking the repo remains a secondary path for advanced users who want to modify the source.' This text already reads as installer-primary/forker-secondary, supporting the F-12 = drop decision. The line content does support 'already balanced.'"
+    - finding_index: 6
+      rationale: "Verified #166's stale-path fix at requirements/pipeline.md:130 is a single-parenthetical deletion ('Convention defined in claude/reference/output-floors.md...'). #168's retirement of requirements/project.md:36 (output-filters.conf) is a separate edit on a different file. No concrete ordering coupling between the two siblings — they touch different files and lines. The 'deprecated-pattern-files cluster' is thematic, not mechanically coupled."
+    - finding_index: 7
+      rationale: "cli.py:268 stderr being conditional is correct, but criticality 'high' is supported by other factors enumerated in the assessment: CLAUDE.md edits affect the load-bearing project-context file all agents read; bin/cortex-check-parity is a drift-prone enforcement gate; cross-references span 9+ files where a wrong path would cascade. The cli.py-specific argument is one of several supports, not the sole load-bearing one."
+    - finding_index: 8
+      rationale: "Verified backlog/133-evaluate-implementmd180-progress-tail-narration-under-opus-47.md:56 contains markdown link with display text 'lifecycle/archive/remove-progress-update-scaffolding-...' but link target '../lifecycle/remove-progress-update-scaffolding-...' (without the archive/ segment). Display and target diverge; the link target really is broken because the file lives at lifecycle/archive/, not lifecycle/. The body's claim is correct."
+    - finding_index: 9
+      rationale: "Round-2 scope expansions (docs/backlog.md trim with plugin-development.md migration, broader SKILL file sweep, code-reference updates) were ratified by the user via commit c019e97 'Consolidate #166+#167 and apply round 2 audit findings' — the recent consolidation commit. Dashboard policy IS in parent epic scope per backlog/165...md:48 'cortex dashboard verb policy: ship verb / flag contributor-only / cut docs/dashboard.md from installer index — child #166.' The other expansions are intentional."
+  status: ok
+{"ts": "2026-05-05T20:16:56Z", "event": "lifecycle_start", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-05T20:16:56Z", "event": "phase_transition", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "from": "clarify", "to": "research"}
+{"ts": "2026-05-05T20:36:14Z", "event": "phase_transition", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "from": "research", "to": "specify"}
+{"ts": "2026-05-05T21:09:19Z", "event": "orchestrator_review", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "phase": "specify", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-05T22:00:00Z", "event": "orchestrator_review", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
+{"ts": "2026-05-05T23:37:17Z", "event": "phase_transition", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "from": "plan", "to": "implement"}
+{"ts": "2026-05-05T23:37:24Z", "event": "batch_dispatch", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "batch": 0, "tasks": [1, 2, 3, 5, 6, 8]}
+{"ts": "2026-05-05T23:43:06Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-05-05T23:46:00Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 2, "batch": 0, "status": "success"}
+{"ts": "2026-05-05T23:48:01Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 3, "batch": 0, "status": "success"}
+{"ts": "2026-05-05T23:50:12Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 5, "batch": 0, "status": "success"}
+{"ts": "2026-05-05T23:56:17Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 6, "batch": 0, "status": "success"}
+{"ts": "2026-05-06T00:01:39Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 8, "batch": 0, "status": "success"}
+{"ts": "2026-05-06T00:01:39Z", "event": "batch_dispatch", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "batch": 1, "tasks": [4, 7, 9]}
+{"ts": "2026-05-06T00:06:08Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 4, "batch": 1, "status": "success"}
+{"ts": "2026-05-06T00:07:51Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 7, "batch": 1, "status": "success"}
+{"ts": "2026-05-06T00:10:41Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 9, "batch": 1, "status": "success"}
+{"ts": "2026-05-06T00:10:41Z", "event": "batch_dispatch", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "batch": 2, "tasks": [10]}
+{"ts": "2026-05-06T00:12:10Z", "event": "task_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "task": 10, "batch": 2, "status": "success"}
+{"ts": "2026-05-06T00:12:27Z", "event": "phase_transition", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-06T00:19:43Z", "event": "review_verdict", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-06T00:19:43Z", "event": "phase_transition", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "from": "review", "to": "complete"}
+{"ts": "2026-05-06T00:24:40Z", "event": "feature_complete", "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths", "tasks_total": 10, "rework_cycles": 0}
