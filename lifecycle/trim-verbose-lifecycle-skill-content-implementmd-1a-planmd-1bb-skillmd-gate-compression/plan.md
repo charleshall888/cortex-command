@@ -145,7 +145,7 @@ The approved spec (R8, R11) specified Gate 2 (Specify→Plan ≥3-Open-Decisions
   - **Failure messages**: when an assertion trips, the test's failure message must name which check failed (region absence, sentence absence, low-confidence-branch separation, comparison-table separation) so the next maintainer can diagnose without re-reading the test source.
   - **Note on overlap with Task 3**: Task 3 (`test_skill_contracts`) pins helper-pointer presence in `implement.md`. Task 7 pins SEC-1 structural placement in `plan.md`. They cover separate skills and separate failure modes — no test consolidation is needed.
 - **Verification**: run `python3 -m pytest tests/test_daytime_preflight.py -v -k 'sec_1 or plan_md_dispatcher or skill_contracts'` (or whichever test the implementer added the assertions to) — pass if exit 0 and the new assertions pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Regenerate plugin mirrors via `just build-plugin`
 

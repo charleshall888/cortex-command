@@ -414,3 +414,79 @@ def test_skill_contracts() -> None:
         f"§1a must invoke {writer_invocation!r} at least twice "
         f"(Step 2 init + Step 4 update-pid); found {writer_count}"
     )
+
+
+def test_plan_md_dispatcher_contracts() -> None:
+    """plan.md §1b.f must keep the SEC-1 mitigation in its routing-branch context.
+
+    The SEC-1 rationale-hiding rule is operational, not lexical — the dispatcher
+    must hide the synthesizer's preliminary rationale specifically on the
+    low-confidence + malformed-envelope routing branch where untrusted variant
+    content could otherwise steer the operator. A grep-only check (already run
+    by the spec's acceptance criterion) cannot distinguish a surviving mitigation
+    from an orphan sentence whose surrounding conditional was deleted.
+
+    This test pins the structural placement of the SEC-1 sentence in three ways:
+      (a) sentence appears in §1b.f (between the `**f. Route on verdict + confidence**`
+          header and the next `**g.` header)
+      (b) sentence offset within §1b.f is within 400 chars of the `confidence: "low"`
+          routing-branch text — pins association with the conditional
+      (c) sentence offset within §1b.f is within 400 chars of the `comparison table`
+          text — pins association with the dispatcher-side render context that
+          gives the rule its operational meaning
+    """
+    plan_md = REPO_ROOT / "skills" / "lifecycle" / "references" / "plan.md"
+    text = plan_md.read_text()
+
+    # Locate §1b.f region: between `**f. Route on verdict + confidence**` and
+    # the next `**g.` subsection header.
+    f_anchor = re.search(r"\*\*f\. Route on verdict \+ confidence\*\*", text)
+    assert f_anchor is not None, (
+        "could not locate §1b.f section header in plan.md"
+    )
+    g_anchor = re.search(r"\*\*g\. ", text[f_anchor.start():])
+    assert g_anchor is not None, (
+        "could not locate §1b.g section header after §1b.f in plan.md"
+    )
+    section_1b_f = text[f_anchor.start() : f_anchor.start() + g_anchor.start()]
+
+    # (a) SEC-1 sentence is present within §1b.f.
+    sec1_match = re.search(
+        r"preliminary rationale is hidden from the comparison table",
+        section_1b_f,
+    )
+    assert sec1_match is not None, (
+        "§1b.f must contain the SEC-1 rationale-hiding sentence "
+        "(verbatim: 'preliminary rationale is hidden from the comparison table')"
+    )
+    sec1_offset = sec1_match.start()
+
+    # (b) SEC-1 sentence is co-located with the low-confidence routing branch
+    # (within ±400 chars). The branch governs when the rule applies.
+    low_conf_match = re.search(r'confidence: "low"', section_1b_f)
+    assert low_conf_match is not None, (
+        '§1b.f must reference the `confidence: "low"` routing branch — '
+        "this is the conditional under which SEC-1 fires"
+    )
+    low_conf_distance = abs(sec1_offset - low_conf_match.start())
+    assert low_conf_distance <= 400, (
+        f"SEC-1 sentence is {low_conf_distance} chars from the "
+        f'`confidence: "low"` routing branch in §1b.f; expected ≤400. '
+        "A pathological edit may have moved the sentence away from its "
+        "guarding conditional, leaving the mitigation orphaned."
+    )
+
+    # (c) SEC-1 sentence is co-located with the comparison-table render
+    # (within ±400 chars). The render context gives the rule operational meaning.
+    table_match = re.search(r"comparison table", section_1b_f)
+    assert table_match is not None, (
+        "§1b.f must reference the comparison table — "
+        "the dispatcher-side render context for SEC-1"
+    )
+    table_distance = abs(sec1_offset - table_match.start())
+    assert table_distance <= 400, (
+        f"SEC-1 sentence is {table_distance} chars from the "
+        "`comparison table` reference in §1b.f; expected ≤400. "
+        "A pathological edit may have decoupled the rationale-hiding rule "
+        "from the render path it governs."
+    )
