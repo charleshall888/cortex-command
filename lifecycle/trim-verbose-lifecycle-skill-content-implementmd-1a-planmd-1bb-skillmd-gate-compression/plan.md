@@ -127,9 +127,9 @@ The approved spec (R8, R11) specified Gate 2 (Specify→Plan ≥3-Open-Decisions
   - `grep -c '"event": "complexity_override"' skills/lifecycle/SKILL.md` returns 1 (down from 3 — only the Gate 1 canonical example remains).
   - `grep -c "cortex_command/overnight/events.py" skills/lifecycle/SKILL.md` returns ≥ 1 (canonical schema pointer present).
   - `grep -c "active complexity tier for all subsequent phases" skills/lifecycle/SKILL.md` returns ≥ 1 (line 328 effect-side prose re-homed into Step 5).
-  - `grep -c "Research.*Specify.*Open Questions" skills/lifecycle/SKILL.md` returns ≥ 1 (Gate 1 inline preserved).
-  - `grep -c "Specify.*Plan.*Open Decisions" skills/lifecycle/SKILL.md` returns ≥ 1 (Gate 2 inline preserved per Alt C — note this is the **opposite** of the spec's R8 acceptance criterion which expected 0; the Alt C deviation reverses this).
-- **Status**: [ ] pending
+  - `grep -c "## Open Questions" skills/lifecycle/SKILL.md` returns ≥ 1 (Gate 1 inline preserved — original `Research.*Specify.*Open Questions` pattern was line-bounded; `## Open Questions` is a stable substring on a single line of the Gate 1 prose).
+  - `grep -c "## Open Decisions" skills/lifecycle/SKILL.md` returns ≥ 1 (Gate 2 inline preserved per Alt C — original `Specify.*Plan.*Open Decisions` pattern was line-bounded; this is the **opposite** of the spec's R8 acceptance criterion which expected 0, the Alt C deviation reverses this).
+- **Status**: [x] complete
 
 ### Task 7: Pin SEC-1 sentence's structural placement in `tests/`
 

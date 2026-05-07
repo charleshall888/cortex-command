@@ -28,11 +28,10 @@ A file-based state machine that survives context loss. Enforces research-before-
 5. [Step 3: Execute Current Phase](#step-3-execute-current-phase)
 6. [Phase Transition](#phase-transition)
 7. [Criticality Override](#criticality-override)
-8. [Complexity Override](#complexity-override)
-9. [Criticality Behavior Matrix](#criticality-behavior-matrix)
-10. [Lifecycle Directory](#lifecycle-directory)
-11. [Concurrent Sessions](#concurrent-sessions)
-12. [Parallel Execution](#parallel-execution)
+8. [Criticality Behavior Matrix](#criticality-behavior-matrix)
+9. [Lifecycle Directory](#lifecycle-directory)
+10. [Concurrent Sessions](#concurrent-sessions)
+11. [Parallel Execution](#parallel-execution)
 
 ## Invocation
 
@@ -266,14 +265,13 @@ The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. T
       {"ts": "<ISO 8601>", "event": "complexity_override", "feature": "<name>", "from": "simple", "to": "complex"}
       ```
 
+   The `complexity_override` event changes the active complexity tier for all subsequent phases. State detection (Step 2, "Detect complexity tier") will recognize this event and apply its `"to"` field as the active tier for Plan, Implement, Review, and Complete phases. The same effect applies to Step 6 (Gate 2) since both gates emit the same event type.
+
 6. **Specify → Plan complexity escalation check**: after the spec is approved by the user and **before** logging the `phase_transition` event from "specify" to "plan", check whether to auto-escalate the complexity tier:
 
    - Read the active tier from `lifecycle/{feature}/events.log` using the two-step detection in Step 2. If the active tier is already `complex`, skip this check entirely.
    - Otherwise, scan `lifecycle/{feature}/spec.md` for a `## Open Decisions` section. Count the number of bullet items (`-` or `*` lines) directly under that heading. If the section is absent or the count is fewer than 3, skip the check.
-   - If the count is ≥ 3, automatically escalate to Complex tier — append the following event to `lifecycle/{feature}/events.log`, announce the escalation briefly ("Escalating to Complex tier — spec contains N open decisions"), then proceed to Plan at Complex tier:
-     ```json
-     {"ts": "<ISO 8601>", "event": "complexity_override", "feature": "<name>", "from": "simple", "to": "complex"}
-     ```
+   - If the count is ≥ 3, automatically escalate to Complex tier — append a `complexity_override` event to `lifecycle/{feature}/events.log` (event format identical to Step 5 above; schema: `cortex_command/overnight/events.py`), announce the escalation briefly ("Escalating to Complex tier — spec contains N open decisions"), then proceed to Plan at Complex tier.
 
 The Research and Spec phases are handled by the /cortex-core:refine delegation block above. The following phases run directly in the lifecycle context:
 
@@ -306,26 +304,6 @@ The user can change criticality at any time by requesting it explicitly. When ov
 ```
 
 The user's criticality setting is always final. No automated process (including future orchestrator additions) may override the user's choice.
-
-## Complexity Override
-
-Complexity tier may be escalated automatically at specific phase transitions if heuristics detect additional complexity. When the user accepts an escalation prompt, a `complexity_override` event is appended to `lifecycle/{feature}/events.log`:
-
-```json
-{"ts": "<ISO 8601>", "event": "complexity_override", "feature": "<name>", "from": "simple", "to": "complex"}
-```
-
-Escalation can occur at two points:
-
-1. **Research → Specify transition**: If `lifecycle/{feature}/research.md` contains a `## Open Questions` section with ≥2 bullet items, automatically escalate to Complex tier and announce briefly.
-2. **Specify → Plan transition**: If `lifecycle/{feature}/spec.md` contains a `## Open Decisions` section with ≥3 bullet items, automatically escalate to Complex tier and announce briefly.
-
-In both cases:
-- Escalation is automatic — no user confirmation required.
-- Append the `complexity_override` event and proceed to the next phase at Complex tier.
-- If the feature is already at Complex tier: skip the check entirely.
-
-The `complexity_override` event changes the active complexity tier for all subsequent phases. State detection (Step 2, "Detect complexity tier") will recognize this event and apply its `"to"` field as the active tier for Plan, Implement, Review, and Complete phases.
 
 ## Criticality Behavior Matrix
 
