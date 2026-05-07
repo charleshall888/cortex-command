@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 964da654-63d8-45e6-b29e-79a8598a1b2c
 title: "Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression)"
 type: chore
-status: in_progress
+status: complete
 priority: high
 parent: 172
 blocked-by: []
@@ -15,8 +15,8 @@ complexity: complex
 criticality: high
 spec: lifecycle/trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression/spec.md
 areas: [skills]
-session_id: d5a1f1a3-ebfe-4fe8-a0d1-de09e171b202
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression)

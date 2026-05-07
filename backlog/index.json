@@ -63,38 +63,6 @@
     "repo": null
   },
   {
-    "id": 177,
-    "title": "Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression)",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "lifecycle",
-      "content-trim",
-      "token-efficiency",
-      "gate-compression",
-      "vertical-planning"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-06",
-    "updated": "2026-05-06",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "172",
-    "research": null,
-    "spec": "lifecycle/trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression/spec.md",
-    "discovery_source": "research/vertical-planning/research.md",
-    "plan": null,
-    "uuid": "964da654-63d8-45e6-b29e-79a8598a1b2c",
-    "lifecycle_slug": null,
-    "session_id": "d5a1f1a3-ebfe-4fe8-a0d1-de09e171b202",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 182,
     "title": "Vertical-planning adoption as REPLACEMENT: ## Outline absorbs Scope Boundaries + Verification Strategy; ## Risks preserves Veto Surface; tier-conditional ## Acceptance",
     "status": "backlog",
@@ -236,9 +204,7 @@
     "created": "2026-05-06",
     "updated": "2026-05-06",
     "blocks": [],
-    "blocked_by": [
-      "177"
-    ],
+    "blocked_by": [],
     "parent": "172",
     "research": null,
     "spec": null,
@@ -300,9 +266,7 @@
     "created": "2026-05-06",
     "updated": "2026-05-06",
     "blocks": [],
-    "blocked_by": [
-      "177"
-    ],
+    "blocked_by": [],
     "parent": "172",
     "research": null,
     "spec": null,
