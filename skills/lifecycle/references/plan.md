@@ -29,7 +29,7 @@ When criticality is `critical`, dispatch 2-3 independent plan agents to produce 
 
 **a. Prepare shared context**: Read `lifecycle/{feature}/spec.md` and `lifecycle/{feature}/research.md` in the main context. These will be provided to each plan agent. Do NOT share one agent's draft with another — each agent must work independently.
 
-**b. Dispatch plan agents**: Launch each agent as a parallel Task tool sub-task. Use the plan agent prompt template below **verbatim** for each — substitute the variables but do not omit, reorder, or paraphrase any instructions. Each agent receives the same spec and research content but is instructed to design an independent approach.
+**b. Dispatch plan agents**: Launch each agent as a parallel Task tool sub-task. Use the plan agent prompt template below **verbatim** for each — substitute the variables but do not omit, reorder, or paraphrase any instructions. Each agent receives the same spec and research content but is instructed to design an independent approach. The dispatched agents emit plans in the §3 Write Plan Artifact format below; for critical tier only, they also populate the `**Architectural Pattern**` field in the Overview per the closed enum `{event-driven, pipeline, layered, shared-state, plug-in}`.
 **Model**: `sonnet` (competing plan agents always use sonnet)
 
 **Plan Agent Prompt Template:**
@@ -70,33 +70,7 @@ You are designing an implementation plan for the {feature} feature.
 - Verification fields that consist only of prose descriptions requiring human judgment to evaluate (e.g., "confirm the feature works correctly", "verify the change looks right")
 - Verification steps that reference artifacts (files, log entries, status fields) the executing task creates solely for the purpose of satisfying verification — this is self-sealing and passes tautologically
 
-## Plan Format
-
-# Plan: {feature}
-
-## Overview
-[1-2 sentence summary of the implementation approach and key architectural decisions]
-
-**Architectural Pattern**: {category} — {1-sentence differentiation}
-
-## Tasks
-
-### Task 1: {description}
-- **Files**: {exact paths to create or modify}
-- **What**: {what this task accomplishes in 1-2 sentences}
-- **Depends on**: none
-- **Complexity**: trivial|simple|complex
-- **Context**: {file paths, function signatures, type definitions, pattern references — structural context for the implementer}
-- **Verification**: {(a) command + expected output + pass/fail (e.g., "run `just test` — pass if exit 0, all tests pass"), OR (b) specific file/pattern check (e.g., "`grep -c 'keyword' path/file` = 1 — pass if count = 1"), OR (c) "Interactive/session-dependent: [one-sentence rationale explaining why no command is possible]"}
-- **Status**: [ ] pending
-
-[Continue with additional tasks...]
-
-## Verification Strategy
-[How to verify the complete feature works end-to-end after all tasks are done]
-
-## Sizing
-Target 5-15 minutes per task, 1-5 files each. A typical feature should decompose into 5-15 tasks. Split tasks that touch more than 5 files. Every task must have a Depends on field (use `none` for independent tasks or `[N, M]` for dependencies).
+Use the plan format defined in §3 Write Plan Artifact below. Required fields per task: Files, What, Depends on, Complexity, Context, Verification, Status. Target 5-15 min per task, 1-5 files each. For critical tier, populate `**Architectural Pattern**` in the Overview per the closed enum `{event-driven, pipeline, layered, shared-state, plug-in}`.
 ```
 
 **c. Collect results**: Wait for all agents to complete. If an agent fails (crash, timeout, garbage output), continue with results from successful agents. If only 1 agent succeeds, use its plan as the sole variant (skip §1b.d–f synthesizer flow and proceed to §3a). If all agents fail, fall back to the standard single-plan flow (§2-§3) in the main context.

@@ -30,7 +30,7 @@ The approved spec (R8, R11) specified Gate 2 (Specify→Plan ≥3-Open-Decisions
   - **Module entry point**: define `def main() -> int:` and `if __name__ == "__main__": sys.exit(main())` mirroring the `_run` pattern in `daytime_pipeline.py:568-573`.
   - **Test file** (`tests/test_daytime_dispatch_writer.py`): use `tmp_path` pytest fixture; tests cover (a) `init` writes JSON with all five expected fields and `pid: null`, (b) `update-pid` mutates only `pid` and preserves other fields, (c) tmp file is cleaned up after success (no `.daytime-dispatch-*.tmp` files remaining), (d) calling `update-pid` against a missing dispatch file raises `FileNotFoundError` (not silently no-op).
 - **Verification**: run `python3 -m pytest tests/test_daytime_dispatch_writer.py -v` — pass if exit 0 and all four tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Trim `implement.md` §1a inline atomic-write Python recipes
 
@@ -81,10 +81,10 @@ The approved spec (R8, R11) specified Gate 2 (Specify→Plan ≥3-Open-Decisions
   - The surviving §1b.b content includes the agent prompt template's instructions 1–5 (lines 50–54), the Allowed/Prohibited fields (lines 56–71), and the closing prose at line 100.
   - The §3 Plan Format starts at `plan.md:163` and is the canonical home; do not edit §3 in this task.
 - **Verification**: run all three checks, all must pass:
-  - `grep -c "^## Plan Format" skills/lifecycle/references/plan.md` returns 1 (only §3 remains; the §1b.b heading is gone).
-  - `grep -c "Architectural Pattern" skills/lifecycle/references/plan.md` returns ≥ 1 (critical-tier-only reference preserved in §1b.b prose).
+  - `grep -c "^## Plan Format" skills/lifecycle/references/plan.md` returns 0 (corrected from spec's "returns 1" — §3's heading is `### 3. Write Plan Artifact`, not `## Plan Format`, so the §1b.b heading was the sole occurrence; deleting it brings the count to 0, which is the structurally-correct post-trim state).
+  - `grep -c "Architectural Pattern" skills/lifecycle/references/plan.md` returns ≥ 1 (critical-tier-only reference preserved in §1b prose).
   - `wc -l skills/lifecycle/references/plan.md` returns ≤ 290 (down from 312, partial cut before Task 5 lands the larger §1b.d/e collapse).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Trim `plan.md` §1b.d/e — synthesizer-prose collapse, preserve dispatcher contract + SEC-1
 
