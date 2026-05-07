@@ -86,10 +86,10 @@ Stash the printed 32-char lowercase hex string into conversation memory as the a
 **Step 2 — Write `daytime-dispatch.json` atomically.** Single Bash call (before the subprocess launch):
 
 ```
-python3 -c 'import json, os, sys, tempfile; d = sys.argv[1]; data = {"schema_version": 1, "dispatch_id": sys.argv[2], "feature": sys.argv[3], "start_ts": sys.argv[4], "pid": None}; fd, tmp = tempfile.mkstemp(dir=d, prefix=".daytime-dispatch-", suffix=".tmp"); os.write(fd, (json.dumps(data, indent=2) + "\n").encode()); os.fsync(fd); os.close(fd); os.replace(tmp, os.path.join(d, "daytime-dispatch.json"))' lifecycle/{feature} {uuid} {slug} $(date -u +%Y-%m-%dT%H:%M:%SZ)
+python3 -m cortex_command.overnight.daytime_dispatch_writer --feature {slug} --dispatch-id {uuid} --mode init
 ```
 
-This writes `lifecycle/{feature}/daytime-dispatch.json` with `pid: null` using the same tempfile + `os.replace` atomic-write pattern as `save_batch_result()`. The dispatch file is the on-disk authoritative source for `dispatch_id` — it survives main-session compaction and allows a re-entered skill to recover the active dispatch identity without trusting in-memory state.
+This writes `lifecycle/{feature}/daytime-dispatch.json` with `pid: null` via the canonical atomic-write helper. The dispatch file is the on-disk authoritative source for `dispatch_id` — it survives main-session compaction and allows a re-entered skill to recover the active dispatch identity without trusting in-memory state.
 
 **Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed:
 
@@ -99,10 +99,10 @@ DAYTIME_DISPATCH_ID={uuid} python3 -m cortex_command.overnight.daytime_pipeline 
 
 The subprocess is responsible for writing `lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID file — it only reads it.
 
-**Step 4 — Update `daytime-dispatch.json` with subprocess PID.** After the background launch Bash call returns and after the PID file has been written (following the initial-wait in §vi), issue a single Bash call that performs a second atomic write updating the `pid` field to the subprocess PID. Re-read `daytime-dispatch.json`, mutate the `pid` field to the integer PID, then atomically overwrite:
+**Step 4 — Update `daytime-dispatch.json` with subprocess PID.** After the PID file has been written (following the initial-wait in §vi), update the `pid` field via the canonical helper:
 
 ```
-python3 -c 'import json, os, tempfile; p = "lifecycle/{feature}/daytime-dispatch.json"; d = os.path.dirname(p); data = json.load(open(p)); data["pid"] = {pid}; fd, tmp = tempfile.mkstemp(dir=d, prefix=".daytime-dispatch-", suffix=".tmp"); os.write(fd, (json.dumps(data, indent=2) + "\n").encode()); os.fsync(fd); os.close(fd); os.replace(tmp, p)'
+python3 -m cortex_command.overnight.daytime_dispatch_writer --feature {slug} --mode update-pid --pid {pid}
 ```
 
 This ensures the on-disk dispatch file reflects the actual subprocess PID for liveness monitoring.
