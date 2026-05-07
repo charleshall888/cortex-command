@@ -68,7 +68,7 @@ The approved spec (R8, R11) specified Gate 2 (Specify→Plan ≥3-Open-Decisions
     - `section.count("python3 -m cortex_command.overnight.daytime_dispatch_writer")` ≥ 2 (one for Step 2 `--mode init`, one for Step 4 `--mode update-pid`).
   - Update the docstring at `tests/test_daytime_preflight.py:316-329` to add a sixth bullet describing invariant (f) with its two-clause check.
 - **Verification**: run `python3 -m pytest tests/test_daytime_preflight.py::test_skill_contracts -v` — pass if exit 0 and all six invariants pass.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Trim `plan.md` §1b.b — Plan Format dedup
 

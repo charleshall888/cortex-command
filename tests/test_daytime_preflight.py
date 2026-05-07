@@ -313,7 +313,7 @@ def test_outcome_detection_paused_substring_in_failure(tmp_path: Path) -> None:
 
 
 def test_skill_contracts() -> None:
-    """implement.md §1b must satisfy five document invariants.
+    """implement.md §1a must satisfy six document invariants.
 
     Checks:
       (a) invocation string `python3 -m cortex_command.overnight.daytime_pipeline
@@ -321,11 +321,16 @@ def test_skill_contracts() -> None:
       (b) no extra flags on that invocation line (--tier, --criticality,
           --base-branch, --test-command absent from that line)
       (c) "plan.md" text appears before the first "daytime.pid" reference
-          in §1b (guard ordering)
-      (d) `"mode": "daytime"` appears at least twice in §1b
+          in §1a (guard ordering)
+      (d) `"mode": "daytime"` appears at least twice in §1a
           (implementation_dispatch + dispatch_complete)
-      (e) §1b.vii invokes the daytime_result_reader helper and documents the
+      (e) §1a.vii invokes the daytime_result_reader helper and documents the
           full outcome enumeration (merged/deferred/paused/failed/unknown)
+      (f) `python3 -m cortex_command.overnight.daytime_dispatch_writer` appears
+          ≥ 2 times in §1a (init mode at Step 2, update-pid mode at Step 4) —
+          pins the canonical-helper-pointer pattern so a future edit cannot
+          silently re-inline the atomic-write Python recipes that #177 trimmed
+          out (closes adversarial finding A4).
     """
     implement_md = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
     text = implement_md.read_text()
@@ -389,9 +394,23 @@ def test_skill_contracts() -> None:
 
     reader_invocation = "python3 -m cortex_command.overnight.daytime_result_reader"
     assert reader_invocation in vii_section, (
-        f"§1b.vii must invoke the reader helper {reader_invocation!r}"
+        f"§1a.vii must invoke the reader helper {reader_invocation!r}"
     )
     for outcome in ("merged", "deferred", "paused", "failed", "unknown"):
         assert outcome in vii_section, (
-            f'§1b.vii must document the {outcome!r} outcome branch'
+            f'§1a.vii must document the {outcome!r} outcome branch'
         )
+
+    # (f) daytime_dispatch_writer pointer appears ≥ 2 times in §1a (init at
+    # Step 2 and update-pid at Step 4). Specifically pinned, not loose-regexed:
+    # the surviving Step-3 daytime_pipeline invocation matches a generic
+    # cortex_command.overnight.\w+ regex, defeating the test's stated purpose
+    # of detecting re-inlining of Steps 2 and 4. This invariant requires the
+    # exact daytime_dispatch_writer module name and ≥ 2 occurrences (one per
+    # replaced step).
+    writer_invocation = "python3 -m cortex_command.overnight.daytime_dispatch_writer"
+    writer_count = section.count(writer_invocation)
+    assert writer_count >= 2, (
+        f"§1a must invoke {writer_invocation!r} at least twice "
+        f"(Step 2 init + Step 4 update-pid); found {writer_count}"
+    )
