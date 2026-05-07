@@ -51,11 +51,11 @@ Per-row KEEP/DROP decisions across the 12 corpus files for the U2 trim. Rule: a 
 
 ## skills/lifecycle/references/plan.md
 
-- [skills/lifecycle/references/plan.md:305] | DROP | reality_text="Clear requirements still need a task breakdown. Planning is about HOW to decompose the work, not WHAT to build."
-- [skills/lifecycle/references/plan.md:306] | DROP | reality_text="Figuring it out while coding means re-doing work when early assumptions prove wrong. Plan once, implement once."
-- [skills/lifecycle/references/plan.md:307] | KEEP | `code budget`, `function bodies` (named contract from §3)
-- [skills/lifecycle/references/plan.md:308] | KEEP | `research/spec artifacts` (named contract for backlog item validation)
-- [skills/lifecycle/references/plan.md:309] | KEEP | `self-sealing` (named anti-pattern), `test commands, pre-existing state, prior-task outputs` (named alternatives)
+(Note: line citations refreshed against post-#177 plan.md. The two DROP entries originally at lines 305-306 cited Hard Gate rows whose content had already been removed before #177 in unrelated trims; those entries are no longer applicable and have been deleted from this list. The three KEEP entries shifted from 307-309 to 284-286 after #177 trimmed §1b.b's duplicated Plan Format block, dropping plan.md from 312 → 286 lines.)
+
+- [skills/lifecycle/references/plan.md:284] | KEEP | `code budget`, `function bodies` (named contract from §3)
+- [skills/lifecycle/references/plan.md:285] | KEEP | `research/spec artifacts` (named contract for backlog item validation)
+- [skills/lifecycle/references/plan.md:286] | KEEP | `self-sealing` (named anti-pattern), `test commands, pre-existing state, prior-task outputs` (named alternatives)
 
 ## skills/lifecycle/references/implement.md
 
