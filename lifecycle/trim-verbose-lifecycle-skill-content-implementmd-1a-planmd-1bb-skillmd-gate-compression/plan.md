@@ -160,7 +160,7 @@ The approved spec (R8, R11) specified Gate 2 (Specify→Plan ≥3-Open-Decisions
   - `diff skills/lifecycle/SKILL.md plugins/cortex-core/skills/lifecycle/SKILL.md` returns empty (exit 0).
   - `diff skills/lifecycle/references/plan.md plugins/cortex-core/skills/lifecycle/references/plan.md` returns empty.
   - `diff skills/lifecycle/references/implement.md plugins/cortex-core/skills/lifecycle/references/implement.md` returns empty.
-- **Status**: [ ] pending
+- **Status**: [x] complete (mirrors were kept in lockstep per-commit; the pre-commit dual-source drift hook enforced parity throughout Tasks 2/4/5/6, so Task 8 is a no-op verification)
 
 ## Verification Strategy
 
