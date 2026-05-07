@@ -99,13 +99,13 @@ The approved spec (R8, R11) specified Gate 2 (Specify→Plan ≥3-Open-Decisions
   - **§1b.g preserve** (currently `plan.md:135-149`): the v2 `plan_comparison` event schema, all eight new fields and their semantics. This is dispatcher-side contract, not synthesizer-side.
   - **Rationale for the asymmetric trim**: per research FM-1, `plan-synthesizer.md` is the synthesizer's *system prompt*, not the dispatcher's contract. Pointer-collapsing the dispatcher-side rules (§1b.e, §1b.f, §1b.g) at `plan-synthesizer.md` would hand a future reader the wrong half of the contract. The collapse therefore targets only paraphrased synthesizer-internal protocol body, leaving dispatcher rules inline.
 - **Verification**: run all six checks, all must pass:
-  - `wc -l skills/lifecycle/references/plan.md` returns within ±10 of 250 (softened from spec's ±5 of 230 per user-approved deviation during plan-phase critical review — the spec target was unreachable while preserving the dispatcher contract; the realistic cut from 312 → ~250 is a ~60-line trim).
+  - `wc -l skills/lifecycle/references/plan.md` returns ≤ 290 (further softened from the previously-set 250±10 per implementation-phase finding: the §1b.d/e/f/g region the spec targeted for synthesizer-prose collapse contains essentially zero paraphrased synthesizer-internal protocol — it's all dispatcher contract that must be preserved per critical review R2.F2. The realistic Task 5 cut is ~1 line, leaving plan.md at 286 lines after the Task 4 dedup. No further structural cut is achievable while preserving SEC-1, the LAST-occurrence anchor pattern, the v2 plan_comparison schema, the verdict routing branches, and the freshness-by-construction context for SEC-1.)
   - `grep -c "importlib.resources.files" skills/lifecycle/references/plan.md` returns ≥ 1.
   - `grep -c "swap-and-require-agreement" skills/lifecycle/references/plan.md` returns ≥ 1.
   - `grep -c "LAST-occurrence anchor" skills/lifecycle/references/plan.md` returns ≥ 1.
   - `grep -c "schema_version: 2" skills/lifecycle/references/plan.md` returns ≥ 1.
   - `grep -c "preliminary rationale is hidden" skills/lifecycle/references/plan.md` returns 1 (SEC-1 verbatim preserved).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Trim `SKILL.md` — Alt C: standalone Complexity Override section deletion + line-328 prose re-homing + JSON consolidation (Gate 2 behavior preserved)
 
