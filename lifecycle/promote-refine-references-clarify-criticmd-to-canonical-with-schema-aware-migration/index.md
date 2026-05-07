@@ -2,7 +2,7 @@
 feature: promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration
 parent_backlog_uuid: 79d84275-ae0a-4ace-8398-ac14fca43497
 parent_backlog_id: 175
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: [lifecycle, refine, dual-source, schema-migration, clarify-critic, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
@@ -15,3 +15,4 @@ Feature lifecycle for [[175-promote-refine-clarify-critic-to-canonical-with-sche
 - Research: [[promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/research|research.md]]
 - Spec: [[promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/spec|spec.md]]
 - Plan: [[promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/plan|plan.md]]
+- Review: [[promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/review|review.md]]

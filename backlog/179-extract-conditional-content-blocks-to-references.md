@@ -6,7 +6,7 @@ type: chore
 status: backlog
 priority: medium
 parent: 172
-blocked-by: [175, 177]
+blocked-by: [177]
 tags: [lifecycle, refine, critical-review, conditional-extraction, hot-path-context, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06

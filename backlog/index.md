@@ -4,13 +4,12 @@
 |-----|-------|--------|----------|------|------------|--------|------|
 | 165 | Repo spring cleaning: share-readiness for installer audience | backlog | high | epic | — | — | — |
 | 172 | Lifecycle skill + artifact densification + vertical-planning adoption | backlog | high | epic | — | — | — |
-| 175 | Promote refine/references/clarify-critic.md to canonical with schema-aware migration | in_progress | high | feature | — | 172 | ✓ |
 | 177 | Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression) | backlog | high | chore | — | 172 | — |
-| 182 | Vertical-planning adoption as REPLACEMENT: ## Outline absorbs Scope Boundaries + Verification Strategy; ## Risks preserves Veto Surface; tier-conditional ## Acceptance | backlog | high | feature | 175 | 172 | — |
+| 182 | Vertical-planning adoption as REPLACEMENT: ## Outline absorbs Scope Boundaries + Verification Strategy; ## Risks preserves Veto Surface; tier-conditional ## Acceptance | backlog | high | feature | — | 172 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 169 | Fix archive predicate and sweep lifecycle/ and research/ dirs | in_progress | medium | feature | 166, 168 | 165 | — |
 | 170 | Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh | backlog | medium | bug | — | — | — |
-| 179 | Extract conditional content blocks to references/ (a-b-downgrade-rubric + implement-daytime — trimmed scope) | backlog | medium | chore | 175, 177 | 172 | — |
+| 179 | Extract conditional content blocks to references/ (a-b-downgrade-rubric + implement-daytime — trimmed scope) | backlog | medium | chore | 177 | 172 | — |
 | 180 | Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional) | backlog | medium | chore | — | 172 | — |
 | 183 | Migrate Gate 1 (research→specify Open-Questions escalation) to Python hook; remove Gate 2 entirely | backlog | medium | feature | 177 | 172 | — |
 | 184 | Merge clarify and research lifecycle phases into single investigate phase | backlog | medium | feature | — | — | — |
@@ -27,6 +26,7 @@
 - **165** Repo spring cleaning: share-readiness for installer audience
 - **172** Lifecycle skill + artifact densification + vertical-planning adoption
 - **177** Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression)
+- **182** Vertical-planning adoption as REPLACEMENT: ## Outline absorbs Scope Boundaries + Verification Strategy; ## Risks preserves Veto Surface; tier-conditional ## Acceptance
 - **170** Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh
 - **180** Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional)
 - **184** Merge clarify and research lifecycle phases into single investigate phase
@@ -35,7 +35,6 @@
 
 ## In-Progress
 
-- **175** Promote refine/references/clarify-critic.md to canonical with schema-aware migration (in_progress)
 - **169** Fix archive predicate and sweep lifecycle/ and research/ dirs (in_progress)
 
 ## Warnings

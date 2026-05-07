@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 79d84275-ae0a-4ace-8398-ac14fca43497
 title: "Promote refine/references/clarify-critic.md to canonical with schema-aware migration"
 type: feature
-status: in_progress
+status: complete
 priority: high
 parent: 172
 blocked-by: []
@@ -15,8 +15,8 @@ complexity: complex
 criticality: high
 spec: lifecycle/promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/spec.md
 areas: [skills]
-session_id: 918b4307-d3e2-4dbc-a5a7-a11324494dcc
-lifecycle_phase: plan
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Promote refine/references/clarify-critic.md to canonical with schema-aware migration
