@@ -203,6 +203,45 @@ def _resolve_file_line_citation(
     return ("resolved", None)
 
 
+_FENCED_DELIM_RE = re.compile(r"^\s*(```|~~~)")
+_INLINE_BACKTICK_RE = re.compile(r"`+[^`\n]*`+")
+
+
+def _scrub_code_spans(text: str) -> str:
+    """Replace fenced-code-block content and inline-backtick spans with
+    space-padded placeholders, preserving line count and column positions
+    so the resolver's line_no reporting stays accurate.
+
+    Required so prose like ``` `tests/fixtures/foo.md:9999` ``` (a
+    backtick-wrapped citation in a test-description bullet, e.g. #181's
+    review.md) does not get treated as a real file_line_citation. Bare-
+    prose citations outside backticks remain visible to the resolver —
+    this is what the regression-fixture tests rely on.
+    """
+    out: list[str] = []
+    in_fence = False
+    fence_marker: str | None = None
+    for line in text.splitlines(keepends=True):
+        eol = "\n" if line.endswith("\n") else ""
+        body = line[: len(line) - len(eol)]
+        m = _FENCED_DELIM_RE.match(line)
+        if m and not in_fence:
+            in_fence = True
+            fence_marker = m.group(1)
+            out.append(" " * len(body) + eol)
+            continue
+        if in_fence:
+            if m and m.group(1) == fence_marker:
+                in_fence = False
+                fence_marker = None
+            out.append(" " * len(body) + eol)
+            continue
+        # Outside fenced block: blank-pad inline backtick spans on this line.
+        scrubbed = _INLINE_BACKTICK_RE.sub(lambda mm: " " * len(mm.group(0)), body)
+        out.append(scrubbed + eol)
+    return "".join(out)
+
+
 def _extract_file_line_citations(
     text: str, citing_file: Path
 ) -> tuple[
@@ -219,7 +258,13 @@ def _extract_file_line_citations(
 
     "Missing" matches (cited file doesn't exist) are dropped silently —
     those are treated as ambiguous prose rather than drift.
+
+    Code spans (fenced blocks and inline backtick spans) are scrubbed
+    before scanning so prose-prose citations like ``` `foo.md:42` ``` are
+    not treated as drift signals. Line numbers reported in errors track
+    the original text because the scrubber preserves line count.
     """
+    text = _scrub_code_spans(text)
     pattern = FORM_REGEXES["file_line_citation"]
     resolved: list[tuple[str, int, int]] = []
     broken: list[tuple[str, int, int, str, str]] = []
