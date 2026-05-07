@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 964da654-63d8-45e6-b29e-79a8598a1b2c
 title: "Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression)"
 type: chore
-status: backlog
+status: in_progress
 priority: high
 parent: 172
 blocked-by: []
@@ -11,6 +11,12 @@ tags: [lifecycle, content-trim, token-efficiency, gate-compression, vertical-pla
 created: 2026-05-06
 updated: 2026-05-06
 discovery_source: research/vertical-planning/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression/spec.md
+areas: [skills]
+session_id: d5a1f1a3-ebfe-4fe8-a0d1-de09e171b202
+lifecycle_phase: plan
 ---
 
 # Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression)

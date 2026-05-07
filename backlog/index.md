@@ -4,7 +4,7 @@
 |-----|-------|--------|----------|------|------------|--------|------|
 | 165 | Repo spring cleaning: share-readiness for installer audience | backlog | high | epic | — | — | — |
 | 172 | Lifecycle skill + artifact densification + vertical-planning adoption | backlog | high | epic | — | — | — |
-| 177 | Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression) | backlog | high | chore | — | 172 | — |
+| 177 | Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression) | in_progress | high | chore | — | 172 | ✓ |
 | 182 | Vertical-planning adoption as REPLACEMENT: ## Outline absorbs Scope Boundaries + Verification Strategy; ## Risks preserves Veto Surface; tier-conditional ## Acceptance | backlog | high | feature | — | 172 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 169 | Fix archive predicate and sweep lifecycle/ and research/ dirs | in_progress | medium | feature | 166, 168 | 165 | — |
@@ -25,7 +25,6 @@
 
 - **165** Repo spring cleaning: share-readiness for installer audience
 - **172** Lifecycle skill + artifact densification + vertical-planning adoption
-- **177** Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression)
 - **182** Vertical-planning adoption as REPLACEMENT: ## Outline absorbs Scope Boundaries + Verification Strategy; ## Risks preserves Veto Surface; tier-conditional ## Acceptance
 - **170** Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh
 - **180** Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional)
@@ -35,6 +34,7 @@
 
 ## In-Progress
 
+- **177** Trim verbose lifecycle skill content (implement.md §1a + plan.md §1b.b + SKILL.md gate compression) (in_progress)
 - **169** Fix archive predicate and sweep lifecycle/ and research/ dirs (in_progress)
 
 ## Warnings

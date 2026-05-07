@@ -1,0 +1,76 @@
+{
+  "ts": "2026-05-06T18:30:00Z",
+  "feature": "trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression",
+  "artifact": "lifecycle/trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 2's trim leaves the post-Tier-1 rm lifecycle/{feature}/daytime-dispatch.json (implement.md:150) outside the helper module. After Task 1+2 land, dispatch-file writes go through the helper but the consume/delete is still a raw shell rm in skill prose, splitting the contract.",
+      "reviewer_angle": "Atomic-write contract preservation",
+      "evidence_quote": "Introduce a single-purpose module that owns atomic writes to lifecycle/{feature}/daytime-dispatch.json."
+    },
+    {
+      "class": "B",
+      "finding": "The plan preserves Step 1's UUID-mint inline Python recipe without justification. The spec's motivation frames inline Python in skill prose as the trim target, but the UUID mint is inline Python in skill prose and survives the trim.",
+      "reviewer_angle": "Atomic-write contract preservation",
+      "evidence_quote": "Preserve untouched: implement.md:78-84 (Step 1 — UUID mint via python3 -c 'import uuid; print(uuid.uuid4().hex)'); the spec does not call for this to move."
+    },
+    {
+      "class": "B",
+      "finding": "The SEC-1 sentence is preserved verbatim but its motivating context (line 110's fresh-judgment-by-construction sentence) is not explicitly pinned. If a future edit drops or paraphrases line 110, the SEC-1 sentence at line 122 references a property that no longer has a defined origin.",
+      "reviewer_angle": "Dispatcher contract + SEC-1 mitigation preservation",
+      "evidence_quote": "the SEC-1 sentence at line 122 verbatim"
+    },
+    {
+      "class": "B",
+      "finding": "Task 5 adds NO automated test pinning the SEC-1 sentence or the LAST-occurrence anchor pattern. The plan inherits FM-2's identified asymmetry — synthesizer prompt is test-pinned via test_plan_synthesizer.py, dispatcher prose remains unprotected — without addressing it.",
+      "reviewer_angle": "Dispatcher contract + SEC-1 mitigation preservation",
+      "evidence_quote": "grep -c \"preliminary rationale is hidden\" skills/lifecycle/references/plan.md returns 1 (SEC-1 verbatim preserved).",
+      "resolution_note": "Task 7 (added during apply-feedback pass) pins SEC-1 structural placement via pytest assertions, partially closing this gap."
+    },
+    {
+      "class": "B",
+      "finding": "Grep verification is tautological with respect to dispatcher-application context. Six grep checks confirm specific substrings exist but do not test their logical placement, ordering, or relationship to the routing branch they govern.",
+      "reviewer_angle": "Dispatcher contract + SEC-1 mitigation preservation",
+      "evidence_quote": "Verification: run all six checks, all must pass",
+      "resolution_note": "Partially addressed by Task 7's structural-placement pytest assertions."
+    },
+    {
+      "class": "B",
+      "finding": "Task 6 deletes the standalone Complexity Override section without re-homing the load-bearing final paragraph at line 328 documenting the event's downstream effect on Plan/Implement/Review/Complete phases.",
+      "reviewer_angle": "Gate 2 simple+low coverage-hole compensating control adequacy",
+      "evidence_quote": "Gate 1 prose is fully described in the inline Step 5 subsection and does not need a duplicate home.",
+      "resolution_note": "Resolved during apply-feedback: Task 6 now re-homes line 328 prose into Step 5."
+    },
+    {
+      "class": "B",
+      "finding": "Task 6 deletes Gate 2 prose and adds no automated test pinning Gate 1's surviving behavior. Combined with the events.log trigger-field absence, Gate 1's post-removal fire-rate is detectable only by manual observation.",
+      "reviewer_angle": "Verification adequacy — silent-regression detection",
+      "evidence_quote": "grep -c \"Specify.*Plan.*Open Decisions\" skills/lifecycle/SKILL.md returns 0"
+    },
+    {
+      "class": "B",
+      "finding": "No end-to-end test verifies that the trimmed implement.md §1a invokes the writer module correctly during a real daytime dispatch. Task 1 tests the writer in isolation; Task 3's invariant (f) confirms a pointer string exists.",
+      "reviewer_angle": "Verification adequacy — silent-regression detection",
+      "evidence_quote": "assert that re.search(r\"python3 -m cortex_command\\.overnight\\.\\w+\", section) finds at least one match in the §1a section.",
+      "resolution_note": "Task 3 tightened during apply-feedback to specifically pin daytime_dispatch_writer with ≥2 matches; end-to-end smoke remains absent."
+    },
+    {
+      "class": "B",
+      "finding": "Task 7's diff-based parity check catches canonical/mirror drift but cannot detect a 'both faithfully wrong' state where Task 5 over-cuts and the regression mirrors. test_dual_source_reference_parity.py only asserts byte-equality.",
+      "reviewer_angle": "Verification adequacy — silent-regression detection",
+      "evidence_quote": "diff skills/lifecycle/SKILL.md plugins/cortex-core/skills/lifecycle/SKILL.md returns empty (exit 0)."
+    },
+    {
+      "class": "B",
+      "finding": "The verification regime is not test-coverage-equivalent across models. Per dispatch.py:135–148, §1b runs under Sonnet/Opus depending on cell. The entire verification surface is static (grep, wc, diff, helper-module pytest); no probe exercises trimmed prose under any model.",
+      "reviewer_angle": "Verification adequacy — silent-regression detection",
+      "evidence_quote": "§1b runs in main-conversation context. Per dispatch.py:135–148, (complex, low) and (complex, medium) cells route to sonnet."
+    }
+  ]
+}
