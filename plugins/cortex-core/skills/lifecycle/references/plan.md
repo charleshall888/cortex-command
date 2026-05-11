@@ -179,15 +179,9 @@ Produce `lifecycle/{feature}/plan.md` with this structure:
 
 ...
 
-## Verification Strategy
-[How to verify the complete feature works end-to-end after all tasks are done]
-
 ## Risks
 [Design choices, scope calls, or constraints the user might want to revisit before implementation begins. "None" if nothing is controversial.]
 <!-- Renamed from `## Veto Surface` 2026-05-11 — retro searches for the prior name still apply to plans authored before this date. Purpose, content shape, and ~5–10 line cost are preserved. -->
-
-## Scope Boundaries
-[What is explicitly excluded from this feature. Maps to the spec's Non-Requirements section.]
 
 ## Acceptance
 <!-- Populate ONLY when `complexity=complex` (the Clarify §4-resolved tier dimension). Omit this section entirely on `complexity=simple` plans. -->
