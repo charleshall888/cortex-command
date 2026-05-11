@@ -9,3 +9,7 @@
 {"ts": "2026-05-11T00:06:01Z", "event": "task_complete", "feature": "fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh", "task": 2, "batch": 0, "status": "success"}
 {"ts": "2026-05-11T00:06:02Z", "event": "task_complete", "feature": "fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh", "task": 3, "batch": 1, "status": "success"}
 {"ts": "2026-05-11T00:06:03Z", "event": "task_complete", "feature": "fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh", "task": 4, "batch": 2, "status": "success"}
+{"ts": "2026-05-11T00:07:00Z", "event": "phase_transition", "feature": "fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-11T00:08:00Z", "event": "review_verdict", "feature": "fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-11T00:08:01Z", "event": "phase_transition", "feature": "fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh", "from": "review", "to": "complete"}
+{"ts": "2026-05-11T00:09:00Z", "event": "feature_complete", "feature": "fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh", "tasks_total": 4, "rework_cycles": 0}
