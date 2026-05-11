@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# cortex-lifecycle-counters — emit a feature's plan/review counters as JSON.
+#
+# Usage:
+#   cortex-lifecycle-counters --feature <slug>
+#
+# Output:
+#   {"tasks_total": <int>, "tasks_checked": <int>, "rework_cycles": <int>}
+#
+# Counter rules (per spec R4):
+#   tasks_total:   count of `- [ ]` and `- [x]` checkbox lines in plan.md.
+#   tasks_checked: count of `- [x]` checked checkbox lines in plan.md.
+#   rework_cycles: count of `"verdict": "<UPPER_SNAKE>"` matches in review.md
+#                  (same regex shape as cortex_command/common.py applies to
+#                  review.md verdict extraction). Known fragility: this regex
+#                  over-counts if review.md contains quoted/example verdict
+#                  strings in prose or code blocks. Behavior is intentionally
+#                  identical to the Python side; loosening would diverge.
+#
+# Missing files → field defaults: tasks_total=0, tasks_checked=0,
+# rework_cycles=0. Behavior matches common.py's read-time defaults for
+# absent plan.md / review.md.
+#
+# Note: bin-side checkbox regex (`^- \[ \]|^- \[x\]`) is per spec R4 and
+# operates on the `- [ ]` / `- [x]` task-line convention. common.py's
+# detect_lifecycle_phase uses a different regex (`\*\*Status\*\*:.*\[[ x]\]`)
+# against `- **Status**: [ ]`-style lines from plan.md task headers — the two
+# regexes target different plan.md syntaxes and are not directly comparable.
+# Task 7's fixture under tests/fixtures/audit_tier/counters_fixture/ asserts
+# the bin-side regex contract.
+
+command -v jq >/dev/null || { echo "cortex-lifecycle-counters: jq is required but not installed" >&2; exit 2; }
+
+"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true
+
+set -euo pipefail
+
+feature=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --feature)
+            feature="${2:-}"
+            shift 2
+            ;;
+        -h|--help)
+            sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        *)
+            echo "cortex-lifecycle-counters: unknown argument: $1" >&2
+            exit 2
+            ;;
+    esac
+done
+
+if [ -z "$feature" ]; then
+    echo "cortex-lifecycle-counters: --feature <slug> is required" >&2
+    exit 2
+fi
+
+plan="lifecycle/$feature/plan.md"
+review="lifecycle/$feature/review.md"
+
+tasks_total=0
+tasks_checked=0
+rework_cycles=0
+
+if [ -f "$plan" ]; then
+    tasks_total=$(grep -cE '^- \[ \]|^- \[x\]' "$plan" || true)
+    tasks_checked=$(grep -cE '^- \[x\]' "$plan" || true)
+fi
+
+if [ -f "$review" ]; then
+    rework_cycles=$(grep -cE '"verdict"[[:space:]]*:[[:space:]]*"[A-Z_]+"' "$review" || true)
+fi
+
+jq -n \
+    --argjson a "$tasks_total" \
+    --argjson b "$tasks_checked" \
+    --argjson c "$rework_cycles" \
+    '{tasks_total: $a, tasks_checked: $b, rework_cycles: $c}'

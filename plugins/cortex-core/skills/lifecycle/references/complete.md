@@ -22,8 +22,7 @@ Append a `feature_complete` event to `lifecycle/{feature}/events.log` **before**
 {"ts": "<ISO 8601>", "event": "feature_complete", "feature": "<name>", "tasks_total": <N>, "rework_cycles": <N>}
 ```
 
-- `tasks_total`: Count the total checkboxes (`- [ ]` and `- [x]`) in `lifecycle/{feature}/plan.md`.
-- `rework_cycles`: Read the cycle count from `lifecycle/{feature}/review.md`. If no review phase occurred (simple tier), use `0`.
+- Read `tasks_total` and `rework_cycles` by running `cortex-lifecycle-counters --feature {feature}` and parsing the JSON output. If no review phase occurred (simple tier), `rework_cycles` will be `0`.
 
 This event closes the event log for the feature.
 
