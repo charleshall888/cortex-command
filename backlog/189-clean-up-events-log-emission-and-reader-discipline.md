@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: d744219f-a0b8-4eff-ac7f-62fda2847a3b
 title: "Clean up events.log emission and reader discipline"
 type: feature
-status: open
+status: in_progress
 priority: high
 parent: 187
 blocked-by: []
@@ -11,6 +11,13 @@ tags: [events-log, emission-discipline, escalations, clarify-critic, token-effic
 created: 2026-05-11
 updated: 2026-05-11
 discovery_source: research/lifecycle-discovery-token-audit/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/clean-up-eventslog-emission-and-reader-discipline/spec.md
+areas: [skills]
+session_id: cfc960f6-d8ed-4e3c-b2cc-8ee3a61ec390
+lifecycle_phase: implement
+lifecycle_slug: clean-up-eventslog-emission-and-reader-discipline
 ---
 
 # Clean up events.log emission and reader discipline
