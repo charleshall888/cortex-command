@@ -148,6 +148,7 @@ Evaluate against `lifecycle/{feature}/spec.md`:
 | S4 | Non-requirements are explicit boundaries | Non-Requirements section defines concrete scope boundaries, not vague statements like "not in scope for now" |
 | S5 | Technical constraints grounded | Technical Constraints section references specific codebase patterns, ADRs, or architectural decisions — not generic best practices |
 | S6 | Behavioral changes documented | If the feature modifies, removes, or extends existing system behavior (including new additions to an existing domain), a `## Changes to Existing Behavior` section is present with specific MODIFIED/REMOVED/ADDED entries. Omission is acceptable only for pure-greenfield work in a new domain with no existing behavior to reference. |
+| S7 | Spec phases section present | Spec contains `## Phases` section with ≥1 phase; each requirement carries a `**Phase**` tag matching one of the declared phases. Skip on `criticality=low AND tier=simple` per the existing skip rule. |
 
 ### Post-Plan Checklist
 
@@ -163,6 +164,8 @@ Evaluate against `lifecycle/{feature}/plan.md`:
 | P6 | Files/Verification consistency | Every file implied by Verification is listed in Files; no verification step requires modifying unlisted files |
 | P7 | No self-sealing verification | For each task, cross-reference the Verification field against the Files list: does Verification reference an artifact that the same task creates? If yes, apply the operational test: if the task's stated purpose is to create that artifact (it is the primary deliverable), the self-check is benign. If the task's purpose is to verify an external condition and the artifact is a side-channel for recording that verification, the self-check is harmful — flag it as self-sealing. |
 | P8 | Architectural Pattern field present and in taxonomy | Structural check only (field presence + closed-set membership): the plan contains a `**Architectural Pattern**` field whose value is one of the five categories: event-driven, pipeline, layered, shared-state, plug-in. Gated on `criticality = critical` (when §1b ran); explicitly N/A for non-critical plans. Semantic fit is not checked here — that domain belongs to the synthesizer. |
+| P9 | Plan outline section present | Plan contains `## Outline` section. For `complexity=complex` plans, ≥2 phases required; for `complexity=simple` plans, ≥1 phase acceptable. Each phase names its task IDs in the heading; each phase has `**Goal**` and `**Checkpoint**` fields. |
+| P10 | Acceptance section present on complex plans | For `complexity=complex` plans, plan contains `## Acceptance` section with whole-feature acceptance criterion. Skip on `complexity=simple` plans — last-phase Checkpoint is the contract there. |
 
 ## Cycle Cap
 
