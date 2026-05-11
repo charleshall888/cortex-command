@@ -139,8 +139,6 @@ This argument fires only when at least one Apply'd alignment finding exists. If 
 After writing `research.md`, update `lifecycle/{lifecycle-slug}/index.md`:
 - If `"research"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"research"` to the artifacts inline array
-- Add wikilink: `- Research: [[{lifecycle-slug}/research|research.md]]`
-  (where `{lifecycle-slug}` is the feature directory name, e.g. `add-lifecycle-feature-indexmd-for-obsidian-navigation`)
 - Update the `updated` field to today's date
 - Rewrite the full `index.md` atomically
 
@@ -168,8 +166,6 @@ Do NOT set `status: refined` before user approval.
 After user approval (specify.md §4), update `lifecycle/{lifecycle-slug}/index.md`:
 - If `"spec"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"spec"` to the artifacts inline array
-- Add wikilink: `- Spec: [[{lifecycle-slug}/spec|spec.md]]`
-  (where `{lifecycle-slug}` is the feature directory name, e.g. `add-lifecycle-feature-indexmd-for-obsidian-navigation`)
 - Update the `updated` field to today's date
 - Rewrite the full `index.md` atomically
 

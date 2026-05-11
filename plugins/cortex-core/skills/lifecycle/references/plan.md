@@ -239,8 +239,6 @@ Plans are prose with structural context. The line between design and implementat
 After writing `plan.md`, update `lifecycle/{feature}/index.md`:
 - If `"plan"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"plan"` to the artifacts inline array
-- Add wikilink: `- Plan: [[{lifecycle-slug}/plan|plan.md]]`
-  (where `{lifecycle-slug}` is the feature directory name, e.g. `add-lifecycle-feature-indexmd-for-obsidian-navigation`)
 - Update the `updated` field to today's date
 - Rewrite the full `index.md` atomically
 

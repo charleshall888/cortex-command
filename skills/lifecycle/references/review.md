@@ -147,8 +147,6 @@ Before proceeding, validate that review.md contains a `## Requirements Drift` se
 Update `lifecycle/{feature}/index.md`:
 - If `"review"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"review"` to the artifacts inline array
-- Add wikilink: `- Review: [[{lifecycle-slug}/review|review.md]]`
-  (where `{lifecycle-slug}` is the feature directory name, e.g. `add-lifecycle-feature-indexmd-for-obsidian-navigation`)
 - Update the `updated` field to today's date
 - Rewrite the full `index.md` atomically
 
