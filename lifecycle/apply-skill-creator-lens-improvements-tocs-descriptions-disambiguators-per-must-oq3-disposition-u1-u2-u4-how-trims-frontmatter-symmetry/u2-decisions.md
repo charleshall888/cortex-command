@@ -25,10 +25,10 @@ Per-row KEEP/DROP decisions across the 12 corpus files for the U2 trim. Rule: a 
 
 ## skills/lifecycle/references/clarify.md
 
-- [skills/lifecycle/references/clarify.md:127] | KEEP | `§6` (criteria definition section)
-- [skills/lifecycle/references/clarify.md:128] | KEEP | `≤5 targeted questions`, `Specify`, `Research` (named phases and contract)
-- [skills/lifecycle/references/clarify.md:129] | KEEP | `intent, scope, requirements alignment` (named rubric dimensions)
-- [skills/lifecycle/references/clarify.md:129] | DROP | reality_text="High confidence on all three dimensions = proceed without questions. Do not manufacture uncertainty."
+- [skills/lifecycle/references/clarify.md] | KEEP | `§6` (criteria definition section) — line numbers stripped 2026-05-11 (citations went stale after upstream edits)
+- [skills/lifecycle/references/clarify.md] | KEEP | `≤5 targeted questions`, `Specify`, `Research` (named phases and contract) — line numbers stripped 2026-05-11
+- [skills/lifecycle/references/clarify.md] | KEEP | `intent, scope, requirements alignment` (named rubric dimensions) — line numbers stripped 2026-05-11
+- [skills/lifecycle/references/clarify.md] | DROP | reality_text="High confidence on all three dimensions = proceed without questions. Do not manufacture uncertainty." — line numbers stripped 2026-05-11
 
 ## skills/lifecycle/references/clarify-critic.md
 
@@ -75,11 +75,11 @@ Per-row KEEP/DROP decisions across the 12 corpus files for the U2 trim. Rule: a 
 
 ## skills/lifecycle/references/orchestrator-review.md
 
-- [skills/lifecycle/references/orchestrator-review.md:180] | DROP | reality_text="Evaluate every checklist item individually. Gestalt impressions miss specific gaps. A single unflagged issue becomes the user's problem."
-- [skills/lifecycle/references/orchestrator-review.md:181] | DROP | reality_text="The orchestrator does not edit phase artifacts directly. Dispatching fixes preserves separation of concerns and creates an audit trail via event logging."
-- [skills/lifecycle/references/orchestrator-review.md:181] | DROP | reality_text="Flag it. The fix agent may resolve it quickly. Letting minor issues pass compounds across phases — a vague spec item becomes a broken plan task becomes a failed implementation."
-- [skills/lifecycle/references/orchestrator-review.md:180] | KEEP | `2-cycle cap` (named contract)
-- [skills/lifecycle/references/orchestrator-review.md:181] | KEEP | `low criticality, simple complexity` (named matrix dimensions)
+- [skills/lifecycle/references/orchestrator-review.md] | DROP | reality_text="Evaluate every checklist item individually. Gestalt impressions miss specific gaps. A single unflagged issue becomes the user's problem." — line numbers stripped 2026-05-11 (citations went stale after upstream edits)
+- [skills/lifecycle/references/orchestrator-review.md] | DROP | reality_text="The orchestrator does not edit phase artifacts directly. Dispatching fixes preserves separation of concerns and creates an audit trail via event logging." — line numbers stripped 2026-05-11
+- [skills/lifecycle/references/orchestrator-review.md] | DROP | reality_text="Flag it. The fix agent may resolve it quickly. Letting minor issues pass compounds across phases — a vague spec item becomes a broken plan task becomes a failed implementation." — line numbers stripped 2026-05-11
+- [skills/lifecycle/references/orchestrator-review.md] | KEEP | `2-cycle cap` (named contract) — line numbers stripped 2026-05-11
+- [skills/lifecycle/references/orchestrator-review.md] | KEEP | `low criticality, simple complexity` (named matrix dimensions) — line numbers stripped 2026-05-11
 
 ## skills/lifecycle/references/complete.md
 

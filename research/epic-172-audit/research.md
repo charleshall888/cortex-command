@@ -77,7 +77,7 @@ Sampled `lifecycle/archive/{unify-lifecycle-phase-detection-…, restructure-rea
 - research.md → `Requirements & Constraints` (5/5 samples), `Tradeoffs & Alternatives` (5/5), `Adversarial Review` (4/5), `Considerations Addressed` (1/5).
 - spec.md → custom anchors like "Slug-and-citation grammar" (S4).
 
-The lifecycle template's documented research.md schema `[skills/lifecycle/references/research.md:114–138]` **is not what gets written**; the research-skill's parallel-agent angles are. Implication: trimming the lifecycle template's research.md schema doesn't move the needle — the actual schema lives in `/cortex-core:research`.
+The lifecycle template's documented research.md schema (formerly at `skills/lifecycle/references/research.md`; deleted in 2026-05-11 per backlog/185 — canonical schema source moved to `skills/research/SKILL.md` Step 4 `### Output structure`) **was not what got written**; the research-skill's parallel-agent angles are. Implication: trimming the lifecycle template's research.md schema doesn't move the needle — the actual schema lives in `/cortex-core:research`.
 
 **Cross-cutting structural observation:** All artifacts in 3/3 archived samples are single-commit writes — never edited collaboratively after first write. Implication: artifact section structure should optimize for **first-write quality**, not for collaborative editing affordances. Sections that exist to "make the artifact easier to revise later" don't pay their tokens — there is no later revision.
 

@@ -124,18 +124,6 @@ After escalation, the user decides how to proceed. Do not continue reviewing.
 
 ## Checklists
 
-### Post-Research Checklist
-
-Evaluate against `lifecycle/{feature}/research.md`:
-
-| # | Item | Criteria |
-|---|------|----------|
-| R1 | Research questions answered concretely | Each question in the Codebase Analysis and Web Research sections has a specific finding, not a hand-wavy generalization |
-| R2 | Feasibility grounded in evidence | Feasibility assessment cites specific codebase patterns, API capabilities, or documented behavior — not just "this should be possible" |
-| R3 | Critical unknowns addressed | No critical unknowns are left unacknowledged; if unresolvable, they appear in Open Questions with explanation of why they could not be resolved |
-| R4 | Open questions are genuine | Items in Open Questions represent true unknowns that require user input or cannot be resolved through further research, not lazily deferred work |
-| R5 | Dependency verification complete | If external dependencies exist, the Dependency Verification section confirms specific capabilities (endpoints, methods, flags) are present and not deprecated |
-
 ### Post-Specify Checklist
 
 Evaluate against `lifecycle/{feature}/spec.md`:

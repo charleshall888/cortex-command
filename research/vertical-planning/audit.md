@@ -66,7 +66,7 @@ The biggest single in-file targets, ordered by line savings:
 | 7 | `lifecycle/references/specify.md §2a` Research Confidence Check (38–77) | ~22 | medium | C1/C2/C3 + dual-cycle handling can collapse to 18 lines without behavior loss. |
 | 8 | `lifecycle/SKILL.md` Backlog Status Check (76–106) | ~20 | low | Dense conditional tree for a rare path. |
 | 9 | `lifecycle/SKILL.md` Create index.md (108–143) | ~18 | low | Drop worked example, keep schema. |
-| 10 | `lifecycle/references/research.md §0` Log Lifecycle Start (8–13) | 6 | none | Duplicates SKILL.md Step 3 §4 logging. Already documented as lifecycle-owned. |
+| 10 | `lifecycle/references/research.md §0` Log Lifecycle Start (8–13) — file deleted in 2026-05-11 per backlog/185; canonical schema now at `skills/research/SKILL.md` Step 4 | 6 | none | Duplicates SKILL.md Step 3 §4 logging. Already documented as lifecycle-owned. |
 
 **Plus** ~30 more lines from `complete.md §3` (duplicate write-back), ~10 from `plan.md §1b.f` legacy fallback table, ~10 from `lifecycle/SKILL.md` Worktree Inspection Invariant. Total per-file content cuts: **~360 lines.**
 
@@ -112,7 +112,7 @@ Many serve as same-session breadcrumbs for the agent emitting them; some (e.g., 
 | `lifecycle/SKILL.md` | 380 | ~150 (~40%) | Triplet-duplication of complexity-override logic; verbose Backlog Status Check; stale `claude/common.py` reference |
 | `lifecycle/references/clarify.md` | 124 | ~15 (~12%) | Confidence assessment is load-bearing; Constraints table is noise |
 | `lifecycle/references/clarify-critic.md` | 167 | **delete entirely** (167) | Refine's version is a superset; promote refine to canonical |
-| `lifecycle/references/research.md` | 204 | ~50 (~25%) | §0 duplicates SKILL.md; §1a synthesis template duplicates §3 artifact template |
+| `lifecycle/references/research.md` (deleted 2026-05-11 per backlog/185; canonical at `skills/research/SKILL.md` Step 4) | 204 | ~50 (~25%) | §0 duplicates SKILL.md; §1a synthesis template duplicates §3 artifact template |
 | `lifecycle/references/specify.md` | 186 | ~35 (~19%) | §2a Research Confidence Check + §2b Pre-Write Checks are valuable; Hard Gate is noise |
 | `lifecycle/references/plan.md` | 309 | **~110 (~36%)** | §1b.b Plan Format duplicates §3 (60 lines saved); per-task templates 1+2 redundant; Code Budget duplicate |
 | `lifecycle/references/orchestrator-review.md` | 184 | ~15 (~8%) | All checklist rows are real gates; Constraints table trim |
@@ -238,7 +238,7 @@ These are conditional content blocks loaded on every invocation — strong candi
 | `lifecycle/SKILL.md` Step 2 (Backlog Status Check + Create index.md + Backlog Write-Back + Discovery Bootstrap, lines 76–208) | ~133 | Loaded every lifecycle invocation | **Split**: first-invocation logic (Discovery Bootstrap, initial Create index.md) → `references/state-init.md`; **re-entrant logic (Backlog Write-Back, Open Decisions bullet-count read for Specify→Plan escalation gate) STAYS in SKILL.md** — Backlog Write-Back fires every phase transition, escalation read is re-entrant. ⚠ Original recommendation incorrectly bundled re-entrant with one-time. |
 | `lifecycle/SKILL.md` Parallel Execution + Worktree Inspection (lines 350–380) | ~30 | Loaded every invocation | `references/parallel-execution.md` (fires only when running concurrent lifecycles) |
 | `lifecycle/references/plan.md` §1b Competing Plans (22–144) | ~122 | Loaded every Plan invocation | `references/plan-competing.md` (critical-tier only) |
-| `lifecycle/references/research.md` §1a Parallel Research (45–140) | ~95 | Loaded every Research invocation | `references/research-parallel.md` (critical-tier only) |
+| `lifecycle/references/research.md` §1a Parallel Research (45–140) — file deleted 2026-05-11 per backlog/185; row obsoleted | ~95 | Loaded every Research invocation | `references/research-parallel.md` (critical-tier only) |
 | `lifecycle/references/implement.md` §1a Daytime Dispatch (49–166, **after Stream B trim to ~75 lines**) | ~75 (NOT 115) | Loaded every Implement invocation | `references/implement-daytime.md` (daytime-dispatch path only). ⚠ Extraction target is ~75 lines after pressure-test-corrected Stream B trim, not the original 115. |
 | `critical-review/SKILL.md` 8 worked examples (212–260) | ~49 | Loaded every critical-review invocation | `references/a-b-downgrade-rubric.md` (only relevant mid-rubric). **Note: this row supersedes per-file cut #3 above (same line range, can't double-book).** |
 

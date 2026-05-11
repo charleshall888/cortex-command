@@ -22,7 +22,7 @@ Remove the dead `${AGENT:-}` env-var gate from `hooks/cortex-scan-lifecycle.sh` 
   fi
   ```
   Replace with the single Claude form — keep the outer guard, drop the inner if/else, retain the same `jq -n --arg ctx "$context" '{ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: $ctx } }'` invocation. Pattern reference: `plugins/cortex-core/hooks/cortex-validate-commit.sh` and `plugins/cortex-overnight/hooks/cortex-tool-failure-tracker.sh` already emit this exact shape unconditionally — match their structure. Do NOT hand-edit `plugins/cortex-overnight/hooks/cortex-scan-lifecycle.sh`; Task 3 regenerates it from the canonical.
-- **Verification**: From a working directory containing `lifecycle/test-feature/research.md`, run `AGENT= bash hooks/cortex-scan-lifecycle.sh <<<'{"hook_event_name":"SessionStart","session_id":"x","cwd":"'$PWD'"}'  | jq -r 'has("hookSpecificOutput")'` — pass if output is `true`. Set up the fixture with `mkdir -p lifecycle/test-feature && touch lifecycle/test-feature/research.md` in a `$TMPDIR` scratch directory, run the hook from that directory, then remove the scratch directory.
+- **Verification**: From a working directory containing `lifecycle/{test-feature}/research.md`, run `AGENT= bash hooks/cortex-scan-lifecycle.sh <<<'{"hook_event_name":"SessionStart","session_id":"x","cwd":"'$PWD'"}'  | jq -r 'has("hookSpecificOutput")'` — pass if output is `true`. Set up the fixture with `mkdir -p lifecycle/{test-feature} && touch lifecycle/{test-feature}/research.md` in a `$TMPDIR` scratch directory, run the hook from that directory, then remove the scratch directory.
 - **Status**: [x] done
 
 ### Task 2: Delete dead defensive code from `test_lifecycle_phase_parity.py`

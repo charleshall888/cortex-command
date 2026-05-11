@@ -189,6 +189,8 @@ Output format:
 
 ## Step 4: Synthesize Findings
 
+Step 4's `### Output structure` block is the canonical schema source for `lifecycle/<feature>/research.md` artifacts. Other lifecycle references must not duplicate or paraphrase this schema; downstream consumers (Spec, Plan) read research.md whole-cloth and do not parse by section name except for `## Open Questions` (parsed by `bin/cortex-complexity-escalator`).
+
 After all agents complete, synthesize into the output structure.
 
 ### Empty/failed agent handling

@@ -134,7 +134,7 @@ Spec [2/{total}]: {feature_title}  (lifecycle/{slug}/spec.md)
 {spec content}
 ```
 
-**Approval prompt**: After all specs are shown, present a single approval:
+**Approval prompt**: After all specs are shown, present a single approval. There is no recommended upper limit on session size — the runner scales well, so remove features only for substantive reasons (out of scope, not actually ready), not to keep the session small.
 
 ```
 Approve this plan and specs?
@@ -342,13 +342,18 @@ A successful `/overnight resume` satisfies:
 |-------|---------|---------|------|----------|----------|
 | 1 | Add user authentication | #042 | feature | high | plan needed |
 | 1 | Fix pagination bug | #051 | bug | high | plan ready |
+| 1 | Tighten login rate-limit | #053 | bug | high | plan ready |
 | 2 | Add export to CSV | #038 | feature | medium | plan ready |
+| 2 | Wire up audit log writer | #044 | feature | medium | plan ready |
+| 2 | Backfill missing user timestamps | #046 | chore | medium | plan ready |
+| 3 | Add admin-only dashboard route | #049 | feature | medium | plan ready |
+| 3 | Document the auth flow | #055 | chore | low | plan ready |
 
 ## Execution Strategy
 
-- **Rounds**: 2
+- **Rounds**: 3
 - **Throttle**: tier-based adaptive (round size determined by conflict tiers)
-- **Features**: 3 (2 in Round 1, 1 in Round 2)
+- **Features**: 8 (3 in Round 1, 3 in Round 2, 2 in Round 3)
 
 ## Not Ready
 
@@ -358,8 +363,9 @@ A successful `/overnight resume` satisfies:
 
 ## Risk Assessment
 
-- No file overlap detected between Round 1 features
-- Round 2 depends on Round 1 completing successfully
+- No file overlap detected within any round's features
+- Round 2 depends on Round 1 completing successfully (audit log writer reads auth state)
+- Round 3 is independent but scheduled after Round 2 to keep dashboard work off a churning auth surface
 
 ## Stop Conditions
 

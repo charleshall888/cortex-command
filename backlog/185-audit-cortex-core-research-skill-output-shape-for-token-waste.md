@@ -20,7 +20,7 @@ lifecycle_phase: implement
 
 # Audit /cortex-core:research skill output shape for token waste in research.md sections
 
-Per `research/epic-172-audit/research.md` Q-G: real-world `lifecycle/<feature>/research.md` artifacts contain ~3,000 token average of sub-agent-invented sections that aren't in any documented template. The lifecycle template at `skills/lifecycle/references/research.md:114–138` documents the schema, but the actual artifacts that ship contain entirely different sections.
+Per `research/epic-172-audit/research.md` Q-G: real-world `lifecycle/<feature>/research.md` artifacts contain ~3,000 token average of sub-agent-invented sections that aren't in any documented template. The lifecycle template (formerly at `skills/lifecycle/references/research.md`; deleted in 2026-05-11 per backlog/185 — canonical schema source now at `skills/research/SKILL.md` Step 4 `### Output structure`) documented the schema, but the actual artifacts that ship contain entirely different sections.
 
 ## Context from discovery
 
@@ -31,7 +31,7 @@ The epic-172-audit's empirical sample (5 recent lifecycle dirs) found:
 - `Adversarial Review` section in 4/5 samples (~1170 tok avg) — caught real issues in unify sample; 0 retro mentions but evidently load-bearing; **NOT in lifecycle template**
 - `Considerations Addressed` section in 1/5 samples (~300 tok avg) — meta-narrative; **NOT in lifecycle template**
 
-These sections are emitted by `/cortex-core:research`'s parallel-agent angles (per `skills/lifecycle/references/research.md:46–112`), which prescribe the angles but don't pin output shape. The result: each agent invents section structure, the synthesizer surfaces it, and the lifecycle template's documented schema is not what gets written.
+These sections are emitted by `/cortex-core:research`'s parallel-agent angles (formerly documented in `skills/lifecycle/references/research.md`; deleted in 2026-05-11 per backlog/185 — angle prescription now lives in `skills/research/SKILL.md` Step 3), which prescribe the angles but don't pin output shape. The result: each agent invents section structure, the synthesizer surfaces it, and the lifecycle template's documented schema is not what gets written.
 
 **Implication**: trimming the lifecycle template's research.md schema (per ticket #182's vertical-planning adoption) doesn't move the needle on per-feature research.md token cost. The actual schema is owned by `/cortex-core:research`, not by lifecycle.
 
@@ -41,7 +41,7 @@ This is the **largest single per-feature waste source identified in the audit** 
 
 ### 1. Document the actual research.md schema as currently emitted
 
-Sample 10 recent `lifecycle/<feature>/research.md` artifacts and produce a "what sections actually appear" inventory. Reconcile against the documented schema in `skills/lifecycle/references/research.md:114–138`. Identify which invented sections are load-bearing (e.g., Adversarial Review caught real issues) vs. ceremonial (e.g., Requirements & Constraints re-quotes upstream).
+Sample 10 recent `lifecycle/<feature>/research.md` artifacts and produce a "what sections actually appear" inventory. Reconcile against the documented schema (formerly at `skills/lifecycle/references/research.md`; deleted in 2026-05-11 per backlog/185 — canonical at `skills/research/SKILL.md` Step 4 `### Output structure`). Identify which invented sections are load-bearing (e.g., Adversarial Review caught real issues) vs. ceremonial (e.g., Requirements & Constraints re-quotes upstream).
 
 ### 2. Decide canonical schema
 
@@ -61,7 +61,7 @@ Per the chosen canonical schema:
 
 ### 4. Update lifecycle template
 
-Update `skills/lifecycle/references/research.md:114–138` to match the canonical schema chosen in step 2.
+Update the lifecycle research template (formerly at `skills/lifecycle/references/research.md`; deleted in 2026-05-11 per backlog/185 — canonical at `skills/research/SKILL.md` Step 4 `### Output structure`) to match the canonical schema chosen in step 2.
 
 ### 5. Backwards compatibility
 
@@ -70,7 +70,7 @@ Existing archived research.md files have the old invented schema. Don't migrate 
 ## Touch points
 
 - `skills/research/SKILL.md` (or wherever `/cortex-core:research` skill lives — verify path)
-- `skills/lifecycle/references/research.md` (template alignment)
+- `skills/lifecycle/references/research.md` (template alignment — file deleted in 2026-05-11 per backlog/185; canonical at `skills/research/SKILL.md` Step 4)
 - `skills/discovery/references/research.md` (if discovery uses the same skill)
 - All `plugins/cortex-core/skills/*` mirrors auto-regenerated
 
@@ -82,11 +82,13 @@ Existing archived research.md files have the old invented schema. Don't migrate 
 
 ## Verification
 
-- Inventory document lists ≥10 research.md samples with section presence/absence and per-section token estimates
-- `skills/lifecycle/references/research.md` schema documents exactly the sections the canonical chosen schema prescribes
+- Inventory document lists ≥10 research.md samples with section presence/absence and per-section token estimates (satisfied by `lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/research.md` § "Empirical inventory — 19 recent lifecycle/*/research.md artifacts")
+- ~~`skills/lifecycle/references/research.md` schema documents exactly the sections the canonical chosen schema prescribes~~ — Superseded by audit findings — see lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/spec.md (file is deleted; canonical schema source moved to `skills/research/SKILL.md` Step 4)
 - A fresh `/cortex-core:research` invocation produces a research.md matching the canonical schema (no inventions)
-- Net per-feature research.md token cost reduces by ≥40% (target: ~3,000 tok savings if (β)/(γ) chosen)
-- Adversarial Review section, if kept (per recommendation γ), appears in a fresh research.md with the documented format
+- ~~Net per-feature research.md token cost reduces by ≥40% (target: ~3,000 tok savings if (β)/(γ) chosen)~~ — Superseded by audit findings — see lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/spec.md (premise misdiagnosed: load-bearing sections cannot be cut to hit ≥40%; replaced by no-regression criterion in spec Requirement 7)
+- ~~Adversarial Review section, if kept (per recommendation γ), appears in a fresh research.md with the documented format~~ — Superseded by audit findings — see lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/spec.md (γ rejected; Adversarial Review preserved unchanged per spec Non-Requirement 1)
 - Existing archived research.md files continue to be parseable by any code that reads them
 - `pytest` passes after migration
 - Pre-commit dual-source drift hook passes after `just build-plugin`
+
+> Verification criteria superseded by lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/spec.md Requirements 1–9; see Problem Statement for rationale.
