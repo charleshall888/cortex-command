@@ -132,6 +132,32 @@ def filter_events_since(
 # Per-feature metric extraction
 # ---------------------------------------------------------------------------
 
+#: Closed enum of field aliases recognized when reading a verdict value from a
+#: ``review_verdict`` event.  Tuple ordering is the precedence contract:
+#: canonical ``"verdict"`` first; multi-alias events resolve to canonical.
+#: Scope is deliberately narrow — do not generalize this helper across other
+#: field accesses in this module (per R11 / FM-6).
+_VERDICT_FIELD_ALIASES: tuple[str, ...] = ("verdict", "review_verdict", "decision")
+
+
+def _extract_verdict(event: dict) -> str | None:
+    """Return the verdict value from *event* using closed-enum alias lookup.
+
+    Iterates :data:`_VERDICT_FIELD_ALIASES` in order and returns the first
+    present field's value.  Returns ``None`` when no alias is present.
+
+    Args:
+        event: A ``review_verdict`` event dict.
+
+    Returns:
+        The verdict string, or ``None`` if no alias field is present.
+    """
+    for alias in _VERDICT_FIELD_ALIASES:
+        if alias in event:
+            return event[alias]
+    return None
+
+
 def _phase_durations(
     transitions: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
@@ -220,7 +246,9 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
     # ---- Review verdicts ----
     review_events = [e for e in events if e["event"] == "review_verdict"]
     review_verdicts: list[str] | None = (
-        [e["verdict"] for e in review_events] if review_events else None
+        [v for v in (_extract_verdict(e) for e in review_events) if v is not None]
+        if review_events
+        else None
     )
 
     # ---- Total duration ----
