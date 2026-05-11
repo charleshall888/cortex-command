@@ -350,5 +350,182 @@ def test_heading_and_status_round_trip(tmp_path):
     assert plan.tasks[1].status == "pending"
 
 
+class TestOutlineSectionAndH3PhasesRegression(unittest.TestCase):
+    """Regression tests for the ``## Outline`` + ``### Phase N:`` plan shape.
+
+    Locks in current parser behavior before the canonical template-restructure
+    tasks land:
+
+    (a) ``## Outline`` ABOVE ``## Tasks`` parses successfully — all tasks
+        discovered, all task-body fields extracted, and the
+        ``_extract_section(text, "Overview")`` extractor at ``parser.py:258``
+        finds ``## Overview`` and is NOT confused by ``## Outline``.
+    (b) ``### Phase N:`` H3 headings inside ``## Outline`` parse successfully
+        — task bodies remain untruncated, all fields extracted on the
+        subsequent ``### Task N:`` sections.
+    (c) Lock-in: an unrelated ``## SomeOther`` H2 section between two
+        ``### Task N:`` blocks still truncates the prior task's body at the
+        H2 boundary (preserves the current H2-anchor termination behavior at
+        ``parser.py:310``).
+    """
+
+    def setUp(self):
+        self._tmpdir = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self._tmpdir.cleanup()
+
+    def _write_and_parse(self, plan_text: str) -> FeaturePlan:
+        plan_path = Path(self._tmpdir.name) / "plan.md"
+        plan_path.write_text(plan_text, encoding="utf-8")
+        return parse_feature_plan(plan_path)
+
+    def test_outline_section_above_tasks_parses(self):
+        """``## Outline`` placed above ``## Tasks`` does not break parsing.
+
+        Overview extraction must still find ``## Overview`` (not be confused
+        by ``## Outline``), and all tasks + their body fields must be
+        discovered.
+        """
+        tasks_body = (
+            _task_block(
+                "### Task 1: First task",
+                Files="`src/a.py`",
+                What="do thing one",
+                Complexity="simple",
+            )
+            + "\n"
+            + _task_block(
+                "### Task 2: Second task",
+                Files="`src/b.py`",
+                What="do thing two",
+                Complexity="moderate",
+            )
+        )
+        # Build a plan with `## Outline` inserted between Overview and Tasks.
+        base = _make_plan(tasks_body)
+        outline_section = (
+            "## Outline\n"
+            "Scope boundaries and verification strategy live here.\n\n"
+        )
+        plan_text = base.replace("## Tasks\n", outline_section + "## Tasks\n", 1)
+
+        plan = self._write_and_parse(plan_text)
+
+        # Overview extractor was not confused by `## Outline`.
+        self.assertEqual(plan.overview, "test")
+        # Both tasks discovered.
+        self.assertEqual(len(plan.tasks), 2)
+        self.assertEqual(plan.tasks[0].number, 1)
+        self.assertEqual(plan.tasks[0].description, "First task")
+        self.assertEqual(plan.tasks[0].files, ["src/a.py"])
+        self.assertEqual(plan.tasks[0].complexity, "simple")
+        self.assertEqual(plan.tasks[1].number, 2)
+        self.assertEqual(plan.tasks[1].description, "Second task")
+        self.assertEqual(plan.tasks[1].files, ["src/b.py"])
+        self.assertEqual(plan.tasks[1].complexity, "moderate")
+
+    def test_h3_phase_headings_inside_outline_do_not_truncate_tasks(self):
+        """``### Phase N:`` H3s inside ``## Outline`` leave task bodies intact.
+
+        The phase H3s live above ``## Tasks``, so the parser must still
+        discover all ``### Task N:`` sections below and extract every field
+        from each task body.
+        """
+        outline_section = (
+            "## Outline\n\n"
+            "### Phase 1: Robustness work\n"
+            "Land parser regression tests first.\n\n"
+            "### Phase 2: Template restructure\n"
+            "Then ship the canonical template changes.\n\n"
+        )
+        tasks_body = (
+            _task_block(
+                "### Task 1: First task",
+                Files="`src/a.py`",
+                What="do thing one",
+                Complexity="simple",
+            )
+            + "\n"
+            + _task_block(
+                "### Task 2: Second task",
+                Files="`src/b.py`",
+                What="do thing two",
+                Complexity="moderate",
+            )
+        )
+        base = _make_plan(tasks_body)
+        plan_text = base.replace("## Tasks\n", outline_section + "## Tasks\n", 1)
+
+        plan = self._write_and_parse(plan_text)
+
+        # All tasks parsed, all fields extracted — bodies were not
+        # truncated by the H3 phase headings above ``## Tasks``.
+        self.assertEqual(len(plan.tasks), 2)
+        self.assertEqual(plan.tasks[0].number, 1)
+        self.assertEqual(plan.tasks[0].description, "First task")
+        self.assertEqual(plan.tasks[0].files, ["src/a.py"])
+        self.assertEqual(plan.tasks[0].complexity, "simple")
+        self.assertEqual(plan.tasks[1].number, 2)
+        self.assertEqual(plan.tasks[1].description, "Second task")
+        self.assertEqual(plan.tasks[1].files, ["src/b.py"])
+        self.assertEqual(plan.tasks[1].complexity, "moderate")
+
+    def test_unrelated_h2_after_last_task_truncates_task_body(self):
+        """Lock-in: a ``## SomeOther`` H2 after the last task truncates that
+        task's body at the H2 boundary.
+
+        Preserves the current H2-anchor termination behavior at
+        ``parser.py:310`` — the H2 sweep only fires for the final task in the
+        sequence (the ``else`` branch of the next-task-start lookup), and
+        truncates that task's body so trailing H2 sections do not leak in.
+
+        A future "support nested-phase headings" change that softens this
+        H2-anchor terminator must deliberately break this assertion rather
+        than do so by accident.
+        """
+        # Two ``### Task N:`` blocks with an unrelated ``## SomeOther`` H2
+        # placed AFTER the last task. The ``## SomeOther`` body intentionally
+        # contains a ``- **Complexity**: critical`` row that would corrupt
+        # Task 2's parsed Complexity if the H2-anchor terminator failed to
+        # fire.
+        tasks_body = (
+            _task_block(
+                "### Task 1: First task",
+                Files="`src/a.py`",
+                What="do thing one",
+                Complexity="simple",
+            )
+            + "\n"
+            + _task_block(
+                "### Task 2: Second task",
+                Files="`src/b.py`",
+                What="do thing two",
+                Complexity="moderate",
+            )
+            + "\n"
+            "## SomeOther\n"
+            "This unrelated H2 sits after the last task.\n\n"
+            "- **Complexity**: critical\n"
+        )
+        plan_text = _make_plan(tasks_body)
+
+        plan = self._write_and_parse(plan_text)
+
+        # Both task headings are still discovered.
+        self.assertEqual(len(plan.tasks), 2)
+
+        self.assertEqual(plan.tasks[0].number, 1)
+        self.assertEqual(plan.tasks[0].complexity, "simple")
+        self.assertEqual(plan.tasks[0].files, ["src/a.py"])
+
+        # Task 2's body was truncated at the ``## SomeOther`` H2, so its
+        # Complexity remains "moderate" — the ``critical`` value sitting
+        # under ``## SomeOther`` did NOT leak into Task 2's parsed fields.
+        self.assertEqual(plan.tasks[1].number, 2)
+        self.assertEqual(plan.tasks[1].complexity, "moderate")
+        self.assertEqual(plan.tasks[1].files, ["src/b.py"])
+
+
 if __name__ == "__main__":
     unittest.main()
