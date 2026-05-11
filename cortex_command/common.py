@@ -321,12 +321,12 @@ def read_tier(
     feature: str,
     lifecycle_base: Path = Path("lifecycle"),
 ) -> str:
-    """Read the most recent tier from a feature's events.log.
+    """Read the active complexity tier from a feature's events.log.
 
-    Scans the JSONL events log for lines containing a ``tier``
-    field and returns the value from the last such line. Defaults to
-    ``"simple"`` if the file does not exist, is empty, or contains no
-    tier entries.
+    Scans the JSONL events log and returns the ``tier`` field from the
+    most recent ``lifecycle_start`` event, superseded by the ``to`` field
+    of any later ``complexity_override`` event. Defaults to ``"simple"``
+    if the file does not exist, is empty, or contains no relevant event.
 
     Args:
         feature: Feature slug string (e.g. "my-feature").
@@ -334,13 +334,14 @@ def read_tier(
             Defaults to ``Path("lifecycle")``.
 
     Returns:
-        The most recent tier string, or ``"simple"``.
+        The active tier string, or ``"simple"``.
     """
     events_path = lifecycle_base / feature / "events.log"
     if not events_path.exists():
         return "simple"
 
-    last = "simple"
+    tier = "simple"
+    found = False
     for line in events_path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
@@ -349,9 +350,18 @@ def read_tier(
             record = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if "tier" in record:
-            last = record["tier"]
-    return last
+        kind = record.get("event")
+        if kind == "lifecycle_start":
+            value = record.get("tier")
+            if isinstance(value, str) and value:
+                tier = value
+                found = True
+        elif kind == "complexity_override":
+            value = record.get("to")
+            if isinstance(value, str) and value:
+                tier = value
+                found = True
+    return tier if found else "simple"
 
 
 # ---------------------------------------------------------------------------
