@@ -1,0 +1,2 @@
+{"event":"lifecycle_start","feature":"foo","tier":"simple","criticality":"medium"}
+{"event":"phase_transition","feature":"foo","from":"research","to":"specify"}

@@ -356,6 +356,10 @@ measure-l1-surface:
 check-events-registry-audit:
     bin/cortex-check-events-registry --audit
 
+# Audit lifecycle events.log files for last-wins vs canonical tier-reader divergence (spec R2b)
+audit-tier-divergence:
+    bin/cortex-audit-tier-divergence
+
 # --- Testing ---
 
 # Run skill contract tests (validates SKILL.md frontmatter across all skills)

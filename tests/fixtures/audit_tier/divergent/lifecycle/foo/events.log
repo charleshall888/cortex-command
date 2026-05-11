@@ -1,0 +1,3 @@
+{"event":"lifecycle_start","feature":"foo","tier":"complex","criticality":"medium"}
+{"event":"complexity_override","feature":"foo","from":"complex","to":"simple"}
+{"event":"batch_dispatch","feature":"foo","tier":"complex"}
