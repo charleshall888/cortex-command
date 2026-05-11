@@ -151,35 +151,6 @@
     "repo": null
   },
   {
-    "id": 194,
-    "title": "Investigate epic-172 closure-inaccuracy base rate",
-    "status": "backlog",
-    "priority": "high",
-    "type": "spike",
-    "tags": [
-      "process",
-      "closure-quality",
-      "epic-172",
-      "dr-5"
-    ],
-    "areas": [],
-    "created": "2026-05-11",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "187",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/lifecycle-discovery-token-audit/research.md",
-    "plan": null,
-    "uuid": "c799c6d4-b846-40ff-814f-41354861bbb4",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
