@@ -1,0 +1,3 @@
+{"event": "lifecycle_start", "tier": "simple", "criticality": "high"}
+{"event": "complexity_override", "to": "complex"}
+{"event": "criticality_override", "to": "medium", "criticality": "medium"}
