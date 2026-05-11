@@ -1,6 +1,6 @@
 ---
 name: morning-review
-description: Guide the user through the morning report after an overnight session. Displays the Executive Summary, walks each report section in order, collects answers to deferred questions, advances completed-feature lifecycles to Complete, and auto-closes backlog tickets at the end. Use when the user says "/morning-review", "morning review", "review overnight", "morning report walkthrough", or "what happened overnight".
+description: Guide the user through the morning report after an overnight session. Walks Executive Summary and report sections, collects answers to deferred questions, advances completed lifecycles to Complete, and auto-closes backlog tickets. Use when the user says "/morning-review", "morning review", or "what happened overnight".
 disable-model-invocation: true
 inputs: []
 outputs:

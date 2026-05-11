@@ -1,6 +1,6 @@
 ---
 name: overnight
-description: Plan and launch autonomous overnight development sessions. Selects eligible features from the backlog, presents a session plan for user approval, and hands off to the runner for unattended execution. Use when user says "/overnight", "/overnight resume", "/overnight status", "start overnight session", "overnight plan", "launch overnight", "overnight status", or wants to run multiple features autonomously overnight.
+description: Plan and launch autonomous overnight development sessions. Selects eligible backlog features, presents a session plan for approval, and hands off to the runner for unattended execution. Use when user says "/overnight", "start overnight session", "launch overnight", or wants to run features autonomously overnight.
 disable-model-invocation: true
 inputs:
   - "time-limit: string (optional) — Maximum wall-clock duration for the overnight session (e.g. '6h'). Passed as --time-limit to the runner."

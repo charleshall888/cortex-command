@@ -2,11 +2,9 @@
 name: diagnose
 description: >
   Systematic 4-phase debugging for skills, hooks, lifecycle, and overnight runner issues.
-  Use when: "debug this", "fix this bug", "why is this failing", "investigate this error",
-  "make this test pass", "why isn't this triggering", "skill not working", "hook not running",
-  "lifecycle bug", "overnight runner stall", "diagnose this", "diagnose",
-  or any unexpected behavior in the agentic layer
-  components. Finds root cause, fixes, and verifies with a structured loop.
+  Use when: "fix this bug", "why is this failing", "make this test pass", "skill not working",
+  "hook not running", "diagnose this", or unexpected agentic-layer behavior.
+  Finds root cause, fixes, and verifies.
 ---
 
 # Systematic Debugging
