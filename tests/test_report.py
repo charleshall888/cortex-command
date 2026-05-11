@@ -386,27 +386,33 @@ class Test_critical_review_residue:
         assert "degraded: synthesis failed" in output
 
     def test_operator_note_literals_in_skill_md(self):
-        """(xii) Operator-note literal strings appear verbatim in SKILL.md."""
-        skill_path = (
+        """(xii) Operator-note literal strings appear verbatim in SKILL.md body or its references."""
+        skill_dir = (
             Path(__file__).resolve().parents[1]
             / "skills"
             / "critical-review"
-            / "SKILL.md"
         )
+        skill_path = skill_dir / "SKILL.md"
         assert skill_path.exists(), f"SKILL.md not found at {skill_path}"
-        skill_text = skill_path.read_text(encoding="utf-8")
+
+        searched_texts = [skill_path.read_text(encoding="utf-8")]
+        references_dir = skill_dir / "references"
+        if references_dir.is_dir():
+            for ref in sorted(references_dir.glob("*.md")):
+                searched_texts.append(ref.read_text(encoding="utf-8"))
+        haystack = "\n".join(searched_texts)
 
         # R5: ad-hoc no-context note
-        assert "B-class residue not written — no active lifecycle context." in skill_text, (
+        assert "B-class residue not written — no active lifecycle context." in haystack, (
             "Missing R5 operator note: 'B-class residue not written — no active lifecycle context.'"
         )
 
         # R4: multiple-match note
-        assert "multiple active lifecycle sessions matched" in skill_text, (
+        assert "multiple active lifecycle sessions matched" in haystack, (
             "Missing R4 operator note: 'multiple active lifecycle sessions matched'"
         )
 
         # Malformed JSON envelope operator note
-        assert "emitted malformed JSON envelope" in skill_text, (
+        assert "emitted malformed JSON envelope" in haystack, (
             "Missing operator note for malformed JSON envelope"
         )
