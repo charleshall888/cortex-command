@@ -1,0 +1,66 @@
+{
+  "ts": "2026-05-11T14:05:41Z",
+  "feature": "extract-conditional-content-blocks-to-references-a-b-downgrade-rubric-implement-daytime-trimmed-scope",
+  "artifact": "lifecycle/extract-conditional-content-blocks-to-references-a-b-downgrade-rubric-implement-daytime-trimmed-scope/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "reviewer_angle": "Live-LLM test assertion fragility",
+      "finding": "Trigger 2 fixture content is semantically near-identical to Worked Example 4 — held-out grep check measures byte-overlap, not semantic-overlap with the worked example, so the test risks measuring prompt-recall rather than rule application.",
+      "evidence_quote": "Required fixture content: \"the proposed change does not produce its stated outcome because the change as proposed will not produce the stated outcome\" (per spec Req 2)."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Live-LLM test assertion fragility",
+      "finding": "The plan does not require updating the docstring on test_synthesizer_rubric_deterministic (lines 217-226) which still asserts \"Single live model invocation; no 2-of-3 tolerance\" — even though the four new tests adopt the opposite pattern; the contradiction remains in the file post-change.",
+      "evidence_quote": "Existing pattern to follow: test_synthesizer_rubric_deterministic at tests/test_critical_review_classifier.py:215+"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Trim verification surface gaps in Task 1",
+      "finding": "The Code blocks to KEEP list pins §1a.iv Step 3 (DAYTIME_DISPATCH_ID=... background launch) as load-bearing, but no entry in the 9-gate Verification list anchors on DAYTIME_DISPATCH_ID, run_in_background, or the literal launch invocation — a future trim could collapse the launch and pass every Task 1 gate.",
+      "evidence_quote": "Code blocks to KEEP (main-session work the helper modules don't do): §1a.iv Step 3 (lines 94–98): the actual DAYTIME_DISPATCH_ID=... python3 -m cortex_command.overnight.daytime_pipeline ... background launch"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Trim verification surface gaps in Task 1",
+      "finding": "test_skill_contracts pins **i., **vii., **viii. sub-headers inside §1a; **ii. through **vi. are unprotected. An over-aggressive collapse of §1a.iv that merges the four **Step N — sub-bullets into one paragraph passes every Task 1 gate while violating the implicit numbered-flow contract.",
+      "evidence_quote": "Test coupling: tests/test_daytime_preflight.py::test_skill_contracts anchors on the literal ### 1a. header (regex at tests/test_daytime_preflight.py:339) and a sibling ### boundary."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Trim verification surface gaps in Task 1",
+      "finding": "Plan Context catalogs behavior-content gates verbatim and asserts they survive prose-tightening if behavioral description is preserved — but spec §71 acknowledges the stub-sentence escape hatch (copying tokens into a one-line stub passes every gate). The plan's Verification field has no rail enforcing tokens survive inside their original behavioral paragraphs.",
+      "evidence_quote": "Phrases that MUST survive inline (spec Req 1 behavior-content gates): kill -0, active-session.json, plan.md not found, pause polling, 120 iterations, dispatch_id (≥2 occurrences), implementation_dispatch (≥1), dispatch_complete (≥1)."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Unverified infrastructure preconditions",
+      "finding": "Trigger 3 no_straddle evaluator regex depends on synthesizer paraphrasing worked-example 6's specific \"describes an adjacent\" phrasing — the rubric itself only mandates \"trigger 3 does NOT fire — ratify as A\" for the straddle case and offers no contract that no_straddle reclassification rationale must contain \"adjacent\".",
+      "evidence_quote": "Per-attempt evaluator for no_straddle: re.search(r'(?i)adjacent|adjacency|no\\s+straddle_rationale|describes\\s+an?\\s+adjacent', stdout)"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Unverified infrastructure preconditions",
+      "finding": "claude -p --model opus subprocess invocation is unverified — no environment precondition check (claude on PATH, opus reachable, network), no pytest skip-marker for missing prerequisites; zero-context implementer hits non-actionable subprocess error with no signal to distinguish rubric-broken from environment-broken.",
+      "evidence_quote": "subprocess invocation (subprocess.run([\"claude\", \"-p\", assembled, \"--model\", \"opus\"], timeout=600))"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "CI/dev cost and drift maintenance shape",
+      "finding": "Neither pre-commit hook nor just test executes the new live-LLM tests on any defined cadence — just test runs pytest tests/ -q without --run-slow. The plan does not specify whether overnight is the trigger, whether a test-slow recipe is needed, or whether these tests gate any PR.",
+      "evidence_quote": "Run pytest tests/test_critical_review_classifier.py -m slow — pass if exit 0"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "CI/dev cost and drift maintenance shape",
+      "finding": "Four new tests assert against specific English rationale vocabulary (restate|circular, adjacent|adjacency, straddle exemption, speculative|vague|hedged). When Opus 4.8/4.9/5.0 ships and rationale vocabulary shifts, all four tests may break in lockstep; no maintenance ticket budgeted, no triage protocol defined, machine-readable trigger-tag emission not considered.",
+      "evidence_quote": "Per-attempt evaluator (both must match): re.search(r'(?i)restate|circular|without\\s+a\\s+causal|tautolog', stdout)"
+    }
+  ]
+}
