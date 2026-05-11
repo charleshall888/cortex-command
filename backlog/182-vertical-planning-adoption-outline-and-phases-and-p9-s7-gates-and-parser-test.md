@@ -3,14 +3,20 @@ schema_version: "1"
 uuid: 4a8a0d7b-3ccb-4576-9f81-387f68cf4e20
 title: "Vertical-planning adoption as REPLACEMENT: ## Outline absorbs Scope Boundaries + Verification Strategy; ## Risks preserves Veto Surface; tier-conditional ## Acceptance"
 type: feature
-status: backlog
+status: complete
 priority: high
 parent: 172
 blocked-by: []
 tags: [lifecycle, plan-template, spec-template, vertical-planning, orchestrator-review, parser, metrics-parser]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-05-11
 discovery_source: research/vertical-planning/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/vertical-planning-adoption-as-replacement-outline-absorbs-scope-boundaries-verification-strategy-risks-preserves-veto-surface-tier-conditional-acceptance/spec.md
+areas: [lifecycle]
+session_id: null
+lifecycle_phase: plan
 ---
 
 # Vertical-planning adoption as REPLACEMENT (per epic-172-audit DR-1)
