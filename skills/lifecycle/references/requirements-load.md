@@ -1,6 +1,6 @@
 # Requirements Context Load
 
-Shared protocol for loading project requirements context. Read this file from any reference that needs to load `requirements/` (currently `clarify.md` §2 and `research.md` §0b).
+Shared protocol for loading project requirements context. Read this file from any reference that needs to load `requirements/` (currently `clarify.md` §2, `research.md` §0b, and `specify.md` §1).
 
 ## Protocol
 
