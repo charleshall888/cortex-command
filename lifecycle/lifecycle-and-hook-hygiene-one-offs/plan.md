@@ -14,7 +14,7 @@ Three surviving sub-items from #193 ship in one PR with one commit per sub-item:
 - **Complexity**: trivial
 - **Context**: Cross-feature artifact edit (touching closed-feature #185's review.md). Covered by the `clarify_critic_amendment` event already present in `lifecycle/lifecycle-and-hook-hygiene-one-offs/events.log` (rationale-bounded to this single edit). No semantic change to the reviewer's prose — backticks render visually identical in most viewers and only affect the test's citation extractor. The fix is a strict prerequisite for Task 3 because Task 3's scoped advisor invokes `test-skill-design`, which includes `test_lifecycle_references_resolve.py`; without this fix every SKILL.md edit would surface a permanent failure message in agent context after Task 3 lands.
 - **Verification**: `uv run pytest tests/test_lifecycle_references_resolve.py 2>&1` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Create tests/test_skill_edit_advisor_scope.sh
 
@@ -24,7 +24,7 @@ Three surviving sub-items from #193 ship in one PR with one commit per sub-item:
 - **Complexity**: simple
 - **Context**: Follow the shell-test pattern in `tests/test_hooks.sh` (set -euo pipefail, function-per-assertion, explicit FAIL/PASS lines on stderr). **Contract pinned to a shim that handles both probe and invocation calls**: prepend a temp dir to `PATH` containing an executable `just` stub that (a) when invoked with `--list` as its first argv, prints a line containing both `test-skill-contracts` and `test-skill-design` to stdout and exits 0 (this satisfies the L36-style existence probe Task 3 produces, no matter whether Task 3 probes for both recipes individually or for one of them); (b) for every other argv invocation, records all argv tokens to a trace file (one token per line) and exits with a controllable status. **Assertion shape**: build a SET of recipe names invoked (the union across invocations, tokenized — so both single-argv `just test-skill-contracts test-skill-design` and two-argv `just test-skill-contracts; just test-skill-design` produce the same set `{test-skill-contracts, test-skill-design}`); ignore `--list` invocations and known-non-recipe tokens (`-c`, `--`); assert the resulting set equals `{test-skill-contracts, test-skill-design}` exactly. **Stdout-cap assertion**: drive the shim to emit ≥2000 bytes (once with exit 0, once with non-zero exit), capture the advisor's JSON output, run `jq -r '.hookSpecificOutput.additionalContext' | wc -c` and assert ≤ 500 on both paths — this measures the **final emitted field including any suffix**, so a hook that does `head -c <N>` + suffix must keep N + len(suffix) ≤ 500. Use `mktemp -d` for trace files and clean up on EXIT trap. The script must be `chmod +x`. Hook input shape: `claude/hooks/cortex-skill-edit-advisor.sh:9-15`; output shape: `:55-68`. The set-based assertion explicitly accommodates both invocation shapes (single-argv per Task 4's verification idiom at line 59 of this plan, or two sequential invocations); the `--list` shim handler accommodates Task 3's existence-probe change at L36.
 - **Verification**: `bash -n tests/test_skill_edit_advisor_scope.sh && test -x tests/test_skill_edit_advisor_scope.sh` — pass if exit 0 (syntax-valid and executable). Functional execution happens after Task 3 lands.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Replace `just test-skills` with scoped sub-suites in skill-edit-advisor (Sub-item 4 commit)
 
@@ -41,7 +41,7 @@ Three surviving sub-items from #193 ship in one PR with one commit per sub-item:
   - `bash tests/test_skill_edit_advisor_scope.sh 2>&1` — pass if exit 0.
   - `grep -c 'clarify_critic_amendment' lifecycle/lifecycle-and-hook-hygiene-one-offs/events.log` ≥ 1 — pass if count ≥ 1.
   - `git log -1 --format=%B | grep -cE 'workflow trim|context bloat'` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Refactor lifecycle SKILL.md Step 1 + Step 2 single-resolve (Sub-item 1 commit)
 
@@ -61,7 +61,7 @@ Three surviving sub-items from #193 ship in one PR with one commit per sub-item:
   - `./bin/cortex-check-parity 2>&1` — pass if exit 0 (§29 parity unchanged).
   - `git log -1 --format=%B | grep -c 'token cut'` ≥ 1 — pass if count ≥ 1.
   - Behavioral spot-check (annotated): Interactive/session-dependent transcript review per spec Req 1 AC — record in PR description. Acknowledged-soft: this is the only behavioral verification of attention-discipline savings and is not enforceable in CI.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Create and push deprecated-auto-scan-2026-05-11 recovery tag
 
@@ -77,7 +77,7 @@ Three surviving sub-items from #193 ship in one PR with one commit per sub-item:
   - `git cat-file -e deprecated-auto-scan-2026-05-11:tests/fixtures/skill_trigger_phrases.yaml` — pass if exit 0 (pre-scrub fixture is recoverable).
   - `git cat-file -e deprecated-auto-scan-2026-05-11:docs/interactive-phases.md` — pass if exit 0 (pre-scrub doc is recoverable).
   - `git ls-remote --tags origin | grep -c 'deprecated-auto-scan-2026-05-11'` ≥ 1 — pass if count ≥ 1 (tag is on the remote, not just local).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Delete discovery auto-scan + scrub orphan references + CHANGELOG entry (Sub-item 3 commit)
 
@@ -99,7 +99,7 @@ Three surviving sub-items from #193 ship in one PR with one commit per sub-item:
   - `git ls-remote --tags origin | grep -c 'deprecated-auto-scan-2026-05-11'` ≥ 1 — pass if count ≥ 1 (re-check post-deletion that the remote tag survives).
   - `uv run pytest tests/test_skill_descriptions.py tests/test_skill_handoff.py 2>&1` — pass if exit 0.
   - `git log -1 --format=%B | grep -c 'workflow trim'` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 

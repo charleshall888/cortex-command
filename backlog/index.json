@@ -51,7 +51,7 @@
     "research": null,
     "spec": "lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/spec.md",
     "discovery_source": "research/lifecycle-discovery-token-audit/research.md",
-    "plan": null,
+    "plan": "lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/plan.md",
     "uuid": "72260d5f-c01b-4600-8b84-0b3b5f4f3a15",
     "lifecycle_slug": null,
     "session_id": null,
@@ -62,27 +62,29 @@
   {
     "id": 195,
     "title": "Reframe discovery to principal-architect posture",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
       "discovery",
       "skill-rewrite"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-05-11",
     "updated": "2026-05-11",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/reframe-discovery-to-principal-architect-posture/spec.md",
     "discovery_source": "research/discovery-architectural-posture-rewrite/research.md",
     "plan": null,
     "uuid": "ce49fbc8-a968-48ed-b1e7-de59ef6f171e",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -146,38 +148,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 193,
-    "title": "Lifecycle and hook hygiene one-offs",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "lifecycle",
-      "hooks",
-      "hygiene",
-      "scan-script",
-      "auto-scan"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-11",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "187",
-    "research": null,
-    "spec": "lifecycle/lifecycle-and-hook-hygiene-one-offs/spec.md",
-    "discovery_source": "research/lifecycle-discovery-token-audit/research.md",
-    "plan": null,
-    "uuid": "8f1fdd95-b748-4b10-bbf8-6f54b17e75a1",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

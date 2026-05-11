@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 8f1fdd95-b748-4b10-bbf8-6f54b17e75a1
 title: "Lifecycle and hook hygiene one-offs"
 type: chore
-status: refined
+status: complete
 priority: medium
 parent: 187
 blocked-by: []
@@ -15,6 +15,7 @@ complexity: complex
 criticality: high
 spec: lifecycle/lifecycle-and-hook-hygiene-one-offs/spec.md
 areas: [skills]
+session_id: null
 ---
 
 # Lifecycle and hook hygiene one-offs
