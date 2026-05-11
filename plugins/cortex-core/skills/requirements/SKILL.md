@@ -1,6 +1,6 @@
 ---
 name: requirements
-description: Gather and document project-level and feature-area requirements through structured interviews. Creates a requirements directory at the project root with a master project requirements doc and area-specific requirements. Use when user says "/cortex-core:requirements", "gather requirements", "document requirements", "requirements for", "what are the requirements", "define project scope", "capture what we have", "document existing project", or wants to capture project scope and feature-area requirements — whether for a new project or retroactively documenting an existing codebase.
+description: Use /cortex-core:requirements to gather requirements or define project scope. disable-model-invocation:true — invoked only by explicit slash command.
 disable-model-invocation: true
 argument-hint: "[area]"
 inputs:
