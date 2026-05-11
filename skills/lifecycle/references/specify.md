@@ -115,9 +115,14 @@ Omit this callout entirely when §2a passed cleanly or no loop-back occurred.
 ## Problem Statement
 [One paragraph: what this solves, who benefits, why it matters]
 
+## Phases
+<!-- Group requirements into phases. ≥1 phase for complexity=simple; ≥2 phases for complexity=complex (matches plan.md Outline tolerance). Each phase name below must match the **Phase** tag on its requirements in `## Requirements`. -->
+- **Phase 1: <name>** — <one-line goal>
+- **Phase 2: <name>** — <one-line goal>
+
 ## Requirements
-1. [Requirement]: [Acceptance criteria — binary-checkable: (a) command + expected output + pass/fail (e.g., "`just test` exits 0, pass if exit code = 0"), (b) observable state naming specific file and pattern (e.g., "`grep -c 'keyword' path/file` = 1"), or (c) "Interactive/session-dependent: [rationale]" if a command check is not possible]
-2. [Requirement]: [Acceptance criteria — same format as above]
+1. [Requirement]: [Acceptance criteria — binary-checkable: (a) command + expected output + pass/fail (e.g., "`just test` exits 0, pass if exit code = 0"), (b) observable state naming specific file and pattern (e.g., "`grep -c 'keyword' path/file` = 1"), or (c) "Interactive/session-dependent: [rationale]" if a command check is not possible]. **Phase**: <name>
+2. [Requirement]: [Acceptance criteria — same format as above]. **Phase**: <name>
 ...
 
 ## Non-Requirements
