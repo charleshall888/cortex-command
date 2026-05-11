@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: de06774f-c109-4bfb-819d-95d47996c23b
 title: "Reference-file hygiene (cross-skill + ceremonial + #179 extractions)"
 type: chore
-status: in_progress
+status: complete
 priority: medium
 parent: 187
 blocked-by: []
@@ -15,8 +15,8 @@ complexity: complex
 criticality: high
 spec: lifecycle/reference-file-hygiene-cross-skill-ceremonial-179-extractions/spec.md
 areas: [skills]
-session_id: 46bfb540-0c95-41f0-a164-4d74ff7e11a8
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Reference-file hygiene (cross-skill + ceremonial + #179 extractions)

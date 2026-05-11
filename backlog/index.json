@@ -85,7 +85,7 @@
     "uuid": "72260d5f-c01b-4600-8b84-0b3b5f4f3a15",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "research",
     "schema_version": "1",
     "repo": null
   },
@@ -123,8 +123,8 @@
     "repo": null
   },
   {
-    "id": 195,
-    "title": "Reframe discovery to principal-architect posture",
+    "id": 196,
+    "title": "Restructure discovery: produce architecture, not tickets",
     "status": "backlog",
     "priority": "high",
     "type": "feature",
@@ -142,7 +142,7 @@
     "spec": null,
     "discovery_source": "research/discovery-architectural-posture-rewrite/research.md",
     "plan": null,
-    "uuid": "ce49fbc8-a968-48ed-b1e7-de59ef6f171e",
+    "uuid": "8689319e-cc16-4db9-ae47-5316d3eaddfc",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -209,38 +209,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 192,
-    "title": "Reference-file hygiene (cross-skill + ceremonial + #179 extractions)",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "skills",
-      "references",
-      "cross-skill-collapse",
-      "ceremony",
-      "process-gap"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-11",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "187",
-    "research": null,
-    "spec": "lifecycle/reference-file-hygiene-cross-skill-ceremonial-179-extractions/spec.md",
-    "discovery_source": "research/lifecycle-discovery-token-audit/research.md",
-    "plan": null,
-    "uuid": "de06774f-c109-4bfb-819d-95d47996c23b",
-    "lifecycle_slug": null,
-    "session_id": "46bfb540-0c95-41f0-a164-4d74ff7e11a8",
-    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
