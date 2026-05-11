@@ -5,3 +5,6 @@
 {"schema_version": 2, "ts": "2026-05-11T21:54:08Z", "event": "orchestrator_review", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": []}
 {"schema_version": 2, "ts": "2026-05-11T23:09:10Z", "event": "critical_review", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "phase": "plan", "objections_applied": 5, "objections_dismissed": 0, "reviewers": {"completed": 4, "dispatched": 4}}
 {"schema_version": 2, "ts": "2026-05-11T23:09:10Z", "event": "phase_transition", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "from": "plan", "to": "implement"}
+{"schema_version": 2, "ts": "2026-05-11T23:24:31Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 0, "tasks": [1]}
+{"schema_version": 2, "ts": "2026-05-11T23:28:00Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 1, "tasks": [2]}
+{"schema_version": 2, "ts": "2026-05-11T23:29:11Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 2, "tasks": [3]}

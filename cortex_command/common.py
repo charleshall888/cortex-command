@@ -31,6 +31,7 @@ import os
 import re
 import sys
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -140,35 +141,38 @@ def slugify(title: str) -> str:
 # detect_lifecycle_phase
 # ---------------------------------------------------------------------------
 
-def detect_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
-    """Detect the current lifecycle phase for a feature directory.
+def _stat_key(path: Path) -> tuple[bool, int, int]:
+    """Return ``(exists, mtime_ns, size)`` for a path.
 
-    Artifact-presence state machine:
-      1. events.log contains "feature_complete" -> "complete"
-      2. review.md has verdict:
-           APPROVED          -> "complete"
-           CHANGES_REQUESTED -> "implement-rework"
-           REJECTED          -> "escalated"
-      3. plan.md exists:
-           all **Status**: [x] (and at least one) -> "review"
-           otherwise                              -> "implement"
-      4. spec.md exists    -> "plan"
-      5. research.md exists -> "specify"
-      6. (default)          -> "research"
-
-    Args:
-        feature_dir: Path to the lifecycle feature directory
-                     (e.g. Path("lifecycle/my-feature")).
-
-    Returns:
-        A dict with keys:
-          - phase: one of "research", "specify", "plan", "implement",
-            "implement-rework", "review", "complete", "escalated".
-          - checked: integer count of completed plan tasks (0 when no plan.md).
-          - total: integer count of total plan tasks (0 when no plan.md).
-          - cycle: integer review-cycle number (1 when no review.md, otherwise
-            the count of `verdict` regex matches in review.md).
+    Used as a per-file cache-key component for the lru-cached lifecycle
+    readers. ``size`` closes the sub-mtime_ns append window (an append
+    bumps file size even when mtime collides at filesystem resolution);
+    ``exists`` distinguishes a missing file from a zero-byte/zero-mtime
+    file.
     """
+    try:
+        s = path.stat()
+        return (True, s.st_mtime_ns, s.st_size)
+    except FileNotFoundError:
+        return (False, 0, 0)
+
+
+@lru_cache(maxsize=128)
+def _detect_lifecycle_phase_inner(
+    feature_dir_str: str,
+    events_key: tuple[bool, int, int],
+    plan_key: tuple[bool, int, int],
+    review_key: tuple[bool, int, int],
+    spec_key: tuple[bool, int, int],
+    research_key: tuple[bool, int, int],
+) -> dict[str, str | int]:
+    """Cached implementation of :func:`detect_lifecycle_phase`.
+
+    The five ``*_key`` tuples encode per-file ``(exists, mtime_ns, size)``
+    state for events.log, plan.md, review.md, spec.md, and research.md
+    so cached results invalidate when any of those files change.
+    """
+    feature_dir = Path(feature_dir_str)
     # Compute plan progress (used by the dict return regardless of phase).
     plan_md = feature_dir / "plan.md"
     checked = 0
@@ -272,9 +276,87 @@ def detect_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
     }
 
 
+def detect_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
+    """Detect the current lifecycle phase for a feature directory.
+
+    Artifact-presence state machine:
+      1. events.log contains "feature_complete" -> "complete"
+      2. review.md has verdict:
+           APPROVED          -> "complete"
+           CHANGES_REQUESTED -> "implement-rework"
+           REJECTED          -> "escalated"
+      3. plan.md exists:
+           all **Status**: [x] (and at least one) -> "review"
+           otherwise                              -> "implement"
+      4. spec.md exists    -> "plan"
+      5. research.md exists -> "specify"
+      6. (default)          -> "research"
+
+    Args:
+        feature_dir: Path to the lifecycle feature directory
+                     (e.g. Path("lifecycle/my-feature")).
+
+    Returns:
+        A dict with keys:
+          - phase: one of "research", "specify", "plan", "implement",
+            "implement-rework", "review", "complete", "escalated".
+          - checked: integer count of completed plan tasks (0 when no plan.md).
+          - total: integer count of total plan tasks (0 when no plan.md).
+          - cycle: integer review-cycle number (1 when no review.md, otherwise
+            the count of `verdict` regex matches in review.md).
+    """
+    events_key = _stat_key(feature_dir / "events.log")
+    plan_key = _stat_key(feature_dir / "plan.md")
+    review_key = _stat_key(feature_dir / "review.md")
+    spec_key = _stat_key(feature_dir / "spec.md")
+    research_key = _stat_key(feature_dir / "research.md")
+    return _detect_lifecycle_phase_inner(
+        str(feature_dir),
+        events_key,
+        plan_key,
+        review_key,
+        spec_key,
+        research_key,
+    )
+
+
+# Expose the cached inner helper on the public API so callers (and tests)
+# can introspect via ``detect_lifecycle_phase.__wrapped__`` per spec R1.
+detect_lifecycle_phase.__wrapped__ = _detect_lifecycle_phase_inner  # type: ignore[attr-defined]
+
+
 # ---------------------------------------------------------------------------
 # read_criticality
 # ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=128)
+def _read_criticality_inner(
+    events_path_str: str,
+    exists: bool,
+    mtime_ns: int,
+    size: int,
+) -> str:
+    """Cached implementation of :func:`read_criticality`.
+
+    The ``(exists, mtime_ns, size)`` triple is part of the cache key so
+    cached results invalidate when the events.log file changes.
+    """
+    if not exists:
+        return "medium"
+
+    last = "medium"
+    for line in Path(events_path_str).read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if "criticality" in record:
+            last = record["criticality"]
+    return last
+
 
 def read_criticality(
     feature: str,
@@ -296,11 +378,36 @@ def read_criticality(
         The most recent criticality string, or ``"medium"``.
     """
     events_path = lifecycle_base / feature / "events.log"
-    if not events_path.exists():
-        return "medium"
+    exists, mtime_ns, size = _stat_key(events_path)
+    return _read_criticality_inner(str(events_path), exists, mtime_ns, size)
 
-    last = "medium"
-    for line in events_path.read_text(encoding="utf-8").splitlines():
+
+# Expose the cached inner helper on the public API for spec R1 introspection.
+read_criticality.__wrapped__ = _read_criticality_inner  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# read_tier
+# ---------------------------------------------------------------------------
+
+@lru_cache(maxsize=128)
+def _read_tier_inner(
+    events_path_str: str,
+    exists: bool,
+    mtime_ns: int,
+    size: int,
+) -> str:
+    """Cached implementation of :func:`read_tier`.
+
+    The ``(exists, mtime_ns, size)`` triple is part of the cache key so
+    cached results invalidate when the events.log file changes.
+    """
+    if not exists:
+        return "simple"
+
+    tier = "simple"
+    found = False
+    for line in Path(events_path_str).read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
             continue
@@ -308,14 +415,19 @@ def read_criticality(
             record = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if "criticality" in record:
-            last = record["criticality"]
-    return last
+        kind = record.get("event")
+        if kind == "lifecycle_start":
+            value = record.get("tier")
+            if isinstance(value, str) and value:
+                tier = value
+                found = True
+        elif kind == "complexity_override":
+            value = record.get("to")
+            if isinstance(value, str) and value:
+                tier = value
+                found = True
+    return tier if found else "simple"
 
-
-# ---------------------------------------------------------------------------
-# read_tier
-# ---------------------------------------------------------------------------
 
 def read_tier(
     feature: str,
@@ -337,31 +449,12 @@ def read_tier(
         The active tier string, or ``"simple"``.
     """
     events_path = lifecycle_base / feature / "events.log"
-    if not events_path.exists():
-        return "simple"
+    exists, mtime_ns, size = _stat_key(events_path)
+    return _read_tier_inner(str(events_path), exists, mtime_ns, size)
 
-    tier = "simple"
-    found = False
-    for line in events_path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        kind = record.get("event")
-        if kind == "lifecycle_start":
-            value = record.get("tier")
-            if isinstance(value, str) and value:
-                tier = value
-                found = True
-        elif kind == "complexity_override":
-            value = record.get("to")
-            if isinstance(value, str) and value:
-                tier = value
-                found = True
-    return tier if found else "simple"
+
+# Expose the cached inner helper on the public API for spec R1 introspection.
+read_tier.__wrapped__ = _read_tier_inner  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------
