@@ -37,7 +37,7 @@ Implement the 7 MUST-have requirements in `spec.md` as five tasks: one in-place 
   - Run `grep -c 'implementation_dispatch' skills/lifecycle/references/implement.md` — pass if value ≥ 1.
   - Run `grep -c 'dispatch_complete' skills/lifecycle/references/implement.md` — pass if value ≥ 1.
   - Run `grep -c 'DAYTIME_DISPATCH_ID' skills/lifecycle/references/implement.md` — pass if value ≥ 1 (pins the §1a.iv Step 3 background-launch line that the plan flags as "MUST KEEP" but no other gate covers).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add `test_synthesizer_trigger_2_restates` with inline 2-of-3 retry + calibration
 
@@ -60,7 +60,7 @@ Implement the 7 MUST-have requirements in `spec.md` as five tasks: one in-place 
   - **Timeout**: `timeout=600` per subprocess invocation (matches the existing Trigger 1 test).
   - **Pytest marker**: `@pytest.mark.slow` decoration — the test is run only when the `--run-slow` opt-in is passed (`tests/conftest.py:11-20` adds skip markers to `@pytest.mark.slow` tests when `--run-slow` is absent).
 - **Verification**: Run `pytest --run-slow tests/test_critical_review_classifier.py::test_synthesizer_trigger_2_restates` — pass if exit 0 (under 2-of-3 tolerance via `_apply_pass_criterion`). Also run `pytest --run-slow tests/test_critical_review_classifier.py::test_synthesizer_rubric_deterministic` — pass if exit 0 (Req 6 regression on the pre-existing Trigger 1 test).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Add the Trigger 3 test pair (`test_synthesizer_trigger_3_adjacent_no_straddle` + `test_synthesizer_trigger_3_adjacent_with_straddle`)
 
@@ -78,7 +78,7 @@ Implement the 7 MUST-have requirements in `spec.md` as five tasks: one in-place 
   - **Calibration-driven hardening for `with_straddle`**: the positive ratification regex matches any prose mention of the Straddle exemption — including chain-of-thought that considers but rejects the exemption ("the straddle exemption would apply IF straddle_rationale were present"). The calibration step (see Task 2 Context) MUST verify that on the chosen fixture, the model's actual output contains the ratify-as-A disposition language without merely considering-then-rejecting the exemption. If the calibration shows ambiguity, add a complementary negative assertion: `re.search(r're-classified finding \d+ from A→B', stdout)` is None (i.e., NO downgrade fired) — this is consistent with the with-straddle case ratifying as A.
   - **Dispatch and timeout**: `claude -p --model opus`, `timeout=600` per attempt.
 - **Verification**: Run `pytest --run-slow tests/test_critical_review_classifier.py::test_synthesizer_trigger_3_adjacent_no_straddle tests/test_critical_review_classifier.py::test_synthesizer_trigger_3_adjacent_with_straddle` — pass if exit 0 (both tests pass under 2-of-3 tolerance).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add `test_synthesizer_trigger_4_vague`
 
@@ -94,7 +94,7 @@ Implement the 7 MUST-have requirements in `spec.md` as five tasks: one in-place 
   - **Calibration step**: as Task 2 — verify per-trigger regex matches AND Trigger 2/3 rationale regexes don't false-pass on real Opus output.
   - **Dispatch and timeout**: `claude -p --model opus`, `timeout=600` per attempt.
 - **Verification**: Run `pytest --run-slow tests/test_critical_review_classifier.py::test_synthesizer_trigger_4_vague` — pass if exit 0 (under 2-of-3 tolerance).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Update existing Trigger 1 test docstring to acknowledge sibling 2-of-3 pattern
 
