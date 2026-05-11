@@ -487,7 +487,7 @@ def _invoke_hook_for_fixture(fixture_dir: Path, tmp_path: Path) -> dict[str, str
       - `wire`: the wire-format string parsed from the hook's Phase label, or
         the sentinel `"complete"` if the feature was filtered out (the hook
         skips `complete` features at L308 and they do not appear in context).
-      - `raw_context`: the full additional_context for diagnostic surfacing.
+      - `raw_context`: the full additionalContext for diagnostic surfacing.
     """
     slug = "test-feature"
     work = tmp_path / "work"
@@ -508,7 +508,6 @@ def _invoke_hook_for_fixture(fixture_dir: Path, tmp_path: Path) -> dict[str, str
     if env.get("PYTHONPATH"):
         pythonpath_parts.append(env["PYTHONPATH"])
     env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
-    env["AGENT"] = "claude"
 
     stdin_payload = json.dumps({
         "session_id": "parity-r12c-test",
@@ -538,11 +537,8 @@ def _invoke_hook_for_fixture(fixture_dir: Path, tmp_path: Path) -> dict[str, str
         return {"wire": "complete", "raw_context": ""}
 
     payload = json.loads(stdout)
-    # Claude format wraps in hookSpecificOutput.additionalContext.
-    if "hookSpecificOutput" in payload:
-        ctx = payload["hookSpecificOutput"].get("additionalContext", "")
-    else:
-        ctx = payload.get("additional_context", "")
+    # Claude Code SessionStart contract: hookSpecificOutput.additionalContext.
+    ctx = payload["hookSpecificOutput"].get("additionalContext", "")
 
     # Extract `Phase: <label>` from the active-feature line.
     m = re.search(r"Phase:\s*(.+?)(?:\n|$)", ctx)

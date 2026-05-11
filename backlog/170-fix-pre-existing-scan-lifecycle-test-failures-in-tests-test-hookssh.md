@@ -2,12 +2,18 @@
 schema_version: "1"
 uuid: 2e617623-49e0-4eba-bbad-615af65dbbd3
 title: "Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh"
-status: backlog
+status: in_progress
 priority: medium
 type: bug
 tags: [tests, hooks, scan-lifecycle, flake]
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-11
+complexity: complex
+criticality: high
+spec: lifecycle/fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh/spec.md
+areas: [hooks]
+session_id: 20bb104d-de0f-46ab-aa37-c0aedde12ccd
+lifecycle_phase: implement
 ---
 
 # Fix pre-existing scan-lifecycle test failures in tests/test_hooks.sh

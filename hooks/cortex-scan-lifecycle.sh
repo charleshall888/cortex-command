@@ -454,21 +454,15 @@ $metrics_summary"
   fi
 fi
 
-# --- Output (agent-specific format) ---
+# --- Output (Claude Code SessionStart contract) ---
 
 if [[ -n "$context" ]]; then
-  if [[ "${AGENT:-}" == "claude" ]]; then
-    jq -n --arg ctx "$context" '{
-      hookSpecificOutput: {
-        hookEventName: "SessionStart",
-        additionalContext: $ctx
-      }
-    }'
-  else
-    jq -n --arg ctx "$context" '{
-      additional_context: $ctx
-    }'
-  fi
+  jq -n --arg ctx "$context" '{
+    hookSpecificOutput: {
+      hookEventName: "SessionStart",
+      additionalContext: $ctx
+    }
+  }'
 fi
 
 exit 0
