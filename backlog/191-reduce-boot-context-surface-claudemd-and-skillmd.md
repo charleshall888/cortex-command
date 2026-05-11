@@ -16,7 +16,7 @@ criticality: high
 spec: lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md
 areas: [skills]
 session_id: d69727ba-3b2b-472b-a3d2-fc30a35002b2
-lifecycle_phase: plan
+lifecycle_phase: implement
 ---
 
 # Reduce boot-context surface (CLAUDE.md + SKILL.md)

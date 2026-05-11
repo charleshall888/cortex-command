@@ -224,7 +224,15 @@ After all parallel reviewer agents from Step 2c complete (or the successful subs
 You are synthesizing findings from multiple independent adversarial reviewers into a single coherent challenge.
 
 ## Artifact
-{artifact content}
+
+- Path: `{artifact_path}`
+- Expected SHA-256: `{artifact_sha256}`
+
+Read the literal absolute path provided above once at the START of synthesis, before the per-finding loop in the Instructions section. Do NOT re-resolve via `git rev-parse` or any other path-derivation step; Read the literal absolute path as given. Treat the in-context Read result as the source of truth for evidence-quote re-validation throughout the remainder of synthesis.
+
+When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `SYNTH_READ_OK: <absolute-path> <sha256-of-Read-result>` as a line in your output before any per-finding analysis, then continue with the synthesis below.
+
+When the Read fails or returns empty content, emit `SYNTH_READ_FAILED: <absolute-path> <one-word-reason>` as a line in your output before any per-finding analysis and stop — do not proceed with synthesis.
 
 ## Reviewer Findings
 {all reviewer findings — class-tagged JSON envelopes from well-formed reviewers, plus any untagged prose blocks from reviewers whose envelopes were malformed per Step 2c.5}
@@ -232,7 +240,7 @@ You are synthesizing findings from multiple independent adversarial reviewers in
 ## Instructions
 1. Read all reviewer findings carefully.
 2. Find the through-lines — claims or concerns that appear across multiple angles **within the same class**. A-class through-lines, B-class through-lines, and C-class through-lines are distinct; do not merge them.
-3. Before accepting any finding's class tag, re-read its `evidence_quote` field against the artifact content provided above. For A-class findings, also re-read the `"fix_invalidation_argument"` field — apply the A→B downgrade rubric below. If the evidence supports a different class, re-classify and surface a note: `Synthesizer re-classified finding N from B→A: <rationale>` (upgrade) or `Synthesizer re-classified finding N from A→B: <rationale>` (downgrade). Downgrades commonly fire on straddle-rationale findings where the evidence only supports the adjacent concern.
+3. Before accepting any finding's class tag, re-read its `evidence_quote` field against the in-context Read result of `{artifact_path}` performed at the start of synthesis. For A-class findings, also re-read the `"fix_invalidation_argument"` field — apply the A→B downgrade rubric below. If the evidence supports a different class, re-classify and surface a note: `Synthesizer re-classified finding N from B→A: <rationale>` (upgrade) or `Synthesizer re-classified finding N from A→B: <rationale>` (downgrade). Downgrades commonly fire on straddle-rationale findings where the evidence only supports the adjacent concern.
 
    **A→B downgrade rubric.** A-class status requires a credible `"fix_invalidation_argument"` — a concrete causal link from the cited evidence to a failure of the proposed change. Downgrade A→B when any of the following triggers fires (using the reclassification note `Synthesizer re-classified finding N from A→B: <rationale>`):
 
