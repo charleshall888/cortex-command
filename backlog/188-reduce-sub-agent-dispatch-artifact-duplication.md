@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: a03420eb-7778-4136-b75b-dfe4a445badd
 title: "Reduce sub-agent dispatch artifact duplication"
 type: feature
-status: open
+status: refined
 priority: high
 parent: 187
 blocked-by: []
@@ -11,6 +11,10 @@ tags: [dispatch, critical-review, plan, review, token-efficiency]
 created: 2026-05-11
 updated: 2026-05-11
 discovery_source: research/lifecycle-discovery-token-audit/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/reduce-sub-agent-dispatch-artifact-duplication/spec.md
+areas: [skills]
 ---
 
 # Reduce sub-agent dispatch artifact duplication
