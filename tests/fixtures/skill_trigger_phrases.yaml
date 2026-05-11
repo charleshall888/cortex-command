@@ -35,3 +35,48 @@ skills:
       - "decompose into backlog"
       - "break this down into tickets"
       - "find gaps in requirements"
+  backlog:
+    must_contain:
+      - "/cortex-core:backlog"
+      - "add to backlog"
+      - "pick a backlog item"
+  commit:
+    must_contain:
+      - "/cortex-core:commit"
+      - "make a commit"
+      - "commit these changes"
+  dev:
+    must_contain:
+      - "/cortex-core:dev"
+      - "what should I work on"
+      - "where do I start"
+  diagnose:
+    must_contain:
+      - "fix this bug"
+      - "why is this failing"
+      - "make this test pass"
+  morning-review:
+    must_contain:
+      - "/morning-review"
+      - "morning review"
+      - "what happened overnight"
+  overnight:
+    must_contain:
+      - "/overnight"
+      - "start overnight session"
+      - "launch overnight"
+  pr:
+    must_contain:
+      - "/cortex-core:pr"
+      - "create a pr"
+      - "open a pull request"
+  requirements:
+    must_contain:
+      - "/cortex-core:requirements"
+      - "gather requirements"
+      - "define project scope"
+  research:
+    must_contain:
+      - "/cortex-core:research"
+      - "research this topic"
+      - "investigate this feature"
