@@ -3,17 +3,16 @@ schema_version: "1"
 uuid: ce49fbc8-a968-48ed-b1e7-de59ef6f171e
 title: "Reframe discovery to principal-architect posture"
 type: feature
-status: closed
+status: open
 priority: high
 blocked-by: []
-tags: [discovery, skill-rewrite, superseded]
+tags: [discovery, skill-rewrite]
 created: 2026-05-11
 updated: 2026-05-11
 discovery_source: research/discovery-architectural-posture-rewrite/research.md
-superseded_by: 196
 ---
 
-> **SUPERSEDED by #196** (closed 2026-05-11). This ticket landed DR-1 from the discovery_source — the "discovery produces 1 epic + N piece-tickets" shape. Following a devil's advocate pass and critical re-examination, the structural direction shifted to DR-G (demote-decompose): discovery produces 1 epic + the research artifact's Architecture section as the load-bearing fragmentation reference; pieces promote to tickets on demand via a new promote-piece workflow. The user's stated framing ("high-level epic creation with rough ideas of what parts need to come together") points at DR-G, not DR-1. See `research/discovery-architectural-posture-rewrite/research.md` revision note 3 for the direction-change reasoning. The empirical re-walk evidence from this ticket's scope transfers to #196 — the ticket-body shape (Role/Integration/Edges/Touch-points) is what promote-piece will produce. Original body retained below for audit trail.
+> **Direction history**: This ticket landed DR-1 from the discovery_source. A subsequent reconsideration shifted to DR-G (demote-decompose: tickets promoted on-demand instead of created at discovery time) as #196 — that direction was reverted when honest re-examination showed it was solving a hypothetical pain (stale-ticket accumulation) not in the user's stated pain list, while DR-1 directly addresses all six stated pains. #196 is closed superseded by this ticket. The DR-G exploration produced 9 concrete strengthenings folded into this ticket's edges and spec-phase deliverables below. See `research/discovery-architectural-posture-rewrite/research.md` revision note 4 for the full audit trail.
 
 ---
 
@@ -43,6 +42,22 @@ Reframe the discovery skill's posture from finding-mirroring to architectural di
 - Vague-mush risk on novel pieces is partially-mitigated by the required edges surface plus authoring-time positive routing during body writing; the remainder is the spec-phase re-walk obligation acting as the empirical safety net before implementation
 - Cumulative skip risk on the three new soft gates is countable via the events surface — if any gate is later observed to be routinely skipped under representative cases, the evidence supports MUST-escalation per the project's escalation policy
 - Refine-side strengthening (extending refine's clarify-critic Parent Epic Alignment sub-rubric with an over-prescription check) is deferred — file as follow-up only if novel-piece vagueness persists after this ticket lands
+
+### Edges from DR-G exploration (carryover)
+
+- The section-partitioned prescriptive-prose check runs on BOTH the architecture-section at research-write time AND on ticket bodies at decompose-§5 time — defense-in-depth catches mechanism leaks before they propagate from architecture to tickets (a single agent typically writes both, so catching upstream means one revision pass instead of N+1)
+- The "Why N pieces" justification gate uses falsification framing, not justification — "for each adjacent pair of pieces, attempt to merge them and record what specifically blocks the merge; if nothing blocks, merge" — converts the gate from defensive (rationalizes count) to falsificationist (constrains count)
+- Architecture-section authoring guidance accommodates non-constructive topic shapes (diagnostic, policy, migration) via a single permissive paragraph rather than branching sub-templates — the zero-piece exit handles diagnostic; policy and migration may author pieces as rule/scope/exceptions or sequence steps within the same Role/Integration/Edges shape
+- The approval checkpoint offers a fourth option beyond approve/revise/drop: "Promote sub-topic to its own discovery" — when a piece is too speculative for child-ticket creation, route it into its own discovery flow instead of forcing it into the current epic
+- Multi-epic discovery is constrained to 1 epic per discovery; if pieces span >1 logical grouping the discovery must split at clarify time before research, not produce multiple epics at decompose
+- Re-running discovery on an existing topic produces a new research-dir slug (e.g., `vertical-planning-2`); existing tickets from the prior run stay open under their original epic; reconciliation between the two architectures is a manual decision at the user's discretion, not automated
+- Dropping a piece without creating a ticket uses existing `cortex-update-item NNN status: closed` with a closing note — no new workflow surface for "rejected piece audit trail"; the closed-with-rationale convention is the audit trail
+
+### Spec-phase MUST deliverables (load-bearing, not deferrable)
+
+- **Worked examples + anti-patterns for architecture-section authoring**: one worked example per piece-shape category (surface-anchored, structural-novel) plus a 2-3 bullet anti-patterns list — both re-walks and user confusion confirmed that abstract "name pieces by role" is insufficient scaffolding without concrete examples
+- **Lexical scanner shipped as actual code** (suggested `bin/cortex-check-prescriptive-prose`): runs at decompose-§5 ticket-creation time AND at research-§6 architecture-write time; flags any path:line / section-index / quoted-prose-patch in body sections (Role/Integration/Edges); Touch points exempted; pure prose-discipline gate is honor-system and confirmed inadequate by both pre-implementation re-walks
+- **Concrete piece definition with worked examples** in the architecture-section authoring template — the user's confusion about "what is a piece" demonstrates the protocol must ground the abstraction concretely; combine with the worked-examples deliverable above
 
 ## Touch points
 

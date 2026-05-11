@@ -3,14 +3,18 @@ schema_version: "1"
 uuid: 8689319e-cc16-4db9-ae47-5316d3eaddfc
 title: "Restructure discovery: produce architecture, not tickets"
 type: feature
-status: open
+status: closed
 priority: high
 blocked-by: []
-tags: [discovery, skill-rewrite]
+tags: [discovery, skill-rewrite, superseded]
 created: 2026-05-11
 updated: 2026-05-11
 discovery_source: research/discovery-architectural-posture-rewrite/research.md
-supersedes: 195
+superseded_by: 195
+---
+
+> **SUPERSEDED by #195** (closed 2026-05-11). This ticket landed DR-G (demote-decompose: tickets promoted on-demand instead of created at discovery time). Honest re-examination after creation showed DR-G was solving a hypothetical pain (stale-ticket accumulation in the backlog) that was NOT in the user's stated pain list, while DR-1 (#195) directly addresses all six stated pains. The user explicitly stated preference for "discovery should create the epic AND the tickets in the backlog all in the same flow" — that's DR-1, not DR-G. Reverted to #195. The DR-G exploration produced 9 concrete strengthenings that carry over into #195's edges and spec-phase deliverables; the empirical re-walk evidence transfers because the ticket-body shape (Role/Integration/Edges/Touch-points) is unchanged. See `research/discovery-architectural-posture-rewrite/research.md` revision note 4 for full audit trail of the swing-and-revert. Original body retained below for audit trail.
+
 ---
 
 # Restructure discovery: produce architecture, not tickets
