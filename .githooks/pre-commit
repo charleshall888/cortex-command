@@ -143,6 +143,33 @@ if [ "$entry_points_triggered" -eq 1 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# Phase 1.8 — Events-registry enforcement
+# -----------------------------------------------------------------------------
+# When any staged path matches the events-registry trigger pattern, invoke the
+# registry checker against the staged blob view. The checker exits non-zero
+# when a skill prompt or overnight prompt emits an event name that is not
+# present in bin/.events-registry.md; propagate that exit code so the commit
+# is blocked. Python sources are intentionally not in the trigger set —
+# backend-only commits do not invoke this phase.
+events_registry_triggered=0
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+        skills/*|cortex_command/overnight/prompts/*|bin/cortex-check-events-registry|bin/.events-registry.md)
+            events_registry_triggered=1
+            break
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "$events_registry_triggered" -eq 1 ]; then
+    if ! just check-events-registry; then
+        echo "pre-commit: events-registry check failed — see bin/.events-registry.md and the script's error message above." >&2
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Phase 2 — Short-circuit decision
 # -----------------------------------------------------------------------------
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
