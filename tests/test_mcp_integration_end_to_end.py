@@ -18,11 +18,13 @@ Sub-case (c) survives because it does not depend on the MCP transport —
 it round-trips an escalation record through ``write_escalation`` and
 the orchestrator's read path. After ticket 111 the orchestrator-round
 prompt no longer parses ``escalations.jsonl`` inline; it calls
-``aggregate_round_context`` (the in-process aggregator) which returns
-pre-computed ``unresolved`` and ``all_entries`` lists. This test now
-exercises that aggregator path directly, preserving the original
-through-line concern: an orchestrator reading escalations must surface
-the new ``{session_id}-{feature}-{round}-q1`` ID format without crashing.
+``aggregate_round_context`` (the in-process aggregator) which returns a
+pre-computed ``unresolved`` list and a
+``prior_resolutions_by_feature`` dict (keyed by feature slug, holding
+only ``type == "resolution"`` entries). This test now exercises that
+aggregator path directly, preserving the original through-line concern:
+an orchestrator reading escalations must surface the new
+``{session_id}-{feature}-{round}-q1`` ID format without crashing.
 """
 
 from __future__ import annotations
@@ -52,8 +54,11 @@ def test_escalation_write_and_orchestrator_prompt_read_roundtrip(
        ``{session_id}-{feature}-{round}-q1`` ID format.
     3. Calls ``aggregate_round_context(session_dir, round_num)`` — the
        same call the orchestrator-round prompt now makes — and asserts
-       the entry surfaces in both ``ctx["escalations"]["all_entries"]``
-       and ``ctx["escalations"]["unresolved"]`` with the new ID format.
+       the entry surfaces in ``ctx["escalations"]["unresolved"]`` with
+       the new ID format. (Escalation entries no longer surface in
+       ``prior_resolutions_by_feature``; that dict holds only
+       ``type == "resolution"`` records, so this round-trip's through-line
+       check now targets the ``unresolved`` list exclusively.)
     """
     from cortex_command.overnight.deferral import (
         EscalationEntry,
@@ -106,22 +111,25 @@ def test_escalation_write_and_orchestrator_prompt_read_roundtrip(
     # call and verify the entry surfaces with the new ID format.
     ctx = aggregate_round_context(session_dir, round_num)
 
-    all_entries = ctx["escalations"]["all_entries"]
-    assert isinstance(all_entries, list)
-    assert len(all_entries) == 1, (
-        f"expected 1 parsed entry, got {len(all_entries)}: {all_entries}"
+    # Post-Task 6 R4: the escalations sub-dict shape is
+    # {"unresolved": [...], "prior_resolutions_by_feature": {...}}.
+    # Escalation entries (type == "escalation") surface only in
+    # `unresolved`; `prior_resolutions_by_feature` holds only
+    # type == "resolution" records.
+    assert set(ctx["escalations"].keys()) == {
+        "unresolved",
+        "prior_resolutions_by_feature",
+    }
+
+    unresolved = ctx["escalations"]["unresolved"]
+    assert isinstance(unresolved, list)
+    assert len(unresolved) == 1, (
+        f"expected 1 unresolved entry, got {len(unresolved)}: {unresolved}"
     )
-    parsed = all_entries[0]
+    parsed = unresolved[0]
     assert parsed.get("escalation_id") == expected_id, (
         f"parsed entry escalation_id={parsed.get('escalation_id')!r}; "
         f"expected {expected_id!r}"
-    )
-
-    unresolved = ctx["escalations"]["unresolved"]
-    unresolved_ids = {e.get("escalation_id") for e in unresolved}
-    assert expected_id in unresolved_ids, (
-        f"new-format escalation_id {expected_id!r} did not surface as "
-        f"unresolved: {unresolved_ids}"
     )
 
 

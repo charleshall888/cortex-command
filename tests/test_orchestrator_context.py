@@ -57,7 +57,7 @@ def test_dict_shape_returns_five_top_level_keys(tmp_path: Path) -> None:
     assert "escalations" in result
     assert isinstance(result["escalations"], dict)
     assert "unresolved" in result["escalations"]
-    assert "all_entries" in result["escalations"]
+    assert "prior_resolutions_by_feature" in result["escalations"]
     assert "session_plan_text" in result
     assert isinstance(result["session_plan_text"], str)
 
@@ -106,7 +106,7 @@ def test_missing_files_use_per_source_defaults(tmp_path: Path) -> None:
     assert result["strategy"] == default_strategy
 
     # escalations defaults
-    assert result["escalations"] == {"unresolved": [], "all_entries": []}
+    assert result["escalations"] == {"unresolved": [], "prior_resolutions_by_feature": {}}
 
     # session_plan_text defaults to empty string
     assert result["session_plan_text"] == ""
@@ -122,8 +122,8 @@ def test_malformed_jsonl_line_skipped_with_warning(
     """R6: malformed line is skipped, valid entries are present, stderr has WARNING."""
     _write_minimal_state(tmp_path)
 
-    entry1 = {"type": "escalation", "escalation_id": "e1", "message": "first"}
-    entry2 = {"type": "escalation", "escalation_id": "e2", "message": "second"}
+    entry1 = {"type": "resolution", "escalation_id": "e1", "feature": "feat-a", "message": "first"}
+    entry2 = {"type": "resolution", "escalation_id": "e2", "feature": "feat-a", "message": "second"}
     bad_line = "this is not valid json {"
 
     escalations_path = tmp_path / "escalations.jsonl"
@@ -134,15 +134,16 @@ def test_malformed_jsonl_line_skipped_with_warning(
 
     result = aggregate_round_context(tmp_path, round_number=1)
 
-    all_entries = result["escalations"]["all_entries"]
-    assert len(all_entries) == 2, (
-        f"Expected 2 valid entries in all_entries, got {len(all_entries)}: {all_entries}"
+    prior = result["escalations"]["prior_resolutions_by_feature"]
+    feat_entries = prior.get("feat-a", [])
+    assert len(feat_entries) == 2, (
+        f"Expected 2 valid resolution entries under feat-a, got {len(feat_entries)}: {feat_entries}"
     )
-    assert all_entries[0] == entry1
-    assert all_entries[1] == entry2
+    assert feat_entries[0] == entry1
+    assert feat_entries[1] == entry2
 
     # Malformed line must not appear
-    for entry in all_entries:
+    for entry in feat_entries:
         assert "not valid json" not in str(entry)
 
     captured = capsys.readouterr()
