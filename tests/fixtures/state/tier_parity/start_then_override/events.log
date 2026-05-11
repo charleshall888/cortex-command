@@ -1,0 +1,2 @@
+{"event":"lifecycle_start","feature":"start_then_override","tier":"simple","criticality":"medium"}
+{"event":"complexity_override","feature":"start_then_override","from":"simple","to":"complex"}
