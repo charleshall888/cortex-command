@@ -24,6 +24,14 @@ Move TWO conditional content blocks from SKILL.md and reference files into dedic
 
 **Trimmed scope per epic-172-audit C7.** Original ticket scoped 6 extractions for ~300-line hot-path reduction. Post-decomposition critical-review noted: cortex has no runtime gate for "first invocation" / "critical-tier only" — relies on Claude reading parent-skill prose; 12 mirror entries; pre-commit drift hook fires on each; state-init.md split lacks correctness test; Opus 4.7 literalism risk on trigger prose. Halved to the 2 cleanest extractions for ~1/3 the maintenance burden.
 
+## Scope revision (post-closure annotation, 2026-05-11)
+
+This backlog body describes the original scope (two `references/*.md` extractions). The spec was revised mid-lifecycle to **Path 1: in-place trim of §1a + Trigger 2/3/4 test additions**, with the original extractions explicitly deferred for documented reasons (anti-pattern risk on the worked-examples extraction, test-anchor breakage on the §1a wholesale relocation, and ~50–75% of §1a being unique main-session orchestration that #177 explicitly preserved). The implementation correctly delivered Path 1; review verdict APPROVED. The authoritative source for what was actually delivered is:
+
+`lifecycle/extract-conditional-content-blocks-to-references-a-b-downgrade-rubric-implement-daytime-trimmed-scope/spec.md` line 3.
+
+This annotation exists to prevent future audits from mis-classifying #179 as a closure-quality failure based on a stale reading of this body.
+
 ## Context from discovery
 
 The skill-creator-lens audit identified that several conditional content blocks are loaded into model context on every invocation but only execute on specific paths (first invocation per feature, critical-tier only, daytime-dispatch only, etc.). Extracting these to dedicated reference files reduces hot-path context burn.
