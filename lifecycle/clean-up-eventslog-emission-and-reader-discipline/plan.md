@@ -16,7 +16,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: simple
 - **Context**: DELETE-row events from spec R1: `task_complete`, `confidence_check`, `decompose_flag`, `decompose_ack`, `decompose_drop`, `discovery_reference`, `implementation_dispatch`, `orchestrator_review`, `orchestrator_dispatch_fix`, `orchestrator_escalate`, `requirements_updated`. KEEP-AS-AUDIT-AFFORDANCE rows (do NOT delete): `plan_comparison`. PRUNE-PAYLOAD: `clarify_critic` (R3). The grep pattern is `grep -rn '"<event_name>"' <scope>`; for skill-prompt scopes also `grep -rn '"event": "<event_name>"'`. Distinguish emitter sites (skill prompts instructing emission) from consumer sites (Python reads, shell substring greps, test fixtures). Legacy-tolerance documentation hits (e.g., `clarify-critic.md:162-166`) are not consumers. Tests-only hits do not block deletion but must be enumerated.
 - **Verification**: `lifecycle/clean-up-eventslog-emission-and-reader-discipline/r2-consumer-grep.md` exists and contains an 11-row table with columns `event_name | grep_pattern | scope | hit_count | classification (DELETE | RECLASSIFY: <reason>)`. Pass if file exists and every row has a non-empty classification cell. Fail if any cell is blank or the file is missing.
-- **Status**: [ ] pending
+- **Status**: [x] completed (e299703)
 
 ### Task 2a: Delete dead-event emission instructions in lifecycle skill prompts (R1)
 
@@ -32,7 +32,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: complex
 - **Context**: Each skill-prompt JSONL emit block typically reads: prose "Append/Emit this event..." + fenced code block with `{"ts": "...", "event": "<name>", ...}` + occasional trailing rationale prose. Delete the prose + fenced block; do not leave dangling lead-ins. The lifecycle reference files contain emit blocks for both live and dead events at adjacent lines — delete only the dead-event block(s) and leave surrounding live-event blocks intact. Pre-commit Phase 2 (dual-source drift) regenerates `plugins/cortex-core/skills/**` mirrors; do not skip the hook.
 - **Verification**: `grep -rn '"event":\s*"\(confidence_check\|discovery_reference\|implementation_dispatch\|orchestrator_review\|orchestrator_dispatch_fix\|orchestrator_escalate\|requirements_updated\|task_complete\)"' skills/lifecycle/ plugins/cortex-core/skills/lifecycle/` returns 0 non-legacy-tolerance-comment hits — pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (239b080)
 
 ### Task 2b: Delete dead-event emission instructions in discovery skill prompts (R1)
 
@@ -45,7 +45,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: simple
 - **Context**: Same edit shape as Task 2a — prose + fenced code block per event. The discovery `orchestrator-review.md` mirrors the lifecycle `orchestrator-review.md` structure; the three events (`orchestrator_review`, `orchestrator_dispatch_fix`, `orchestrator_escalate`) are emitted at parallel line positions.
 - **Verification**: `grep -rn '"event":\s*"\(decompose_flag\|decompose_ack\|decompose_drop\|orchestrator_review\|orchestrator_dispatch_fix\|orchestrator_escalate\)"' skills/discovery/ plugins/cortex-core/skills/discovery/` returns 0 non-legacy-tolerance-comment hits — pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (71aad8f)
 
 ### Task 3: Delete the `requirements_updated` consumer scan section in walkthrough.md (R1)
 
@@ -55,7 +55,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: simple
 - **Context**: The block instructs the morning-review skill to grep `events.log` files for `requirements_updated` rows. With Task 2 removing the emit instruction, the consumer scan is also dead. Check for subsequent sections that need renumber (search for `## Section 2[a-z]` and `## Section 3` in the same file).
 - **Verification**: `grep -n 'requirements_updated' skills/morning-review/references/walkthrough.md` — pass if zero hits. `grep -n '## Section 2c' skills/morning-review/references/walkthrough.md` — pass if zero hits (or, if Section 2c remains, it is a renumbered successor with different content).
-- **Status**: [ ] pending
+- **Status**: [x] completed (5bf99e7)
 
 ### Task 4: Bump `clarify_critic` schema v2→v3 in clarify-critic.md (R3)
 
@@ -67,7 +67,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: simple
 - **Context**: Use the v3 shape from spec.md:46-48 verbatim. The legacy-tolerance table is a markdown table at 162-166; extend it with a row for v3 as the current write shape and ensure each prior shape's row carries an "indefinite read-tolerance" annotation. The prose around the template should explain that the per-finding text is intentionally not preserved (audit-verified zero non-test consumers; preserving prose without a reader would re-create the dead-emission pattern). The mirror at `plugins/cortex-core/skills/refine/references/clarify-critic.md` regenerates via the dual-source pre-commit hook.
 - **Verification**: `grep -c '"schema_version": 3' skills/refine/references/clarify-critic.md` ≥ 1 — pass. `grep -c '"findings":' skills/refine/references/clarify-critic.md` = 0 in event-emit template context (legacy-tolerance examples may still show `findings:` as historical shape) — pass if no template-level reference. `grep -c '"findings_count":' skills/refine/references/clarify-critic.md` ≥ 1 — pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (063b1b1)
 
 ### Task 5: Verify `tests/test_clarify_critic_alignment_integration.py` passes unchanged under v3 (R3)
 
@@ -77,7 +77,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: simple
 - **Context**: The test walks `lifecycle/*/events.log` for `clarify_critic` rows and asserts at least one detection. It is a schema-conformance gate, not a content assertion against the inner payload. The fixtures at `tests/fixtures/clarify_critic_v1.json` and `tests/fixtures/jsonl_emission_cutoff.txt` are referenced for legacy-tolerance verification and should not need changes for v1/v2 paths. For the v3 path: construct an in-test `tmp_path` events.log containing one synthetic v3 row matching the Task 4 template literal and rerun the detection-count assertion against it. If the test module doesn't already support a parameterized fixture-corpus path, add the v3 case as a new test function rather than weakening the existing one.
 - **Verification**: `just test -- tests/test_clarify_critic_alignment_integration.py` — pass if exit 0. A v3-only synthetic fixture is detected with `detections >= 1` — pass (asserted by the added test function).
-- **Status**: [ ] pending
+- **Status**: [x] completed (17ee63e; commit also swept in stale leftovers from feature 192's refine work — flagged in events.log)
 
 ### Task 6: Rewrite `aggregate_round_context` to emit `prior_resolutions_by_feature` (R4)
 
@@ -88,7 +88,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: complex
 - **Context**: The aggregator currently builds `all_entries` by concatenating all `escalations.jsonl` rows; replace this with a dict-comprehension that buckets by `feature` for entries where `type == "resolution"`. `unresolved` is computed at lines 79-94 and is independent of this change. The two schema_version sites (`_EXPECTED_SCHEMA_VERSION` and the inline literal) MUST move together — the strict-equality guard at 115-116 fails if they drift. Function signature: `aggregate_round_context(session_dir: Path, round_number: int) -> dict` (verified at `cortex_command/overnight/orchestrator_context.py:23`; do not drop the `round_number` arg). The returned `escalations` sub-dict shape becomes `{"unresolved": list[dict], "prior_resolutions_by_feature": dict[str, list[dict]]}`. Per spec R4 acceptance and Edge Cases line 178: the producer (this file) and the consumer prompt (Task 7) MUST ship in the same PR.
 - **Verification**: `grep -n '_EXPECTED_SCHEMA_VERSION = 2' cortex_command/overnight/orchestrator_context.py` returns exactly one hit — pass. `grep -n '"schema_version": 2' cortex_command/overnight/orchestrator_context.py` returns ≥ 1 hit (the inline literal) — pass. `grep -n 'all_entries' cortex_command/overnight/orchestrator_context.py` returns 0 hits in non-comment code — pass. `grep -n 'prior_resolutions_by_feature' cortex_command/overnight/orchestrator_context.py` returns ≥ 1 hit — pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (80ee899)
 
 ### Task 7: Update orchestrator-round.md prompt to consume the new dict (R4)
 
@@ -98,17 +98,20 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: simple
 - **Context**: Co-deployed with Task 6 in the same PR per spec R4 (Edge Cases line 178: the producer and consumer revert must be coupled). The reader prompt is consumed by the orchestrator agent at round time. The `.get(entry["feature"], [])` fallback handles features absent from the dict (no prior resolutions) — this is the dict-equivalent of the previous filter returning an empty list.
 - **Verification**: `grep -n 'all_entries' cortex_command/overnight/prompts/orchestrator-round.md` returns 0 hits — pass. `grep -n 'prior_resolutions_by_feature' cortex_command/overnight/prompts/orchestrator-round.md` returns ≥ 1 hit — pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (9ad5cb1)
 
-### Task 8: Add round-trip schema-lockstep test for `aggregate_round_context` (R4)
+### Task 8: Add round-trip schema-lockstep test for `aggregate_round_context` + update existing tests (R4)
 
-- **Files**: `cortex_command/overnight/tests/test_orchestrator_context_schema_roundtrip.py` (new)
-- **What**: Add a pytest module that calls `aggregate_round_context` on a fixture session directory and asserts: (a) the call does not raise `RuntimeError("schema_version drift")`; (b) `escalations` contains exactly the keys `{"unresolved", "prior_resolutions_by_feature"}`; (c) `all_entries` is absent. This locks the inline literal and `_EXPECTED_SCHEMA_VERSION` together — any future drift between them will surface in CI before merge.
+- **Files**:
+  - `cortex_command/overnight/tests/test_orchestrator_context_schema_roundtrip.py` (new)
+  - `tests/test_orchestrator_context.py` (modify lines 60, 109, 137-145 — update assertions from `all_entries` shape to `prior_resolutions_by_feature` shape)
+  - `tests/test_mcp_integration_end_to_end.py` (modify lines 22, 55, 109-114 — same shape update, including the module docstring)
+- **What**: Add a new pytest module that calls `aggregate_round_context` on a fixture session directory and asserts: (a) the call does not raise `RuntimeError("schema_version drift")`; (b) `escalations` contains exactly the keys `{"unresolved", "prior_resolutions_by_feature"}`; (c) `all_entries` is absent. ALSO update the two pre-existing test files that reference the old `all_entries` shape so they assert the new `prior_resolutions_by_feature` shape — preserve their original intent (entry-count, entry-content invariants) but read them through the new dict-by-feature path. This locks the inline literal and `_EXPECTED_SCHEMA_VERSION` together — any future drift between them will surface in CI before merge.
 - **Depends on**: [6]
 - **Complexity**: simple
-- **Context**: Existing pattern: see other `cortex_command/overnight/tests/test_*.py` modules for fixture-session-dir setup. The fixture session can be a `tmp_path`-built directory with a minimal `escalations.jsonl` containing one resolution entry and one promotion entry, plus any other files `aggregate_round_context` requires (check the function's read surface). Call signature is `aggregate_round_context(session_dir, round_number=1)` — pass a plausible round number. The assertion on key-set is `set(result["escalations"].keys()) == {"unresolved", "prior_resolutions_by_feature"}`.
+- **Context**: Existing pattern: see other `cortex_command/overnight/tests/test_*.py` modules for fixture-session-dir setup. The new fixture session can be a `tmp_path`-built directory with a minimal `escalations.jsonl` containing one resolution entry and one promotion entry, plus any other files `aggregate_round_context` requires (check the function's read surface). Call signature is `aggregate_round_context(session_dir, round_number=1)` — pass a plausible round number. The assertion on key-set is `set(result["escalations"].keys()) == {"unresolved", "prior_resolutions_by_feature"}`. For the existing-test updates: `prior_resolutions_by_feature` is keyed by feature slug; entries that previously appeared in `all_entries` and had `type == "resolution"` now appear at `result["escalations"]["prior_resolutions_by_feature"][feature_slug]`. The `tests/test_orchestrator_context.py:109` empty-escalations assertion changes from `{"unresolved": [], "all_entries": []}` to `{"unresolved": [], "prior_resolutions_by_feature": {}}`. Non-resolution entries (e.g., `type == "promotion"`) are no longer surfaced in the escalations sub-dict — if a test fixture relies on a non-resolution entry being visible, update the fixture to use `type: "resolution"` or remove the assertion that targets it.
 - **Verification**: `just test -- cortex_command/overnight/tests/test_orchestrator_context_schema_roundtrip.py` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (0a6b652)
 
 ### Task 9: Create `bin/cortex-check-events-registry` script + justfile recipes (R5/R6 wiring)
 
@@ -120,7 +123,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: complex
 - **Context**: Precedent: `bin/cortex-check-parity` (lines 34, 51, 69, 117 for top-level constants; line 386 for fail-open behavior to OVERRIDE). The new script uses similar SCAN_GLOBS but narrower: `("skills/**/*.md", "cortex_command/overnight/prompts/*.md")`. Event-name extraction regex: `r'"event":\s*"([a-z_]+)"'` against markdown content (skill prompts embed JSONL emit templates in fenced code blocks). Registry parsing: markdown table at `bin/.events-registry.md` with header row defining columns from spec R5; parse with stdlib `csv` after stripping `|` delimiters, or use plain-line splitting. CLI shape: `argparse` with `--staged` / `--audit` mutually-exclusive flags. Exit code 0 on pass, non-zero on any error; print human-readable diagnostics to stderr. The `cortex-log-invocation` shim is a 5-10 line block copied from existing `bin/cortex-*` scripts (e.g., `bin/cortex-check-parity` first 50 lines). stdlib-only — no third-party imports. Justfile recipes: `check-events-registry` runs `bin/cortex-check-events-registry --staged`; `check-events-registry-audit` runs `bin/cortex-check-events-registry --audit`. The justfile reference + the Task-11 test file together satisfy the dual-source parity contract for the new script.
 - **Verification**: `test -x bin/cortex-check-events-registry` — pass if exit 0 (script is executable). `bin/cortex-check-events-registry --help` exits 0 with usage text — pass. `head -50 bin/cortex-check-events-registry | grep -c cortex-log-invocation` ≥ 1 — pass. `grep -n '^check-events-registry:' justfile` ≥ 1 — pass. `grep -n '^check-events-registry-audit:' justfile` ≥ 1 — pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (46c1300)
 
 ### Task 10: Populate `bin/.events-registry.md` with initial rows (R7)
 
@@ -130,7 +133,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: complex
 - **Context**: The registry's column order must match spec R5. The markdown table format is `| col1 | col2 | ... |` with a separator row `|---|---|...|` after the header. For consumer pointers, prefer `path:line` form (e.g., `cortex_command/pipeline/metrics.py:232`). `human-skim` is allowed as a consumer value only for `category: audit-affordance` rows with a ≥30-char rationale (the post-Task-2 surviving set has no audit-affordance rows; `plan_comparison` has test consumers and qualifies as `live` — record it as `category: live, consumers: tests/<path>:<line> (tests-only)` per spec R5's `tests-only` annotation convention). The `deprecated-pending-removal` rows exist so in-flight features that emit a deleted name during a transitional period don't trigger the gate — these rows are pruned by a follow-up cleanup PR after the 30-day grace period.
 - **Verification**: `test -f bin/.events-registry.md` — pass if exit 0. `grep -c '^|' bin/.events-registry.md` ≥ 20 (header + separator + at least 18 data rows covering the live + deprecated event set) — pass. `bin/cortex-check-events-registry --staged` exit code 0 against a clean working tree — pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (0cd7629)
 
 ### Task 11: Self-tests for `bin/cortex-check-events-registry` (R5)
 
@@ -140,7 +143,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: complex
 - **Context**: Use `pytest` with `tmp_path` fixture. Invoke via `subprocess.run(["bin/cortex-check-events-registry", "--staged", "--root", str(tmp_path)], ...)` — the script needs a `--root` flag for testability (or alternatively, invoke with `cwd=tmp_path`). Each test's fixture registry should be the minimal content needed to exercise that case. Assertion form: `assert result.returncode == expected_code` and `assert "<expected substring>" in result.stderr.decode()`.
 - **Verification**: `just test -- tests/test_check_events_registry.py` — pass if exit 0 and ≥ 8 test cases collected (`pytest -v` output shows 8+ test ids).
-- **Status**: [ ] pending
+- **Status**: [x] completed (7fd78a5)
 
 ### Task 12: Wire pre-commit Phase 1.8 (R6)
 
@@ -150,7 +153,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: simple
 - **Context**: Existing Phase 1.5 (SKILL.md-to-bin parity) is the structural precedent in the same file; mirror its trigger-on-paths shape. The trigger-path matching uses the existing `git diff --cached --name-only` pattern from earlier phases. The phase is gated by staged-paths so a commit that touches none of the trigger paths short-circuits (exit 0 without invoking the gate).
 - **Verification**: `grep -n 'Phase 1.8' .githooks/pre-commit` ≥ 1 — pass. `grep -n 'check-events-registry' .githooks/pre-commit` ≥ 1 — pass. After installing the hook (`just setup-githooks`), staging a skill-prompt edit that adds an unregistered event name and attempting `git commit -m test --dry-run` fails non-zero with the registry error message — pass (manual verification step recorded in PR description).
-- **Status**: [ ] pending
+- **Status**: [x] completed (1600ca5)
 
 ### Task 13: CHANGELOG entry + `docs/internals/events-registry.md` (R8)
 
@@ -164,7 +167,7 @@ Apply the per-event remediation table from spec R1 (delete 11 verified-dead skil
 - **Complexity**: simple
 - **Context**: Existing CHANGELOG.md format: scan the last 3-5 entries to match style (date header, bulleted change list). The new docs/internals/ file follows the existing pattern of `docs/internals/pipeline.md` and `docs/internals/mcp-contract.md` — markdown, no frontmatter required, headed sections for Schema / Scope / Modes / Deprecation Lifecycle / Recovery. No user-side cleanup paths required per spec R8 acceptance (deletions affect emission only; archived rows remain parseable via Tolerant-Reader semantics).
 - **Verification**: `grep -n 'cortex-check-events-registry' CHANGELOG.md` ≥ 1 — pass. `test -f docs/internals/events-registry.md` — pass. `grep -n 'events-registry' docs/internals/pipeline.md` ≥ 1 — pass. `grep -n 'events-registry' docs/overnight-operations.md` ≥ 1 — pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed (83b9456)
 
 ## Verification Strategy
 
