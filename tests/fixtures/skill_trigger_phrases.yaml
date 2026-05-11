@@ -47,7 +47,6 @@ skills:
       - "discover this"
       - "decompose into backlog"
       - "break this down into tickets"
-      - "find gaps in requirements"
   backlog:
     must_contain:
       - "/cortex-core:backlog"

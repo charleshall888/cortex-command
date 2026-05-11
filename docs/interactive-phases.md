@@ -150,7 +150,7 @@ The readiness gate (and `/cortex-core:lifecycle`'s phase detection) checks for a
 
 ### What to Expect
 
-**Clarify** — The agent asks what you want to understand, what's in scope, and how deep to go. If you run `/cortex-core:discovery` with no argument, it enters auto-scan mode and reads `requirements/` to suggest gap candidates.
+**Clarify** — The agent asks what you want to understand, what's in scope, and how deep to go. `/cortex-core:discovery` requires a topic argument; for "what should I work on" / "next task" routing without a specific topic, use `/cortex-core:dev` instead.
 
 **Research** — Automated. The agent reads codebase, requirements, and (if needed) external documentation. The resulting `research/{topic}/research.md` is a durable artifact — it is referenced by the backlog tickets created in Decompose.
 
