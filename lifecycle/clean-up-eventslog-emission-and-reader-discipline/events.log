@@ -28,3 +28,7 @@
 {"ts": "2026-05-11T17:13:05Z", "event": "batch_dispatch", "feature": "clean-up-eventslog-emission-and-reader-discipline", "batch": 5, "tasks": [13]}
 {"ts": "2026-05-11T17:20:00Z", "event": "task_complete", "feature": "clean-up-eventslog-emission-and-reader-discipline", "task": 13, "batch": 5, "status": "success", "commit": "83b9456"}
 {"ts": "2026-05-11T17:30:00Z", "event": "phase_transition", "feature": "clean-up-eventslog-emission-and-reader-discipline", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-11T17:45:00Z", "event": "review_verdict", "feature": "clean-up-eventslog-emission-and-reader-discipline", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-05-11T17:45:05Z", "event": "requirements_updated", "feature": "clean-up-eventslog-emission-and-reader-discipline", "file": "requirements/project.md", "section": "## Architectural Constraints", "content": "Added Two-mode gate pattern bullet capturing the --staged/--audit split, narrow-trigger discipline, and fail-closed vs fail-open decision criterion (softened MUST phrasing per post-Opus-4.7 policy)"}
+{"ts": "2026-05-11T17:45:10Z", "event": "phase_transition", "feature": "clean-up-eventslog-emission-and-reader-discipline", "from": "review", "to": "complete"}
+{"ts": "2026-05-11T17:50:00Z", "event": "feature_complete", "feature": "clean-up-eventslog-emission-and-reader-discipline", "tasks_total": 14, "rework_cycles": 1}

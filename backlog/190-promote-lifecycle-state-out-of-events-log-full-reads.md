@@ -6,7 +6,7 @@ type: feature
 status: open
 priority: high
 parent: 187
-blocked-by: [189]
+blocked-by: []
 tags: [lifecycle, state-storage, events-log, data-model]
 created: 2026-05-11
 updated: 2026-05-11

@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- **`bin/cortex-check-events-registry` gate** and `bin/.events-registry.md` allowlist (R5/R6 of the events.log emission-discipline work). The static gate validates that every skill-prompt-emitted event name is registered with a documented consumer. Runs in `--staged` mode from `.githooks/pre-commit` Phase 1.7 (triggers only on `skills/*`, `cortex_command/overnight/prompts/*`, and the gate/registry files themselves — never on `cortex_command/**/*.py`) and in `--audit` mode via `just check-events-registry-audit` for off-critical-path deprecation-date review. Schema, scope split (`gate-enforced` vs `manual`), two-mode design, and stale-row recovery path are documented in `docs/internals/events-registry.md`.
+- **`bin/cortex-check-events-registry` gate** and `bin/.events-registry.md` allowlist (R5/R6 of the events.log emission-discipline work). The static gate validates that every skill-prompt-emitted event name is registered with a documented consumer. Runs in `--staged` mode from `.githooks/pre-commit` Phase 1.8 (triggers only on `skills/*`, `cortex_command/overnight/prompts/*`, and the gate/registry files themselves — never on `cortex_command/**/*.py`) and in `--audit` mode via `just check-events-registry-audit` for off-critical-path deprecation-date review. Schema, scope split (`gate-enforced` vs `manual`), two-mode design, and stale-row recovery path are documented in `docs/internals/events-registry.md`.
 
 ### Changed
 

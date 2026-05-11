@@ -46,7 +46,7 @@ The split is a deliberate scope choice. Extending the static gate to Python woul
 
 ### `--staged` (pre-commit critical path)
 
-Wired into `.githooks/pre-commit` Phase 1.7. Triggers only when the commit touches staged paths in the gate's scan surface (`skills/*`, `cortex_command/overnight/prompts/*`, the gate script itself, or the registry file). Crucially, the trigger does **not** include `cortex_command/**/*.py` — unrelated backend commits never invoke this phase.
+Wired into `.githooks/pre-commit` Phase 1.8. Triggers only when the commit touches staged paths in the gate's scan surface (`skills/*`, `cortex_command/overnight/prompts/*`, the gate script itself, or the registry file). Crucially, the trigger does **not** include `cortex_command/**/*.py` — unrelated backend commits never invoke this phase.
 
 The `--staged` mode enforces only unregistered-emission detection: a staged file containing `"event":"<name>"` where `<name>` is not present in the registry fails the commit. Time-based checks (stale `deprecation_date`) are deliberately off this path to avoid the day-15 tripwire pattern, where an unrelated commit gets blocked by an aged registry row that the committer is not responsible for.
 
@@ -90,7 +90,7 @@ This split — pre-commit gate enforces only producer registration, audit recipe
 
 - `bin/.events-registry.md` — the registry itself.
 - `bin/cortex-check-events-registry` — the gate script (skill-prompt scope, `--staged` and `--audit` modes).
-- `.githooks/pre-commit` Phase 1.7 — pre-commit invocation.
+- `.githooks/pre-commit` Phase 1.8 — pre-commit invocation.
 - `justfile` recipes `check-events-registry` and `check-events-registry-audit`.
 - `tests/test_check_events_registry.py` — gate self-tests.
 - `docs/internals/pipeline.md` and `docs/overnight-operations.md` — where `events.log` shapes and consumers are documented at the module level.
