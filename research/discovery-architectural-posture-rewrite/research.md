@@ -4,7 +4,9 @@ Second-pass audit of `/cortex-core:discovery`. The prior session (`research/disc
 
 This artifact holds principal-architect as the user's intent and tests one operationalization of it through a walk-through against `research/vertical-planning/`, with prescriptive-prose semantics grounded empirically across 14 sampled discovery-sourced tickets.
 
-> **Revision note (post-critical-review)**: An initial draft of DR-1 introduced a defect-vs-novel binary annotation on each architectural piece that gated path:line permission, lexical-scan whitelisting, and bundling judgment. Critical review (9 A-class findings across 4 reviewer angles) identified the binary as a circular load-bearing pivot with no independent rubric, asymmetric failure modes (over-tagging defect inverts the lexical scan), unspecified scan-exempt section taxonomy, an uncalibrated lexical threshold, walk-through evidence covering only the naive variant of the rule (not the refined defect-vs-novel variant), no events.log instrumentation for any new gate, and a bundling-question riding on an approval gate the walk-through itself said misses vagueness-class signals. The revised DR-1 below collapses the binary, replaces the multi-section taxonomy with a single optional `Touch points` section, removes the threshold, demotes the semantic self-check to authoring-time positive-routing, instruments three named gates with events, and replaces the bundling-question with a piece-count heuristic at architecture-section authoring time. The refined shape is itself a *hypothesis informed by walk-through findings* — not validated by re-walk. The spec phase MUST re-walk the refined shape against vertical-planning plus one alternative corpus (`research/repo-spring-cleaning/` or `research/opus-4-7-harness-adaptation/`) before implementation lands. See DR-1 §"Refined shape (post-revision)."
+> **Revision note 1 (post-critical-review)**: An initial draft of DR-1 introduced a defect-vs-novel binary annotation on each architectural piece that gated path:line permission, lexical-scan whitelisting, and bundling judgment. Critical review (9 A-class findings across 4 reviewer angles) identified the binary as a circular load-bearing pivot with no independent rubric, asymmetric failure modes (over-tagging defect inverts the lexical scan), unspecified scan-exempt section taxonomy, an uncalibrated lexical threshold, walk-through evidence covering only the naive variant of the rule (not the refined defect-vs-novel variant), no events.log instrumentation for any new gate, and a bundling-question riding on an approval gate the walk-through itself said misses vagueness-class signals. The revised DR-1 below collapses the binary, replaces the multi-section taxonomy with a single optional `Touch points` section, removes the threshold, demotes the semantic self-check to authoring-time positive-routing, instruments three named gates with events, and replaces the bundling-question with a piece-count heuristic at architecture-section authoring time.
+
+> **Revision note 2 (post-devil's-advocate + refined-shape re-walks)**: Following ticket creation (#195), a devil's advocate pass surfaced four objections: relabel-risk in the Architecture section, an unexamined demote-decompose alternative, prose-fixing-prose fragility, and vendor-endorsement migration. Two of these survived honest re-examination. To address the prose-fragility concern — the load-bearing one — the spec-phase re-walk obligation was executed pre-implementation rather than deferred. Both required corpora were walked: vertical-planning (mixed-stream, ~9 pieces under refined shape) and repo-spring-cleaning (surface-anchored, ~3 pieces under refined shape). Both re-walks produced architecturally-correct tickets with one gate-caught leak each — the gate detected real prescription leaks when applied honestly. Re-walk findings folded into the artifact below as `## Refined-shape re-walks (spec-phase, executed pre-implementation)`. The demote-decompose alternative was added to Feasibility as Approach G and cut with rationale (requires major new refine capability; cross-ticket coherence moves to a worse layer). The vendor-endorsement migration concern was confirmed as real but lower-likelihood than the framing implied; the existing "dissolved" language softened to "migrated to a less likely surface" in the trim table. See DR-1 §"Refined shape" and §"Refined-shape re-walks." The spec phase of #195 no longer needs to re-walk — it was done here. Spec-phase tasks remaining: codify the lexical scanner as actual code (not honor-system), sharpen "Why N pieces" prompt to falsify count rather than rationalize it, and consider a follow-up Touch-points over-quotation check.
 
 ## Research Questions
 
@@ -60,7 +62,47 @@ The walk-through agent applied a **naive candidate** (decompose §2 rewrite to "
 
 The walk-through verdict on the **naive candidate** was: "**works partially**. Headcount comes down. Pigeonhole pressure releases on architecturally novel pieces. Mechanism creeps back on known-defect pieces; vagueness creeps in on novel pieces. The 'no mechanism' rule isn't survivable literally."
 
-The refined shape is the response. It has not been re-walked. The spec phase MUST re-walk it.
+The refined shape is the response. It was re-walked pre-implementation; see next subsection.
+
+### Refined-shape re-walks (spec-phase, executed pre-implementation)
+
+Following a devil's advocate pass that surfaced prose-fixing-prose as the load-bearing fragility, the spec-phase re-walk obligation was executed before implementation rather than deferred. Both required corpora were walked under the refined shape (uniform Role/Integration/Edges/Touch-points template, section-partitioned gate, piece-count justification when N > 5, single-question approval gate).
+
+#### Vertical-planning re-walk (mixed-stream corpus, refined shape)
+
+- **Pieces produced**: 9 (vs 11 shipped, 29 originally drafted). Role-named (reference-integrity restorer, cross-skill canonicalizer, skill-content trimmer, skill-meta uplift, conditional-content extractor, artifact-template normalizer, skill-design test bed, vertical-planning surface, deterministic complexity router).
+- **Section-partitioned gate**: 1 leak caught. Ticket 8 (vertical-planning surface) leaked a path:line into Edges; the gate flagged it correctly; remediation was a one-line edit moving the citation to Touch points.
+- **Pain pass/fail**: over-decompose PASS (9 vs 11 manual / 29 drafted); undersized PASS (Touch points preserves detail on surface-anchored pieces without inflating body); prescription PASS with one caught leak; pigeonhole PASS (Ticket 8 leaves refine room to reframe DR-1's measure-first option vs naive adoption).
+- **Failure modes surfaced**:
+  1. **"Why N pieces" can rationalize bundling rather than constrain it.** The justification exercise produced defensible distinguishers without falsifying the count. Authors writing under prompt-pressure produce 9 plausible-looking justifications; the gate has no falsification mechanism.
+  2. **Gate is honor-system unless implemented as code.** The path:line leak in Ticket 8 was caught only because the walk-through author was honest. A motivated author could leave it; a real lexical scanner (script) would catch it deterministically.
+  3. **Touch points became a richness valve on the most surface-anchored piece (Ticket 8).** Body sections were real but thinner; the load-bearing parser-line-range, P9/S7 specifics, and exact template section names lived in Touch points.
+  4. **Vague-mush partially still present on novel pieces.** Ticket 4 (skill-meta uplift "improve discoverability") and Ticket 7 (test bed "add regression guards") have role-true but role-generic body sections. Touch points patched this for 7 but barely for 4.
+  5. **Single-question approval gate strains at 9 pieces.** Gate optimized for 3–5 pieces; at higher counts the "approve all / revise all / drop all" instrument is coarse.
+
+#### Repo-spring-cleaning re-walk (surface-anchored corpus, refined shape)
+
+- **Pieces produced**: 3 (vs 3 shipped, 7 originally drafted). Role-named (installer-facing surface rewrite, orphan-implementation retirement, lifecycle/research archive sweep). Exact parity with shipped consolidation.
+- **Section-partitioned gate**: 1 leak caught. Ticket 2 (orphan retirement) leaked `justfile:326-327` into Edges; the gate flagged it correctly.
+- **Pain pass/fail**: over-decompose PASS (parity with shipped); undersized PASS; prescription PARTIAL FAIL (1/3 needs reframe — the surface-anchored corpus stresses the body-section discipline more than mixed-stream); pigeonhole PASS with improvement (Role-level "no live consumer + zero drift" leaves implementers more room than a hardcoded delete-list).
+- **Failure modes surfaced specific to surface-anchored corpora**:
+  1. **Body sections become token-inefficient.** 60–80% of substance lives in Touch points; body sections carry framing-tax (audience claim, sequencing contract, spec/code coupling) but not content. The gate's structural value per token drops on surface-anchored corpora.
+  2. **Bundling within a role can happen unchallenged when count ≤ 5.** Ticket 1 (installer-facing surface) bundles six legitimately-distinct content classes inside one role; the role description ("what installer sees first") accepts them; "Why N pieces" doesn't fire because count is 3. The role-level framing is permissive enough that bundling happens without the gate firing — correct on this corpus, but unchecked on others where bundling might be a mistake.
+  3. **Information loss vs prescriptive shipped tickets is unknown without reading shipped body content.** Likely-net: parity for what-to-do, mild loss on why-this-sequencing-matters unless authors lean harder on Integration. Acceptable.
+  4. **Touch points becomes the gate's blind spot.** The prescription-check operates on body sections only; on surface-anchored corpora Touch points is where everything load-bearing lives. Quoted-prose-patch over-volume in Touch points is not currently checked.
+
+#### Synthesis across both re-walks
+
+**The refined shape works on both corpus types.** Both produced architecturally-correct tickets at appropriate headcount. The gate caught real leaks on both walks when applied honestly. The shape is materially better than the naive variant — the binary annotation that critical review cut was the right cut.
+
+**The weakest components are now visible**:
+
+- **"Why N pieces" rationalizes rather than constrains** — needs a falsification framing in the protocol prose ("attempt to merge each piece with its neighbor; record what specifically blocks the merge" rather than "explain why each is distinct"). Spec-phase task.
+- **The lexical scanner must be implemented as code, not relied on as prose discipline** — otherwise the gate is honor-system. Spec-phase task: ship a small script (e.g., `bin/cortex-check-prescriptive-prose`) that scans ticket bodies for the forbidden patterns and reports flags.
+- **Touch points has no over-quotation check** — quoted prose patches in Touch points are currently permitted freely. Consider a follow-up: cap quoted-content in Touch points at N lines per entry, or flag entries that quote >50% of the cited surface. Not blocking; surface for follow-up audit.
+- **Single-question approval gate strains at high piece counts** — when N > 7 or so, the gate's coarse "approve/revise/drop" instrument may need per-piece sub-questions. Not blocking; observe in practice and revise if needed.
+
+**The demote-decompose alternative (devil's advocate Objection 2) is a real cut option but properly cut for scope.** See Feasibility table Approach G.
 
 ### Refine-side considered and deferred
 
@@ -82,7 +124,7 @@ Per `requirements/project.md` workflow-trimming bias: prefer removing existing s
 | `decompose.md` R2(a) local grounding (`:24`) | **Remove** | R2(a) requires path:line in Value prose — the strongest prescriptive marker per the prose scan. Net negative under principal-architect framing. |
 | `decompose.md` R2(b) research-premise check (`:25`) | **Remove** | Same premise as R2(a); pushes Value toward concrete mechanism. |
 | `decompose.md` E9 ad-hoc fallback (`:26`) | **Remove** | Inherited from R2; dies with R2. |
-| `decompose.md` surface-pattern helper (`:27`) | **Remove** | Vendor-endorsement was a real prior failure mode but the principal-architect frame dissolves it (architectural-piece tickets have no Value-prose surface where "Anthropic recommends" attaches). |
+| `decompose.md` surface-pattern helper (`:27`) | **Remove** | Vendor-endorsement was a real prior failure mode but the principal-architect frame migrates it to a less likely surface (architectural-piece body sections have no Value-prose shape where "Anthropic recommends" naturally attaches). Caveat surfaced by devil's advocate: Touch points is a prose surface where vendor-endorsement *could* still appear if an author writes "Anthropic recommends X" there — semantically out-of-place but not gate-flagged. Acceptable trade per the user's stated pain priorities (mechanism prescription > vendor-endorsement); revisit if the unlikely failure mode shows up empirically. |
 | `decompose.md` R3 per-item ack flow (`:37-42`) | **Remove** | Quotes a Value string verbatim; under the new framing tickets don't have a structured Value field for this to operate on. Prior session's empirical finding (0/13 sampled tickets have structured Value) confirms the flow has no string to quote in practice. |
 | `decompose.md` R4 cap (`:35`) | **Remove** | Cap exists to halt cascading R2 flags; no R2, no cap need. |
 | `decompose.md` R5 flag propagation (`:70`) | **Remove** | Propagates R2 flags through consolidation; no R2 flags, nothing to propagate. E10 invariant dies with R5. |
@@ -113,6 +155,7 @@ Skipped. The discovery skill's posture is project-specific; broader "story split
 | **D. Naive principal-architect §2 rewrite alone (prior recommendation, pre-revision)** | S | High — walk-through showed it fails on surface-anchored pieces, novel pieces, edge cases. **Not recommended.** | N/A. |
 | **E. Defect-vs-novel binary annotation (initial-draft DR-1, cut at critical review)** | M | High — circular rubric, asymmetric failure modes, lexical scan inverts on mis-annotation. **Cut wholesale.** | N/A. |
 | **F. Add gates without trimming (alternative read of prior session)** | M | High — compounds cumulative skip risk per CLAUDE.md; user has explicitly rejected "more machinery." **Not recommended.** | N/A. |
+| **G. Demote decompose-time ticket creation; refine fragments per-piece on demand** | XL | High — requires major new refine capability (refine currently consumes one backlog ticket and produces one spec.md; under this approach refine would need to fragment one ticket into N specs). Cross-ticket coherence moves from discovery's cross-list view to refine's per-ticket view, where it's structurally invisible. Backlog visibility drops — users can't see "what's the scope" without reading the research artifact. The user's "rough ideas of what parts need to come together" framing arguably points this direction, but the operational consequences (new refine capability, lost backlog visibility, harder cross-piece coherence) make it strictly larger scope than DR-1. **Cut for scope.** Surface as a future option if DR-1 leaves residual pain after re-walks confirm it works at implementation time. | New refine fragmentation capability; rewrite of refine's input-contract. |
 
 ## Decision Records
 
@@ -257,7 +300,20 @@ Trimming decompose.md without adding the `## Architecture` section leaves §2 wi
 
 ## Open Questions
 
-- **Spec-phase re-walk corpus choice**: vertical-planning is required (for continuity with this artifact's walk-through); the alternative corpus choice between `research/repo-spring-cleaning/` and `research/opus-4-7-harness-adaptation/` resolved at spec time based on which is more recently familiar to the user. Both are valid; the choice is implementation sequencing, not research.
-- **Architecture-section authoring guidance volume**: the walk-through showed agents need concrete scaffolding (worked examples, anti-patterns) to stay architectural without drifting vague. Exact wording resolved at implementation time; rough requirement is one worked example per piece-shape category (surface-anchored example, structural-novel example) plus a 2-3 bullet "anti-patterns" list.
-- **Piece-count threshold for required "Why N pieces" justification**: set at >5 in the current draft based on the user's stated "reasonably sized" target. Resolved at implementation time; the threshold can be tuned against spec-phase re-walk results.
-- **Approval-checkpoint UX**: single question with three options (Approve / Revise / Drop) is specified. Whether the checkpoint surfaces the Architecture section as inline text vs a file-link is implementation-time UX.
+**Resolved by pre-implementation re-walks (no longer open):**
+
+- ~~Spec-phase re-walk corpus choice~~ — RESOLVED: both required corpora (vertical-planning + repo-spring-cleaning) walked pre-implementation; evidence folded into Codebase Analysis §"Refined-shape re-walks."
+- ~~Will the refined shape actually produce architecturally-richer tickets than the naive shape on real corpora?~~ — RESOLVED: yes on both corpus types tested; gate caught real leaks; pain pass on three of four dimensions across both walks.
+
+**Open — for implementation-phase spec.md to resolve:**
+
+- **Lexical scanner as code, not prose discipline**: re-walks showed the gate is honor-system without a real scanner. Implementation must ship a small script (suggested: `bin/cortex-check-prescriptive-prose`) that scans ticket body sections for path:line, section indices, and quoted-prose-patches, reporting flags. Without this the gate is unenforced.
+- **"Why N pieces" falsification framing**: re-walks showed the current "explain why each is distinct" prompt produces rationalization rather than constraint. Implementation should reframe the prompt to attempt-merge: "for each adjacent pair of pieces, attempt to merge them and record what specifically blocks the merge. If nothing blocks, merge." This converts the gate from defensive to falsificationist.
+- **Architecture-section authoring guidance volume**: re-walks confirmed agents need concrete scaffolding to stay role-level. Implementation should ship one worked example per piece-shape category (surface-anchored, structural-novel) plus a 2–3 bullet anti-patterns list.
+- **Piece-count threshold for "Why N pieces"**: set at >5 in current draft. Vertical-planning re-walk produced 9 pieces (justifications fired and were defensible-but-rationalizing). Repo-spring-cleaning re-walk produced 3 pieces (didn't fire; bundling within a role went unchecked but was correct here). Implementation may tune the threshold downward (>3 or >4) to make the justification fire more often, or pair the lower threshold with the falsification framing above.
+- **Approval-checkpoint UX at high piece counts**: re-walk surfaced that the single-question gate strains when N > 7. Implementation may add per-piece sub-questions when count exceeds a threshold; verify by observation post-implementation.
+
+**Surfaced for follow-up (not blocking #195 implementation):**
+
+- **Touch-points over-quotation check**: re-walks showed Touch points becomes the gate's blind spot on surface-anchored corpora. Consider a follow-up audit checking Touch-points entries for quoted-content volume (e.g., flag entries quoting >N lines or >50% of the cited surface). Not blocking; surface as a follow-up ticket if Touch points proves to be a prescription-leak valve in practice.
+- **Refine-side strengthening (DR-2)**: re-walks showed mild vague-mush persists on novel pieces (vertical-planning Tickets 4 and 7). If empirical post-#195 implementation confirms this, DR-2's refine-side over-prescription check becomes obvious.
