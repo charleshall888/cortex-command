@@ -232,13 +232,13 @@ For each completed feature (same list as Section 2, same order):
 2. Read `lifecycle/{feature}/events.log`. If it already contains a line where
    `"event": "feature_complete"` appears → skip, report `already complete`.
 
-3. Read the feature's tier and criticality from `lifecycle/{feature}/events.log`:
-   - **Tier**: scan for the last JSON line containing a `"tier"` field (from
-     `lifecycle_start` or `complexity_override` events). If none found, default to
-     `"simple"`. This mirrors `read_tier()` from `claude.common`.
-   - **Criticality**: scan for the last JSON line containing a `"criticality"` field.
-     If none found, default to `"medium"`. This mirrors `read_criticality()` from
-     `claude.common`.
+3. Read the feature's tier and criticality by running
+   `cortex-lifecycle-state --feature {feature}` (emits JSON applying the canonical
+   rules — tier: `lifecycle_start.tier` superseded by the most recent
+   `complexity_override.to`; criticality: most recent value from `lifecycle_start`
+   or `criticality_override`). When a key is absent, default tier to `"simple"`
+   and criticality to `"medium"`. This mirrors `read_tier()` / `read_criticality()`
+   from `claude.common`.
 
 4. Apply the review gating check using the logic from `requires_review(tier, criticality)`
    in `claude.common`:

@@ -4,7 +4,7 @@ Quality gate between phase artifact write and user presentation. The orchestrato
 
 ## Applicability
 
-Before running this protocol, determine whether orchestrator review applies. Read `lifecycle/{feature}/events.log` and find the most recent `lifecycle_start` or `criticality_override` event. Extract `criticality` and `tier` from that event. If no such event exists, default to `criticality: medium`.
+Before running this protocol, determine whether orchestrator review applies. Read both fields by running `cortex-lifecycle-state --feature {feature}` (emits JSON; canonical rules — criticality is the most recent value from `lifecycle_start` or `criticality_override`; tier is `lifecycle_start.tier` superseded by the most recent `complexity_override.to`). Defaults: criticality `medium`, tier `simple` when the key is absent.
 
 **Skip rule**: Skip orchestrator review when criticality is `low` AND tier is `simple`. Proceed directly to user presentation or the next phase.
 

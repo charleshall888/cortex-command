@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# cortex-lifecycle-state — emit a feature's canonical criticality and tier as JSON.
+#
+# Usage:
+#   cortex-lifecycle-state --feature <slug>
+#   cortex-lifecycle-state --feature <slug> --field criticality
+#   cortex-lifecycle-state --feature <slug> --field tier
+#
+# Output:
+#   Without --field: {"criticality": "<value>", "tier": "<value>"} — keys absent
+#   when no relevant event was found in events.log (caller defaults criticality
+#   to "medium", tier to "simple"). When events.log is missing, output {}.
+#
+#   With --field: JSON containing only the requested key (omitted when empty).
+#
+# Canonical rules (mirror cortex_command.common.read_tier / read_criticality):
+#   criticality: most-recent `criticality` field on `lifecycle_start` or
+#                `criticality_override` events.
+#   tier:        `lifecycle_start.tier` superseded by `complexity_override.to`,
+#                whichever appears most recently.
+#
+# JSONL streaming via `jq fromjson?` — tolerates the spaced (`"event": "X"`)
+# and compact (`"event":"X"`) serialization styles uniformly, and silently
+# skips torn or malformed lines.
+
+command -v jq >/dev/null || { echo "cortex-lifecycle-state: jq is required but not installed" >&2; exit 2; }
+
+"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true
+
+set -euo pipefail
+
+feature=""
+field=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --feature)
+            feature="${2:-}"
+            shift 2
+            ;;
+        --field)
+            field="${2:-}"
+            shift 2
+            ;;
+        -h|--help)
+            sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        *)
+            echo "cortex-lifecycle-state: unknown argument: $1" >&2
+            exit 2
+            ;;
+    esac
+done
+
+if [ -z "$feature" ]; then
+    echo "cortex-lifecycle-state: --feature <slug> is required" >&2
+    exit 2
+fi
+
+case "$field" in
+    ""|criticality|tier) ;;
+    *)
+        echo "cortex-lifecycle-state: --field must be 'criticality' or 'tier' (got: $field)" >&2
+        exit 2
+        ;;
+esac
+
+events="lifecycle/$feature/events.log"
+
+if [ ! -f "$events" ]; then
+    echo "{}"
+    exit 0
+fi
+
+# Single-process jq pipeline:
+#   - stream events.log line-by-line via fromjson?
+#   - reduce to {criticality, tier}, applying canonical rules (most-recent wins
+#     for criticality; lifecycle_start.tier superseded by complexity_override.to)
+#   - drop keys that were never set, so callers can apply their default
+#   - filter to the requested --field, if any
+jq -ncR --arg field "$field" '
+    reduce inputs as $line (
+        {};
+        ($line | fromjson?) as $r
+        | if $r == null then .
+          elif $r.event == "lifecycle_start" then
+              (if ($r.criticality // "") != "" then .criticality = $r.criticality else . end)
+            | (if ($r.tier // "") != "" then .tier = $r.tier else . end)
+          elif $r.event == "criticality_override" then
+              (if ($r.to // $r.criticality // "") != "" then .criticality = ($r.to // $r.criticality) else . end)
+          elif $r.event == "complexity_override" then
+              (if ($r.to // $r.tier // "") != "" then .tier = ($r.to // $r.tier) else . end)
+          else .
+          end
+    )
+    | if $field == "criticality" then (if has("criticality") then {criticality} else {} end)
+      elif $field == "tier" then (if has("tier") then {tier} else {} end)
+      else .
+      end
+' < "$events"

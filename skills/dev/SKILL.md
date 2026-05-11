@@ -123,7 +123,7 @@ If no heuristic signals are detected, suggest **medium** (the lifecycle default)
 
 Before performing this assessment, check whether `lifecycle/<feature>/` already exists. If it does:
 
-1. Read `lifecycle/<feature>/events.log` for an existing criticality setting.
+1. Read criticality by running `cortex-lifecycle-state --feature <feature> --field criticality` (emits JSON; defaults to `medium` when the key is absent).
 2. Inform the user: "A lifecycle for `<feature>` already exists at `<phase>`. Resume it?"
 3. If the user confirms, state: "Invoke `/cortex-core:lifecycle <feature>`" to resume. Skip the criticality suggestion — the existing lifecycle already has one.
 4. If the user wants to start fresh, confirm they want to discard existing artifacts before proceeding.

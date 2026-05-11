@@ -93,9 +93,9 @@ Reference table (one line per `phase` value):
 | `complete`         | `events.log` has a `feature_complete` event, or `review.md` verdict is `APPROVED` — feature done. |
 | `escalated`        | `review.md` verdict is `REJECTED`; present reviewer analysis and ask the user for direction.      |
 
-**Detect criticality**: After determining the phase, read criticality from `events.log`. Scan for the most recent event with a `criticality` field (either `lifecycle_start` or `criticality_override`). If no criticality field is found (pre-existing lifecycle), default to `medium`. Report the detected criticality alongside the detected phase when resuming.
+**Detect criticality**: After determining the phase, read criticality via `cortex-lifecycle-state --feature {feature} --field criticality` (emits JSON; defaults to `medium` when the key is absent or events.log is missing). Report the detected criticality alongside the detected phase when resuming.
 
-**Detect complexity tier**: After determining the phase, read the active complexity tier from `events.log` in two steps: (1) read `tier` from the `lifecycle_start` event as the baseline; (2) scan for the most recent `complexity_override` event — if one exists, its `"to"` field supersedes the baseline tier. The result of step (2), if present, is the active tier for all subsequent phases. If no `lifecycle_start` event exists (pre-existing lifecycle), default to `simple`. Report the detected tier alongside the detected phase when resuming.
+**Detect complexity tier**: After determining the phase, read the active complexity tier via `cortex-lifecycle-state --feature {feature} --field tier` (emits JSON applying the canonical rule that `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when the key is absent). Report the detected tier alongside the detected phase when resuming.
 
 **Register session**: After identifying the feature (whether new or existing), register this session by writing the session file:
 

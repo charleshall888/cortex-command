@@ -144,7 +144,7 @@ Before presenting the artifact to the user, read and follow `references/orchestr
 
 ### 3b. Critical Review
 
-After orchestrator review passes, check `lifecycle/{feature}/events.log` for the most recent `lifecycle_start` or `criticality_override` event. Extract `tier`.
+After orchestrator review passes, read the active tier by running `cortex-lifecycle-state --feature {feature} --field tier` (emits JSON applying the canonical rule that `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when the key is absent).
 
 **Run** when `tier = complex`: invoke the `critical-review` skill with the spec artifact. Present the synthesis to the user before spec approval.
 

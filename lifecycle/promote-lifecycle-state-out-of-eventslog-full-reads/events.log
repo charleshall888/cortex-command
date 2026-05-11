@@ -8,3 +8,5 @@
 {"schema_version": 2, "ts": "2026-05-11T23:24:31Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 0, "tasks": [1]}
 {"schema_version": 2, "ts": "2026-05-11T23:28:00Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 1, "tasks": [2]}
 {"schema_version": 2, "ts": "2026-05-11T23:29:11Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 2, "tasks": [3]}
+{"schema_version": 2, "ts": "2026-05-11T23:32:52Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 2, "tasks": [4]}
+{"schema_version": 2, "ts": "2026-05-11T23:42:06Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 2, "tasks": [5]}

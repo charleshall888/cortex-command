@@ -18,7 +18,7 @@ Read prior artifacts:
 
 ### 1a. Check Criticality
 
-Read `lifecycle/{feature}/events.log` and find the most recent event containing a `criticality` field (`lifecycle_start` or `criticality_override`). Extract the criticality value. If no criticality field is found, default to `medium`.
+Read criticality by running `cortex-lifecycle-state --feature {feature} --field criticality` (emits JSON; defaults to `medium` when the key is absent or events.log is missing).
 
 - **If criticality is `critical`**: proceed to §1b (Competing Plans).
 - **Otherwise** (low, medium, high): proceed to §2 (Design the Approach) — the standard single-plan flow.
@@ -266,7 +266,7 @@ Before presenting the artifact to the user, read and follow `references/orchestr
 
 ### 3b. Critical Review
 
-After orchestrator review passes, check `lifecycle/{feature}/events.log` for the most recent `lifecycle_start` or `criticality_override` event. Extract `tier`.
+After orchestrator review passes, read the active tier by running `cortex-lifecycle-state --feature {feature} --field tier` (emits JSON applying the canonical rule that `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when the key is absent).
 
 **Run** when `tier = complex`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval.
 
