@@ -1,0 +1,36 @@
+{
+  "ts": "2026-05-11T00:04:00Z",
+  "feature": "promote-lifecycle-state-out-of-eventslog-full-reads",
+  "artifact": "lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "jq is required by both new bin scripts but not auto-installed by `cortex init`. The plan adds a `command -v jq` preflight that exits non-zero with clear stderr; the dependency landscape (uv-tool-install consumers, fresh CI containers) is not updated in user-facing install docs.",
+      "reviewer_angle": "Bash bin-script robustness",
+      "evidence_quote": "Build output JSON with `jq -n --arg c \"$criticality\" --arg t \"$tier\" '{}'`"
+    },
+    {
+      "class": "B",
+      "finding": "Checkbox regex case-sensitivity assumed to match `common.py:detect_lifecycle_phase`. Task 6 uses `^- \\[[ xX]\\]` to accept capital `[X]`; if common.py is lowercase-only the bin script must match common.py exactly for Task 7 parity to pass. The plan defers the broader case-insensitivity fix to a follow-up.",
+      "reviewer_angle": "Bash bin-script robustness",
+      "evidence_quote": "tasks_total: grep -cE '^- \\[ \\]|^- \\[x\\]' \"lifecycle/<slug>/plan.md\""
+    },
+    {
+      "class": "B",
+      "finding": "Verdict-count regex over review.md inherits existing fragility from common.py — both readers over-count when review.md quotes verdict-shaped strings in prose. Behavior is intentionally identical to preserve Task 7 parity; loosening the bash regex would diverge from common.py. Filed as a follow-up.",
+      "reviewer_angle": "Bash bin-script robustness",
+      "evidence_quote": "For shell impl: grep -cE '\"verdict\"[[:space:]]*:[[:space:]]*\"[A-Z_]+\"' review.md"
+    },
+    {
+      "class": "B",
+      "finding": "Task 5/5b verifications and Phase B checkpoint use `grep -r skills/` without naming working directory or scope vs. the auto-generated `plugins/cortex-core/skills/` mirror. Task 5's updated verification specifies `run from project root` but the constraint about the plugin mirror is recoverable via pre-commit regeneration, not enforced by the verifications.",
+      "reviewer_angle": "Spec-to-plan interpretation",
+      "evidence_quote": "Checkpoint: ... grep -rnE ... skills/ returns no matches."
+    }
+  ]
+}

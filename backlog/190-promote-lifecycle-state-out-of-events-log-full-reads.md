@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 72260d5f-c01b-4600-8b84-0b3b5f4f3a15
 title: "Promote lifecycle state out of events.log full-reads"
 type: feature
-status: open
+status: refined
 priority: high
 parent: 187
 blocked-by: []
@@ -11,6 +11,10 @@ tags: [lifecycle, state-storage, events-log, data-model]
 created: 2026-05-11
 updated: 2026-05-11
 discovery_source: research/lifecycle-discovery-token-audit/research.md
+spec: lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/spec.md
+areas: [skills]
+lifecycle_phase: implement
+plan: lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/plan.md
 ---
 
 # Promote lifecycle state out of events.log full-reads
