@@ -139,6 +139,8 @@ Produce `lifecycle/{feature}/plan.md` with this structure:
 
 ## Overview
 [1-2 sentence summary of the implementation approach and key architectural decisions]
+**Architectural Pattern**: {category}
+<!-- Include only when the implementation commits to one of: event-driven, pipeline, layered, shared-state, plug-in. Omit otherwise. -->
 
 ## Tasks
 
