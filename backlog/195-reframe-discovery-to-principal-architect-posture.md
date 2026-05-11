@@ -3,13 +3,18 @@ schema_version: "1"
 uuid: ce49fbc8-a968-48ed-b1e7-de59ef6f171e
 title: "Reframe discovery to principal-architect posture"
 type: feature
-status: open
+status: closed
 priority: high
 blocked-by: []
-tags: [discovery, skill-rewrite]
+tags: [discovery, skill-rewrite, superseded]
 created: 2026-05-11
 updated: 2026-05-11
 discovery_source: research/discovery-architectural-posture-rewrite/research.md
+superseded_by: 196
+---
+
+> **SUPERSEDED by #196** (closed 2026-05-11). This ticket landed DR-1 from the discovery_source — the "discovery produces 1 epic + N piece-tickets" shape. Following a devil's advocate pass and critical re-examination, the structural direction shifted to DR-G (demote-decompose): discovery produces 1 epic + the research artifact's Architecture section as the load-bearing fragmentation reference; pieces promote to tickets on demand via a new promote-piece workflow. The user's stated framing ("high-level epic creation with rough ideas of what parts need to come together") points at DR-G, not DR-1. See `research/discovery-architectural-posture-rewrite/research.md` revision note 3 for the direction-change reasoning. The empirical re-walk evidence from this ticket's scope transfers to #196 — the ticket-body shape (Role/Integration/Edges/Touch-points) is what promote-piece will produce. Original body retained below for audit trail.
+
 ---
 
 # Reframe discovery to principal-architect posture
