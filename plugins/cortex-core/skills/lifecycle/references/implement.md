@@ -75,13 +75,7 @@ If `kill -0` exits 0 (process alive): reject with "Autonomous daytime run alread
 
 **iv. Background subprocess launch.** Three preparatory Bash calls before the launch, then one launch call, then one post-launch update call — five calls total (no compound commands):
 
-**Step 1 — Mint dispatch UUID.** Single Bash call:
-
-```
-python3 -c 'import uuid; print(uuid.uuid4().hex)'
-```
-
-Stash the printed 32-char lowercase hex string into conversation memory as the active `dispatch_id` for the current feature.
+**Step 1 — Mint dispatch UUID.** Single Bash call to `cortex_command.overnight.daytime_pipeline`'s UUID-minting entry (the helper prints a 32-char lowercase hex string); the main session stashes the printed value into conversation memory as the active `dispatch_id` for the current feature.
 
 **Step 2 — Write `daytime-dispatch.json` atomically.** Single Bash call (before the subprocess launch):
 
@@ -89,7 +83,7 @@ Stash the printed 32-char lowercase hex string into conversation memory as the a
 python3 -m cortex_command.overnight.daytime_dispatch_writer --feature {slug} --dispatch-id {uuid} --mode init
 ```
 
-This writes `lifecycle/{feature}/daytime-dispatch.json` with `pid: null` via the canonical atomic-write helper. The dispatch file is the on-disk authoritative source for `dispatch_id` — it survives main-session compaction and allows a re-entered skill to recover the active dispatch identity without trusting in-memory state.
+Invoke `daytime_dispatch_writer` in init mode — see the module for the canonical atomic-write contract and `daytime-dispatch.json` schema.
 
 **Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed:
 
@@ -105,7 +99,7 @@ The subprocess is responsible for writing `lifecycle/{feature}/daytime.pid` at i
 python3 -m cortex_command.overnight.daytime_dispatch_writer --feature {slug} --mode update-pid --pid {pid}
 ```
 
-This ensures the on-disk dispatch file reflects the actual subprocess PID for liveness monitoring.
+Invoke `daytime_dispatch_writer` in update-pid mode — see the module for the canonical atomic-write contract.
 
 **v. Log `implementation_dispatch` event.** Immediately after the background launch, a separate Bash call appends to `lifecycle/{feature}/events.log`:
 
@@ -125,32 +119,19 @@ This ensures the on-disk dispatch file reflects the actual subprocess PID for li
 
 **Termination bound**: 120 iterations (~4 hours). Context window exhaustion — not iteration count — is the practical binding constraint for long runs. At **30 iterations (~1 hour)**, pause and offer the user the option to suspend polling: "Subprocess still running after 30 iterations (~1 hour). Continue polling or stop? (The process continues in background — monitor `lifecycle/{feature}/daytime.log` and `events.log` directly.)" If the user chooses to stop, exit the polling loop (the subprocess keeps running; skip result surfacing and log `dispatch_complete` with outcome `"paused"` only if the subprocess is still alive — otherwise surface results normally). On reaching 120 iterations without the subprocess exiting: surface "Polling timeout — subprocess may still be running (PID {pid}). Check `lifecycle/{feature}/daytime.log` directly for status." and exit the polling loop.
 
-**vii. Result surfacing.** Invoke the `daytime_result_reader` helper module — the canonical classification logic — via a single Bash call:
+**vii. Result surfacing.** Surface results via `daytime_result_reader`, which matches `dispatch_id` against `daytime-dispatch.json` to discriminate stale prior-run files from current dispatch and classifies per the helper's tier-1/tier-3 output schema. Single Bash call:
 
 ```
 python3 -m cortex_command.overnight.daytime_result_reader --feature {slug}
 ```
 
-The helper implements the full 3-tier fallback (Tier 1: `daytime-result.json` + freshness check against `daytime-dispatch.json`; Tier 2: `daytime-state.json` phase discrimination; Tier 3: `outcome: "unknown"` with discriminated message) and prints a JSON dict to stdout. The skill MAY cache the dispatch UUID in conversation memory for speed, but `daytime-dispatch.json` on disk is authoritative — the helper reads it directly, so a re-entered skill after compaction or process restart recovers the active dispatch identity without trusting in-memory state.
-
-Parse the JSON output. The returned dict has fields: `outcome`, `terminated_via`, `message`, `source_tier`, `pr_url`, `deferred_files`, `error`, `log_tail`.
-
-Surface the result to the user based on `source_tier` + `outcome`:
-
-**Tier 1 success** (`source_tier == 1`): the helper validated `schema_version == 1` (hard equality — no "greater than" branch; missing, null, or any value other than `1` falls to tier 2), matched `dispatch_id` against `daytime-dispatch.json` (stale prior-run files with mismatched `dispatch_id` fall to tier 2), and classified from the result file. Map `outcome`:
-
-- `outcome: "merged"` → display the `message` field; surface `pr_url` if non-null.
-- `outcome: "deferred"` → display the `message` field; list each path in `deferred_files`; display content of the most recently modified deferred file.
-- `outcome: "paused"` → display the `message` field; instruct the user to check `events.log` for details and re-run when ready.
-- `outcome: "failed"` → display the `message` field; show the `error` field if non-null.
+Parse the JSON dict the helper prints to stdout (fields: `outcome`, `terminated_via`, `message`, `source_tier`, `pr_url`, `deferred_files`, `error`, `log_tail`) and surface to the user per the helper's documented output schema. On tier-1 success the `outcome` field is one of `merged`, `deferred`, `paused`, or `failed` — display the `message`, plus `pr_url` (merged), `deferred_files` content (deferred), or `error` (failed) as appropriate; on tier-3 surface the `outcome` is `unknown` with a discriminated `message` and `log_tail` (last 20 lines of `daytime.log`) — do NOT silently re-classify as `failed`.
 
 After displaying a tier-1 result, issue a separate Bash call to delete `daytime-dispatch.json` and mark the dispatch as consumed:
 
 ```
 rm lifecycle/{feature}/daytime-dispatch.json
 ```
-
-**Tier 3 surface** (`source_tier == 3`, `outcome: "unknown"`): the helper fell through tiers 1 and 2 and produced a discriminated message. Display the `message` field (one of three verbatim messages per spec R6: "Subprocess likely completed but its result file is missing or invalid…", "Subprocess did not complete…", or "Subprocess never started…") and display the `log_tail` field (last 20 lines of `daytime.log`). The classification that flows into §1a viii's `dispatch_complete` event is `outcome: "unknown"`. Do NOT silently classify as `"failed"`.
 
 **viii. Log `dispatch_complete` event.** After result surfacing, a separate Bash call appends to `lifecycle/{feature}/events.log`:
 
