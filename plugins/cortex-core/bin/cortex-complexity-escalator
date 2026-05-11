@@ -1,0 +1,344 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = []
+# ///
+"""Evaluate a complexity-escalation gate for a lifecycle feature.
+
+Counts top-level bullets under ``## Open Questions`` (Gate 1) or
+``## Open Decisions`` (Gate 2) and, when the count meets the gate's
+threshold AND the feature is not already at the ``complex`` tier,
+appends a ``complexity_override`` event to
+``lifecycle/<feature>/events.log`` and prints a one-line announcement
+to stdout. On any non-firing path (already-complex, missing inputs,
+empty section, below-threshold) the hook exits 0 silently.
+
+See ``--help`` for the full CLI surface. The full requirements list
+lives at ``lifecycle/migrate-gate-1-researchspecify-open-questions-escalation-to-python-hook-remove-gate-2-entirely/spec.md``.
+"""
+
+from __future__ import annotations
+
+import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+
+import argparse
+import json
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+GATE_RESEARCH = "research_open_questions"
+GATE_SPECIFY = "specify_open_decisions"
+
+GATE_CONFIG = {
+    GATE_RESEARCH: {
+        "artifact": "research.md",
+        "section": "## Open Questions",
+        "threshold": 2,
+        "noun": "research surfaced {n} open questions",
+    },
+    GATE_SPECIFY: {
+        "artifact": "spec.md",
+        "section": "## Open Decisions",
+        "threshold": 3,
+        "noun": "spec contains {n} open decisions",
+    },
+}
+
+SLUG_RE = re.compile(r"^[a-zA-Z0-9._-]+$")
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def read_effective_tier(events_log_path: Path) -> str:
+    """Return the effective complexity tier per latest-event semantics.
+
+    Scans ``events.log`` for ``complexity_override`` events and returns the
+    effective tier of the latest one in file order. Recognizes three payload
+    shapes: ``tier`` field (test fixture), ``to`` field (standard), or neither
+    (YAML-style: bare event presence implies escalation).
+
+    Returns ``"simple"`` if the log does not exist or contains no matching
+    events; ``"complex"`` only when the latest matching event resolves to it.
+    """
+    if not events_log_path.exists():
+        return "simple"
+
+    latest_tier = "simple"
+    try:
+        with open(events_log_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                if not isinstance(obj, dict):
+                    continue
+                if obj.get("event") != "complexity_override":
+                    continue
+                if "tier" in obj:
+                    latest_tier = obj["tier"]
+                elif "to" in obj:
+                    latest_tier = obj["to"]
+                else:
+                    latest_tier = "complex"
+    except OSError:
+        return "simple"
+
+    return latest_tier
+
+
+def _is_fence_line(line: str) -> bool:
+    """Return True if a stripped line opens or closes a fenced code block."""
+    stripped = line.lstrip()
+    if stripped.startswith("> "):
+        return False
+    return stripped.startswith("```")
+
+
+def _is_heading_line(line: str) -> bool:
+    """Return True if the line is a Markdown ATX heading (1-6 hashes + space)."""
+    return bool(re.match(r"^#{1,6} ", line))
+
+
+def _slice_section(text: str, heading: str) -> list[str]:
+    """Return the lines of ``text`` belonging to the named section.
+
+    Walks the file once, tracking fenced-block state, and locates the
+    target heading by exact match on a non-fenced stripped line. Collects
+    lines after that heading until the next non-fenced ATX heading or EOF.
+    Returns ``[]`` if the heading is absent.
+    """
+    lines = text.splitlines()
+    fence_open = False
+    section_start = -1
+
+    for idx, line in enumerate(lines):
+        if _is_fence_line(line) and not line.lstrip().startswith("> "):
+            fence_open = not fence_open
+            continue
+        if fence_open:
+            continue
+        if line.rstrip() == heading:
+            section_start = idx + 1
+            break
+
+    if section_start < 0:
+        return []
+
+    # Now collect lines after the heading until next heading or EOF, with
+    # its own fence-tracking state.
+    section_lines: list[str] = []
+    fence_open = False
+    for line in lines[section_start:]:
+        is_fence = _is_fence_line(line) and not line.lstrip().startswith("> ")
+        if not fence_open and not is_fence and _is_heading_line(line):
+            break
+        section_lines.append(line)
+        if is_fence:
+            fence_open = not fence_open
+
+    return section_lines
+
+
+def _count_top_level_bullets(section_lines: list[str], gate: str) -> int:
+    """Count top-level bullets in a section slice per the gate's rules.
+
+    Excludes lines inside fenced code blocks, blockquoted lines (``> ``),
+    and indented (sub-bullet) lines. For Gate 2 additionally excludes the
+    three "no decisions" idioms: bracketed placeholder, ``None.`` / ``none.``,
+    and ``([Nn]one ...)``.
+    """
+    fence_open = False
+    count = 0
+    bullet_re = re.compile(r"^(?:[-*]|\d+\.[ \t])")
+    none_re = re.compile(r"^[Nn]one\b")
+    paren_none_re = re.compile(r"^\([Nn]one\b")
+    bullet_marker_strip_re = re.compile(r"^(?:[-*]|\d+\.)[ \t]+")
+
+    for line in section_lines:
+        is_fence = _is_fence_line(line) and not line.lstrip().startswith("> ")
+        if is_fence:
+            fence_open = not fence_open
+            continue
+        if fence_open:
+            continue
+        stripped_left = line.lstrip()
+        if stripped_left.startswith("> "):
+            continue
+        if line and (line[0] == " " or line[0] == "\t"):
+            # Indented => sub-bullet; excluded
+            continue
+        if not bullet_re.match(stripped_left):
+            continue
+        # Counted as a top-level bullet; apply Gate 2 idiom exclusions.
+        if gate == GATE_SPECIFY:
+            body = bullet_marker_strip_re.sub("", stripped_left, count=1)
+            if body.startswith("["):
+                continue
+            if none_re.match(body):
+                continue
+            if paren_none_re.match(body):
+                continue
+        count += 1
+    return count
+
+
+def _emit_event(events_log_path: Path, feature: str, gate: str) -> dict:
+    """Append a ``complexity_override`` event line; return the appended dict."""
+    events_log_path.parent.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "ts": _now_iso(),
+        "event": "complexity_override",
+        "feature": feature,
+        "from": "simple",
+        "to": "complex",
+        "gate": gate,
+    }
+    with open(events_log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
+    return entry
+
+
+def _verify_last_event(events_log_path: Path, gate: str) -> tuple[bool, str]:
+    """Re-read the last line of events.log and assert it matches the appended event.
+
+    Returns ``(True, "")`` on success or ``(False, <failure_mode>)`` where
+    ``failure_mode`` is one of ``read_after_write_io_error`` or
+    ``read_after_write_mismatch``.
+    """
+    try:
+        with open(events_log_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except OSError:
+        return (False, "read_after_write_io_error")
+
+    if not lines:
+        return (False, "read_after_write_mismatch")
+
+    last = lines[-1].strip()
+    try:
+        obj = json.loads(last)
+    except (json.JSONDecodeError, ValueError):
+        return (False, "read_after_write_mismatch")
+    if (
+        obj.get("event") != "complexity_override"
+        or obj.get("gate") != gate
+        or obj.get("to") != "complex"
+    ):
+        return (False, "read_after_write_mismatch")
+    return (True, "")
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="cortex-complexity-escalator",
+        description=(
+            "Evaluate a complexity-escalation gate for a lifecycle feature. "
+            "Reads research.md (--gate research_open_questions) or spec.md "
+            "(--gate specify_open_decisions), counts top-level bullets in the "
+            "relevant section, and on threshold append a complexity_override "
+            "event with read-after-write verification."
+        ),
+    )
+    parser.add_argument(
+        "feature",
+        help="Feature slug under lifecycle/ (e.g., my-feature-name).",
+    )
+    parser.add_argument(
+        "--gate",
+        required=True,
+        choices=[GATE_RESEARCH, GATE_SPECIFY],
+        help=(
+            "Which gate to evaluate. Use research_open_questions for Gate 1 "
+            "(Research → Specify) or specify_open_decisions for Gate 2 "
+            "(Specify → Plan)."
+        ),
+    )
+    parser.add_argument(
+        "--lifecycle-dir",
+        default="lifecycle",
+        help=argparse.SUPPRESS,
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    feature = args.feature
+    gate = args.gate
+    lifecycle_dir = Path(args.lifecycle_dir)
+
+    # R10: slug + path hardening.
+    if not SLUG_RE.match(feature):
+        sys.stderr.write(f"rejected feature slug: {feature!r}\n")
+        return 2
+    feature_dir = lifecycle_dir / feature
+    try:
+        real_feature = os.path.realpath(feature_dir)
+        real_lifecycle = os.path.realpath(lifecycle_dir)
+    except OSError as exc:
+        sys.stderr.write(f"realpath failure for {feature!r}: {exc}\n")
+        return 2
+    if not real_feature.startswith(real_lifecycle + os.sep):
+        sys.stderr.write(f"rejected feature slug: {feature!r}\n")
+        return 2
+
+    cfg = GATE_CONFIG[gate]
+    artifact_path = feature_dir / cfg["artifact"]
+    events_log_path = feature_dir / "events.log"
+
+    # R6 + R7: tier guard via latest-event semantics.
+    if read_effective_tier(events_log_path) == "complex":
+        return 0
+
+    # R11: graceful no-op when artifact missing.
+    if not artifact_path.exists():
+        return 0
+
+    try:
+        text = artifact_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        sys.stderr.write(f"failed to read {artifact_path}: {exc}\n")
+        return 2
+
+    section_lines = _slice_section(text, cfg["section"])
+    if not section_lines:
+        # Heading absent or empty; graceful no-op (R11).
+        return 0
+
+    count = _count_top_level_bullets(section_lines, gate)
+    if count < cfg["threshold"]:
+        return 0
+
+    # Fire: append event + read-after-write verification.
+    try:
+        _emit_event(events_log_path, feature, gate)
+    except OSError as exc:
+        sys.stderr.write(
+            f"failed to append complexity_override event to {events_log_path}: {exc}\n"
+        )
+        return 2
+
+    ok, mode = _verify_last_event(events_log_path, gate)
+    if not ok:
+        sys.stderr.write(
+            f"{mode}: expected complexity_override gate={gate} to=complex "
+            f"as last line of {events_log_path}\n"
+        )
+        return 2
+
+    message = "Escalating to Complex tier — " + cfg["noun"].format(n=count)
+    sys.stdout.write(message + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

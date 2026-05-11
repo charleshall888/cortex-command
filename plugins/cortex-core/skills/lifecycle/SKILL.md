@@ -256,22 +256,13 @@ The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. T
      {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "specify", "to": "plan"}
      ```
 
-5. **Research → Specify complexity escalation check**: Immediately after research completes and **before** entering the Specify phase, check whether to escalate the complexity tier:
+5. **Research → Specify complexity escalation**: At the Research → Specify transition, run `cortex-complexity-escalator <feature> --gate research_open_questions`.
+   - On exit 0 with non-empty stdout: announce the escalation message to the user and proceed to Specify at Complex tier.
+   - On exit 0 with empty stdout: the gate did not fire (already-complex, missing section, or below threshold). Proceed to Specify at current tier.
+   - On non-zero exit: surface the stderr message to the user and halt the phase transition. Resume only after the underlying failure is resolved (e.g., re-run with a corrected slug, restore sandbox write permission, address a malformed input file).
 
-   a. Read the active tier from `lifecycle/{feature}/events.log` using the two-step detection in Step 2. If the active tier is already `complex`, skip this check entirely and proceed to Specify.
-   b. Open `lifecycle/{feature}/research.md` and locate the `## Open Questions` section. Count the number of bullet items (`-` or `*` prefixed lines) directly under that heading. If the section is absent, the count is 0.
-   c. If the count is ≥ 2, automatically escalate to Complex tier — append the following event to `lifecycle/{feature}/events.log`, announce the escalation briefly ("Escalating to Complex tier — research surfaced N open questions"), then proceed to Specify at Complex tier:
-      ```json
-      {"ts": "<ISO 8601>", "event": "complexity_override", "feature": "<name>", "from": "simple", "to": "complex"}
-      ```
-
-   The `complexity_override` event changes the active complexity tier for all subsequent phases. State detection (Step 2, "Detect complexity tier") will recognize this event and apply its `"to"` field as the active tier for Plan, Implement, Review, and Complete phases. The same effect applies to Step 6 (Gate 2) since both gates emit the same event type.
-
-6. **Specify → Plan complexity escalation check**: after the spec is approved by the user and **before** logging the `phase_transition` event from "specify" to "plan", check whether to auto-escalate the complexity tier:
-
-   - Read the active tier from `lifecycle/{feature}/events.log` using the two-step detection in Step 2. If the active tier is already `complex`, skip this check entirely.
-   - Otherwise, scan `lifecycle/{feature}/spec.md` for a `## Open Decisions` section. Count the number of bullet items (`-` or `*` lines) directly under that heading. If the section is absent or the count is fewer than 3, skip the check.
-   - If the count is ≥ 3, automatically escalate to Complex tier — append a `complexity_override` event to `lifecycle/{feature}/events.log` (event format identical to Step 5 above; schema: `cortex_command/overnight/events.py`), announce the escalation briefly ("Escalating to Complex tier — spec contains N open decisions"), then proceed to Plan at Complex tier.
+6. **Specify → Plan complexity escalation**: After spec approval, before the Specify → Plan transition, run `cortex-complexity-escalator <feature> --gate specify_open_decisions`. Same hook, different gate.
+   - Exit-code branching is identical to Step 5 above.
 
 The Research and Spec phases are handled by the /cortex-core:refine delegation block above. The following phases run directly in the lifecycle context:
 
