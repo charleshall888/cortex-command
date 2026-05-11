@@ -286,7 +286,7 @@ You are synthesizing findings from multiple independent adversarial reviewers in
 
 Read the literal absolute path provided above once at the START of synthesis, before the per-finding loop in the Instructions section. Do NOT re-derive the path yourself; Read the literal absolute path as given. Treat the in-context Read result as the source of truth for evidence-quote re-validation throughout the remainder of synthesis.
 
-When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `SYNTH_READ_OK: <absolute-path> <sha256-of-Read-result>` as a line in your output before any per-finding analysis, then continue with the synthesis below.
+When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `SYNTH_READ_OK: <path> <sha>` (substituting the absolute path you Read and the SHA-256 of the Read result) as a line in your output before any per-finding analysis, then continue with the synthesis below.
 
 When the Read fails or returns empty content, emit `SYNTH_READ_FAILED: <absolute-path> <one-word-reason>` as a line in your output before any per-finding analysis and stop — do not proceed with synthesis.
 
