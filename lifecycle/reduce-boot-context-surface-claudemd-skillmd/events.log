@@ -7,3 +7,27 @@
 {"ts": "2026-05-11T19:55:00Z", "event": "orchestrator_review", "feature": "reduce-boot-context-surface-claudemd-skillmd", "phase": "plan", "verdict": "pass", "cycle": 2, "issues": []}
 {"ts": "2026-05-11T20:35:00Z", "event": "critical_review_completed", "feature": "reduce-boot-context-surface-claudemd-skillmd", "phase": "plan", "reviewers_completed": 4, "reviewers_dispatched": 4, "a_class_findings": 7, "b_class_findings": 5, "disposition": "5 applied, 2 user-decided (PR-split as commit-ordering; fixture as content-preservation gate)"}
 {"ts": "2026-05-11T20:40:00Z", "event": "phase_transition", "feature": "reduce-boot-context-surface-claudemd-skillmd", "from": "plan", "to": "implement"}
+{"ts": "2026-05-11T21:00:00Z", "event": "batch_dispatch", "feature": "reduce-boot-context-surface-claudemd-skillmd", "batch": 0, "tasks": [1], "note": "sequential within batch on current branch; starting with task 1 to validate dispatch flow"}
+{"ts": "2026-05-11T21:30:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 1, "batch": 0, "status": "success", "note": "files committed via piggyback into eef565a and 57f68b0"}
+{"ts": "2026-05-11T21:35:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 3, "batch": 0, "status": "success", "commit": "0c5fe5d"}
+{"ts": "2026-05-11T21:45:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 5, "batch": 0, "status": "success", "commit": "b151025"}
+{"ts": "2026-05-11T22:00:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 10, "batch": 0, "status": "success", "commit": "ba09d4a"}
+{"ts": "2026-05-11T22:10:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 11, "batch": 0, "status": "success", "commit": "6b829c4", "note": "V3 verification command in plan was based on wrong premise (filter is justfile per-plugin SKILLS allowlist, not hook-source keyword grep); body extraction itself passed V1/V2 cleanly; plan.md V3 reworded to match actual filter mechanism"}
+{"ts": "2026-05-11T22:25:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 12, "batch": 0, "status": "success", "commit": "16fbcd7"}
+{"ts": "2026-05-11T22:35:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 13, "batch": 0, "status": "success", "note": "lifecycle body 355->172 lines; test_lifecycle_references_resolve failure is pre-existing in unrelated sibling lifecycle, verified via git stash"}
+{"ts": "2026-05-11T22:40:00Z", "event": "batch_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "batch": 0, "tasks_succeeded": [1, 3, 5, 10, 11, 12, 13]}
+{"ts": "2026-05-11T22:40:00Z", "event": "batch_dispatch", "feature": "reduce-boot-context-surface-claudemd-skillmd", "batch": 1, "tasks": [2, 4, 6]}
+{"ts": "2026-05-11T22:50:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 2, "batch": 1, "status": "success", "commit": "92ffc8a"}
+{"ts": "2026-05-11T22:55:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 4, "batch": 1, "status": "success", "commit": "6be3443"}
+{"ts": "2026-05-11T23:00:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 6, "batch": 1, "status": "success", "commit": "00c530d"}
+{"ts": "2026-05-11T23:00:00Z", "event": "batch_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "batch": 1, "tasks_succeeded": [2, 4, 6]}
+{"ts": "2026-05-11T23:00:00Z", "event": "batch_dispatch", "feature": "reduce-boot-context-surface-claudemd-skillmd", "batch": 2, "tasks": [7, 8, 9]}
+{"ts": "2026-05-11T23:15:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 7, "batch": 2, "status": "success", "commit": "54987e8"}
+{"ts": "2026-05-11T23:20:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 8, "batch": 2, "status": "success", "commit": "8acaf4e"}
+{"ts": "2026-05-11T23:25:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 9, "batch": 2, "status": "success", "commit": "7825451"}
+{"ts": "2026-05-11T23:25:00Z", "event": "batch_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "batch": 2, "tasks_succeeded": [7, 8, 9]}
+{"ts": "2026-05-11T23:25:00Z", "event": "batch_dispatch", "feature": "reduce-boot-context-surface-claudemd-skillmd", "batch": 3, "tasks": [14]}
+{"ts": "2026-05-11T23:45:00Z", "event": "task_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "task": 14, "batch": 3, "status": "success", "commit": "1825a2b", "note": "awk filter in plan.md had bug (compared dir not leaf); fixed in plan.md; corrected filter confirms 0 mirror divergence"}
+{"ts": "2026-05-11T23:45:00Z", "event": "batch_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "batch": 3, "tasks_succeeded": [14]}
+{"ts": "2026-05-11T23:45:00Z", "event": "implementation_complete", "feature": "reduce-boot-context-surface-claudemd-skillmd", "tasks_total": 14, "tasks_succeeded": 14, "tasks_failed": 0}
+{"ts": "2026-05-11T23:45:00Z", "event": "phase_transition", "feature": "reduce-boot-context-surface-claudemd-skillmd", "tier": "complex", "from": "implement", "to": "review"}

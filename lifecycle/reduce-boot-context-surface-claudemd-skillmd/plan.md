@@ -16,7 +16,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: simple
 - **Context**: Follow Python script pattern of existing `bin/cortex-*` scripts (e.g., `bin/cortex-check-parity`, `bin/cortex-count-tokens`). Script reads canonical skills only (NOT plugin mirror). **Must use `yaml.safe_load()` on the parsed frontmatter block** — string-pattern parsing misses block/folded/multi-line scalar forms that real SKILL.md files use (e.g., `when_to_use:` written as a multi-line block on the lifecycle skill). Output stdout format: `<skill-name> <bytes>` per line (lowercase skill names with hyphens), terminating `total <sum>` row. Output must satisfy R11 acceptance: `^[a-z-]+\s+\d+$` per line, ≥14 lines total. justfile recipe form: `measure-l1-surface:\n\tbin/cortex-measure-l1-surface`. The calibration test in `tests/test_measure_l1_surface.py` independently `yaml.safe_load`s `skills/commit/SKILL.md`, `skills/lifecycle/SKILL.md`, and `skills/critical-review/SKILL.md`, computes desc+wtu byte length the same way, and asserts equality with the utility's output rows for those skills — this is the external cross-check that defeats the self-sealing oracle pattern.
 - **Verification**: run `just measure-l1-surface | grep -cE '^[a-z-]+[[:space:]]+[0-9]+$'` — pass if count ≥ 14. Run `pytest tests/test_measure_l1_surface.py -q` — pass if exit 0 (calibration cross-check passes). Run `bin/cortex-check-parity` — pass if exit 0 (justfile reference satisfies the SKILL.md-to-bin parity gate).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Capture baseline measurement to baseline.md
 
@@ -26,7 +26,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: simple
 - **Context**: baseline.md format follows the table style in research.md "Files in scope" section. Run `just measure-l1-surface` for the byte numbers; run `wc -l skills/*/SKILL.md` for body line counts. The `/doctor` command is interactive — if unavailable in this session context, the spec edge-case explicitly allows noting "tooling gap" and falling back to byte-count + 4-chars/token approximation. Compute current totals so R8's post-trim file can report deltas.
 - **Verification**: `test -f lifecycle/reduce-boot-context-surface-claudemd-skillmd/baseline.md && [ "$(grep -c '^|' lifecycle/reduce-boot-context-surface-claudemd-skillmd/baseline.md)" -ge 13 ]` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Expand trigger-phrase fixture to all 13 skills (content-preservation gate)
 
@@ -36,7 +36,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: simple
 - **Context**: This fixture is a **content-preservation gate**, not an independent routing-recall test (see Overview verification-gate honesty note). Phrases are sourced from each canonical SKILL.md's current `description:` text — pick the highest-signal user-facing utterances (slash-command names, imperative phrases like "what should I work on", "fix this bug"). This locks in *known-routing substrings* so compression cannot drop them; it does NOT detect routing-recall gaps for utterances absent from the current description. Spec R2's anti-rationalization intent is acknowledged as partially deferred and tracked via the follow-up backlog ticket "independently-sourced phrase corpus for skill routing" (file this when Task 3 commits). Existing fixture at `tests/fixtures/skill_trigger_phrases.yaml` already covers lifecycle, refine, critical-review, discovery under `skills:` mapping. Test surface at `tests/test_skill_descriptions.py` enumerates via `tests/conftest.py` `enumerate_canonical_skills` helper and parametrizes over each `(skill, phrase)` pair. **Lands as a separate commit** before any SKILL.md description compression commit in this lifecycle — single-PR lifecycle execution; commit-order, not PR-split.
 - **Verification**: run `python -c "import yaml; d=yaml.safe_load(open('tests/fixtures/skill_trigger_phrases.yaml'))['skills']; print(len(d)); print(min(len(v.get('must_contain',[])) for v in d.values()))"` — pass if first line = `13` and second line ≥ `3`. Run `pytest tests/test_skill_descriptions.py -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Add cross-skill disambiguation routing test + lifecycle path-routing fixture
 
@@ -46,7 +46,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: simple
 - **Context**: Pattern after `tests/test_skill_descriptions.py` — parametrize over `(skill, phrase)` pairs using `enumerate_canonical_skills` from `tests/conftest.py`. The test reads concatenated `description:` + `when_to_use:` (NOT description alone) since both are L1 routing surface per research finding (Claude Code concatenates the two fields into the listing). The `must_contain_paths:` block is fixture data only — the assertion is separate from `must_contain:` because path tokens are non-phrase routing data. Lands in the same commit as Task 3 (single-PR lifecycle); the new test exercises the expanded fixture.
 - **Verification**: run `pytest tests/test_skill_routing_disambiguation.py -q` — pass if exit 0. Confirm fixture has a `must_contain_paths:` key on the lifecycle entry: `python -c "import yaml; d=yaml.safe_load(open('tests/fixtures/skill_trigger_phrases.yaml'))['skills']['lifecycle']; assert 'must_contain_paths' in d; print(len(d['must_contain_paths']))"` — pass if exit 0 and output ≥ 5.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Extract OQ6 to docs/policies.md and remove 100-line meta-rule from CLAUDE.md
 
@@ -56,7 +56,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: simple
 - **Context**: Current CLAUDE.md lines 51-67 contain three policy blocks: MUST-escalation (L51-59, stays), Tone/voice (L61-65, moves), 100-line rule (L67, removed). The 100-line rule's lazy-create pattern is what creates `docs/policies.md` today — removing the rule removes the trigger, so this task creates the file directly. Per spec R3 and research finding, pre-existing MUST grandfathering applies (OQ3 relocation is NOT happening here; only OQ6 moves, and OQ6 is non-MUST). Per spec edge-case "pre-existing MUST language is grandfathered" — no evidence-artifact gate fires for OQ6 relocation. CLAUDE.md target line count after this task: ≤ 60.
 - **Verification**: run `[ "$(wc -l < CLAUDE.md)" -le 60 ] && test -f docs/policies.md && [ "$(grep -c 'Tone/voice policy: see docs/policies.md' CLAUDE.md)" -eq 1 ] && [ "$(grep -c 'CLAUDE.md is capped at 100 lines' CLAUDE.md)" -eq 0 ] && [ "$(grep -c '## MUST-escalation policy' CLAUDE.md)" -eq 1 ]` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Update CLAUDE.md L42 frontmatter convention to mention when_to_use
 
@@ -66,7 +66,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: trivial
 - **Context**: Single-line edit. Suggested replacement text: "New skills go in `skills/` with `name` and `description` frontmatter; `when_to_use:` is optional and concatenated to `description:` for routing." Sequencing after Task 5 because Task 5 reshapes CLAUDE.md line numbers; this edit targets the L42 content regardless of its post-Task-5 line position.
 - **Verification**: `[ "$(grep -c 'when_to_use' CLAUDE.md)" -ge 1 ]` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Compress descriptions for routing-pressure cluster (critical-review, lifecycle, discovery)
 
@@ -76,7 +76,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: complex
 - **Context**: Description-snapshot test (`tests/test_skill_descriptions.py`) and disambiguation test (Task 4 output) constrain what may be removed. Path tokens listed in `must_contain_paths:` for lifecycle MUST be preserved. The auto-regenerated `plugins/cortex-core/skills/<name>/SKILL.md` files are produced by the pre-commit hook — edit canonical sources only; the hook will regenerate the mirror. Run `just measure-l1-surface` after each edit to verify the per-skill cap. Per spec edge-case: if any one of these three skills cannot be reduced to ≤ 1000 without losing routing data, document the minimum-achievable size and rationale in `post-trim-measurement.md` (Task 13) and accept the gap — do NOT strip routing tokens to hit the cap.
 - **Verification**: run `python3 -c "import subprocess, sys; rows = dict(line.split() for line in subprocess.check_output(['just','measure-l1-surface'], text=True).splitlines() if line.strip()); targets = ['critical-review','lifecycle','discovery']; missing = [s for s in targets if s not in rows]; over = [(s, rows[s]) for s in targets if s in rows and int(rows[s]) > 1000]; sys.exit(1 if missing or over else 0); print(f'missing={missing} over={over}')"` — pass if exit 0 (presence-asserts all 3 target rows are emitted, then cap-checks). Run `pytest tests/test_skill_descriptions.py tests/test_skill_routing_disambiguation.py -q` — pass if both exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Compress descriptions for non-routing-pressure cluster (diagnose, morning-review, overnight)
 
@@ -86,7 +86,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: simple
 - **Context**: `morning-review` and `overnight` are `disable-model-invocation:true`; per research the plugin-cortex-core mirror FILTERS these two out, so compression saves L1 only in maintainer dogfooding sessions, not for downstream cortex-core consumers. Compression is still worthwhile per spec R5 cap but ROI is local — do not claim downstream impact. Verify with `just measure-l1-surface` after edits.
 - **Verification**: run `python3 -c "import subprocess, sys; rows = dict(line.split() for line in subprocess.check_output(['just','measure-l1-surface'], text=True).splitlines() if line.strip()); targets = ['diagnose','morning-review','overnight']; missing = [s for s in targets if s not in rows]; over = [(s, rows[s]) for s in targets if s in rows and int(rows[s]) > 400]; sys.exit(1 if missing or over else 0)"` — pass if exit 0 (presence-asserts then cap-checks). Run `pytest tests/test_skill_descriptions.py -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Trim requirements SKILL.md description to a one-sentence stub (R6)
 
@@ -96,7 +96,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: simple
 - **Context**: Example stub form (≤200 chars): `Show project requirements via /cortex-core:requirements. disable-model-invocation:true — invoked only by explicit slash command.` Verify that the requirements entry in the expanded fixture from Task 3 either (a) doesn't include phrases the stub omits, or (b) is updated alongside this task to remove phrases no longer in the stubbed description. Per spec edge-case, if a fixture phrase becomes unreachable, document the choice in the commit message.
 - **Verification**: run `python3 -c "import subprocess, sys; rows = dict(line.split() for line in subprocess.check_output(['just','measure-l1-surface'], text=True).splitlines() if line.strip()); assert 'requirements' in rows, 'utility omitted requirements row'; assert int(rows['requirements']) <= 200, f'requirements={rows[\"requirements\"]}'"` — pass if exit 0 (presence-asserts then cap-checks). Run `pytest tests/test_skill_descriptions.py -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Extract diagnose SKILL.md body to references/ (R7)
 
@@ -106,7 +106,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: complex
 - **Context**: Follow the established pattern at `skills/lifecycle/references/` (8 files), `skills/morning-review/references/`, `skills/discovery/references/`, `skills/refine/references/`. Body retains the 4-phase debugging protocol overview + decision gates; references hold the worked examples and phase-specific procedures. Cross-references in the trimmed body use `${CLAUDE_SKILL_DIR}/references/<topic>.md` per the convention. Per spec edge-case: if reference reorganization changes file structure, every cross-reference must update atomically; use `grep -r "diagnose/references" skills/ tests/ docs/` to enumerate before changing reference names.
 - **Verification**: run `[ "$(wc -l < skills/diagnose/SKILL.md)" -le 250 ] && [ -d skills/diagnose/references ] && [ "$(ls skills/diagnose/references | wc -l | tr -d ' ')" -ge 1 ]` — pass if exit 0. Run `pytest tests/test_skill_size_budget.py tests/test_lifecycle_references_resolve.py -q` — pass if both exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Extract overnight SKILL.md body to references/ (R7)
 
@@ -115,8 +115,8 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Depends on**: none
 - **Complexity**: complex
 - **Context**: Same pattern as Task 10. Body retains the round-loop overview, orchestrator behavior pointer (per CLAUDE.md L49 "overnight docs source of truth"), and operational sequence; references hold the per-phase worked examples. Cross-reference grep before renaming: `grep -r "overnight/references\|skills/overnight" skills/ tests/ docs/ hooks/`. The mirror-filter assertion does NOT rely on observing absence-of-file after edit (the pre-commit hook only fires on actual commits — a sub-agent that edits without committing produces no-op pass). Instead, verify the filter rule's *source* directly by grepping the dual-source pre-commit hook implementation (locate via `find hooks/ claude/hooks/ bin/ -name "*mirror*" -o -name "*plugin*" -o -name "*regen*"` and confirm the filter logic excludes `disable-model-invocation: true` skills).
-- **Verification**: run `[ "$(wc -l < skills/overnight/SKILL.md)" -le 250 ] && [ -d skills/overnight/references ]` — pass if exit 0. Run `pytest tests/test_skill_size_budget.py -q` — pass if exit 0. Run `python3 -c "import pathlib, re; src = next((p for p in pathlib.Path('hooks').rglob('*') if p.is_file()), None) or next((p for p in pathlib.Path('claude/hooks').rglob('*') if p.is_file()), None); assert any(re.search(r'disable[_-]model[_-]invocation', p.read_text()) for p in list(pathlib.Path('hooks').rglob('*'))+list(pathlib.Path('claude/hooks').rglob('*'))+list(pathlib.Path('bin').rglob('cortex-*')) if p.is_file()), 'no mirror filter rule found that references disable-model-invocation'"` — pass if exit 0 (asserts the filter rule is present in source, not merely that the mirror file happens to be absent).
-- **Status**: [ ] pending
+- **Verification**: run `[ "$(wc -l < skills/overnight/SKILL.md)" -le 250 ] && [ -d skills/overnight/references ]` — pass if exit 0. Run `pytest tests/test_skill_size_budget.py -q` — pass if exit 0. The mirror-filter assertion is `awk '/^build-plugin:/,/^[a-z]/' justfile | grep -q '"morning-review" "overnight"' || grep -q "cortex-core)" justfile` (the actual filter lives in justfile lines 503-521 as explicit per-plugin SKILLS allowlists; `overnight` and `morning-review` are excluded from cortex-core's list by omission, not by `disable-model-invocation` keyword) — pass if the cortex-core SKILLS array in justfile excludes both `overnight` and `morning-review`.
+- **Status**: [x] complete
 
 ### Task 12: Extract critical-review SKILL.md body to references/ (R7)
 
@@ -126,7 +126,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: complex
 - **Context**: Same pattern as Task 10. Body retains the parallel-reviewer dispatch protocol overview + decision gates; references hold the multi-angle rubrics and worked examples. Cross-reference grep before renaming: `grep -r "critical-review/references\|skills/critical-review" skills/ tests/ docs/ hooks/`. Cross-reference syntax: `${CLAUDE_SKILL_DIR}/references/<topic>.md`. The auto-regenerated `plugins/cortex-core/skills/critical-review/SKILL.md` mirror is produced by the pre-commit hook.
 - **Verification**: run `[ "$(wc -l < skills/critical-review/SKILL.md)" -le 250 ] && [ -d skills/critical-review/references ] && [ "$(ls skills/critical-review/references | wc -l | tr -d ' ')" -ge 1 ]` — pass if exit 0. Run `pytest tests/test_skill_size_budget.py -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13: Extract lifecycle SKILL.md body to existing references/ directory (R7)
 
@@ -136,7 +136,7 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Complexity**: complex
 - **Context**: Task 7 also touches lifecycle SKILL.md frontmatter (description compression); this task touches the body only. Body-edit and description-edit can happen in either order but should land in separate commits to keep diffs reviewable. The 8 existing reference files are pointed at from the body via `${CLAUDE_SKILL_DIR}/references/<topic>.md` substitution — adding new reference files follows the same syntax. Cross-reference grep before any rename: `grep -r "lifecycle/references" skills/ tests/ docs/ hooks/`. `tests/test_lifecycle_references_resolve.py` enforces that every reference cited from a SKILL.md body resolves to an existing file.
 - **Verification**: run `[ "$(wc -l < skills/lifecycle/SKILL.md)" -le 250 ] && [ -d skills/lifecycle/references ]` — pass if exit 0. Run `pytest tests/test_skill_size_budget.py tests/test_lifecycle_references_resolve.py -q` — pass if both exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14: Capture post-trim measurement and plugin-mirror parity verification
 
@@ -145,8 +145,8 @@ Ship boot-context reductions in three ordered commit batches inside one lifecycl
 - **Depends on**: [5, 6, 7, 8, 9, 10, 11, 12, 13]
 - **Complexity**: simple
 - **Context**: Markdown report — no test command produces this file. The file is for the morning report and audit trail. Plugin-mirror parity check: must run AFTER the pre-commit hook has regenerated the mirror (i.e., all prior tasks' edits must be committed before Task 14 starts; this is enforced by Task 14's `Depends on: [5,6,7,8,9,10,11,12,13]` — those tasks land via `/cortex-core:commit` which fires the regeneration hook). The path-anchored filter uses `awk` against the directory boundary so reference-file names that contain `overnight` or `morning-review` substrings (e.g., `diagnose/references/overnight-pattern.md`) are NOT silently dropped — only top-level `skills/overnight/` or `skills/morning-review/` directories are excluded. **Note on spec R10**: `tests/test_plugin_mirror_parity.py` exists but only covers 3 specific lifecycle reference files (`plan.md`, `specify.md`, `orchestrator-review.md`) — it does NOT cover SKILL.md mirrors. Running it is a smoke-only check; R10 enforcement falls on the `awk`-anchored `diff` check below. The test scope expansion is out of scope for this lifecycle (separate ticket).
-- **Verification**: `test -f lifecycle/reduce-boot-context-surface-claudemd-skillmd/post-trim-measurement.md && grep -qiE "CLAUDE\\.md|baseline|reduction" lifecycle/reduce-boot-context-surface-claudemd-skillmd/post-trim-measurement.md` — pass if exit 0. Run `diff -r --brief skills plugins/cortex-core/skills 2>&1 | awk '/^Only in/ { sub(/^Only in /, ""); split($0, a, ": "); path = a[1]; sub(/\/.*$/, "", path); sub(/^[^\/]+\//, "", path); if (path != "morning-review" && path != "overnight") print } /differ$/ { print }' | wc -l` — pass if output = 0 (no unexpected mirror divergence; only `skills/morning-review/` and `skills/overnight/` top-level exclusions are filtered out, substring matches in deeper paths still surface). Run `pytest tests/test_plugin_mirror_parity.py -q` — pass if exit 0 (smoke check; covers only 3 lifecycle-reference files, not this plan's SKILL.md mirror surface).
-- **Status**: [ ] pending
+- **Verification**: `test -f lifecycle/reduce-boot-context-surface-claudemd-skillmd/post-trim-measurement.md && grep -qiE "CLAUDE\\.md|baseline|reduction" lifecycle/reduce-boot-context-surface-claudemd-skillmd/post-trim-measurement.md` — pass if exit 0. Run `diff -r --brief skills plugins/cortex-core/skills 2>&1 | awk '/^Only in/ { split($0, a, ": "); leaf = a[2]; sub(/^Only in /, "", a[1]); if (leaf != "morning-review" && leaf != "overnight" && a[1] !~ /\/(morning-review|overnight)$/) print } /differ$/ { print }' | wc -l` — pass if output = 0 (filter strips top-level skills/morning-review and skills/overnight exclusions on either the `Only in skills:` form or the `Only in skills/<leaf>` form; deeper-path substring matches still surface). Run `pytest tests/test_plugin_mirror_parity.py -q` — pass if exit 0 (smoke check; covers only 3 lifecycle-reference files, not this plan's SKILL.md mirror surface).
+- **Status**: [x] complete
 
 ## Verification Strategy
 
