@@ -17,7 +17,7 @@ from pathlib import Path
 from cortex_command.overnight.state import load_state
 from cortex_command.overnight.strategy import load_strategy
 
-_EXPECTED_SCHEMA_VERSION = 1
+_EXPECTED_SCHEMA_VERSION = 2
 
 
 def aggregate_round_context(session_dir: Path, round_number: int) -> dict:
@@ -38,8 +38,9 @@ def aggregate_round_context(session_dir: Path, round_number: int) -> dict:
         dict with keys ``schema_version`` (int), ``state`` (dict from
         asdict(OvernightState)), ``strategy`` (dict from
         asdict(OvernightStrategy)), ``escalations`` (dict with
-        ``unresolved`` and ``all_entries`` lists), and
-        ``session_plan_text`` (str).
+        ``unresolved`` list and ``prior_resolutions_by_feature`` dict
+        keyed by feature slug containing only ``type == "resolution"``
+        entries), and ``session_plan_text`` (str).
 
     Raises:
         FileNotFoundError: If ``overnight-state.json`` is absent.
@@ -58,7 +59,7 @@ def aggregate_round_context(session_dir: Path, round_number: int) -> dict:
 
     # --- escalations ---------------------------------------------------------
     escalations_path = session_dir / "escalations.jsonl"
-    all_entries: list[dict] = []
+    entries: list[dict] = []
     if escalations_path.exists():
         with escalations_path.open(encoding="utf-8") as fh:
             for line in fh:
@@ -66,7 +67,7 @@ def aggregate_round_context(session_dir: Path, round_number: int) -> dict:
                 if not line:
                     continue
                 try:
-                    all_entries.append(json.loads(line))
+                    entries.append(json.loads(line))
                 except json.JSONDecodeError:
                     print(
                         f"WARNING: Skipping malformed {escalations_path} line: {line[:80]}",
@@ -78,20 +79,32 @@ def aggregate_round_context(session_dir: Path, round_number: int) -> dict:
     # matching resolution or promoted entry — mirrors orchestrator-round.md:52-61.
     escalation_ids = {
         e["escalation_id"]
-        for e in all_entries
+        for e in entries
         if e.get("type") == "escalation" and "escalation_id" in e
     }
     resolved_ids = {
         e["escalation_id"]
-        for e in all_entries
+        for e in entries
         if e.get("type") in ("resolution", "promoted") and "escalation_id" in e
     }
     unresolved_ids = escalation_ids - resolved_ids
     unresolved = [
         e
-        for e in all_entries
+        for e in entries
         if e.get("type") == "escalation" and e.get("escalation_id") in unresolved_ids
     ]
+
+    # Bucket resolution entries by feature slug so the consumer prompt no
+    # longer needs to filter the full escalations.jsonl per round. Entries
+    # without a "feature" field are skipped (orphan resolutions).
+    prior_resolutions_by_feature: dict[str, list[dict]] = {}
+    for e in entries:
+        if e.get("type") != "resolution":
+            continue
+        feature = e.get("feature")
+        if not feature:
+            continue
+        prior_resolutions_by_feature.setdefault(feature, []).append(e)
 
     # --- session plan --------------------------------------------------------
     session_plan_path = session_dir / "session-plan.md"
@@ -102,17 +115,17 @@ def aggregate_round_context(session_dir: Path, round_number: int) -> dict:
 
     # --- assemble ------------------------------------------------------------
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "state": asdict(state_obj),
         "strategy": asdict(strategy_obj),
         "escalations": {
             "unresolved": unresolved,
-            "all_entries": all_entries,
+            "prior_resolutions_by_feature": prior_resolutions_by_feature,
         },
         "session_plan_text": session_plan_text,
     }
 
     if payload["schema_version"] != _EXPECTED_SCHEMA_VERSION:
-        raise RuntimeError(f"orchestrator_context schema_version drift: returned {payload['schema_version']}, expected {_EXPECTED_SCHEMA_VERSION}")
+        raise RuntimeError(f"orchestrator_context schema_version drift: returned {payload['schema_version']}, expected {_EXPECTED_SCHEMA_VERSION} (escalations sub-dict shape: unresolved + prior_resolutions_by_feature)")
 
     return payload
