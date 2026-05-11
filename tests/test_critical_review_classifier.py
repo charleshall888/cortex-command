@@ -788,3 +788,185 @@ def test_synthesizer_trigger_3_adjacent_with_straddle() -> None:
         f"Trigger 3 (adjacent, with straddle) synthesizer-rubric validation failed under 2-of-3: "
         f"{summary}; per-attempt reasons: {[r for _, r in results]}"
     )
+
+
+@pytest.mark.slow
+def test_synthesizer_trigger_4_vague() -> None:
+    """Trigger 4 (vague) synthesizer-rubric test — 2-of-3 tolerance (#179 Task 4).
+
+    Bypasses reviewer dispatch entirely: extracts the Step 2d synthesizer prompt
+    template from SKILL.md, substitutes a stub artifact and a hand-crafted
+    reviewer-output JSON envelope (one A-class finding whose
+    `fix_invalidation_argument` is hedged/speculative — "could potentially",
+    "may emerge", "some environments" — with no concrete failure path), then
+    invokes `claude -p '<assembled prompt>' --model opus` up to 3 times. The
+    per-attempt evaluator passes iff (a) the response contains an A→B
+    reclassification note AND (b) the A→B rationale prose contains a
+    Trigger-4 anchor token (speculative / vague / hedged /
+    no concrete failure path / trigger 4), case-insensitive. Pass/fail is then
+    derived via `_apply_pass_criterion(results, "2-of-3")`.
+
+    The 2-of-3 tolerance accommodates real-LLM stochasticity in the
+    synthesizer's rationale wording (per spec R6) while still failing loud
+    when the rubric is structurally broken or when Trigger 4 is not actually
+    being recognized.
+
+    The fixture's `fix_invalidation_argument` ("this approach could
+    potentially encounter issues under load conditions that may emerge in
+    some environments") is verbatim per #179 spec Req 5; verified held-out
+    from `skills/critical-review/SKILL.md` via `grep -F ... SKILL.md`
+    (exit 1) so the synthesizer cannot memorize-and-regurgitate from the
+    worked-example prose. Deliberately distinct from the Worked Example 8
+    string ("might cause performance issues", SKILL.md line ~275) for the
+    same reason.
+
+    Calibration evidence (one-time, 2026-05-11, pre-commit):
+    ----------------------------------------------------------
+    Ran `claude -p --model opus` once with this exact assembled prompt
+    (stub artifact + the Trigger-4 fixture envelope below). Captured
+    response (excerpt):
+
+        No fix-invalidating objections after evidence re-examination. The
+        concerns below are adjacent gaps or framing notes — do not read as
+        verdict.
+
+        ## Concerns
+
+        - Synthesizer re-classified finding 1 from A→B:
+          fix_invalidation_argument is speculative ("could potentially
+          encounter issues", "may emerge in some environments") with no
+          concrete failure path.
+
+    Verified properties:
+    (i) Per-trigger regex match: both the A→B-marker regex and the
+        Trigger-4 anchor regex (`speculative | vague | hedged |
+        no\\s+concrete\\s+failure\\s+path | trigger\\s+4`, case-insensitive)
+        matched on the A→B rationale-line suffix. Captured rationale-line
+        suffix: 'fix_invalidation_argument is speculative ("could
+        potentially encounter issues", "may emerge in some environments")
+        with no concrete failure path.' Trigger-4 token regex matched
+        "speculative" (and "no concrete failure path" also present).
+        Property (i) holds.
+
+    (ii) Cross-trigger discrimination: per the lessons from Tasks 2 and 3,
+         the rationale-token check is scoped to the post-`A→B:` suffix via
+         `re.search(r're-classified finding \\d+ from A→B:?\\s*(.+)',
+         stdout)`. The template's opening boilerplate "The concerns below
+         are adjacent gaps or framing notes" would otherwise false-match
+         "adjacent" outside the rationale; scoping prevents that. On the
+         captured rationale line, the Trigger-2 token regex (`restate |
+         circular | without\\s+a\\s+causal | tautolog`) did NOT match, and
+         the Trigger-3 token regex (`adjacent | adjacency |
+         no\\s+straddle_rationale | describes\\s+an?\\s+adjacent`) did NOT
+         match either. Property (ii) holds for the load-bearing positive
+         assertion.
+
+    Disposition: calibration sound. Single live opus run produced a clean
+    Trigger-4 downgrade signal; no fixture iteration required. The
+    synthesizer cited the fixture's hedged phrases verbatim
+    ("could potentially encounter issues", "may emerge in some
+    environments") inside the rationale, which is the strongest possible
+    signal that Trigger 4 is being recognized as designed.
+    ----------------------------------------------------------
+    """
+    template = _extract_synthesizer_template()
+
+    sentinel = "You are synthesizing findings from multiple independent adversarial reviewers"
+    assert sentinel in template, (
+        "synthesizer template extraction failed — anchor mismatch in SKILL.md"
+    )
+
+    # Hand-crafted reviewer JSON: one A-class finding whose
+    # `fix_invalidation_argument` is hedged/speculative with no concrete
+    # failure path. This is the canonical Trigger 4 (vague) shape per
+    # SKILL.md Worked Example 8 — deliberately worded to avoid the
+    # Worked Example 8 string ("might cause performance issues") so the
+    # synthesizer can't pattern-match from memorization.
+    #
+    # Verbatim string per #179 spec Req 5; verified absent from SKILL.md
+    # via `grep -F` (exit 1).
+    reviewer_envelope = {
+        "angle": "fragile assumptions",
+        "findings": [
+            {
+                "class": "A",
+                "finding": (
+                    "The plan assumes setting `retries=0` is sufficient to disable "
+                    "retry behavior on timeout for the payment client."
+                ),
+                "evidence_quote": (
+                    "Set `retries=0` in the payment client constructor in "
+                    "`client.py:88` so that timed-out payment requests fail fast "
+                    "instead of being retried."
+                ),
+                "fix_invalidation_argument": (
+                    "this approach could potentially encounter issues under "
+                    "load conditions that may emerge in some environments"
+                ),
+            }
+        ],
+    }
+    reviewer_json = json.dumps(reviewer_envelope, indent=2)
+
+    assembled = re.sub(
+        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+    )
+    assembled = re.sub(
+        r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
+    )
+
+    assert "{artifact content}" not in assembled, (
+        "regex substitution failed: {artifact content} placeholder still present"
+    )
+    assert "{all reviewer findings" not in assembled, (
+        "regex substitution failed: {all reviewer findings ...} placeholder still present"
+    )
+
+    # Inline 2-of-3 retry loop — sequential invocation, per-attempt evaluator.
+    # Not delegated to `_run_n_times`: that helper dispatches the full
+    # `/cortex-core:critical-review` slash command, not synthesizer-only.
+    results: list[tuple[bool, str]] = []
+    for attempt_idx in range(3):
+        proc = subprocess.run(
+            ["claude", "-p", assembled, "--model", "opus"],
+            capture_output=True, text=True, timeout=600,
+        )
+        if proc.returncode != 0:
+            results.append((False, f"attempt {attempt_idx}: exit {proc.returncode}; stderr: {proc.stderr[:300]}"))
+            continue
+        stdout = proc.stdout
+        ab_match = re.search(r're-classified finding \d+ from A→B', stdout)
+        if not ab_match:
+            results.append((False, f"attempt {attempt_idx}: no A→B reclassification note; stdout head: {stdout[:400]!r}"))
+            continue
+        # Scope the anchor-token check to the rationale-line suffix so
+        # template boilerplate ("The concerns below are adjacent gaps...")
+        # cannot false-pass cross-trigger negatives. This mirrors Tasks 2/3
+        # scoping.
+        rationale_line_match = re.search(
+            r're-classified finding \d+ from A→B:?\s*(.+)', stdout
+        )
+        rationale = rationale_line_match.group(1) if rationale_line_match else ""
+        trigger4_match = re.search(
+            r'(?i)speculative|vague|hedged|no\s+concrete\s+failure\s+path|trigger\s+4',
+            rationale,
+        )
+        if not trigger4_match:
+            results.append((
+                False,
+                f"attempt {attempt_idx}: A→B note present but rationale prose does not match Trigger 4 anchors; "
+                f"rationale: {rationale[:300]!r}",
+            ))
+            continue
+        # Per calibration property (ii) disposition (mirroring Tasks 2/3):
+        # cross-trigger negative assertions are deferred. The positive
+        # Trigger-4 token match on the rationale-line suffix is the
+        # load-bearing assertion; cross-trigger contamination only matters
+        # if a single stdout had to be classified as exactly one trigger.
+        results.append((True, f"attempt {attempt_idx}: pass (rationale: {rationale[:120]!r})"))
+
+    overall, summary = _apply_pass_criterion(results, "2-of-3")
+    assert overall, (
+        f"Trigger 4 (vague) synthesizer-rubric validation failed under 2-of-3: "
+        f"{summary}; per-attempt reasons: {[r for _, r in results]}"
+    )
