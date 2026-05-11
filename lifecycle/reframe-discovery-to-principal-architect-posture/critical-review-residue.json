@@ -1,0 +1,48 @@
+{
+  "ts": "2026-05-11T13:00:00Z",
+  "feature": "reframe-discovery-to-principal-architect-posture",
+  "artifact": "lifecycle/reframe-discovery-to-principal-architect-posture/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "SKILL.md serialization order (Task 5 inserts R15 cross-reference before Task 6 documents the R4 approval gate that gates entry into decompose) leaves intermediate-commit prose with a forward reference to an undocumented gate.",
+      "reviewer_angle": "Dependency-graph coherence",
+      "evidence_quote": "SKILL.md edits ordering (Tasks 5, 6, 7): three tasks touch skills/discovery/SKILL.md. Plan serializes 5 -> 6 -> 7 to avoid merge conflicts."
+    },
+    {
+      "class": "B",
+      "finding": "Task 7 smoke-test parsers (refine clarify-critic loader, lifecycle discovery-bootstrap loader, backlog index generator) are deferred to grep-time discovery \u2014 pass condition unverifiable in advance.",
+      "reviewer_angle": "Dependency-graph coherence",
+      "evidence_quote": "Locate these via grep -rn discovery_source skills/refine skills/lifecycle cortex_command/ during implementation."
+    },
+    {
+      "class": "B",
+      "finding": "R6 LEX-2 one-reopen-per-cycle stopping rule at risk of being consumed by discovered-late Task-9 (ii-a) failure, leaving zero reopens for post-ship false-positives.",
+      "reviewer_angle": "R12 re-walk inversion",
+      "evidence_quote": "If the R12 re-walk shows over-merging, the LEX-2 reopen path is open."
+    },
+    {
+      "class": "B",
+      "finding": "Task 5 events-registry verification may fail if registry checker validates producer-file existence and cortex_command/discovery.py is not yet committed.",
+      "reviewer_angle": "Dependency-graph coherence (synth-downgraded)",
+      "evidence_quote": "Event emission path resolution depends on Task 6 helper module \u2014 but the prose just names the event by literal name."
+    },
+    {
+      "class": "B",
+      "finding": "Plan conflates atomic-commit with atomic-task; sub-tasks sharing a terminal commit is a viable decoupling option not surfaced in Veto Surface.",
+      "reviewer_angle": "Task sizing vs Unit atomicity",
+      "evidence_quote": "A task could be decomposed into multiple sub-tasks that build up the working tree, with a terminal sub-task running the commit."
+    },
+    {
+      "class": "B",
+      "finding": "Task 8 (#195 rewrite) works in isolation but cannot generalize \u2014 only 3 of 197 backlog tickets currently match the uniform Role/Integration/Edges template, so single-file scanner exit-0 is not corpus-level evidence.",
+      "reviewer_angle": "Scanner target scope",
+      "evidence_quote": "bin/cortex-check-prescriptive-prose --root . backlog/195-...md exits 0"
+    }
+  ]
+}
