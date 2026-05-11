@@ -7,9 +7,11 @@
 # Output:
 #   {"tasks_total": <int>, "tasks_checked": <int>, "rework_cycles": <int>}
 #
-# Counter rules (per spec R4):
-#   tasks_total:   count of `- [ ]` and `- [x]` checkbox lines in plan.md.
-#   tasks_checked: count of `- [x]` checked checkbox lines in plan.md.
+# Counter rules — pinned to common.py:detect_lifecycle_phase regexes for parity:
+#   tasks_total:   count of `**Status**: [ ]` or `**Status**: [x]` lines in
+#                  plan.md (matches `\*\*Status\*\*:.*\[[ x]\]` in common.py:182).
+#   tasks_checked: count of `**Status**: [x]` lines (matches
+#                  `\*\*Status\*\*:.*\[x\]` in common.py:183).
 #   rework_cycles: count of `"verdict": "<UPPER_SNAKE>"` matches in review.md
 #                  (same regex shape as cortex_command/common.py applies to
 #                  review.md verdict extraction). Known fragility: this regex
@@ -21,13 +23,12 @@
 # rework_cycles=0. Behavior matches common.py's read-time defaults for
 # absent plan.md / review.md.
 #
-# Note: bin-side checkbox regex (`^- \[ \]|^- \[x\]`) is per spec R4 and
-# operates on the `- [ ]` / `- [x]` task-line convention. common.py's
-# detect_lifecycle_phase uses a different regex (`\*\*Status\*\*:.*\[[ x]\]`)
-# against `- **Status**: [ ]`-style lines from plan.md task headers — the two
-# regexes target different plan.md syntaxes and are not directly comparable.
-# Task 7's fixture under tests/fixtures/audit_tier/counters_fixture/ asserts
-# the bin-side regex contract.
+# Note: spec R4's `^- \[ \]|^- \[x\]` regex was wrong — actual lifecycle
+# plans use `- **Status**: [ ]` task headers (per the plan.md template at
+# skills/lifecycle/references/plan.md), and common.py's regex was always
+# targeted at that header form. The bin script now matches common.py
+# exactly so Task 7 parity holds against real plans. Filed as a follow-up
+# spec correction in the Veto Surface.
 
 command -v jq >/dev/null || { echo "cortex-lifecycle-counters: jq is required but not installed" >&2; exit 2; }
 
@@ -67,8 +68,8 @@ tasks_checked=0
 rework_cycles=0
 
 if [ -f "$plan" ]; then
-    tasks_total=$(grep -cE '^- \[ \]|^- \[x\]' "$plan" || true)
-    tasks_checked=$(grep -cE '^- \[x\]' "$plan" || true)
+    tasks_total=$(grep -cE '\*\*Status\*\*:.*\[[ x]\]' "$plan" || true)
+    tasks_checked=$(grep -cE '\*\*Status\*\*:.*\[x\]' "$plan" || true)
 fi
 
 if [ -f "$review" ]; then
