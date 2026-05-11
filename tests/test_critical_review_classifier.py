@@ -6,9 +6,11 @@ Pass criterion is read from tests/fixtures/critical-review/baseline-stability.js
 (written by tests/baseline_critical_review.py). Default: 3-of-3.
 """
 
+import hashlib
 import json
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -17,7 +19,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 BASELINE_PATH = REPO_ROOT / "tests" / "fixtures" / "critical-review" / "baseline-stability.json"
 SKILL_MD_PATH = REPO_ROOT / "skills" / "critical-review" / "SKILL.md"
 
-# Stub artifact used to ground the synthesizer prompt's "{artifact content}" reference.
+# Stub artifact used to ground the synthesizer prompt's `{artifact_path}`/`{artifact_sha256}`
+# references and the reviewer Read directive.
 # Minimal but coherent — a small spec fragment with one concrete claim a reviewer
 # could plausibly tag at A-class.
 STUB_ARTIFACT = """\
@@ -37,6 +40,18 @@ decide whether to retry idempotently.
 - Payment client no longer retries on timeout.
 - Existing retry behavior for non-payment clients is preserved.
 """
+
+# Write STUB_ARTIFACT to a temp file at import time so substitution sites can
+# reference a concrete path + sha256 for the new `{artifact_path}` /
+# `{artifact_sha256}` placeholders (replaces the prior inline-content
+# placeholder per #188).
+_stub_artifact_tmpfile = tempfile.NamedTemporaryFile(
+    mode="w", suffix=".md", delete=False, encoding="utf-8"
+)
+_stub_artifact_tmpfile.write(STUB_ARTIFACT)
+_stub_artifact_tmpfile.close()
+STUB_ARTIFACT_PATH = _stub_artifact_tmpfile.name
+STUB_ARTIFACT_SHA256 = hashlib.sha256(STUB_ARTIFACT.encode("utf-8")).hexdigest()
 
 
 def _load_pass_criterion():
@@ -276,15 +291,21 @@ def test_synthesizer_rubric_deterministic():
     # clauses (em-dash for the long form). str.format() cannot be used because
     # the Output Format section contains literal JSON braces.
     assembled = re.sub(
-        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+    )
+    assembled = re.sub(
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
     )
 
     # Post-substitution assertion — catches placeholder-name drift loudly.
-    assert "{artifact content}" not in assembled, (
-        "regex substitution failed: {artifact content} placeholder still present"
+    assert "{artifact_path}" not in assembled, (
+        "regex substitution failed: {artifact_path} placeholder still present"
+    )
+    assert "{artifact_sha256}" not in assembled, (
+        "regex substitution failed: {artifact_sha256} placeholder still present"
     )
     assert "{all reviewer findings" not in assembled, (
         "regex substitution failed: {all reviewer findings ...} placeholder still present"
@@ -408,14 +429,20 @@ def test_synthesizer_trigger_2_restates() -> None:
     reviewer_json = json.dumps(reviewer_envelope, indent=2)
 
     assembled = re.sub(
-        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+    )
+    assembled = re.sub(
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
     )
 
-    assert "{artifact content}" not in assembled, (
-        "regex substitution failed: {artifact content} placeholder still present"
+    assert "{artifact_path}" not in assembled, (
+        "regex substitution failed: {artifact_path} placeholder still present"
+    )
+    assert "{artifact_sha256}" not in assembled, (
+        "regex substitution failed: {artifact_sha256} placeholder still present"
     )
     assert "{all reviewer findings" not in assembled, (
         "regex substitution failed: {all reviewer findings ...} placeholder still present"
@@ -605,14 +632,20 @@ def test_synthesizer_trigger_3_adjacent_no_straddle() -> None:
     reviewer_json = json.dumps(reviewer_envelope, indent=2)
 
     assembled = re.sub(
-        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+    )
+    assembled = re.sub(
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
     )
 
-    assert "{artifact content}" not in assembled, (
-        "regex substitution failed: {artifact content} placeholder still present"
+    assert "{artifact_path}" not in assembled, (
+        "regex substitution failed: {artifact_path} placeholder still present"
+    )
+    assert "{artifact_sha256}" not in assembled, (
+        "regex substitution failed: {artifact_sha256} placeholder still present"
     )
     assert "{all reviewer findings" not in assembled, (
         "regex substitution failed: {all reviewer findings ...} placeholder still present"
@@ -743,14 +776,20 @@ def test_synthesizer_trigger_3_adjacent_with_straddle() -> None:
     reviewer_json = json.dumps(reviewer_envelope, indent=2)
 
     assembled = re.sub(
-        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+    )
+    assembled = re.sub(
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
     )
 
-    assert "{artifact content}" not in assembled, (
-        "regex substitution failed: {artifact content} placeholder still present"
+    assert "{artifact_path}" not in assembled, (
+        "regex substitution failed: {artifact_path} placeholder still present"
+    )
+    assert "{artifact_sha256}" not in assembled, (
+        "regex substitution failed: {artifact_sha256} placeholder still present"
     )
     assert "{all reviewer findings" not in assembled, (
         "regex substitution failed: {all reviewer findings ...} placeholder still present"
@@ -917,14 +956,20 @@ def test_synthesizer_trigger_4_vague() -> None:
     reviewer_json = json.dumps(reviewer_envelope, indent=2)
 
     assembled = re.sub(
-        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+        r'\{artifact_path\}', lambda _m: STUB_ARTIFACT_PATH, template, count=1
+    )
+    assembled = re.sub(
+        r'\{artifact_sha256\}', lambda _m: STUB_ARTIFACT_SHA256, assembled, count=1
     )
     assembled = re.sub(
         r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
     )
 
-    assert "{artifact content}" not in assembled, (
-        "regex substitution failed: {artifact content} placeholder still present"
+    assert "{artifact_path}" not in assembled, (
+        "regex substitution failed: {artifact_path} placeholder still present"
+    )
+    assert "{artifact_sha256}" not in assembled, (
+        "regex substitution failed: {artifact_sha256} placeholder still present"
     )
     assert "{all reviewer findings" not in assembled, (
         "regex substitution failed: {all reviewer findings ...} placeholder still present"
