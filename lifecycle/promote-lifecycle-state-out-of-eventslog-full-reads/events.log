@@ -11,3 +11,6 @@
 {"schema_version": 2, "ts": "2026-05-11T23:32:52Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 2, "tasks": [4]}
 {"schema_version": 2, "ts": "2026-05-11T23:42:06Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 2, "tasks": [5]}
 {"schema_version": 2, "ts": "2026-05-11T23:48:25Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 2, "tasks": [6]}
+{"schema_version": 2, "ts": "2026-05-11T23:52:20Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 3, "tasks": [7]}
+{"schema_version": 2, "ts": "2026-05-11T23:55:40Z", "event": "batch_dispatch", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "batch": 4, "tasks": [8]}
+{"schema_version": 2, "ts": "2026-05-11T23:59:56Z", "event": "phase_transition", "feature": "promote-lifecycle-state-out-of-eventslog-full-reads", "tier": "complex", "from": "implement", "to": "review"}

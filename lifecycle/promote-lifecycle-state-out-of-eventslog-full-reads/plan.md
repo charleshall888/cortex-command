@@ -60,7 +60,7 @@ Ship the spec's parser-cache + bin-reader pattern in seven implementation tasks 
   - **Tests**: `tests/test_audit_tier_divergence.py` invokes the script via `subprocess.run([sys.executable, "bin/cortex-audit-tier-divergence", "--root", str(tmp_path)], ...)`. Fixtures: `tests/fixtures/audit_tier/clean/lifecycle/foo/events.log` (lifecycle_start + override only — no divergence) and `tests/fixtures/audit_tier/divergent/lifecycle/foo/events.log` (lifecycle_start tier:complex, complexity_override to:simple, batch_dispatch tier:complex — last_wins says complex, canonical says simple).
   - **Wiring for parity (W003)**: justfile reference + tests/ reference both satisfy `bin/cortex-check-parity`'s SCAN_GLOBS at `bin/cortex-check-parity:74,77` (`justfile`, `tests/**/*.py`). `.githooks/pre-commit` is NOT in SCAN_GLOBS — do not rely on it alone.
 - **Verification**: (a) `bin/cortex-audit-tier-divergence` exits 0 against current corpus — `bin/cortex-audit-tier-divergence; echo $?` prints `0`; (b) `python3 -m pytest tests/test_audit_tier_divergence.py -q` exits 0; (c) `just audit-tier-divergence` from project root exits 0; (d) `git diff --cached --name-only` simulating a `common.py:read_tier` change triggers the pre-commit Phase 1.9 stderr token `tier-divergence` — verify by staging a no-op `common.py` edit and running `.githooks/pre-commit`, then unstaging.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Add `bin/cortex-lifecycle-state` and replace all nine prose scan-events.log stanzas in one commit
 
@@ -85,7 +85,7 @@ Ship the spec's parser-cache + bin-reader pattern in seven implementation tasks 
   - (c) `bash -c 'grep -rc "cortex-lifecycle-state" skills/lifecycle/ skills/refine/ skills/dev/ skills/morning-review/ | awk -F: "{s+=\$2} END {print s}"'` ≥ 9.
   - (d) Bin-vs-Python whitespace-corpus parity smoke check — `for slug in $(ls lifecycle/ | grep -v sessions); do diff <(bin/cortex-lifecycle-state --feature "$slug" --field tier 2>/dev/null | jq -r '.tier // "(absent)"') <(python3 -c "from cortex_command.common import read_tier; print(read_tier('$slug'))") || echo "DIVERGENCE: $slug"; done` emits no `DIVERGENCE:` lines (each feature with an events.log returns identical tier from bin script and Python reader).
   - (e) `time bash -c 'bin/cortex-lifecycle-state --feature promote-lifecycle-state-out-of-eventslog-full-reads --field tier'` wall time <15ms on this machine.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Add `bin/cortex-lifecycle-counters` and replace complete.md stanzas
 
@@ -104,7 +104,7 @@ Ship the spec's parser-cache + bin-reader pattern in seven implementation tasks 
   - **complete.md replacement** (R5): edit lines 17-26 of `skills/lifecycle/references/complete.md` to replace the two bulleted "Count the total checkboxes..." / "Read the cycle count..." prose lines with a single instruction: "Read `tasks_total` and `rework_cycles` by running `cortex-lifecycle-counters --feature {feature}` and parsing the JSON output." Keep the surrounding `feature_complete` event-emit guidance (lines 19-23 and 28-onward) unchanged.
   - **Wiring co-location**: deploying `cortex-lifecycle-counters` and editing complete.md in one task per the parity W003 rule.
 - **Verification**: (a) against the fixture at `tests/fixtures/audit_tier/counters_fixture/` (which Task 7 will scaffold — for Task 6 alone, use the live `lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/` directory with its plan.md present after this task lands): `bin/cortex-lifecycle-counters --feature promote-lifecycle-state-out-of-eventslog-full-reads` exits 0 and stdout satisfies `jq -e '.tasks_total > 0 and .tasks_checked >= 0 and .rework_cycles >= 0'`; (b) `grep -c "Count the total checkboxes" skills/lifecycle/references/complete.md` = 0; (c) `grep -c "cortex-lifecycle-counters" skills/lifecycle/references/complete.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Add `tests/test_bin_lifecycle_state_parity.py`
 
@@ -114,7 +114,7 @@ Ship the spec's parser-cache + bin-reader pattern in seven implementation tasks 
 - **Complexity**: simple
 - **Context**: Fixture layout: each `feat*/` directory carries `events.log` (some with criticality_override, some without; some with complexity_override, some without), `plan.md` (mix of checked/unchecked tasks), and optionally `review.md` (mix of verdict counts). Test invokes the bash scripts via `subprocess.run(["bin/cortex-lifecycle-state", "--feature", feat, ...], cwd=fixture_root, capture_output=True, text=True)` then `json.loads(result.stdout)` and compares each field. For counters: Python side recomputes via `len(re.findall(r'^- \[[ x]\]', plan_text, re.M))` etc. The test does NOT re-validate Task 1's parity scope — it specifically checks bin-vs-Python equality on a single corpus.
 - **Verification**: `python3 -m pytest tests/test_bin_lifecycle_state_parity.py -q` — pass if exit 0 (both bin scripts return values matching Python-side computation for every fixture).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Full-suite verification (no code changes)
 
@@ -129,7 +129,7 @@ Ship the spec's parser-cache + bin-reader pattern in seven implementation tasks 
   - `just build-plugin` — pass if exit 0 (dual-source mirror clean; `git diff --quiet plugins/cortex-core/bin/` after the build).
   - `just audit-tier-divergence` — pass if exit 0 (in-tree corpus has no divergence).
   - `just check-events-registry` — pass if exit 0 (no events emitted by this ticket; should be a no-op pass).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Outline
 
