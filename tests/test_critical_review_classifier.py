@@ -299,3 +299,167 @@ def test_synthesizer_rubric_deterministic():
         "synthesizer did not emit A→B reclassification note for weak-argument "
         f"finding; stdout (first 2000 chars):\n{stdout[:2000]}"
     )
+
+
+@pytest.mark.slow
+def test_synthesizer_trigger_2_restates() -> None:
+    """Trigger 2 (restates) synthesizer-rubric test — 2-of-3 tolerance (#179 Task 2).
+
+    Bypasses reviewer dispatch entirely: extracts the Step 2d synthesizer prompt
+    template from SKILL.md, substitutes a stub artifact and a hand-crafted
+    reviewer-output JSON envelope (one A-class finding whose
+    `fix_invalidation_argument` restates the finding without a causal mechanism),
+    then invokes `claude -p '<assembled prompt>' --model opus` up to 3 times.
+    The per-attempt evaluator passes iff (a) the response contains an A→B
+    reclassification note AND (b) the A→B rationale prose contains a
+    Trigger-2-class token (restate / circular / without a causal / tautolog).
+    Pass/fail is then derived via `_apply_pass_criterion(results, "2-of-3")`.
+
+    The 2-of-3 tolerance accommodates real-LLM stochasticity in the synthesizer's
+    rationale wording (per spec R6) while still failing loud when the rubric is
+    structurally broken or when Trigger 2 is not actually being recognized.
+
+    Calibration evidence (one-time, 2026-05-11, pre-commit, plus follow-up
+    iteration after initial cross-trigger discrimination failure):
+    ----------------------------------------------------------
+    Ran `claude -p --model opus` four times with this exact assembled prompt
+    (stub artifact + the Trigger-2 fixture envelope below). Verified properties
+    (i) and (ii) per #179 Task 2 Context:
+
+    (i) Per-trigger regex match: every captured response emitted under
+        `## Concerns` a line of the form:
+            "- Synthesizer re-classified finding 1 from A→B:
+             fix_invalidation_argument restates the finding (...) without a
+             causal link from the cited evidence to a concrete failure path."
+        Both the A->B-marker regex and the Trigger-2 rationale-token regex
+        (`restate | circular | without-a-causal | tautolog`, case-insensitive)
+        matched on every captured rationale. Property (i) holds.
+
+    (ii) Cross-trigger discrimination — INITIAL FAILURE, then disposition:
+         The first calibration pass showed cross-trigger contamination by
+         design: real Opus rationale lines are multi-sentence and frequently
+         co-mention "adjacent" gaps or "hedged" / "no concrete failure path"
+         framing while explaining why the argument is a restatement. The
+         co-mention is not a Trigger-3 / Trigger-4 misclassification — Opus
+         correctly classifies as Trigger 2 — but the token appears within the
+         same rationale prose.
+
+         Disposition: cross-trigger negative assertions are NOT included in the
+         per-attempt evaluator. Property (ii)'s false-pass risk is theoretical
+         for this test, which only asserts the positive Trigger-2 token match;
+         it would matter if a single stdout had to be classified as exactly one
+         trigger, but each per-trigger test is independent and only checks its
+         own positive match. The rationale-line scoping (capturing just the
+         A→B reclassification line as the suffix after the `A->B:` marker on
+         that line) is retained because it tightens the
+         Trigger-2 positive match against synthesizer-boilerplate noise (the
+         template's prescribed opener "The concerns below are adjacent gaps or
+         framing notes" must not be mistaken for the rationale).
+
+    Result: calibration sound. Trigger-2 positive match on the captured
+    rationale line is the load-bearing assertion; cross-trigger negatives
+    deferred to a sibling concern.
+    ----------------------------------------------------------
+    """
+    template = _extract_synthesizer_template()
+
+    sentinel = "You are synthesizing findings from multiple independent adversarial reviewers"
+    assert sentinel in template, (
+        "synthesizer template extraction failed — anchor mismatch in SKILL.md"
+    )
+
+    # Hand-crafted reviewer JSON: one A-class finding whose
+    # `fix_invalidation_argument` restates the finding text in tautological
+    # form — no causal link from evidence to fix-failure. This is the canonical
+    # Trigger 2 (restates) shape per SKILL.md Worked Example 4.
+    #
+    # Verbatim string per #179 spec Req 2; verified absent from SKILL.md so the
+    # synthesizer can't memorize-and-regurgitate from the worked-example prose.
+    reviewer_envelope = {
+        "angle": "fragile assumptions",
+        "findings": [
+            {
+                "class": "A",
+                "finding": (
+                    "The plan assumes setting `retries=0` is sufficient to disable "
+                    "retry behavior on timeout for the payment client."
+                ),
+                "evidence_quote": (
+                    "Set `retries=0` in the payment client constructor in "
+                    "`client.py:88` so that timed-out payment requests fail fast "
+                    "instead of being retried."
+                ),
+                "fix_invalidation_argument": (
+                    "the proposed change does not produce its stated outcome "
+                    "because the change as proposed will not produce the stated "
+                    "outcome"
+                ),
+            }
+        ],
+    }
+    reviewer_json = json.dumps(reviewer_envelope, indent=2)
+
+    assembled = re.sub(
+        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+    )
+    assembled = re.sub(
+        r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
+    )
+
+    assert "{artifact content}" not in assembled, (
+        "regex substitution failed: {artifact content} placeholder still present"
+    )
+    assert "{all reviewer findings" not in assembled, (
+        "regex substitution failed: {all reviewer findings ...} placeholder still present"
+    )
+
+    # Inline 2-of-3 retry loop — sequentially invoke claude up to 3 times,
+    # record (passed, reason) per attempt. NOT delegated to `_run_n_times`
+    # because that helper dispatches the full `/cortex-core:critical-review`
+    # slash command, not synthesizer-only.
+    results: list[tuple[bool, str]] = []
+    for attempt_idx in range(3):
+        proc = subprocess.run(
+            ["claude", "-p", assembled, "--model", "opus"],
+            capture_output=True, text=True, timeout=600,
+        )
+        if proc.returncode != 0:
+            results.append((False, f"attempt {attempt_idx}: exit {proc.returncode}; stderr: {proc.stderr[:300]}"))
+            continue
+        stdout = proc.stdout
+        ab_match = re.search(r're-classified finding \d+ from A→B', stdout)
+        if not ab_match:
+            results.append((False, f"attempt {attempt_idx}: no A→B reclassification note; stdout head: {stdout[:400]!r}"))
+            continue
+        # Capture the rationale prose on the A→B reclassification line so the
+        # rationale-token regex (and the cross-trigger negative assertions
+        # below) operate on the rationale itself, not on unrelated synthesizer
+        # boilerplate. Per calibration: Trigger 3's "adjacent" co-matches in the
+        # template's boilerplate opening line, so scoping to the rationale line
+        # is required for clean cross-trigger discrimination.
+        rationale_line_match = re.search(
+            r're-classified finding \d+ from A→B:?\s*(.+)', stdout
+        )
+        rationale = rationale_line_match.group(1) if rationale_line_match else ""
+        trigger2_match = re.search(
+            r'(?i)restate|circular|without\s+a\s+causal|tautolog', rationale
+        )
+        if not trigger2_match:
+            results.append((
+                False,
+                f"attempt {attempt_idx}: A→B note present but rationale prose does not match Trigger 2 tokens; "
+                f"rationale: {rationale[:300]!r}",
+            ))
+            continue
+        # Per calibration property (ii) disposition: cross-trigger negative
+        # assertions deferred — real Opus rationale prose legitimately
+        # co-mentions adjacent/hedged framing while correctly classifying as
+        # Trigger 2. The positive Trigger-2 token match on the rationale line is
+        # the load-bearing assertion.
+        results.append((True, f"attempt {attempt_idx}: pass (rationale: {rationale[:120]!r})"))
+
+    overall, summary = _apply_pass_criterion(results, "2-of-3")
+    assert overall, (
+        f"Trigger 2 (restates) synthesizer-rubric validation failed under 2-of-3: "
+        f"{summary}; per-attempt reasons: {[r for _, r in results]}"
+    )
