@@ -331,3 +331,443 @@ def test_morning_report_distinguishes_api_rate_limit_pause() -> None:
     assert "API rate limit hit" not in budget_output, (
         f"Did not expect 'API rate limit hit' for budget_exhausted pause, got:\n{budget_output[:600]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Integration tests for tier-conditional verification rendering (R13 / Task 5)
+#
+# Ten fixtures exercising the compat-shim helpers (`_read_tier`,
+# `_read_acceptance`, `_read_last_phase_checkpoint`) and the rendered
+# "How to try" line in `_render_feature_block`. Fixtures 4 and 10 specifically
+# assert the generic fallback string — loud, visible degradation rather than
+# silent empty. Plus two key-name assertion tests that pin the
+# persistence-vs-user-facing distinction for `_read_tier`.
+#
+# Helpers in report.py use relative paths like ``Path("lifecycle/{feature}/…")``,
+# so each test changes the working directory to ``tmp_path`` via
+# ``monkeypatch.chdir`` and constructs the fixture files underneath.
+# ---------------------------------------------------------------------------
+
+
+def _write_plan(tmp_path: Path, feature: str, content: str) -> None:
+    """Construct ``lifecycle/{feature}/plan.md`` under tmp_path."""
+    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir.mkdir(parents=True, exist_ok=True)
+    (feature_dir / "plan.md").write_text(content, encoding="utf-8")
+
+
+def _write_events_log(tmp_path: Path, feature: str, events: list[dict]) -> None:
+    """Construct ``lifecycle/{feature}/events.log`` (NDJSON, one event per line)."""
+    import json as _json
+
+    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir.mkdir(parents=True, exist_ok=True)
+    lines = [_json.dumps(e) for e in events]
+    (feature_dir / "events.log").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _write_events_log_raw(tmp_path: Path, feature: str, raw: str) -> None:
+    """Construct ``lifecycle/{feature}/events.log`` from raw text (for corrupt cases)."""
+    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir.mkdir(parents=True, exist_ok=True)
+    (feature_dir / "events.log").write_text(raw, encoding="utf-8")
+
+
+def _render_how_to_try(feature: str) -> str:
+    """Render the morning report for a single merged feature and extract the
+    "How to try" line. Returns the line directly under the ``**How to try:**``
+    marker.
+    """
+    features = {feature: OvernightFeatureStatus(status="merged", repo_path=None)}
+    data = ReportData()
+    data.state = OvernightState(session_id="test-session", features=features)
+    data.pr_urls = {}
+    output = render_completed_features(data)
+    marker = "**How to try:**"
+    assert marker in output, f"Expected '{marker}' in rendered output, got:\n{output[:600]}"
+    lines = output.splitlines()
+    idx = lines.index(marker)
+    return lines[idx + 1]
+
+
+GENERIC_FALLBACK = "See feature plan for verification steps."
+
+
+# Plan-fixture builders -----------------------------------------------------
+
+def _plan_with_acceptance(text: str = "Run `just test` and observe all green.") -> str:
+    return (
+        "# Plan\n\n"
+        "## Outline\n\n"
+        "### Phase 1: setup (tasks: 1)\n"
+        "**Goal**: scaffold the work.\n"
+        "**Checkpoint**: scaffolding compiles.\n\n"
+        "### Phase 2: ship (tasks: 2)\n"
+        "**Goal**: deliver.\n"
+        "**Checkpoint**: tests pass locally.\n\n"
+        "## Acceptance\n\n"
+        f"{text}\n"
+    )
+
+
+def _plan_simple_with_outline(checkpoint: str = "the regression test now passes.") -> str:
+    return (
+        "# Plan\n\n"
+        "## Outline\n\n"
+        "### Phase 1: only (tasks: 1)\n"
+        "**Goal**: fix it.\n"
+        f"**Checkpoint**: {checkpoint}\n"
+    )
+
+
+def _plan_legacy_verification(text: str = "Manually exercise the X flow and confirm Y.") -> str:
+    return (
+        "# Plan\n\n"
+        "## Verification Strategy\n\n"
+        f"{text}\n"
+    )
+
+
+def _plan_degenerate() -> str:
+    return (
+        "# Plan\n\n"
+        "## Tasks\n\n"
+        "- Task 1: do the thing\n"
+    )
+
+
+def _plan_hybrid(outline_checkpoint: str = "outline-checkpoint-wins.",
+                 legacy_text: str = "legacy-verification-should-be-ignored.") -> str:
+    return (
+        "# Plan\n\n"
+        "## Outline\n\n"
+        "### Phase 1: only (tasks: 1)\n"
+        "**Goal**: do it.\n"
+        f"**Checkpoint**: {outline_checkpoint}\n\n"
+        "## Verification Strategy\n\n"
+        f"{legacy_text}\n"
+    )
+
+
+def _plan_complex_no_acceptance(checkpoint: str = "final-phase-checkpoint-text.") -> str:
+    return (
+        "# Plan\n\n"
+        "## Outline\n\n"
+        "### Phase 1: setup (tasks: 1)\n"
+        "**Goal**: scaffold.\n"
+        "**Checkpoint**: stage one done.\n\n"
+        "### Phase 2: ship (tasks: 2)\n"
+        "**Goal**: ship it.\n"
+        f"**Checkpoint**: {checkpoint}\n"
+    )
+
+
+def _plan_last_phase_missing_checkpoint(
+    earlier_checkpoint: str = "earlier-phase-checkpoint-wins.",
+) -> str:
+    return (
+        "# Plan\n\n"
+        "## Outline\n\n"
+        "### Phase 1: early (tasks: 1)\n"
+        "**Goal**: groundwork.\n"
+        f"**Checkpoint**: {earlier_checkpoint}\n\n"
+        "### Phase 2: final (tasks: 2)\n"
+        "**Goal**: wrap.\n"
+    )
+
+
+def _plan_legacy_plus_manual_acceptance(
+    acceptance: str = "manual-acceptance-line.",
+    legacy: str = "legacy-verification.",
+) -> str:
+    return (
+        "# Plan\n\n"
+        "## Verification Strategy\n\n"
+        f"{legacy}\n\n"
+        "## Acceptance\n\n"
+        f"{acceptance}\n"
+    )
+
+
+class TestTenFixtureVerificationRendering:
+    """Ten-fixture suite covering tier-conditional verification rendering."""
+
+    # Fixture 1 -------------------------------------------------------------
+    def test_fixture_1_complex_plan_with_acceptance(self, tmp_path, monkeypatch):
+        """Complex plan with ``## Acceptance`` — renders the acceptance text."""
+        from cortex_command.overnight.report import _read_tier, _read_acceptance
+
+        feature = "f1-complex-with-acceptance"
+        monkeypatch.chdir(tmp_path)
+        _write_plan(tmp_path, feature, _plan_with_acceptance("acceptance-line-text-f1."))
+        _write_events_log(
+            tmp_path, feature,
+            [{"event": "lifecycle_start", "feature": feature, "tier": "complex"}],
+        )
+
+        assert _read_tier(feature) == "complex"
+        assert _read_acceptance(feature) == "acceptance-line-text-f1."
+        assert _render_how_to_try(feature) == "acceptance-line-text-f1."
+
+    # Fixture 2 -------------------------------------------------------------
+    def test_fixture_2_simple_plan_with_outline_checkpoint(self, tmp_path, monkeypatch):
+        """Simple plan with ``## Outline`` + last-phase Checkpoint — renders it."""
+        from cortex_command.overnight.report import _read_tier, _read_last_phase_checkpoint
+
+        feature = "f2-simple-with-checkpoint"
+        monkeypatch.chdir(tmp_path)
+        _write_plan(tmp_path, feature, _plan_simple_with_outline("checkpoint-line-f2."))
+        _write_events_log(
+            tmp_path, feature,
+            [{"event": "lifecycle_start", "feature": feature, "tier": "simple"}],
+        )
+
+        assert _read_tier(feature) == "simple"
+        assert _read_last_phase_checkpoint(feature) == "checkpoint-line-f2."
+        assert _render_how_to_try(feature) == "checkpoint-line-f2."
+
+    # Fixture 3 -------------------------------------------------------------
+    def test_fixture_3_legacy_verification_strategy_only(self, tmp_path, monkeypatch):
+        """Legacy plan with only ``## Verification Strategy`` — renders that section."""
+        from cortex_command.overnight.report import _read_tier
+
+        feature = "f3-legacy-verification"
+        monkeypatch.chdir(tmp_path)
+        _write_plan(tmp_path, feature, _plan_legacy_verification("legacy-text-f3."))
+        # No events.log -> defaults to simple tier.
+
+        assert _read_tier(feature) == "simple"
+        assert _render_how_to_try(feature) == "legacy-text-f3."
+
+    # Fixture 4 -------------------------------------------------------------
+    def test_fixture_4_degenerate_plan_generic_fallback(self, tmp_path, monkeypatch):
+        """Degenerate plan — renders the generic fallback string (NOT empty)."""
+        from cortex_command.overnight.report import (
+            _read_acceptance,
+            _read_last_phase_checkpoint,
+        )
+
+        feature = "f4-degenerate"
+        monkeypatch.chdir(tmp_path)
+        _write_plan(tmp_path, feature, _plan_degenerate())
+
+        assert _read_acceptance(feature) == ""
+        assert _read_last_phase_checkpoint(feature) == ""
+        # Loud visible degradation, not silent empty.
+        assert _render_how_to_try(feature) == GENERIC_FALLBACK
+
+    # Fixture 5 -------------------------------------------------------------
+    def test_fixture_5_hybrid_plan_new_shape_wins(self, tmp_path, monkeypatch):
+        """HYBRID plan — new-shape reader (Outline) wins over legacy section."""
+        from cortex_command.overnight.report import _read_last_phase_checkpoint
+
+        feature = "f5-hybrid"
+        monkeypatch.chdir(tmp_path)
+        _write_plan(
+            tmp_path, feature,
+            _plan_hybrid(
+                outline_checkpoint="new-shape-f5.",
+                legacy_text="legacy-should-be-ignored-f5.",
+            ),
+        )
+        _write_events_log(
+            tmp_path, feature,
+            [{"event": "lifecycle_start", "feature": feature, "tier": "simple"}],
+        )
+
+        assert _read_last_phase_checkpoint(feature) == "new-shape-f5."
+        rendered = _render_how_to_try(feature)
+        assert rendered == "new-shape-f5."
+        assert "legacy-should-be-ignored-f5." not in rendered
+
+    # Fixture 6 -------------------------------------------------------------
+    def test_fixture_6_complex_no_acceptance_falls_back_to_checkpoint(
+        self, tmp_path, monkeypatch,
+    ):
+        """Complex tier with Outline but no Acceptance — falls back to last-phase Checkpoint."""
+        from cortex_command.overnight.report import (
+            _read_acceptance,
+            _read_last_phase_checkpoint,
+            _read_tier,
+        )
+
+        feature = "f6-complex-no-acceptance"
+        monkeypatch.chdir(tmp_path)
+        _write_plan(tmp_path, feature, _plan_complex_no_acceptance("complex-fallback-f6."))
+        _write_events_log(
+            tmp_path, feature,
+            [{"event": "lifecycle_start", "feature": feature, "tier": "complex"}],
+        )
+
+        assert _read_tier(feature) == "complex"
+        assert _read_acceptance(feature) == ""
+        assert _read_last_phase_checkpoint(feature) == "complex-fallback-f6."
+        assert _render_how_to_try(feature) == "complex-fallback-f6."
+
+    # Fixture 7 -------------------------------------------------------------
+    def test_fixture_7_walk_backward_to_most_recent_populated_checkpoint(
+        self, tmp_path, monkeypatch,
+    ):
+        """Simple plan; last phase heading present, Checkpoint field absent —
+        walk backward to most recent populated Checkpoint."""
+        from cortex_command.overnight.report import _read_last_phase_checkpoint
+
+        feature = "f7-walk-backward"
+        monkeypatch.chdir(tmp_path)
+        _write_plan(
+            tmp_path, feature,
+            _plan_last_phase_missing_checkpoint("earlier-walked-back-f7."),
+        )
+        _write_events_log(
+            tmp_path, feature,
+            [{"event": "lifecycle_start", "feature": feature, "tier": "simple"}],
+        )
+
+        assert _read_last_phase_checkpoint(feature) == "earlier-walked-back-f7."
+        assert _render_how_to_try(feature) == "earlier-walked-back-f7."
+
+    # Fixture 8 -------------------------------------------------------------
+    def test_fixture_8_complex_prefers_acceptance_over_legacy(
+        self, tmp_path, monkeypatch,
+    ):
+        """Legacy plan with manually-authored ``## Acceptance`` — complex tier
+        prefers Acceptance (intentional going-forward stance)."""
+        from cortex_command.overnight.report import _read_acceptance, _read_tier
+
+        feature = "f8-complex-prefers-acceptance"
+        monkeypatch.chdir(tmp_path)
+        _write_plan(
+            tmp_path, feature,
+            _plan_legacy_plus_manual_acceptance(
+                acceptance="manual-acceptance-f8.",
+                legacy="legacy-should-lose-f8.",
+            ),
+        )
+        _write_events_log(
+            tmp_path, feature,
+            [{"event": "lifecycle_start", "feature": feature, "tier": "complex"}],
+        )
+
+        assert _read_tier(feature) == "complex"
+        assert _read_acceptance(feature) == "manual-acceptance-f8."
+        rendered = _render_how_to_try(feature)
+        assert rendered == "manual-acceptance-f8."
+        assert "legacy-should-lose-f8." not in rendered
+
+    # Fixture 9 -------------------------------------------------------------
+    def test_fixture_9_complexity_override_escalates_to_complex(
+        self, tmp_path, monkeypatch,
+    ):
+        """``complexity_override`` event escalated to ``tier=complex`` mid-lifecycle;
+        plan still only has ``## Outline`` / no ``## Acceptance`` — same as fixture 6."""
+        from cortex_command.overnight.report import _read_tier
+
+        feature = "f9-override-to-complex"
+        monkeypatch.chdir(tmp_path)
+        _write_plan(tmp_path, feature, _plan_complex_no_acceptance("override-fallback-f9."))
+        _write_events_log(
+            tmp_path, feature,
+            [
+                {"event": "lifecycle_start", "feature": feature, "tier": "simple"},
+                {"event": "complexity_override", "feature": feature,
+                 "from": "simple", "to": "complex"},
+            ],
+        )
+
+        assert _read_tier(feature) == "complex"
+        assert _render_how_to_try(feature) == "override-fallback-f9."
+
+    # Fixture 10 ------------------------------------------------------------
+    def test_fixture_10_corrupted_events_log_complex_acceptance_only(
+        self, tmp_path, monkeypatch,
+    ):
+        """Complex-tier plan with corrupted/missing events.log and an
+        ``## Acceptance``-only verification source.
+
+        Asserts:
+          * ``_read_tier`` returns ``"simple"`` per R13a default (corrupted log
+            falls back gracefully — NOT crash, NOT inferring tier from plan).
+          * Because tier reads as simple, the simple-tier fallback chain
+            (last-phase Checkpoint → Verification Strategy → generic fallback)
+            runs. With no Outline and no Verification Strategy, the rendered
+            line is the generic fallback string (loud visible degradation,
+            NOT silent empty).
+        """
+        from cortex_command.overnight.report import (
+            _read_acceptance,
+            _read_last_phase_checkpoint,
+            _read_tier,
+        )
+
+        feature = "f10-corrupted-events"
+        monkeypatch.chdir(tmp_path)
+        # Plan has ONLY an ## Acceptance section — no Outline, no Verification
+        # Strategy. The acceptance section content would only be rendered if
+        # tier resolved to complex; with a corrupted log it should not.
+        plan_text = (
+            "# Plan\n\n"
+            "## Acceptance\n\n"
+            "acceptance-text-f10.\n"
+        )
+        _write_plan(tmp_path, feature, plan_text)
+        # Corrupted events.log: not valid JSON on any line.
+        _write_events_log_raw(
+            tmp_path, feature,
+            "this is not json\n{also not json\n",
+        )
+
+        # R13a default: returns "simple" when events.log is malformed.
+        assert _read_tier(feature) == "simple"
+        # Acceptance text exists in the plan but is not consulted on simple tier.
+        assert _read_acceptance(feature) == "acceptance-text-f10."
+        # No Outline -> no last-phase checkpoint.
+        assert _read_last_phase_checkpoint(feature) == ""
+        # Generic fallback rendered — loud, visible degradation.
+        assert _render_how_to_try(feature) == GENERIC_FALLBACK
+
+
+# ---------------------------------------------------------------------------
+# Key-name assertion tests for `_read_tier` (T-A, T-B)
+#
+# Pin the persistence-vs-user-facing distinction: events.log persists the
+# field as ``tier``; the user-facing Clarify assessment is called
+# "complexity"; the canonical events.log key is ``tier``. A stray
+# ``complexity`` field on an event is silently ignored.
+# ---------------------------------------------------------------------------
+
+
+def test_read_tier_ignores_complexity_field_only_returns_default(tmp_path, monkeypatch):
+    """T-A: ``_read_tier`` on an events.log containing only a ``complexity``
+    field (no ``tier`` field) returns ``"simple"`` — the default. The wrong
+    key is silently ignored."""
+    from cortex_command.overnight.report import _read_tier
+
+    feature = "tA-complexity-only"
+    monkeypatch.chdir(tmp_path)
+    _write_events_log(
+        tmp_path, feature,
+        [{"event": "lifecycle_start", "feature": feature, "complexity": "complex"}],
+    )
+
+    assert _read_tier(feature) == "simple"
+
+
+def test_read_tier_canonical_tier_wins_over_stray_complexity(tmp_path, monkeypatch):
+    """T-B: ``_read_tier`` on an events.log containing BOTH ``tier: "complex"``
+    and a stray ``complexity: "simple"`` returns ``"complex"`` — the canonical
+    ``tier`` key wins."""
+    from cortex_command.overnight.report import _read_tier
+
+    feature = "tB-both-keys"
+    monkeypatch.chdir(tmp_path)
+    _write_events_log(
+        tmp_path, feature,
+        [{
+            "event": "lifecycle_start",
+            "feature": feature,
+            "tier": "complex",
+            "complexity": "simple",
+        }],
+    )
+
+    assert _read_tier(feature) == "complex"
