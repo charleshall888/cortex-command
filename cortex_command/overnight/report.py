@@ -530,8 +530,20 @@ def render_completed_features(data: ReportData) -> str:
                 lines.append(f"**Cost**: ${cost:.2f}")
                 lines.append("")
 
-        # How to try
-        verification = _read_verification_strategy(name)
+        # How to try — tier-conditional verification source with fallback chain
+        # (R13d/R13e compat shim: new-shape readers win when both shapes present).
+        tier = _read_tier(name)
+        if tier == "complex":
+            verification = (
+                _read_acceptance(name)
+                or _read_last_phase_checkpoint(name)
+                or _read_verification_strategy(name)
+            )
+        else:
+            verification = (
+                _read_last_phase_checkpoint(name)
+                or _read_verification_strategy(name)
+            )
         lines.append("**How to try:**")
         lines.append(verification if verification else "See feature plan for verification steps.")
         lines.append("")
@@ -728,6 +740,107 @@ def _read_verification_strategy(feature: str) -> str:
     )
     if match:
         return match.group(1).strip()
+    return ""
+
+
+def _read_tier(feature: str) -> str:
+    """Return the active complexity tier for a feature.
+
+    Reads ``lifecycle/{feature}/events.log`` and returns the ``tier`` field
+    from the most recent ``lifecycle_start`` event, superseded by the ``to``
+    field of any later ``complexity_override`` event. Returns ``"simple"``
+    when events.log is missing, malformed, or contains no relevant event.
+    """
+    events_path = Path(f"lifecycle/{feature}/events.log")
+    if not events_path.exists():
+        return "simple"
+
+    try:
+        events = read_events(events_path)
+    except Exception:
+        return "simple"
+
+    tier = "simple"
+    found = False
+    for event in events:
+        kind = event.get("event")
+        if kind == "lifecycle_start":
+            value = event.get("tier")
+            if isinstance(value, str) and value:
+                tier = value
+                found = True
+        elif kind == "complexity_override":
+            value = event.get("to")
+            if isinstance(value, str) and value:
+                tier = value
+                found = True
+
+    return tier if found else "simple"
+
+
+def _read_acceptance(feature: str) -> str:
+    """Read the ``## Acceptance`` section from a feature's plan."""
+    plan_path = Path(f"lifecycle/{feature}/plan.md")
+    if not plan_path.exists():
+        return ""
+
+    text = plan_path.read_text(encoding="utf-8")
+    match = re.search(
+        r"^## Acceptance\s*\n(.*?)(?=\n## |\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if match:
+        return match.group(1).strip()
+    return ""
+
+
+def _read_last_phase_checkpoint(feature: str) -> str:
+    """Read the last populated ``**Checkpoint**:`` from ``## Outline``.
+
+    Parses the ``## Outline`` section, locates the LAST ``### Phase N:``
+    heading, and extracts that phase's ``**Checkpoint**:`` field value. If
+    the last phase has the heading but no ``**Checkpoint**:`` field, walks
+    backward through earlier phases and returns the most recent populated
+    Checkpoint. Returns ``""`` when the plan has no ``## Outline`` section
+    or when no phase in the Outline has a Checkpoint field.
+    """
+    plan_path = Path(f"lifecycle/{feature}/plan.md")
+    if not plan_path.exists():
+        return ""
+
+    text = plan_path.read_text(encoding="utf-8")
+    outline_match = re.search(
+        r"^## Outline\s*\n(.*?)(?=\n## |\Z)",
+        text,
+        re.MULTILINE | re.DOTALL,
+    )
+    if not outline_match:
+        return ""
+
+    outline_body = outline_match.group(1)
+    # Split outline body into phase blocks at each ### Phase N: heading.
+    phase_pattern = re.compile(r"^### Phase \d+:.*$", re.MULTILINE)
+    phase_starts = [m.start() for m in phase_pattern.finditer(outline_body)]
+    if not phase_starts:
+        return ""
+
+    phase_blocks: list[str] = []
+    for idx, start in enumerate(phase_starts):
+        end = phase_starts[idx + 1] if idx + 1 < len(phase_starts) else len(outline_body)
+        phase_blocks.append(outline_body[start:end])
+
+    checkpoint_re = re.compile(
+        r"^\*\*Checkpoint\*\*:\s*(.+?)(?=\n\*\*|\n###|\n##|\Z)",
+        re.MULTILINE | re.DOTALL,
+    )
+    # Walk backward through phases; return the most recent populated Checkpoint.
+    for block in reversed(phase_blocks):
+        cp_match = checkpoint_re.search(block)
+        if cp_match:
+            value = cp_match.group(1).strip()
+            if value:
+                return value
     return ""
 
 
