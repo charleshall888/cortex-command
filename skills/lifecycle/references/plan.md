@@ -87,7 +87,7 @@ Use the plan format defined in §3 Write Plan Artifact below. Required fields pe
 
 The synthesizer is dispatched as a fresh Task sub-agent — it shares no context with the plan-gen sub-agents from §1b.b — so its judgment is fresh by construction.
 
-**e. Envelope extraction**: After the synthesizer Task sub-agent returns, parse its output using the LAST-occurrence anchor pattern from `plugins/cortex-core/skills/critical-review/SKILL.md:176-182`:
+**e. Envelope extraction**: After the synthesizer Task sub-agent returns, parse its output using the LAST-occurrence anchor pattern from `plugins/cortex-core/skills/critical-review/references/verification-gates.md` (Phase 2 — Envelope extraction):
 
 1. Locate the `<!--findings-json-->` delimiter using `re.findall(r'^<!--findings-json-->\s*$', output, re.MULTILINE)` and split at the last occurrence (tolerates prose that quotes the delimiter).
 2. `json.loads` the post-delimiter tail. Validate the envelope schema: `schema_version: 2` (int), `per_criterion` (object), `verdict ∈ {"A","B","C"}` (string), `confidence ∈ {"high","medium","low"}` (string), `rationale` (string).
