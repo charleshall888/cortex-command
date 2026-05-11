@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: f6d3637e-b27b-426b-9978-5ecfeb740238
 title: "Reduce boot-context surface (CLAUDE.md + SKILL.md)"
 type: feature
-status: open
+status: in_progress
 priority: high
 parent: 187
 blocked-by: []
@@ -11,6 +11,12 @@ tags: [boot-context, claude-md, skill-md, descriptions, skill-routing, workflow-
 created: 2026-05-11
 updated: 2026-05-11
 discovery_source: research/lifecycle-discovery-token-audit/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md
+areas: [skills]
+session_id: d69727ba-3b2b-472b-a3d2-fc30a35002b2
+lifecycle_phase: plan
 ---
 
 # Reduce boot-context surface (CLAUDE.md + SKILL.md)

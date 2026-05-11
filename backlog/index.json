@@ -92,7 +92,7 @@
   {
     "id": 191,
     "title": "Reduce boot-context surface (CLAUDE.md + SKILL.md)",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -103,20 +103,22 @@
       "skill-routing",
       "workflow-trimming"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-05-11",
     "updated": "2026-05-11",
     "blocks": [],
     "blocked_by": [],
     "parent": "187",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md",
     "discovery_source": "research/lifecycle-discovery-token-audit/research.md",
     "plan": null,
     "uuid": "f6d3637e-b27b-426b-9978-5ecfeb740238",
     "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "specify",
+    "session_id": "d69727ba-3b2b-472b-a3d2-fc30a35002b2",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -245,7 +247,7 @@
   {
     "id": 193,
     "title": "Lifecycle and hook hygiene one-offs",
-    "status": "backlog",
+    "status": "refined",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -255,20 +257,22 @@
       "scan-script",
       "auto-scan"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-05-11",
     "updated": "2026-05-11",
     "blocks": [],
     "blocked_by": [],
     "parent": "187",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/lifecycle-and-hook-hygiene-one-offs/spec.md",
     "discovery_source": "research/lifecycle-discovery-token-audit/research.md",
     "plan": null,
     "uuid": "8f1fdd95-b748-4b10-bbf8-6f54b17e75a1",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

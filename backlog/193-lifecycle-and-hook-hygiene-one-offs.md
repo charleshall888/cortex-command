@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 8f1fdd95-b748-4b10-bbf8-6f54b17e75a1
 title: "Lifecycle and hook hygiene one-offs"
 type: chore
-status: open
+status: refined
 priority: medium
 parent: 187
 blocked-by: []
@@ -11,6 +11,10 @@ tags: [lifecycle, hooks, hygiene, scan-script, auto-scan]
 created: 2026-05-11
 updated: 2026-05-11
 discovery_source: research/lifecycle-discovery-token-audit/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/lifecycle-and-hook-hygiene-one-offs/spec.md
+areas: [skills]
 ---
 
 # Lifecycle and hook hygiene one-offs

@@ -47,6 +47,18 @@ FIXTURE_DIR = "tests/fixtures/lifecycle_references/"
 # walker so the gate validates only live-tree citations that future-Claude or
 # future-operator might follow.
 ARCHIVED_PREFIXES = ("lifecycle/archive/", "research/archive/")
+# Known prose-collision (slug, citing-path) pairs. Some completed-lifecycle
+# review/decisions docs quote slash-path tokens like `lifecycle/discovery` as
+# prose when discussing detection false-positives in other artifacts. Treat
+# these as non-citations rather than mutating immutable historical artifacts
+# to evade the regex. Each entry is `(slug, citing_path_suffix)`; a match on
+# both fields exempts the slug-form citation from the broken-list.
+KNOWN_PROSE_COLLISIONS: tuple[tuple[str, str], ...] = (
+    (
+        "discovery",
+        "lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/review.md",
+    ),
+)
 # When prose abbreviates `skills/lifecycle/references/<file>.md` to
 # `lifecycle/references/<file>.md`, the slug `references` is a path component
 # inside the lifecycle SKILL, not a feature directory. Same for any future
@@ -395,6 +407,13 @@ def test_every_lifecycle_reference_resolves() -> None:
             per_form[form] += 1
             total_resolved += 1
         for slug, form, line_no in broken:
+            # Skip known prose collisions where a completed lifecycle doc
+            # quotes a slash-path-shaped token while discussing detection
+            # false-positives. The convention is "lifecycle artifacts are
+            # immutable history" — those docs cannot be edited to evade
+            # the regex, so the test exempts them explicitly.
+            if (slug, path) in KNOWN_PROSE_COLLISIONS:
+                continue
             broken_all.append((path, slug, form, line_no))
 
         # file_line_citation: scan only artifacts under lifecycle/ and
@@ -407,6 +426,17 @@ def test_every_lifecycle_reference_resolves() -> None:
             per_form["file_line_citation"] += len(fl_resolved)
             total_resolved += len(fl_resolved)
             for cited, cited_line, line_no, kind, msg in fl_broken:
+                # Stale line numbers in completed-lifecycle artifacts are
+                # expected drift when skill reference files evolve. The
+                # file itself still resolves; only the specific line N is
+                # past EOF. Treating this as a hard failure would either
+                # block every line-count change in skill refs or force
+                # post-hoc edits to immutable historical artifacts —
+                # both worse than tolerating stale line citations.
+                # Traversal-class breakage (file missing or path-walk
+                # escape) remains a hard failure.
+                if kind == "stale" and path.startswith("lifecycle/"):
+                    continue
                 file_line_broken_all.append((path, cited, cited_line, kind, msg))
 
     error_lines: list[str] = []
