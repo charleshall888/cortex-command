@@ -27,11 +27,8 @@ A file-based state machine that survives context loss. Enforces research-before-
 4. [Step 2: Check for Existing State](#step-2-check-for-existing-state)
 5. [Step 3: Execute Current Phase](#step-3-execute-current-phase)
 6. [Phase Transition](#phase-transition)
-7. [Criticality Override](#criticality-override)
-8. [Criticality Behavior Matrix](#criticality-behavior-matrix)
-9. [Lifecycle Directory](#lifecycle-directory)
-10. [Concurrent Sessions](#concurrent-sessions)
-11. [Parallel Execution](#parallel-execution)
+7. [Lifecycle Directory](#lifecycle-directory)
+8. [Reference Files](#reference-files)
 
 ## Invocation
 
@@ -88,127 +85,14 @@ echo $LIFECYCLE_SESSION_ID > lifecycle/{feature}/.session
 
 If resuming from a previous session, report the detected phase and offer to continue or restart from an earlier phase.
 
-### Backlog Status Check
+### Backlog Status, index.md, Write-Back, and Discovery Bootstrap
 
-Before creating any artifacts or performing write-back, check whether the originating backlog item has already been marked complete outside the lifecycle:
+These four sub-procedures all read or update the originating backlog item and (for new lifecycles) seed `index.md` and epic context. Read the reference for the protocol:
 
-1. **Scan** for `backlog/[0-9]*-*{feature}*.md` — a matching backlog file for this feature.
-2. **If no match is found**, or the matched file's YAML frontmatter `status` field is not `complete`: skip this section silently and fall through to "Create index.md" and subsequent sections as normal.
-3. **If a match is found and `status: complete`**: present a prompt using `AskUserQuestion` with two options:
-   - **"Close lifecycle"**
-   - **"Continue from current phase"**
+- [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — Backlog Status Check, Create index.md (new lifecycle only), and Backlog Write-Back (Lifecycle Start)
+- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — Detect epic research/spec from backlog frontmatter and record paths for refine context injection (do not copy epic content)
 
-   If `AskUserQuestion` is unavailable (e.g., overnight batch context where no interactive prompt is possible), default to **Continue** — never auto-close.
-
-4. **On "Continue"** (or if the check was skipped): fall through to "Create index.md" and "Backlog Write-Back" sections as normal. No further action from this section.
-
-5. **On "Close lifecycle"**: the behavior depends on the current phase:
-
-   - **If `phase != none`** (a `lifecycle/{feature}/` directory exists):
-     1. Append the following NDJSON event to `lifecycle/{feature}/events.log` (one JSON object per line):
-        ```json
-        {"ts": "<ISO 8601>", "event": "feature_complete", "feature": "<name>"}
-        ```
-        Intentionally omit `tasks_total` and `rework_cycles` — `plan.md` may not exist on this path (the lifecycle may have been completed out-of-band before a plan was written). Do NOT add those fields with value 0.
-     2. Run:
-        ```bash
-        cortex-update-item <slug> status=complete lifecycle_phase=complete session_id=null
-        ```
-        Where `<slug>` is the backlog filename stem (e.g., `1043-add-backlog-status-detection-to-lifecycle-resume`).
-     3. **Exit immediately.** Do not proceed to "Create index.md", "Backlog Write-Back", "Discovery Bootstrap", or any subsequent Step 2 sections or later steps. The lifecycle is closed.
-
-   - **If `phase = none`** (no `lifecycle/{feature}/` directory exists):
-     1. **Exit immediately** without creating any lifecycle artifacts (no directory, no events.log, no index.md) and without calling `cortex-update-item`. The backlog item is already complete and no lifecycle artifacts need to exist.
-
-### Create index.md (New Lifecycle Only)
-
-When `phase = none` (no prior `lifecycle/{slug}/` directory exists), create `lifecycle/{slug}/index.md` as follows:
-
-**Guard**: If `lifecycle/{slug}/index.md` already exists, skip this entire block — do not overwrite.
-
-Scan `backlog/[0-9]*-*{slug}*.md` for a matching backlog item. If a match is found, read its frontmatter to populate the fields below. If no match is found, set null fields.
-
-Write `lifecycle/{slug}/index.md` with all seven required frontmatter fields:
-
-```yaml
----
-feature: {lifecycle-slug}
-parent_backlog_uuid: {uuid from backlog item, or null}
-parent_backlog_id: {numeric ID prefix from backlog filename, or null}
-artifacts: []
-tags: {inline array from backlog item tags field, or []}
-created: {today's date in ISO 8601, e.g. 2026-03-23}
-updated: {today's date in ISO 8601}
----
-```
-
-If a matching backlog item was found, append the wikilink body:
-
-```
-# [[{NNN}-{backlog-slug}|{backlog title}]]
-
-Feature lifecycle for [[{NNN}-{backlog-slug}]].
-```
-
-Where `{NNN}` is the zero-padded numeric prefix exactly as it appears in the backlog filename (e.g. `030`, `1048`), and `{backlog-slug}` is the filename without its `.md` extension and numeric prefix (e.g. `cf-tunnel-fallback-polish` from `030-cf-tunnel-fallback-polish.md`). Use the full filename stem (numeric prefix + slug) in the wikilink, e.g. `[[1048-lifecycle-feature-index|...]]`.
-
-If no matching backlog item was found, omit the heading and body line entirely.
-
-`artifacts: []` must always use inline YAML array notation — never block notation.
-
-### Backlog Write-Back (Lifecycle Start)
-
-After registering the session, attempt to write the lifecycle start back to the originating backlog item. Scan for a matching backlog file:
-
-```
-scan backlog/[0-9]*-*{feature}*.md for a matching file
-```
-
-If a match is found, run:
-
-```bash
-cortex-update-item <path> status=in_progress session_id=$LIFECYCLE_SESSION_ID lifecycle_phase=research
-```
-
-Where `<path>` is the slug-or-uuid of the matched backlog item (e.g., `045-my-feature`).
-
-Additionally, when `phase = none` (new lifecycle only), also run the following write-back to record the lifecycle slug — this is separate from and in addition to the status write-back above:
-
-```bash
-cortex-update-item <path> lifecycle_slug={lifecycle-slug}
-```
-
-This `lifecycle_slug` write-back runs only when `phase = none`. The status write-back runs on all phases when a match is found.
-
-If no backlog item is found, skip this step silently -- lifecycles can exist independently of the backlog.
-
-### Discovery Bootstrap
-
-When `phase = research` (no lifecycle directory exists yet), check whether discovery already produced epic-level artifacts for this feature:
-
-```
-scan backlog/[0-9]*-*{feature}*.md for a matching file
-if match found:
-    read frontmatter of first match
-    if discovery_source field exists:
-        epic_research_path = discovery_source field value
-    elif research field exists:
-        epic_research_path = research field value
-    else:
-        (no epic context — epic_research_path is unset)
-    if epic_research_path is set:
-        if epic_research_path file exists on disk:
-            record epic_research_path
-            if spec field also exists and spec file path exists on disk:
-                record epic_spec_path = spec field value
-        else:
-            log warning: "epic research file {epic_research_path} not found on disk — no epic context available"
-            epic_research_path = unset
-```
-
-**Do not copy epic content into lifecycle files.** Epic research covers all tickets in the epic — copying it wholesale bleeds cross-ticket context into this ticket's research and spec. Record the paths as reference context only; `/cortex-core:refine` will produce ticket-specific research.md and spec.md that reference the epic artifacts without reproducing them.
-
-If `epic_research_path` was found, announce: "Found epic research at `{epic_research_path}` — will use as background reference during research. Running ticket-specific research and spec phases."
+Run them in this order: Backlog Status Check → Create index.md → Backlog Write-Back → Discovery Bootstrap.
 
 ## Step 3: Execute Current Phase
 
@@ -224,14 +108,9 @@ The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. T
 
 1. **Read `skills/refine/SKILL.md` verbatim.** Do not paraphrase or reconstruct `/cortex-core:refine`'s protocol from training context. The file read is mandatory — this ensures lifecycle stays in sync as `/cortex-core:refine` evolves.
 
-2. **Epic context injection** (applies when `epic_research_path` was recorded in Discovery Bootstrap): before starting Clarify, read the epic research file at `{epic_research_path}` (and `{epic_spec_path}` if present) as background context. This explains the broader epic scope and which concerns belong to adjacent tickets. Instruct `/cortex-core:refine` to:
-   - Scope research and spec to THIS ticket's specific requirements only — do not reproduce content that belongs to other tickets in the epic
-   - Include a `## Epic Reference` section near the top of `research.md` with a link to the epic research path and a one-sentence note on how the epic relates to this ticket
-   - In `spec.md`, add a brief preamble note referencing the epic research path for broader context
+2. **Epic context injection** (applies when `epic_research_path` was recorded in Discovery Bootstrap): follow the Epic Context Injection protocol in [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md).
 
-3. **Determine the starting point for `/cortex-core:refine`:** `/cortex-core:refine`'s Step 2 (Check State) checks for `lifecycle/{lifecycle-slug}/research.md` and `lifecycle/{lifecycle-slug}/spec.md` at those exact paths. Rules:
-   - If both files exist at those exact paths: Step 2 proceeds normally.
-   - If a backlog item's `discovery_source` or `research` frontmatter field points to epic research at a different path: that epic file is background context for the Clarify phase, not a substitute for the lifecycle research artifact. `/cortex-core:refine` must still run its full Research phase to produce `lifecycle/{slug}/research.md`.
+3. **Determine the starting point for `/cortex-core:refine`:** follow the Refine Starting-Point Rules in [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md).
 
 4. **Event logging during delegation**: lifecycle owns `lifecycle/{feature}/events.log`. Log these events as `/cortex-core:refine` completes each phase:
 
@@ -246,13 +125,7 @@ The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. T
      {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "specify", "to": "plan"}
      ```
 
-5. **Research → Specify complexity escalation**: At the Research → Specify transition, run `cortex-complexity-escalator <feature> --gate research_open_questions`.
-   - On exit 0 with non-empty stdout: announce the escalation message to the user and proceed to Specify at Complex tier.
-   - On exit 0 with empty stdout: the gate did not fire (already-complex, missing section, or below threshold). Proceed to Specify at current tier.
-   - On non-zero exit: surface the stderr message to the user and halt the phase transition. Resume only after the underlying failure is resolved (e.g., re-run with a corrected slug, restore sandbox write permission, address a malformed input file).
-
-6. **Specify → Plan complexity escalation**: After spec approval, before the Specify → Plan transition, run `cortex-complexity-escalator <feature> --gate specify_open_decisions`. Same hook, different gate.
-   - Exit-code branching is identical to Step 5 above.
+5. **Complexity escalation gates**: run the Research → Specify and Specify → Plan complexity-escalator gates per [complexity-escalation.md](${CLAUDE_SKILL_DIR}/references/complexity-escalation.md).
 
 The Research and Spec phases are handled by the /cortex-core:refine delegation block above. The following phases run directly in the lifecycle context:
 
@@ -276,26 +149,7 @@ After completing a phase artifact, announce the transition and proceed to the ne
 
 If the user invokes `/cortex-core:lifecycle <phase>` to jump to a specific phase, honor the request but warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
 
-## Criticality Override
-
-The user can change criticality at any time by requesting it explicitly. When overriding, append a `criticality_override` event:
-
-```json
-{"ts": "<ISO 8601>", "event": "criticality_override", "feature": "<name>", "from": "<old>", "to": "<new>"}
-```
-
-The user's criticality setting is always final. No automated process (including future orchestrator additions) may override the user's choice.
-
-## Criticality Behavior Matrix
-
-| Criticality | Review phase (023) | Orchestrator review (024) | Scaled behaviors (025) | Model selection |
-|-------------|-------------------|--------------------------|----------------------|----------------|
-| low | Tier-based (skip for simple) | Skipped for simple; active for complex | Single research, single plan | Haiku explore, Sonnet build/review |
-| medium | Tier-based (skip for simple) | Active at phase boundaries | Single research, single plan | Haiku explore, Sonnet build/review |
-| high | Forced regardless of tier | Active at all phase boundaries | Single research, single plan | Sonnet explore, Opus build/review |
-| critical | Forced regardless of tier | Active at all phase boundaries | Parallel research, competing plans | Sonnet explore/research/plan, Opus build/review |
-
-All three tickets (023, 024, 025) are implemented. The Review phase column reflects tier-based skip logic, the Orchestrator review column reflects boundary-checking behavior, and the Scaled behaviors column reflects criticality-conditional dispatch in the research and plan reference files. The Model selection column reflects which models are used at each criticality level.
+For criticality override syntax and the criticality behavior matrix (which phases run, model selection, parallel-vs-single dispatch), see [criticality-matrix.md](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md).
 
 ## Lifecycle Directory
 
@@ -306,50 +160,13 @@ The `lifecycle/` directory handling is a per-project choice. Projects may:
 
 There is no global enforcement. This is intentionally left to the project.
 
-## Concurrent Sessions
+## Reference Files
 
-Multiple sessions can work on different features simultaneously. Each session is associated with one feature at a time via a `.session` file.
+Beyond the per-phase references in the table above, these references cover cross-cutting concerns. Load on demand:
 
-**Session-feature association**: When a session starts or resumes a feature, it writes its session ID to `lifecycle/{feature}/.session`:
-
-```
-echo $LIFECYCLE_SESSION_ID > lifecycle/{feature}/.session
-```
-
-`LIFECYCLE_SESSION_ID` is an environment variable set automatically by the SessionStart hook at the beginning of each session.
-
-**`.session` files are ephemeral**: They are gitignored, cleaned up by the SessionEnd hook when the session exits, and overwritten when another session resumes the same feature. Do not commit them.
-
-**Listing incomplete features**: If multiple incomplete `lifecycle/*/` directories exist and the user has not specified which to work on, list them and ask which to resume. Completed features (those with a `feature_complete` event in `events.log`, or `review.md` containing an APPROVED verdict) are ignored.
-
-## Parallel Execution
-
-When the user requests running multiple lifecycle features in parallel (e.g., "/cortex-core:lifecycle 120 and 121 in parallel"), use the `Agent` tool with `isolation: "worktree"` for each feature:
-
-```
-Agent(
-  isolation: "worktree",
-  prompt: "/cortex-core:lifecycle {feature}"
-)
-```
-
-**Do not use `git worktree add` manually in sandboxed sessions.** This fails for two reasons:
-
-1. **`.claude/` is sandbox-restricted at the Seatbelt OS level**: Any worktree target inside `.claude/` (e.g., `.claude/worktrees/{feature}`) will fail because git tries to write tracked `.claude/**` files into the new worktree. The restriction is broader than what `denyWithinAllow` explicitly shows.
-2. **Orphaned branches**: `git worktree add` creates the branch *before* checking out files. A failed checkout leaves an orphaned branch that blocks the next attempt with "branch already exists". Clean up with `git branch -d <name>` before retrying.
-
-The `Agent` tool's `isolation: "worktree"` handles all of this correctly — it creates the worktree outside the sandbox write path and auto-cleans if no changes are made. If manual worktree creation is ever needed, use `$TMPDIR` (not `.claude/`) as the target.
-
-### Worktree Inspection Invariant
-
-**Prohibited**: `cd <worktree-path> && git <cmd>` — this triggers a hardcoded Claude Code security check ("Compound commands with cd and git require approval to prevent bare repository attacks") that is not bypassable by allow rules or sandbox config. It also fails general compound-command allow-rule matching.
-
-**Correct pattern**: inspect worktree branches from the main repo CWD using remote-ref syntax:
-
-```
-git log HEAD..worktree/{task-name} --oneline
-```
-
-The task name is the `name` parameter passed to `Agent(isolation: "worktree")`; the branch is always `worktree/{name}` (from `claude/hooks/cortex-worktree-create.sh` line 30).
-
-Hook `updatedPermissions` session injection: ruled out — `updatedPermissions` is exclusive to `PermissionRequest` hooks; `WorktreeCreate` command hooks use plain-text stdout only and cannot inject session allow rules. Fix is behavioral only: use `git log HEAD..worktree/{name}` from main CWD (never `cd <path> && git`).
+- [concurrent-sessions.md](${CLAUDE_SKILL_DIR}/references/concurrent-sessions.md) — `.session` file convention, multi-feature concurrency, listing incomplete features
+- [parallel-execution.md](${CLAUDE_SKILL_DIR}/references/parallel-execution.md) — running multiple features in parallel via `Agent(isolation: "worktree")`, worktree-inspection invariant
+- [criticality-matrix.md](${CLAUDE_SKILL_DIR}/references/criticality-matrix.md) — criticality override event, behavior matrix across review/orchestrator/dispatch/model dimensions
+- [complexity-escalation.md](${CLAUDE_SKILL_DIR}/references/complexity-escalation.md) — `cortex-complexity-escalator` gates at phase transitions
+- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — epic-research detection from backlog frontmatter, epic-context injection during refine
+- [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — backlog status check, index.md creation, and write-back to the originating backlog item
