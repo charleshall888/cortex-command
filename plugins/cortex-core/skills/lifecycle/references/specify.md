@@ -6,7 +6,7 @@ Structured interview to surface hidden requirements, edge cases, and priorities 
 
 ### 1. Load Context
 
-Read `lifecycle/{feature}/research.md` for codebase analysis and open questions. If `lifecycle.config.md` exists at the project root, read it for project-specific constraints. Apply the protocol in `requirements-load.md` to load project requirements. Use requirements to avoid re-asking settled questions — focus the interview on feature-specific details that requirements don't already cover.
+Read `lifecycle/{feature}/research.md` for codebase analysis and open questions. If `lifecycle.config.md` exists at the project root, read it for project-specific constraints. If `requirements/project.md` exists at the project root, read it. Scan `requirements/` for area docs whose names suggest relevance to this feature and read any that apply. If no `requirements/` directory or files exist, note this and proceed. Use requirements to avoid re-asking settled questions — focus the interview on feature-specific details that requirements don't already cover.
 
 ### 2. Structured Interview
 

@@ -30,7 +30,7 @@ Branch on the exit code:
 
 ### 2. Load Requirements Context
 
-Apply the protocol in `requirements-load.md`. If no requirements files exist, skip to §3.
+If `requirements/project.md` exists at the project root, read it. Scan `requirements/` for area docs whose names suggest relevance to this feature and read any that apply. If no `requirements/` directory or files exist, note this and proceed.
 
 ### 3. Confidence Assessment
 
