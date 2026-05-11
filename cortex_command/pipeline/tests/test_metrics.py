@@ -1528,5 +1528,47 @@ def test_v2_tolerance_downstream_filter_unaffected(tmp_path):
     assert "schema_version" not in filtered[0]
 
 
+class TestExtractVerdict(unittest.TestCase):
+    """Tests for the closed-enum alias lookup helper ``_extract_verdict``.
+
+    Locks in the four-case contract from spec R11:
+      (a) canonical ``"verdict"`` is returned as-is,
+      (b) alias-only events (``"review_verdict"``) resolve to that value,
+      (c) events missing all aliases return ``None``,
+      (d) multi-alias events (both ``"verdict"`` and ``"review_verdict"``
+          present) deterministically resolve to canonical per the tuple
+          ordering of ``_VERDICT_FIELD_ALIASES``.
+    """
+
+    def _fn(self, event):
+        from cortex_command.pipeline.metrics import _extract_verdict
+        return _extract_verdict(event)
+
+    def test_canonical_verdict_returned(self):
+        """An event with canonical ``"verdict"`` returns its value."""
+        event = {"event": "review_verdict", "verdict": "APPROVED"}
+        self.assertEqual(self._fn(event), "APPROVED")
+
+    def test_alias_review_verdict_only(self):
+        """An event with only the ``"review_verdict"`` alias resolves to it."""
+        event = {"event": "review_verdict", "review_verdict": "CHANGES_REQUESTED"}
+        self.assertEqual(self._fn(event), "CHANGES_REQUESTED")
+
+    def test_no_alias_returns_none(self):
+        """An event missing every alias returns ``None``."""
+        event = {"event": "review_verdict", "feature": "feat-x"}
+        self.assertIsNone(self._fn(event))
+
+    def test_canonical_wins_over_alias(self):
+        """When both ``"verdict"`` and ``"review_verdict"`` are present,
+        tuple-ordering precedence resolves to the canonical field."""
+        event = {
+            "event": "review_verdict",
+            "verdict": "APPROVED",
+            "review_verdict": "CHANGES_REQUESTED",
+        }
+        self.assertEqual(self._fn(event), "APPROVED")
+
+
 if __name__ == "__main__":
     unittest.main()
