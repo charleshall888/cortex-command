@@ -59,21 +59,19 @@ Per-row KEEP/DROP decisions across the 12 corpus files for the U2 trim. Rule: a 
 
 ## skills/lifecycle/references/implement.md
 
-- [skills/lifecycle/references/implement.md:296] | DROP | reality_text="Each task is self-contained by design. The plan already decomposed the work so each task has everything it needs. Reading other tasks risks scope creep."
-- [skills/lifecycle/references/implement.md:297] | DROP | reality_text="Combined tasks are harder to verify, harder to revert, and harder to review. One task, one commit, one concern."
-- [skills/lifecycle/references/implement.md:298] | DROP | reality_text="Small tasks with clear scope succeed reliably. Large tasks with vague scope fail unpredictably. Trust the plan's sizing."
-- [skills/lifecycle/references/implement.md:299] | KEEP | `batch model`, `checkpoint writes` (named contract)
-- [skills/lifecycle/references/implement.md:300] | DROP | reality_text="Deviating from spec paths breaks traceability between phases. If the spec path is wrong, flag it — don't fix it silently."
-- [skills/lifecycle/references/implement.md:301] | KEEP | `/cortex-core:commit`, `Skill tool` (named tool/command contract)
+(Note: line citations refreshed against post-trim implement.md. The four DROP entries originally at lines 296, 297, 298, and 300 cited Constraints-table rows whose content was removed in earlier unrelated trims (a21ae52, bd6988e); those entries are no longer applicable and have been deleted from this list. The two KEEP entries shifted from 299/301 to 282/283 after the Constraints table was compressed.)
+
+- [skills/lifecycle/references/implement.md:282] | KEEP | `batch model`, `checkpoint writes` (named contract)
+- [skills/lifecycle/references/implement.md:283] | KEEP | `/cortex-core:commit`, `Skill tool` (named tool/command contract)
 
 ## skills/lifecycle/references/review.md
 
 - [skills/lifecycle/references/review.md:214] | DROP | reality_text="Review each requirement against the spec individually. Gestalt impressions miss specific gaps."
 - [skills/lifecycle/references/review.md:215] | DROP | reality_text="The reviewer does not modify files. Flagging issues preserves separation of concerns and creates a paper trail."
-- [skills/lifecycle/references/review.md:216] | KEEP | `PARTIAL` (schema key — review status)
-- [skills/lifecycle/references/review.md:217] | KEEP | `verdict` field, `APPROVED`, `CHANGES_REQUESTED`, `REJECTED` (schema keys/values)
-- [skills/lifecycle/references/review.md:216] | KEEP | `§1`, `detected` (schema key for drift logging)
-- [skills/lifecycle/references/review.md:217] | KEEP | `verdict`, `APPROVED`, `requirements` docs
+- [skills/lifecycle/references/review.md:214] | KEEP | `PARTIAL` (schema key — review status)
+- [skills/lifecycle/references/review.md:215] | KEEP | `verdict` field, `APPROVED`, `CHANGES_REQUESTED`, `REJECTED` (schema keys/values)
+- [skills/lifecycle/references/review.md:214] | KEEP | `§1`, `detected` (schema key for drift logging)
+- [skills/lifecycle/references/review.md:215] | KEEP | `verdict`, `APPROVED`, `requirements` docs
 
 ## skills/lifecycle/references/orchestrator-review.md
 

@@ -28,8 +28,8 @@
 | `backlog/generate_index.py` | `skills/lifecycle/references/complete.md:65` | → `cortex_command/backlog/generate_index.py` (preserve `test -f` guard structure) |
 | `update_item.py` | `skills/lifecycle/references/clarify.md:113` | → `cortex-update-item` (CLI name) |
 | `update_item.py` | `skills/refine/references/clarify.md:119` | → `cortex-update-item` (CLI name) |
-| `update_item.py` | `skills/refine/SKILL.md:212` (constraints table row 3, "I should use the lifecycle-slug as the update_item.py argument") | → `cortex-update-item` |
-| `update_item.py` | `skills/refine/SKILL.md:213` (constraints table row 4, "If update_item.py fails I can skip it") | → `cortex-update-item` |
+| `update_item.py` | `skills/refine/SKILL.md:208` (constraints table row 3, "I should use the lifecycle-slug as the update_item.py argument") | → `cortex-update-item` |
+| `update_item.py` | `skills/refine/SKILL.md:209` (constraints table row 4, "If update_item.py fails I can skip it") | → `cortex-update-item` |
 
 Total: 17 substitutions + 1 sentence deletion + 1 block deletion across 8 files.
 
@@ -161,7 +161,7 @@ Still cheap to verify post-edit with `python -c "import yaml; yaml.safe_load(...
 
 ### False alarm from adversarial agent
 
-- The adversarial agent's FM-1 ("synthesis lost the ticket's clarify.md targets") is a misread — Agent 1's full inventory DID include skills/lifecycle/references/clarify.md:113, skills/refine/references/clarify.md:119, and skills/refine/SKILL.md:212-213. The synthesis is complete on those targets.
+- The adversarial agent's FM-1 ("synthesis lost the ticket's clarify.md targets") is a misread — Agent 1's full inventory DID include skills/lifecycle/references/clarify.md:113, skills/refine/references/clarify.md:119, and skills/refine/SKILL.md:208-209. The synthesis is complete on those targets.
 
 ### Recommended mitigations (synthesis)
 

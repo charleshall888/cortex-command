@@ -2,7 +2,7 @@
 feature: artifact-template-cleanups-architectural-pattern-optional-indexmd-body-trim-frontmatter-preserved-d4-open-decisions-optional
 parent_backlog_uuid: a5e3d90f-7e20-49ab-8be8-c9fd6bbe45b6
 parent_backlog_id: 180
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: [lifecycle, plan-template, spec-template, indexmd, artifact-densification, vertical-planning]
 created: 2026-05-11
 updated: 2026-05-11
