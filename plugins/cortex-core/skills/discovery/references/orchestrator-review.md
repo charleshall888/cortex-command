@@ -19,19 +19,7 @@ Evaluate the artifact against every item in the checklist. For each item, assign
 
 This review executes in the main conversation context. Do not dispatch a subagent for the review itself — the artifact is already in context.
 
-### 3. Log Review
-
-Append an `orchestrator_review` event to `research/{topic}/events.log`:
-
-```
-{"ts": "<ISO 8601>", "event": "orchestrator_review", "feature": "<name>", "phase": "research", "verdict": "pass|flag", "cycle": <N>, "issues": ["<description of each flagged item>"]}
-```
-
-The `verdict` is `pass` if all items passed, `flag` if any item was flagged. The `issues` array is empty on pass.
-
-If `research/{topic}/events.log` does not exist yet, create it.
-
-### 4. Handle Verdict
+### 3. Handle Verdict
 
 **On pass**: Show the user a one-line assessment summarizing what was checked and the result. Example formats:
 
@@ -39,21 +27,15 @@ If `research/{topic}/events.log` does not exist yet, create it.
 
 Then proceed to user presentation or the next phase as normal.
 
-**On flag**: Check the cycle counter. If this is cycle 3 or beyond, go to Escalation (step 6). Otherwise, proceed to Fix Dispatch (step 5).
+**On flag**: Check the cycle counter. If this is cycle 3 or beyond, go to Escalation (step 5). Otherwise, proceed to Fix Dispatch (step 4).
 
-### 5. Fix Dispatch
+### 4. Fix Dispatch
 
 For each flagged issue, determine the appropriate fix mode:
 
 **Fresh subagent** (via Task tool): Use for thinking-quality rework that does not require user input. This includes research depth issues, feasibility re-assessment, missing edge cases, vague acceptance criteria, and similar structural problems. Fresh context prevents anchoring to the flawed artifact.
 
 **Same conversation**: Use for interactive rework that requires user input. This includes clarifications where user preference determines the answer, ambiguous research scope, and priority trade-offs. Explain the issue to the user, gather their input, and then revise the artifact in the current context.
-
-For each dispatched fix, append an `orchestrator_dispatch_fix` event to `research/{topic}/events.log`:
-
-```
-{"ts": "<ISO 8601>", "event": "orchestrator_dispatch_fix", "feature": "<name>", "phase": "research", "mode": "fresh_subagent|same_context", "issue": "<description of the flagged item>"}
-```
 
 Fix agents rewrite the full artifact, not section patches. A full rewrite maintains internal coherence across sections that cross-reference each other.
 
@@ -84,19 +66,13 @@ The artifact must still conform to the format defined in the {phase} phase refer
 Do not add content beyond what the phase requires.
 ```
 
-### 6. Escalation
+### 5. Escalation
 
 When the cycle cap is reached (2 cycles completed, issue persists), stop reviewing and escalate to the user. Present:
 
 - What was checked (the flagged checklist items)
 - What was tried (fixes dispatched in each cycle)
 - What remains unresolved (items still flagged after 2 cycles)
-
-Append an `orchestrator_escalate` event to `research/{topic}/events.log`:
-
-```
-{"ts": "<ISO 8601>", "event": "orchestrator_escalate", "feature": "<name>", "phase": "research", "reason": "<summary of unresolved issues>", "cycles": <N>}
-```
 
 After escalation, the user decides how to proceed. Do not continue reviewing.
 
@@ -121,7 +97,7 @@ The orchestrator runs a maximum of 2 review cycles per phase. A cycle is one com
 - **Cycle 1**: Initial review after artifact is written.
 - **Cycle 2**: Re-review after fix dispatch. If issues remain after cycle 2, escalate.
 
-Do not start cycle 3. Escalate with full context per step 6.
+Do not start cycle 3. Escalate with full context per step 5.
 
 ## Constraints
 

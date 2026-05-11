@@ -43,14 +43,6 @@ If the user chooses "Drop this item", remove the item from the decomposition (no
 
 (iii) **Unflagged items — batch review**: Present the proposed work items to the user for review before creating tickets. Unflagged items (including flagged items the user acknowledged in (ii)) continue through this existing batch-review behavior unchanged.
 
-(iv) **Event logging (R7)**: When a flag is raised, when the user acknowledges a flagged item, or when the user drops a flagged item, append an event to the active discovery topic's event stream (the same stream used by `orchestrator-review.md:22-30`, e.g., `research/{topic}/events.log`). If no event stream exists for the topic, skip silently — do not create new infrastructure.
-
-```
-{"ts": "<ISO 8601>", "event": "decompose_flag", "phase": "decompose", "item": "<title>", "reason": "<R2(a)|R2(b)|both>", "details": "<short>"}
-{"ts": "<ISO 8601>", "event": "decompose_ack", "phase": "decompose", "item": "<title>"}
-{"ts": "<ISO 8601>", "event": "decompose_drop", "phase": "decompose", "item": "<title>", "reason": "<R2 basis from flag event>"}
-```
-
 ### 3. Consolidation Review
 
 Before creating tickets, review the proposed work items for over-decomposition. Combine items when either of the following signals is present:
