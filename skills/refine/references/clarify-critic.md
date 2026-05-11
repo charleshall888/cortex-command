@@ -96,7 +96,7 @@ Write a one-sided critique — focus on what the assessment got wrong. Exclude b
 
 ## Disposition Framework
 
-After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection with one of three dispositions. (Apply/Dismiss/Ask classification and the self-resolution step below are reproduced from `/cortex-core:critical-review` Step 4 to avoid silent drift. Dismiss-rationale handling diverges by design: clarify-critic routes rationales to `dismissals[].rationale` per the Dispositioning Output Contract below; `/cortex-core:critical-review` Step 4 emits a count-only user-facing line.)
+After the critic agent returns its list of objections, the orchestrator (not the critic) classifies each objection with one of three dispositions. (Apply/Dismiss/Ask classification and the self-resolution step below are reproduced from `/cortex-core:critical-review` Step 4 to avoid silent drift. Under the v3 schema the dispositioning step logs counts only; the rationales informing each Dismiss decision are not preserved in the event row. Both clarify-critic and `/cortex-core:critical-review` Step 4 therefore emit count-only Dismiss data.)
 
 **Apply** — the objection identifies a concrete problem and the correct fix is clear and unambiguous. Examples: a High confidence rating is demonstrably unsupported by the source, the scope claim contradicts explicit text in the backlog item, the requirements alignment is asserted when no requirements file was loaded. Fix these without asking — revise the affected confidence dimension(s) accordingly.
 
@@ -110,14 +110,14 @@ After the critic agent returns its list of objections, the orchestrator (not the
 
 ### Dispositioning Output Contract
 
-After classifying every objection, the dispositioning step produces one structured artifact and nothing else. That artifact is the `clarify_critic` event itself — a single-line JSONL payload matching the schema defined in `## Event Logging` below, including the `dismissals` array.
+After classifying every objection, the dispositioning step produces one structured artifact and nothing else. That artifact is the `clarify_critic` event itself — a single-line JSONL payload matching the schema defined in `## Event Logging` below, carrying disposition counts only.
 
 - The **sole output** of the dispositioning step is the structured single-line JSONL artifact. It is not free-form prose.
 - The orchestrator writes this single-line JSON object **verbatim** to `lifecycle/{feature}/events.log` as the `clarify_critic` event.
 - The user-facing response following the dispositioning step is scoped to (a) the §4 Ask-merge invocation (per Ask-to-Q&A Merge Rule below), and (b) silent application of Apply dispositions to the confidence assessment.
-- Dismiss rationales appear only in `dismissals[].rationale` inside the event — never in the user-facing response surface. Because the dispositioning step's only output channel is the structured artifact, there is no prose surface in which a Dismiss rationale could appear.
+- Dismiss rationales are not preserved in the event row — the v3 schema carries only counts. The user-facing response surface remains reserved for §4 Ask merge and silent Apply confidence revisions; the rationales informed the orchestrator's disposition decisions but are not durably logged.
 
-Note: alignment findings flow through the same Apply/Dismiss/Ask framework as primary findings — same self-resolution check, same Apply/Dismiss/Ask classification, same `dismissals[]` and `applied_fixes` routing.
+Note: alignment findings flow through the same Apply/Dismiss/Ask framework as primary findings — same self-resolution check, same Apply/Dismiss/Ask classification. Under v3 only the resulting counts are logged.
 
 ## Ask-to-Q&A Merge Rule
 
@@ -131,88 +131,57 @@ After the critic agent returns and the orchestrator has applied dispositions, wr
 
 Events are emitted as single-line JSONL — one JSON object per line, written verbatim by the orchestrator to `lifecycle/{feature}/events.log`. Producers SHOULD include `schema_version`; readers MUST tolerate its absence as v1.
 
-Required fields:
+Required fields (v3 — current write shape):
 
 ```
-schema_version: <int>  # 2 for current schema; readers MUST tolerate absence as v1
+schema_version: 3
 ts: <ISO 8601 timestamp>
 event: clarify_critic
 feature: <feature slug>
 parent_epic_loaded: <bool>  # required; default false on read for legacy events without this field
-findings: <array of {text: <string>, origin: "primary" | "alignment"} objects — one per critic objection>
+findings_count: <int>  # total number of critic objections (primary + alignment)
 dispositions:
-  apply: <count>
-  dismiss: <count>
-  ask: <count>
-applied_fixes: <array of strings describing changes made to the confidence assessment>
-dismissals: <array of {finding_index, rationale} objects — one per Dismiss disposition>
+  apply: <int>
+  dismiss: <int>
+  ask: <int>
+applied_fixes_count: <int>  # number of changes made to the confidence assessment as a result of Apply dispositions
+dismissals_count: <int>  # number of Dismiss dispositions (invariant: dismissals_count == dispositions.dismiss)
 status: "ok"
 ```
 
-`applied_fixes` contains descriptions of the changes the orchestrator made to the confidence assessment as a result of Apply dispositions. If no Apply dispositions were made, `applied_fixes` is an empty array.
+The v3 shape carries only counts — the per-finding prose (`findings[].text`), the dismissal rationales (`dismissals[].rationale`), and the applied-fix descriptions (`applied_fixes[]`) are intentionally not preserved in the row. Audit verified there are zero non-test consumers of those prose fields; preserving them without a reader would re-create the dead-emission pattern this work eliminates. Disposition counts and `applied_fixes_count` / `dismissals_count` remain on the row to keep the audit-affordance signal (`detections >= 1` plus disposition-shape sanity) intact.
 
-`dismissals` is the Dismiss-disposition counterpart to `applied_fixes`. Each entry is `{finding_index: <int>, rationale: <prose>}`: `finding_index` is the zero-based position of the dismissed objection in the `findings` array; `rationale` is the orchestrator's reason for dismissing that objection.
+`applied_fixes_count` is the count of changes the orchestrator made to the confidence assessment as a result of Apply dispositions. If no Apply dispositions were made, `applied_fixes_count` is `0`.
 
-If no Dismiss dispositions were made, `dismissals` is an empty array. The invariant `len(dismissals) == dispositions.dismiss` must hold for every success-path event.
+`dismissals_count` is the Dismiss-disposition counterpart to `applied_fixes_count`. If no Dismiss dispositions were made, `dismissals_count` is `0`. The invariant `dismissals_count == dispositions.dismiss` must hold for every success-path event.
 
 `parent_epic_loaded` is present on every post-feature event. It is `true` when the orchestrator included the `## Parent Epic Alignment` section in the dispatch prompt (per the Parent Epic Loading branching above) and `false` otherwise. Pre-feature legacy events without this field are read as `false`.
 
-`findings[]` is an array of objects, each with `text: <string>` (the prose objection) and `origin: "primary" | "alignment"`. `origin: "alignment"` is reserved for findings produced from the `## Parent Epic Alignment` sub-rubric; all other critic-dimension findings use `origin: "primary"`. Pre-feature legacy events with bare-string findings are read as `{text: <string>, origin: "primary"}`.
+`findings_count` is the total number of critic objections (primary and alignment combined). The v3 row does not carry a per-finding `origin` breakdown; the alignment-vs-primary split is no longer logged in the row.
 
-**Legacy-tolerance — three pre-v2 shapes.** Readers MUST tolerate the following pre-v2 event shapes (described by behavioral effect, not version label):
+**Legacy-tolerance — all prior shapes read-tolerated indefinitely.** Readers MUST tolerate every prior event shape forever. Each shape below is described by behavioral effect; archived `lifecycle/*/events.log` files remain readable without rewrite.
 
-1. **minimal v1** — events without `schema_version`, without `parent_epic_loaded`, and with bare-string `findings[]` entries. Read `schema_version` as v1, `parent_epic_loaded` as `false`, and each bare-string finding as `{text: <string>, origin: "primary"}`. The `dismissals` array may be absent; read as `[]`.
-2. **v1+dismissals** — events without `schema_version` but with the `dismissals` array present (and the `len(dismissals) == dispositions.dismiss` invariant intended). Apply the same v1 defaults for missing fields; honor the present `dismissals` array as written.
-3. **YAML-block** — events written as a multi-line YAML block on disk rather than single-line JSONL. Tolerate on read; do not rewrite. Producers SHOULD emit single-line JSONL going forward.
+1. **minimal v1** — events without `schema_version`, without `parent_epic_loaded`, and with bare-string `findings[]` entries. Read `schema_version` as v1, `parent_epic_loaded` as `false`, and each bare-string finding as `{text: <string>, origin: "primary"}`. The `dismissals` array may be absent; read as `[]`. Read-tolerated indefinitely.
+2. **v1+dismissals** — events without `schema_version` but with the `dismissals` array present (and the `len(dismissals) == dispositions.dismiss` invariant intended). Apply the same v1 defaults for missing fields; honor the present `dismissals` array as written. Read-tolerated indefinitely.
+3. **v2** — events with `schema_version: 2`, structured `findings[]` array of `{text, origin}` objects, `dismissals[]` array of `{finding_index, rationale}` objects, and `applied_fixes[]` array of prose strings. Read-tolerated indefinitely; readers that need only count-shape data can compute counts from the arrays at read time (`findings_count = len(findings)`, etc.).
+4. **YAML-block** — events written as a multi-line YAML block on disk rather than single-line JSONL. Tolerate on read; do not rewrite. Producers SHOULD emit single-line JSONL going forward. Read-tolerated indefinitely.
+5. **v3** — current write shape (count-only, defined above). This is the only shape new producers emit.
 
-**Cross-field invariant**: any post-feature event whose `findings[]` contains at least one item with `origin: "alignment"` has `parent_epic_loaded: true`. Violation indicates a write-side bug. This invariant sits in parallel to the `len(dismissals) == dispositions.dismiss` invariant; neither is programmatically validated in this version, but a future ticket may add a validator covering both.
+**Cross-field invariant (legacy events with arrays present)**: any post-feature legacy event whose `findings[]` contains at least one item with `origin: "alignment"` has `parent_epic_loaded: true`. Violation indicates a write-side bug in the legacy v2 emitter. This invariant sits in parallel to the `len(dismissals) == dispositions.dismiss` invariant; neither is programmatically validated. Under v3 the invariant has no row-level expression because per-finding `origin` is no longer logged.
 
-Disposition counts reflect post-self-resolution values. If self-resolution reclassifies an Ask item as Apply, the logged `apply` count increases and `ask` count decreases accordingly, and the resulting fix description is appended to `applied_fixes` (the `applied_fixes` array thus carries initial Apply dispositions and Ask→Apply self-resolution reclassifications). If self-resolution reclassifies an Ask item as Dismiss, `ask` decreases and `dismiss` increases; the resolved rationale lands in `dismissals[].rationale` (not in `applied_fixes`) because `dismissals` is the Dismiss-disposition counterpart to `applied_fixes`.
+Disposition counts reflect post-self-resolution values. If self-resolution reclassifies an Ask item as Apply, the logged `apply` count increases and `ask` count decreases accordingly, and `applied_fixes_count` increments. If self-resolution reclassifies an Ask item as Dismiss, `ask` decreases and `dismiss` increases and `dismissals_count` increments in lockstep.
 
 Example (single-line JSONL, written verbatim by the orchestrator):
 
 ```
-{"schema_version": 2, "ts": "2026-03-23T14:05:00Z", "event": "clarify_critic", "feature": "my-feature", "parent_epic_loaded": true, "findings": [{"text": "The High rating for intent clarity is not grounded in the backlog item body — the item says 'improve the workflow' with no further elaboration.", "origin": "primary"}, {"text": "Scope boundedness is rated High but the item mentions both the CLI and the web UI without distinguishing them.", "origin": "primary"}, {"text": "Requirements alignment asserts 'no conflicts' but no requirements file was actually loaded.", "origin": "primary"}, {"text": "Complexity rated simple despite four distinct subsystems named in the body.", "origin": "primary"}, {"text": "The clarified intent narrows scope to 'CLI commit flow' but the parent epic body explicitly frames the work as 'commit and PR flows together' — divergence unjustified by the source material.", "origin": "alignment"}], "dispositions": {"apply": 1, "dismiss": 2, "ask": 2}, "applied_fixes": ["Revised intent clarity from High to Low — the goal phrase is genuinely ambiguous."], "dismissals": [{"finding_index": 1, "rationale": "The body's second paragraph distinguishes CLI and web UI; the scope claim is grounded, not asserted."}, {"finding_index": 3, "rationale": "Reclassified from Ask to Dismiss during self-resolution: the four subsystems are orchestration layers within one bounded context per project convention in requirements/project.md; the simple rating holds."}], "status": "ok"}
-```
-
-Structural breakdown (for documentation only — the orchestrator emits the single-line JSONL above, not this YAML rendering):
-
-```yaml
-- schema_version: 2
-  ts: 2026-03-23T14:05:00Z
-  event: clarify_critic
-  feature: my-feature
-  parent_epic_loaded: true
-  findings:
-    - text: "The High rating for intent clarity is not grounded in the backlog item body — the item says 'improve the workflow' with no further elaboration."
-      origin: primary
-    - text: "Scope boundedness is rated High but the item mentions both the CLI and the web UI without distinguishing them."
-      origin: primary
-    - text: "Requirements alignment asserts 'no conflicts' but no requirements file was actually loaded."
-      origin: primary
-    - text: "Complexity rated simple despite four distinct subsystems named in the body."
-      origin: primary
-    - text: "The clarified intent narrows scope to 'CLI commit flow' but the parent epic body explicitly frames the work as 'commit and PR flows together' — divergence unjustified by the source material."
-      origin: alignment
-  dispositions:
-    apply: 1
-    dismiss: 2
-    ask: 2
-  applied_fixes:
-    - "Revised intent clarity from High to Low — the goal phrase is genuinely ambiguous."
-  dismissals:
-    - finding_index: 1  # initial Dismiss disposition — source material explicitly distinguishes the two UIs later in the body
-      rationale: "The body's second paragraph distinguishes CLI and web UI; the scope claim is grounded, not asserted."
-    - finding_index: 3  # Ask→Dismiss self-resolution reclassification — resolved against a documented project convention
-      rationale: "Reclassified from Ask to Dismiss during self-resolution: the four subsystems are orchestration layers within one bounded context per project convention in requirements/project.md; the simple rating holds."
-  status: ok
+{"schema_version": 3, "ts": "2026-03-23T14:05:00Z", "event": "clarify_critic", "feature": "my-feature", "parent_epic_loaded": true, "findings_count": 5, "dispositions": {"apply": 1, "dismiss": 2, "ask": 2}, "applied_fixes_count": 1, "dismissals_count": 2, "status": "ok"}
 ```
 
 ## Failure Handling
 
 If the critic agent fails, errors, or times out:
 
-1. Write a `clarify_critic` event with `status: "failed"` and empty `findings`, `applied_fixes`, `dismissals`, and zero counts in `dispositions`. `parent_epic_loaded` is set per the value determined before dispatch (the result of the Parent Epic Loading branching above) — failure of the critic agent does not retroactively change whether the alignment section was included in the prompt.
+1. Write a `clarify_critic` event with `status: "failed"`, `findings_count: 0`, `applied_fixes_count: 0`, `dismissals_count: 0`, and zero counts in `dispositions`. `parent_epic_loaded` is set per the value determined before dispatch (the result of the Parent Epic Loading branching above) — failure of the critic agent does not retroactively change whether the alignment section was included in the prompt.
 2. Proceed to §4 as if the critic had not run — cover all original low-confidence dimensions in the Q&A. Do not skip questions because the critic was supposed to run.
 3. Do not surface the failure as a blocking error. Note it silently in the event log.
 
@@ -226,5 +195,5 @@ If the critic agent fails, errors, or times out:
 | "Ask items from the critic should be presented separately before §4" | Ask items are folded into the §4 Q&A and presented as a single consolidated question set alongside any low-confidence dimension questions. |
 | "The critic should read files or gather additional context" | The critic receives the confidence assessment, the source material, and (Context A only, when the child has a `type: epic` parent loaded by `bin/cortex-load-parent-epic`) a `## Parent Epic Alignment` section containing the sanitized parent epic body inside `<parent_epic_body>` markers. It reads nothing else. |
 | "The orchestrator should write the event before reading critic output" | The orchestrator writes the `clarify_critic` event after the critic returns and dispositions are applied — not before. |
-| "applied_fixes should summarize the critic's suggestions" | `applied_fixes` contains descriptions of changes the orchestrator actually made. If the orchestrator dismissed or asked about an objection, it does not appear in `applied_fixes`. |
-| "Surface Dismiss rationales to the user so they can see the critic's work" | Dismiss rationales go to the `dismissals` array in `events.log` only; the user-facing response surface is reserved for §4 Ask merge and silent Apply confidence revisions. |
+| "applied_fixes_count should reflect total objections, not just Apply outcomes" | `applied_fixes_count` counts the changes the orchestrator actually made as a result of Apply dispositions. Dismissed or Asked objections do not contribute to `applied_fixes_count`. |
+| "Surface Dismiss rationales to the user so they can see the critic's work" | Dismiss rationales are not preserved in the v3 event row — only `dismissals_count`. The user-facing response surface is reserved for §4 Ask merge and silent Apply confidence revisions. |
