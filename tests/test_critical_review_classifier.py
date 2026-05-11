@@ -224,6 +224,14 @@ def test_synthesizer_rubric_deterministic():
 
     This decouples rubric verification from reviewer-side stochasticity.
     Single live model invocation; no 2-of-3 tolerance.
+
+    Companion tests `test_synthesizer_trigger_{2_restates,3_adjacent_no_straddle,
+    3_adjacent_with_straddle,4_vague}` follow the same prompt-assembly path but
+    use an inline 2-of-3 retry loop (with `_apply_pass_criterion(results,
+    '2-of-3')`) because their assertions anchor on rationale-prose words with
+    higher decoding variance than this Trigger-1 binary-field check. The
+    single-invocation rationale here is specific to the binary-field nature of
+    the Trigger-1 assertion and does not generalize to Triggers 2/3/4.
     """
     template = _extract_synthesizer_template()
 
