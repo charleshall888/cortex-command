@@ -23,11 +23,13 @@ Dispatch a focused review sub-task with read-only instructions using the reviewe
 
 ### Reviewer Prompt Template
 
+Before dispatching, substitute `{spec_path}` with the absolute path to the spec file, resolved as `git rev-parse --show-toplevel` joined with `lifecycle/{feature}/spec.md`.
+
 ```
 You are reviewing the {feature} implementation against its specification.
 
 ## Specification
-{contents of lifecycle/{feature}/spec.md, or a summary with a path to read it}
+Read `{spec_path}` before beginning the review.
 
 ## Project Requirements
 {list of requirements docs loaded in §1, each on its own line with path and summary; if only project.md loaded, note 'only project.md loaded — no area docs matched tags'}
