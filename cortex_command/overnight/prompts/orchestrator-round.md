@@ -51,13 +51,10 @@ to_process = unresolved_entries
 
 For each entry in `to_process`, wrap the entire processing in a try/except so that a single malformed or problematic entry never crashes the round.
 
-**Cycle-breaking check**: Before attempting resolution, check for prior resolutions. Use:
+**Cycle-breaking check**: Before attempting resolution, check for prior resolutions via the precomputed per-feature dict:
 
 ```python
-prior_resolutions = [
-    e for e in ctx["escalations"]["all_entries"]
-    if e.get("type") == "resolution" and e.get("feature") == entry["feature"]
-]
+prior_resolutions = ctx["escalations"]["prior_resolutions_by_feature"].get(entry["feature"], [])
 ```
 
 If `len(prior_resolutions) >= 1` (the orchestrator already resolved a question for this feature in a prior round, but the worker asked again), this is a cycle — do **not** attempt resolution:
