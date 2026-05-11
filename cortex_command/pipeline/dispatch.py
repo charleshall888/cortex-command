@@ -268,7 +268,7 @@ def resolve_effort(complexity: str, criticality: str, skill: str, model: str) ->
 
     Raises:
         ValueError: If the resolved effort is not supported by the resolved
-            model per spec §3 (e.g. ``xhigh`` on Sonnet). Per the Veto Surface
+            model per spec §3 (e.g. ``xhigh`` on Sonnet). Per the Risks section
             in the implementation plan, this is ``raise ValueError`` rather
             than the ``assert`` literally specified in spec §3 — ``assert`` is
             stripped under ``python -O`` / ``PYTHONOPTIMIZE=1``, defeating the

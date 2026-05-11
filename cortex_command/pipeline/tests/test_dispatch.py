@@ -940,7 +940,7 @@ def test_effort_runtime_guard_rejects_unsupported_effort_for_model(monkeypatch):
     supported by the resolved model per spec §3.
 
     The runtime guard MUST be ``raise ValueError`` (not ``assert``) per the
-    plan's Veto Surface — ``assert`` is stripped under ``python -O`` /
+    plan's Risks section — ``assert`` is stripped under ``python -O`` /
     ``PYTHONOPTIMIZE=1``, defeating spec §3's "MUST fail loudly" intent.
 
     We force a synthetic matrix entry to ``"xhigh"`` for a (complexity,

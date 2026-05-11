@@ -132,6 +132,10 @@ Based on research and spec, determine:
 
 ### 3. Write Plan Artifact
 
+The plan structure below — specifically the `## Outline` / `## Tasks` / `## Risks` shape — is community-derived from CRISPY/QRSPI v2 (HumanLayer). Evidence quality is practitioner-grade (1/5); the primary justification is human-skim readability for orchestrator review and operator approval. The CRISPY/QRSPI source materials' "more reliable than any prompt instruction" superlative is NOT quoted as fact here — we adopt the shape on human-skim grounds only.
+
+Renamed from `## Veto Surface` 2026-05-11 — retro searches for the prior name still apply to plans authored before this date.
+
 Produce `lifecycle/{feature}/plan.md` with this structure:
 
 ```markdown
@@ -141,6 +145,17 @@ Produce `lifecycle/{feature}/plan.md` with this structure:
 [1-2 sentence summary of the implementation approach and key architectural decisions]
 **Architectural Pattern**: {category}
 <!-- Include only when the implementation commits to one of: event-driven, pipeline, layered, shared-state, plug-in. Omit otherwise. -->
+
+## Outline
+<!-- Phase decomposition above the per-task list. Use H3 headings for phases (### Phase N: <name>) to avoid parser truncation (FM-5) and namespace collision with per-task `phase_durations` (FM-4). Populate with ≥1 phase when `complexity=simple`; populate with ≥2 phases when `complexity=complex` (the Clarify §4-resolved tier dimension). -->
+
+### Phase 1: {phase name} (tasks: 1, 2, ...)
+**Goal**: {one-line phase objective}
+**Checkpoint**: {observable state at end of this phase — e.g., "tests green for module X", "fixture set in place"}
+
+### Phase 2: {phase name} (tasks: 3, 4, ...)
+**Goal**: {one-line phase objective}
+**Checkpoint**: {observable state at end of this phase}
 
 ## Tasks
 
@@ -167,11 +182,16 @@ Produce `lifecycle/{feature}/plan.md` with this structure:
 ## Verification Strategy
 [How to verify the complete feature works end-to-end after all tasks are done]
 
-## Veto Surface
+## Risks
 [Design choices, scope calls, or constraints the user might want to revisit before implementation begins. "None" if nothing is controversial.]
+<!-- Renamed from `## Veto Surface` 2026-05-11 — retro searches for the prior name still apply to plans authored before this date. Purpose, content shape, and ~5–10 line cost are preserved. -->
 
 ## Scope Boundaries
 [What is explicitly excluded from this feature. Maps to the spec's Non-Requirements section.]
+
+## Acceptance
+<!-- Populate ONLY when `complexity=complex` (the Clarify §4-resolved tier dimension). Omit this section entirely on `complexity=simple` plans. -->
+[~3 lines whole-feature acceptance criterion — the observable end-state that demonstrates the complete feature works as intended. Distinct from per-task Verification, which checks task-local effects.]
 ```
 
 > Verification fields that consist only of prose descriptions (e.g., "confirm the feature works correctly") do not pass the P4 checklist. Use format (a), (b), or (c) from the task template above.
