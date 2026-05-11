@@ -669,3 +669,74 @@ def test_post_migration_clarify_critic_events_are_jsonl():
             "event detection in the development tree, got 0 — possible "
             "silent parse-skip regression"
         )
+
+
+def test_v3_only_synthetic_corpus_detects_clarify_critic_event(tmp_path):
+    """R3 / Wave-1 Task 5: a v3-only synthetic events.log is detected by the
+    same line-scan logic the post-migration test uses.
+
+    Guards against a future v3 emission-shape regression being masked by
+    legacy v2 rows in ``lifecycle/archive/`` that still satisfy the
+    ``detections >= 1`` invariant. Builds an isolated lifecycle tree under
+    ``tmp_path`` containing exactly one synthetic v3 ``clarify_critic`` JSONL
+    row (count-only fields, matching the template at
+    ``skills/refine/references/clarify-critic.md``) and asserts the scan
+    detects it.
+    """
+    # Build a tmp lifecycle tree mirroring lifecycle/<slug>/events.log layout.
+    feature_dir = tmp_path / "lifecycle" / "test-v3-feature"
+    feature_dir.mkdir(parents=True)
+    events_log = feature_dir / "events.log"
+
+    # Synthetic v3 row — count-only fields, matching the template literal at
+    # skills/refine/references/clarify-critic.md "Example (single-line JSONL,
+    # written verbatim by the orchestrator):".
+    v3_row = {
+        "schema_version": 3,
+        "ts": "2026-03-23T14:05:00Z",
+        "event": "clarify_critic",
+        "feature": "test-v3-feature",
+        "parent_epic_loaded": True,
+        "findings_count": 5,
+        "dispositions": {"apply": 1, "dismiss": 2, "ask": 2},
+        "applied_fixes_count": 1,
+        "dismissals_count": 2,
+        "status": "ok",
+    }
+    events_log.write_text(json.dumps(v3_row) + "\n", encoding="utf-8")
+
+    # Replicate the detection logic from
+    # test_post_migration_clarify_critic_events_are_jsonl, scoped to tmp_path.
+    detections = 0
+    lifecycle_root = tmp_path / "lifecycle"
+    for log_path in lifecycle_root.glob("*/events.log"):
+        if "archive" in log_path.parts:
+            continue
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+        for i, line in enumerate(lines):
+            if _JSONL_RE.match(line):
+                try:
+                    evt = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if evt.get("event") != "clarify_critic":
+                    continue
+                detections += 1
+            else:
+                m = _YAML_HEAD_RE.match(line)
+                if not m:
+                    continue
+                found_clarify_critic = False
+                for la in lines[i + 1 : i + 6]:
+                    if _YAML_EVENT_LINE_RE.match(la):
+                        found_clarify_critic = True
+                        break
+                if not found_clarify_critic:
+                    continue
+                detections += 1
+
+    assert detections >= 1, (
+        "v3-only synthetic corpus failure: a single canonical-template "
+        "v3 clarify_critic row was not detected — v3 emission-shape "
+        "regression"
+    )
