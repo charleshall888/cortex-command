@@ -93,7 +93,17 @@ Each agent receives the following prompt template verbatim, with bracketed varia
 You are conducting an adversarial review of one specific angle.
 
 ## Artifact
-{artifact content}
+
+- Path: `{artifact_path}`
+- Expected SHA-256: `{artifact_sha256}`
+
+Read the literal absolute path provided above before beginning analysis. Do NOT re-resolve via `git rev-parse` or any other path-derivation step; Read the literal absolute path as given.
+
+When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <absolute-path> <sha256-of-Read-result>` as the first line of output, then continue with the analysis below.
+
+When the Read fails or returns empty content, emit `READ_FAILED: <absolute-path> <one-word-reason>` as the first line of output and stop — do not proceed with analysis.
+
+Example success first-line shape: `READ_OK: <path> <sha>`
 
 ## Project Context
 {## Project Context block from Step 2a, omit this entire section if no context was loaded}
@@ -163,7 +173,14 @@ You are conducting an adversarial review. Your job is to find what's wrong, risk
 
 ## Artifact
 
-{artifact content}
+- Path: `{artifact_path}`
+- Expected SHA-256: `{artifact_sha256}`
+
+Read the literal absolute path provided above before beginning analysis. Do NOT re-resolve via `git rev-parse` or any other path-derivation step; Read the literal absolute path as given.
+
+When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <absolute-path> <sha256-of-Read-result>` as the first line of output, then continue with the analysis below.
+
+When the Read fails or returns empty content, emit `READ_FAILED: <absolute-path> <one-word-reason>` as the first line of output and stop — do not proceed with analysis.
 
 ## Instructions
 
