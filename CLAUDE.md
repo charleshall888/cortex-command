@@ -39,7 +39,7 @@ Run `just` to see all available recipes. Key commands:
 - Always commit using the `/cortex-core:commit` skill -- never run `git commit` manually
 - Commit messages: imperative mood, capitalized, no trailing period, max 72 chars subject
 - A shared hook validates commit messages automatically
-- New skills go in `skills/` with `name` and `description` frontmatter
+- New skills go in `skills/` with `name` and `description` frontmatter; `when_to_use:` is optional and concatenated to `description:` for routing.
 - Agent-specific config goes in `claude/`
 - Settings JSON must remain valid JSON
 - Hook/notification scripts must be executable (`chmod +x`)
