@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: e6002f93-1c9a-4ff6-a7d8-125279879d2a
 title: "Audit /cortex-core:research skill output shape for token waste in research.md sections"
 type: chore
-status: in_progress
+status: complete
 priority: medium
 blocked-by: []
 tags: [research-skill, token-efficiency, artifact-densification, sub-agent-output-shape]
@@ -14,8 +14,8 @@ complexity: complex
 criticality: high
 spec: lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/spec.md
 areas: [lifecycle,skills]
-session_id: c9fa97be-0fd2-4aba-aa3c-d47cdca97027
-lifecycle_phase: implement
+session_id: null
+lifecycle_phase: complete
 ---
 
 # Audit /cortex-core:research skill output shape for token waste in research.md sections

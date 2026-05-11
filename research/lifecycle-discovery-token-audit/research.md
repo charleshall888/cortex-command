@@ -1,6 +1,6 @@
 # Research: Lifecycle & Discovery Token-Munching Audit
 
-Breadth-first audit of cortex-command's lifecycle/discovery/overnight flows for hot-path token waste — context loads, file reads, and sub-agent dispatch payloads that consume substantial token budget relative to their downstream value.
+Breadth-first audit of cortex-command's lifecycle, discovery, and overnight flows for hot-path token waste — context loads, file reads, and sub-agent dispatch payloads that consume substantial token budget relative to their downstream value.
 
 **Scoping**: per user direction — "anything cuttable" threshold; going-forward only (no retroactive archive migration).
 

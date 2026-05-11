@@ -30,38 +30,6 @@
     "repo": null
   },
   {
-    "id": 185,
-    "title": "Audit /cortex-core:research skill output shape for token waste in research.md sections",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "research-skill",
-      "token-efficiency",
-      "artifact-densification",
-      "sub-agent-output-shape"
-    ],
-    "areas": [
-      "lifecycle",
-      "skills"
-    ],
-    "created": "2026-05-06",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/spec.md",
-    "discovery_source": "research/epic-172-audit/research.md",
-    "plan": null,
-    "uuid": "e6002f93-1c9a-4ff6-a7d8-125279879d2a",
-    "lifecycle_slug": null,
-    "session_id": "c9fa97be-0fd2-4aba-aa3c-d47cdca97027",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 186,
     "title": "Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on)",
     "status": "proposed",
