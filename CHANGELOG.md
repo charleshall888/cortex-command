@@ -6,8 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **`bin/cortex-check-events-registry` gate** and `bin/.events-registry.md` allowlist (R5/R6 of the events.log emission-discipline work). The static gate validates that every skill-prompt-emitted event name is registered with a documented consumer. Runs in `--staged` mode from `.githooks/pre-commit` Phase 1.7 (triggers only on `skills/*`, `cortex_command/overnight/prompts/*`, and the gate/registry files themselves — never on `cortex_command/**/*.py`) and in `--audit` mode via `just check-events-registry-audit` for off-critical-path deprecation-date review. Schema, scope split (`gate-enforced` vs `manual`), two-mode design, and stale-row recovery path are documented in `docs/internals/events-registry.md`.
+
+### Changed
+
+- **`clarify_critic` event row schema bumped v2 → v3** at `skills/refine/references/clarify-critic.md`. Row now contains only count fields (`findings_count`, `dispositions`, `applied_fixes_count`, `dismissals_count`); the `findings[]`, `dismissals[]`, and `applied_fixes[]` arrays are removed from the JSONL payload. Average row size drops from ~1,961 chars to ~250 chars. Readers tolerate v1, v1+dismissals, v2, v3, and YAML-block shapes indefinitely; archives are not rewritten.
+- **`aggregate_round_context` payload schema bumped v1 → v2** at `cortex_command/overnight/orchestrator_context.py`. The `escalations.all_entries` re-inline is replaced by `escalations.prior_resolutions_by_feature: dict[str, list[dict]]` matched to the consumer's read shape. `cortex_command/overnight/prompts/orchestrator-round.md` consumes the precomputed dict via `.get(entry["feature"], [])` instead of filtering `all_entries`. **Operators: do not upgrade the CLI mid-overnight-session** — the strict-equality schema-version guard at `orchestrator_context.py` raises on producer/consumer drift; the runner's existing pre-install in-flight guard blocks the upgrade path when an overnight session is detected, but split-revert scenarios still require both files to revert together.
+
 ### Removed
 
+- **11 dead-event emission instructions in skill prompts** (R1 of the events.log discipline work): `task_complete`, `confidence_check`, `decompose_flag`, `decompose_ack`, `decompose_drop`, `discovery_reference`, `implementation_dispatch`, `orchestrator_review`, `orchestrator_dispatch_fix`, `orchestrator_escalate`, `requirements_updated`. Each had zero non-test consumers in `cortex_command/`, `bin/`, `hooks/`, `claude/`, `tests/`, and skill prompts. Already-archived events.log rows containing these names remain parseable — all consumers tolerate unknown event names. The `requirements_updated` consumer scan at `skills/morning-review/references/walkthrough.md` Section 2c was removed in the same pass.
 - `claude/hooks/cortex-output-filter.sh`, `claude/hooks/output-filters.conf`, `claude/hooks/cortex-sync-permissions.py`, `claude/hooks/bell.ps1`. Maintainers who installed these via the retired `cortex setup` flow should grep `~/.claude/settings.json` for these script names and remove the bindings; cortex no longer deploys them.
 - **`/cortex-core:fresh`, `/cortex-core:evolve`, `/cortex-core:retro` slash commands and the session-feedback loop they implemented** (formerly invoked as `/fresh`, `/evolve`, `/retro`).
   - The marker-file resume mechanism (`lifecycle/.fresh-resume`), the `/clear`-recovery prose injection, the `retro:N` statusline indicator, the `cortex init` retros/ scaffolding, the `CLAUDE_AUTOMATED_SESSION` env var, and the CLAUDE.md OQ3/OQ6 retros-citation policy clauses are all removed.

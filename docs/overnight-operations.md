@@ -398,6 +398,8 @@ Every overnight session persists state as files under `lifecycle/`. The runner r
 
 State file reads are not lock-protected by design — forward-only phase transitions and atomic replace writes make torn reads impossible. A reader either sees the pre-write state or the post-write state, never a partial record.
 
+The allowlist of event names emitted across the three `events.log` surfaces above, together with their documented consumers and the pre-commit gate that enforces producer registration, lives in `bin/.events-registry.md` — see [`docs/internals/events-registry.md`](internals/events-registry.md) for the schema, scope split, and `--staged`/`--audit` modes.
+
 ### Escalation System (escalations.jsonl)
 
 `lifecycle/sessions/{session_id}/escalations.jsonl` is the worker-to-orchestrator side channel. Writer is `write_escalation()` in `cortex_command/overnight/deferral.py` (re-exported from `cortex_command/overnight/orchestrator_io.py`); readers include the orchestrator prompt (Steps 0a–0d) and `_next_escalation_n()` in the same module. Records are one JSON object per line with a `type` discriminator.
