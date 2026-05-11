@@ -1,0 +1,106 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["pyyaml"]
+# ///
+"""Measure combined ``description:`` + ``when_to_use:`` UTF-8 byte size per skill.
+
+Enumerates ``skills/*/SKILL.md`` relative to the current working directory,
+parses each file's YAML frontmatter via ``yaml.safe_load`` (so every YAML
+scalar form is handled — single-line plain, single-quoted, double-quoted,
+block scalar ``|``, folded ``>-``, and multi-line plain), then computes the
+UTF-8 byte length of the ``description`` field plus the ``when_to_use``
+field (each treated as the empty string when absent).
+
+Emits one ``<skill-name> <bytes>`` row per skill (sorted) and a final
+``total <sum>`` row. Output matches the R11 acceptance regex
+``^[a-z-]+\\s+\\d+$``.
+
+Spec: lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md R11.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+
+subprocess.run(
+    [
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"),
+        sys.argv[0],
+        *sys.argv[1:],
+    ],
+    check=False,
+)
+
+from pathlib import Path
+
+import yaml
+
+
+FRONTMATTER_DELIM = "---"
+
+
+def extract_frontmatter(text: str) -> str:
+    """Return the YAML frontmatter block (without delimiter lines).
+
+    Skips a leading BOM if present. Returns the empty string if no
+    delimited block is found at the file head.
+    """
+    if text.startswith("﻿"):
+        text = text[1:]
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != FRONTMATTER_DELIM:
+        return ""
+    body: list[str] = []
+    for line in lines[1:]:
+        if line.strip() == FRONTMATTER_DELIM:
+            return "\n".join(body)
+        body.append(line)
+    return ""
+
+
+def measure_skill(skill_md: Path) -> int:
+    """Return UTF-8 byte length of description + when_to_use fields."""
+    text = skill_md.read_text(encoding="utf-8")
+    fm = extract_frontmatter(text)
+    if not fm:
+        return 0
+    data = yaml.safe_load(fm)
+    if not isinstance(data, dict):
+        return 0
+    desc = data.get("description") or ""
+    wtu = data.get("when_to_use") or ""
+    if not isinstance(desc, str):
+        desc = str(desc)
+    if not isinstance(wtu, str):
+        wtu = str(wtu)
+    return len(desc.encode("utf-8")) + len(wtu.encode("utf-8"))
+
+
+def main() -> int:
+    root = Path(os.getcwd())
+    skills_dir = root / "skills"
+    if not skills_dir.is_dir():
+        print(f"error: {skills_dir} not found", file=sys.stderr)
+        return 1
+
+    rows: list[tuple[str, int]] = []
+    for entry in sorted(skills_dir.iterdir()):
+        if not entry.is_dir():
+            continue
+        skill_md = entry / "SKILL.md"
+        if not skill_md.is_file():
+            continue
+        rows.append((entry.name, measure_skill(skill_md)))
+
+    total = 0
+    for name, n_bytes in rows:
+        print(f"{name} {n_bytes}")
+        total += n_bytes
+    print(f"total {total}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
