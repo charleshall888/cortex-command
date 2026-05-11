@@ -177,18 +177,13 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
 
 3. **Apply the update**: Read the target requirements file. Find the section heading. Append the content after the last bullet or paragraph in that section. Write the file.
 
-4. **Log the event**: Append a `requirements_updated` event to `lifecycle/{feature}/events.log`:
-   ```
-   {"ts": "<ISO 8601>", "event": "requirements_updated", "feature": "<name>", "file": "<requirements file path>", "section": "<section heading>", "content": "<one-line summary of what was added>"}
-   ```
-
-5. **Report to the user**: Display what was changed:
+4. **Report to the user**: Display what was changed:
    ```
    Requirements updated: {file} → {section}
      Added: {first line of content}
    ```
 
-   In interactive sessions, the user sees this immediately. In overnight sessions, the `requirements_updated` event in events.log is surfaced by the morning review.
+   In interactive sessions, the user sees this immediately.
 
 ### 5. Transition
 

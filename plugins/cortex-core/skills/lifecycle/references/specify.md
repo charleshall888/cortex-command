@@ -60,21 +60,14 @@ After the interview concludes, evaluate whether the research from `research.md` 
 
 1. Present the signals flagged in §2a's Research Confidence Check as a bulleted list — one bullet per flagged signal, ≤15 words per bullet, no prose expansion outside the bullets. Then state that Research must be re-run. Example: a bullet of acceptable terseness might read:
    - `C2: spec needs read of hooks/commit-msg.sh — not in research.md`
-2. Append a `confidence_check` event to `lifecycle/{feature}/events.log`:
-   ```
-   {"ts": "<ISO 8601>", "event": "confidence_check", "feature": "<name>", "cycle": 1, "signals": ["<C1|C2|C3 with description>", ...], "action": "loop_back"}
-   ```
-3. Transition back to Research — **bypassing /refine's Sufficiency Check**. Because Specify runs inside a /cortex-core:refine invocation (Step 5), the normal loop-back to Research would re-enter /cortex-core:refine Step 4, which applies a Sufficiency Check that may declare the existing `research.md` sufficient and skip back to Spec. This must not happen. Explicitly override: treat the existing `research.md` as invalidated and re-run Research from scratch regardless of Sufficiency Check criteria. This follows the same override pattern used in lifecycle SKILL.md's Discovery Bootstrap edge case.
+2. Transition back to Research — **bypassing /refine's Sufficiency Check**. Because Specify runs inside a /cortex-core:refine invocation (Step 5), the normal loop-back to Research would re-enter /cortex-core:refine Step 4, which applies a Sufficiency Check that may declare the existing `research.md` sufficient and skip back to Spec. This must not happen. Explicitly override: treat the existing `research.md` as invalidated and re-run Research from scratch regardless of Sufficiency Check criteria. This follows the same override pattern used in lifecycle SKILL.md's Discovery Bootstrap edge case.
 
 **If any signal is flagged AND current_cycle ≥ 2**:
 
 Present the signals flagged in §2a's Research Confidence Check as a bulleted list — one bullet per flagged signal, ≤15 words per bullet, no prose expansion outside the bullets. Then ask (via AskUserQuestion) whether to loop back to Research or proceed to §3 anyway.
 
-- If the user chooses to loop back: repeat the cycle 1 loop-back procedure above (announce, log event with the current cycle number and `"action": "loop_back"`, re-run Research bypassing Sufficiency Check).
-- If the user chooses to proceed: append a `confidence_check` event with `"action": "declined"` and continue to §3.
-  ```
-  {"ts": "<ISO 8601>", "event": "confidence_check", "feature": "<name>", "cycle": <n>, "signals": ["<C1|C2|C3 with description>", ...], "action": "declined"}
-  ```
+- If the user chooses to loop back: repeat the cycle 1 loop-back procedure above (announce, re-run Research bypassing Sufficiency Check).
+- If the user chooses to proceed: continue to §3.
 
 ### 2b. Pre-Write Checks
 

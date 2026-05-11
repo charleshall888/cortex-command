@@ -212,16 +212,6 @@ If `epic_research_path` was found, announce: "Found epic research at `{epic_rese
 
 ## Step 3: Execute Current Phase
 
-### Epic Context Event Logging
-
-If `epic_research_path` was found in Discovery Bootstrap above, log a `discovery_reference` event before delegating to `/cortex-core:refine`. This records that the lifecycle is scoped from a larger epic, without implying that any phases were skipped:
-
-```json
-{"ts": "<ISO 8601>", "event": "discovery_reference", "feature": "<name>", "epic_research": "<epic_research_path>", "epic_spec": "<epic_spec_path or null>"}
-```
-
-If no epic context was found, skip this section entirely.
-
 ### /cortex-core:refine Delegation
 
 The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. This section determines whether delegation is needed and, if so, how to execute it.

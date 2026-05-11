@@ -93,7 +93,7 @@ DAYTIME_DISPATCH_ID={uuid} python3 -m cortex_command.overnight.daytime_pipeline 
 
 The subprocess is responsible for writing `lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID file — it only reads it.
 
-**Step 4 — Update `daytime-dispatch.json` with subprocess PID.** After the PID file has been written (following the initial-wait in §vi), update the `pid` field via the canonical helper:
+**Step 4 — Update `daytime-dispatch.json` with subprocess PID.** After the PID file has been written (following the initial-wait in §v), update the `pid` field via the canonical helper:
 
 ```
 python3 -m cortex_command.overnight.daytime_dispatch_writer --feature {slug} --mode update-pid --pid {pid}
@@ -101,17 +101,11 @@ python3 -m cortex_command.overnight.daytime_dispatch_writer --feature {slug} --m
 
 Invoke `daytime_dispatch_writer` in update-pid mode — see the module for the canonical atomic-write contract.
 
-**v. Log `implementation_dispatch` event.** Immediately after the background launch, a separate Bash call appends to `lifecycle/{feature}/events.log`:
-
-```
-{"ts": "<ISO 8601>", "event": "implementation_dispatch", "feature": "<name>", "mode": "daytime"}
-```
-
-**vi. Polling loop.** Sequential Bash calls only — no compound commands.
+**v. Polling loop.** Sequential Bash calls only — no compound commands.
 
 **Initial wait**: issue a `sleep 10` Bash call with `timeout: 15000` (15 seconds — ample margin over the 10-second sleep). This follows a background launch, so it is not a blocking subprocess wait; it gives the subprocess time to write its PID file.
 
-**After initial wait**: read the PID file with `cat lifecycle/{feature}/daytime.pid 2>/dev/null`. If the file is absent: this is a startup failure — skip the polling loop and go directly to result surfacing (§vii) using the content of `daytime.log`.
+**After initial wait**: read the PID file with `cat lifecycle/{feature}/daytime.pid 2>/dev/null`. If the file is absent: this is a startup failure — skip the polling loop and go directly to result surfacing (§vi) using the content of `daytime.log`.
 
 **Per-iteration steps** (each a separate Bash call):
 - (a) Liveness: `kill -0 $pid 2>/dev/null`. Non-zero exit means the process has exited — break out of the polling loop and proceed to result surfacing.
@@ -119,7 +113,7 @@ Invoke `daytime_dispatch_writer` in update-pid mode — see the module for the c
 
 **Termination bound**: 120 iterations (~4 hours). Context window exhaustion — not iteration count — is the practical binding constraint for long runs. At **30 iterations (~1 hour)**, pause and offer the user the option to suspend polling: "Subprocess still running after 30 iterations (~1 hour). Continue polling or stop? (The process continues in background — monitor `lifecycle/{feature}/daytime.log` and `events.log` directly.)" If the user chooses to stop, exit the polling loop (the subprocess keeps running; skip result surfacing and log `dispatch_complete` with outcome `"paused"` only if the subprocess is still alive — otherwise surface results normally). On reaching 120 iterations without the subprocess exiting: surface "Polling timeout — subprocess may still be running (PID {pid}). Check `lifecycle/{feature}/daytime.log` directly for status." and exit the polling loop.
 
-**vii. Result surfacing.** Surface results via `daytime_result_reader`, which matches `dispatch_id` against `daytime-dispatch.json` to discriminate stale prior-run files from current dispatch and classifies per the helper's tier-1/tier-3 output schema. Single Bash call:
+**vi. Result surfacing.** Surface results via `daytime_result_reader`, which matches `dispatch_id` against `daytime-dispatch.json` to discriminate stale prior-run files from current dispatch and classifies per the helper's tier-1/tier-3 output schema. Single Bash call:
 
 ```
 python3 -m cortex_command.overnight.daytime_result_reader --feature {slug}
@@ -133,7 +127,7 @@ After displaying a tier-1 result, issue a separate Bash call to delete `daytime-
 rm lifecycle/{feature}/daytime-dispatch.json
 ```
 
-**viii. Log `dispatch_complete` event.** After result surfacing, a separate Bash call appends to `lifecycle/{feature}/events.log`:
+**vii. Log `dispatch_complete` event.** After result surfacing, a separate Bash call appends to `lifecycle/{feature}/events.log`:
 
 ```
 {"ts": "<ISO 8601>", "event": "dispatch_complete", "feature": "<name>", "mode": "daytime", "outcome": "complete|deferred|paused|failed|unknown", "pr_url": "<url>|null"}
@@ -149,7 +143,7 @@ The `outcome` field maps from the result-surfacing classification:
 
 The `pr_url` field is the PR URL string if one was surfaced from the result file during Tier-1 success (merged outcome), or the JSON literal `null` otherwise.
 
-**ix. Exit /cortex-core:lifecycle entirely.** Do not transition to any further phase. The daytime pipeline has already run the full lifecycle; the main session's role is done.
+**viii. Exit /cortex-core:lifecycle entirely.** Do not transition to any further phase. The daytime pipeline has already run the full lifecycle; the main session's role is done.
 
 ### 2. Task Dispatch
 
@@ -181,11 +175,6 @@ After launching, append a `batch_dispatch` event to `lifecycle/{feature}/events.
 - **Sequential dispatch**: Run `git log --oneline -N` (where N = number of tasks in the batch) to verify commits are present.
 
 Then update plan.md to change `[ ]` to `[x]` for every task that completed successfully in the batch.
-
-For each task in the batch (whether it succeeded or failed), append a `task_complete` event to `lifecycle/{feature}/events.log`:
-```
-{"ts": "<ISO 8601>", "event": "task_complete", "feature": "<name>", "task": <task ID>, "batch": <N>, "status": "success|failed"}
-```
 
 **e. Worktree Integration**: Skip this step entirely for sequential (non-worktree) dispatch.
 

@@ -34,17 +34,7 @@ Evaluate the artifact against every item in the checklist. For each item, assign
 
 This review executes in the main conversation context. Do not dispatch a subagent for the review itself — the artifact is already in context.
 
-### 3. Log Review
-
-Append an `orchestrator_review` event to `lifecycle/{feature}/events.log`:
-
-```
-{"ts": "<ISO 8601>", "event": "orchestrator_review", "feature": "<name>", "phase": "research|specify|plan", "verdict": "pass|flag", "cycle": <N>, "issues": ["<description of each flagged item>"]}
-```
-
-The `verdict` is `pass` if all items passed, `flag` if any item was flagged. The `issues` array is empty on pass.
-
-### 4. Handle Verdict
+### 3. Handle Verdict
 
 **On pass**: Show the user a one-line assessment summarizing what was checked and the result. Example formats:
 
@@ -54,9 +44,9 @@ The `verdict` is `pass` if all items passed, `flag` if any item was flagged. The
 
 Then proceed to user presentation or the next phase as normal.
 
-**On flag**: Check the cycle counter. If this is cycle 3 or beyond, go to Escalation (step 6). Otherwise, proceed to Fix Dispatch (step 5).
+**On flag**: Check the cycle counter. If this is cycle 3 or beyond, go to Escalation (step 5). Otherwise, proceed to Fix Dispatch (step 4).
 
-### 5. Fix Dispatch
+### 4. Fix Dispatch
 
 For each flagged issue, determine the appropriate fix mode:
 
@@ -66,17 +56,11 @@ For each flagged issue, determine the appropriate fix mode:
 
 **Same conversation**: Use for interactive rework that requires user input. This includes spec clarifications where user preference determines the answer, ambiguous requirements, and priority trade-offs. Explain the issue to the user, gather their input, and then revise the artifact in the current context.
 
-For each dispatched fix, append an `orchestrator_dispatch_fix` event to `lifecycle/{feature}/events.log`:
-
-```
-{"ts": "<ISO 8601>", "event": "orchestrator_dispatch_fix", "feature": "<name>", "phase": "research|specify|plan", "mode": "fresh_subagent|same_context", "issue": "<description of the flagged item>"}
-```
-
 Fix agents rewrite the full artifact, not section patches. A full rewrite maintains internal coherence across sections that cross-reference each other.
 
 After all fixes complete, return to step 2 (Execute Review) and increment the cycle counter. The re-review evaluates the revised artifact against the same checklist.
 
-After the fix-agent returns its envelope, the orchestrator reads the envelope and does not relay it to the user. The orchestrator proceeds to step 2 (Execute Review) and writes the per-cycle `orchestrator_review` event per step 3 as part of the re-review (preserving the cycle-cap logic in the Cycle Cap section). Only the pass/fail verdict from the re-review surfaces to the user; the fix-agent envelope itself is never relayed.
+After the fix-agent returns its envelope, the orchestrator reads the envelope and does not relay it to the user. The orchestrator proceeds to step 2 (Execute Review) (preserving the cycle-cap logic in the Cycle Cap section). Only the pass/fail verdict from the re-review surfaces to the user; the fix-agent envelope itself is never relayed.
 
 #### Fix Agent Prompt Template
 
@@ -106,19 +90,13 @@ The artifact must still conform to the format defined in the {phase} phase refer
 Do not add content beyond what the phase requires.
 ```
 
-### 6. Escalation
+### 5. Escalation
 
 When the cycle cap is reached (2 cycles completed, issue persists), stop reviewing and escalate to the user. Present:
 
 - What was checked (the flagged checklist items)
 - What was tried (fixes dispatched in each cycle)
 - What remains unresolved (items still flagged after 2 cycles)
-
-Append an `orchestrator_escalate` event to `lifecycle/{feature}/events.log`:
-
-```
-{"ts": "<ISO 8601>", "event": "orchestrator_escalate", "feature": "<name>", "phase": "research|specify|plan", "reason": "<summary of unresolved issues>", "cycles": <N>}
-```
 
 After escalation, the user decides how to proceed. Do not continue reviewing.
 
@@ -162,7 +140,7 @@ The orchestrator runs a maximum of 2 review cycles per phase. A cycle is one com
 - **Cycle 1**: Initial review after artifact is written.
 - **Cycle 2**: Re-review after fix dispatch. If issues remain after cycle 2, escalate.
 
-Do not start cycle 3. Escalate with full context per step 6.
+Do not start cycle 3. Escalate with full context per step 5.
 
 ## Constraints
 
