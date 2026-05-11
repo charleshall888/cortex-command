@@ -3,14 +3,19 @@ schema_version: "1"
 uuid: cc130eb5-8439-4012-a52e-1b7c39ee08e8
 title: "Extract conditional content blocks to references/ (a-b-downgrade-rubric + implement-daytime — trimmed scope)"
 type: chore
-status: backlog
+status: complete
 priority: medium
 parent: 172
 blocked-by: []
 tags: [lifecycle, refine, critical-review, conditional-extraction, hot-path-context, vertical-planning]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-05-11
 discovery_source: research/vertical-planning/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/extract-conditional-content-blocks-to-references-a-b-downgrade-rubric-implement-daytime-trimmed-scope/spec.md
+areas: [skills]
+session_id: null
 ---
 
 # Extract conditional content blocks to references/ (trimmed scope)

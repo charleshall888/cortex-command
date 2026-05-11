@@ -107,7 +107,7 @@ Implement the 7 MUST-have requirements in `spec.md` as five tasks: one in-place 
   - **Reason**: a reader pattern-matching from the original Trigger 1 test will otherwise infer the new tests should also be single-invocation, contradicting the explicit Edge Case §74 rationale in spec.md.
   - **Suggested addition** (non-normative wording): "Companion tests `test_synthesizer_trigger_{2_restates,3_adjacent_no_straddle,3_adjacent_with_straddle,4_vague}` follow the same prompt-assembly path but use an inline 2-of-3 retry loop (with `_apply_pass_criterion(results, '2-of-3')`) because their assertions anchor on rationale-prose words with higher decoding variance than this Trigger-1 binary-field check."
 - **Verification**: Run `git diff tests/test_critical_review_classifier.py | grep -c '2-of-3 retry loop'` — pass if value ≥ 1 (confirms the added paragraph references the sibling pattern). Also run `pytest --run-slow tests/test_critical_review_classifier.py::test_synthesizer_rubric_deterministic` — pass if exit 0 (behavior unchanged).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Verification Strategy
 
