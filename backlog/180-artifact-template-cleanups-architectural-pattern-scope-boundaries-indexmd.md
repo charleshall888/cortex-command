@@ -3,14 +3,20 @@ schema_version: "1"
 uuid: a5e3d90f-7e20-49ab-8be8-c9fd6bbe45b6
 title: "Artifact template cleanups (Architectural Pattern optional, index.md body-trim + frontmatter preserved, D4 Open Decisions optional)"
 type: chore
-status: backlog
+status: in_progress
 priority: medium
 parent: 172
-blocked-by: []
+blocked-by: [183]
 tags: [lifecycle, plan-template, spec-template, indexmd, artifact-densification, vertical-planning]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-05-11
 discovery_source: research/vertical-planning/research.md
+complexity: complex
+criticality: high
+spec: lifecycle/artifact-template-cleanups-architectural-pattern-optional-indexmd-body-trim-frontmatter-preserved-d4-open-decisions-optional/spec.md
+areas: [skills]
+session_id: 75698f1c-de4d-4dea-b1a9-9c47913fe006
+lifecycle_phase: implement
 ---
 
 # Artifact template cleanups (Architectural Pattern critical-only + Scope Boundaries deletion + index.md frontmatter-only)
