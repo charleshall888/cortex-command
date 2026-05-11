@@ -185,7 +185,7 @@ After the prose findings above, emit a JSON envelope so the orchestrator can ext
 
 #### Failure Handling
 
-**(a) Partial failure** — some agents succeed, some fail: Collect all successful results. Unconditionally note "N of M reviewer angles completed" at the top of the synthesis output (Step 2d). Proceed to Step 2d with the successful findings only.
+**(a) Partial failure** — some agents succeed, some fail: Collect all successful results. Unconditionally note "N of M reviewer angles completed (K excluded for drift/Read failure)" at the top of the synthesis output (Step 2d), where K is the count of reviewers excluded by Step 2c.5's sentinel-first gate (drift or Read-failure exclusions recorded via `record-exclusion`). When K = 0 the parenthetical is OMITTED entirely — emit only "N of M reviewer angles completed" to preserve existing behavior for clean runs. Proceed to Step 2d with the successful findings only.
 
 **(b) Total failure** — all agents fail: Fall back to a single-agent approach. Dispatch one general-purpose agent with this fallback prompt verbatim:
 
@@ -381,7 +381,7 @@ Do not be balanced. Do not reassure. Find the through-lines and make the stronge
 
 #### Partial Coverage
 
-If partial coverage occurred in Step 2c (some agents succeeded, some failed), unconditionally prefix the synthesis output with "N of M reviewer angles completed." before the synthesis narrative.
+If partial coverage occurred in Step 2c (some agents succeeded, some failed), unconditionally prefix the synthesis output with "N of M reviewer angles completed (K excluded for drift/Read failure)." before the synthesis narrative, where K is the count of reviewers excluded by Step 2c.5's sentinel-first gate (drift or Read-failure exclusions recorded via `record-exclusion`). When K = 0 the parenthetical is OMITTED entirely — emit only "N of M reviewer angles completed." to preserve existing behavior for clean runs.
 
 #### Synthesis Failure
 
