@@ -7,3 +7,27 @@
 {"ts": "2026-05-11T00:03:05Z", "event": "phase_transition", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "from": "specify", "to": "plan"}
 {"ts": "2026-05-11T00:05:00Z", "event": "orchestrator_review", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "phase": "plan", "verdict": "pass", "cycle": 1, "issues": [], "note": "post-critical-review revision: task verifications now awk-scoped, ceremony collapsed to 3 atomic subprocess calls, follow-up triggers documented"}
 {"ts": "2026-05-11T00:06:00Z", "event": "phase_transition", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "from": "plan", "to": "implement"}
+{"ts": "2026-05-11T00:07:00Z", "event": "batch_dispatch", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "batch": 0, "tasks": [1, 2, 4, 9, 10]}
+{"ts": "2026-05-11T00:08:00Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 1, "batch": 0, "status": "success"}
+{"ts": "2026-05-11T00:08:01Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 2, "batch": 0, "status": "success"}
+{"ts": "2026-05-11T00:08:02Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 4, "batch": 0, "status": "success"}
+{"ts": "2026-05-11T00:08:03Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 9, "batch": 0, "status": "success"}
+{"ts": "2026-05-11T00:08:04Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 10, "batch": 0, "status": "success"}
+{"ts": "2026-05-11T00:08:10Z", "event": "batch_dispatch", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "batch": 1, "tasks": [3, 5]}
+{"ts": "2026-05-11T00:09:00Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 3, "batch": 1, "status": "success", "note": "commit 4b40df6"}
+{"ts": "2026-05-11T00:09:01Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 5, "batch": 1, "status": "success", "note": "edits absorbed into commit 4b40df6 due to parallel-session interference; substantive changes verified via awk-scoped greps"}
+{"ts": "2026-05-11T00:09:10Z", "event": "batch_dispatch", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "batch": 2, "tasks": [6, 11]}
+{"ts": "2026-05-11T00:10:00Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 6, "batch": 2, "status": "success", "note": "commit abd360a"}
+{"ts": "2026-05-11T00:10:01Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 11, "batch": 2, "status": "success", "note": "commit 04708ea"}
+{"ts": "2026-05-11T00:10:10Z", "event": "batch_dispatch", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "batch": 3, "tasks": [7]}
+{"ts": "2026-05-11T00:11:00Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 7, "batch": 3, "status": "success", "note": "commit 59ac4af"}
+{"ts": "2026-05-11T00:11:10Z", "event": "batch_dispatch", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "batch": 4, "tasks": [8]}
+{"ts": "2026-05-11T00:12:00Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 8, "batch": 4, "status": "success", "note": "commit bc88011"}
+{"ts": "2026-05-11T00:12:10Z", "event": "batch_dispatch", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "batch": 5, "tasks": [12]}
+{"ts": "2026-05-11T00:13:00Z", "event": "task_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "task": 12, "batch": 5, "status": "success", "note": "verification only; parity test 32/32 pass; fast-path test 9/9 pass after Req 10(d) literal fix commit 0e536c2"}
+{"ts": "2026-05-11T00:13:10Z", "event": "phase_transition", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-11T00:14:00Z", "event": "review_verdict", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-05-11T00:14:30Z", "event": "requirements_updated", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "file": "requirements/project.md", "section": "## Architectural Constraints", "content": "Added skill-helper modules pattern naming convention and module-event-registration rule"}
+{"ts": "2026-05-11T00:14:31Z", "event": "requirements_updated", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "file": "bin/.events-registry.md", "section": "registry table", "content": "Added sentinel_absence and synthesizer_drift rows pointing to critical_review.py emission sites"}
+{"ts": "2026-05-11T00:14:40Z", "event": "phase_transition", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "from": "review", "to": "complete"}
+{"ts": "2026-05-11T00:15:00Z", "event": "feature_complete", "feature": "reduce-sub-agent-dispatch-artifact-duplication", "tasks_total": 12, "rework_cycles": 0}

@@ -33,7 +33,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
 - **Verification**:
   - `python3 -m cortex_command.critical_review --help` — pass if exit 0 and stdout mentions `prepare-dispatch`, `verify-synth-output`, `record-exclusion`.
   - `python3 -m cortex_command.critical_review prepare-dispatch <a-known-valid-lifecycle-file>` — pass if exit 0 and stdout is single-line JSON with `resolved_path` and `sha256` keys.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 23a386b)
 
 ### Task 2: Add fast-path template-correctness unit test
 - **Files**:
@@ -47,7 +47,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
   - Group assertions by Requirement number in a docstring or comment header so future readers can map test failures to spec requirements.
   - This test runs BEFORE Tasks 4–10 land — it will initially fail. That is expected and load-bearing: it serves as the spec-encoded checklist driving the template edits.
 - **Verification**: `just test tests/test_dispatch_template_placeholders.py` — pass if exit 0 after Tasks 4–10 land. AND `grep -c '@pytest.mark.slow' tests/test_dispatch_template_placeholders.py` = 0 — pass if 0 (Req 10 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 0110a72)
 
 ### Task 3: Add path-validation test exercising module API AND CLI subprocess paths
 - **Files**:
@@ -62,7 +62,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
   - For (f)–(g): use `subprocess.run([sys.executable, '-m', 'cortex_command.critical_review', 'prepare-dispatch', ...], capture_output=True, text=True, cwd=tmp_path)` — exercises the actual entry path the SKILL.md orchestrator block uses, closing the "module-API-tested-but-not-CLI-path" gap.
   - Module under test: `cortex_command.critical_review`.
 - **Verification**: `just test tests/test_critical_review_path_validation.py` — pass if exit 0 (Req 9d acceptance, extended to CLI). AND `grep -c '@pytest.mark.slow' tests/test_critical_review_path_validation.py` = 0 — pass if 0. AND `grep -c 'subprocess.run\|subprocess.check_output' tests/test_critical_review_path_validation.py` — pass if ≥ 1 (CLI-layer coverage present).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 4b40df6)
 
 ### Task 4: Update critical-review reviewer + fallback prompts (path + SHA placeholders)
 - **Files**:
@@ -80,7 +80,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
   - `awk '/^### Step 2c:/,/^#### Step 2c.5/' skills/critical-review/SKILL.md | grep -c '{artifact_path}'` — pass if ≥ 2 (covering reviewer + fallback).
   - `awk '/^### Step 2c:/,/^#### Step 2c.5/' skills/critical-review/SKILL.md | grep -c '{artifact_sha256}'` — pass if ≥ 2.
   - `awk '/^### Step 2c:/,/^#### Step 2c.5/' skills/critical-review/SKILL.md | grep -c 'READ_OK: <path> <sha>'` — pass if ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit f9d0c81)
 
 ### Task 5: Update critical-review synthesizer prompt (path + SHA + SYNTH_READ_OK)
 - **Files**:
@@ -97,7 +97,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
   - `awk '/^### Step 2d:/,/^### Step 2e:/' skills/critical-review/SKILL.md | grep -c '{artifact content}'` — pass if 0 (Req 3 acceptance for synthesizer region; combined with Task 4's region check, file-wide absence is the conjunction).
   - `awk '/^### Step 2d:/,/^### Step 2e:/' skills/critical-review/SKILL.md | grep -c 'SYNTH_READ_OK'` — pass if ≥ 1 (Req 3 acceptance).
   - `awk '/^### Step 2d:/,/^### Step 2e:/' skills/critical-review/SKILL.md | grep -c 'Read.*{artifact_path}'` — pass if ≥ 1 (Read directive in synthesizer prompt).
-- **Status**: [ ] pending
+- **Status**: [x] complete (absorbed into commit 4b40df6 due to parallel-session interference)
 
 ### Task 6: Rewrite Step 2c.5 verification gate (sentinel-first, exclusion routing, warnings)
 - **Files**:
@@ -115,7 +115,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
   - `awk '/^#### Step 2c.5/,/^### Step 2d:/' skills/critical-review/SKILL.md | grep -c 'sentinel absent'` — pass if ≥ 1.
   - `awk '/^#### Step 2c.5/,/^### Step 2d:/' skills/critical-review/SKILL.md | grep -c 'Read failed'` — pass if ≥ 1.
   - `awk '/^#### Step 2c.5/,/^### Step 2d:/' skills/critical-review/SKILL.md | grep -c '⚠ Reviewer'` — pass if ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit abd360a)
 
 ### Task 7: Add orchestrator-side dispatch ceremony using atomic subcommands
 - **Files**:
@@ -139,7 +139,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
   - `grep -c 'python3 -m cortex_command.critical_review record-exclusion' skills/critical-review/SKILL.md` — pass if ≥ 1.
   - `awk '/^### Step 2d:/,/^### Step 2e:/' skills/critical-review/SKILL.md | grep -c 'Critical-review pass invalidated'` — pass if ≥ 1 (Req 4c diagnostic surfaced as fallback text in case verify-synth-output cannot run; primary path is helper-emitted).
   - `awk '/^### Step 2c:/,/^#### Step 2c.5/' skills/critical-review/SKILL.md | grep -c 'git rev-parse'` — pass if 0 (Req 8: `git rev-parse` MUST NOT appear inside reviewer/fallback prompt blocks). AND `awk '/^### Step 2d:/,/^### Step 2e:/' skills/critical-review/SKILL.md | grep -c 'git rev-parse'` — pass if 0 (Req 8: not inside synthesizer prompt either).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 59ac4af)
 
 ### Task 8: Extend partial-coverage banner with excluded-reviewer surface
 - **Files**:
@@ -152,7 +152,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
   - Phrase as instruction to the orchestrator (Claude), not a runtime substitution variable.
 - **Verification**:
   - `grep -c 'excluded for drift/Read failure' skills/critical-review/SKILL.md` — pass if ≥ 1 (Req 5 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit bc88011)
 
 ### Task 9: Replace inline `{full contents}` in lifecycle critical-tier plan dispatch
 - **Files**:
@@ -169,7 +169,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
   - `grep -c '{spec_path}' skills/lifecycle/references/plan.md` — pass if ≥ 1.
   - `grep -c '{research_path}' skills/lifecycle/references/plan.md` — pass if ≥ 1.
   - `awk '/Plan Agent Prompt Template/,/^```$/' skills/lifecycle/references/plan.md | grep -c 'READ_OK'` — pass if ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 9e30048)
 
 ### Task 10: Replace hedged inline phrasing in lifecycle review.md reviewer prompt
 - **Files**:
@@ -183,7 +183,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
 - **Verification**:
   - `grep -c 'contents of lifecycle/{feature}/spec.md, or a summary' skills/lifecycle/references/review.md` — pass if 0 (Req 7 acceptance).
   - `grep -c '{spec_path}' skills/lifecycle/references/review.md` — pass if ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 2b38a6b)
 
 ### Task 11: Update existing slow classifier test for new placeholders
 - **Files**:
@@ -198,7 +198,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
 - **Verification**:
   - `grep -c '{artifact content}' tests/test_critical_review_classifier.py` — pass if 0 (Req 11 acceptance).
   - `grep -c '{artifact_path}\|{artifact_sha256}' tests/test_critical_review_classifier.py` — pass if ≥ 2.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 04708ea)
 
 ### Task 12: Regenerate dual-source mirrors and verify parity
 - **Files**:
@@ -214,7 +214,7 @@ Replace inline `{artifact content}` / `{full contents of …}` injection at thre
   - The parity test (`tests/test_dual_source_reference_parity.py`) asserts byte-equality between canonical and mirror.
 - **Verification**:
   - `just test tests/test_dual_source_reference_parity.py` — pass if exit 0 (Req 13 acceptance).
-- **Status**: [ ] pending
+- **Status**: [x] complete (mirrors regenerated by sub-agents during their commits; parity test 32/32 passes)
 
 ## Verification Strategy
 

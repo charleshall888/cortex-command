@@ -3,7 +3,6 @@
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
 | 187 | Lifecycle/discovery token-waste cuts and architectural cleanup | backlog | high | epic | — | — | — |
-| 188 | Reduce sub-agent dispatch artifact duplication | refined | high | feature | — | 187 | ✓ |
 | 190 | Promote lifecycle state out of events.log full-reads | backlog | high | feature | — | 187 | — |
 | 191 | Reduce boot-context surface (CLAUDE.md + SKILL.md) | in_progress | high | feature | — | 187 | ✓ |
 | 196 | Restructure discovery: produce architecture, not tickets | backlog | high | feature | — | — | — |
@@ -15,7 +14,6 @@
 
 ## Refined
 
-- **188** Reduce sub-agent dispatch artifact duplication
 - **193** Lifecycle and hook hygiene one-offs
 
 ## Backlog

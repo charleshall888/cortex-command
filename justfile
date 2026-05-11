@@ -348,6 +348,10 @@ check-parity *args:
 check-events-registry:
     bin/cortex-check-events-registry --staged
 
+# Measure per-skill combined description: + when_to_use: UTF-8 byte size (L1 boot-context surface)
+measure-l1-surface:
+    bin/cortex-measure-l1-surface
+
 # Audit the events registry for stale deprecation rows or missing owners (R5 audit mode, off critical path)
 check-events-registry-audit:
     bin/cortex-check-events-registry --audit

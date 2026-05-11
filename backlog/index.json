@@ -29,38 +29,6 @@
     "repo": null
   },
   {
-    "id": 188,
-    "title": "Reduce sub-agent dispatch artifact duplication",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "dispatch",
-      "critical-review",
-      "plan",
-      "review",
-      "token-efficiency"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-11",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "187",
-    "research": null,
-    "spec": "lifecycle/reduce-sub-agent-dispatch-artifact-duplication/spec.md",
-    "discovery_source": "research/lifecycle-discovery-token-audit/research.md",
-    "plan": null,
-    "uuid": "a03420eb-7778-4136-b75b-dfe4a445badd",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 190,
     "title": "Promote lifecycle state out of events.log full-reads",
     "status": "backlog",
@@ -85,7 +53,7 @@
     "uuid": "72260d5f-c01b-4600-8b84-0b3b5f4f3a15",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
