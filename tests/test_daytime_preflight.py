@@ -322,10 +322,13 @@ def test_skill_contracts() -> None:
           --base-branch, --test-command absent from that line)
       (c) "plan.md" text appears before the first "daytime.pid" reference
           in §1a (guard ordering)
-      (d) `"mode": "daytime"` appears at least twice in §1a
-          (implementation_dispatch + dispatch_complete)
-      (e) §1a.vii invokes the daytime_result_reader helper and documents the
+      (d) `"mode": "daytime"` appears exactly once in §1a
+          (dispatch_complete only — implementation_dispatch emission was
+          removed as part of the Wave 1 dead-event cleanup in feature #189)
+      (e) §1a.vi invokes the daytime_result_reader helper and documents the
           full outcome enumeration (merged/deferred/paused/failed/unknown)
+          (step shifted from §vii to §vi after implementation_dispatch
+          emission was removed in feature #189 Wave 1 dead-event cleanup)
       (f) `python3 -m cortex_command.overnight.daytime_dispatch_writer` appears
           ≥ 2 times in §1a (init mode at Step 2, update-pid mode at Step 4) —
           pins the canonical-helper-pointer pattern so a future edit cannot
@@ -377,28 +380,33 @@ def test_skill_contracts() -> None:
         "daytime.pid reference in §1b"
     )
 
-    # (d) `"mode": "daytime"` appears at least twice
+    # (d) `"mode": "daytime"` appears exactly once (dispatch_complete only;
+    # implementation_dispatch emission was removed in feature #189 Wave 1
+    # dead-event cleanup)
     mode_count = section.count('"mode": "daytime"')
-    assert mode_count >= 2, (
-        f'§1b must include `"mode": "daytime"` at least twice '
-        f"(implementation_dispatch + dispatch_complete events); found {mode_count}"
+    assert mode_count == 1, (
+        f'§1b must include `"mode": "daytime"` exactly once '
+        f"(dispatch_complete event only); found {mode_count}"
     )
 
-    # (e) §1b.vii invokes the structured-result-file reader helper (the
+    # (e) §1b.vi invokes the structured-result-file reader helper (the
     # ticket-095 replacement for log-sentinel substring classification) and
-    # documents the full outcome enumeration. Narrow to the §vii region.
-    vii_start = section.find("**vii.")
-    assert vii_start != -1, "§1b must contain a §vii step marker"
-    vii_end_marker = section.find("**viii.", vii_start)
-    vii_section = section[vii_start:vii_end_marker] if vii_end_marker != -1 else section[vii_start:]
+    # documents the full outcome enumeration. Narrow to the §vi region.
+    # (Step numbering shifted from §vii to §vi after the implementation_dispatch
+    # emission step was removed as part of the Wave 1 dead-event cleanup in
+    # feature #189.)
+    vi_start = section.find("**vi.")
+    assert vi_start != -1, "§1b must contain a §vi step marker"
+    vi_end_marker = section.find("**vii.", vi_start)
+    vi_section = section[vi_start:vi_end_marker] if vi_end_marker != -1 else section[vi_start:]
 
     reader_invocation = "python3 -m cortex_command.overnight.daytime_result_reader"
-    assert reader_invocation in vii_section, (
-        f"§1a.vii must invoke the reader helper {reader_invocation!r}"
+    assert reader_invocation in vi_section, (
+        f"§1a.vi must invoke the reader helper {reader_invocation!r}"
     )
     for outcome in ("merged", "deferred", "paused", "failed", "unknown"):
-        assert outcome in vii_section, (
-            f'§1a.vii must document the {outcome!r} outcome branch'
+        assert outcome in vi_section, (
+            f'§1a.vi must document the {outcome!r} outcome branch'
         )
 
     # (f) daytime_dispatch_writer pointer appears ≥ 2 times in §1a (init at

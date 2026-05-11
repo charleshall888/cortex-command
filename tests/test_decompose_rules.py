@@ -188,27 +188,9 @@ def test_r3_flagged_item_in_identify_work_items(sections: dict[str, str]) -> Non
     )
 
 
-# ---- R7: Event names co-located with fire site in §2 ----
-
-def test_r7_decompose_flag_in_identify_work_items(sections: dict[str, str]) -> None:
-    body = _find_section(sections, "Identify Work Items")
-    assert "decompose_flag" in body, (
-        "R7: 'decompose_flag' event must appear in §2 Identify Work Items"
-    )
-
-
-def test_r7_decompose_ack_in_identify_work_items(sections: dict[str, str]) -> None:
-    body = _find_section(sections, "Identify Work Items")
-    assert "decompose_ack" in body, (
-        "R7: 'decompose_ack' event must appear in §2 Identify Work Items"
-    )
-
-
-def test_r7_decompose_drop_in_identify_work_items(sections: dict[str, str]) -> None:
-    body = _find_section(sections, "Identify Work Items")
-    assert "decompose_drop" in body, (
-        "R7: 'decompose_drop' event must appear in §2 Identify Work Items"
-    )
+# ---- R7: decompose_flag/decompose_ack/decompose_drop event placement tests
+# removed: emission instructions for those events were deleted as part of
+# the Wave 1 dead-event cleanup (feature #189). ----
 
 
 # ---- R5: Flag propagation through consolidation in §3 ----

@@ -61,17 +61,17 @@ Per-row KEEP/DROP decisions across the 12 corpus files for the U2 trim. Rule: a 
 
 (Note: line citations refreshed against post-trim implement.md. The four DROP entries originally at lines 296, 297, 298, and 300 cited Constraints-table rows whose content was removed in earlier unrelated trims (a21ae52, bd6988e); those entries are no longer applicable and have been deleted from this list. The two KEEP entries shifted from 299/301 to 282/283 after the Constraints table was compressed.)
 
-- [skills/lifecycle/references/implement.md:282] | KEEP | `batch model`, `checkpoint writes` (named contract)
-- [skills/lifecycle/references/implement.md:283] | KEEP | `/cortex-core:commit`, `Skill tool` (named tool/command contract)
+- [skills/lifecycle/references/implement.md] | KEEP | `batch model`, `checkpoint writes` (named contract) — line numbers stripped 2026-05-11 (citations went stale after Wave 1 dead-event cleanup, feature #189)
+- [skills/lifecycle/references/implement.md] | KEEP | `/cortex-core:commit`, `Skill tool` (named tool/command contract) — line numbers stripped 2026-05-11
 
 ## skills/lifecycle/references/review.md
 
-- [skills/lifecycle/references/review.md:214] | DROP | reality_text="Review each requirement against the spec individually. Gestalt impressions miss specific gaps."
-- [skills/lifecycle/references/review.md:215] | DROP | reality_text="The reviewer does not modify files. Flagging issues preserves separation of concerns and creates a paper trail."
-- [skills/lifecycle/references/review.md:214] | KEEP | `PARTIAL` (schema key — review status)
-- [skills/lifecycle/references/review.md:215] | KEEP | `verdict` field, `APPROVED`, `CHANGES_REQUESTED`, `REJECTED` (schema keys/values)
-- [skills/lifecycle/references/review.md:214] | KEEP | `§1`, `detected` (schema key for drift logging)
-- [skills/lifecycle/references/review.md:215] | KEEP | `verdict`, `APPROVED`, `requirements` docs
+- [skills/lifecycle/references/review.md] | DROP | reality_text="Review each requirement against the spec individually. Gestalt impressions miss specific gaps." — line numbers stripped 2026-05-11 (citations went stale after Wave 1 dead-event cleanup, feature #189)
+- [skills/lifecycle/references/review.md] | DROP | reality_text="The reviewer does not modify files. Flagging issues preserves separation of concerns and creates a paper trail." — line numbers stripped 2026-05-11
+- [skills/lifecycle/references/review.md] | KEEP | `PARTIAL` (schema key — review status) — line numbers stripped 2026-05-11
+- [skills/lifecycle/references/review.md] | KEEP | `verdict` field, `APPROVED`, `CHANGES_REQUESTED`, `REJECTED` (schema keys/values) — line numbers stripped 2026-05-11
+- [skills/lifecycle/references/review.md] | KEEP | `§1`, `detected` (schema key for drift logging) — line numbers stripped 2026-05-11
+- [skills/lifecycle/references/review.md] | KEEP | `verdict`, `APPROVED`, `requirements` docs — line numbers stripped 2026-05-11
 
 ## skills/lifecycle/references/orchestrator-review.md
 
@@ -89,13 +89,13 @@ Per-row KEEP/DROP decisions across the 12 corpus files for the U2 trim. Rule: a 
 
 ## skills/refine/references/clarify-critic.md
 
-- [skills/refine/references/clarify-critic.md:209] | DROP | reality_text="Always runs — the critic's job is to challenge whether those High ratings are deserved, not to rubber-stamp them."
-- [skills/refine/references/clarify-critic.md:210] | KEEP | `disposition framework`
-- [skills/refine/references/clarify-critic.md:211] | KEEP | `§4` Q&A
-- [skills/refine/references/clarify-critic.md:212] | KEEP | `bin/cortex-load-parent-epic`, `## Parent Epic Alignment`, `<parent_epic_body>` markers
-- [skills/refine/references/clarify-critic.md:213] | KEEP | `clarify_critic` event (schema key)
-- [skills/refine/references/clarify-critic.md:214] | KEEP | `applied_fixes` (schema key)
-- [skills/refine/references/clarify-critic.md:214] | KEEP | `dismissals` array, `events.log`, `§4`
+- [skills/refine/references/clarify-critic.md] | DROP | reality_text="Always runs — the critic's job is to challenge whether those High ratings are deserved, not to rubber-stamp them." — line numbers stripped 2026-05-11 (citations went stale after clarify_critic schema v2→v3 bump, feature #189)
+- [skills/refine/references/clarify-critic.md] | KEEP | `disposition framework` — line numbers stripped 2026-05-11
+- [skills/refine/references/clarify-critic.md] | KEEP | `§4` Q&A — line numbers stripped 2026-05-11
+- [skills/refine/references/clarify-critic.md] | KEEP | `bin/cortex-load-parent-epic`, `## Parent Epic Alignment`, `<parent_epic_body>` markers — line numbers stripped 2026-05-11
+- [skills/refine/references/clarify-critic.md] | KEEP | `clarify_critic` event (schema key) — line numbers stripped 2026-05-11
+- [skills/refine/references/clarify-critic.md] | KEEP | `applied_fixes` (schema key) — line numbers stripped 2026-05-11
+- [skills/refine/references/clarify-critic.md] | KEEP | `dismissals` array, `events.log`, `§4` — line numbers stripped 2026-05-11
 
 ## Summary
 
