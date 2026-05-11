@@ -21,13 +21,7 @@ Read `lifecycle/{feature}/events.log` and find the most recent event that contai
 
 ### 0b. Load Requirements Context
 
-Check for a `requirements/` directory at the project root.
-
-- If `requirements/project.md` exists, read it for project-level context.
-- Scan `requirements/` for area-specific docs. If any area names appear relevant to this feature (based on the feature name and description), read those too.
-- Use requirements as context during exploration — they inform what patterns to look for, what constraints to respect, and how this feature fits into the broader project.
-
-If no requirements directory exists, skip this step.
+Apply the protocol in `requirements-load.md`. Use the loaded requirements as context during exploration — they inform what patterns to look for, what constraints to respect, and how this feature fits into the broader project.
 
 ### 1. Codebase Exploration
 

@@ -30,11 +30,7 @@ Branch on the exit code:
 
 ### 2. Load Requirements Context
 
-Check for a `requirements/` directory at the project root.
-
-- If `requirements/project.md` exists, read it.
-- Scan `requirements/` for area docs whose names suggest relevance to this feature. Read any that apply.
-- If no requirements directory or files exist, note this and skip to §3.
+Apply the protocol in `requirements-load.md`. If no requirements files exist, skip to §3.
 
 ### 3. Confidence Assessment
 

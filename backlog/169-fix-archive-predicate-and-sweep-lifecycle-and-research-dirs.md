@@ -2,13 +2,13 @@
 schema_version: "1"
 uuid: 924ee1c9-96a9-42a7-8060-9fbf68451681
 title: "Fix archive predicate and sweep lifecycle/ and research/ dirs"
-status: in_progress
+status: complete
 priority: medium
 type: feature
 tags: [repo-spring-cleaning, archive, lifecycle, research, justfile]
 areas: []
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-11
 parent: "165"
 blocks: []
 blocked-by: [166, 168]

@@ -3,13 +3,15 @@ schema_version: "1"
 uuid: 536b2399-506c-40c8-90da-78abdb01ec8c
 title: "Merge clarify and research lifecycle phases into single investigate phase"
 type: feature
-status: backlog
+status: complete
 priority: medium
 blocked-by: []
 tags: [lifecycle, phase-shape, refine, token-efficiency, six-phase]
 created: 2026-05-06
-updated: 2026-05-06
+updated: 2026-05-11
 discovery_source: research/epic-172-audit/research.md
+complexity: complex
+criticality: high
 ---
 
 # Merge clarify and research lifecycle phases into single investigate phase
@@ -106,3 +108,18 @@ Discovery has its own clarify and research phases (per `skills/discovery/SKILL.m
 - Refine skill produces an `investigate→spec` transition event (not `research→specify`)
 - `pytest` passes after migration
 - Pre-commit dual-source drift hook passes after `just build-plugin`
+
+## Disposition (2026-05-11): Considered, not implementing
+
+Closed after full refine cycle (clarify → research → spec → critical-review). Decision: keep Clarify and Research as separate phases.
+
+**Rationale**:
+- **Structural gate enforcement is load-bearing**: two-file delegation forces the agent through clarify.md before research.md can be read. Merging makes the question gate prose-only — Anthropic's chain-prompts doc explicitly recommends chaining over single-prompt collapse for sequential reliability ("when a single prompt handles everything, Claude can drop steps").
+- **Value driver was overstated**: realistic token savings is ~100–150 tokens per refine chain, not the ~700–900 initially implied. Clarity-of-flow gain doesn't outweigh loss of structural gate enforcement.
+- **Cited retros argued for preserving Clarify, not collapsing it**: `lifecycle-140-spec.md:5–9` and `lifecycle-129.md:13` are confidence-calibration failures (gate fired but calibration was bad). The fix is stronger calibration, not phase merger.
+- **Distinct failure surfaces**: per discovery research, Clarify retros are "intent built on wrong premise" while Research retros are "agent didn't read the file" — separate phases keep failure modes independently auditable.
+- **Skill family symmetry**: discovery uses Clarify+Research+Decompose; keeping lifecycle/refine on the same vocabulary aligns the family.
+
+**Audit trail**: full investigation preserved in `lifecycle/merge-clarify-and-research-lifecycle-phases-into-single-investigate-phase/` (research.md, spec.md, critical-review-residue.json, events.log) for future re-evaluation if Anthropic ships an officially-supported gate-enforcement mechanism or the empirical evidence on prose-only ordering shifts.
+
+**Follow-up ticket candidate**: if the ~75-100 token duplication in the `requirements/` load is genuinely irritating, file a small ticket for Alternative D — extract `skills/lifecycle/references/requirements-load.md` and reference it from both clarify.md and research.md. No phase merge needed.

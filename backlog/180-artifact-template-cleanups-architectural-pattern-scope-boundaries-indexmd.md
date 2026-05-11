@@ -6,7 +6,7 @@ type: chore
 status: complete
 priority: medium
 parent: 172
-blocked-by: [183]
+blocked-by: []
 tags: [lifecycle, plan-template, spec-template, indexmd, artifact-densification, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-11

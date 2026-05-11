@@ -2,13 +2,13 @@
 schema_version: "1"
 uuid: 5307b13a-e41e-47b0-ac6c-06417fa26a18
 title: "Repo spring cleaning: share-readiness for installer audience"
-status: backlog
+status: complete
 priority: high
 type: epic
 tags: [repo-spring-cleaning, share-readiness, documentation, cleanup]
 areas: [docs]
 created: 2026-05-05
-updated: 2026-05-05
+updated: 2026-05-11
 blocks: []
 blocked-by: []
 discovery_source: research/repo-spring-cleaning/research.md

@@ -30,39 +30,9 @@
     "repo": null
   },
   {
-    "id": 184,
-    "title": "Merge clarify and research lifecycle phases into single investigate phase",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "lifecycle",
-      "phase-shape",
-      "refine",
-      "token-efficiency",
-      "six-phase"
-    ],
-    "areas": [],
-    "created": "2026-05-06",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/epic-172-audit/research.md",
-    "plan": null,
-    "uuid": "536b2399-506c-40c8-90da-78abdb01ec8c",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 185,
     "title": "Audit /cortex-core:research skill output shape for token waste in research.md sections",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -71,20 +41,23 @@
       "artifact-densification",
       "sub-agent-output-shape"
     ],
-    "areas": [],
+    "areas": [
+      "lifecycle",
+      "skills"
+    ],
     "created": "2026-05-06",
     "updated": "2026-05-11",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/spec.md",
     "discovery_source": "research/epic-172-audit/research.md",
     "plan": null,
     "uuid": "e6002f93-1c9a-4ff6-a7d8-125279879d2a",
     "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
+    "session_id": "c9fa97be-0fd2-4aba-aa3c-d47cdca97027",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
