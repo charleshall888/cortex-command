@@ -1,0 +1,566 @@
+#!/usr/bin/env python3
+"""Events-registry static gate.
+
+Validates that every emitted ``event_name`` literal appearing in skill-prompt
+sources is declared in ``bin/.events-registry.md`` with a documented consumer.
+Modeled on ``bin/cortex-check-parity`` (R5 of the events.log discipline spec).
+
+Three modes:
+
+- ``--staged`` (pre-commit critical path): scan staged files matching
+  ``skills/**/*.md`` and ``cortex_command/overnight/prompts/*.md``. Fail if any
+  staged emission references an event_name not in the registry.
+- ``--audit`` (off critical path): scan the registry itself. Fail if any row
+  with ``category=deprecated-pending-removal`` has a ``deprecation_date`` in
+  the past or a missing ``owner`` field.
+- ``--root <path>`` (test-only override): when set with ``--staged``, scan the
+  matching files under ``<path>`` as if all were staged (subprocess-test
+  fixture support). When set with ``--audit``, resolve the registry at
+  ``<path>/bin/.events-registry.md``.
+
+Fails closed on missing registry (``MISSING_REGISTRY`` error) — this overrides
+the ``cortex-check-parity`` precedent which fails open on missing allowlist.
+
+Stdlib-only. See lifecycle/clean-up-eventslog-emission-and-reader-discipline/spec.md
+R5 for the gate behavior and R6 for the (separate) pre-commit wiring.
+"""
+
+import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+
+import argparse
+import datetime
+import os
+import re
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+# R5 scan surface — narrower than cortex-check-parity. Only skill prompts and
+# the orchestrator-round-style prompt corpus are gate-enforced. Python emission
+# sites are governed by review and write-time EVENT_TYPES enforcement.
+SCAN_GLOBS: tuple[str, ...] = (
+    "skills/**/*.md",
+    "cortex_command/overnight/prompts/*.md",
+)
+
+# Registry file location. Chosen for direct precedent fit with
+# bin/.parity-exceptions.md.
+REGISTRY_PATH = "bin/.events-registry.md"
+
+# Documentation pointer surfaced in MISSING_REGISTRY error messages.
+REGISTRY_DOCS_PATH = "docs/internals/events-registry.md"
+
+# JSONL-emit instructions in skill prompts use the shape
+# ``"event": "<name>"``. Skill prompts embed these templates in fenced code
+# blocks; we scan the entire file body so prose mentions of canonical event
+# names also count as wired (the registry's job is to document the name —
+# narrative mentions of a registered name are not failures).
+EVENT_NAME_RE = re.compile(r'"event"\s*:\s*"([a-z_][a-z0-9_]*)"')
+
+# Schema constants — see spec R5.
+ALLOWED_CATEGORIES: frozenset[str] = frozenset(
+    {"live", "audit-affordance", "deprecated-pending-removal"}
+)
+ALLOWED_TARGETS: frozenset[str] = frozenset(
+    {"per-feature-events-log", "overnight-events-log"}
+)
+ALLOWED_SCAN_COVERAGE: frozenset[str] = frozenset({"gate-enforced", "manual"})
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+# Column order in the canonical registry header row.
+REGISTRY_COLUMNS: tuple[str, ...] = (
+    "event_name",
+    "target",
+    "scan_coverage",
+    "producers",
+    "consumers",
+    "category",
+    "added_date",
+    "deprecation_date",
+    "rationale",
+    "owner",
+)
+
+
+# ---------------------------------------------------------------------------
+# Data classes
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class RegistryRow:
+    event_name: str
+    target: str
+    scan_coverage: str
+    producers: str
+    consumers: str
+    category: str
+    added_date: str
+    deprecation_date: str
+    rationale: str
+    owner: str
+    line: int
+
+
+@dataclass(frozen=True)
+class GateError:
+    """A single human-readable diagnostic in positive-routing form."""
+
+    path: str
+    line: int
+    code: str
+    message: str
+
+    def format_text(self) -> str:
+        return f"{self.path}:{self.line}: {self.code} {self.message}"
+
+
+# ---------------------------------------------------------------------------
+# Registry parsing
+# ---------------------------------------------------------------------------
+
+
+def parse_registry(
+    text: str, *, source_path: str = REGISTRY_PATH
+) -> tuple[list[RegistryRow], list[GateError]]:
+    """Parse the registry markdown table.
+
+    Returns (rows, schema_errors). schema_errors describe malformed rows.
+    Unknown extra columns are tolerated; missing required columns produce
+    errors.
+    """
+    rows: list[RegistryRow] = []
+    errors: list[GateError] = []
+
+    saw_header = False
+    saw_separator = False
+    header_indices: dict[str, int] = {}
+    for idx, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            saw_header = False
+            saw_separator = False
+            header_indices = {}
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if not saw_header:
+            lower_cells = [c.lower().strip("`").strip() for c in cells]
+            if "event_name" in lower_cells:
+                header_indices = {name: i for i, name in enumerate(lower_cells)}
+                saw_header = True
+            continue
+        if not saw_separator:
+            if all(set(c) <= set("-: ") and "-" in c for c in cells):
+                saw_separator = True
+                continue
+            saw_header = False
+            header_indices = {}
+            continue
+
+        def cell(name: str) -> str:
+            i = header_indices.get(name)
+            if i is None or i >= len(cells):
+                return ""
+            return cells[i].strip().strip("`").strip()
+
+        event_name = cell("event_name")
+        if not event_name:
+            errors.append(
+                GateError(
+                    source_path,
+                    idx,
+                    "INVALID_ROW",
+                    "registry row is missing event_name; add a non-empty event_name to enable the gate to recognize this row",
+                )
+            )
+            continue
+
+        row = RegistryRow(
+            event_name=event_name,
+            target=cell("target"),
+            scan_coverage=cell("scan_coverage"),
+            producers=cell("producers"),
+            consumers=cell("consumers"),
+            category=cell("category"),
+            added_date=cell("added_date"),
+            deprecation_date=cell("deprecation_date"),
+            rationale=cell("rationale"),
+            owner=cell("owner"),
+            line=idx,
+        )
+
+        # Schema validation: required-always fields.
+        if row.target and row.target not in ALLOWED_TARGETS:
+            errors.append(
+                GateError(
+                    source_path,
+                    idx,
+                    "INVALID_ROW",
+                    f"row {event_name!r} has target {row.target!r}; set target to one of {sorted(ALLOWED_TARGETS)}",
+                )
+            )
+        if row.scan_coverage and row.scan_coverage not in ALLOWED_SCAN_COVERAGE:
+            errors.append(
+                GateError(
+                    source_path,
+                    idx,
+                    "INVALID_ROW",
+                    f"row {event_name!r} has scan_coverage {row.scan_coverage!r}; set scan_coverage to one of {sorted(ALLOWED_SCAN_COVERAGE)}",
+                )
+            )
+        if not row.consumers:
+            errors.append(
+                GateError(
+                    source_path,
+                    idx,
+                    "INVALID_ROW",
+                    f"row {event_name!r} has empty consumers; add a consumer pointer (path:line, tests-only, or human-skim for audit-affordance rows)",
+                )
+            )
+        if row.category and row.category not in ALLOWED_CATEGORIES:
+            errors.append(
+                GateError(
+                    source_path,
+                    idx,
+                    "INVALID_ROW",
+                    f"row {event_name!r} has category {row.category!r}; set category to one of {sorted(ALLOWED_CATEGORIES)}",
+                )
+            )
+        if row.added_date and not DATE_RE.match(row.added_date):
+            errors.append(
+                GateError(
+                    source_path,
+                    idx,
+                    "INVALID_ROW",
+                    f"row {event_name!r} has added_date {row.added_date!r}; use YYYY-MM-DD",
+                )
+            )
+
+        # Conditional schema: rationale required when category != live.
+        if row.category and row.category != "live":
+            if len(row.rationale) < 30:
+                errors.append(
+                    GateError(
+                        source_path,
+                        idx,
+                        "INVALID_ROW",
+                        f"row {event_name!r} has category={row.category!r}; add a rationale of at least 30 chars (got {len(row.rationale)})",
+                    )
+                )
+
+        # Conditional schema: deprecation_date required when category == deprecated-pending-removal.
+        if row.category == "deprecated-pending-removal":
+            if not row.deprecation_date:
+                errors.append(
+                    GateError(
+                        source_path,
+                        idx,
+                        "INVALID_ROW",
+                        f"row {event_name!r} is deprecated-pending-removal; add a deprecation_date (YYYY-MM-DD)",
+                    )
+                )
+            elif not DATE_RE.match(row.deprecation_date):
+                errors.append(
+                    GateError(
+                        source_path,
+                        idx,
+                        "INVALID_ROW",
+                        f"row {event_name!r} has deprecation_date {row.deprecation_date!r}; use YYYY-MM-DD",
+                    )
+                )
+
+        rows.append(row)
+
+    return rows, errors
+
+
+def load_registry(
+    root: Path,
+) -> tuple[list[RegistryRow], list[GateError], bool]:
+    """Load registry file. Returns (rows, schema_errors, file_present).
+
+    file_present=False means the registry is missing — caller decides how to
+    surface that (fail closed for this script).
+    """
+    p = root / REGISTRY_PATH
+    if not p.is_file():
+        return [], [], False
+    try:
+        text = p.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeError(f"cannot read {REGISTRY_PATH}: {exc}") from exc
+    rows, errors = parse_registry(text)
+    return rows, errors, True
+
+
+# ---------------------------------------------------------------------------
+# Emission extraction (gate-enforced scan surface)
+# ---------------------------------------------------------------------------
+
+
+def extract_emissions(text: str) -> list[tuple[int, str]]:
+    """Return [(line, event_name), ...] for every ``"event": "<name>"`` in text."""
+    out: list[tuple[int, str]] = []
+    for idx, line in enumerate(text.splitlines(), start=1):
+        for m in EVENT_NAME_RE.finditer(line):
+            out.append((idx, m.group(1)))
+    return out
+
+
+def _expand_glob(root: Path, glob: str) -> list[Path]:
+    if "*" in glob:
+        return sorted(p for p in root.glob(glob) if p.is_file())
+    p = root / glob
+    return [p] if p.is_file() else []
+
+
+def gather_scan_files(root: Path) -> list[Path]:
+    """Return the set of files matching any scan glob under ``root``."""
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for glob in SCAN_GLOBS:
+        for p in _expand_glob(root, glob):
+            rp = p.resolve()
+            if rp in seen:
+                continue
+            seen.add(rp)
+            out.append(p)
+    return sorted(out, key=lambda p: str(p))
+
+
+def _matches_scan_glob(rel_path: str) -> bool:
+    p = Path(rel_path)
+    for glob in SCAN_GLOBS:
+        if p.match(glob):
+            return True
+    return False
+
+
+def _staged_paths(root: Path) -> list[str]:
+    """Return paths in the staged index, filtered to scan globs."""
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+            cwd=str(root),
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+    return [ln for ln in out.stdout.splitlines() if ln and _matches_scan_glob(ln)]
+
+
+def _read_staged_blob(path: str, root: Path) -> str | None:
+    try:
+        out = subprocess.run(
+            ["git", "show", f":{path}"],
+            cwd=str(root),
+            capture_output=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    try:
+        return out.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Gate modes
+# ---------------------------------------------------------------------------
+
+
+def run_staged_gate(
+    root: Path, *, root_override_active: bool
+) -> list[GateError]:
+    """Pre-commit gate: scan staged (or root-override) in-scope files.
+
+    When ``root_override_active`` is True, scan all files matching scan globs
+    under ``root`` as if all were staged. Otherwise, scan ``git diff --cached``.
+    """
+    errors: list[GateError] = []
+
+    rows, schema_errors, present = load_registry(root)
+    if not present:
+        errors.append(
+            GateError(
+                REGISTRY_PATH,
+                0,
+                "MISSING_REGISTRY",
+                f"Create {REGISTRY_PATH} to enable the events-registry gate. "
+                f"See {REGISTRY_DOCS_PATH} for the schema.",
+            )
+        )
+        return errors
+
+    # Schema errors in the registry block any commit on the staged path —
+    # they're prerequisites for the gate's referential check.
+    errors.extend(schema_errors)
+
+    registered: set[str] = {r.event_name for r in rows}
+
+    # Collect (path, line, event_name) tuples to check.
+    occurrences: list[tuple[str, int, str]] = []
+    if root_override_active:
+        for p in gather_scan_files(root):
+            try:
+                text = p.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            rel = str(p.relative_to(root))
+            for line, name in extract_emissions(text):
+                occurrences.append((rel, line, name))
+    else:
+        for rel in _staged_paths(root):
+            text = _read_staged_blob(rel, root)
+            if text is None:
+                continue
+            for line, name in extract_emissions(text):
+                occurrences.append((rel, line, name))
+
+    for rel, line, name in occurrences:
+        if name in registered:
+            continue
+        errors.append(
+            GateError(
+                rel,
+                line,
+                "UNREGISTERED_EVENT",
+                f"emission references event_name {name!r}; add a row to "
+                f"{REGISTRY_PATH} declaring its target, consumers, and category, "
+                f"or remove the emission if it has no consumer.",
+            )
+        )
+
+    return errors
+
+
+def _parse_iso_date(value: str) -> datetime.date | None:
+    try:
+        return datetime.date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def run_audit_gate(root: Path) -> list[GateError]:
+    """Audit gate: scan registry for stale deprecation rows and missing owners."""
+    errors: list[GateError] = []
+
+    rows, schema_errors, present = load_registry(root)
+    if not present:
+        errors.append(
+            GateError(
+                REGISTRY_PATH,
+                0,
+                "MISSING_REGISTRY",
+                f"Create {REGISTRY_PATH} to enable the events-registry gate. "
+                f"See {REGISTRY_DOCS_PATH} for the schema.",
+            )
+        )
+        return errors
+
+    errors.extend(schema_errors)
+
+    today = datetime.date.today()
+    for row in rows:
+        if row.category != "deprecated-pending-removal":
+            continue
+        if not row.owner:
+            errors.append(
+                GateError(
+                    REGISTRY_PATH,
+                    row.line,
+                    "MISSING_OWNER",
+                    f"row {row.event_name!r} is deprecated-pending-removal but has no owner; "
+                    f"add an owner field naming who has authority to bump the deprecation_date.",
+                )
+            )
+        if row.deprecation_date:
+            parsed = _parse_iso_date(row.deprecation_date)
+            if parsed is not None and parsed < today:
+                errors.append(
+                    GateError(
+                        REGISTRY_PATH,
+                        row.line,
+                        "STALE_DEPRECATION",
+                        f"row {row.event_name!r} has deprecation_date {row.deprecation_date} "
+                        f"(past today={today.isoformat()}); coordinate with owner "
+                        f"{row.owner or '<unset>'} to complete the cleanup PR or bump the date "
+                        f"with rationale update.",
+                    )
+                )
+
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="cortex-check-events-registry",
+        description=(
+            "Static gate validating that emitted event_name literals in skill-prompt "
+            "sources are declared in bin/.events-registry.md."
+        ),
+    )
+    mode = p.add_mutually_exclusive_group(required=True)
+    mode.add_argument(
+        "--staged",
+        action="store_true",
+        help="Pre-commit critical path: scan staged in-scope files for unregistered emissions",
+    )
+    mode.add_argument(
+        "--audit",
+        action="store_true",
+        help="Off critical path: scan registry for stale deprecation rows and missing owners",
+    )
+    p.add_argument(
+        "--root",
+        type=str,
+        default=None,
+        help=(
+            "Testability override. When set with --staged, scan in-scope files "
+            "under <path> as if all were staged. When set with --audit, "
+            "resolve the registry at <path>/bin/.events-registry.md."
+        ),
+    )
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+
+    if args.root is not None:
+        root = Path(args.root).resolve()
+    else:
+        root = Path(os.getcwd()).resolve()
+
+    root_override_active = args.root is not None
+
+    try:
+        if args.staged:
+            errors = run_staged_gate(root, root_override_active=root_override_active)
+        else:
+            errors = run_audit_gate(root)
+    except RuntimeError as exc:
+        print(f"{REGISTRY_PATH}: REGISTRY_READ_ERROR {exc}", file=sys.stderr)
+        return 2
+
+    for err in errors:
+        print(err.format_text(), file=sys.stderr)
+
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

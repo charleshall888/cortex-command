@@ -344,6 +344,14 @@ validate-skill-preconditions skill:
 check-parity *args:
     python3 bin/cortex-check-parity {{args}}
 
+# Check skill-prompt emissions are declared in bin/.events-registry.md (R5 staged-mode gate)
+check-events-registry:
+    bin/cortex-check-events-registry --staged
+
+# Audit the events registry for stale deprecation rows or missing owners (R5 audit mode, off critical path)
+check-events-registry-audit:
+    bin/cortex-check-events-registry --audit
+
 # --- Testing ---
 
 # Run skill contract tests (validates SKILL.md frontmatter across all skills)
