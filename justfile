@@ -334,11 +334,11 @@ validate-commit msg="Test commit message":
 
 # Validate prompt contract frontmatter across all skills
 validate-skills:
-    python3 scripts/validate-skill.py skills/
+    ./scripts/validate-skill.py skills/
 
 # Validate preconditions for a specific skill
 validate-skill-preconditions skill:
-    python3 scripts/validate-preconditions.py {{skill}}
+    ./scripts/validate-preconditions.py {{skill}}
 
 # Check SKILL.md-to-bin parity (per DR-5 / lifecycle 102)
 check-parity *args:
@@ -350,8 +350,8 @@ check-parity *args:
 test-skill-contracts:
     #!/usr/bin/env bash
     set -euo pipefail
-    python3 scripts/validate-skill.py skills/
-    python3 scripts/validate-callgraph.py skills/ .claude/skills/
+    ./scripts/validate-skill.py skills/
+    ./scripts/validate-callgraph.py skills/ .claude/skills/
     uv run pytest tests/test_skill_contracts.py tests/test_skill_callgraph.py -q
 
 # Run commit hook regression tests

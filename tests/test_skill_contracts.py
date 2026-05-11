@@ -36,7 +36,7 @@ def test_skill_contract(fixture_dir: Path) -> None:
     name = fixture_dir.name
 
     result = subprocess.run(
-        [sys.executable, str(VALIDATOR), str(fixture_dir)],
+        [str(VALIDATOR), str(fixture_dir)],
         capture_output=True,
         text=True,
     )

@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["pyyaml"]
+# ///
 """Validate skill call-graph: no programmatic callee may carry disable-model-invocation: true.
 
 Scans one or more skill-root directories. For each SKILL.md or reference-file *.md

@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["pyyaml"]
+# ///
 """Evaluate a skill's precondition_checks and report pass/fail per check.
 
 Reads the named skill's SKILL.md directly (registry.json is not required).

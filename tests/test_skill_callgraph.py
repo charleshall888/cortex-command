@@ -52,7 +52,7 @@ def test_invocation_regex(module, line, expected):
 def test_real_tree_clean(tmp_path):
     """The live skills/ and .claude/skills/ trees must have no violations."""
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), "skills", ".claude/skills"],
+        [str(SCRIPT), "skills", ".claude/skills"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -76,7 +76,7 @@ def test_detects_disabled_callee(tmp_path):
     )
 
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), str(tmp_path)],
+        [str(SCRIPT), str(tmp_path)],
         capture_output=True,
         text=True,
     )
@@ -100,7 +100,7 @@ def test_ignores_suppression_comment(tmp_path):
     )
 
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), str(tmp_path)],
+        [str(SCRIPT), str(tmp_path)],
         capture_output=True,
         text=True,
     )

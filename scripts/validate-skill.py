@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["pyyaml"]
+# ///
 """Validate SKILL.md frontmatter against the prompt contract schema.
 
 Accepts a skill directory path (containing SKILL.md) or a parent directory
