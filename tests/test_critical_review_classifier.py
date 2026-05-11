@@ -463,3 +463,328 @@ def test_synthesizer_trigger_2_restates() -> None:
         f"Trigger 2 (restates) synthesizer-rubric validation failed under 2-of-3: "
         f"{summary}; per-attempt reasons: {[r for _, r in results]}"
     )
+
+
+# Shared envelope content for the Trigger 3 (adjacent) test pair (#179 Task 3).
+#
+# Per spec Req 4 isolation constraint, finding / evidence_quote /
+# fix_invalidation_argument are byte-identical between the no_straddle and
+# with_straddle fixtures; only `straddle_rationale` presence/value varies.
+# This isolates the Straddle Protocol exemption as the single load-bearing
+# variable across the pair.
+#
+# The shared `fix_invalidation_argument` describes a concrete effect one
+# layer up from the change — the order-confirmation webhook still emitting a
+# successful_charge event on raised timeout — specific enough to avoid
+# Trigger 4 (vague) but adjacent: it does not name a failure path on
+# `retries=0` itself, only a downstream dashboard-correctness gap.
+# Verified held-out from `skills/critical-review/SKILL.md` via
+# `grep -F 'order-confirmation webhook' skills/critical-review/SKILL.md`
+# (exit 1) and `grep -F 'webhooks.py:204' skills/critical-review/SKILL.md`
+# (exit 1), so the synthesizer cannot memorize-and-regurgitate from the
+# worked-example prose.
+_TRIGGER_3_SHARED_FINDING = (
+    "The plan assumes setting `retries=0` is sufficient to disable retry "
+    "behavior on timeout for the payment client."
+)
+_TRIGGER_3_SHARED_EVIDENCE_QUOTE = (
+    "Set `retries=0` in the payment client constructor in `client.py:88` "
+    "so that timed-out payment requests fail fast instead of being retried."
+)
+_TRIGGER_3_SHARED_FIX_INVAL_ARG = (
+    "the order-confirmation webhook in `webhooks.py:204` still emits a "
+    "successful_charge event when the payment client raises on timeout, "
+    "so downstream fulfilment dashboards will show charges that never "
+    "settled."
+)
+_TRIGGER_3_WITH_STRADDLE_RATIONALE = (
+    "splits between fix-invalidation (the webhook emitting a "
+    "successful_charge on a raised timeout collapses the documented "
+    "'fail fast' outcome from the caller's perspective) and an adjacent "
+    "webhook-event-correctness gap; biasing up because the downstream "
+    "contract under 'fail fast' explicitly assumes no successful_charge "
+    "event fires when the call raises."
+)
+
+
+def _build_trigger_3_envelope(with_straddle: bool) -> dict:
+    """Assemble the Trigger 3 reviewer envelope, optionally with straddle_rationale.
+
+    Shared envelope content is sourced from module-level constants so the only
+    load-bearing variable between the two fixtures is `straddle_rationale`
+    presence/value (spec Req 4).
+    """
+    finding = {
+        "class": "A",
+        "finding": _TRIGGER_3_SHARED_FINDING,
+        "evidence_quote": _TRIGGER_3_SHARED_EVIDENCE_QUOTE,
+        "fix_invalidation_argument": _TRIGGER_3_SHARED_FIX_INVAL_ARG,
+    }
+    if with_straddle:
+        finding["straddle_rationale"] = _TRIGGER_3_WITH_STRADDLE_RATIONALE
+    return {"angle": "fragile assumptions", "findings": [finding]}
+
+
+@pytest.mark.slow
+def test_synthesizer_trigger_3_adjacent_no_straddle() -> None:
+    """Trigger 3 (adjacent, no straddle) synthesizer-rubric test — 2-of-3 (#179 Task 3).
+
+    Bypasses reviewer dispatch entirely: extracts the Step 2d synthesizer prompt
+    template from SKILL.md, substitutes a stub artifact and a hand-crafted
+    reviewer-output JSON envelope (one A-class finding whose
+    `fix_invalidation_argument` describes an adjacent downstream gap, with NO
+    `straddle_rationale` field), then invokes `claude -p '<assembled prompt>'
+    --model opus` up to 3 times. The per-attempt evaluator passes iff (a) the
+    response contains an A→B reclassification note AND (b) the A→B rationale
+    prose contains a Trigger-3 anchor token (adjacent / adjacency /
+    no straddle_rationale / describes an adjacent), case-insensitive. Pair
+    partner: `test_synthesizer_trigger_3_adjacent_with_straddle` — both tests
+    share finding / evidence_quote / fix_invalidation_argument byte-for-byte;
+    the only load-bearing variable across the pair is `straddle_rationale`
+    presence/value (spec Req 4).
+
+    Calibration evidence (one-time, 2026-05-11, pre-commit):
+    ----------------------------------------------------------
+    Ran `claude -p --model opus` once with this exact assembled prompt
+    (stub artifact + the no-straddle fixture envelope below). Captured
+    response (excerpt):
+
+        No fix-invalidating objections after evidence re-examination. The
+        concerns below are adjacent gaps or framing notes — do not read as
+        verdict.
+
+        Synthesizer re-classified finding 1 from A→B:
+        fix_invalidation_argument describes an adjacent downstream gap
+        (webhook emitting `successful_charge` on timeout) rather than a
+        failure of the proposed change. The plan's stated outcome —
+        payment requests fail fast instead of retrying — is not
+        invalidated by the webhook behavior; `retries=0` still disables
+        retries. The misleading downstream signal is an adjacent B-class
+        concern, and no `straddle_rationale` is present to invoke the
+        exemption.
+
+    Verified properties:
+    (i) Per-trigger regex match: both the A→B-marker regex and the
+        Trigger-3 anchor regex (`adjacent | adjacency |
+        no straddle_rationale | describes an adjacent`, case-insensitive)
+        matched on the A→B rationale-line suffix. Property (i) holds.
+    (ii) Cross-trigger discrimination: per Task 2's lesson learned, the
+         rationale-token check is scoped to the post-`A→B:` suffix via
+         `re.search(r're-classified finding \\d+ from A→B:?\\s*(.+)',
+         stdout)`. The opening boilerplate "The concerns below are
+         adjacent gaps or framing notes" would otherwise match
+         "adjacent" outside the rationale; scoping prevents that. The
+         Trigger-2 token regex (`restate | circular | without\\s+a\\s+causal
+         | tautolog`) does NOT match the captured rationale line.
+         Property (ii) holds for the load-bearing positive assertion.
+
+    Disposition: calibration sound. Single live opus run produced a clean
+    Trigger-3 downgrade signal; no fixture iteration required.
+    ----------------------------------------------------------
+    """
+    template = _extract_synthesizer_template()
+
+    sentinel = "You are synthesizing findings from multiple independent adversarial reviewers"
+    assert sentinel in template, (
+        "synthesizer template extraction failed — anchor mismatch in SKILL.md"
+    )
+
+    reviewer_envelope = _build_trigger_3_envelope(with_straddle=False)
+    # Defensive: confirm the no-straddle fixture genuinely lacks the field.
+    assert "straddle_rationale" not in reviewer_envelope["findings"][0], (
+        "no_straddle fixture must not include straddle_rationale"
+    )
+    reviewer_json = json.dumps(reviewer_envelope, indent=2)
+
+    assembled = re.sub(
+        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+    )
+    assembled = re.sub(
+        r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
+    )
+
+    assert "{artifact content}" not in assembled, (
+        "regex substitution failed: {artifact content} placeholder still present"
+    )
+    assert "{all reviewer findings" not in assembled, (
+        "regex substitution failed: {all reviewer findings ...} placeholder still present"
+    )
+
+    # Inline 2-of-3 retry loop — sequential invocation, per-attempt evaluator.
+    # Not delegated to `_run_n_times`: that helper dispatches the full
+    # `/cortex-core:critical-review` slash command, not synthesizer-only.
+    results: list[tuple[bool, str]] = []
+    for attempt_idx in range(3):
+        proc = subprocess.run(
+            ["claude", "-p", assembled, "--model", "opus"],
+            capture_output=True, text=True, timeout=600,
+        )
+        if proc.returncode != 0:
+            results.append((False, f"attempt {attempt_idx}: exit {proc.returncode}; stderr: {proc.stderr[:300]}"))
+            continue
+        stdout = proc.stdout
+        ab_match = re.search(r're-classified finding \d+ from A→B', stdout)
+        if not ab_match:
+            results.append((False, f"attempt {attempt_idx}: no A→B reclassification note; stdout head: {stdout[:400]!r}"))
+            continue
+        # Scope the anchor-token check to the rationale-line suffix so
+        # template boilerplate ("The concerns below are adjacent gaps...")
+        # cannot false-pass for "adjacent". This mirrors Task 2's scoping.
+        rationale_line_match = re.search(
+            r're-classified finding \d+ from A→B:?\s*(.+)', stdout
+        )
+        rationale = rationale_line_match.group(1) if rationale_line_match else ""
+        trigger3_match = re.search(
+            r'(?i)adjacent|adjacency|no\s+straddle_rationale|describes\s+an?\s+adjacent',
+            rationale,
+        )
+        if not trigger3_match:
+            results.append((
+                False,
+                f"attempt {attempt_idx}: A→B note present but rationale prose does not match Trigger 3 anchors; "
+                f"rationale: {rationale[:300]!r}",
+            ))
+            continue
+        results.append((True, f"attempt {attempt_idx}: pass (rationale: {rationale[:120]!r})"))
+
+    overall, summary = _apply_pass_criterion(results, "2-of-3")
+    assert overall, (
+        f"Trigger 3 (adjacent, no straddle) synthesizer-rubric validation failed under 2-of-3: "
+        f"{summary}; per-attempt reasons: {[r for _, r in results]}"
+    )
+
+
+@pytest.mark.slow
+def test_synthesizer_trigger_3_adjacent_with_straddle() -> None:
+    """Trigger 3 (adjacent, with straddle) synthesizer-rubric test — 2-of-3 (#179 Task 3).
+
+    Pair partner of `test_synthesizer_trigger_3_adjacent_no_straddle`.
+    Identical envelope content except this fixture adds a populated
+    `straddle_rationale` field (bias-up rationale). Per the synthesizer
+    rubric (SKILL.md Step 2d, Trigger 3 Straddle exemption), the presence of
+    `straddle_rationale` MUST preempt Trigger 3 — the finding ratifies as A
+    and NO A→B reclassification fires.
+
+    Per-attempt evaluator: the load-bearing disposition signal is the
+    ABSENCE of an A→B reclassification marker (i.e., no downgrade fired
+    despite adjacency). Optionally, the synthesizer may also emit explicit
+    Straddle-exemption prose ("Straddle exemption preserves A-class",
+    "ratify as A", "trigger 3 does NOT fire") — when it does, that's
+    stronger evidence; when it doesn't, silent ratification (finding
+    surfaces under `## Objections` with no A→B note) is the disposition.
+    The negative assertion is therefore the primary pass criterion;
+    positive prose matching is captured for diagnostic visibility only.
+
+    Calibration evidence (one-time, 2026-05-11, pre-commit, two runs to
+    confirm prose-vs-silent ratification variance):
+    ----------------------------------------------------------
+    Ran `claude -p --model opus` twice with this exact assembled prompt
+    (stub artifact + the with-straddle fixture envelope below).
+
+    Run 1: silent ratification. Response opened directly with
+    `## Objections` and surfaced the finding as an A-class objection
+    (citing the webhook contract and the "fail fast" outcome
+    invalidation). NO `Synthesizer re-classified finding N from A→B`
+    marker present. NO explicit Straddle-exemption prose. Disposition:
+    correct ratification, silent. The positive ratification regex
+    (`straddle exemption | Straddle (Protocol )?(bias-up|exempt) |
+    trigger 3 does NOT fire | ratify as A`) did NOT match.
+
+    Run 2: explicit Straddle-exemption prose. Response surfaced the
+    finding under `## Objections` and appended
+    "(Straddle exemption preserves A-class: the downstream contract
+    collapses the documented fail-fast outcome, not merely an adjacent
+    dashboard concern.)" NO A→B marker present. The positive
+    ratification regex matched on "Straddle exemption".
+
+    Disposition implication: the positive prose regex would false-fail
+    on silent ratification (Run 1). Per the Task Context calibration
+    guidance for the with-straddle case ("If the calibration shows
+    ambiguity, add a complementary negative assertion: ... NO downgrade
+    fired — this is consistent with the with-straddle case ratifying as
+    A"), the test's load-bearing pass criterion is the ABSENCE of an
+    A→B reclassification marker. The positive prose regex is recorded
+    in the attempt's reason string for diagnostic value but is not
+    load-bearing.
+
+    Cross-trigger considerations: this test does not need rationale-line
+    scoping because no rationale line is expected to exist (ratification
+    means no `A→B:` marker fires). The positive ratification regex is
+    only checked across full stdout for diagnostic capture.
+
+    Disposition: calibration sound. Negative assertion is the disposition
+    signal; positive prose is diagnostic.
+    ----------------------------------------------------------
+    """
+    template = _extract_synthesizer_template()
+
+    sentinel = "You are synthesizing findings from multiple independent adversarial reviewers"
+    assert sentinel in template, (
+        "synthesizer template extraction failed — anchor mismatch in SKILL.md"
+    )
+
+    reviewer_envelope = _build_trigger_3_envelope(with_straddle=True)
+    # Defensive: confirm the with-straddle fixture genuinely has the field
+    # populated and that the shared envelope content matches the pair partner.
+    assert "straddle_rationale" in reviewer_envelope["findings"][0], (
+        "with_straddle fixture must include a populated straddle_rationale"
+    )
+    assert reviewer_envelope["findings"][0]["fix_invalidation_argument"] == (
+        _TRIGGER_3_SHARED_FIX_INVAL_ARG
+    ), "shared fix_invalidation_argument must be byte-identical across the pair"
+    reviewer_json = json.dumps(reviewer_envelope, indent=2)
+
+    assembled = re.sub(
+        r'\{artifact content\}', lambda _m: STUB_ARTIFACT, template, count=1
+    )
+    assembled = re.sub(
+        r'\{all reviewer findings[^}]*\}', lambda _m: reviewer_json, assembled, count=1
+    )
+
+    assert "{artifact content}" not in assembled, (
+        "regex substitution failed: {artifact content} placeholder still present"
+    )
+    assert "{all reviewer findings" not in assembled, (
+        "regex substitution failed: {all reviewer findings ...} placeholder still present"
+    )
+
+    results: list[tuple[bool, str]] = []
+    for attempt_idx in range(3):
+        proc = subprocess.run(
+            ["claude", "-p", assembled, "--model", "opus"],
+            capture_output=True, text=True, timeout=600,
+        )
+        if proc.returncode != 0:
+            results.append((False, f"attempt {attempt_idx}: exit {proc.returncode}; stderr: {proc.stderr[:300]}"))
+            continue
+        stdout = proc.stdout
+        # Load-bearing disposition signal: NO A→B reclassification marker
+        # (Straddle exemption preempts Trigger 3, so the finding ratifies
+        # as A and no downgrade fires).
+        ab_match = re.search(r're-classified finding \d+ from A→B', stdout)
+        if ab_match:
+            results.append((
+                False,
+                f"attempt {attempt_idx}: A→B reclassification fired despite straddle_rationale presence "
+                f"(rubric violation — Straddle exemption should preempt Trigger 3); marker: {ab_match.group(0)!r}; "
+                f"stdout head: {stdout[:400]!r}",
+            ))
+            continue
+        # Diagnostic capture only — positive prose may or may not appear
+        # depending on whether the synthesizer ratifies silently or
+        # explicitly notes the exemption. Not load-bearing.
+        prose_match = re.search(
+            r'(?i)straddle\s+exemption|Straddle\s+(?:Protocol\s+)?(?:bias-up|exempt)|trigger\s+3\s+does\s+NOT\s+fire|ratify\s+as\s+A',
+            stdout,
+        )
+        prose_note = (
+            f"explicit straddle prose: {prose_match.group(0)!r}"
+            if prose_match else "silent ratification (no A→B marker)"
+        )
+        results.append((True, f"attempt {attempt_idx}: pass ({prose_note})"))
+
+    overall, summary = _apply_pass_criterion(results, "2-of-3")
+    assert overall, (
+        f"Trigger 3 (adjacent, with straddle) synthesizer-rubric validation failed under 2-of-3: "
+        f"{summary}; per-attempt reasons: {[r for _, r in results]}"
+    )
