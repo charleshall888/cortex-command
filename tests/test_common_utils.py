@@ -26,29 +26,31 @@ class TestReadTier:
     """Tests for read_tier()."""
 
     def test_returns_tier_from_events_log(self, tmp_path: Path):
-        """Reads the tier field from a well-formed events.log."""
+        """Reads the tier field from a well-formed lifecycle_start event."""
         feature = "test-feature"
         feature_dir = tmp_path / feature
         feature_dir.mkdir()
         events_log = feature_dir / "events.log"
         events_log.write_text(
-            json.dumps({"event": "plan_parsed", "tier": "complex"}) + "\n",
+            json.dumps({"event": "lifecycle_start", "tier": "complex"}) + "\n",
             encoding="utf-8",
         )
 
         result = read_tier(feature, lifecycle_base=tmp_path)
         assert result == "complex"
 
-    def test_returns_last_tier_when_multiple(self, tmp_path: Path):
-        """When multiple lines have a tier field, returns the last one."""
+    def test_complexity_override_supersedes_lifecycle_start_tier(
+        self, tmp_path: Path
+    ):
+        """complexity_override.to supersedes the earlier lifecycle_start.tier."""
         feature = "test-feature"
         feature_dir = tmp_path / feature
         feature_dir.mkdir()
         events_log = feature_dir / "events.log"
         lines = [
-            json.dumps({"event": "plan_parsed", "tier": "simple"}),
+            json.dumps({"event": "lifecycle_start", "tier": "simple"}),
             json.dumps({"event": "something_else", "note": "no tier here"}),
-            json.dumps({"event": "complexity_override", "tier": "complex"}),
+            json.dumps({"event": "complexity_override", "to": "complex"}),
         ]
         events_log.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -73,15 +75,15 @@ class TestReadTier:
         result = read_tier(feature, lifecycle_base=tmp_path)
         assert result == "simple"
 
-    def test_complexity_override_event_updates_tier(self, tmp_path: Path):
-        """A complexity_override event with a tier field overrides earlier values."""
+    def test_complexity_override_to_field_updates_tier(self, tmp_path: Path):
+        """complexity_override with `to` field overrides the baseline tier."""
         feature = "test-feature"
         feature_dir = tmp_path / feature
         feature_dir.mkdir()
         events_log = feature_dir / "events.log"
         lines = [
-            json.dumps({"event": "plan_parsed", "tier": "simple"}),
-            json.dumps({"event": "complexity_override", "tier": "complex"}),
+            json.dumps({"event": "lifecycle_start", "tier": "simple"}),
+            json.dumps({"event": "complexity_override", "to": "complex"}),
         ]
         events_log.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -96,7 +98,7 @@ class TestReadTier:
         events_log = feature_dir / "events.log"
         lines = [
             "not valid json",
-            json.dumps({"event": "plan_parsed", "tier": "complex"}),
+            json.dumps({"event": "lifecycle_start", "tier": "complex"}),
             "{bad json too",
         ]
         events_log.write_text("\n".join(lines) + "\n", encoding="utf-8")

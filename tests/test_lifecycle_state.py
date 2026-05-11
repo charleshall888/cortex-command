@@ -28,7 +28,23 @@ from cortex_command.common import (
 REPO_ROOT = Path(__file__).parent.parent
 FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures" / "state"
 
-_fixture_dirs = [d for d in sorted(FIXTURES_DIR.iterdir()) if d.is_dir()]
+# Filter to phase-named directories only; tier_parity/ holds parity-test
+# fixtures (see tests/test_read_tier_parity.py), not phase-detection ones.
+_PHASE_NAMES = {
+    "research",
+    "specify",
+    "plan",
+    "implement",
+    "implement-rework",
+    "review",
+    "complete",
+    "escalated",
+}
+_fixture_dirs = [
+    d
+    for d in sorted(FIXTURES_DIR.iterdir())
+    if d.is_dir() and d.name in _PHASE_NAMES
+]
 
 
 @pytest.mark.parametrize("fixture_dir", _fixture_dirs, ids=[d.name for d in _fixture_dirs])
