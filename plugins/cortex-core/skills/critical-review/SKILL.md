@@ -207,13 +207,27 @@ Do not be balanced. Do not reassure. Find the problems.
 
 Output the fallback agent's result directly (no synthesis step). Prefix the output with this one-line note: "Note: parallel dispatch failed, falling back to single reviewer" before proceeding to Step 3.
 
-#### Step 2c.5: Envelope Extraction
+#### Step 2c.5: Sentinel-First Verification Gate
 
-After parallel reviewers (or the surviving subset) return, extract each reviewer's JSON envelope before Step 2d synthesis:
+After parallel reviewers (or the surviving subset) return, run a two-phase verification gate before Step 2d synthesis. Phase 1 verifies each reviewer's read-sentinel; Phase 2 extracts the JSON envelope only for reviewers that pass Phase 1.
+
+The orchestrator captures the pre-dispatch SHA-256 of the artifact into orchestrator context before fan-out (see the `verify-synth-output` subcommand for the canonical computation path used in Task 7). That captured SHA is the expected value compared against each reviewer's sentinel here.
+
+**Phase 1 — Sentinel verification (per reviewer):**
+
+1. Read the reviewer's first output line. Expected form: `READ_OK: <absolute-path> <sha256>` (success sentinel) or `READ_FAILED: <absolute-path> <reason>` (read-failure sentinel).
+2. Classify the reviewer's status using these routes:
+   - **Pass** — first line is `READ_OK: <path> <sha>` AND `<sha>` equals the orchestrator's pre-dispatch SHA. Proceed to Phase 2 for this reviewer.
+   - **Exclude (SHA drift)** — first line is `READ_OK: <path> <sha>` but `<sha>` differs from the orchestrator's pre-dispatch SHA. Emit warning with reason `SHA drift detected (expected <expected-sha>, got <reviewer-sha>)`.
+   - **Exclude (sentinel absent)** — first line is neither a `READ_OK:` nor a `READ_FAILED:` line. Emit warning with reason `sentinel absent`.
+   - **Exclude (read failure)** — first line is `READ_FAILED: <path> <reason>`. Emit warning with reason `Read failed: <reason>`.
+3. Excluded reviewers drop from ALL downstream tallies (A-class, B-class, C-class) AND from the untagged-prose pathway. Their output is not parsed for envelope JSON and not surfaced to the synthesizer as prose. Emit the standardized warning `⚠ Reviewer {angle} excluded: {reason}` to the orchestrator log, and include the same warning line in the synthesizer prompt preamble (Step 2d) so the synthesizer sees the partial reviewer set explicitly rather than silently working from a reduced count.
+
+**Phase 2 — Envelope extraction (only for reviewers that passed Phase 1):**
 
 1. Locate the `<!--findings-json-->` delimiter using the LAST occurrence anchor — `re.findall(r'^<!--findings-json-->\s*$', output, re.MULTILINE)`, then split at the last match (tolerates prose quoting the delimiter).
 2. `json.loads` the post-delimiter tail. Assert schema: top-level `angle: str`, `findings: list`; each finding has `class ∈ {"A","B","C"}`, `finding: str`, `evidence_quote: str`, optional `straddle_rationale: str`, optional `"fix_invalidation_argument": str`.
-3. On any extraction or validation failure (no delimiter, JSON decode error, missing required field, invalid `class` enum), emit `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason}) — class tags for this angle are UNAVAILABLE. Prose findings presented as-is; the B→A refusal gate will EXCLUDE this reviewer's findings from its count rather than treating them as C-class.` and pass the reviewer's prose findings to the synthesizer as an untagged block. Step 2d renders untagged prose under `## Concerns` and excludes it from the A-class tally. Do NOT silently coerce malformed envelopes to C-class.
+3. On any extraction or validation failure (no delimiter, JSON decode error, missing required field, invalid `class` enum), emit `⚠ Reviewer {angle} emitted malformed JSON envelope ({reason}) — class tags for this angle are UNAVAILABLE. Prose findings presented as-is; the B→A refusal gate will EXCLUDE this reviewer's findings from its count rather than treating them as C-class.` and pass the reviewer's prose findings to the synthesizer as an untagged block. Step 2d renders untagged prose under `## Concerns` and excludes it from the A-class tally. Do NOT silently coerce malformed envelopes to C-class. This malformed-envelope handler applies only AFTER Phase 1 sentinel verification has passed — a reviewer with a missing or drifted sentinel never reaches this path.
 
 ### Step 2d: Opus Synthesis
 
