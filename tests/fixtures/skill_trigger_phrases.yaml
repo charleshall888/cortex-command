@@ -17,6 +17,19 @@ skills:
       - "lifecycle research/specify/plan/implement/review/complete"
       - "start a feature lifecycle"
       - "structured phases"
+    # Path tokens distinct from phrase tokens. These tokens must appear as
+    # case-sensitive substrings of the concatenated `description:` +
+    # `when_to_use:` frontmatter of `skills/lifecycle/SKILL.md`. They are
+    # routing data (not user-facing trigger phrases) — the canonical-source
+    # path enumeration that tells Claude the lifecycle skill is required
+    # before editing those paths. Tracked separately so the phrase-vs-path
+    # distinction is observable when the cap is loosened.
+    must_contain_paths:
+      - "skills/"
+      - "hooks/"
+      - "claude/hooks/"
+      - "bin/cortex-"
+      - "cortex_command/common.py"
   refine:
     must_contain:
       - "refine backlog item"
