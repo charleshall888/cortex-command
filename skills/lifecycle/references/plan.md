@@ -27,12 +27,12 @@ Read `lifecycle/{feature}/events.log` and find the most recent event containing 
 
 When criticality is `critical`, dispatch 2-3 independent plan agents to produce competing plan variants. The orchestrator decides how many agents to dispatch (minimum 2, maximum 3) based on how many meaningfully distinct approaches it can identify from the spec and research.
 
-**a. Prepare shared context**: Read `lifecycle/{feature}/spec.md` and `lifecycle/{feature}/research.md` in the main context. These will be provided to each plan agent. Do NOT share one agent's draft with another — each agent must work independently.
+**a. Prepare shared context**: Resolve absolute paths for `lifecycle/{feature}/spec.md` and `lifecycle/{feature}/research.md` — absolutify `{spec_path}` and `{research_path}` via `git rev-parse --show-toplevel` joined with the lifecycle paths before injection into the prompt template. Each plan agent reads the files itself rather than receiving inline contents. Do NOT share one agent's draft with another — each agent must work independently.
 
-**b. Dispatch plan agents**: Launch each agent as a parallel Task tool sub-task. Use the plan agent prompt template below **verbatim** for each — substitute the variables but do not omit, reorder, or paraphrase any instructions. Each agent receives the same spec and research content but is instructed to design an independent approach. The dispatched agents emit plans in the §3 Write Plan Artifact format below; for critical tier only, they also populate the `**Architectural Pattern**` field in the Overview per the closed enum `{event-driven, pipeline, layered, shared-state, plug-in}`.
+**b. Dispatch plan agents**: Launch each agent as a parallel Task tool sub-task. Use the plan agent prompt template below **verbatim** for each — substitute the variables (including `{spec_path}` and `{research_path}` as absolute paths) but do not omit, reorder, or paraphrase any instructions. Each agent reads the same spec and research files but is instructed to design an independent approach. The dispatched agents emit plans in the §3 Write Plan Artifact format below; for critical tier only, they also populate the `**Architectural Pattern**` field in the Overview per the closed enum `{event-driven, pipeline, layered, shared-state, plug-in}`.
 **Model**: `sonnet` (competing plan agents always use sonnet)
 
-**Plan Agent Prompt Template:**
+**Plan Agent Prompt Template:** (each agent reads its inputs at the injected absolute paths and emits one `READ_OK: <path> <sha>` header per file before any plan content — see the Read directive inside the template)
 
 ```
 You are designing an implementation plan for the {feature} feature.
@@ -40,10 +40,14 @@ You are designing an implementation plan for the {feature} feature.
 ## Inputs
 
 ### Specification
-{full contents of lifecycle/{feature}/spec.md}
+Read the spec file at {spec_path}.
 
 ### Research
-{full contents of lifecycle/{feature}/research.md}
+Read the research file at {research_path}.
+
+## Read Both Inputs First
+
+Before any planning work, Read both input files at the absolute paths above. After reading each, emit one `READ_OK` header line per file with the file's git blob SHA — one line per file, in this exact form: `READ_OK: <path> <sha>`. Example for the spec file: `READ_OK: {spec_path} <sha>` — and similarly for `{research_path}`. Compute `<sha>` via `git hash-object <path>`. Emit both `READ_OK` lines at the top of your output before any plan content.
 
 ## Instructions
 
