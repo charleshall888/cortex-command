@@ -1,11 +1,10 @@
 # Discovery Bootstrap
 
-When `phase = research` (no lifecycle directory exists yet), check whether discovery already produced epic-level artifacts for this feature:
+When `phase = research` (no lifecycle directory exists yet), check whether discovery already produced epic-level artifacts for this feature. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` and parsed frontmatter.
 
 ```
-scan backlog/[0-9]*-*{feature}*.md for a matching file
-if match found:
-    read frontmatter of first match
+if Step 1 resolved a {backlog-file} (exit 0):
+    use the parsed frontmatter from Step 1
     if discovery_source field exists:
         epic_research_path = discovery_source field value
     elif research field exists:
@@ -20,6 +19,8 @@ if match found:
         else:
             log warning: "epic research file {epic_research_path} not found on disk — no epic context available"
             epic_research_path = unset
+else:
+    (Step 1 resolver returned exit 3 — no backlog match; no epic context)
 ```
 
 **Do not copy epic content into lifecycle files.** Epic research covers all tickets in the epic — copying it wholesale bleeds cross-ticket context into this ticket's research and spec. Record the paths as reference context only; `/cortex-core:refine` will produce ticket-specific research.md and spec.md that reference the epic artifacts without reproducing them.

@@ -4,11 +4,11 @@ Three closely related Step 2 sub-procedures: check whether the backlog item is a
 
 ## Backlog Status Check
 
-Before creating any artifacts or performing write-back, check whether the originating backlog item has already been marked complete outside the lifecycle:
+Before creating any artifacts or performing write-back, check whether the originating backlog item has already been marked complete outside the lifecycle. **Do not re-scan the backlog directory in this sub-procedure** — Step 1's `cortex-resolve-backlog-item` call already located the file and parsed its frontmatter; consume that result here.
 
-1. **Scan** for `backlog/[0-9]*-*{feature}*.md` — a matching backlog file for this feature.
-2. **If no match is found**, or the matched file's YAML frontmatter `status` field is not `complete`: skip this section silently and fall through to "Create index.md" and subsequent sections as normal.
-3. **If a match is found and `status: complete`**: present a prompt using `AskUserQuestion` with two options:
+1. **Use** the `{backlog-file}` resolved by Step 1 (or the resolver's no-match signal, exit code 3).
+2. **If no match was found** (resolver exit 3), or the parsed `status` field is not `complete`: skip this section silently and fall through to "Create index.md" and subsequent sections as normal.
+3. **If a match was found and the parsed `status` is `complete`**: present a prompt using `AskUserQuestion` with two options:
    - **"Close lifecycle"**
    - **"Continue from current phase"**
 
@@ -36,11 +36,11 @@ Before creating any artifacts or performing write-back, check whether the origin
 
 ## Create index.md (New Lifecycle Only)
 
-When `phase = none` (no prior `lifecycle/{slug}/` directory exists), create `lifecycle/{slug}/index.md` as follows:
+When `phase = none` (no prior `lifecycle/{slug}/` directory exists), create `lifecycle/{slug}/index.md` as follows. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` and parsed frontmatter.
 
 **Guard**: If `lifecycle/{slug}/index.md` already exists, skip this entire block — do not overwrite.
 
-Scan `backlog/[0-9]*-*{slug}*.md` for a matching backlog item. If a match is found, read its frontmatter to populate the fields below. If no match is found, set null fields.
+Use Step 1's resolver result: if a `{backlog-file}` was resolved (exit 0), use its parsed frontmatter (`uuid`, `tags`, plus the filename's numeric prefix and slug stem) to populate the fields below. If Step 1's resolver returned exit 3 (no match), set null fields.
 
 Write `lifecycle/{slug}/index.md` with all seven required frontmatter fields:
 
@@ -72,13 +72,9 @@ If no matching backlog item was found, omit the heading and body line entirely.
 
 ## Backlog Write-Back (Lifecycle Start)
 
-After registering the session, attempt to write the lifecycle start back to the originating backlog item. Scan for a matching backlog file:
+After registering the session, attempt to write the lifecycle start back to the originating backlog item. **Do not re-scan the backlog directory in this sub-procedure** — use Step 1's resolved `{backlog-file}` (when present).
 
-```
-scan backlog/[0-9]*-*{feature}*.md for a matching file
-```
-
-If a match is found, run:
+If Step 1 resolved a `{backlog-file}` (exit 0), run:
 
 ```bash
 cortex-update-item <path> status=in_progress session_id=$LIFECYCLE_SESSION_ID lifecycle_phase=research
@@ -94,4 +90,4 @@ cortex-update-item <path> lifecycle_slug={lifecycle-slug}
 
 This `lifecycle_slug` write-back runs only when `phase = none`. The status write-back runs on all phases when a match is found.
 
-If no backlog item is found, skip this step silently -- lifecycles can exist independently of the backlog.
+If Step 1's resolver returned exit 3 (no backlog match), skip this step silently — lifecycles can exist independently of the backlog.

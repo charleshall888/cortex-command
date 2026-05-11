@@ -46,6 +46,26 @@ Feature/phase from invocation: $ARGUMENTS. Parse: first word = feature name, sec
 
 Determine the feature name from the invocation. Use lowercase-kebab-case for directory naming. When linked to a backlog item, use the canonical `slugify()` from `cortex_command.common`.
 
+### Resolve the originating backlog file once
+
+When `$ARGUMENTS` is non-empty, invoke `bin/cortex-resolve-backlog-item` once to find the matching backlog file. This single call replaces the previous pattern of independently re-scanning `backlog/[0-9]*-*{feature}*.md` in each of the four Step 2 sub-procedures (Backlog Status Check, Create index.md, Backlog Write-Back, Discovery Bootstrap). The four sub-procedures consume Step 1's resolver output — they do not re-scan the backlog directory.
+
+```bash
+bin/cortex-resolve-backlog-item {feature}
+```
+
+Route on the resolver's exit code:
+
+- **exit code 0** — Unambiguous match. The resolver prints the resolved backlog filename on stdout (e.g. `backlog/193-lifecycle-and-hook-hygiene-one-offs.md`). Record this as the `{backlog-file}` Step 2 sub-procedures will consume. Also perform a single read of the file's YAML frontmatter at Step 1 entry and hold the parsed fields (`uuid`, `status`, `tags`, `discovery_source`, `research`, `spec`) in conversation memory for the four sub-procedures.
+- **exit code 2** — Ambiguous match. The resolver prints candidate filenames on stderr. Present the candidates via `AskUserQuestion` and halt for user selection. Once selected, treat the chosen filename as the `{backlog-file}`.
+- **exit code 3** — No match. The named feature has no backlog file. Step 2 sub-procedures each handle the no-backlog-file path independently (Backlog Status Check skips silently; Create index.md proceeds with null fields; Backlog Write-Back silent-skips; Discovery Bootstrap records no epic context).
+- **exit code 64** — Usage error. Halt with the resolver's diagnostic; this indicates an invocation bug, not a feature-naming issue.
+- **exit code 70** — Software/IO error. Halt with the resolver's diagnostic.
+
+When `$ARGUMENTS` is empty, skip the resolver entirely — the existing incomplete-lifecycle-dirs scan path applies (see Step 2's empty-arguments fallback).
+
+The single-resolve contract is prose discipline: Step 2's four sub-procedures (in `references/backlog-writeback.md` and `references/discovery-bootstrap.md`) reference Step 1's `{backlog-file}` and parsed frontmatter without re-scanning. If a long session causes the parsed frontmatter to drop from working memory, a single targeted re-Read of `{backlog-file}` is permitted at the phase boundary — but the four sub-procedures do not re-scan the backlog directory.
+
 ## Step 2: Check for Existing State
 
 Scan for `lifecycle/{feature}/` at the project root.
