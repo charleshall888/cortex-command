@@ -48,7 +48,7 @@ Direct-swap consolidation (research §A): `overnight/report.py:535` migrates to 
 - **Verification**:
   - `grep -c "^def _read_tier\b\|_read_tier(" cortex_command/overnight/report.py` = 0 — pass if count = 0 (R1, R2).
   - `grep "from cortex_command.common import" cortex_command/overnight/report.py` shows a single import line containing `read_tier` alongside `_resolve_user_project_root`, `atomic_write`, `slugify` — pass if exit 0 (R3).
-- **Status**: [ ] pending
+- **Status**: [x] complete (18ce622)
 
 ### Task 3: Migrate test_report.py callers to common.read_tier with lifecycle_base arg
 - **Files**:

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from cortex_command.overnight.report import ReportData, render_completed_features, render_executive_summary, render_failed_features
 from cortex_command.overnight.state import OvernightFeatureStatus, OvernightState
+from cortex_command.common import read_tier
 
 
 # ---------------------------------------------------------------------------
@@ -495,7 +496,7 @@ class TestTenFixtureVerificationRendering:
     # Fixture 1 -------------------------------------------------------------
     def test_fixture_1_complex_plan_with_acceptance(self, tmp_path, monkeypatch):
         """Complex plan with ``## Acceptance`` — renders the acceptance text."""
-        from cortex_command.overnight.report import _read_tier, _read_acceptance
+        from cortex_command.overnight.report import _read_acceptance
 
         feature = "f1-complex-with-acceptance"
         monkeypatch.chdir(tmp_path)
@@ -505,14 +506,14 @@ class TestTenFixtureVerificationRendering:
             [{"event": "lifecycle_start", "feature": feature, "tier": "complex"}],
         )
 
-        assert _read_tier(feature) == "complex"
+        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
         assert _read_acceptance(feature) == "acceptance-line-text-f1."
         assert _render_how_to_try(feature) == "acceptance-line-text-f1."
 
     # Fixture 2 -------------------------------------------------------------
     def test_fixture_2_simple_plan_with_outline_checkpoint(self, tmp_path, monkeypatch):
         """Simple plan with ``## Outline`` + last-phase Checkpoint — renders it."""
-        from cortex_command.overnight.report import _read_tier, _read_last_phase_checkpoint
+        from cortex_command.overnight.report import _read_last_phase_checkpoint
 
         feature = "f2-simple-with-checkpoint"
         monkeypatch.chdir(tmp_path)
@@ -522,21 +523,19 @@ class TestTenFixtureVerificationRendering:
             [{"event": "lifecycle_start", "feature": feature, "tier": "simple"}],
         )
 
-        assert _read_tier(feature) == "simple"
+        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "simple"
         assert _read_last_phase_checkpoint(feature) == "checkpoint-line-f2."
         assert _render_how_to_try(feature) == "checkpoint-line-f2."
 
     # Fixture 3 -------------------------------------------------------------
     def test_fixture_3_legacy_verification_strategy_only(self, tmp_path, monkeypatch):
         """Legacy plan with only ``## Verification Strategy`` — renders that section."""
-        from cortex_command.overnight.report import _read_tier
-
         feature = "f3-legacy-verification"
         monkeypatch.chdir(tmp_path)
         _write_plan(tmp_path, feature, _plan_legacy_verification("legacy-text-f3."))
         # No events.log -> defaults to simple tier.
 
-        assert _read_tier(feature) == "simple"
+        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "simple"
         assert _render_how_to_try(feature) == "legacy-text-f3."
 
     # Fixture 4 -------------------------------------------------------------
@@ -588,7 +587,6 @@ class TestTenFixtureVerificationRendering:
         from cortex_command.overnight.report import (
             _read_acceptance,
             _read_last_phase_checkpoint,
-            _read_tier,
         )
 
         feature = "f6-complex-no-acceptance"
@@ -599,7 +597,7 @@ class TestTenFixtureVerificationRendering:
             [{"event": "lifecycle_start", "feature": feature, "tier": "complex"}],
         )
 
-        assert _read_tier(feature) == "complex"
+        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
         assert _read_acceptance(feature) == ""
         assert _read_last_phase_checkpoint(feature) == "complex-fallback-f6."
         assert _render_how_to_try(feature) == "complex-fallback-f6."
@@ -632,7 +630,7 @@ class TestTenFixtureVerificationRendering:
     ):
         """Legacy plan with manually-authored ``## Acceptance`` — complex tier
         prefers Acceptance (intentional going-forward stance)."""
-        from cortex_command.overnight.report import _read_acceptance, _read_tier
+        from cortex_command.overnight.report import _read_acceptance
 
         feature = "f8-complex-prefers-acceptance"
         monkeypatch.chdir(tmp_path)
@@ -648,7 +646,7 @@ class TestTenFixtureVerificationRendering:
             [{"event": "lifecycle_start", "feature": feature, "tier": "complex"}],
         )
 
-        assert _read_tier(feature) == "complex"
+        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
         assert _read_acceptance(feature) == "manual-acceptance-f8."
         rendered = _render_how_to_try(feature)
         assert rendered == "manual-acceptance-f8."
@@ -660,8 +658,6 @@ class TestTenFixtureVerificationRendering:
     ):
         """``complexity_override`` event escalated to ``tier=complex`` mid-lifecycle;
         plan still only has ``## Outline`` / no ``## Acceptance`` — same as fixture 6."""
-        from cortex_command.overnight.report import _read_tier
-
         feature = "f9-override-to-complex"
         monkeypatch.chdir(tmp_path)
         _write_plan(tmp_path, feature, _plan_complex_no_acceptance("override-fallback-f9."))
@@ -674,7 +670,7 @@ class TestTenFixtureVerificationRendering:
             ],
         )
 
-        assert _read_tier(feature) == "complex"
+        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
         assert _render_how_to_try(feature) == "override-fallback-f9."
 
     # Fixture 10 ------------------------------------------------------------
@@ -696,7 +692,6 @@ class TestTenFixtureVerificationRendering:
         from cortex_command.overnight.report import (
             _read_acceptance,
             _read_last_phase_checkpoint,
-            _read_tier,
         )
 
         feature = "f10-corrupted-events"
@@ -717,7 +712,7 @@ class TestTenFixtureVerificationRendering:
         )
 
         # R13a default: returns "simple" when events.log is malformed.
-        assert _read_tier(feature) == "simple"
+        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "simple"
         # Acceptance text exists in the plan but is not consulted on simple tier.
         assert _read_acceptance(feature) == "acceptance-text-f10."
         # No Outline -> no last-phase checkpoint.
@@ -726,48 +721,3 @@ class TestTenFixtureVerificationRendering:
         assert _render_how_to_try(feature) == GENERIC_FALLBACK
 
 
-# ---------------------------------------------------------------------------
-# Key-name assertion tests for `_read_tier` (T-A, T-B)
-#
-# Pin the persistence-vs-user-facing distinction: events.log persists the
-# field as ``tier``; the user-facing Clarify assessment is called
-# "complexity"; the canonical events.log key is ``tier``. A stray
-# ``complexity`` field on an event is silently ignored.
-# ---------------------------------------------------------------------------
-
-
-def test_read_tier_ignores_complexity_field_only_returns_default(tmp_path, monkeypatch):
-    """T-A: ``_read_tier`` on an events.log containing only a ``complexity``
-    field (no ``tier`` field) returns ``"simple"`` — the default. The wrong
-    key is silently ignored."""
-    from cortex_command.overnight.report import _read_tier
-
-    feature = "tA-complexity-only"
-    monkeypatch.chdir(tmp_path)
-    _write_events_log(
-        tmp_path, feature,
-        [{"event": "lifecycle_start", "feature": feature, "complexity": "complex"}],
-    )
-
-    assert _read_tier(feature) == "simple"
-
-
-def test_read_tier_canonical_tier_wins_over_stray_complexity(tmp_path, monkeypatch):
-    """T-B: ``_read_tier`` on an events.log containing BOTH ``tier: "complex"``
-    and a stray ``complexity: "simple"`` returns ``"complex"`` — the canonical
-    ``tier`` key wins."""
-    from cortex_command.overnight.report import _read_tier
-
-    feature = "tB-both-keys"
-    monkeypatch.chdir(tmp_path)
-    _write_events_log(
-        tmp_path, feature,
-        [{
-            "event": "lifecycle_start",
-            "feature": feature,
-            "tier": "complex",
-            "complexity": "simple",
-        }],
-    )
-
-    assert _read_tier(feature) == "complex"
