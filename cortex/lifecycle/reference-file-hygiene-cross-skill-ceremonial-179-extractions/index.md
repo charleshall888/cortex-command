@@ -1,6 +1,7 @@
 ---
 feature: reference-file-hygiene-cross-skill-ceremonial-179-extractions
 backlog_id: 192
+tags: [skills, references, cross-skill-collapse, ceremony, process-gap]
 artifacts: ["research", "spec", "plan", "review"]
 created: 2026-05-11
 updated: 2026-05-11

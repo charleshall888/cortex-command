@@ -2,6 +2,7 @@
 slug: audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections
 title: "Audit /cortex-core:research skill output shape for token waste in research.md sections"
 backlog_filename: 185-audit-cortex-core-research-skill-output-shape-for-token-waste.md
+tags: [research-skill, token-efficiency, artifact-densification, sub-agent-output-shape]
 artifacts: [research, spec, plan, review]
 created: 2026-05-11
 updated: 2026-05-11

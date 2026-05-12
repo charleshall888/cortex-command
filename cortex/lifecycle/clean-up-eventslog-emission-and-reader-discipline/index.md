@@ -2,6 +2,7 @@
 slug: clean-up-eventslog-emission-and-reader-discipline
 title: "Clean up events.log emission and reader discipline"
 backlog_filename: 189-clean-up-events-log-emission-and-reader-discipline.md
+tags: [events-log, emission-discipline, escalations, clarify-critic, token-efficiency]
 artifacts: [research, spec, plan, review]
 created: 2026-05-11
 updated: 2026-05-11

@@ -7,6 +7,7 @@ tier: complex
 criticality: high
 created: 2026-05-11
 updated: 2026-05-11
+tags: []  # loader falls back to project.md-only (R1)
 artifacts: [research, spec, plan, review]
 ---
 

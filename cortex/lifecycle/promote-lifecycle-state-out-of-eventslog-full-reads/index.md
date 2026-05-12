@@ -2,6 +2,7 @@
 slug: promote-lifecycle-state-out-of-eventslog-full-reads
 title: "Promote lifecycle state out of events.log full-reads"
 backlog_filename: 190-promote-lifecycle-state-out-of-events-log-full-reads.md
+tags: [lifecycle, state-storage, events-log, data-model]
 artifacts: [research, spec, plan, review]
 created: 2026-05-11
 updated: 2026-05-11

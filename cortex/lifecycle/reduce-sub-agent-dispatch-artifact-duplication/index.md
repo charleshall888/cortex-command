@@ -2,6 +2,7 @@
 slug: reduce-sub-agent-dispatch-artifact-duplication
 title: "Reduce sub-agent dispatch artifact duplication"
 backlog_filename: 188-reduce-sub-agent-dispatch-artifact-duplication.md
+tags: [dispatch, critical-review, plan, review, token-efficiency]
 artifacts: [research, spec, plan, review]
 created: 2026-05-11
 updated: 2026-05-11

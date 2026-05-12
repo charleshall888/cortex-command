@@ -2,6 +2,7 @@
 slug: trim-cortex-log-invocation-shim-cost-per-call-21ms
 title: "Trim cortex-log-invocation shim cost (per-call ~21ms)"
 backlog_filename: 198-trim-cortex-log-invocation-shim-cost-per-call-21ms.md
+tags: [bin, performance, shim]
 artifacts: [research, spec, plan, review]
 created: 2026-05-11
 updated: 2026-05-11

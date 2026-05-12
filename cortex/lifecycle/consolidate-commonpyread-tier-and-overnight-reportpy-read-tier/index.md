@@ -2,6 +2,7 @@
 slug: consolidate-commonpyread-tier-and-overnight-reportpy-read-tier
 title: "Consolidate common.py:read_tier and overnight/report.py:_read_tier"
 backlog_filename: 199-consolidate-commonpyread-tier-and-overnight-reportpy-read-tier.md
+tags: [refactor, lifecycle, deduplication]
 artifacts: [research, spec, plan]
 created: 2026-05-11
 updated: 2026-05-11

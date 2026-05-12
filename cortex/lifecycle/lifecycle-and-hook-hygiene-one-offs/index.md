@@ -3,6 +3,7 @@ feature: lifecycle-and-hook-hygiene-one-offs
 backlog_id: 193
 created: 2026-05-11
 updated: 2026-05-11
+tags: [lifecycle, hooks, hygiene, scan-script, auto-scan]
 artifacts: [research, spec, plan, review]
 ---
 
