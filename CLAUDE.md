@@ -49,6 +49,22 @@ Run `just` to see all available recipes. Key commands:
 - Use `cortex-jcc <recipe>` to invoke cortex-command recipes from any directory. The wrapper (shipped in `plugins/cortex-core/bin/`) runs recipes in this repo's directory context, so it's suitable for repo-specific operations (`cortex-jcc backlog-index`, `cortex-jcc validate-commit`), not for operations that should act on another repo's files (use `cortex-update-item`, `cortex-generate-backlog-index`, etc. for those — also shipped via the cortex-core plugin's `bin/`).
 - Overnight docs source of truth: `docs/overnight-operations.md` owns the round loop and orchestrator behavior, `docs/internals/pipeline.md` owns pipeline-module internals, and `docs/internals/sdk.md` owns SDK model-selection mechanics. When editing overnight-related docs, update the owning doc and link from the others rather than duplicating content.
 
+## Skill / phase authoring guidelines
+
+Before classifying a phase boundary or gate as ceremonial, identify the user-facing affordance that boundary protects. A pause that looks redundant from the agent's perspective may be the only point where a human can redirect, reject, or reshape the work before the lifecycle advances. If the affordance genuinely provides no blocking value — because internals already enforce the constraint — document that reasoning explicitly rather than silently removing the boundary.
+
+The concrete inventory of kept user pauses lives in `skills/lifecycle/SKILL.md` under the "Kept user pauses" section. The parity test at `tests/test_lifecycle_kept_pauses_parity.py` verifies that the implementation matches that inventory. When modifying phase sequencing, update both the SKILL.md inventory and the parity test together.
+
+Prefer structural separation over prose-only enforcement for sequential gates. A gate encoded in skill control flow is harder to accidentally bypass than one that relies on the model reading and following a prose instruction. Prose-only enforcement is appropriate only for guidelines where the cost of occasional deviation is low.
+
+## Design principle: prescribe What and Why, not How
+
+When authoring skills, hooks, lifecycle templates, or any harness instruction, describe decisions to be made, gates to enforce, output shapes required, and the intent behind each (the What and Why). Resist prescribing step-by-step method (the How).
+
+The reasoning: capable models (Opus 4.7 and later) determine method themselves given clear decision criteria and intent. Spelling out procedure wastes tokens, constrains agent judgment on details the spec author cannot fully anticipate, and tends to produce brittle rails that break when model behavior evolves.
+
+This principle is the conceptual partner to the MUST-escalation policy below: both protect against over-specification — the escalation policy guards against over-constraining model behavior with imperative language; this principle guards against over-constraining it with procedural narration.
+
 ## MUST-escalation policy (post-Opus 4.7)
 
 Default to soft positive-routing phrasing for new authoring under epic #82's post-4.7 harness adaptation; pre-existing MUST language is grandfathered until specifically audited (per #85). To add a new MUST/CRITICAL/REQUIRED escalation, you must include in the commit body OR PR description a link to one evidence artifact: (a) `cortex/lifecycle/<feature>/events.log` path + line of an F-row showing Claude skipped the soft form, OR (b) a commit-linked transcript URL or quoted excerpt. Without one of these artifact links, the escalation is rejected at review.
