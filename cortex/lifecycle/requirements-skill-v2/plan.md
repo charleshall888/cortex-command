@@ -126,7 +126,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: Existing pattern: `_read_requirements_drift` at `cortex_command/overnight/report.py:559,635`. The new event type travels through events.log, not the review.md frontmatter. Follow the existing event-row rendering for sibling event types in the same file.
 - **Verification**: `grep -c "drift_protocol_breach" cortex_command/overnight/report.py` ≥`1` AND `grep -c "drift_protocol_breach" bin/.events-registry.md` ≥`1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit eeec6d9d; 32 tests passing)
 
 ### Task 11: One-shot historical drift remediation script (R8)
 - **Files**: `cortex/lifecycle/requirements-skill-v2/scripts/remediate-historical-drift.py`, `docs/internals/one-shot-scripts.md` (new or appended — registry of one-shot remediation scripts with discovery pointer)
