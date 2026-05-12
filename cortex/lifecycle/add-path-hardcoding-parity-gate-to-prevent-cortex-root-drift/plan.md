@@ -32,7 +32,7 @@ Cleanup-then-deploy ordering: refactor the two empirically-surfaced pre-relocati
 - **Complexity**: simple
 - **Context**: Both changes are inside `bin/cortex-check-prescriptive-prose`. SCAN_GLOBS is a tuple near the top of the file. The docstring example is in the module's leading comment. No other call sites reference the old glob path.
 - **Verification**: `grep -cE '"backlog/\*\.md"' bin/cortex-check-prescriptive-prose` returns 0 AND `grep -cE '"cortex/backlog/\*\.md"' bin/cortex-check-prescriptive-prose` returns ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Allowlist file with schema and initial entries
 - **Files**: `bin/.path-hardcoding-allowlist.md`

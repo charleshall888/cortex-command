@@ -1,7 +1,7 @@
 """Self-tests for ``bin/cortex-check-prescriptive-prose`` (R7 acceptance).
 
 Each test case sets up a temp directory with a minimal markdown fixture under
-``skills/`` or ``backlog/`` and invokes the scanner via ``subprocess`` with the
+``skills/`` or ``cortex/backlog/`` and invokes the scanner via ``subprocess`` with the
 ``--root <tmp_path>`` test-only override. We assert exit codes and a stable
 substring of the scanner's positive-routing diagnostic.
 
@@ -76,7 +76,7 @@ def test_clean_section_exits_zero(tmp_path: Path) -> None:
         "## Edges\n\n"
         "Breaks if the phase-transition contract changes.\n"
     )
-    _write_ticket(tmp_path, "backlog/100-clean.md", body)
+    _write_ticket(tmp_path, "cortex/backlog/100-clean.md", body)
     result = _run_staged(tmp_path)
     assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")
 
@@ -87,7 +87,7 @@ def test_path_line_in_role_flags(tmp_path: Path) -> None:
         "## Role\n\n"
         "This piece must update decompose.md:147 to replace the ban.\n"
     )
-    _write_ticket(tmp_path, "backlog/101-path-line.md", body)
+    _write_ticket(tmp_path, "cortex/backlog/101-path-line.md", body)
     result = _run_staged(tmp_path)
     assert result.returncode == 1
     stderr = result.stderr.decode("utf-8", errors="replace")
@@ -103,7 +103,7 @@ def test_section_index_in_edges_flags(tmp_path: Path) -> None:
         "## Edges\n\n"
         "Follows the pattern in §3a from the spec.\n"
     )
-    _write_ticket(tmp_path, "backlog/102-section-index.md", body)
+    _write_ticket(tmp_path, "cortex/backlog/102-section-index.md", body)
     result = _run_staged(tmp_path)
     assert result.returncode == 1
     stderr = result.stderr.decode("utf-8", errors="replace")
@@ -122,7 +122,7 @@ def test_fenced_block_two_lines_in_integration_flags(tmp_path: Path) -> None:
         "    return 42\n"
         "```\n"
     )
-    _write_ticket(tmp_path, "backlog/103-fenced.md", body)
+    _write_ticket(tmp_path, "cortex/backlog/103-fenced.md", body)
     result = _run_staged(tmp_path)
     assert result.returncode == 1
     stderr = result.stderr.decode("utf-8", errors="replace")
@@ -140,7 +140,7 @@ def test_touch_points_exempted(tmp_path: Path) -> None:
         "- §3a of research.md\n"
         "- R2(b) premise check\n"
     )
-    _write_ticket(tmp_path, "backlog/104-touch-points.md", body)
+    _write_ticket(tmp_path, "cortex/backlog/104-touch-points.md", body)
     result = _run_staged(tmp_path)
     assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")
 
@@ -152,7 +152,7 @@ def test_bare_path_without_line_does_not_flag(tmp_path: Path) -> None:
         "The phase-transition contract is documented in skills/lifecycle/SKILL.md.\n"
         "See research/foo/research.md for context.\n"
     )
-    _write_ticket(tmp_path, "backlog/105-bare-path.md", body)
+    _write_ticket(tmp_path, "cortex/backlog/105-bare-path.md", body)
     result = _run_staged(tmp_path)
     assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")
 
@@ -164,7 +164,7 @@ def test_inline_backtick_does_not_flag(tmp_path: Path) -> None:
         "The role is to track lifecycle state. "
         "See `cortex-update-item` for the helper.\n"
     )
-    _write_ticket(tmp_path, "backlog/106-inline-backtick.md", body)
+    _write_ticket(tmp_path, "cortex/backlog/106-inline-backtick.md", body)
     result = _run_staged(tmp_path)
     assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")
 
@@ -180,7 +180,7 @@ def test_single_file_mode(tmp_path: Path) -> None:
         "## Edges\n\n"
         "This piece must update foo.py:42 to fix the bug.\n"
     )
-    target = _write_ticket(tmp_path, "backlog/200-single-file.md", body)
+    target = _write_ticket(tmp_path, "cortex/backlog/200-single-file.md", body)
     result = _run_file(target, tmp_path)
     assert result.returncode == 1
     stderr = result.stderr.decode("utf-8", errors="replace")

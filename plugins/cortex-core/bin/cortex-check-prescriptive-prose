@@ -17,7 +17,7 @@ Three modes:
 - ``--root <path>`` (test-only override): when set with ``--staged``, scan
   matching files under ``<path>`` as if all were staged.
 - Positional file-arg mode: scan a single file and report violations. Useful
-  for ad-hoc checks (``bin/cortex-check-prescriptive-prose backlog/195-*.md``).
+  for ad-hoc checks (``bin/cortex-check-prescriptive-prose cortex/backlog/195-*.md``).
 
 Exit codes: 0 (clean), 1 (violations).
 
@@ -40,7 +40,7 @@ from pathlib import Path
 
 SCAN_GLOBS: tuple[str, ...] = (
     "skills/**/*.md",
-    "backlog/*.md",
+    "cortex/backlog/*.md",
 )
 
 FORBIDDEN_SECTIONS: frozenset[str] = frozenset({"Role", "Integration", "Edges"})

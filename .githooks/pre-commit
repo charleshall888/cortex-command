@@ -183,7 +183,7 @@ prescriptive_prose_triggered=0
 while IFS= read -r f; do
     [ -z "$f" ] && continue
     case "$f" in
-        skills/*|backlog/*.md|bin/cortex-check-prescriptive-prose)
+        skills/*|cortex/backlog/*.md|bin/cortex-check-prescriptive-prose)
             prescriptive_prose_triggered=1
             break
             ;;
