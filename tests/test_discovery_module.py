@@ -36,9 +36,9 @@ from cortex_command.discovery import (
 
 @pytest.fixture
 def repo_root(tmp_path: Path) -> Path:
-    """A bare tmp repo root with empty research/ and lifecycle/ subdirs."""
-    (tmp_path / "research").mkdir()
-    (tmp_path / "lifecycle").mkdir()
+    """A bare tmp repo root with empty cortex/research/ and cortex/lifecycle/ subdirs."""
+    (tmp_path / "cortex" / "research").mkdir(parents=True)
+    (tmp_path / "cortex" / "lifecycle").mkdir(parents=True)
     return tmp_path
 
 
@@ -56,7 +56,7 @@ def test_resolve_path_plain_slug_routes_to_research_topic(
 ) -> None:
     monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
     target = resolve_events_log_path("plugin-system", repo_root)
-    assert target == repo_root / "research" / "plugin-system" / "events.log"
+    assert target == repo_root / "cortex" / "research" / "plugin-system" / "events.log"
 
 
 def test_resolve_path_n_suffix_keeps_n_in_slug(
@@ -69,10 +69,10 @@ def test_resolve_path_n_suffix_keeps_n_in_slug(
     """
     monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
     target = resolve_events_log_path("plugin-system-2", repo_root)
-    assert target == repo_root / "research" / "plugin-system-2" / "events.log"
+    assert target == repo_root / "cortex" / "research" / "plugin-system-2" / "events.log"
     # And N >= 3 path:
     target3 = resolve_events_log_path("plugin-system-7", repo_root)
-    assert target3 == repo_root / "research" / "plugin-system-7" / "events.log"
+    assert target3 == repo_root / "cortex" / "research" / "plugin-system-7" / "events.log"
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ def test_resolve_path_active_lifecycle_overrides_topic(
     events route to ``lifecycle/<slug>/events.log`` per EVT-1, regardless
     of the topic slug shape.
     """
-    feature_dir = repo_root / "lifecycle" / "some-active-feature"
+    feature_dir = repo_root / "cortex" / "lifecycle" / "some-active-feature"
     feature_dir.mkdir()
     (feature_dir / ".session").write_text("sess-abc-123", encoding="utf-8")
     monkeypatch.setenv("LIFECYCLE_SESSION_ID", "sess-abc-123")
@@ -103,7 +103,7 @@ def test_resolve_path_active_lifecycle_matches_via_session_owner(
     ``/clear``; the resolver must also recognize ``.session-owner`` as a
     valid match marker for the original stale session id.
     """
-    feature_dir = repo_root / "lifecycle" / "migrated-feature"
+    feature_dir = repo_root / "cortex" / "lifecycle" / "migrated-feature"
     feature_dir.mkdir()
     # Fresh .session has the NEW id; .session-owner holds the original.
     (feature_dir / ".session").write_text("new-session-id", encoding="utf-8")
@@ -120,13 +120,13 @@ def test_resolve_path_env_unset_falls_back_to_research(
     repo_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An unset env var must NOT match an empty .session file."""
-    feature_dir = repo_root / "lifecycle" / "orphan-feature"
+    feature_dir = repo_root / "cortex" / "lifecycle" / "orphan-feature"
     feature_dir.mkdir()
     (feature_dir / ".session").write_text("", encoding="utf-8")
     monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
 
     target = resolve_events_log_path("topic-foo", repo_root)
-    assert target == repo_root / "research" / "topic-foo" / "events.log"
+    assert target == repo_root / "cortex" / "research" / "topic-foo" / "events.log"
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ def test_emit_architecture_written_writes_jsonl(
         repo_root=repo_root,
         re_walk_attempt=1,
     )
-    assert target == repo_root / "research" / "my-topic" / "events.log"
+    assert target == repo_root / "cortex" / "research" / "my-topic" / "events.log"
     events = _read_jsonl(target)
     assert len(events) == 1
     ev = events[0]
@@ -277,7 +277,7 @@ def test_emit_subcommands_honor_resolve_events_log_path(
     test fails any such hardcode by activating the env override and
     asserting all three emit-* targets resolve under ``lifecycle/<slug>/``.
     """
-    feature_dir = repo_root / "lifecycle" / "active-feature"
+    feature_dir = repo_root / "cortex" / "lifecycle" / "active-feature"
     feature_dir.mkdir()
     (feature_dir / ".session").write_text("active-id", encoding="utf-8")
     monkeypatch.setenv("LIFECYCLE_SESSION_ID", "active-id")
@@ -311,8 +311,8 @@ def test_emit_subcommands_honor_resolve_events_log_path(
     assert chk_target == expected
     assert pre_target == expected
 
-    # And NOT to research/some-topic/events.log.
-    standalone = repo_root / "research" / "some-topic" / "events.log"
+    # And NOT to cortex/research/some-topic/events.log.
+    standalone = repo_root / "cortex" / "research" / "some-topic" / "events.log"
     assert not standalone.exists()
 
     # All three events landed in the lifecycle log.
@@ -367,7 +367,7 @@ def test_cli_resolve_events_log_path_standalone_topic(
     )
     assert proc.returncode == 0, proc.stderr
     assert proc.stdout.strip() == str(
-        repo_root / "research" / "my-topic" / "events.log"
+        repo_root / "cortex" / "research" / "my-topic" / "events.log"
     )
 
 
@@ -396,7 +396,7 @@ def test_cli_emit_architecture_written_appends_event(
         text=True,
     )
     assert proc.returncode == 0, proc.stderr
-    events_log = repo_root / "research" / "cli-topic" / "events.log"
+    events_log = repo_root / "cortex" / "research" / "cli-topic" / "events.log"
     events = _read_jsonl(events_log)
     assert len(events) == 1
     assert events[0]["event"] == "architecture_section_written"

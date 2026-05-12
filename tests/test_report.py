@@ -172,7 +172,7 @@ class Test_critical_review_residue:
 
     def test_clean_ok_residue(self, tmp_path, monkeypatch):
         """(i) Clean synthesis_status: 'ok' residue renders without degraded annotation."""
-        lifecycle = tmp_path / "lifecycle"
+        lifecycle = tmp_path / "cortex" / "lifecycle"
         feat_dir = lifecycle / "my-feature"
         feat_dir.mkdir(parents=True)
         residue = _make_residue(synthesis_status="ok", completed=3, dispatched=3)
@@ -192,7 +192,7 @@ class Test_critical_review_residue:
 
     def test_synthesis_failed_annotation(self, tmp_path, monkeypatch):
         """(ii) synthesis_status: 'failed' produces degraded annotation."""
-        lifecycle = tmp_path / "lifecycle"
+        lifecycle = tmp_path / "cortex" / "lifecycle"
         feat_dir = lifecycle / "my-feature"
         feat_dir.mkdir(parents=True)
         residue = _make_residue(synthesis_status="failed")
@@ -209,7 +209,7 @@ class Test_critical_review_residue:
 
     def test_partial_coverage_annotation(self, tmp_path, monkeypatch):
         """(iii) completed < dispatched produces partial reviewer coverage annotation."""
-        lifecycle = tmp_path / "lifecycle"
+        lifecycle = tmp_path / "cortex" / "lifecycle"
         feat_dir = lifecycle / "my-feature"
         feat_dir.mkdir(parents=True)
         residue = _make_residue(synthesis_status="ok", completed=2, dispatched=3)
@@ -227,7 +227,7 @@ class Test_critical_review_residue:
 
     def test_both_annotations_simultaneously(self, tmp_path, monkeypatch):
         """(iv) Both synthesis_status: 'failed' and partial coverage fire together."""
-        lifecycle = tmp_path / "lifecycle"
+        lifecycle = tmp_path / "cortex" / "lifecycle"
         feat_dir = lifecycle / "my-feature"
         feat_dir.mkdir(parents=True)
         residue = _make_residue(synthesis_status="failed", completed=1, dispatched=4)
@@ -245,7 +245,7 @@ class Test_critical_review_residue:
 
     def test_empty_state_literal(self, tmp_path, monkeypatch):
         """(v) When no residue files exist, the empty-state literal is rendered."""
-        lifecycle = tmp_path / "lifecycle"
+        lifecycle = tmp_path / "cortex" / "lifecycle"
         lifecycle.mkdir(parents=True)
 
         monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
@@ -258,7 +258,7 @@ class Test_critical_review_residue:
 
     def test_malformed_json_graceful_skip(self, tmp_path, monkeypatch):
         """(vi) Malformed JSON residue is skipped gracefully with a notice line."""
-        lifecycle = tmp_path / "lifecycle"
+        lifecycle = tmp_path / "cortex" / "lifecycle"
         feat_dir = lifecycle / "bad-feature"
         feat_dir.mkdir(parents=True)
         (feat_dir / "critical-review-residue.json").write_text(
@@ -276,7 +276,7 @@ class Test_critical_review_residue:
 
     def test_missing_required_fields_default_unknown(self, tmp_path, monkeypatch):
         """(vii) Residue missing synthesis_status or reviewers defaults fields to 'unknown'."""
-        lifecycle = tmp_path / "lifecycle"
+        lifecycle = tmp_path / "cortex" / "lifecycle"
         feat_dir = lifecycle / "sparse-feature"
         feat_dir.mkdir(parents=True)
         # Minimal payload — no synthesis_status, no reviewers
@@ -304,7 +304,7 @@ class Test_critical_review_residue:
     def test_placement_between_deferred_and_failed(self, tmp_path, monkeypatch):
         """(viii) generate_report places '## Critical Review Residue' between
         '## Deferred Questions' and '## Failed Features'."""
-        lifecycle = tmp_path / "lifecycle"
+        lifecycle = tmp_path / "cortex" / "lifecycle"
         lifecycle.mkdir(parents=True)
 
         monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
@@ -367,7 +367,7 @@ class Test_critical_review_residue:
 
     def test_synthesis_failed_roundtrip(self, tmp_path, monkeypatch):
         """(xi) synthesis_status: 'failed' round-trips correctly through the renderer."""
-        lifecycle = tmp_path / "lifecycle"
+        lifecycle = tmp_path / "cortex" / "lifecycle"
         feat_dir = lifecycle / "roundtrip-feature"
         feat_dir.mkdir(parents=True)
         residue_path = feat_dir / "critical-review-residue.json"

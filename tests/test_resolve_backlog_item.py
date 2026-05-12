@@ -638,7 +638,7 @@ def test_lifecycle_slug_dirname_fallback(resolver, tmp_path):
         backlog,
         "001-some-ticket.md",
         "Some Ticket",
-        extra="spec: lifecycle/my-feature-dir/spec.md\n",
+        extra="spec: cortex/lifecycle/my-feature-dir/spec.md\n",
     )
     fm = resolver._parse_frontmatter(item)
     title = resolver._item_title(item, fm)

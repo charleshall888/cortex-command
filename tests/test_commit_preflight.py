@@ -264,7 +264,7 @@ def test_shim_records_invocation(tmp_path: Path) -> None:
         capture_output=True,
     )
 
-    log_path = repo / "lifecycle" / "sessions" / session_id / "bin-invocations.jsonl"
+    log_path = repo / "cortex" / "lifecycle" / "sessions" / session_id / "bin-invocations.jsonl"
 
     def _count_records() -> int:
         if not log_path.exists():
