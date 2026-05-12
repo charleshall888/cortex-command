@@ -46,9 +46,9 @@ from pathlib import Path
 class CortexProjectRootError(RuntimeError):
     """Raised when the user's cortex project root cannot be resolved.
 
-    Indicates that ``CORTEX_REPO_ROOT`` is unset and the current working
-    directory does not look like a cortex project (no ``lifecycle/`` or
-    ``backlog/`` subdirectory).
+    Indicates that ``CORTEX_REPO_ROOT`` is unset and no ancestor of the
+    current working directory contains ``lifecycle/`` or ``backlog/``
+    before a ``.git/`` boundary (or filesystem root) terminates the walk.
     """
 
 
@@ -57,33 +57,50 @@ def _resolve_user_project_root() -> Path:
 
     Returns ``Path(os.environ["CORTEX_REPO_ROOT"])`` when that environment
     variable is set (the user's explicit override is trusted verbatim).
-    Otherwise returns ``Path.cwd().resolve()`` after verifying that the
-    CWD looks like a cortex project (contains ``lifecycle/`` or ``backlog/``).
+    Otherwise walks upward from ``Path.cwd().resolve()`` to the first
+    ancestor whose ``lifecycle/`` or ``backlog/`` child is a directory.
+    The walk terminates on either ``(current / ".git").exists()`` (file
+    or directory shape — handles git worktrees) or ``parent == current``
+    (filesystem root). Matches the upward-walk semantics of git, npm,
+    cargo, and similar tools so cortex CLIs work from any subdirectory.
 
-    This function is invoked at call time (never at module load) so that
-    worker subprocesses, pytest fixtures using ``monkeypatch.chdir``, and
-    users who chdir between cortex invocations in a long-running shell all
+    Invoked at call time (never at module load) so that worker
+    subprocesses, pytest fixtures using ``monkeypatch.chdir``, and users
+    who chdir between cortex invocations in a long-running shell all
     resolve the project root correctly at the moment it is needed.
 
     Returns:
         Resolved absolute path to the user's cortex project root.
 
     Raises:
-        CortexProjectRootError: When ``CORTEX_REPO_ROOT`` is unset and CWD
-            does not contain ``lifecycle/`` or ``backlog/``.
+        CortexProjectRootError: When ``CORTEX_REPO_ROOT`` is unset and
+            no ancestor up to the first ``.git/`` boundary (or filesystem
+            root) contains ``lifecycle/`` or ``backlog/``. The exception
+            message lists each directory the walk visited.
     """
     env_root = os.environ.get("CORTEX_REPO_ROOT")
     if env_root:
         return Path(env_root)
 
-    cwd = Path.cwd().resolve()
-    if not (cwd / "lifecycle").is_dir() and not (cwd / "backlog").is_dir():
-        raise CortexProjectRootError(
-            "Run from your cortex project root, set CORTEX_REPO_ROOT, or "
-            "create a new project here with `git init && cortex init` "
-            "(cortex init requires a git repository)."
-        )
-    return cwd
+    searched: list[Path] = []
+    current = Path.cwd().resolve()
+    while True:
+        searched.append(current)
+        if (current / "lifecycle").is_dir() or (current / "backlog").is_dir():
+            return current
+        if (current / ".git").exists():
+            break
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+
+    raise CortexProjectRootError(
+        "Run from your cortex project root, set CORTEX_REPO_ROOT, or "
+        "create a new project here with `git init && cortex init` "
+        "(cortex init requires a git repository). "
+        f"Searched: {', '.join(str(p) for p in searched)}"
+    )
 
 
 # ---------------------------------------------------------------------------

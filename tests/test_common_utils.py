@@ -16,6 +16,8 @@ from pathlib import Path
 import pytest
 
 from cortex_command.common import (
+    CortexProjectRootError,
+    _resolve_user_project_root,
     mark_task_done_in_plan,
     read_criticality,
     read_tier,
@@ -392,3 +394,117 @@ def test_read_tier_canonical_tier_wins_over_stray_complexity(
     )
 
     assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
+
+
+# ---------------------------------------------------------------------------
+# _resolve_user_project_root — upward walk for project-root detection (#201)
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_user_project_root_lifecycle_marker_at_cwd(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Walk returns the cwd itself when ``lifecycle/`` is present at cwd."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    (tmp_path / "lifecycle").mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    assert _resolve_user_project_root() == tmp_path.resolve()
+
+
+def test_resolve_user_project_root_backlog_only_marker(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Walk returns cwd when only ``backlog/`` is present (lifecycle/ absent)."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    (tmp_path / "backlog").mkdir()
+    monkeypatch.chdir(tmp_path)
+
+    assert _resolve_user_project_root() == tmp_path.resolve()
+
+
+def test_resolve_user_project_root_walks_up_from_subdir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Walk starts deep inside the tree and returns the ancestor with markers."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    (tmp_path / "lifecycle").mkdir()
+    deep = tmp_path / "lifecycle" / "feature-x" / "deferred"
+    deep.mkdir(parents=True)
+    monkeypatch.chdir(deep)
+
+    assert _resolve_user_project_root() == tmp_path.resolve()
+
+
+def test_resolve_user_project_root_git_dir_boundary_terminates_walk(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``.git/`` (as directory) ancestor without cortex markers terminates the walk."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    repo = tmp_path / "some-repo"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    subdir = repo / "src" / "nested"
+    subdir.mkdir(parents=True)
+    monkeypatch.chdir(subdir)
+
+    with pytest.raises(CortexProjectRootError) as excinfo:
+        _resolve_user_project_root()
+    assert "Searched: " in str(excinfo.value)
+
+
+def test_resolve_user_project_root_git_file_boundary_terminates_walk(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``.git`` as a regular file (worktree shape) also terminates the walk."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    worktree = tmp_path / "wt-checkout"
+    worktree.mkdir()
+    (worktree / ".git").write_text("gitdir: /elsewhere\n", encoding="utf-8")
+    subdir = worktree / "src"
+    subdir.mkdir()
+    monkeypatch.chdir(subdir)
+
+    with pytest.raises(CortexProjectRootError):
+        _resolve_user_project_root()
+
+
+def test_resolve_user_project_root_env_override_skips_walk(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``CORTEX_REPO_ROOT`` env var is honored verbatim and bypasses the walk."""
+    # Override points to a directory that does NOT contain markers — the walk
+    # would otherwise fail. The env var must win without inspecting the path.
+    override = tmp_path / "explicit-root"
+    override.mkdir()
+    monkeypatch.setenv("CORTEX_REPO_ROOT", str(override))
+    monkeypatch.chdir(tmp_path)
+
+    assert _resolve_user_project_root() == override
+
+
+def test_resolve_user_project_root_searched_paths_in_diagnostic(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Error message lists each visited path so failure is self-diagnosing."""
+    monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
+    repo = tmp_path / "outer"
+    repo.mkdir()
+    (repo / ".git").mkdir()
+    leaf = repo / "a" / "b"
+    leaf.mkdir(parents=True)
+    monkeypatch.chdir(leaf)
+
+    with pytest.raises(CortexProjectRootError) as excinfo:
+        _resolve_user_project_root()
+    msg = str(excinfo.value)
+    assert "Searched: " in msg
+    assert str(leaf.resolve()) in msg
+    assert str(repo.resolve()) in msg
