@@ -135,7 +135,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Research §2 identifies 8 such artifacts. Acceptance soft target ≤1 unfixed (≥7/8 succeed). The `--dry-run` mode lets the operator verify the candidate set semantically (script implements the spec's enumeration logic correctly) before live dispatch. The `docs/internals/one-shot-scripts.md` pointer mitigates Risk #3 from the original plan (script outside `bin/` is undiscoverable).
 - **Verification**: `test -x cortex/lifecycle/requirements-skill-v2/scripts/remediate-historical-drift.py` AND `python3 cortex/lifecycle/requirements-skill-v2/scripts/remediate-historical-drift.py --dry-run | grep -c review.md` returns the expected candidate count (verify count matches research §2's 8 artifacts) AND `grep -c "remediate-historical-drift" docs/internals/one-shot-scripts.md` ≥`1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 9b54e2ef; 9 candidates enumerated, within ≥7/8 soft target)
 
 ### Task 12: Run remediation script + commit results
 - **Files**: Affected `cortex/lifecycle/*/review.md` and `cortex/lifecycle/archive/*/review.md` files (8 in total per research)
