@@ -93,6 +93,23 @@ def _item_title(path: Path, fm: dict) -> str:
 # Priority: lifecycle_slug frontmatter → spec/research dirname → slugify(title)
 # ---------------------------------------------------------------------------
 
+_LIFECYCLE_SLUG_WORD_CAP = 6
+
+
+def _cap_slug_words(slug: str, max_words: int = _LIFECYCLE_SLUG_WORD_CAP) -> str:
+    """Truncate a hyphenated slug to its first ``max_words`` words.
+
+    Used only when a lifecycle slug is derived from a backlog title via
+    ``slugify(title)`` — explicit frontmatter ``lifecycle_slug`` values and
+    spec/research dirname extractions are returned verbatim so existing
+    on-disk directory references stay valid.
+    """
+    parts = slug.split("-")
+    if len(parts) <= max_words:
+        return slug
+    return "-".join(parts[:max_words])
+
+
 def _resolve_lifecycle_slug(fm: dict, title: str) -> str:
     """Derive lifecycle_slug using the same fallback chain as BacklogItem.resolve_slug."""
     if fm.get("lifecycle_slug"):
@@ -103,7 +120,7 @@ def _resolve_lifecycle_slug(fm: dict, title: str) -> str:
             parent = Path(artifact_path).parent.name
             if parent and parent != ".":
                 return parent
-    return slugify(title)
+    return _cap_slug_words(slugify(title))
 
 
 # ---------------------------------------------------------------------------

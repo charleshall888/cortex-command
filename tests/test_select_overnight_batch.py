@@ -569,13 +569,18 @@ class TestResolveSlug:
         assert item.resolve_slug() == "bare-filename-feature"
 
     def test_underscores_become_hyphens_in_slugify_fallback(self):
-        """The bug that started it all: session_panel must become session-panel."""
+        """The bug that started it all: session_panel must become session-panel.
+
+        Title kept within the 6-word lifecycle-slug cap (see
+        ``_LIFECYCLE_SLUG_WORD_CAP``) so the assertion captures the full
+        underscore→hyphen transformation without being truncated by the cap.
+        """
         item = _make_item(
             lifecycle_slug=None,
             spec=None,
-            title="Fix inline style violations in session_panel and feature_cards templates",
+            title="Fix session_panel and feature_cards",
         )
-        assert item.resolve_slug() == "fix-inline-style-violations-in-session-panel-and-feature-cards-templates"
+        assert item.resolve_slug() == "fix-session-panel-and-feature-cards"
 
 
 # ---------------------------------------------------------------------------

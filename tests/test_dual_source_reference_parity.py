@@ -73,7 +73,8 @@ def assert_byte_parity(canonical_bytes: bytes, mirror_bytes: bytes) -> None:
     if canonical_bytes != mirror_bytes:
         raise AssertionError(
             f"byte-parity mismatch: canonical={len(canonical_bytes)} bytes, "
-            f"mirror={len(mirror_bytes)} bytes"
+            f"mirror={len(mirror_bytes)} bytes — run `just build-plugin` to "
+            "regenerate the mirror from the canonical source, then re-run tests"
         )
 
 

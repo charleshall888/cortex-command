@@ -32,6 +32,9 @@ from cortex_command.common import TERMINAL_STATUSES, normalize_status, slugify
 # Valid enum values for validation
 # ---------------------------------------------------------------------------
 
+_LIFECYCLE_SLUG_WORD_CAP = 6
+
+
 STATUSES = (
     "open", "in-progress", "blocked", "resolved", "wontfix", "done",
     "backlog", "ready", "refined", "in_progress", "implementing", "review", "complete", "abandoned",
@@ -105,6 +108,13 @@ class BacklogItem:
         The spec/research paths in frontmatter point to the actual lifecycle directory,
         so extracting the slug from them handles cases where the directory name diverges
         from slugify(title) (e.g., underscores stripped vs hyphenated).
+
+        When falling back to ``slugify(self.title)``, the result is capped at
+        ``_LIFECYCLE_SLUG_WORD_CAP`` (6) hyphenated words so prose-y backlog
+        titles do not produce unwieldy directory names. Explicit frontmatter
+        ``lifecycle_slug`` and spec/research dirname extractions are returned
+        verbatim so existing on-disk references stay valid. Mirrors the cap
+        in ``bin/cortex-resolve-backlog-item``'s ``_cap_slug_words``.
         """
         if self.lifecycle_slug:
             return self.lifecycle_slug
@@ -113,7 +123,11 @@ class BacklogItem:
                 parent = Path(artifact_path).parent.name
                 if parent and parent != ".":
                     return parent
-        return slugify(self.title)
+        slug = slugify(self.title)
+        parts = slug.split("-")
+        if len(parts) > _LIFECYCLE_SLUG_WORD_CAP:
+            return "-".join(parts[:_LIFECYCLE_SLUG_WORD_CAP])
+        return slug
 
 
 @dataclass
