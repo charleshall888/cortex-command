@@ -1,0 +1,7 @@
+{"ts": "2026-05-12T17:31:52Z", "event": "lifecycle_start", "feature": "add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift", "tier": "complex", "criticality": "medium"}
+{"ts": "2026-05-12T17:31:52Z", "event": "phase_transition", "feature": "add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift", "from": "clarify", "to": "research"}
+{"ts": "2026-05-12T17:31:52Z", "event": "phase_transition", "feature": "add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift", "from": "research", "to": "specify"}
+{"ts": "2026-05-12T17:31:52Z", "event": "spec_approved", "feature": "add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift"}
+{"ts": "2026-05-12T17:31:52Z", "event": "phase_transition", "feature": "add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift", "from": "specify", "to": "plan"}
+{"ts": "2026-05-12T17:35:00Z", "event": "plan_approved", "feature": "add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift"}
+{"ts": "2026-05-12T17:35:00Z", "event": "phase_transition", "feature": "add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift", "from": "plan", "to": "implement"}

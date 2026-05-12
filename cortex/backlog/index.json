@@ -157,7 +157,7 @@
   {
     "id": 203,
     "title": "Add path-hardcoding parity gate to prevent cortex/ root drift",
-    "status": "refined",
+    "status": "in_progress",
     "priority": "low",
     "type": "feature",
     "tags": [
@@ -166,7 +166,6 @@
       "consolidate-artifacts-under-cortex-root"
     ],
     "areas": [
-      "parity",
       "hooks"
     ],
     "created": "2026-05-11",
@@ -175,13 +174,13 @@
     "blocked_by": [],
     "parent": "200",
     "research": null,
-    "spec": null,
+    "spec": "cortex/lifecycle/add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift/spec.md",
     "discovery_source": "cortex/research/consolidate-artifacts-under-cortex-root/research.md",
-    "plan": null,
+    "plan": "cortex/lifecycle/add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift/plan.md",
     "uuid": "7f9dd538-380e-49cf-8492-3bd6fb561fb2",
     "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "session_id": "a7c39a2e-8d33-4dd1-b341-3106a2752551",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
