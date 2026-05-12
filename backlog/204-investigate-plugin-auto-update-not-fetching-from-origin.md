@@ -2,16 +2,19 @@
 schema_version: "1"
 uuid: 2f968fc7-982b-4748-934a-7d8febd4122d
 title: "Investigate plugin auto-update not fetching from origin"
-status: ready
+status: complete
 priority: medium
 type: spike
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-12
 tags: [plugin-system, claude-code, investigation]
-complexity: simple
+complexity: complex
 criticality: medium
-areas: [plugin-distribution]
+areas: [docs]
 session_id: null
+lifecycle_phase: complete
+lifecycle_slug: investigate-plugin-auto-update-not-fetching-from-origin
+spec: lifecycle/investigate-plugin-auto-update-not-fetching-from-origin/spec.md
 ---
 
 # Investigate plugin auto-update not fetching from origin

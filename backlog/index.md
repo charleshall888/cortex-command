@@ -7,7 +7,6 @@
 | 197 | Independently-sourced phrase corpus for skill routing | backlog | medium | feature | — | — | — |
 | 200 | Consolidate cortex-command artifacts under a single cortex/ root | refined | medium | epic | — | — | — |
 | 202 | Relocate cortex-command artifacts under cortex/ root | refined | medium | feature | — | 200 | — |
-| 204 | Investigate plugin auto-update not fetching from origin | refined | medium | spike | — | — | ✓ |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 203 | Add path-hardcoding parity gate to prevent cortex/ root drift | refined | low | feature | 202 | 200 | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
@@ -16,7 +15,6 @@
 
 - **200** Consolidate cortex-command artifacts under a single cortex/ root
 - **202** Relocate cortex-command artifacts under cortex/ root
-- **204** Investigate plugin auto-update not fetching from origin
 
 ## Backlog
 

@@ -155,37 +155,7 @@
     "uuid": "47fde14d-e2a0-48e3-9a56-84d4cf6018ca",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 204,
-    "title": "Investigate plugin auto-update not fetching from origin",
-    "status": "refined",
-    "priority": "medium",
-    "type": "spike",
-    "tags": [
-      "plugin-system",
-      "claude-code",
-      "investigation"
-    ],
-    "areas": [
-      "docs"
-    ],
-    "created": "2026-05-11",
-    "updated": "2026-05-12",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/investigate-plugin-auto-update-not-fetching-from-origin/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "2f968fc7-982b-4748-934a-7d8febd4122d",
-    "lifecycle_slug": "investigate-plugin-auto-update-not-fetching-from-origin",
-    "session_id": "d487af52-7a11-4cf1-9a1c-318355f25c34",
-    "lifecycle_phase": "implement",
+    "lifecycle_phase": "specify",
     "schema_version": "1",
     "repo": null
   },
