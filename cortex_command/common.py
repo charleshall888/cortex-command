@@ -344,7 +344,8 @@ def _read_criticality_inner(
     if not exists:
         return "medium"
 
-    last = "medium"
+    criticality = "medium"
+    found = False
     for line in Path(events_path_str).read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
@@ -353,21 +354,32 @@ def _read_criticality_inner(
             record = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if "criticality" in record:
-            last = record["criticality"]
-    return last
+        kind = record.get("event")
+        if kind == "lifecycle_start":
+            value = record.get("criticality")
+            if isinstance(value, str) and value:
+                criticality = value
+                found = True
+        elif kind == "criticality_override":
+            value = record.get("to")
+            if isinstance(value, str) and value:
+                criticality = value
+                found = True
+    return criticality if found else "medium"
 
 
 def read_criticality(
     feature: str,
     lifecycle_base: Path = Path("lifecycle"),
 ) -> str:
-    """Read the most recent criticality from a feature's events.log.
+    """Read the canonical criticality from a feature's events.log.
 
-    Scans the JSONL events log for lines containing a ``criticality``
-    field and returns the value from the last such line. Defaults to
-    ``"medium"`` if the file does not exist, is empty, or contains no
-    criticality entries.
+    Returns the ``criticality`` field from the most recent
+    ``lifecycle_start`` event, superseded by the ``to`` field of any
+    later ``criticality_override`` event. Stray ``criticality`` fields
+    on other event types (e.g. ``critical_review``) are ignored.
+    Defaults to ``"medium"`` if the file does not exist, is empty, or
+    contains no relevant event.
 
     Args:
         feature: Feature slug string (e.g. "my-feature").

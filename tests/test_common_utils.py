@@ -14,7 +14,12 @@ from pathlib import Path
 
 import pytest
 
-from cortex_command.common import mark_task_done_in_plan, read_tier, requires_review
+from cortex_command.common import (
+    mark_task_done_in_plan,
+    read_criticality,
+    read_tier,
+    requires_review,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +125,83 @@ class TestReadTier:
 
         result = read_tier(feature, lifecycle_base=tmp_path)
         assert result == "simple"
+
+
+# ---------------------------------------------------------------------------
+# read_criticality — canonical rule (lifecycle_start → criticality_override.to)
+# ---------------------------------------------------------------------------
+
+
+class TestReadCriticality:
+    """Tests for read_criticality() canonical rule.
+
+    The canonical rule reads the ``criticality`` field of the most recent
+    ``lifecycle_start`` event, superseded by the ``to`` field of any later
+    ``criticality_override`` event. Stray ``criticality`` fields on other
+    event types (e.g. ``critical_review``) are ignored.
+    """
+
+    def test_returns_criticality_from_lifecycle_start(self, tmp_path: Path):
+        """Reads criticality from a well-formed lifecycle_start event."""
+        feature = "test-feature"
+        feature_dir = tmp_path / feature
+        feature_dir.mkdir()
+        events_log = feature_dir / "events.log"
+        events_log.write_text(
+            json.dumps({"event": "lifecycle_start", "criticality": "high"}) + "\n",
+            encoding="utf-8",
+        )
+
+        assert read_criticality(feature, lifecycle_base=tmp_path) == "high"
+
+    def test_criticality_override_supersedes_lifecycle_start(self, tmp_path: Path):
+        """criticality_override.to supersedes the earlier lifecycle_start.criticality."""
+        feature = "test-feature"
+        feature_dir = tmp_path / feature
+        feature_dir.mkdir()
+        events_log = feature_dir / "events.log"
+        lines = [
+            json.dumps({"event": "lifecycle_start", "criticality": "low"}),
+            json.dumps({"event": "criticality_override", "to": "critical"}),
+        ]
+        events_log.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        assert read_criticality(feature, lifecycle_base=tmp_path) == "critical"
+
+    def test_stray_criticality_field_on_other_event_ignored(self, tmp_path: Path):
+        """A criticality field on a non-canonical event (e.g. critical_review)
+        does NOT update the canonical value — the spec line 42 stray-tier
+        sibling case for the criticality axis."""
+        feature = "test-feature"
+        feature_dir = tmp_path / feature
+        feature_dir.mkdir()
+        events_log = feature_dir / "events.log"
+        lines = [
+            json.dumps({"event": "lifecycle_start", "criticality": "medium"}),
+            json.dumps({"event": "critical_review", "criticality": "high"}),
+        ]
+        events_log.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        assert read_criticality(feature, lifecycle_base=tmp_path) == "medium"
+
+    def test_returns_default_for_missing_file(self, tmp_path: Path):
+        """Missing events.log returns the default criticality 'medium'."""
+        feature = "test-feature"
+        assert read_criticality(feature, lifecycle_base=tmp_path) == "medium"
+
+    def test_returns_default_when_no_canonical_event(self, tmp_path: Path):
+        """An events.log with no lifecycle_start/criticality_override events
+        returns the default — even if other events carry criticality fields."""
+        feature = "test-feature"
+        feature_dir = tmp_path / feature
+        feature_dir.mkdir()
+        events_log = feature_dir / "events.log"
+        events_log.write_text(
+            json.dumps({"event": "critical_review", "criticality": "high"}) + "\n",
+            encoding="utf-8",
+        )
+
+        assert read_criticality(feature, lifecycle_base=tmp_path) == "medium"
 
 
 # ---------------------------------------------------------------------------

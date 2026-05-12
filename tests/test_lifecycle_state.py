@@ -90,12 +90,16 @@ def test_read_criticality_mtime_invalidates(
     feature_dir = tmp_path / feature
     feature_dir.mkdir()
     events = feature_dir / "events.log"
-    events.write_text('{"criticality": "low"}\n', encoding="utf-8")
+    events.write_text(
+        '{"event": "lifecycle_start", "criticality": "low"}\n',
+        encoding="utf-8",
+    )
 
     assert read_criticality(feature, lifecycle_base=tmp_path) == "low"
 
     events.write_text(
-        '{"criticality": "low"}\n{"criticality": "high"}\n',
+        '{"event": "lifecycle_start", "criticality": "low"}\n'
+        '{"event": "criticality_override", "to": "high"}\n',
         encoding="utf-8",
     )
     _bump_mtime(events)
