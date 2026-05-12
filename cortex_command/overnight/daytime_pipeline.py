@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from cortex_command.common import CortexProjectRootError, _resolve_user_project_root
 from cortex_command.overnight.auth import ensure_sdk_auth
 from cortex_command.overnight.batch_runner import BatchConfig
 from cortex_command.overnight.deferral import DEFAULT_DEFERRED_DIR
@@ -50,17 +51,18 @@ _DISPATCH_ID_RE = re.compile(r"^[a-f0-9]{32}$")
 
 
 def _check_cwd() -> None:
-    """Abort if the CLI is not launched from the repo root.
+    """Abort if the CLI is not launched from inside a cortex project.
 
     All path construction in ``feature_executor`` and ``outcome_router``
     is CWD-relative, so running from the wrong directory would silently
-    write artifacts to the wrong locations.
+    write artifacts to the wrong locations. Routes through
+    ``_resolve_user_project_root()`` so the walk catches subdirectory
+    invocations and the failure diagnostic includes the searched paths.
     """
-    if not Path("lifecycle").is_dir():
-        sys.stderr.write(
-            "error: must be run from the repo root "
-            "(lifecycle/ directory not found)\n"
-        )
+    try:
+        _resolve_user_project_root()
+    except CortexProjectRootError as exc:
+        sys.stderr.write(f"error: must be run from a cortex project root: {exc}\n")
         sys.exit(1)
 
 

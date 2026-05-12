@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from cortex_command.backlog import _telemetry
-from cortex_command.common import TERMINAL_STATUSES, atomic_write
+from cortex_command.common import TERMINAL_STATUSES, _resolve_user_project_root, atomic_write
 
 
 # ---------------------------------------------------------------------------
@@ -439,9 +439,10 @@ def main() -> int:
         )
         return 1
 
-    # CLI-layer cwd resolution — internal callers must pass backlog_dir
-    # explicitly (see spec R3 / update_item signature).
-    BACKLOG_DIR = Path.cwd() / "backlog"
+    # CLI-layer resolver routing — internal callers must pass backlog_dir
+    # explicitly (see spec R3 / update_item signature). Routes through
+    # _resolve_user_project_root() so the CLI works from any subdirectory.
+    BACKLOG_DIR = _resolve_user_project_root() / "backlog"
 
     slug_or_uuid = sys.argv[1]
     field_args = sys.argv[2:]

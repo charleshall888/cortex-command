@@ -19,10 +19,14 @@ from types import SimpleNamespace
 
 from cortex_command.backlog import _telemetry
 from cortex_command.backlog.readiness import is_item_ready
-from cortex_command.common import TERMINAL_STATUSES, atomic_write, detect_lifecycle_phase, normalize_status, slugify
-
-BACKLOG_DIR = Path.cwd() / "backlog"
-LIFECYCLE_DIR = Path.cwd() / "lifecycle"
+from cortex_command.common import (
+    TERMINAL_STATUSES,
+    _resolve_user_project_root,
+    atomic_write,
+    detect_lifecycle_phase,
+    normalize_status,
+    slugify,
+)
 
 # Priority sort order (lower rank = higher priority)
 _PRIORITY_RANK: dict[str, int] = {"critical": 1, "high": 2, "medium": 3, "low": 4}
@@ -73,14 +77,28 @@ def _opt(fm: dict[str, str], key: str) -> str | None:
     return v if v and v.lower() != "null" else None
 
 
-def collect_items() -> tuple[list[dict], set[int], set[int], list[dict]]:
-    """Scan BACKLOG_DIR and return (active_items, active_ids, archive_ids, all_items).
+def collect_items(
+    backlog_dir: Path | None = None,
+    lifecycle_dir: Path | None = None,
+) -> tuple[list[dict], set[int], set[int], list[dict]]:
+    """Scan ``backlog_dir`` and return (active_items, active_ids, archive_ids, all_items).
 
     active_items is sorted by priority rank then ID ascending. all_items is
     a parallel list of minimal records (id, status, uuid) covering ALL
     backlog markdown files — active, terminal-status, and archived — used
     by the shared readiness helper to resolve blocker references.
+
+    When called without arguments, resolves the directories via
+    ``_resolve_user_project_root()`` so the CLI works from any subdirectory.
     """
+    if backlog_dir is None:
+        backlog_dir = _resolve_user_project_root() / "backlog"
+    if lifecycle_dir is None:
+        lifecycle_dir = _resolve_user_project_root() / "lifecycle"
+
+    BACKLOG_DIR = backlog_dir
+    LIFECYCLE_DIR = lifecycle_dir
+
     if not BACKLOG_DIR.is_dir():
         return [], set(), set(), []
 
@@ -282,10 +300,13 @@ def generate_md(
 
 def main() -> int:
     _telemetry.log_invocation("cortex-generate-backlog-index")
-    items, active_ids, archive_ids, all_items = collect_items()
-    atomic_write(BACKLOG_DIR / "index.json", generate_json(items))
+    project_root = _resolve_user_project_root()
+    backlog_dir = project_root / "backlog"
+    lifecycle_dir = project_root / "lifecycle"
+    items, active_ids, archive_ids, all_items = collect_items(backlog_dir, lifecycle_dir)
+    atomic_write(backlog_dir / "index.json", generate_json(items))
     atomic_write(
-        BACKLOG_DIR / "index.md",
+        backlog_dir / "index.md",
         generate_md(items, active_ids, archive_ids, all_items),
     )
     print(f"Generated index.json ({len(items)} items) and index.md")

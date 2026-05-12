@@ -26,7 +26,7 @@ from typing import Any
 from uuid import uuid4
 
 from cortex_command.backlog import _telemetry
-from cortex_command.common import atomic_write, slugify
+from cortex_command.common import _resolve_user_project_root, atomic_write, slugify
 
 
 # ---------------------------------------------------------------------------
@@ -157,9 +157,10 @@ def main() -> int:
     parser.add_argument("--parent", default=None, help="Parent epic ID")
     args = parser.parse_args()
 
-    # CLI-layer cwd resolution — internal callers must pass backlog_dir
-    # explicitly (see spec R3 / create_item signature).
-    BACKLOG_DIR = Path.cwd() / "backlog"
+    # CLI-layer resolver routing — internal callers must pass backlog_dir
+    # explicitly (see spec R3 / create_item signature). Routes through
+    # _resolve_user_project_root() so the CLI works from any subdirectory.
+    BACKLOG_DIR = _resolve_user_project_root() / "backlog"
 
     try:
         item_path = create_item(
