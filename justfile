@@ -348,6 +348,10 @@ check-parity *args:
 check-events-registry:
     bin/cortex-check-events-registry --staged
 
+# Check ticket bodies / skill prose for prescriptive-prose violations (LEX-1 scanner, R6/R7)
+check-prescriptive-prose *args:
+    bin/cortex-check-prescriptive-prose --staged {{args}}
+
 # Measure per-skill combined description: + when_to_use: UTF-8 byte size (L1 boot-context surface)
 measure-l1-surface:
     bin/cortex-measure-l1-surface

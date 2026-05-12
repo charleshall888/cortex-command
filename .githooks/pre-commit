@@ -170,6 +170,34 @@ if [ "$events_registry_triggered" -eq 1 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# Phase 1.85 — Prescriptive-prose scanner (LEX-1, R6/R7)
+# -----------------------------------------------------------------------------
+# When any staged path matches skill prose or backlog ticket bodies, invoke
+# the prescriptive-prose scanner against the staged blob view. The scanner
+# exits non-zero when a forbidden section (## Role, ## Integration, ## Edges)
+# contains a path:line citation, §N/RN section-index citation, or a fenced
+# code block of ≥2 non-empty lines. Touch points is exempt. Runs AFTER
+# cortex-check-parity (Phase 1.5) and cortex-check-events-registry (Phase 1.8)
+# so infrastructure-level violations surface first.
+prescriptive_prose_triggered=0
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+        skills/*|backlog/*.md|bin/cortex-check-prescriptive-prose)
+            prescriptive_prose_triggered=1
+            break
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "$prescriptive_prose_triggered" -eq 1 ]; then
+    if ! just check-prescriptive-prose; then
+        echo "pre-commit: prescriptive-prose check failed — move path:line/§N citations and multi-line code blocks into the ## Touch points section of the ticket body." >&2
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Phase 1.9 — Tier-reader divergence audit (spec R2c)
 # -----------------------------------------------------------------------------
 # When staged diffs touch the canonical tier readers, audit the in-tree

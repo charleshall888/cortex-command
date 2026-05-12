@@ -75,6 +75,8 @@ When items are combined, document the consolidation decision and rationale in th
 
 ### 5. Create Backlog Tickets
 
+Ticket bodies authored under the Role/Integration/Edges/Touch-points template are validated by `bin/cortex-check-prescriptive-prose` at pre-commit time (LEX-1 scanner). Path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks belong in the `## Touch points` section — the scanner flags them when they appear inside `## Role`, `## Integration`, or `## Edges`.
+
 Follow the `/cortex-core:backlog add` conventions for each ticket:
 
 1. Scan filenames matching `[0-9]*-*.md` in both `backlog/` and `backlog/archive/` to find the highest existing numeric ID

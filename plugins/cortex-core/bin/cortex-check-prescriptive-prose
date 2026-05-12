@@ -1,0 +1,407 @@
+#!/usr/bin/env python3
+"""Section-partitioned prescriptive-prose scanner (LEX-1).
+
+Implements the lexical scanner specified in
+``lifecycle/reframe-discovery-to-principal-architect-posture/spec.md`` R6/R7.
+Scans ticket-body / skill-prose markdown files and flags prescriptive content
+(``path:line`` citations, ``§N``/``RN`` section-index citations, multi-line
+fenced code blocks) appearing inside forbidden sections (``## Role``,
+``## Integration``, ``## Edges``). The ``## Touch points`` section is exempt
+— it is the sole permitted location for these tokens.
+
+Three modes:
+
+- ``--staged`` (pre-commit critical path): scan staged files matching skill
+  prose and backlog ticket bodies. Fail if any forbidden section contains a
+  LEX-1 hit.
+- ``--root <path>`` (test-only override): when set with ``--staged``, scan
+  matching files under ``<path>`` as if all were staged.
+- Positional file-arg mode: scan a single file and report violations. Useful
+  for ad-hoc checks (``bin/cortex-check-prescriptive-prose backlog/195-*.md``).
+
+Exit codes: 0 (clean), 1 (violations).
+
+Stdlib-only. Modeled on ``bin/cortex-check-events-registry`` shape.
+"""
+
+import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+
+import argparse
+import re
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+SCAN_GLOBS: tuple[str, ...] = (
+    "skills/**/*.md",
+    "backlog/*.md",
+)
+
+FORBIDDEN_SECTIONS: frozenset[str] = frozenset({"Role", "Integration", "Edges"})
+PERMITTED_SECTIONS: frozenset[str] = frozenset({"Touch points"})
+
+# LEX-1 regex patterns from spec R6.
+
+# Pattern 1: path:line — file path ending in a known extension followed by
+# :digits or :digits-digits. Bare paths without :line do NOT match.
+PATH_LINE_RE = re.compile(
+    r"\b[\w./\-]+\.(?:md|py|sh|json|toml|yml|yaml):\d+(?:-\d+)?\b"
+)
+
+# Pattern 2: section-index — §N or RN with optional letter suffix forms
+# (`§3a`, `§3(a)`, `R2(b)`). Single-letter `§` without a digit does NOT match.
+SECTION_INDEX_RE = re.compile(
+    r"(?:§|\bR)\d+(?:[a-z]\)?|\([a-z]\))?\b"
+)
+
+# Section heading detection. A new section opens at lines like
+# ``## Role`` or ``## Touch points`` (sibling-level ## headings). Subsections
+# (`### foo`) belong to the parent.
+SECTION_HEADING_RE = re.compile(r"^## (Role|Integration|Edges|Touch points)\s*$")
+SIBLING_HEADING_RE = re.compile(r"^## \S")
+
+# Fenced code block delimiters.
+FENCE_RE = re.compile(r"^(```|~~~)")
+
+
+# ---------------------------------------------------------------------------
+# Data classes
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Violation:
+    path: str
+    line: int
+    section: str
+    pattern: str
+    snippet: str
+
+    def format_text(self) -> str:
+        return (
+            f"{self.path}:{self.line}: PRESCRIPTIVE_PROSE "
+            f"section={self.section!r} pattern={self.pattern} -- {self.snippet}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Scanner
+# ---------------------------------------------------------------------------
+
+
+def scan_text(text: str, path: str) -> list[Violation]:
+    """Scan ``text`` for LEX-1 violations in forbidden sections.
+
+    Section model: a section begins at a line matching
+    ``^## (Role|Integration|Edges|Touch points)$`` and ends at the next line
+    matching ``^## `` (sibling-level heading) or EOF. Third-level subsections
+    (``### foo``) belong to the parent. Fenced code blocks are tracked so the
+    multi-line-fenced-block pattern (Pattern 3) can be detected.
+    """
+    violations: list[Violation] = []
+    lines = text.splitlines()
+
+    current_section: str | None = None  # section name (no '## ' prefix)
+    in_fence = False
+    fence_delim: str | None = None
+    fence_section: str | None = None
+    fence_start_line = 0
+    fence_nonempty_lines = 0
+
+    for idx, raw in enumerate(lines, start=1):
+        # Fence handling first — heading-looking lines inside a fenced block
+        # don't open or close sections.
+        m_fence = FENCE_RE.match(raw)
+        if m_fence:
+            if not in_fence:
+                in_fence = True
+                fence_delim = m_fence.group(1)
+                fence_section = current_section
+                fence_start_line = idx
+                fence_nonempty_lines = 0
+            else:
+                if raw.startswith(fence_delim):
+                    # Closing fence — emit Pattern 3 violation if the block sat
+                    # in a forbidden section and had ≥2 non-empty content lines.
+                    if (
+                        fence_section in FORBIDDEN_SECTIONS
+                        and fence_nonempty_lines >= 2
+                    ):
+                        violations.append(
+                            Violation(
+                                path=path,
+                                line=fence_start_line,
+                                section=fence_section,
+                                pattern="quoted-prose-patch",
+                                snippet=f"fenced block of {fence_nonempty_lines} non-empty lines",
+                            )
+                        )
+                    in_fence = False
+                    fence_delim = None
+                    fence_section = None
+                    fence_nonempty_lines = 0
+            continue
+
+        if in_fence:
+            if raw.strip():
+                fence_nonempty_lines += 1
+            continue
+
+        # Section heading detection (outside fences).
+        m_section = SECTION_HEADING_RE.match(raw)
+        if m_section:
+            current_section = m_section.group(1)
+            continue
+
+        # Any other sibling-level ## heading closes the current section.
+        if SIBLING_HEADING_RE.match(raw):
+            current_section = None
+            continue
+
+        # Only scan content inside a forbidden section.
+        if current_section not in FORBIDDEN_SECTIONS:
+            continue
+
+        # Pattern 1: path:line. Strip inline backtick spans first so the
+        # narrative-code-reference anti-pattern (e.g., `` `foo.md:42` `` if it
+        # ever appears) doesn't false-positive. The R6 worked examples treat
+        # inline backticks as narrative; bare path:line tokens still match.
+        scanlike = _strip_inline_backticks(raw)
+
+        for m in PATH_LINE_RE.finditer(scanlike):
+            violations.append(
+                Violation(
+                    path=path,
+                    line=idx,
+                    section=current_section,
+                    pattern="path:line",
+                    snippet=m.group(0),
+                )
+            )
+
+        # Pattern 2: section-index. Same inline-backtick strip.
+        for m in SECTION_INDEX_RE.finditer(scanlike):
+            violations.append(
+                Violation(
+                    path=path,
+                    line=idx,
+                    section=current_section,
+                    pattern="section-index",
+                    snippet=m.group(0),
+                )
+            )
+
+    return violations
+
+
+def _strip_inline_backticks(line: str) -> str:
+    """Remove inline-backtick spans from ``line``.
+
+    Inline `` `foo` `` spans are narrative code references per R6 and should
+    not match LEX-1 patterns. Multi-line fenced blocks are handled separately
+    (Pattern 3 via the fence state machine). This stripping is line-local and
+    naive — it removes balanced single-backtick spans only.
+    """
+    return re.sub(r"`[^`]*`", " ", line)
+
+
+# ---------------------------------------------------------------------------
+# File discovery
+# ---------------------------------------------------------------------------
+
+
+def _expand_glob(root: Path, glob: str) -> list[Path]:
+    if "*" in glob:
+        return sorted(p for p in root.glob(glob) if p.is_file())
+    p = root / glob
+    return [p] if p.is_file() else []
+
+
+def gather_scan_files(root: Path) -> list[Path]:
+    """Return files matching any scan glob under ``root``."""
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for glob in SCAN_GLOBS:
+        for p in _expand_glob(root, glob):
+            rp = p.resolve()
+            if rp in seen:
+                continue
+            seen.add(rp)
+            out.append(p)
+    return sorted(out, key=lambda p: str(p))
+
+
+def _matches_scan_glob(rel_path: str) -> bool:
+    p = Path(rel_path)
+    for glob in SCAN_GLOBS:
+        if p.match(glob):
+            return True
+    return False
+
+
+def _staged_paths(root: Path) -> list[str]:
+    try:
+        out = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+            cwd=str(root),
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+    return [ln for ln in out.stdout.splitlines() if ln and _matches_scan_glob(ln)]
+
+
+def _read_staged_blob(path: str, root: Path) -> str | None:
+    try:
+        out = subprocess.run(
+            ["git", "show", f":{path}"],
+            cwd=str(root),
+            capture_output=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    try:
+        return out.stdout.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Gate modes
+# ---------------------------------------------------------------------------
+
+
+def run_staged_gate(root: Path, *, root_override_active: bool) -> list[Violation]:
+    """Pre-commit gate: scan staged (or root-override) in-scope files."""
+    violations: list[Violation] = []
+
+    if root_override_active:
+        for p in gather_scan_files(root):
+            try:
+                text = p.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            rel = str(p.relative_to(root))
+            violations.extend(scan_text(text, rel))
+    else:
+        for rel in _staged_paths(root):
+            text = _read_staged_blob(rel, root)
+            if text is None:
+                continue
+            violations.extend(scan_text(text, rel))
+
+    return violations
+
+
+def run_file_mode(file_path: Path, root: Path | None) -> list[Violation]:
+    """Scan a single file. ``root`` is used only to relativize the report path."""
+    try:
+        text = file_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        print(
+            f"{file_path}: READ_ERROR {exc}",
+            file=sys.stderr,
+        )
+        return [
+            Violation(
+                path=str(file_path),
+                line=0,
+                section="",
+                pattern="read-error",
+                snippet=str(exc),
+            )
+        ]
+    if root is not None:
+        try:
+            rel = str(file_path.resolve().relative_to(root.resolve()))
+        except ValueError:
+            rel = str(file_path)
+    else:
+        rel = str(file_path)
+    return scan_text(text, rel)
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="cortex-check-prescriptive-prose",
+        description=(
+            "Section-partitioned prescriptive-prose scanner (LEX-1). "
+            "Flags path:line, §N/RN, and multi-line fenced-block tokens "
+            "appearing inside forbidden ticket-body sections "
+            "(## Role, ## Integration, ## Edges)."
+        ),
+    )
+    p.add_argument(
+        "--staged",
+        action="store_true",
+        help="Pre-commit critical path: scan staged in-scope files for LEX-1 violations.",
+    )
+    p.add_argument(
+        "--root",
+        type=str,
+        default=None,
+        help=(
+            "Testability override. When set with --staged, scan in-scope files "
+            "under <path> as if all were staged. When set with a positional "
+            "file arg, relativize the report path under <path>."
+        ),
+    )
+    p.add_argument(
+        "files",
+        nargs="*",
+        help="Optional positional file paths to scan directly (single-file mode).",
+    )
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+
+    if args.root is not None:
+        root = Path(args.root).resolve()
+    else:
+        root = Path(os.getcwd()).resolve()
+
+    violations: list[Violation] = []
+
+    if args.staged:
+        violations.extend(
+            run_staged_gate(root, root_override_active=args.root is not None)
+        )
+
+    for file_arg in args.files:
+        fp = Path(file_arg)
+        if not fp.is_absolute():
+            fp = root / fp
+        violations.extend(run_file_mode(fp, root))
+
+    if not args.staged and not args.files:
+        print(
+            "cortex-check-prescriptive-prose: no mode selected; "
+            "pass --staged or a positional file path.",
+            file=sys.stderr,
+        )
+        return 2
+
+    for v in violations:
+        print(v.format_text(), file=sys.stderr)
+
+    return 1 if violations else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
