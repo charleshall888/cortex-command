@@ -1,81 +1,124 @@
 # Decompose Phase
 
-Break research findings into implementable work items and create backlog tickets. This is the core value of discovery — turning research into actionable work.
+Break the approved Architecture section into backlog tickets. This is the core value of discovery — turning the named pieces into actionable work under a uniform body template.
 
 ## Protocol
 
 ### 1. Load Context
 
-Read `research/{topic}/research.md` for findings, feasibility assessment, and decision records.
+Read `research/{topic}/research.md` for findings, feasibility assessment, decision records, and — most importantly — the approved `## Architecture` section. The Architecture section's `### Pieces`, `### Integration shape`, and `### Seam-level edges` sub-sections are the source-of-truth input to decompose. The research→decompose approval gate (per `skills/discovery/SKILL.md`) must have fired before this phase runs.
 
-### 2. Identify Work Items
+### 2. Consume the Architecture Section
 
-Analyze the research and break findings into discrete, independently implementable work items. Each should:
+Each bullet in the approved `### Pieces` sub-section becomes one ticket candidate. Do **not** re-derive pieces from raw findings — the Architecture section already names them by role. The piece-set is fixed at decompose entry; if the agent finds that the piece-set is wrong, return to the research phase rather than mutating the set silently.
 
-- Deliver a testable increment of value
-- Be completable in a single `/cortex-core:lifecycle` run
-- Have clear boundaries (what's in, what's out)
+For each piece, author a ticket body under the **uniform template**:
 
-For each work item, capture:
+```
+## Role
 
-- **Title**: Short imperative description
-- **Description**: What this item delivers, referencing research findings
-- **Value**: What problem this solves and why it's worth the effort in *this* codebase. One sentence. Apply both checks below; flag the item when EITHER (a) fails OR (b) indicates an unverified premise.
-  - **(a) Local grounding check**: Produce a locally-written `[file:line]` citation that grounds the Value claim in this codebase (the specific file/line where the problem manifests or where the solution will land). If no such citation can be produced — because the target does not exist, the search was inconclusive, or the Value rests on a premise that is not codebase-local — flag the item.
-  - **(b) Research-side premise check**: Cross-check `research/{topic}/research.md` for the section substantiating this Value claim. Flag the item when EITHER branch holds: (i) a `[premise-unverified: not-searched]` marker appears adjacent to the Value-supporting claim (per #138's signal, codified at `skills/discovery/references/research.md:148-154`), OR (ii) there is an absence of any `[file:line]` citation within that claim's research section/bullet (no citation at all in the supporting prose). Per E1, branch (ii) — citation-absence — is the dominant path for the current research corpus and should be treated as a primary route, not a legacy fallback; branch (i) becomes primary once #138's marker adoption saturates. This is a lexical check: it catches citation-absence but not citation-incorrectness.
-  - **(E9) Ad-hoc fallback**: When no `research/{topic}/research.md` exists (ad-hoc discovery / no research.md), R2(b) is skipped and R2(a) alone governs flagging.
-  - **Surface-pattern helper (non-gating hint)**: The following vendor/authority phrasings in the Value prose are a prompt-level signal to apply (a)/(b) with extra care — they do NOT by themselves flag the item: `"vendor X recommends"`, `"Anthropic says"`, `"CrewAI docs"`, `"industry best practice"`, `"canonical pattern in $framework"`, `"recommended approach"`, `"current conventions suggest"`, `"standard pattern"`, `"widely adopted"`, `"accepted convention"`. This list is non-exhaustive; treat the pattern family (external authority cited in place of codebase grounding) as reason to scrutinize.
-- **Priority**: Derived from research signals — items flagged as Low effort/Low risk in the feasibility assessment → high priority; items with High effort or High risk → lower priority unless explicitly critical in decision records
+What this piece does, named by role (not by mechanism). One paragraph.
+
+## Integration
+
+How this piece connects to the other pieces and to the existing system.
+Reference the Integration shape sub-section's contract surfaces.
+
+## Edges
+
+Structural constraints and boundary breaks. Each bullet names a contract
+surface by name (e.g., "phase-transition contract", "events-registry schema").
+Bullets do NOT cite file paths or section indices.
+
+## Touch points  (optional)
+
+Implementation locations: specific file paths with line numbers, section
+indices (§N, RN), or multi-line code excerpts. This is the sole permitted
+location for path:line citations and section-index citations.
+```
+
+The template applies uniformly to all pieces. There is no defect-vs-novel branching, no per-shape variation. Every ticket body produced from the architecture uses these four headers in this order.
+
+**Edge-vs-Touch-point semantic distinction.** `## Edges` documents structural constraints between pieces, naming each contract surface by name without a file path. `## Touch points` documents implementation locations. If an edge bullet would name a path or line to express its constraint, the path:line moves to `## Touch points` and a structural-constraint summary naming the contract by name remains in `## Edges`.
+
+**Worked example.** A piece that re-shapes how lifecycle state transitions read:
+
+```
+## Edges
+
+- Breaks if the phase-transition contract changes shape (new phase enum value, renamed transition function).
+- Depends on the events-registry schema for the events this piece emits.
+
+## Touch points
+
+- skills/lifecycle/SKILL.md §3 (phase-transition prose)
+- bin/cortex-lifecycle-state:42-58 (transition function)
+- bin/.events-registry.md (target enum for emitted events)
+```
+
+The Edges bullets name contracts by name. The Touch points bullets cite paths and lines. The path:line citation `bin/cortex-lifecycle-state:42-58` belongs in Touch points; the structural summary "depends on the events-registry schema" belongs in Edges.
+
+For each ticket, also capture:
+
+- **Title**: Short imperative description (≤ 72 chars)
+- **Priority**: Derived from research signals — Low effort/Low risk → high priority; High effort or High risk → lower priority unless explicitly critical in decision records
 - **Type**: Usually `feature`, but may be `chore` or `spike`
 - **Size**: S/M/L (informs ordering, not stored in backlog)
-- **Dependencies**: Which other work items must complete first
-
-**Flagged-item routing and batch review**: Route flagged items and unflagged items separately before creating tickets.
-
-(i) **R4 cap check (pre-consolidation)**: If any items are flagged per R2, first evaluate the cap on the **pre-consolidation** flag set (before §3 Consolidation Review runs). The cap fires when EITHER (a) **more than 3** items are flagged in the pre-consolidation set, OR (b) **all items are flagged** and N ≥ 2. When the cap fires, skip per-item pauses and halt with a single escalation: "{N} of {total} flagged items (pre-consolidation) — recommend re-running research with premise verification." Offer the user "Return to research" or "Proceed anyway" (the latter resumes the per-item ack flow in (ii)).
-
-(ii) **Per-item acknowledgment for flagged items**: If the cap did not fire, present each flagged item one at a time via `AskUserQuestion`. Each prompt must:
-  - Quote the proposed Value string verbatim.
-  - State which R2 branch flagged the item: `R2(a)-no-grounding`, `R2(b)-research-absent`, or `both`.
-  - Offer three choices: "Acknowledge and proceed", "Drop this item", "Return to research".
-
-If the user chooses "Drop this item", remove the item from the decomposition (no ticket is created later) and continue to the next flagged item. If the user chooses "Return to research", halt decomposition — do not proceed to ticket creation. If the user chooses "Acknowledge and proceed", keep the item and continue.
-
-(iii) **Unflagged items — batch review**: Present the proposed work items to the user for review before creating tickets. Unflagged items (including flagged items the user acknowledged in (ii)) continue through this existing batch-review behavior unchanged.
+- **Dependencies**: From the Integration shape and Seam-level edges sub-sections
 
 ### 3. Consolidation Review
 
-Before creating tickets, review the proposed work items for over-decomposition. Combine items when either of the following signals is present:
+The Architecture section's falsification gate (research-phase R3) has already run the structural-coherence merge test. Do not re-run it here. The piece-set at decompose entry is the merged set.
 
-**(a) Same-file overlap**: Two or more S-sized items that modify the same set of files. These are aspects of a single change that were split unnecessarily.
+If during ticket authoring the agent finds that two pieces share identical Touch points and identical Role paragraphs, that is a signal the research-phase merger missed a case — surface this to the user with the option to return to research rather than silently consolidating at decompose time.
 
-**(b) No-standalone-value prerequisite**: A strict sequential dependency where the predecessor has no independent deliverable value — it exists only to enable the successor. Merge the prerequisite into the item it enables.
-
-When combining, merge the descriptions and adjust size accordingly (two S items typically become one M). Update the dependency graph to reflect the combined item.
-
-The agent may also consolidate items beyond (a) and (b) when there is concrete, verifiable rationale (e.g., overlapping file sets, shared research section reference). Self-referential reasoning ("these share a thought process") is not sufficient rationale.
-
-If no consolidation candidates are found, proceed to §4 silently.
-
-When items are combined, document the consolidation decision and rationale in the Key Design Decisions section of `research/{topic}/decomposed.md` (written in §6).
-
-**R5 flag propagation through consolidation**: When consolidation merges two or more work items, flags from inputs propagate to the merged output. Specifically: (i) if any input item to a consolidation merge carried a flag per R2, the merged output item carries the flag for R3 ack-display purposes — the merged item carries the flag of any flagged input, and flag propagation is inherited rather than re-derived on the merged Value prose; (ii) the R4 cap evaluates on the **pre-consolidation** flag count, not the post-consolidation count, so consolidation cannot mask a cap-triggering flag burden by collapsing flagged items into fewer merged items; (iii) the R3 ack prompt for a merged flagged item must surface the **originating** flagged input's Value string and its R2 premise (branch and basis) so the user sees the actual basis of the flag rather than the merged Value prose — per E5, this preserves the originally flagged premise through the merge; (iv) **E10 invariant**: consolidation cannot reduce the flagged set to zero — propagation ensures any input flag survives merging, so the count of flagged items after consolidation is always ≥ 1 whenever the pre-consolidation count was ≥ 1.
+If no consolidation candidates surface, proceed to §4.
 
 ### 4. Determine Grouping
 
-**Single ticket**: If the research produces exactly one work item, create a single backlog ticket. No epic needed.
+The grouping is determined by piece_count from the approved Architecture section.
 
-**Epic + children**: If the spec produces 2+ work items:
+**Single-piece branch** (piece_count = 1): Create one backlog ticket directly. **No epic.** The single ticket is the entire output. Skip to §5.
+
+**Zero-piece branch** (piece_count = 0): No tickets are created. Two sub-cases:
+
+- **Fold-into-#N**: The research surfaced a finding that belongs on an existing open ticket. Record the target ticket number and a one-line rationale in `decomposed.md` under a `## Fold-into` heading. No new backlog entries.
+- **No-tickets verdict**: The research surfaced no actionable work (e.g., a diagnostic finding that "the current behavior is correct as designed"). Record the verdict and one-sentence rationale in `decomposed.md` under a `## Verdict` heading.
+
+In both zero-piece sub-cases, `decomposed.md` is **still written** as an audit trail. The frontmatter line `decomposition_verdict: zero-piece` makes the branch machine-readable.
+
+**Epic + children** (piece_count ≥ 2):
 
 1. Create an epic ticket first — a parent backlog item summarizing the full scope
    - `type: epic`
    - `discovery_source: research/{topic}/research.md`
    - Body references the research artifact
-2. Create child tickets — one per work item, each with `parent: <epic-id>`
+2. Create child tickets — one per piece, each with `parent: <epic-id>` and body authored under the §2 uniform template
 
 ### 5. Create Backlog Tickets
 
-Ticket bodies authored under the Role/Integration/Edges/Touch-points template are validated by `bin/cortex-check-prescriptive-prose` at pre-commit time (LEX-1 scanner). Path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks belong in the `## Touch points` section — the scanner flags them when they appear inside `## Role`, `## Integration`, or `## Edges`.
+Ticket bodies authored under the Role/Integration/Edges/Touch-points template are validated by `bin/cortex-check-prescriptive-prose` at pre-commit time (LEX-1 scanner). The scanner runs section-partitioned: path:line citations, `§N`/`RN` section-index citations, and multi-line fenced code blocks are permitted only in `## Touch points` and are flagged when they appear inside `## Role`, `## Integration`, or `## Edges`.
+
+**LEX-1 regex specification** (the scanner's exact behavior, baked into this prose):
+
+- **Pattern 1 (path:line)**: `\b[\w./\-]+\.(md|py|sh|json|toml|yml|yaml):\d+(?:-\d+)?\b` — matches `decompose.md:147`, `bin/foo.py:42-58`. Bare paths without `:line` do NOT match (narrative references are fine).
+- **Pattern 2 (section-index)**: `(?:§|R)\d+(?:[a-z]\)?|\([a-z]\))?\b` — matches `§5`, `§3a`, `§3(a)`, `R2`, `R2(b)`. Single-letter references without a digit do NOT match.
+- **Pattern 3 (quoted-prose-patch)**: a fenced code block (` ``` ` or `~~~`) of ≥ 2 non-empty lines appearing inside a forbidden section. Single-line fenced blocks and inline backticks do NOT match.
+
+**Forbidden sections (per ticket body)**: `## Role`, `## Integration`, `## Edges`. **Permitted section**: `## Touch points`.
+
+**Section-boundary detection**: a section begins at a line matching `^## (Role|Integration|Edges|Touch points)$` and ends at the next line matching `^## ` (any sibling-level heading) or end-of-file. Third-level subsections (`### foo`) inside a section are part of that section. Fenced code blocks are tolerated as ranges (do not split sections).
+
+**Worked examples**:
+
+- **PASSES** (no flag): `## Edges` followed by "This piece breaks if the phase-transition contract changes." (named contract, no path:line)
+- **PASSES** (no flag): `## Role` followed by "The role is to track lifecycle state. See `cortex-update-item` for the helper." (inline backtick narrative)
+- **FLAGS**: `## Edges` followed by "This piece must update decompose.md:147 to replace the ban." (path:line in forbidden section)
+- **FLAGS**: `## Integration` followed by "Follows the pattern in §3a." (section-index in forbidden section)
+- **NOT flagged** (anti-pattern: false positive on legitimate narrative): `## Edges` followed by "The phase-transition contract is documented in skills/lifecycle/SKILL.md." (bare path, no `:line`, no `§`)
+- **NOT flagged** (anti-pattern: false positive on inline code): `## Role` followed by "The helper `cortex-update-item` writes the state." (inline backtick code reference, not a fenced block)
+
+The scanner runs once at decompose ticket-write time. Defense-in-depth at architecture-write time is deferred. The pre-commit hook is the second-actor surface that re-runs the check before any ticket lands in `backlog/`.
 
 Follow the `/cortex-core:backlog add` conventions for each ticket:
 
@@ -83,7 +126,7 @@ Follow the `/cortex-core:backlog add` conventions for each ticket:
 2. Create the epic first if applicable (children need its ID for `parent`)
 3. Each ticket gets proper frontmatter:
    - `parent: <epic-id>` on children (omit on epic or single tickets)
-   - `blocked-by: [<ids>]` based on work item dependencies
+   - `blocked-by: [<ids>]` based on Integration-shape dependencies
    - `tags: [<topic>]` to link back to the discovery topic
    - `created` and `updated` set to today's date
    - `discovery_source: research/{topic}/research.md` — enables `/cortex-core:lifecycle` to auto-load prior discovery context
@@ -105,12 +148,6 @@ Create `research/{topic}/decomposed.md` to record what was produced:
 |----|-------|----------|------|------------|
 | NNN | [title] | high/medium/low | S/M/L | [IDs or —] |
 
-## Dropped Items
-| Title | Reason (R2 branch) | Originating Value |
-|-------|--------------------|-------------------|
-
-Include this subsection only when items were dropped at R3's ack prompt; omit when no drops occurred.
-
 ## Suggested Implementation Order
 [Brief description of the recommended sequence]
 
@@ -118,6 +155,8 @@ Include this subsection only when items were dropped at R3's ack prompt; omit wh
 - `backlog/NNN-slug.md` — [title]
 - `backlog/NNN-slug.md` — [title]
 ```
+
+For the single-piece branch, omit the Epic subsection and list one ticket. For the zero-piece branch, write `decomposition_verdict: zero-piece` in frontmatter and include either a `## Fold-into` or `## Verdict` section instead of Work Items.
 
 ### 7. Update Index
 
@@ -131,13 +170,15 @@ Stage and commit the new backlog files and `research/{topic}/decomposed.md` usin
 
 Show the user:
 
-- The epic and its children (or single ticket if no epic)
+- The epic and its children (or single ticket / zero-piece verdict)
 - The dependency graph and suggested implementation order
 - Reminder that `/cortex-core:lifecycle <feature>` is the next step when ready to build
 
 ## Constraints
 
-- **Codebase-grounded Value**: Vendor guidance, best practices, and industry standards are not sufficient Value on their own — the Value field must state what problem this solves in *this* codebase.
-- **No implementation planning**: Don't specify HOW to build each item — that's `/cortex-core:lifecycle`'s plan phase. Ticket bodies must not contain prescriptive section headers like "## Proposed Fix", "## Implementation Steps", or "## How to Fix". Instead, use descriptive headers to summarize research context: "## Research Context", "## Findings", or "## Context from discovery:" are all fine. Tickets may reference findings from `discovery_source` to give implementers background, but should never prescribe solutions
-- **One epic max**: A single discovery produces at most one epic with children
-- **Respect backlog conventions**: Follow the backlog skill's frontmatter schema exactly
+- **Architecture-section-driven**: The piece-set is the approved `### Pieces` sub-section from research. Do not re-derive pieces from raw findings; do not silently mutate the set at decompose time.
+- **Uniform body template**: All tickets use `## Role`, `## Integration`, `## Edges`, and optional `## Touch points`. No per-shape branching.
+- **Touch-points exclusivity**: Path:line citations and section-index citations live only in `## Touch points`. The pre-commit scanner enforces this.
+- **No implementation planning**: Don't specify HOW to build each piece — that's `/cortex-core:lifecycle`'s plan phase. Ticket bodies describe role, integration, and structural edges; the plan phase fills in mechanism.
+- **One epic max**: A single discovery produces at most one epic with children.
+- **Respect backlog conventions**: Follow the backlog skill's frontmatter schema exactly.
