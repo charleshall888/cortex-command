@@ -3,3 +3,5 @@
 {"ts":"2026-05-12T19:31:25Z","event":"phase_transition","feature":"audit-auto-memory","from":"research","to":"specify"}
 {"ts":"2026-05-12T19:31:25Z","event":"spec_approved","feature":"audit-auto-memory"}
 {"ts":"2026-05-12T19:31:25Z","event":"phase_transition","feature":"audit-auto-memory","from":"specify","to":"plan"}
+{"ts":"2026-05-12T19:35:29Z","event":"plan_approved","feature":"audit-auto-memory"}
+{"ts":"2026-05-12T19:35:29Z","event":"phase_transition","feature":"audit-auto-memory","from":"plan","to":"implement"}
