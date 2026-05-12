@@ -317,7 +317,7 @@ def _stage_tier_parity_fixture(tmp_path: Path, slug: str) -> None:
     ``tmp_path/lifecycle/<slug>/events.log`` so read_tier can be invoked with
     an absolute lifecycle_base."""
     source = TIER_PARITY_ROOT / slug / "events.log"
-    feature_dir = tmp_path / "lifecycle" / slug
+    feature_dir = tmp_path / "cortex" / "lifecycle" / slug
     feature_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy(source, feature_dir / "events.log")
 
@@ -341,7 +341,7 @@ def test_canonical_tier_rule(
     assert source.exists(), f"missing fixture: {source}"
     _stage_tier_parity_fixture(tmp_path, slug)
 
-    result = read_tier(slug, lifecycle_base=tmp_path / "lifecycle")
+    result = read_tier(slug, lifecycle_base=tmp_path / "cortex" / "lifecycle")
 
     assert result == expected, (
         f"read_tier({slug!r}) returned {result!r}, expected {expected!r}"
@@ -360,7 +360,7 @@ def test_read_tier_ignores_complexity_field_only_returns_default(
     (no ``tier`` field) returns ``"simple"`` — the default. The wrong key is
     silently ignored."""
     feature = "tA-complexity-only"
-    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir = tmp_path / "cortex" / "lifecycle" / feature
     feature_dir.mkdir(parents=True, exist_ok=True)
     events_log = feature_dir / "events.log"
     events_log.write_text(
@@ -369,7 +369,7 @@ def test_read_tier_ignores_complexity_field_only_returns_default(
         encoding="utf-8",
     )
 
-    assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "simple"
+    assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "simple"
 
 
 def test_read_tier_canonical_tier_wins_over_stray_complexity(
@@ -379,7 +379,7 @@ def test_read_tier_canonical_tier_wins_over_stray_complexity(
     a stray ``complexity: "simple"`` returns ``"complex"`` — the canonical
     ``tier`` key wins."""
     feature = "tB-both-keys"
-    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir = tmp_path / "cortex" / "lifecycle" / feature
     feature_dir.mkdir(parents=True, exist_ok=True)
     events_log = feature_dir / "events.log"
     events_log.write_text(
@@ -393,7 +393,7 @@ def test_read_tier_canonical_tier_wins_over_stray_complexity(
         encoding="utf-8",
     )
 
-    assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
+    assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "complex"
 
 
 # ---------------------------------------------------------------------------

@@ -94,7 +94,7 @@ def _get_spec_path(feature: str, spec_path: Optional[str] = None) -> str:
         p = Path(spec_path)
         if p.exists():
             return str(p.resolve())
-    lifecycle_path = Path(f"lifecycle/{feature}/spec.md")
+    lifecycle_path = Path(f"cortex/lifecycle/{feature}/spec.md")
     return str(lifecycle_path.resolve())
 
 
@@ -113,12 +113,12 @@ def _read_spec_content(feature: str, spec_path: Optional[str] = None) -> str:
 
 def _read_learnings(feature: str) -> str:
     parts: list[str] = []
-    progress_path = Path(f"lifecycle/{feature}/learnings/progress.txt")
+    progress_path = Path(f"cortex/lifecycle/{feature}/learnings/progress.txt")
     if progress_path.exists():
         content = progress_path.read_text(encoding="utf-8")
         if content.strip():
             parts.append(content)
-    note_path = Path(f"lifecycle/{feature}/learnings/orchestrator-note.md")
+    note_path = Path(f"cortex/lifecycle/{feature}/learnings/orchestrator-note.md")
     if note_path.exists():
         content = note_path.read_text(encoding="utf-8")
         if content.strip():
@@ -159,7 +159,7 @@ def _read_exit_report(
     contains malformed JSON, is missing the ``action`` key, or declares an
     unrecognised action string.
     """
-    report_path = Path(f"lifecycle/{feature}/exit-reports/{task_number}.json")
+    report_path = Path(f"cortex/lifecycle/{feature}/exit-reports/{task_number}.json")
     if not report_path.is_file():
         if worktree_path is not None:
             fallback_path = worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" / f"{task_number}.json"
@@ -242,7 +242,7 @@ async def _handle_failed_task(
 
     # Map BrainDecision to return values
     if decision.action == BrainAction.SKIP:
-        mark_task_done_in_plan(Path(f"lifecycle/{feature}/plan.md"), task.number)
+        mark_task_done_in_plan(Path(f"cortex/lifecycle/{feature}/plan.md"), task.number)
         return None  # Continue to next task
 
     if decision.action == BrainAction.DEFER:
@@ -523,7 +523,7 @@ async def execute_feature(
                         )
     # --- End conflict recovery policy ---
 
-    plan_path = Path(f"lifecycle/{feature}/plan.md")
+    plan_path = Path(f"cortex/lifecycle/{feature}/plan.md")
     plan_hash = _compute_plan_hash(plan_path)
     try:
         feature_plan = parse_feature_plan(plan_path)
@@ -537,7 +537,7 @@ async def execute_feature(
 
     spec_path_resolved = _get_spec_path(feature, spec_path)
     spec_content = _read_spec_content(feature, spec_path)
-    learnings_dir = Path(f"lifecycle/{feature}/learnings")
+    learnings_dir = Path(f"cortex/lifecycle/{feature}/learnings")
 
     try:
         batches = compute_dependency_batches(feature_plan.tasks)
@@ -556,8 +556,8 @@ async def execute_feature(
                 f"- **Complexity**: {task.complexity}",
             ]
             plan_task = "\n".join(plan_task_lines)
-            progress_path = Path(f"lifecycle/{feature}/learnings/progress.txt")
-            note_path = Path(f"lifecycle/{feature}/learnings/orchestrator-note.md")
+            progress_path = Path(f"cortex/lifecycle/{feature}/learnings/progress.txt")
+            note_path = Path(f"cortex/lifecycle/{feature}/learnings/orchestrator-note.md")
             has_progress = progress_path.exists() and progress_path.read_text(encoding="utf-8").strip()
             has_note = note_path.exists() and note_path.read_text(encoding="utf-8").strip()
             if has_progress or has_note:
@@ -576,7 +576,7 @@ async def execute_feature(
                 "integration_worktree_path": str(Path.cwd()),
             })
 
-            activity_log_path = Path(f"lifecycle/{feature}/agent-activity.jsonl")
+            activity_log_path = Path(f"cortex/lifecycle/{feature}/agent-activity.jsonl")
 
             token = _make_idempotency_token(feature, task.number, plan_hash)
             if _check_task_completed(config.pipeline_events_path, token):
@@ -711,7 +711,7 @@ async def execute_feature(
                 )
 
             if result.idempotency_skipped:
-                mark_task_done_in_plan(Path(f"lifecycle/{feature}/plan.md"), task.number)
+                mark_task_done_in_plan(Path(f"cortex/lifecycle/{feature}/plan.md"), task.number)
                 continue
 
             # --- Exit-report validation (R1, R2, R3) ---
@@ -759,7 +759,7 @@ async def execute_feature(
                 report_action == "question" and not report_question
             ):
                 report_path = Path(
-                    f"lifecycle/{feature}/exit-reports/{task.number}.json"
+                    f"cortex/lifecycle/{feature}/exit-reports/{task.number}.json"
                 )
                 if report_path.is_file():
                     overnight_log_event(
@@ -779,7 +779,7 @@ async def execute_feature(
                     )
 
             # action == "complete", missing, or malformed — fall through
-            mark_task_done_in_plan(Path(f"lifecycle/{feature}/plan.md"), task.number)
+            mark_task_done_in_plan(Path(f"cortex/lifecycle/{feature}/plan.md"), task.number)
 
     # All tasks passed — feature complete
     return FeatureResult(name=feature, status="completed")

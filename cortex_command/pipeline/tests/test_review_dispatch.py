@@ -163,7 +163,7 @@ class TestCycleThreading(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             feature = "feat-cycle-threading"
-            lifecycle_base = tmp_path / "lifecycle"
+            lifecycle_base = tmp_path / "cortex" / "lifecycle"
             feature_dir = lifecycle_base / feature
             feature_dir.mkdir(parents=True)
 

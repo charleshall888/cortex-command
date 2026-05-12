@@ -91,7 +91,7 @@ def test_schedule_dry_run_human_exits_zero(
 ) -> None:
     """``--dry-run`` succeeds and prints session_id/label/target ISO."""
     session_id = "overnight-2026-05-04-2200"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
@@ -119,7 +119,7 @@ def test_schedule_dry_run_json_envelope(
 ) -> None:
     """``--dry-run --format json`` emits a versioned JSON envelope."""
     session_id = "overnight-2026-05-04-2300"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
@@ -156,7 +156,7 @@ def test_schedule_non_darwin_exits_with_macos_only_message(
 ) -> None:
     """Non-macOS platforms get the spec-exact error message and non-zero exit."""
     session_id = "overnight-2026-05-04-0100"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
@@ -196,7 +196,7 @@ def test_schedule_feb_29_in_non_leap_year_rejected(
 ) -> None:
     """Feb 29 in a non-leap year exits non-zero with the spec phrasing."""
     session_id = "overnight-2026-05-04-0200"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 
@@ -221,7 +221,7 @@ def test_schedule_malformed_target_rejected(
 ) -> None:
     """Unparseable target time exits non-zero before any backend work."""
     session_id = "overnight-2026-05-04-0300"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state_file(session_dir, session_id)
 

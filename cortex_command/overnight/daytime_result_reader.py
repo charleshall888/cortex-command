@@ -66,7 +66,7 @@ _MSG_ABSENT = (
 _TERMINAL_PHASES = {"complete", "done", "finished"}
 
 # Default lifecycle root (repo root).
-_DEFAULT_LIFECYCLE_ROOT = Path("lifecycle")
+_DEFAULT_LIFECYCLE_ROOT = Path("cortex/lifecycle")
 
 
 def _lifecycle_root(lifecycle_root: Optional[Path]) -> Path:
@@ -126,9 +126,9 @@ def classify_result(
 
     Args:
         feature_slug: The feature slug (subdirectory name under lifecycle/).
-        lifecycle_root: Path to the lifecycle/ directory. Defaults to
-            Path("lifecycle") relative to cwd — i.e., the repo root must
-            be the cwd. Pass an explicit path in tests.
+        lifecycle_root: Path to the cortex/lifecycle/ directory. Defaults
+            to Path("cortex/lifecycle") relative to cwd — i.e., the repo
+            root must be the cwd. Pass an explicit path in tests.
 
     Returns:
         A JSON-serializable dict with keys:

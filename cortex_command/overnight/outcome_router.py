@@ -304,7 +304,7 @@ def _classify_no_commit(feature: str, branch: str, base_branch: str) -> str:
 # ---------------------------------------------------------------------------
 
 # Runtime backlog directory — set from overnight state so write-backs find items
-# in external repos. Falls back to ``_resolve_user_project_root() / "backlog"``
+# in external repos. Falls back to ``_resolve_user_project_root() / "cortex" / "backlog"``
 # (resolved at call time) when unset, which anchors the lookup at the user's
 # project root via the CORTEX_REPO_ROOT env var or CWD probe rather than at a
 # module-anchored path.
@@ -355,7 +355,7 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
       2. If *backlog_id* is provided, match ``backlog/{NNN}-*.md``
       3. Substring match via ``_find_item(feature)``
     """
-    backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "backlog"
+    backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "cortex" / "backlog"
 
     # 1. Exact slug match
     for p in sorted(backlog_dir.glob("[0-9]*-*.md")):
@@ -412,7 +412,7 @@ def _write_back_to_backlog(
             else:
                 fields[key] = value
 
-        backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "backlog"
+        backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "cortex" / "backlog"
         _backlog_update_item(
             item_path, fields, backlog_dir=backlog_dir, session_id=session_id
         )
@@ -835,7 +835,7 @@ async def apply_feature_result(
                         feature=name,
                         worktree_path=ctx.worktree_paths.get(name, Path(f"worktrees/{name}")),
                         branch=actual_branch or f"pipeline/{name}",
-                        spec_path=Path(f"lifecycle/{name}/spec.md"),
+                        spec_path=Path(f"cortex/lifecycle/{name}/spec.md"),
                         complexity=tier,
                         criticality=criticality,
                         base_branch=_effective_base_branch(
@@ -1030,7 +1030,7 @@ async def apply_feature_result(
             ),
             branch=actual_branch or f"pipeline/{name}",
             worktree_path=ctx.worktree_paths.get(name),
-            learnings_dir=Path(f"lifecycle/{name}/learnings"),
+            learnings_dir=Path(f"cortex/lifecycle/{name}/learnings"),
             test_command=ctx.config.test_command,
             pipeline_log_path=ctx.config.pipeline_events_path,
             repo_path=_effective_merge_repo_path(

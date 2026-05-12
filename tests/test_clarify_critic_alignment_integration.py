@@ -594,7 +594,7 @@ def test_post_migration_clarify_critic_events_are_jsonl():
     """R14: any post-cutoff clarify_critic event in active lifecycle/*/events.log
     is single-line JSON, never a YAML-block event.
 
-    Walks ``Path("lifecycle").glob("*/events.log")`` excluding any path whose
+    Walks ``Path("cortex/lifecycle").glob("*/events.log")`` excluding any path whose
     parts include ``archive``. For each ``clarify_critic`` event found via
     regex line-scan (both single-line JSONL and multi-line YAML-block forms),
     compares the event's ``ts`` to the cutoff in
@@ -684,7 +684,7 @@ def test_v3_only_synthetic_corpus_detects_clarify_critic_event(tmp_path):
     detects it.
     """
     # Build a tmp lifecycle tree mirroring lifecycle/<slug>/events.log layout.
-    feature_dir = tmp_path / "lifecycle" / "test-v3-feature"
+    feature_dir = tmp_path / "cortex" / "lifecycle" / "test-v3-feature"
     feature_dir.mkdir(parents=True)
     events_log = feature_dir / "events.log"
 
@@ -708,7 +708,7 @@ def test_v3_only_synthetic_corpus_detects_clarify_critic_event(tmp_path):
     # Replicate the detection logic from
     # test_post_migration_clarify_critic_events_are_jsonl, scoped to tmp_path.
     detections = 0
-    lifecycle_root = tmp_path / "lifecycle"
+    lifecycle_root = tmp_path / "cortex" / "lifecycle"
     for log_path in lifecycle_root.glob("*/events.log"):
         if "archive" in log_path.parts:
             continue

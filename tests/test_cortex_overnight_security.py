@@ -88,7 +88,7 @@ def test_validate_session_id_accepts_canonical(good_id: str) -> None:
 def test_resolve_session_dir_rejects_symlink_escape(tmp_path: Path) -> None:
     """A session-id that is a symlink pointing outside the sessions root must
     be rejected by :func:`session_validation.resolve_session_dir`."""
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     sessions_root.mkdir(parents=True)
 
     # Target outside the sessions root.
@@ -200,7 +200,7 @@ def test_cancel_rejects_stale_pid_end_to_end(tmp_path: Path) -> None:
     construction).
     """
     session_id = "stale-e2e-session"
-    session_dir = tmp_path / "lifecycle" / "sessions" / session_id
+    session_dir = tmp_path / "cortex" / "lifecycle" / "sessions" / session_id
     session_dir.mkdir(parents=True)
 
     stale_start = (

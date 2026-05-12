@@ -100,7 +100,7 @@ def log_invocation(script_name: str) -> None:
             _write_breadcrumb("no_repo_root", "")
             return
 
-        session_dir = _Path(repo_root) / "lifecycle" / "sessions" / session_id
+        session_dir = _Path(repo_root) / "cortex" / "lifecycle" / "sessions" / session_id
         try:
             session_dir.mkdir(parents=True, exist_ok=True)
         except Exception:

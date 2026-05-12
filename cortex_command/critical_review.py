@@ -80,7 +80,7 @@ def validate_artifact_path(
         raise ValueError(
             f"Path validation failed (Req 9a/9c): symlink detected in "
             f"{candidate!r}; realpath={realpath!r} != abspath={abspath!r}. "
-            f"lifecycle/ must not contain symlinks."
+            f"cortex/lifecycle/ must not contain symlinks."
         )
 
     root_abs = os.path.abspath(lifecycle_root)
@@ -257,7 +257,7 @@ def _default_lifecycle_root() -> str:
             "Could not resolve git toplevel; run from inside a git "
             "repository or pass --lifecycle-root explicitly."
         ) from e
-    return str(Path(toplevel) / "lifecycle")
+    return str(Path(toplevel) / "cortex" / "lifecycle")
 
 
 def _now_iso() -> str:

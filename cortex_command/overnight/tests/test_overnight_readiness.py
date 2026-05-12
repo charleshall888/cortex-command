@@ -245,8 +245,8 @@ def test_rejected_spec_missing() -> None:
             status="backlog",
             priority="medium",
             type="feature",
-            research=f"lifecycle/{slug}/research.md",
-            spec=f"lifecycle/{slug}/spec.md",
+            research=f"cortex/lifecycle/{slug}/research.md",
+            spec=f"cortex/lifecycle/{slug}/spec.md",
         )
 
         result = filter_ready([item], project_root=root)
@@ -414,8 +414,8 @@ def test_rejected_epic_type() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         slug = "epic-feature"
-        research_path = root / "lifecycle" / slug / "research.md"
-        spec_path = root / "lifecycle" / slug / "spec.md"
+        research_path = root / "cortex" / "lifecycle" / slug / "research.md"
+        spec_path = root / "cortex" / "lifecycle" / slug / "spec.md"
         research_path.parent.mkdir(parents=True, exist_ok=True)
         research_path.write_text("# Research\n")
         spec_path.write_text("# Spec\n")
@@ -469,7 +469,7 @@ def test_spec_backfill_when_item_spec_is_none() -> None:
         result = filter_ready([item], project_root=root)
 
         assert len(result.eligible) == 1, f"expected 1 eligible, got {len(result.eligible)}; ineligible: {result.ineligible}"
-        assert result.eligible[0].spec == f"lifecycle/{slug}/spec.md", f"expected spec backfill, got: {result.eligible[0].spec!r}"
+        assert result.eligible[0].spec == f"cortex/lifecycle/{slug}/spec.md", f"expected spec backfill, got: {result.eligible[0].spec!r}"
         assert len(result.ineligible) == 0, f"expected 0 ineligible, got {len(result.ineligible)}"
 
 

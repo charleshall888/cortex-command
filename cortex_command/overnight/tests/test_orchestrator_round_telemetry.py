@@ -373,7 +373,7 @@ class TestAggregatorBucket:
 
         # Set up lifecycle/sessions/<sid>/pipeline-events.log layout so
         # discover_pipeline_event_logs picks it up.
-        lifecycle_dir = tmp_path / "lifecycle"
+        lifecycle_dir = tmp_path / "cortex" / "lifecycle"
         session_dir = lifecycle_dir / "sessions" / "s1"
         session_dir.mkdir(parents=True)
         log_path = session_dir / "pipeline-events.log"

@@ -66,7 +66,7 @@ def _stage_fixture(slug: str, tmp_path: Path) -> Path:
     Returns the tmp_path (to use as cwd for subprocess invocations).
     """
     src = FIXTURES_DIR / slug
-    dst = tmp_path / "lifecycle" / slug
+    dst = tmp_path / "cortex" / "lifecycle" / slug
     dst.mkdir(parents=True)
     for item in src.iterdir():
         shutil.copy2(item, dst / item.name)

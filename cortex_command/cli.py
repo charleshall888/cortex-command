@@ -554,7 +554,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="List active and recent overnight sessions",
         description=(
             "List overnight sessions discovered under "
-            "lifecycle/sessions/. Active sessions (planning, executing, "
+            "cortex/lifecycle/sessions/. Active sessions (planning, executing, "
             "paused) and recent sessions (complete) are partitioned in "
             "the JSON output."
         ),

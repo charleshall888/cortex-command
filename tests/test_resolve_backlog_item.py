@@ -276,8 +276,8 @@ def test_drift_adversarial_parenthesis_spike(resolver):
 
 def test_numeric_resolves_109(resolver, tmp_path):
     """Input "109" matches a file whose name starts with "109-"."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     item = _make_item(
         backlog,
         "109-extract-refine-resolution.md",
@@ -290,8 +290,8 @@ def test_numeric_resolves_109(resolver, tmp_path):
 
 def test_numeric_999_no_match(resolver, tmp_path):
     """Input "999" returns empty list when no file starts with "999-"."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "109-some-ticket.md", "Some Ticket")
     items = sorted(backlog.glob("[0-9]*-*.md"))
     matches = resolver._resolve_numeric("999", items)
@@ -305,8 +305,8 @@ def test_numeric_999_no_match(resolver, tmp_path):
 
 def test_kebab_resolves_extract_refine(resolver, tmp_path):
     """Full kebab slug of ticket 109 resolves to that item."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     slug = "extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout"
     item = _make_item(
         backlog,
@@ -320,8 +320,8 @@ def test_kebab_resolves_extract_refine(resolver, tmp_path):
 
 def test_kebab_does_not_exist_no_match(resolver, tmp_path):
     """Non-existent kebab slug returns empty list."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "109-some-ticket.md", "Some Ticket")
     items = sorted(backlog.glob("[0-9]*-*.md"))
     matches = resolver._resolve_kebab("does-not-exist", items)
@@ -335,8 +335,8 @@ def test_kebab_does_not_exist_no_match(resolver, tmp_path):
 
 def test_title_phrase_uniquely_identifies(resolver, tmp_path):
     """Unique phrase matches exactly one item."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     item = _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
     _make_item(backlog, "002-other.md", "Other Item")
     items_with_fm = [
@@ -349,8 +349,8 @@ def test_title_phrase_uniquely_identifies(resolver, tmp_path):
 
 def test_title_phrase_extract_multiple_ambiguous(resolver, tmp_path):
     """Input "extract" matches multiple items → ambiguous."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     a = _make_item(backlog, "001-extract-foo.md", "Extract foo from bar")
     b = _make_item(backlog, "002-extract-baz.md", "Extract baz from qux")
     items_with_fm = [
@@ -364,8 +364,8 @@ def test_title_phrase_extract_multiple_ambiguous(resolver, tmp_path):
 
 def test_title_phrase_nonsense_no_match(resolver, tmp_path):
     """Input that matches nothing returns empty list."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "001-some-ticket.md", "Some Ticket")
     items_with_fm = [
         (p, resolver._parse_frontmatter(p))
@@ -377,8 +377,8 @@ def test_title_phrase_nonsense_no_match(resolver, tmp_path):
 
 def test_title_phrase_axis_predicate_a_only(resolver, tmp_path):
     """Predicate A (raw substring) fires for "4.7" — not slug-matchable."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     # "4.7" lowercases to "4.7"; slugify("4.7") → "47" (dot stripped)
     # slugify(title) will contain "47" somewhere — we need to make a title
     # where predicate A fires but predicate B does not.
@@ -483,8 +483,8 @@ def test_title_phrase_axis_predicate_b_only(resolver, tmp_path):
     - lower("backlog-pick") NOT in lower(title) — title has "backlog pick" with a space, not hyphen
     - slugify("backlog-pick") = "backlog-pick"; slugify(title) contains "backlog-pick" → B fires
     """
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     item = _make_item(
         backlog,
         "108-extract-backlog-pick.md",
@@ -505,8 +505,8 @@ def test_title_phrase_axis_predicate_b_only(resolver, tmp_path):
 
 def test_title_phrase_axis_mixed_case(resolver, tmp_path):
     """Predicate A matches case-insensitively (input "GPG" finds title with "GPG")."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     item = _make_item(backlog, "001-gpg-signing.md", "Enable GPG signing for commits")
     _make_item(backlog, "002-other.md", "Unrelated ticket")
     items_with_fm = [
@@ -519,8 +519,8 @@ def test_title_phrase_axis_mixed_case(resolver, tmp_path):
 
 def test_title_phrase_axis_whitespace(resolver, tmp_path):
     """Predicate B fires for "create  skill" (double space) matching "Create skill"."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     item = _make_item(backlog, "001-create-skill.md", "Create skill")
     _make_item(backlog, "002-other.md", "Unrelated ticket")
     items_with_fm = [
@@ -542,8 +542,8 @@ def test_title_phrase_axis_whitespace(resolver, tmp_path):
 
 def test_exit_codes_zero_unambiguous(tmp_path):
     """Unambiguous match → exit 0 with JSON on stdout."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
     result = _run(["zorp"], backlog)
     assert result.returncode == 0
@@ -554,8 +554,8 @@ def test_exit_codes_zero_unambiguous(tmp_path):
 
 def test_exit_codes_two_ambiguous(tmp_path):
     """Two matches → exit 2 with candidate list on stderr."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "001-extract-foo.md", "Extract foo from bar")
     _make_item(backlog, "002-extract-baz.md", "Extract baz from qux")
     result = _run(["extract"], backlog)
@@ -565,8 +565,8 @@ def test_exit_codes_two_ambiguous(tmp_path):
 
 def test_exit_codes_three_no_match(tmp_path):
     """No match → exit 3 with no-match message on stderr."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "001-some-ticket.md", "Some Ticket")
     result = _run(["xyzzy-nonexistent-99999"], backlog)
     assert result.returncode == 3
@@ -575,8 +575,8 @@ def test_exit_codes_three_no_match(tmp_path):
 
 def test_exit_codes_64_empty_input(tmp_path):
     """Input that slugifies to empty → exit 64."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "001-some-ticket.md", "Some Ticket")
     result = _run(["!!!"], backlog)
     assert result.returncode == 64
@@ -584,8 +584,8 @@ def test_exit_codes_64_empty_input(tmp_path):
 
 def test_exit_codes_70_malformed_frontmatter(tmp_path):
     """Malformed YAML frontmatter → exit 70."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     # Write a file with broken YAML
     bad_file = backlog / "001-broken.md"
     bad_file.write_text("---\ntitle: [unclosed bracket\n---\n", encoding="utf-8")
@@ -600,8 +600,8 @@ def test_exit_codes_70_malformed_frontmatter(tmp_path):
 
 def test_json_schema_closed_set(tmp_path):
     """JSON output on exit 0 must have exactly the four expected keys."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
     result = _run(["zorp"], backlog)
     assert result.returncode == 0
@@ -616,8 +616,8 @@ def test_json_schema_closed_set(tmp_path):
 
 def test_lifecycle_slug_frontmatter_wins(resolver, tmp_path):
     """lifecycle_slug frontmatter field is used when present."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     item = _make_item(
         backlog,
         "001-some-ticket.md",
@@ -632,8 +632,8 @@ def test_lifecycle_slug_frontmatter_wins(resolver, tmp_path):
 
 def test_lifecycle_slug_dirname_fallback(resolver, tmp_path):
     """spec/research dirname is used when no lifecycle_slug frontmatter."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     item = _make_item(
         backlog,
         "001-some-ticket.md",
@@ -648,8 +648,8 @@ def test_lifecycle_slug_dirname_fallback(resolver, tmp_path):
 
 def test_lifecycle_slug_slugify_fallback(resolver, tmp_path):
     """slugify(title) is used when no lifecycle_slug and no spec/research dirname."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     item = _make_item(
         backlog,
         "001-some-ticket.md",
@@ -668,8 +668,8 @@ def test_lifecycle_slug_slugify_fallback(resolver, tmp_path):
 
 def test_edge_missing_title(resolver, tmp_path):
     """Item with no title: field gets a synthesized title from filename."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     path = backlog / "042-my-feature-ticket.md"
     path.write_text("---\nstatus: open\n---\n", encoding="utf-8")
     fm = resolver._parse_frontmatter(path)
@@ -680,8 +680,8 @@ def test_edge_missing_title(resolver, tmp_path):
 
 def test_edge_empty_after_slugify(tmp_path):
     """Input "!!!" (all special chars) → exit 64 (not a no-match exit 3)."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "001-some-ticket.md", "Some Ticket")
     result = _run(["!!!"], backlog)
     assert result.returncode == 64
@@ -689,8 +689,8 @@ def test_edge_empty_after_slugify(tmp_path):
 
 def test_edge_empty_title_slugify(resolver, tmp_path):
     """Empty slug_input no longer matches empty slug_title (post-#176 slugify-only)."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     # Title "!!!" slugifies to ""; input "!!!" slugifies to "". The bool(slug_input)
     # guard rejects empty-string matches so the function returns []. Pre-#176 this
     # fired via Predicate A (raw "!!!" in raw "!!!"); post-#176 with A removed, no
@@ -728,8 +728,8 @@ def _run_no_env(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
 
 def test_discovery_walks_up_from_cwd(tmp_path):
     """No env var: script walks from cwd, finds backlog/ at cwd root."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
     result = _run_no_env(["zorp"], tmp_path)
     assert result.returncode == 0, result.stderr
@@ -739,8 +739,8 @@ def test_discovery_walks_up_from_cwd(tmp_path):
 
 def test_discovery_walks_up_from_subdir(tmp_path):
     """No env var: script walks up from a deep subdir to find backlog/."""
-    backlog = tmp_path / "backlog"
-    backlog.mkdir()
+    backlog = tmp_path / "cortex" / "backlog"
+    backlog.mkdir(parents=True)
     _make_item(backlog, "001-unique-zorp.md", "Unique Zorp Widget")
     deep = tmp_path / "nested" / "sub" / "dir"
     deep.mkdir(parents=True)

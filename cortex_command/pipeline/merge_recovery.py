@@ -124,7 +124,7 @@ def write_recovery_log_entry(
         result: Outcome summary — test output excerpt, resolved files, or error.
         _log_path: Optional override for the log path (for testing only).
     """
-    log_path = _log_path or Path(f"lifecycle/{feature}/learnings/recovery-log.md")
+    log_path = _log_path or Path(f"cortex/lifecycle/{feature}/learnings/recovery-log.md")
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     n = 1

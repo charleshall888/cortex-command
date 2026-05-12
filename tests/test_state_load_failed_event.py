@@ -49,8 +49,8 @@ def test_state_load_failed_event_emitted_on_corrupt_state(
     # `subsequent_writes_target` lookup both land inside tmp_path.
     # CORTEX_REPO_ROOT is set below so the resolver bypasses the walk;
     # lifecycle/ and backlog/ are created for orchestrator path resolution.
-    (tmp_path / "lifecycle").mkdir()
-    (tmp_path / "backlog").mkdir()
+    (tmp_path / "cortex" / "lifecycle").mkdir(parents=True)
+    (tmp_path / "cortex" / "backlog").mkdir()
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))
 
     # Corrupted state — invalid JSON so json.load raises.
@@ -99,7 +99,7 @@ def test_state_load_failed_event_emitted_on_corrupt_state(
     # subsequent_writes_target is the key operator signal from spec R6 —
     # points at the home-repo backlog fallback the silent-misdirection path
     # uses. Resolved at call time from CORTEX_REPO_ROOT (set above to tmp_path).
-    expected_target = str(tmp_path / "backlog")
+    expected_target = str(tmp_path / "cortex" / "backlog")
     assert evt["subsequent_writes_target"] == expected_target, (
         f"expected subsequent_writes_target={expected_target!r}, "
         f"got {evt.get('subsequent_writes_target')!r}"

@@ -706,7 +706,7 @@ def _find_backlog_tags(feature: str, backlog_dir: Path) -> list[str]:
 
 def _find_backlog_id(feature: str) -> Optional[int]:
     """Find the backlog item ID for a feature by scanning backlog/."""
-    backlog_dir = Path("backlog")
+    backlog_dir = Path("cortex/backlog")
     if not backlog_dir.is_dir():
         return None
 
@@ -728,7 +728,7 @@ def _find_backlog_id(feature: str) -> Optional[int]:
 
 def _read_verification_strategy(feature: str) -> str:
     """Read the verification strategy section from a feature's plan."""
-    plan_path = Path(f"lifecycle/{feature}/plan.md")
+    plan_path = Path(f"cortex/lifecycle/{feature}/plan.md")
     if not plan_path.exists():
         return ""
 
@@ -745,7 +745,7 @@ def _read_verification_strategy(feature: str) -> str:
 
 def _read_acceptance(feature: str) -> str:
     """Read the ``## Acceptance`` section from a feature's plan."""
-    plan_path = Path(f"lifecycle/{feature}/plan.md")
+    plan_path = Path(f"cortex/lifecycle/{feature}/plan.md")
     if not plan_path.exists():
         return ""
 
@@ -770,7 +770,7 @@ def _read_last_phase_checkpoint(feature: str) -> str:
     Checkpoint. Returns ``""`` when the plan has no ``## Outline`` section
     or when no phase in the Outline has a Checkpoint field.
     """
-    plan_path = Path(f"lifecycle/{feature}/plan.md")
+    plan_path = Path(f"cortex/lifecycle/{feature}/plan.md")
     if not plan_path.exists():
         return ""
 
@@ -817,7 +817,7 @@ def _read_requirements_drift(feature: str) -> dict | None:
         {"state": "malformed", "findings": []}  – section exists but no **State**: line.
         {"state": <value>, "findings": [<bullet strings>]}  – valid section.
     """
-    review_path = Path(f"lifecycle/{feature}/review.md")
+    review_path = Path(f"cortex/lifecycle/{feature}/review.md")
     if not review_path.exists():
         return None
 
@@ -862,7 +862,7 @@ def _read_recovery_log_last_entry(feature: str) -> str:
     Never raises — all I/O is wrapped in a try/except.
     """
     try:
-        log_path = Path(f"lifecycle/{feature}/learnings/recovery-log.md")
+        log_path = Path(f"cortex/lifecycle/{feature}/learnings/recovery-log.md")
         if not log_path.exists():
             return ""
         content = log_path.read_text(encoding="utf-8").strip()
@@ -879,7 +879,7 @@ def _read_recovery_log_last_entry(feature: str) -> str:
 
 def _read_learnings_summary(feature: str) -> str:
     """Read learnings and return a brief summary if any exist."""
-    progress_path = Path(f"lifecycle/{feature}/learnings/progress.txt")
+    progress_path = Path(f"cortex/lifecycle/{feature}/learnings/progress.txt")
     if not progress_path.exists():
         return ""
 
@@ -1124,7 +1124,7 @@ def collect_tool_failures(session_id: str) -> dict[str, dict[str, Any]]:
         each tool that has recorded at least one failure.  Returns an empty
         dict when neither directory is present or contains no failure records.
     """
-    lifecycle_dir = Path(f"lifecycle/sessions/{session_id}/tool-failures")
+    lifecycle_dir = Path(f"cortex/lifecycle/sessions/{session_id}/tool-failures")
     if lifecycle_dir.is_dir():
         track_dir = lifecycle_dir
     else:
@@ -1270,7 +1270,7 @@ def collect_sandbox_denials(session_id: str) -> dict[str, int]:
     try:
         import yaml  # local import; yaml is already an indirect dep
 
-        session_root = Path(f"lifecycle/sessions/{session_id}")
+        session_root = Path(f"cortex/lifecycle/sessions/{session_id}")
         bash_log = session_root / "tool-failures" / "bash.log"
         sidecar_dir = session_root / "sandbox-deny-lists"
 
@@ -2026,9 +2026,9 @@ def generate_and_write_report(
     )
     data.pr_urls = pr_urls or {}
     if data.state and data.state.worktree_path:
-        followup_backlog_dir = Path(data.state.worktree_path) / "backlog"
+        followup_backlog_dir = Path(data.state.worktree_path) / "cortex" / "backlog"
     else:
-        followup_backlog_dir = user_root / "backlog"
+        followup_backlog_dir = user_root / "cortex" / "backlog"
     data.new_backlog_items = create_followup_backlog_items(
         data, backlog_dir=followup_backlog_dir
     )
@@ -2118,9 +2118,9 @@ if __name__ == "__main__":
     else:
         data = collect_report_data()
     if data.state and data.state.worktree_path:
-        followup_backlog_dir = Path(data.state.worktree_path) / "backlog"
+        followup_backlog_dir = Path(data.state.worktree_path) / "cortex" / "backlog"
     else:
-        followup_backlog_dir = _cli_user_root / "backlog"
+        followup_backlog_dir = _cli_user_root / "cortex" / "backlog"
     data.new_backlog_items = create_followup_backlog_items(
         data, backlog_dir=followup_backlog_dir
     )

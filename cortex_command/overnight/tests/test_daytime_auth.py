@@ -67,7 +67,7 @@ def test_no_auth_vector_hard_fails() -> None:
 
         # Build the minimal fixture feature inside td so _check_cwd
         # (which looks for ``lifecycle/`` in cwd) passes.
-        feat_dir = td / "lifecycle" / feature
+        feat_dir = td / "cortex" / "lifecycle" / feature
         feat_dir.mkdir(parents=True)
         (feat_dir / "plan.md").write_text(f"# {feature}\n", encoding="utf-8")
 
@@ -93,7 +93,7 @@ def test_no_auth_vector_hard_fails() -> None:
 
         assert rc == 1
 
-        result_path = td / "lifecycle" / feature / "daytime-result.json"
+        result_path = td / "cortex" / "lifecycle" / feature / "daytime-result.json"
         assert result_path.exists(), "daytime-result.json was not written"
 
         with result_path.open(encoding="utf-8") as fh:

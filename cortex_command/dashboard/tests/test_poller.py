@@ -45,8 +45,8 @@ class TestRunPolling(unittest.IsolatedAsyncioTestCase):
         """state.overnight is populated from overnight-state.json within 3 seconds."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            lifecycle_dir = root / "lifecycle"
-            lifecycle_dir.mkdir()
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            lifecycle_dir.mkdir(parents=True)
             session_dir = lifecycle_dir / "sessions" / "latest-overnight"
             session_dir.mkdir(parents=True)
 
@@ -79,8 +79,8 @@ class TestRunPolling(unittest.IsolatedAsyncioTestCase):
         """A second poll of overnight-events.log does not re-emit already-seen events."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            lifecycle_dir = root / "lifecycle"
-            lifecycle_dir.mkdir()
+            lifecycle_dir = root / "cortex" / "lifecycle"
+            lifecycle_dir.mkdir(parents=True)
             session_dir = lifecycle_dir / "sessions" / "latest-overnight"
             session_dir.mkdir(parents=True)
 

@@ -45,7 +45,7 @@ class TestReadExitReport(unittest.TestCase):
 
     def _make_report(self, data, feature: str = "test-feat", task: int = 1) -> Path:
         """Write a report file and return its path."""
-        p = Path(f"lifecycle/{feature}/exit-reports/{task}.json")
+        p = Path(f"cortex/lifecycle/{feature}/exit-reports/{task}.json")
         p.parent.mkdir(parents=True, exist_ok=True)
         if isinstance(data, str):
             p.write_text(data, encoding="utf-8")

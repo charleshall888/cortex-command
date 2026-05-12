@@ -245,7 +245,7 @@ def _parse_frontmatter(text: str) -> dict[str, str]:
 # Public API
 # ---------------------------------------------------------------------------
 
-DEFAULT_BACKLOG_DIR = Path("backlog")
+DEFAULT_BACKLOG_DIR = Path("cortex/backlog")
 
 
 def parse_backlog_dir(
@@ -532,7 +532,7 @@ def filter_ready(
 
         # All checks passed
         if item.spec is None:
-            item.spec = f"lifecycle/{slug}/spec.md"
+            item.spec = f"cortex/lifecycle/{slug}/spec.md"
         result.eligible.append(item)
 
     # Phase 2 — iterative BFS over pending_blocked.
@@ -596,7 +596,7 @@ def filter_ready(
 
             # Promote to intra_session_blocked
             if item.spec is None:
-                item.spec = f"lifecycle/{item_slug}/spec.md"
+                item.spec = f"cortex/lifecycle/{item_slug}/spec.md"
             result.intra_session_blocked.append((item, blocker_slugs))
             session_eligible_slugs.add(item_slug)
             promoted = True

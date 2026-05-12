@@ -352,7 +352,7 @@ def test_morning_report_distinguishes_api_rate_limit_pause() -> None:
 
 def _write_plan(tmp_path: Path, feature: str, content: str) -> None:
     """Construct ``lifecycle/{feature}/plan.md`` under tmp_path."""
-    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir = tmp_path / "cortex" / "lifecycle" / feature
     feature_dir.mkdir(parents=True, exist_ok=True)
     (feature_dir / "plan.md").write_text(content, encoding="utf-8")
 
@@ -361,7 +361,7 @@ def _write_events_log(tmp_path: Path, feature: str, events: list[dict]) -> None:
     """Construct ``lifecycle/{feature}/events.log`` (NDJSON, one event per line)."""
     import json as _json
 
-    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir = tmp_path / "cortex" / "lifecycle" / feature
     feature_dir.mkdir(parents=True, exist_ok=True)
     lines = [_json.dumps(e) for e in events]
     (feature_dir / "events.log").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -369,7 +369,7 @@ def _write_events_log(tmp_path: Path, feature: str, events: list[dict]) -> None:
 
 def _write_events_log_raw(tmp_path: Path, feature: str, raw: str) -> None:
     """Construct ``lifecycle/{feature}/events.log`` from raw text (for corrupt cases)."""
-    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir = tmp_path / "cortex" / "lifecycle" / feature
     feature_dir.mkdir(parents=True, exist_ok=True)
     (feature_dir / "events.log").write_text(raw, encoding="utf-8")
 
@@ -506,7 +506,7 @@ class TestTenFixtureVerificationRendering:
             [{"event": "lifecycle_start", "feature": feature, "tier": "complex"}],
         )
 
-        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
+        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "complex"
         assert _read_acceptance(feature) == "acceptance-line-text-f1."
         assert _render_how_to_try(feature) == "acceptance-line-text-f1."
 
@@ -523,7 +523,7 @@ class TestTenFixtureVerificationRendering:
             [{"event": "lifecycle_start", "feature": feature, "tier": "simple"}],
         )
 
-        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "simple"
+        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "simple"
         assert _read_last_phase_checkpoint(feature) == "checkpoint-line-f2."
         assert _render_how_to_try(feature) == "checkpoint-line-f2."
 
@@ -535,7 +535,7 @@ class TestTenFixtureVerificationRendering:
         _write_plan(tmp_path, feature, _plan_legacy_verification("legacy-text-f3."))
         # No events.log -> defaults to simple tier.
 
-        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "simple"
+        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "simple"
         assert _render_how_to_try(feature) == "legacy-text-f3."
 
     # Fixture 4 -------------------------------------------------------------
@@ -597,7 +597,7 @@ class TestTenFixtureVerificationRendering:
             [{"event": "lifecycle_start", "feature": feature, "tier": "complex"}],
         )
 
-        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
+        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "complex"
         assert _read_acceptance(feature) == ""
         assert _read_last_phase_checkpoint(feature) == "complex-fallback-f6."
         assert _render_how_to_try(feature) == "complex-fallback-f6."
@@ -646,7 +646,7 @@ class TestTenFixtureVerificationRendering:
             [{"event": "lifecycle_start", "feature": feature, "tier": "complex"}],
         )
 
-        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
+        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "complex"
         assert _read_acceptance(feature) == "manual-acceptance-f8."
         rendered = _render_how_to_try(feature)
         assert rendered == "manual-acceptance-f8."
@@ -670,7 +670,7 @@ class TestTenFixtureVerificationRendering:
             ],
         )
 
-        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
+        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "complex"
         assert _render_how_to_try(feature) == "override-fallback-f9."
 
     # Fixture 10 ------------------------------------------------------------
@@ -712,7 +712,7 @@ class TestTenFixtureVerificationRendering:
         )
 
         # R13a default: returns "simple" when events.log is malformed.
-        assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "simple"
+        assert read_tier(feature, lifecycle_base=tmp_path / "cortex" / "lifecycle") == "simple"
         # Acceptance text exists in the plan but is not consulted on simple tier.
         assert _read_acceptance(feature) == "acceptance-text-f10."
         # No Outline -> no last-phase checkpoint.

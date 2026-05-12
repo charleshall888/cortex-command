@@ -65,7 +65,7 @@ def _frontmatter(p: Path, key: str) -> str | None:
 
 def test_update_item_raises_on_none_backlog_dir(tmp_path: Path):
     """Internal API must raise TypeError rather than silently fall back to cwd."""
-    item = _mk_item(tmp_path / "backlog", "001-foo")
+    item = _mk_item(tmp_path / "cortex" / "backlog", "001-foo")
     with pytest.raises(TypeError, match="backlog_dir is required"):
         update_item(item, {"status": "complete"}, None)  # type: ignore[arg-type]
 

@@ -43,7 +43,7 @@ def _write_text(path: Path, content: str) -> None:
 
 def _make_lifecycle_root(tmp_path: Path) -> Path:
     """Return a lifecycle root with the feature subdirectory created."""
-    root = tmp_path / "lifecycle"
+    root = tmp_path / "cortex" / "lifecycle"
     (root / SLUG).mkdir(parents=True, exist_ok=True)
     return root
 

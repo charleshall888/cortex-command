@@ -52,7 +52,7 @@ def tmp_lifecycle(tmp_path):
     feature slug, the feature dir, and the (not-yet-created) events.log path.
     """
     feature = "test-feature"
-    lifecycle_dir = tmp_path / "lifecycle"
+    lifecycle_dir = tmp_path / "cortex" / "lifecycle"
     feature_dir = lifecycle_dir / feature
     feature_dir.mkdir(parents=True)
     return {

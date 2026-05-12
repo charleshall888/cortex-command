@@ -84,7 +84,7 @@ def test_python_helper_byte_equivalent_to_bash_shim(
         monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
     monkeypatch.chdir(fake_repo)
 
-    session_dir = fake_repo / "lifecycle" / "sessions" / session_id
+    session_dir = fake_repo / "cortex" / "lifecycle" / "sessions" / session_id
     session_dir.mkdir(parents=True)
     log_file = session_dir / "bin-invocations.jsonl"
 

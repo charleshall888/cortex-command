@@ -45,8 +45,8 @@ class TestEvaluateAlerts(unittest.TestCase):
         import tempfile
         tmp = tempfile.mkdtemp()
         root = Path(tmp)
-        lifecycle_dir = root / "lifecycle"
-        lifecycle_dir.mkdir()
+        lifecycle_dir = root / "cortex" / "lifecycle"
+        lifecycle_dir.mkdir(parents=True)
         return root, lifecycle_dir
 
     def test_stall_added_when_last_activity_over_threshold(self):

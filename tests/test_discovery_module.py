@@ -88,7 +88,7 @@ def test_resolve_path_active_lifecycle_overrides_topic(
     of the topic slug shape.
     """
     feature_dir = repo_root / "cortex" / "lifecycle" / "some-active-feature"
-    feature_dir.mkdir()
+    feature_dir.mkdir(parents=True)
     (feature_dir / ".session").write_text("sess-abc-123", encoding="utf-8")
     monkeypatch.setenv("LIFECYCLE_SESSION_ID", "sess-abc-123")
 
@@ -104,7 +104,7 @@ def test_resolve_path_active_lifecycle_matches_via_session_owner(
     valid match marker for the original stale session id.
     """
     feature_dir = repo_root / "cortex" / "lifecycle" / "migrated-feature"
-    feature_dir.mkdir()
+    feature_dir.mkdir(parents=True)
     # Fresh .session has the NEW id; .session-owner holds the original.
     (feature_dir / ".session").write_text("new-session-id", encoding="utf-8")
     (feature_dir / ".session-owner").write_text(
@@ -121,7 +121,7 @@ def test_resolve_path_env_unset_falls_back_to_research(
 ) -> None:
     """An unset env var must NOT match an empty .session file."""
     feature_dir = repo_root / "cortex" / "lifecycle" / "orphan-feature"
-    feature_dir.mkdir()
+    feature_dir.mkdir(parents=True)
     (feature_dir / ".session").write_text("", encoding="utf-8")
     monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
 
@@ -278,7 +278,7 @@ def test_emit_subcommands_honor_resolve_events_log_path(
     asserting all three emit-* targets resolve under ``lifecycle/<slug>/``.
     """
     feature_dir = repo_root / "cortex" / "lifecycle" / "active-feature"
-    feature_dir.mkdir()
+    feature_dir.mkdir(parents=True)
     (feature_dir / ".session").write_text("active-id", encoding="utf-8")
     monkeypatch.setenv("LIFECYCLE_SESSION_ID", "active-id")
 
