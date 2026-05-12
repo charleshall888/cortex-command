@@ -1,1 +1,3 @@
 {"ts": "2026-01-01T00:00:00Z", "event": "lifecycle_start", "feature": "test"}
+{"ts": "2026-01-01T00:00:01Z", "event": "spec_approved", "feature": "test"}
+{"ts": "2026-01-01T00:00:02Z", "event": "plan_approved", "feature": "test"}

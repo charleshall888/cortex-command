@@ -152,17 +152,24 @@ After orchestrator review passes, read the active tier by running `cortex-lifecy
 
 ### 4. User Approval
 
-Present the specification summary and use the AskUserQuestion tool to collect approval — not as plain markdown text. The summary must include these approval surface fields:
+Present the specification summary and use the AskUserQuestion tool to collect the operator's disposition. The summary must include these approval surface fields:
 
 - **Produced** (one-line summary of the artifact)
 - **Value** (what problem this solves and why it's worth building now — flag weak value cases explicitly)
 - **Trade-offs** (alternatives considered and rationale for chosen approach)
 
-The user must approve before proceeding to Plan. If the user requests changes, revise the spec and re-present.
+Enumerate the options on that call explicitly as: `Approve` | `Request changes` | `Cancel`. Route on the response:
+
+- **Approve**: append a `spec_approved` event to `lifecycle/{feature}/events.log`, then append the `phase_transition` event from §5 below, then auto-advance to Plan. Proceed automatically — do not ask the user for confirmation again.
+  ```
+  {"ts": "<ISO 8601>", "event": "spec_approved", "feature": "<name>"}
+  ```
+- **Request changes**: collect the requested changes, revise the spec, and re-present the approval surface. Do not emit `spec_approved` on intermediate revision loops; only the final `Approve` selection emits the event.
+- **Cancel**: append a `lifecycle_cancelled` event and halt. The user can resume by re-invoking `/cortex-core:lifecycle`.
 
 ### 5. Transition
 
-Append a `phase_transition` event to `lifecycle/{feature}/events.log`:
+On `Approve`, append a `phase_transition` event to `lifecycle/{feature}/events.log` (the `spec_approved` event from §4 must precede this one in the log):
 
 ```
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "specify", "to": "plan"}
@@ -170,7 +177,7 @@ Append a `phase_transition` event to `lifecycle/{feature}/events.log`:
 
 If `commit-artifacts` is enabled in project config (default), stage `lifecycle/{feature}/` and commit using `/cortex-core:commit`.
 
-After approval, proceed to Plan.
+After approval, proceed to Plan automatically — do not ask the user for confirmation.
 
 ## Hard Gate
 

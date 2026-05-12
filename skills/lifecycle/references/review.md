@@ -189,6 +189,8 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
 
 ### 5. Transition
 
+Proceed automatically — do not ask the user for confirmation when the verdict is APPROVED or CHANGES_REQUESTED cycle 1. Announce the transition briefly and continue.
+
 - APPROVED → log the transition and proceed to Complete automatically — do not ask the user for confirmation:
   ```
   {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "complete"}

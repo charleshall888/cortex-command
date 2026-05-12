@@ -182,30 +182,60 @@ def _detect_lifecycle_phase_inner(
         total = len(re.findall(r'\*\*Status\*\*:.*\[[ x]\]', plan_content))
         checked = len(re.findall(r'\*\*Status\*\*:.*\[x\]', plan_content))
 
-    # Compute cycle from review.md verdict matches (default 1 when absent).
+    # Scan events.log once for review-cycle count, approval events, and
+    # migration sentinels (phase_transition events out of specify/plan).
+    # events.log is append-only and the canonical source of truth for the
+    # review-cycle count; review.md is overwritten each cycle so regex-counting
+    # verdicts there used to stick at 1 forever.
+    events_log = feature_dir / "events.log"
+    events_content = ""
+    if events_log.is_file():
+        events_content = events_log.read_text(errors="replace")
+    review_verdict_count = 0
+    spec_approved = False
+    plan_approved = False
+    spec_transitioned_out = False
+    plan_transitioned_out = False
+    for line in events_content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        event_type = event.get("event")
+        if event_type == "review_verdict":
+            review_verdict_count += 1
+        elif event_type == "spec_approved":
+            spec_approved = True
+        elif event_type == "plan_approved":
+            plan_approved = True
+        elif event_type == "phase_transition":
+            if event.get("from") == "specify":
+                spec_transitioned_out = True
+            if event.get("from") == "plan":
+                plan_transitioned_out = True
+    cycle = review_verdict_count if review_verdict_count > 0 else 1
+
+    # Read review.md only for verdict-value extraction (Step 2 below).
     review_md = feature_dir / "review.md"
     review_content: str | None = None
-    cycle = 1
     verdict_matches: list[str] = []
     if review_md.is_file():
         review_content = review_md.read_text(errors="replace")
         verdict_matches = re.findall(
             r'"verdict"\s*:\s*"([A-Z_]+)"', review_content
         )
-        if verdict_matches:
-            cycle = len(verdict_matches)
 
     # Step 1: event-based completion check
-    events_log = feature_dir / "events.log"
-    if events_log.is_file():
-        content = events_log.read_text(errors="replace")
-        if '"feature_complete"' in content:
-            return {
-                "phase": "complete",
-                "checked": checked,
-                "total": total,
-                "cycle": cycle,
-            }
+    if events_content and '"feature_complete"' in events_content:
+        return {
+            "phase": "complete",
+            "checked": checked,
+            "total": total,
+            "cycle": cycle,
+        }
 
     # Step 2: review.md verdict
     if verdict_matches:
@@ -232,8 +262,16 @@ def _detect_lifecycle_phase_inner(
                 "cycle": cycle,
             }
 
-    # Step 3: plan.md task completion
+    # Step 3: plan.md task completion (gated by plan_approved or migration sentinel)
     if plan_md.is_file():
+        if not (plan_approved or plan_transitioned_out):
+            # Plan written but not approved — stay in plan phase.
+            return {
+                "phase": "plan",
+                "checked": checked,
+                "total": total,
+                "cycle": cycle,
+            }
         if total > 0 and checked == total:
             return {
                 "phase": "review",
@@ -249,8 +287,15 @@ def _detect_lifecycle_phase_inner(
                 "cycle": cycle,
             }
 
-    # Step 4: spec.md exists -> plan phase
+    # Step 4: spec.md exists -> plan phase (gated by spec_approved or migration sentinel)
     if (feature_dir / "spec.md").is_file():
+        if not (spec_approved or spec_transitioned_out):
+            return {
+                "phase": "specify",
+                "checked": checked,
+                "total": total,
+                "cycle": cycle,
+            }
         return {
             "phase": "plan",
             "checked": checked,

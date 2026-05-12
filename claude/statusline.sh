@@ -388,6 +388,18 @@ if [ -d "$_lc_base" ]; then
     # in cortex_command.common AND ensure the parity test still passes. Do not
     # "fix" this apparent duplication by collapsing it into a Python call.
     _lc_phase=""
+    # Pre-scan events.log once for approval events and migration sentinels.
+    _lc_spec_approved=0
+    _lc_plan_approved=0
+    _lc_spec_transitioned_out=0
+    _lc_plan_transitioned_out=0
+    if [ -f "$_lc_fdir/events.log" ]; then
+      grep -q '"event"[[:space:]]*:[[:space:]]*"spec_approved"' "$_lc_fdir/events.log" 2>/dev/null && _lc_spec_approved=1
+      grep -q '"event"[[:space:]]*:[[:space:]]*"plan_approved"' "$_lc_fdir/events.log" 2>/dev/null && _lc_plan_approved=1
+      grep -qE '"event"[[:space:]]*:[[:space:]]*"phase_transition"[^}]*"from"[[:space:]]*:[[:space:]]*"specify"' "$_lc_fdir/events.log" 2>/dev/null && _lc_spec_transitioned_out=1
+      grep -qE '"event"[[:space:]]*:[[:space:]]*"phase_transition"[^}]*"from"[[:space:]]*:[[:space:]]*"plan"' "$_lc_fdir/events.log" 2>/dev/null && _lc_plan_transitioned_out=1
+    fi
+
     if [ -f "$_lc_fdir/events.log" ] && grep -q '"feature_complete"' "$_lc_fdir/events.log" 2>/dev/null; then
       _lc_phase="complete"
     elif [ -f "$_lc_fdir/review.md" ]; then
@@ -400,16 +412,26 @@ if [ -d "$_lc_base" ]; then
     fi
 
     if [ -z "$_lc_phase" ] && [ -f "$_lc_fdir/plan.md" ]; then
-      _lc_total=$(grep -cE '\*\*Status\*\*:.*\[[ x]\]' "$_lc_fdir/plan.md" 2>/dev/null) || _lc_total=0
-      _lc_checked=$(grep -cE '\*\*Status\*\*:.*\[x\]' "$_lc_fdir/plan.md" 2>/dev/null) || _lc_checked=0
-      if [ "$_lc_total" -gt 0 ] && [ "$_lc_checked" -eq "$_lc_total" ]; then
-        _lc_phase="review"
+      if [ "$_lc_plan_approved" -eq 0 ] && [ "$_lc_plan_transitioned_out" -eq 0 ]; then
+        _lc_phase="plan"
       else
-        _lc_phase="implement:$_lc_checked/$_lc_total"
+        _lc_total=$(grep -cE '\*\*Status\*\*:.*\[[ x]\]' "$_lc_fdir/plan.md" 2>/dev/null) || _lc_total=0
+        _lc_checked=$(grep -cE '\*\*Status\*\*:.*\[x\]' "$_lc_fdir/plan.md" 2>/dev/null) || _lc_checked=0
+        if [ "$_lc_total" -gt 0 ] && [ "$_lc_checked" -eq "$_lc_total" ]; then
+          _lc_phase="review"
+        else
+          _lc_phase="implement:$_lc_checked/$_lc_total"
+        fi
       fi
     fi
 
-    [ -z "$_lc_phase" ] && [ -f "$_lc_fdir/spec.md" ] && _lc_phase="plan"
+    if [ -z "$_lc_phase" ] && [ -f "$_lc_fdir/spec.md" ]; then
+      if [ "$_lc_spec_approved" -eq 0 ] && [ "$_lc_spec_transitioned_out" -eq 0 ]; then
+        _lc_phase="specify"
+      else
+        _lc_phase="plan"
+      fi
+    fi
     [ -z "$_lc_phase" ] && [ -f "$_lc_fdir/research.md" ] && _lc_phase="specify"
     [ -z "$_lc_phase" ] && _lc_phase="research"
 

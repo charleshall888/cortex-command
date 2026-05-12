@@ -46,7 +46,9 @@ Check for existing artifacts to determine the resume point:
 
 ```
 if lifecycle/{lifecycle-slug}/spec.md exists AND lifecycle/{lifecycle-slug}/research.md exists:
-    offer to re-run or exit (both artifacts present — spec is complete)
+    both artifacts exist — refine is complete. Announce completion and skip directly to Step 6 (Completion).
+    Re-run is triggered only by an explicit user message (e.g., "re-run refine", "redo the spec").
+    Do not prompt the user; do not offer a menu.
 elif lifecycle/{lifecycle-slug}/spec.md exists AND lifecycle/{lifecycle-slug}/research.md does NOT exist:
     warn: "spec.md exists but research.md is missing — overnight requires both. Running research phase."
     resume = research phase (skip Clarify — intent was already established when spec was written)
@@ -59,7 +61,7 @@ else:
     resume = clarify phase (start from beginning)
 ```
 
-If both artifacts exist and the user chooses to re-run, re-running will overwrite the existing spec and reset `status` to `in_progress` until the new spec is approved.
+When both artifacts exist and the user has explicitly requested a re-run via a follow-up message, re-running will overwrite the existing spec and reset `status` to `in_progress` until the new spec is approved. No CLI flag is required — the trigger is the user's explicit message.
 
 ## Step 3: Clarify Phase
 

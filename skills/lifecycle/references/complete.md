@@ -92,6 +92,10 @@ Provide a brief summary of what was built:
 
 The `lifecycle/{feature}/` directory is preserved as project history. It contains the research, specification (if applicable), plan, and review (if applicable) artifacts. These may already be committed as part of the git workflow in step 2. Do not delete or archive the directory.
 
+### 7. Transition
+
+Proceed automatically — do not ask the user for confirmation. The lifecycle is now complete; emit the summary from §5 and exit without further prompts.
+
 ## Constraints
 
 | Thought | Reality |

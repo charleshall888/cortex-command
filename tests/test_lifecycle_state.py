@@ -176,6 +176,14 @@ def test_detect_phase_invalidates_on_spec_md(
     # cache key. The exists bool alone already differs, but bumping mtime
     # is harmless and keeps parity with the other invalidation tests.
     _bump_mtime(spec)
+    # With the approval-event gate, spec.md alone leaves the lifecycle in
+    # specify; emit spec_approved so the cache invalidation actually flips
+    # the returned phase to plan.
+    events_log = feature_dir / "events.log"
+    events_log.write_text(
+        '{"event": "spec_approved", "feature": "feat"}\n', encoding="utf-8"
+    )
+    _bump_mtime(events_log)
 
     second = detect_lifecycle_phase(feature_dir)
     assert second["phase"] == "plan"

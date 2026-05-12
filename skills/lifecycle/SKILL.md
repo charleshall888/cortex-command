@@ -103,7 +103,12 @@ Reference table (one line per `phase` value):
 echo $LIFECYCLE_SESSION_ID > lifecycle/{feature}/.session
 ```
 
-If resuming from a previous session, report the detected phase and offer to continue or restart from an earlier phase.
+If resuming from a previous session, report the detected phase and offer to continue or restart from an earlier phase. Before presenting the offer, surface two staleness signals so the user can decide whether the existing artifacts are still trustworthy:
+
+1. **Artifact age (mtime)**: report the modification time of `lifecycle/{feature}/spec.md` (and `plan.md` if present) via `os.path.getmtime` or `stat -c %Y`. Express the result as a relative age (e.g., "spec.md last modified 12 days ago").
+2. **Commits since artifact (git log)**: run `git log --since="$(stat -c %Y lifecycle/{feature}/spec.md)" --oneline -- <files-mentioned-in-spec>` and report the count of commits touching files the spec names. A non-zero count suggests the spec's research assumptions may have drifted.
+
+Surface both signals as terse lines (one each) above the continue/restart prompt. Do not block on either signal — they inform the user's choice; the offer still defaults to "continue".
 
 ### Backlog Status, index.md, Write-Back, and Discovery Bootstrap
 
@@ -160,12 +165,37 @@ Read **only** the reference for the current phase. Do not preload other phases.
 
 ## Phase Transition
 
-After completing a phase artifact, announce the transition and proceed to the next phase automatically. Between phases, include these minimum fields in the transition summary:
+Proceed automatically — do not ask the user for confirmation at phase boundaries. Announce the transition and continue to the next phase. Between phases, include these minimum fields in the transition summary:
 
 - **Decisions**: Key decisions made during this phase (or "None")
 - **Scope delta**: Changes to scope, approach, or plan since last phase (or "None")
 - **Blockers**: Active blockers, escalations, or deferred questions (or "None")
 - **Next**: Next phase name and what it will do
+
+### Per-phase completion rule
+
+"Completing a phase artifact" is defined per-phase. A phase is complete (and auto-advance fires) only when its gate condition is satisfied:
+
+- **Specify**: `spec.md` exists AND (`spec_approved` event in `events.log` OR a `phase_transition` event with `"from":"specify"` already exists as a migration sentinel for in-flight lifecycles authored before approval events existed).
+- **Plan**: `plan.md` exists AND (`plan_approved` event in `events.log` OR a `phase_transition` event with `"from":"plan"` already exists as a migration sentinel).
+- **Implement**: `plan.md` exists AND every task's `**Status**` line is `[x]` — no approval gate; the checkbox tally is the gate.
+- **Review**: `review.md` exists AND a `review_verdict` event in `events.log` with `verdict: APPROVED` is present (auto-routes to Complete) OR the cycle-2 escalation condition is met (routes to `escalated`, which is a genuine user-blocking state).
+- **Complete**: a `feature_complete` event is present in `events.log`.
+
+Specify and Plan retain a single user-facing approval surface at §4 of their respective references (Approve / Request changes / Cancel) — the approval event is emitted on `Approve` and the lifecycle auto-advances from there. The other transitions emit `phase_transition` events without a pause.
+
+### Kept user pauses
+
+The following user-facing pauses are deliberate and remain in scope. Each entry names the file and the rough line anchor of the `AskUserQuestion` call site, plus a one-line rationale. The parity test at `tests/test_lifecycle_kept_pauses_parity.py` enforces that this inventory and the actual call sites stay in sync (±20-line tolerance).
+
+- `skills/lifecycle/SKILL.md:60` — ambiguous backlog match needs operator disambiguation.
+- `skills/lifecycle/references/clarify.md:57` — low-confidence clarify question batch surfaces unknowns the model cannot resolve alone.
+- `skills/lifecycle/references/specify.md:36` — structured-interview gap-fill: model needs user input for unstated requirements.
+- `skills/lifecycle/references/specify.md:67` — §2a cycle-2 confidence-check: user decides whether to loop back to research or proceed with gaps.
+- `skills/lifecycle/references/specify.md:155` — spec approval surface (Approve / Request changes / Cancel). Substantive user decision.
+- `skills/lifecycle/references/plan.md:277` — plan approval surface (Approve / Request changes / Cancel). Substantive user decision.
+- `skills/lifecycle/references/implement.md:22` — branch selection on main: trunk vs autonomous worktree vs feature branch.
+- `skills/lifecycle/references/backlog-writeback.md:11` — backlog write-back complete-lifecycle prompt on a backlog item already marked complete.
 
 If the user invokes `/cortex-core:lifecycle <phase>` to jump to a specific phase, honor the request but warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
 

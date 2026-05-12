@@ -274,16 +274,23 @@ After orchestrator review passes, read the active tier by running `cortex-lifecy
 
 ### 4. User Approval
 
-Present the plan summary (overview + task list). In addition to the overview and task list, include these approval surface fields:
+Present the plan summary (overview + task list) and use the AskUserQuestion tool to collect the operator's disposition. In addition to the overview and task list, include these approval surface fields:
 
 - **Produced** (one-line summary of the artifact)
 - **Trade-offs** (alternatives considered and rationale for chosen approach)
 
-The user must approve before implementation begins. If the user requests changes, revise and re-present.
+Enumerate the options on that call explicitly as: `Approve` | `Request changes` | `Cancel`. Route on the response:
+
+- **Approve**: append a `plan_approved` event to `lifecycle/{feature}/events.log`, then append the `phase_transition` event from §5 below, then auto-advance to Implement. Proceed automatically — do not ask the user for confirmation again.
+  ```
+  {"ts": "<ISO 8601>", "event": "plan_approved", "feature": "<name>"}
+  ```
+- **Request changes**: collect the requested changes, revise the plan, and re-present the approval surface. Do not emit `plan_approved` on intermediate revision loops; only the final `Approve` selection emits the event.
+- **Cancel**: append a `lifecycle_cancelled` event and halt. The user can resume by re-invoking `/cortex-core:lifecycle`.
 
 ### 5. Transition
 
-Append a `phase_transition` event to `lifecycle/{feature}/events.log`:
+On `Approve`, append a `phase_transition` event to `lifecycle/{feature}/events.log` (the `plan_approved` event from §4 must precede this one in the log):
 
 ```
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "plan", "to": "implement"}
@@ -291,7 +298,7 @@ Append a `phase_transition` event to `lifecycle/{feature}/events.log`:
 
 If `commit-artifacts` is enabled in project config (default), stage `lifecycle/{feature}/` and commit using `/cortex-core:commit`.
 
-After approval, proceed to Implement.
+After approval, proceed to Implement automatically — do not ask the user for confirmation.
 
 ## Hard Gate
 
