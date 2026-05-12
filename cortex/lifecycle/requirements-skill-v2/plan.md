@@ -63,7 +63,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: Same pattern as Task 2 applied to the discovery surface. Both files currently read `project.md` always then heuristically scan area docs.
 - **Verification**: `grep -l "load-requirements.md\|tag-based.*loading" skills/discovery/references/clarify.md skills/discovery/references/research.md | wc -l` returns `2` AND `grep -c "names suggest relevance" skills/discovery/references/clarify.md skills/discovery/references/research.md` returns `0`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 4760aaf7)
 
 ### Task 5: Apply tag-based loading to refine (R4)
 - **Files**: `skills/refine/SKILL.md`
