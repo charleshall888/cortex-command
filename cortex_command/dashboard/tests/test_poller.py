@@ -52,7 +52,7 @@ class TestRunPolling(unittest.IsolatedAsyncioTestCase):
 
             overnight_data = {
                 "session_id": "test-session-001",
-                "plan_ref": "lifecycle/plan.md",
+                "plan_ref": "cortex/lifecycle/plan.md",
                 "current_round": 1,
                 "phase": "executing",
                 "features": {},

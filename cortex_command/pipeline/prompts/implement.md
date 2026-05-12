@@ -20,8 +20,8 @@ Your working directory is `{worktree_path}`. All source file reads and writes mu
 
 Exit reports and other lifecycle artifacts must be written to the integration repository, not your feature worktree. Write exit reports to:
 
-- `{integration_worktree_path}/lifecycle/{feature}/exit-reports/{task_number}.json` when `{integration_worktree_path}` is non-empty
-- `lifecycle/{feature}/exit-reports/{task_number}.json` relative to your working directory otherwise
+- `{integration_worktree_path}/cortex/lifecycle/{feature}/exit-reports/{task_number}.json` when `{integration_worktree_path}` is non-empty
+- `cortex/lifecycle/{feature}/exit-reports/{task_number}.json` relative to your working directory otherwise
 
 - For source file work, do not navigate to parent directories using shell commands (e.g. `cd ..`, `cd /`, or absolute paths outside your working directory). Exit report writes to `{integration_worktree_path}` and spec reads from `{spec_path}` are exempt from this restriction.
 
@@ -68,7 +68,7 @@ This single-task-then-exit behavior is critical. The orchestrator manages task s
 
 After completing your work — **after committing** (or after the last verification step if no commit is made) — you must write an exit report. If the task fails before the commit step, do **not** write an exit report.
 
-**File path**: `{integration_worktree_path}/lifecycle/{feature}/exit-reports/{task_number}.json` when `{integration_worktree_path}` is non-empty; otherwise `lifecycle/{feature}/exit-reports/{task_number}.json` relative to your working directory.
+**File path**: `{integration_worktree_path}/cortex/lifecycle/{feature}/exit-reports/{task_number}.json` when `{integration_worktree_path}` is non-empty; otherwise `cortex/lifecycle/{feature}/exit-reports/{task_number}.json` relative to your working directory.
 
 Create the directory if it does not exist (equivalent of `mkdir -p`).
 

@@ -33,7 +33,7 @@
 
 | Feature | Reason |
 |---------|--------|
-| Add dark mode | Missing spec (`lifecycle/<feature-slug>/spec.md` not present) |
+| Add dark mode | Missing spec (`cortex/lifecycle/<feature-slug>/spec.md` not present) |
 
 ## Risk Assessment
 

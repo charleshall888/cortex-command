@@ -12,7 +12,7 @@ Your job is to make the strongest case against the current direction — not to 
 Before proceeding, verify:
 
 1. **Direction is present**: Is there a clear direction, plan, or approach to argue against?
-   - If lifecycle is active, check for `lifecycle/{feature}/plan.md` or `spec.md`
+   - If lifecycle is active, check for `cortex/lifecycle/{feature}/plan.md` or `spec.md`
    - If no lifecycle, scan conversation context for a stated direction
    - If no clear direction exists → **Error: Missing direction** (see error handling below)
 
@@ -27,9 +27,9 @@ Before proceeding, verify:
 ## Step 1: Read First
 
 If a lifecycle is active, read the most relevant artifact in this order:
-1. `lifecycle/{feature}/plan.md` (best for structured approach)
-2. `lifecycle/{feature}/spec.md` (if no plan exists)
-3. `lifecycle/{feature}/research.md` (if spec is unavailable)
+1. `cortex/lifecycle/{feature}/plan.md` (best for structured approach)
+2. `cortex/lifecycle/{feature}/spec.md` (if no plan exists)
+3. `cortex/lifecycle/{feature}/research.md` (if spec is unavailable)
 
 Otherwise, work from the conversation context. Don't argue blind — an uninformed devil's advocate is noise.
 

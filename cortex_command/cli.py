@@ -93,7 +93,7 @@ _MCP_SERVER_RESTART_ADVISORY = (
 )
 
 _MCP_SERVER_T12_VERDICT_PATH = (
-    "lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-"
+    "cortex/lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-"
     "orchestration/plugin-refresh-semantics.md"
 )
 

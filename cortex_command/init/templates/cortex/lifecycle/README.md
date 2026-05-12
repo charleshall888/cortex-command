@@ -16,7 +16,7 @@ produced by the lifecycle phases.
 ## Artifact layout per feature
 
 ```
-lifecycle/<feature-slug>/
+cortex/lifecycle/<feature-slug>/
   index.md        # phase + status + links to artifacts
   research.md     # phase 1 output
   spec.md         # phase 2 output
@@ -26,11 +26,11 @@ lifecycle/<feature-slug>/
 
 ## Configuration
 
-`lifecycle.config.md` at the repo root sets project-specific overrides such
+`cortex/lifecycle.config.md` at the repo root sets project-specific overrides such
 as the test command, whether to skip the specify or review phases, and any
 demo commands surfaced in review artifacts.
 
 ## Session state
 
-`lifecycle/sessions/` stores overnight-runner session state. It is per-machine
+`cortex/lifecycle/sessions/` stores overnight-runner session state. It is per-machine
 and should generally not be committed.

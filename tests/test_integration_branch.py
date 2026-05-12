@@ -91,7 +91,7 @@ def test_integration_branch_persists_after_complete(tmp_path: Path) -> None:
     state_path = tmp_path / "overnight-state.json"
     state = OvernightState(
         session_id=session_id,
-        plan_ref="lifecycle/overnight-plan.md",
+        plan_ref="cortex/lifecycle/overnight-plan.md",
         phase="complete",
         integration_branch=integration_branch,
         features={

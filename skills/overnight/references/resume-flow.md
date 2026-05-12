@@ -2,10 +2,10 @@
 
 ## Step 1: Load Existing State
 
-Scan `$CORTEX_COMMAND_ROOT/lifecycle/sessions/*/overnight-state.json` (sorted by modification time, most recent first) and load the first file whose `phase` is not `complete` using `load_state(state_path=<path>)` from `cortex_command.overnight.state`. You should pass the explicit `state_path` argument — the default path points to a different location. This mirrors the runner's own auto-discovery logic and works correctly whether state was written by a sandboxed or non-sandboxed session.
+Scan `$CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/*/overnight-state.json` (sorted by modification time, most recent first) and load the first file whose `phase` is not `complete` using `load_state(state_path=<path>)` from `cortex_command.overnight.state`. You should pass the explicit `state_path` argument — the default path points to a different location. This mirrors the runner's own auto-discovery logic and works correctly whether state was written by a sandboxed or non-sandboxed session.
 
 - **If no matching file is found** (glob returns no results, or all found files have `phase: complete`): Report "No active overnight session found. Use `/overnight` to start a new session." Stop.
-- **Error**: If a candidate file exists but cannot be parsed (corrupted JSON), skip it and try the next candidate. If all candidates fail to parse, report: "All overnight state files under $CORTEX_COMMAND_ROOT/lifecycle/sessions/ are corrupted. Inspect and repair manually, or start a new session with `/overnight`." → stop.
+- **Error**: If a candidate file exists but cannot be parsed (corrupted JSON), skip it and try the next candidate. If all candidates fail to parse, report: "All overnight state files under $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/ are corrupted. Inspect and repair manually, or start a new session with `/overnight`." → stop.
 
 ## Step 2: Report Session State
 
@@ -49,7 +49,7 @@ Based on the session phase, ask the user what to do:
 - **Resume execution**: Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` from the loaded state):
 
   ```
-  overnight-start $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
+  overnight-start $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json 6h
   ```
 
   The runner resumes from where it left off, skipping already-merged features. After the Bash tool returns, report: "Overnight session resumed. Attach with `tmux attach -t overnight-runner` to monitor progress."

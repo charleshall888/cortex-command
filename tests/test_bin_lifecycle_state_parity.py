@@ -86,7 +86,7 @@ def test_bin_lifecycle_state_matches_python(slug: str, tmp_path: Path) -> None:
     )
     bin_out = json.loads(result.stdout)
 
-    lifecycle_base = cwd / "lifecycle"
+    lifecycle_base = cwd / "cortex" / "lifecycle"
     expected_tier = read_tier(slug, lifecycle_base=lifecycle_base)
     expected_criticality = read_criticality(slug, lifecycle_base=lifecycle_base)
 
@@ -115,7 +115,7 @@ def test_bin_lifecycle_counters_matches_python(slug: str, tmp_path: Path) -> Non
     )
     bin_out = json.loads(result.stdout)
 
-    feat_dir = cwd / "lifecycle" / slug
+    feat_dir = cwd / "cortex" / "lifecycle" / slug
     plan_path = feat_dir / "plan.md"
     review_path = feat_dir / "review.md"
 

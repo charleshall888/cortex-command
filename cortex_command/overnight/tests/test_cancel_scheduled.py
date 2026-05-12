@@ -38,7 +38,7 @@ def _write_state(session_dir: Path, session_id: str, scheduled_start: str | None
     session_dir.mkdir(parents=True, exist_ok=True)
     payload = {
         "session_id": session_id,
-        "plan_ref": "lifecycle/test/plan.md",
+        "plan_ref": "cortex/lifecycle/test/plan.md",
         "current_round": 1,
         "phase": "planning",
         "features": {},

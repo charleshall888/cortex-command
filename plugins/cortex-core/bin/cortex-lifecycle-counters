@@ -60,8 +60,8 @@ if [ -z "$feature" ]; then
     exit 2
 fi
 
-plan="lifecycle/$feature/plan.md"
-review="lifecycle/$feature/review.md"
+plan="cortex/lifecycle/$feature/plan.md"
+review="cortex/lifecycle/$feature/review.md"
 
 tasks_total=0
 tasks_checked=0

@@ -7,7 +7,7 @@ outputs:
   - "deferred/{feature}-q*.md — user answers appended under ## User Answer section"
   - "cortex/lifecycle/{feature}/events.log — phase_transition and feature_complete events appended for completed features"
 preconditions:
-  - "Morning report exists in one of: $CORTEX_COMMAND_ROOT/lifecycle/sessions/latest-overnight/morning-report.md, cortex/lifecycle/sessions/latest-overnight/morning-report.md, or cortex/lifecycle/morning-report.md"
+  - "Morning report exists in one of: $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/latest-overnight/morning-report.md, cortex/lifecycle/sessions/latest-overnight/morning-report.md, or cortex/lifecycle/morning-report.md"
 ---
 
 # Morning Review
@@ -66,7 +66,7 @@ Skip Step 0 entirely if neither path-resolution branch resolved to a readable st
 
 Check for the morning report in order:
 
-1. `$CORTEX_COMMAND_ROOT/lifecycle/sessions/latest-overnight/morning-report.md` — the MC session directory (new-style worktree sessions).
+1. `$CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/latest-overnight/morning-report.md` — the MC session directory (new-style worktree sessions).
 2. `cortex/lifecycle/sessions/latest-overnight/morning-report.md` — reachable via a project-local `latest-overnight` symlink (if one exists)
 3. `cortex/lifecycle/morning-report.md` — regular file overwritten by each overnight session's writer.
 

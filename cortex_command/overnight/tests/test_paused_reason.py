@@ -41,7 +41,7 @@ def test_paused_reason_round_trip() -> None:
 
         state = OvernightState(
             session_id="overnight-2026-01-01-0000",
-            plan_ref="lifecycle/overnight-plan.md",
+            plan_ref="cortex/lifecycle/overnight-plan.md",
             phase="paused",
             paused_from="executing",
             paused_reason="budget_exhausted",
@@ -69,7 +69,7 @@ def test_paused_reason_preserved_through_interrupt() -> None:
         # preserve paused_reason through the load/save cycle.
         state = OvernightState(
             session_id="overnight-2026-01-01-0001",
-            plan_ref="lifecycle/overnight-plan.md",
+            plan_ref="cortex/lifecycle/overnight-plan.md",
             phase="paused",
             paused_from="executing",
             paused_reason="stall_timeout",
@@ -97,7 +97,7 @@ def test_load_state_missing_paused_reason_defaults_none() -> None:
     """Loading a state JSON without paused_reason key returns paused_reason=None."""
     minimal_state = {
         "session_id": "overnight-2025-12-31-2359",
-        "plan_ref": "lifecycle/overnight-plan.md",
+        "plan_ref": "cortex/lifecycle/overnight-plan.md",
         "plan_hash": None,
         "current_round": 1,
         "phase": "paused",

@@ -43,7 +43,7 @@ def test_round_trip() -> None:
 
         state = OvernightState(
             session_id="test-session",
-            plan_ref="lifecycle/test/plan.md",
+            plan_ref="cortex/lifecycle/test/plan.md",
             features={
                 "feature-a": OvernightFeatureStatus(
                     recovery_attempts=1,
@@ -78,7 +78,7 @@ def test_interrupt_preservation() -> None:
 
         state = OvernightState(
             session_id="test-session-interrupt",
-            plan_ref="lifecycle/test/plan.md",
+            plan_ref="cortex/lifecycle/test/plan.md",
             features={
                 "feature-b": OvernightFeatureStatus(
                     status="running",
@@ -141,7 +141,7 @@ def test_repo_path_round_trip() -> None:
 
         state = OvernightState(
             session_id="test-session-repo-path",
-            plan_ref="lifecycle/test/plan.md",
+            plan_ref="cortex/lifecycle/test/plan.md",
             features={
                 "feature-c": OvernightFeatureStatus(
                     repo_path="~/Workspaces/other-repo",

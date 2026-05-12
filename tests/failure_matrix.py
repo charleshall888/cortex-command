@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).parent.parent
 
 
 def main():
-    log_files = sorted(REPO_ROOT.glob("lifecycle/*/events.log"))
+    log_files = sorted(REPO_ROOT.glob("cortex/lifecycle/*/events.log"))
 
     if not log_files:
         print("No lifecycle event logs found. Run some lifecycle features first.")

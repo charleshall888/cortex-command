@@ -66,7 +66,7 @@ case "$field" in
         ;;
 esac
 
-events="lifecycle/$feature/events.log"
+events="cortex/lifecycle/$feature/events.log"
 
 if [ ! -f "$events" ]; then
     echo "{}"

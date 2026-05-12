@@ -40,7 +40,7 @@ Rules:
 After resolving all markers, write your exit report to:
 
 ```
-lifecycle/{feature}/exit-reports/repair.json
+cortex/lifecycle/{feature}/exit-reports/repair.json
 ```
 
 Use **exactly** one of these two schemas — do not substitute field names:
@@ -60,6 +60,6 @@ Do not use `reason`, `output`, or any other field names. These are the only vali
 ## Constraints
 
 - Resolve **only** conflict markers — nothing else.
-- Write the exit report to `lifecycle/{feature}/exit-reports/repair.json`.
+- Write the exit report to `cortex/lifecycle/{feature}/exit-reports/repair.json`.
 - Do not use the Agent tool or spawn sub-agents.
 - If intent cannot be determined confidently for any file, write a deferral question and stop.

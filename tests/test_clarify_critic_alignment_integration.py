@@ -612,7 +612,7 @@ def test_post_migration_clarify_critic_events_are_jsonl():
     violations: list[tuple[str, int, str]] = []  # (file, line_number, ts)
     detections = 0
 
-    lifecycle_root = REPO_ROOT / "lifecycle"
+    lifecycle_root = REPO_ROOT / "cortex" / "lifecycle"
     for events_log in lifecycle_root.glob("*/events.log"):
         if "archive" in events_log.parts:
             continue

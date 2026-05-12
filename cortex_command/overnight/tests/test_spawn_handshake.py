@@ -56,7 +56,7 @@ def _write_minimal_state(session_dir: Path, session_id: str) -> Path:
             {
                 "session_id": session_id,
                 "phase": "executing",
-                "plan_ref": "lifecycle/overnight-plan.md",
+                "plan_ref": "cortex/lifecycle/overnight-plan.md",
                 "current_round": 1,
                 "started_at": "2026-04-26T00:00:00+00:00",
                 "updated_at": "2026-04-26T00:00:00+00:00",

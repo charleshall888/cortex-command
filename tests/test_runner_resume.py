@@ -41,7 +41,7 @@ def _write_state(state_path: Path, features: dict[str, str]) -> None:
     """Write a minimal overnight state with features at the given statuses."""
     state = OvernightState(
         session_id="overnight-2026-04-24-resume",
-        plan_ref="lifecycle/overnight-plan.md",
+        plan_ref="cortex/lifecycle/overnight-plan.md",
         features={
             name: OvernightFeatureStatus(status=status)
             for name, status in features.items()

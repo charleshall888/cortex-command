@@ -31,7 +31,7 @@ def _write_minimal_state(session_dir: Path) -> OvernightState:
     """Write a minimal valid overnight-state.json and return the state object."""
     state = OvernightState(
         session_id="test-session-001",
-        plan_ref="lifecycle/test/plan.md",
+        plan_ref="cortex/lifecycle/test/plan.md",
     )
     save_state(state, session_dir / "overnight-state.json")
     return state

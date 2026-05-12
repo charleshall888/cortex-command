@@ -27,7 +27,7 @@ def _seed_session(session_dir: Path) -> None:
     session_dir.mkdir(parents=True, exist_ok=True)
 
     save_state(
-        OvernightState(session_id="overnight-2026-05-11-roundtrip", plan_ref="lifecycle/x/plan.md"),
+        OvernightState(session_id="overnight-2026-05-11-roundtrip", plan_ref="cortex/lifecycle/x/plan.md"),
         state_path=session_dir / "overnight-state.json",
     )
 

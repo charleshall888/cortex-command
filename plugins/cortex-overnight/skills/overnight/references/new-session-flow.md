@@ -4,7 +4,7 @@
 
 ## Step 1: Check for Existing Session
 
-Call `load_state()` from `cortex_command.overnight.state` (no arguments — uses its default path at `$CORTEX_COMMAND_ROOT/lifecycle/overnight-state.json`).
+Call `load_state()` from `cortex_command.overnight.state` (no arguments — uses its default path at `$CORTEX_COMMAND_ROOT/cortex/lifecycle/overnight-state.json`).
 
 - **If found with phase other than `complete`**: Warn the user that an active overnight session exists. Report the phase and feature count. Ask whether to resume the existing session (switch to the Resume Flow) or abandon it and start fresh.
 - **If found with `complete` phase**: Treat as no active session. Proceed as new.
@@ -180,7 +180,7 @@ On user approval, execute these steps in order:
     **Run now (option 1)**: Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and time limit):
 
     ```
-    overnight-start $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h
+    overnight-start $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json 6h
     ```
 
     Args are positional — do not use `--flag=value` syntax. `overnight-start` creates a detached tmux session named `overnight-runner` and returns immediately.
@@ -188,7 +188,7 @@ On user approval, execute these steps in order:
     **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and target time):
 
     ```
-    cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json
+    cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json
     ```
 
     `cortex overnight schedule` registers a one-shot LaunchAgent (no tmux) that fires the runner at the target time and returns immediately. The Bash tool call MUST set `dangerouslyDisableSandbox: true` so the harness can reach `launchctl`.

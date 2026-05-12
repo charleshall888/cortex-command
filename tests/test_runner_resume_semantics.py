@@ -37,7 +37,7 @@ def _write_fixture_state(state_path: Path, feature_status: str) -> None:
     """Write an overnight state fixture with one feature at *feature_status*."""
     state = OvernightState(
         session_id="overnight-2026-04-24-resume",
-        plan_ref="lifecycle/overnight-plan.md",
+        plan_ref="cortex/lifecycle/overnight-plan.md",
         features={
             "feat-x": OvernightFeatureStatus(status=feature_status),
         },

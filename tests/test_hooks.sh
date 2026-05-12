@@ -50,7 +50,7 @@ trap cleanup_temp EXIT
 
 # --- Test: normal-end — .session file is removed ---
 
-SESSION_FILE="$CLEANUP_TMPDIR/lifecycle/test-feature/.session"
+SESSION_FILE="$CLEANUP_TMPDIR/cortex/lifecycle/test-feature/.session"
 mkdir -p "$(dirname "$SESSION_FILE")"
 echo "test-session-123" > "$SESSION_FILE"
 
@@ -113,8 +113,8 @@ fi
 
 # --- Test: single-incomplete-feature — output contains hookSpecificOutput.additionalContext ---
 
-mkdir -p "$SCAN_TMPDIR/lifecycle/test-feature"
-echo "# stub research" > "$SCAN_TMPDIR/lifecycle/test-feature/research.md"
+mkdir -p "$SCAN_TMPDIR/cortex/lifecycle/test-feature"
+echo "# stub research" > "$SCAN_TMPDIR/cortex/lifecycle/test-feature/research.md"
 
 output=$(sed "s|__TMPDIR__|$SCAN_TMPDIR|g" "$SCAN_FIXTURE_DIR/single-incomplete-feature.json" \
   | bash "$SCAN_HOOK" 2>/dev/null)

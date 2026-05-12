@@ -48,7 +48,7 @@ Note: requirements drift does NOT influence the verdict. This is an observation 
 
 ### Stage 3: Write Review
 
-Write your review to `lifecycle/{feature}/review.md` on disk using the format below.
+Write your review to `cortex/lifecycle/{feature}/review.md` on disk using the format below.
 
 CRITICAL: The Verdict section MUST contain a fenced JSON code block with exactly these fields:
 - `"verdict"`: one of `"APPROVED"`, `"CHANGES_REQUESTED"`, or `"REJECTED"`

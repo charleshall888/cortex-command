@@ -37,7 +37,7 @@ def _make_state(features: dict[str, OvernightFeatureStatus] | None = None) -> Ov
     """Create a minimal OvernightState for testing."""
     return OvernightState(
         session_id="overnight-test-0000",
-        plan_ref="lifecycle/test-plan.md",
+        plan_ref="cortex/lifecycle/test-plan.md",
         phase="executing",
         features=features or {},
     )

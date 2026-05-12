@@ -42,7 +42,7 @@ def _render() -> str:
 def test_escalations_path_renders_correctly():
     """R20: ``{session_dir}/escalations.jsonl`` is substituted to the per-session path."""
     out = _render()
-    expected = f"lifecycle/sessions/{FIXTURE_ID}/escalations.jsonl"
+    expected = f"cortex/lifecycle/sessions/{FIXTURE_ID}/escalations.jsonl"
     assert expected in out, (
         f"expected substituted escalations path {expected!r} not found in rendered prompt"
     )

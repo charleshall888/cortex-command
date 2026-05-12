@@ -22,7 +22,7 @@ All branches except `loaded` set `parent_epic_loaded = false` and omit the `## P
 - **`no_parent`** — child has no `parent:` field, value is `null`, or normalizes to `None` (e.g. UUID-shape).
 - **`missing`** — `parent:` resolves to an integer but no `cortex/backlog/NNN-*.md` file matches. Emit the user-facing warning line `"Parent epic <id> referenced but file missing — alignment evaluation skipped."` (verbatim from the allowlist below).
 - **`non_epic`** — parent file's `type:` is not `"epic"` (or missing entirely). No warning is emitted.
-- **`loaded`** — parent file is `type: epic` and the body was extracted, sanitized, and token-capped. Splice `body` into the `<parent_epic_body source="backlog/<filename>" trust="untrusted">…</parent_epic_body>` markers within the dispatch prompt's `## Parent Epic Alignment` section. Set `parent_epic_loaded = true`.
+- **`loaded`** — parent file is `type: epic` and the body was extracted, sanitized, and token-capped. Splice `body` into the `<parent_epic_body source="cortex/backlog/<filename>" trust="untrusted">…</parent_epic_body>` markers within the dispatch prompt's `## Parent Epic Alignment` section. Set `parent_epic_loaded = true`.
 - **`unreadable`** — parent file exists with `type: epic` but its frontmatter is malformed. Emit the user-facing warning line `"Parent epic <id> referenced but file is unreadable — alignment evaluation skipped."` (verbatim from the allowlist below).
 
 **Warning-template allowlist.** When emitting a user-facing warning for the `missing` or `unreadable` branches, the orchestrator uses one of the two verbatim templates listed above and does not echo raw filesystem error text or helper stderr output. The allowlist is closed; new branches require a spec amendment.

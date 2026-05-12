@@ -82,7 +82,7 @@ def runner_env(tmp_path: Path):
     state = {
         "session_id": session_id,
         "phase": "executing",
-        "plan_ref": "lifecycle/overnight-plan.md",
+        "plan_ref": "cortex/lifecycle/overnight-plan.md",
         "current_round": 1,
         "started_at": _iso_now(),
         "updated_at": _iso_now(),

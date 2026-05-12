@@ -239,8 +239,8 @@ cleanup_session_dir "$SESSION_CORRUPT"
 # ---------------------------------------------------------------------------
 
 LIFECYCLE_ID="overnight-fixture-test"
-LIFECYCLE_TRACK_DIR="$REPO_ROOT/lifecycle/sessions/${LIFECYCLE_ID}/tool-failures"
-LIFECYCLE_SESSION_DIR="$REPO_ROOT/lifecycle/sessions/${LIFECYCLE_ID}"
+LIFECYCLE_TRACK_DIR="$REPO_ROOT/cortex/lifecycle/sessions/${LIFECYCLE_ID}/tool-failures"
+LIFECYCLE_SESSION_DIR="$REPO_ROOT/cortex/lifecycle/sessions/${LIFECYCLE_ID}"
 
 # Pre-test cleanup in case a prior failed run left the dir behind.
 rm -rf "$LIFECYCLE_SESSION_DIR"

@@ -42,7 +42,7 @@ def test_sibling_continues_after_one_fails() -> None:
         # Two-feature fixture, both initially pending.
         state = OvernightState(
             session_id="overnight-2026-04-24-fail-forward",
-            plan_ref="lifecycle/overnight-plan.md",
+            plan_ref="cortex/lifecycle/overnight-plan.md",
             features={
                 "feat-a": OvernightFeatureStatus(status="pending"),
                 "feat-b": OvernightFeatureStatus(status="pending"),

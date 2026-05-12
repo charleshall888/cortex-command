@@ -519,7 +519,7 @@ class TestResolveSlug:
     def test_lifecycle_slug_wins(self):
         item = _make_item(
             lifecycle_slug="explicit-slug",
-            spec="lifecycle/different-slug/spec.md",
+            spec="cortex/lifecycle/different-slug/spec.md",
             title="Yet Another Title",
         )
         assert item.resolve_slug() == "explicit-slug"
@@ -527,7 +527,7 @@ class TestResolveSlug:
     def test_spec_path_extraction(self):
         item = _make_item(
             lifecycle_slug=None,
-            spec="lifecycle/from-spec-path/spec.md",
+            spec="cortex/lifecycle/from-spec-path/spec.md",
             title="Ignored Title",
         )
         assert item.resolve_slug() == "from-spec-path"
@@ -536,7 +536,7 @@ class TestResolveSlug:
         item = _make_item(
             lifecycle_slug=None,
             spec=None,
-            research="lifecycle/from-research/research.md",
+            research="cortex/lifecycle/from-research/research.md",
             title="Ignored Title",
         )
         assert item.resolve_slug() == "from-research"
@@ -553,8 +553,8 @@ class TestResolveSlug:
     def test_spec_preferred_over_research(self):
         item = _make_item(
             lifecycle_slug=None,
-            spec="lifecycle/spec-wins/spec.md",
-            research="lifecycle/research-loses/research.md",
+            spec="cortex/lifecycle/spec-wins/spec.md",
+            research="cortex/lifecycle/research-loses/research.md",
             title="Ignored",
         )
         assert item.resolve_slug() == "spec-wins"

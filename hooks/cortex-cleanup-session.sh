@@ -18,9 +18,9 @@ CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 # Nothing to match without a session ID
 [[ -n "$SESSION_ID" ]] || exit 0
 
-LIFECYCLE_DIR="$CWD/lifecycle"
+LIFECYCLE_DIR="$CWD/cortex/lifecycle"
 
-# No lifecycle directory — nothing to clean
+# No cortex/lifecycle directory — nothing to clean
 [[ -d "$LIFECYCLE_DIR" ]] || exit 0
 
 # --- Scan for .session files matching this session ---

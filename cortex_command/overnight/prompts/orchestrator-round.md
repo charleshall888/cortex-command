@@ -17,7 +17,7 @@ You are the overnight orchestrator agent for round {round_number}. Your job is t
 ## Round Procedure
 
 <!-- All artifact paths below use {session_dir} as the session directory.
-     {session_dir} is substituted by runner.sh's fill_prompt() and resolves to an absolute path like /path/to/lifecycle/sessions/{session_id}/. -->
+     {session_dir} is substituted by runner.sh's fill_prompt() and resolves to an absolute path like /path/to/cortex/lifecycle/sessions/{session_id}/. -->
 
 ### 0. Resolve Worker Escalations
 
@@ -59,7 +59,7 @@ prior_resolutions = ctx["escalations"]["prior_resolutions_by_feature"].get(entry
 
 If `len(prior_resolutions) >= 1` (the orchestrator already resolved a question for this feature in a prior round, but the worker asked again), this is a cycle — do **not** attempt resolution:
 
-1. Delete `lifecycle/{feature}/learnings/orchestrator-note.md` if it exists (prevents stale answers from polluting future sessions).
+1. Delete `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` if it exists (prevents stale answers from polluting future sessions).
 2. Append a `promoted` entry to `{session_dir}/escalations.jsonl`:
    ```python
    import datetime
@@ -78,14 +78,14 @@ If `len(prior_resolutions) >= 1` (the orchestrator already resolved a question f
 **Resolution attempt** (only reached if the cycle-breaking check passes):
 
 Read up to three files for context:
-- `lifecycle/{feature}/spec.md` — if this file does not exist, the escalation is not resolvable. Jump to the promotion path below.
-- `lifecycle/{feature}/plan.md` — read if it exists; skip gracefully if not.
+- `cortex/lifecycle/{feature}/spec.md` — if this file does not exist, the escalation is not resolvable. Jump to the promotion path below.
+- `cortex/lifecycle/{feature}/plan.md` — read if it exists; skip gracefully if not.
 - `{session_plan_path}` — the session overnight plan.
 
 Using the content of these files, determine whether the worker's `question` can be answered:
 
 - **If resolvable** — the question can be answered from spec, plan, or session plan context:
-  1. Write the answer to `lifecycle/{feature}/learnings/orchestrator-note.md` (overwrite the file if it already exists). Use plain prose — the worker will see this in its `{learnings}` slot.
+  1. Write the answer to `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` (overwrite the file if it already exists). Use plain prose — the worker will see this in its `{learnings}` slot.
   2. Append a `resolution` entry to `{session_dir}/escalations.jsonl`:
      ```python
      resolution_entry = {
@@ -106,7 +106,7 @@ Using the content of these files, determine whether the worker's `question` can 
      ```
 
 - **If not resolvable** (question requires human judgment, or `spec.md` is absent):
-  1. Delete `lifecycle/{feature}/learnings/orchestrator-note.md` if it exists — this prevents a stale answer from a prior resolution from polluting the next session when the feature is retried.
+  1. Delete `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` if it exists — this prevents a stale answer from a prior resolution from polluting the next session when the feature is retried.
   2. Append a `promoted` entry to `{session_dir}/escalations.jsonl`:
      ```python
      promoted_entry = {
@@ -197,7 +197,7 @@ They will be reconsidered in the next round if their blockers merge.
 
 ### 3. Generate Missing Plans and Validate
 
-For each feature to execute this round, read its `plan_path` and `spec_path` from the overnight state (these are stored per-feature and reflect the actual artifact locations, which may differ from `lifecycle/<feature-slug>/`).
+For each feature to execute this round, read its `plan_path` and `spec_path` from the overnight state (these are stored per-feature and reflect the actual artifact locations, which may differ from `cortex/lifecycle/<feature-slug>/`).
 
 **Step 3a — Hard-fail on missing spec**: If a feature's `spec_path` is `null` or the file does not exist on disk, mark it as `failed` in overnight state with an error message and exclude it from this round. Do not attempt plan generation without a spec.
 
@@ -221,7 +221,7 @@ log_event(
 )
 ```
 
-**Step 3b.1 — Criticality branch (synthesizer dual-plan path)**: Before falling through to the single-agent dispatch template below, partition `missing` into a critical-tier subset that takes the parallel-variant + synthesizer path and a non-critical subset that takes the existing single-agent path unchanged. The branch is gated by `synthesizer_overnight_enabled` in `lifecycle.config.md`; when the gate is `false` (default, fail-closed), all features fall through to the single-agent path.
+**Step 3b.1 — Criticality branch (synthesizer dual-plan path)**: Before falling through to the single-agent dispatch template below, partition `missing` into a critical-tier subset that takes the parallel-variant + synthesizer path and a non-critical subset that takes the existing single-agent path unchanged. The branch is gated by `synthesizer_overnight_enabled` in `cortex/lifecycle.config.md`; when the gate is `false` (default, fail-closed), all features fall through to the single-agent path.
 
 ```python
 from cortex_command.overnight.cli_handler import read_synthesizer_gate
@@ -272,7 +272,7 @@ For each feature in `critical_subset`, run the synthesizer dual-plan flow descri
 
 (1) **Variant dispatch (criticality == critical branch)**: For each feature whose criticality is `critical`,
 dispatch 2-3 parallel Sonnet plan-gen Task sub-agents writing to `plan-variant-A.md`,
-`plan-variant-B.md`, optionally `plan-variant-C.md` under `lifecycle/{{feature_slug}}/`.
+`plan-variant-B.md`, optionally `plan-variant-C.md` under `cortex/lifecycle/{{feature_slug}}/`.
 The orchestrator agent decides 2 vs 3 based on how many distinct approaches are identifiable from spec+research; minimum 2, maximum 3. Each sub-agent uses the **same** plan-agent prompt template as the single-agent path below (lines reading "You are generating an implementation plan ..."), substituting `{{feature_plan_path}}` per variant. Emit `PLAN_SYNTHESIS_DISPATCHED` before dispatch:
 
 ```python
@@ -293,11 +293,11 @@ log_event(
 ```
 
 (2) **Variant-edge cases**: After all variant sub-agents return:
-- If **only 1 variant** wrote successfully (the others crashed or returned `{"status": "deferred"}`): accept it directly. Copy that variant's content to `lifecycle/{{feature_slug}}/plan.md`, append a v2 `plan_comparison` event with `disposition: "auto_select"`, `selector_confidence: "high"`, `selection_rationale: "single surviving variant"`, `operator_choice: null`, `schema_version: 2`, and `position_swap_check_result: "agreed"`. Skip the synthesizer dispatch for this feature.
+- If **only 1 variant** wrote successfully (the others crashed or returned `{"status": "deferred"}`): accept it directly. Copy that variant's content to `cortex/lifecycle/{{feature_slug}}/plan.md`, append a v2 `plan_comparison` event with `disposition: "auto_select"`, `selector_confidence: "high"`, `selection_rationale: "single surviving variant"`, `operator_choice: null`, `schema_version: 2`, and `position_swap_check_result: "agreed"`. Skip the synthesizer dispatch for this feature.
 - If **all variants failed**: fall back to the single-agent path — append the feature back to `single_agent_subset` so it goes through the existing dispatch template below.
 - If **≥2 variants succeeded**: proceed to the synthesizer Task sub-agent dispatch in (3) below.
 
-(3) **Synthesizer dispatch**: Dispatch one fresh Opus synthesizer Task sub-agent per critical feature with ≥2 surviving variants. The sub-agent's **system prompt** is the shared fragment loaded from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()` — do not paraphrase or inline. The **user prompt** inlines the surviving variant paths (`lifecycle/{{feature_slug}}/plan-variant-A.md`, etc.) and the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped before assigning `confidence: "high"` or `"medium"`, and to emit a JSON envelope per the schema in the system prompt fragment. The synthesizer is read-only; no worktree isolation is required.
+(3) **Synthesizer dispatch**: Dispatch one fresh Opus synthesizer Task sub-agent per critical feature with ≥2 surviving variants. The sub-agent's **system prompt** is the shared fragment loaded from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()` — do not paraphrase or inline. The **user prompt** inlines the surviving variant paths (`cortex/lifecycle/{{feature_slug}}/plan-variant-A.md`, etc.) and the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped before assigning `confidence: "high"` or `"medium"`, and to emit a JSON envelope per the schema in the system prompt fragment. The synthesizer is read-only; no worktree isolation is required.
 
 (4) **Envelope extraction (LAST-occurrence anchor)**: Parse the synthesizer Task sub-agent's output using the same LAST-occurrence anchor pattern as the canonical `skills/lifecycle/references/plan.md` §1b:
 
@@ -328,7 +328,7 @@ The `last occurrence` semantics tolerate prose that quotes the `<!--findings-jso
 
 (5) **Route on verdict + confidence**:
 
-- **`verdict ∈ {"A","B","C"}` AND `confidence ∈ {"high","medium"}`**: copy the selected variant's content to `lifecycle/{{feature_slug}}/plan.md` (verdict `"A"` → `plan-variant-A.md`, `"B"` → `plan-variant-B.md`, `"C"` → tie at high/medium confidence is a logically impossible state per the synthesizer fragment, so treat as malformed and follow the deferred branch). Then append a v2 `plan_comparison` event to `lifecycle/{{feature_slug}}/events.log`:
+- **`verdict ∈ {"A","B","C"}` AND `confidence ∈ {"high","medium"}`**: copy the selected variant's content to `cortex/lifecycle/{{feature_slug}}/plan.md` (verdict `"A"` → `plan-variant-A.md`, `"B"` → `plan-variant-B.md`, `"C"` → tie at high/medium confidence is a logically impossible state per the synthesizer fragment, so treat as malformed and follow the deferred branch). Then append a v2 `plan_comparison` event to `cortex/lifecycle/{{feature_slug}}/events.log`:
 
   ```python
   with open(f"cortex/lifecycle/{f['slug']}/events.log", "a", encoding="utf-8") as fh:
@@ -405,8 +405,8 @@ You are generating an implementation plan for the overnight feature "{{feature_s
 
 Read the following files:
 - Spec: {{feature_spec_path}}
-- Research: lifecycle/{{feature_slug}}/research.md (if it exists — skip gracefully if not)
-- Recovery history: lifecycle/{{feature_slug}}/learnings/recovery-log.md (if it exists — skip gracefully if not; if present, note in the plan what was previously tried and why it failed so the new plan avoids repeating those approaches)
+- Research: cortex/lifecycle/{{feature_slug}}/research.md (if it exists — skip gracefully if not)
+- Recovery history: cortex/lifecycle/{{feature_slug}}/learnings/recovery-log.md (if it exists — skip gracefully if not; if present, note in the plan what was previously tried and why it failed so the new plan avoids repeating those approaches)
 
 Follow the lifecycle plan phase protocol: design an implementation approach, then
 write a complete plan to {{feature_plan_path}} using the standard plan.md format (Overview,

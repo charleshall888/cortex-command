@@ -27,7 +27,7 @@ from cortex_command.cli import _dispatch_upgrade
 
 
 T12_VERDICT_RELATIVE_PATH = (
-    "lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-"
+    "cortex/lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-"
     "orchestration/plugin-refresh-semantics.md"
 )
 

@@ -27,7 +27,7 @@ class TestIntegrationBranchesPersistence(unittest.TestCase):
         expected = {"repo_a": "overnight/abc"}
         state = OvernightState(
             session_id="overnight-2026-01-01-0000",
-            plan_ref="lifecycle/overnight-plan.md",
+            plan_ref="cortex/lifecycle/overnight-plan.md",
             phase="executing",
             integration_branches=expected,
         )
@@ -45,7 +45,7 @@ class TestIntegrationBranchesPersistence(unittest.TestCase):
         """Loading a state JSON without integration_branches key returns empty dict."""
         minimal_state = {
             "session_id": "overnight-2025-12-31-2359",
-            "plan_ref": "lifecycle/overnight-plan.md",
+            "plan_ref": "cortex/lifecycle/overnight-plan.md",
             "plan_hash": None,
             "current_round": 1,
             "phase": "executing",
@@ -77,7 +77,7 @@ class TestIntegrationWorktreesPersistence(unittest.TestCase):
         expected = {"/abs/repo": "/tmp/wt"}
         state = OvernightState(
             session_id="overnight-2026-01-01-0000",
-            plan_ref="lifecycle/overnight-plan.md",
+            plan_ref="cortex/lifecycle/overnight-plan.md",
             phase="executing",
             integration_worktrees=expected,
         )
@@ -95,7 +95,7 @@ class TestIntegrationWorktreesPersistence(unittest.TestCase):
         """Loading a state JSON without integration_worktrees key returns empty dict."""
         minimal_state = {
             "session_id": "overnight-2025-12-31-2359",
-            "plan_ref": "lifecycle/overnight-plan.md",
+            "plan_ref": "cortex/lifecycle/overnight-plan.md",
             "plan_hash": None,
             "current_round": 1,
             "phase": "executing",

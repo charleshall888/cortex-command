@@ -75,15 +75,15 @@ Operational sequence — execute in order. Full per-step detail (error handling,
    - 7.5 `log_event(event='session_start', round=1, ...)` from `cortex_command.overnight.events` (lowercase event names; param is `event`, not `event_type`).
    - 7.6 Launch dashboard if not running; poll `localhost:8080/health`. Dashboard is optional.
    - 7.7 Ask run-now vs. schedule-for-later. Run via Bash with `dangerouslyDisableSandbox: true`:
-     - Run now: `overnight-start $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json 6h`
-     - Schedule: `cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/lifecycle/sessions/{session_id}/overnight-state.json`
+     - Run now: `overnight-start $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json 6h`
+     - Schedule: `cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json`
    - 7.8 Inform the user; the runner takes over from here.
 
 ## Resume Flow (`/overnight resume`)
 
 Operational sequence — full per-step detail in `${CLAUDE_SKILL_DIR}/references/resume-flow.md`.
 
-1. **Load existing state** — scan `$CORTEX_COMMAND_ROOT/lifecycle/sessions/*/overnight-state.json` by mtime; load the first non-`complete` file via `load_state(state_path=<path>)`.
+1. **Load existing state** — scan `$CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/*/overnight-state.json` by mtime; load the first non-`complete` file via `load_state(state_path=<path>)`.
 2. **Report session state** — phase, per-feature statuses, rounds completed, current round. When `phase: paused`, surface `paused_reason` with contextual guidance.
 3. **Check for deferred questions** — `read_deferrals()` + `summarize_deferrals()` from `cortex_command.overnight.deferral`.
 4. **Determine next action** based on phase:
