@@ -198,33 +198,6 @@ if [ "$prescriptive_prose_triggered" -eq 1 ]; then
 fi
 
 # -----------------------------------------------------------------------------
-# Phase 1.9 — Tier-reader divergence audit (spec R2c)
-# -----------------------------------------------------------------------------
-# When staged diffs touch the canonical tier readers, audit the in-tree
-# lifecycle corpus for last-wins vs canonical divergence. The audit script
-# emits "tier-divergence: <feature> last_wins=<x> canonical=<y>" per
-# divergent lifecycle and exits non-zero; propagate that exit code so the
-# commit is blocked. Closed lifecycles are skipped by default (their
-# runtime blast radius is zero).
-tier_audit_triggered=0
-while IFS= read -r f; do
-    [ -z "$f" ] && continue
-    case "$f" in
-        cortex_command/common.py|cortex_command/overnight/report.py)
-            tier_audit_triggered=1
-            break
-            ;;
-    esac
-done < <(git diff --cached --name-only --diff-filter=ACMR)
-
-if [ "$tier_audit_triggered" -eq 1 ]; then
-    if ! just audit-tier-divergence; then
-        echo "pre-commit: tier-divergence audit failed — a canonical tier-reader change introduced new lifecycle divergence (search stderr for 'tier-divergence:')." >&2
-        exit 1
-    fi
-fi
-
-# -----------------------------------------------------------------------------
 # Phase 2 — Short-circuit decision
 # -----------------------------------------------------------------------------
 staged=$(git diff --cached --name-only --diff-filter=ACMR)

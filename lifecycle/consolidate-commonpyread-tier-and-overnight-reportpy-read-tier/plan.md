@@ -84,7 +84,7 @@ Direct-swap consolidation (research §A): `overnight/report.py:535` migrates to 
   - `test -d tests/fixtures/state/tier_parity && ls tests/fixtures/state/tier_parity/` lists `lifecycle_start_only`, `start_then_override`, `stray_tier_after_override` — pass if all three present (R8).
   - `uv run pytest tests/test_outcome_router.py cortex_command/overnight/tests/test_lead_unit.py tests/test_lifecycle_state.py tests/test_bin_lifecycle_state_parity.py -q` exits 0 — pass if exit code = 0 (R18, R19).
   - `git log -1 --pretty=%s` shows the Phase 1 commit subject — pass if a new commit landed since the start of this task.
-- **Status**: [ ] pending
+- **Status**: [x] complete (b94aab7)
 
 ### Task 5: Delete audit-gate canonical sources and wiring
 - **Files**:
@@ -110,7 +110,7 @@ Direct-swap consolidation (research §A): `overnight/report.py:535` migrates to 
   - `grep -c "Phase 1.9\|tier_audit_triggered\|audit-tier-divergence" .githooks/pre-commit` = 0 — pass if count = 0 (R13).
   - `grep -c "^audit-tier-divergence:" justfile` = 0 AND `grep -c "bin/cortex-audit-tier-divergence" justfile` = 0 — pass if both = 0 (R14).
   - `git status --short` shows both `D bin/cortex-audit-tier-divergence` AND `D plugins/cortex-core/bin/cortex-audit-tier-divergence` in the staged set — pass if both deletions are staged.
-- **Status**: [ ] pending
+- **Status**: [x] complete (staged, will land with Task 7)
 
 ### Task 6: Add CHANGELOG entry under [Unreleased] → Removed
 - **Files**:
@@ -124,7 +124,7 @@ Direct-swap consolidation (research §A): `overnight/report.py:535` migrates to 
   - No `### Removed` user-facing migration steps apply — explicitly say so to match the "no user-side cleanup required" pattern.
 - **Verification**:
   - `grep -B 2 -A 5 "cortex-audit-tier-divergence" CHANGELOG.md` returns a block under the `## [Unreleased]` / `### Removed` heading containing each of the six retired-surface names AND the replacement-entry-point phrase AND a no-user-cleanup statement — pass if all three conditions hold visually on inspection (R15).
-- **Status**: [ ] pending
+- **Status**: [x] complete (staged, will land with Task 7)
 
 ### Task 7: Run Phase 2 acceptance and commit Phase 2
 - **Files**:
