@@ -50,6 +50,19 @@ The flag-position variant convention for git push URL deny rules mirrors the exi
 - The implementation introduces security hardening for the permission allow/deny list (exfiltration channel closure). The project requirements (`requirements/project.md`) describe the project scope ("Global agent configuration (settings, hooks, reference docs)") but contain no mention of security posture, permission management, or sandbox hardening as a quality attribute or architectural concern. This is a new behavioral domain not yet reflected in requirements.
 **Update needed**: requirements/project.md
 
+## Suggested Requirements Update
+
+**Target**: `requirements/project.md`
+
+**Proposed addition** (new "Security posture" subsection or quality attribute):
+
+> **Security posture**: The agentic layer maintains a least-privilege permission set in `claude/settings.json`. Read-only operations (`gh pr view`, `gh repo view`, `git remote -v`, etc.) are allowlisted by exact subcommand pattern; mutating operations that could exfiltrate data or escape sandbox controls (`gh gist create`, `git remote add/set-url/remove`, inline-URL `git push`, `WebFetch` at global scope) are explicitly denied. Deny rules take precedence over allow rules. Any expansion of the allow list must be reviewed against this principle; new exfiltration vectors (network egress, credential exposure, write paths outside the project tree) require an explicit deny rule before any broader allow rule is added.
+
+**Evidence trail**:
+- `claude/settings.json` deny array: `Bash(gh gist create *)`, `Bash(gh gist edit *)`, `Bash(git remote add *)`, `Bash(git remote set-url *)`, `Bash(git remote remove *)`, `Bash(git push https://*)`, `Bash(git push http://*)`, `Bash(git push * https://*)`, `Bash(git push * http://*)` (this review, Requirements 3, 5, 6).
+- `claude/settings.json` allow array: replaced `Bash(gh *)` and `Bash(git remote *)` with read-only subcommand patterns (this review, Requirements 2, 4).
+- `WebFetch` removed from global `permissions.allow` (this review, Requirement 1).
+
 ## Verdict
 
 ```json

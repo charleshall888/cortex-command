@@ -114,6 +114,23 @@ No automated tests are present for `overnight-schedule`. The plan verification s
 - The `scheduled_start` field and scheduling capability are new behaviors not reflected in `requirements/project.md` or any area requirements. The project requirements mention "Overnight execution framework, session management, and morning reporting" (In Scope) but do not specifically mention scheduling or delayed launch.
 **Update needed**: requirements/project.md (minor -- add scheduling to the overnight execution framework description in the In Scope section)
 
+## Suggested Requirements Update
+
+**Target**: `requirements/project.md` (In Scope section, overnight execution framework line)
+
+**Proposed edit**:
+
+> Replace "Overnight execution framework, session management, and morning reporting" with "Overnight execution framework (including delayed/scheduled launch via `bin/overnight-schedule`), session management, and morning reporting".
+
+**Optional companion addition** (Overnight area, or pipeline.md if scheduling moves there):
+
+> **Scheduling**: `bin/overnight-schedule HH:MM | YYYY-MM-DDTHH:MM [args...]` accepts a target time within the next 7 days and launches `overnight-start` after a `caffeinate -i sleep`. The scheduled session runs inside a dedicated tmux session (`overnight-scheduled` with collision-avoidance suffix) and writes a `scheduled_start` ISO 8601 marker to `overnight-state.json` while waiting; the field clears just before `overnight-start` is invoked. State schema is backward-compatible: `scheduled_start` defaults to `None` and is read via `raw.get("scheduled_start")`.
+
+**Evidence trail**:
+- `bin/overnight-schedule` lines 28, 44, 83-129, 154-194 (this review, Requirements 3-11).
+- `claude/overnight/state.py:214,342` `scheduled_start: Optional[str] = None` and `raw.get("scheduled_start")` (this review, Requirement 12).
+- `skills/overnight/SKILL.md` Step 8.7 (this review, Requirement 1).
+
 ## Verdict
 
 ```json

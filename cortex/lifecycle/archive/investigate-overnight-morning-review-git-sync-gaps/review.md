@@ -103,6 +103,24 @@ Unit-level verification from the plan has been executed (all 9 tasks marked comp
 - The sync-allowlist.conf introduces a new shared configuration artifact for the pipeline that is not listed in the Dependencies section of `requirements/pipeline.md`.
 **Update needed**: requirements/pipeline.md
 
+## Suggested Requirements Update
+
+**Target**: `requirements/pipeline.md`
+
+**Proposed new section** ("Post-PR-merge sync"):
+
+> **Post-PR-merge sync**: After the morning review skill merges a feature's PR, it runs `bin/git-sync-rebase.sh claude/overnight/sync-allowlist.conf` to fast-forward local `main` against the remote and push any local-only commits (e.g., morning reports). The rebase honors an allowlist file: paths matching an allowlist pattern are resolved via `git checkout --theirs` and re-added automatically; conflicts on paths outside the allowlist exceeding a small threshold abort the rebase and surface a manual-resolution prompt. Exit codes: 0 (synced), 1 (unresolvable conflicts), 2 (push failed). Session artifacts (`lifecycle/sessions/`, `lifecycle/pipeline-events.log`, `backlog/`) are committed on the integration branch rather than `main` so the PR carries the audit trail rather than the morning report itself, which lands separately on `main`.
+
+**Proposed edit** to the Dependencies section:
+
+> Add: `claude/overnight/sync-allowlist.conf` — pattern allowlist consumed by `bin/git-sync-rebase.sh` during morning-review post-merge sync. Patterns currently include session artifacts, lifecycle phase outputs, pipeline event log, backlog index/items, and morning reports.
+
+**Evidence trail**:
+- `runner.sh:964-1015` Phase D artifact commit moved entirely inside the worktree (this review, Requirement 1).
+- `skills/morning-review/references/walkthrough.md` Section 6a lines 351-373 (this review, Requirement 3).
+- `bin/git-sync-rebase.sh` and `claude/overnight/sync-allowlist.conf` (this review, Requirements 4-5).
+- `bin/git-sync-rebase.sh:117-189` resolution loop (this review, Requirement 5).
+
 ## Verdict
 
 ```json

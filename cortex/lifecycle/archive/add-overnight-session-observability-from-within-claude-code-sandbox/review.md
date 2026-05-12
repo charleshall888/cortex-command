@@ -103,6 +103,23 @@
 - The `setup-tmux-socket` recipe adds tmux socket allowlisting to enable sandboxed sessions to access tmux. This sandbox configuration capability is not captured in any requirements document.
 **Update needed**: requirements/observability.md
 
+## Suggested Requirements Update
+
+**Target**: `requirements/observability.md`
+
+**Proposed addition** (new subsection in the observability surfaces list):
+
+> **CLI session status**: A `bin/overnight-status` script (also reachable via `/overnight status`) reports active or last-known session phase, runner liveness (PID + `kill -0` check), per-feature status counts, recent events, and surfaced failures by reading `~/.local/share/overnight-sessions/active-session.json`, `.runner.lock`, `overnight-state.json`, and `overnight-events.log` directly from disk. This is the sandbox-compatible counterpart to the dashboard and is the canonical liveness probe when the dashboard is unavailable.
+
+**Proposed addition** (sandbox prerequisites or a new "Sandbox integration" subsection):
+
+> **Tmux socket allowlist**: The `setup-tmux-socket` justfile recipe writes the active tmux socket path (`/private/tmp/tmux-$(id -u)/default`) into `settings.local.json` under `sandbox.network.allowUnixSockets`, allowing sandboxed sessions to reach the tmux server. The recipe is idempotent and preserves sibling settings.
+
+**Evidence trail**:
+- `bin/overnight-status` lines 15, 27-74, 97-153, 159-188 (this review, Requirements 1-6).
+- `skills/overnight/SKILL.md` `## Status Flow` (this review, Requirement 7).
+- `justfile` line 138 (deploy-bin pair) and lines 560-586 (`setup-tmux-socket` recipe) (this review, Requirements 8-10).
+
 ## Verdict
 
 ```json

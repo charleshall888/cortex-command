@@ -55,6 +55,19 @@
 - The `render_pending_drift()` function (lines 598-659 of report.py) introduces a new top-level morning report section `## Requirements Drift Flags` that is not described in `requirements/project.md`. This is new morning reporting behavior (scanning non-completed features for drift) that extends the overnight execution framework's reporting capabilities beyond what project requirements currently document.
 **Update needed**: requirements/project.md
 
+## Suggested Requirements Update
+
+**Target**: `requirements/project.md` (morning reporting description) and/or `requirements/pipeline.md` (review phase outputs).
+
+**Proposed addition**:
+
+> **Requirements drift surfacing in morning reports**: The morning report includes a `## Requirements Drift Flags` section that aggregates `## Requirements Drift` blocks from every `lifecycle/*/review.md` where state = `detected`, including features not yet merged. Drift is purely observational — it never blocks merge or completion — but surfacing it in the morning report ensures the operator sees pending drift before it accumulates. Each entry lists the feature, the drift findings, and the `Update needed:` target so the operator can decide whether to open a backlog item, update requirements directly, or dismiss.
+
+**Evidence trail**:
+- `claude/overnight/report.py:598-659` `render_pending_drift()` (this review, Requirement 8 + this drift finding).
+- `claude/overnight/report.py:749-792` `_read_requirements_drift()` helper (this review, Requirement 8).
+- `skills/lifecycle/review.md:96-103,116` artifact format + verdict JSON (this review, Requirements 1-3).
+
 ## Stage 2: Code Quality
 
 - **Naming conventions**: Consistent with project patterns. `_read_requirements_drift()` follows the established `_read_*()` private helper convention (cf. `_read_verification_strategy`, `_read_learnings_summary`, `_read_recovery_log_last_entry`). `render_pending_drift()` follows the `render_*()` public function convention (cf. `render_completed_features`, `render_deferred_questions`).

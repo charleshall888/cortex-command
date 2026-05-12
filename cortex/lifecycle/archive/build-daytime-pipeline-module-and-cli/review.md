@@ -108,6 +108,25 @@ The spec edge case (line 85) states: "Deferred feature: exits 0 with a clear mes
 
 ---
 
+## Suggested Requirements Update
+
+**Target**: `requirements/pipeline.md` (Deferral System section, lines ~87-92, and Dependencies, line ~144)
+
+**Proposed edit** to the Deferral System "Outputs" line:
+
+> **Outputs**: Deferral file at `lifecycle/deferred/{feature}-q{NNN}.md` for overnight runs, or `lifecycle/{feature}/deferred/{feature}-q{NNN}.md` for daytime pipeline runs. The daytime pipeline isolates deferrals per-feature so multiple concurrent feature runs cannot interleave deferral writes.
+
+**Proposed edit** to the Dependencies section:
+
+> `lifecycle/deferred/` (overnight) and `lifecycle/{feature}/deferred/` (daytime) — both honored by `feature_executor` and `outcome_router` via the `deferred_dir` parameter (default `DEFAULT_DEFERRED_DIR` for overnight, per-feature path for daytime).
+
+**Evidence trail**:
+- `claude/overnight/daytime_pipeline.py` `build_config` sets `deferred_dir = cwd / f"lifecycle/{feature}/deferred"` (this review, Requirement 5).
+- `feature_executor.py:192,358` and `outcome_router.py:438,767` signatures accept `deferred_dir: Path = DEFAULT_DEFERRED_DIR` (this review, Requirement 6).
+- Behavioral tests `TestDeferredDirThreadingFeatureExecutor` and `TestDeferredDirThreadingOutcomeRouter` confirm the custom path is forwarded to `write_deferral` (this review, Requirement 6).
+
+---
+
 ## Stage 2: Code Quality
 
 ### Naming Conventions

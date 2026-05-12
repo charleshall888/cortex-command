@@ -32,6 +32,25 @@
 
 **Update needed**: `requirements/pipeline.md` — needs a "Post-Merge Review Dispatch" functional requirement section describing the gating matrix (tier × criticality), the conditions under which the review agent is dispatched, and the handling of synthetic approval events for intentionally-skipped features. This update belongs as a follow-on to backlog ticket 043.
 
+## Suggested Requirements Update
+
+**Target**: `requirements/pipeline.md`
+
+**Proposed new section** ("Post-Merge Review Dispatch"):
+
+> **Post-Merge Review Dispatch**: After a feature merges and passes the test gate, the pipeline dispatches a review phase if `requires_review(tier, criticality)` returns true (per the gating matrix in `claude/common.py`). Qualifying features run a review agent that writes `lifecycle/{feature}/review.md` with a verdict JSON (`APPROVED` / `CHANGES_REQUESTED` / `REJECTED` / `ERROR`) and a Requirements Drift observation. Features that do not qualify (e.g., simple-tier non-critical changes) receive a synthetic `review_verdict: APPROVED` event at `cycle: 0` so downstream consumers (morning report, metrics) see a uniform shape. The review phase does not block merge — it gates lifecycle completion only.
+>
+> **Inputs**: `lifecycle/{feature}/spec.md`, the merged diff on the integration branch, tier/criticality from events.log.
+>
+> **Outputs**: `lifecycle/{feature}/review.md`, `review_verdict` event in events.log, optional rework dispatch on `CHANGES_REQUESTED` (max 2 cycles, then defer).
+>
+> **Dependencies**: `claude/common.py::read_tier`, `claude/common.py::requires_review`, `claude/pipeline/review_dispatch.py`, `claude/pipeline/prompts/review.md`.
+
+**Evidence trail**:
+- `research.md` post-019 overnight investigation showing the review-dispatch gap (this review, Requirement 4).
+- `backlog/043-wire-review-phase-into-overnight-runner.md` (this review, Requirement 2).
+- `research.md` `## Spike Conclusions` section (this review, Requirement 1).
+
 ## Stage 2: Code Quality
 
 - **Naming conventions**: All new sections follow existing `research.md` heading conventions (`##` for top-level sections, `###` for subsections). The backlog ticket filename (`043-wire-review-phase-into-overnight-runner.md`) matches the kebab-case pattern used by all other backlog items. YAML frontmatter field names are consistent with the existing backlog schema (`schema_version`, `uuid`, `id`, `title`, `type`, `status`, `priority`, `parent`, `tags`, `areas`, `created`, `updated`, `session_id`, `lifecycle_phase`, `lifecycle_slug`, `complexity`, `criticality`).

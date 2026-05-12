@@ -66,6 +66,31 @@
 - The deferral system requirements do not mention review-originated deferrals as a deferral source.
 **Update needed**: requirements/pipeline.md
 
+## Suggested Requirements Update
+
+**Target**: `requirements/pipeline.md`
+
+**Proposed edits**:
+
+1. **Feature execution lifecycle** — extend the state transitions to include the review phase:
+
+   > `pending -> running -> merged -> (review?) -> complete | deferred | paused | failed`. Features whose `(tier, criticality)` qualify per `requires_review()` enter a review phase after merge: the runner dispatches a review agent, parses the verdict from `lifecycle/{feature}/review.md`, and advances to `complete` on APPROVED. CHANGES_REQUESTED triggers up to one rework cycle (dispatch fix agent, re-merge, re-review); a second non-APPROVED verdict defers the feature. REJECTED and ERROR defer immediately. Non-qualifying features bypass the phase and receive a synthetic `review_verdict: APPROVED` at `cycle: 0`.
+
+2. **Review gating matrix** (new subsection):
+
+   > `requires_review(tier, criticality)` lives in `claude/common.py` and encodes the policy of which features get reviewed (e.g., complex × any-criticality, any-tier × high-criticality, etc.). The matrix is unit-tested at the cell level. Changes to the matrix are a requirements-level change, not a code-only tweak.
+
+3. **Deferral System** — extend the "Deferral source" enumeration:
+
+   > Add: **Review-originated deferrals** — emitted when a review verdict is REJECTED, ERROR, or CHANGES_REQUESTED after the rework cycle is exhausted. Written via the same `write_deferral` path; filename follows the existing `{feature}-q{N}.md` convention.
+
+**Evidence trail**:
+- `claude/common.py:204` `read_tier`, `claude/common.py:245` `requires_review` (this review, R1, R6a).
+- `claude/pipeline/review_dispatch.py:119,186,195,218,250,262` (this review, R3, R6b).
+- `claude/overnight/batch_runner.py:1688` `requires_review` call site in `_accumulate_result` (this review, R2).
+- `skills/morning-review/references/walkthrough.md` Section 2b lines 86-156 (this review, R5).
+- `claude/pipeline/prompts/review.md:44-57` (this review, R7).
+
 ## Stage 2: Code Quality
 
 - **Naming conventions**: Consistent with project patterns. `read_tier` mirrors `read_criticality`. `requires_review` follows the predicate naming convention. `ReviewResult` dataclass follows existing result types. `dispatch_review` follows `dispatch_task` naming. `parse_verdict` is clear and descriptive.

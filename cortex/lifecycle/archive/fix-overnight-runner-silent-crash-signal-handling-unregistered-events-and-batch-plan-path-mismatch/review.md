@@ -100,6 +100,24 @@ Implementation follows existing project conventions throughout:
 - The pipeline requirements do not mention the event type registration allowlist (`EVENT_TYPES`) as an architectural constraint, despite it being load-bearing for data quality validation. The spec's non-requirements section explicitly states "Do NOT remove the EVENT_TYPES allowlist -- it provides data quality validation for the events log."
 **Update needed**: requirements/pipeline.md
 
+## Suggested Requirements Update
+
+**Target**: `requirements/pipeline.md`
+
+**Proposed addition** (extend the graceful-degradation section):
+
+> **Signal handling**: The overnight runner traps `SIGINT`, `SIGTERM`, and `SIGHUP` and routes each to the same cleanup path: kill watchdog process groups, write a `circuit_breaker` event with `reason: signal`, transition session state to `paused`, generate a partial morning report, and exit with code 130. SIGHUP is included so that terminal disconnects (a common cause of silent crashes for tmux-detached runs) result in graceful pause rather than process loss.
+
+**Proposed addition** (new "Data quality invariants" subsection):
+
+> **Event type registry**: All events written to `overnight-events.log` and `lifecycle/pipeline-events.log` must use an event type listed in `claude/overnight/events.py::EVENT_TYPES`. The registry is load-bearing: morning report rendering, metrics aggregation, and dashboard parsers all assume known event types. A regression test (`test_events.py::test_all_log_event_calls_registered`) statically scans every `log_event` call site in `claude/overnight/` and asserts the literal is registered; this guard must remain in place.
+
+**Evidence trail**:
+- `runner.sh:512` (`trap cleanup SIGINT SIGTERM SIGHUP`) and `runner.sh:458-459` (watchdog kills) (this review, R1, R2).
+- `tests/test_runner_signal.py::test_sighup_triggers_cleanup` verifying `circuit_breaker` event with `reason: signal` and exit code 130 (this review, R10).
+- `claude/overnight/events.py:71-76,118-123` (6 new event types registered) (this review, R7).
+- `tests/test_events.py::test_all_log_event_calls_registered` (regression guard) (this review, R8).
+
 ## Verdict
 
 ```json
