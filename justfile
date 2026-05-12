@@ -360,6 +360,14 @@ measure-l1-surface:
 check-events-registry-audit:
     bin/cortex-check-events-registry --audit
 
+# Check Python sources for bare-prefix path literals (#203 — prevents pre-#202 layout regression)
+check-path-hardcoding *args:
+    bin/cortex-check-path-hardcoding --staged {{args}}
+
+# Audit the whole repo for bare-prefix path literals (off critical path)
+check-path-hardcoding-audit:
+    bin/cortex-check-path-hardcoding --audit
+
 # --- Testing ---
 
 # Run skill contract tests (validates SKILL.md frontmatter across all skills)

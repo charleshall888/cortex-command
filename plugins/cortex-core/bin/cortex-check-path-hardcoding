@@ -1,0 +1,552 @@
+#!/usr/bin/env python3
+"""Path-hardcoding static gate (#203).
+
+Validates that no source file under the gate's scan scope contains a bare-prefix
+path literal (e.g. ``Path("lifecycle/x")``, ``f"backlog/{x}"``) that would
+re-introduce the pre-#202 layout. The post-#202 canonical anchor is
+``Path("cortex/lifecycle")`` / ``Path("cortex/backlog")`` etc.; literals
+beginning with the bare prefix (without ``cortex/``) are flagged.
+
+Three modes:
+
+- ``--staged`` (pre-commit critical path): scan files in
+  ``git diff --cached --name-only --diff-filter=ACMR`` intersected with the
+  scan-scope rule. Fail if any in-scope staged file contains a violation that
+  is not suppressed by ``bin/.path-hardcoding-allowlist.md``.
+- ``--audit`` (off critical path): scan every in-scope file under the repo
+  root (or ``--root <path>``). Same detection and allowlist logic as
+  ``--staged``.
+- ``--root <path>`` (test-only override): when set with ``--staged`` or
+  ``--audit``, resolve scan roots and the allowlist file under ``<path>``
+  as if it were the repo root.
+
+Scan scope:
+
+- ``cortex_command/**/*.py`` (all Python sources in the package)
+- ``bin/cortex-*`` (executable shim scripts; any extension)
+- ``hooks/cortex-*`` (executable hook scripts)
+- ``claude/hooks/cortex-*`` (executable hook scripts in the claude config dir)
+
+Any path whose path segments contain ``tests`` anywhere (top-level ``tests/``
+or nested ``cortex_command/init/tests/``) is excluded.
+
+Fails OPEN on missing allowlist (matches the ``bin/.parity-exceptions.md``
+precedent) — the allowlist is opt-in for legitimate exceptions, not a registry
+of expected entries.
+
+Stdlib-only. See
+``cortex/lifecycle/add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift/spec.md``
+and ``plan.md`` for the design rationale.
+"""
+
+import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+# The four pre-#202 prefix names. Kept as a tuple constant so the detection
+# regexes can be built via string concatenation — the gate's source therefore
+# never contains a contiguous ``"<prefix>/`` substring that would self-match
+# when the gate scans its own source file.
+_PREFIXES: tuple[str, ...] = ("lifecycle", "backlog", "research", "requirements")
+
+_PREFIX_ALTERNATION = "|".join(_PREFIXES)
+
+# Detection regex 1: string literal whose first slash-separated segment is one
+# of the four prefix names. Catches ``"lifecycle/x"``, ``f"backlog/{x}"``,
+# ``'research/foo'``, etc. Construction via string concatenation ensures the
+# literal substring ``"<prefix>/`` never appears as source text in this file.
+_SLASH_RE = re.compile(
+    r"""["']\s*(?:""" + _PREFIX_ALTERNATION + r")/"
+)
+
+# Detection regex 2: bare-literal argument to ``Path(...)`` or
+# ``os.path.join(...)`` — catches ``Path("lifecycle")`` / ``os.path.join("backlog", x)``.
+_BARE_RE = re.compile(
+    r"""\b(?:Path|os\.path\.join)\(\s*["']\s*(?:"""
+    + _PREFIX_ALTERNATION
+    + r""")\s*["']"""
+)
+
+# Allowlist file location. Mirrors bin/.parity-exceptions.md placement.
+ALLOWLIST_PATH = "bin/.path-hardcoding-allowlist.md"
+
+# Categories accepted in the allowlist's ``category`` column.
+ALLOWED_CATEGORIES: frozenset[str] = frozenset(
+    {"archive-rewriter", "docstring-narrative", "migration-script"}
+)
+
+# Substrings that disqualify a rationale (case-insensitive).
+FORBIDDEN_RATIONALE_LITERALS: frozenset[str] = frozenset(
+    {"internal", "misc", "tbd", "n/a", "pending", "temporary"}
+)
+
+# Minimum rationale length after trim.
+MIN_RATIONALE_LEN = 30
+
+# Scan-scope: ordered list of (root_dir, file_predicate). Each predicate takes
+# a path relative to the scan root and returns True if the file is in scope.
+_SCAN_ROOTS: tuple[tuple[str, str], ...] = (
+    # (root, kind): kind is "py-tree" (recurse, scan *.py) or
+    # "cortex-prefix" (single-dir, scan files named cortex-*).
+    ("cortex_command", "py-tree"),
+    ("bin", "cortex-prefix"),
+    ("hooks", "cortex-prefix"),
+    ("claude/hooks", "cortex-prefix"),
+)
+
+
+# ---------------------------------------------------------------------------
+# Data classes
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AllowlistRow:
+    file: str
+    line_pattern: str
+    category: str
+    rationale: str
+    lifecycle_id: str
+    added_date: str
+    source_line: int
+
+
+@dataclass(frozen=True)
+class GateError:
+    """A single human-readable diagnostic in positive-routing form."""
+
+    path: str
+    line: int
+    code: str
+    message: str
+
+    def format_text(self) -> str:
+        return f"{self.path}:{self.line}: {self.code} {self.message}"
+
+
+# ---------------------------------------------------------------------------
+# Allowlist parsing
+# ---------------------------------------------------------------------------
+
+
+def _split_table_row(stripped: str) -> list[str]:
+    """Split a markdown table row on ``|`` boundaries."""
+    body = stripped.strip("|")
+    return [cell.strip() for cell in body.split("|")]
+
+
+# Required column order in the canonical allowlist header row.
+_ALLOWLIST_COLUMNS: tuple[str, ...] = (
+    "file",
+    "line_pattern",
+    "category",
+    "rationale",
+    "lifecycle_id",
+    "added_date",
+)
+
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def parse_allowlist(text: str) -> tuple[list[AllowlistRow], list[GateError]]:
+    """Parse the allowlist markdown table.
+
+    Returns (rows, schema_errors). schema_errors describe malformed rows in
+    the canonical-shaped entries table; non-canonical tables (e.g. the schema
+    documentation table at the top of the file) are skipped silently — only
+    the first table whose header contains every required column is parsed.
+    """
+    rows: list[AllowlistRow] = []
+    errors: list[GateError] = []
+
+    in_canonical_table = False
+    saw_separator = False
+    header_indices: dict[str, int] = {}
+
+    for idx, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            # Leaving a table block: reset state. If we've already parsed the
+            # canonical entries table, ignore further tables.
+            saw_separator = False
+            in_canonical_table = False
+            header_indices = {}
+            continue
+
+        cells = _split_table_row(stripped)
+
+        if not in_canonical_table:
+            # Candidate header. Accept only when it contains every required
+            # column; otherwise skip this whole table block.
+            indices = {name: i for i, name in enumerate(cells)}
+            if all(c in indices for c in _ALLOWLIST_COLUMNS):
+                header_indices = indices
+                in_canonical_table = True
+                saw_separator = False
+            else:
+                # Not the canonical entries table — skip until the table block
+                # ends (non-table line resets state).
+                in_canonical_table = False
+            continue
+
+        if not saw_separator:
+            # Second row is the markdown separator (``| --- | --- |``).
+            saw_separator = True
+            continue
+
+        # Data row.
+        def cell(col_name: str) -> str:
+            i = header_indices[col_name]
+            return cells[i] if i < len(cells) else ""
+
+        file_cell = cell("file").strip("`").strip()
+        line_pattern_cell = cell("line_pattern").strip("`").strip()
+        category_cell = cell("category").strip("`").strip()
+        rationale_cell = cell("rationale").strip()
+        lifecycle_id_cell = cell("lifecycle_id").strip("`").strip()
+        added_date_cell = cell("added_date").strip("`").strip()
+
+        # Skip blank rows (all cells empty).
+        if not any((file_cell, line_pattern_cell, category_cell, rationale_cell)):
+            continue
+
+        row_errors: list[GateError] = []
+
+        if category_cell not in ALLOWED_CATEGORIES:
+            row_errors.append(
+                GateError(
+                    ALLOWLIST_PATH,
+                    idx,
+                    "ALLOWLIST_CATEGORY",
+                    f"category {category_cell!r} not in {sorted(ALLOWED_CATEGORIES)}.",
+                )
+            )
+
+        if len(rationale_cell) < MIN_RATIONALE_LEN:
+            row_errors.append(
+                GateError(
+                    ALLOWLIST_PATH,
+                    idx,
+                    "ALLOWLIST_RATIONALE_LEN",
+                    f"rationale must be ≥{MIN_RATIONALE_LEN} chars after trim "
+                    f"(got {len(rationale_cell)}).",
+                )
+            )
+
+        rationale_lc = rationale_cell.lower()
+        for forbidden in FORBIDDEN_RATIONALE_LITERALS:
+            # Match as a whole word so case-insensitive substring like
+            # "internal" trips, but words like "pertinent" do not.
+            if re.search(r"\b" + re.escape(forbidden) + r"\b", rationale_lc):
+                row_errors.append(
+                    GateError(
+                        ALLOWLIST_PATH,
+                        idx,
+                        "ALLOWLIST_RATIONALE_FORBIDDEN",
+                        f"rationale contains forbidden literal {forbidden!r}; be specific.",
+                    )
+                )
+
+        if not _DATE_RE.match(added_date_cell):
+            row_errors.append(
+                GateError(
+                    ALLOWLIST_PATH,
+                    idx,
+                    "ALLOWLIST_DATE",
+                    f"added_date {added_date_cell!r} must match YYYY-MM-DD.",
+                )
+            )
+
+        if row_errors:
+            errors.extend(row_errors)
+            continue
+
+        # Validate that line_pattern is a compilable regex.
+        try:
+            re.compile(line_pattern_cell)
+        except re.error as exc:
+            errors.append(
+                GateError(
+                    ALLOWLIST_PATH,
+                    idx,
+                    "ALLOWLIST_LINE_PATTERN",
+                    f"line_pattern is not a valid regex: {exc}",
+                )
+            )
+            continue
+
+        rows.append(
+            AllowlistRow(
+                file=file_cell,
+                line_pattern=line_pattern_cell,
+                category=category_cell,
+                rationale=rationale_cell,
+                lifecycle_id=lifecycle_id_cell,
+                added_date=added_date_cell,
+                source_line=idx,
+            )
+        )
+
+    return rows, errors
+
+
+def load_allowlist(root: Path) -> tuple[list[AllowlistRow], list[GateError], bool]:
+    """Load the allowlist from ``<root>/bin/.path-hardcoding-allowlist.md``.
+
+    Returns (rows, schema_errors, present). When the file is absent, returns
+    ([], [], False) — the gate runs in strict mode without erroring (fail-open).
+    """
+    path = root / ALLOWLIST_PATH
+    if not path.is_file():
+        return [], [], False
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [], [
+            GateError(
+                ALLOWLIST_PATH,
+                0,
+                "ALLOWLIST_READ_ERROR",
+                f"could not read {ALLOWLIST_PATH}: {exc}",
+            )
+        ], True
+    rows, errors = parse_allowlist(text)
+    return rows, errors, True
+
+
+def allowlist_suppresses(
+    rows: list[AllowlistRow], rel_path: str, line_text: str
+) -> bool:
+    """Return True if any allowlist row matches the (rel_path, line_text) pair."""
+    for row in rows:
+        if row.file != rel_path:
+            continue
+        try:
+            if re.search(row.line_pattern, line_text):
+                return True
+        except re.error:
+            # Invalid regex was already reported as schema error; skip silently.
+            continue
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Scan-scope walker
+# ---------------------------------------------------------------------------
+
+
+def _path_segments_contain_tests(rel_parts: tuple[str, ...]) -> bool:
+    """Return True when any segment in ``rel_parts`` equals ``tests``."""
+    return "tests" in rel_parts
+
+
+def enumerate_in_scope_files(root: Path) -> list[Path]:
+    """Enumerate every file under ``root`` that falls in the scan scope.
+
+    Excludes any path containing a ``tests`` segment at any depth.
+    Returned paths are absolute.
+    """
+    out: list[Path] = []
+    for sub_root, kind in _SCAN_ROOTS:
+        base = root / sub_root
+        if not base.is_dir():
+            continue
+        if kind == "py-tree":
+            for p in base.rglob("*.py"):
+                rel_parts = p.relative_to(root).parts
+                if _path_segments_contain_tests(rel_parts):
+                    continue
+                if not p.is_file():
+                    continue
+                out.append(p)
+        elif kind == "cortex-prefix":
+            # Single-dir, files matching cortex-*. Files only (no recursion).
+            for p in base.iterdir():
+                if not p.is_file():
+                    continue
+                if not p.name.startswith("cortex-"):
+                    continue
+                rel_parts = p.relative_to(root).parts
+                if _path_segments_contain_tests(rel_parts):
+                    continue
+                out.append(p)
+    return out
+
+
+def filter_staged_to_scope(root: Path, staged: list[str]) -> list[Path]:
+    """Filter a list of staged paths to those that match the scan-scope rules."""
+    out: list[Path] = []
+    for raw in staged:
+        rel = Path(raw)
+        rel_parts = rel.parts
+        if _path_segments_contain_tests(rel_parts):
+            continue
+        for sub_root, kind in _SCAN_ROOTS:
+            sub_parts = Path(sub_root).parts
+            if rel_parts[: len(sub_parts)] != sub_parts:
+                continue
+            if kind == "py-tree":
+                if rel.suffix == ".py":
+                    out.append((root / rel).resolve())
+                    break
+            elif kind == "cortex-prefix":
+                # Must be a direct child of sub_root (no nesting) and named cortex-*.
+                if len(rel_parts) == len(sub_parts) + 1 and rel_parts[-1].startswith(
+                    "cortex-"
+                ):
+                    out.append((root / rel).resolve())
+                    break
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Detection
+# ---------------------------------------------------------------------------
+
+
+def scan_file(
+    abs_path: Path, root: Path, allowlist: list[AllowlistRow]
+) -> list[GateError]:
+    """Scan one file line-by-line for path-hardcoding violations."""
+    try:
+        text = abs_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return [
+            GateError(
+                str(abs_path),
+                0,
+                "FILE_READ_ERROR",
+                f"could not read source: {exc}",
+            )
+        ]
+
+    rel_path = str(abs_path.relative_to(root)) if abs_path.is_absolute() else str(
+        abs_path
+    )
+    errors: list[GateError] = []
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        if not (_SLASH_RE.search(line) or _BARE_RE.search(line)):
+            continue
+        if allowlist_suppresses(allowlist, rel_path, line):
+            continue
+        errors.append(
+            GateError(
+                rel_path,
+                lineno,
+                "PH001",
+                'bare-prefix path literal detected — use Path("cortex/<prefix>") '
+                "style, or add an entry to bin/.path-hardcoding-allowlist.md if "
+                "the bare prefix is intentional.",
+            )
+        )
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# Mode runners
+# ---------------------------------------------------------------------------
+
+
+def _git_staged_paths(root: Path) -> list[str]:
+    """Return paths reported by ``git diff --cached`` under ``root``."""
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        capture_output=True,
+        text=True,
+        cwd=str(root),
+        check=False,
+    )
+    if result.returncode != 0:
+        # Outside a git repo or git command unavailable — treat as no staged paths.
+        return []
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def run_staged_gate(root: Path) -> list[GateError]:
+    rows, schema_errors, _present = load_allowlist(root)
+    if schema_errors:
+        return schema_errors
+    staged = _git_staged_paths(root)
+    files = filter_staged_to_scope(root, staged)
+    errors: list[GateError] = []
+    for abs_path in files:
+        errors.extend(scan_file(abs_path, root, rows))
+    return errors
+
+
+def run_audit_gate(root: Path) -> list[GateError]:
+    rows, schema_errors, _present = load_allowlist(root)
+    if schema_errors:
+        return schema_errors
+    files = enumerate_in_scope_files(root)
+    errors: list[GateError] = []
+    for abs_path in files:
+        errors.extend(scan_file(abs_path, root, rows))
+    return errors
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="cortex-check-path-hardcoding",
+        description=(
+            "Static gate flagging bare-prefix path literals "
+            "(lifecycle/, backlog/, research/, requirements/) in source files. "
+            "See bin/.path-hardcoding-allowlist.md to suppress legitimate exceptions."
+        ),
+    )
+    mode = p.add_mutually_exclusive_group(required=True)
+    mode.add_argument(
+        "--staged",
+        action="store_true",
+        help="Pre-commit critical path: scan staged in-scope files",
+    )
+    mode.add_argument(
+        "--audit",
+        action="store_true",
+        help="Off critical path: scan every in-scope file under <root>",
+    )
+    p.add_argument(
+        "--root",
+        type=str,
+        default=None,
+        help=(
+            "Testability override. When set, resolve scan roots and the "
+            "allowlist file under <path> as if it were the repo root."
+        ),
+    )
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    if args.root is not None:
+        root = Path(args.root).resolve()
+    else:
+        root = Path(os.getcwd()).resolve()
+    if args.staged:
+        errors = run_staged_gate(root)
+    else:
+        errors = run_audit_gate(root)
+    for err in errors:
+        print(err.format_text(), file=sys.stderr)
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
