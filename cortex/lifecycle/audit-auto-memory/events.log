@@ -1,0 +1,5 @@
+{"ts":"2026-05-12T18:51:01Z","event":"lifecycle_start","feature":"audit-auto-memory","tier":"simple","criticality":"medium"}
+{"ts":"2026-05-12T18:51:01Z","event":"phase_transition","feature":"audit-auto-memory","from":"clarify","to":"research"}
+{"ts":"2026-05-12T19:31:25Z","event":"phase_transition","feature":"audit-auto-memory","from":"research","to":"specify"}
+{"ts":"2026-05-12T19:31:25Z","event":"spec_approved","feature":"audit-auto-memory"}
+{"ts":"2026-05-12T19:31:25Z","event":"phase_transition","feature":"audit-auto-memory","from":"specify","to":"plan"}
