@@ -72,7 +72,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: trivial
 - **Context**: Refine wraps lifecycle clarify; the citation chain is `refine SKILL.md → lifecycle clarify.md → load-requirements.md`. Step 3 is the right insertion point.
 - **Verification**: `grep -c "load-requirements.md\|tag-based.*loading" skills/refine/SKILL.md` ≥`1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 8cab1348)
 
 ### Task 6: Document critical-review's deliberate exemption (R5)
 - **Files**: `skills/critical-review/SKILL.md`
