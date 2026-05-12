@@ -171,7 +171,21 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
 
 1. **Read the suggested update**: Parse the `## Suggested Requirements Update` section from `cortex/lifecycle/{feature}/review.md`. Extract `File`, `Section`, and `Content` fields.
 
-2. **If the section is missing or unparseable**: Skip auto-apply. Log a warning to the user: "Requirements drift detected but no suggested update was provided — manual update needed." Do not block the verdict processing.
+2. **If the section is missing or unparseable, enforce the protocol via re-dispatch**: The reviewer is expected to emit a `## Suggested Requirements Update` section whenever `requirements_drift: detected`. When the section is absent or unparseable on the first pass, re-dispatch the reviewer with a targeted instruction:
+
+   > "review.md flags `requirements_drift: detected` but is missing the `## Suggested Requirements Update` section. Read the existing review.md, then append the section in the format documented in §2 (File / Section / Content). Do not modify any other section."
+
+   The re-dispatch follows a max-retry cap of `2` — i.e. the reviewer is invoked up to 2 additional times for a total of 3 passes (initial dispatch + 2 retries). On each retry, re-read `cortex/lifecycle/{feature}/review.md` from disk and check whether the section is now present and parseable. As soon as a pass produces a parseable section, exit the retry loop and continue with step 3.
+
+   If all 3 passes complete without producing a parseable `## Suggested Requirements Update` section, the retry loop is exhausted. Do **not** block the verdict processing. Instead, log a `drift_protocol_breach` event to `cortex/lifecycle/{feature}/events.log` with `state=detected` and `suggestion=missing`, then fall through to step 5 (skip auto-apply). The breach event surfaces in the morning report so the gap is visible rather than silent.
+
+   Event format:
+
+   ```
+   {"ts": "<ISO 8601>", "event": "drift_protocol_breach", "feature": "<name>", "state": "detected", "suggestion": "missing", "retries": 2}
+   ```
+
+   The `retries` field records the number of re-dispatches attempted before exhaustion (max-retry=2, so this is `2` on every emitted breach). Future tooling that surfaces breaches reads the `event` name; the `state` and `suggestion` fields disambiguate the breach mode for the morning report.
 
 3. **Apply the update**: Read the target requirements file. Find the section heading. Append the content after the last bullet or paragraph in that section. Write the file.
 
@@ -182,6 +196,8 @@ After logging the `review_verdict` event, check whether `requirements_drift` is 
    ```
 
    In interactive sessions, the user sees this immediately.
+
+5. **Skip auto-apply after exhausted retries**: If step 2's retry loop exhausted without a parseable section, log a brief notice to the user — "Requirements drift detected but no suggested update was provided after re-dispatch; breach logged for morning report" — and continue to §5 Transition without blocking the verdict.
 
 ### 5. Transition
 
