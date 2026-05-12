@@ -45,7 +45,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: Existing patterns in review.md §1 show the citation shape. The phrase "names suggest relevance" must be entirely absent from both files post-edit.
 - **Verification**: `grep -l "load-requirements.md\|tag-based.*loading" skills/lifecycle/references/clarify.md skills/lifecycle/references/specify.md | wc -l` returns `2` AND `grep -c "names suggest relevance" skills/lifecycle/references/clarify.md skills/lifecycle/references/specify.md` returns `0`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 6520ed64)
 
 ### Task 3: Cross-link review.md to the shared reference (R5 partial)
 - **Files**: `skills/lifecycle/references/review.md`

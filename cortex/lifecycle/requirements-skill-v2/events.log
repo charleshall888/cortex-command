@@ -11,3 +11,4 @@
 {"schema_version": 3, "ts": "2026-05-12T22:35:58Z", "event": "dispatch_complete", "feature": "requirements-skill-v2", "mode": "daytime", "outcome": "failed", "pr_url": null}
 {"v": 1, "ts": "2026-05-12T22:36:18.315609+00:00", "event": "feature_failed", "session_id": "cc6c24cf-7aae-4538-8dfd-babb091004ed", "round": 1, "feature": "requirements-skill-v2", "details": {"error": "Unexpected error: claude_agent_sdk is not installed. Install it with: pip install claude-agent-sdk"}}
 {"schema_version": 3, "ts": "2026-05-12T22:37:12Z", "event": "dispatch_complete", "feature": "requirements-skill-v2", "mode": "daytime", "outcome": "failed", "pr_url": null}
+{"schema_version": 3, "ts": "2026-05-12T23:09:14Z", "event": "batch_dispatch", "feature": "requirements-skill-v2", "batch": 0, "tasks": [1]}
