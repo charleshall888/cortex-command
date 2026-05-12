@@ -18,6 +18,8 @@ Agentic workflow toolkit for AI-assisted software development. Defines the globa
 
 **Complexity**: Must earn its place by solving a real problem that exists now. When in doubt, the simpler solution is correct.
 
+**Solution horizon**: This is a long-term project, and proposed fixes should reflect that. Before suggesting a fix, ask: do I currently know this will need to be redone — because a follow-up is already planned, the same patch would apply in multiple known places I can name, or it sidesteps a constraint I can already name? If yes, propose the durable version, or surface both choices with the tradeoff. If no, **Complexity** above still applies — the simpler fix is correct, and speculating about future redo is itself over-engineering. A deliberately-scoped phase of a multi-phase lifecycle is not a stop-gap; stop-gap means unplanned-redo. The test is current knowledge, not prediction.
+
 **Quality bar**: Tests pass and the feature works as specced. ROI matters — the system exists to make shipping faster, not to be a project in itself.
 
 **Workflow trimming**: Workflows that have not earned their place are removed wholesale rather than deprecated in stages. Hard-deletion is preferred over deprecation notices, tombstone skills, or env-var soft-deletes when the surface has zero downstream consumers (verified per-PR). Retired surfaces are documented in `CHANGELOG.md` with replacement entry points and any user-side cleanup paths the scaffolder cannot auto-prune.

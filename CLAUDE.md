@@ -57,6 +57,10 @@ The concrete inventory of kept user pauses lives in `skills/lifecycle/SKILL.md` 
 
 Prefer structural separation over prose-only enforcement for sequential gates. A gate encoded in skill control flow is harder to accidentally bypass than one that relies on the model reading and following a prose instruction. Prose-only enforcement is appropriate only for guidelines where the cost of occasional deviation is low.
 
+## Solution horizon
+
+This is a long-term project, and proposed fixes should reflect that. Before suggesting a fix, ask whether you already know it will need to be redone — because a follow-up is already planned, the same patch would apply in multiple known places you can name, or it sidesteps a constraint you can already name. If yes, propose the durable version, or surface both choices with the tradeoff. If no, the simpler fix is correct — anchor on current knowledge, not prediction. A deliberately-scoped phase of a multi-phase lifecycle is not a stop-gap. The canonical statement of this principle, and its reconciliation with the simplicity defaults, lives in `cortex/requirements/project.md` under Philosophy of Work.
+
 ## Design principle: prescribe What and Why, not How
 
 When authoring skills, hooks, lifecycle templates, or any harness instruction, describe decisions to be made, gates to enforce, output shapes required, and the intent behind each (the What and Why). Resist prescribing step-by-step method (the How).
