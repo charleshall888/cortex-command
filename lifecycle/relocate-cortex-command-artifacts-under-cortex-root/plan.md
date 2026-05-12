@@ -157,7 +157,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: `test_lifecycle_phase_parity.py` and `test_resolve_backlog_item.py` both rely on filesystem fixtures and string-output assertions. Read each test before editing — some fixtures create directories via `mkdir` and write files; others string-match outputs from `cortex-resolve-backlog-item`. After editing, run the specific test files first (faster feedback than `just test`), then the full suite.
 - **Verification**: `pytest tests/test_lifecycle_phase_parity.py tests/test_resolve_backlog_item.py` exits 0; `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commits c6c2e0c [Task 1 baseline], multiple Task-15 commits; expansion picked up ~20 additional broken fixture sites across overnight + init suites; only `test_shim_records_invocation` remains failing — pre-existing, unrelated)
 
 ### Task 16: Execute `git mv` storm under `cortex/`
 - **Files**: All relocated directories and state files — `lifecycle/`, `lifecycle/archive/`, `research/`, `research/archive/`, `backlog/`, `requirements/`, `retros/archive/`, `debug/`, `lifecycle.config.md`, `.cortex-init`
@@ -175,7 +175,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: Per the spec Edge Cases section, `bin/cortex-check-parity` triggers on staged edits matching sandbox-source regex patterns in lines 89–109. The runner.py edits in Task 4 (lines 421/423/1804) match this regex. The preflight gate at line 988 reads `commit_hash:` from the YAML and compares against staged HEAD — if the field is stale, the gate fails with E102. Solution: regenerate the preflight to point at pre-relocation HEAD so the gate accepts. The PREFLIGHT_PATH constant in `bin/cortex-check-parity:112-113` was updated in Task 9 to point at the new cortex/-prefixed location.
 - **Verification**: Interactive/session-dependent (the preflight regeneration command varies by `just --list` output — implementer runs it and confirms `bin/cortex-check-parity --staged` exits 0 in the pre-commit dry-run before staging proceeds).
-- **Status**: [ ] pending
+- **Status**: [ ] DEFERRED — handoff to fresh-shell operator. No automated regeneration recipe exists in `just --list`; the preflight requires an empirical kernel-sandbox `claude -p` test invocation. The existing preflight.md is archived at `lifecycle/archive/apply-per-spawn-.../preflight.md`, not the active path PREFLIGHT_PATH points at. Operator running Tasks 16+18 must either (a) re-run the empirical preflight test to generate a fresh artifact at the new `cortex/lifecycle/apply-per-spawn-.../preflight.md` path, or (b) verify the parity-trigger does not fire on the relocation commit's staged set (in which case the gate never invokes the preflight check).
 
 ### Task 18: Single atomic commit (precondition checks → `git add -A` → `git commit`)
 - **Files**: Commit metadata only; no file edits in this task
