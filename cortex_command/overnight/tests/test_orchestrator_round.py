@@ -2,7 +2,7 @@
 
 Sibling to ``test_orchestrator_round_telemetry.py``. Covers three
 synthesizer-related Python-observable invariants from
-``lifecycle/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight``
+``cortex/lifecycle/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight``
 Task 9:
 
   1. ``test_synthesizer_gate_disabled_returns_false`` — direct unit
@@ -13,7 +13,7 @@ Task 9:
      given a canned orchestrator stdout containing a high-confidence
      ``<!--findings-json-->`` envelope, the post-orchestrator-turn
      processing logic copies the selected variant to
-     ``lifecycle/{feature}/plan.md`` and appends a v2
+     ``cortex/lifecycle/{feature}/plan.md`` and appends a v2
      ``plan_comparison`` event.
   3. ``test_synthesizer_post_orchestrator_low_confidence_defers`` — same
      setup with ``confidence: "low"``; ``PLAN_SYNTHESIS_DEFERRED`` is
@@ -216,7 +216,7 @@ def _process_synthesizer_envelope(
 def _make_lifecycle_event_log(
     feature_dir: Path, criticality: str = "critical"
 ) -> Path:
-    """Write a stub ``lifecycle/{feature}/events.log`` with a lifecycle_start row.
+    """Write a stub ``cortex/lifecycle/{feature}/events.log`` with a lifecycle_start row.
 
     The ``criticality: "critical"`` row exists per Task 9's Context: the
     runtime branch in orchestrator-round.md reads this file for the most-

@@ -6,7 +6,7 @@ Covers, per spec R9 acceptance:
   (ii)  ``resolve-events-log-path`` honors the ``-N`` re-run slug suffix
   (iii) ``resolve-events-log-path`` honors the active-lifecycle env override
   (iv)  emit-* subcommands invoke ``resolve-events-log-path`` rather than
-        hardcoding ``research/{topic}/events.log``
+        hardcoding ``cortex/research/{topic}/events.log``
 
 Each scenario is its own ``def test_*`` for granular failure reporting.
 The test count is >= 7 per the spec acceptance bar.
@@ -62,7 +62,7 @@ def test_resolve_path_plain_slug_routes_to_research_topic(
 def test_resolve_path_n_suffix_keeps_n_in_slug(
     repo_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R13: re-run slug ``foo-2`` writes to ``research/foo-2/events.log``.
+    """R13: re-run slug ``foo-2`` writes to ``cortex/research/foo-2/events.log``.
 
     The resolver must NOT strip the ``-N`` suffix; downstream consumers
     expect the suffixed directory.
@@ -83,8 +83,8 @@ def test_resolve_path_n_suffix_keeps_n_in_slug(
 def test_resolve_path_active_lifecycle_overrides_topic(
     repo_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """When LIFECYCLE_SESSION_ID matches a lifecycle/<slug>/.session file,
-    events route to ``lifecycle/<slug>/events.log`` per EVT-1, regardless
+    """When LIFECYCLE_SESSION_ID matches a cortex/lifecycle/<slug>/.session file,
+    events route to ``cortex/lifecycle/<slug>/events.log`` per EVT-1, regardless
     of the topic slug shape.
     """
     feature_dir = repo_root / "cortex" / "lifecycle" / "some-active-feature"
@@ -263,19 +263,19 @@ def test_emit_prescriptive_check_rejects_malformed_flag_locations(
 
 # ---------------------------------------------------------------------------
 # (iv) emit-* subcommands route through resolve-events-log-path, NOT a
-#      hardcoded research/{topic}/events.log path. We assert this by
+#      hardcoded cortex/research/{topic}/events.log path. We assert this by
 #      activating the lifecycle env override and verifying every emit-*
-#      writes to the lifecycle/<slug>/events.log target.
+#      writes to the cortex/lifecycle/<slug>/events.log target.
 # ---------------------------------------------------------------------------
 
 
 def test_emit_subcommands_honor_resolve_events_log_path(
     repo_root: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """If the emit-* helpers hardcoded ``research/{topic}/events.log``, an
+    """If the emit-* helpers hardcoded ``cortex/research/{topic}/events.log``, an
     active-lifecycle env override would NOT redirect their output. This
     test fails any such hardcode by activating the env override and
-    asserting all three emit-* targets resolve under ``lifecycle/<slug>/``.
+    asserting all three emit-* targets resolve under ``cortex/lifecycle/<slug>/``.
     """
     feature_dir = repo_root / "cortex" / "lifecycle" / "active-feature"
     feature_dir.mkdir(parents=True)

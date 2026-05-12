@@ -352,7 +352,7 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
 
     Strategy:
       1. Exact match: ``cortex/backlog/NNN-{feature}.md``
-      2. If *backlog_id* is provided, match ``backlog/{NNN}-*.md``
+      2. If *backlog_id* is provided, match ``cortex/backlog/{NNN}-*.md``
       3. Substring match via ``_find_item(feature)``
     """
     backlog_dir = _backlog_dir if _backlog_dir is not None else _resolve_user_project_root() / "cortex" / "backlog"

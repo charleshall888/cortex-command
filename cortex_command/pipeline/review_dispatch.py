@@ -57,7 +57,7 @@ def parse_verdict(review_path: Path) -> dict:
 
     Args:
         review_path: Path to the review.md file (e.g.
-            ``lifecycle/{feature}/review.md``).
+            ``cortex/lifecycle/{feature}/review.md``).
 
     Returns:
         Parsed verdict dict with at least ``verdict``, ``cycle``, and

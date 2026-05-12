@@ -41,8 +41,8 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "backlog_ready_render.j
 
 
 # Deterministic fixture records. Field set mirrors what
-# ``cortex-generate-backlog-index`` emits (see ``backlog/index.json``)
-# but pruned to the keys ``backlog/ready.py`` consumes:
+# ``cortex-generate-backlog-index`` emits (see ``cortex/backlog/index.json``)
+# but pruned to the keys ``cortex/backlog/ready.py`` consumes:
 # ``id``, ``title``, ``status``, ``priority``, ``type``, ``blocked_by``,
 # ``parent``, ``uuid``.
 _FIXTURE_RECORDS = [
@@ -182,7 +182,7 @@ def _build_fixture_backlog(tmp_path: Path) -> Path:
     All records are written as ``.md`` files (so the full-corpus scan
     sees terminal items). ``index.json`` excludes terminal-status
     records — mirroring ``collect_items()`` in
-    ``backlog/generate_index.py``, which filters terminal items out
+    ``cortex_command/backlog/generate_index.py``, which filters terminal items out
     before serialization. This composition forces the script to resolve
     the ``blocked_by: ["9"]`` reference via the source-tree scan rather
     than the index, exercising the ticket-152 fix.

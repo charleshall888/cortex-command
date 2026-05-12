@@ -67,7 +67,7 @@ The multi-agent area covers how the system spawns, isolates, and coordinates mul
 ## Non-Functional Requirements
 
 - **Idempotency**: Sessions that resume after interruption skip features already merged (plan hash + task ID used as idempotency tokens)
-- **Context hygiene**: Each retry appends learnings (test output, agent output) to `lifecycle/{feature}/learnings/progress.txt`; subsequent agents receive this history to avoid repeating failed approaches
+- **Context hygiene**: Each retry appends learnings (test output, agent output) to `cortex/lifecycle/{feature}/learnings/progress.txt`; subsequent agents receive this history to avoid repeating failed approaches
 - **Resource constraints**: Agent stderr capped at 100 lines; learnings entries truncated to 2000 chars; worktrees cleaned up after merge to reclaim disk space
 
 ## Architectural Constraints

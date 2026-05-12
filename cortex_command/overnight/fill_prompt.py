@@ -4,7 +4,7 @@ Python port of ``fill_prompt()`` from ``runner.sh:362-376``. Loads the
 ``orchestrator-round.md`` template via ``importlib.resources`` (package-internal
 resource) and performs six single-brace ``str.replace`` substitutions.
 
-Dual-layer substitution contract (per ``requirements/multi-agent.md:50``):
+Dual-layer substitution contract (per ``cortex/requirements/multi-agent.md:50``):
 single-brace ``{token}`` substitutions happen here; double-brace
 ``{{feature_X}}`` tokens are preserved verbatim because ``str.replace`` on
 single-brace keys does not match doubled braces.

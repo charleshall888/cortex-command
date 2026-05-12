@@ -29,7 +29,7 @@ STILL-FRAME POSTER REQUIREMENT. The pipeline's sticky scroll-scrub MUST degrade 
 INK CURSOR BEHAVIORS (now activated). The cursor from v1 follows the active rail subtly during pipeline activation — eased follow with ~120ms lag, no walk cycle, no bobbing. At fan-out points, brief 180ms pause at the junction, then continues. In the spec section above, the cursor occasionally underlines a phrase as it locks (specifically: underline "felt morning" in Clarify, "sleep-while-you-fish" in Research, "the soul of the feature" in Plan). One self-correction moment: in Research, briefly write "Animal Crossing" then strike through and replace with "Sea of Thieves" — visual evidence the spec was authored, not generated.
 
 INTERACTIVITY (minimal — restraint is the point):
-- Hover any pipeline node → small popover with the node's name and the artifact path it produces (e.g., "Refine: tackle data model · produces lifecycle/{slug}/spec.md"). Tooltips, not full panels.
+- Hover any pipeline node → small popover with the node's name and the artifact path it produces (e.g., "Refine: tackle data model · produces cortex/lifecycle/{slug}/spec.md"). Tooltips, not full panels.
 - No criticality toggle. No complexity slider in the pipeline section.
 
 PLAYGROUND SECTION (after the main pipeline, collapsed by default). One element: a complexity slider (simple → complex → critical). When dragged, run a 1.5s ghost-train down the new pipeline shape so the viewer SEES which gates fire in sequence. Closed by default; revealed by a small "explore the lifecycle gates →" link.

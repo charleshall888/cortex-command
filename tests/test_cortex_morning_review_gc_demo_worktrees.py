@@ -1,7 +1,7 @@
 """Fixture-replay tests for ``bin/cortex-morning-review-gc-demo-worktrees``.
 
 Covers the six C12 behavior cases from spec R11 of
-``lifecycle/extract-morning-review-deterministic-sequences-c11-c15-bundle/spec.md``.
+``cortex/lifecycle/extract-morning-review-deterministic-sequences-c11-c15-bundle/spec.md``.
 
 Each test builds a real parent git repo + real worktrees in a pytest tmpdir
 (since the script invokes real ``git worktree``), invokes the script via

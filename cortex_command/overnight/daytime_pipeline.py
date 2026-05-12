@@ -357,7 +357,7 @@ async def run_daytime(feature: str) -> int:
                 f"error: plan.md not found at `cortex/lifecycle/{feature}/plan.md`\n"
             )
             _top_exc = FileNotFoundError(
-                f"plan.md not found at lifecycle/{feature}/plan.md"
+                f"plan.md not found at cortex/lifecycle/{feature}/plan.md"
             )
             _terminated_via = "startup_failure"
             _outcome = "failed"

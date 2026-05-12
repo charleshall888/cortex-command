@@ -2,7 +2,7 @@
 
 This test asserts pure string properties of the three canonical dispatch
 templates after the path+SHA migration (see
-``lifecycle/reduce-sub-agent-dispatch-artifact-duplication/spec.md``,
+``cortex/lifecycle/reduce-sub-agent-dispatch-artifact-duplication/spec.md``,
 Requirement 10). No live model calls, no slow-marker — this is the
 spec-encoded checklist that drives Tasks 4–10 (the template edits).
 
@@ -15,10 +15,10 @@ Assertions, grouped by Requirement number for failure→spec traceability:
 
 Requirement 10(a) — inline-content placeholders ABSENT:
   - ``{artifact content}`` absent from ``skills/critical-review/SKILL.md``.
-  - ``{full contents of lifecycle/{feature}/spec.md}`` and
-    ``{full contents of lifecycle/{feature}/research.md}`` absent from
+  - ``{full contents of cortex/lifecycle/{feature}/spec.md}`` and
+    ``{full contents of cortex/lifecycle/{feature}/research.md}`` absent from
     ``skills/lifecycle/references/plan.md``.
-  - ``{contents of lifecycle/{feature}/spec.md, or a summary with a path to
+  - ``{contents of cortex/lifecycle/{feature}/spec.md, or a summary with a path to
     read it}`` absent from ``skills/lifecycle/references/review.md``.
 
 Requirement 10(b) — path/SHA placeholders PRESENT at expected sites:
@@ -72,26 +72,26 @@ def test_req10a_critical_review_no_artifact_content_placeholder() -> None:
 
 
 def test_req10a_lifecycle_plan_no_full_contents_placeholders() -> None:
-    """`{full contents of lifecycle/{feature}/spec.md}` and the research
+    """`{full contents of cortex/lifecycle/{feature}/spec.md}` and the research
     counterpart MUST be absent from lifecycle plan.md."""
     content = _read(LIFECYCLE_PLAN)
-    assert "{full contents of lifecycle/{feature}/spec.md}" not in content, (
-        "Req 10(a): '{full contents of lifecycle/{feature}/spec.md}' must "
+    assert "{full contents of cortex/lifecycle/{feature}/spec.md}" not in content, (
+        "Req 10(a): '{full contents of cortex/lifecycle/{feature}/spec.md}' must "
         f"not appear in {LIFECYCLE_PLAN.relative_to(REPO_ROOT)} (Req 6)."
     )
-    assert "{full contents of lifecycle/{feature}/research.md}" not in content, (
-        "Req 10(a): '{full contents of lifecycle/{feature}/research.md}' "
+    assert "{full contents of cortex/lifecycle/{feature}/research.md}" not in content, (
+        "Req 10(a): '{full contents of cortex/lifecycle/{feature}/research.md}' "
         f"must not appear in {LIFECYCLE_PLAN.relative_to(REPO_ROOT)} "
         "(Req 6)."
     )
 
 
 def test_req10a_lifecycle_review_no_hedged_contents_placeholder() -> None:
-    """`{contents of lifecycle/{feature}/spec.md, or a summary with a path
+    """`{contents of cortex/lifecycle/{feature}/spec.md, or a summary with a path
     to read it}` MUST be absent from lifecycle review.md."""
     content = _read(LIFECYCLE_REVIEW)
     needle = (
-        "{contents of lifecycle/{feature}/spec.md, or a summary with a "
+        "{contents of cortex/lifecycle/{feature}/spec.md, or a summary with a "
         "path to read it}"
     )
     assert needle not in content, (

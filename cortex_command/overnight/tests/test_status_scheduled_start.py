@@ -74,7 +74,7 @@ def test_status_json_includes_scheduled_start_null_when_absent(
 
     monkeypatch.setattr(cli_handler, "_resolve_repo_path", lambda: tmp_path)
     # Force the active-session pointer to be empty so the fallback uses
-    # the latest-state path under our tmp_path lifecycle/sessions dir.
+    # the latest-state path under our tmp_path cortex/lifecycle/sessions dir.
     monkeypatch.setattr(
         "cortex_command.overnight.cli_handler.ipc.read_active_session",
         lambda: None,

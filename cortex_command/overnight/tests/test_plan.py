@@ -423,7 +423,7 @@ class TestInitializeOvernightState(unittest.TestCase):
                 return False
             return True
 
-        mock_session_dir = MagicMock(side_effect=lambda sid, **kw: Path(f"/fake/lifecycle/sessions/{sid}"))
+        mock_session_dir = MagicMock(side_effect=lambda sid, **kw: Path(f"/fake/cortex/lifecycle/sessions/{sid}"))
         mock_run = MagicMock(return_value=MagicMock(returncode=0))
 
         env_patch = patch.dict(os.environ, {"TMPDIR": self._fake_tmpdir})

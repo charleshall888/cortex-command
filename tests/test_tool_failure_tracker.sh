@@ -233,7 +233,7 @@ fi
 cleanup_session_dir "$SESSION_CORRUPT"
 
 # ---------------------------------------------------------------------------
-# Test: LIFECYCLE_SESSION_ID set — writes under lifecycle/sessions/<id>/tool-failures
+# Test: LIFECYCLE_SESSION_ID set — writes under cortex/lifecycle/sessions/<id>/tool-failures
 # (R6a: covers the lifecycle-path branch added by T1; the existing tests above
 # cover the /tmp fallback branch when LIFECYCLE_SESSION_ID is unset.)
 # ---------------------------------------------------------------------------

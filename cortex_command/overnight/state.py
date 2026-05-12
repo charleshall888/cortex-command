@@ -76,7 +76,7 @@ class DaytimeResult:
         end_ts: ISO 8601 timestamp captured at write time.
         outcome: Terminal outcome of the dispatch.
         terminated_via: How the dispatch reached its terminal state.
-        deferred_files: Absolute paths under lifecycle/{slug}/deferred/,
+        deferred_files: Absolute paths under cortex/lifecycle/{slug}/deferred/,
             empty if none.
         error: Populated when terminated_via is "exception" or
             "startup_failure"; null otherwise.

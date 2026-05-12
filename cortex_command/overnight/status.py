@@ -1,6 +1,6 @@
 """Live status display for overnight orchestration sessions.
 
-Reads lifecycle/overnight-state.json and the session events log to
+Reads cortex/lifecycle/overnight-state.json and the session events log to
 produce a single-screen status snapshot. Designed to be run in a
 refresh loop via `just overnight-status`.
 

@@ -17,7 +17,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
 CANDIDATES_MD = REPO_ROOT / (
-    "lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/"
+    "cortex/lifecycle/audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns/"
     "candidates.md"
 )
 

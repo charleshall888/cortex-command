@@ -1,8 +1,8 @@
 """Verification test for Task 8 of the MCP control-plane spec.
 
 Covers R19: ``cortex overnight logs --files=escalations <session_id>``
-reads ``lifecycle/sessions/{session_id}/escalations.jsonl``, not the
-legacy repo-level ``lifecycle/escalations.jsonl``.
+reads ``cortex/lifecycle/sessions/{session_id}/escalations.jsonl``, not the
+legacy repo-level ``cortex/lifecycle/escalations.jsonl``.
 """
 
 from __future__ import annotations
@@ -19,11 +19,11 @@ def test_escalations_per_session(capsys, monkeypatch) -> None:
     """`handle_logs --files=escalations` reads the per-session file.
 
     Writes a fixture per-session ``escalations.jsonl`` under
-    ``lifecycle/sessions/<id>/`` inside a tempdir, points the CLI handler
+    ``cortex/lifecycle/sessions/<id>/`` inside a tempdir, points the CLI handler
     at that tempdir via the repo-path resolver, invokes the handler with
     ``--files=escalations``, and asserts that the lines returned come
     from the per-session file (and that no repo-level
-    ``lifecycle/escalations.jsonl`` is consulted).
+    ``cortex/lifecycle/escalations.jsonl`` is consulted).
     """
     with tempfile.TemporaryDirectory() as tmp:
         repo_path = Path(tmp)

@@ -2435,7 +2435,7 @@ def run(
                 # Mark remaining critical-tier features as paused so
                 # the orchestrator's resume path does not re-dispatch
                 # them. read_criticality() defaults to "medium" when no
-                # lifecycle/{feature}/events.log carries a criticality
+                # cortex/lifecycle/{feature}/events.log carries a criticality
                 # entry, so non-critical features are unaffected.
                 state = state_module.load_state(state_path)
                 for name, fs in list(state.features.items()):

@@ -344,21 +344,21 @@ def test_morning_report_distinguishes_api_rate_limit_pause() -> None:
 # silent empty. Plus two key-name assertion tests that pin the
 # persistence-vs-user-facing distinction for `_read_tier`.
 #
-# Helpers in report.py use relative paths like ``Path("lifecycle/{feature}/…")``,
+# Helpers in report.py use relative paths like ``Path("cortex/lifecycle/{feature}/…")``,
 # so each test changes the working directory to ``tmp_path`` via
 # ``monkeypatch.chdir`` and constructs the fixture files underneath.
 # ---------------------------------------------------------------------------
 
 
 def _write_plan(tmp_path: Path, feature: str, content: str) -> None:
-    """Construct ``lifecycle/{feature}/plan.md`` under tmp_path."""
+    """Construct ``cortex/lifecycle/{feature}/plan.md`` under tmp_path."""
     feature_dir = tmp_path / "cortex" / "lifecycle" / feature
     feature_dir.mkdir(parents=True, exist_ok=True)
     (feature_dir / "plan.md").write_text(content, encoding="utf-8")
 
 
 def _write_events_log(tmp_path: Path, feature: str, events: list[dict]) -> None:
-    """Construct ``lifecycle/{feature}/events.log`` (NDJSON, one event per line)."""
+    """Construct ``cortex/lifecycle/{feature}/events.log`` (NDJSON, one event per line)."""
     import json as _json
 
     feature_dir = tmp_path / "cortex" / "lifecycle" / feature
@@ -368,7 +368,7 @@ def _write_events_log(tmp_path: Path, feature: str, events: list[dict]) -> None:
 
 
 def _write_events_log_raw(tmp_path: Path, feature: str, raw: str) -> None:
-    """Construct ``lifecycle/{feature}/events.log`` from raw text (for corrupt cases)."""
+    """Construct ``cortex/lifecycle/{feature}/events.log`` from raw text (for corrupt cases)."""
     feature_dir = tmp_path / "cortex" / "lifecycle" / feature
     feature_dir.mkdir(parents=True, exist_ok=True)
     (feature_dir / "events.log").write_text(raw, encoding="utf-8")

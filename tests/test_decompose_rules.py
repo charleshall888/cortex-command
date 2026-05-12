@@ -6,7 +6,7 @@ Parses skills/discovery/references/decompose.md into sections by heading
 blocks, and asserts each rule's text appears within its expected section.
 
 This file covers the post-reframe decompose protocol per spec
-`lifecycle/reframe-discovery-to-principal-architect-posture/spec.md`:
+`cortex/lifecycle/reframe-discovery-to-principal-architect-posture/spec.md`:
 
 - §2 Consume the Architecture Section (3 tests)
 - §4 Single-piece branch (2 tests)

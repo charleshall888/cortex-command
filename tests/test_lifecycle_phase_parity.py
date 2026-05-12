@@ -21,7 +21,7 @@ Layer 12b — Statusline ladder + parser vs canonical Python
 
 Layer 12c — Hook end-to-end vs glue prediction
     For each fixture dir, invoke `bash hooks/cortex-scan-lifecycle.sh` in a
-    temporary working directory where `lifecycle/{slug}/` is the fixture
+    temporary working directory where `cortex/lifecycle/{slug}/` is the fixture
     and assert the hook's emitted wire-format token matches what the R3
     glue table predicts when given `detect_lifecycle_phase(fixture)` as
     input. This catches integration bugs between the inline-batch Python
@@ -416,7 +416,7 @@ def test_statusline_parser_handles_wire_values(wire_value: str) -> None:
 # ---------------------------------------------------------------------------
 #
 # For each fixture directory created in Task 13, set up a temporary working
-# directory with `lifecycle/{slug}/` populated as a copy of the fixture, then
+# directory with `cortex/lifecycle/{slug}/` populated as a copy of the fixture, then
 # invoke `bash hooks/cortex-scan-lifecycle.sh` from that working directory.
 # The hook's stdout (a JSON envelope) carries a human-readable Phase label
 # derived from the wire-format string. We parse the label back into the
@@ -568,7 +568,7 @@ def test_hook_end_to_end_emit_matches_glue_prediction(
     """R12c: hook emit equals glue table prediction for canonical detector input.
 
     Drives the actual `bash hooks/cortex-scan-lifecycle.sh` against each
-    fixture dir (placed under `lifecycle/{slug}/` in a tmpdir CWD) and
+    fixture dir (placed under `cortex/lifecycle/{slug}/` in a tmpdir CWD) and
     asserts the emitted wire-format string matches what the R3 glue table
     predicts when given `detect_lifecycle_phase(fixture)` as input.
 

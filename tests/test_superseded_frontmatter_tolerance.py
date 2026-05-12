@@ -1,8 +1,8 @@
 """Smoke test for spec R13: downstream parsers tolerate ``superseded:`` frontmatter.
 
 When `/cortex-core:discovery` is re-run on a topic with an existing
-``research/{topic}/`` directory, R13 produces a fresh-slug artifact at
-``research/{topic}-N/research.md`` whose YAML frontmatter carries a
+``cortex/research/{topic}/`` directory, R13 produces a fresh-slug artifact at
+``cortex/research/{topic}-N/research.md`` whose YAML frontmatter carries a
 ``superseded:`` key pointing at the prior artifact path. The four sub-rules
 spelled out in the spec (a/b/c/d) require that the prior artifact stay
 untouched and that reconciliation is a manual user decision, NOT something
@@ -70,8 +70,8 @@ RESOLVE_BACKLOG_ITEM = REPO_ROOT / "bin" / "cortex-resolve-backlog-item"
 
 # Sample frontmatter blob the new R13 artifact would carry. Mirrors the
 # shape documented in skills/discovery/SKILL.md Step 2:
-#   superseded: research/<prior-topic>/research.md
-SAMPLE_SUPERSEDED_VALUE = "research/plugin-system/research.md"
+#   superseded: cortex/research/<prior-topic>/research.md
+SAMPLE_SUPERSEDED_VALUE = "cortex/research/plugin-system/research.md"
 
 
 def _load_module_from_path(name: str, path: Path):
@@ -163,7 +163,7 @@ def test_discovery_bootstrap_loader_tolerates_superseded_on_backlog_item(
         "title: Supersede test\n"
         "lifecycle_slug: supersede-test\n"
         f"superseded: {SAMPLE_SUPERSEDED_VALUE}\n"
-        "discovery_source: research/plugin-system-2/research.md\n"
+        "discovery_source: cortex/research/plugin-system-2/research.md\n"
         "---\n\n# Body\n",
         encoding="utf-8",
     )
@@ -245,7 +245,7 @@ def test_backlog_index_generator_tolerates_superseded(tmp_path: Path) -> None:
         "priority: medium\n"
         "type: feature\n"
         f"superseded: {SAMPLE_SUPERSEDED_VALUE}\n"
-        "discovery_source: research/plugin-system-2/research.md\n"
+        "discovery_source: cortex/research/plugin-system-2/research.md\n"
         "tags: []\n"
         "---\n\n# Body\n",
         encoding="utf-8",
@@ -258,7 +258,7 @@ def test_backlog_index_generator_tolerates_superseded(tmp_path: Path) -> None:
     assert fm["title"] == "Supersede smoke test"
     assert fm["status"] == "open"
     assert fm["priority"] == "medium"
-    assert fm["discovery_source"] == "research/plugin-system-2/research.md"
+    assert fm["discovery_source"] == "cortex/research/plugin-system-2/research.md"
     # And the unknown field is captured rather than silently dropped or
     # raising — the generator simply doesn't extract it downstream.
     assert fm["superseded"] == SAMPLE_SUPERSEDED_VALUE
@@ -279,11 +279,11 @@ def test_backlog_index_generator_overnight_parser_tolerates_superseded(
         "title: Supersede smoke test\n"
         "status: open\n"
         f"superseded: {SAMPLE_SUPERSEDED_VALUE}\n"
-        "discovery_source: research/plugin-system-2/research.md\n"
+        "discovery_source: cortex/research/plugin-system-2/research.md\n"
         "---\n\n# Body\n"
     )
     fm = _parse_frontmatter(text)
     assert fm["title"] == "Supersede smoke test"
     assert fm["status"] == "open"
     assert fm["superseded"] == SAMPLE_SUPERSEDED_VALUE
-    assert fm["discovery_source"] == "research/plugin-system-2/research.md"
+    assert fm["discovery_source"] == "cortex/research/plugin-system-2/research.md"

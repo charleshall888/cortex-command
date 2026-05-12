@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Transition failure matrix script.
 
-Parses all lifecycle/*/events.log files, builds a table of state transition
+Parses all cortex/lifecycle/*/events.log files, builds a table of state transition
 frequencies and rework cycle counts, and prints a markdown report.
 
 Standalone -- no arguments required.

@@ -1,6 +1,6 @@
 """Positive-control acceptance test for sandbox-denial classifier + renderer.
 
-Spec: ``lifecycle/add-sandbox-violation-tracker-hook-for-posttoolusebash/spec.md``
+Spec: ``cortex/lifecycle/add-sandbox-violation-tracker-hook-for-posttoolusebash/spec.md``
 R6 (positive-control acceptance test). Constructs a hand-authored fixture
 session under ``tmp_path`` and exercises ``collect_sandbox_denials`` and
 ``render_sandbox_denials`` end-to-end against it.
@@ -182,7 +182,7 @@ def fixture_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
               sandbox-deny-lists/feature-foo-1.json
 
     chdir into ``tmp_path`` so ``collect_sandbox_denials``'s relative
-    ``Path("lifecycle/sessions/...")`` resolves correctly AND
+    ``Path("cortex/lifecycle/sessions/...")`` resolves correctly AND
     ``_resolve_user_project_root()`` (which inspects CWD for a ``cortex/``
     sentinel) can discover the project root.
     """
@@ -194,8 +194,8 @@ def fixture_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     cortex_lifecycle_dir = tmp_path / "cortex" / "lifecycle"
     _write_overnight_state(cortex_lifecycle_dir)
 
-    # collect_sandbox_denials uses a CWD-relative Path("lifecycle/sessions/..."),
-    # so session data stays under lifecycle/sessions/ relative to CWD (tmp_path).
+    # collect_sandbox_denials uses a CWD-relative Path("cortex/lifecycle/sessions/..."),
+    # so session data stays under cortex/lifecycle/sessions/ relative to CWD (tmp_path).
     legacy_session_dir = tmp_path / "cortex" / "lifecycle" / "sessions" / FIXTURE_ID
     _write_bash_log(legacy_session_dir / "tool-failures")
     _write_sidecars(legacy_session_dir / "sandbox-deny-lists")

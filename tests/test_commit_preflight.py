@@ -15,7 +15,7 @@ Cases covered:
     the diff is NOT git's ``Binary files ... differ`` short-circuit
     output (which would let any decode strategy pass vacuously).
   - DR-7 invocation shim: each run appends exactly one JSONL record
-    pinned to the tmp repo's ``lifecycle/sessions/<uuid>/`` directory
+    pinned to the tmp repo's ``cortex/lifecycle/sessions/<uuid>/`` directory
     (so the test cannot pollute the cortex-command repo and cannot pass
     vacuously when the shim is broken).
   - Git-env hardening: AST-walks the module to assert every git
@@ -240,7 +240,7 @@ def test_binary_diff_no_crash(tmp_path: Path) -> None:
 def test_shim_records_invocation(tmp_path: Path) -> None:
     """DR-7: invocation shim appends one JSONL record per run.
 
-    The JSONL path is pinned to ``<tmp_repo>/lifecycle/sessions/<uuid>/``
+    The JSONL path is pinned to ``<tmp_repo>/cortex/lifecycle/sessions/<uuid>/``
     because ``cortex-log-invocation`` resolves ``$repo_root`` from
     ``git rev-parse --show-toplevel`` of the script's CWD. We invoke
     with ``cwd=tmp_repo`` so the shim writes inside the tmp repo, never

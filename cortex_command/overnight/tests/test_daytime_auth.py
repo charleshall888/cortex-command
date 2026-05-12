@@ -50,9 +50,9 @@ def test_no_auth_vector_hard_fails() -> None:
         (no ``.claude/settings.json``, no ``personal-oauth-token``) so
         the helper and oauth-file branches both fail.
       * CWD is pinned to the fixture root so the finally's cwd-relative
-        write of ``lifecycle/<feature>/daytime-result.json`` lands
+        write of ``cortex/lifecycle/<feature>/daytime-result.json`` lands
         inside the fixture rather than polluting the real repo.
-      * A minimal ``lifecycle/<feature>/plan.md`` is created so the
+      * A minimal ``cortex/lifecycle/<feature>/plan.md`` is created so the
         ``_check_cwd`` guard passes; the hard-fail must still occur
         before ``execute_feature`` runs.
     """

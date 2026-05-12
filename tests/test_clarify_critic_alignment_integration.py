@@ -3,7 +3,7 @@
 Exercises the orchestrator-side parent-loading flow against synthetic
 ``tmp_path`` backlog fixtures, WITHOUT invoking the live critic agent.
 
-Per ``lifecycle/add-parent-epic-alignment-check-to-refine-clarify-critic/plan.md``
+Per ``cortex/lifecycle/add-parent-epic-alignment-check-to-refine-clarify-critic/plan.md``
 Task 9, this module asserts the dispatch-prompt construction is correct
 across all four parent-classification branches plus the layered injection-
 defense and cross-field invariant.
@@ -591,7 +591,7 @@ def _parse_ts(s: str) -> datetime:
 
 
 def test_post_migration_clarify_critic_events_are_jsonl():
-    """R14: any post-cutoff clarify_critic event in active lifecycle/*/events.log
+    """R14: any post-cutoff clarify_critic event in active cortex/lifecycle/*/events.log
     is single-line JSON, never a YAML-block event.
 
     Walks ``Path("cortex/lifecycle").glob("*/events.log")`` excluding any path whose
@@ -676,14 +676,14 @@ def test_v3_only_synthetic_corpus_detects_clarify_critic_event(tmp_path):
     same line-scan logic the post-migration test uses.
 
     Guards against a future v3 emission-shape regression being masked by
-    legacy v2 rows in ``lifecycle/archive/`` that still satisfy the
+    legacy v2 rows in ``cortex/lifecycle/archive/`` that still satisfy the
     ``detections >= 1`` invariant. Builds an isolated lifecycle tree under
     ``tmp_path`` containing exactly one synthetic v3 ``clarify_critic`` JSONL
     row (count-only fields, matching the template at
     ``skills/refine/references/clarify-critic.md``) and asserts the scan
     detects it.
     """
-    # Build a tmp lifecycle tree mirroring lifecycle/<slug>/events.log layout.
+    # Build a tmp lifecycle tree mirroring cortex/lifecycle/<slug>/events.log layout.
     feature_dir = tmp_path / "cortex" / "lifecycle" / "test-v3-feature"
     feature_dir.mkdir(parents=True)
     events_log = feature_dir / "events.log"

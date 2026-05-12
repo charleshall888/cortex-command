@@ -547,7 +547,7 @@ def write_feature_files(repo_root: Path, slug: str, status: str) -> None:
     plan_path = feature_dir / "plan.md"
     plan_path.write_text(plan_content, encoding="utf-8")
 
-    print(f"  Wrote lifecycle/{slug}/{{agent-activity.jsonl,events.log,plan.md}}")
+    print(f"  Wrote cortex/lifecycle/{slug}/{{agent-activity.jsonl,events.log,plan.md}}")
 
 
 # ---------------------------------------------------------------------------

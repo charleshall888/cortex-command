@@ -104,7 +104,7 @@ def test_sonnet_success(tmp_path: Path) -> None:
             feature=feature,
             conflict_classification=_base_cc(),
             base_branch="main",
-            spec_path="lifecycle/my-feature/spec.md",
+            spec_path="cortex/lifecycle/my-feature/spec.md",
             config=_FakeBatchConfig(),
             round_number=1,
         ))

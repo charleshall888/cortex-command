@@ -93,7 +93,7 @@ def test_happy_path_scaffolds_four_templates(
         assert dest.exists(), f"missing scaffold file {rel}"
         assert dest.stat().st_size > 0, f"empty scaffold file {rel}"
 
-    marker = repo / ".cortex-init"
+    marker = repo / "cortex" / ".cortex-init"
     assert marker.exists()
     marker_data = json.loads(marker.read_text(encoding="utf-8"))
     assert "cortex_version" in marker_data
@@ -103,8 +103,8 @@ def test_happy_path_scaffolds_four_templates(
     assert gitignore.exists()
     gitignore_text = gitignore.read_text(encoding="utf-8")
     gitignore_lines = gitignore_text.splitlines()
-    assert ".cortex-init" in gitignore_lines
-    assert ".cortex-init-backup/" in gitignore_lines
+    assert "cortex/.cortex-init" in gitignore_lines
+    assert "cortex/.cortex-init-backup/" in gitignore_lines
 
 
 # ---------------------------------------------------------------------------
@@ -170,7 +170,7 @@ def test_update_writes_marker_when_absent(
     _isolate_home(monkeypatch, tmp_path)
 
     assert init_main(_make_args(repo, update=True)) == 0
-    assert (repo / ".cortex-init").exists()
+    assert (repo / "cortex" / ".cortex-init").exists()
     for rel in SCAFFOLD_FILES:
         assert (repo / rel).exists()
 
@@ -188,7 +188,7 @@ def test_update_on_empty_repo_acts_like_default(
 
     for rel in SCAFFOLD_FILES:
         assert (repo / rel).exists()
-    assert (repo / ".cortex-init").exists()
+    assert (repo / "cortex" / ".cortex-init").exists()
     assert (repo / ".gitignore").exists()
 
 
@@ -213,7 +213,7 @@ def test_force_backs_up_existing_with_marker(
 
     assert init_main(_make_args(repo, force=True)) == 0
 
-    backup_root = repo / ".cortex-init-backup"
+    backup_root = repo / "cortex" / ".cortex-init-backup"
     assert backup_root.is_dir()
     backup_entries = list(backup_root.iterdir())
     assert len(backup_entries) >= 1
@@ -226,7 +226,7 @@ def test_force_backs_up_existing_with_marker(
     assert "FORCE-BACKUP-SENTINEL" not in project.read_text(encoding="utf-8")
 
     gitignore_text = (repo / ".gitignore").read_text(encoding="utf-8")
-    assert ".cortex-init-backup/" in gitignore_text.splitlines()
+    assert "cortex/.cortex-init-backup/" in gitignore_text.splitlines()
     assert gitignore_text.endswith("\n")
 
 
@@ -248,7 +248,7 @@ def test_force_overwrites_no_marker_populated(
 
     for rel in SCAFFOLD_FILES:
         assert (repo / rel).exists()
-    assert (repo / ".cortex-init").exists()
+    assert (repo / "cortex" / ".cortex-init").exists()
     # Force did not touch unrelated.md (it wasn't a scaffold target).
     assert unrelated.exists()
 
@@ -322,7 +322,7 @@ def test_content_aware_decline(
     assert not (repo / "cortex" / "backlog" / "README.md").exists()
     assert not (repo / "cortex" / "requirements" / "project.md").exists()
     assert not (repo / "cortex" / "lifecycle.config.md").exists()
-    assert not (repo / ".cortex-init").exists()
+    assert not (repo / "cortex" / ".cortex-init").exists()
 
     # Settings file unchanged byte-for-byte.
     assert settings_path.read_bytes() == pre_bytes
@@ -477,10 +477,10 @@ def test_path_flag_retargets(
 
     for rel in SCAFFOLD_FILES:
         assert (repo / rel).exists()
-    assert (repo / ".cortex-init").exists()
+    assert (repo / "cortex" / ".cortex-init").exists()
 
     # No scaffold output appeared under the unrelated cwd.
-    assert not (unrelated_cwd / ".cortex-init").exists()
+    assert not (unrelated_cwd / "cortex" / ".cortex-init").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -498,7 +498,8 @@ def test_marker_refresh_on_update(
     _isolate_home(monkeypatch, tmp_path)
 
     # Seed with an older marker to verify --update rewrites cortex_version.
-    (repo / ".cortex-init").write_text(
+    (repo / "cortex").mkdir(parents=True, exist_ok=True)
+    (repo / "cortex" / ".cortex-init").write_text(
         json.dumps({"cortex_version": "0.0.0", "initialized_at": "stale"}) + "\n",
         encoding="utf-8",
     )
@@ -515,7 +516,7 @@ def test_marker_refresh_on_update(
 
     assert init_main(_make_args(repo, update=True)) == 0
 
-    marker_data = json.loads((repo / ".cortex-init").read_text(encoding="utf-8"))
+    marker_data = json.loads((repo / "cortex" / ".cortex-init").read_text(encoding="utf-8"))
     assert marker_data["cortex_version"] == "9.9.9"
     assert marker_data["initialized_at"] != "stale"
 
@@ -537,21 +538,21 @@ def test_gitignore_append_idempotent(
     # Pre-populate .gitignore with the canonical patterns to exercise the
     # no-op branch of ensure_gitignore.
     (repo / ".gitignore").write_text(
-        ".cortex-init\n.cortex-init-backup/\n", encoding="utf-8"
+        "cortex/.cortex-init\ncortex/.cortex-init-backup/\n", encoding="utf-8"
     )
 
     assert init_main(_make_args(repo)) == 0
 
     gitignore_text = (repo / ".gitignore").read_text(encoding="utf-8")
     lines = gitignore_text.splitlines()
-    assert lines.count(".cortex-init") == 1
-    assert lines.count(".cortex-init-backup/") == 1
+    assert lines.count("cortex/.cortex-init") == 1
+    assert lines.count("cortex/.cortex-init-backup/") == 1
 
     # Run again via --force: still no duplicates.
     assert init_main(_make_args(repo, force=True)) == 0
     lines = (repo / ".gitignore").read_text(encoding="utf-8").splitlines()
-    assert lines.count(".cortex-init") == 1
-    assert lines.count(".cortex-init-backup/") == 1
+    assert lines.count("cortex/.cortex-init") == 1
+    assert lines.count("cortex/.cortex-init-backup/") == 1
 
 
 def test_gitignore_orphan_prefix_repair(
@@ -574,8 +575,8 @@ def test_gitignore_orphan_prefix_repair(
     lines = text.splitlines()
     assert "node_modules/" in lines
     assert ".cortex-init-backu" not in lines  # orphan removed
-    assert ".cortex-init" in lines
-    assert ".cortex-init-backup/" in lines
+    assert "cortex/.cortex-init" in lines
+    assert "cortex/.cortex-init-backup/" in lines
 
 
 # ---------------------------------------------------------------------------
@@ -629,7 +630,7 @@ def test_partial_scaffold_update_recovery(
     assert len(present) == 3
     assert len(missing) == 1
     # Marker never written (scaffold failed before step 4).
-    assert not (repo / ".cortex-init").exists()
+    assert not (repo / "cortex" / ".cortex-init").exists()
 
     # Capture the bytes of the existing files to prove --update leaves
     # them untouched.

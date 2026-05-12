@@ -13,7 +13,7 @@ The observability area covers five subsystems that give the developer visibility
 ### Statusline
 
 - **Description**: A 3-line terminal prompt extension that shows session context, git state, and active lifecycle feature phase. Rendered by `claude/statusline.sh`.
-- **Inputs**: Claude Code hook JSON (context utilization, model), `lifecycle/*/events.log`, `lifecycle/overnight-state.json`
+- **Inputs**: Claude Code hook JSON (context utilization, model), `cortex/lifecycle/*/events.log`, `cortex/lifecycle/overnight-state.json`
 - **Outputs**: 3 lines of ANSI-colored text to stdout, logged to `claude/statusline.log`
 - **Acceptance criteria**:
   - Context percentage and progress bar match actual token usage in the active session
@@ -27,7 +27,7 @@ The observability area covers five subsystems that give the developer visibility
 ### Dashboard
 
 - **Description**: A read-only FastAPI web application at `http://localhost:$DASHBOARD_PORT` (default 8080) that monitors overnight sessions in real time. Renders session panels, feature cards, fleet overview, alerts, and a swim-lane timeline via HTMX polling.
-- **Inputs**: `lifecycle/overnight-state.json`, `lifecycle/pipeline-events.log`, per-feature `events.log` and `plan.md`, `lifecycle/active-session.json`
+- **Inputs**: `cortex/lifecycle/overnight-state.json`, `cortex/lifecycle/pipeline-events.log`, per-feature `events.log` and `plan.md`, `cortex/lifecycle/active-session.json`
 - **Outputs**: Live HTML UI updated via HTMX at ~5s intervals; alert notifications dispatched via notify scripts
 - **Acceptance criteria**:
   - Feature status badges, model, and phase progress reflect actual state within 7s of a state file change
@@ -52,16 +52,16 @@ The observability area covers five subsystems that give the developer visibility
 
 ### Runtime Adoption Telemetry
 
-- **Description**: Per-script invocation shim (`bin/cortex-log-invocation`) writes one JSONL record per `bin/cortex-*` invocation to `lifecycle/sessions/<id>/bin-invocations.jsonl`. Aggregator CLI (`bin/cortex-invocation-report`) reads the per-session logs and reports adoption (default human-readable, `--json`, `--check-shims`, `--self-test` modes). Composed with DR-5 static parity lint (ticket 102) for full coverage of script-adoption failure modes — DR-5 catches missing wiring; runtime telemetry catches wired-but-never-invoked scripts.
-- **Inputs**: helper invocation calls from each `bin/cortex-*` script's shim line; `LIFECYCLE_SESSION_ID` environment variable; aggregator scans `lifecycle/sessions/*/bin-invocations.jsonl` glob.
-- **Outputs**: per-session JSONL log file (`lifecycle/sessions/<id>/bin-invocations.jsonl`); aggregator stdout (default + `--json` modes); error breadcrumb at `~/.cache/cortex/log-invocation-errors.log` recording fail-open categories.
-- **Acceptance criteria**: Spec R1–R18 acceptance criteria from `lifecycle/archive/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md` (helper fail-open contract, JSONL schema, sessions inventory, aggregator output structure, `--check-shims` pre-commit gate, `--self-test` round-trip, plugin distribution byte-identity).
+- **Description**: Per-script invocation shim (`bin/cortex-log-invocation`) writes one JSONL record per `bin/cortex-*` invocation to `cortex/lifecycle/sessions/<id>/bin-invocations.jsonl`. Aggregator CLI (`bin/cortex-invocation-report`) reads the per-session logs and reports adoption (default human-readable, `--json`, `--check-shims`, `--self-test` modes). Composed with DR-5 static parity lint (ticket 102) for full coverage of script-adoption failure modes — DR-5 catches missing wiring; runtime telemetry catches wired-but-never-invoked scripts.
+- **Inputs**: helper invocation calls from each `bin/cortex-*` script's shim line; `LIFECYCLE_SESSION_ID` environment variable; aggregator scans `cortex/lifecycle/sessions/*/bin-invocations.jsonl` glob.
+- **Outputs**: per-session JSONL log file (`cortex/lifecycle/sessions/<id>/bin-invocations.jsonl`); aggregator stdout (default + `--json` modes); error breadcrumb at `~/.cache/cortex/log-invocation-errors.log` recording fail-open categories.
+- **Acceptance criteria**: Spec R1–R18 acceptance criteria from `cortex/lifecycle/archive/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md` (helper fail-open contract, JSONL schema, sessions inventory, aggregator output structure, `--check-shims` pre-commit gate, `--self-test` round-trip, plugin distribution byte-identity).
 - **Priority**: P1 (closes the runtime-adoption-failure detection gap that DR-5 cannot reach).
 
 ### In-Session Status CLI
 
 - **Description**: A standalone bash script (`bin/overnight-status`, deployed to `~/.local/bin/overnight-status`) that produces a one-shot status report of the active overnight session from within a sandboxed Claude Code session. Also invocable as `/overnight status` via the overnight skill.
-- **Inputs**: `~/.local/share/overnight-sessions/active-session.json` (session pointer), `lifecycle/sessions/{id}/overnight-state.json`, `lifecycle/sessions/{id}/.runner.lock`, `lifecycle/sessions/{id}/overnight-events.log`
+- **Inputs**: `~/.local/share/overnight-sessions/active-session.json` (session pointer), `cortex/lifecycle/sessions/{id}/overnight-state.json`, `cortex/lifecycle/sessions/{id}/.runner.lock`, `cortex/lifecycle/sessions/{id}/overnight-events.log`
 - **Outputs**: Human-readable status report to stdout including runner liveness, session phase, feature progress, recent events, and failed-feature errors
 - **Acceptance criteria**:
   - Exits 0 when session data found (active or last-known); exits 1 only when no session data exists at all
@@ -69,7 +69,7 @@ The observability area covers five subsystems that give the developer visibility
   - Session phase and feature counts by status (pending/running/merged/failed/deferred) from `overnight-state.json`
   - Last 5 events from `overnight-events.log` displayed as timeline
   - Failed features listed with error messages
-  - Falls back to most recent `lifecycle/sessions/` directory when `active-session.json` is absent or shows `phase: complete`
+  - Falls back to most recent `cortex/lifecycle/sessions/` directory when `active-session.json` is absent or shows `phase: complete`
   - Handles corrupt `overnight-state.json` gracefully (falls back to events-only output)
 - **Priority**: must-have
 
@@ -105,7 +105,7 @@ The observability area covers five subsystems that give the developer visibility
 - **Statusline**: `jq` (with pure-bash fallback), `git`
 - **Dashboard**: Python 3, FastAPI, Jinja2, HTMX (embedded in templates); file-based session state at `lifecycle/`
 - **Notifications (macOS)**: `terminal-notifier` (installed via `brew install terminal-notifier`); Ghostty terminal
-- **In-Session Status CLI**: `jq`, `bash`; file-based session state at `lifecycle/sessions/` and `~/.local/share/overnight-sessions/`
+- **In-Session Status CLI**: `jq`, `bash`; file-based session state at `cortex/lifecycle/sessions/` and `~/.local/share/overnight-sessions/`
 - **Sandbox Socket Access**: `jq`, `just` (setup recipe); `~/.claude/settings.json` and `~/.claude/settings.local.json`
 
 ## Edge Cases

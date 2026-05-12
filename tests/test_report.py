@@ -156,7 +156,7 @@ def _make_residue(
     return {
         "ts": "2026-04-22T00:00:00+00:00",
         "feature": feature,
-        "artifact": f"lifecycle/{feature}/spec.md",
+        "artifact": f"cortex/lifecycle/{feature}/spec.md",
         "synthesis_status": synthesis_status,
         "reviewers": {"completed": completed, "dispatched": dispatched},
         "findings": findings,
@@ -283,7 +283,7 @@ class Test_critical_review_residue:
         sparse = {
             "ts": "2026-04-22T00:00:00+00:00",
             "feature": "sparse-feature",
-            "artifact": "lifecycle/sparse-feature/spec.md",
+            "artifact": "cortex/lifecycle/sparse-feature/spec.md",
             "findings": [],
         }
         (feat_dir / "critical-review-residue.json").write_text(

@@ -46,7 +46,7 @@ def escalator_module():
 
 @pytest.fixture
 def tmp_lifecycle(tmp_path):
-    """Create a self-contained ``lifecycle/<feature>/`` scratch directory.
+    """Create a self-contained ``cortex/lifecycle/<feature>/`` scratch directory.
 
     Returns a dict carrying the repo-root tmp path, the lifecycle dir, the
     feature slug, the feature dir, and the (not-yet-created) events.log path.

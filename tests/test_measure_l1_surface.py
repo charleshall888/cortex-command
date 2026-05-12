@@ -9,7 +9,7 @@ flagged by critical review: the utility's correctness is verified
 against an external, inline parser invocation rather than against
 itself.
 
-Spec: lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md R11.
+Spec: cortex/lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md R11.
 """
 
 from __future__ import annotations

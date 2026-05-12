@@ -29,7 +29,7 @@ def aggregate_round_context(session_dir: Path, round_number: int) -> dict:
 
     Args:
         session_dir: Path to the session directory containing the round-startup
-            state files (e.g. ``lifecycle/sessions/<session_id>/``).
+            state files (e.g. ``cortex/lifecycle/sessions/<session_id>/``).
         round_number: Current round number. Included for schema-version
             tracing; not used for filtering — callers retain round-filter
             logic.

@@ -13,7 +13,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 ### Session Orchestration
 
 - **Description**: The overnight runner (`orchestrator.py`) manages session-level state, schedules features into rounds, dispatches them concurrently, and transitions the session through completion.
-- **Inputs**: `lifecycle/overnight-state.json` (session phase, feature statuses), `lifecycle/master-plan.md` (round assignments), per-feature `lifecycle/{feature}/plan.md`
+- **Inputs**: `cortex/lifecycle/overnight-state.json` (session phase, feature statuses), `cortex/lifecycle/master-plan.md` (round assignments), per-feature `cortex/lifecycle/{feature}/plan.md`
 - **Outputs**: Updated `overnight-state.json`, `pipeline-events.log` (JSONL append log), per-feature commits on integration branch `overnight/{session_id}`
 - **Acceptance criteria**:
   - Session phases transition forward-only: `planning → executing → complete`; any phase may transition to `paused`
@@ -21,7 +21,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - All state writes are atomic (tempfile + `os.replace()`) — partial-write corruption is not possible
   - Integration branches (`overnight/{session_id}`) persist after session completion and are not auto-deleted — they are left for PR creation to main
   - Artifact commits (lifecycle files, backlog status updates, session data) land on the integration branch, not local `main` — they travel with the PR
-  - The morning report is written to two paths: `lifecycle/sessions/{session_id}/morning-report.md` (gitignored per-session archive) and `lifecycle/morning-report.md` (tracked latest copy); the latter is committed to local `main` directly by the runner process.
+  - The morning report is written to two paths: `cortex/lifecycle/sessions/{session_id}/morning-report.md` (gitignored per-session archive) and `cortex/lifecycle/morning-report.md` (tracked latest copy); the latter is committed to local `main` directly by the runner process.
   - Budget exhaustion transitions the session to `paused` without aborting in-flight features
   - Home-repo integration PR is always created (home-repo is an always-participant); cross-repo PRs are opt-in per-feature and skip when the repo contributed zero merges. On zero-merge home-repo sessions the PR is opened as a draft with a `[ZERO PROGRESS]` title prefix to block accidental merge; `integration_pr_flipped_once` (session-scoped marker in `overnight-state.json`) gates the resume-flow state-flip so the runner defers to human action after the first flip or a persistent `gh pr ready` failure
   - `cortex overnight start --dry-run` is a supported test-affordance mode that echoes (instead of executing) PR-side-effect calls (`gh pr create`, `gh pr ready`, `git push`, `notify.sh`) and assertable state writes; it rejects invocation when any feature is still pending. Regression coverage lives in `tests/test_runner_pr_gating.py`, including a byte-identical stdout snapshot against `tests/fixtures/dry_run_reference.txt` that catches format drift (full-line equality, not substring).
@@ -58,8 +58,8 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 ### Post-Merge Review
 
 - **Description**: After a feature merges successfully, the pipeline checks whether it qualifies for spec-compliance review per the tier/criticality gating matrix. Qualifying features are reviewed by a fresh agent; non-qualifying features skip directly to completion.
-- **Inputs**: Merged feature; `lifecycle/{feature}/events.log` (tier and criticality); `lifecycle/{feature}/spec.md` (review benchmark); gating matrix
-- **Outputs**: `lifecycle/{feature}/review.md` (review artifact with verdict JSON); `review_verdict` event in per-feature events.log; deferral file if non-APPROVED after rework
+- **Inputs**: Merged feature; `cortex/lifecycle/{feature}/events.log` (tier and criticality); `cortex/lifecycle/{feature}/spec.md` (review benchmark); gating matrix
+- **Outputs**: `cortex/lifecycle/{feature}/review.md` (review artifact with verdict JSON); `review_verdict` event in per-feature events.log; deferral file if non-APPROVED after rework
 - **Acceptance criteria**:
   - Gating matrix: complex tier at any criticality → review; simple tier at high/critical → review; simple tier at low/medium → skip
   - Review agent dispatched via `dispatch_review()` in `cortex_command/pipeline/review_dispatch.py`; batch_runner owns all `events.log` writes; review agent writes only `review.md`
@@ -79,15 +79,15 @@ The pipeline area covers the overnight execution framework: how sessions are orc
   - If flaky guard fails, dispatch repair agent (Sonnet); escalate to Opus on failure
   - Repair attempt cap is a fixed architectural constraint: max 2 attempts (Sonnet + Opus)
   - Circuit breaker: if repair agent produces no new commits (before_sha == after_sha), feature pauses immediately
-  - Each attempt appends learnings to `lifecycle/{feature}/learnings/progress.txt`
-  - Recovery outcome is recorded in `lifecycle/{feature}/recovery-log.md`
+  - Each attempt appends learnings to `cortex/lifecycle/{feature}/learnings/progress.txt`
+  - Recovery outcome is recorded in `cortex/lifecycle/{feature}/recovery-log.md`
 - **Priority**: must-have
 
 ### Deferral System
 
 - **Description**: When the pipeline encounters an ambiguous decision that cannot be resolved autonomously, it writes a structured deferral question and surfaces it in the morning report.
 - **Inputs**: Worker exit report declaring `action: "question"`; CI gate block; repair agent declaring deferral
-- **Outputs**: Deferral file at `lifecycle/deferred/{feature}-q{NNN}.md`; feature status transitions to `deferred` (blocking) or continues (non-blocking); escalation entry in `lifecycle/sessions/{session_id}/escalations.jsonl`
+- **Outputs**: Deferral file at `lifecycle/deferred/{feature}-q{NNN}.md`; feature status transitions to `deferred` (blocking) or continues (non-blocking); escalation entry in `cortex/lifecycle/sessions/{session_id}/escalations.jsonl`
 - **Acceptance criteria**:
   - Deferral files are written atomically
   - Blocking deferrals pause the feature; non-blocking deferrals allow the feature to continue using the recorded `default_choice`
@@ -97,8 +97,8 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 ### Metrics and Cost Tracking
 
 - **Description**: The pipeline collects execution metrics from lifecycle event logs for post-session review and calibration.
-- **Inputs**: `lifecycle/*/events.log` (JSONL event streams per feature)
-- **Outputs**: `lifecycle/metrics.json` with per-feature metrics, tier aggregates, and calibration summaries
+- **Inputs**: `cortex/lifecycle/*/events.log` (JSONL event streams per feature)
+- **Outputs**: `cortex/lifecycle/metrics.json` with per-feature metrics, tier aggregates, and calibration summaries
 - **Acceptance criteria**:
   - Metrics are computed by parsing `feature_complete` events; in-progress features are excluded
   - Per-feature metrics: complexity tier, task count, batch count, rework cycles, review verdicts, phase durations, total duration
@@ -126,7 +126,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - **Atomicity**: All session state writes use tempfile + `os.replace()` — no partial-write corruption
 - **Concurrency safety**: State file reads are not protected by locks; the forward-only phase transition model ensures re-reading a new state is safe (idempotent transitions)
 - **Graceful degradation**: Budget exhaustion and rate limits pause the session rather than crashing it
-- **Audit trail**: `lifecycle/pipeline-events.log` provides an append-only JSONL record of all dispatch and merge events
+- **Audit trail**: `cortex/lifecycle/pipeline-events.log` provides an append-only JSONL record of all dispatch and merge events
 - **Orchestrator rationale convention**: When the orchestrator resolves an escalation or makes a non-obvious feature selection decision (e.g., skipping a feature, reordering rounds), the relevant events.log entry should include a `rationale` field explaining the reasoning. Routine forward-progress decisions do not require this field.
 
 ## Architectural Constraints
@@ -138,24 +138,24 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 
 ## Dependencies
 
-- `lifecycle/overnight-state.json` — session state (atomic writes)
-- `lifecycle/master-plan.md` — batch session plan
-- `lifecycle/{feature}/plan.md` — per-feature task plans
-- `lifecycle/pipeline-events.log` — JSONL event audit log
-- `lifecycle/deferred/` — deferral question files
-- `lifecycle/sessions/{session_id}/escalations.jsonl` — escalation audit log
+- `cortex/lifecycle/overnight-state.json` — session state (atomic writes)
+- `cortex/lifecycle/master-plan.md` — batch session plan
+- `cortex/lifecycle/{feature}/plan.md` — per-feature task plans
+- `cortex/lifecycle/pipeline-events.log` — JSONL event audit log
+- `cortex/lifecycle/deferred/` — deferral question files
+- `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` — escalation audit log
 - `cortex_command/overnight/sync-allowlist.conf` — glob patterns for auto-resolvable files during post-merge sync
 - `bin/cortex-git-sync-rebase` — post-merge sync script
 - Multi-agent orchestration (see `requirements/multi-agent.md`) — agent spawning, worktrees, model selection
 - Smoke test gate (`cortex_command/overnight/smoke_test.py`) — post-merge verification
-- `lifecycle/sessions/{session_id}/runner.pid` — per-session IPC contract (JSON `{schema_version, magic, pid, pgid, start_time, session_id, session_dir, repo_path}`, mode 0o600, atomic write). Cleared on clean shutdown; cancel verifies magic + start_time (±2s via psutil) before signalling to close the PID-reuse race. Stable contract for the MCP control plane (versioned runner IPC).
+- `cortex/lifecycle/sessions/{session_id}/runner.pid` — per-session IPC contract (JSON `{schema_version, magic, pid, pgid, start_time, session_id, session_dir, repo_path}`, mode 0o600, atomic write). Cleared on clean shutdown; cancel verifies magic + start_time (±2s via psutil) before signalling to close the PID-reuse race. Stable contract for the MCP control plane (versioned runner IPC).
 - `~/.local/share/overnight-sessions/active-session.json` — host-global active-session pointer sharing the `runner.pid` schema plus a `phase: "planning|executing|paused|complete"` field. Retained on `paused` transition (preserves dashboard/statusline visibility); cleared on `complete`. A transient `phase: "starting"` value is observable via `cortex overnight status` during the spawn handshake window between sentinel write and `runner.pid` appearance, but is never persisted to either the state file or this active-session pointer.
 - `cortex mcp-server` exposes five stdio tools (`overnight_start_run`, `overnight_status`, `overnight_logs`, `overnight_cancel`, `overnight_list_sessions`) wrapping `cli_handler` boundaries. The server is stateless; tools accept `session_id` and read filesystem-grounded state. `confirm_dangerously_skip_permissions: Literal[True]` is the operational gate on `overnight_start_run`. See `docs/mcp-server.md`.
 - Pre-install in-flight guard: `cortex` aborts when an active overnight session is detected (phase != `complete` AND `verify_runner_pid` succeeds); bypassable inline via `CORTEX_ALLOW_INSTALL_DURING_RUN=1` (do NOT export). Carve-outs: pytest, runner-spawned children (`CORTEX_RUNNER_CHILD=1`), dashboard, cancel-force invocation.
-- `lifecycle/sessions/{session_id}/runner-bootstrap.log` — captures runner stdout/stderr on the MCP-spawned start path so pre-`events.log`-init failures (import errors, missing deps, permission errors) are diagnosable.
+- `cortex/lifecycle/sessions/{session_id}/runner-bootstrap.log` — captures runner stdout/stderr on the MCP-spawned start path so pre-`events.log`-init failures (import errors, missing deps, permission errors) are diagnosable.
 - `~/.cache/cortex-command/scheduled-launches.json` — sidecar index of pending LaunchAgent schedules (one entry per scheduled launch: label, session_id, plist_path, launcher_path, scheduled_for_iso, created_at_iso). Atomic writes via tempfile + `os.replace`. Consumed by `cortex overnight cancel --list` and the GC pass at every `schedule()` call.
 - `~/.cache/cortex-command/scheduled-launches.lock` — companion `fcntl.LOCK_EX` lockfile held across the GC + plist install + `launchctl bootstrap` + verify + sidecar-write critical section to serialize concurrent `cortex overnight schedule` invocations.
-- `lifecycle/sessions/{session_id}/sandbox-settings/cortex-sandbox-*.json` — per-spawn sandbox settings tempfiles (mode 0o600, atomic write). Created by both `_spawn_orchestrator` and per-dispatch in `cortex_command/pipeline/dispatch.py`. Cleaned via `atexit.register` on clean shutdown and via startup-scan in runner-init for SIGKILL/OOM/kernel-panic crash paths. Carries the documented Claude Code `sandbox.filesystem.{denyWrite,allowWrite}` shape; not human-readable state — operators consult `docs/overnight-operations.md` "Per-spawn sandbox enforcement" for the threat model.
+- `cortex/lifecycle/sessions/{session_id}/sandbox-settings/cortex-sandbox-*.json` — per-spawn sandbox settings tempfiles (mode 0o600, atomic write). Created by both `_spawn_orchestrator` and per-dispatch in `cortex_command/pipeline/dispatch.py`. Cleaned via `atexit.register` on clean shutdown and via startup-scan in runner-init for SIGKILL/OOM/kernel-panic crash paths. Carries the documented Claude Code `sandbox.filesystem.{denyWrite,allowWrite}` shape; not human-readable state — operators consult `docs/overnight-operations.md` "Per-spawn sandbox enforcement" for the threat model.
 
 ## Edge Cases
 

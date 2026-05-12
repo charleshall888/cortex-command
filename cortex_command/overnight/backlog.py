@@ -65,10 +65,10 @@ class BacklogItem:
         parent: Optional parent backlog item ID (string — UUID or stringified integer).
         research: Optional path to research artifact.
         spec: Optional path to spec artifact.
-        plan: Optional path to implementation plan artifact (lifecycle/<slug>/plan.md).
+        plan: Optional path to implementation plan artifact (cortex/lifecycle/<slug>/plan.md).
             Required for overnight execution.
         uuid: Optional UUID v4 identifier (canonical cross-reference key).
-        lifecycle_slug: Optional kebab-case slug linking to lifecycle/{slug}/.
+        lifecycle_slug: Optional kebab-case slug linking to cortex/lifecycle/{slug}/.
         session_id: Optional session ID of the session currently working on this item.
         lifecycle_phase: Optional current lifecycle phase (research, specify, plan,
             implement, implement-rework, review, complete, escalated).
@@ -508,7 +508,7 @@ def filter_ready(
 
         if not research_path.exists():
             result.ineligible.append(IneligibleItem(
-                item, f"research file not found: lifecycle/{slug}/research.md"
+                item, f"research file not found: cortex/lifecycle/{slug}/research.md"
             ))
             continue
 
@@ -517,7 +517,7 @@ def filter_ready(
         #    session if missing.
         if not spec_path.exists():
             result.ineligible.append(IneligibleItem(
-                item, f"spec file not found: lifecycle/{slug}/spec.md"
+                item, f"spec file not found: cortex/lifecycle/{slug}/spec.md"
             ))
             continue
 
@@ -582,14 +582,14 @@ def filter_ready(
 
             if not research_path.exists():
                 result.ineligible.append(IneligibleItem(
-                    item, f"research file not found: lifecycle/{item_slug}/research.md"
+                    item, f"research file not found: cortex/lifecycle/{item_slug}/research.md"
                 ))
                 promoted = True
                 continue
 
             if not spec_path.exists():
                 result.ineligible.append(IneligibleItem(
-                    item, f"spec file not found: lifecycle/{item_slug}/spec.md"
+                    item, f"spec file not found: cortex/lifecycle/{item_slug}/spec.md"
                 ))
                 promoted = True
                 continue

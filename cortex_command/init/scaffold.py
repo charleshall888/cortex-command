@@ -49,7 +49,8 @@ _TEMPLATE_ROOT: Traversable = files("cortex_command.init.templates")
 _MARKER_FILENAME = ".cortex-init"
 _BACKUP_DIR_PATTERN = ".cortex-init-backup/"
 _BACKUP_DIR_ROOT = ".cortex-init-backup"
-_GITIGNORE_TARGETS = (_MARKER_FILENAME, _BACKUP_DIR_PATTERN)
+# Per #202, both marker and backup-dir live under the cortex/ umbrella.
+_GITIGNORE_TARGETS = ("cortex/.cortex-init", "cortex/.cortex-init-backup/")
 
 # Target scaffold paths inspected by the content-aware decline gate (R19).
 # A populated non-marker repo with any of these present fires the gate.
@@ -68,9 +69,9 @@ def check_marker_decline(repo_root: Path) -> None:
     """R6 gate: refuse to re-initialize a repo that already has ``.cortex-init``.
 
     Raises:
-        ScaffoldError: if ``repo_root / .cortex-init`` exists.
+        ScaffoldError: if ``repo_root / cortex / .cortex-init`` exists.
     """
-    if (repo_root / _MARKER_FILENAME).exists():
+    if (repo_root / "cortex" / _MARKER_FILENAME).exists():
         raise ScaffoldError(
             "`cortex init`: repo already initialized. Use `--update` to add "
             "missing templates or `--force` to overwrite."
@@ -171,11 +172,12 @@ def check_symlink_safety(repo_root: Path) -> str:
 
     return str(cortex_canon) + "/"
 
-# Any line starting with ``.cortex-init`` that is NOT exactly one of the two
-# canonical targets is treated as an orphan-prefix fragment from a prior
-# truncated append (e.g., ``.cortex-init-backu``). The scan-and-repair step
-# removes each such line before the idempotent append.
-_ORPHAN_RE = re.compile(r"^\.cortex-init(?:-backup)?.*$")
+# Any line matching ``[cortex/].cortex-init[-backup]...`` that is NOT exactly
+# one of the two canonical targets is treated as an orphan-prefix fragment
+# from a prior truncated append (e.g., ``.cortex-init-backu`` or the post-#202
+# variant ``cortex/.cortex-init-backu``). The scan-and-repair step removes
+# each such line before the idempotent append.
+_ORPHAN_RE = re.compile(r"^(?:cortex/)?\.cortex-init(?:-backup)?.*$")
 
 
 def _iter_template_files() -> list[tuple[Traversable, Path]]:
@@ -286,11 +288,11 @@ def backup_existing(
 
     Returns:
         The absolute backup directory path
-        (``<repo_root>/.cortex-init-backup/<UTC-timestamp>``) so callers
+        (``<repo_root>/cortex/.cortex-init-backup/<UTC-timestamp>``) so callers
         (Task 9's handler) can log it to stderr.
     """
     timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H-%M-%SZ")
-    backup_dir = repo_root / _BACKUP_DIR_ROOT / timestamp
+    backup_dir = repo_root / "cortex" / _BACKUP_DIR_ROOT / timestamp
 
     for target in targets:
         src = Path(target)
@@ -352,11 +354,11 @@ def write_marker(repo_root: Path, *, refresh: bool) -> None:
     default invocation writes the marker only when absent.
 
     Args:
-        repo_root: Target repo root; marker lands at ``repo_root / .cortex-init``.
+        repo_root: Target repo root; marker lands at ``repo_root / cortex / .cortex-init``.
         refresh: If True, overwrite an existing marker with current values
             (R20). If False, skip the write when the marker already exists.
     """
-    marker_path = repo_root / _MARKER_FILENAME
+    marker_path = repo_root / "cortex" / _MARKER_FILENAME
     if marker_path.exists() and not refresh:
         return
 
@@ -365,6 +367,7 @@ def write_marker(repo_root: Path, *, refresh: bool) -> None:
         "initialized_at": datetime.datetime.now(datetime.UTC).isoformat(),
     }
     content = json.dumps(data, indent=2) + "\n"
+    marker_path.parent.mkdir(parents=True, exist_ok=True)
     atomic_write(marker_path, content)
 
 

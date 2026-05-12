@@ -1333,7 +1333,7 @@ def test_metrics_json_exposes_effort_bucket(tmp_path):
 
     Pre-flip records use ``effort="high"``; post-flip records use
     ``effort="xhigh"``.  Both share ``(model="opus", tier="complex",
-    skill="implement")``.  After ``main()`` writes ``lifecycle/metrics.json``,
+    skill="implement")``.  After ``main()`` writes ``cortex/lifecycle/metrics.json``,
     the JSON's ``skill_tier_dispatch_aggregates`` and
     ``model_tier_dispatch_aggregates`` slices must expose distinct
     per-effort buckets so an operator can compute the >2× cost-regression

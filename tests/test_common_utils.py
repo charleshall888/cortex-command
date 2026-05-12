@@ -314,7 +314,7 @@ CANONICAL_CASES = [
 
 def _stage_tier_parity_fixture(tmp_path: Path, slug: str) -> None:
     """Stage ``tests/fixtures/state/tier_parity/<slug>/events.log`` under
-    ``tmp_path/lifecycle/<slug>/events.log`` so read_tier can be invoked with
+    ``tmp_path/cortex/lifecycle/<slug>/events.log`` so read_tier can be invoked with
     an absolute lifecycle_base."""
     source = TIER_PARITY_ROOT / slug / "events.log"
     feature_dir = tmp_path / "cortex" / "lifecycle" / slug

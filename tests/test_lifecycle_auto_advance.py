@@ -3,7 +3,7 @@
 
 Covers R1 (cycle counter reads events.log, not review.md), R3 (approval-event
 lookup with migration sentinel), and R4 (per-phase completion rule) by
-constructing synthetic ``lifecycle/{feature}/`` fixtures and asserting that
+constructing synthetic ``cortex/lifecycle/{feature}/`` fixtures and asserting that
 ``cortex_command.common.detect_lifecycle_phase`` returns the expected phase
 and cycle.
 """

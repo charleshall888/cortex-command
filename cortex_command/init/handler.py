@@ -151,7 +151,7 @@ def _run(args: argparse.Namespace) -> int:
     settings_merge.validate_settings(home)
 
     # Steps 4–5: decline gates + scaffold dispatch.
-    marker_present = (repo_root / ".cortex-init").exists()
+    marker_present = (repo_root / "cortex" / ".cortex-init").exists()
 
     if marker_present:
         if args.update:

@@ -3,7 +3,7 @@ from ``cortex_command/overnight/ipc.py``.
 
 The takeover lockfile is the kernel coordination artifact that serializes
 ``_check_concurrent_start`` + ``write_runner_pid`` + ``handle_cancel`` (per the
-spec at ``lifecycle/fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid/spec.md``).
+spec at ``cortex/lifecycle/fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid/spec.md``).
 Its discipline rules — never written, never unlinked, never ``durable_fsync``'d,
 must not be matched by ``*.lock`` globs — are load-bearing for correctness.
 Concentrating every reference to the path in ``ipc.py`` lets reviewers audit

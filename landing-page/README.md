@@ -18,7 +18,7 @@ The prompts are the source of truth for tagline, manifesto, copy, fallback rules
 ## How to run
 
 1. Open Claude Design (claude.ai/design) and create a new project.
-2. Upload three files from this repo as project context: `README.md` (top-level), `requirements/project.md`, and `docs/agentic-layer.md`. Do **not** attach the full repo — Python source, plugin internals, backlog state, and internal Claude Code docs add noise without adding signal, and risk Claude Design treating implementation detail as design intent.
+2. Upload three files from this repo as project context: `README.md` (top-level), `cortex/requirements/project.md`, and `docs/agentic-layer.md`. Do **not** attach the full repo — Python source, plugin internals, backlog state, and internal Claude Code docs add noise without adding signal, and risk Claude Design treating implementation detail as design intent.
 3. Upload `prompt-1-foundation.md` as the opening prompt. Refine v1 via inline comments, sliders, and direct text edits — *not* chat reprompts. (Inline comments batch into one model turn; chat reprompts reprocess full context and burn budget fast.)
 4. **Run the acceptance check in `prompt-1-foundation.md`** before proceeding. If either criterion fails, stop — do not run Prompt 2.
 5. Manual save before the next step: tell Claude *"Save what we have."* That's the only checkpoint primitive available.

@@ -1,6 +1,6 @@
 """End-to-end regression tests for PR-gating behavior under ``cortex overnight``.
 
-Covers spec Req 8 of `lifecycle/gate-overnight-pr-creation-on-merged-over-zero/`:
+Covers spec Req 8 of `cortex/lifecycle/gate-overnight-pr-creation-on-merged-over-zero/`:
 eleven subprocess-capture tests that invoke ``cortex overnight start --dry-run``
 via subprocess (and, for the byte-identical reference test, the CLI wrapper for
 CLI-wiring coverage) and assert substring patterns on stdout.

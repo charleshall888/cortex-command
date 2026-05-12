@@ -7,7 +7,7 @@ spec: the prompt template references ``{session_dir}/escalations.jsonl`` so that
 orchestrator agent executes the prompt. These tests assert that:
 
 1. After ``fill_prompt()``, the rendered prompt contains the substituted
-   ``lifecycle/sessions/{fixture_id}/escalations.jsonl`` path and contains zero
+   ``cortex/lifecycle/sessions/{fixture_id}/escalations.jsonl`` path and contains zero
    occurrences of the literal token-string ``{session_dir}``.
 2. The rendered prompt's Python code blocks ``compile()`` without ``NameError``
    against a synthetic globals dict containing the substituted path.

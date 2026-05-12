@@ -8,8 +8,8 @@ Functions:
     parse_overnight_state  -- reads cortex/lifecycle/overnight-state.json
     parse_pipeline_state   -- reads cortex/lifecycle/pipeline-state.json
     tail_jsonl             -- byte-offset-aware JSONL tail utility
-    parse_feature_events   -- reads lifecycle/{feature}/events.log
-    parse_agent_activity   -- reads lifecycle/{feature}/agent-activity.jsonl
+    parse_feature_events   -- reads cortex/lifecycle/{feature}/events.log
+    parse_agent_activity   -- reads cortex/lifecycle/{feature}/agent-activity.jsonl
     get_last_activity_ts   -- most recent event timestamp for a feature
     parse_fleet_cards      -- builds agent fleet cards for running features
     build_swim_lane_data   -- builds swim lane timeline data for a session

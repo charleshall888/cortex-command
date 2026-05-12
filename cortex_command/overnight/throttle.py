@@ -16,7 +16,7 @@ from enum import Enum
 # was deleted in 2026-05-04 after evidence showed it was never wired into the
 # live dispatch path. If rate-limit-induced session pauses become a problem in
 # production, see git log for the deletion commit and
-# lifecycle/remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release/
+# cortex/lifecycle/remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release/
 # for context.
 
 

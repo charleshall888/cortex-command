@@ -59,7 +59,7 @@ class FeatureTask:
 
 @dataclass
 class FeaturePlan:
-    """Parsed representation of lifecycle/{feature}/plan.md."""
+    """Parsed representation of cortex/lifecycle/{feature}/plan.md."""
 
     feature: str
     overview: str
@@ -235,7 +235,7 @@ def parse_feature_plan(path: Path) -> FeaturePlan:
     """Parse a feature plan markdown file into structured data.
 
     Args:
-        path: Path to the lifecycle/{feature}/plan.md file.
+        path: Path to the cortex/lifecycle/{feature}/plan.md file.
 
     Returns:
         A FeaturePlan dataclass with feature name, overview, and tasks.

@@ -111,7 +111,7 @@ class TestRunDaytimeStartupGuards(unittest.IsolatedAsyncioTestCase):
         self.assertIn("must be run from a cortex project root", stderr.getvalue())
 
     async def test_plan_check_rejects_missing_plan(self) -> None:
-        """With ``lifecycle/feat/`` present but no ``plan.md``, must
+        """With ``cortex/lifecycle/feat/`` present but no ``plan.md``, must
         return 1 and emit ``plan.md not found`` on stderr."""
         import tempfile
 
@@ -637,7 +637,7 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result["error"])
         self.assertEqual(len(result["deferred_files"]), 1)
         # The implementation globs relative to CWD and stores the path as
-        # str(Path("lifecycle/feat/deferred/x.md")) — a relative path.
+        # str(Path("cortex/lifecycle/feat/deferred/x.md")) — a relative path.
         # We assert the filename is present rather than requiring an absolute path,
         # pinning the actual behavior while remaining cross-platform.
         self.assertIn("x.md", result["deferred_files"][0])

@@ -95,7 +95,7 @@ def test_resolve_session_dir_rejects_symlink_escape(tmp_path: Path) -> None:
     outside_target = tmp_path / "outside"
     outside_target.mkdir()
 
-    # Symlink lifecycle/sessions/evil -> outside_target (escapes root).
+    # Symlink cortex/lifecycle/sessions/evil -> outside_target (escapes root).
     evil_link = sessions_root / "evil"
     os.symlink(outside_target, evil_link)
 

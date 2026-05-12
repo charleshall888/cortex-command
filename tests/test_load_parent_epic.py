@@ -1,7 +1,7 @@
 """Unit and subprocess tests for ``bin/cortex-load-parent-epic``.
 
 Covers the helper's full status-branch and edge-case surface per
-``lifecycle/add-parent-epic-alignment-check-to-refine-clarify-critic/plan.md``
+``cortex/lifecycle/add-parent-epic-alignment-check-to-refine-clarify-critic/plan.md``
 Task 2.
 
 Test inventory (13 tests):

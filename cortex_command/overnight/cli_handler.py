@@ -661,7 +661,7 @@ def handle_status(args: argparse.Namespace) -> int:
     """Implement ``cortex overnight status``.
 
     Reads the active-session pointer; falls back to the most-recent
-    session under ``lifecycle/sessions/`` when the pointer is absent or
+    session under ``cortex/lifecycle/sessions/`` when the pointer is absent or
     points at a completed session. For human format, delegates to
     :func:`status_module.render_status`; for JSON format, emits an
     object with ``session_id``, ``phase``, ``current_round``, ``features``.
@@ -1318,7 +1318,7 @@ def _parse_iso8601(value: Optional[str]):
 def handle_list_sessions(args: argparse.Namespace) -> int:
     """Implement ``cortex overnight list-sessions``.
 
-    Globs ``lifecycle/sessions/*/overnight-state.json``, partitions
+    Globs ``cortex/lifecycle/sessions/*/overnight-state.json``, partitions
     results into active (``planning`` / ``executing`` / ``paused``) and
     recent (``complete``), and applies optional ``status`` / ``since`` /
     ``limit`` filters. Pagination cursors are reserved for a future

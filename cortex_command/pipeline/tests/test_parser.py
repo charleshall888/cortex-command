@@ -208,7 +208,7 @@ class TestNormalizationPreservesBody(unittest.TestCase):
 class TestMasterPlanConcurrencyLimitBackwardCompat(unittest.TestCase):
     """Historical master plans with a concurrency_limit config row parse without error.
 
-    Protects the 4 historical plans in lifecycle/sessions/ that map_results.py
+    Protects the 4 historical plans in cortex/lifecycle/sessions/ that map_results.py
     processes. The concurrency_limit field was removed from MasterPlanConfig but
     the parser must silently ignore it so old plans remain parseable.
     """
@@ -306,7 +306,7 @@ def test_heading_and_status_round_trip(tmp_path):
       - Task 1: heading `[x]` AND Status `[x] complete` -> status=done, description stripped
       - Task 2: heading `[x]` AND Status `[ ] pending` -> status=pending, description stripped
 
-    The second pattern mirrors `lifecycle/rewrite-verification-mindsetmd-to-positive-
+    The second pattern mirrors `cortex/lifecycle/rewrite-verification-mindsetmd-to-positive-
     routing-structure-under-47-literalism/plan.md` Task 2, where an authored-`[x]` in
     the heading must not leak through as `status == done` when the Status field is
     genuinely `[ ] pending`.

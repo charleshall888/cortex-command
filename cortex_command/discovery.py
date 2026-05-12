@@ -190,7 +190,7 @@ def resolve_events_log_path(
     # ``{topic}-2`` and passes that as the topic argument). Per spec R9:
     # "When the slug has a -N suffix (per R13 re-run semantics), the
     # resolver returns cortex/research/{topic}-N/events.log" -- i.e. the same
-    # research/{slug}/events.log shape, with the slug already including
+    # cortex/research/{slug}/events.log shape, with the slug already including
     # the suffix.
     return repo_root / "cortex" / "research" / topic / "events.log"
 

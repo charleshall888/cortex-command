@@ -194,7 +194,7 @@ async def _handle_failed_task(
     cb_state: CircuitBreakerState,
     manager: Optional[ConcurrencyManager] = None,
     round: int = 0,
-    log_path: Path = Path("lifecycle/overnight-events.log"),
+    log_path: Path = Path("cortex/lifecycle/overnight-events.log"),
     *,
     deferred_dir: Path = DEFAULT_DEFERRED_DIR,
 ) -> Optional[FeatureResult]:

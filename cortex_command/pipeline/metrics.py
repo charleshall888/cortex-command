@@ -1,7 +1,7 @@
 """Lifecycle metrics pipeline: event parsing, per-feature extraction,
 aggregate computation, calibration insights, and JSON output.
 
-Discovers all ``lifecycle/*/events.log`` files, parses JSONL events, and
+Discovers all ``cortex/lifecycle/*/events.log`` files, parses JSONL events, and
 computes per-feature metric records.  Handles edge cases: malformed lines
 (skip with warning), minimal-event features (partial records with nulls),
 in-progress features (excluded), duplicate ``feature_complete`` events

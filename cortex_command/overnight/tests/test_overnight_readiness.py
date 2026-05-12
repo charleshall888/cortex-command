@@ -68,8 +68,8 @@ def test_rejected_done_status() -> None:
         status="done",
         priority="medium",
         type="feature",
-        research="lifecycle/done-feature/research.md",
-        spec="lifecycle/done-feature/spec.md",
+        research="cortex/lifecycle/done-feature/research.md",
+        spec="cortex/lifecycle/done-feature/spec.md",
     )
 
     result = filter_ready([item])
@@ -206,8 +206,8 @@ def test_rejected_research_missing() -> None:
             status="backlog",
             priority="medium",
             type="feature",
-            research="lifecycle/research-missing-feature/research.md",
-            spec="lifecycle/research-missing-feature/spec.md",
+            research="cortex/lifecycle/research-missing-feature/research.md",
+            spec="cortex/lifecycle/research-missing-feature/spec.md",
         )
 
         result = filter_ready([item], project_root=root)
@@ -264,18 +264,18 @@ def test_rejected_spec_missing() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test: rejected — lifecycle/slug/spec.md missing
+# Test: rejected — cortex/lifecycle/slug/spec.md missing
 # ---------------------------------------------------------------------------
 
 def test_rejected_no_lifecycle_spec() -> None:
-    """An item with research present but lifecycle/slug/spec.md absent is rejected at step 4 with 'spec file not found'."""
+    """An item with research present but cortex/lifecycle/slug/spec.md absent is rejected at step 4 with 'spec file not found'."""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         slug = "no-lifecycle-spec-feature"
         research_path = root / "cortex" / "lifecycle" / slug / "research.md"
         research_path.parent.mkdir(parents=True, exist_ok=True)
         research_path.write_text("# Research\n")
-        # lifecycle/{slug}/spec.md deliberately absent
+        # cortex/lifecycle/{slug}/spec.md deliberately absent
 
         item = BacklogItem(
             id=8,
@@ -379,7 +379,7 @@ def test_lifecycle_slug_mismatch_rejected() -> None:
     """An explicit lifecycle_slug with no matching artifacts is rejected."""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        # No files created under lifecycle/missing-slug/
+        # No files created under cortex/lifecycle/missing-slug/
 
         item = BacklogItem(
             id=11,
@@ -399,7 +399,7 @@ def test_lifecycle_slug_mismatch_rejected() -> None:
             pytest.fail("expected 1 ineligible item, got none")
             return
         _, reason = result.ineligible[0]
-        expected = "research file not found: lifecycle/missing-slug/research.md"
+        expected = "research file not found: cortex/lifecycle/missing-slug/research.md"
         if expected not in reason:
             pytest.fail(f"expected reason to contain {expected!r}, got: {reason!r}")
             return
@@ -448,7 +448,7 @@ def test_rejected_epic_type() -> None:
 # ---------------------------------------------------------------------------
 
 def test_spec_backfill_when_item_spec_is_none() -> None:
-    """When item.spec is None but lifecycle/{slug}/spec.md exists, filter_ready backfills item.spec."""
+    """When item.spec is None but cortex/lifecycle/{slug}/spec.md exists, filter_ready backfills item.spec."""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         slug = "test-slug"
@@ -558,7 +558,7 @@ def test_intra_session_mixed_blockers_excluded() -> None:
             status="refined",
             priority="medium",
             type="feature",
-            # no lifecycle_slug, no artifacts under lifecycle/ineligible-x/
+            # no lifecycle_slug, no artifacts under cortex/lifecycle/ineligible-x/
         )
         item_a = BacklogItem(
             id=202,

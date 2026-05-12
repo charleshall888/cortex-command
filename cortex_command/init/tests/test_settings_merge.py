@@ -79,18 +79,16 @@ def _make_args(
 
 
 def _target_path_for(repo_root: Path) -> str:
-    """Compute the canonical ``lifecycle/`` path string for a repo."""
-    return str(repo_root.resolve() / "lifecycle") + "/"
+    """Compute the canonical sandbox-grant path string for a repo.
 
-
-def _research_target_for(repo_root: Path) -> str:
-    """Compute the canonical ``research/`` path string for a repo (R9)."""
-    return str(repo_root.resolve() / "research") + "/"
+    Post-#202: the registration target is the umbrella ``cortex/`` path.
+    """
+    return str(repo_root.resolve() / "cortex") + "/"
 
 
 def _cortex_target_for(repo_root: Path) -> str:
-    """Compute the canonical ``cortex/`` path string for a repo."""
-    return str(repo_root.resolve() / "cortex") + "/"
+    """Alias of :func:`_target_path_for` kept for callsites that name it explicitly."""
+    return _target_path_for(repo_root)
 
 
 def _settings_path(home: Path) -> Path:
@@ -356,8 +354,8 @@ def test_concurrent_registers_under_flock(
     acquire ``LOCK_EX`` on the sibling lockfile before either has written.
     """
     fake_home = _isolate_home(monkeypatch, tmp_path)
-    target_a = "/repo-a/lifecycle/sessions/"
-    target_b = "/repo-b/lifecycle/sessions/"
+    target_a = "/repo-a/cortex/"
+    target_b = "/repo-b/cortex/"
 
     ctx = multiprocessing.get_context("fork")
     barrier = ctx.Barrier(2)
@@ -402,8 +400,8 @@ def test_staggered_registers_post_replace(
     Final assertion: both entries present in the final allowWrite.
     """
     fake_home = _isolate_home(monkeypatch, tmp_path)
-    target_a = "/caller-a/lifecycle/sessions/"
-    target_b = "/caller-b/lifecycle/sessions/"
+    target_a = "/caller-a/cortex/"
+    target_b = "/caller-b/cortex/"
 
     post_replace_event = threading.Event()
     real_atomic_write = settings_merge.atomic_write
@@ -458,8 +456,8 @@ def test_failed_caller_a_does_not_block_b_from_lock(
     winning caller anything other than releasing the lock cleanly.
     """
     fake_home = _isolate_home(monkeypatch, tmp_path)
-    target_a = "/caller-a/lifecycle/sessions/"
-    target_b = "/caller-b/lifecycle/sessions/"
+    target_a = "/caller-a/cortex/"
+    target_b = "/caller-b/cortex/"
 
     # Seed a pre-state so we can prove B's write doesn't lose it.
     pre_existing = {"sandbox": {"filesystem": {"allowWrite": ["/kept/"]}}}
@@ -541,7 +539,7 @@ def test_partial_failure_recovery_step5(
         init_main(_make_args(repo))
 
     # Scaffold + marker present.
-    assert (repo / ".cortex-init").exists()
+    assert (repo / "cortex" / ".cortex-init").exists()
     assert (repo / "cortex" / "lifecycle" / "README.md").exists()
     assert (repo / "cortex" / "requirements" / "project.md").exists()
 
@@ -549,7 +547,7 @@ def test_partial_failure_recovery_step5(
     assert settings.read_bytes() == pre_bytes
 
     # Capture marker's initialized_at for the refresh assertion.
-    marker_before = json.loads((repo / ".cortex-init").read_text(encoding="utf-8"))
+    marker_before = json.loads((repo / "cortex" / ".cortex-init").read_text(encoding="utf-8"))
 
     # Restore atomic_write and re-run with --update. Entry lands; marker refreshed.
     monkeypatch.setattr(
@@ -564,7 +562,7 @@ def test_partial_failure_recovery_step5(
     data = json.loads(settings.read_text(encoding="utf-8"))
     assert _cortex_target_for(repo) in data["sandbox"]["filesystem"]["allowWrite"]
 
-    marker_after = json.loads((repo / ".cortex-init").read_text(encoding="utf-8"))
+    marker_after = json.loads((repo / "cortex" / ".cortex-init").read_text(encoding="utf-8"))
     assert marker_after["initialized_at"] != marker_before["initialized_at"]
 
 
@@ -602,12 +600,12 @@ def test_partial_failure_recovery_step4(
 
     # Scaffold files landed; marker did not.
     assert (repo / "cortex" / "lifecycle" / "README.md").exists()
-    assert not (repo / ".cortex-init").exists()
+    assert not (repo / "cortex" / ".cortex-init").exists()
 
     # Recovery with --update.
     rc = init_main(_make_args(repo, update=True))
     assert rc == 0
-    assert (repo / ".cortex-init").exists()
+    assert (repo / "cortex" / ".cortex-init").exists()
     data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
     assert _cortex_target_for(repo) in data["sandbox"]["filesystem"]["allowWrite"]
 
@@ -669,10 +667,10 @@ def test_partial_failure_recovery_step3(
     # Orphan repaired.
     assert ".cortex-init-backu" not in gi_lines
     # Both required patterns land.
-    assert ".cortex-init" in gi_lines
-    assert ".cortex-init-backup/" in gi_lines
+    assert "cortex/.cortex-init" in gi_lines
+    assert "cortex/.cortex-init-backup/" in gi_lines
     # Marker lands.
-    assert (repo / ".cortex-init").exists()
+    assert (repo / "cortex" / ".cortex-init").exists()
 
 
 def test_partial_failure_recovery_step2(
@@ -730,7 +728,7 @@ def test_partial_failure_recovery_step2(
     missing = [rel for rel in SCAFFOLD_FILES if not (repo / rel).exists()]
     assert len(present) == 3
     assert len(missing) == 1
-    assert not (repo / ".cortex-init").exists()
+    assert not (repo / "cortex" / ".cortex-init").exists()
 
     # Taint one of the partially-landed files so the drift report has
     # something to surface on the recovery run.
@@ -749,7 +747,7 @@ def test_partial_failure_recovery_step2(
     # All 5 scaffold files now present.
     for rel in SCAFFOLD_FILES:
         assert (repo / rel).exists()
-    assert (repo / ".cortex-init").exists()
+    assert (repo / "cortex" / ".cortex-init").exists()
 
     # The tainted file was NOT rewritten by --update (additive invariant).
     assert tainted.read_text(encoding="utf-8") == "TAINT\n"
@@ -813,8 +811,8 @@ def test_sigint_mid_merge_releases_lock(
     settings.write_text(json.dumps(pre_existing, indent=2) + "\n", encoding="utf-8")
     pre_bytes = settings.read_bytes()
 
-    target_subprocess = "/subprocess-caller/lifecycle/sessions/"
-    target_in_test = "/in-test-caller/lifecycle/sessions/"
+    target_subprocess = "/subprocess-caller/cortex/"
+    target_in_test = "/in-test-caller/cortex/"
 
     # Launch the subprocess that will hold the lock.
     proc = subprocess.Popen(

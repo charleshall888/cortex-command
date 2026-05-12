@@ -6,7 +6,7 @@ Pins bash-script vs Python-helper equality at CI (spec Edge Cases:
 tests/fixtures/bin_parity/<slug>/, the test:
 
   1. Stages the fixture into a tmp_path with the layout the bin scripts
-     expect (`<cwd>/lifecycle/<slug>/...`).
+     expect (`<cwd>/cortex/lifecycle/<slug>/...`).
   2. Invokes the bin scripts via subprocess with cwd=tmp_path.
   3. Compares each JSON output field against the Python source-of-truth
      (`cortex_command.common.read_tier`, `read_criticality`, and the
@@ -61,7 +61,7 @@ def _clear_lifecycle_caches() -> None:
 
 
 def _stage_fixture(slug: str, tmp_path: Path) -> Path:
-    """Copy tests/fixtures/bin_parity/<slug>/ into tmp_path/lifecycle/<slug>/.
+    """Copy tests/fixtures/bin_parity/<slug>/ into tmp_path/cortex/lifecycle/<slug>/.
 
     Returns the tmp_path (to use as cwd for subprocess invocations).
     """

@@ -39,7 +39,7 @@ from cortex_command.critical_review import (
 
 @pytest.fixture
 def lifecycle_layout(tmp_path: Path) -> dict:
-    """Build a minimal ``lifecycle/foo/`` tree with a real file and a symlink.
+    """Build a minimal ``cortex/lifecycle/foo/`` tree with a real file and a symlink.
 
     Returns a dict with keys:
         lifecycle_root: tmp_path/'lifecycle'
@@ -100,7 +100,7 @@ def test_module_api_rejects_path_outside_lifecycle_root(lifecycle_layout: dict) 
 
 
 def test_module_api_accepts_path_under_matching_feature(lifecycle_layout: dict) -> None:
-    """Req 9b auto-trigger: feature='foo' accepted when path is under lifecycle/foo/."""
+    """Req 9b auto-trigger: feature='foo' accepted when path is under cortex/lifecycle/foo/."""
     good = lifecycle_layout["good_file"]
     root = lifecycle_layout["lifecycle_root"]
     resolved = validate_artifact_path(str(good), str(root), feature="foo")
@@ -108,7 +108,7 @@ def test_module_api_accepts_path_under_matching_feature(lifecycle_layout: dict) 
 
 
 def test_module_api_rejects_path_under_mismatched_feature(lifecycle_layout: dict) -> None:
-    """Req 9b auto-trigger: feature='bar' rejected when path is under lifecycle/foo/."""
+    """Req 9b auto-trigger: feature='bar' rejected when path is under cortex/lifecycle/foo/."""
     good = lifecycle_layout["good_file"]
     root = lifecycle_layout["lifecycle_root"]
     with pytest.raises(ValueError) as exc_info:

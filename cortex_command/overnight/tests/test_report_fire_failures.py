@@ -48,7 +48,7 @@ def _make_failure(
         error_text=error_text,
         label=label,
         session_id=session_id,
-        session_dir=session_dir or Path("/tmp/lifecycle/sessions") / session_id,
+        session_dir=session_dir or Path("/tmp/cortex/lifecycle/sessions") / session_id,
     )
 
 
@@ -75,7 +75,7 @@ def test_render_single_failure_includes_section_header_and_entry() -> None:
             error_text="cortex binary not found at /usr/local/bin/cortex",
             label="com.charleshall.cortex-command.overnight-schedule.alpha.1",
             session_id="overnight-2026-05-04-2200",
-            session_dir=Path("/Users/me/proj/lifecycle/sessions/overnight-2026-05-04-2200"),
+            session_dir=Path("/Users/me/proj/cortex/lifecycle/sessions/overnight-2026-05-04-2200"),
         ),
     ]
     output = render_scheduled_fire_failures(data)
@@ -93,7 +93,7 @@ def test_render_single_failure_includes_section_header_and_entry() -> None:
 
 def test_render_single_failure_contains_absolute_marker_path() -> None:
     """The rendered section includes the absolute marker path for diagnostics."""
-    session_dir = Path("/Users/me/proj/lifecycle/sessions/overnight-2026-05-04-2200")
+    session_dir = Path("/Users/me/proj/cortex/lifecycle/sessions/overnight-2026-05-04-2200")
     data = ReportData()
     data.scheduled_fire_failures = [
         _make_failure(session_dir=session_dir),
@@ -116,21 +116,21 @@ def test_render_multiple_failures_renders_every_entry() -> None:
             ts="2026-05-04T22:00:11Z",
             error_class="EPERM",
             session_id="session-aaa",
-            session_dir=Path("/tmp/lifecycle/sessions/session-aaa"),
+            session_dir=Path("/tmp/cortex/lifecycle/sessions/session-aaa"),
             label="com.charleshall.cortex-command.overnight-schedule.aaa.1",
         ),
         _make_failure(
             ts="2026-05-05T23:30:00Z",
             error_class="command_not_found",
             session_id="session-bbb",
-            session_dir=Path("/tmp/lifecycle/sessions/session-bbb"),
+            session_dir=Path("/tmp/cortex/lifecycle/sessions/session-bbb"),
             label="com.charleshall.cortex-command.overnight-schedule.bbb.2",
         ),
         _make_failure(
             ts="2026-05-06T01:15:42Z",
             error_class="EPERM",
             session_id="session-ccc",
-            session_dir=Path("/tmp/lifecycle/sessions/session-ccc"),
+            session_dir=Path("/tmp/cortex/lifecycle/sessions/session-ccc"),
             label="com.charleshall.cortex-command.overnight-schedule.ccc.3",
         ),
     ]

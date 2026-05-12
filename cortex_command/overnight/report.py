@@ -595,7 +595,7 @@ def render_completed_features(data: ReportData) -> str:
 def render_pending_drift(data: ReportData) -> str:
     """Render a Requirements Drift Flags section for non-completed features.
 
-    Scans ``lifecycle/*/review.md`` for features that are NOT in the
+    Scans ``cortex/lifecycle/*/review.md`` for features that are NOT in the
     merged set (already rendered in the completed section) and NOT in a
     re-implementing state (stale review.md from a prior cycle).  For the
     remaining features, reads the Requirements Drift section and collects
@@ -1228,9 +1228,9 @@ _GIT_COMMIT_TARGETS = (
 def collect_sandbox_denials(session_id: str) -> dict[str, int]:
     """Classify per-session Bash sandbox denials into closed-enum categories.
 
-    Reads ``lifecycle/sessions/<session_id>/tool-failures/bash.log`` (the
+    Reads ``cortex/lifecycle/sessions/<session_id>/tool-failures/bash.log`` (the
     tracker's per-session bash failure log, with ``command:`` and ``stderr:``
-    fields per spec R3a) and the union of ``lifecycle/sessions/<session_id>/
+    fields per spec R3a) and the union of ``cortex/lifecycle/sessions/<session_id>/
     sandbox-deny-lists/*.json`` sidecar deny-lists (per spec R2).  Filters to
     failures whose stderr contains ``Operation not permitted`` and runs the
     four-layer classifier:
@@ -1629,7 +1629,7 @@ def _suggest_next_step(error: str) -> str:
 
 def _read_last_task_output(
     feature: str,
-    pipeline_events_path: Path = Path("lifecycle/pipeline-events.log"),
+    pipeline_events_path: Path = Path("cortex/lifecycle/pipeline-events.log"),
 ) -> str:
     """Read the most recent task_output event for a feature from the pipeline events log.
 

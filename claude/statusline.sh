@@ -377,7 +377,7 @@ if [ -d "$_lc_base" ]; then
     #
     # STRUCTURAL EXCEPTION: This is a deliberate bash-only mirror of
     # cortex_command.common.detect_lifecycle_phase(). The statusline operates under
-    # a < 500ms render latency budget (see requirements/observability.md:23, 91),
+    # a < 500ms render latency budget (see cortex/requirements/observability.md:23, 91),
     # which prohibits subprocessing to a Python interpreter on every render. All
     # other lifecycle phase detection in the codebase delegates to the canonical
     # Python implementation; the statusline is the documented exception.

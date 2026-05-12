@@ -13,7 +13,7 @@ from cortex_command.overnight.daytime_dispatch_writer import main
 
 @pytest.fixture
 def feature_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Set CWD to tmp_path and create lifecycle/{feature}/ subdir."""
+    """Set CWD to tmp_path and create cortex/lifecycle/{feature}/ subdir."""
     monkeypatch.chdir(tmp_path)
     feature = "test-feature"
     (tmp_path / "cortex" / "lifecycle" / feature).mkdir(parents=True)

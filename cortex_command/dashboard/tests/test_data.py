@@ -651,13 +651,13 @@ class TestParseLastSession(unittest.TestCase):
         )
 
     def test_returns_none_when_sessions_dir_absent(self):
-        """Returns None when lifecycle/sessions/ does not exist."""
+        """Returns None when cortex/lifecycle/sessions/ does not exist."""
         with tempfile.TemporaryDirectory() as tmp:
             result = parse_last_session(Path(tmp))
             self.assertIsNone(result)
 
     def test_returns_none_when_sessions_dir_empty(self):
-        """Returns None when lifecycle/sessions/ has no session subdirectories."""
+        """Returns None when cortex/lifecycle/sessions/ has no session subdirectories."""
         with tempfile.TemporaryDirectory() as tmp:
             lifecycle_dir = Path(tmp)
             (lifecycle_dir / "sessions").mkdir()
