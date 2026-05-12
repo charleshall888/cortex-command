@@ -68,7 +68,7 @@ def test_status_json_includes_scheduled_start_null_when_absent(
 ) -> None:
     """JSON envelope reports ``scheduled_start: null`` when the field is absent."""
     session_id = "overnight-2026-05-04-2200"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     _write_state(session_dir, session_id, scheduled_start=None)
 
@@ -95,7 +95,7 @@ def test_status_json_includes_scheduled_start_iso_when_present(
 ) -> None:
     """JSON envelope echoes ``scheduled_start`` as an ISO 8601 string."""
     session_id = "overnight-2026-05-04-2300"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     iso = "2026-05-05T22:00:00"
     _write_state(session_dir, session_id, scheduled_start=iso)
@@ -125,7 +125,7 @@ def test_status_human_includes_scheduled_fire_line_when_present(
 ) -> None:
     """Human output prints ``Scheduled fire: <iso>`` when scheduled_start is set."""
     session_id = "overnight-2026-05-04-0100"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     iso = "2026-05-05T22:00:00"
     _write_state(session_dir, session_id, scheduled_start=iso)
@@ -156,7 +156,7 @@ def test_status_human_omits_scheduled_fire_line_when_absent(
 ) -> None:
     """Human output does not print Scheduled fire when scheduled_start is null."""
     session_id = "overnight-2026-05-04-0200"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     _write_state(session_dir, session_id, scheduled_start=None)
 

@@ -688,8 +688,8 @@ def test_unregister_accepts_non_git_path(
     fake_home = _isolate_home(monkeypatch, tmp_path)
 
     # Seed settings.local.json with an entry that would normally be
-    # registered for this path.
-    target_path = str(non_git.resolve() / "lifecycle" / "sessions") + "/"
+    # registered for this path (the new umbrella cortex/ grant).
+    target_path = str(non_git.resolve() / "cortex") + "/"
     settings_path = fake_home / ".claude" / "settings.local.json"
     settings_path.write_text(
         json.dumps(

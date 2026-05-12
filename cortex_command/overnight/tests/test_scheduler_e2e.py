@@ -199,7 +199,7 @@ def test_schedule_then_cancel_full_lifecycle(
 ) -> None:
     """Schedule fires, creates all four artifacts; cancel removes all four."""
     session_id = "overnight-2026-05-04-2200"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
@@ -312,7 +312,7 @@ def test_fail_marker_surfaces_in_status(
     ``handle_status`` populates ``fire_failures`` in the JSON envelope.
     """
     session_id = "overnight-2026-05-04-2300"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 

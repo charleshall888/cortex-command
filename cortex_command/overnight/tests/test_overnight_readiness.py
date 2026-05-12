@@ -27,8 +27,8 @@ def test_eligible() -> None:
         root = Path(tmp)
         # Slug of "Eligible Feature" → "eligible-feature"
         slug = "eligible-feature"
-        research_path = root / "lifecycle" / slug / "research.md"
-        spec_path = root / "lifecycle" / slug / "spec.md"
+        research_path = root / "cortex" / "lifecycle" / slug / "research.md"
+        spec_path = root / "cortex" / "lifecycle" / slug / "spec.md"
         research_path.parent.mkdir(parents=True, exist_ok=True)
         research_path.write_text("# Research\n")
         spec_path.write_text("# Spec\n")
@@ -163,7 +163,7 @@ def test_rejected_no_spec() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         slug = "no-spec-feature"
-        research_path = root / "lifecycle" / slug / "research.md"
+        research_path = root / "cortex" / "lifecycle" / slug / "research.md"
         research_path.parent.mkdir(parents=True, exist_ok=True)
         research_path.write_text("# Research\n")
         # spec file deliberately omitted
@@ -234,7 +234,7 @@ def test_rejected_spec_missing() -> None:
         root = Path(tmp)
         # Create the research file but NOT the spec file
         slug = "spec-missing-feature"
-        research_path = root / "lifecycle" / slug / "research.md"
+        research_path = root / "cortex" / "lifecycle" / slug / "research.md"
         research_path.parent.mkdir(parents=True, exist_ok=True)
         research_path.write_text("# Research\n")
         # spec file deliberately omitted
@@ -272,7 +272,7 @@ def test_rejected_no_lifecycle_spec() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         slug = "no-lifecycle-spec-feature"
-        research_path = root / "lifecycle" / slug / "research.md"
+        research_path = root / "cortex" / "lifecycle" / slug / "research.md"
         research_path.parent.mkdir(parents=True, exist_ok=True)
         research_path.write_text("# Research\n")
         # lifecycle/{slug}/spec.md deliberately absent
@@ -311,8 +311,8 @@ def test_lifecycle_slug_explicit() -> None:
         # "Alpha Feature" slugifies to "alpha-feature"; use a different explicit slug
         # to prove that the explicit value is used, not the title-derived one.
         explicit_slug = "custom-slug"
-        research_path = root / "lifecycle" / explicit_slug / "research.md"
-        spec_path = root / "lifecycle" / explicit_slug / "spec.md"
+        research_path = root / "cortex" / "lifecycle" / explicit_slug / "research.md"
+        spec_path = root / "cortex" / "lifecycle" / explicit_slug / "spec.md"
         research_path.parent.mkdir(parents=True, exist_ok=True)
         research_path.write_text("# Research\n")
         spec_path.write_text("# Spec\n")
@@ -346,8 +346,8 @@ def test_lifecycle_slug_none_fallback() -> None:
         root = Path(tmp)
         # slugify("Fallback Feature") → "fallback-feature"
         derived_slug = "fallback-feature"
-        research_path = root / "lifecycle" / derived_slug / "research.md"
-        spec_path = root / "lifecycle" / derived_slug / "spec.md"
+        research_path = root / "cortex" / "lifecycle" / derived_slug / "research.md"
+        spec_path = root / "cortex" / "lifecycle" / derived_slug / "spec.md"
         research_path.parent.mkdir(parents=True, exist_ok=True)
         research_path.write_text("# Research\n")
         spec_path.write_text("# Spec\n")
@@ -452,8 +452,8 @@ def test_spec_backfill_when_item_spec_is_none() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         slug = "test-slug"
-        research_path = root / "lifecycle" / slug / "research.md"
-        spec_path = root / "lifecycle" / slug / "spec.md"
+        research_path = root / "cortex" / "lifecycle" / slug / "research.md"
+        spec_path = root / "cortex" / "lifecycle" / slug / "spec.md"
         research_path.parent.mkdir(parents=True, exist_ok=True)
         research_path.write_text("# Research\n")
         spec_path.write_text("# Spec\n")
@@ -486,7 +486,7 @@ def test_intra_session_blocked_item_promoted() -> None:
         slug_b = "dependent-b"
 
         for slug in (slug_a, slug_b):
-            lc_dir = root / "lifecycle" / slug
+            lc_dir = root / "cortex" / "lifecycle" / slug
             lc_dir.mkdir(parents=True, exist_ok=True)
             (lc_dir / "research.md").write_text("# Research\n")
             (lc_dir / "spec.md").write_text("# Spec\n")
@@ -546,7 +546,7 @@ def test_intra_session_mixed_blockers_excluded() -> None:
 
         slug_a = "blocker-eligible-a"
         # Create lifecycle artifacts only for A
-        lc_dir_a = root / "lifecycle" / slug_a
+        lc_dir_a = root / "cortex" / "lifecycle" / slug_a
         lc_dir_a.mkdir(parents=True, exist_ok=True)
         (lc_dir_a / "research.md").write_text("# Research\n")
         (lc_dir_a / "spec.md").write_text("# Spec\n")
@@ -606,13 +606,13 @@ def test_intra_session_blocked_missing_spec() -> None:
         slug_b = "spec-dependent-b"
 
         # A has full artifacts
-        lc_dir_a = root / "lifecycle" / slug_a
+        lc_dir_a = root / "cortex" / "lifecycle" / slug_a
         lc_dir_a.mkdir(parents=True, exist_ok=True)
         (lc_dir_a / "research.md").write_text("# Research\n")
         (lc_dir_a / "spec.md").write_text("# Spec\n")
 
         # B has research.md but NOT spec.md
-        lc_dir_b = root / "lifecycle" / slug_b
+        lc_dir_b = root / "cortex" / "lifecycle" / slug_b
         lc_dir_b.mkdir(parents=True, exist_ok=True)
         (lc_dir_b / "research.md").write_text("# Research\n")
         # spec.md deliberately omitted
@@ -664,7 +664,7 @@ def test_intra_session_multilevel_chain() -> None:
         slug_c = "chain-item-c"
 
         for slug in (slug_a, slug_b, slug_c):
-            lc_dir = root / "lifecycle" / slug
+            lc_dir = root / "cortex" / "lifecycle" / slug
             lc_dir.mkdir(parents=True, exist_ok=True)
             (lc_dir / "research.md").write_text("# Research\n")
             (lc_dir / "spec.md").write_text("# Spec\n")
@@ -743,7 +743,7 @@ def test_intra_session_round_assignment() -> None:
         slug_b = "dependent-item"
 
         for slug in (slug_a, slug_b):
-            lc_dir = root / "lifecycle" / slug
+            lc_dir = root / "cortex" / "lifecycle" / slug
             lc_dir.mkdir(parents=True, exist_ok=True)
             (lc_dir / "research.md").write_text("# Research\n")
             (lc_dir / "spec.md").write_text("# Spec\n")
