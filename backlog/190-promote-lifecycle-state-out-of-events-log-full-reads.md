@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 72260d5f-c01b-4600-8b84-0b3b5f4f3a15
 title: "Promote lifecycle state out of events.log full-reads"
 type: feature
-status: refined
+status: complete
 priority: high
 parent: 187
 blocked-by: []
@@ -15,6 +15,7 @@ spec: lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/spec.md
 areas: [skills]
 lifecycle_phase: implement
 plan: lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/plan.md
+session_id: null
 ---
 
 # Promote lifecycle state out of events.log full-reads

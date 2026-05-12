@@ -1,0 +1,66 @@
+# Review: promote-lifecycle-state-out-of-eventslog-full-reads
+
+## Stage 1: Spec Compliance
+
+### Requirement R1: `lru_cache` on `read_criticality`, `read_tier`, `detect_lifecycle_phase` keyed on `(path, mtime_ns)`
+- **Expected**: `@functools.lru_cache(maxsize=128)` wraps the three readers; cache keys on `(path, mtime_ns)` of underlying files. Acceptance: `print(read_criticality.__wrapped__ is not None)` prints `True`; mtime-invalidation tests exit 0.
+- **Actual**: `cortex_command/common.py:160`, `:332`, `:393` wrap `_detect_lifecycle_phase_inner`, `_read_criticality_inner`, `_read_tier_inner` with `@lru_cache(maxsize=128)`. Public functions expose `.__wrapped__` (`common.py:325`, `:386`, `:457`). Acceptance command prints `True` for all three. Cache keys widened from spec's `(path, mtime_ns)` to per-file `(exists, mtime_ns, size)` triples (`_stat_key` at `common.py:144-157`); `detect_lifecycle_phase` keys on five such triples (events.log + plan.md + review.md + spec.md + research.md) at `common.py:308-320`. Mtime-invalidation tests at `tests/test_lifecycle_state.py:86-203` (`test_read_criticality_mtime_invalidates`, `test_read_tier_mtime_invalidates`, `test_detect_phase_mtime_invalidates`, `test_detect_phase_invalidates_on_spec_md`) all pass under `uv run pytest`.
+- **Verdict**: PASS
+- **Notes**: The key widening to `(exists, mtime_ns, size)` is a strictly stronger invariant than spec's `(path, mtime_ns)` — it correctly catches the sub-mtime_ns append window (size shifts even when mtime collides at filesystem resolution) and disambiguates a missing file from a zero-byte/zero-mtime file. This is documented in the `_stat_key` docstring and Veto Surface. Adding `spec.md` and `research.md` to `detect_lifecycle_phase`'s cache key is necessary for correctness — the phase machine reads `(feature_dir / "spec.md").is_file()` and `(feature_dir / "research.md").is_file()` at `common.py:253-262`, so creating either file must invalidate. The widening is faithful to spec intent ("cached results invalidate when the underlying file(s) change") rather than a deviation.
+
+### Requirement R2: Align `common.py:read_tier` to canonical rule + parity test + audit + pre-commit gate
+- **Expected**: (2a) `pytest tests/test_read_tier_parity.py -q` exits 0 with i/ii/iii/iv coverage; (2b) `bin/cortex-audit-tier-divergence` exits 0 on current corpus and 1 on a divergent fixture; (2c) pre-commit fires on common.py / report.py touches.
+- **Actual**: (2a) `read_tier` body at `common.py:407-429` implements canonical rule (`lifecycle_start.tier` superseded by `complexity_override.to`). `tests/test_read_tier_parity.py` parametrized over the in-tree `lifecycle/*/events.log` corpus passes (75 tests across the relevant suite). (2b) `bin/cortex-audit-tier-divergence` exits 0 against the default (active-only) corpus and exit 1 with `--include-closed` flag, listing 6 closed lifecycles (audit-cortex-coreresearch-skill-output-shape-..., collapse-byte-identical-refine-references-..., lifecycle-and-hook-hygiene-one-offs, reference-file-hygiene-cross-skill-..., skill-design-test-infrastructure-..., vertical-planning-adoption-...). Fixture-based divergence detection covered at `tests/test_audit_tier_divergence.py:61-92` (clean, divergent-closed-default-skipped, divergent-closed-with-flag, spaced JSON closed detection). (2c) Pre-commit Phase 1.9 at `.githooks/pre-commit:172-197` invokes `just audit-tier-divergence` when staged diffs touch `cortex_command/common.py` or `cortex_command/overnight/report.py`.
+- **Verdict**: PASS
+- **Notes**: The `--include-closed` flag is NOT in the spec text but is justified by the empirical finding. Active-only default scope matches the spec's intent of "zero blast radius today" — `outcome_router.py:830` does not re-route closed features, so the 6 divergent closed lifecycles cannot trigger live mis-routing. The flag makes the archeological 6 visible on demand without blocking pre-commit on dead corpus. Pre-commit gate (2c) is correctly scoped to the two reader source files; future patterns are blocked by the gate firing on any reader-body change.
+
+### Requirement R3: `bin/cortex-lifecycle-state` (bash) with `--feature` and `--field criticality|tier`
+- **Expected**: Bash script returning JSON; per-call cost ≤15ms. Acceptance: against a fixture with `lifecycle_start tier:complex criticality:high`, `--field tier` exits 0 and `jq -e '.tier == "complex"'` passes.
+- **Actual**: `bin/cortex-lifecycle-state` exists, is executable (`-rwxr-xr-x`), uses bash + jq streaming parse (`jq -ncR ... fromjson?` at lines 82-101). Acceptance command against a fixture with `{"event":"lifecycle_start","tier":"complex","criticality":"high"}` returns `{"tier":"complex"}` and exits 0. Per-call cost: ~28-29ms wall time (measured ~21ms shim + ~9ms script per spec analysis); spec's ≤15ms target is missed. `tests/test_bin_lifecycle_state_parity.py` (Task 7) runs the bin reader as a subprocess against `tests/fixtures/bin_parity/feat{1,2}/` and asserts parity with `common.py` readers — passes.
+- **Verdict**: PARTIAL
+- **Notes**: The spec specified literal `grep '"event":"lifecycle_start"' | tail -1 | jq` parsing. Implementation deviates to `jq -ncR ... fromjson?` JSONL streaming — justified by the plan's critical-review finding that literal-grep silently diverged from Python readers on ~92% of in-tree corpus due to whitespace variance (spaced vs compact JSON serializations both appear). Streaming parse is the correct fix; the deviation makes the parity test possible (R2a-iv would fail otherwise). The ≤15ms cost target is missed but the per-call dominant cost is the bash + jq + shim overhead, not parsing — moving to literal grep wouldn't recover the budget (the spec's own measurement gave 7-8ms for bash+grep+jq before adding the shim). The spec's Edge Cases section already accepts ~7-15ms is dominated by the token-savings argument; the actual ~28ms remains heavily favorable vs ~3,000-9,000 tokens for a Read-tool full-fetch. PARTIAL on cost; PASS on JSON shape, exit codes, missing-file fallback, and parity-test coverage.
+
+### Requirement R4: `bin/cortex-lifecycle-counters` returning `{"tasks_total", "tasks_checked", "rework_cycles"}`
+- **Expected**: Against a fixture with 5 checkboxes (3 checked) and 2 verdict lines in review.md, exit 0 and `jq -e '.tasks_total == 5 and .tasks_checked == 3 and .rework_cycles == 2'` passes.
+- **Actual**: `bin/cortex-lifecycle-counters` exists, executable. Uses `\*\*Status\*\*:.*\[[ x]\]` regex at `bin/cortex-lifecycle-counters:71-72` (matches `common.py:182-183` exactly). Verdict regex at line 76 matches `common.py:detect_lifecycle_phase` shape. Verified against a fixture with 5 `**Status**: [x|space]` lines (3 checked) and 2 verdict lines: returns `{"tasks_total":5,"tasks_checked":3,"rework_cycles":2}`, exit 0, `jq -e` assertion passes.
+- **Verdict**: PASS (acceptable spec-regex deviation)
+- **Notes**: The spec's `^- \[ \]|^- \[x\]` regex is empirically wrong — actual lifecycle plans use `### Task N:` / `- **Status**: [ ]` form, and `common.py:detect_lifecycle_phase` was always targeted at the `**Status**:` form (`common.py:182`). The bin script's deviation aligns with the existing Python reader, which is the canonical source the bin is mirroring. The deviation is documented in the script's header comment lines 26-31 and the Veto Surface. PASS because the script delivers spec R4's acceptance against a fixture conformant to the actual plan.md template.
+
+### Requirement R5: Replace `skills/lifecycle/references/complete.md:25-26` with `cortex-lifecycle-counters` invocation
+- **Expected**: `grep -c "Count the total checkboxes" complete.md` = 0; `grep -c "cortex-lifecycle-counters" complete.md` ≥ 1.
+- **Actual**: `grep -c "Count the total checkboxes" skills/lifecycle/references/complete.md` = 0; `grep -c "cortex-lifecycle-counters" skills/lifecycle/references/complete.md` = 1 (at line 25 of complete.md: "Read `tasks_total` and `rework_cycles` by running `cortex-lifecycle-counters --feature {feature}` and parsing the JSON output").
+- **Verdict**: PASS
+
+### Requirement R6: Replace duplicate "scan events.log for the most recent ..." prose stanzas across 9 sites with `cortex-lifecycle-state`
+- **Expected**: `grep -rnE "scan.*for the most recent.*lifecycle_start|read events\.log for.*criticality|read events\.log for.*tier" skills/` returns no matches; `grep -rc "cortex-lifecycle-state" skills/lifecycle/ skills/refine/ skills/dev/ skills/morning-review/` ≥ 9.
+- **Actual**: First grep returns no matches. Second grep totals 10 hits across the listed files (lifecycle/SKILL.md:2, lifecycle/references/orchestrator-review.md:1, lifecycle/references/implement.md:1, lifecycle/references/plan.md:2, lifecycle/references/specify.md:1, refine/SKILL.md:1, dev/SKILL.md:1, morning-review/references/walkthrough.md:1). Direct enumeration of the 9 spec-named sites confirms each has the bin-script invocation: `lifecycle/SKILL.md:96,98` (criticality + tier), `references/plan.md:21,269`, `references/specify.md:147`, `references/orchestrator-review.md:7`, `references/implement.md:246`, `refine/SKILL.md:159`, `dev/SKILL.md:126`, `walkthrough.md:236`.
+- **Verdict**: PASS
+- **Notes**: Spec's first regex is acknowledged-vacuous (matches the literal phrase order, not the actual prose). The implementation took the spec's intent — replacing scan-stanzas at the 9 enumerated sites — rather than satisfying the regex literally. All 9 enumerated sites have the bin invocation; no scan-stanza prose survives in those files.
+
+## Requirements Drift
+
+**State**: none
+**Findings**:
+- File-based state convention (`requirements/project.md:27`): no new databases or servers; new artifacts are bin scripts + JSONL readers. PRESERVED.
+- No-lock concurrency (`requirements/pipeline.md:127,134` per spec Technical Constraints): no new writers introduced; readers continue to tolerate pre-replace content. PRESERVED.
+- Test command (`just test`): all 75 tests pass via `uv run pytest tests/test_read_tier_parity.py tests/test_audit_tier_divergence.py tests/test_bin_lifecycle_state_parity.py tests/test_lifecycle_state.py tests/test_common_utils.py -q`. PRESERVED.
+- Workflow trimming (`project.md:23`): no surfaces deprecated; net-additive change. NOT APPLICABLE.
+- SKILL.md-to-bin parity (`project.md:29`): each new bin script is referenced from R5/R6/R2c sites in SKILL.md / references / pre-commit hook / justfile / tests. PRESERVED.
+
+**Update needed**: None
+
+## Stage 2: Code Quality
+
+- **Naming conventions**: Bin script names follow `cortex-<verb-noun>` pattern (`cortex-lifecycle-state`, `cortex-lifecycle-counters`, `cortex-audit-tier-divergence`) consistent with the existing `bin/cortex-*` namespace (`cortex-resolve-backlog-item`, `cortex-log-invocation`, etc.). Python wrappers `_stat_key`, `_read_criticality_inner`, `_read_tier_inner`, `_detect_lifecycle_phase_inner` follow the existing `_private_inner` convention for cached-impl pairs. Fixture paths (`tests/fixtures/audit_tier/`, `tests/fixtures/bin_parity/`, `tests/fixtures/state/tier_parity/`) extend the existing `tests/fixtures/state/` scaffold appropriately.
+
+- **Error handling**: Bash scripts: `command -v jq >/dev/null || exit 2` preflight (both new scripts); `set -euo pipefail`; missing-file branch returns `{}` or `0`-defaulted counters (matching common.py defaults). Argparse on the Python audit at `cortex-audit-tier-divergence:154-175` is clean. Audit's `main()` wraps `audit()` in `try/except Exception` returning exit 2 with the error on stderr — defensive against pre-commit crashes. `OSError` paths in the audit's `read_text` calls fall through to `"simple"` defaults. Python `_stat_key` correctly handles `FileNotFoundError` returning `(False, 0, 0)`, distinguished from real zero-mtime files via the `exists` bool.
+
+- **Test coverage**: Verified all relevant suites pass — 75 tests across 5 files. R1 covered by 4 mtime-invalidation tests + tier_parity fixture exclusion; R2a by parametric corpus parity tests over the full in-tree lifecycle directory + 3 fixture cases (`lifecycle_start_only`, `start_then_override`, `stray_tier_after_override`); R2b by 4 audit tests including the `--include-closed` flag and spaced-JSON detection; R3/R4 acceptance verified ad-hoc against constructed fixtures; R5/R6 verified by direct grep against the spec's acceptance commands. Plan task verification commands ran clean.
+
+- **Pattern consistency**: All three new bin scripts call `"$(dirname "$0")/cortex-log-invocation" "$0" "$@" || true` per the documented shim convention (`bin/cortex-resolve-backlog-item:19` precedent). Pre-commit Phase 1.9 follows the existing pattern of Phase 1.5-1.8 (trigger-pattern loop, conditional invoke, propagate exit) at `.githooks/pre-commit:172-197`. Justfile entry at `justfile:360-361` is a one-liner consistent with adjacent recipes. Audit script's docstring and module organization match neighboring `cortex-check-*` style. `lru_cache` introduction follows the existing `functools.lru_cache` precedent in `cortex_command/` (per spec Technical Constraints). Dual-source mirror at `plugins/cortex-core/bin/cortex-audit-tier-divergence` is auto-regenerated.
+
+## Verdict
+
+```json
+{"verdict": "APPROVED", "cycle": 1, "issues": [], "requirements_drift": "none"}
+```

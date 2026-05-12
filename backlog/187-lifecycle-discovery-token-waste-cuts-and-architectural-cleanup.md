@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: 44c71e96-4f6a-4308-b045-785ac0d7822a
 title: "Lifecycle/discovery token-waste cuts and architectural cleanup"
 type: epic
-status: open
+status: complete
 priority: high
 blocked-by: []
 tags: [lifecycle, discovery, token-efficiency, architectural-cleanup]
