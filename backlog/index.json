@@ -91,34 +91,6 @@
     "repo": null
   },
   {
-    "id": 198,
-    "title": "Trim cortex-log-invocation shim cost (per-call ~21ms)",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "bin",
-      "performance",
-      "shim"
-    ],
-    "areas": [],
-    "created": "2026-05-11",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/trim-cortex-log-invocation-shim-cost-per-call-21ms/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "acb70ac0-3581-40bf-acb3-e09577f050b5",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "complete",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 200,
     "title": "Consolidate cortex-command artifacts under a single cortex/ root",
     "status": "refined",
