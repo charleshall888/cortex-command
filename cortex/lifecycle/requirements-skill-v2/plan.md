@@ -54,7 +54,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: trivial
 - **Context**: Review.md remains the consumer that originated the protocol; cross-link makes the shared reference authoritative without duplicating prose.
 - **Verification**: `grep -c "load-requirements.md\|tag-based.*loading" skills/lifecycle/references/review.md` ≥`1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit f4228e78)
 
 ### Task 4: Apply tag-based loading to discovery clarify + research (R3)
 - **Files**: `skills/discovery/references/clarify.md`, `skills/discovery/references/research.md`
