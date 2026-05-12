@@ -63,6 +63,36 @@
     "repo": null
   },
   {
+    "id": 206,
+    "title": "Improve discovery gate presentation and add no-tickets terminus",
+    "status": "in_progress",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "discovery",
+      "skills",
+      "agentic-layer"
+    ],
+    "areas": [
+      "skills"
+    ],
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "310f9146-0267-46ab-8e6d-f5cf8bbe50bd",
+    "lifecycle_slug": "improve-discovery-gate-presentation",
+    "session_id": "7fe2bb2f-c2c5-4e1f-bb1e-5c4af96787d7",
+    "lifecycle_phase": "specify",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 156,
     "title": "Make cortex-check-parity context-aware (skip tokens inside fenced code blocks)",
     "status": "deferred",
@@ -89,6 +119,37 @@
     "lifecycle_slug": "make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks",
     "session_id": null,
     "lifecycle_phase": "specify",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 205,
+    "title": "Auto-derive lifecycle slug from prose-style invocation args",
+    "status": "refined",
+    "priority": "low",
+    "type": "enhancement",
+    "tags": [
+      "skills",
+      "lifecycle",
+      "clarify",
+      "dx"
+    ],
+    "areas": [
+      "skills"
+    ],
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "7dedb72c-5931-4792-a9ae-efcc4afbac17",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },
