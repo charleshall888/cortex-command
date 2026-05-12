@@ -112,6 +112,54 @@ Combine findings into `research/{topic}/research.md`:
 |----------|--------|-------|---------------|
 | [A] | S/M/L/XL | [risks] | [prereqs] |
 
+## Architecture
+<!--
+Name the pieces the topic decomposes into by role, integration shape, and
+seam-level edges. This section is the source-of-truth input to the decompose
+phase; ticket bodies follow from it.
+
+For non-constructive topic shapes (diagnostic, policy, migration), the
+pieces can be expressed as rule/scope/exceptions OR sequence steps within
+the same Role/Integration/Edges shape — one permissive paragraph framing,
+not a separate template.
+-->
+
+### Pieces
+- [Piece name by role, not by mechanism — one bullet per piece]
+
+### Integration shape
+[How the pieces connect; named contract surfaces between pieces.]
+
+### Seam-level edges
+[Boundary breaks and dependencies — what each piece's edges land on.]
+
+### Why N pieces
+<!--
+Conditional: include this subsection ONLY when piece_count > 5.
+
+Falsification-framed structural-coherence gate (per spec R3): for each
+adjacent pair of pieces, attempt to merge them and record what specifically
+blocks the merge. **Merge if the two pieces share ≥1 named contract surface
+AND can be described in one Role/Integration/Edges paragraph without losing
+distinguishing detail.** Otherwise keep separate.
+
+The structural test is evaluable at discovery time — no implementation
+imagination required: the contract surfaces are named in the pieces'
+Role/Integration content; the paragraph-fit test is performed by attempting
+the merger description in-line. The piece_count > 5 threshold governs when
+this subsection fires.
+
+**Template walk-back rule (R1).** If the gate above instructs a merge,
+re-emit `### Pieces` and re-walk `### Integration shape` and
+`### Seam-level edges` with the merged piece-set before finalizing the
+Architecture section. The walk-back protocol re-runs §6 from `### Pieces`
+forward, not the full Architecture section. If a walk-back triggers another
+cascading merge, terminate after 2 walk-backs and escalate to user revision.
+-->
+
+- Adjacent pair [A ↔ B]: attempted merger — [what specifically blocks merge: distinguishing detail lost OR no shared named contract surface]. Verdict: keep separate / merge.
+- ...
+
 ## Decision Records
 <!-- Key trade-offs and alternatives considered -->
 

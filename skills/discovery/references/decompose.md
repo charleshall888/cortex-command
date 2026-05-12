@@ -120,6 +120,20 @@ Ticket bodies authored under the Role/Integration/Edges/Touch-points template ar
 
 The scanner runs once at decompose ticket-write time. Defense-in-depth at architecture-write time is deferred. The pre-commit hook is the second-actor surface that re-runs the check before any ticket lands in `backlog/`.
 
+#### Post-decompose batch-review gate (R15)
+
+After all N ticket bodies are authored AND the internal prescriptive-prose scanner has passed, BUT BEFORE any tickets commit to `backlog/`, a user-blocking gate fires. This restores the per-ticket review affordance that the prior R3 per-item-ack flow provided; without it, the user's first encounter with ticket bodies would be a pre-commit hook failure.
+
+The gate presents all ticket titles and bodies via a single AskUserQuestion-style surface and offers three options:
+
+- **`approve-all`** — proceed to write all N tickets to `backlog/`.
+- **`revise-piece <N>`** — open a free-text revision prompt scoped to ticket N's body. The agent re-walks ticket N's `## Role`, `## Integration`, `## Edges`, and `## Touch points` under the user's direction and re-presents the FULL batch (not just ticket N) at the gate. Loop continues until `approve-all` or all pieces are dropped.
+- **`drop-piece <N>`** — do not write ticket N to `backlog/`. Record the dropped piece in `decomposed.md` with a one-sentence rationale under a `## Dropped Items` heading. Continue the gate loop with the remaining tickets.
+
+The gate is user-blocking: no tickets commit to `backlog/` until `approve-all` fires (or all pieces are dropped).
+
+On each user response, emit one `approval_checkpoint_responded` event with `checkpoint: decompose-commit` and the chosen response. Use the helper module per the `cortex_command/discovery.py` interface (event emission lives in the helper; the prose here only names the event by its literal name `"event": "approval_checkpoint_responded"`).
+
 Follow the `/cortex-core:backlog add` conventions for each ticket:
 
 1. Scan filenames matching `[0-9]*-*.md` in both `backlog/` and `backlog/archive/` to find the highest existing numeric ID

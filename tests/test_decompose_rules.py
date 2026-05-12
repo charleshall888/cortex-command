@@ -12,10 +12,8 @@ This file covers the post-reframe decompose protocol per spec
 - §4 Single-piece branch (2 tests)
 - §4 Zero-piece branch (2 tests)
 - Uniform body template — Role/Integration/Edges/Touch-points (3 tests)
-
-Tests for the R15 batch-review gate and prescriptive-prose-check
-integration land in Task 5, alongside the source-of-truth prose they
-assert against.
+- R15 post-decompose batch-review gate (2 tests)
+- Prescriptive-prose-check integration (2 tests)
 """
 
 import re
@@ -236,4 +234,67 @@ def test_uniform_template_edge_vs_touchpoint_distinction(sections: dict[str, str
     # The worked example shows path:line in Touch points (not Edges).
     assert "## Touch points" in body and "## Edges" in body, (
         "worked example must show both ## Edges and ## Touch points sections"
+    )
+
+
+# ---- R15 post-decompose batch-review gate (2 tests) ----
+
+def test_r15_batch_review_gate_three_options_documented(sections: dict[str, str]) -> None:
+    """§5 documents the R15 gate's three options (approve-all/revise-piece/drop-piece)."""
+    body = _find_section(sections, "Create Backlog Tickets")
+    # All three options appear by literal name.
+    assert "approve-all" in body, "R15 gate must document the approve-all option"
+    assert "revise-piece" in body, "R15 gate must document the revise-piece <N> option"
+    assert "drop-piece" in body, "R15 gate must document the drop-piece <N> option"
+    # The gate is user-blocking before any tickets commit.
+    assert "user-blocking" in body.lower(), (
+        "R15 gate must be documented as user-blocking"
+    )
+    # Revise re-presents the FULL batch, not just ticket N.
+    assert "full batch" in body.lower() or "FULL batch" in body, (
+        "revise-piece must re-present the full batch (not just ticket N)"
+    )
+
+
+def test_r15_batch_review_gate_emits_checkpoint_event(sections: dict[str, str]) -> None:
+    """§5 names the `approval_checkpoint_responded` event with `decompose-commit` checkpoint."""
+    body = _find_section(sections, "Create Backlog Tickets")
+    assert "approval_checkpoint_responded" in body, (
+        "R15 gate must emit the approval_checkpoint_responded event by name"
+    )
+    assert "decompose-commit" in body, (
+        "R15 gate must specify the `checkpoint: decompose-commit` field"
+    )
+
+
+# ---- Prescriptive-prose-check integration (2 tests) ----
+
+def test_prescriptive_prose_check_named_in_section_5(sections: dict[str, str]) -> None:
+    """§5 names the `bin/cortex-check-prescriptive-prose` scanner and its pre-commit role."""
+    body = _find_section(sections, "Create Backlog Tickets")
+    assert "cortex-check-prescriptive-prose" in body, (
+        "§5 must reference the cortex-check-prescriptive-prose scanner by name"
+    )
+    # Pre-commit hook is the second-actor surface.
+    assert "pre-commit" in body.lower(), (
+        "§5 must establish the pre-commit hook as the second-actor surface"
+    )
+
+
+def test_prescriptive_prose_check_section_partitioning(sections: dict[str, str]) -> None:
+    """§5 documents the forbidden/permitted sections governing the LEX-1 scanner."""
+    body = _find_section(sections, "Create Backlog Tickets")
+    # Forbidden sections per ticket body.
+    assert "Forbidden sections" in body, (
+        "§5 must name the Forbidden sections (Role, Integration, Edges)"
+    )
+    assert "## Role" in body and "## Integration" in body and "## Edges" in body, (
+        "§5 must enumerate the forbidden sections by their header literals"
+    )
+    # Permitted section is Touch points.
+    assert "Permitted section" in body, (
+        "§5 must name the Permitted section (Touch points)"
+    )
+    assert "## Touch points" in body, (
+        "§5 must name `## Touch points` as the permitted section literal"
     )

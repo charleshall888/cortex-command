@@ -58,6 +58,8 @@ If resuming, report the detected phase and offer to continue or restart from an 
 
 Read **only** the reference for the current phase.
 
+Within the Decompose phase, a user-blocking post-decompose batch-review gate (`checkpoint: decompose-commit`) fires after all ticket bodies are authored and the prescriptive-prose scanner has passed, BEFORE any tickets commit to `backlog/`. The gate offers `approve-all`, `revise-piece <N>`, and `drop-piece <N>` options and emits an `approval_checkpoint_responded` event per response. See decompose.md §5 for the gate semantics.
+
 ## Phase Transition
 
 After completing a phase artifact, commit the `research/{{topic}}/` directory, summarize findings, and proceed to the next phase automatically.
