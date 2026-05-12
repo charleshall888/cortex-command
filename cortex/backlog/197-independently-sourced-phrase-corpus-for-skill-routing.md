@@ -3,12 +3,12 @@ schema_version: "1"
 uuid: b6f13a48-2777-43c5-8e0a-5b1a0edba201
 title: "Independently-sourced phrase corpus for skill routing"
 type: feature
-status: open
+status: closed
 priority: medium
 blocked-by: []
 tags: [testing, skill-design, routing]
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-12
 ---
 
 # Independently-sourced phrase corpus for skill routing
@@ -39,3 +39,9 @@ Build a routing-recall test corpus whose phrases are sourced independently of th
 ## Provenance
 
 Filed as part of Task 3 of the `reduce-boot-context-surface-claudemd-skillmd` lifecycle (spec R2 deferred follow-up). See `lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md` for the original anti-rationalization rationale that motivates the independently-sourced corpus.
+
+## Closed 2026-05-12
+
+Closed as premature. The source-of-phrases authority (the hardest part) is unresolved and the corpus risks silently re-deriving from descriptions. Empirical detector already exists via `events.log` F-rows under the MUST-escalation policy — real routing failures surface there with effort-first escalation. No evidence yet of a routing-recall failure pattern that a speculative pre-built corpus would have caught.
+
+**Reopen trigger**: ≥5 observed routing-recall failures in `events.log` (or transcript citations) where users said a phrase no skill description captured. At that point the corpus has real evidence to source from.
