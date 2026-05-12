@@ -9,11 +9,7 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 - Read `cortex/lifecycle/{feature}/spec.md` for requirements
 - Identify files changed during implementation by reading the git log for commits since the lifecycle started, or by comparing plan.md's file lists
 - Read `cortex/lifecycle/{feature}/plan.md` for the verification strategy
-- Load requirements docs using the structured tag-based protocol:
-  1. Read `cortex/requirements/project.md` (always)
-  2. Read `cortex/lifecycle/{feature}/index.md` and extract the `tags:` array from its YAML frontmatter
-  3. Read the Conditional Loading section of `cortex/requirements/project.md`; for each tag word in the tags array, check case-insensitively whether any Conditional Loading phrase contains that word; collect the area doc paths for all matches
-  4. If matching area docs are found, read them too. Record the full list of loaded requirements files (project.md + matched area docs) for injection into the reviewer prompt. If no tags match or no area docs are found, load project.md only and note: "no area docs matched for tags: {tags}; drift check covers project.md only"
+- Load requirements docs using the shared tag-based loading protocol — read `references/load-requirements.md` and follow it. Record the full list of loaded requirements files (project.md + matched area docs) for injection into the reviewer prompt; when the fallback applies (no tags match or no area docs are found), note: "no area docs matched for tags: {tags}; drift check covers project.md only".
 
 ### 2. Launch Review Sub-Task
 
