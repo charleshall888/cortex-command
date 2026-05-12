@@ -50,7 +50,7 @@ Reframe the discovery skill's posture from finding-mirroring to architectural di
 
 ### Edges from DR-G exploration (carryover)
 
-- The section-partitioned prescriptive-prose check runs on BOTH the architecture-section at research-write time AND on ticket bodies at decompose-§5 time — defense-in-depth catches mechanism leaks before they propagate from architecture to tickets (a single agent typically writes both, so catching upstream means one revision pass instead of N+1)
+- The section-partitioned prescriptive-prose check runs on BOTH the architecture-section at research-write time AND on ticket bodies at decompose-ticket-creation time — defense-in-depth catches mechanism leaks before they propagate from architecture to tickets (a single agent typically writes both, so catching upstream means one revision pass instead of N+1)
 - The "Why N pieces" justification gate uses falsification framing, not justification — "for each adjacent pair of pieces, attempt to merge them and record what specifically blocks the merge; if nothing blocks, merge" — converts the gate from defensive (rationalizes count) to falsificationist (constrains count)
 - Architecture-section authoring guidance accommodates non-constructive topic shapes (diagnostic, policy, migration) via a single permissive paragraph rather than branching sub-templates — the zero-piece exit handles diagnostic; policy and migration may author pieces as rule/scope/exceptions or sequence steps within the same Role/Integration/Edges shape
 - The approval checkpoint offers a fourth option beyond approve/revise/drop: "Promote sub-topic to its own discovery" — when a piece is too speculative for child-ticket creation, route it into its own discovery flow instead of forcing it into the current epic
@@ -61,7 +61,7 @@ Reframe the discovery skill's posture from finding-mirroring to architectural di
 ### Spec-phase MUST deliverables (load-bearing, not deferrable)
 
 - **Worked examples + anti-patterns for architecture-section authoring**: one worked example per piece-shape category (surface-anchored, structural-novel) plus a 2-3 bullet anti-patterns list — both re-walks and user confusion confirmed that abstract "name pieces by role" is insufficient scaffolding without concrete examples
-- **Lexical scanner shipped as actual code** (suggested `bin/cortex-check-prescriptive-prose`): runs at decompose-§5 ticket-creation time AND at research-§6 architecture-write time; flags any path:line / section-index / quoted-prose-patch in body sections (Role/Integration/Edges); Touch points exempted; pure prose-discipline gate is honor-system and confirmed inadequate by both pre-implementation re-walks
+- **Lexical scanner shipped as actual code** (suggested `bin/cortex-check-prescriptive-prose`): runs at decompose ticket-creation time AND at research architecture-write time; flags any path:line / section-index / quoted-prose-patch in body sections (Role/Integration/Edges); Touch points exempted; pure prose-discipline gate is honor-system and confirmed inadequate by both pre-implementation re-walks
 - **Concrete piece definition with worked examples** in the architecture-section authoring template — the user's confusion about "what is a piece" demonstrates the protocol must ground the abstraction concretely; combine with the worked-examples deliverable above
 
 ## Touch points
