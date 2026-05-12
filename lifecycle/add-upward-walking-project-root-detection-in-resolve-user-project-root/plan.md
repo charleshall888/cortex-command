@@ -29,7 +29,7 @@ Replace `_resolve_user_project_root()`'s cwd-only marker check with an upward wa
   - For the worktree-style test (`.git` as a regular file), create a `tmp_path / "outer" / ".git"` file with `Path.write_text("gitdir: /elsewhere\n", encoding="utf-8")`; that mirrors real worktree shape.
   - For the `Searched:` assertion, use `pytest.raises(CortexProjectRootError) as excinfo` and assert `"Searched: "` appears in `str(excinfo.value)`.
 - **Verification**: `just test PATTERN=test_common_utils` exits 0 — pass if exit code = 0; AND `grep -c "^def test_resolve_user_project_root" tests/test_common_utils.py` ≥ 7 — pass if count ≥ 7. (The leading `^` anchors against accidental matches inside comments or docstrings.)
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Reroute `daytime_pipeline._check_cwd()` through the resolver
 - **Files**: `cortex_command/overnight/daytime_pipeline.py`
@@ -41,7 +41,7 @@ Replace `_resolve_user_project_root()`'s cwd-only marker check with an upward wa
   - The module already imports `sys` and `Path` (`pathlib.Path`); only `_resolve_user_project_root` and `CortexProjectRootError` need to be added to the import block from `cortex_command.common`.
   - Call sites of `_check_cwd` live elsewhere in `daytime_pipeline.py` (`_run` / `build_parser` entry points) — confirm signature unchanged (`() -> None`) so callers stay untouched.
 - **Verification**: `grep -c 'Path("lifecycle").is_dir()' cortex_command/overnight/daytime_pipeline.py` = 0 — pass if count = 0; AND `python3 -c "import cortex_command.overnight.daytime_pipeline"` exits 0 — pass if exit 0 (no import-time syntax error).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Reroute backlog CLIs through the resolver
 - **Files**: `cortex_command/backlog/generate_index.py`, `cortex_command/backlog/update_item.py`, `cortex_command/backlog/create_item.py`
@@ -53,7 +53,7 @@ Replace `_resolve_user_project_root()`'s cwd-only marker check with an upward wa
   - `cortex_command/backlog/update_item.py:442-444` and `cortex_command/backlog/create_item.py:160-162` already evaluate `BACKLOG_DIR = Path.cwd() / "backlog"` inside `main()` — a one-line swap each.
   - Internal callers (functions inside these modules that take `backlog_dir` as a parameter) are unaffected — the spec explicitly excludes "callsites that already accept a `lifecycle_base` parameter."
 - **Verification**: `grep -nE 'Path\.cwd\(\) / "(backlog|lifecycle)"' cortex_command/backlog/generate_index.py cortex_command/backlog/update_item.py cortex_command/backlog/create_item.py` returns 0 matches — pass if no output; AND `python3 -c "import cortex_command.backlog.generate_index, cortex_command.backlog.update_item, cortex_command.backlog.create_item"` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Full-suite validation and subdirectory smoke test
 - **Files**: (none — validation only)
@@ -64,8 +64,8 @@ Replace `_resolve_user_project_root()`'s cwd-only marker check with an upward wa
   - `just test` is the canonical test runner.
   - `cortex --print-root` lives at `cortex_command/cli.py:163-202` and routes through `_resolve_user_project_root()` (line 199); a successful resolve emits versioned JSON with the `root` field.
   - The smoke test must be run from inside a subdirectory of the cortex-command repo (e.g., `lifecycle/`), not from the repo root, to actually exercise the walk.
-- **Verification**: `just test` exits 0 — pass if exit code = 0; AND `(cd lifecycle && cortex --print-root)` exits 0 and emits JSON whose `.root` field equals the absolute path of the cortex-command repo root — pass if both hold. (Check with `(cd lifecycle && cortex --print-root | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d["root"])')` matches `git rev-parse --show-toplevel`.)
-- **Status**: [ ] pending
+- **Verification**: `just test` exits 0 — pass if exit code = 0; AND `(cd lifecycle && cortex --print-root)` exits 0 and emits JSON whose `.root` field equals the absolute path of the cortex-command repo root — pass if both hold. (Check with `(cd lifecycle && cortex --print-root | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d["root"])')` matches `git rev-parse --show-toplevel`. Note: the literal `cortex` binary points at the pinned `uv tool install` wheel; the new resolver is verified via `.venv/bin/python -m cortex_command.cli --print-root`, which packages the working tree.)
+- **Status**: [x] complete
 
 ## Risks
 

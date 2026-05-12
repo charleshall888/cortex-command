@@ -125,36 +125,6 @@
     "repo": null
   },
   {
-    "id": 201,
-    "title": "Add upward-walking project-root detection in _resolve_user_project_root()",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "cli-ergonomics",
-      "consolidate-artifacts-under-cortex-root"
-    ],
-    "areas": [
-      "cli",
-      "init"
-    ],
-    "created": "2026-05-11",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "200",
-    "research": null,
-    "spec": null,
-    "discovery_source": "research/consolidate-artifacts-under-cortex-root/research.md",
-    "plan": null,
-    "uuid": "391e2823-ea89-4b72-8b35-54660eb983a3",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "research",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 202,
     "title": "Relocate cortex-command artifacts under cortex/ root",
     "status": "refined",
@@ -174,11 +144,9 @@
       "docs"
     ],
     "created": "2026-05-11",
-    "updated": "2026-05-11",
+    "updated": "2026-05-12",
     "blocks": [],
-    "blocked_by": [
-      "201"
-    ],
+    "blocked_by": [],
     "parent": "200",
     "research": null,
     "spec": null,
@@ -203,21 +171,21 @@
       "investigation"
     ],
     "areas": [
-      "plugin-distribution"
+      "docs"
     ],
     "created": "2026-05-11",
-    "updated": "2026-05-11",
+    "updated": "2026-05-12",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/investigate-plugin-auto-update-not-fetching-from-origin/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "2f968fc7-982b-4748-934a-7d8febd4122d",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_slug": "investigate-plugin-auto-update-not-fetching-from-origin",
+    "session_id": "d487af52-7a11-4cf1-9a1c-318355f25c34",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

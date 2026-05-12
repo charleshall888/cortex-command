@@ -6,14 +6,14 @@ status: ready
 priority: medium
 type: feature
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-12
 tags: [installer-experience, repo-layout, consolidate-artifacts-under-cortex-root]
 complexity: complex
 criticality: medium
 areas: [init, overnight-runner, dashboard, backlog, skills, docs]
 session_id: null
 parent: 200
-blocked-by: [201]
+blocked-by: []
 discovery_source: research/consolidate-artifacts-under-cortex-root/research.md
 ---
 
