@@ -58,7 +58,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: `state.py:_session_dir()` is the single most load-bearing path-computation site — every overnight session resolves session storage through it. `runner.py` is the orchestration entry point; lines 421/423 set the followup-backlog write target, line 1804 sets the pipeline-events log path. Variable-name patterns vary (`_resolve_user_project_root()`, `repo_path`, `worktree_path`, `Path(worktree_path)`) — match each. Use `grep -nE '/ "(lifecycle|backlog)"' cortex_command/overnight/state.py cortex_command/overnight/runner.py` to enumerate all sites in these two files before editing.
 - **Verification**: `grep -nE '/ "(lifecycle|backlog)"($|[^/])' cortex_command/overnight/state.py cortex_command/overnight/runner.py` returns 0 matches; `grep -cE '/ "cortex" / "(lifecycle|backlog)"' cortex_command/overnight/state.py` ≥ 3; `grep -cE '/ "cortex" / "(lifecycle|backlog)"' cortex_command/overnight/runner.py` ≥ 3.
-- **Status**: [ ] pending
+- **Status**: [x] complete (squashed into commit c8110de5)
 
 ### Task 5: Rebase overnight runtime path literals — orchestrator, report, cli_handler
 - **Files**: `cortex_command/overnight/orchestrator.py`, `cortex_command/overnight/report.py`, `cortex_command/overnight/cli_handler.py`
@@ -67,7 +67,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: `orchestrator.py` has four `@dataclass` field factories with `default_factory=lambda: ...` — match the `lambda` pattern. `report.py:616,631` uses bare `Path("lifecycle").glob("*/review.md")` — replace with `Path("cortex/lifecycle").glob(...)` (or `Path("cortex") / "lifecycle"`). `report.py:2106` is `_cli_lifecycle_root = _cli_user_root / "lifecycle"` — drop in the `/ "cortex" /` prefix. `cli_handler.py:58` reads `lifecycle.config.md` from cwd — its new location is `cortex/lifecycle.config.md`.
 - **Verification**: `grep -nE '/ "lifecycle"($|[^/])' cortex_command/overnight/orchestrator.py cortex_command/overnight/report.py cortex_command/overnight/cli_handler.py` returns 0 matches; `grep -nE 'Path\("lifecycle"\)' cortex_command/overnight/report.py` returns 0 matches; `grep -nE '"lifecycle\.config\.md"' cortex_command/overnight/cli_handler.py` returns 0 matches (replaced with `"cortex/lifecycle.config.md"` or split path components).
-- **Status**: [ ] pending
+- **Status**: [x] complete (squashed into commit c8110de5)
 
 ### Task 6: Rebase overnight runtime path literals — daytime_pipeline, backlog, feature_executor
 - **Files**: `cortex_command/overnight/daytime_pipeline.py`, `cortex_command/overnight/backlog.py`, `cortex_command/overnight/feature_executor.py`
@@ -76,7 +76,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: `daytime_pipeline.py:59` already imports and calls `_resolve_user_project_root()` (post-#201); the literals on lines 181/220-243/391 still construct `lifecycle/<feature>/...` paths relative to `cwd` — preserve the `cwd` variable, just insert the `/ "cortex"` segment. `daytime_pipeline.py:243` has `(cwd / f"lifecycle/{feature}/deferred").mkdir(...)` — rebase the literal. `backlog.py:506-507` and `580-581` read research/spec paths for refine-context — rebase under `cortex/lifecycle/`. `feature_executor.py:153,165` is the worktree exit-report fallback path.
 - **Verification**: `grep -rEn '/ ?"lifecycle(\.config\.md)?"($|[^/])|cwd / f"lifecycle/|/ "lifecycle" / ' cortex_command/overnight/daytime_pipeline.py cortex_command/overnight/backlog.py cortex_command/overnight/feature_executor.py` returns 0 matches; `grep -cE '/ "cortex" /' cortex_command/overnight/daytime_pipeline.py` ≥ 4.
-- **Status**: [ ] pending
+- **Status**: [x] complete (squashed into commit c8110de5)
 
 ### Task 7: Rebase backlog modules + dashboard + discovery path literals
 - **Files**: `cortex_command/backlog/generate_index.py`, `cortex_command/backlog/update_item.py`, `cortex_command/backlog/create_item.py`, `cortex_command/backlog/build_epic_map.py`, `cortex_command/discovery.py`
@@ -85,7 +85,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: All three primary backlog modules wire through `_resolve_user_project_root()` (post-#201). `build_epic_map.py:160` is referenced in research as a consumer of `spec:` YAML — verify the line ref and edit accordingly. `discovery.py` uses `_default_repo_root()` (git rev-parse) at line 62, not `_resolve_user_project_root()` — the literals at 104/187/195 are constructed against `repo_root` parameter, just insert the `/ "cortex"` segment.
 - **Verification**: `grep -rEn '_resolve_user_project_root\(\) / "(backlog|lifecycle)"($|[^/])' cortex_command/backlog/` returns 0 matches; `grep -nE 'repo_root / "(lifecycle|research)"($|[^/])' cortex_command/discovery.py` returns 0 matches.
-- **Status**: [ ] pending
+- **Status**: [x] complete (squashed into commit c8110de5)
 
 ### Task 8: Rebase dashboard module path literals
 - **Files**: `cortex_command/dashboard/app.py`, `cortex_command/dashboard/seed.py`, `cortex_command/dashboard/poller.py`, `cortex_command/dashboard/data.py`
@@ -94,7 +94,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: Dashboard reads/serves JSON seed and live-poll data sourced from `lifecycle/<feature>/` artifacts. Run `grep -nE '"lifecycle"|/ "lifecycle"|f"lifecycle/' cortex_command/dashboard/*.py` to enumerate all 15 sites before editing. Where the literal is a path segment in `Path(...)` composition, insert `/ "cortex"`; where it's an f-string, insert `cortex/` before `lifecycle/`.
 - **Verification**: `grep -rEn '"lifecycle"|f"lifecycle/' cortex_command/dashboard/*.py` returns 0 matches except inside `cortex/`-prefixed compositions; `pytest cortex_command/dashboard/tests/` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (squashed into commit c8110de5)
 
 ### Task 9: Rebase hooks + bin + parity gates
 - **Files**: `hooks/cortex-scan-lifecycle.sh`, `claude/hooks/cortex-tool-failure-tracker.sh`, `.githooks/pre-commit`, `bin/cortex-check-parity`, `bin/cortex-log-invocation`
@@ -166,7 +166,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: `git mv` operates on the working tree and the index simultaneously, registering the move as a rename. With ~400+ tracked files affected (38+146 lifecycle dirs × files inside, 195 backlog items, 56 retros files, 10+30 research dirs × files, 5 requirements files, 5 debug files), git's default rename-detection threshold (`-M50`) should pick up most renames; if `git status` shows D/A pairs, add `-M30` to subsequent diff/status invocations for verification. The `_relocation_migration.py` script (Task 11) must have already run because the working tree's content references must be `cortex/`-prefixed before the `git mv` so the post-commit state is self-consistent.
 - **Verification**: `ls -d lifecycle backlog research requirements retros debug 2>&1 | grep -c "No such file or directory"` ≥ 6; `git status --porcelain | awk '$1 ~ /^R/' | wc -l` ≥ 400; `ls cortex/` shows all 8 children.
-- **Status**: [ ] pending
+- **Status**: [x] complete (squashed into commit c8110de5)
 
 ### Task 17: Refresh sandbox preflight against pre-relocation HEAD
 - **Files**: `lifecycle/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/preflight.md` (in working tree, pre-`git mv`)
@@ -175,7 +175,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: Per the spec Edge Cases section, `bin/cortex-check-parity` triggers on staged edits matching sandbox-source regex patterns in lines 89–109. The runner.py edits in Task 4 (lines 421/423/1804) match this regex. The preflight gate at line 988 reads `commit_hash:` from the YAML and compares against staged HEAD — if the field is stale, the gate fails with E102. Solution: regenerate the preflight to point at pre-relocation HEAD so the gate accepts. The PREFLIGHT_PATH constant in `bin/cortex-check-parity:112-113` was updated in Task 9 to point at the new cortex/-prefixed location.
 - **Verification**: Interactive/session-dependent (the preflight regeneration command varies by `just --list` output — implementer runs it and confirms `bin/cortex-check-parity --staged` exits 0 in the pre-commit dry-run before staging proceeds).
-- **Status**: [ ] DEFERRED — handoff to fresh-shell operator. No automated regeneration recipe exists in `just --list`; the preflight requires an empirical kernel-sandbox `claude -p` test invocation. The existing preflight.md is archived at `lifecycle/archive/apply-per-spawn-.../preflight.md`, not the active path PREFLIGHT_PATH points at. Operator running Tasks 16+18 must either (a) re-run the empirical preflight test to generate a fresh artifact at the new `cortex/lifecycle/apply-per-spawn-.../preflight.md` path, or (b) verify the parity-trigger does not fire on the relocation commit's staged set (in which case the gate never invokes the preflight check).
+- **Status**: [x] complete via option (b) — `bin/cortex-check-parity --staged` exited 0 against the relocation commit's staged set, so the preflight gate was never invoked. No regeneration of the preflight artifact required. Squashed into commit c8110de5.
 
 ### Task 18: Single atomic commit (precondition checks → `git add -A` → `git commit`)
 - **Files**: Commit metadata only; no file edits in this task
@@ -184,7 +184,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: DR-7 binds single-atomic-commit. `git add -A` is required (no partial staging — partial staging makes working-copy and staged versions diverge under `core.hooksPath`). Pre-commit hook runs the parity + drift + preflight gates against the unified working copy. The shell session must be fresh (no `LIFECYCLE_SESSION_ID`) to avoid writes to a lifecycle dir mid-rename. Commit message should follow the project convention: imperative mood, capitalized, no trailing period, ≤72 chars subject — per CLAUDE.md.
 - **Verification**: `git log -1 --pretty=format:'%s'` matches the commit subject; `git log -1 --name-only | wc -l` ≥ 500; `git log --oneline -2 | awk 'NR==1{first=$0} NR==2{print first; print $0}'` shows the relocation commit at HEAD with the prior commit unchanged.
-- **Status**: [ ] pending
+- **Status**: [x] complete (squashed into commit c8110de5)
 
 ### Task 19: Post-commit finalize — `cortex init --update`, version tag, plugin-update note, `just test`
 - **Files**: `~/.claude/settings.local.json` (sandbox grant refresh), git annotated tag
@@ -193,7 +193,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: `cortex init --update` is the documented mechanism per `cortex_command/init/handler.py` (search for `--update`) for refreshing settings idempotently. Determine the next major version from the existing tag set via `git tag -l 'v[0-9]*' | sort -V | tail -1` and increment major. `just test` runs the full suite; failures here indicate a missed touchpoint and require returning to earlier tasks for fix.
 - **Verification**: `jq '.sandbox.filesystem.allowWrite' ~/.claude/settings.local.json | grep -E '"[^"]+/cortex"'` returns at least 1 match; `git tag --points-at HEAD | grep -E '^v[0-9]+\.0\.0$'` returns at least 1 match; `just test` exits 0; `just validate-commit` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (squashed into commit c8110de5)
 
 ## Risks
 

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 47fde14d-e2a0-48e3-9a56-84d4cf6018ca
 title: "Relocate cortex-command artifacts under cortex/ root"
-status: refined
+status: done
 priority: medium
 type: feature
 created: 2026-05-11

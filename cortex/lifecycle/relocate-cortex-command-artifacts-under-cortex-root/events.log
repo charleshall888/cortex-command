@@ -7,3 +7,7 @@
 {"ts": "2026-05-12T11:00:00Z", "event": "batch_dispatch", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "batch": 0, "tasks": [1, 2, 3, 9, 10, 11, 12, 13, 14]}
 {"ts": "2026-05-12T11:30:00Z", "event": "batch_dispatch", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "batch": 1, "tasks": [4, 5, 6, 7, 8]}
 {"ts": "2026-05-12T12:00:00Z", "event": "batch_dispatch", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "batch": 2, "tasks": [15, 17]}
+{"ts": "2026-05-12T14:30:30Z", "event": "phase_transition", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-12T14:30:30Z", "event": "review_verdict", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "verdict": "APPROVED", "cycle": 1, "note": "PR #8 squash-merged to main; 6/6 test suites passed; CI checks green"}
+{"ts": "2026-05-12T14:30:30Z", "event": "phase_transition", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "tier": "complex", "from": "review", "to": "complete"}
+{"ts": "2026-05-12T14:30:30Z", "event": "feature_complete", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "pr_url": "https://github.com/charleshall888/cortex-command/pull/8", "merged_commit": "c8110de5", "tag": "v1.0.0"}

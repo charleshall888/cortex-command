@@ -6,14 +6,14 @@ status: ready
 priority: low
 type: feature
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-12
 tags: [drift-prevention, parity, consolidate-artifacts-under-cortex-root]
 complexity: simple
 criticality: low
 areas: [parity, hooks]
 session_id: null
 parent: 200
-blocked-by: [202]
+blocked-by: []
 discovery_source: cortex/research/consolidate-artifacts-under-cortex-root/research.md
 ---
 
