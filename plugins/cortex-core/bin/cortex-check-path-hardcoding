@@ -5,7 +5,9 @@ Validates that no source file under the gate's scan scope contains a bare-prefix
 path literal (e.g. ``Path("lifecycle/x")``, ``f"backlog/{x}"``) that would
 re-introduce the pre-#202 layout. The post-#202 canonical anchor is
 ``Path("cortex/lifecycle")`` / ``Path("cortex/backlog")`` etc.; literals
-beginning with the bare prefix (without ``cortex/``) are flagged.
+beginning with one of the six bare prefixes (``lifecycle``, ``backlog``,
+``research``, ``requirements``, ``retros``, ``debug``) without ``cortex/``
+are flagged.
 
 Three modes:
 
@@ -54,11 +56,19 @@ from pathlib import Path
 # Constants
 # ---------------------------------------------------------------------------
 
-# The four pre-#202 prefix names. Kept as a tuple constant so the detection
-# regexes can be built via string concatenation — the gate's source therefore
-# never contains a contiguous ``"<prefix>/`` substring that would self-match
-# when the gate scans its own source file.
-_PREFIXES: tuple[str, ...] = ("lifecycle", "backlog", "research", "requirements")
+# The six pre-#202 prefix names — every top-level directory that #202
+# relocated under cortex/. Kept as a tuple constant so the detection regexes
+# can be built via string concatenation — the gate's source therefore never
+# contains a contiguous ``"<prefix>/`` substring that would self-match when
+# the gate scans its own source file.
+_PREFIXES: tuple[str, ...] = (
+    "lifecycle",
+    "backlog",
+    "research",
+    "requirements",
+    "retros",
+    "debug",
+)
 
 _PREFIX_ALTERNATION = "|".join(_PREFIXES)
 

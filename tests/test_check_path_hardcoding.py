@@ -134,6 +134,22 @@ def test_canonical_anchor_does_not_flag(tmp_path: Path) -> None:
     assert result.returncode == 0
 
 
+def test_retros_prefix_flags(tmp_path: Path) -> None:
+    """``Path("retros/x")`` is flagged — covers the full set of #202-relocated paths."""
+    _write(tmp_path, "cortex_command/bad.py", 'x = Path("retros/team-meeting")\n')
+    result = _run_audit(tmp_path)
+    assert result.returncode == 1
+    assert b"PH001" in result.stderr
+
+
+def test_debug_prefix_flags(tmp_path: Path) -> None:
+    """``f"debug/{x}"`` is flagged — covers the full set of #202-relocated paths."""
+    _write(tmp_path, "cortex_command/bad.py", 'x = f"debug/{name}/trace.log"\n')
+    result = _run_audit(tmp_path)
+    assert result.returncode == 1
+    assert b"PH001" in result.stderr
+
+
 # ---------------------------------------------------------------------------
 # Scan-scope tests (fixture script names built via _F + suffix concatenation)
 # ---------------------------------------------------------------------------
