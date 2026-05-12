@@ -2,12 +2,17 @@
 schema_version: "1"
 uuid: d88b8d0f-df9f-4f14-98f3-1bfcc994c475
 title: "Consolidate common.py:read_tier and overnight/report.py:_read_tier"
-status: backlog
+status: complete
 priority: low
 type: chore
 created: 2026-05-11
 updated: 2026-05-11
 tags: [refactor, lifecycle, deduplication]
+complexity: complex
+criticality: medium
+spec: lifecycle/consolidate-commonpyread-tier-and-overnight-reportpy-read-tier/spec.md
+areas: [overnight-runner]
+session_id: null
 ---
 
 # Consolidate common.py:read_tier and overnight/report.py:_read_tier

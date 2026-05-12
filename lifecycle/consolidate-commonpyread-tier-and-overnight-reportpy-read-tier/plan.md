@@ -140,7 +140,7 @@ Direct-swap consolidation (research §A): `overnight/report.py:535` migrates to 
   - `uv run pytest tests/ cortex_command/overnight/tests/ -q` exits 0 — pass if exit code = 0 (R16).
   - `just check-parity` exits 0 — pass if exit code = 0 (R17).
   - `git log -1 --pretty=%s` shows the Phase 2 commit subject AND `git log -1 --pretty=%b` contains a CHANGELOG reference — pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (579105a)
 
 ## Risks
 

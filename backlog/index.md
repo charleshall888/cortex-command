@@ -7,13 +7,11 @@
 | 197 | Independently-sourced phrase corpus for skill routing | backlog | medium | feature | — | — | — |
 | 198 | Trim cortex-log-invocation shim cost (per-call ~21ms) | refined | medium | chore | — | — | ✓ |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
-| 199 | Consolidate common.py:read_tier and overnight/report.py:_read_tier | refined | low | chore | — | — | ✓ |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
 
 ## Refined
 
 - **198** Trim cortex-log-invocation shim cost (per-call ~21ms)
-- **199** Consolidate common.py:read_tier and overnight/report.py:_read_tier
 
 ## Backlog
 

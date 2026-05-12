@@ -149,36 +149,6 @@
     "repo": null
   },
   {
-    "id": 199,
-    "title": "Consolidate common.py:read_tier and overnight/report.py:_read_tier",
-    "status": "refined",
-    "priority": "low",
-    "type": "chore",
-    "tags": [
-      "refactor",
-      "lifecycle",
-      "deduplication"
-    ],
-    "areas": [
-      "overnight-runner"
-    ],
-    "created": "2026-05-11",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/consolidate-commonpyread-tier-and-overnight-reportpy-read-tier/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "d88b8d0f-df9f-4f14-98f3-1bfcc994c475",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 142,
     "title": "Multi-session host concurrency registry for cortex overnight",
     "status": "backlog",

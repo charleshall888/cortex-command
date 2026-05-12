@@ -8,3 +8,5 @@
 {"ts":"2026-05-12T01:08:54Z","event":"batch_dispatch","feature":"consolidate-commonpyread-tier-and-overnight-reportpy-read-tier","batch":4,"tasks":[5]}
 {"ts":"2026-05-12T01:10:34Z","event":"batch_dispatch","feature":"consolidate-commonpyread-tier-and-overnight-reportpy-read-tier","batch":5,"tasks":[6]}
 {"ts":"2026-05-12T01:11:37Z","event":"batch_dispatch","feature":"consolidate-commonpyread-tier-and-overnight-reportpy-read-tier","batch":6,"tasks":[7]}
+{"ts":"2026-05-12T01:24:03Z","event":"phase_transition","feature":"consolidate-commonpyread-tier-and-overnight-reportpy-read-tier","tier":"simple","from":"implement","to":"complete"}
+{"ts":"2026-05-12T01:25:29Z","event":"feature_complete","feature":"consolidate-commonpyread-tier-and-overnight-reportpy-read-tier","tasks_total":7,"rework_cycles":0}
