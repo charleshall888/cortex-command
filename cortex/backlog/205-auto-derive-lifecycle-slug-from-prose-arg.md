@@ -2,18 +2,19 @@
 schema_version: "1"
 uuid: 7dedb72c-5931-4792-a9ae-efcc4afbac17
 title: "Auto-derive lifecycle slug from prose-style invocation args"
-status: ready
+status: complete
 priority: low
 type: enhancement
 created: 2026-05-12
 updated: 2026-05-12
 tags: [skills, lifecycle, clarify, dx]
 complexity: simple
-criticality: low
+criticality: high
 areas: [skills]
 session_id: null
-lifecycle_phase: null
-lifecycle_slug: null
+lifecycle_phase: research
+lifecycle_slug: auto-derive-lifecycle-slug-from-prose-style-invocation-args
+spec: cortex/lifecycle/auto-derive-lifecycle-slug-from-prose-style-invocation-args/spec.md
 ---
 
 # Auto-derive lifecycle slug from prose-style invocation args
