@@ -40,7 +40,7 @@ def evaluate_alerts(state: "DashboardState", root: Path, lifecycle_dir: Path) ->
     Args:
         state: Shared ``DashboardState`` instance (mutated in place).
         root: Project root path (unused; reserved for future use).
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
     """
     if not state.overnight:
         return

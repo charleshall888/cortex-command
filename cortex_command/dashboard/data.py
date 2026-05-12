@@ -285,8 +285,8 @@ def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
     ``cortex_command.pipeline.metrics.parse_events()``.
 
     Args:
-        feature_slug: Feature directory name under ``lifecycle/``.
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        feature_slug: Feature directory name under ``cortex/lifecycle/``.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
 
     Returns:
         Dict with keys:
@@ -364,8 +364,8 @@ def parse_agent_activity(
     (non-incremental simple tail).  Malformed JSON lines are silently skipped.
 
     Args:
-        feature_slug: Feature directory name under ``lifecycle/``.
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        feature_slug: Feature directory name under ``cortex/lifecycle/``.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
         last_n: Maximum number of lines to return from the file end.
 
     Returns:
@@ -429,8 +429,8 @@ def get_last_activity_ts(feature_slug: str, lifecycle_dir: Path) -> "datetime | 
     timezone-aware datetime.
 
     Args:
-        feature_slug: Feature directory name under ``lifecycle/``.
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        feature_slug: Feature directory name under ``cortex/lifecycle/``.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
 
     Returns:
         The most recent datetime (UTC), or None if no timestamped events exist.
@@ -483,7 +483,7 @@ def parse_fleet_cards(
         overnight: Parsed overnight-state.json dict.
         overnight_events: Accumulated list of overnight event dicts.
         feature_states: Per-feature parsed state from ``parse_feature_events``.
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
         agent_activity_offsets: Byte offsets per feature slug (reserved for
             incremental tailing; currently passed through unchanged).
 
@@ -549,7 +549,7 @@ def build_swim_lane_data(
         overnight: Parsed overnight-state.json dict, or None.
         overnight_events: Accumulated list of overnight event dicts.
         feature_states: Per-feature parsed state from ``parse_feature_events``.
-        lifecycle_dir: Path to the ``lifecycle/`` directory (currently unused;
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory (currently unused;
             reserved for future agent-activity tick integration).
         end_dt: Optional fixed "now" datetime for historical rendering; defaults
             to ``datetime.now(timezone.utc)`` when not provided.
@@ -704,7 +704,7 @@ def parse_last_session(lifecycle_dir: Path) -> dict | None:
     timestamp.
 
     Args:
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
 
     Returns:
         Dict with keys:
@@ -772,7 +772,7 @@ def parse_session_list(lifecycle_dir: Path) -> list[dict]:
     are appended at the end in arbitrary order).
 
     Args:
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
 
     Returns:
         List of dicts, each with keys:
@@ -855,7 +855,7 @@ def parse_session_detail(session_id: str, lifecycle_dir: Path) -> dict | None:
 
     Args:
         session_id: Directory name of the session (e.g. ``"overnight-2026-02-26-2129"``).
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
 
     Returns:
         Dict with keys ``session_id``, ``start_ts``, ``end_ts``,
@@ -976,7 +976,7 @@ def parse_backlog_counts(backlog_dir: Path) -> dict[str, int]:
     default to ``"open"``.
 
     Args:
-        backlog_dir: Path to the ``backlog/`` directory.
+        backlog_dir: Path to the ``cortex/backlog/`` directory.
 
     Returns:
         Dict mapping status string to count.  Returns ``{}`` if
@@ -1036,7 +1036,7 @@ def parse_backlog_titles(backlog_dir: Path) -> dict[str, str]:
     Files with missing or malformed frontmatter are skipped silently.
 
     Args:
-        backlog_dir: Path to the ``backlog/`` directory.
+        backlog_dir: Path to the ``cortex/backlog/`` directory.
 
     Returns:
         Dict mapping slug string to title string.  Returns ``{}`` if
@@ -1097,7 +1097,7 @@ def parse_pipeline_dispatch(lifecycle_dir: Path) -> dict[str, dict]:
     last entry is kept.
 
     Args:
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
 
     Returns:
         Dict mapping feature name to ``{"model": str, "complexity": str}``.
@@ -1125,7 +1125,7 @@ def parse_metrics(lifecycle_dir: Path) -> dict | None:
     """Read and return the metrics data as a plain dict.
 
     Args:
-        lifecycle_dir: Path to the ``lifecycle/`` directory.
+        lifecycle_dir: Path to the ``cortex/lifecycle/`` directory.
 
     Returns:
         Parsed JSON dict from ``lifecycle_dir/metrics.json``, or None if

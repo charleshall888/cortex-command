@@ -565,7 +565,7 @@ _BACKLOG_ITEMS = [
 
 
 def write_backlog_items(repo_root: Path) -> list[Path]:
-    """Write 5 seed backlog items to backlog/990-seed-*.md through backlog/994-seed-*.md.
+    """Write 5 seed backlog items to cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md.
 
     Each file has YAML frontmatter with ``status`` and ``title`` fields covering
     all status variants: open, in-progress, on-hold, refined, done.

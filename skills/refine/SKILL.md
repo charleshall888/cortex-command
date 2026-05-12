@@ -10,7 +10,7 @@ outputs:
   - "cortex/backlog/{item}.md — updated with complexity:, criticality:, status: refined, spec: path, areas:"
 preconditions:
   - "Run from project root"
-  - "backlog/ directory exists"
+  - "cortex/backlog/ directory exists"
 argument-hint: "<topic>"
 ---
 

@@ -15,7 +15,7 @@ Emits one ``<skill-name> <bytes>`` row per skill (sorted) and a final
 ``total <sum>`` row. Output matches the R11 acceptance regex
 ``^[a-z-]+\\s+\\d+$``.
 
-Spec: lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md R11.
+Spec: cortex/lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md R11.
 """
 
 from __future__ import annotations

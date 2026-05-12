@@ -7,7 +7,7 @@ Detects two failure modes for ``bin/cortex-*`` scripts:
 - E001 invalid allowlist row: ``bin/.parity-exceptions.md`` row fails schema.
 - W005 allowlist-superfluous: a script is allowlisted AND has wiring in scope.
 
-Stdlib-only. Operates on ``os.getcwd()``. See lifecycle/ship-dr-5-... for the
+Stdlib-only. Operates on ``os.getcwd()``. See cortex/lifecycle/ship-dr-5-... for the
 full spec (R1–R18).
 """
 

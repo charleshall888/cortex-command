@@ -60,7 +60,7 @@ class DashboardState:
             additional ``plan_progress`` key — a ``(checked, total)``
             tuple sourced from the canonical detector when ``plan.md``
             exists, else ``None``.
-        backlog_counts: Status -> count mapping from backlog/ directory.
+        backlog_counts: Status -> count mapping from cortex/backlog/ directory.
         last_updated: ISO 8601 timestamp of the most recent successful poll.
     """
 
@@ -327,7 +327,7 @@ async def run_polling(state: DashboardState, root: Path) -> None:
 
     Args:
         state: Shared DashboardState instance that all tasks update in place.
-        root: Project root path (the directory containing lifecycle/ and backlog/).
+        root: Project root path (the directory containing cortex/lifecycle/ and cortex/backlog/).
     """
     asyncio.create_task(_poll_state_files(state, root))
     asyncio.create_task(_poll_jsonl_events(state, root))

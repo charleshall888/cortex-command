@@ -21,7 +21,7 @@ Three modes:
 Fails closed on missing registry (``MISSING_REGISTRY`` error) — this overrides
 the ``cortex-check-parity`` precedent which fails open on missing allowlist.
 
-Stdlib-only. See lifecycle/clean-up-eventslog-emission-and-reader-discipline/spec.md
+Stdlib-only. See cortex/lifecycle/clean-up-eventslog-emission-and-reader-discipline/spec.md
 R5 for the gate behavior and R6 for the (separate) pre-commit wiring.
 """
 
