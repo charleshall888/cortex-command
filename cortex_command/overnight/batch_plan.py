@@ -54,7 +54,7 @@ def generate_batch_plan(
         if feature_plan_paths and name in feature_plan_paths:
             plan_path = Path(feature_plan_paths[name])
         else:
-            plan_path = Path(f"lifecycle/{name}/plan.md")
+            plan_path = Path(f"cortex/lifecycle/{name}/plan.md")
         if plan_path.exists():
             try:
                 fp = parse_feature_plan(plan_path)

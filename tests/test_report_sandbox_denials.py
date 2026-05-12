@@ -188,7 +188,7 @@ def fixture_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """
     # CORTEX_REPO_ROOT is pinned to tmp_path below so the walk is bypassed;
     # no cortex/ sentinel directory is needed here.
-    (tmp_path / "backlog").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "cortex" / "backlog").mkdir(parents=True, exist_ok=True)
 
     # load_state() reads overnight-state.json from cortex/lifecycle/ (rebased path).
     cortex_lifecycle_dir = tmp_path / "cortex" / "lifecycle"
@@ -196,7 +196,7 @@ def fixture_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     # collect_sandbox_denials uses a CWD-relative Path("lifecycle/sessions/..."),
     # so session data stays under lifecycle/sessions/ relative to CWD (tmp_path).
-    legacy_session_dir = tmp_path / "lifecycle" / "sessions" / FIXTURE_ID
+    legacy_session_dir = tmp_path / "cortex" / "lifecycle" / "sessions" / FIXTURE_ID
     _write_bash_log(legacy_session_dir / "tool-failures")
     _write_sidecars(legacy_session_dir / "sandbox-deny-lists")
 

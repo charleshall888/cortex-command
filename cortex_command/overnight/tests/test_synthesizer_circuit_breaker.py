@@ -198,7 +198,7 @@ def test_circuit_breaker_marks_features_paused(
     """
     from cortex_command.overnight import runner as runner_module
 
-    session_dir = tmp_path / "lifecycle" / "sessions" / _SESSION_ID
+    session_dir = tmp_path / "cortex" / "lifecycle" / "sessions" / _SESSION_ID
     session_dir.mkdir(parents=True, exist_ok=True)
     state_path = session_dir / "overnight-state.json"
     events_path = session_dir / "overnight-events.log"

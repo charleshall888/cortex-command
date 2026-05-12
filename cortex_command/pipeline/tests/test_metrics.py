@@ -969,7 +969,7 @@ class TestReportTierDispatch(unittest.TestCase):
 
         Returns ``(root, lifecycle_dir_as_str)``.
         """
-        lifecycle_dir = tmp_path / "lifecycle"
+        lifecycle_dir = tmp_path / "cortex" / "lifecycle"
         lifecycle_dir.mkdir(parents=True, exist_ok=True)
 
         # Write raw events from paired records so main() can pair them.
@@ -1087,7 +1087,7 @@ class TestReportTierDispatch(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            lifecycle_dir = root / "lifecycle"
+            lifecycle_dir = root / "cortex" / "lifecycle"
             lifecycle_dir.mkdir(parents=True, exist_ok=True)
             output = self._run_report(
                 ["--root", str(root), "--report", "tier-dispatch"]
@@ -1105,7 +1105,7 @@ class TestReportTierDispatch(unittest.TestCase):
         import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            lifecycle_dir = root / "lifecycle"
+            lifecycle_dir = root / "cortex" / "lifecycle"
             lifecycle_dir.mkdir(parents=True, exist_ok=True)
             output = self._run_report(
                 ["--root", str(root), "--report", "tier-dispatch", "--since", "2099-01-01"]
@@ -1343,7 +1343,7 @@ def test_metrics_json_exposes_effort_bucket(tmp_path):
 
     from cortex_command.pipeline.metrics import main
 
-    lifecycle_dir = tmp_path / "lifecycle"
+    lifecycle_dir = tmp_path / "cortex" / "lifecycle"
     lifecycle_dir.mkdir(parents=True, exist_ok=True)
 
     def _start(feature, effort, ts):

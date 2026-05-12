@@ -22,7 +22,7 @@ from cortex_command.overnight.fill_prompt import fill_prompt
 
 
 FIXTURE_ID = "overnight-2026-04-24-fixture"
-FIXTURE_SESSION_DIR = Path(f"lifecycle/sessions/{FIXTURE_ID}")
+FIXTURE_SESSION_DIR = Path(f"cortex/lifecycle/sessions/{FIXTURE_ID}")
 FIXTURE_PLAN_PATH = FIXTURE_SESSION_DIR / "overnight-plan.md"
 FIXTURE_STATE_PATH = FIXTURE_SESSION_DIR / "overnight-state.json"
 FIXTURE_EVENTS_PATH = FIXTURE_SESSION_DIR / "overnight-events.log"

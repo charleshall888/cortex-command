@@ -338,7 +338,7 @@ class Test_critical_review_residue:
     def test_r4_schema_valid_json_and_required_fields(self, tmp_path):
         """(ix) A residue file written via atomic_write with the R4 schema parses
         as valid JSON and contains all required fields."""
-        residue_dir = tmp_path / "lifecycle" / "test-feature"
+        residue_dir = tmp_path / "cortex" / "lifecycle" / "test-feature"
         residue_dir.mkdir(parents=True)
         residue_path = residue_dir / "critical-review-residue.json"
 
@@ -355,7 +355,7 @@ class Test_critical_review_residue:
 
     def test_zero_b_class_no_file(self, tmp_path):
         """(x) Zero B-class findings → no residue file (simulated by not calling write)."""
-        residue_dir = tmp_path / "lifecycle" / "clean-feature"
+        residue_dir = tmp_path / "cortex" / "lifecycle" / "clean-feature"
         residue_dir.mkdir(parents=True)
         residue_path = residue_dir / "critical-review-residue.json"
 

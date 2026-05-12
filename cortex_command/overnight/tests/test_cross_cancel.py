@@ -114,7 +114,7 @@ def test_schedule_blocked_when_runner_active(
 ) -> None:
     """A verified-live runner.pid causes schedule to exit non-zero."""
     session_id = "overnight-2026-05-04-2200"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
@@ -148,7 +148,7 @@ def test_schedule_blocked_when_spawn_pending_fresh(
 ) -> None:
     """A fresh spawn-pending sentinel blocks schedule (handshake gap guard)."""
     session_id = "overnight-2026-05-04-2300"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
@@ -182,7 +182,7 @@ def test_schedule_proceeds_when_spawn_pending_stale(
 ) -> None:
     """A stale (>30s) spawn-pending sentinel is ignored; schedule proceeds."""
     session_id = "overnight-2026-05-04-0100"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
@@ -226,7 +226,7 @@ def test_start_blocked_when_pending_schedule(
 ) -> None:
     """A pending sidecar entry causes start to exit non-zero."""
     session_id = "overnight-2026-05-04-0200"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 
@@ -265,7 +265,7 @@ def test_start_with_force_bypasses_pending_schedule_guard(
     a "pending schedule" stderr message).
     """
     session_id = "overnight-2026-05-04-0300"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id)
 

@@ -356,7 +356,7 @@ class TestPostOrchestratorHighConfidence:
         monkeypatch.setenv("LIFECYCLE_SESSION_ID", "overnight-2026-05-04-synth-hc")
 
         feature = "synthesizer-high-confidence-fixture"
-        feature_dir = tmp_path / "lifecycle" / feature
+        feature_dir = tmp_path / "cortex" / "lifecycle" / feature
         feature_dir.mkdir(parents=True, exist_ok=True)
         _make_lifecycle_event_log(feature_dir)
 
@@ -440,7 +440,7 @@ class TestPostOrchestratorLowConfidence:
         monkeypatch.setenv("LIFECYCLE_SESSION_ID", "overnight-2026-05-04-synth-lc")
 
         feature = "synthesizer-low-confidence-fixture"
-        feature_dir = tmp_path / "lifecycle" / feature
+        feature_dir = tmp_path / "cortex" / "lifecycle" / feature
         feature_dir.mkdir(parents=True, exist_ok=True)
         _make_lifecycle_event_log(feature_dir)
 
@@ -542,7 +542,7 @@ class TestPostOrchestratorMalformedEnvelope:
         )
 
         feature = "synthesizer-malformed-envelope-fixture"
-        feature_dir = tmp_path / "lifecycle" / feature
+        feature_dir = tmp_path / "cortex" / "lifecycle" / feature
         feature_dir.mkdir(parents=True, exist_ok=True)
         _make_lifecycle_event_log(feature_dir)
         (feature_dir / "plan-variant-A.md").write_text(

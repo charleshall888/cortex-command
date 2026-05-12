@@ -16,8 +16,8 @@ def feature_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Set CWD to tmp_path and create lifecycle/{feature}/ subdir."""
     monkeypatch.chdir(tmp_path)
     feature = "test-feature"
-    (tmp_path / "lifecycle" / feature).mkdir(parents=True)
-    return tmp_path / "lifecycle" / feature
+    (tmp_path / "cortex" / "lifecycle" / feature).mkdir(parents=True)
+    return tmp_path / "cortex" / "lifecycle" / feature
 
 
 def test_init_writes_fresh_dispatch_json(feature_dir: Path) -> None:

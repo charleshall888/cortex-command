@@ -319,7 +319,7 @@ async def dispatch_repair_agent(
     )
 
     exit_report_path = (
-        worktree_path / "lifecycle" / feature / "exit-reports" / "repair.json"
+        worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" / "repair.json"
     )
 
     def _read_exit_report() -> Optional[dict]:

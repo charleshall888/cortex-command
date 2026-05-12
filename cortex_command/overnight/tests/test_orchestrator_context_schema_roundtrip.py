@@ -59,7 +59,7 @@ def test_aggregate_round_context_schema_lockstep_roundtrip(tmp_path: Path) -> No
         ``{"unresolved", "prior_resolutions_by_feature"}``;
     (c) ``all_entries`` is absent from the escalations sub-dict.
     """
-    session_dir = tmp_path / "lifecycle" / "sessions" / "overnight-2026-05-11-roundtrip"
+    session_dir = tmp_path / "cortex" / "lifecycle" / "sessions" / "overnight-2026-05-11-roundtrip"
     _seed_session(session_dir)
 
     # (a) Call must not raise — schema_version literal and

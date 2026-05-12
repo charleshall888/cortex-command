@@ -68,7 +68,7 @@ def _check_cwd() -> None:
 
 def _pid_path(feature: str) -> Path:
     """Return the PID file path for a given feature."""
-    return Path(f"lifecycle/{feature}/daytime.pid")
+    return Path(f"cortex/lifecycle/{feature}/daytime.pid")
 
 
 def _read_pid(pid_path: Path) -> Optional[int]:
@@ -331,7 +331,7 @@ async def run_daytime(feature: str) -> int:
     _orphan_task: Optional[asyncio.Task] = None
 
     # Alias for the daytime log path used by the PR-URL scanner.
-    daytime_log_path = Path(f"lifecycle/{feature}/daytime.log")
+    daytime_log_path = Path(f"cortex/lifecycle/{feature}/daytime.log")
 
     try:
         # Phase A: resolve SDK auth vector. Must run INSIDE the try-block so
@@ -351,7 +351,7 @@ async def run_daytime(feature: str) -> int:
             _outcome = "failed"
             return 1
 
-        plan_path = Path(f"lifecycle/{feature}/plan.md")
+        plan_path = Path(f"cortex/lifecycle/{feature}/plan.md")
         if not plan_path.exists():
             sys.stderr.write(
                 f"error: plan.md not found at `lifecycle/{feature}/plan.md`\n"
@@ -457,7 +457,7 @@ async def run_daytime(feature: str) -> int:
             else:
                 print(
                     f"Feature {feature} deferred — check "
-                    f"lifecycle/{feature}/deferred/ for details.",
+                    f"cortex/lifecycle/{feature}/deferred/ for details.",
                     flush=True,
                 )
             return 1
@@ -500,7 +500,7 @@ async def run_daytime(feature: str) -> int:
             _orphan_task.cancel()
 
         # Compute deferred file paths as absolute paths (spec R2, line 21).
-        deferred_glob_dir = Path(f"lifecycle/{feature}/deferred")
+        deferred_glob_dir = Path(f"cortex/lifecycle/{feature}/deferred")
         if deferred_glob_dir.is_dir():
             deferred_files = [
                 str(p.resolve()) for p in sorted(deferred_glob_dir.glob("*.md"))
@@ -545,7 +545,7 @@ async def run_daytime(feature: str) -> int:
             pr_url=_scan_pr_url(daytime_log_path),
         )
 
-        result_path = Path(f"lifecycle/{feature}/daytime-result.json")
+        result_path = Path(f"cortex/lifecycle/{feature}/daytime-result.json")
         try:
             save_daytime_result(result_obj, result_path)
         except Exception as write_err:

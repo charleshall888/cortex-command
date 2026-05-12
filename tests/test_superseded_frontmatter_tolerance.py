@@ -180,8 +180,8 @@ def test_discovery_bootstrap_loader_tolerates_superseded_on_backlog_item(
     if result.returncode not in (0, 3):
         # Retry under a "backlog/" layout, which is the resolver's
         # standard search location.
-        backlog_dir = tmp_path / "backlog"
-        backlog_dir.mkdir(exist_ok=True)
+        backlog_dir = tmp_path / "cortex" / "backlog"
+        backlog_dir.mkdir(parents=True, exist_ok=True)
         item2 = backlog_dir / "300-supersede-test.md"
         item2.write_text(item.read_text(encoding="utf-8"), encoding="utf-8")
         result = subprocess.run(

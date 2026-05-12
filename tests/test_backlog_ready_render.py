@@ -177,7 +177,7 @@ def _write_md(backlog_dir: Path, record: dict) -> None:
 
 
 def _build_fixture_backlog(tmp_path: Path) -> Path:
-    """Materialize the fixture backlog under ``tmp_path / "backlog"``.
+    """Materialize the fixture backlog under ``tmp_path / "cortex" / "backlog"``.
 
     All records are written as ``.md`` files (so the full-corpus scan
     sees terminal items). ``index.json`` excludes terminal-status

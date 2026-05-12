@@ -70,7 +70,7 @@ def test_escalation_write_and_orchestrator_prompt_read_roundtrip(
     from cortex_command.overnight.state import OvernightState, save_state
 
     session_id = _fixture_session_id()
-    session_dir = tmp_path / "lifecycle" / "sessions" / session_id
+    session_dir = tmp_path / "cortex" / "lifecycle" / "sessions" / session_id
     session_dir.mkdir(parents=True, exist_ok=True)
 
     # The aggregator re-raises FileNotFoundError if overnight-state.json

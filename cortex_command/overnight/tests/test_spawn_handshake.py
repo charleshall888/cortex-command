@@ -153,7 +153,7 @@ def fake_runner_env(
     runner.
     """
     session_id = "spawn-handshake-test"
-    session_dir = tmp_path / "lifecycle" / "sessions" / session_id
+    session_dir = tmp_path / "cortex" / "lifecycle" / "sessions" / session_id
     state_path = _write_minimal_state(session_dir, session_id)
 
     monkeypatch.setattr(

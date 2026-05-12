@@ -1415,8 +1415,8 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     root: Path = args.root.resolve()
-    lifecycle_dir = root / "lifecycle"
-    output_path = root / "lifecycle" / "metrics.json"
+    lifecycle_dir = root / "cortex" / "lifecycle"
+    output_path = root / "cortex" / "lifecycle" / "metrics.json"
 
     # ---- Discover and extract per-feature metrics ----
     print(f"Scanning {lifecycle_dir} for event logs...")

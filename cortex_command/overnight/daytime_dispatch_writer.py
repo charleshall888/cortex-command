@@ -23,7 +23,7 @@ from cortex_command.common import atomic_write
 
 
 def _dispatch_path(feature: str) -> Path:
-    return Path(f"lifecycle/{feature}/daytime-dispatch.json")
+    return Path(f"cortex/lifecycle/{feature}/daytime-dispatch.json")
 
 
 def _write_init(feature: str, dispatch_id: str) -> None:

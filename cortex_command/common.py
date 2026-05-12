@@ -356,7 +356,7 @@ def detect_lifecycle_phase(feature_dir: Path) -> dict[str, str | int]:
 
     Args:
         feature_dir: Path to the lifecycle feature directory
-                     (e.g. Path("lifecycle/my-feature")).
+                     (e.g. Path("cortex/lifecycle/my-feature")).
 
     Returns:
         A dict with keys:
@@ -432,7 +432,7 @@ def _read_criticality_inner(
 
 def read_criticality(
     feature: str,
-    lifecycle_base: Path = Path("lifecycle"),
+    lifecycle_base: Path = Path("cortex/lifecycle"),
 ) -> str:
     """Read the canonical criticality from a feature's events.log.
 
@@ -446,7 +446,7 @@ def read_criticality(
     Args:
         feature: Feature slug string (e.g. "my-feature").
         lifecycle_base: Base directory for lifecycle data.
-            Defaults to ``Path("lifecycle")``.
+            Defaults to ``Path("cortex/lifecycle")``.
 
     Returns:
         The most recent criticality string, or ``"medium"``.
@@ -505,7 +505,7 @@ def _read_tier_inner(
 
 def read_tier(
     feature: str,
-    lifecycle_base: Path = Path("lifecycle"),
+    lifecycle_base: Path = Path("cortex/lifecycle"),
 ) -> str:
     """Read the active complexity tier from a feature's events.log.
 
@@ -517,7 +517,7 @@ def read_tier(
     Args:
         feature: Feature slug string (e.g. "my-feature").
         lifecycle_base: Base directory for lifecycle data.
-            Defaults to ``Path("lifecycle")``.
+            Defaults to ``Path("cortex/lifecycle")``.
 
     Returns:
         The active tier string, or ``"simple"``.

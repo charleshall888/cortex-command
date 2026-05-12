@@ -94,7 +94,7 @@ class TestRunDaytimeStartupGuards(unittest.IsolatedAsyncioTestCase):
 
         with tempfile.TemporaryDirectory() as td:
             # Confirm no lifecycle dir exists.
-            self.assertFalse((Path(td) / "lifecycle").exists())
+            self.assertFalse((Path(td) / "cortex" / "lifecycle").exists())
             # Pin the resolver away from the ambient repo: setting
             # CORTEX_REPO_ROOT bypasses the walk, but here we want the walk
             # to fail, so explicitly clear it for this assertion.
@@ -116,7 +116,7 @@ class TestRunDaytimeStartupGuards(unittest.IsolatedAsyncioTestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as td:
-            feat_dir = Path(td) / "lifecycle" / "feat"
+            feat_dir = Path(td) / "cortex" / "lifecycle" / "feat"
             feat_dir.mkdir(parents=True)
             stderr = io.StringIO()
             with _CwdCtx(Path(td)), patch.object(sys, "stderr", stderr):
@@ -130,7 +130,7 @@ class TestRunDaytimeStartupGuards(unittest.IsolatedAsyncioTestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as td:
-            feat_dir = Path(td) / "lifecycle" / "feat"
+            feat_dir = Path(td) / "cortex" / "lifecycle" / "feat"
             feat_dir.mkdir(parents=True)
             (feat_dir / "plan.md").write_text("# feat\n", encoding="utf-8")
             (feat_dir / "daytime.pid").write_text(
@@ -149,7 +149,7 @@ class TestRunDaytimeStartupGuards(unittest.IsolatedAsyncioTestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as td:
-            feat_dir = Path(td) / "lifecycle" / "feat"
+            feat_dir = Path(td) / "cortex" / "lifecycle" / "feat"
             feat_dir.mkdir(parents=True)
             (feat_dir / "plan.md").write_text("# feat\n", encoding="utf-8")
             (feat_dir / "daytime.pid").write_text("99999", encoding="utf-8")
@@ -193,7 +193,7 @@ class TestRunDaytimeRouting(unittest.IsolatedAsyncioTestCase):
     """Exit-code routing for the three terminal outcomes."""
 
     def _setup_dirs(self, td: str, feature: str = "feat") -> None:
-        feat_dir = Path(td) / "lifecycle" / feature
+        feat_dir = Path(td) / "cortex" / "lifecycle" / feature
         feat_dir.mkdir(parents=True)
         (feat_dir / "plan.md").write_text(f"# {feature}\n", encoding="utf-8")
 
@@ -506,7 +506,7 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
     # ------------------------------------------------------------------
 
     def _setup_dirs(self, td: Path, feature: str = "feat") -> None:
-        feat_dir = td / "lifecycle" / feature
+        feat_dir = td / "cortex" / "lifecycle" / feature
         feat_dir.mkdir(parents=True)
         (feat_dir / "plan.md").write_text(f"# {feature}\n", encoding="utf-8")
         (feat_dir / "deferred").mkdir(parents=True, exist_ok=True)
@@ -514,7 +514,7 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
     def _read_result(self, td: Path, feature: str = "feat") -> dict:
         import json
 
-        result_path = td / "lifecycle" / feature / "daytime-result.json"
+        result_path = td / "cortex" / "lifecycle" / feature / "daytime-result.json"
         self.assertTrue(result_path.exists(), "daytime-result.json not found")
         with result_path.open(encoding="utf-8") as fh:
             return json.load(fh)
@@ -597,7 +597,7 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
             self._setup_dirs(td, feature)
 
             # Pre-create a deferral file so deferred_files is populated.
-            deferred_dir = td / "lifecycle" / feature / "deferred"
+            deferred_dir = td / "cortex" / "lifecycle" / feature / "deferred"
             deferred_file = deferred_dir / "x.md"
             deferred_file.write_text("# question\n", encoding="utf-8")
 
@@ -899,7 +899,7 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
             td = Path(raw_td)
             self._setup_dirs(td, feature)
             # Write a PID file pointing at the current (live) process.
-            pid_path = td / "lifecycle" / feature / "daytime.pid"
+            pid_path = td / "cortex" / "lifecycle" / feature / "daytime.pid"
             pid_path.write_text(str(os.getpid()), encoding="utf-8")
 
             with (
@@ -1053,7 +1053,7 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
 
             # Pre-create a daytime.log with a PR URL embedded.
             pr_url = "https://github.com/owner/repo/pull/42"
-            log_path = td / "lifecycle" / feature / "daytime.log"
+            log_path = td / "cortex" / "lifecycle" / feature / "daytime.log"
             log_path.write_text(
                 f"Some output\nCreated PR: {pr_url}\nMore output\n",
                 encoding="utf-8",

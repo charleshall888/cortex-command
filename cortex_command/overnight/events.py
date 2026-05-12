@@ -158,7 +158,7 @@ def _default_log_path() -> Path:
     Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
     every consumer must invoke this function (or supply an explicit path).
     """
-    return _resolve_user_project_root() / "lifecycle" / "overnight-events.log"
+    return _resolve_user_project_root() / "cortex" / "lifecycle" / "overnight-events.log"
 
 
 def events_log_path(
@@ -178,7 +178,7 @@ def events_log_path(
     Returns:
         Path to lifecycle/overnight-events-{session_id}.log.
     """
-    lifecycle_root = lifecycle_root or _resolve_user_project_root() / "lifecycle"
+    lifecycle_root = lifecycle_root or _resolve_user_project_root() / "cortex" / "lifecycle"
     return lifecycle_root / f"overnight-events-{session_id}.log"
 
 

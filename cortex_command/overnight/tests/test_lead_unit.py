@@ -110,7 +110,7 @@ class TestReadLearnings(unittest.TestCase):
         self._tmpdir.cleanup()
 
     def _make_learnings_dir(self, feature: str = "feat-a") -> Path:
-        d = Path(f"lifecycle/{feature}/learnings")
+        d = Path(f"cortex/lifecycle/{feature}/learnings")
         d.mkdir(parents=True, exist_ok=True)
         return d
 

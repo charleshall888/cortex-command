@@ -59,7 +59,7 @@ def _make_test_result(*, passed: bool = True, output: str = "") -> MagicMock:
 
 
 def _write_exit_report(worktree: Path, feature: str, report: dict) -> None:
-    path = worktree / "lifecycle" / feature / "exit-reports" / "repair.json"
+    path = worktree / "cortex" / "lifecycle" / feature / "exit-reports" / "repair.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(report), encoding="utf-8")
 

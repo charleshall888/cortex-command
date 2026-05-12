@@ -109,19 +109,27 @@ SECTION_PRIORITY: tuple[str, ...] = (
 # ---------------------------------------------------------------------------
 
 def _backlog_dir() -> Path:
-    """Return the backlog directory, honouring CORTEX_BACKLOG_DIR override."""
+    """Return the backlog directory, honouring CORTEX_BACKLOG_DIR override.
+
+    Walks upward from cwd looking for ``cortex/backlog/`` (post-#202 umbrella
+    layout); falls back to legacy ``backlog/`` for transitional repos that
+    have not yet relocated.
+    """
     env_override = os.environ.get("CORTEX_BACKLOG_DIR")
     if env_override:
         return Path(env_override)
     here = Path.cwd().resolve()
     while True:
-        candidate = here / "backlog"
+        candidate = here / "cortex" / "backlog"
         if candidate.is_dir():
             return candidate
+        legacy = here / "backlog"
+        if legacy.is_dir():
+            return legacy
         if here == here.parent:
             break
         here = here.parent
-    return Path.cwd() / "backlog"
+    return Path.cwd() / "cortex" / "backlog"
 
 
 # ---------------------------------------------------------------------------

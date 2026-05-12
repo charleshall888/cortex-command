@@ -216,17 +216,20 @@ def _backlog_dir() -> Path:
         return Path(env_override)
     here = Path.cwd().resolve()
     while True:
-        candidate = here / "backlog"
+        candidate = here / "cortex" / "backlog"
         if candidate.is_dir():
             return candidate
+        legacy = here / "backlog"
+        if legacy.is_dir():
+            return legacy
         if here == here.parent:
             break
         here = here.parent
     # No backlog/ found anywhere up the tree. Return a cwd-relative path so
     # the existing exit-70 branch in main() emits an intelligible diagnostic
-    # ("backlog directory not found at <user-cwd>/backlog") rather than a
-    # plugin-cache path the user has never heard of.
-    return Path.cwd() / "backlog"
+    # ("backlog directory not found at <user-cwd>/cortex/backlog") rather
+    # than a plugin-cache path the user has never heard of.
+    return Path.cwd() / "cortex" / "backlog"
 
 
 # ---------------------------------------------------------------------------

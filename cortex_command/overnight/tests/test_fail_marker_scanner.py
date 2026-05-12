@@ -72,8 +72,8 @@ def test_state_root_without_sessions_subdir_returns_empty_list(
     tmp_path: Path,
 ) -> None:
     """A state root that has no ``sessions/`` subdir returns ``[]``."""
-    (tmp_path / "lifecycle").mkdir()
-    assert scan_session_dirs(tmp_path / "lifecycle") == []
+    (tmp_path / "cortex" / "lifecycle").mkdir(parents=True)
+    assert scan_session_dirs(tmp_path / "cortex" / "lifecycle") == []
 
 
 def test_empty_sessions_dir_returns_empty_list(tmp_path: Path) -> None:

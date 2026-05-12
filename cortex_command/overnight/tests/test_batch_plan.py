@@ -28,7 +28,7 @@ class TestGenerateBatchPlanPreflight(unittest.TestCase):
 
     def _write_valid_plan(self, feature: str) -> Path:
         """Write a minimal valid feature plan and return its path."""
-        plan_dir = Path(f"lifecycle/{feature}")
+        plan_dir = Path(f"cortex/lifecycle/{feature}")
         plan_dir.mkdir(parents=True, exist_ok=True)
         plan_path = plan_dir / "plan.md"
         plan_path.write_text(
@@ -45,7 +45,7 @@ class TestGenerateBatchPlanPreflight(unittest.TestCase):
 
     def _write_malformed_plan(self, feature: str) -> Path:
         """Write a plan.md that exists but cannot be parsed (no heading)."""
-        plan_dir = Path(f"lifecycle/{feature}")
+        plan_dir = Path(f"cortex/lifecycle/{feature}")
         plan_dir.mkdir(parents=True, exist_ok=True)
         plan_path = plan_dir / "plan.md"
         plan_path.write_text(

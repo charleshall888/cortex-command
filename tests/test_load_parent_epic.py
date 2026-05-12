@@ -382,7 +382,7 @@ def _run_no_env(slug: str, cwd: Path) -> subprocess.CompletedProcess:
 def test_discovery_walks_up_from_cwd(tmp_path):
     """No env var: script walks from cwd, finds backlog/ at cwd root."""
     _write(
-        tmp_path / "backlog" / "300-test-child.md",
+        tmp_path / "cortex" / "backlog" / "300-test-child.md",
         "---\ntitle: Test child\n---\n",
     )
     result = _run_no_env("300-test-child", tmp_path)
@@ -394,7 +394,7 @@ def test_discovery_walks_up_from_cwd(tmp_path):
 def test_discovery_walks_up_from_subdir(tmp_path):
     """No env var: script walks up from a deep subdir to find backlog/."""
     _write(
-        tmp_path / "backlog" / "300-test-child.md",
+        tmp_path / "cortex" / "backlog" / "300-test-child.md",
         "---\ntitle: Test child\n---\n",
     )
     deep = tmp_path / "nested" / "sub" / "dir"

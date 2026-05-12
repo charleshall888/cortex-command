@@ -38,7 +38,7 @@ def _events_symlink_path() -> Path:
     every consumer must invoke this function so the user's project root is
     resolved at the moment the path is needed.
     """
-    lifecycle_root = _resolve_user_project_root() / "lifecycle"
+    lifecycle_root = _resolve_user_project_root() / "cortex" / "lifecycle"
     return latest_symlink_path("overnight", lifecycle_root=lifecycle_root) / "overnight-events.log"
 
 
@@ -86,7 +86,7 @@ def _resolve_events_log(session_id: str) -> Path | None:
         return events_symlink
 
     # Fall back to per-session file
-    per_session = session_dir(session_id, lifecycle_root=_resolve_user_project_root() / "lifecycle") / "overnight-events.log"
+    per_session = session_dir(session_id, lifecycle_root=_resolve_user_project_root() / "cortex" / "lifecycle") / "overnight-events.log"
     if per_session.exists():
         return per_session
 
@@ -199,7 +199,7 @@ def _find_latest_state_path() -> Optional[Path]:
     Falls back to the most recently modified session of any phase.
     Never reads through the latest-overnight symlink to avoid stale data.
     """
-    sessions_dir = _resolve_user_project_root() / "lifecycle" / "sessions"
+    sessions_dir = _resolve_user_project_root() / "cortex" / "lifecycle" / "sessions"
     if not sessions_dir.exists():
         return None
 

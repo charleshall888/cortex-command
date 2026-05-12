@@ -29,7 +29,7 @@ def _default_plan_path() -> Path:
     Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
     every consumer must invoke this function (or supply an explicit path).
     """
-    return _resolve_user_project_root() / "lifecycle" / "overnight-plan.md"
+    return _resolve_user_project_root() / "cortex" / "lifecycle" / "overnight-plan.md"
 
 
 def _format_item_row(
@@ -406,7 +406,7 @@ def initialize_overnight_state(
                 status="pending",
                 round_assigned=batch.batch_id,
                 spec_path=item.spec,
-                plan_path=item.plan if item.plan else f"lifecycle/{slug}/plan.md",
+                plan_path=item.plan if item.plan else f"cortex/lifecycle/{slug}/plan.md",
                 backlog_id=item.id if item.id else None,
                 repo_path=item.repo,
             )
@@ -634,7 +634,7 @@ def extract_spec_section(
 
     output = "".join(sections)
 
-    dest = project_root / "lifecycle" / slug / "spec.md"
+    dest = project_root / "cortex" / "lifecycle" / slug / "spec.md"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(output, encoding="utf-8")
     return dest
@@ -664,7 +664,7 @@ def extract_batch_specs(
     created: list[Path] = []
     for slug, feature_status in state.features.items():
         # Skip if per-feature lifecycle spec already exists
-        if (project_root / "lifecycle" / slug / "spec.md").exists():
+        if (project_root / "cortex" / "lifecycle" / slug / "spec.md").exists():
             continue
         # Skip if no batch spec or no backlog ID to identify the section
         if not feature_status.spec_path or feature_status.backlog_id is None:

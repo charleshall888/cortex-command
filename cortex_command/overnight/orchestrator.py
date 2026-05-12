@@ -184,7 +184,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
         integration_branches = overnight_state.integration_branches
         integration_worktrees = overnight_state.integration_worktrees
         if overnight_state.worktree_path:
-            outcome_router.set_backlog_dir(Path(overnight_state.worktree_path) / "backlog")
+            outcome_router.set_backlog_dir(Path(overnight_state.worktree_path) / "cortex" / "backlog")
         for name in feature_names:
             fs = overnight_state.features.get(name, OvernightFeatureStatus())
             spec_paths[name] = fs.spec_path if fs else None
@@ -201,7 +201,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
                     "exception_message": str(exc),
                     "state_path": str(config.overnight_state_path),
                     "subsequent_writes_target": str(
-                        _resolve_user_project_root() / "backlog"
+                        _resolve_user_project_root() / "cortex" / "backlog"
                     ),
                 },
             )

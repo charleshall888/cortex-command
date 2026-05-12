@@ -48,7 +48,7 @@ def lifecycle_layout(tmp_path: Path) -> dict:
         evil_symlink:   tmp_path/'lifecycle'/'foo'/'evil.md' -> /etc/hostname
         outside_file:   tmp_path/'outside.md' (regular file, not under lifecycle)
     """
-    lifecycle_root = tmp_path / "lifecycle"
+    lifecycle_root = tmp_path / "cortex" / "lifecycle"
     feature_dir = lifecycle_root / "foo"
     feature_dir.mkdir(parents=True)
 
