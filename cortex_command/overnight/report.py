@@ -566,6 +566,21 @@ def render_completed_features(data: ReportData) -> str:
             lines.append("**Requirements drift**: section is malformed and requires manual review.")
             lines.append("")
 
+        # Drift protocol breaches (spec R7) — reviewer exhausted the
+        # max-retry=2 cap without producing a Suggested Requirements Update
+        # section. The breach event is the visibility surface so the gap is
+        # not silent on the post-3rd-pass case.
+        breaches = _read_drift_protocol_breaches(name)
+        if breaches:
+            last = breaches[-1]
+            retries = last.get("retries", "?")
+            lines.append(
+                f"**Drift protocol breach** — reviewer exhausted re-dispatch after "
+                f"{retries} retries without producing a `## Suggested Requirements Update` "
+                f"section; manual review required."
+            )
+            lines.append("")
+
     for repo_path in sorted_keys:
         if repo_path is None:
             group_name = home_repo_name
@@ -628,6 +643,7 @@ def render_pending_drift(data: ReportData) -> str:
 
     # 3. Scan cortex/lifecycle/*/review.md, skip merged and re-implementing
     drift_features: list[tuple[str, dict]] = []
+    breach_features: list[tuple[str, list[dict]]] = []
     for review_path in sorted(Path("cortex/lifecycle").glob("*/review.md")):
         feature = review_path.parent.name
         if feature in merged or feature in reimplementing:
@@ -635,9 +651,12 @@ def render_pending_drift(data: ReportData) -> str:
         drift = _read_requirements_drift(feature)
         if drift is not None and drift.get("state") == "detected":
             drift_features.append((feature, drift))
+        breaches = _read_drift_protocol_breaches(feature)
+        if breaches:
+            breach_features.append((feature, breaches))
 
-    # 4. No detected drift — omit the section entirely
-    if not drift_features:
+    # 4. No detected drift and no breaches — omit the section entirely
+    if not drift_features and not breach_features:
         return ""
 
     # 5. Render the section
@@ -651,6 +670,19 @@ def render_pending_drift(data: ReportData) -> str:
                 lines.append(f"- {finding}")
         else:
             lines.append("- (drift detected but no findings listed)")
+        lines.append("")
+
+    # 6. Render drift protocol breaches (spec R7) — exhausted re-dispatch
+    # surfaces here so the post-3rd-pass case is visible, not silent.
+    for feature, breaches in breach_features:
+        last = breaches[-1]
+        retries = last.get("retries", "?")
+        lines.append(f"### {feature} (drift_protocol_breach)")
+        lines.append("")
+        lines.append(
+            f"- Reviewer exhausted re-dispatch after {retries} retries without "
+            f"producing a `## Suggested Requirements Update` section; manual review required."
+        )
         lines.append("")
 
     return "\n".join(lines)
@@ -853,6 +885,31 @@ def _read_requirements_drift(feature: str) -> dict | None:
                 findings.append(line[2:].strip())
 
     return {"state": state, "findings": findings}
+
+
+def _read_drift_protocol_breaches(feature: str) -> list[dict]:
+    """Read ``drift_protocol_breach`` events from a feature's events.log.
+
+    Returns the list of parsed event records (newest last), or an empty
+    list if no events.log exists or no breaches were emitted. Each breach
+    event carries the schema documented in
+    ``skills/lifecycle/references/review.md`` §4a:
+
+        {"ts": "<ISO 8601>", "event": "drift_protocol_breach",
+         "feature": "<name>", "state": "detected",
+         "suggestion": "missing", "retries": 2}
+
+    The morning report surfaces breaches so an exhausted retry on the
+    Suggested Requirements Update section is visible rather than silent
+    (spec R7, Phase 2). Companion to ``_read_requirements_drift`` which
+    reads the review.md section; breaches travel through events.log, not
+    review.md frontmatter.
+    """
+    events_path = Path(f"cortex/lifecycle/{feature}/events.log")
+    if not events_path.exists():
+        return []
+    events = read_events(events_path)
+    return [e for e in events if e.get("event") == "drift_protocol_breach"]
 
 
 def _read_recovery_log_last_entry(feature: str) -> str:
