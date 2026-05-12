@@ -48,6 +48,17 @@ Backward compat: existing discoveries that have `spec.md` but no `decomposed.md`
 
 If resuming, report the detected phase and offer to continue or restart from an earlier phase.
 
+### Re-run slug-collision semantics (spec R13)
+
+When the user invokes `/cortex-core:discovery` on a topic whose `research/{{topic}}/` directory already exists AND the user elects to re-run from scratch (rather than resume or update in place), the agent does NOT overwrite the prior artifact. Instead:
+
+(a) **Fresh slug**: compute a new slug of the form `{{topic}}-N` where N is the smallest integer ≥ 2 making the resulting slug unique on disk. For example, if `research/plugin-system/` already exists, the first re-run produces `research/plugin-system-2/`; a second re-run produces `research/plugin-system-3/`; and so on. The collision check considers every entry directly under `research/` so prior re-runs are honored.
+(b) **`superseded:` frontmatter on the new artifact**: the newly created `research/{{topic}}-N/research.md` begins with a YAML frontmatter block that includes a `superseded:` key whose value is the relative path of the prior artifact it supersedes (e.g. `superseded: research/plugin-system/research.md`). When the re-run itself supersedes an existing `-N` artifact, the `superseded:` value points at that immediately-prior `-N` artifact, not the original.
+(c) **Prior artifact untouched**: the existing `research/{{topic}}/` (or prior `-N`) directory is read-only for this re-run. No files in it are renamed, moved, or deleted; the decomposed.md (if any) remains in place as a durable audit trail.
+(d) **Reconciliation is manual**: the agent does NOT automatically reconcile the new architecture with the prior one. Surfacing differences, choosing which slug downstream `discovery_source:` fields should point at, and any archival of the prior artifact are explicit user decisions made outside the discovery skill.
+
+Events for re-runs route to `research/{{topic}}-N/events.log` via the helper module's `resolve-events-log-path` subcommand (see Step 2's `python3 -m cortex_command.discovery` invocations below), which inspects the slug for a `-N` suffix and returns the correctly-suffixed path. Skill prose should resolve event-log paths through the helper rather than hardcoding `research/{topic}/events.log`, so re-runs do not bleed events into the superseded artifact's log.
+
 ## Step 3: Execute Current Phase
 
 | Phase | Reference | Artifact |
