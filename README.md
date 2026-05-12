@@ -2,6 +2,8 @@
 
 Cortex Command is an AI workflow framework for Claude Code built on a single insight: autonomous execution is only as good as the specification that precedes it.
 
+📖 **[Read the overview →](https://charleshall888.github.io/cortex-command/)**
+
 The front half of the lifecycle is human-driven — discovery maps the problem space, refine clarifies scope, and lifecycle drives features through research, spec, plan, implement, and review. Once scope is genuinely clear, run `/cortex-core:lifecycle` for interactive development or queue refined items for `/overnight` and wake up to a morning report with PRs ready to review. For a visual of the full pipeline, see [docs/agentic-layer.md](docs/agentic-layer.md#diagram-a--main-workflow-flow).
 
 ## Prerequisites
