@@ -15,7 +15,7 @@ updated: 2026-05-11
 
 ## Role
 
-Build a routing-recall test corpus whose phrases are sourced independently of the canonical `skills/<name>/SKILL.md` `description:` text. The current `tests/fixtures/skill_trigger_phrases.yaml` fixture is a content-preservation gate — its phrases are sampled FROM each canonical SKILL.md description, so it locks in known-routing substrings against silent drop during description compression, but it cannot detect routing-recall gaps for utterances that are absent from the current description. Spec R2 of the `reduce-boot-context-surface-claudemd-skillmd` lifecycle calls out this partial-coverage acknowledgment and defers the independently-sourced corpus to a follow-up.
+Build a routing-recall test corpus whose phrases are sourced independently of the canonical `skills/<name>/SKILL.md` `description:` text. The current `tests/fixtures/skill_trigger_phrases.yaml` fixture is a content-preservation gate — its phrases are sampled FROM each canonical SKILL.md description, so it locks in known-routing substrings against silent drop during description compression, but it cannot detect routing-recall gaps for utterances that are absent from the current description. The parent lifecycle calls out this partial-coverage acknowledgment and defers the independently-sourced corpus to a follow-up (see Provenance).
 
 ## Integration
 
