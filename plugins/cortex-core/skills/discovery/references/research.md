@@ -24,13 +24,7 @@ Present questions to the user for review. Add any questions they raise.
 
 ### 1a. Load Requirements Context
 
-Check for a `cortex/requirements/` directory at the project root. If it exists:
-
-- Read `cortex/requirements/project.md` for project-level context.
-- Scan for area docs relevant to this topic and read those too.
-- Use requirements to inform research — identify where this topic intersects with established requirements and constraints.
-
-If no requirements directory exists, skip this step.
+Load requirements using the shared tag-based loading protocol — read `../../lifecycle/references/load-requirements.md` and follow it. Use requirements to inform research — identify where this topic intersects with established requirements and constraints. If no `cortex/requirements/` directory or files exist, note this and skip this step.
 
 ### 2. Codebase Analysis
 

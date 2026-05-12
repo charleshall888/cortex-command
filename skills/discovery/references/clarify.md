@@ -12,11 +12,7 @@ The input is a raw topic name or description. There is no backlog item to resolv
 
 ### 2. Load Requirements Context
 
-Check for a `cortex/requirements/` directory at the project root.
-
-- If `cortex/requirements/project.md` exists, read it.
-- Scan `cortex/requirements/` for area docs whose names suggest relevance to this topic. Read any that apply.
-- If no requirements directory or files exist, note this and skip to §3.
+Load requirements using the shared tag-based loading protocol — read `../../lifecycle/references/load-requirements.md` and follow it. If no `cortex/requirements/` directory or files exist, note this and skip to §3.
 
 ### 3. Check Existing Backlog Coverage
 
