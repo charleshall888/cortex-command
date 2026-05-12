@@ -67,3 +67,17 @@ Lifecycle state (`criticality`, `tier`, `tasks_total`, `tasks_checked`, `rework_
 ## Open Decisions
 
 None. All design decisions are committed.
+
+## Post-Implementation Spec Corrections
+
+Recorded after the lifecycle was APPROVED to capture spec-vs-implementation divergences that future readers should not trip on. Original requirements text above is preserved verbatim; corrections live in this section only.
+
+- **R4 checkbox regex** — spec text specifies `grep -cE '^- \[ \]|^- \[x\]'` (GitHub task-list checkbox syntax). Actual lifecycle plans use `- **Status**: [ ]` task-header syntax per `skills/lifecycle/references/plan.md`'s plan template, and `cortex_command/common.py:detect_lifecycle_phase` has always parsed that form via `\*\*Status\*\*:.*\[[ x]\]`. The shipped `bin/cortex-lifecycle-counters` uses the **Status** regex to match common.py's existing behavior — the spec's regex would have returned 0 against every real plan. Treat R4's regex as a documentation error; the **Status** regex is the implementation contract.
+
+- **R6 acceptance regex** — spec text specifies `grep -rnE "scan.*for the most recent.*lifecycle_start|read events\.log for.*criticality|read events\.log for.*tier" skills/` as the binary acceptance for "scan-stanza was removed." Empirically this regex matches at most 1 line of the unmodified pre-implementation tree (because actual prose word order is, e.g., "read criticality from `events.log`. Scan for the most recent..." — different from the regex's required substring order). Task 5's verification substituted **targeted prose-fingerprint greps** matching the actual phrases being removed. Treat R6's regex as vacuous on its own; the prose-fingerprint approach is the implementation contract.
+
+- **Per-call cost target (R3)** — spec specifies "≤15ms wall time on a 15 KB events.log". Measured on the shipping bash + jq + `cortex-log-invocation` shim implementation: ~28-30ms total (shim ~21ms; jq pipeline ~9ms). The script's actual work is well within budget; the shim cost is a separate cross-script concern filed as a follow-up (see backlog item for shim trim investigation).
+
+- **Cache key shape (R1)** — spec specifies `(path, mtime_ns)` keying. Shipped implementation widens to per-file `(exists, mtime_ns, size)` triples (and 5-tuple for `detect_lifecycle_phase`) to close two failure modes the spec didn't anticipate: sub-mtime_ns append windows where mtime collides between writes (size component breaks ties), and `0`-mtime collisions between missing-file sentinels and legitimately-zero-mtime fixtures (`exists` boolean disambiguates). Strict superset of the spec's key.
+
+- **`read_criticality` canonical-rule alignment (post-#190 follow-up)** — the spec did not call out that `read_criticality` had the same "permissive last-wins" gap as `read_tier`. Mirror alignment landed in commit `9587121` immediately after #190 closed.
