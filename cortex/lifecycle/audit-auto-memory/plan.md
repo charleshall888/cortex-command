@@ -26,7 +26,7 @@ Land 3 PROMOTE rails from the audit-auto-memory triage: two new `CLAUDE.md` auth
   - **Style constraint**: use soft positive-routing phrasing throughout — no new `MUST` / `CRITICAL` / `REQUIRED` language. The MUST-escalation policy at `CLAUDE.md:52` forbids new MUSTs without evidence-artifact links; these rails carry none.
   - **Source paraphrase rule**: paraphrase the memory contents into new prose; do not paste memory text verbatim — the rails are net-new authored content informed by the audit verdicts, not copy-pastes.
 - **Verification**: Run `grep -c "user-facing affordance" CLAUDE.md && grep -c "Kept user pauses\|kept-pauses" CLAUDE.md && grep -c "structural separation\|prose-only enforcement" CLAUDE.md && grep -c "What and Why\|what and why" CLAUDE.md && grep -c "Opus 4.7\|capable models" CLAUDE.md` — pass if all five counts return ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit `1d4adf45`)
 
 ### Task 2: Append measurement operationalization to critical-review Step 4 anchor-check (R3)
 - **Files**: `skills/critical-review/SKILL.md`, `plugins/cortex-core/skills/critical-review/SKILL.md`
@@ -40,7 +40,7 @@ Land 3 PROMOTE rails from the audit-auto-memory triage: two new `CLAUDE.md` auth
   - **Mirror regeneration mechanics**: `.githooks/pre-commit` runs `just build-plugin` automatically when staged paths include `skills/`. The hook then verifies no drift between fresh build and index — failure here means `git add plugins/cortex-core/skills/critical-review/SKILL.md` and re-commit. Alternative: run `just build-plugin` before the first `git add` so both files are staged in one shot.
   - **No new MUST language**: the operationalization uses positive-routing prose ("run the actual measurement before classifying…"), not a `MUST`.
 - **Verification**: Run `grep -c "new evidence, not prior reasoning" skills/critical-review/SKILL.md` (expect ≥ 1, preserves existing sentence) AND `grep -c "new evidence, not prior reasoning" plugins/cortex-core/skills/critical-review/SKILL.md` (expect ≥ 1, mirror parity) AND `awk '/^## Step 4/,/^## Step 5/' skills/critical-review/SKILL.md | grep -ci "measure\|measurement"` (expect ≥ 1, Step 4 region contains the operationalization keyword) AND `awk '/^## Step 4/,/^## Step 5/' skills/critical-review/SKILL.md | grep -c "wc -c\|empirical claim\|time.*wc.*grep"` (expect ≥ 1, Step 4 region names a concrete measurement form). Pass if all four counts ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit `2fed8ab6`)
 
 ## Risks
 
