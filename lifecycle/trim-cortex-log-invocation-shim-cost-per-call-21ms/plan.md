@@ -29,7 +29,7 @@ Trim `bin/cortex-log-invocation` per-invocation cost from ~19ms to ~9ms on the c
   - JSON-emission `printf` line (60-62) is unchanged — preserves byte-equivalence with `_telemetry.py`'s `json.dumps(record, separators=(",", ":"), ensure_ascii=False) + "\n"`.
   - Spec R5 budget: shim must remain bash + POSIX utilities only; no new external dependencies.
 - **Verification**: (b) `grep -c 'CORTEX_REPO_ROOT' bin/cortex-log-invocation` ≥ 1 AND `grep -c '\[ -d "\$session_dir" \] || mkdir -p' bin/cortex-log-invocation` ≥ 1 AND `grep -c 'script_name="\${script_path##\*/}"' bin/cortex-log-invocation` = 1 AND `grep -c '^script_name="\$(basename' bin/cortex-log-invocation` = 0 AND `head -20 bin/cortex-log-invocation | grep -c "trap 'exit 0' EXIT"` = 1 — pass if all five conditions hold
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 21f83f1
 
 ### Task 2: Mirror `CORTEX_REPO_ROOT` consultation in `_telemetry.py`
 - **Files**: `cortex_command/backlog/_telemetry.py`, `cortex_command/backlog/tests/test_telemetry_byte_equivalence.py`
@@ -43,7 +43,7 @@ Trim `bin/cortex-log-invocation` per-invocation cost from ~19ms to ~9ms on the c
   - Spec R6 requires that the existing byte-equivalence test continues to pass. The new test case is parametrized: one parametrization is the existing no-env-var path; the second sets `env={"CORTEX_REPO_ROOT": str(tmp_path), ...}` and asserts the bash subprocess and Python helper produce byte-identical JSONL records (after `ts`-normalization). This closes the verification-gate gap where the new env-var branch was previously unreached by any test.
   - Symmetric updates keep bash and Python emitters identical on the cooperating-parent fast path; deeper edge-case parity (worktree `.git` files pointing to pruned gitdirs, `GIT_DIR` env interaction with the slow-path fallback) is **explicitly out of scope** — research's adversarial review rejected a `git rev-parse` replacement (option D) for exactly these correctness hazards and the slow path's behavior is preserved as-is. The Risks section captures the residual blind spot.
 - **Verification**: (b) `grep -cE 'os\.environ\.get\("CORTEX_REPO_ROOT"\)' cortex_command/backlog/_telemetry.py` ≥ 1 AND `grep -cE '\.is_dir\(\) or .*\.is_file\(\)' cortex_command/backlog/_telemetry.py` ≥ 1 AND `uv run pytest cortex_command/backlog/tests/test_telemetry_byte_equivalence.py -q` exits 0 AND `uv run pytest cortex_command/backlog/tests/ -q` exits 0 — pass if both greps ≥ 1 and both pytest invocations exit 0
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 4cd70ae
 
 ### Task 3: Export `CORTEX_REPO_ROOT` from three cooperating-parent producers
 - **Files**: `cortex_command/overnight/runner.py`, `hooks/cortex-scan-lifecycle.sh`, `plugins/cortex-overnight/hooks/cortex-scan-lifecycle.sh`, `cortex_command/pipeline/dispatch.py`
@@ -58,7 +58,7 @@ Trim `bin/cortex-log-invocation` per-invocation cost from ~19ms to ~9ms on the c
   - This shifts the three producers from "propagate parent's env" to "assert producer's known-correct value" — defends against the wrong-but-existent-marker failure mode where a stale CORTEX_REPO_ROOT inherited from a developer's parent shell passes the shim's `.git`-marker validation and routes telemetry to the wrong project.
   - Three producers cover three dispatcher classes: interactive sessions (hook), overnight runner (runner.py), per-dispatch subprocesses (dispatch.py). Scheduled launchd-fired runs are covered transitively: the plist invokes `cortex overnight start-run` which goes through runner.py's `os.environ["CORTEX_REPO_ROOT"] = str(repo_path)` before spawning anything. Manual user CLI invocations (`cortex-jcc backlog-index` typed at a terminal) are NOT covered — the shim falls back to `git rev-parse` on those, which is acceptable (these are interactive, single-shot, not in any hot loop).
 - **Verification**: (b) `grep -cE 'os\.environ\[.CORTEX_REPO_ROOT.\] = str\(repo_path\)' cortex_command/overnight/runner.py` ≥ 1 AND `grep -c "export CORTEX_REPO_ROOT=" hooks/cortex-scan-lifecycle.sh` ≥ 1 AND `grep -c "export CORTEX_REPO_ROOT=" plugins/cortex-overnight/hooks/cortex-scan-lifecycle.sh` ≥ 1 AND `grep -cE '_env\[.CORTEX_REPO_ROOT.\] = str\(worktree_path\)' cortex_command/pipeline/dispatch.py` ≥ 1 AND `diff hooks/cortex-scan-lifecycle.sh plugins/cortex-overnight/hooks/cortex-scan-lifecycle.sh; echo $?` outputs 0 — pass if all four greps satisfy and the hook-pair diff exits 0
-- **Status**: [ ] pending
+- **Status**: [x] done — commit 25b1410
 
 ### Task 4: Regenerate plugin mirror and verify byte-identity
 - **Files**: `plugins/cortex-core/bin/cortex-log-invocation` (regenerated, not hand-edited)
@@ -71,7 +71,7 @@ Trim `bin/cortex-log-invocation` per-invocation cost from ~19ms to ~9ms on the c
   - The dual-source pre-commit hook regenerates `plugins/cortex-core/bin/` automatically on commit. Running `just build-plugin` once before the diff verification gives a deterministic check at task-execution time.
   - Spec R15 (archived spec) requires `diff bin/cortex-log-invocation plugins/cortex-core/bin/cortex-log-invocation` exits 0 after regeneration.
 - **Verification**: (b) `just build-plugin; echo $?` outputs 0 AND `diff bin/cortex-log-invocation plugins/cortex-core/bin/cortex-log-invocation; echo $?` outputs 0 — pass if both exit 0
-- **Status**: [ ] pending
+- **Status**: [x] done — co-committed with T1 in 21f83f1; pre-commit dual-source hook forces co-commit with every shim edit
 
 ### Task 5: Add perf-budget regression test with paired fast/slow measurement
 - **Files**: `tests/test_log_invocation_perf.py`
@@ -87,7 +87,7 @@ Trim `bin/cortex-log-invocation` per-invocation cost from ~19ms to ~9ms on the c
   - Budget tightening from 15ms to 25ms p95 + 18ms mean reduces headroom from 67% to ~20-30% over the ~9ms-fast / ~17ms-slow expectations — meaningful signal without removing all variance tolerance. If the test flakes in practice, the remediation is to widen the delta tolerance or raise p95 with a comment citing the noisy-machine cause, NOT to remove the delta assertion.
   - The discard-first-5-samples convention is the standard mitigation for the first-call `mkdir` cost being included in the median (concern raised by adversarial review).
 - **Verification**: (b) `grep -c 'def test_log_invocation_fast_path_budget' tests/test_log_invocation_perf.py` = 1 AND `grep -c 'def test_log_invocation_fast_path_faster_than_slow' tests/test_log_invocation_perf.py` = 1 AND `uv run pytest tests/test_log_invocation_perf.py -q; echo $?` outputs 0 — pass if both grep counts = 1 and pytest exits 0
-- **Status**: [ ] pending
+- **Status**: [x] done — commit cde5f3e
 
 ### Task 6: Run full gate suite
 - **Files**: none (verification-only against pre-existing tooling)
@@ -99,7 +99,7 @@ Trim `bin/cortex-log-invocation` per-invocation cost from ~19ms to ~9ms on the c
   - `bin/cortex-invocation-report --self-test` (Spec R13): round-trip probe write to `cortex-self-test-probe` and read-back from `lifecycle/sessions/<LIFECYCLE_SESSION_ID>/bin-invocations.jsonl`.
   - `just test` (Spec R18): full test suite including `test_telemetry_byte_equivalence.py`, `test_commit_preflight.py:239-294`, and the new `test_log_invocation_perf.py`.
 - **Verification**: (b) `bin/cortex-invocation-report --check-shims; echo $?` outputs 0 AND `bin/cortex-invocation-report --self-test; echo $?` outputs 0 AND `just test; echo $?` outputs 0 — pass if all three exit 0
-- **Status**: [ ] pending
+- **Status**: [x] done — all three gates passed (check-shims: 0 missing; self-test: passed; just test: 6/6)
 
 ## Risks
 
