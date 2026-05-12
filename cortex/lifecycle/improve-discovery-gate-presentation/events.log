@@ -10,3 +10,5 @@
 {"ts": "2026-05-12T22:05:01Z", "event": "phase_transition", "feature": "improve-discovery-gate-presentation", "from": "specify", "to": "plan"}
 {"ts": "2026-05-12T22:30:00Z", "event": "plan_approved", "feature": "improve-discovery-gate-presentation"}
 {"ts": "2026-05-12T22:30:01Z", "event": "phase_transition", "feature": "improve-discovery-gate-presentation", "from": "plan", "to": "implement"}
+{"ts": "2026-05-12T22:35:00Z", "event": "batch_dispatch", "feature": "improve-discovery-gate-presentation", "batch": 0, "tasks": [1, 2]}
+{"ts": "2026-05-12T22:45:00Z", "event": "batch_dispatch", "feature": "improve-discovery-gate-presentation", "batch": 1, "tasks": [3]}
