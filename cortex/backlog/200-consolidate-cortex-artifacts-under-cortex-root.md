@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 6c21da16-1c97-4809-a389-7a87115b6483
 title: "Consolidate cortex-command artifacts under a single cortex/ root"
-status: ready
+status: complete
 priority: medium
 type: epic
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-12
 tags: [installer-experience, repo-layout, consolidate-artifacts-under-cortex-root]
 complexity: complex
 criticality: medium

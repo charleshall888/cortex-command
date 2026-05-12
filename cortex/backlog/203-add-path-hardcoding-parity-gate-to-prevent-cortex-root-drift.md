@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 7f9dd538-380e-49cf-8492-3bd6fb561fb2
 title: "Add path-hardcoding parity gate to prevent cortex/ root drift"
-status: in_progress
+status: complete
 priority: low
 type: feature
 created: 2026-05-11
@@ -11,7 +11,7 @@ tags: [drift-prevention, parity, consolidate-artifacts-under-cortex-root]
 complexity: complex
 criticality: medium
 areas: [hooks]
-session_id: a7c39a2e-8d33-4dd1-b341-3106a2752551
+session_id: null
 parent: 200
 blocked-by: []
 discovery_source: cortex/research/consolidate-artifacts-under-cortex-root/research.md
