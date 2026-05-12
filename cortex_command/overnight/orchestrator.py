@@ -95,16 +95,16 @@ class BatchConfig:
     # is what's prohibited. The lambda escape hatch is intentional — see
     # spec R3c "AST-gate scope clarification".
     overnight_state_path: Path = field(
-        default_factory=lambda: _resolve_user_project_root() / "lifecycle" / "overnight-state.json"
+        default_factory=lambda: _resolve_user_project_root() / "cortex/lifecycle" / "overnight-state.json"
     )
     overnight_events_path: Path = field(
-        default_factory=lambda: _resolve_user_project_root() / "lifecycle" / "overnight-events.log"
+        default_factory=lambda: _resolve_user_project_root() / "cortex/lifecycle" / "overnight-events.log"
     )
     result_dir: Path = field(
-        default_factory=lambda: _resolve_user_project_root() / "lifecycle"
+        default_factory=lambda: _resolve_user_project_root() / "cortex/lifecycle"
     )
     pipeline_events_path: Path = field(
-        default_factory=lambda: _resolve_user_project_root() / "lifecycle" / "pipeline-events.log"
+        default_factory=lambda: _resolve_user_project_root() / "cortex/lifecycle" / "pipeline-events.log"
     )
     throttle_tier: Optional[str] = None
     session_id: str = ""

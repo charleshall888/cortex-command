@@ -492,7 +492,7 @@ def handle_start(args: argparse.Namespace) -> int:
     if args.state is not None:
         state_path = Path(args.state).expanduser().resolve()
     else:
-        sessions_root = repo_path / "lifecycle" / "sessions"
+        sessions_root = repo_path / "cortex/lifecycle" / "sessions"
         discovered = _auto_discover_state(sessions_root)
         if discovered is None:
             print(
@@ -700,7 +700,7 @@ def handle_status(args: argparse.Namespace) -> int:
                 return 0
         else:
             repo_path = _resolve_repo_path()
-            sessions_root = repo_path / "lifecycle" / "sessions"
+            sessions_root = repo_path / "cortex/lifecycle" / "sessions"
             latest = _latest_state_path(sessions_root)
             if latest is None:
                 if fmt == "json":
@@ -798,7 +798,7 @@ def _resolve_cancel_target(
         1. ``--session-dir`` override — treated as a full path; the
            basename is validated as a session-id for containment.
         2. Positional ``session_id`` — resolved against
-           ``repo_path / "lifecycle" / "sessions"`` with R17 regex +
+           ``repo_path / "cortex/lifecycle" / "sessions"`` with R17 regex +
            realpath containment via
            :func:`session_validation.resolve_session_dir`.
         3. Active-session pointer.
@@ -817,7 +817,7 @@ def _resolve_cancel_target(
 
     positional_id = getattr(args, "session_id", None)
     if positional_id is not None:
-        lifecycle_sessions_root = repo_path / "lifecycle" / "sessions"
+        lifecycle_sessions_root = repo_path / "cortex/lifecycle" / "sessions"
         try:
             session_dir = session_validation.resolve_session_dir(
                 positional_id, lifecycle_sessions_root
@@ -1067,7 +1067,7 @@ def handle_cancel(args: argparse.Namespace) -> int:
         ):
             sched_session_id = str(args.session_id)
             sched_dir = (
-                repo_path / "lifecycle" / "sessions" / sched_session_id
+                repo_path / "cortex/lifecycle" / "sessions" / sched_session_id
             )
             return _cancel_scheduled_launch(fmt, sched_session_id, sched_dir)
         code = "invalid_session_id" if err == "invalid session id" else "no_active_session"
@@ -1217,7 +1217,7 @@ def handle_logs(args: argparse.Namespace) -> int:
         session_dir = Path(args.session_dir).expanduser().resolve()
     elif positional_id is not None:
         repo_path = _resolve_repo_path()
-        lifecycle_sessions_root = repo_path / "lifecycle" / "sessions"
+        lifecycle_sessions_root = repo_path / "cortex/lifecycle" / "sessions"
         try:
             session_dir = session_validation.resolve_session_dir(
                 positional_id, lifecycle_sessions_root
@@ -1332,7 +1332,7 @@ def handle_list_sessions(args: argparse.Namespace) -> int:
     """
     fmt = getattr(args, "format", "human")
     repo_path = _resolve_repo_path()
-    sessions_root = repo_path / "lifecycle" / "sessions"
+    sessions_root = repo_path / "cortex/lifecycle" / "sessions"
 
     paths = _list_sessions_state_paths(sessions_root)
 
@@ -1533,7 +1533,7 @@ def handle_schedule(args: argparse.Namespace) -> int:
     if args.state is not None:
         state_path = Path(args.state).expanduser().resolve()
     else:
-        sessions_root = repo_path / "lifecycle" / "sessions"
+        sessions_root = repo_path / "cortex/lifecycle" / "sessions"
         discovered = _auto_discover_state(sessions_root)
         if discovered is None:
             message = (
