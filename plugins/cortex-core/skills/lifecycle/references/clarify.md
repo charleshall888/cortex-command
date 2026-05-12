@@ -30,7 +30,7 @@ Branch on the exit code:
 
 ### 2. Load Requirements Context
 
-If `cortex/requirements/project.md` exists at the project root, read it. Scan `cortex/requirements/` for area docs whose names suggest relevance to this feature and read any that apply. If no `cortex/requirements/` directory or files exist, note this and proceed.
+Load requirements using the shared tag-based loading protocol — read `references/load-requirements.md` and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed.
 
 ### 3. Confidence Assessment
 
