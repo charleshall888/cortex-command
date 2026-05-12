@@ -23,7 +23,7 @@ Cleanup-then-deploy ordering: refactor the two empirically-surfaced pre-relocati
 - **Complexity**: simple
 - **Context**: Affected lines: 220, 223, 224, 225, 226, 243, 391. Current shapes include `cwd / "cortex" / f"lifecycle/{feature}/plan.md"`, `cwd / "cortex" / f"lifecycle/{feature}/daytime-state.json"`, `cwd / "cortex" / f"lifecycle/{feature}/events.log"`, `cwd / "cortex" / f"lifecycle/{feature}"`, `cwd / "cortex" / f"lifecycle/{feature}/pipeline-events.log"`, `(cwd / "cortex" / f"lifecycle/{feature}/deferred")`, `cwd / "cortex" / f"lifecycle/{feature}/deferred"`. Use canonical-anchor form: `cwd / Path("cortex/lifecycle") / feature / "plan.md"`, etc. `Path` is already imported in this module — verify the import is present before editing; if not, add a `from pathlib import Path` import to the module's existing imports. Resolved path output must be byte-identical to the pre-refactor result; this is a stylistic refactor, not a semantic change.
 - **Verification**: `grep -cE '"lifecycle/' cortex_command/overnight/daytime_pipeline.py` returns 0 — pass if count is 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Fix prescriptive-prose backlog glob
 - **Files**: `bin/cortex-check-prescriptive-prose`
