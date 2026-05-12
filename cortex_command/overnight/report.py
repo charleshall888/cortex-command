@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from cortex_command.common import _resolve_user_project_root, atomic_write, slugify
+from cortex_command.common import _resolve_user_project_root, atomic_write, read_tier, slugify
 
 from cortex_command.overnight.deferral import (
     DEFAULT_DEFERRED_DIR,
@@ -532,7 +532,7 @@ def render_completed_features(data: ReportData) -> str:
 
         # How to try — tier-conditional verification source with fallback chain
         # (R13d/R13e compat shim: new-shape readers win when both shapes present).
-        tier = _read_tier(name)
+        tier = read_tier(name)
         if tier == "complex":
             verification = (
                 _read_acceptance(name)
@@ -741,41 +741,6 @@ def _read_verification_strategy(feature: str) -> str:
     if match:
         return match.group(1).strip()
     return ""
-
-
-def _read_tier(feature: str) -> str:
-    """Return the active complexity tier for a feature.
-
-    Reads ``lifecycle/{feature}/events.log`` and returns the ``tier`` field
-    from the most recent ``lifecycle_start`` event, superseded by the ``to``
-    field of any later ``complexity_override`` event. Returns ``"simple"``
-    when events.log is missing, malformed, or contains no relevant event.
-    """
-    events_path = Path(f"lifecycle/{feature}/events.log")
-    if not events_path.exists():
-        return "simple"
-
-    try:
-        events = read_events(events_path)
-    except Exception:
-        return "simple"
-
-    tier = "simple"
-    found = False
-    for event in events:
-        kind = event.get("event")
-        if kind == "lifecycle_start":
-            value = event.get("tier")
-            if isinstance(value, str) and value:
-                tier = value
-                found = True
-        elif kind == "complexity_override":
-            value = event.get("to")
-            if isinstance(value, str) and value:
-                tier = value
-                found = True
-
-    return tier if found else "simple"
 
 
 def _read_acceptance(feature: str) -> str:

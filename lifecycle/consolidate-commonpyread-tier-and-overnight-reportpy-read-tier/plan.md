@@ -32,7 +32,7 @@ Direct-swap consolidation (research §A): `overnight/report.py:535` migrates to 
   - Cache isolation: `tests/test_lifecycle_state.py` and `tests/test_bin_lifecycle_state_parity.py` already use absolute `lifecycle_base` + optional `_read_tier_inner.cache_clear()` — follow that prior art (the cached inner is reachable via `read_tier.__wrapped__` at `common.py:469`).
   - Do NOT modify `tests/test_read_tier_parity.py` or `cortex_command/overnight/tests/test_report.py` yet — those are Tasks 2 and 3's scope.
 - **Verification**: `uv run pytest tests/test_common_utils.py -q -k "tier"` — pass if exit 0 AND `grep -c "lifecycle_start_only\|start_then_override\|stray_tier_after_override" tests/test_common_utils.py` ≥ 3 AND `grep -c "ignores_complexity_field\|canonical_tier_wins_over_stray_complexity" tests/test_common_utils.py` ≥ 2.
-- **Status**: [ ] pending
+- **Status**: [x] complete (201e8e7)
 
 ### Task 2: Swap report.py callsite and delete `_read_tier`
 - **Files**:
