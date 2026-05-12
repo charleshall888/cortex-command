@@ -117,7 +117,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Existing §4 of `review.md` already wires the auto-apply cascade for `requirements_drift: detected` with a Suggested Update section; this task adds the parallel enforcement path when the section is absent. Soft positive-routing only — no MUST/CRITICAL escalation in the new prose. Critical-review flagged that presence-only verification could pass while the prose says the opposite (e.g., "we do NOT enforce max-retry=2"); the integration test forces behavioral verification.
 - **Verification**: `grep -c "Suggested Requirements Update" skills/lifecycle/references/review.md` returns ≥`2` (absolute target, not differential) AND `grep -c "max[-_ ]retry.*2\|retry.*max.*2" skills/lifecycle/references/review.md` ≥`1` AND `grep -c "drift_protocol_breach" skills/lifecycle/references/review.md` ≥`1` AND `test -f tests/test_drift_enforcement_protocol.py && python3 -m pytest tests/test_drift_enforcement_protocol.py -v` exits `0`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit e7f75540; 7 tests passing)
 
 ### Task 10: Wire `drift_protocol_breach` into report.py + events registry (R7 part 2)
 - **Files**: `cortex_command/overnight/report.py`, `bin/.events-registry.md`
