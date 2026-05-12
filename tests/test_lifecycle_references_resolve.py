@@ -46,7 +46,12 @@ FIXTURE_DIR = "tests/fixtures/lifecycle_references/"
 # example/historical slugs aren't load-bearing citations. Skip them from the
 # walker so the gate validates only live-tree citations that future-Claude or
 # future-operator might follow.
-ARCHIVED_PREFIXES = ("lifecycle/archive/", "research/archive/")
+ARCHIVED_PREFIXES = (
+    "cortex/lifecycle/archive/",
+    "cortex/research/archive/",
+    "lifecycle/archive/",
+    "research/archive/",
+)
 # Known prose-collision (slug, citing-path) pairs. Some completed-lifecycle
 # review/decisions docs quote slash-path tokens like `lifecycle/discovery` as
 # prose when discussing detection false-positives in other artifacts. Treat
@@ -56,7 +61,7 @@ ARCHIVED_PREFIXES = ("lifecycle/archive/", "research/archive/")
 KNOWN_PROSE_COLLISIONS: tuple[tuple[str, str], ...] = (
     (
         "discovery",
-        "lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/review.md",
+        "cortex/lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/review.md",
     ),
 )
 # When prose abbreviates `skills/lifecycle/references/<file>.md` to
@@ -131,15 +136,28 @@ TOP_LEVEL_PREFIXES: tuple[str, ...] = (
 # in idiomatic prose without intending them as resolvable pointers, so
 # limiting scope here avoids false positives while still catching the
 # named drift mode.
-FILE_LINE_SCAN_PREFIXES: tuple[str, ...] = ("lifecycle/", "research/")
+FILE_LINE_SCAN_PREFIXES: tuple[str, ...] = (
+    "cortex/lifecycle/",
+    "cortex/research/",
+    "lifecycle/",
+    "research/",
+)
 
 FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
 
 def _slug_resolves(slug: str) -> bool:
-    """Return True if a top-level or archived dir exists for ``slug``."""
+    """Return True if a top-level or archived dir exists for ``slug``.
+
+    Lifecycle artifacts written pre-relocation cite ``lifecycle/<slug>`` by
+    convention; the canonical tree now lives under ``cortex/lifecycle/``.
+    Both the legacy and umbrella paths are accepted so historical citations
+    in immutable artifact bodies (review.md, plan.md) remain resolvable.
+    """
     return (
-        (REPO_ROOT / "lifecycle" / slug).is_dir()
+        (REPO_ROOT / "cortex" / "lifecycle" / slug).is_dir()
+        or (REPO_ROOT / "cortex" / "lifecycle" / "archive" / slug).is_dir()
+        or (REPO_ROOT / "lifecycle" / slug).is_dir()
         or (REPO_ROOT / "lifecycle" / "archive" / slug).is_dir()
     )
 
@@ -435,7 +453,9 @@ def test_every_lifecycle_reference_resolves() -> None:
                 # both worse than tolerating stale line citations.
                 # Traversal-class breakage (file missing or path-walk
                 # escape) remains a hard failure.
-                if kind == "stale" and path.startswith("lifecycle/"):
+                if kind == "stale" and (
+                    path.startswith("cortex/lifecycle/") or path.startswith("lifecycle/")
+                ):
                     continue
                 file_line_broken_all.append((path, cited, cited_line, kind, msg))
 

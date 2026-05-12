@@ -9,7 +9,7 @@ fi
 
 # Branch (b): CORTEX_COMMAND_ROOT points at a cortex-command checkout
 if [ -n "${CORTEX_COMMAND_ROOT:-}" ] && grep -q '^name = "cortex-command"' "$CORTEX_COMMAND_ROOT/pyproject.toml" 2>/dev/null; then
-    exec python3 "$CORTEX_COMMAND_ROOT/backlog/ready.py" "$@"
+    exec python3 "$CORTEX_COMMAND_ROOT/cortex/backlog/ready.py" "$@"
 fi
 
 # Branch (c): not found

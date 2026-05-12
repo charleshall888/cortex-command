@@ -97,6 +97,7 @@ def _invoke(repo: Path, env: dict | None = None) -> subprocess.CompletedProcess:
     assert against text without each test needing to repeat the dance.
     """
     full_env = os.environ.copy()
+    full_env.pop("CORTEX_REPO_ROOT", None)
     if env:
         full_env.update(env)
     return subprocess.run(

@@ -29,7 +29,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-resolve-backlog-item"
-BACKLOG_DIR = REPO_ROOT / "backlog"
+BACKLOG_DIR = REPO_ROOT / "cortex" / "backlog"
 FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures"
 BASELINE_FIXTURE = FIXTURES_DIR / "predicate_a_baseline.json"
 

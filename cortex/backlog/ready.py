@@ -50,9 +50,10 @@ import types
 from pathlib import Path
 from typing import Any
 
-# Resolve project root so imports work when called from any directory
-# (mirrors backlog/generate_index.py:20-22).
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Resolve project root so imports work when called from any directory.
+# Path is cortex/backlog/ready.py post-#202 relocation; three .parent
+# walks reach the repo root where cortex_command/ lives.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
