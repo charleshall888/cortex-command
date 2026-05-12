@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 310f9146-0267-46ab-8e6d-f5cf8bbe50bd
 title: "Improve discovery gate presentation and add no-tickets terminus"
-status: in_progress
+status: complete
 priority: medium
 type: feature
 created: 2026-05-12
@@ -11,7 +11,7 @@ tags: [discovery, skills, agentic-layer]
 complexity: complex
 criticality: high
 areas: [skills]
-session_id: 7fe2bb2f-c2c5-4e1f-bb1e-5c4af96787d7
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: improve-discovery-gate-presentation
 spec: cortex/lifecycle/improve-discovery-gate-presentation/spec.md

@@ -12,3 +12,7 @@
 {"ts": "2026-05-12T22:30:01Z", "event": "phase_transition", "feature": "improve-discovery-gate-presentation", "from": "plan", "to": "implement"}
 {"ts": "2026-05-12T22:35:00Z", "event": "batch_dispatch", "feature": "improve-discovery-gate-presentation", "batch": 0, "tasks": [1, 2]}
 {"ts": "2026-05-12T22:45:00Z", "event": "batch_dispatch", "feature": "improve-discovery-gate-presentation", "batch": 1, "tasks": [3]}
+{"ts": "2026-05-12T23:10:00Z", "event": "phase_transition", "feature": "improve-discovery-gate-presentation", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-12T23:35:00Z", "event": "review_verdict", "feature": "improve-discovery-gate-presentation", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-12T23:35:01Z", "event": "phase_transition", "feature": "improve-discovery-gate-presentation", "from": "review", "to": "complete"}
+{"ts": "2026-05-12T23:40:00Z", "event": "feature_complete", "feature": "improve-discovery-gate-presentation", "tasks_total": 3, "rework_cycles": 1}

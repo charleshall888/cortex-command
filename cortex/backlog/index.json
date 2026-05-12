@@ -23,7 +23,7 @@
     "uuid": "c5df69bc-ea51-4f85-94b4-bc0dbc72dfb6",
     "lifecycle_slug": "requirements-skill-v2",
     "session_id": null,
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -87,36 +87,6 @@
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 206,
-    "title": "Improve discovery gate presentation and add no-tickets terminus",
-    "status": "in_progress",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "discovery",
-      "skills",
-      "agentic-layer"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-12",
-    "updated": "2026-05-12",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/improve-discovery-gate-presentation/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "310f9146-0267-46ab-8e6d-f5cf8bbe50bd",
-    "lifecycle_slug": "improve-discovery-gate-presentation",
-    "session_id": "7fe2bb2f-c2c5-4e1f-bb1e-5c4af96787d7",
-    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
