@@ -150,7 +150,7 @@ def _read_exit_report(
     1. Primary: ``lifecycle/{feature}/exit-reports/{task_number}.json``
        relative to the batch runner's CWD (the integration worktree in overnight
        sessions).
-    2. Fallback: ``worktree_path / "lifecycle" / feature / "exit-reports" /
+    2. Fallback: ``worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" /
        "{task_number}.json"`` — the absolute path inside the feature worktree,
        used when the worker wrote artifacts to its own CWD rather than the
        integration worktree.
@@ -162,7 +162,7 @@ def _read_exit_report(
     report_path = Path(f"lifecycle/{feature}/exit-reports/{task_number}.json")
     if not report_path.is_file():
         if worktree_path is not None:
-            fallback_path = worktree_path / "lifecycle" / feature / "exit-reports" / f"{task_number}.json"
+            fallback_path = worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" / f"{task_number}.json"
             if fallback_path.is_file():
                 report_path = fallback_path
             else:
