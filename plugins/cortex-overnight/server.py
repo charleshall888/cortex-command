@@ -2161,7 +2161,7 @@ def _delegate_overnight_status(payload: StatusInput) -> StatusOutput | str:
         # The CLI expects an absolute or repo-relative session dir; use
         # the cortex_root's lifecycle/sessions tree.
         session_dir = (
-            Path(cortex_root) / "lifecycle" / "sessions" / payload.session_id
+            Path(cortex_root) / "cortex" / "lifecycle" / "sessions" / payload.session_id
         )
         argv.extend(["--session-dir", str(session_dir)])
 
