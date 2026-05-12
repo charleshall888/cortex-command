@@ -2,12 +2,16 @@
 schema_version: "1"
 uuid: acb70ac0-3581-40bf-acb3-e09577f050b5
 title: "Trim cortex-log-invocation shim cost (per-call ~21ms)"
-status: backlog
+status: refined
 priority: medium
 type: chore
 created: 2026-05-11
 updated: 2026-05-11
 tags: [bin, performance, shim]
+complexity: complex
+criticality: high
+spec: lifecycle/trim-cortex-log-invocation-shim-cost-per-call-21ms/spec.md
+areas: []
 ---
 
 # Trim cortex-log-invocation shim cost (per-call ~21ms)
