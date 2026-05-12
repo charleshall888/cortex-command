@@ -438,12 +438,12 @@ def _commit_followup_in_worktree(
     session_id: str,
     events_path: Path,
 ) -> None:
-    """Commit follow-up backlog items under ``worktree_path/backlog/``.
+    """Commit follow-up backlog items under ``worktree_path/cortex/backlog/``.
 
     Mirrors the bash runner's post-SIGHUP/post-loop commit (`runner.sh`
-    Task 7 block): ``git add backlog/ && git commit -m "Overnight session
-    <id>: record followup"`` inside the worktree so the follow-ups land
-    on the integration branch, not the home repo. Silently no-ops when
+    Task 7 block): ``git add cortex/backlog/ && git commit -m "Overnight
+    session <id>: record followup"`` inside the worktree so the follow-ups
+    land on the integration branch, not the home repo. Silently no-ops when
     the worktree directory does not exist or has nothing staged.
 
     On non-zero ``git commit`` exit (e.g. rejected by the Phase 0 hook
@@ -455,7 +455,7 @@ def _commit_followup_in_worktree(
     env = {k: v for k, v in os.environ.items() if k != "GIT_DIR"}
     try:
         subprocess.run(
-            ["git", "add", "backlog/"],
+            ["git", "add", "cortex/backlog/"],
             cwd=str(worktree_path),
             env=env,
             check=False,

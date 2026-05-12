@@ -407,10 +407,8 @@ def rejecting_hook_env(tmp_path: Path):
     _git(repo, "config", "core.hooksPath", str(hooks_dir))
 
     # Stage a backlog change so the diff --cached precheck doesn't no-op.
-    # Note: _commit_followup_in_worktree uses "git add backlog/" so the
-    # fixture file must be at backlog/ (runner.py:458 source-code issue tracked separately).
-    (worktree / "backlog").mkdir(exist_ok=True)
-    (worktree / "backlog" / "fixture-followup.md").write_text(
+    (worktree / "cortex" / "backlog").mkdir(parents=True, exist_ok=True)
+    (worktree / "cortex" / "backlog" / "fixture-followup.md").write_text(
         "# fixture followup\n"
     )
 
