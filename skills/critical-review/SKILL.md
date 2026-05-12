@@ -101,7 +101,7 @@ Immediately after presenting the synthesis, work through each objection independ
 **Apply** when the fix is unambiguous and confidence is high.
 **Dismiss** when the artifact already addresses the objection or the objection misreads stated constraints.
 **Ask** when the fix involves user preference, scope decision, or genuine uncertainty.
-Default ambiguous to Ask. Anchor-checks: dismissals must be pointable to artifact text, not memory; resolutions must rest on new evidence, not prior reasoning.
+Default ambiguous to Ask. Anchor-checks: dismissals must be pointable to artifact text, not memory; resolutions must rest on new evidence, not prior reasoning. For any empirical claim (latency, file size, blast radius, baseline behavior), run the actual measurement (`time`, `wc -c`, grep) before classifying Apply/Dismiss — re-reading the artifact text does not count as new evidence.
 
 After classifying all objections:
 
