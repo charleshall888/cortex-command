@@ -2,16 +2,17 @@
 
 ## What This Repo Is
 
-An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0`) plus plugins installed via `/plugin install` in Claude Code; `cortex init` additionally registers the repo's `lifecycle/` path (the parent of `lifecycle/sessions/`) in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so interactive sessions and the overnight runner can write under it without sandbox prompts.
+An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0`) plus plugins installed via `/plugin install` in Claude Code; `cortex init` additionally registers the repo's `cortex/` umbrella path in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so interactive sessions and the overnight runner can write under it without sandbox prompts.
 
 ## Repository Structure
 
 - `skills/` - Skills (commit, pr, lifecycle, etc.)
 - `hooks/` - Hooks (commit validation, lifecycle scanning, notifications)
 - `claude/` - Claude Code config (settings, statusline, hooks)
-- `backlog/` - Project backlog items (YAML frontmatter markdown files)
-- `requirements/` - Project and area-level requirements (vision, priorities, scope)
-- `lifecycle/` - Feature lifecycle tracking (research, spec, plan, implementation)
+- `cortex/` - Tool-managed umbrella (lifecycle, backlog, requirements, research, retros, debug)
+  - `cortex/backlog/` - Project backlog items (YAML frontmatter markdown files)
+  - `cortex/requirements/` - Project and area-level requirements (vision, priorities, scope)
+  - `cortex/lifecycle/` - Feature lifecycle tracking (research, spec, plan, implementation)
 - `docs/` - Documentation (setup guide, agentic layer, overnight, skills reference)
 - `tests/` - Automated test suite for skills, hooks, and overnight runner
 - `bin/` - Global CLI utilities; canonical source mirrored into the `cortex-core` plugin's `bin/` via dual-source enforcement
@@ -50,7 +51,7 @@ Run `just` to see all available recipes. Key commands:
 
 ## MUST-escalation policy (post-Opus 4.7)
 
-Default to soft positive-routing phrasing for new authoring under epic #82's post-4.7 harness adaptation; pre-existing MUST language is grandfathered until specifically audited (per #85). To add a new MUST/CRITICAL/REQUIRED escalation, you must include in the commit body OR PR description a link to one evidence artifact: (a) `lifecycle/<feature>/events.log` path + line of an F-row showing Claude skipped the soft form, OR (b) a commit-linked transcript URL or quoted excerpt. Without one of these artifact links, the escalation is rejected at review.
+Default to soft positive-routing phrasing for new authoring under epic #82's post-4.7 harness adaptation; pre-existing MUST language is grandfathered until specifically audited (per #85). To add a new MUST/CRITICAL/REQUIRED escalation, you must include in the commit body OR PR description a link to one evidence artifact: (a) `cortex/lifecycle/<feature>/events.log` path + line of an F-row showing Claude skipped the soft form, OR (b) a commit-linked transcript URL or quoted excerpt. Without one of these artifact links, the escalation is rejected at review.
 
 Before adding or restoring a MUST, run a dispatch with `effort=high` (and `effort=xhigh` if effort=high also fails) on a representative case and record the result. Escalate to MUST only when effort=high (and xhigh) demonstrably fail to resolve the observed failure. Record the effort attempt in the escalation note: cite the events.log entry showing the effort=high run + outcome, OR paste the transcript excerpt. If the dispatch path does not currently expose `effort` as a tunable parameter, cite the specific dispatch path file and file a separate wiring ticket — do not escalate to MUST as a workaround.
 

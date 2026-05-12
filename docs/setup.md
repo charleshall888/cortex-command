@@ -42,7 +42,7 @@ For upgrade paths and forker fork-install URLs, see [§ Upgrade & maintenance](#
 #### Troubleshooting CLI install
 
 - **`cortex: command not found`**: confirm `~/.local/bin/` is on your `PATH`. Add `export PATH="$HOME/.local/bin:$PATH"` to your shell rc file, or run `uv tool update-shell` once.
-- **`cortex --print-root` fails with "Run from your cortex project root..."**: you invoked `cortex` from a directory with no `lifecycle/` AND no `backlog/`. Either `cd` into a cortex project, set `CORTEX_REPO_ROOT=/path/to/your/project`, or create a new project with `git init && cortex init`.
+- **`cortex --print-root` fails with "Run from your cortex project root..."**: you invoked `cortex` from a directory with no `cortex/` umbrella directory. Either `cd` into a cortex project, set `CORTEX_REPO_ROOT=/path/to/your/project`, or create a new project with `git init && cortex init`.
 - **macOS GUI-app launches Claude Code; `uv` not on PATH**: see the macOS GUI-launch caveat in the `cortex-overnight` plugin-specific prerequisites below.
 
 ### 2. Add and install the plugins from inside Claude Code
@@ -71,7 +71,7 @@ The six available plugins are:
 #### Plugin-specific prerequisites
 
 - **`cortex-overnight`** requires `uv` and the `cortex` CLI on your `PATH`. The MCP server auto-installs `cortex` on first tool call when it is missing (set `CORTEX_AUTO_INSTALL=0` to opt out and receive a notice instead). It also probes for `uv` at startup and refuses to run if `uv` is not on `PATH`. macOS GUI-launched Claude Code processes do not inherit the same `PATH` as a Terminal session — if `uv` is on `PATH` in your shell but the MCP server still reports it missing, see the auto-install error message and add `uv`'s install directory to `~/.zshenv` (or `~/.bash_profile`) so GUI-launched processes pick it up.
-- **`cortex-core`** shell-side bin shims (`cortex-jcc` and the other `cortex-*` tools) need to be invoked from inside a cortex project directory (one containing `lifecycle/` or `backlog/`), or with `CORTEX_REPO_ROOT=/path/to/your/project` exported. The in-Claude skills work without setup. The shims error explicitly with the missing-project message when neither condition holds.
+- **`cortex-core`** shell-side bin shims (`cortex-jcc` and the other `cortex-*` tools) need to be invoked from inside a cortex project directory (one containing a `cortex/` umbrella directory), or with `CORTEX_REPO_ROOT=/path/to/your/project` exported. The in-Claude skills work without setup. The shims error explicitly with the missing-project message when neither condition holds.
 - **`cortex-ui-extras`** has no extra prerequisites.
 - **`cortex-pr-review`** has no extra prerequisites.
 
@@ -91,7 +91,7 @@ Use the `owner/repo` git form (`/plugin marketplace add charleshall888/cortex-co
 
 ### 3. Per-repo setup
 
-Run `cortex init` once in each repo where you want to use cortex. It scaffolds the directories cortex skills and the overnight runner expect (`lifecycle/`, `backlog/`, `requirements/`) and registers the repo's `lifecycle/` path in your Claude Code sandbox allowlist — required for any cortex workflow (lifecycle, refine, backlog, overnight, dashboard).
+Run `cortex init` once in each repo where you want to use cortex. It scaffolds the `cortex/` umbrella directory containing subdirectories cortex skills and the overnight runner expect (`cortex/lifecycle/`, `cortex/backlog/`, `cortex/requirements/`) and registers the `cortex/` path in your Claude Code sandbox allowlist as a single grant — required for any cortex workflow (lifecycle, refine, backlog, overnight, dashboard).
 
 ```bash
 cortex init
@@ -100,20 +100,20 @@ cortex init
 `cortex init` runs four phases in order:
 
 **1. Pre-flight validation**
-Resolves the git repo root via `git rev-parse --show-toplevel` (errors out if not in a git repo; refuses to run inside a submodule), checks the `lifecycle/` path does not resolve through a symlink (closing a TOCTOU gap with phase 4's sandbox write), and validates `~/.claude/settings.local.json` is well-formed JSON before any mutation. All read-only.
+Resolves the git repo root via `git rev-parse --show-toplevel` (errors out if not in a git repo; refuses to run inside a submodule), checks the `cortex/` path does not resolve through a symlink (closing a TOCTOU gap with phase 4's sandbox write), and validates `~/.claude/settings.local.json` is well-formed JSON before any mutation. All read-only.
 
 **2. Re-run guard**
 Checks for a `.cortex-init` marker in the repo root. If present and neither `--update` nor `--force` is passed, init declines to re-scaffold so a second accidental `cortex init` does not overwrite local customizations. Pass `--update` for an additive (no-overwrite) re-run, or `--force` to back up and overwrite.
 
 **3. Scaffold + `.gitignore` append**
-Creates the directory structure and starter templates (`lifecycle/`, `backlog/`, `requirements/`), refreshes the `.cortex-init` marker, and idempotently appends cortex-specific ignore patterns to the repo's `.gitignore` (running twice does not duplicate entries).
+Creates the `cortex/` umbrella directory and starter templates (`cortex/lifecycle/`, `cortex/backlog/`, `cortex/requirements/`), refreshes the `cortex/.cortex-init` marker, and idempotently appends cortex-specific ignore patterns to the repo's `.gitignore` — including an optional `cortex/` entry under a documented "uncomment to gitignore tool state" marker (running twice does not duplicate entries).
 
 **4. Sandbox registration into `~/.claude/settings.local.json`**
-Additively registers the repo's `lifecycle/` path under `sandbox.filesystem.allowWrite`. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs. Concurrent calls across repos are safe — the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
+Additively registers the repo's `cortex/` umbrella path under `sandbox.filesystem.allowWrite` as a single entry. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs, replacing the prior dual-registration of `lifecycle/sessions/` + `lifecycle/`. Concurrent calls across repos are safe — the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
 
 #### lifecycle.config.md schema
 
-`cortex init` scaffolds a `lifecycle/lifecycle.config.md` file with YAML frontmatter — project-specific overrides for the lifecycle skill and overnight runner. Six keys total, three active (consumed by code) and three advisory (scaffolded but not yet wired up):
+`cortex init` scaffolds a `cortex/lifecycle.config.md` file with YAML frontmatter — project-specific overrides for the lifecycle skill and overnight runner. Six keys total, three active (consumed by code) and three advisory (scaffolded but not yet wired up):
 
 ```yaml
 test-command: "just test"      # active: shell command for daytime_pipeline.py test step
@@ -139,26 +139,28 @@ cortex init
 After `cortex init` completes, the following structure is created in your repo:
 
 ```
-lifecycle/
-lifecycle/README.md
-lifecycle.config.md
-backlog/
-backlog/README.md
-requirements/
-requirements/project.md
-.cortex-init
-.gitignore   ← updated with cortex ignore entries
+cortex/
+cortex/lifecycle/
+cortex/lifecycle/README.md
+cortex/lifecycle.config.md
+cortex/backlog/
+cortex/backlog/README.md
+cortex/requirements/
+cortex/requirements/project.md
+cortex/.cortex-init
+cortex/README.md
+.gitignore   ← updated with cortex ignore entries (optional gitignore-as-unit entry included)
 ```
 
-The `.cortex-init` marker records the cortex version and timestamp of the run. `lifecycle.config.md` in the repo root holds per-repo configuration overrides (see the schema section above). The repo's `lifecycle/` path is also registered in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so the overnight runner and interactive sessions can write under it without sandbox prompts.
+The `cortex/.cortex-init` marker records the cortex version and timestamp of the run. `cortex/lifecycle.config.md` holds per-repo configuration overrides (see the schema section above). The repo's `cortex/` umbrella path is registered in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array as a single entry, covering all subdirectories so the overnight runner and interactive sessions can write under it without sandbox prompts.
 
-Then run `/cortex-core:lifecycle <feature>` to begin a new feature, which produces a `lifecycle/<feature>/` directory containing the feature's lifecycle artifacts (research, spec, plan, implementation, events log). For example:
+Then run `/cortex-core:lifecycle <feature>` to begin a new feature, which produces a `cortex/lifecycle/<feature>/` directory containing the feature's lifecycle artifacts (research, spec, plan, implementation, events log). For example:
 
 ```
 /cortex-core:lifecycle my-feature
 ```
 
-This command initiates the research phase for `my-feature` and guides you through research → spec → plan → implementation → review. Running `/cortex-core:lifecycle my-feature` with no prior artifacts starts fresh; re-running it in a later session resumes from the current phase recorded in `lifecycle/my-feature/events.log`.
+This command initiates the research phase for `my-feature` and guides you through research → spec → plan → implementation → review. Running `/cortex-core:lifecycle my-feature` with no prior artifacts starts fresh; re-running it in a later session resumes from the current phase recorded in `cortex/lifecycle/my-feature/events.log`.
 
 This sequence — `cortex init` followed by `/cortex-core:lifecycle <feature>` — is the end-to-end verification that both the CLI scaffold and the lifecycle skill are working in your environment.
 
@@ -174,7 +176,7 @@ claude /plugin list
 `cortex --print-root` should print a JSON object with five fields:
 
 - **`version`** — the print-root JSON envelope schema version (currently `"1.1"`)
-- **`root`** — the absolute path to your cortex project (the directory where you ran `cortex init`, resolved via `CORTEX_REPO_ROOT` env override or CWD with a `lifecycle/`+`backlog/` sanity check)
+- **`root`** — the absolute path to your cortex project (the directory where you ran `cortex init`, resolved via `CORTEX_REPO_ROOT` env override or CWD with a `cortex/` directory sanity check)
 - **`package_root`** — the absolute path to the cortex-command package install (under `uv` tool, this lives inside `~/.local/share/uv/tools/cortex-command/`); useful for diagnostic introspection
 - **`remote_url`** — the git remote URL of your project, if it is a git repository (empty string otherwise)
 - **`head_sha`** — the full SHA of your project's current HEAD commit (empty string if it is not a git repository)
