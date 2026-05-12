@@ -1,0 +1,66 @@
+{
+  "ts": "2026-05-11T00:04:00Z",
+  "feature": "reduce-sub-agent-dispatch-artifact-duplication",
+  "artifact": "cortex/lifecycle/reduce-sub-agent-dispatch-artifact-duplication/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Dependency chain 4→5→6→7 documented as churn-avoidance serialization but verifications form a union check that cannot resolve per task. Either merge tasks or awk-scope each verification to the text region the task actually edits.",
+      "reviewer_angle": "Per-task verification independence",
+      "evidence_quote": "Depends on Task 4 so the file is touched in a deterministic order (avoids merge churn)."
+    },
+    {
+      "class": "B",
+      "finding": "Step (e)'s 'inline python3 -c atomic-append' to events.log lacks a worked-example technique and cites a precedent that uses tempfile + os.replace overwrite, not append. Orchestrator likely synthesizes non-atomic open(path,'a') block.",
+      "reviewer_angle": "Orchestrator-LLM ceremony reliability",
+      "evidence_quote": "(e) Append `sentinel_absence` and `synthesizer_drift` events to `lifecycle/{feature}/events.log` via inline `python3 -c` atomic-append for each excluded reviewer / synthesizer-mismatch (Req 12)."
+    },
+    {
+      "class": "B",
+      "finding": "Veto Surface chose inline python3 -m over wrapper script citing 'no clear win' but the wrapper's clear win is exactly the validate→sha→substitute atomicity property that the second A-class objection identifies as the SEC-1 enforcement gap.",
+      "reviewer_angle": "Orchestrator-LLM ceremony reliability",
+      "evidence_quote": "Inline `python3 -m cortex_command.critical_review` invocation vs. a shell wrapper script in `bin/`: chose module invocation because no consumer outside the SKILL.md orchestrator block needs it, and adding a `bin/cortex-validate-artifact-path` triggers the parity-wiring check (`bin/cortex-check-parity` W003) without a clear win."
+    },
+    {
+      "class": "B",
+      "finding": "Plan-variant synthesizer at lifecycle plan.md §1b.d (parallel plan-agents → Opus comparison) is structurally identical to critical-review dispatch+synthesizer pattern and is not touched. Veto Surface frames as out-of-scope on grounds drift 'is not a documented failure mode' but absence of documented failures at uninstrumented site is not evidence of safety.",
+      "reviewer_angle": "Plan-agent dispatch site delivers token reduction without snapshot consistency",
+      "evidence_quote": "the three plan agents in lifecycle critical-tier are dispatched in parallel and the synthesizer is a separate Opus pass that compares variants — SHA verification across plan agents would only catch concurrent writes to spec/research between dispatch and Read, which is not a documented failure mode at this site."
+    },
+    {
+      "class": "B",
+      "finding": "Task 9 emits READ_OK sentinel with no orchestrator-side parser/expected-SHA; sentinel is performative. Drift-observability half of spec Problem Statement is unimplemented at this site (post-reclassification from A — adjacent scope question rather than fix-failure of Task 9's stated outcome).",
+      "reviewer_angle": "Plan-agent dispatch site delivers token reduction without snapshot consistency",
+      "evidence_quote": "Reviewer SHA is not added to plan-agent prompts in this ticket; the `READ_OK` sentinel is included as a partial-coverage signal only."
+    },
+    {
+      "class": "B",
+      "finding": "Req 12 telemetry verification is grep for event-type string literal in SKILL.md instruction block, not assertion that event is appended to events.log when reviewer fails. Verification cannot distinguish 'instruction documented' from 'instruction executed.'",
+      "reviewer_angle": "Test-of-template vs test-of-runtime gap",
+      "evidence_quote": "`grep -c '\"event\": \"sentinel_absence\"' skills/critical-review/SKILL.md` — pass if ≥ 1 (Req 12 acceptance)."
+    },
+    {
+      "class": "B",
+      "finding": "Req 4c synthesizer-drift handling verified by phrase presence in template, not by behavior. Load-bearing claim (synthesis-output suppression on drift) is unverified by any task.",
+      "reviewer_angle": "Test-of-template vs test-of-runtime gap",
+      "evidence_quote": "`grep -c 'Critical-review pass invalidated' skills/critical-review/SKILL.md` — pass if ≥ 1 (Req 4c acceptance)."
+    },
+    {
+      "class": "B",
+      "finding": "Reviewer exclusion routing (Req 4a–b) verified by warning-string presence, not tally-exclusion behavior. Edge Cases bullets 1–4 (empty Read, sandbox-deny, missing sentinel, SHA mismatch) have no end-to-end test exercising failure paths.",
+      "reviewer_angle": "Test-of-template vs test-of-runtime gap",
+      "evidence_quote": "`awk '/Step 2c.5/,/Step 2d/' skills/critical-review/SKILL.md | grep -c '⚠ Reviewer'` — pass if ≥ 1."
+    },
+    {
+      "class": "B",
+      "finding": "Task 3's symlink-rejection test exercises module API in isolation, not the SKILL.md call path that Task 7 wires up. The 'rejection before dispatch' property (Req 9 enforcement at dispatch site) has no test.",
+      "reviewer_angle": "Test-of-template vs test-of-runtime gap",
+      "evidence_quote": "Module under test: `cortex_command.critical_review`."
+    }
+  ]
+}

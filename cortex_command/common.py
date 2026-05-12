@@ -47,7 +47,7 @@ class CortexProjectRootError(RuntimeError):
     """Raised when the user's cortex project root cannot be resolved.
 
     Indicates that ``CORTEX_REPO_ROOT`` is unset and no ancestor of the
-    current working directory contains ``lifecycle/`` or ``backlog/``
+    current working directory contains ``cortex/``
     before a ``.git/`` boundary (or filesystem root) terminates the walk.
     """
 
@@ -58,7 +58,7 @@ def _resolve_user_project_root() -> Path:
     Returns ``Path(os.environ["CORTEX_REPO_ROOT"])`` when that environment
     variable is set (the user's explicit override is trusted verbatim).
     Otherwise walks upward from ``Path.cwd().resolve()`` to the first
-    ancestor whose ``lifecycle/`` or ``backlog/`` child is a directory.
+    ancestor whose ``cortex/`` child is a directory.
     The walk terminates on either ``(current / ".git").exists()`` (file
     or directory shape — handles git worktrees) or ``parent == current``
     (filesystem root). Matches the upward-walk semantics of git, npm,
@@ -75,8 +75,8 @@ def _resolve_user_project_root() -> Path:
     Raises:
         CortexProjectRootError: When ``CORTEX_REPO_ROOT`` is unset and
             no ancestor up to the first ``.git/`` boundary (or filesystem
-            root) contains ``lifecycle/`` or ``backlog/``. The exception
-            message lists each directory the walk visited.
+            root) contains ``cortex/``. The exception message lists each
+            directory the walk visited.
     """
     env_root = os.environ.get("CORTEX_REPO_ROOT")
     if env_root:
@@ -86,7 +86,7 @@ def _resolve_user_project_root() -> Path:
     current = Path.cwd().resolve()
     while True:
         searched.append(current)
-        if (current / "lifecycle").is_dir() or (current / "backlog").is_dir():
+        if (current / "cortex").is_dir():
             return current
         if (current / ".git").exists():
             break

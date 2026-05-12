@@ -59,7 +59,7 @@ def _make_item(**kwargs) -> BacklogItem:
 
 def _stub_lifecycle(tmp_path: Path, slug: str) -> None:
     """Create minimal lifecycle artifacts (research.md + spec.md) under tmp_path."""
-    lc_dir = tmp_path / "lifecycle" / slug
+    lc_dir = tmp_path / "cortex" / "lifecycle" / slug
     lc_dir.mkdir(parents=True, exist_ok=True)
     (lc_dir / "research.md").write_text("stub")
     (lc_dir / "spec.md").write_text("stub")
@@ -337,7 +337,7 @@ class TestRegressionGuards:
             lifecycle_slug="no-spec",
         )
         # Create research but not spec
-        lc_dir = tmp_path / "lifecycle" / "no-spec"
+        lc_dir = tmp_path / "cortex" / "lifecycle" / "no-spec"
         lc_dir.mkdir(parents=True)
         (lc_dir / "research.md").write_text("stub")
 

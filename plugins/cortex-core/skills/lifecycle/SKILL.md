@@ -7,12 +7,12 @@ inputs:
   - "feature: string (required) — kebab-case slug of the feature to develop or resume"
   - "phase: string (optional) — explicit phase to enter: research|specify|plan|implement|review|complete"
 outputs:
-  - "lifecycle/{{feature}}/ — directory containing phase artifacts: research.md, spec.md, plan.md, review.md, events.log"
+  - "cortex/lifecycle/{{feature}}/ — directory containing phase artifacts: research.md, spec.md, plan.md, review.md, events.log"
 preconditions:
   - "Run from project root"
-  - "lifecycle/ directory must exist or will be created"
+  - "cortex/lifecycle/ directory must exist or will be created"
 precondition_checks:
-  - "test -d lifecycle"
+  - "test -d cortex/lifecycle"
 ---
 
 # Feature Lifecycle
@@ -56,7 +56,7 @@ bin/cortex-resolve-backlog-item {feature}
 
 Route on the resolver's exit code:
 
-- **exit code 0** — Unambiguous match. The resolver prints the resolved backlog filename on stdout (e.g. `backlog/193-lifecycle-and-hook-hygiene-one-offs.md`). Record this as the `{backlog-file}` Step 2 sub-procedures will consume. Also perform a single read of the file's YAML frontmatter at Step 1 entry and hold the parsed fields (`uuid`, `status`, `tags`, `discovery_source`, `research`, `spec`) in conversation memory for the four sub-procedures.
+- **exit code 0** — Unambiguous match. The resolver prints the resolved backlog filename on stdout (e.g. `cortex/backlog/193-lifecycle-and-hook-hygiene-one-offs.md`). Record this as the `{backlog-file}` Step 2 sub-procedures will consume. Also perform a single read of the file's YAML frontmatter at Step 1 entry and hold the parsed fields (`uuid`, `status`, `tags`, `discovery_source`, `research`, `spec`) in conversation memory for the four sub-procedures.
 - **exit code 2** — Ambiguous match. The resolver prints candidate filenames on stderr. Present the candidates via `AskUserQuestion` and halt for user selection. Once selected, treat the chosen filename as the `{backlog-file}`.
 - **exit code 3** — No match. The named feature has no backlog file. Step 2 sub-procedures each handle the no-backlog-file path independently (Backlog Status Check skips silently; Create index.md proceeds with null fields; Backlog Write-Back silent-skips; Discovery Bootstrap records no epic context).
 - **exit code 64** — Usage error. Halt with the resolver's diagnostic; this indicates an invocation bug, not a feature-naming issue.
@@ -68,14 +68,14 @@ The single-resolve contract is prose discipline: Step 2's four sub-procedures (i
 
 ## Step 2: Check for Existing State
 
-Scan for `lifecycle/{feature}/` at the project root.
+Scan for `cortex/lifecycle/{feature}/` at the project root.
 
 ### Artifact-Based Phase Detection
 
-If no `lifecycle/{feature}/` directory exists, `phase = none` — start from the beginning. Otherwise, invoke the canonical detector and route on the returned `phase` field:
+If no `cortex/lifecycle/{feature}/` directory exists, `phase = none` — start from the beginning. Otherwise, invoke the canonical detector and route on the returned `phase` field:
 
 ```bash
-python3 -m cortex_command.common detect-phase lifecycle/{feature}
+python3 -m cortex_command.common detect-phase cortex/lifecycle/{feature}
 ```
 
 The command emits a single JSON object on stdout, e.g. `{"phase":"implement","checked":2,"total":5,"cycle":1}`. Parse the `phase` field and route accordingly. The `checked`/`total` fields report plan-task progress; `cycle` reports the review-cycle number.
@@ -100,13 +100,13 @@ Reference table (one line per `phase` value):
 **Register session**: After identifying the feature (whether new or existing), register this session by writing the session file:
 
 ```
-echo $LIFECYCLE_SESSION_ID > lifecycle/{feature}/.session
+echo $LIFECYCLE_SESSION_ID > cortex/lifecycle/{feature}/.session
 ```
 
 If resuming from a previous session, report the detected phase and offer to continue or restart from an earlier phase. Before presenting the offer, surface two staleness signals so the user can decide whether the existing artifacts are still trustworthy:
 
-1. **Artifact age (mtime)**: report the modification time of `lifecycle/{feature}/spec.md` (and `plan.md` if present) via `os.path.getmtime` or `stat -c %Y`. Express the result as a relative age (e.g., "spec.md last modified 12 days ago").
-2. **Commits since artifact (git log)**: run `git log --since="$(stat -c %Y lifecycle/{feature}/spec.md)" --oneline -- <files-mentioned-in-spec>` and report the count of commits touching files the spec names. A non-zero count suggests the spec's research assumptions may have drifted.
+1. **Artifact age (mtime)**: report the modification time of `cortex/lifecycle/{feature}/spec.md` (and `plan.md` if present) via `os.path.getmtime` or `stat -c %Y`. Express the result as a relative age (e.g., "spec.md last modified 12 days ago").
+2. **Commits since artifact (git log)**: run `git log --since="$(stat -c %Y cortex/lifecycle/{feature}/spec.md)" --oneline -- <files-mentioned-in-spec>` and report the count of commits touching files the spec names. A non-zero count suggests the spec's research assumptions may have drifted.
 
 Surface both signals as terse lines (one each) above the continue/restart prompt. Do not block on either signal — they inform the user's choice; the offer still defaults to "continue".
 
@@ -125,11 +125,11 @@ Run them in this order: Backlog Status Check → Create index.md → Backlog Wri
 
 The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. This section determines whether delegation is needed and, if so, how to execute it.
 
-**If `lifecycle/{feature}/spec.md` already exists AND `lifecycle/{feature}/research.md` also exists** (from a prior `/cortex-core:refine` run, or a resumed lifecycle): announce that early-phase delegation is skipped and proceed directly to the phase execution table below (Plan phase).
+**If `cortex/lifecycle/{feature}/spec.md` already exists AND `cortex/lifecycle/{feature}/research.md` also exists** (from a prior `/cortex-core:refine` run, or a resumed lifecycle): announce that early-phase delegation is skipped and proceed directly to the phase execution table below (Plan phase).
 
-**If `lifecycle/{feature}/spec.md` exists but `lifecycle/{feature}/research.md` does not**: warn that the lifecycle is in an inconsistent state — spec exists without research, and overnight requires both. Delegate to `/cortex-core:refine` normally; `/cortex-core:refine`'s Step 2 will detect the missing research.md and route to the research phase.
+**If `cortex/lifecycle/{feature}/spec.md` exists but `cortex/lifecycle/{feature}/research.md` does not**: warn that the lifecycle is in an inconsistent state — spec exists without research, and overnight requires both. Delegate to `/cortex-core:refine` normally; `/cortex-core:refine`'s Step 2 will detect the missing research.md and route to the research phase.
 
-**If `lifecycle/{feature}/spec.md` does not exist**: delegate to `/cortex-core:refine` as follows:
+**If `cortex/lifecycle/{feature}/spec.md` does not exist**: delegate to `/cortex-core:refine` as follows:
 
 1. **Read `skills/refine/SKILL.md` verbatim.** Do not paraphrase or reconstruct `/cortex-core:refine`'s protocol from training context. The file read is mandatory — this ensures lifecycle stays in sync as `/cortex-core:refine` evolves.
 
@@ -137,7 +137,7 @@ The Clarify, Research, and Spec phases are delegated to `/cortex-core:refine`. T
 
 3. **Determine the starting point for `/cortex-core:refine`:** follow the Refine Starting-Point Rules in [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md).
 
-4. **Event logging during delegation**: lifecycle owns `lifecycle/{feature}/events.log`. Log these events as `/cortex-core:refine` completes each phase:
+4. **Event logging during delegation**: lifecycle owns `cortex/lifecycle/{feature}/events.log`. Log these events as `/cortex-core:refine` completes each phase:
 
    - After the full Clarify phase completes (including §3a critic review and any Q&A) — **before Research begins** — log `lifecycle_start` (tier and criticality come from the post-critic, post-Q&A values in context):
      ```json
@@ -156,9 +156,9 @@ The Research and Spec phases are handled by the /cortex-core:refine delegation b
 
 | Phase | Reference | Artifact Produced |
 |-------|-----------|-------------------|
-| Plan | [plan.md](${CLAUDE_SKILL_DIR}/references/plan.md) | `lifecycle/{feature}/plan.md` |
+| Plan | [plan.md](${CLAUDE_SKILL_DIR}/references/plan.md) | `cortex/lifecycle/{feature}/plan.md` |
 | Implement | [implement.md](${CLAUDE_SKILL_DIR}/references/implement.md) | Source code + commits |
-| Review | [review.md](${CLAUDE_SKILL_DIR}/references/review.md) | `lifecycle/{feature}/review.md` |
+| Review | [review.md](${CLAUDE_SKILL_DIR}/references/review.md) | `cortex/lifecycle/{feature}/review.md` |
 | Complete | [complete.md](${CLAUDE_SKILL_DIR}/references/complete.md) | Git workflow + summary |
 
 Read **only** the reference for the current phase. Do not preload other phases.

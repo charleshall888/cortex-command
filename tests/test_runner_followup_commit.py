@@ -89,8 +89,8 @@ def worktree_runner_env(tmp_path: Path):
         _git(d, "config", "commit.gpgsign", "false")
 
     # Mirror bare minimum structure inside the worktree so commits can touch
-    # backlog/ — the worktree is on its own branch, safe to mutate.
-    (worktree / "backlog").mkdir(exist_ok=True)
+    # cortex/backlog/ — the worktree is on its own branch, safe to mutate.
+    (worktree / "cortex" / "backlog").mkdir(parents=True, exist_ok=True)
 
     # Fake HOME
     claude_dir = tmp_path / ".claude"
@@ -103,7 +103,7 @@ def worktree_runner_env(tmp_path: Path):
     # Session state — features dict has one failed entry so the followup
     # writer produces a file and the SIGHUP path has something to commit.
     session_id = "overnight-test-followup"
-    session_dir = repo / "lifecycle" / "sessions" / session_id
+    session_dir = repo / "cortex" / "lifecycle" / "sessions" / session_id
     session_dir.mkdir(parents=True)
 
     state = {
@@ -300,7 +300,7 @@ def test_sighup_trap_commits_followup_to_worktree(worktree_runner_env: dict):
         log = _git(
             worktree, "log",
             "--pretty=%s",
-            "test-integration-branch", "--", "backlog/",
+            "test-integration-branch", "--", "cortex/backlog/",
         ).stdout
         commit_re = re.compile(
             rf"Overnight session {re.escape(session_id)}: record followup"
@@ -309,20 +309,22 @@ def test_sighup_trap_commits_followup_to_worktree(worktree_runner_env: dict):
             # Dump diagnostics for post-mortem
             stderr_text = stderr_capture.read_text(errors="replace") \
                 if stderr_capture.exists() else "<no stderr>"
-            backlog_contents = list((worktree / "backlog").iterdir())
-            home_backlog_contents = list((repo / "backlog").iterdir()) \
-                if (repo / "backlog").exists() else []
+            cortex_backlog = worktree / "cortex" / "backlog"
+            backlog_contents = list(cortex_backlog.iterdir()) if cortex_backlog.exists() else []
+            home_cortex_backlog = repo / "cortex" / "backlog"
+            home_backlog_contents = list(home_cortex_backlog.iterdir()) \
+                if home_cortex_backlog.exists() else []
             pytest.fail(
                 "no followup commit on integration branch.\n"
                 f"log={log!r}\n"
-                f"worktree/backlog contents={backlog_contents!r}\n"
-                f"home/backlog contents={home_backlog_contents!r}\n"
+                f"worktree/cortex/backlog contents={backlog_contents!r}\n"
+                f"home/cortex/backlog contents={home_backlog_contents!r}\n"
                 f"--- runner stderr tail ---\n{stderr_text[-4000:]}"
             )
 
-        # (c) the followup file under worktree/backlog/ exists with session_id.
+        # (c) the followup file under worktree/cortex/backlog/ exists with session_id.
         followups = [
-            p for p in (worktree / "backlog").glob("*-broken-feature.md")
+            p for p in (worktree / "cortex" / "backlog").glob("*-broken-feature.md")
         ]
         assert followups, "no followup backlog item created in worktree"
         (followup,) = followups
@@ -405,13 +407,13 @@ def rejecting_hook_env(tmp_path: Path):
     _git(repo, "config", "core.hooksPath", str(hooks_dir))
 
     # Stage a backlog change so the diff --cached precheck doesn't no-op.
-    (worktree / "backlog").mkdir(exist_ok=True)
-    (worktree / "backlog" / "fixture-followup.md").write_text(
+    (worktree / "cortex" / "backlog").mkdir(parents=True, exist_ok=True)
+    (worktree / "cortex" / "backlog" / "fixture-followup.md").write_text(
         "# fixture followup\n"
     )
 
     session_id = "overnight-test-followup-fail"
-    session_dir = repo / "lifecycle" / "sessions" / session_id
+    session_dir = repo / "cortex" / "lifecycle" / "sessions" / session_id
     session_dir.mkdir(parents=True)
     events_path = session_dir / "overnight-events.log"
 

@@ -1,0 +1,42 @@
+{
+  "ts": "2026-04-25T00:55:00Z",
+  "feature": "build-mcp-control-plane-server-with-versioned-runner-ipc-contract",
+  "artifact": "cortex/lifecycle/build-mcp-control-plane-server-with-versioned-runner-ipc-contract/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Wrapping blocking calls in asyncio.to_thread moves them to threadpool workers, where CPython delivers signals only to main thread — making blocking syscalls less signal-responsive after the R29 wrap, not more. Task 16 has no test for partial-completion / signal-mid-handler behavior.",
+      "reviewer_angle": "Async-correctness verification depth (Task 16)",
+      "evidence_quote": "every blocking call ... inside their bodies is preceded by await asyncio.to_thread(...)"
+    },
+    {
+      "class": "B",
+      "finding": "psutil children(recursive=True) finds PGID-divergent grandchildren only while intermediate parents are alive. Workers in the runner own PGID receive the same SIGTERM and may exit before the runner handler finishes enumeration; reparented grandchildren disappear from the runner descendant tree.",
+      "reviewer_angle": "Cancel/SIGTERM 10s-budget race (Tasks 3 ↔ 14)",
+      "evidence_quote": "enumerates descendants via psutil.Process(os.getpid()).children(recursive=True)"
+    },
+    {
+      "class": "B",
+      "finding": "CORTEX_ALLOW_INSTALL_DURING_RUN=1 bypass produces split-brain escalations under in-flight upgrade — orchestrator-agent writes (re-rendered prompt → per-session) diverge from in-memory OLD-code feature_executor.py / outcome_router.py writes (still repo-level), silently degrading cycle detection.",
+      "reviewer_angle": "Escalations cleanup cutover hazard via install-guard bypasses (Tasks 10 ↔ 17)",
+      "evidence_quote": "Bypassable via env var CORTEX_ALLOW_INSTALL_DURING_RUN=1"
+    },
+    {
+      "class": "B",
+      "finding": "CORTEX_ALLOW_INSTALL_DURING_RUN=1 leaks via env-inheritance into runner-spawned subprocess children. subprocess.Popen calls in runner.py do not pass env=. A user who sets the bypass to recover from a stuck session and later starts a new run silently re-disables R28 protection.",
+      "reviewer_angle": "Pre-install guard import-time scope and bypass fragility (Task 17)",
+      "evidence_quote": "Bypassable via env var CORTEX_ALLOW_INSTALL_DURING_RUN=1"
+    },
+    {
+      "class": "B",
+      "finding": "Guard has no liveness check on active-session pointer — checks phase \\!= complete only, no verify_runner_pid call. A crashed runner leaves a phase: executing pointer that locks out all future cortex invocations until user finds and runs the cancel-bypass incantation.",
+      "reviewer_angle": "Pre-install guard import-time scope and bypass fragility (Task 17)",
+      "evidence_quote": "aborts when ~/.local/share/overnight-sessions/active-session.json exists with a phase \\!= complete field"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "ts": "2026-05-05T22:30:00Z",
+  "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths",
+  "artifact": "cortex/lifecycle/rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Atomic-landing enforcement reduces to operator discipline + post-commit self-check + manual PR-review checklist; no mechanical gate per spec Non-Requirements (no pre-commit hook).",
+      "reviewer_angle": "Atomic-landing invariant coherence",
+      "evidence_quote": "**No new pre-commit hook** for hard-prereq enforcement."
+    },
+    {
+      "class": "B",
+      "finding": "Task 4's Files list references docs/internals/sdk.md (post-Task-1 path) but Depends on: [1] is advisory metadata; the plan does not cite the runtime mechanism that enforces dependency-order execution.",
+      "reviewer_angle": "Task dependency graph fragility",
+      "evidence_quote": "docs/internals/sdk.md (post-Task-1 path)"
+    },
+    {
+      "class": "B",
+      "finding": "Plan's Verification Strategy quotes the spec's intermediate-commit invariant but names no CI workflow that runs these per-commit checks on the PR branch.",
+      "reviewer_angle": "Task dependency graph fragility",
+      "evidence_quote": "Tests are NOT required to pass at every intermediate commit"
+    },
+    {
+      "class": "B",
+      "finding": "Task 1 edits README.md (drops L127) and Task 9 fully rewrites README.md with only post-hoc grep verifiers; a fresh-agent Task 9 rewrite using a stale Documentation-index template can re-introduce the dropped row (caught only post-commit).",
+      "reviewer_angle": "Task dependency graph fragility",
+      "evidence_quote": "**No new pre-commit hook** for hard-prereq enforcement."
+    },
+    {
+      "class": "B",
+      "finding": "Plan addresses PID write under wheel install and ~/.cache absence, but not _resolve_user_project_root's CortexProjectRootError when cortex dashboard runs from a directory with no lifecycle/ or backlog/.",
+      "reviewer_angle": "Dashboard implementation under macOS-primary platform constraint",
+      "evidence_quote": "L230 lifespan precondition"
+    }
+  ]
+}

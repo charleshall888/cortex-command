@@ -28,7 +28,7 @@ def test_escalations_per_session(capsys, monkeypatch) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         repo_path = Path(tmp)
         session_id = "alpha-2026-04-24"
-        sessions_root = repo_path / "lifecycle" / "sessions"
+        sessions_root = repo_path / "cortex" / "lifecycle" / "sessions"
         session_dir = sessions_root / session_id
         session_dir.mkdir(parents=True)
 
@@ -45,7 +45,7 @@ def test_escalations_per_session(capsys, monkeypatch) -> None:
         # Write a legacy repo-level escalations file with distinct
         # content; if the handler still resolved to the repo-level path,
         # these would leak into stdout instead of the per-session lines.
-        (repo_path / "lifecycle" / "escalations.jsonl").write_text(
+        (repo_path / "cortex" / "lifecycle" / "escalations.jsonl").write_text(
             json.dumps({"escalation_id": "LEGACY-REPO-LEVEL"}) + "\n",
             encoding="utf-8",
         )

@@ -72,7 +72,7 @@ SCAN_GLOBS: tuple[str, ...] = (
     "docs/**/*.md",
     "hooks/cortex-*.sh",
     "justfile",
-    "requirements/**/*.md",
+    "cortex/requirements/**/*.md",
     "skills/**/*.md",
     "tests/**/*.py",
     "tests/**/*.sh",
@@ -110,7 +110,7 @@ SANDBOX_WATCHED_FILES: dict[str, tuple[str, ...]] = {
 
 # Canonical preflight artifact location for the sandbox per-spawn epic.
 PREFLIGHT_PATH = (
-    "lifecycle/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/preflight.md"
+    "cortex/lifecycle/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/preflight.md"
 )
 
 ALLOWED_CATEGORIES: frozenset[str] = frozenset(

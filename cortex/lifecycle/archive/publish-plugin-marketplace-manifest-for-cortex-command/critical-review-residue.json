@@ -1,0 +1,42 @@
+{
+  "ts": "2026-04-25T19:48:30Z",
+  "feature": "publish-plugin-marketplace-manifest-for-cortex-command",
+  "artifact": "cortex/lifecycle/publish-plugin-marketplace-manifest-for-cortex-command/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 8 verifier gate does not fire on a Task-5 or Task-6 commit that ALSO removed /cortex: references it shouldn't have touched; positive-only gates can't localize cross-task ownership leak.",
+      "reviewer_angle": "Cross-task overlap and edit-conflict risk on shared files",
+      "evidence_quote": "python3 scripts/verify-skill-namespace.py --carve-out-file <path> exits 0"
+    },
+    {
+      "class": "B",
+      "finding": "docs/skills-reference.md lines 131 (Task 8 scope) and 139–153 (Task 6 scope) are in immediately adjacent paragraphs of the same Optional Plugins section, increasing accidental cross-edit risk.",
+      "reviewer_angle": "Cross-task overlap and edit-conflict risk on shared files",
+      "evidence_quote": "docs/skills-reference.md:10,139,150,153"
+    },
+    {
+      "class": "B",
+      "finding": "If R9 is run post-merge (the only reliably-enabled path given the syntax issue), the spec's load-bearing claim that structural acceptance R1–R8 cannot substitute for this runtime check is no longer enforceable pre-merge.",
+      "reviewer_angle": "Task 10 R9 smoke check is gated on published state",
+      "evidence_quote": "Interactive/session-dependent"
+    },
+    {
+      "class": "B",
+      "finding": "Carve-out file referenced as required Task 8 input (--carve-out-file <path>) but not in Task 7's Files list; path/format/producer described only in prose.",
+      "reviewer_angle": "Verifier self-defining gate under-tests sweep correctness",
+      "evidence_quote": "Files: scripts/verify-skill-namespace.py ... Carve-out list: a small text file listing <file>:<line>"
+    },
+    {
+      "class": "B",
+      "finding": "Task 8 Files list is incomplete under the 'extend scripts/migrate-namespace.py' branch of Approach; only surfaces if user picks Veto Surface alternative (b).",
+      "reviewer_angle": "Migration-tool disposition is load-bearing but deferred",
+      "evidence_quote": "Approach — write a one-shot Python helper at scripts/sweep-skill-namespace.py (or extend scripts/migrate-namespace.py with a --to-plugin-namespace mode; see Veto Surface)"
+    }
+  ]
+}

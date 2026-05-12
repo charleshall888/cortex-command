@@ -92,9 +92,9 @@ def collect_items(
     ``_resolve_user_project_root()`` so the CLI works from any subdirectory.
     """
     if backlog_dir is None:
-        backlog_dir = _resolve_user_project_root() / "backlog"
+        backlog_dir = _resolve_user_project_root() / "cortex" / "backlog"
     if lifecycle_dir is None:
-        lifecycle_dir = _resolve_user_project_root() / "lifecycle"
+        lifecycle_dir = _resolve_user_project_root() / "cortex" / "lifecycle"
 
     BACKLOG_DIR = backlog_dir
     LIFECYCLE_DIR = lifecycle_dir
@@ -301,8 +301,8 @@ def generate_md(
 def main() -> int:
     _telemetry.log_invocation("cortex-generate-backlog-index")
     project_root = _resolve_user_project_root()
-    backlog_dir = project_root / "backlog"
-    lifecycle_dir = project_root / "lifecycle"
+    backlog_dir = project_root / "cortex" / "backlog"
+    lifecycle_dir = project_root / "cortex" / "lifecycle"
     items, active_ids, archive_ids, all_items = collect_items(backlog_dir, lifecycle_dir)
     atomic_write(backlog_dir / "index.json", generate_json(items))
     atomic_write(

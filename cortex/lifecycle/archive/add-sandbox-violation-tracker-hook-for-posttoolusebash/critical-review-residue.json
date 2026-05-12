@@ -1,0 +1,60 @@
+{
+  "ts": "2026-05-05T00:03:00Z",
+  "feature": "add-sandbox-violation-tracker-hook-for-posttoolusebash",
+  "artifact": "cortex/lifecycle/add-sandbox-violation-tracker-hook-for-posttoolusebash/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "T8's positive-control test hand-authors sidecar JSON files that conform to the documented flat-list schema; it cannot detect a runtime mismatch between what runner.py/dispatch.py actually write and what the classifier expects. Writer-reader integration is uncovered.",
+      "reviewer_angle": "#163 cross-ticket dependency contract",
+      "evidence_quote": "two sidecar files (`orchestrator-1.json` listing `/fixture/.git/refs/heads/main`, ...; `feature-foo-1.json` listing `/other-repo/.git/refs/heads/main` to verify union behavior)"
+    },
+    {
+      "class": "B",
+      "finding": "Plan provides no guidance for #164-before-#163 ordering; T4's 'Immediately after constructing the --settings deny-list' insertion has no defined behavior if that anchor does not yet exist. Spec Technical Constraints require co-merge but plan's task ordering and verification do not enforce it.",
+      "reviewer_angle": "#163 cross-ticket dependency contract (downgraded from A)",
+      "evidence_quote": "Immediately after constructing the `--settings` deny-list for an orchestrator spawn, write a per-spawn JSON sidecar"
+    },
+    {
+      "class": "B",
+      "finding": "Task 8 hand-constructs fixture YAML against the spec rather than generating it by invoking Task 1's tracker; the fixture's three single-line entries never exercise multi-line bodies, embedded `---`, near-4KB lengths, or shell echo-escape edge cases. Manual cross-reference is not a verification mechanism.",
+      "reviewer_angle": "Fixture-vs-emission divergence",
+      "evidence_quote": "bash.log YAML format must match what Task 1 emits ... Cross-reference Task 1's tracker output format to keep fixture in sync."
+    },
+    {
+      "class": "B",
+      "finding": "Spec edge case 'Command field contains binary data or extreme length' has zero verification coverage anywhere in the plan; under the graceful-partial-failure invariant a parse error at report-render time produces an empty section with no diagnostic surface.",
+      "reviewer_angle": "Fixture-vs-emission divergence",
+      "evidence_quote": "Command field contains binary data or extreme length. Tracker emits via YAML literal block scalar (`command: |`); aggregator reads via Python YAML parser."
+    },
+    {
+      "class": "B",
+      "finding": "Task 8's positive-control fixture fabricates the missing schema field directly ('a minimal overnight-state.json declaring /fixture as the home-repo root') and asserts home_repo_refs >= 1 against it; no real writer in the codebase emits a home-repo root field on overnight-state.json, so the test passes against a fixture production never produces.",
+      "reviewer_angle": "Silent classifier degradation",
+      "evidence_quote": "a minimal `overnight-state.json` declaring `/fixture` as home-repo root."
+    },
+    {
+      "class": "B",
+      "finding": "The 'conditional on non-empty result' wiring at the render call site is a falsy check on the rendered string, not an exception boundary; it catches the empty-data case but does nothing if the renderer raises. Plan never specifies a try/except wrapper at the render call site.",
+      "reviewer_angle": "Failure propagation in render path",
+      "evidence_quote": "Append `render_sandbox_denials(data)` conditionally (truthy check on the rendered string, since empty string evaluates falsy)."
+    },
+    {
+      "class": "B",
+      "finding": "The Verification Strategy enumerates unit / integration / manual-smoke layers but no failure-injection layer for malformed bash.log, malformed overnight-state.json, or AttributeError-on-non-dict-YAML-doc — the exact failure modes most likely to surface in a real overnight session.",
+      "reviewer_angle": "Failure propagation in render path",
+      "evidence_quote": "End-to-end verification proceeds in three layers: 1. Unit-level ... 2. Integration-level ... 3. Live-system smoke (manual)"
+    },
+    {
+      "class": "B",
+      "finding": "Veto Surface enumerates consolidation scope, counter sources, and repo-root identification but does not enumerate 'collector raises and kills the entire morning report' — the highest-blast-radius risk of the change.",
+      "reviewer_angle": "Failure propagation in render path",
+      "evidence_quote": "Repo-root identification source. Task 6 reads `lifecycle/overnight-state.json` for home/cross repo roots."
+    }
+  ]
+}

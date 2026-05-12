@@ -178,7 +178,7 @@ def _read_test_command(cwd: Path) -> str:
     Returns ``"just test"`` if the file is missing, has no frontmatter
     key, or cannot be parsed.
     """
-    config_path = cwd / "lifecycle.config.md"
+    config_path = cwd / "cortex" / "lifecycle.config.md"
     try:
         text = config_path.read_text(encoding="utf-8")
     except (FileNotFoundError, OSError):
@@ -217,13 +217,13 @@ def build_config(feature: str, cwd: Path, session_id: str) -> BatchConfig:
 
     config = BatchConfig(
         batch_id=1,
-        plan_path=cwd / f"lifecycle/{feature}/plan.md",
+        plan_path=cwd / "cortex" / f"lifecycle/{feature}/plan.md",
         test_command=test_command,
         base_branch="main",
-        overnight_state_path=cwd / f"lifecycle/{feature}/daytime-state.json",
-        overnight_events_path=cwd / f"lifecycle/{feature}/events.log",
-        result_dir=cwd / f"lifecycle/{feature}",
-        pipeline_events_path=cwd / f"lifecycle/{feature}/pipeline-events.log",
+        overnight_state_path=cwd / "cortex" / f"lifecycle/{feature}/daytime-state.json",
+        overnight_events_path=cwd / "cortex" / f"lifecycle/{feature}/events.log",
+        result_dir=cwd / "cortex" / f"lifecycle/{feature}",
+        pipeline_events_path=cwd / "cortex" / f"lifecycle/{feature}/pipeline-events.log",
     )
 
     state = OvernightState(
@@ -240,7 +240,7 @@ def build_config(feature: str, cwd: Path, session_id: str) -> BatchConfig:
     )
     save_state(state, config.overnight_state_path)
 
-    (cwd / f"lifecycle/{feature}/deferred").mkdir(parents=True, exist_ok=True)
+    (cwd / "cortex" / f"lifecycle/{feature}/deferred").mkdir(parents=True, exist_ok=True)
 
     return config
 
@@ -388,7 +388,7 @@ async def run_daytime(feature: str) -> int:
             f"daytime-{feature}-{int(time.time())}"
         )
         config = build_config(feature, cwd, session_id)
-        deferred_dir = cwd / f"lifecycle/{feature}/deferred"
+        deferred_dir = cwd / "cortex" / f"lifecycle/{feature}/deferred"
 
         # Phase B: emit the buffered auth_bootstrap event to pipeline-events.log.
         # Byte-format matches cortex_command.pipeline.state.log_event (single

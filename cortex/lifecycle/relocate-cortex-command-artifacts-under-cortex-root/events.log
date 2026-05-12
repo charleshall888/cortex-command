@@ -1,0 +1,9 @@
+{"schema_version": 3, "ts": "2026-05-12T10:32:44Z", "event": "clarify_critic", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "parent_epic_loaded": true, "findings_count": 9, "dispositions": {"apply": 8, "dismiss": 1, "ask": 0}, "applied_fixes_count": 8, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-05-12T10:44:51Z", "event": "lifecycle_start", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "tier": "complex", "criticality": "medium"}
+{"ts": "2026-05-12T10:44:51Z", "event": "phase_transition", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "from": "clarify", "to": "research"}
+{"ts": "2026-05-12T10:44:51Z", "event": "phase_transition", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "from": "research", "to": "specify"}
+{"ts": "2026-05-12T10:44:51Z", "event": "phase_transition", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "from": "specify", "to": "plan"}
+{"ts": "2026-05-12T10:50:05Z", "event": "phase_transition", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "from": "plan", "to": "implement"}
+{"ts": "2026-05-12T11:00:00Z", "event": "batch_dispatch", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "batch": 0, "tasks": [1, 2, 3, 9, 10, 11, 12, 13, 14]}
+{"ts": "2026-05-12T11:30:00Z", "event": "batch_dispatch", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "batch": 1, "tasks": [4, 5, 6, 7, 8]}
+{"ts": "2026-05-12T12:00:00Z", "event": "batch_dispatch", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "batch": 2, "tasks": [15, 17]}

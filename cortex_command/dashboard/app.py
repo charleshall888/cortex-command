@@ -259,7 +259,7 @@ async def health() -> JSONResponse:
 @app.get("/")
 async def index(request: Request):
     """Render the main dashboard page."""
-    last_session = parse_last_session(_root() / "lifecycle")
+    last_session = parse_last_session(_root() / "cortex" / "lifecycle")
     return templates.TemplateResponse(
         "base.html",
         {"request": request, "state": state, "last_session": last_session},
@@ -269,7 +269,7 @@ async def index(request: Request):
 @app.get("/sessions")
 async def sessions_list(request: Request):
     """Render the session history list page."""
-    sessions = parse_session_list(_root() / "lifecycle")
+    sessions = parse_session_list(_root() / "cortex" / "lifecycle")
     return templates.TemplateResponse(
         "sessions_list.html",
         {"request": request, "sessions": sessions},
@@ -279,7 +279,7 @@ async def sessions_list(request: Request):
 @app.get("/sessions/{session_id}")
 async def session_detail(session_id: str, request: Request):
     """Render the detail page for a single session."""
-    detail = parse_session_detail(session_id, _root() / "lifecycle")
+    detail = parse_session_detail(session_id, _root() / "cortex" / "lifecycle")
     status_code = 404 if detail is None else 200
     return templates.TemplateResponse(
         "session_detail.html",
@@ -309,7 +309,7 @@ async def alerts_banner(request: Request):
 @app.get("/partials/session-panel")
 async def session_panel(request: Request):
     """Return the session panel HTML fragment for HTMX polling."""
-    last_session = parse_last_session(_root() / "lifecycle")
+    last_session = parse_last_session(_root() / "cortex" / "lifecycle")
     return templates.TemplateResponse(
         "session_panel.html",
         {"request": request, "state": state, "last_session": last_session},
@@ -341,7 +341,7 @@ async def swim_lane(request: Request):
         state.overnight,
         state.overnight_events,
         state.feature_states,
-        _root() / "lifecycle",
+        _root() / "cortex" / "lifecycle",
     )
     return templates.TemplateResponse(
         "swim-lane.html",

@@ -64,10 +64,10 @@ def _isolate_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 
 
 SCAFFOLD_FILES = (
-    "lifecycle/README.md",
-    "backlog/README.md",
-    "requirements/project.md",
-    "lifecycle.config.md",
+    "cortex/lifecycle/README.md",
+    "cortex/backlog/README.md",
+    "cortex/requirements/project.md",
+    "cortex/lifecycle.config.md",
 )
 
 
@@ -123,9 +123,9 @@ def test_update_preserves_user_edits(
 
     assert init_main(_make_args(repo)) == 0
 
-    project = repo / "requirements" / "project.md"
+    project = repo / "cortex" / "requirements" / "project.md"
     project.write_text("USER-EDIT-SENTINEL\n", encoding="utf-8")
-    backlog_readme = repo / "backlog" / "README.md"
+    backlog_readme = repo / "cortex" / "backlog" / "README.md"
     backlog_readme.unlink()
 
     assert init_main(_make_args(repo, update=True)) == 0
@@ -149,14 +149,14 @@ def test_update_emits_drift_report(
     assert init_main(_make_args(repo)) == 0
     capsys.readouterr()  # flush captured output from the initial scaffold
 
-    (repo / "lifecycle" / "README.md").write_text(
+    (repo / "cortex" / "lifecycle" / "README.md").write_text(
         "DRIFT-TEST\n", encoding="utf-8"
     )
 
     assert init_main(_make_args(repo, update=True)) == 0
 
     captured = capsys.readouterr()
-    assert "lifecycle/README.md" in captured.err
+    assert "cortex/lifecycle/README.md" in captured.err
     assert "--force" in captured.err
 
 
@@ -208,7 +208,7 @@ def test_force_backs_up_existing_with_marker(
 
     assert init_main(_make_args(repo)) == 0
 
-    project = repo / "requirements" / "project.md"
+    project = repo / "cortex" / "requirements" / "project.md"
     project.write_text("FORCE-BACKUP-SENTINEL\n", encoding="utf-8")
 
     assert init_main(_make_args(repo, force=True)) == 0
@@ -218,7 +218,7 @@ def test_force_backs_up_existing_with_marker(
     backup_entries = list(backup_root.iterdir())
     assert len(backup_entries) >= 1
     timestamped = backup_entries[0]
-    backup_project = timestamped / "requirements" / "project.md"
+    backup_project = timestamped / "cortex" / "requirements" / "project.md"
     assert backup_project.exists()
     assert "FORCE-BACKUP-SENTINEL" in backup_project.read_text(encoding="utf-8")
 
@@ -239,8 +239,8 @@ def test_force_overwrites_no_marker_populated(
     _git_init(repo)
     _isolate_home(monkeypatch, tmp_path)
 
-    lifecycle_dir = repo / "lifecycle"
-    lifecycle_dir.mkdir()
+    lifecycle_dir = repo / "cortex" / "lifecycle"
+    lifecycle_dir.mkdir(parents=True)
     unrelated = lifecycle_dir / "unrelated.md"
     unrelated.write_text("pre-existing content\n", encoding="utf-8")
 
@@ -305,9 +305,9 @@ def test_content_aware_decline(
     )
     pre_bytes = settings_path.read_bytes()
 
-    lifecycle_dir = repo / "lifecycle"
-    lifecycle_dir.mkdir()
-    (lifecycle_dir / "unrelated.md").write_text(
+    cortex_dir = repo / "cortex"
+    cortex_dir.mkdir()
+    (cortex_dir / "unrelated.md").write_text(
         "user content\n", encoding="utf-8"
     )
 
@@ -317,11 +317,11 @@ def test_content_aware_decline(
     captured = capsys.readouterr()
     assert "pre-existing content" in captured.err
 
-    # No scaffold files were written (lifecycle/unrelated.md persists,
+    # No scaffold files were written (cortex/unrelated.md persists,
     # but the scaffold targets are absent).
-    assert not (repo / "backlog" / "README.md").exists()
-    assert not (repo / "requirements" / "project.md").exists()
-    assert not (repo / "lifecycle.config.md").exists()
+    assert not (repo / "cortex" / "backlog" / "README.md").exists()
+    assert not (repo / "cortex" / "requirements" / "project.md").exists()
+    assert not (repo / "cortex" / "lifecycle.config.md").exists()
     assert not (repo / ".cortex-init").exists()
 
     # Settings file unchanged byte-for-byte.
@@ -367,7 +367,7 @@ def test_symlink_refusal_prefix_aliased_path(
     )
     pre_bytes = settings_path.read_bytes()
 
-    (repo / "lifecycle").symlink_to(escape_target)
+    (repo / "cortex").symlink_to(escape_target)
 
     rc = init_main(_make_args(repo))
     assert rc == 2
@@ -400,7 +400,7 @@ def test_symlink_refusal_case_variant(
 
     _isolate_home(monkeypatch, tmp_path)
 
-    (repo / "lifecycle").symlink_to(elsewhere)
+    (repo / "cortex").symlink_to(elsewhere)
 
     rc = init_main(_make_args(repo))
     assert rc == 2
@@ -688,8 +688,8 @@ def test_unregister_accepts_non_git_path(
     fake_home = _isolate_home(monkeypatch, tmp_path)
 
     # Seed settings.local.json with an entry that would normally be
-    # registered for this path.
-    target_path = str(non_git.resolve() / "lifecycle" / "sessions") + "/"
+    # registered for this path (the new umbrella cortex/ grant).
+    target_path = str(non_git.resolve() / "cortex") + "/"
     settings_path = fake_home / ".claude" / "settings.local.json"
     settings_path.write_text(
         json.dumps(

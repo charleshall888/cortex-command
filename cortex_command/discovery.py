@@ -101,7 +101,7 @@ def _active_lifecycle_slug(repo_root: Path) -> str | None:
     session_id = os.environ.get("LIFECYCLE_SESSION_ID", "").strip()
     if not session_id:
         return None
-    lifecycle_dir = repo_root / "lifecycle"
+    lifecycle_dir = repo_root / "cortex" / "lifecycle"
     if not lifecycle_dir.is_dir():
         return None
     for candidate in sorted(lifecycle_dir.iterdir()):
@@ -184,7 +184,7 @@ def resolve_events_log_path(
     _validate_topic_slug(topic)
     lifecycle_slug = _active_lifecycle_slug(repo_root)
     if lifecycle_slug is not None:
-        return repo_root / "lifecycle" / lifecycle_slug / "events.log"
+        return repo_root / "cortex" / "lifecycle" / lifecycle_slug / "events.log"
     # Cases (2) and (3) both produce research/{topic}/events.log -- the
     # -N suffix is already part of the slug per R13 (the agent generates
     # ``{topic}-2`` and passes that as the topic argument). Per spec R9:
@@ -192,7 +192,7 @@ def resolve_events_log_path(
     # resolver returns research/{topic}-N/events.log" -- i.e. the same
     # research/{slug}/events.log shape, with the slug already including
     # the suffix.
-    return repo_root / "research" / topic / "events.log"
+    return repo_root / "cortex" / "research" / topic / "events.log"
 
 
 def _has_rerun_suffix(topic: str) -> bool:

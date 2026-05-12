@@ -122,7 +122,7 @@ class TestFilterReadyMergeCheck(unittest.TestCase):
         self._tmpdir.cleanup()
 
     def _make_item(self, slug: str) -> BacklogItem:
-        lifecycle_dir = self._root / "lifecycle" / slug
+        lifecycle_dir = self._root / "cortex" / "lifecycle" / slug
         lifecycle_dir.mkdir(parents=True)
         (lifecycle_dir / "research.md").write_text("# Research\n")
         (lifecycle_dir / "spec.md").write_text("# Spec\n")

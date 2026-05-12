@@ -4,6 +4,16 @@ All notable changes to cortex-command will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.0.0] - 2026-05-12
+
+### Changed
+
+- **cortex/ umbrella relocation** — All tool-managed paths (`lifecycle/`, `backlog/`, `requirements/`, `research/`, `retros/`, `debug/`, `.cortex-init`, `lifecycle.config.md`) have been relocated and consolidated under a single `cortex/` root directory. The repo root no longer contains scattered cortex state; everything lives under `cortex/`. This is a **breaking change** — skill prose, bin shims, the overnight runner, and the dashboard all reference the new `cortex/`-prefixed paths. Backlog YAML frontmatter fields and critical-review-residue artifacts have been bulk-migrated in the same atomic commit. `cortex init` now registers a single `cortex/` sandbox-allowWrite entry instead of the prior dual `lifecycle/sessions/` + `lifecycle/` entries.
+  - **Required operator actions after pulling this commit**:
+    1. Run `/plugin update cortex-core` (and `/plugin update cortex-overnight` if installed) inside Claude Code to load the updated skill prose and bin shims that reference `cortex/` paths.
+    2. Run `cortex init --update` once from each project root to replace stale `lifecycle/` sandbox entries with the umbrella `cortex/` grant in `~/.claude/settings.local.json`.
+  - Backlog YAML `discovery_source:`, `spec:`, `plan:`, and `research:` fields bulk-migrated to `cortex/`-prefixed paths in the same atomic relocation commit.
+
 ## [Unreleased]
 
 ### Added

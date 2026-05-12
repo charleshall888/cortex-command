@@ -1,0 +1,30 @@
+{
+  "ts": "2026-04-28T17:34:48Z",
+  "feature": "extract-commit-preflight-into-bin-commit-preflight",
+  "artifact": "cortex/lifecycle/extract-commit-preflight-into-bin-commit-preflight/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "reviewer_angle": "Bootstrap atomicity vs Phase-3 build-plugin idempotency",
+      "finding": "Phase 1.5 parity enforcement triggers on staged bin/cortex-* paths; plan provides zero analysis of whether new bin/cortex-commit-preflight ↔ skills/commit/SKILL.md pairing satisfies linter contract.",
+      "evidence_quote": "Phase 1.5 (parity), Phase 1.6 (shim presence), Phase 3 (build-plugin re-run), and Phase 4 (plugin-drift) must all pass on this commit."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Bootstrap atomicity vs Phase-3 build-plugin idempotency",
+      "finding": "Phase 1.6 enforces shim presence within first 50 lines on disk; six drive-by edits asserted line-preserving but never verified to leave shim within window.",
+      "evidence_quote": "since Task 1 emits the shim within the first 50 lines, this passes."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Test verification fragility under realistic implementations",
+      "finding": "test_shim_records_invocation path coupling unpinned: cortex-log-invocation derives session_dir from $repo_root (test process git toplevel); without explicit cwd=tmp_repo, JSONL lands in cortex-command repo (polluting) instead of tmp fixture.",
+      "evidence_quote": "set LIFECYCLE_SESSION_ID to a fresh UUID, count records in lifecycle/sessions/<uuid>/bin-invocations.jsonl before invocation (zero), run script, count after, assert delta == 1"
+    }
+  ]
+}

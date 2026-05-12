@@ -49,7 +49,7 @@ def _default_report_path() -> Path:
     Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
     every consumer must invoke this function (or supply an explicit path).
     """
-    return _resolve_user_project_root() / "lifecycle" / "morning-report.md"
+    return _resolve_user_project_root() / "cortex/lifecycle" / "morning-report.md"
 
 
 @dataclass
@@ -122,7 +122,7 @@ def collect_report_data(
     """
     state_path = state_path or _default_state_path()
     events_path = events_path or _default_log_path()
-    lifecycle_root = _resolve_user_project_root() / "lifecycle"
+    lifecycle_root = _resolve_user_project_root() / "cortex/lifecycle"
     data = ReportData()
 
     # Load state
@@ -613,9 +613,9 @@ def render_pending_drift(data: ReportData) -> str:
 
     # 2. Re-implementing features — review.md is stale from a prior cycle
     reimplementing: set[str] = set()
-    for review_path in sorted(Path("lifecycle").glob("*/review.md")):
+    for review_path in sorted(Path("cortex/lifecycle").glob("*/review.md")):
         feature = review_path.parent.name
-        events_path = Path(f"lifecycle/{feature}/events.log")
+        events_path = Path(f"cortex/lifecycle/{feature}/events.log")
         if not events_path.exists():
             continue
         events = read_events(events_path)
@@ -626,9 +626,9 @@ def render_pending_drift(data: ReportData) -> str:
         if phase_transitions and phase_transitions[-1].get("to") in {"implement", "implement-rework"}:
             reimplementing.add(feature)
 
-    # 3. Scan lifecycle/*/review.md, skip merged and re-implementing
+    # 3. Scan cortex/lifecycle/*/review.md, skip merged and re-implementing
     drift_features: list[tuple[str, dict]] = []
-    for review_path in sorted(Path("lifecycle").glob("*/review.md")):
+    for review_path in sorted(Path("cortex/lifecycle").glob("*/review.md")):
         feature = review_path.parent.name
         if feature in merged or feature in reimplementing:
             continue
@@ -946,7 +946,7 @@ def render_deferred_questions(data: ReportData) -> str:
 
 def render_critical_review_residue(data: ReportData) -> str:
     """Render the critical review residue section from lifecycle residue files."""
-    lifecycle_root = _resolve_user_project_root() / "lifecycle"
+    lifecycle_root = _resolve_user_project_root() / "cortex/lifecycle"
     residue_paths = sorted(lifecycle_root.glob("*/critical-review-residue.json"))
     total = len(residue_paths)
     lines: list[str] = [f"## Critical Review Residue ({total})", ""]
@@ -2010,14 +2010,14 @@ def generate_and_write_report(
             files.  Passed through to collect_report_data.
         project_root: Optional target project root.  When provided, the
             latest-copy morning report is written to
-            ``project_root / "lifecycle" / "morning-report.md"`` instead
+            ``project_root / "cortex/lifecycle" / "morning-report.md"`` instead
             of ``_default_report_path()`` (the user's project root resolved
             at call time).
     """
     state_path = state_path or _default_state_path()
     events_path = events_path or _default_log_path()
     user_root = _resolve_user_project_root()
-    lifecycle_root = user_root / "lifecycle"
+    lifecycle_root = user_root / "cortex/lifecycle"
     data = collect_report_data(
         state_path=state_path,
         events_path=events_path,
@@ -2059,7 +2059,7 @@ def generate_and_write_report(
 
         # Keep a latest-copy at the well-known lifecycle location
         latest_copy_path = (
-            project_root / "lifecycle" / "morning-report.md"
+            project_root / "cortex/lifecycle" / "morning-report.md"
             if project_root is not None
             else lifecycle_root / "morning-report.md"
         )
@@ -2103,7 +2103,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     _cli_user_root = _resolve_user_project_root()
-    _cli_lifecycle_root = _cli_user_root / "lifecycle"
+    _cli_lifecycle_root = _cli_user_root / "cortex/lifecycle"
 
     if args.session:
         sdir = session_dir(args.session, lifecycle_root=_cli_lifecycle_root)

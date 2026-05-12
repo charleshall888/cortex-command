@@ -29,7 +29,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "bin" / "cortex-resolve-backlog-item"
-BACKLOG_DIR = REPO_ROOT / "backlog"
+BACKLOG_DIR = REPO_ROOT / "cortex" / "backlog"
 FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures"
 BASELINE_FIXTURE = FIXTURES_DIR / "predicate_a_baseline.json"
 
@@ -638,7 +638,7 @@ def test_lifecycle_slug_dirname_fallback(resolver, tmp_path):
         backlog,
         "001-some-ticket.md",
         "Some Ticket",
-        extra="spec: lifecycle/my-feature-dir/spec.md\n",
+        extra="spec: cortex/lifecycle/my-feature-dir/spec.md\n",
     )
     fm = resolver._parse_frontmatter(item)
     title = resolver._item_title(item, fm)

@@ -1,0 +1,126 @@
+{
+  "ts": "2026-04-28T11:33:06Z",
+  "feature": "add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7",
+  "artifact": "cortex/lifecycle/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "reviewer_angle": "Shim insertion mechanics",
+      "finding": "Task 6 verification 2 uses bin/cortex-jcc --version; passes/fails depending on CORTEX_COMMAND_ROOT env state, not shim correctness.",
+      "evidence_quote": "Round-trip: LIFECYCLE_SESSION_ID=plan-rt-sid bin/cortex-jcc --version 2>/dev/null"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Shim insertion mechanics",
+      "finding": "cortex-jcc + inner script double-counting in aggregator; composition rule undocumented.",
+      "evidence_quote": "cortex-jccs adoption is captured at the wrapper level only."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Shim insertion mechanics",
+      "finding": "Task 6 lists 5 bash files but does not gate-verify each shebang; head|grep would pass even on a Python file with the literal string in a comment.",
+      "evidence_quote": "Both files verified at plan time as plain Python"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Aggregator parsing correctness",
+      "finding": "Self-test probe records inflate Records: total in default report; aggregator filtering scope unspecified.",
+      "evidence_quote": "Probe records ARE written to the real session log."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Aggregator parsing correctness",
+      "finding": "scripts array in --json schema does not specify whether zero-count inventory items appear or only candidates_for_review; ordering also unspecified.",
+      "evidence_quote": "scripts: [{script: <name>, count: <int>}]"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Aggregator parsing correctness",
+      "finding": "skipped_malformed_lines aggregation across multiple JSONL files unspecified (per-file END vs single awk over all files).",
+      "evidence_quote": "skipped_malformed_lines is incremented inside the awk parser whenever a line cannot be matched to the expected pattern."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Aggregator parsing correctness",
+      "finding": "wc -l counts newlines, not lines; breadcrumb writer format not constrained to terminate every entry with newline.",
+      "evidence_quote": "Any failure path writes a one-line entry to ~/.cache/cortex/log-invocation-errors.log"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Aggregator parsing correctness (synth-downgraded)",
+      "finding": "No-data path mechanism unspecified for missing lifecycle/sessions/ parent; works under default bash with [ -f ] guard but breaks if implementer uses find.",
+      "evidence_quote": "if no lifecycle/sessions/*/bin-invocations.jsonl files are present"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Self-bootstrap and merge-order risk",
+      "finding": "Verification 2 captures grep exit code, not git commit exit; weakens discriminative power.",
+      "evidence_quote": "grep -q cortex-test-no-shim; failed=0"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Self-bootstrap and merge-order risk",
+      "finding": "Verification 1 produces real commit + reset; does not check clean tree, not detached HEAD, not mid-rebase.",
+      "evidence_quote": "make a noop edit to bin/cortex-jcc"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Self-bootstrap and merge-order risk",
+      "finding": "Verification 1 commit triggers Phase 3 just build-plugin; mirrored cortex-jcc may drift after revert if build-plugin not idempotent.",
+      "evidence_quote": "make a noop edit to bin/cortex-jcc"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Self-bootstrap and merge-order risk",
+      "finding": "Helper bug-fix re-triggers gate against full inventory; commit health coupled to inventory-wide shim coverage.",
+      "evidence_quote": "[ \"$n\" = \"cortex-log-invocation\" ] && continue"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Self-bootstrap and merge-order risk",
+      "finding": "Probe bin/cortex-test-no-shim used by Tasks 4 and 9 verifications; no idempotent setup if a previous run was interrupted.",
+      "evidence_quote": "create a temporary bin/cortex-test-no-shim"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Self-bootstrap and merge-order risk (synth-downgraded)",
+      "finding": "Phase 3 dual-source mirror of bin/cortex-test-no-shim depends on Phase 1.5 short-circuit; speculative future placement-refactor could leave stale plugin-tree mirrors.",
+      "evidence_quote": "create a probe bin/cortex-test-no-shim (no shim line)"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Sandbox & verification env",
+      "finding": "Task 5 step 4 tail -1 concurrent-unsafe under O_APPEND atomicity with parallel writers; non-deterministic in overnight populations.",
+      "evidence_quote": "tail -1 \"$logfile\" | grep -q"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Sandbox & verification env",
+      "finding": "Task 9 verification 1 git checkout -- destructive on dirty working trees; clobbers unstaged edits.",
+      "evidence_quote": "git reset --soft HEAD^ && git restore --staged bin/cortex-jcc && git checkout -- bin/cortex-jcc"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Sandbox & verification env",
+      "finding": "Six plan-{test,deny,r8,r10,rt,selftest}-sid test session dirs accumulate; only Task 2 verification 4 cleans.",
+      "evidence_quote": "rm -rf lifecycle/sessions/plan-*-sid"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Sandbox & verification env",
+      "finding": "Task 3 verification depends on jq but never pre-checks; on CI without jq verification passes for wrong reason.",
+      "evidence_quote": "bin/cortex-invocation-report --json | jq -e .scripts | type == \"array\""
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "Sandbox & verification env (synth-downgraded)",
+      "finding": "Task 5 step 4 remediation hint enumerates only cortex init; misleading for worktree, missing-init-in-this-repo, or shape-mismatch causes.",
+      "evidence_quote": "run cortex init to register the log path in sandbox.filesystem.allowWrite"
+    }
+  ]
+}

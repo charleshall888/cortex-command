@@ -53,12 +53,7 @@ _GITIGNORE_TARGETS = (_MARKER_FILENAME, _BACKUP_DIR_PATTERN)
 
 # Target scaffold paths inspected by the content-aware decline gate (R19).
 # A populated non-marker repo with any of these present fires the gate.
-_CONTENT_DECLINE_TARGETS = (
-    "lifecycle",
-    "backlog",
-    "requirements",
-    "lifecycle.config.md",
-)
+_CONTENT_DECLINE_TARGETS = ("cortex",)
 
 
 class ScaffoldError(Exception):
@@ -115,15 +110,15 @@ def check_content_decline(repo_root: Path) -> None:
 
 
 def check_symlink_safety(repo_root: Path) -> str:
-    """R13 gate: refuse if ``lifecycle/`` resolves outside the repo.
+    """R13 gate: refuse if ``cortex/`` resolves outside the repo.
 
-    Returns the canonical lifecycle path (with trailing slash) that the
-    handler threads into :func:`settings_merge.register` to close the TOCTOU
-    window between pre-flight resolution and a re-resolve at registration
-    time.
+    Returns the canonical cortex umbrella path (with trailing slash) that
+    the handler threads into :func:`settings_merge.register` to close the
+    TOCTOU window between pre-flight resolution and a re-resolve at
+    registration time.
 
-    If ``lifecycle/`` does not yet exist, no resolution is possible;
-    the non-canonical path (still with trailing slash) is returned. Ancestor
+    If ``cortex/`` does not yet exist, no resolution is possible; the
+    non-canonical path (still with trailing slash) is returned. Ancestor
     canonicalization is the handler's responsibility (it calls
     ``repo_root.resolve()`` before invoking any gate), which makes the
     non-canonical path consistent with what the future-created directory
@@ -134,13 +129,13 @@ def check_symlink_safety(repo_root: Path) -> str:
             caller (handler invariant).
 
     Returns:
-        The canonical lifecycle-path string with a trailing ``/``.
+        The canonical cortex-umbrella-path string with a trailing ``/``.
 
     Raises:
-        ScaffoldError: if an existing ``lifecycle`` resolves to a
+        ScaffoldError: if an existing ``cortex`` resolves to a
             location that is not a subpath of ``repo_root``.
     """
-    lifecycle_path = repo_root / "lifecycle"
+    cortex_path = repo_root / "cortex"
 
     # ``Path.exists`` follows symlinks by default and returns False for
     # dangling links. We want to catch dangling symlinks too, since a
@@ -148,33 +143,33 @@ def check_symlink_safety(repo_root: Path) -> str:
     # (it will resolve on creation). ``lexists`` via ``follow_symlinks=False``
     # detects the link entry regardless of target validity.
     try:
-        present = lifecycle_path.exists(follow_symlinks=False)
+        present = cortex_path.exists(follow_symlinks=False)
     except TypeError:
         # Python <3.12 fallback — shouldn't hit (project requires 3.12+),
         # but guard anyway via os.path.lexists.
-        present = os.path.lexists(lifecycle_path)
+        present = os.path.lexists(cortex_path)
 
     if not present:
-        return str(lifecycle_path) + "/"
+        return str(cortex_path) + "/"
 
-    lifecycle_canon = lifecycle_path.resolve(strict=False)
+    cortex_canon = cortex_path.resolve(strict=False)
     root_canon = repo_root.resolve(strict=False)
 
     # APFS (macOS) preserves case but compares case-insensitively; ``resolve``
     # does not normalize case. Normalize both sides before the containment
     # check so the comparison matches filesystem semantics.
-    lifecycle_norm = Path(os.path.normcase(str(lifecycle_canon)))
+    cortex_norm = Path(os.path.normcase(str(cortex_canon)))
     root_norm = Path(os.path.normcase(str(root_canon)))
 
     # ``is_relative_to`` performs proper subpath containment; ``startswith``
     # would false-positive (e.g. ``/tmp/repository`` vs ``/tmp/repo``).
-    if not lifecycle_norm.is_relative_to(root_norm):
+    if not cortex_norm.is_relative_to(root_norm):
         raise ScaffoldError(
-            "`cortex init`: refusing to proceed — `lifecycle/` "
+            "`cortex init`: refusing to proceed — `cortex/` "
             "resolves outside the repo root."
         )
 
-    return str(lifecycle_canon) + "/"
+    return str(cortex_canon) + "/"
 
 # Any line starting with ``.cortex-init`` that is NOT exactly one of the two
 # canonical targets is treated as an orphan-prefix fragment from a prior
@@ -439,4 +434,7 @@ def ensure_gitignore(repo_root: Path) -> None:
     if new_content and not new_content.endswith("\n"):
         new_content += "\n"
     new_content += "\n".join(to_append) + "\n"
+    # Uncomment to gitignore cortex tool state
+    if "# cortex/" not in existing_lines:
+        new_content += "# cortex/\n"
     atomic_write(gitignore_path, new_content)

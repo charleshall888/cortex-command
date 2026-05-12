@@ -503,8 +503,8 @@ def filter_ready(
 
         # 4-5. Lifecycle artifact checks — derive paths from lifecycle_slug
         slug = item.resolve_slug()
-        research_path = project_root / "lifecycle" / slug / "research.md"
-        spec_path = project_root / "lifecycle" / slug / "spec.md"
+        research_path = project_root / "cortex" / "lifecycle" / slug / "research.md"
+        spec_path = project_root / "cortex" / "lifecycle" / slug / "spec.md"
 
         if not research_path.exists():
             result.ineligible.append(IneligibleItem(
@@ -577,8 +577,8 @@ def filter_ready(
 
             # 4-5. Lifecycle artifact checks
             item_slug = item.resolve_slug()
-            research_path = project_root / "lifecycle" / item_slug / "research.md"
-            spec_path = project_root / "lifecycle" / item_slug / "spec.md"
+            research_path = project_root / "cortex" / "lifecycle" / item_slug / "research.md"
+            spec_path = project_root / "cortex" / "lifecycle" / item_slug / "spec.md"
 
             if not research_path.exists():
                 result.ineligible.append(IneligibleItem(

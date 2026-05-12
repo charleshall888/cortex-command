@@ -183,19 +183,22 @@ def fixture_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     chdir into ``tmp_path`` so ``collect_sandbox_denials``'s relative
     ``Path("lifecycle/sessions/...")`` resolves correctly AND
-    ``_resolve_user_project_root()`` (which inspects CWD for a ``lifecycle/``
-    or ``backlog/`` sentinel) can discover the project root.
+    ``_resolve_user_project_root()`` (which inspects CWD for a ``cortex/``
+    sentinel) can discover the project root.
     """
-    # Sentinel: _resolve_user_project_root requires either lifecycle/ or
-    # backlog/ in CWD.  We create both so the resolver is happy.
+    # CORTEX_REPO_ROOT is pinned to tmp_path below so the walk is bypassed;
+    # no cortex/ sentinel directory is needed here.
     (tmp_path / "backlog").mkdir(parents=True, exist_ok=True)
 
-    lifecycle_dir = tmp_path / "lifecycle"
-    session_dir = lifecycle_dir / "sessions" / FIXTURE_ID
+    # load_state() reads overnight-state.json from cortex/lifecycle/ (rebased path).
+    cortex_lifecycle_dir = tmp_path / "cortex" / "lifecycle"
+    _write_overnight_state(cortex_lifecycle_dir)
 
-    _write_overnight_state(lifecycle_dir)
-    _write_bash_log(session_dir / "tool-failures")
-    _write_sidecars(session_dir / "sandbox-deny-lists")
+    # collect_sandbox_denials uses a CWD-relative Path("lifecycle/sessions/..."),
+    # so session data stays under lifecycle/sessions/ relative to CWD (tmp_path).
+    legacy_session_dir = tmp_path / "lifecycle" / "sessions" / FIXTURE_ID
+    _write_bash_log(legacy_session_dir / "tool-failures")
+    _write_sidecars(legacy_session_dir / "sandbox-deny-lists")
 
     monkeypatch.chdir(tmp_path)
     # Ensure CORTEX_REPO_ROOT does not override CWD discovery; if the parent

@@ -93,7 +93,7 @@ def test_cancel_scheduled_launch_removes_sidecar_and_clears_state(
         pytest.skip("macOS-only backend; cancel path requires darwin dispatch")
 
     session_id = "overnight-2026-05-04-2200"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     state_path = _write_state(session_dir, session_id, scheduled_start="2026-05-05T22:00:00")
 
@@ -177,7 +177,7 @@ def test_cancel_scheduled_launch_json_envelope(
         pytest.skip("macOS-only backend; cancel path requires darwin dispatch")
 
     session_id = "overnight-2026-05-04-2300"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     _write_state(session_dir, session_id, scheduled_start="2026-05-05T22:00:00")
 
@@ -246,7 +246,7 @@ def test_cancel_no_runner_no_schedule_returns_no_active_session(
         pytest.skip("macOS-only backend; cancel path requires darwin dispatch")
 
     session_id = "overnight-2026-05-04-0100"
-    sessions_root = tmp_path / "lifecycle" / "sessions"
+    sessions_root = tmp_path / "cortex" / "lifecycle" / "sessions"
     session_dir = sessions_root / session_id
     _write_state(session_dir, session_id, scheduled_start=None)
 

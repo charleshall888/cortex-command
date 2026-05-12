@@ -160,7 +160,7 @@ def main() -> int:
     # CLI-layer resolver routing — internal callers must pass backlog_dir
     # explicitly (see spec R3 / create_item signature). Routes through
     # _resolve_user_project_root() so the CLI works from any subdirectory.
-    BACKLOG_DIR = _resolve_user_project_root() / "backlog"
+    BACKLOG_DIR = _resolve_user_project_root() / "cortex" / "backlog"
 
     try:
         item_path = create_item(

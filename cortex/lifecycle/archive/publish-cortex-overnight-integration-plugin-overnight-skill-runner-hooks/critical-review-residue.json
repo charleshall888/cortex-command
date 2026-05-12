@@ -1,0 +1,60 @@
+{
+  "ts": "2026-04-25T14:30:00Z",
+  "feature": "publish-cortex-overnight-integration-plugin-overnight-skill-runner-hooks",
+  "artifact": "cortex/lifecycle/publish-cortex-overnight-integration-plugin-overnight-skill-runner-hooks/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Bulk pre-delete + per-hook rsync in Task 1's recipe is non-atomic; a mid-loop rsync error leaves the plugin tree partially gutted, and pre-commit Phase 4 then refuses to commit the partial state, giving the developer no clean recovery from inside the commit flow.",
+      "reviewer_angle": "Recipe ordering and pollution race",
+      "evidence_quote": "Pre-clean `plugins/$p/hooks/cortex-*.sh` before rsync so removing a HOOKS entry actually removes the file."
+    },
+    {
+      "class": "B",
+      "finding": "Task 1 verification gap at the boundary between Task 1 (guard active) and Task 5 (guard inactive) — the case-pattern arm for cortex-overnight-integration is never exercised at Task 1 because the .claude-plugin guard skips it; a typo, missing arm, or wildcard fall-through would all pass Task 1 verification and fail at Task 5.",
+      "reviewer_angle": "Recipe ordering and pollution race",
+      "evidence_quote": "Verification: snapshot `plugins/cortex-interactive/` with `git stash` or `cp -r plugins/cortex-interactive /tmp/ci-pre-refactor`, then `just build-plugin && diff -rq /tmp/ci-pre-refactor plugins/cortex-interactive` — pass if `diff` exits 0 with no output (cortex-interactive output unchanged)."
+    },
+    {
+      "class": "B",
+      "finding": "Task 9 Context instructs maintainer to author a stub manifest with no instruction to delete it before subsequent commits; the next pre-commit run (Phase 4 drift detection) sees the stub diverge from 122's production manifest at handoff or accidentally commits it.",
+      "reviewer_angle": "Marketplace dogfood gap and Task 9/12 self-contradiction",
+      "evidence_quote": "instruct maintainers to create a stub listing only the plugin under test during local dogfooding, and that ticket 122 will replace it with the production manifest"
+    },
+    {
+      "class": "B",
+      "finding": "No test in tests/ exercises any of the four hooks with a non-matching event payload to assert exit-0-with-no-side-effects. The 'self-filter internally' contract is load-bearing per plan line 38 + line 166, but Task 5 verification covers only byte-identity to source and executability. Removal of the tool_name != 'Bash' early-exit at cortex-tool-failure-tracker.sh:26-28 would cause silent /tmp file creation on every PostToolUse with no test to catch it.",
+      "reviewer_angle": "Hook matcher omission anchored on unverified self-filter assumption",
+      "evidence_quote": "for each of the 4 source→plugin hook pairs, `cmp -s <source> plugins/cortex-overnight-integration/hooks/<basename>` exits 0; `find plugins/cortex-overnight-integration/hooks/ -name 'cortex-*.sh' -not -perm -u+x | wc -l` returns `0`"
+    },
+    {
+      "class": "B",
+      "finding": "The matcher-omission contract is encoded only in plan prose and a Scope Boundaries bullet — not in code comments at the top of each hook script and not in hooks.json. A future editor of cortex-tool-failure-tracker.sh has no in-source signal that the tool_name != 'Bash' early-exit is load-bearing for the hooks.json registration rather than stylistic.",
+      "reviewer_angle": "Hook matcher omission anchored on unverified self-filter assumption",
+      "evidence_quote": "**`matcher` field in hooks.json**: omitted across all four hook registrations on purpose (R4) — each script self-filters internally; pinning a matcher would either duplicate filter logic or risk drift."
+    },
+    {
+      "class": "B",
+      "finding": "Spec acceptance grep `grep -E 'check_symlink_safety|symlink_safety' ... | grep -v sessions` validates a variable name rather than a behavior; a future maintainer who narrows the registered path back to lifecycle/sessions/ but retains the variable name lifecycle_target will silently pass the grep while behavior diverges. The companion grep on scaffold.py would not catch a regression introduced in handler.py:125 inside the --unregister branch.",
+      "reviewer_angle": "Sandbox widening, --unregister symmetry, and migration-path silence",
+      "evidence_quote": "Variable rename from `sessions_target` to `lifecycle_target` is required so the spec acceptance grep (`grep -E 'check_symlink_safety|symlink_safety' ... | grep -v sessions`) finds the call line."
+    },
+    {
+      "class": "B",
+      "finding": "Repointing check_symlink_safety from lifecycle/sessions/ to lifecycle/ widens the attack surface (lifecycle/ now contains feature-state markers and per-feature artifacts in addition to runner sessions), but the plan frames the change purely as preserving coverage. The wider gate also stops resolving the nested case — a real lifecycle/ directory containing a symlinked lifecycle/sessions/ pointing outside the repo — which the previous gate would catch and the new gate cannot.",
+      "reviewer_angle": "Sandbox widening, --unregister symmetry, and migration-path silence",
+      "evidence_quote": "repoint the `check_symlink_safety` gate at the same wider path so the escape check still covers what's actually written"
+    },
+    {
+      "class": "B",
+      "finding": "Test fixture rewrite '(repo / \"lifecycle\").symlink_to(...) — no parent mkdir; the symlink itself IS lifecycle/' eliminates the previous nested-escape test case (real lifecycle/, symlinked lifecycle/sessions/) and never adds a replacement. Combined with the explicit 'Skip those' instruction for test_settings_merge.py, no test exercises register() or check_symlink_safety against the actual production input shape Task 7 introduces.",
+      "reviewer_angle": "Sandbox widening, --unregister symmetry, and migration-path silence",
+      "evidence_quote": "test_settings_merge.py uses `/repo/lifecycle/sessions/` as a fake target_path argument; the function accepts arbitrary paths so the tests still pass without modification. Skip those."
+    }
+  ]
+}

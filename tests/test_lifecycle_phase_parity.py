@@ -491,9 +491,9 @@ def _invoke_hook_for_fixture(fixture_dir: Path, tmp_path: Path) -> dict[str, str
     """
     slug = "test-feature"
     work = tmp_path / "work"
-    lifecycle = work / "lifecycle" / slug
+    lifecycle = work / "cortex" / "lifecycle" / slug
     lifecycle.mkdir(parents=True)
-    # Copy fixture contents into lifecycle/{slug}/.
+    # Copy fixture contents into cortex/lifecycle/{slug}/.
     for entry in fixture_dir.iterdir():
         if entry.is_file():
             shutil.copy2(entry, lifecycle / entry.name)

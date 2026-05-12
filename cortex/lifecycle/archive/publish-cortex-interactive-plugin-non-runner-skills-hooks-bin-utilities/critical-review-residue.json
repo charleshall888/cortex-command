@@ -1,0 +1,42 @@
+{
+  "ts": "2026-04-24T13:00:00Z",
+  "feature": "publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities",
+  "artifact": "cortex/lifecycle/publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Simplest fix: extend build-plugin to rsync top-level hooks/cortex-validate-commit.sh into plugins/cortex-interactive/hooks/, eliminating dual-source condition without a new enforcement mechanism. Plan rejected this under a falsified 'changes rarely' premise.",
+      "reviewer_angle": "Hand-authored vs build-output drift asymmetry",
+      "evidence_quote": "Alternative: extend `build-plugin` to template `hooks.json` from a source file. Rejected for now"
+    },
+    {
+      "class": "B",
+      "finding": "Task 5 error message tells the user what's wrong but not how to recover. Missing 'cd to repo root and re-invoke' directive.",
+      "reviewer_angle": "Evolve readlink → $PWD behavioral regression",
+      "evidence_quote": "/cortex:evolve must be invoked from a cortex-command checkout (missing .git/ or backlog/ in $PWD)"
+    },
+    {
+      "class": "B",
+      "finding": "Task 17 smoke test does not specify invocation from a subdirectory — the primary regression surface introduced by Task 5. A smoke run from repo root exercises only the happy path.",
+      "reviewer_angle": "Evolve readlink → $PWD behavioral regression",
+      "evidence_quote": "Invoke `/cortex:evolve` (exercises Task 5's $PWD-based resolution)"
+    },
+    {
+      "class": "B",
+      "finding": "Part A/Part B partition leaves 15 bare slash-command references in skills/morning-review/ and skills/overnight/ outside every sweep. No task rewrites them; no verification grep scopes to them. Ticket-121 inherits undocumented coordination debt.",
+      "reviewer_angle": "Scope hole for non-shipped skills' namespace state",
+      "evidence_quote": "Task 10 invocation scope: --include skills/commit --include skills/pr ... --include skills/critical-review"
+    },
+    {
+      "class": "B",
+      "finding": "Task 15 drift enforcement has no visibility into non-shipped skill tree (morning-review, overnight, skill-creator). Any namespace-state inconsistency in those directories between ticket-120 and ticket-121 is invisible.",
+      "reviewer_angle": "Scope hole for non-shipped skills' namespace state",
+      "evidence_quote": "Explicitly excludes `morning-review`, `overnight`, `skill-creator` — those are not in this plugin."
+    }
+  ]
+}

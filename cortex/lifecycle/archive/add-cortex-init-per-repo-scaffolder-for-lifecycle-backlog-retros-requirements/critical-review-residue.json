@@ -1,0 +1,78 @@
+{
+  "ts": "2026-04-24T13:35:00Z",
+  "feature": "add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements",
+  "artifact": "cortex/lifecycle/add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "reviewer_angle": "flock + os.replace lock invariant",
+      "finding": "Task 12 concurrency test uses Barrier(2) so both callers open the same inode before either os.replace; cannot detect the broken invariant that lives in the post-replace window",
+      "evidence_quote": "use multiprocessing.Pool... Use a multiprocessing.Barrier(2) to maximize the race window."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "symlink-safety",
+      "finding": "repo_root canonicalization not threaded from Task 9 step 2 into Task 7 register(); registered allowWrite entry may be non-canonical on systems with symlinked ancestor directories",
+      "evidence_quote": "Target path format: str((repo_root / 'lifecycle' / 'sessions').resolve(strict=False)) + '/'"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "symlink-safety",
+      "finding": "Forward-direction symlink bypass — a symlink created at lifecycle/sessions/ after cortex init runs is never rechecked, yet its target is already in allowWrite; overnight runner's --dangerously-skip-permissions makes allowWrite the sole enforcement surface",
+      "evidence_quote": "Revalidating the registered path after the fact — cortex init registers $(repo-root)/lifecycle/sessions/ once per invocation; it does not later detect stale entries for deleted repos"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "partial-failure recovery",
+      "finding": "test_partial_failure_recovery exercises only step-5 failure; steps 2/3/4 partial-failure recovery paths untested",
+      "evidence_quote": "monkeypatch settings_merge.atomic_write to raise OSError('disk full') once"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "partial-failure recovery",
+      "finding": "ADR-2 framing claims concurrent callers serialize such that each sees the prior writer's mutation — only true between two successful callers; failed-caller scenario leaves caller-B reading pre-failure state",
+      "evidence_quote": "Concurrent callers serialize through the kernel's advisory lock; each sees the prior writer's mutation."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "handler branch matrix",
+      "finding": "--unregister against a non-git or deleted-repo path is reachable but step 1 git-repo gate fires before step 4 unregister dispatch; cleanup of deleted repos not possible via --path",
+      "evidence_quote": "1. Resolve repo_root (R2 + R3 gates run here). ... 4. If --unregister: call settings_merge.unregister(repo_root) and return 0."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "handler branch matrix",
+      "finding": "no-marker + --force branch ('R19 doesn't fire; backup + overwrite + marker') is named in handler prose but not a named test function",
+      "evidence_quote": "Otherwise (no marker): branch on --update (additive scaffold + marker write) / --force (R19 doesn't fire; backup + overwrite + marker)"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "handler branch matrix",
+      "finding": "no-marker + --update branch not covered by any named test; test_marker_refresh_on_update and test_update_preserves_user_edits both start from post-init state",
+      "evidence_quote": "Otherwise (no marker): branch on --update (additive scaffold + marker write)"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "handler branch matrix",
+      "finding": "Task 9 step 3 calls settings_merge.validate_settings(home) but Task 7/8 don't expose such a signature; ADR-3 ordering guarantee untestable if inlined into register",
+      "evidence_quote": "Pre-flight malformed-settings validation (R14) — call a thin settings_merge.validate_settings(home) that acquires/releases the lock quickly."
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "handler branch matrix",
+      "finding": "No test for --unregister against malformed settings despite Task 8 specifying unregister runs the same R14 validate logic",
+      "evidence_quote": "Mirrors register exactly: acquire flock, read, validate sandbox/filesystem types (same diagnostics as R14)"
+    },
+    {
+      "class": "B",
+      "reviewer_angle": "handler branch matrix",
+      "finding": "test_partial_failure_recovery lives in test_settings_merge.py but calls init_main; test_scaffold.py has no corresponding partial-failure test; marker-refresh side-effect on recovery is unasserted",
+      "evidence_quote": "Restore atomic_write behavior; call init_main with --update; assert settings now contains the entry and exit 0"
+    }
+  ]
+}

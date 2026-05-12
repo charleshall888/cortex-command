@@ -1,0 +1,60 @@
+{
+  "ts": "2026-04-27T19:15:04Z",
+  "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening",
+  "artifact": "cortex/lifecycle/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Task 1 introduces cache-clear write-from-outside-the-helper but _get_cortex_root_payload's check-then-act idiom (server.py:213-215, 242) lacks any lock; pre-existing race becomes newly exploitable once external clears land.",
+      "reviewer_angle": "Concurrency safety in S1.3 retry-and-cache mutation under asyncio",
+      "evidence_quote": "add a per-tool-call retry counter (local variable, not module-global) that on CortexCliMissing clears _CORTEX_ROOT_CACHE and retries once."
+    },
+    {
+      "class": "B",
+      "finding": "Task 3 _retry_on_cli_missing helper risks except OSError footgun given CortexCliMissing(OSError); a careless except OSError silently absorbs PermissionError into retry loop, contradicting Task 4 case (c).",
+      "reviewer_angle": "Concurrency safety in S1.3 retry-and-cache mutation under asyncio",
+      "evidence_quote": "extract a small _retry_on_cli_missing(func, *args) helper if it cleans up the call sites, otherwise inline the try/except at each site"
+    },
+    {
+      "class": "B",
+      "finding": "Trap find . -name '*.md.bak' -delete unscoped — runs against entire repo tree, silently deletes editor backups unrelated to recipe.",
+      "reviewer_angle": "Path-rewriting fragility in N6.3 (Task 12)",
+      "evidence_quote": "Trap: trap 'find . -name \"*.md.bak\" -delete' EXIT INT TERM set near the top of the recipe"
+    },
+    {
+      "class": "B",
+      "finding": "Path-rewriting scope restricted to *.md but lifecycle slugs are cited in non-markdown files (bin/cortex-* shell scripts, claude/hooks/*.sh, tests/*.py, plugins/**/server.py); after archive runs those references break with no signal.",
+      "reviewer_angle": "Path-rewriting fragility in N6.3 (Task 12)",
+      "evidence_quote": "rewrite scope INCLUDES docs/, README.md, SKILL.md citers because the find/grep walks all *.md under repo root with only the four exclusions"
+    },
+    {
+      "class": "B",
+      "finding": "Plan asserts slug values must be regex-escaped before substitution but does not specify the escape helper or character set; latent footgun if slug naming evolves to include regex metacharacters.",
+      "reviewer_angle": "Path-rewriting fragility in N6.3 (Task 12)",
+      "evidence_quote": "Three regex anchored substitutions per archived slug — slug values must be regex-escaped before substitution"
+    },
+    {
+      "class": "B",
+      "finding": "Task 16 acceptance (>=100 dir moves + zero .md.bak) satisfiable by recipe-repair commits without a distinct lifecycle-archive full run commit existing; verification framework allows recipe-repair commit to silently substitute for labeled full-run commit.",
+      "reviewer_angle": "Destructive sample-then-full sequencing under recipe-repair scope creep",
+      "evidence_quote": "Spec N6.4 acceptance: >=100 directory moves under lifecycle/archive/ compared to pre-run state."
+    },
+    {
+      "class": "B",
+      "finding": "No diagnostic procedure distinguishes recipe-bug from data-bug after a sample-run failure; implementer must classify without guidance, and a data-bug-mistaken-as-recipe-bug bakes the data fault into the repaired recipe.",
+      "reviewer_angle": "Destructive sample-then-full sequencing under recipe-repair scope creep",
+      "evidence_quote": "if the sample run surfaces bugs in Tasks 11 or 12, fix the recipe with a clearly-labeled lifecycle-archive recipe repair (post-sample) commit before proceeding to Task 16."
+    },
+    {
+      "class": "B",
+      "finding": "5-of-124 (~4%) sample against ~1869 cross-reference lines undersized for catching rare citation patterns (refs in fenced code blocks, tables, trailing punctuation breaking word-boundary).",
+      "reviewer_angle": "Destructive sample-then-full sequencing under recipe-repair scope creep",
+      "evidence_quote": "Plan-residue noted the cross-reference volume is ~1869 lines, two orders of magnitude larger than the recipe's initial framing assumed."
+    }
+  ]
+}

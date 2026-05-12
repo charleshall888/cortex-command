@@ -88,6 +88,11 @@ def _research_target_for(repo_root: Path) -> str:
     return str(repo_root.resolve() / "research") + "/"
 
 
+def _cortex_target_for(repo_root: Path) -> str:
+    """Compute the canonical ``cortex/`` path string for a repo."""
+    return str(repo_root.resolve() / "cortex") + "/"
+
+
 def _settings_path(home: Path) -> Path:
     return home / ".claude" / "settings.local.json"
 
@@ -537,8 +542,8 @@ def test_partial_failure_recovery_step5(
 
     # Scaffold + marker present.
     assert (repo / ".cortex-init").exists()
-    assert (repo / "lifecycle" / "README.md").exists()
-    assert (repo / "requirements" / "project.md").exists()
+    assert (repo / "cortex" / "lifecycle" / "README.md").exists()
+    assert (repo / "cortex" / "requirements" / "project.md").exists()
 
     # Settings file byte-unchanged.
     assert settings.read_bytes() == pre_bytes
@@ -557,8 +562,7 @@ def test_partial_failure_recovery_step5(
     assert rc == 0
 
     data = json.loads(settings.read_text(encoding="utf-8"))
-    target = _target_path_for(repo)
-    assert target in data["sandbox"]["filesystem"]["allowWrite"]
+    assert _cortex_target_for(repo) in data["sandbox"]["filesystem"]["allowWrite"]
 
     marker_after = json.loads((repo / ".cortex-init").read_text(encoding="utf-8"))
     assert marker_after["initialized_at"] != marker_before["initialized_at"]
@@ -597,7 +601,7 @@ def test_partial_failure_recovery_step4(
         init_main(_make_args(repo))
 
     # Scaffold files landed; marker did not.
-    assert (repo / "lifecycle" / "README.md").exists()
+    assert (repo / "cortex" / "lifecycle" / "README.md").exists()
     assert not (repo / ".cortex-init").exists()
 
     # Recovery with --update.
@@ -605,8 +609,7 @@ def test_partial_failure_recovery_step4(
     assert rc == 0
     assert (repo / ".cortex-init").exists()
     data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
-    target = _target_path_for(repo)
-    assert target in data["sandbox"]["filesystem"]["allowWrite"]
+    assert _cortex_target_for(repo) in data["sandbox"]["filesystem"]["allowWrite"]
 
 
 def test_partial_failure_recovery_step3(
@@ -653,7 +656,7 @@ def test_partial_failure_recovery_step3(
     # framing calls the gitignore step "step 3" semantically). The key
     # structural assertion per the task:
     #   scaffold files present, .gitignore absent-or-incomplete, marker absent.
-    assert (repo / "lifecycle" / "README.md").exists()
+    assert (repo / "cortex" / "lifecycle" / "README.md").exists()
     # Gitignore still has the orphan and has NOT been repaired.
     gi_text = (repo / ".gitignore").read_text(encoding="utf-8")
     assert ".cortex-init-backu" in gi_text.splitlines()
@@ -693,10 +696,10 @@ def test_partial_failure_recovery_step2(
     _git_init(repo)
 
     SCAFFOLD_FILES = (
-        "lifecycle/README.md",
-        "backlog/README.md",
-        "requirements/project.md",
-        "lifecycle.config.md",
+        "cortex/lifecycle/README.md",
+        "cortex/backlog/README.md",
+        "cortex/requirements/project.md",
+        "cortex/lifecycle.config.md",
     )
 
     real_scaffold_atomic_write = scaffold.atomic_write
@@ -866,18 +869,18 @@ def test_sigint_mid_merge_releases_lock(
 
 
 # ---------------------------------------------------------------------------
-# R9 dual-registration: cortex init registers both lifecycle/ and research/
+# Single cortex/ registration: cortex init registers exactly one cortex/ entry
 # Test name substring "dual_registration" is grepped by the Task 5
 # verification check (≥ 8 functions match).
 # ---------------------------------------------------------------------------
 
 
-# (a) happy-path: register-creates-settings; both entries appear
+# (a) happy-path: register-creates-settings; cortex/ entry appears (exactly one)
 def test_dual_registration_happy_path_creates_settings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R9: cortex init on a fresh repo writes both lifecycle/ and research/
-    entries to a newly-created settings.local.json."""
+    """cortex init on a fresh repo writes a single cortex/ entry to a
+    newly-created settings.local.json."""
     fake_home = _isolate_home(monkeypatch, tmp_path)
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -889,16 +892,18 @@ def test_dual_registration_happy_path_creates_settings(
 
     data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
     allow = data["sandbox"]["filesystem"]["allowWrite"]
-    assert _target_path_for(repo) in allow
-    assert _research_target_for(repo) in allow
+    cortex_target = _cortex_target_for(repo)
+    assert cortex_target in allow
+    assert cortex_target.endswith("/cortex/")
+    # Exactly one new entry per cortex init invocation.
+    assert len([e for e in allow if e == cortex_target]) == 1
 
 
 # (b) sibling-key preservation: other JSON keys untouched
 def test_dual_registration_preserves_sibling_keys(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R9: cortex init preserves sibling settings keys when writing both
-    lifecycle/ and research/ entries."""
+    """cortex init preserves sibling settings keys when writing the cortex/ entry."""
     fake_home = _isolate_home(monkeypatch, tmp_path)
     settings = _settings_path(fake_home)
     pre_existing = {
@@ -918,15 +923,14 @@ def test_dual_registration_preserves_sibling_keys(
     assert data["sandbox"]["network"] == {"allowUnixSockets": ["/tmp/x"]}
     assert data["permissions"] == {"allow": ["read"]}
     allow = data["sandbox"]["filesystem"]["allowWrite"]
-    assert _target_path_for(repo) in allow
-    assert _research_target_for(repo) in allow
+    assert _cortex_target_for(repo) in allow
 
 
-# (c) idempotency: running cortex init twice yields one of each entry
+# (c) idempotency: running cortex init twice yields exactly one cortex/ entry
 def test_dual_registration_idempotent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R9: a second cortex init --update does not duplicate either entry."""
+    """A second cortex init --update does not duplicate the cortex/ entry."""
     _isolate_home(monkeypatch, tmp_path)
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -939,15 +943,16 @@ def test_dual_registration_idempotent(
         _settings_path(tmp_path / "fake-home").read_text(encoding="utf-8")
     )
     allow = data["sandbox"]["filesystem"]["allowWrite"]
-    assert allow.count(_target_path_for(repo)) == 1
-    assert allow.count(_research_target_for(repo)) == 1
+    cortex_target = _cortex_target_for(repo)
+    assert allow.count(cortex_target) == 1
 
 
-# (d) order preservation: [lifecycle/, research/] (not reversed)
+# (d) single-entry: exactly one new entry per cortex init invocation
 def test_dual_registration_order_lifecycle_first(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R9 invariant: lifecycle/ FIRST, research/ SECOND in the array."""
+    """cortex init adds exactly one cortex/ entry; the registered path ends
+    with /cortex/."""
     _isolate_home(monkeypatch, tmp_path)
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -959,18 +964,20 @@ def test_dual_registration_order_lifecycle_first(
         _settings_path(tmp_path / "fake-home").read_text(encoding="utf-8")
     )
     allow = data["sandbox"]["filesystem"]["allowWrite"]
-    lifecycle_idx = allow.index(_target_path_for(repo))
-    research_idx = allow.index(_research_target_for(repo))
-    assert lifecycle_idx < research_idx
+    cortex_target = _cortex_target_for(repo)
+    assert cortex_target in allow
+    assert cortex_target.endswith("/cortex/")
+    # Exactly one entry added per invocation.
+    assert len(allow) == 1
 
 
-# (e) malformed-sandbox refusal: existing R14 gate still rejects
+# (e) malformed-sandbox refusal: R14 gate still rejects
 def test_dual_registration_malformed_sandbox_refused(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """R9 + R14: malformed sandbox refuses cortex init; settings unchanged."""
+    """R14: malformed sandbox refuses cortex init; settings unchanged."""
     fake_home = _isolate_home(monkeypatch, tmp_path)
     settings = _settings_path(fake_home)
     settings.write_text('{"sandbox": "broken"}\n', encoding="utf-8")
@@ -987,12 +994,12 @@ def test_dual_registration_malformed_sandbox_refused(
     assert settings.read_bytes() == pre_bytes
 
 
-# (f) unregister-removes both entries
+# (f) unregister removes the cortex/ entry
 def test_dual_registration_unregister_removes_both(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R9: cortex init --unregister removes both lifecycle/ and research/
-    entries that a register pass added."""
+    """cortex init --unregister removes the cortex/ entry that a register
+    pass added."""
     fake_home = _isolate_home(monkeypatch, tmp_path)
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -1000,28 +1007,27 @@ def test_dual_registration_unregister_removes_both(
 
     assert init_main(_make_args(repo)) == 0
     pre_data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
-    assert _target_path_for(repo) in pre_data["sandbox"]["filesystem"]["allowWrite"]
-    assert _research_target_for(repo) in pre_data["sandbox"]["filesystem"]["allowWrite"]
+    assert _cortex_target_for(repo) in pre_data["sandbox"]["filesystem"]["allowWrite"]
 
     assert init_main(_make_args(repo, unregister=True)) == 0
     post_data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
     allow = post_data["sandbox"]["filesystem"].get("allowWrite", [])
-    assert _target_path_for(repo) not in allow
-    assert _research_target_for(repo) not in allow
+    assert _cortex_target_for(repo) not in allow
 
 
-# (g) unregister-idempotent: pre-R9 install (only lifecycle/ entry) unregisters cleanly
+# (g) unregister-idempotent: absent cortex/ entry unregisters cleanly (no-op)
 def test_dual_registration_unregister_idempotent_pre_r9_install(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R9: a pre-R9 install only has the lifecycle/ entry. cortex init
-    --unregister succeeds (no error) and removes whatever it finds."""
+    """cortex init --unregister on a settings file that has no cortex/ entry
+    succeeds (no-op) and leaves other entries untouched."""
     fake_home = _isolate_home(monkeypatch, tmp_path)
     settings = _settings_path(fake_home)
     repo = tmp_path / "repo"
     repo.mkdir()
     _git_init(repo)
 
+    # Simulate a pre-umbrella install that only has the old lifecycle/ entry.
     pre_existing = {
         "sandbox": {"filesystem": {"allowWrite": [_target_path_for(repo)]}}
     }
@@ -1031,30 +1037,36 @@ def test_dual_registration_unregister_idempotent_pre_r9_install(
     assert rc == 0
     data = json.loads(settings.read_text(encoding="utf-8"))
     allow = data["sandbox"]["filesystem"].get("allowWrite", [])
-    assert _target_path_for(repo) not in allow
+    # cortex/ was never there; the old lifecycle/ entry is not touched by
+    # the new unregister path (it only targets cortex/).
+    assert _cortex_target_for(repo) not in allow
 
 
-# (h) partial-failure recovery: --update adds missing research/ entry on
-# a half-registered settings file
+# (h) partial-failure recovery: --update adds missing cortex/ entry on
+# a settings file without one
 def test_dual_registration_partial_failure_recovery_via_update(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """R9: pre-R9 settings has only lifecycle/; cortex init --update adds
-    the missing research/ entry without duplicating lifecycle/."""
+    """cortex init --update adds the cortex/ entry if absent without
+    duplicating any existing entries."""
     fake_home = _isolate_home(monkeypatch, tmp_path)
     settings = _settings_path(fake_home)
     repo = tmp_path / "repo"
     repo.mkdir()
     _git_init(repo)
 
-    half_registered = {
-        "sandbox": {"filesystem": {"allowWrite": [_target_path_for(repo)]}}
+    # Simulate settings that have some prior entry but no cortex/ entry.
+    pre_registered = {
+        "sandbox": {"filesystem": {"allowWrite": ["/kept/"]}}
     }
-    settings.write_text(json.dumps(half_registered, indent=2) + "\n", encoding="utf-8")
+    settings.write_text(json.dumps(pre_registered, indent=2) + "\n", encoding="utf-8")
 
     rc = init_main(_make_args(repo, update=True))
     assert rc == 0
     data = json.loads(settings.read_text(encoding="utf-8"))
     allow = data["sandbox"]["filesystem"]["allowWrite"]
-    assert allow.count(_target_path_for(repo)) == 1
-    assert _research_target_for(repo) in allow
+    cortex_target = _cortex_target_for(repo)
+    assert cortex_target in allow
+    assert allow.count(cortex_target) == 1
+    # Pre-existing entry preserved.
+    assert "/kept/" in allow

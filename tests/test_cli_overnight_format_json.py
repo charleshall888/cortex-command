@@ -65,8 +65,8 @@ def _alive_runner_pid_payload(
 
 
 def _make_session(tmp_path: Path, session_id: str) -> Path:
-    """Create a session directory under ``tmp_path/lifecycle/sessions/`` and return it."""
-    session_dir = tmp_path / "lifecycle" / "sessions" / session_id
+    """Create a session directory under ``tmp_path/cortex/lifecycle/sessions/`` and return it."""
+    session_dir = tmp_path / "cortex" / "lifecycle" / "sessions" / session_id
     session_dir.mkdir(parents=True)
     return session_dir
 

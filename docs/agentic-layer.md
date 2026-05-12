@@ -32,7 +32,7 @@ graph TD
     LC["/lifecycle\nfull interactive · single feature\nClarify → Research → Specify → Plan → Implement → Review → Complete"]
     DISC["/discovery\nresearch + decompose\ncreates backlog tickets"]
     BACKLOG[("Backlog<br/>draft → refined → complete")]
-    REQ([requirements/project.md])
+    REQ([cortex/requirements/project.md])
 
     REFINE["/refine\nClarify → Research → Specify\nsets status: refined"]
     GATE{"Readiness\ngate\nresearch ✓  spec ✓"}
@@ -126,7 +126,7 @@ Criticality is set per-feature and drives which models run at each phase and whe
 
 ### 1. Structured Single-Feature
 
-The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single non-trivial feature and routes to `/cortex-core:lifecycle feature-name`. The lifecycle skill starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria. Planning produces a task breakdown that the orchestrator reviews before approval. Implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — four Sonnet reviewers in parallel, then an Opus cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
+The most common path. The user asks `/cortex-core:dev` what to work on, or names a specific feature. `/cortex-core:dev` classifies the request as a single non-trivial feature and routes to `/cortex-core:lifecycle feature-name`. The lifecycle skill starts with a Clarify phase — focused questions about scope, complexity, and criticality — then runs research (codebase exploration plus a read of `cortex/requirements/project.md`), then moves to specify, where an interview surfaces acceptance criteria. Planning produces a task breakdown that the orchestrator reviews before approval. Implementation proceeds as a series of commits, one per task *(PreToolUse hook: `hooks/cortex-validate-commit.sh` fires here and blocks any `git commit` whose message fails the style rules)*. If the feature is complex tier (6+ files, novel pattern) or high/critical criticality, the review phase runs a multi-agent verdict — four Sonnet reviewers in parallel, then an Opus cross-validator. On completion, `events.log` is updated, the backlog item is closed, and a PR is created.
 
 ### 2. Multiple Features via /overnight
 
@@ -134,7 +134,7 @@ When multiple backlog items are ready, the user runs `/cortex-core:refine` per f
 
 ### 3. Autonomous Overnight
 
-In the evening, the user runs `/overnight` to plan a batch of features for unattended execution *(SessionStart hook: `hooks/cortex-scan-lifecycle.sh` fires here, injecting `LIFECYCLE_SESSION_ID` and active feature state into context so the session begins oriented to current work)*. **Prerequisite**: selected features must already have discovery artifacts (`research:` and `spec:` fields in their backlog YAML frontmatter) — `/overnight` does not run interactive research or spec phases. The plan lists the eligible features and estimated duration; after user approval, the runner detaches in a tmux session and begins working. Through the night, the runner selects features from the approved batch, creates branches, and runs lead agents with a tier-based conflict-aware scheduling system to avoid resource contention. Each feature picks up at the plan phase (or implement, if already planned). In the morning, `/morning-review` walks the overnight report: it reads `lifecycle/morning-report.md`, closes completed lifecycles, merges approved PRs, and surfaces any features that need follow-up. For the full architecture and operational guide, see [Overnight: In Depth](overnight.md).
+In the evening, the user runs `/overnight` to plan a batch of features for unattended execution *(SessionStart hook: `hooks/cortex-scan-lifecycle.sh` fires here, injecting `LIFECYCLE_SESSION_ID` and active feature state into context so the session begins oriented to current work)*. **Prerequisite**: selected features must already have discovery artifacts (`research:` and `spec:` fields in their backlog YAML frontmatter) — `/overnight` does not run interactive research or spec phases. The plan lists the eligible features and estimated duration; after user approval, the runner detaches in a tmux session and begins working. Through the night, the runner selects features from the approved batch, creates branches, and runs lead agents with a tier-based conflict-aware scheduling system to avoid resource contention. Each feature picks up at the plan phase (or implement, if already planned). In the morning, `/morning-review` walks the overnight report: it reads `cortex/lifecycle/morning-report.md`, closes completed lifecycles, merges approved PRs, and surfaces any features that need follow-up. For the full architecture and operational guide, see [Overnight: In Depth](overnight.md).
 
 ### 4. Discovery to Backlog
 
@@ -151,7 +151,7 @@ Hooks in `hooks/` are shared entry points. Hooks in `claude/hooks/` are specific
 | `hooks/cortex-validate-commit.sh` | PreToolUse | Validate commit message: imperative mood, ≤72 chars subject, no trailing period, blank line before body | Claude only |
 | `hooks/cortex-scan-lifecycle.sh` | SessionStart | Inject `LIFECYCLE_SESSION_ID`, active feature state, and overnight execution state into context | Claude only |
 | *desktop notifier* | Stop, Notification | Desktop notifications via terminal-notifier when Claude needs input or completes (macOS) — user/machine-config responsibility; no script shipped by this repo | Claude only |
-| `hooks/cortex-cleanup-session.sh` | SessionEnd | Remove `.session` lock files from `lifecycle/*/` when a Claude Code session ends (skips on `/clear`) | Claude only |
+| `hooks/cortex-cleanup-session.sh` | SessionEnd | Remove `.session` lock files from `cortex/lifecycle/*/` when a Claude Code session ends (skips on `/clear`) | Claude only |
 | `claude/hooks/cortex-sync-permissions.py` | PreToolUse | Merge MCP allow/deny patterns from `settings.json` so permissions stay consistent | Claude only |
 | `claude/hooks/cortex-permission-audit-log.sh` | Notification (permission_prompt) | Append one line per permission prompt to a session-scoped log in `$TMPDIR` for sandbox tuning diagnostics | Claude only |
 | `claude/hooks/cortex-tool-failure-tracker.sh` | PostToolUse (Bash) | Track Bash tool failures by exit code; surface a warning via `additionalContext` after 3 failures for the same tool in one session | Claude only |
@@ -241,21 +241,21 @@ For overnight runner operations and architecture (state schemas, recovery, allow
 
 ## Integration Points
 
-1. **events.log** — Append-only per-feature lifecycle journal stored at `lifecycle/{feature}/events.log`. Phase transitions write structured entries; `/cortex-core:lifecycle resume` reads the log to determine which phase to restart from. `/morning-review` scans it to identify completions. Powers all progress reporting.
+1. **events.log** — Append-only per-feature lifecycle journal stored at `cortex/lifecycle/{feature}/events.log`. Phase transitions write structured entries; `/cortex-core:lifecycle resume` reads the log to determine which phase to restart from. `/morning-review` scans it to identify completions. Powers all progress reporting.
 
 2. **cortex-scan-lifecycle hook** — Runs at SessionStart and injects `LIFECYCLE_SESSION_ID`, the active feature's current phase, and overnight execution state into the session context. This is what makes the system appear continuous across `/clear` invocations and new terminal sessions.
 
 3. **cortex-validate-commit hook** — Pre-execution gate on all `git commit` commands. Enforces imperative mood, ≤72-character subject line, no trailing period, and a blank line before the body.
 
-4. **Backlog index** (`backlog/index.md`) — Generated by `/cortex-core:backlog reindex`. `/cortex-core:dev` reads it during triage to identify ready work. Items are auto-closed by `/cortex-core:lifecycle complete` and `/morning-review`, keeping the index current without manual intervention.
+4. **Backlog index** (`cortex/backlog/index.md`) — Generated by `/cortex-core:backlog reindex`. `/cortex-core:dev` reads it during triage to identify ready work. Items are auto-closed by `/cortex-core:lifecycle complete` and `/morning-review`, keeping the index current without manual intervention.
 
 5. **pipeline-state.json** — Persistent execution state written by the overnight runner's `cortex_command/pipeline/state.py`. Records which features are complete, in-progress, or blocked. Enables the overnight runner to resume interrupted execution — features already merged are skipped when the runner restarts.
 
-6. **Discovery bootstrap** — When `/cortex-core:lifecycle` starts a feature, it checks the backlog item's YAML frontmatter for `research:` and `spec:` fields. If those fields point to existing artifacts from a prior `/cortex-core:discovery` run, it copies them into `lifecycle/{feature}/` and skips the research and specify phases entirely, saving hours of redundant exploration.
+6. **Discovery bootstrap** — When `/cortex-core:lifecycle` starts a feature, it checks the backlog item's YAML frontmatter for `research:` and `spec:` fields. If those fields point to existing artifacts from a prior `/cortex-core:discovery` run, it copies them into `cortex/lifecycle/{feature}/` and skips the research and specify phases entirely, saving hours of redundant exploration.
 
-7. **requirements context** — `requirements/project.md` and per-area requirement files inform both lifecycle research and discovery sessions. The `/cortex-core:requirements` skill maintains them. They act as a stable design compass that keeps individual feature work aligned with broader project goals.
+7. **requirements context** — `cortex/requirements/project.md` and per-area requirement files inform both lifecycle research and discovery sessions. The `/cortex-core:requirements` skill maintains them. They act as a stable design compass that keeps individual feature work aligned with broader project goals.
 
-8. **overnight-state.json + morning-report.md** — The overnight runner writes execution state to `overnight-state.json` and archives a full session report. `lifecycle/morning-report.md` is a regular file that the writer overwrites each session; `lifecycle/sessions/latest-overnight` is the symlink that points at the current session directory. See [overnight-operations.md](overnight-operations.md#core-state-files) for the full file inventory. `/morning-review` reads the report to determine what succeeded, what needs review, and what should carry over to the next session.
+8. **overnight-state.json + morning-report.md** — The overnight runner writes execution state to `overnight-state.json` and archives a full session report. `cortex/lifecycle/morning-report.md` is a regular file that the writer overwrites each session; `cortex/lifecycle/sessions/latest-overnight` is the symlink that points at the current session directory. See [overnight-operations.md](overnight-operations.md#core-state-files) for the full file inventory. `/morning-review` reads the report to determine what succeeded, what needs review, and what should carry over to the next session.
 
 ---
 
