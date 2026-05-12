@@ -16,24 +16,24 @@ The skills form a pipeline. Each skill produces artifacts that the next skill co
 /cortex-core:discovery
     |
     v
-backlog tickets (backlog/NNN-slug.md)
+backlog tickets (cortex/backlog/NNN-slug.md)
     |
     v  (/cortex-core:refine or /cortex-core:lifecycle picks up discovery artifacts automatically)
 /cortex-core:refine  (Clarify → Research → Spec)
-         -->  lifecycle/{slug}/research.md
-         -->  lifecycle/{slug}/spec.md
+         -->  cortex/lifecycle/{slug}/research.md
+         -->  cortex/lifecycle/{slug}/spec.md
     |
     v
 /cortex-core:lifecycle (plan phase)
     |
     v
-lifecycle/{slug}/plan.md
+cortex/lifecycle/{slug}/plan.md
     |
     v
 Implement (commits to git)
     |
     v
-lifecycle/{slug}/review.md  (complex tier / high / critical criticality only)
+cortex/lifecycle/{slug}/review.md  (complex tier / high / critical criticality only)
 ```
 
 You do not need to run all three skills — `/cortex-core:lifecycle` on a fresh feature covers the full journey. The other skills exist for partial workflows: `/cortex-core:discovery` when you have a vague idea, and `/cortex-core:refine` when you want to prepare a backlog item before overnight execution.
@@ -49,11 +49,11 @@ You do not need to run all three skills — `/cortex-core:lifecycle` on a fresh 
 | Phase | What happens | Artifact produced | Interactive? |
 |-------|-------------|-------------------|-------------|
 | Clarify | Agent asks intent, complexity, and criticality | none (output captured internally) | Yes — up to 5 questions |
-| Research | Agent reads codebase, dependencies, and requirements | `lifecycle/{feature}/research.md` | Minimal — complexity escalation prompt only |
-| Specify | Structured requirements interview covering problem statement, requirements, non-requirements, edge cases, technical constraints | `lifecycle/{feature}/spec.md` | Yes — spec approval required |
-| Plan | Agent produces a task breakdown; orchestrator reviews before approval | `lifecycle/{feature}/plan.md` | Yes — plan approval required |
+| Research | Agent reads codebase, dependencies, and requirements | `cortex/lifecycle/{feature}/research.md` | Minimal — complexity escalation prompt only |
+| Specify | Structured requirements interview covering problem statement, requirements, non-requirements, edge cases, technical constraints | `cortex/lifecycle/{feature}/spec.md` | Yes — spec approval required |
+| Plan | Agent produces a task breakdown; orchestrator reviews before approval | `cortex/lifecycle/{feature}/plan.md` | Yes — plan approval required |
 | Implement | Agent executes tasks as commits | Source code + commits | Optional — user can monitor or leave it running |
-| Review | Multi-agent verdict (complex tier or forced by criticality) | `lifecycle/{feature}/review.md` | No — automated; results presented for acceptance |
+| Review | Multi-agent verdict (complex tier or forced by criticality) | `cortex/lifecycle/{feature}/review.md` | No — automated; results presented for acceptance |
 | Complete | events.log closure, backlog item closed | events.log update | No |
 
 ### What to Expect in Each Phase
@@ -79,7 +79,7 @@ The agent presents a draft spec and asks for approval. Review it carefully — o
 
 ### Resuming a Lifecycle
 
-`/cortex-core:lifecycle <feature>` can be run at any time. The skill detects the current phase by checking which artifacts exist in `lifecycle/{feature}/`:
+`/cortex-core:lifecycle <feature>` can be run at any time. The skill detects the current phase by checking which artifacts exist in `cortex/lifecycle/{feature}/`:
 
 - No directory → starts at Clarify
 - `research.md` exists, no `spec.md` → resumes at Specify
@@ -96,7 +96,7 @@ Two parameters govern the lifecycle:
 
 Both can be overridden at any point by asking the agent to change them.
 
-**Persistence note**: When the complexity tier is escalated mid-lifecycle (either automatically at phase transitions or manually on request), the escalation is recorded as a `complexity_override` event in `lifecycle/{feature}/events.log`. It is NOT written back to the backlog item's YAML frontmatter — the `complexity:` field in the backlog item is set only during the Clarify phase and does not change thereafter. The active tier for all subsequent phases is determined by reading `events.log` at resume time.
+**Persistence note**: When the complexity tier is escalated mid-lifecycle (either automatically at phase transitions or manually on request), the escalation is recorded as a `complexity_override` event in `cortex/lifecycle/{feature}/events.log`. It is NOT written back to the backlog item's YAML frontmatter — the `complexity:` field in the backlog item is set only during the Clarify phase and does not change thereafter. The active tier for all subsequent phases is determined by reading `events.log` at resume time.
 
 ---
 
@@ -116,8 +116,8 @@ Use `/cortex-core:refine` when:
 | Phase | What happens | Artifact produced | Interactive? |
 |-------|-------------|-------------------|-------------|
 | Clarify | Same as lifecycle Clarify | Complexity + criticality written to backlog item | Yes — up to 5 questions |
-| Research | Same as lifecycle Research | `lifecycle/{slug}/research.md` | Minimal |
-| Spec | Same as lifecycle Specify | `lifecycle/{slug}/spec.md` | Yes — spec approval required |
+| Research | Same as lifecycle Research | `cortex/lifecycle/{slug}/research.md` | Minimal |
+| Spec | Same as lifecycle Specify | `cortex/lifecycle/{slug}/spec.md` | Yes — spec approval required |
 
 After spec approval, `/cortex-core:refine` writes `status: refined` and `spec:` to the backlog item's YAML frontmatter. The next `/overnight` or `/cortex-core:lifecycle` run picks up these artifacts automatically and skips to planning.
 
@@ -145,14 +145,14 @@ The readiness gate (and `/cortex-core:lifecycle`'s phase detection) checks for a
 | Phase | What happens | Artifact produced | Interactive? |
 |-------|-------------|-------------------|-------------|
 | Clarify | Agent asks about scope and research focus | none (conversation output) | Yes — scoping questions |
-| Research | Deep codebase and requirements exploration | `research/{topic}/research.md` | Minimal |
-| Decompose | Findings broken into epics and backlog tickets | `backlog/NNN-slug.md` files per ticket | Yes — epic grouping review |
+| Research | Deep codebase and requirements exploration | `cortex/research/{topic}/research.md` | Minimal |
+| Decompose | Findings broken into epics and backlog tickets | `cortex/backlog/NNN-slug.md` files per ticket | Yes — epic grouping review |
 
 ### What to Expect
 
 **Clarify** — The agent asks what you want to understand, what's in scope, and how deep to go. `/cortex-core:discovery` requires a topic argument; for "what should I work on" / "next task" routing without a specific topic, use `/cortex-core:dev` instead.
 
-**Research** — Automated. The agent reads codebase, requirements, and (if needed) external documentation. The resulting `research/{topic}/research.md` is a durable artifact — it is referenced by the backlog tickets created in Decompose.
+**Research** — Automated. The agent reads codebase, requirements, and (if needed) external documentation. The resulting `cortex/research/{topic}/research.md` is a durable artifact — it is referenced by the backlog tickets created in Decompose.
 
 **Decompose** — The agent groups findings into epics and creates one backlog ticket per concrete work item. Each ticket gets YAML frontmatter including a `discovery_source:` field pointing to the research artifact. The agent may ask for confirmation on epic groupings before writing tickets.
 
@@ -161,7 +161,7 @@ The readiness gate (and `/cortex-core:lifecycle`'s phase detection) checks for a
 When `/cortex-core:lifecycle` starts on a ticket created by `/cortex-core:discovery`:
 
 1. It detects the `discovery_source:` field in the backlog item frontmatter.
-2. It copies the referenced research into `lifecycle/{feature}/research.md`.
+2. It copies the referenced research into `cortex/lifecycle/{feature}/research.md`.
 3. If a `spec:` field also exists, it copies that too and skips directly to Plan.
 4. It announces what was bootstrapped and which phases were skipped.
 
@@ -174,19 +174,19 @@ This means a well-run `/cortex-core:discovery` session can eliminate hours of re
 ```
 /cortex-core:discovery <topic>
     |
-    +-- research/{topic}/research.md   (durable research artifact)
-    +-- backlog/NNN-slug.md            (one per ticket, discovery_source: field set)
+    +-- cortex/research/{topic}/research.md   (durable research artifact)
+    +-- cortex/backlog/NNN-slug.md            (one per ticket, discovery_source: field set)
          |
          v  (when /cortex-core:lifecycle or /cortex-core:refine picks up the backlog item)
 /cortex-core:refine <item>  -- OR --  /cortex-core:lifecycle <feature>  [early phases]
     |
-    +-- lifecycle/{slug}/research.md   (implementation-level research)
-    +-- lifecycle/{slug}/spec.md       (approved requirements spec)
+    +-- cortex/lifecycle/{slug}/research.md   (implementation-level research)
+    +-- cortex/lifecycle/{slug}/spec.md       (approved requirements spec)
          |
          v  (/cortex-core:lifecycle plan phase, or overnight runner)
 /cortex-core:lifecycle <feature>  [plan phase]
     |
-    +-- lifecycle/{slug}/plan.md       (task breakdown, orchestrator-reviewed)
+    +-- cortex/lifecycle/{slug}/plan.md       (task breakdown, orchestrator-reviewed)
          |
          v  (/cortex-core:lifecycle implement phase)
 Implement
@@ -197,7 +197,7 @@ Implement
          v  (complex tier or high/critical criticality)
 Review
     |
-    +-- lifecycle/{slug}/review.md     (multi-agent verdict)
+    +-- cortex/lifecycle/{slug}/review.md     (multi-agent verdict)
          |
          v
 Complete

@@ -25,7 +25,7 @@ Every backlog item file uses this YAML frontmatter contract. Frontmatter must be
 | `blocked-by` | array | no | Inline YAML only: `[3, 7]` (numeric IDs) |
 | `parent` | integer | no | Numeric ID of parent item |
 | `research` | string | no | Path to lifecycle research doc, set by discovery |
-| `spec` | string | no | Path to lifecycle spec doc, set by /cortex-core:refine (lifecycle/{slug}/spec.md) |
+| `spec` | string | no | Path to lifecycle spec doc, set by /cortex-core:refine (cortex/lifecycle/{slug}/spec.md) |
 | `discovery_source` | string | no | Path to discovery research artifact; set by /cortex-core:discovery on epics and child tickets |
 
 **Inline array syntax is mandatory.** All array fields (`tags`, `areas`, `blocks`, `blocked-by`) must use `[value1, value2]` form. Never use the multiline `- item` form. This keeps shell parsing tractable with a single regex pattern.

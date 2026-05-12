@@ -14,7 +14,7 @@ Produce a detailed implementation plan with numbered tasks, file paths, and veri
 Read prior artifacts:
 - `cortex/lifecycle/{feature}/research.md` (always)
 - `cortex/lifecycle/{feature}/spec.md` (required — produced in Specify phase)
-- `lifecycle.config.md` at project root (if exists — project constraints)
+- `cortex/lifecycle.config.md` at project root (if exists — project constraints)
 
 ### 1a. Check Criticality
 

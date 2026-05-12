@@ -18,8 +18,8 @@ Before creating any artifacts or performing write-back, check whether the origin
 
 5. **On "Close lifecycle"**: the behavior depends on the current phase:
 
-   - **If `phase != none`** (a `lifecycle/{feature}/` directory exists):
-     1. Append the following NDJSON event to `lifecycle/{feature}/events.log` (one JSON object per line):
+   - **If `phase != none`** (a `cortex/lifecycle/{feature}/` directory exists):
+     1. Append the following NDJSON event to `cortex/lifecycle/{feature}/events.log` (one JSON object per line):
         ```json
         {"ts": "<ISO 8601>", "event": "feature_complete", "feature": "<name>"}
         ```
@@ -31,18 +31,18 @@ Before creating any artifacts or performing write-back, check whether the origin
         Where `<slug>` is the backlog filename stem (e.g., `1043-add-backlog-status-detection-to-lifecycle-resume`).
      3. **Exit immediately.** Do not proceed to "Create index.md", "Backlog Write-Back", "Discovery Bootstrap", or any subsequent Step 2 sections or later steps. The lifecycle is closed.
 
-   - **If `phase = none`** (no `lifecycle/{feature}/` directory exists):
+   - **If `phase = none`** (no `cortex/lifecycle/{feature}/` directory exists):
      1. **Exit immediately** without creating any lifecycle artifacts (no directory, no events.log, no index.md) and without calling `cortex-update-item`. The backlog item is already complete and no lifecycle artifacts need to exist.
 
 ## Create index.md (New Lifecycle Only)
 
-When `phase = none` (no prior `lifecycle/{slug}/` directory exists), create `lifecycle/{slug}/index.md` as follows. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` and parsed frontmatter.
+When `phase = none` (no prior `cortex/lifecycle/{slug}/` directory exists), create `cortex/lifecycle/{slug}/index.md` as follows. **Do not re-scan the backlog directory in this sub-procedure** — consume Step 1's resolved `{backlog-file}` and parsed frontmatter.
 
-**Guard**: If `lifecycle/{slug}/index.md` already exists, skip this entire block — do not overwrite.
+**Guard**: If `cortex/lifecycle/{slug}/index.md` already exists, skip this entire block — do not overwrite.
 
 Use Step 1's resolver result: if a `{backlog-file}` was resolved (exit 0), use its parsed frontmatter (`uuid`, `tags`, plus the filename's numeric prefix and slug stem) to populate the fields below. If Step 1's resolver returned exit 3 (no match), set null fields.
 
-Write `lifecycle/{slug}/index.md` with all seven required frontmatter fields:
+Write `cortex/lifecycle/{slug}/index.md` with all seven required frontmatter fields:
 
 ```yaml
 ---

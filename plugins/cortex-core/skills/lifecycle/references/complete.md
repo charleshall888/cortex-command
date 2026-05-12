@@ -6,17 +6,17 @@ Verify tests pass, finalize git workflow, and summarize what was built.
 
 ### 1. Run Tests
 
-Check for `lifecycle.config.md` and determine the test path:
+Check for `cortex/lifecycle.config.md` and determine the test path:
 
 - **Config exists with `test-command`**: Run the specified command.
 - **Config exists without `test-command`**: Ask the user if there are tests to run.
-- **No config exists**: Skip the test step. Note to the user: "No `lifecycle.config.md` found — skipping test step."
+- **No config exists**: Skip the test step. Note to the user: "No `cortex/lifecycle.config.md` found — skipping test step."
 
 If tests are run and fail, report the failures and do not proceed to the git workflow until they are resolved.
 
 ### 2. Log Feature Complete
 
-Append a `feature_complete` event to `lifecycle/{feature}/events.log` **before** the git workflow so the event is included in the commit:
+Append a `feature_complete` event to `cortex/lifecycle/{feature}/events.log` **before** the git workflow so the event is included in the commit:
 
 ```
 {"ts": "<ISO 8601>", "event": "feature_complete", "feature": "<name>", "tasks_total": <N>, "rework_cycles": <N>}
@@ -72,7 +72,7 @@ Each fallback is a separate Bash tool call using `test -f` or `command -v` to ch
 Execute the appropriate workflow based on the current git state. Do not ask the user to choose — the correct action is determined by branch and change state.
 
 **If there are uncommitted changes:**
-Stage `lifecycle/{feature}/` artifacts alongside source changes, then use `/cortex-core:commit` to create the commit. If `lifecycle.config.md` specifies `commit-artifacts: false`, exclude lifecycle artifacts from staging.
+Stage `cortex/lifecycle/{feature}/` artifacts alongside source changes, then use `/cortex-core:commit` to create the commit. If `cortex/lifecycle.config.md` specifies `commit-artifacts: false`, exclude lifecycle artifacts from staging.
 
 **If on a feature branch (not main/master):**
 Push the branch and use `/cortex-core:pr` to create a pull request with a summary of the feature.
@@ -90,7 +90,7 @@ Provide a brief summary of what was built:
 
 ### 6. Lifecycle Directory
 
-The `lifecycle/{feature}/` directory is preserved as project history. It contains the research, specification (if applicable), plan, and review (if applicable) artifacts. These may already be committed as part of the git workflow in step 2. Do not delete or archive the directory.
+The `cortex/lifecycle/{feature}/` directory is preserved as project history. It contains the research, specification (if applicable), plan, and review (if applicable) artifacts. These may already be committed as part of the git workflow in step 2. Do not delete or archive the directory.
 
 ### 7. Transition
 

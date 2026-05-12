@@ -7,11 +7,11 @@ description: >
   tradeoffs, adversarial), synthesizes into research.md or conversation output.
 inputs:
   - "topic: string (required) — feature or topic to research"
-  - "lifecycle-slug: string (optional) — determines lifecycle mode; if present, writes lifecycle/{slug}/research.md"
+  - "lifecycle-slug: string (optional) — determines lifecycle mode; if present, writes cortex/lifecycle/{slug}/research.md"
   - "tier: simple|complex (optional, default: simple) — feature complexity tier"
   - "criticality: low|medium|high|critical (optional, default: low) — feature criticality"
 outputs:
-  - "lifecycle mode: lifecycle/{lifecycle-slug}/research.md"
+  - "lifecycle mode: cortex/lifecycle/{lifecycle-slug}/research.md"
   - "standalone mode: research findings presented in conversation, no file written"
 preconditions:
   - "Run from project root"
@@ -34,7 +34,7 @@ Example invocations:
 
 **Mode detection rule**: `lifecycle-slug` presence in `$ARGUMENTS` determines mode — do NOT use directory existence checks.
 
-- `lifecycle-slug` present → **lifecycle mode**: write output to `lifecycle/{lifecycle-slug}/research.md`
+- `lifecycle-slug` present → **lifecycle mode**: write output to `cortex/lifecycle/{lifecycle-slug}/research.md`
 - `lifecycle-slug` absent or empty → **standalone mode**: output findings to conversation only, no file written
 
 Defaults:
@@ -246,10 +246,10 @@ Omit this section if no open questions exist.]
 ## Step 5: Route Output
 
 **Lifecycle mode** (`lifecycle-slug` was present in `$ARGUMENTS`):
-1. If `lifecycle/{lifecycle-slug}/` does not exist, create the directory.
-2. Write synthesis output to `lifecycle/{lifecycle-slug}/research.md`.
+1. If `cortex/lifecycle/{lifecycle-slug}/` does not exist, create the directory.
+2. Write synthesis output to `cortex/lifecycle/{lifecycle-slug}/research.md`.
 3. If `research-considerations` was non-empty in `$ARGUMENTS`, the synthesis output includes the `## Considerations Addressed` section (per Step 4 output structure) — one bullet per input consideration with a one-sentence note on how research addressed it (or "deferred — no relevant evidence found"). This section is emitted only in lifecycle mode.
-4. Announce: "Research complete. Written to `lifecycle/{lifecycle-slug}/research.md`."
+4. Announce: "Research complete. Written to `cortex/lifecycle/{lifecycle-slug}/research.md`."
 
 **Standalone mode** (`lifecycle-slug` absent or empty):
 1. Present synthesis output directly in the conversation.

@@ -37,7 +37,7 @@ When `epic_research_path` was recorded above, before starting Clarify, read the 
 
 ## Refine Starting-Point Rules
 
-`/cortex-core:refine`'s Step 2 (Check State) checks for `lifecycle/{lifecycle-slug}/research.md` and `lifecycle/{lifecycle-slug}/spec.md` at those exact paths. Rules:
+`/cortex-core:refine`'s Step 2 (Check State) checks for `cortex/lifecycle/{lifecycle-slug}/research.md` and `cortex/lifecycle/{lifecycle-slug}/spec.md` at those exact paths. Rules:
 
 - If both files exist at those exact paths: Step 2 proceeds normally.
-- If a backlog item's `discovery_source` or `research` frontmatter field points to epic research at a different path: that epic file is background context for the Clarify phase, not a substitute for the lifecycle research artifact. `/cortex-core:refine` must still run its full Research phase to produce `lifecycle/{slug}/research.md`.
+- If a backlog item's `discovery_source` or `research` frontmatter field points to epic research at a different path: that epic file is background context for the Clarify phase, not a substitute for the lifecycle research artifact. `/cortex-core:refine` must still run its full Research phase to produce `cortex/lifecycle/{slug}/research.md`.

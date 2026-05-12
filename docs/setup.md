@@ -111,7 +111,7 @@ Creates the `cortex/` umbrella directory and starter templates (`cortex/lifecycl
 **4. Sandbox registration into `~/.claude/settings.local.json`**
 Additively registers the repo's `cortex/` umbrella path under `sandbox.filesystem.allowWrite` as a single entry. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs, replacing the prior dual-registration of `cortex/lifecycle/sessions/` + `cortex/lifecycle/`. Concurrent calls across repos are safe — the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
 
-#### lifecycle.config.md schema
+#### cortex/lifecycle.config.md schema
 
 `cortex init` scaffolds a `cortex/lifecycle.config.md` file with YAML frontmatter — project-specific overrides for the lifecycle skill and overnight runner. Six keys total, three active (consumed by code) and three advisory (scaffolded but not yet wired up):
 

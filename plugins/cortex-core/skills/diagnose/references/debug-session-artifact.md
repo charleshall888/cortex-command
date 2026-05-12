@@ -6,8 +6,8 @@ This reference defines the debug-session artifact written during the 4-phase deb
 
 Determine where to write the artifact using this priority:
 
-1. **Explicit feature argument** (e.g., `/cortex-core:diagnose my-feature`): write to `lifecycle/{feature}/debug-session.md` if the directory exists. If not, warn verbally and fall back to step 3.
-2. **Active session scan**: check `lifecycle/*/` for a `.session` file whose content matches `$LIFECYCLE_SESSION_ID`. If found, write to `lifecycle/{feature}/debug-session.md`.
+1. **Explicit feature argument** (e.g., `/cortex-core:diagnose my-feature`): write to `cortex/lifecycle/{feature}/debug-session.md` if the directory exists. If not, warn verbally and fall back to step 3.
+2. **Active session scan**: check `cortex/lifecycle/*/` for a `.session` file whose content matches `$LIFECYCLE_SESSION_ID`. If found, write to `cortex/lifecycle/{feature}/debug-session.md`.
 3. **Fallback**: write to `debug/{date}-{slug}.md` where `{date}` is ISO date (YYYY-MM-DD) and `{slug}` is a short kebab-case description of what is being debugged (use `diagnose` if no slug is available). Create the `debug/` directory if absent.
 
 > **Note**: `$LIFECYCLE_SESSION_ID` propagation into overnight sub-agent sessions is unverified. In autonomous/overnight context, pass the feature name explicitly (e.g., `/cortex-core:diagnose my-feature`) for reliable lifecycle-coupled artifact placement.

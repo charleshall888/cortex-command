@@ -38,7 +38,7 @@ A file-based state machine that survives context loss. Enforces research-before-
 
 ## Project Configuration
 
-If `lifecycle.config.md` exists at the project root, read it first. It contains project-specific overrides for complexity defaults, test commands, phase skipping, and review criteria.
+If `cortex/lifecycle.config.md` exists at the project root, read it first. It contains project-specific overrides for complexity defaults, test commands, phase skipping, and review criteria.
 
 ## Step 1: Identify the Feature
 

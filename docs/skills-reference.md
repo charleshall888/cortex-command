@@ -30,7 +30,7 @@ Structured feature development lifecycle with phases for research, specification
 ---
 
 ### refine
-Prepare a backlog item for overnight execution by running it through Clarify → Research → Spec. Produces `lifecycle/{slug}/research.md` and `lifecycle/{slug}/spec.md`, then sets `status: refined` on the backlog item so it is eligible for overnight selection.
+Prepare a backlog item for overnight execution by running it through Clarify → Research → Spec. Produces `cortex/lifecycle/{slug}/research.md` and `cortex/lifecycle/{slug}/spec.md`, then sets `status: refined` on the backlog item so it is eligible for overnight selection.
 
 [skills/refine/SKILL.md](../skills/refine/SKILL.md)
 

@@ -590,7 +590,7 @@ Overnight spawns two distinct kinds of `claude` subprocess: the per-round orches
   - `<repo>/.git/HEAD`
   - `<repo>/.git/packed-refs`
 
-  This is a static four-entry enumeration per repo — no dynamic `git symbolic-ref` resolution. Repos with custom default branches (e.g., `develop`, `trunk`) are not covered by V1 and are documented as a limitation. Denying entire `<repo>` paths would override cortex-init's user-scope `allowWrite` for `<repo>/lifecycle/sessions/` under the documented `denyWrite > allowWrite` precedence and crash the runner on the first events-log write; enumerating the specific git paths sidesteps this collision.
+  This is a static four-entry enumeration per repo — no dynamic `git symbolic-ref` resolution. Repos with custom default branches (e.g., `develop`, `trunk`) are not covered by V1 and are documented as a limitation. Denying entire `<repo>` paths would override cortex-init's user-scope `allowWrite` for `<repo>/cortex/` under the documented `denyWrite > allowWrite` precedence and crash the runner on the first events-log write; enumerating the specific git paths sidesteps this collision.
 
 - **Dispatch allow-set.** Per-feature dispatch's `sandbox.filesystem.allowWrite` includes the worktree path plus six risk-targeted out-of-worktree writers cortex actively uses: `~/.cache/uv/`, `$TMPDIR/`, `~/.claude/sessions/`, `~/.cache/cortex/`, `~/.cache/cortex-command/`, and `~/.local/share/overnight-sessions/`. Per-entry rationale lives in `docs/internals/pipeline.md`'s "Allowed write paths" subsection. The dispatched-agent env locks `TMPDIR=$TMPDIR` to prevent the unset-TMPDIR fallback to `/tmp/`, which is not on the allow-set.
 
@@ -640,13 +640,13 @@ The returned dict has five top-level keys:
 
 **Error behavior**: `aggregate_round_context` raises `FileNotFoundError` if `overnight-state.json` is missing (propagated from `load_state`). It raises `RuntimeError` with the substring `"schema_version drift"` if the assembled dict's `schema_version` does not match the module-level `_EXPECTED_SCHEMA_VERSION` constant — this is the in-process safety net for contract changes. `load_strategy` tolerates missing/invalid `overnight-strategy.json` by returning a default instance; escalation lines that fail JSON parsing are skipped with a stderr warning. The function is read-only with respect to all state files and performs no in-process caching — each call reads fresh from disk.
 
-### lifecycle.config.md consumers and absence behavior
+### cortex/lifecycle.config.md consumers and absence behavior
 
-`lifecycle.config.md` is a per-project config file (template at `skills/lifecycle/assets/lifecycle.config.md`). There is no centralized Python loader — each consumer reads it directly — so the contract is "template is source of truth for fields; each consumer decides its own absence behavior." Fields include `type`, `test-command`, `demo-command` / `demo-commands`, `default-tier`, `default-criticality`, `skip-specify`, `skip-review`, and `commit-artifacts`.
+`cortex/lifecycle.config.md` is a per-project config file (template at `skills/lifecycle/assets/lifecycle.config.md`). There is no centralized Python loader — each consumer reads it directly — so the contract is "template is source of truth for fields; each consumer decides its own absence behavior." Fields include `type`, `test-command`, `demo-command` / `demo-commands`, `default-tier`, `default-criticality`, `skip-specify`, `skip-review`, and `commit-artifacts`.
 
 **Files**: `skills/lifecycle/assets/lifecycle.config.md` (template — source of truth for the field list), plus the consumers in `skills/lifecycle/`, `skills/critical-review/`, and `skills/morning-review/`.
 
-Absence behavior per consumer (what happens when the project has no `lifecycle.config.md`):
+Absence behavior per consumer (what happens when the project has no `cortex/lifecycle.config.md`):
 
 - **morning-review**: skips Section 2a (the demo-commands walkthrough) and continues the rest of the review.
 - **lifecycle complete**: skips the test step with a note that no `test-command` was configured.

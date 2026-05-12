@@ -50,7 +50,7 @@ You are fixing a flagged issue in the {phase} artifact for the {topic} discovery
 {description of the flagged checklist item and what is wrong}
 
 ## Current Artifact
-Read research/{topic}/{artifact} for the current content.
+Read cortex/research/{topic}/{artifact} for the current content.
 
 ## Phase-Specific Checklist
 {paste the relevant checklist from the Checklists section below}
@@ -59,7 +59,7 @@ Read research/{topic}/{artifact} for the current content.
 1. Read the current artifact fully
 2. Rewrite the ENTIRE artifact to address the flagged issue while maintaining all existing content that is correct
 3. Do not patch individual sections — rewrite the full file to maintain internal coherence
-4. Write the revised artifact to research/{topic}/{artifact}
+4. Write the revised artifact to cortex/research/{topic}/{artifact}
 5. Report: what you changed and why. Format: changed [file path] — [one-sentence rationale].
 
 The artifact must still conform to the format defined in the {phase} phase reference.
@@ -80,7 +80,7 @@ After escalation, the user decides how to proceed. Do not continue reviewing.
 
 ### Post-Research Checklist
 
-Evaluate against `research/{topic}/research.md`:
+Evaluate against `cortex/research/{topic}/research.md`:
 
 | # | Item | Criteria |
 |---|------|----------|

@@ -14,8 +14,8 @@ Before deriving angles or dispatching any agent, fuse path validation and SHA-25
 python3 -m cortex_command.critical_review prepare-dispatch <artifact-path> [--feature <name>]
 ```
 
-- `<artifact-path>` is the candidate artifact path resolved in Step 1 (e.g. `lifecycle/{feature}/plan.md` or the explicit `<path>` argument from `/cortex-core:critical-review <path>`).
-- Pass `--feature <name>` only on auto-trigger flows (the lifecycle resolved `{feature}` from `$LIFECYCLE_SESSION_ID` against `lifecycle/*/.session` — see the Step 2e residue-write reference for the canonical resolver). The `<path>`-arg invocation form (`/cortex-core:critical-review <path>`) omits `--feature`.
+- `<artifact-path>` is the candidate artifact path resolved in Step 1 (e.g. `cortex/lifecycle/{feature}/plan.md` or the explicit `<path>` argument from `/cortex-core:critical-review <path>`).
+- Pass `--feature <name>` only on auto-trigger flows (the lifecycle resolved `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session` — see the Step 2e residue-write reference for the canonical resolver). The `<path>`-arg invocation form (`/cortex-core:critical-review <path>`) omits `--feature`.
 
 Capture the single-line JSON object printed to stdout. Schema: `{"resolved_path": "<absolute-path>", "sha256": "<64-hex>"}`. Bind:
 
@@ -56,7 +56,7 @@ The orchestrator captures the pre-dispatch SHA-256 of the artifact into orchestr
    - `--reason` maps from the exclusion route: `sentinel absent` → `absent`; `SHA drift detected` → `sha_mismatch`; `Read failed` → `read_failed`.
    - `--observed-sha` is supplied only on the `sha_mismatch` route (the reviewer's emitted SHA from its `READ_OK:` first line). Omit for `absent` and `read_failed`.
    - `--feature` is the same value passed to `prepare-dispatch` in Step 2a.5; on the `<path>`-arg invocation form (no feature in scope), skip the call — sentinel_absence telemetry requires a lifecycle feature directory to write into.
-   - The subcommand performs an atomic tempfile + rename append to `lifecycle/{feature}/events.log`. Exit 0 = appended.
+   - The subcommand performs an atomic tempfile + rename append to `cortex/lifecycle/{feature}/events.log`. Exit 0 = appended.
 
 5. **Total-failure path (all reviewers excluded).** When every dispatched reviewer is classified Exclude in step 2 (zero pass through Phase 2), surface verbatim to the user — do NOT proceed to Step 2d synthesis:
 
@@ -84,7 +84,7 @@ printf '%s' "$SYNTH_OUTPUT" | python3 -m cortex_command.critical_review verify-s
 Routes based on exit code:
 
 - **Exit 0** — synthesizer's `SYNTH_READ_OK:` sentinel present and SHA matches. Surface the synthesizer's prose output to the user normally, then proceed to Step 2e.
-- **Exit 3** — sentinel absent OR SHA mismatch (drift). **Do NOT surface the synthesizer's prose output.** Instead, relay `verify-synth-output`'s own stdout verbatim to the user — its top-level diagnostic carries the `Critical-review pass invalidated` phrasing and the resolution instruction. The subcommand has already appended the `synthesizer_drift` event to `lifecycle/{feature}/events.log` atomically; the orchestrator must not duplicate that append.
+- **Exit 3** — sentinel absent OR SHA mismatch (drift). **Do NOT surface the synthesizer's prose output.** Instead, relay `verify-synth-output`'s own stdout verbatim to the user — its top-level diagnostic carries the `Critical-review pass invalidated` phrasing and the resolution instruction. The subcommand has already appended the `synthesizer_drift` event to `cortex/lifecycle/{feature}/events.log` atomically; the orchestrator must not duplicate that append.
 
 On Exit 3, do NOT proceed to Step 2e (residue write) — the critical-review pass is invalidated and a stale residue write would compound the drift.
 

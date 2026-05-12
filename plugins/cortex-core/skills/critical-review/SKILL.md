@@ -35,8 +35,8 @@ If a lifecycle is active, read the most relevant artifact (`cortex/lifecycle/{fe
 Before dispatching any reviewer agent, load project context for injection into reviewer prompts:
 
 1. If `cortex/requirements/project.md` exists, read it and extract the **Overview** section (or the first top-level summary section if none is labeled "Overview") — up to ~250 words.
-2. If `lifecycle.config.md` exists, read it and check for a `type:` field. Only use the value if it is present, non-empty, and not commented out (i.e., the line is not prefixed with `#`). If valid, include it as a one-line prefix: `**Project type:** {type}` before the project overview text.
-3. Construct a `## Project Context` block from these inputs. **If neither file exists** (or `cortex/requirements/project.md` is absent and `lifecycle.config.md` has no valid `type:` value), **omit the `## Project Context` section entirely** — do not inject an empty placeholder into reviewer prompts.
+2. If `cortex/lifecycle.config.md` exists, read it and check for a `type:` field. Only use the value if it is present, non-empty, and not commented out (i.e., the line is not prefixed with `#`). If valid, include it as a one-line prefix: `**Project type:** {type}` before the project overview text.
+3. Construct a `## Project Context` block from these inputs. **If neither file exists** (or `cortex/requirements/project.md` is absent and `cortex/lifecycle.config.md` has no valid `type:` value), **omit the `## Project Context` section entirely** — do not inject an empty placeholder into reviewer prompts.
 
 ### Step 2a.5: Pre-Dispatch (atomic path + SHA pin)
 

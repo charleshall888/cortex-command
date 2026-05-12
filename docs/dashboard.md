@@ -73,8 +73,8 @@ The dashboard reads directly from files written by the overnight runner — no s
 
 - `overnight-state.json` — session metadata and per-feature statuses. Key fields: `session_id` (unique session identifier), `phase` (session phase: `planning` | `executing` | `complete` | `paused`), `current_round` (1-based round number), `started_at` (ISO 8601 UTC timestamp), `features` (mapping of feature slug → status object with `status`, `started_at`, `completed_at`, `error`, and `recovery_attempts`), `round_history` (list of completed round summaries).
 - `overnight-events.log` — NDJSON event stream (one JSON object per line). Each line has the form: `{"v": 1, "ts": "<ISO-8601>", "event": "<type>", "session_id": "...", "round": N}` with optional `"feature"` and `"details"` fields. Event types include `session_start`, `feature_start`, `feature_complete`, `feature_failed`, `circuit_breaker`, and others.
-- `lifecycle/{slug}/plan.md` — task-level progress for each feature
-- `backlog/*.md` — feature titles and frontmatter status fields
+- `cortex/lifecycle/{slug}/plan.md` — task-level progress for each feature
+- `cortex/backlog/*.md` — feature titles and frontmatter status fields
 - `metrics.json` — API cost data
 
 For the schemas, state machine, and lifecycle of these files, see [overnight-operations.md](overnight-operations.md).

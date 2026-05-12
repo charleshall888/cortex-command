@@ -43,9 +43,9 @@ For mechanics, state files, recovery, and debugging procedures, see [overnight-o
 
 The overnight runner can be launched from any repo — not just cortex-command.
 
-### Setup: lifecycle.config.md
+### Setup: cortex/lifecycle.config.md
 
-Before running overnight in a new repo, create a `lifecycle.config.md` at the repo root. A template lives at `skills/lifecycle/assets/lifecycle.config.md` in cortex-command:
+Before running overnight in a new repo, create a `cortex/lifecycle.config.md` at the repo root. A template lives at `skills/lifecycle/assets/cortex/lifecycle.config.md` in cortex-command:
 
 ```yaml
 ---
@@ -79,7 +79,7 @@ Other fields:
 
 **From any other repo:**
 
-1. Ensure `lifecycle.config.md` exists at the repo root with `test-command` configured.
+1. Ensure `cortex/lifecycle.config.md` exists at the repo root with `test-command` configured.
 2. Open a Claude session in that repo's directory.
 3. Run `/overnight` — it will generate the session plan and write the state file to `cortex/lifecycle/sessions/{session_id}/overnight-state.json` inside that repo.
 4. In a terminal, launch the runner with the explicit state file path:

@@ -292,7 +292,7 @@ def test_dispatch_prompt_structure_for_loaded_parent(tmp_path):
     assert FRAMING_SHIFT in prompt
     # Layer 3 (body wrapped in markers) — open and close tags both present
     open_marker_match = re.search(
-        r'<parent_epic_body source="backlog/[^"]+" trust="untrusted">',
+        r'<parent_epic_body source="cortex/backlog/[^"]+" trust="untrusted">',
         prompt,
     )
     assert open_marker_match is not None, (

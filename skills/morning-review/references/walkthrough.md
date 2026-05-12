@@ -85,7 +85,7 @@ Skip this section entirely if any of the following hold:
 
 ### Guard 1 — Route between `demo-commands:` list and `demo-command:` single-string paths
 
-This guard determines which of two configuration schemas is active in `lifecycle.config.md` and routes the rest of Section 2a accordingly. If `lifecycle.config.md` at the project root is missing, skip Section 2a silently. Otherwise, try the `demo-commands:` list path first; if it yields no valid entries, fall back to the `demo-command:` single-string path; if neither is configured, skip Section 2a silently.
+This guard determines which of two configuration schemas is active in `cortex/lifecycle.config.md` and routes the rest of Section 2a accordingly. If `cortex/lifecycle.config.md` at the project root is missing, skip Section 2a silently. Otherwise, try the `demo-commands:` list path first; if it yields no valid entries, fall back to the `demo-command:` single-string path; if neither is configured, skip Section 2a silently.
 
 #### `demo-commands:` list path (tried first)
 
@@ -105,7 +105,7 @@ If `demo-commands:` was absent, or was present but yielded no valid entries, fal
 
 Skip this path (and therefore Section 2a, if the list path also did not activate — i.e. no valid entries and fall through to demo-command check also yields nothing) silently if ANY of the following hold:
 
-- `lifecycle.config.md` exists but a non-commented `demo-command:` line is absent.
+- `cortex/lifecycle.config.md` exists but a non-commented `demo-command:` line is absent.
 - The `demo-command:` value is empty (whitespace-only after trimming).
 - The `demo-command:` value contains any control character (byte < 0x20 except `\t`).
 
@@ -141,7 +141,7 @@ Constraints and inputs for the reasoning step:
 1. **No additional git commands are run for this step.** The input is the completed-features list already in context from Section 2, including each feature's **Key files changed** data (which was already processed in Section 2 when computing the "Files changed" count). Do NOT re-read `git log`, `git diff`, or any file tree — everything needed is already in context.
 2. Consider each configured entry's `label:` and `command:` alongside the merged features' names and **Key files changed** paths. A `demo-commands:` entry whose label or command clearly maps to the area the night's work touched is a candidate.
 3. If a single entry is clearly the most relevant winner, select it and proceed to the Demo offer (`demo-commands:` list path variant) using that entry's `label` as `{selected-label}` and its `command` as `{selected-command}`.
-4. If no entry is clearly relevant — the night's work does not map cleanly onto any configured demo — **skip Section 2a silently**. This suppression is absolute: do NOT fall back to the `demo-command:` single-string path even if that field is also configured in the same `lifecycle.config.md`. The list path, once active, owns the decision; the single-string fallback does not fire when the `demo-commands:` list path is active.
+4. If no entry is clearly relevant — the night's work does not map cleanly onto any configured demo — **skip Section 2a silently**. This suppression is absolute: do NOT fall back to the `demo-command:` single-string path even if that field is also configured in the same `cortex/lifecycle.config.md`. The list path, once active, owns the decision; the single-string fallback does not fire when the `demo-commands:` list path is active.
 
 ### Demo offer
 
@@ -184,7 +184,7 @@ After a successful worktree-add, print the block matching the active path. `{res
 
 #### `demo-command:` single-string path variant
 
-**Use this variant only if the active path is `demo-command:` single-string.** Print exactly this block, substituting `{resolved-target-path}` with the absolute path from the previous step and `{demo-command}` with the verbatim value extracted from `lifecycle.config.md` (already validated by the config check above to contain no control characters):
+**Use this variant only if the active path is `demo-command:` single-string.** Print exactly this block, substituting `{resolved-target-path}` with the absolute path from the previous step and `{demo-command}` with the verbatim value extracted from `cortex/lifecycle.config.md` (already validated by the config check above to contain no control characters):
 
 ```
 Demo worktree created at: {resolved-target-path}
@@ -592,9 +592,9 @@ After this section, the review is complete.
 | Dirty `.git/rebase-merge/` detected | Script auto-aborts stale rebase, warns user, proceeds with sync |
 | Push fails after rebase | Report error, note local main is clean but not pushed |
 | All conflicts auto-resolved | Report "N files auto-resolved via allowlist" |
-| lifecycle.config.md missing at project root | Skip Section 2a entirely |
-| `lifecycle.config.md` present but `demo-command` absent or commented out | Skip Section 2a entirely |
-| `lifecycle.config.md` present but `demo-command` value is empty | Skip Section 2a entirely |
+| cortex/lifecycle.config.md missing at project root | Skip Section 2a entirely |
+| `cortex/lifecycle.config.md` present but `demo-command` absent or commented out | Skip Section 2a entirely |
+| `cortex/lifecycle.config.md` present but `demo-command` value is empty | Skip Section 2a entirely |
 | `demo-command` value contains control characters / ANSI escapes | Skip Section 2a entirely; treat as malformed |
 | `$SSH_CONNECTION` set (running over SSH or mosh) | Skip Section 2a entirely |
 | `git rev-parse --verify {integration_branch}` exits non-zero | Skip Section 2a entirely |

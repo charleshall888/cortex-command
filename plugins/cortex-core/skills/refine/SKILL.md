@@ -7,7 +7,7 @@ inputs:
 outputs:
   - "cortex/lifecycle/{slug}/research.md — implementation-level research artifact"
   - "cortex/lifecycle/{slug}/spec.md — approved specification ready for overnight planning"
-  - "backlog/{item}.md — updated with complexity:, criticality:, status: refined, spec: path, areas:"
+  - "cortex/backlog/{item}.md — updated with complexity:, criticality:, status: refined, spec: path, areas:"
 preconditions:
   - "Run from project root"
   - "backlog/ directory exists"

@@ -71,7 +71,7 @@ You are fixing a flagged issue in the {phase} artifact for the {feature} feature
 {description of the flagged checklist item and what is wrong}
 
 ## Current Artifact
-Read lifecycle/{feature}/{artifact} for the current content.
+Read cortex/lifecycle/{feature}/{artifact} for the current content.
 
 ## Phase-Specific Checklist
 {paste the relevant checklist from the Checklists section below}
@@ -80,7 +80,7 @@ Read lifecycle/{feature}/{artifact} for the current content.
 1. Read the current artifact fully
 2. Rewrite the ENTIRE artifact to address the flagged issue while maintaining all existing content that is correct
 3. Do not patch individual sections — rewrite the full file to maintain internal coherence
-4. Write the revised artifact to lifecycle/{feature}/{artifact}
+4. Write the revised artifact to cortex/lifecycle/{feature}/{artifact}
 5. End your return with a YAML-style envelope using these three fields, and emit no prose before or after it:
    verdict: revised | failed
    files_changed: [<path>, ...]
@@ -104,7 +104,7 @@ After escalation, the user decides how to proceed. Do not continue reviewing.
 
 ### Post-Specify Checklist
 
-Evaluate against `lifecycle/{feature}/spec.md`:
+Evaluate against `cortex/lifecycle/{feature}/spec.md`:
 
 | # | Item | Criteria |
 |---|------|----------|
@@ -118,7 +118,7 @@ Evaluate against `lifecycle/{feature}/spec.md`:
 
 ### Post-Plan Checklist
 
-Evaluate against `lifecycle/{feature}/plan.md`:
+Evaluate against `cortex/lifecycle/{feature}/plan.md`:
 
 | # | Item | Criteria |
 |---|------|----------|

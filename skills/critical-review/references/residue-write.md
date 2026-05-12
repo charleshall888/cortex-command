@@ -6,7 +6,7 @@ B-class findings remain.
 
 ## Feature Resolution
 
-Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `lifecycle/*/.session` files (whitespace-stripped match):
+Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session` files (whitespace-stripped match):
 
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
@@ -22,7 +22,7 @@ print('\n'.join(p for p in glob.glob(os.path.join('$REPO_ROOT','lifecycle','*','
 
 ## Atomic Write
 
-Only when `{feature}` resolved AND ≥1 B-class finding — inline `python3 -c` performing a tempfile + `os.replace` atomic rename to `lifecycle/{feature}/critical-review-residue.json`:
+Only when `{feature}` resolved AND ≥1 B-class finding — inline `python3 -c` performing a tempfile + `os.replace` atomic rename to `cortex/lifecycle/{feature}/critical-review-residue.json`:
 
 ```bash
 python3 -c "

@@ -19,7 +19,7 @@ synthesizer_overnight_enabled: false
 
 # Lifecycle Configuration
 
-Project-specific overrides for the lifecycle skill. Copy this file to your project root as `lifecycle.config.md` and customize.
+Project-specific overrides for the lifecycle skill. Copy this file to your project root as `cortex/lifecycle.config.md` and customize.
 
 ## Review Criteria
 
