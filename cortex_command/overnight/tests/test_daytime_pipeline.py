@@ -87,20 +87,28 @@ class TestRunDaytimeStartupGuards(unittest.IsolatedAsyncioTestCase):
     """Startup-layer guard behaviours for ``run_daytime``."""
 
     async def test_cwd_guard_rejects_wrong_directory(self) -> None:
-        """Running outside the repo root (no ``lifecycle/`` dir) must
-        exit with code 1 and emit ``must be run from the repo root`` on
-        stderr."""
+        """Running outside a cortex project (no ``lifecycle/``/``backlog/``
+        ancestor before a ``.git/`` boundary) must exit 1 and emit the
+        resolver's project-root diagnostic on stderr."""
         import tempfile
 
         with tempfile.TemporaryDirectory() as td:
             # Confirm no lifecycle dir exists.
             self.assertFalse((Path(td) / "lifecycle").exists())
+            # Pin the resolver away from the ambient repo: setting
+            # CORTEX_REPO_ROOT bypasses the walk, but here we want the walk
+            # to fail, so explicitly clear it for this assertion.
             stderr = io.StringIO()
-            with _CwdCtx(Path(td)), patch.object(sys, "stderr", stderr):
+            with _CwdCtx(Path(td)), patch.object(sys, "stderr", stderr), patch.dict(
+                "os.environ", {}, clear=False
+            ):
+                import os as _os
+
+                _os.environ.pop("CORTEX_REPO_ROOT", None)
                 with self.assertRaises(SystemExit) as cm:
                     await run_daytime("feat")
         self.assertEqual(cm.exception.code, 1)
-        self.assertIn("must be run from the repo root", stderr.getvalue())
+        self.assertIn("must be run from a cortex project root", stderr.getvalue())
 
     async def test_plan_check_rejects_missing_plan(self) -> None:
         """With ``lifecycle/feat/`` present but no ``plan.md``, must
