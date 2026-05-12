@@ -2,18 +2,21 @@
 schema_version: "1"
 uuid: 391e2823-ea89-4b72-8b35-54660eb983a3
 title: "Add upward-walking project-root detection in _resolve_user_project_root()"
-status: ready
+status: in_progress
 priority: medium
 type: feature
 created: 2026-05-11
-updated: 2026-05-11
+updated: 2026-05-12
 tags: [cli-ergonomics, consolidate-artifacts-under-cortex-root]
 complexity: simple
-criticality: low
-areas: [cli, init]
-session_id: null
+criticality: medium
+areas: [backlog]
+session_id: afa5d270-d256-4d91-ace9-0c5a12029904
 parent: 200
 discovery_source: research/consolidate-artifacts-under-cortex-root/research.md
+spec: lifecycle/add-upward-walking-project-root-detection-in-resolve-user-project-root/spec.md
+lifecycle_phase: implement
+lifecycle_slug: add-upward-walking-project-root-detection-in-resolve-user-project-root
 ---
 
 # Add upward-walking project-root detection in _resolve_user_project_root()
