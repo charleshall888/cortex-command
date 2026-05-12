@@ -55,6 +55,12 @@ Write or present the following outputs — this is the handoff package for Resea
 
 4. **Open questions for research**: Bulleted list of questions to carry into Research (may be empty). These are questions best resolved by investigation — not user answers.
 
+5. **Scope envelope** (optional): The agent decides per topic whether to produce this. When the topic's boundaries are tractable at clarify time, emit in-scope/out-of-scope bullets to constrain what Research investigates:
+   - **In scope**: bulleted list of areas/questions Research should pursue
+   - **Out of scope**: bulleted list of adjacent concerns explicitly excluded from this discovery
+   
+   When boundaries cannot be pre-locked (topic is too exploratory, or scope itself is part of what Research must determine), emit "No envelope needed" with a one-line reason. Fire when boundaries are tractable; skip when they are not.
+
 ## Constraints
 
 | Thought | Reality |
