@@ -368,6 +368,10 @@ check-path-hardcoding *args:
 check-path-hardcoding-audit:
     bin/cortex-check-path-hardcoding --audit
 
+# Audit logged-vs-applied requirements drift suggestions (R9, informational JSON to stdout)
+requirements-parity-audit:
+    bin/cortex-requirements-parity-audit
+
 # --- Testing ---
 
 # Run skill contract tests (validates SKILL.md frontmatter across all skills)
