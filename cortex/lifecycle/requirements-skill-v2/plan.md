@@ -36,7 +36,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: Source prose lives at `skills/lifecycle/references/review.md` §1 lines 12-16. Reference must explicitly document the fallback rule for `tags:` empty/absent: load `project.md` only, proceed silently. Cross-link from review.md is added in Task 3.
 - **Verification**: `test -f skills/lifecycle/references/load-requirements.md && grep -c "Conditional Loading" skills/lifecycle/references/load-requirements.md` ≥`1` AND `grep -ciE 'tags.*empty|tags.*absent|no tags' skills/lifecycle/references/load-requirements.md` ≥`1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 48b26c8d)
 
 ### Task 2: Replace heuristic loading in lifecycle clarify + specify (R2)
 - **Files**: `skills/lifecycle/references/clarify.md`, `skills/lifecycle/references/specify.md`
