@@ -8,3 +8,5 @@
 {"ts": "2026-05-11T13:00:00Z", "event": "batch_dispatch", "feature": "trim-cortex-log-invocation-shim-cost-per-call-21ms", "batch": 0, "tasks": [1, 3]}
 {"ts": "2026-05-11T13:30:00Z", "event": "batch_dispatch", "feature": "trim-cortex-log-invocation-shim-cost-per-call-21ms", "batch": 1, "tasks": [2, 5]}
 {"ts": "2026-05-11T14:00:00Z", "event": "batch_dispatch", "feature": "trim-cortex-log-invocation-shim-cost-per-call-21ms", "batch": 2, "tasks": [6]}
+{"ts": "2026-05-11T15:00:00Z", "event": "review_verdict", "feature": "trim-cortex-log-invocation-shim-cost-per-call-21ms", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-11T15:00:01Z", "event": "phase_transition", "feature": "trim-cortex-log-invocation-shim-cost-per-call-21ms", "from": "review", "to": "complete"}
