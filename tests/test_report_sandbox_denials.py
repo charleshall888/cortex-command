@@ -183,11 +183,11 @@ def fixture_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     chdir into ``tmp_path`` so ``collect_sandbox_denials``'s relative
     ``Path("lifecycle/sessions/...")`` resolves correctly AND
-    ``_resolve_user_project_root()`` (which inspects CWD for a ``lifecycle/``
-    or ``backlog/`` sentinel) can discover the project root.
+    ``_resolve_user_project_root()`` (which inspects CWD for a ``cortex/``
+    sentinel) can discover the project root.
     """
-    # Sentinel: _resolve_user_project_root requires either lifecycle/ or
-    # backlog/ in CWD.  We create both so the resolver is happy.
+    # CORTEX_REPO_ROOT is pinned to tmp_path below so the walk is bypassed;
+    # no cortex/ sentinel directory is needed here.
     (tmp_path / "backlog").mkdir(parents=True, exist_ok=True)
 
     lifecycle_dir = tmp_path / "lifecycle"

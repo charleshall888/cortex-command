@@ -47,6 +47,8 @@ def test_state_load_failed_event_emitted_on_corrupt_state(
     # Pin user project root to tmp_path so BatchConfig defaults that resolve
     # `_resolve_user_project_root()` and the orchestrator's
     # `subsequent_writes_target` lookup both land inside tmp_path.
+    # CORTEX_REPO_ROOT is set below so the resolver bypasses the walk;
+    # lifecycle/ and backlog/ are created for orchestrator path resolution.
     (tmp_path / "lifecycle").mkdir()
     (tmp_path / "backlog").mkdir()
     monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))

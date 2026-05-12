@@ -405,9 +405,9 @@ def test_resolve_user_project_root_lifecycle_marker_at_cwd(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Walk returns the cwd itself when ``lifecycle/`` is present at cwd."""
+    """Walk returns the cwd itself when ``cortex/`` is present at cwd."""
     monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
-    (tmp_path / "lifecycle").mkdir()
+    (tmp_path / "cortex").mkdir()
     monkeypatch.chdir(tmp_path)
 
     assert _resolve_user_project_root() == tmp_path.resolve()
@@ -417,9 +417,9 @@ def test_resolve_user_project_root_backlog_only_marker(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Walk returns cwd when only ``backlog/`` is present (lifecycle/ absent)."""
+    """Walk returns cwd when ``cortex/`` is present."""
     monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
-    (tmp_path / "backlog").mkdir()
+    (tmp_path / "cortex").mkdir()
     monkeypatch.chdir(tmp_path)
 
     assert _resolve_user_project_root() == tmp_path.resolve()
@@ -429,10 +429,10 @@ def test_resolve_user_project_root_walks_up_from_subdir(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Walk starts deep inside the tree and returns the ancestor with markers."""
+    """Walk starts deep inside the tree and returns the ancestor with the marker."""
     monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
-    (tmp_path / "lifecycle").mkdir()
-    deep = tmp_path / "lifecycle" / "feature-x" / "deferred"
+    (tmp_path / "cortex").mkdir()
+    deep = tmp_path / "cortex" / "feature-x" / "deferred"
     deep.mkdir(parents=True)
     monkeypatch.chdir(deep)
 

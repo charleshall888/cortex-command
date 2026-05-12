@@ -293,13 +293,13 @@ class TestInitializeOvernightState(unittest.TestCase):
         Post-Task 2: PASSES once plan.py is changed to use Path.cwd().
 
         Wheel-install migration (Task 4): ``_resolve_user_project_root``
-        rejects a CWD that lacks ``lifecycle/`` and ``backlog/``. Patching
+        rejects a CWD that lacks ``cortex/``. Patching
         ``Path.cwd`` to a bare ``/tmp/fake-repo`` would now hit that
         rejection, so we materialize the fake-repo as a real tmp directory
-        with ``lifecycle/`` for the duration of the test.
+        with ``cortex/`` for the duration of the test.
         """
         fake_repo = Path(self._fake_tmpdir) / "fake-repo"
-        (fake_repo / "lifecycle").mkdir(parents=True)
+        (fake_repo / "cortex").mkdir(parents=True)
         selection = _make_selection("Feature CWD")
         mock_run = MagicMock(return_value=MagicMock(returncode=0))
         cwd_patch = patch("pathlib.Path.cwd", return_value=fake_repo)
