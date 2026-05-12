@@ -8,7 +8,7 @@ outputs:
   - "Backlog triage summary (stdout) — refined items with recommended workflows (when invoked with no request)"
 preconditions:
   - "Run from project root"
-  - "backlog/ directory should exist (required for triage mode)"
+  - "cortex/backlog/ directory should exist (required for triage mode)"
 ---
 
 # Dev
@@ -121,7 +121,7 @@ If no heuristic signals are detected, suggest **medium** (the lifecycle default)
 
 ### Resumed Lifecycle
 
-Before performing this assessment, check whether `lifecycle/<feature>/` already exists. If it does:
+Before performing this assessment, check whether `cortex/lifecycle/<feature>/` already exists. If it does:
 
 1. Read criticality by running `cortex-lifecycle-state --feature <feature> --field criticality` (emits JSON; defaults to `medium` when the key is absent).
 2. Inform the user: "A lifecycle for `<feature>` already exists at `<phase>`. Resume it?"
@@ -138,11 +138,11 @@ Run the global shell command `cortex-generate-backlog-index` directly (do NOT us
 
 If it fails:
 - Warn the user: "Index generation failed. Falling back to the existing index."
-- Attempt to read `backlog/index.md` directly. If that file also does not exist, report: "No backlog index found. Use `/cortex-core:backlog add` to create items, then re-run `/cortex-core:dev`."
+- Attempt to read `cortex/backlog/index.md` directly. If that file also does not exist, report: "No backlog index found. Use `/cortex-core:backlog add` to create items, then re-run `/cortex-core:dev`."
 
 ### 3b. Read the Ready Section
 
-Read `backlog/index.md` and extract the **Ready** section — items with no unresolved blockers.
+Read `cortex/backlog/index.md` and extract the **Ready** section — items with no unresolved blockers.
 
 If no items are in the Ready section:
 - Report: "No ready items in the backlog."
@@ -150,7 +150,7 @@ If no items are in the Ready section:
 
 **Epic detection and child map construction** (must complete before any output is rendered):
 
-Invoke `cortex-build-epic-map` to produce the deterministic epic→children map. The script reads `backlog/index.json`, auto-detects `type: epic` items, and groups non-epic items under their normalized parent epic (handling quote-stripping, UUID-format parent references, and integer comparison internally). Capture stdout as JSON.
+Invoke `cortex-build-epic-map` to produce the deterministic epic→children map. The script reads `cortex/backlog/index.json`, auto-detects `type: epic` items, and groups non-epic items under their normalized parent epic (handling quote-stripping, UUID-format parent references, and integer comparison internally). Capture stdout as JSON.
 
 **Schema note**: The Refined section contains `status: refined` items (spec-approved, overnight-eligible). The Backlog section contains `status: backlog` items (not yet refined).
 
@@ -226,7 +226,7 @@ After presenting both blocks, ask the user which item to pick up. Once chosen, r
 
 ### Empty or Missing Backlog
 
-If `backlog/` contains no item files (or does not exist):
+If `cortex/backlog/` contains no item files (or does not exist):
 - Report: "No backlog found."
 - Suggest: "Use `/cortex-core:backlog add <description>` to create items, or describe what you want to build and I'll route you directly."
 

@@ -6,7 +6,7 @@
 
 The project uses the SDK in two structurally different ways: direct `Agent` tool calls embedded in skill instruction files (daytime, interactive), and the Python `claude_agent_sdk.query()` API called from the overnight execution pipeline (autonomous). These paths have different control points, different permission models, and different reasons for existing.
 
-> For a full analysis of current SDK usage patterns and evaluated trade-offs, see [`research/claude-code-sdk-usage/research.md`](../../research/claude-code-sdk-usage/research.md).
+> For a full analysis of current SDK usage patterns and evaluated trade-offs, see [`cortex/research/claude-code-sdk-usage/research.md`](../../research/claude-code-sdk-usage/research.md).
 
 > For overnight runner operations and architecture, see [overnight-operations.md](../overnight-operations.md).
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Generate backlog/index.json and backlog/index.md from active item frontmatter.
+"""Generate cortex/backlog/index.json and cortex/backlog/index.md from active item frontmatter.
 
 Produces:
-  - backlog/index.json  — all BacklogItem fields for active items (O(1) index)
-  - backlog/index.md    — summary table sorted by priority then ID
+  - cortex/backlog/index.json  — all BacklogItem fields for active items (O(1) index)
+  - cortex/backlog/index.md    — summary table sorted by priority then ID
 
 Usage:
     cortex-generate-backlog-index

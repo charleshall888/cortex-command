@@ -7,7 +7,7 @@ in order after the report has been located and confirmed to exist.
 
 ## Section 1 — Executive Summary
 
-Read `lifecycle/morning-report.md` (or the file it symlinks to). Locate the Executive
+Read `cortex/lifecycle/morning-report.md` (or the file it symlinks to). Locate the Executive
 Summary section and extract:
 
 - **Verdict**: the overall session outcome (e.g. "All features completed", "Partial —
@@ -18,8 +18,8 @@ Summary section and extract:
 Display all three fields to the user before any interaction. This is the first output the
 user sees. Do not ask questions or prompt for input during this step.
 
-**Missing report handling**: If `lifecycle/morning-report.md` does not exist and
-`lifecycle/sessions/` contains no subdirectories, print:
+**Missing report handling**: If `cortex/lifecycle/morning-report.md` does not exist and
+`cortex/lifecycle/sessions/` contains no subdirectories, print:
 
 ```
 No morning report found. No overnight session has been run yet, or the report was not
@@ -36,7 +36,7 @@ Then stop. Do not proceed to later sections.
 
 Skip this section entirely if there are no completed features in the report.
 
-**Load overnight metadata** (best-effort): read `lifecycle/sessions/latest-overnight/overnight-state.json` if it
+**Load overnight metadata** (best-effort): read `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` if it
 exists. Parse the `features` map for `round_assigned`, `started_at`, and `completed_at`
 per feature name. If the file is missing or a field is absent, omit that field from the
 display — do not error.
@@ -128,9 +128,9 @@ Skip Section 2a if `$SSH_CONNECTION` is set and non-empty. This catches both SSH
 
 ### Guard 3 — overnight branch is missing
 
-Skip Section 2a if `git rev-parse --verify {integration_branch}` exits non-zero, where `{integration_branch}` is read from `lifecycle/sessions/latest-overnight/overnight-state.json` using the same jq pattern as Section 6 step 1 (`jq -r '.integration_branch' lifecycle/sessions/latest-overnight/overnight-state.json`). If `overnight-state.json` is missing or `integration_branch` is absent from it, also skip.
+Skip Section 2a if `git rev-parse --verify {integration_branch}` exits non-zero, where `{integration_branch}` is read from `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` using the same jq pattern as Section 6 step 1 (`jq -r '.integration_branch' cortex/lifecycle/sessions/latest-overnight/overnight-state.json`). If `overnight-state.json` is missing or `integration_branch` is absent from it, also skip.
 
-**If on the `demo-commands:` list path only (this third check does NOT apply to the `demo-command:` single-string path):** additionally read the `features` map from `lifecycle/sessions/latest-overnight/overnight-state.json` and count entries whose `"status"` equals `"merged"`. If there are zero merged features (i.e. `"status".*merged` matches no entry — no merged features, no completed features), skip Section 2a silently. If `overnight-state.json` is missing the `features` key entirely, treat this as zero merged features and skip. This guard suppresses the demo offer when no overnight work actually landed on the integration branch — there is nothing meaningful to demo.
+**If on the `demo-commands:` list path only (this third check does NOT apply to the `demo-command:` single-string path):** additionally read the `features` map from `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` and count entries whose `"status"` equals `"merged"`. If there are zero merged features (i.e. `"status".*merged` matches no entry — no merged features, no completed features), skip Section 2a silently. If `overnight-state.json` is missing the `features` key entirely, treat this as zero merged features and skip. This guard suppresses the demo offer when no overnight work actually landed on the integration branch — there is nothing meaningful to demo.
 
 ### Agent Reasoning
 
@@ -226,10 +226,10 @@ Run immediately after Section 2a (or after the batch verification response if Se
 
 For each completed feature (same list as Section 2, same order):
 
-1. Check whether `lifecycle/{feature}/events.log` exists.
+1. Check whether `cortex/lifecycle/{feature}/events.log` exists.
    - If the directory or file does not exist → skip, report `no lifecycle dir`.
 
-2. Read `lifecycle/{feature}/events.log`. If it already contains a line where
+2. Read `cortex/lifecycle/{feature}/events.log`. If it already contains a line where
    `"event": "feature_complete"` appears → skip, report `already complete`.
 
 3. Read the feature's tier and criticality by running
@@ -247,11 +247,11 @@ For each completed feature (same list as Section 2, same order):
    - otherwise (simple/low, simple/medium) → review NOT required
 
 5. **If review is NOT required**: write synthetic events. Count the total number of
-   checkboxes in `lifecycle/{feature}/plan.md`:
+   checkboxes in `cortex/lifecycle/{feature}/plan.md`:
    - Match all occurrences of `- [x]` and `- [ ]` (case-insensitive)
    - Sum = `tasks_total`. If `plan.md` does not exist, use `tasks_total: 0`.
 
-   Append the following four events to `lifecycle/{feature}/events.log` (one JSON object
+   Append the following four events to `cortex/lifecycle/{feature}/events.log` (one JSON object
    per line, newline-terminated, no trailing comma). Use the current UTC time in ISO 8601
    format for all `ts` fields:
 
@@ -264,7 +264,7 @@ For each completed feature (same list as Section 2, same order):
 
    Report: `advanced → complete`.
 
-6. **If review IS required**: check `lifecycle/{feature}/events.log` for real review
+6. **If review IS required**: check `cortex/lifecycle/{feature}/events.log` for real review
    events written by the batch runner (these have `cycle >= 1`):
 
    a. **Both `review_verdict` (with `cycle >= 1`) AND `feature_complete` present**: the
@@ -395,7 +395,7 @@ For each failed feature (in the order listed in the report):
    - Instead, instruct the user to:
      - Verify the feature is present on the integration branch.
      - Identify which post-merge step failed by checking
-       `lifecycle/sessions/latest-overnight/overnight-events.log`.
+       `cortex/lifecycle/sessions/latest-overnight/overnight-events.log`.
      - Address the missed step manually (e.g., trigger review, update the
        backlog item).
      - Advance the lifecycle manually to reflect the correct state.
@@ -463,7 +463,7 @@ After printing the summary, proceed to Section 6.
 
 Run after all other sections. No per-feature confirmation is needed before locating the PR.
 
-1. Read `lifecycle/sessions/latest-overnight/overnight-state.json` and extract `integration_branch`.
+1. Read `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` and extract `integration_branch`.
    - If the file is missing or `integration_branch` is absent/empty, skip this section
      and note: "No integration branch found — skipping PR step."
 
@@ -513,7 +513,7 @@ Run after all other sections. No per-feature confirmation is needed before locat
 6. If yes:
    - Run: `gh pr merge {number} --merge --delete-branch`
    - On success: report "Merged. Remote branch deleted."
-     - Read `worktree_path` from `lifecycle/sessions/latest-overnight/overnight-state.json`.
+     - Read `worktree_path` from `cortex/lifecycle/sessions/latest-overnight/overnight-state.json`.
        If non-empty and the path exists, run: `git worktree remove --force {worktree_path}`
        - On success: report "Worktree removed."
        - On failure: report the error but do not fail the review.
@@ -555,8 +555,8 @@ After this section, the review is complete.
 
 | Situation | Action |
 |-----------|--------|
-| No morning report at `lifecycle/morning-report.md` | Print missing-report message (Section 1) and stop |
-| `lifecycle/sessions/` exists but report is missing | Print "Incomplete session detected — report not generated. Run: `python3 -m cortex_command.overnight.report`" and stop |
+| No morning report at `cortex/lifecycle/morning-report.md` | Print missing-report message (Section 1) and stop |
+| `cortex/lifecycle/sessions/` exists but report is missing | Print "Incomplete session detected — report not generated. Run: `python3 -m cortex_command.overnight.report`" and stop |
 | No completed features | Skip Sections 2, 2b, and 5 entirely |
 | No deferred question files | Skip Section 3 entirely |
 | No failed features | Skip Section 4 entirely |
@@ -565,7 +565,7 @@ After this section, the review is complete.
 | `overnight-state.json` missing | Display features flat (no round grouping or duration) |
 | `started_at` or `completed_at` null | Omit Duration field for that feature |
 | `feature_complete` already in events.log | Report `already complete`; do not append events |
-| `lifecycle/{feature}/` dir missing | Report `no lifecycle dir`; skip advancement |
+| `cortex/lifecycle/{feature}/` dir missing | Report `no lifecycle dir`; skip advancement |
 | `plan.md` missing | Use `tasks_total: 0` in `feature_complete` event |
 | No tier in events.log | Default to `"simple"` (mirrors `read_tier()`) |
 | No criticality in events.log | Default to `"medium"` (mirrors `read_criticality()`) |

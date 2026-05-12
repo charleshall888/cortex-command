@@ -48,7 +48,7 @@ Determine the feature name from the invocation. Use lowercase-kebab-case for dir
 
 ### Resolve the originating backlog file once
 
-When `$ARGUMENTS` is non-empty, invoke `bin/cortex-resolve-backlog-item` once to find the matching backlog file. This single call replaces the previous pattern of independently re-scanning `backlog/[0-9]*-*{feature}*.md` in each of the four Step 2 sub-procedures (Backlog Status Check, Create index.md, Backlog Write-Back, Discovery Bootstrap). The four sub-procedures consume Step 1's resolver output — they do not re-scan the backlog directory.
+When `$ARGUMENTS` is non-empty, invoke `bin/cortex-resolve-backlog-item` once to find the matching backlog file. This single call replaces the previous pattern of independently re-scanning `cortex/backlog/[0-9]*-*{feature}*.md` in each of the four Step 2 sub-procedures (Backlog Status Check, Create index.md, Backlog Write-Back, Discovery Bootstrap). The four sub-procedures consume Step 1's resolver output — they do not re-scan the backlog directory.
 
 ```bash
 bin/cortex-resolve-backlog-item {feature}
@@ -115,7 +115,7 @@ Surface both signals as terse lines (one each) above the continue/restart prompt
 These four sub-procedures all read or update the originating backlog item and (for new lifecycles) seed `index.md` and epic context. Read the reference for the protocol:
 
 - [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — Backlog Status Check, Create index.md (new lifecycle only), and Backlog Write-Back (Lifecycle Start)
-- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — Detect epic research/spec from backlog frontmatter and record paths for refine context injection (do not copy epic content)
+- [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — Detect epic cortex/research/spec from backlog frontmatter and record paths for refine context injection (do not copy epic content)
 
 Run them in this order: Backlog Status Check → Create index.md → Backlog Write-Back → Discovery Bootstrap.
 
@@ -203,7 +203,7 @@ For criticality override syntax and the criticality behavior matrix (which phase
 
 ## Lifecycle Directory
 
-The `lifecycle/` directory handling is a per-project choice. Projects may:
+The `cortex/lifecycle/` directory handling is a per-project choice. Projects may:
 - **Commit artifacts** as design history and institutional memory
 - **Gitignore them** as ephemeral working state
 - **Mix** — commit spec and plan, ignore research scratch work

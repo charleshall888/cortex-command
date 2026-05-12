@@ -577,13 +577,13 @@ def extract_spec_section(
     Args:
         item_id: Numeric backlog item ID (e.g. 56).
         spec_path: Relative path to the batch spec (e.g.
-            ``"research/pipeline-and-tooling-polish/spec.md"``).
+            ``"cortex/research/pipeline-and-tooling-polish/spec.md"``).
         slug: Kebab-case slug for the feature (e.g.
             ``"improve-validate-skill-py-yaml-error-messages"``).
         project_root: Repository root for resolving relative paths.
 
     Returns:
-        Path of the written ``lifecycle/{slug}/spec.md`` file.
+        Path of the written ``cortex/lifecycle/{slug}/spec.md`` file.
     """
     tag = f"({item_id:03d})"
     batch_spec_text = (project_root / spec_path).read_text(encoding="utf-8")
@@ -647,7 +647,7 @@ def extract_batch_specs(
     """Extract per-feature lifecycle specs for batch-spec items in the session.
 
     Iterates over all features in ``state``.  For each feature that has a
-    ``spec_path`` (batch spec) but no existing ``lifecycle/{slug}/spec.md``,
+    ``spec_path`` (batch spec) but no existing ``cortex/lifecycle/{slug}/spec.md``,
     calls :func:`extract_spec_section` to write the per-feature spec.
 
     Features with an existing lifecycle spec, no ``spec_path``, or no
@@ -658,7 +658,7 @@ def extract_batch_specs(
         project_root: Repository root for resolving relative paths.
 
     Returns:
-        List of paths for newly written ``lifecycle/{slug}/spec.md`` files.
+        List of paths for newly written ``cortex/lifecycle/{slug}/spec.md`` files.
         Empty if no extraction was needed.
     """
     created: list[Path] = []

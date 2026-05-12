@@ -18,8 +18,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--batch-id", type=int, required=True)
     p.add_argument("--test-command", default=None)
     p.add_argument("--base-branch", default="main")
-    p.add_argument("--state-path", default="lifecycle/sessions/latest-overnight/overnight-state.json")
-    p.add_argument("--events-path", default="lifecycle/sessions/latest-overnight/overnight-events.log")
+    p.add_argument("--state-path", default="cortex/lifecycle/sessions/latest-overnight/overnight-state.json")
+    p.add_argument("--events-path", default="cortex/lifecycle/sessions/latest-overnight/overnight-events.log")
     p.add_argument("--tier", default=None)
     return p
 

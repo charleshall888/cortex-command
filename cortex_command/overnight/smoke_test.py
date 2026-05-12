@@ -26,9 +26,9 @@ from cortex_command.pipeline.worktree import cleanup_worktree, create_worktree
 
 FEATURE_NAME = "overnight-smoke-test-tmp"
 BRANCH_NAME = f"pipeline/{FEATURE_NAME}"
-LIFECYCLE_DIR = Path("lifecycle/overnight-smoke-test-tmp")
-BATCH_PLAN_PATH = Path("lifecycle/smoke-batch-plan.md")
-PIPELINE_EVENTS_PATH = Path("lifecycle/pipeline-events.log")
+LIFECYCLE_DIR = Path("cortex/lifecycle/overnight-smoke-test-tmp")
+BATCH_PLAN_PATH = Path("cortex/lifecycle/smoke-batch-plan.md")
+PIPELINE_EVENTS_PATH = Path("cortex/lifecycle/pipeline-events.log")
 
 # Unique ID for this run so the agent always has fresh content to write.
 RUN_ID = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -66,12 +66,12 @@ Minimal smoke test feature to verify the overnight batch orchestration system.
 
 ### Task 1: Write smoke test result
 
-- **Files**: lifecycle/overnight-smoke-test-tmp/result.txt
+- **Files**: cortex/lifecycle/overnight-smoke-test-tmp/result.txt
 - **Depends on**: None
 - **Complexity**: simple
 - **Status**: [ ]
 
-Write the file `lifecycle/overnight-smoke-test-tmp/result.txt` with exactly this
+Write the file `cortex/lifecycle/overnight-smoke-test-tmp/result.txt` with exactly this
 content (one line):
 
     smoke-test-ok-{run_id}
@@ -139,7 +139,7 @@ def _cleanup_artifacts() -> None:
     BATCH_RESULTS_PATH.unlink(missing_ok=True)
 
 
-BATCH_RESULTS_PATH = Path("lifecycle/batch-99-results.json")
+BATCH_RESULTS_PATH = Path("cortex/lifecycle/batch-99-results.json")
 
 
 def _check_feature_merged() -> bool:

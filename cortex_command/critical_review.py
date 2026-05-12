@@ -64,7 +64,7 @@ def validate_artifact_path(
 
     Args:
         candidate: Caller-supplied artifact path.
-        lifecycle_root: Absolute path to the ``lifecycle/`` directory.
+        lifecycle_root: Absolute path to the ``cortex/lifecycle/`` directory.
         feature: Optional feature slug to narrow the prefix.
 
     Returns:
@@ -143,7 +143,7 @@ def prepare_dispatch(
 
     Args:
         candidate: Caller-supplied artifact path.
-        lifecycle_root: Absolute path to the ``lifecycle/`` directory.
+        lifecycle_root: Absolute path to the ``cortex/lifecycle/`` directory.
         feature: Optional feature slug to narrow the prefix.
 
     Returns:

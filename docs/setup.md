@@ -109,7 +109,7 @@ Checks for a `.cortex-init` marker in the repo root. If present and neither `--u
 Creates the `cortex/` umbrella directory and starter templates (`cortex/lifecycle/`, `cortex/backlog/`, `cortex/requirements/`), refreshes the `cortex/.cortex-init` marker, and idempotently appends cortex-specific ignore patterns to the repo's `.gitignore` — including an optional `cortex/` entry under a documented "uncomment to gitignore tool state" marker (running twice does not duplicate entries).
 
 **4. Sandbox registration into `~/.claude/settings.local.json`**
-Additively registers the repo's `cortex/` umbrella path under `sandbox.filesystem.allowWrite` as a single entry. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs, replacing the prior dual-registration of `lifecycle/sessions/` + `lifecycle/`. Concurrent calls across repos are safe — the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
+Additively registers the repo's `cortex/` umbrella path under `sandbox.filesystem.allowWrite` as a single entry. This is the only write to `~/.claude/settings.local.json` that `cortex init` performs, replacing the prior dual-registration of `cortex/lifecycle/sessions/` + `cortex/lifecycle/`. Concurrent calls across repos are safe — the implementation uses `fcntl.flock` on a sibling lock file so concurrent processes serialize rather than corrupt the JSON.
 
 #### lifecycle.config.md schema
 

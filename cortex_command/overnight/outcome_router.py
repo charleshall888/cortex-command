@@ -351,7 +351,7 @@ def _find_backlog_item_path(feature: str, backlog_id: Optional[int] = None) -> O
     """Locate the backlog item file for *feature*.
 
     Strategy:
-      1. Exact match: ``backlog/NNN-{feature}.md``
+      1. Exact match: ``cortex/backlog/NNN-{feature}.md``
       2. If *backlog_id* is provided, match ``backlog/{NNN}-*.md``
       3. Substring match via ``_find_item(feature)``
     """
@@ -387,7 +387,7 @@ def _write_back_to_backlog(
     """Best-effort write of canonical status back to the backlog item.
 
     Maps *overnight_status* to the canonical backlog fields defined in R13
-    and calls ``update_item()`` from ``backlog/update_item.py``. All
+    and calls ``update_item()`` from ``cortex/backlog/update_item.py``. All
     exceptions are caught, logged to the overnight events log, and silently
     swallowed so the overnight session never aborts on a backlog write failure.
     """

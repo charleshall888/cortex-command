@@ -22,7 +22,7 @@ Branch on the exit code:
 
 > **Note:** If the body contains implementation suggestions (e.g., a proposed fix or a specific approach), treat them as unvalidated hypotheses for the research phase — not as constraints on scope. Scope is determined by the problem to solve, not the suggested solution.
 
-**Context A — Backlog item**: Input resolved to a `backlog/NNN-*.md` file. Downstream phases use the four named fields (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`) from the exit-0 JSON directly.
+**Context A — Backlog item**: Input resolved to a `cortex/backlog/NNN-*.md` file. Downstream phases use the four named fields (`filename`, `backlog_filename_slug`, `title`, `lifecycle_slug`) from the exit-0 JSON directly.
 
 **Context B — Ad-hoc prompt**: Input is raw text (a topic name or description) with no matching backlog item. Assess the prompt directly. The output intent statement and complexity/criticality assessments still apply; backlog write-backs are skipped.
 
@@ -30,7 +30,7 @@ Branch on the exit code:
 
 ### 2. Load Requirements Context
 
-If `requirements/project.md` exists at the project root, read it. Scan `requirements/` for area docs whose names suggest relevance to this feature and read any that apply. If no `requirements/` directory or files exist, note this and proceed.
+If `cortex/requirements/project.md` exists at the project root, read it. Scan `cortex/requirements/` for area docs whose names suggest relevance to this feature and read any that apply. If no `cortex/requirements/` directory or files exist, note this and proceed.
 
 ### 3. Confidence Assessment
 
@@ -40,7 +40,7 @@ Assess confidence across three dimensions:
 |-----------|----------------|----------------|
 | **Intent clarity** | Goal is unambiguous — one clear outcome | Goal is vague, multi-interpretable, or contradictory |
 | **Scope boundedness** | Boundaries are explicit — what is in and out is clear | Scope is open-ended, unbounded, or conflated with adjacent work |
-| **Requirements alignment** | Request aligns with requirements/ context; no conflicts detected | Request conflicts with, ignores, or has no connection to requirements context |
+| **Requirements alignment** | Request aligns with cortex/requirements/ context; no conflicts detected | Request conflicts with, ignores, or has no connection to requirements context |
 
 > **Note:** A prescriptive ticket body — one that suggests a specific fix or approach — does not make scope "more bounded." Scope boundedness is assessed against the problem statement and what is in/out; a detailed implementation suggestion in the body should not raise the scope-boundedness rating.
 
@@ -48,7 +48,7 @@ For Context B (ad-hoc), assess requirements alignment as "no requirements files 
 
 ### 3a. Critic Review
 
-Read `../../refine/references/clarify-critic.md` and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `lifecycle/{feature}/events.log` with the post-critic status.
+Read `../../refine/references/clarify-critic.md` and follow its protocol. After the critic completes, the orchestrator writes the `clarify_critic` event to `cortex/lifecycle/{feature}/events.log` with the post-critic status.
 
 ### 4. Question Threshold
 
@@ -80,7 +80,7 @@ Write or present the following five outputs — this is the handoff package for 
    Default to `high` for skill/lifecycle/hook/workflow changes. Default to `medium` only for clearly isolated, easily-reverted tooling changes (e.g., a standalone UI tweak with no shared dependencies). State the assessment and proceed — do not ask the user to confirm.
 
 4. **Requirements alignment note**: One of:
-   - "Aligned with requirements/{file}: [brief summary of relevant constraints or goals]"
+   - "Aligned with cortex/requirements/{file}: [brief summary of relevant constraints or goals]"
    - "Partial alignment: [what aligns and what doesn't]"
    - "No requirements files found — requirements alignment check skipped"
    - "Conflict detected: [describe the conflict]" — if conflict, resolve with user before proceeding
@@ -89,7 +89,7 @@ Write or present the following five outputs — this is the handoff package for 
 
 ### 6. Research Sufficiency Criteria
 
-When Research phase entry evaluates an existing `lifecycle/{slug}/research.md`, apply these criteria to determine whether it is sufficient or must be rerun. These criteria are defined here (in Clarify) because the clarified intent statement and scope boundaries produced in §5 are the benchmark against which Research is graded.
+When Research phase entry evaluates an existing `cortex/lifecycle/{slug}/research.md`, apply these criteria to determine whether it is sufficient or must be rerun. These criteria are defined here (in Clarify) because the clarified intent statement and scope boundaries produced in §5 are the benchmark against which Research is graded.
 
 **Research is sufficient if none of the following signals are present:**
 

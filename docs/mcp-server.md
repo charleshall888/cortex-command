@@ -12,7 +12,7 @@ This doc owns the **control-plane interface** plane. It is a sibling of `overnig
 
 ## What this server is
 
-`cortex mcp-server` is a stdio-transport MCP server that exposes five tools for driving the overnight runner from a Claude Code conversation. It is stateless: every tool call reads or writes filesystem-grounded state under `lifecycle/sessions/{session_id}/`, which means an MCP client can be restarted or replaced without affecting an in-flight runner.
+`cortex mcp-server` is a stdio-transport MCP server that exposes five tools for driving the overnight runner from a Claude Code conversation. It is stateless: every tool call reads or writes filesystem-grounded state under `cortex/lifecycle/sessions/{session_id}/`, which means an MCP client can be restarted or replaced without affecting an in-flight runner.
 
 Two install paths exist; both register the same `cortex mcp-server` subprocess:
 
@@ -121,7 +121,7 @@ The cursor is an **opaque token**. Do not parse, modify, or persist its internal
 Escalations — the worker-to-orchestrator side channel described in `docs/overnight-operations.md` — live at:
 
 ```
-lifecycle/sessions/{session_id}/escalations.jsonl
+cortex/lifecycle/sessions/{session_id}/escalations.jsonl
 ```
 
 Every active session has its own escalations file. There is no repo-level `escalations.jsonl` anymore; the legacy path was removed as part of the MCP control-plane work. To read escalation records via the MCP layer, call `overnight_logs` with `files: ["escalations"]` and the desired `session_id`.
@@ -175,7 +175,7 @@ The runner spawns with `start_new_session=True` and reparents to PID 1 / `launch
 When the MCP server spawns a runner via `overnight_start_run`, the runner's stdout and stderr are redirected to:
 
 ```
-lifecycle/sessions/{session_id}/runner-bootstrap.log
+cortex/lifecycle/sessions/{session_id}/runner-bootstrap.log
 ```
 
 This file captures pre-`events.log`-init failures: import errors, missing dependencies, `session_dir` permission errors, early uncaught exceptions, and anything else that prevents the runner from initializing its own structured logging. If a fresh `overnight_start_run` call returns a `pid` but `events.log` never appears, `runner-bootstrap.log` is the first place to look.
@@ -198,7 +198,7 @@ Exporting via `export CORTEX_ALLOW_INSTALL_DURING_RUN=1` (or persisting it in `~
 
 ### Split-brain escalations consequence
 
-If you bypass the guard mid-run, the OLD-code runner is still using its in-memory bindings from before the upgrade. Specifically: the orchestrator agent (which is re-spawned each round and re-imports modules) will pick up the NEW write path — `lifecycle/sessions/{session_id}/escalations.jsonl` — while the in-memory OLD-code `feature_executor.py` and `outcome_router.py` continue writing to whatever path their imports resolved at runner-launch time. Under the migration, the old default is the deleted repo-level `lifecycle/escalations.jsonl`.
+If you bypass the guard mid-run, the OLD-code runner is still using its in-memory bindings from before the upgrade. Specifically: the orchestrator agent (which is re-spawned each round and re-imports modules) will pick up the NEW write path — `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` — while the in-memory OLD-code `feature_executor.py` and `outcome_router.py` continue writing to whatever path their imports resolved at runner-launch time. Under the migration, the old default is the deleted repo-level `cortex/lifecycle/escalations.jsonl`.
 
 The result is a **split-brain escalations state**:
 
@@ -213,7 +213,7 @@ This is the central reason the in-flight guard exists. The bypass is provided fo
 Once the active run has fully completed (phase `complete` or paused-and-not-resuming), clean up any legacy file the OLD-code processes may have written during the bypass window:
 
 ```
-git rm lifecycle/escalations.jsonl
+git rm cortex/lifecycle/escalations.jsonl
 ```
 
 Commit the deletion. The next overnight run will be entirely on the per-session layout and the split-brain window closes. If the file does not exist when you check, no cleanup is required — the OLD-code path may have failed cleanly under the missing-directory error rather than silently writing.

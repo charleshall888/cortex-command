@@ -6,11 +6,11 @@ argument-hint: "[area]"
 inputs:
   - "area: string (optional) — area name (kebab-case) for area-level requirements; omit for project-level; 'list' to show all documented areas"
 outputs:
-  - "requirements/project.md — master project requirements document (project-level invocation)"
-  - "requirements/{{area}}.md — area-specific requirements document (area-level invocation)"
+  - "cortex/requirements/project.md — master project requirements document (project-level invocation)"
+  - "cortex/requirements/{{area}}.md — area-specific requirements document (area-level invocation)"
 preconditions:
   - "Run from project root"
-  - "requirements/ directory will be created if it does not exist"
+  - "cortex/requirements/ directory will be created if it does not exist"
 ---
 
 # Requirements
@@ -27,10 +27,10 @@ Area: $ARGUMENTS (if non-empty, scope interview to this area; if empty, run full
 
 ## Storage
 
-Requirements live in `requirements/` at the project root:
+Requirements live in `cortex/requirements/` at the project root:
 
-- `requirements/project.md` — master project requirements
-- `requirements/{area}.md` — area-specific requirements (e.g., `requirements/multiplayer.md`)
+- `cortex/requirements/project.md` — master project requirements
+- `cortex/requirements/{area}.md` — area-specific requirements (e.g., `cortex/requirements/multiplayer.md`)
 
 Area names use lowercase-kebab-case (same convention as lifecycle directories).
 
@@ -44,7 +44,7 @@ Parse the invocation to determine scope:
 
 ### Step 1a: List
 
-Scan `requirements/` for all `.md` files. For each, read the first heading and the Overview section. Present a summary table:
+Scan `cortex/requirements/` for all `.md` files. For each, read the first heading and the Overview section. Present a summary table:
 
 | File | Scope | Last Gathered | Requirement Count |
 |------|-------|---------------|-------------------|
@@ -57,7 +57,7 @@ If no requirements directory exists, report: "No requirements documented yet. Ru
 
 Check if the target file already exists:
 
-- **If `requirements/{scope}.md` exists**: Read it, present a summary, and ask:
+- **If `cortex/requirements/{scope}.md` exists**: Read it, present a summary, and ask:
   - **Update** — Run a follow-up interview to refine or extend
   - **Replace** — Start fresh (confirms overwrite)
   - **View** — Display the current requirements
@@ -70,14 +70,14 @@ If the project has existing source code, launch a focused codebase exploration t
 - Project structure, languages, and frameworks
 - Existing features and capabilities already built
 - Architecture patterns, conventions, and technology choices already made
-- README, docs, or any existing requirements/spec/design files
+- README, docs, or any existing cortex/requirements/spec/design files
 - CLAUDE.md or equivalent project instructions — understand what operational context is already documented so the interview and artifact avoid duplicating it
 
 **For existing codebases** (retroactive documentation): Mine the code for what's already been decided. The codebase IS the current requirements — extract them rather than asking the user to re-state what the code already shows. Focus the interview on intent, priorities, and boundaries the code can't tell you.
 
 **For greenfield projects** (no meaningful source code): Skip this step.
 
-For area-level requirements, also read `requirements/project.md` if it exists — area requirements should be consistent with project-level decisions.
+For area-level requirements, also read `cortex/requirements/project.md` if it exists — area requirements should be consistent with project-level decisions.
 
 ## Step 4: Structured Interview
 
@@ -93,7 +93,7 @@ Present the requirements document summary. The user must approve before finalizi
 
 ## Step 7: Commit
 
-Stage `requirements/` and commit using `/cortex-core:commit`.
+Stage `cortex/requirements/` and commit using `/cortex-core:commit`.
 
 ## Downstream Integration
 

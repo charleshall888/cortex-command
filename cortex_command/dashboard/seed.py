@@ -432,7 +432,7 @@ def write_metrics(repo_root: Path) -> None:
 def write_feature_files(repo_root: Path, slug: str, status: str) -> None:
     """Write per-feature lifecycle files for a seeded feature.
 
-    Creates ``lifecycle/{slug}/`` under ``repo_root`` and writes three files:
+    Creates ``cortex/lifecycle/{slug}/`` under ``repo_root`` and writes three files:
 
     - ``agent-activity.jsonl``: 12 events — 5 ``tool_call``/``tool_result``
       pairs for tools Read, Grep, Edit, Bash, Write (10 events), then two

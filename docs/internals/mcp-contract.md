@@ -12,7 +12,7 @@ Every JSON payload the CLI emits for MCP consumption carries a `"version"` strin
 - **Initial version: `"1.0"`.** Stamped on every payload from `cortex --print-root`, `cortex overnight start --format json`, `cortex overnight status --format json`, `cortex overnight logs --format json`, and `cortex overnight cancel --format json`. The CLI side of the constant lives at `cortex_command/overnight/cli_handler.py::_JSON_SCHEMA_VERSION`.
 - **Major bump (M increments) = breaking change.** The MCP consumer hard-rejects payloads whose major component differs from its baked-in `MCP_REQUIRED_CLI_VERSION` constant. A major bump is reserved for renaming or retyping an existing field, removing a field, or changing its semantics.
 - **Minor bump (m increments) = additive change.** The MCP consumer skips unknown fields and accepts payloads with a greater minor than its required floor. Minor bumps are how new fields land without breaking older MCP plugins paired with newer CLIs.
-- **Single CLI major in scope.** The first implementation pins the MCP to one CLI major schema version. Multi-major compatibility is explicitly out of scope (see `lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md` Non-Requirements).
+- **Single CLI major in scope.** The first implementation pins the MCP to one CLI major schema version. Multi-major compatibility is explicitly out of scope (see `cortex/lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md` Non-Requirements).
 
 ### Forever-public API
 
@@ -45,7 +45,7 @@ Source: `cortex_command/cli.py::_dispatch_print_root` (around lines 128–165).
 Field semantics:
 
 - `version` — schema-floor stamp; see [Schema versioning](#schema-versioning). Bumped from `"1.0"` to `"1.1"` in ticket 141 when `package_root` was added (additive change — `1.0` consumers ignore the new field).
-- `root` — absolute path to the **user's project** (the directory where they ran `cortex init`). Resolution chain: `CORTEX_REPO_ROOT` env override → CWD when CWD contains either `lifecycle/` or `backlog/` → hard-fail on stderr (exit 2) with a guidance message. Note that under non-editable wheel install this is **not** the cortex-command install location — see `package_root` for that.
+- `root` — absolute path to the **user's project** (the directory where they ran `cortex init`). Resolution chain: `CORTEX_REPO_ROOT` env override → CWD when CWD contains either `cortex/lifecycle/` or `cortex/backlog/` → hard-fail on stderr (exit 2) with a guidance message. Note that under non-editable wheel install this is **not** the cortex-command install location — see `package_root` for that.
 - `package_root` — absolute path to the cortex-command package install (e.g. inside `~/.local/share/uv/tools/cortex-command/lib/python<ver>/site-packages/cortex_command/`). Resolved via `Path(cortex_command.__file__).resolve().parent`. Useful for diagnostic introspection; not consumed by R8 throttle keying or R13 schema-floor checks.
 - `remote_url` — output of `git -C $root remote get-url origin`, stripped (where `$root` is the user's project root, not the package install). Empty string if the user's project is not a git repository or the git command fails. Never `null`.
 - `head_sha` — output of `git -C $root rev-parse HEAD`, stripped. Empty string if the user's project is not a git repository. Never `null`.
@@ -174,7 +174,7 @@ Not currently a CLI verb. The `overnight_list_sessions` MCP tool reads the sessi
 
 MCP-orchestrated auto-update is auto-RCE. If the upstream cortex repository on GitHub is compromised — account takeover, malicious PR merged, dependency poisoning of the install script — the next MCP-triggered `cortex upgrade` runs attacker-controlled code with the user's privileges. That includes filesystem write access to `~/.local/share/uv/tools/cortex-command/`, `~/.local/bin/cortex`, and any path the cortex CLI subsequently reaches during normal operation.
 
-This trade-off is accepted deliberately. Per `requirements/project.md`, cortex-command is personal tooling — "Published packages or reusable modules for others — out of scope." The user is responsible for the trustworthiness of their own upstream repository (their own GitHub account). The threat surface is one-self.
+This trade-off is accepted deliberately. Per `cortex/requirements/project.md`, cortex-command is personal tooling — "Published packages or reusable modules for others — out of scope." The user is responsible for the trustworthiness of their own upstream repository (their own GitHub account). The threat surface is one-self.
 
 Mitigations that exist:
 

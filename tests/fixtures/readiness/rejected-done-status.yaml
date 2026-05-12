@@ -7,8 +7,8 @@ tags: []
 created: 2026-01-01
 updated: 2026-01-01
 blocked-by: []
-research: lifecycle/done-feature/research.md
-spec: lifecycle/done-feature/spec.md
+research: cortex/lifecycle/done-feature/research.md
+spec: cortex/lifecycle/done-feature/spec.md
 ---
 
 A backlog item with terminal status — should be rejected at step 1.

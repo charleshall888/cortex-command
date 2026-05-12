@@ -15,7 +15,7 @@ Call `load_state()` from `cortex_command.overnight.state` (no arguments — uses
 Regenerate the backlog index so that feature selection in Step 3 operates on up-to-date metadata.
 
 1. Run `cortex-generate-backlog-index` from the project root. If the command exits with a non-zero status, report: "Backlog index regeneration failed (exit {code}). Fix the issue and retry `/overnight`." → halt.
-2. Stage the regenerated index files: `git add backlog/index.json backlog/index.md`.
+2. Stage the regenerated index files: `git add cortex/backlog/index.json cortex/backlog/index.md`.
 3. If there are staged changes (i.e., the index actually changed), commit with message "Regenerate backlog index". If the commit fails, report: "Failed to commit regenerated backlog index: {error}." → halt.
 4. If there are no staged changes, skip the commit — the index is already current.
 
@@ -26,11 +26,11 @@ Run `select_overnight_batch()` from `cortex_command.overnight.backlog` on the pr
 This function composes the full selection pipeline: parse backlog items, filter for readiness (status, blockers, research + spec + plan artifacts), score by weighted algorithm (dependency structure, priority, tag cohesion, type routing), and group into batches.
 
 A feature is eligible only if the following exist on disk:
-- `lifecycle/{slug}/research.md` exists on disk (slug = `item.lifecycle_slug` if set, else `slugify(item.title)`)
-- `lifecycle/{slug}/spec.md` exists on disk (produced by `/refine` or `/lifecycle`)
+- `cortex/lifecycle/{slug}/research.md` exists on disk (slug = `item.lifecycle_slug` if set, else `slugify(item.title)`)
+- `cortex/lifecycle/{slug}/spec.md` exists on disk (produced by `/refine` or `/lifecycle`)
 - `type:` is not `epic` — epic items are non-implementable and excluded at step 4 (after blocked-by, before artifact checks); a blocked epic reports its blocking dependency, not the epic exclusion
 
-If `lifecycle/{slug}/plan.md` is missing, it is generated automatically during the
+If `cortex/lifecycle/{slug}/plan.md` is missing, it is generated automatically during the
 overnight session before the feature executes — no pre-run `/lifecycle plan` needed.
 
 **If no eligible items** (selection result has zero batches): Report "Nothing ready for overnight execution." List the ineligible items with their reasons from the selection result. Suggest running `/lifecycle` through the plan phase on the highest-priority ineligible items to produce the required lifecycle artifacts. Stop.
@@ -71,7 +71,7 @@ This produces a formatted markdown session plan with:
 
 Collect specs for all selected features, display the session plan with specs inline, and get a single approval covering both.
 
-**Collect specs**: For each selected feature (in round-then-priority order), attempt to read `lifecycle/{slug}/spec.md`.
+**Collect specs**: For each selected feature (in round-then-priority order), attempt to read `cortex/lifecycle/{slug}/spec.md`.
 
 - **If a spec file is missing or unreadable**: Report "Cannot read spec for {feature_title}: {error}." Offer two choices: (a) remove the feature from the selection and continue, or (b) abort planning so the user can fix the spec. If the user chooses remove, update the selection and skip that feature in the display below.
 
@@ -81,12 +81,12 @@ Collect specs for all selected features, display the session plan with specs inl
 {rendered session plan}
 
 ─────────────────────────────────────────
-Spec [1/{total}]: {feature_title}  (lifecycle/{slug}/spec.md)
+Spec [1/{total}]: {feature_title}  (cortex/lifecycle/{slug}/spec.md)
 ─────────────────────────────────────────
 {spec content}
 
 ─────────────────────────────────────────
-Spec [2/{total}]: {feature_title}  (lifecycle/{slug}/spec.md)
+Spec [2/{total}]: {feature_title}  (cortex/lifecycle/{slug}/spec.md)
 ─────────────────────────────────────────
 {spec content}
 ```
@@ -107,7 +107,7 @@ Approve this plan and specs?
 - **Adjust time limit (T)**: Ask for the new time limit. Re-render the plan with the new limit and re-display before prompting again.
 - **Abort (Q)**: Stop immediately. Report "Planning aborted." Do not write any artifacts. Stop.
 
-**Error**: If `lifecycle/{slug}/spec.md` exists but cannot be decoded (e.g., binary content, encoding error), treat it the same as a missing file and offer the remove-or-abort choice.
+**Error**: If `cortex/lifecycle/{slug}/spec.md` exists but cannot be decoded (e.g., binary content, encoding error), treat it the same as a missing file and offer the remove-or-abort choice.
 
 ## Step 7: Launch
 
@@ -122,9 +122,9 @@ On user approval, execute these steps in order:
    ```
    Do not write any artifacts, create any worktrees, or mark the session `executing`. → stop.
 
-1. **Pre-flight: uncommitted lifecycle/backlog files**: Run `git status --porcelain -- lifecycle/ backlog/` and capture the output.
+1. **Pre-flight: uncommitted cortex/lifecycle/backlog files**: Run `git status --porcelain -- cortex/lifecycle/ cortex/backlog/` and capture the output.
 
-   - **If output is non-empty** (any untracked files, staged, or modified-but-unstaged files in `lifecycle/` or `backlog/`): block launch with:
+   - **If output is non-empty** (any untracked files, staged, or modified-but-unstaged files in `cortex/lifecycle/` or `cortex/backlog/`): block launch with:
      ```
      Uncommitted lifecycle files detected. The overnight worktree is created from HEAD, so
      these files will not be visible to the runner. Commit or stash them before launching.
@@ -134,7 +134,7 @@ On user approval, execute these steps in order:
      ```
      Then offer: "Would you like me to run `/commit` now?"
 
-     - **If user accepts**: invoke `/commit`. After it returns, re-run `git status --porcelain -- lifecycle/ backlog/`. If the output is now empty, proceed to Launch sub-step 2. If the output is still non-empty, display the block message again with the remaining paths and stop — do not offer `/commit` a second time.
+     - **If user accepts**: invoke `/commit`. After it returns, re-run `git status --porcelain -- cortex/lifecycle/ cortex/backlog/`. If the output is now empty, proceed to Launch sub-step 2. If the output is still non-empty, display the block message again with the remaining paths and stop — do not offer `/commit` a second time.
      - **If user declines**: stop with "Commit or stash the files above, then run `/overnight` again." Do not proceed to Launch sub-step 2.
 
    - **If output is empty**: proceed to Launch sub-step 2 without any message.
@@ -154,7 +154,7 @@ On user approval, execute these steps in order:
 
 3. **latest-overnight symlink**: Handled by the runner on startup. The skill does not create this symlink — it writes to the repo root which is outside the sandbox's write allowlist in sandboxed projects.
 
-4. **Extract batch spec sections**: Read the worktree path from the initialized state (`state.worktree_path`). Call `extract_batch_specs(state, Path(worktree_path))` from `cortex_command.overnight.plan`, passing the worktree path instead of the repository root so that extracted specs are written into the worktree's `lifecycle/` directory. If the returned list is non-empty, `cd` to the worktree directory, stage each returned path with `git add` (paths are relative to the worktree, not the repo root), and commit using `/commit` with message `"Extract batch spec sections for overnight session {session_id}"` (substituting the actual session ID). This commits the specs on the integration branch, not on main. If the list is empty, skip the commit — no batch-spec items were selected.
+4. **Extract batch spec sections**: Read the worktree path from the initialized state (`state.worktree_path`). Call `extract_batch_specs(state, Path(worktree_path))` from `cortex_command.overnight.plan`, passing the worktree path instead of the repository root so that extracted specs are written into the worktree's `cortex/lifecycle/` directory. If the returned list is non-empty, `cd` to the worktree directory, stage each returned path with `git add` (paths are relative to the worktree, not the repo root), and commit using `/commit` with message `"Extract batch spec sections for overnight session {session_id}"` (substituting the actual session ID). This commits the specs on the integration branch, not on main. If the list is empty, skip the commit — no batch-spec items were selected.
 
    **Error**: If `git add` or `git commit` fails, report: "Batch spec commit failed: {error}. Proceeding without committing batch spec sections — they may be extracted during runner startup." Continue — the runner can still function without the pre-commit.
 

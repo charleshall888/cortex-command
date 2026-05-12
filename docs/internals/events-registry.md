@@ -17,7 +17,7 @@ The registry exists because the audit that produced epic #172 found the cost of 
 | Column | Required | Description |
 |---|---|---|
 | `event_name` | yes | The event-name string literal as it appears in emissions (matches the `"event"` field in the JSONL row). |
-| `target` | yes | `per-feature-events-log` for `lifecycle/{feature}/events.log` rows, `overnight-events-log` for `lifecycle/overnight-events.log` rows. |
+| `target` | yes | `per-feature-events-log` for `cortex/lifecycle/{feature}/events.log` rows, `overnight-events-log` for `cortex/lifecycle/overnight-events.log` rows. |
 | `scan_coverage` | yes | `gate-enforced` — the static gate scans for new emissions of this name in the skill-prompt scan surface. `manual` — Python or shell emission; the gate does NOT auto-detect drift; the row exists for human reference. |
 | `producers` | yes | `;`-separated list of `path:line` pointers to the emission sites. Python collective references (e.g. `cortex_command/overnight/events.py:EVENT_TYPES`) are permitted. |
 | `consumers` | yes | `;`-separated list of `path:line` pointers to read sites. Skill prompts, Python, shell, and tests all count; tests-only consumers carry a `tests-only` annotation. Audit-affordance rows may use the literal value `human-skim` with a rationale. |
@@ -67,7 +67,7 @@ When an event is scheduled for deletion (the producer is being removed, but in-f
 1. `category` set to `deprecated-pending-removal`.
 2. `deprecation_date` set to today + 30 days (aligned to the repo's observed 25-day batch cadence; not 14 days, which is too tight to absorb a missed cycle).
 3. `owner` set to the engineer responsible for the cleanup follow-up PR.
-4. `rationale` updated to explain why the deletion is staged (typically: "Emission deleted in PR #N; deprecation row exists so in-flight features that already emit this name don't trip the gate; row removable once no events.log in `lifecycle/` contains the name").
+4. `rationale` updated to explain why the deletion is staged (typically: "Emission deleted in PR #N; deprecation row exists so in-flight features that already emit this name don't trip the gate; row removable once no events.log in `cortex/lifecycle/` contains the name").
 
 Once the deprecation date passes and the cleanup-PR runner has confirmed no live emissions remain, the row is removed entirely from the registry. Tolerant-Reader semantics in all consumers (Python, shell, skill prompts) ensure that already-archived events.log rows with the deleted name remain parseable — readers silently skip unknown event names, so archive data is never broken by registry pruning.
 

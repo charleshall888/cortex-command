@@ -27,16 +27,16 @@ to pick the correct events.log target -- never hardcoded. Path resolution
 rules (spec R9 + R13 + EVT-1):
 
   1. If ``LIFECYCLE_SESSION_ID`` is set in the env AND a lifecycle directory
-     under ``{repo_root}/lifecycle/`` contains a ``.session`` (or
+     under ``{repo_root}/cortex/lifecycle/`` contains a ``.session`` (or
      ``.session-owner``) file whose contents byte-equal that ID, the active
      lifecycle slug is that directory's basename and the target is
-     ``lifecycle/{lifecycle-slug}/events.log``.
+     ``cortex/lifecycle/{lifecycle-slug}/events.log``.
 
   2. Otherwise, when the supplied topic slug has a trailing ``-N`` suffix
      (decimal integer, N >= 2 per R13's re-run rule), the target is
-     ``research/{topic}-N/events.log``.
+     ``cortex/research/{topic}-N/events.log``.
 
-  3. Otherwise, the target is ``research/{topic}/events.log``.
+  3. Otherwise, the target is ``cortex/research/{topic}/events.log``.
 
 Public functions are importable for unit testing; the CLI is a thin
 argparse wrapper.
@@ -88,7 +88,7 @@ def _active_lifecycle_slug(repo_root: Path) -> str | None:
 
     The SessionStart hook (``hooks/cortex-scan-lifecycle.sh``) injects
     ``LIFECYCLE_SESSION_ID`` into the environment. The active lifecycle
-    feature is the ``lifecycle/<slug>/`` directory whose ``.session`` (or
+    feature is the ``cortex/lifecycle/<slug>/`` directory whose ``.session`` (or
     chain-migrated ``.session-owner``) file contents byte-equal that ID.
 
     Args:
@@ -96,7 +96,7 @@ def _active_lifecycle_slug(repo_root: Path) -> str | None:
 
     Returns:
         The matching lifecycle slug, or ``None`` if no env var is set, no
-        ``lifecycle/`` directory exists, or no slug's ``.session`` matches.
+        ``cortex/lifecycle/`` directory exists, or no slug's ``.session`` matches.
     """
     session_id = os.environ.get("LIFECYCLE_SESSION_ID", "").strip()
     if not session_id:
@@ -157,17 +157,17 @@ def resolve_events_log_path(
     Resolution rules (spec R9 + R13 + EVT-1):
 
       1. If an active lifecycle is detected (``LIFECYCLE_SESSION_ID`` env
-         set AND a ``lifecycle/<slug>/.session`` file matches), the target
-         is ``{repo_root}/lifecycle/{lifecycle-slug}/events.log``. The
+         set AND a ``cortex/lifecycle/<slug>/.session`` file matches), the target
+         is ``{repo_root}/cortex/lifecycle/{lifecycle-slug}/events.log``. The
          topic argument is honored for slug validation but the lifecycle
          path takes precedence per EVT-1.
 
       2. Otherwise, if ``topic`` has a trailing ``-N`` decimal suffix
          (R13 re-run semantics, N >= 2), the target is
-         ``{repo_root}/research/{topic}/events.log`` where the ``-N`` is
+         ``{repo_root}/cortex/research/{topic}/events.log`` where the ``-N`` is
          already in the slug.
 
-      3. Otherwise, the target is ``{repo_root}/research/{topic}/events.log``.
+      3. Otherwise, the target is ``{repo_root}/cortex/research/{topic}/events.log``.
 
     Args:
         topic: The discovery topic slug (lowercase-kebab-case, may carry a
@@ -185,11 +185,11 @@ def resolve_events_log_path(
     lifecycle_slug = _active_lifecycle_slug(repo_root)
     if lifecycle_slug is not None:
         return repo_root / "cortex" / "lifecycle" / lifecycle_slug / "events.log"
-    # Cases (2) and (3) both produce research/{topic}/events.log -- the
+    # Cases (2) and (3) both produce cortex/research/{topic}/events.log -- the
     # -N suffix is already part of the slug per R13 (the agent generates
     # ``{topic}-2`` and passes that as the topic argument). Per spec R9:
     # "When the slug has a -N suffix (per R13 re-run semantics), the
-    # resolver returns research/{topic}-N/events.log" -- i.e. the same
+    # resolver returns cortex/research/{topic}-N/events.log" -- i.e. the same
     # research/{slug}/events.log shape, with the slug already including
     # the suffix.
     return repo_root / "cortex" / "research" / topic / "events.log"

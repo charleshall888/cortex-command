@@ -5,7 +5,7 @@ performs at round startup (overnight-state.json, overnight-strategy.json,
 escalations.jsonl, session-plan.md) into a single in-process function call.
 
 This module is read-only with respect to all state files, lock-free per
-requirements/pipeline.md:127,134, and performs no in-process caching (each
+cortex/requirements/pipeline.md:127,134, and performs no in-process caching (each
 round-spawn gets a fresh read).
 """
 

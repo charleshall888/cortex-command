@@ -2159,7 +2159,7 @@ def _delegate_overnight_status(payload: StatusInput) -> StatusOutput | str:
             return _CORTEX_CLI_MISSING_ERROR
         cortex_root = root_payload.get("root", "")
         # The CLI expects an absolute or repo-relative session dir; use
-        # the cortex_root's lifecycle/sessions tree.
+        # the cortex_root's cortex/lifecycle/sessions tree.
         session_dir = (
             Path(cortex_root) / "cortex" / "lifecycle" / "sessions" / payload.session_id
         )

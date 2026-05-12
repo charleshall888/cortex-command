@@ -199,7 +199,7 @@ def _read_test_command(cwd: Path) -> str:
 def build_config(feature: str, cwd: Path, session_id: str) -> BatchConfig:
     """Construct a single-feature ``BatchConfig`` and initial state file.
 
-    Builds per-feature paths under ``lifecycle/{feature}/``, writes an
+    Builds per-feature paths under ``cortex/lifecycle/{feature}/``, writes an
     initial ``daytime-state.json`` (minimal ``OvernightState`` for a
     single feature), and pre-creates the per-feature deferred directory.
 
@@ -354,7 +354,7 @@ async def run_daytime(feature: str) -> int:
         plan_path = Path(f"cortex/lifecycle/{feature}/plan.md")
         if not plan_path.exists():
             sys.stderr.write(
-                f"error: plan.md not found at `lifecycle/{feature}/plan.md`\n"
+                f"error: plan.md not found at `cortex/lifecycle/{feature}/plan.md`\n"
             )
             _top_exc = FileNotFoundError(
                 f"plan.md not found at lifecycle/{feature}/plan.md"

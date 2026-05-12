@@ -2,7 +2,7 @@
 
 This package consolidates readiness logic that was previously duplicated
 across ``cortex_command.overnight.backlog.filter_ready`` and
-``backlog/generate_index.py``.
+``cortex/backlog/generate_index.py``.
 
 Re-exports the public helpers from :mod:`cortex_command.backlog.readiness`
 so callers can write::

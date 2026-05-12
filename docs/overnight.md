@@ -24,7 +24,7 @@ For mechanics, state files, recovery, and debugging procedures, see [overnight-o
 
 - [ ] Features in backlog have `status: refined`
 - [ ] Each feature has `research:` and `spec:` frontmatter fields pointing to existing files
-- [ ] `lifecycle/{slug}/spec.md` exists for each feature (run `/cortex-core:refine <item>` to produce it)
+- [ ] `cortex/lifecycle/{slug}/spec.md` exists for each feature (run `/cortex-core:refine <item>` to produce it)
 - [ ] Python venv is set up (`just python-setup` if not done)
 - [ ] Run `/overnight` in Claude Code — review and approve the session plan
 - [ ] (Optional) Launch the [dashboard](dashboard.md) in a separate terminal: `just dashboard`
@@ -81,10 +81,10 @@ Other fields:
 
 1. Ensure `lifecycle.config.md` exists at the repo root with `test-command` configured.
 2. Open a Claude session in that repo's directory.
-3. Run `/overnight` — it will generate the session plan and write the state file to `lifecycle/sessions/{session_id}/overnight-state.json` inside that repo.
+3. Run `/overnight` — it will generate the session plan and write the state file to `cortex/lifecycle/sessions/{session_id}/overnight-state.json` inside that repo.
 4. In a terminal, launch the runner with the explicit state file path:
    ```bash
-   cortex overnight start --state lifecycle/sessions/{session_id}/overnight-state.json
+   cortex overnight start --state cortex/lifecycle/sessions/{session_id}/overnight-state.json
    ```
 
 **Status and log:**
@@ -107,7 +107,7 @@ prepared before selection. The readiness gate checks four things:
 | `status: refined` in backlog frontmatter | Set by `/cortex-core:refine` on spec approval, or manually with `/cortex-core:backlog` |
 | `research:` field in backlog YAML pointing to an existing file | Produced by `/cortex-core:refine` or `/cortex-core:discovery` |
 | `spec:` field in backlog YAML pointing to an existing file | Produced by `/cortex-core:refine` or `/cortex-core:discovery` |
-| `lifecycle/{slug}/spec.md` exists on disk | Produced by `/cortex-core:refine <item>` |
+| `cortex/lifecycle/{slug}/spec.md` exists on disk | Produced by `/cortex-core:refine <item>` |
 
 A feature that passes all four checks is eligible for overnight selection. Features
 that fail the gate are reported as ineligible with a reason — they don't silently drop.
@@ -121,7 +121,7 @@ that fail the gate are reported as ineligible with a reason — they don't silen
 
 /cortex-core:refine <item>              (for each backlog ticket you want to run overnight)
     → Clarify → Research → Spec phases (interactive, ~15 min)
-    → produces lifecycle/{slug}/spec.md
+    → produces cortex/lifecycle/{slug}/spec.md
     → sets status: refined on the backlog item
 
 /overnight                  → select features, approve plan, launch
@@ -145,7 +145,7 @@ Run `/overnight` to start the interactive planning session. The skill walks five
 
 ### 1. Select eligible features
 
-`select_overnight_batch()` scans `backlog/NNN-*.md`, parses YAML frontmatter, applies
+`select_overnight_batch()` scans `cortex/backlog/NNN-*.md`, parses YAML frontmatter, applies
 the readiness gate, and scores eligible items using a weighted algorithm:
 
 - **Dependency structure** — unblocked features rank higher
@@ -180,8 +180,8 @@ You can adjust before approving:
 
 On approval, the skill:
 
-1. Writes `lifecycle/overnight-plan.md` — the session plan is immutable from this point (per-feature `plan.md` files are generated later by the orchestrator if missing)
-2. Initializes `lifecycle/overnight-state.json` with session ID (`overnight-YYYY-MM-DD-HHmm`), feature statuses, round assignments, and phase `executing`
+1. Writes `cortex/lifecycle/overnight-plan.md` — the session plan is immutable from this point (per-feature `plan.md` files are generated later by the orchestrator if missing)
+2. Initializes `cortex/lifecycle/overnight-state.json` with session ID (`overnight-YYYY-MM-DD-HHmm`), feature statuses, round assignments, and phase `executing`
 3. Creates git integration branch `overnight/{session_id}`
 4. Extracts and commits batch spec sections (if applicable)
 5. Logs `SESSION_START` to the event log
@@ -222,11 +222,11 @@ Run `/morning-review` the morning after an overnight session.
 
 The skill:
 
-1. **Reads `lifecycle/morning-report.md`** — the full session summary
+1. **Reads `cortex/lifecycle/morning-report.md`** — the full session summary
 2. **Walks each report section** in order (executive summary, feature outcomes, deferred questions)
 3. **Presents deferred questions** for you to answer; answers are written back and features can resume
 4. **Advances completed lifecycles** — features marked merged get their `events.log` closed out
-5. **Archives closed backlog items** — resolved items move to `backlog/archive/`
+5. **Archives closed backlog items** — resolved items move to `cortex/backlog/archive/`
 
 The session PR (from `overnight/{session_id}` to `main`) is created automatically at
 session end. `/morning-review` surfaces its URL so you can review and merge.
@@ -261,7 +261,7 @@ The runner scales well — you can queue as many features as you like. There is 
 
 - Run `/cortex-core:backlog pick` → `/cortex-core:refine <item>` for each target feature
 - `/cortex-core:refine` runs Clarify → Research → Spec and sets `status: refined` — takes ~15 min per feature
-- Verify `lifecycle/{slug}/spec.md` exists: `ls lifecycle/*/spec.md`
+- Verify `cortex/lifecycle/{slug}/spec.md` exists: `ls cortex/lifecycle/*/spec.md`
 - Run `just overnight-smoke-test` once to verify the toolchain is healthy
 
 ### Morning workflow

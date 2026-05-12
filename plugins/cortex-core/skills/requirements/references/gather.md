@@ -29,7 +29,7 @@ During the interview, skip or abbreviate areas already covered by CLAUDE.md. Foc
 
 ## Project-Level Gathering
 
-For `requirements/project.md`, cover these areas in sequence. Adapt based on answers — skip areas that aren't applicable, dive deeper into areas that surface complexity.
+For `cortex/requirements/project.md`, cover these areas in sequence. Adapt based on answers — skip areas that aren't applicable, dive deeper into areas that surface complexity.
 
 ### 1. Project Vision
 
@@ -72,9 +72,9 @@ Focus on strategic constraints that narrow the solution space — not operationa
 
 ## Area-Level Gathering
 
-For `requirements/{area}.md`, the interview goes deeper since it's scoped to a specific feature area.
+For `cortex/requirements/{area}.md`, the interview goes deeper since it's scoped to a specific feature area.
 
-Before starting, read `requirements/project.md` if it exists. Reference the project requirements when asking questions — area requirements should be consistent with project-level decisions.
+Before starting, read `cortex/requirements/project.md` if it exists. Reference the project requirements when asking questions — area requirements should be consistent with project-level decisions.
 
 **For existing codebases**: Present what the code already reveals about this area's capabilities, patterns, and constraints. Frame the interview around confirming, correcting, and filling gaps — not re-stating what's visible in the code. Focus questions on: intent behind decisions, unwritten rules, known limitations, and planned changes.
 
@@ -183,8 +183,8 @@ Target length: 70–80 lines. The parent doc is always-loaded context — keep i
 - [Items intentionally deferred to later phases]
 
 ## Conditional Loading
-{trigger phrase} → requirements/{area}.md
-{trigger phrase} → requirements/{area}.md
+{trigger phrase} → cortex/requirements/{area}.md
+{trigger phrase} → cortex/requirements/{area}.md
 [One line per area doc. Trigger phrases describe the work that makes the area doc relevant.]
 ```
 
@@ -197,7 +197,7 @@ Area sub-docs do not contain "When to Load" guidance — that belongs in the par
 
 > Last gathered: {date}
 
-**Parent doc**: [requirements/project.md](../../../requirements/project.md)
+**Parent doc**: [cortex/requirements/project.md](../../../requirements/project.md)
 
 ## Overview
 [What this area covers and how it fits into the project]

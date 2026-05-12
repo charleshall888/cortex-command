@@ -6,7 +6,7 @@ Structured interview to surface hidden requirements, edge cases, and priorities 
 
 ### 1. Load Context
 
-Read `lifecycle/{feature}/research.md` for codebase analysis and open questions. If `lifecycle.config.md` exists at the project root, read it for project-specific constraints. If `requirements/project.md` exists at the project root, read it. Scan `requirements/` for area docs whose names suggest relevance to this feature and read any that apply. If no `requirements/` directory or files exist, note this and proceed. Use requirements to avoid re-asking settled questions — focus the interview on feature-specific details that requirements don't already cover.
+Read `cortex/lifecycle/{feature}/research.md` for codebase analysis and open questions. If `lifecycle.config.md` exists at the project root, read it for project-specific constraints. If `cortex/requirements/project.md` exists at the project root, read it. Scan `cortex/requirements/` for area docs whose names suggest relevance to this feature and read any that apply. If no `cortex/requirements/` directory or files exist, note this and proceed. Use requirements to avoid re-asking settled questions — focus the interview on feature-specific details that requirements don't already cover.
 
 ### 2. Structured Interview
 
@@ -37,7 +37,7 @@ Ask probing questions — challenge assumptions, probe unstated expectations, id
 
 ### 2a. Research Confidence Check
 
-**Missing research.md guard**: Before evaluating any signals, check whether `lifecycle/{feature}/research.md` exists.
+**Missing research.md guard**: Before evaluating any signals, check whether `cortex/lifecycle/{feature}/research.md` exists.
 
 - **If it does NOT exist**: Announce to the user that `research.md` is missing and Research must run before Specify can proceed. Then immediately trigger the cycle 1 loop-back: log a `confidence_check` event with `"signals": ["research.md missing"]` and `"action": "loop_back"`, and transition to Research bypassing /refine's Sufficiency Check (same override described below). Do not evaluate C1/C2/C3.
 - **If it DOES exist**: proceed to the C1/C2/C3 signal evaluation below.
@@ -54,7 +54,7 @@ After the interview concludes, evaluate whether the research from `research.md` 
 
 **If all three signals pass**: proceed to §3. No event is logged. Do not emit any acknowledgment to the user.
 
-**Cycle count**: `current_cycle = (count of existing confidence_check events in lifecycle/{feature}/events.log) + 1`. On the first pass with zero existing confidence_check events, current_cycle = 1.
+**Cycle count**: `current_cycle = (count of existing confidence_check events in cortex/lifecycle/{feature}/events.log) + 1`. On the first pass with zero existing confidence_check events, current_cycle = 1.
 
 **If any signal is flagged AND current_cycle = 1**:
 
@@ -79,7 +79,7 @@ Before drafting §3, run the checks below. All checks are silent on pass: if eve
 - **File paths**: Before referencing a file path in a requirement, verify the file exists at that path.
 - **State ownership**: Before asserting that a function writes or persists a value, confirm which function owns that write and when it runs. A function that increments a counter in memory may have its write silently overwritten if another function owns the writeback at end-of-batch.
 
-**Research cross-check**: Re-read `lifecycle/{feature}/research.md` in full. For each explicit behavioral requirement, constraint, guard, or edge case documented in research — verify it appears in the spec's Requirements, Edge Cases, or Technical Constraints. A requirement present in research but absent from the spec is a silent omission, not a scope decision. On failure, surface only the specific omitted item. If an omission is intentional, note it explicitly in Non-Requirements or Open Decisions.
+**Research cross-check**: Re-read `cortex/lifecycle/{feature}/research.md` in full. For each explicit behavioral requirement, constraint, guard, or edge case documented in research — verify it appears in the spec's Requirements, Edge Cases, or Technical Constraints. A requirement present in research but absent from the spec is a silent omission, not a scope decision. On failure, surface only the specific omitted item. If an omission is intentional, note it explicitly in Non-Requirements or Open Decisions.
 
 **Open Decision Resolution**: Before adding any item to `## Open Decisions`, attempt to resolve it using this order:
 
@@ -91,9 +91,9 @@ Any item that IS deferred must include a one-sentence reason why it cannot be re
 
 ### 3. Write Specification Artifact
 
-Compile answers into `lifecycle/{feature}/spec.md`.
+Compile answers into `cortex/lifecycle/{feature}/spec.md`.
 
-**If §2a ended with the user declining to loop back** (i.e., a `confidence_check` event with `"action": "declined"` is present in `lifecycle/{feature}/events.log`): prepend the following callout to the spec, before `## Problem Statement`, substituting one bullet per flagged signal from that event:
+**If §2a ended with the user declining to loop back** (i.e., a `confidence_check` event with `"action": "declined"` is present in `cortex/lifecycle/{feature}/events.log`): prepend the following callout to the spec, before `## Problem Statement`, substituting one bullet per flagged signal from that event:
 
 ```markdown
 > **Advisory — research gaps noted**: The confidence check identified gaps during the interview that were not resolved before proceeding. The requirements below may be incomplete or inaccurate in these areas. This warning is intentional; downstream phases should proceed normally.
@@ -160,7 +160,7 @@ Present the specification summary and use the AskUserQuestion tool to collect th
 
 Enumerate the options on that call explicitly as: `Approve` | `Request changes` | `Cancel`. Route on the response:
 
-- **Approve**: append a `spec_approved` event to `lifecycle/{feature}/events.log`, then append the `phase_transition` event from §5 below, then auto-advance to Plan. Proceed automatically — do not ask the user for confirmation again.
+- **Approve**: append a `spec_approved` event to `cortex/lifecycle/{feature}/events.log`, then append the `phase_transition` event from §5 below, then auto-advance to Plan. Proceed automatically — do not ask the user for confirmation again.
   ```
   {"ts": "<ISO 8601>", "event": "spec_approved", "feature": "<name>"}
   ```
@@ -169,13 +169,13 @@ Enumerate the options on that call explicitly as: `Approve` | `Request changes` 
 
 ### 5. Transition
 
-On `Approve`, append a `phase_transition` event to `lifecycle/{feature}/events.log` (the `spec_approved` event from §4 must precede this one in the log):
+On `Approve`, append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log` (the `spec_approved` event from §4 must precede this one in the log):
 
 ```
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "specify", "to": "plan"}
 ```
 
-If `commit-artifacts` is enabled in project config (default), stage `lifecycle/{feature}/` and commit using `/cortex-core:commit`.
+If `commit-artifacts` is enabled in project config (default), stage `cortex/lifecycle/{feature}/` and commit using `/cortex-core:commit`.
 
 After approval, proceed to Plan automatically — do not ask the user for confirmation.
 

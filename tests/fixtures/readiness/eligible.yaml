@@ -7,8 +7,8 @@ tags: [testing]
 created: 2026-01-01
 updated: 2026-01-01
 blocked-by: []
-research: lifecycle/eligible-feature/research.md
-spec: lifecycle/eligible-feature/spec.md
+research: cortex/lifecycle/eligible-feature/research.md
+spec: cortex/lifecycle/eligible-feature/spec.md
 ---
 
 An eligible backlog item with all required fields and files present.

@@ -41,7 +41,7 @@ Based on the session phase, ask the user what to do:
 |-------|---------|
 | `executing` | Resume execution (print runner command), or view current progress |
 | `paused` | Address the cause of the pause (deferred questions, failures), then resume execution |
-| `complete` | View the morning report at `lifecycle/morning-report.md` |
+| `complete` | View the morning report at `cortex/lifecycle/morning-report.md` |
 | `planning` | This should not normally occur (planning happens interactively). Offer to restart the session. |
 
 ## Step 5: Act on User Choice
@@ -54,6 +54,6 @@ Based on the session phase, ask the user what to do:
 
   The runner resumes from where it left off, skipping already-merged features. After the Bash tool returns, report: "Overnight session resumed. Attach with `tmux attach -t overnight-runner` to monitor progress."
 
-- **View morning report**: Direct the user to read `lifecycle/morning-report.md` for a summary of what was accomplished, what failed, and any deferred questions.
+- **View morning report**: Direct the user to read `cortex/lifecycle/morning-report.md` for a summary of what was accomplished, what failed, and any deferred questions.
 
 - **Address deferred questions**: Present each blocking question from `deferred/` and collect the user's answers. After answering, the user can resume execution.

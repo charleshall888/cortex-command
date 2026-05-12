@@ -7,7 +7,7 @@ tags: []
 created: 2026-01-01
 updated: 2026-01-01
 blocked-by: []
-research: lifecycle/no-spec-feature/research.md
+research: cortex/lifecycle/no-spec-feature/research.md
 ---
 
 A backlog item with no spec field — should be rejected at step 4.

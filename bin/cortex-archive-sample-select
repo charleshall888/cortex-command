@@ -60,9 +60,9 @@ from typing import Dict, Iterable, List, Set, Tuple
 # Directories excluded from the citer walk (matches recipe filters).
 CITER_EXCLUDED_DIR_NAMES = frozenset({".git"})
 CITER_EXCLUDED_REL_PREFIXES: Tuple[Path, ...] = (
-    Path("lifecycle") / "archive",
-    Path("lifecycle") / "sessions",
-    Path("retros"),
+    Path("cortex") / "lifecycle" / "archive",
+    Path("cortex") / "lifecycle" / "sessions",
+    Path("cortex") / "retros",
 )
 
 # Directories excluded from the candidate scan.
@@ -110,7 +110,7 @@ def _candidate_slugs(root: Path) -> List[str]:
     Mirrors the recipe filters: skip ``lifecycle/archive/``,
     ``lifecycle/sessions/``, and directories that are active git worktrees.
     """
-    lifecycle_dir = root / "lifecycle"
+    lifecycle_dir = root / "cortex" / "lifecycle"
     if not lifecycle_dir.is_dir():
         return []
     worktrees = _active_worktree_paths(root)
@@ -250,7 +250,7 @@ def _is_out_of_band_closed(root: Path, slug: str) -> bool:
     transitions (only event in events.log) AND the directory contents are
     limited to ``events.log`` and ``index.md``.
     """
-    feature_dir = root / "lifecycle" / slug
+    feature_dir = root / "cortex" / "lifecycle" / slug
     events_log = feature_dir / "events.log"
     try:
         with open(events_log, "r", encoding="utf-8") as fh:
@@ -269,7 +269,7 @@ def _is_out_of_band_closed(root: Path, slug: str) -> bool:
 def _mtime(root: Path, slug: str) -> float:
     """Return the lifecycle dir's mtime for ordering by recency."""
     try:
-        return (root / "lifecycle" / slug).stat().st_mtime
+        return (root / "cortex" / "lifecycle" / slug).stat().st_mtime
     except OSError:
         return 0.0
 

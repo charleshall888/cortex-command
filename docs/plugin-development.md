@@ -108,13 +108,13 @@ reinstall the plugin (`/plugin install`) or restart the session.
 
 Some scripts (e.g. `update-item`, `create-backlog-item`,
 `generate-backlog-index`) need to be available as commands from any working
-directory, not just when invoked via `python3 backlog/...` from the repo
+directory, not just when invoked via `python3 cortex/backlog/...` from the repo
 root. These are deployed via the `cortex-core` plugin's `bin/` directory.
 
 ### Per-script deployment mechanism
 
 1. **Add the script source to the canonical top-level location** (e.g.
-   `backlog/my_script.py`). Build-output plugins are assembled from these
+   `cortex/backlog/my_script.py`). Build-output plugins are assembled from these
    top-level sources by `just build-plugin`.
 2. **Expose it via the `cortex-core` plugin's `bin/` directory.** The
    plugin loader adds `plugins/cortex-core/bin/` to PATH automatically, so
@@ -143,7 +143,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 But `Path(__file__).parent` does **not** know which repo the user is
 currently working in. If the user runs `generate-backlog-index` from a
 different project, `Path(__file__).parent` still resolves to the
-cortex-command repo — the wrong project's `backlog/` directory.
+cortex-command repo — the wrong project's `cortex/backlog/` directory.
 
 **Rule:** any directory that should be relative to the user's current
 project (not the cortex-command checkout) must use `Path.cwd()`:

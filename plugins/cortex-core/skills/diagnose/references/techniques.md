@@ -104,10 +104,10 @@ wait_for() {
 }
 
 # Usage examples:
-wait_for "events.log to appear"       '[ -s lifecycle/my-feature/events.log ]'
+wait_for "events.log to appear"       '[ -s cortex/lifecycle/my-feature/events.log ]'
 wait_for "task-done flag"             '[ -f /tmp/task-done.flag ]'       30
 wait_for "GPG agent socket"           '[ -S "$GNUPGHOME/S.gpg-agent" ]'  10
-wait_for "overnight runner to finish" 'grep -q feature_complete lifecycle/my-feature/events.log' 120
+wait_for "overnight runner to finish" 'grep -q feature_complete cortex/lifecycle/my-feature/events.log' 120
 ```
 
 **Don't use when:**

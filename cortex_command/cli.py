@@ -169,8 +169,8 @@ def _dispatch_print_root(_args: argparse.Namespace) -> int:
       - ``root``: the user's cortex project root (resolved via
         :func:`cortex_command.common._resolve_user_project_root`). This is
         the single-source-of-truth contract — under non-editable wheel
-        install ``root`` is the user's project (containing ``lifecycle/``
-        and/or ``backlog/``), NOT the package install location.
+        install ``root`` is the user's project (containing ``cortex/lifecycle/``
+        and/or ``cortex/backlog/``), NOT the package install location.
       - ``package_root``: the package install location (via
         ``Path(cortex_command.__file__).resolve().parent``) — useful for
         diagnostic introspection.

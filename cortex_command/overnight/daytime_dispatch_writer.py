@@ -1,4 +1,4 @@
-"""Atomic-write helper for ``lifecycle/{feature}/daytime-dispatch.json``.
+"""Atomic-write helper for ``cortex/lifecycle/{feature}/daytime-dispatch.json``.
 
 Owns the contract for the daytime-dispatch file's two write modes:
 

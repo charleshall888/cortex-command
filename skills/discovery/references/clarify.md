@@ -12,15 +12,15 @@ The input is a raw topic name or description. There is no backlog item to resolv
 
 ### 2. Load Requirements Context
 
-Check for a `requirements/` directory at the project root.
+Check for a `cortex/requirements/` directory at the project root.
 
-- If `requirements/project.md` exists, read it.
-- Scan `requirements/` for area docs whose names suggest relevance to this topic. Read any that apply.
+- If `cortex/requirements/project.md` exists, read it.
+- Scan `cortex/requirements/` for area docs whose names suggest relevance to this topic. Read any that apply.
 - If no requirements directory or files exist, note this and skip to §3.
 
 ### 3. Check Existing Backlog Coverage
 
-Scan `backlog/[0-9]*-*.md` titles, tags, and descriptions for overlap with the topic. If a backlog item already covers this topic substantially, surface it to the user and ask whether to proceed with discovery or work from the existing ticket.
+Scan `cortex/backlog/[0-9]*-*.md` titles, tags, and descriptions for overlap with the topic. If a backlog item already covers this topic substantially, surface it to the user and ask whether to proceed with discovery or work from the existing ticket.
 
 ### 4. Confidence Assessment
 
@@ -48,7 +48,7 @@ Write or present the following outputs — this is the handoff package for Resea
 2. **Domain note**: Which area(s) of the project this touches (e.g., "Skills & workflow engine — orchestration layer").
 
 3. **Requirements alignment note**: One of:
-   - "Aligned with requirements/{file}: [brief summary of relevant constraints or goals]"
+   - "Aligned with cortex/requirements/{file}: [brief summary of relevant constraints or goals]"
    - "Partial alignment: [what aligns and what doesn't]"
    - "No requirements files found — alignment check skipped"
    - "Conflict detected: [describe the conflict]" — if conflict, resolve with user before proceeding

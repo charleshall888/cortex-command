@@ -24,9 +24,9 @@ Present questions to the user for review. Add any questions they raise.
 
 ### 1a. Load Requirements Context
 
-Check for a `requirements/` directory at the project root. If it exists:
+Check for a `cortex/requirements/` directory at the project root. If it exists:
 
-- Read `requirements/project.md` for project-level context.
+- Read `cortex/requirements/project.md` for project-level context.
 - Scan for area docs relevant to this topic and read those too.
 - Use requirements to inform research — identify where this topic intersects with established requirements and constraints.
 
@@ -76,7 +76,7 @@ Prerequisites entries describing codebase-state checks (e.g., 'Identify pattern 
 
 ### 6. Write Research Artifact
 
-Combine findings into `research/{topic}/research.md`:
+Combine findings into `cortex/research/{topic}/research.md`:
 
 ```markdown
 # Research: {topic}
@@ -179,11 +179,11 @@ Before committing, read and follow `references/orchestrator-review.md` for the `
 
 ### 6b. Critical Review
 
-Run `/cortex-core:critical-review` on `research/{topic}/research.md`. Address any significant challenges raised before proceeding.
+Run `/cortex-core:critical-review` on `cortex/research/{topic}/research.md`. Address any significant challenges raised before proceeding.
 
 ### 7. Transition
 
-Stage and commit `research/{topic}/` using `/cortex-core:commit`. Summarize key findings for the user and proceed to Specify.
+Stage and commit `cortex/research/{topic}/` using `/cortex-core:commit`. Summarize key findings for the user and proceed to Specify.
 
 ## Constraints
 

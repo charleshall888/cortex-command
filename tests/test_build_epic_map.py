@@ -166,8 +166,8 @@ def test_spec_passthrough_non_empty_string() -> None:
     assert result.returncode == 0
     parsed = json.loads(result.stdout)
     by_id = {c["id"]: c for c in parsed["epics"]["100"]["children"]}
-    # id 200 has "spec": "lifecycle/example-feature/spec.md"
-    assert by_id[200]["spec"] == "lifecycle/example-feature/spec.md"
+    # id 200 has "spec": "cortex/lifecycle/example-feature/spec.md"
+    assert by_id[200]["spec"] == "cortex/lifecycle/example-feature/spec.md"
 
 
 def test_no_epics_emits_empty_map(tmp_path: Path) -> None:

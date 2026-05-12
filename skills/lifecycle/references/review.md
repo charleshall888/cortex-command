@@ -6,13 +6,13 @@ Two-stage review: spec compliance first, then code quality. Complex tier only. T
 
 ### 1. Gather Review Inputs
 
-- Read `lifecycle/{feature}/spec.md` for requirements
+- Read `cortex/lifecycle/{feature}/spec.md` for requirements
 - Identify files changed during implementation by reading the git log for commits since the lifecycle started, or by comparing plan.md's file lists
-- Read `lifecycle/{feature}/plan.md` for the verification strategy
+- Read `cortex/lifecycle/{feature}/plan.md` for the verification strategy
 - Load requirements docs using the structured tag-based protocol:
-  1. Read `requirements/project.md` (always)
-  2. Read `lifecycle/{feature}/index.md` and extract the `tags:` array from its YAML frontmatter
-  3. Read the Conditional Loading section of `requirements/project.md`; for each tag word in the tags array, check case-insensitively whether any Conditional Loading phrase contains that word; collect the area doc paths for all matches
+  1. Read `cortex/requirements/project.md` (always)
+  2. Read `cortex/lifecycle/{feature}/index.md` and extract the `tags:` array from its YAML frontmatter
+  3. Read the Conditional Loading section of `cortex/requirements/project.md`; for each tag word in the tags array, check case-insensitively whether any Conditional Loading phrase contains that word; collect the area doc paths for all matches
   4. If matching area docs are found, read them too. Record the full list of loaded requirements files (project.md + matched area docs) for injection into the reviewer prompt. If no tags match or no area docs are found, load project.md only and note: "no area docs matched for tags: {tags}; drift check covers project.md only"
 
 ### 2. Launch Review Sub-Task
@@ -23,7 +23,7 @@ Dispatch a focused review sub-task with read-only instructions using the reviewe
 
 ### Reviewer Prompt Template
 
-Before dispatching, substitute `{spec_path}` with the absolute path to the spec file, resolved as `git rev-parse --show-toplevel` joined with `lifecycle/{feature}/spec.md`.
+Before dispatching, substitute `{spec_path}` with the absolute path to the spec file, resolved as `git rev-parse --show-toplevel` joined with `cortex/lifecycle/{feature}/spec.md`.
 
 ```
 You are reviewing the {feature} implementation against its specification.
@@ -61,7 +61,7 @@ Note: requirements drift does NOT influence the verdict. This is an observation 
 - If the implementation introduces behavior not captured in the requirements docs, or changes behavior in a way requirements don't reflect: state = detected; list each drifted item as a bullet; name the requirements file that needs updating
 
 ### Write Review
-Write your review to lifecycle/{feature}/review.md using the format below.
+Write your review to cortex/lifecycle/{feature}/review.md using the format below.
 
 The Verdict section is a JSON object with exactly these fields:
 - "verdict": one of "APPROVED", "CHANGES_REQUESTED", or "REJECTED"
@@ -81,7 +81,7 @@ The requirements_drift value in the verdict JSON matches: "none" when State is n
 
 When drift IS detected, also include a ## Suggested Requirements Update section immediately after Requirements Drift. This section provides the exact content the orchestrator will append to the named requirements file:
 ## Suggested Requirements Update
-**File**: (path to the requirements file to update, e.g. requirements/project.md)
+**File**: (path to the requirements file to update, e.g. cortex/requirements/project.md)
 **Section**: (existing section heading where the content belongs, e.g. "## Quality Attributes")
 **Content**:
 ```
@@ -142,11 +142,11 @@ Do NOT modify any source files. This is a read-only review.
 
 ### 4. Process Verdict
 
-After the reviewer sub-task completes and `lifecycle/{feature}/review.md` is confirmed on disk:
+After the reviewer sub-task completes and `cortex/lifecycle/{feature}/review.md` is confirmed on disk:
 
 Before proceeding, validate that review.md contains a `## Requirements Drift` section. If the section is absent (e.g., the reviewer ran out of context), re-dispatch the reviewer with this targeted instruction: "review.md is missing the ## Requirements Drift section. Read the existing review.md, then append the ## Requirements Drift section in the correct format. Do not modify any other section." If the section remains absent after one re-dispatch, escalate to the user.
 
-Update `lifecycle/{feature}/index.md`:
+Update `cortex/lifecycle/{feature}/index.md`:
 - If `"review"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"review"` to the artifacts inline array
 - Update the `updated` field to today's date
@@ -161,7 +161,7 @@ Update `lifecycle/{feature}/index.md`:
 
 The cycle counter prevents infinite rework loops. After cycle 2, always escalate to the user regardless of verdict.
 
-After reading the verdict from the review artifact, append a `review_verdict` event to `lifecycle/{feature}/events.log`:
+After reading the verdict from the review artifact, append a `review_verdict` event to `cortex/lifecycle/{feature}/events.log`:
 
 ```
 {"ts": "<ISO 8601>", "event": "review_verdict", "feature": "<name>", "verdict": "APPROVED|CHANGES_REQUESTED|REJECTED", "cycle": <N>, "requirements_drift": "none|detected"}
@@ -173,7 +173,7 @@ Where `requirements_drift` is read from the `"requirements_drift"` field in the 
 
 After logging the `review_verdict` event, check whether `requirements_drift` is `"detected"`. If so:
 
-1. **Read the suggested update**: Parse the `## Suggested Requirements Update` section from `lifecycle/{feature}/review.md`. Extract `File`, `Section`, and `Content` fields.
+1. **Read the suggested update**: Parse the `## Suggested Requirements Update` section from `cortex/lifecycle/{feature}/review.md`. Extract `File`, `Section`, and `Content` fields.
 
 2. **If the section is missing or unparseable**: Skip auto-apply. Log a warning to the user: "Requirements drift detected but no suggested update was provided — manual update needed." Do not block the verdict processing.
 

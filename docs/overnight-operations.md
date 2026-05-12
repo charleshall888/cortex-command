@@ -51,7 +51,7 @@ SIGINT or SIGTERM (e.g. Ctrl-C or `kill`) triggers a graceful shutdown:
 1. Transitions state to `paused`.
 2. Logs a `CIRCUIT_BREAKER` event with `reason: signal`.
 3. Generates a partial morning report.
-4. Archives session artifacts to `lifecycle/sessions/{id}/`.
+4. Archives session artifacts to `cortex/lifecycle/sessions/{id}/`.
 5. Sends a push notification.
 
 Forward-only phase transitions apply — the shutdown path writes `paused` via the same atomic tempfile + `os.replace()` dance used elsewhere, so a concurrent reader sees either the pre-shutdown or post-shutdown state, never a partial record.
@@ -102,13 +102,13 @@ After a feature merges to the integration branch, `batch_runner.execute_feature(
 
 **Files**: `cortex_command/pipeline/review_dispatch.py` (`dispatch_review`, `parse_verdict`, `_write_review_deferral`), `cortex_command/pipeline/prompts/review.md`, `cortex_command/common.py` (`requires_review`), `cortex_command/pipeline/batch_runner.py` (`execute_feature` owns the review/rework loop).
 
-**Inputs**: integration branch HEAD at merge time; feature metadata; prior orchestrator notes at `lifecycle/{feature}/learnings/orchestrator-note.md`.
+**Inputs**: integration branch HEAD at merge time; feature metadata; prior orchestrator notes at `cortex/lifecycle/{feature}/learnings/orchestrator-note.md`.
 
 The verdict is parsed from a ```json``` block inside the review agent's `review.md` artifact — `APPROVED`, `CHANGES_REQUESTED`, or `REJECTED`. The review agent writes only `review.md`; `batch_runner` owns every `events.log` write (`phase_transition`, `review_verdict`, `feature_complete`) so review artifacts and state transitions never interleave.
 
 The rework cycle is single-shot:
 
-- **Cycle 1 `CHANGES_REQUESTED`**: feedback is appended to `lifecycle/{feature}/learnings/orchestrator-note.md`, HEAD SHA is captured as a circuit-breaker baseline, a fix agent is dispatched, the SHA circuit breaker verifies new work landed, and the feature is re-merged with `ci_check=False` (the test gate already passed pre-review). A cycle-2 review then runs.
+- **Cycle 1 `CHANGES_REQUESTED`**: feedback is appended to `cortex/lifecycle/{feature}/learnings/orchestrator-note.md`, HEAD SHA is captured as a circuit-breaker baseline, a fix agent is dispatched, the SHA circuit breaker verifies new work landed, and the feature is re-merged with `ci_check=False` (the test gate already passed pre-review). A cycle-2 review then runs.
 - **Cycle 2 non-`APPROVED` or any `REJECTED`**: `_write_review_deferral()` emits a blocking `DeferralQuestion` and the feature stops. There is no cycle 3.
 
 Forward-only phase transitions hold throughout: `planning → executing → complete`, or any phase → `paused`. State writes use tempfile + `os.replace()` so a crash mid-review leaves either the pre-merge or post-merge state on disk, never a torn record.
@@ -166,16 +166,16 @@ On repair success the feature re-merges and continues; on repair failure the fea
 
 ### Cycle-breaking for repeated escalations
 
-Workers raise escalations to the Escalation System by appending entries to `lifecycle/sessions/{session_id}/escalations.jsonl` — an append-only JSONL log whose writer is `write_escalation()` in `cortex_command/overnight/deferral.py` (re-exported via `cortex_command/overnight/orchestrator_io.py`). Each record carries an `escalation_id` of form `{feature}-{round}-q{N}` and a `type` field — one of `"escalation"` (worker asked), `"resolution"` (orchestrator answered), or `"promoted"` (cycle broken, see below). N is chosen by `_next_escalation_n()`, which counts existing `"escalation"` entries for the same feature+round; a TOCTOU race is acknowledged in code comments and is safe under the per-feature single-coroutine dispatch invariant.
+Workers raise escalations to the Escalation System by appending entries to `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` — an append-only JSONL log whose writer is `write_escalation()` in `cortex_command/overnight/deferral.py` (re-exported via `cortex_command/overnight/orchestrator_io.py`). Each record carries an `escalation_id` of form `{feature}-{round}-q{N}` and a `type` field — one of `"escalation"` (worker asked), `"resolution"` (orchestrator answered), or `"promoted"` (cycle broken, see below). N is chosen by `_next_escalation_n()`, which counts existing `"escalation"` entries for the same feature+round; a TOCTOU race is acknowledged in code comments and is safe under the per-feature single-coroutine dispatch invariant.
 
 **Files**: `cortex_command/overnight/deferral.py` (`EscalationEntry`, `write_escalation`, `_next_escalation_n`), `cortex_command/overnight/orchestrator_io.py` (re-export), `cortex_command/overnight/prompts/orchestrator-round.md` (Step 0a–0d — the cycle-breaking logic lives in the prompt, not Python).
 
-**Inputs**: `lifecycle/sessions/{session_id}/escalations.jsonl`; prior orchestrator feedback at `lifecycle/{feature}/learnings/orchestrator-note.md`.
+**Inputs**: `cortex/lifecycle/sessions/{session_id}/escalations.jsonl`; prior orchestrator feedback at `cortex/lifecycle/{feature}/learnings/orchestrator-note.md`.
 
-Cycle-breaking fires when a worker re-asks a question the orchestrator already answered. The orchestrator prompt's Step 0d scans `lifecycle/sessions/{session_id}/escalations.jsonl` at round start: if ≥1 `"type": "resolution"` entry exists for the same `feature` and a new worker escalation raises a sufficiently similar question, the orchestrator treats the feature as stuck rather than answering again. The concrete action is:
+Cycle-breaking fires when a worker re-asks a question the orchestrator already answered. The orchestrator prompt's Step 0d scans `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` at round start: if ≥1 `"type": "resolution"` entry exists for the same `feature` and a new worker escalation raises a sufficiently similar question, the orchestrator treats the feature as stuck rather than answering again. The concrete action is:
 
-- Delete `lifecycle/{feature}/learnings/orchestrator-note.md` (the feedback channel clearly did not land — do not accumulate stale guidance).
-- Append a `"type": "promoted"` entry to `lifecycle/sessions/{session_id}/escalations.jsonl` recording the promotion.
+- Delete `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` (the feedback channel clearly did not land — do not accumulate stale guidance).
+- Append a `"type": "promoted"` entry to `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` recording the promotion.
 - Call `write_deferral()` to file a blocking deferral for human review at morning.
 - Do **not** re-queue the feature for this session.
 
@@ -201,7 +201,7 @@ For tunable surfaces (`--test-command` choice, the unconditional-repair rule, `i
 
 **Files**: `cortex_command/overnight/interrupt.py` (`handle_interrupted_features`, `_infer_interrupt_reason`), invoked by `cortex_command/overnight/runner.sh` at session start.
 
-**Inputs**: `lifecycle/overnight-state.json`; per-feature worktree paths and their on-disk state.
+**Inputs**: `cortex/lifecycle/overnight-state.json`; per-feature worktree paths and their on-disk state.
 
 Behavior: scan the state file for features whose status is `running`. For each, inspect the worktree to infer why it was stuck (round-end handoff, orchestrator-interrupted mid-dispatch, or crash/SIGKILL), append an `interrupted` event to the per-session events log with the inferred reason, and reset the feature's status to `pending` so the upcoming round can re-dispatch it. `recovery_depth` and feature-level history are preserved — a feature that exhausted its recovery budget before the interruption retains that history and will defer rather than re-enter the repair loop. State writes go through the same atomic tempfile + `os.replace()` pattern used elsewhere.
 
@@ -209,11 +209,11 @@ The reset is conservative: `interrupt.py` never changes features in `complete`, 
 
 ### Runner concurrency guard (runner.pid + .runner.pid.takeover.lock)
 
-The legacy `$SESSION_DIR/.runner.lock` PID file written by the retired `runner.sh` no longer exists — `runner.sh` was retired in favor of the `cortex overnight {start|status|cancel|logs}` Python CLI per `requirements/pipeline.md:28`. The runner-concurrency guard is now the per-session `runner.pid` JSON artifact written by `cortex_command/overnight/ipc.py` plus a sibling `flock`-based lockfile that serializes the read-verify-claim critical section.
+The legacy `$SESSION_DIR/.runner.lock` PID file written by the retired `runner.sh` no longer exists — `runner.sh` was retired in favor of the `cortex overnight {start|status|cancel|logs}` Python CLI per `cortex/requirements/pipeline.md:28`. The runner-concurrency guard is now the per-session `runner.pid` JSON artifact written by `cortex_command/overnight/ipc.py` plus a sibling `flock`-based lockfile that serializes the read-verify-claim critical section.
 
 **Files**: `cortex_command/overnight/ipc.py` (`_acquire_takeover_lock`, `_check_concurrent_start`, `write_runner_pid`, `verify_runner_pid`, `handle_cancel`).
 
-**Inputs**: `session_dir` (`lifecycle/sessions/{id}/`).
+**Inputs**: `session_dir` (`cortex/lifecycle/sessions/{id}/`).
 
 `runner.pid` carries the magic header, schema version, session id, OS pid, and `start_time` that `verify_runner_pid` cross-checks against `psutil.Process.create_time()` before any signal is sent.
 
@@ -226,7 +226,7 @@ Discipline obligations on every future production code site (the static gate at 
 - The lockfile is **never durable_fsync**'d (nor `os.fsync`'d, `F_FULLFSYNC`'d, or otherwise flushed for durability). It carries no content worth persisting — kernel `flock` state is in-memory coordination, not durable file content.
 - The lockfile must **never be matched by a `*.lock` glob** in any auto-cleanup, archival, or worktree-teardown sweep outside `ipc.py`. The audit at `cortex_command/overnight/daytime_pipeline.py:152` shows that today's `*.lock` rglob targets per-feature `worktree_path` rather than `session_dir`, so the two paths do not currently overlap; future glob callers must keep that invariant or explicitly exclude `.runner.pid.takeover.lock`.
 
-The file persists indefinitely under current archival policy: this project does not auto-archive `lifecycle/sessions/`, so directories (and their lockfiles) accumulate until manually cleaned. After a reboot the kernel `flock` state is gone but the 0-byte file remains; the next runner reopens it on a fresh inode-with-no-locks and acquires immediately. This is benign for correctness and is the documented backwards-compat / rollback path.
+The file persists indefinitely under current archival policy: this project does not auto-archive `cortex/lifecycle/sessions/`, so directories (and their lockfiles) accumulate until manually cleaned. After a reboot the kernel `flock` state is gone but the 0-byte file remains; the next runner reopens it on a fresh inode-with-no-locks and acquires immediately. This is benign for correctness and is the documented backwards-compat / rollback path.
 
 ### Scheduled Launch (LaunchAgent-based scheduler)
 
@@ -252,7 +252,7 @@ cortex overnight cancel <session_id>
 - **Reboot drops pending schedules.** launchd's bootstrap namespace is rebuilt on each boot from persistent plist sources in `/Library/LaunchAgents/` and `~/Library/LaunchAgents/`; cortex registers into the per-session `gui/$(id -u)` namespace using plists in `$TMPDIR`, which is not persisted across reboots. After a reboot, re-schedule any pending runs with `cortex overnight schedule <target>`.
 - **SSH and headless contexts are not supported.** The LaunchAgent backend targets the logged-in GUI session (`gui/$(id -u)`). Running `cortex overnight schedule` over SSH or in a headless CI context where no GUI session exists will fail at bootstrap time.
 
-**TCC / Full Disk Access requirement**: the cortex binary needs Full Disk Access on macOS to read and write `lifecycle/` paths during overnight execution. Grant access to the binary path printed by `which cortex` in **System Settings → Privacy & Security → Full Disk Access**. TCC authorization is not checked at schedule time — a missing grant surfaces only at fire time as a fail marker in the morning report, not as an error when you run `cortex overnight schedule`.
+**TCC / Full Disk Access requirement**: the cortex binary needs Full Disk Access on macOS to read and write `cortex/lifecycle/` paths during overnight execution. Grant access to the binary path printed by `which cortex` in **System Settings → Privacy & Security → Full Disk Access**. TCC authorization is not checked at schedule time — a missing grant surfaces only at fire time as a fail marker in the morning report, not as an error when you run `cortex overnight schedule`.
 
 **Cancel and list**:
 
@@ -349,15 +349,15 @@ This subsection covers *why* the effort matrix flipped Sonnet baseline to `high`
 ```sh
 # Per-effort cost mean for opus on complex/high dispatches under xhigh:
 jq '.model_tier_dispatch_aggregates["opus,complex,xhigh"].cost_usd_mean' \
-  lifecycle/sessions/<session_id>/metrics.json
+  cortex/lifecycle/sessions/<session_id>/metrics.json
 
 # Pre-flip baseline (same skill/tier under high) for direct comparison:
 jq '.model_tier_dispatch_aggregates["opus,complex,high"].cost_usd_mean' \
-  lifecycle/sessions/<previous_session_id>/metrics.json
+  cortex/lifecycle/sessions/<previous_session_id>/metrics.json
 
 # Quick sweep across all post-flip buckets:
 jq '.model_tier_dispatch_aggregates | to_entries | map({key, mean: .value.cost_usd_mean})' \
-  lifecycle/sessions/<session_id>/metrics.json
+  cortex/lifecycle/sessions/<session_id>/metrics.json
 ```
 
 Bucket key shape after Task 6 is `"<model>,<tier>,<effort>"` (e.g. `"opus,complex,xhigh"`, `"sonnet,simple,high"`); skill-specific aggregates use the analogous `skill_tier_dispatch_aggregates` slice with skill in the key. The exact aggregate field names are owned by `cortex_command/pipeline/metrics.py` — if the path above does not resolve in a given `metrics.json`, dump the top-level keys with `jq 'keys' metrics.json` and follow the structure from there.
@@ -380,20 +380,20 @@ The field-by-field writer and reader map is documented under [Strategy File (ove
 
 ### State File Locations
 
-Every overnight session persists state as files under `lifecycle/`. The runner resolves a per-session directory (`lifecycle/sessions/{id}/`) and symlinks the canonical top-level paths into it so tools that hard-code `lifecycle/overnight-state.json` keep working mid-session. The table below names the canonical path (what readers use), the on-disk writer, and what the file represents.
+Every overnight session persists state as files under `cortex/lifecycle/`. The runner resolves a per-session directory (`cortex/lifecycle/sessions/{id}/`) and symlinks the canonical top-level paths into it so tools that hard-code `cortex/lifecycle/overnight-state.json` keep working mid-session. The table below names the canonical path (what readers use), the on-disk writer, and what the file represents.
 
 | Path | Writer | Role |
 |------|--------|------|
-| `lifecycle/overnight-state.json` | `cortex_command/overnight/state.py` (`save_state` — atomic tempfile + `os.replace`) | Session state: phase, per-feature status, round counter. Source of truth for "is this session still running." |
-| `lifecycle/overnight-events.log` | `cortex_command/overnight/events.py` (`log_event`) | Append-only JSONL event stream at the session level (round boundaries, feature lifecycle, circuit breakers). |
-| `lifecycle/sessions/{id}/pipeline-events.log` | `cortex_command/pipeline/events.py` via `batch_runner` | Append-only JSONL of per-task dispatch/merge/test events inside each feature. |
-| `lifecycle/sessions/{id}/overnight-strategy.json` | `cortex_command/overnight/strategy.py` (`save_strategy` — atomic tempfile + `os.replace`) | Cross-round strategy: `hot_files`, `integration_health`, `recovery_log_summary`, `round_history_notes`. |
-| `lifecycle/sessions/{session_id}/escalations.jsonl` | `cortex_command/overnight/deferral.py` (`write_escalation`) | Append-only JSONL of worker escalations, orchestrator resolutions, and cycle-break promotions. |
-| `lifecycle/{feature}/events.log` | `cortex_command/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/cortex-core:lifecycle resume` and `/morning-review`. |
-| `lifecycle/{feature}/agent-activity.jsonl` | `cortex_command/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
-| `lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
-| `lifecycle/morning-report.md` | `cortex_command/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). Runner emits `morning_report_generate_result` and `morning_report_commit_result` events to `overnight-events.log` around the write + commit so the operator can confirm the file landed on `main`. |
-| `lifecycle/.runner.lock` | `runner.sh` | PID lock preventing concurrent overnight sessions. See [Runner Lock](#runner-lock-runnerlock). |
+| `cortex/lifecycle/overnight-state.json` | `cortex_command/overnight/state.py` (`save_state` — atomic tempfile + `os.replace`) | Session state: phase, per-feature status, round counter. Source of truth for "is this session still running." |
+| `cortex/lifecycle/overnight-events.log` | `cortex_command/overnight/events.py` (`log_event`) | Append-only JSONL event stream at the session level (round boundaries, feature lifecycle, circuit breakers). |
+| `cortex/lifecycle/sessions/{id}/pipeline-events.log` | `cortex_command/pipeline/events.py` via `batch_runner` | Append-only JSONL of per-task dispatch/merge/test events inside each feature. |
+| `cortex/lifecycle/sessions/{id}/overnight-strategy.json` | `cortex_command/overnight/strategy.py` (`save_strategy` — atomic tempfile + `os.replace`) | Cross-round strategy: `hot_files`, `integration_health`, `recovery_log_summary`, `round_history_notes`. |
+| `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` | `cortex_command/overnight/deferral.py` (`write_escalation`) | Append-only JSONL of worker escalations, orchestrator resolutions, and cycle-break promotions. |
+| `cortex/lifecycle/{feature}/events.log` | `cortex_command/pipeline/batch_runner.py` | Per-feature phase-transition journal (`phase_transition`, `review_verdict`, `feature_complete`). Read by `/cortex-core:lifecycle resume` and `/morning-review`. |
+| `cortex/lifecycle/{feature}/agent-activity.jsonl` | `cortex_command/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
+| `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
+| `cortex/lifecycle/morning-report.md` | `cortex_command/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). Runner emits `morning_report_generate_result` and `morning_report_commit_result` events to `overnight-events.log` around the write + commit so the operator can confirm the file landed on `main`. |
+| `cortex/lifecycle/.runner.lock` | `runner.sh` | PID lock preventing concurrent overnight sessions. See [Runner Lock](#runner-lock-runnerlock). |
 | `deferred/*.md` | `cortex_command/overnight/deferral.py` (`write_deferral`) | Blocking human-decision questions filed during the session. |
 
 State file reads are not lock-protected by design — forward-only phase transitions and atomic replace writes make torn reads impossible. A reader either sees the pre-write state or the post-write state, never a partial record.
@@ -402,7 +402,7 @@ The allowlist of event names emitted across the three `events.log` surfaces abov
 
 ### Escalation System (escalations.jsonl)
 
-`lifecycle/sessions/{session_id}/escalations.jsonl` is the worker-to-orchestrator side channel. Writer is `write_escalation()` in `cortex_command/overnight/deferral.py` (re-exported from `cortex_command/overnight/orchestrator_io.py`); readers include the orchestrator prompt (Steps 0a–0d) and `_next_escalation_n()` in the same module. Records are one JSON object per line with a `type` discriminator.
+`cortex/lifecycle/sessions/{session_id}/escalations.jsonl` is the worker-to-orchestrator side channel. Writer is `write_escalation()` in `cortex_command/overnight/deferral.py` (re-exported from `cortex_command/overnight/orchestrator_io.py`); readers include the orchestrator prompt (Steps 0a–0d) and `_next_escalation_n()` in the same module. Records are one JSON object per line with a `type` discriminator.
 
 **Worker-raised escalation** (`"type": "escalation"`), appended by `write_escalation()`:
 
@@ -418,7 +418,7 @@ The allowlist of event names emitted across the three `events.log` surfaces abov
 }
 ```
 
-**Orchestrator resolution** (`"type": "resolution"`), appended inline from `orchestrator-round.md` Step 0d when the orchestrator answers a prior escalation and writes the feedback into `lifecycle/{feature}/learnings/orchestrator-note.md`:
+**Orchestrator resolution** (`"type": "resolution"`), appended inline from `orchestrator-round.md` Step 0d when the orchestrator answers a prior escalation and writes the feedback into `cortex/lifecycle/{feature}/learnings/orchestrator-note.md`:
 
 ```json
 {
@@ -448,7 +448,7 @@ The allowlist of event names emitted across the three `events.log` surfaces abov
 
 ### Strategy File (overnight-strategy.json) schema
 
-The `OvernightStrategy` dataclass in `cortex_command/overnight/strategy.py` serializes to `lifecycle/sessions/{id}/overnight-strategy.json` via atomic tempfile + `os.replace`. Field semantics and mutators are covered under [overnight-strategy.json contents and mutators](#overnight-strategyjson-contents-and-mutators); the on-disk shape is:
+The `OvernightStrategy` dataclass in `cortex_command/overnight/strategy.py` serializes to `cortex/lifecycle/sessions/{id}/overnight-strategy.json` via atomic tempfile + `os.replace`. Field semantics and mutators are covered under [overnight-strategy.json contents and mutators](#overnight-strategyjson-contents-and-mutators); the on-disk shape is:
 
 ```json
 {
@@ -466,19 +466,19 @@ The `OvernightStrategy` dataclass in `cortex_command/overnight/strategy.py` seri
 
 ### Morning Report Generation (report.py)
 
-`cortex_command/overnight/report.py` (`generate_and_write_report`) is invoked by `runner.sh` after the orchestration loop completes. It collects state + events + deferrals, renders the Markdown report, and atomically writes `lifecycle/morning-report.md`.
+`cortex_command/overnight/report.py` (`generate_and_write_report`) is invoked by `runner.sh` after the orchestration loop completes. It collects state + events + deferrals, renders the Markdown report, and atomically writes `cortex/lifecycle/morning-report.md`.
 
 **Inputs**:
 
-- `lifecycle/overnight-state.json` — phase, per-feature status, round counter (`load_state`).
-- `lifecycle/overnight-events.log` — event stream (`read_events`).
+- `cortex/lifecycle/overnight-state.json` — phase, per-feature status, round counter (`load_state`).
+- `cortex/lifecycle/overnight-events.log` — event stream (`read_events`).
 - `deferred/*.md` — blocking questions filed during the session.
-- Per-feature artifacts under `lifecycle/{feature}/`: `events.log`, `learnings/orchestrator-note.md`, `review.md`, `requirements-drift.md`, recovery log entries.
+- Per-feature artifacts under `cortex/lifecycle/{feature}/`: `events.log`, `learnings/orchestrator-note.md`, `review.md`, `requirements-drift.md`, recovery log entries.
 - Per-session results directory for tool-failure mining (`collect_tool_failures`).
 
 **Assembly**: `generate_report()` concatenates `render_executive_summary`, `render_completed_features`, `render_pending_drift`, `render_deferred_questions`, `render_failed_features`, `render_new_backlog_items`, `render_action_checklist`, `render_run_statistics`, and — when any exist — `render_tool_failures`. Each renderer is a pure function of `ReportData`.
 
-**Output**: `lifecycle/morning-report.md`. `write_report()` uses tempfile + `os.replace()` so the report is never observed half-written. After the write, `runner.sh` emits a `morning_report_generate_result` event (per-session and latest-copy sha256s + byte counts) and then a `morning_report_commit_result` event recording whether the commit landed on `main`. `notify()` then fires the user's desktop-notifier hook (user/machine-config responsibility, not shipped by this repo) so the operator knows overnight is done.
+**Output**: `cortex/lifecycle/morning-report.md`. `write_report()` uses tempfile + `os.replace()` so the report is never observed half-written. After the write, `runner.sh` emits a `morning_report_generate_result` event (per-session and latest-copy sha256s + byte counts) and then a `morning_report_commit_result` event recording whether the commit landed on `main`. `notify()` then fires the user's desktop-notifier hook (user/machine-config responsibility, not shipped by this repo) so the operator knows overnight is done.
 
 The morning-report commit is the only runner commit that stays on local `main`; all other artifact commits travel on the integration branch. (Historical reports from 2026-04-07, 2026-04-11, and 2026-04-21 were backfilled retroactively under commits whose subject lines end with `(backfill)`.)
 
@@ -486,8 +486,8 @@ The morning-report commit is the only runner commit that stays on local `main`; 
 
 `render_sandbox_denials` (in `cortex_command/overnight/report.py`) emits the morning report's `## Sandbox Denials` section by classifying Bash-routed `Operation not permitted` failures at render time. There is no separate sandbox-violation hook — classification reuses two existing signal sources:
 
-- **Tool-failure tracker** (`hooks/cortex-tool-failure-tracker.sh`, PostToolUse Bash) writes each failed Bash invocation's `command` and truncated `stderr` to `lifecycle/sessions/<id>/tool-failures/bash.log` as YAML literal block scalars.
-- **Per-spawn sidecar deny-lists** at `lifecycle/sessions/<id>/sandbox-deny-lists/<spawn-id>.json`, written by both overnight spawn sites (`cortex_command/overnight/runner.py` for the orchestrator and `cortex_command/pipeline/dispatch.py` for per-feature dispatches) immediately after each spawn's `--settings` deny-list is constructed. Files are never overwritten — each spawn writes a uniquely-keyed file (e.g. `orchestrator-1.json`, `feature-foo-1.json`) and the aggregator unions them.
+- **Tool-failure tracker** (`hooks/cortex-tool-failure-tracker.sh`, PostToolUse Bash) writes each failed Bash invocation's `command` and truncated `stderr` to `cortex/lifecycle/sessions/<id>/tool-failures/bash.log` as YAML literal block scalars.
+- **Per-spawn sidecar deny-lists** at `cortex/lifecycle/sessions/<id>/sandbox-deny-lists/<spawn-id>.json`, written by both overnight spawn sites (`cortex_command/overnight/runner.py` for the orchestrator and `cortex_command/pipeline/dispatch.py` for per-feature dispatches) immediately after each spawn's `--settings` deny-list is constructed. Files are never overwritten — each spawn writes a uniquely-keyed file (e.g. `orchestrator-1.json`, `feature-foo-1.json`) and the aggregator unions them.
 
 `collect_sandbox_denials(session_id)` reads both sources, filters the bash log to entries whose `stderr` contains `Operation not permitted`, and applies a 4-layer classifier to each entry's command:
 
@@ -508,11 +508,11 @@ Layer-1/Layer-2 candidate targets are then matched against the union of all side
 
 **Within-Bash plumbing caveat.** Within Bash scope, `git`/`gh`/`npm`-class plumbing denials are classified by command-target inference, which is precise only when the subcommand appears in the known mapping. Subcommand variants outside the mapping (e.g. `git config --global …`, `git rev-parse … | xargs git update-ref`) fall through to the `plumbing_eperm` bucket — still useful as a flag, but the specific target is not attributed.
 
-**Manual smoke recipe.** This path cannot be exercised in automated CI because it requires a sandboxed `claude -p` invocation. To smoke-test by hand: (1) create a temp git repo and stage it as the home repo for an overnight session; (2) construct a per-spawn deny-list that includes `<repo>/.git/refs/heads/main`; (3) drive a sandboxed `claude -p` invocation whose prompt instructs the orchestrator's Bash tool to run `cd $REPO_ROOT && git commit --allow-empty -m 'sandbox test'`; (4) let the round complete and trigger morning-report generation; (5) confirm `lifecycle/morning-report.md` contains a `## Sandbox Denials` section with a non-zero `Home-repo refs` line (the `home_repo_refs` category). If the count appears under `plumbing_eperm` instead, the sidecar deny-list path did not match the inferred target — re-check the deny-list paths and the inferred home-repo root in `lifecycle/overnight-state.json`.
+**Manual smoke recipe.** This path cannot be exercised in automated CI because it requires a sandboxed `claude -p` invocation. To smoke-test by hand: (1) create a temp git repo and stage it as the home repo for an overnight session; (2) construct a per-spawn deny-list that includes `<repo>/.git/refs/heads/main`; (3) drive a sandboxed `claude -p` invocation whose prompt instructs the orchestrator's Bash tool to run `cd $REPO_ROOT && git commit --allow-empty -m 'sandbox test'`; (4) let the round complete and trigger morning-report generation; (5) confirm `cortex/lifecycle/morning-report.md` contains a `## Sandbox Denials` section with a non-zero `Home-repo refs` line (the `home_repo_refs` category). If the count appears under `plumbing_eperm` instead, the sidecar deny-list path did not match the inferred target — re-check the deny-list paths and the inferred home-repo root in `cortex/lifecycle/overnight-state.json`.
 
 ### agent-activity.jsonl
 
-`lifecycle/{feature}/agent-activity.jsonl` is a per-feature append-only breadcrumb trail of a dispatched agent's tool interactions during a single run. Writer is `_write_activity_event()` in `cortex_command/pipeline/dispatch.py`; writes are fire-and-forget and swallow exceptions — activity logging never blocks or interrupts the agent. Each line is one JSON object discriminated by `event`.
+`cortex/lifecycle/{feature}/agent-activity.jsonl` is a per-feature append-only breadcrumb trail of a dispatched agent's tool interactions during a single run. Writer is `_write_activity_event()` in `cortex_command/pipeline/dispatch.py`; writes are fire-and-forget and swallow exceptions — activity logging never blocks or interrupts the agent. Each line is one JSON object discriminated by `event`.
 
 **Tool call** (as the agent requests a tool):
 
@@ -540,11 +540,11 @@ Overnight writes several JSONL logs at different scopes. Pick the one that match
 
 | Log file | Grep this when |
 |----------|----------------|
-| `lifecycle/overnight-events.log` | Investigating round boundaries, session-level circuit breakers, or feature-start/feature-complete markers — anything that needs a chronological view across all features in one session. |
-| `lifecycle/sessions/{id}/pipeline-events.log` | Investigating dispatch/merge/test outcomes for individual tasks within a feature (`dispatch_start`, `dispatch_complete`, `merge_start`, `merge_success`, `task_idempotency_skip`). |
-| `lifecycle/{feature}/events.log` | Investigating phase transitions, review verdicts, and completion for one feature — what `/cortex-core:lifecycle resume` and `/morning-review` read. |
-| `lifecycle/{feature}/agent-activity.jsonl` | Investigating what tools an agent actually invoked inside a dispatch and whether they succeeded — the "what did the worker really do" log. |
-| `lifecycle/sessions/{session_id}/escalations.jsonl` | Investigating which features blocked on questions, how the orchestrator answered, and which were cycle-break-promoted to deferrals. |
+| `cortex/lifecycle/overnight-events.log` | Investigating round boundaries, session-level circuit breakers, or feature-start/feature-complete markers — anything that needs a chronological view across all features in one session. |
+| `cortex/lifecycle/sessions/{id}/pipeline-events.log` | Investigating dispatch/merge/test outcomes for individual tasks within a feature (`dispatch_start`, `dispatch_complete`, `merge_start`, `merge_success`, `task_idempotency_skip`). |
+| `cortex/lifecycle/{feature}/events.log` | Investigating phase transitions, review verdicts, and completion for one feature — what `/cortex-core:lifecycle resume` and `/morning-review` read. |
+| `cortex/lifecycle/{feature}/agent-activity.jsonl` | Investigating what tools an agent actually invoked inside a dispatch and whether they succeeded — the "what did the worker really do" log. |
+| `cortex/lifecycle/sessions/{session_id}/escalations.jsonl` | Investigating which features blocked on questions, how the orchestrator answered, and which were cycle-break-promoted to deferrals. |
 
 All five are append-only JSONL and safe to `tail -f` live. The first four are written by four different modules — session events by `cortex_command/overnight/events.py`, pipeline events by `cortex_command/pipeline/events.py`, per-feature lifecycle by `cortex_command/pipeline/batch_runner.py`, and agent activity by `cortex_command/pipeline/dispatch.py` — so ownership drift is contained. A symptom that spans "did the orchestrator try to merge?" plus "what did the merge agent do?" requires grepping both `pipeline-events.log` and the feature's `agent-activity.jsonl`.
 
@@ -554,7 +554,7 @@ The dashboard is a pull-based observer — it never shares memory with the runne
 
 **Files**: `cortex_command/dashboard/poller.py` (`_poll_state_files`, `_poll_jsonl_events`, `_poll_slow`, `_poll_alerts`), `cortex_command/dashboard/data.py` (parse helpers).
 
-**Inputs**: `lifecycle/sessions/{id}/overnight-state.json`, `lifecycle/sessions/latest-pipeline/pipeline-state.json`, `lifecycle/sessions/{id}/overnight-events.log` (incremental JSONL tail via byte offset), per-feature `lifecycle/{feature}/events.log` and `agent-activity.jsonl`, `backlog/`.
+**Inputs**: `cortex/lifecycle/sessions/{id}/overnight-state.json`, `cortex/lifecycle/sessions/latest-pipeline/pipeline-state.json`, `cortex/lifecycle/sessions/{id}/overnight-events.log` (incremental JSONL tail via byte offset), per-feature `cortex/lifecycle/{feature}/events.log` and `agent-activity.jsonl`, `cortex/backlog/`.
 
 Polling cadence: state files every 2s, `overnight-events.log` every 1s (offset-tracked so already-seen events are never re-emitted), backlog counts every 30s, alert evaluation every 5s. The TOCTOU concern (what if the writer updates a file mid-read?) is resolved by convention at the write side: the overnight runner writes all state JSON via tempfile + `os.replace()`, which is atomic on the same filesystem, so the poller's `json.loads(path.read_text())` either sees the old bytes or the new bytes — never a torn mix. Append-only JSONL logs (`overnight-events.log`, `agent-activity.jsonl`) are tailed by byte offset, which means a write partway through a line will be re-read on the next tick once the line is complete. The practical consequence: a momentarily-stale dashboard is normal, an internally-inconsistent dashboard view is not.
 
@@ -566,7 +566,7 @@ Claude Code fires lifecycle hooks at session boundaries and on specific tool/not
 
 **Inputs**: JSON payload on stdin from Claude Code (`session_id`, `cwd`, `reason`, `tool_name`, etc.); environment (`CLAUDE_ENV_FILE`).
 
-Debugging note: hooks exit 0 unconditionally and **have no log mechanism** — per `requirements/remote-access.md`, notification and session-management failures are silent by design so that hook bugs never block the Claude session. This is acceptable for personal use but means "I didn't get a notification" has no breadcrumb trail; diagnose by running the hook script manually with a synthetic JSON payload on stdin, not by searching logs. The same silence applies to SessionStart/SessionEnd hooks: if `cortex-scan-lifecycle.sh` fails to inject `LIFECYCLE_SESSION_ID`, the session starts anyway and downstream tooling silently loses session identity.
+Debugging note: hooks exit 0 unconditionally and **have no log mechanism** — per `cortex/requirements/remote-access.md`, notification and session-management failures are silent by design so that hook bugs never block the Claude session. This is acceptable for personal use but means "I didn't get a notification" has no breadcrumb trail; diagnose by running the hook script manually with a synthetic JSON payload on stdin, not by searching logs. The same silence applies to SessionStart/SessionEnd hooks: if `cortex-scan-lifecycle.sh` fails to inject `LIFECYCLE_SESSION_ID`, the session starts anyway and downstream tooling silently loses session identity.
 
 ---
 
@@ -626,7 +626,7 @@ Convention: any new orchestrator-callable I/O primitive is added here rather tha
 
 **Signature**: `aggregate_round_context(session_dir: Path, round_number: int) -> dict`
 
-`session_dir` is the path to the session directory (e.g. `lifecycle/sessions/<session_id>/`). `round_number` is the current round number; it is included for schema-version tracing and is not used for filtering — callers retain round-filter logic.
+`session_dir` is the path to the session directory (e.g. `cortex/lifecycle/sessions/<session_id>/`). `round_number` is the current round number; it is included for schema-version tracing and is not used for filtering — callers retain round-filter logic.
 
 The returned dict has five top-level keys:
 
@@ -691,7 +691,7 @@ Both phases use the same event payload (built once inside `ensure_sdk_auth` with
 
 ### Lifecycle-archive recovery procedure
 
-The `just lifecycle-archive` recipe (housekeeping that moves long-completed feature directories from `lifecycle/` into `lifecycle/archive/` and rewrites cross-references) is git-recoverable by design. There is no manifest-driven rollback — recovery is a single git command from the main repo CWD.
+The `just lifecycle-archive` recipe (housekeeping that moves long-completed feature directories from `cortex/lifecycle/` into `cortex/lifecycle/archive/` and rewrites cross-references) is git-recoverable by design. There is no manifest-driven rollback — recovery is a single git command from the main repo CWD.
 
 The recipe asserts a clean working tree on entry (`git diff --quiet HEAD && git diff --quiet --cached HEAD`) so that any subsequent change in the working tree is unambiguously attributable to this run. If that precheck fails, the recipe aborts before touching anything; if a mid-run abort occurs (a `set -euo pipefail` exit, a partial `mv`, a `sed`/path-rewrite error, or operator interrupt), the working tree contains only this run's incomplete edits.
 
@@ -699,6 +699,6 @@ Recovery is three steps:
 
 1. **Confirm the failure mode** — either the precheck error (recipe never ran) or a mid-run abort (partial moves and/or rewrites visible in `git status`).
 2. **Revert from the main repo CWD**: `git checkout -- .` discards all uncommitted moves and `*.md` rewrites since the clean-tree baseline. This restores the pre-run state in one command.
-3. **Treat the manifest as audit-only** — `lifecycle/archive/.archive-manifest.jsonl` (NDJSON, appended atomically before each `mv`) records what the recipe attempted, but it exists for inspection and audit (e.g., morning-report integration) only. Do NOT script a manifest-driven rollback; the supported recovery path is `git checkout -- .` and nothing else. The manifest persists across the abort because it lives under `lifecycle/archive/` (which the recipe creates outside the moved-set), so it remains readable for post-mortem after the checkout.
+3. **Treat the manifest as audit-only** — `cortex/lifecycle/archive/.archive-manifest.jsonl` (NDJSON, appended atomically before each `mv`) records what the recipe attempted, but it exists for inspection and audit (e.g., morning-report integration) only. Do NOT script a manifest-driven rollback; the supported recovery path is `git checkout -- .` and nothing else. The manifest persists across the abort because it lives under `cortex/lifecycle/archive/` (which the recipe creates outside the moved-set), so it remains readable for post-mortem after the checkout.
 
 For larger archive runs, prefer the two-phase pattern documented in N6.4 of the apply-post-113-audit-follow-ups spec (a deterministic 5-dir sample run, commit, then the full run on remaining dirs), which keeps each commit boundary small enough that a `git checkout -- .` recovery never crosses a successful prior phase.

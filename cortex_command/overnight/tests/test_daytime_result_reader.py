@@ -316,17 +316,17 @@ class TestVerbatimMessageConstants:
     def test_terminal_message_verbatim(self) -> None:
         assert _MSG_TERMINAL == (
             "Subprocess likely completed but its result file is missing or invalid. "
-            "Check `lifecycle/{slug}/daytime.log` for the final outcome."
+            "Check `cortex/lifecycle/{slug}/daytime.log` for the final outcome."
         )
 
     def test_non_terminal_message_verbatim(self) -> None:
         assert _MSG_NON_TERMINAL == (
             "Subprocess did not complete (still running, killed, or crashed "
-            "mid-execution). Check `lifecycle/{slug}/daytime.log`."
+            "mid-execution). Check `cortex/lifecycle/{slug}/daytime.log`."
         )
 
     def test_absent_message_verbatim(self) -> None:
         assert _MSG_ABSENT == (
             "Subprocess never started (pre-flight failure). "
-            "Check `lifecycle/{slug}/daytime.log`."
+            "Check `cortex/lifecycle/{slug}/daytime.log`."
         )

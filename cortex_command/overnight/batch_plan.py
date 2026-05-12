@@ -34,7 +34,7 @@ def generate_batch_plan(
         output_path: Where to write the generated plan.
         base_branch: Branch to merge into. Defaults to "main".
         feature_plan_paths: Optional mapping of feature name to plan.md path.
-            When provided, overrides the default ``lifecycle/{name}/plan.md``
+            When provided, overrides the default ``cortex/lifecycle/{name}/plan.md``
             derivation. Use this when feature slugs in the overnight state
             differ from the actual lifecycle directory names.
 
@@ -131,11 +131,11 @@ def map_pipeline_results(
     - ``pending`` / ``executing`` -> ``running`` (pipeline didn't finish)
 
     After reading, archives the pipeline state file to
-    ``lifecycle/pipeline-state-round-{N}.json`` so the next round starts
+    ``cortex/lifecycle/pipeline-state-round-{N}.json`` so the next round starts
     clean.
 
     Args:
-        pipeline_state_path: Path to ``lifecycle/pipeline-state.json``.
+        pipeline_state_path: Path to ``cortex/lifecycle/pipeline-state.json``.
         round_number: Current round number (used for archive filename).
 
     Returns:

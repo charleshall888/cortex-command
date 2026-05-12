@@ -7,7 +7,7 @@ inputs:
   - "artifact-path: string (optional) — path to plan.md, spec.md, or research.md to review; if omitted, auto-detect from current lifecycle"
 outputs:
   - "Synthesis prose presented in conversation"
-  - "Optional residue write at lifecycle/{feature}/critical-review-residue.json"
+  - "Optional residue write at cortex/lifecycle/{feature}/critical-review-residue.json"
 preconditions:
   - "Run from project root"
   - "Artifact path resolves to an existing markdown file"
@@ -26,7 +26,7 @@ Derives challenge angles from the artifact and domain context, dispatches one fr
 
 ## Step 1: Find the Artifact
 
-If a lifecycle is active, read the most relevant artifact (`lifecycle/{feature}/plan.md` → `spec.md` → `research.md`, in that order). Otherwise use conversation context. If nothing is clear enough to challenge, ask: "What should I critically review?" before proceeding.
+If a lifecycle is active, read the most relevant artifact (`cortex/lifecycle/{feature}/plan.md` → `spec.md` → `research.md`, in that order). Otherwise use conversation context. If nothing is clear enough to challenge, ask: "What should I critically review?" before proceeding.
 
 ## Step 2: Review Setup and Dispatch
 
@@ -34,9 +34,9 @@ If a lifecycle is active, read the most relevant artifact (`lifecycle/{feature}/
 
 Before dispatching any reviewer agent, load project context for injection into reviewer prompts:
 
-1. If `requirements/project.md` exists, read it and extract the **Overview** section (or the first top-level summary section if none is labeled "Overview") — up to ~250 words.
+1. If `cortex/requirements/project.md` exists, read it and extract the **Overview** section (or the first top-level summary section if none is labeled "Overview") — up to ~250 words.
 2. If `lifecycle.config.md` exists, read it and check for a `type:` field. Only use the value if it is present, non-empty, and not commented out (i.e., the line is not prefixed with `#`). If valid, include it as a one-line prefix: `**Project type:** {type}` before the project overview text.
-3. Construct a `## Project Context` block from these inputs. **If neither file exists** (or `requirements/project.md` is absent and `lifecycle.config.md` has no valid `type:` value), **omit the `## Project Context` section entirely** — do not inject an empty placeholder into reviewer prompts.
+3. Construct a `## Project Context` block from these inputs. **If neither file exists** (or `cortex/requirements/project.md` is absent and `lifecycle.config.md` has no valid `type:` value), **omit the `## Project Context` section entirely** — do not inject an empty placeholder into reviewer prompts.
 
 ### Step 2a.5: Pre-Dispatch (atomic path + SHA pin)
 
@@ -86,7 +86,7 @@ Full invocation contract and resolution instructions: `${CLAUDE_SKILL_DIR}/refer
 
 ### Step 2e: Residue Write
 
-After synthesis (or Step 2c.5 pass-through), atomically write any B-class findings to a sidecar JSON for the morning report. Skip silently when zero B-class findings remain. Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `lifecycle/*/.session` files; on multiple-match or zero-match, emit the documented note and skip the write. The write is an inline `python3 -c` tempfile + `os.replace` atomic rename to `lifecycle/{feature}/critical-review-residue.json`.
+After synthesis (or Step 2c.5 pass-through), atomically write any B-class findings to a sidecar JSON for the morning report. Skip silently when zero B-class findings remain. Resolve `{feature}` from `$LIFECYCLE_SESSION_ID` against `cortex/lifecycle/*/.session` files; on multiple-match or zero-match, emit the documented note and skip the write. The write is an inline `python3 -c` tempfile + `os.replace` atomic rename to `cortex/lifecycle/{feature}/critical-review-residue.json`.
 
 Resolver script, payload schema (R4), and gating rules: `${CLAUDE_SKILL_DIR}/references/residue-write.md`.
 

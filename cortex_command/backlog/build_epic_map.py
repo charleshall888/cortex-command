@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a deterministic epic→children JSON map from ``backlog/index.json``.
+"""Build a deterministic epic→children JSON map from ``cortex/backlog/index.json``.
 
 Auto-detects ``type: epic`` items in the active backlog index and emits a
 sorted JSON envelope keying each epic to the list of its child items
@@ -11,7 +11,7 @@ lexicographically.
 Usage:
     cortex-build-epic-map [INDEX_PATH]
 
-INDEX_PATH defaults to ``backlog/index.json`` resolved relative to the
+INDEX_PATH defaults to ``cortex/backlog/index.json`` resolved relative to the
 current working directory.
 
 Exit codes:
@@ -181,7 +181,7 @@ def _build_argparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cortex-build-epic-map",
         description=(
-            "Build a deterministic epic→children JSON map from backlog/index.json. "
+            "Build a deterministic epic→children JSON map from cortex/backlog/index.json. "
             "Auto-detects type:epic items and groups each non-epic item under its "
             "normalized parent epic. Reads index.json, writes JSON envelope to stdout."
         ),
@@ -189,8 +189,8 @@ def _build_argparser() -> argparse.ArgumentParser:
     parser.add_argument(
         "index_path",
         nargs="?",
-        default="backlog/index.json",
-        help="Path to backlog index.json (default: backlog/index.json, resolved relative to CWD).",
+        default="cortex/backlog/index.json",
+        help="Path to backlog index.json (default: cortex/backlog/index.json, resolved relative to CWD).",
     )
     return parser
 

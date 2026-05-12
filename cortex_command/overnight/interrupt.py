@@ -7,7 +7,7 @@ with a reason field, and resets the feature to 'pending'.
 Callable as:
     python3 -m cortex_command.overnight.interrupt [state_path]
 
-The state_path argument defaults to lifecycle/overnight-state.json.
+The state_path argument defaults to cortex/lifecycle/overnight-state.json.
 """
 
 from __future__ import annotations
@@ -155,7 +155,7 @@ def main() -> None:
     if len(sys.argv) > 1:
         state_path = Path(sys.argv[1])
     else:
-        state_path = Path("lifecycle/overnight-state.json")
+        state_path = Path("cortex/lifecycle/overnight-state.json")
 
     handle_interrupted_features(state_path)
 

@@ -62,14 +62,14 @@ setup-tmux-socket:
 
 # Async-spawn the overnight round-loop runner (detaches; use `cortex overnight status` to track)
 # Usage: just overnight-run <state-path> <time-limit-seconds>  (args are positional)
-overnight-run state="lifecycle/sessions/latest-overnight/overnight-state.json" time-limit="21600" max-rounds="10" tier="simple":
+overnight-run state="cortex/lifecycle/sessions/latest-overnight/overnight-state.json" time-limit="21600" max-rounds="10" tier="simple":
     #!/usr/bin/env bash
     set -euo pipefail
     STATE="{{ state }}"
     if [[ "$STATE" == --* || "$STATE" == *=* ]]; then
         echo "Error: wrong arg format — use positional syntax:" >&2
         echo "  just overnight-run <state-path> <time-limit-seconds>" >&2
-        echo "  just overnight-run lifecycle/sessions/.../overnight-state.json 21600" >&2
+        echo "  just overnight-run cortex/lifecycle/sessions/.../overnight-state.json 21600" >&2
         exit 1
     fi
     cortex overnight start --state {{ state }} --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}
@@ -82,7 +82,7 @@ overnight-smoke-test:
 overnight-logs:
     #!/usr/bin/env bash
     set -euo pipefail
-    LOGFILE="lifecycle/sessions/latest-overnight/overnight-events.log"
+    LOGFILE="cortex/lifecycle/sessions/latest-overnight/overnight-events.log"
     if [ \! -f "$LOGFILE" ]; then
         echo "No active session log"
         exit 1
@@ -191,19 +191,19 @@ lifecycle-archive *args:
             from_file_slugs="${from_file_slugs}${slug}"$'\n'
         done < "$from_file"
     fi
-    mkdir -p lifecycle/archive
-    manifest="lifecycle/archive/.archive-manifest.jsonl"
-    lockdir="lifecycle/archive/.archive-manifest.lock"
+    mkdir -p cortex/lifecycle/archive
+    manifest="cortex/lifecycle/archive/.archive-manifest.jsonl"
+    lockdir="cortex/lifecycle/archive/.archive-manifest.lock"
     # Build list of active worktree paths to avoid moving checked-out worktrees
     worktree_paths=$(git worktree list --porcelain | awk '/^worktree / {print $2}')
     # --- Pass 1: build candidate slug list ---
     candidates=()
-    for events_log in lifecycle/*/events.log; do
+    for events_log in cortex/lifecycle/*/events.log; do
         [ -f "$events_log" ] || continue
         dir=$(dirname "$events_log")
-        # Skip lifecycle/archive and lifecycle/sessions
+        # Skip cortex/lifecycle/archive and cortex/lifecycle/sessions
         case "$dir" in
-            lifecycle/archive|lifecycle/archive/*|lifecycle/sessions|lifecycle/sessions/*) continue ;;
+            cortex/lifecycle/archive|cortex/lifecycle/archive/*|cortex/lifecycle/sessions|cortex/lifecycle/sessions/*) continue ;;
         esac
         # Stale-symlink guard: skip broken symlinks before realpath (spec edge case "N6 stale symlinks")
         [ -e "$dir" ] || continue
@@ -294,7 +294,7 @@ lifecycle-archive *args:
         rewrite_json=$(bin/cortex-archive-rewrite-paths --slug "$slug" "${exclude_dir_args[@]+"${exclude_dir_args[@]}"}")
         rewritten_json=$(printf '%s' "$rewrite_json" | python3 -c 'import json,sys; print(json.dumps(json.loads(sys.stdin.read())["rewritten_files"]))')
         src="$dir"
-        dst="lifecycle/archive/$slug"
+        dst="cortex/lifecycle/archive/$slug"
         line=$(python3 -c 'import json,sys; print(json.dumps({"ts": sys.argv[1], "src": sys.argv[2], "dst": sys.argv[3], "rewritten_files": json.loads(sys.argv[4])}))' "$ts" "$src" "$dst" "$rewritten_json")
         # --- Atomic append under mkdir-based lock (portable; flock unavailable on macOS) ---
         # Acquire lock (busy-wait briefly; mkdir is atomic on POSIX).
@@ -321,7 +321,7 @@ lifecycle-archive *args:
         rmdir "$lockdir" 2>/dev/null || true
         trap - EXIT
         # --- Move the directory ---
-        mv "$dir" lifecycle/archive/
+        mv "$dir" cortex/lifecycle/archive/
         count=$((count + 1))
     done
     echo "$count lifecycle directories archived"

@@ -332,7 +332,7 @@ def parse_backlog_dir(
 
 
 def load_from_index(backlog_dir: Path = DEFAULT_BACKLOG_DIR) -> list[BacklogItem]:
-    """Load BacklogItem instances from backlog/index.json.
+    """Load BacklogItem instances from cortex/backlog/index.json.
 
     Raises:
         FileNotFoundError: If index.json does not exist.
@@ -439,12 +439,12 @@ def filter_ready(
     """Partition backlog items into eligible and ineligible for overnight execution.
 
     Uses ``item.lifecycle_slug`` (falling back to ``slugify(item.title)``) to
-    derive artifact paths under ``lifecycle/{slug}/``.
+    derive artifact paths under ``cortex/lifecycle/{slug}/``.
 
     Readiness gates: (1) status in ``ELIGIBLE_STATUSES`` and (2) blockers
     delegate to :func:`cortex_command.backlog.is_item_ready`. (3) epics are
     excluded. (4) ``research.md`` and (5) ``spec.md`` must exist under
-    ``lifecycle/{slug}/`` (``plan.md`` is generated during the session).
+    ``cortex/lifecycle/{slug}/`` (``plan.md`` is generated during the session).
 
     Args:
         items: Backlog items to evaluate.

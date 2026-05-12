@@ -51,15 +51,15 @@ from typing import Optional
 
 _MSG_TERMINAL = (
     "Subprocess likely completed but its result file is missing or invalid. "
-    "Check `lifecycle/{slug}/daytime.log` for the final outcome."
+    "Check `cortex/lifecycle/{slug}/daytime.log` for the final outcome."
 )
 _MSG_NON_TERMINAL = (
     "Subprocess did not complete (still running, killed, or crashed "
-    "mid-execution). Check `lifecycle/{slug}/daytime.log`."
+    "mid-execution). Check `cortex/lifecycle/{slug}/daytime.log`."
 )
 _MSG_ABSENT = (
     "Subprocess never started (pre-flight failure). "
-    "Check `lifecycle/{slug}/daytime.log`."
+    "Check `cortex/lifecycle/{slug}/daytime.log`."
 )
 
 # Terminal phase values — any phase in this set → tier-2 says "terminal".

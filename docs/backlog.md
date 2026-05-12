@@ -3,7 +3,7 @@
 **For:** Users creating and managing features in the backlog — including preparing items for overnight execution.
 **Assumes:** Git and Claude Code are set up.
 
-The backlog is a flat directory of numbered markdown files (`backlog/NNN-slug.md`). Each file contains YAML frontmatter describing the item, followed by an optional markdown body. The overnight orchestration system reads these files to select work; the `/cortex-core:backlog` skill manages them interactively.
+The backlog is a flat directory of numbered markdown files (`cortex/backlog/NNN-slug.md`). Each file contains YAML frontmatter describing the item, followed by an optional markdown body. The overnight orchestration system reads these files to select work; the `/cortex-core:backlog` skill manages them interactively.
 
 ---
 
@@ -22,14 +22,14 @@ Every backlog item uses the following YAML frontmatter contract. Fields listed a
 | `tags` | array | no | Inline YAML only: `[tag1, tag2]` |
 | `created` | date | yes | `YYYY-MM-DD` |
 | `updated` | date | yes | `YYYY-MM-DD` — auto-updated by `update_item.py` |
-| `lifecycle_slug` | string | no | Kebab-case slug linking to `lifecycle/{slug}/`; or `null` |
+| `lifecycle_slug` | string | no | Kebab-case slug linking to `cortex/lifecycle/{slug}/`; or `null` |
 | `lifecycle_phase` | string | no | Current lifecycle phase (`research`, `specify`, `plan`, `implement`, `review`, `complete`); or `null` |
 | `session_id` | string | no | ID of the overnight session currently working on this item; or `null` |
 | `blocks` | array | no | Inline YAML only: `[1, 5]` (numeric IDs of items this item blocks) |
 | `blocked-by` | array | no | Inline YAML only: `[3, 7]` (numeric IDs of items blocking this one) |
 | `parent` | integer | no | Numeric ID of a parent epic item |
-| `research` | string | no | Path to prior research artifact (e.g. `research/topic/research.md`); set by `/cortex-core:discovery` |
-| `spec` | string | no | Path to spec artifact; set by `/cortex-core:refine` (e.g. `lifecycle/{slug}/spec.md`) |
+| `research` | string | no | Path to prior research artifact (e.g. `cortex/research/topic/research.md`); set by `/cortex-core:discovery` |
+| `spec` | string | no | Path to spec artifact; set by `/cortex-core:refine` (e.g. `cortex/lifecycle/{slug}/spec.md`) |
 | `discovery_source` | string | no | Path to the `/cortex-core:discovery` research artifact that produced this ticket; triggers auto-copy to lifecycle on `/cortex-core:lifecycle` start |
 | `repo` | string | no | Absolute path to target repository (e.g. `~/Workspaces/wild-light`); `null` = current repo (default) |
 | `complexity` | string | no | Lifecycle complexity tier (`simple`, `standard`, `complex`) |
@@ -76,16 +76,16 @@ When invoked without a subcommand, the skill presents the available actions.
 
 Creates a new backlog item from a title.
 
-1. Scans `backlog/` and `backlog/archive/` for the highest existing numeric ID.
+1. Scans `cortex/backlog/` and `cortex/backlog/archive/` for the highest existing numeric ID.
 2. Assigns the next sequential ID (zero-padded to three digits).
 3. Derives a slug from the title (lowercase, kebab-case).
-4. Creates `backlog/NNN-slug.md` with populated frontmatter and defaults (`status: backlog`, `priority: medium`, `type: feature`).
+4. Creates `cortex/backlog/NNN-slug.md` with populated frontmatter and defaults (`status: backlog`, `priority: medium`, `type: feature`).
 5. Opens the file for review or editing.
 6. Regenerates the backlog index.
 
 ### `list`
 
-Reads `backlog/index.md` and presents the summary table. Suggests running `reindex` if the index does not exist.
+Reads `cortex/backlog/index.md` and presents the summary table. Suggests running `reindex` if the index does not exist.
 
 ### `pick`
 
@@ -93,22 +93,22 @@ Interactive item selector. Filters to actionable items (status `backlog` or `in_
 
 ### `ready`
 
-Reads `backlog/index.md` and presents items from the Ready section (items with no unresolved `blocked-by` entries).
+Reads `cortex/backlog/index.md` and presents items from the Ready section (items with no unresolved `blocked-by` entries).
 
 ### `archive`
 
 Updates item status in place using `update_item.py`:
 
 ```bash
-python3 backlog/update_item.py <item> status=complete
-python3 backlog/update_item.py <item> status=abandoned
+python3 cortex/backlog/update_item.py <item> status=complete
+python3 cortex/backlog/update_item.py <item> status=abandoned
 ```
 
 No file is moved. The script cascades `blocked-by` cleanup across the backlog and auto-closes parent epics when all children reach a terminal status.
 
 ### `reindex`
 
-Runs `generate-backlog-index` to regenerate `backlog/index.md` and `backlog/index.json`.
+Runs `generate-backlog-index` to regenerate `cortex/backlog/index.md` and `cortex/backlog/index.json`.
 
 ---
 
@@ -122,9 +122,9 @@ Before an item is eligible for overnight execution, `filter_ready()` in `cortex_
 
 **Gate 3 — Type (epics excluded).** Items with `type: epic` are non-implementable and always excluded. Epics are containers produced by `/cortex-core:discovery`; their children are the actionable items.
 
-**Gate 4 — Research artifact.** The file `lifecycle/{slug}/research.md` must exist on disk, where `{slug}` is taken from `lifecycle_slug` (falling back to a slugified form of the title). The item's `research` frontmatter field is not consulted for this check.
+**Gate 4 — Research artifact.** The file `cortex/lifecycle/{slug}/research.md` must exist on disk, where `{slug}` is taken from `lifecycle_slug` (falling back to a slugified form of the title). The item's `research` frontmatter field is not consulted for this check.
 
-**Gate 5 — Spec artifact.** The file `lifecycle/{slug}/spec.md` must exist on disk. A `plan.md` is not required at this stage — if missing, it is generated by the overnight session before implementation begins.
+**Gate 5 — Spec artifact.** The file `cortex/lifecycle/{slug}/spec.md` must exist on disk. A `plan.md` is not required at this stage — if missing, it is generated by the overnight session before implementation begins.
 
 > **Note — gates check file existence, not content quality.** Gates 4 and 5 only verify that `research.md` and `spec.md` exist on disk. A spec file that exists but contains only a one-line problem statement will pass Gate 5 — the item will be queued — but the overnight session will be unable to produce a verifiable plan and may produce incorrect or incomplete work. See the thin spec example below.
 
@@ -146,7 +146,7 @@ Items that pass all five gates are scored and grouped into batches for overnight
 
 ## Discovery Bootstrapping Lifecycle Artifacts
 
-When `/cortex-core:discovery` decomposes research into backlog tickets, it writes a `discovery_source` frontmatter field on each created item pointing to the research artifact (e.g. `research/my-topic/research.md`).
+When `/cortex-core:discovery` decomposes research into backlog tickets, it writes a `discovery_source` frontmatter field on each created item pointing to the research artifact (e.g. `cortex/research/my-topic/research.md`).
 
 When `/cortex-core:lifecycle` starts on an item that has `discovery_source` set, it automatically loads the prior research, presents a summary, and asks whether to skip re-investigation (default: skip). In overnight contexts the skip is applied automatically. If the user declines, the research artifact is loaded as additional context and investigation proceeds normally.
 
@@ -156,10 +156,10 @@ This coupling means that features discovered via `/cortex-core:discovery` arrive
 
 ## `update_item.py` CLI Reference
 
-`backlog/update_item.py` is the canonical tool for automated write-backs to backlog frontmatter. It is used by the `/cortex-core:refine` skill, lifecycle hooks, and the overnight pipeline to update items without manual editing.
+`cortex/backlog/update_item.py` is the canonical tool for automated write-backs to backlog frontmatter. It is used by the `/cortex-core:refine` skill, lifecycle hooks, and the overnight pipeline to update items without manual editing.
 
 ```
-python3 backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
+python3 cortex/backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
 ```
 
 **Lookup.** The first argument is matched against item filenames (exact stem, then substring), then against `uuid` fields. UUID prefix matching is supported.
@@ -169,7 +169,7 @@ python3 backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
 **Side effects on every update:**
 - Writes the updated file atomically (write-then-rename).
 - Appends `status_changed` or `phase_changed` events to the sidecar `{stem}.events.jsonl` log.
-- Regenerates `backlog/index.json` and `backlog/index.md` via `generate_index.py`.
+- Regenerates `cortex/backlog/index.json` and `cortex/backlog/index.md` via `generate_index.py`.
 
 **Additional side effects for terminal status transitions** (`complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do` — full list in `cortex_command/common.py`):
 - Removes the closed item's ID and UUID from `blocked-by` arrays across all active backlog items.
@@ -181,16 +181,16 @@ python3 backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
 
 ```bash
 # Mark an item complete by slug
-python3 backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete
+python3 cortex/backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete
 
 # Update lifecycle phase by UUID
-python3 backlog/update_item.py 550e8400-... lifecycle_phase=implement
+python3 cortex/backlog/update_item.py 550e8400-... lifecycle_phase=implement
 
 # Clear the session_id field
-python3 backlog/update_item.py 030-cf-tunnel-fallback-polish session_id=null
+python3 cortex/backlog/update_item.py 030-cf-tunnel-fallback-polish session_id=null
 
 # Update multiple fields at once
-python3 backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete session_id=null
+python3 cortex/backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete session_id=null
 ```
 
 ---
@@ -202,5 +202,5 @@ This document describes the backlog system as implemented at the time of writing
 - `cortex_command/overnight/backlog.py` — changes to `ELIGIBLE_STATUSES`, `TERMINAL_STATUSES`, or `filter_ready()` gate logic
 - `skills/backlog/references/schema.md` — additions or removals from the frontmatter schema
 - `skills/backlog/SKILL.md` — new subcommands or changed subcommand behavior
-- `backlog/update_item.py` — changes to the CLI interface or side-effect behavior
+- `cortex/backlog/update_item.py` — changes to the CLI interface or side-effect behavior
 - `skills/discovery/SKILL.md` — changes to how `discovery_source` is written or consumed

@@ -4,7 +4,7 @@ Reads overnight state, event logs, deferral files, and batch results
 to produce a morning report with executive summary, completed features,
 deferred questions, failed features, action checklist, and run
 statistics.  The report is written to the session directory at
-``lifecycle/sessions/{session-id}/morning-report.md``.
+``cortex/lifecycle/sessions/{session-id}/morning-report.md``.
 """
 
 from __future__ import annotations
@@ -267,7 +267,7 @@ def create_followup_backlog_items(
             body = (
                 f"Feature **{name}** failed during the overnight run. "
                 f"Error: {error_summary}. "
-                f"Review `lifecycle/{name}/learnings/progress.txt` and retry or investigate."
+                f"Review `cortex/lifecycle/{name}/learnings/progress.txt` and retry or investigate."
             )
         else:  # deferred
             title = f"Retry deferred: {name}"
@@ -890,8 +890,8 @@ def _read_learnings_summary(feature: str) -> str:
     # Count attempts
     attempt_count = content.count("Attempt ")
     if attempt_count > 0:
-        return f"Required {attempt_count} attempt(s) — see `lifecycle/{feature}/learnings/progress.txt`"
-    return f"See `lifecycle/{feature}/learnings/progress.txt`"
+        return f"Required {attempt_count} attempt(s) — see `cortex/lifecycle/{feature}/learnings/progress.txt`"
+    return f"See `cortex/lifecycle/{feature}/learnings/progress.txt`"
 
 
 def render_deferred_questions(data: ReportData) -> str:
@@ -1064,7 +1064,7 @@ def render_failed_features(data: ReportData) -> str:
                 files_str = ", ".join(f"`{f}`" for f in conflicted_files)
                 lines.append(f"- **Conflicted files**: {files_str}")
             lines.append(f"- **Recovery branch**: `pipeline/{name}`")
-        lines.append(f"- Learnings: `lifecycle/{name}/learnings/progress.txt`")
+        lines.append(f"- Learnings: `cortex/lifecycle/{name}/learnings/progress.txt`")
         recovery_entry = _read_recovery_log_last_entry(name)
         if recovery_entry:
             lines.append(f"- **Last recovery attempt**: {recovery_entry}")
@@ -1109,7 +1109,7 @@ def render_failed_features(data: ReportData) -> str:
 def collect_tool_failures(session_id: str) -> dict[str, dict[str, Any]]:
     """Collect tool failure data from the session-scoped failure directory.
 
-    Prefers ``lifecycle/sessions/{session_id}/tool-failures/`` (the post-#163
+    Prefers ``cortex/lifecycle/sessions/{session_id}/tool-failures/`` (the post-#163
     location written by the PostToolUse hook when ``$LIFECYCLE_SESSION_ID`` is
     set) and falls back to ``${TMPDIR:-/tmp}/claude-tool-failures-{session_id}/``
     only when the lifecycle path is absent (interactive sessions and pre-#163
@@ -1247,7 +1247,7 @@ def collect_sandbox_denials(session_id: str) -> dict[str, int]:
     L1/L2 candidate targets are looked up against the union of sidecar
     ``deny_paths`` and classified by path-pattern (home_repo_*, cross_repo_*,
     or other_deny_path).  Home/cross repo roots are inferred at classification
-    time from ``lifecycle/overnight-state.json``: home is ``state.project_root``
+    time from ``cortex/lifecycle/overnight-state.json``: home is ``state.project_root``
     and cross is the set of distinct non-home ``feature.repo_path`` values.
 
     The entire body is wrapped in a top-level exception envelope that returns

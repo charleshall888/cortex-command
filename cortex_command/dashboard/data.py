@@ -5,8 +5,8 @@ structures. All file I/O is wrapped in try/except so parsers never raise
 on missing or malformed files.
 
 Functions:
-    parse_overnight_state  -- reads lifecycle/overnight-state.json
-    parse_pipeline_state   -- reads lifecycle/pipeline-state.json
+    parse_overnight_state  -- reads cortex/lifecycle/overnight-state.json
+    parse_pipeline_state   -- reads cortex/lifecycle/pipeline-state.json
     tail_jsonl             -- byte-offset-aware JSONL tail utility
     parse_feature_events   -- reads lifecycle/{feature}/events.log
     parse_agent_activity   -- reads lifecycle/{feature}/agent-activity.jsonl
@@ -20,7 +20,7 @@ Functions:
     parse_backlog_titles   -- maps lifecycle slug → human-readable backlog title
     _read_all_jsonl        -- reads all JSONL events from byte 0 (initial-read primitive)
     parse_feature_cost_delta -- incremental cost delta and new byte offset for a feature
-    parse_metrics          -- reads lifecycle/metrics.json
+    parse_metrics          -- reads cortex/lifecycle/metrics.json
     compute_slow_flags     -- identifies running features slower than 3x median for their phase
     parse_feature_timestamps -- extracts start/complete timestamps and duration per feature slug
     parse_round_timestamps   -- extracts start/complete timestamps per round number from overnight events
@@ -44,7 +44,7 @@ def parse_overnight_state(path: Path) -> dict | None:
 
     Args:
         path: Path to overnight-state.json (typically
-            ``lifecycle/overnight-state.json``).
+            ``cortex/lifecycle/overnight-state.json``).
 
     Returns:
         Parsed JSON dict, or None if the file is absent or unreadable.
@@ -63,7 +63,7 @@ def parse_pipeline_state(path: Path) -> dict | None:
 
     Args:
         path: Path to pipeline-state.json (typically
-            ``lifecycle/pipeline-state.json``).
+            ``cortex/lifecycle/pipeline-state.json``).
 
     Returns:
         Parsed JSON dict, or None if the file is absent or unreadable.
@@ -281,7 +281,7 @@ def parse_feature_cost_delta(path: Path, offset: int) -> tuple[float, int]:
 def parse_feature_events(feature_slug: str, lifecycle_dir: Path) -> dict:
     """Parse phase transitions and rework cycles from a feature's events.log.
 
-    Reads ``lifecycle/{feature_slug}/events.log`` via
+    Reads ``cortex/lifecycle/{feature_slug}/events.log`` via
     ``cortex_command.pipeline.metrics.parse_events()``.
 
     Args:

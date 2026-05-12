@@ -532,7 +532,7 @@ def _commit_morning_report_in_repo(
     session_id: str,
     events_path: Path,
 ) -> None:
-    """Commit ``lifecycle/morning-report.md`` to local main from the runner.
+    """Commit ``cortex/lifecycle/morning-report.md`` to local main from the runner.
 
     Ports the morning-report runner-side commit step from the legacy
     ``runner.sh`` (Req 9 of the
@@ -559,7 +559,7 @@ def _commit_morning_report_in_repo(
     env = {k: v for k, v in os.environ.items() if k != "GIT_DIR"}
     try:
         subprocess.run(
-            ["git", "add", "lifecycle/morning-report.md"],
+            ["git", "add", "cortex/lifecycle/morning-report.md"],
             cwd=str(project_root),
             env=env,
             check=False,

@@ -6,18 +6,18 @@ inputs:
   - "title: string (optional, with add) — title of the new backlog item to create"
   - "item: string (optional, with archive) — slug or number of item to archive"
 outputs:
-  - "backlog/NNN-slug.md — for add subcommand"
+  - "cortex/backlog/NNN-slug.md — for add subcommand"
   - "stdout — for list and ready subcommands"
   - "/cortex-core:lifecycle {{item}} invocation — for pick subcommand"
 preconditions:
   - "Run from project root"
-  - "backlog/ directory exists"
+  - "cortex/backlog/ directory exists"
 argument-hint: "<subcommand> [args]"
 ---
 
 # Backlog
 
-Manage a file-based project backlog. Each item is a standalone markdown file with YAML frontmatter in `backlog/` (active) or `backlog/archive/` (complete/abandoned).
+Manage a file-based project backlog. Each item is a standalone markdown file with YAML frontmatter in `cortex/backlog/` (active) or `cortex/backlog/archive/` (complete/abandoned).
 
 Subcommand: $ARGUMENTS (first word = subcommand, remainder = subcommand args; empty = list backlog).
 
@@ -57,9 +57,9 @@ Create a new backlog item from `{{title}}`.
 
 Present the current backlog summary.
 
-1. Read `backlog/index.md`
+1. Read `cortex/backlog/index.md`
 2. Present the summary table to the user
-3. If `backlog/index.md` does not exist, suggest running `reindex` first
+3. If `cortex/backlog/index.md` does not exist, suggest running `reindex` first
 
 ### archive
 

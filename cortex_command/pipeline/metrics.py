@@ -1385,7 +1385,7 @@ def _format_skill_tier_dispatch_report(metrics_data: dict[str, Any], since: date
 
 def main(argv: list[str] | None = None) -> None:
     """Run the full metrics pipeline: discover, parse, extract, aggregate,
-    calibrate, and write ``lifecycle/metrics.json``.
+    calibrate, and write ``cortex/lifecycle/metrics.json``.
 
     Args:
         argv: Command-line arguments (defaults to ``sys.argv[1:]``).

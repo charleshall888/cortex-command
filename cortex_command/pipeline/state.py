@@ -1,7 +1,7 @@
 """Pipeline state machine with persistence and event logging.
 
 Manages pipeline phase transitions, per-feature status tracking, and
-JSONL event logging. State is persisted to lifecycle/pipeline-state.json
+JSONL event logging. State is persisted to cortex/lifecycle/pipeline-state.json
 and read by shell scripts (hooks, statusline), so writes must be atomic.
 """
 

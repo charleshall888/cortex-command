@@ -87,7 +87,7 @@ _self_test() {
     fi
     # Step 2 (repo root) is enforced by the top-level REPO_ROOT check; reaching here means it's set.
 
-    local session_dir="$REPO_ROOT/lifecycle/sessions/$LIFECYCLE_SESSION_ID"
+    local session_dir="$REPO_ROOT/cortex/lifecycle/sessions/$LIFECYCLE_SESSION_ID"
     if ! mkdir -p "$session_dir" 2>/dev/null; then
         echo "step 3 (session dir create): permission denied — run \`cortex init\` to register the log path in sandbox.filesystem.allowWrite" >&2
         exit 1
@@ -173,7 +173,7 @@ _check_entry_points() {
 
 _json_mode() {
     local logs sessions errors_recorded inventory_str counts records malformed
-    logs=( "$REPO_ROOT"/lifecycle/sessions/*/bin-invocations.jsonl )
+    logs=( "$REPO_ROOT"/cortex/lifecycle/sessions/*/bin-invocations.jsonl )
     sessions=${#logs[@]}
     errors_recorded="$(_errors_recorded)"
     inventory_str="$(_inventory | sort)"
@@ -213,7 +213,7 @@ _json_mode() {
 
 _default_mode() {
     local logs sessions records errors_recorded inventory_str counts
-    logs=( "$REPO_ROOT"/lifecycle/sessions/*/bin-invocations.jsonl )
+    logs=( "$REPO_ROOT"/cortex/lifecycle/sessions/*/bin-invocations.jsonl )
     sessions=${#logs[@]}
     errors_recorded="$(_errors_recorded)"
     inventory_str="$(_inventory)"

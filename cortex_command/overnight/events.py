@@ -2,8 +2,8 @@
 
 Provides forensic logging of all significant events during an overnight
 session. Each event is written as a single JSON line to a per-session
-log file at lifecycle/overnight-events-{session_id}.log. The canonical
-path lifecycle/overnight-events.log is a symlink maintained by runner.sh.
+log file at cortex/lifecycle/overnight-events-{session_id}.log. The canonical
+path cortex/lifecycle/overnight-events.log is a symlink maintained by runner.sh.
 Timestamps are auto-generated in UTC ISO 8601 format.
 
 Includes reader utilities (read_events, read_events_for_round) used by
@@ -176,7 +176,7 @@ def events_log_path(
             project lifecycle/, resolved at call time).
 
     Returns:
-        Path to lifecycle/overnight-events-{session_id}.log.
+        Path to cortex/lifecycle/overnight-events-{session_id}.log.
     """
     lifecycle_root = lifecycle_root or _resolve_user_project_root() / "cortex" / "lifecycle"
     return lifecycle_root / f"overnight-events-{session_id}.log"

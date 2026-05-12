@@ -144,10 +144,10 @@ def _read_exit_report(
     """Read a worker exit report for a single task.
 
     Returns ``(action, reason, question)`` extracted from
-    ``lifecycle/{feature}/exit-reports/{task_number}.json``.
+    ``cortex/lifecycle/{feature}/exit-reports/{task_number}.json``.
 
     Checks two locations in order:
-    1. Primary: ``lifecycle/{feature}/exit-reports/{task_number}.json``
+    1. Primary: ``cortex/lifecycle/{feature}/exit-reports/{task_number}.json``
        relative to the batch runner's CWD (the integration worktree in overnight
        sessions).
     2. Fallback: ``worktree_path / "cortex" / "lifecycle" / feature / "exit-reports" /

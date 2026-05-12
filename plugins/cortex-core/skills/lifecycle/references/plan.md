@@ -12,8 +12,8 @@ Produce a detailed implementation plan with numbered tasks, file paths, and veri
 ### 1. Load Context
 
 Read prior artifacts:
-- `lifecycle/{feature}/research.md` (always)
-- `lifecycle/{feature}/spec.md` (required — produced in Specify phase)
+- `cortex/lifecycle/{feature}/research.md` (always)
+- `cortex/lifecycle/{feature}/spec.md` (required — produced in Specify phase)
 - `lifecycle.config.md` at project root (if exists — project constraints)
 
 ### 1a. Check Criticality
@@ -27,7 +27,7 @@ Read criticality by running `cortex-lifecycle-state --feature {feature} --field 
 
 When criticality is `critical`, dispatch 2-3 independent plan agents to produce competing plan variants. The orchestrator decides how many agents to dispatch (minimum 2, maximum 3) based on how many meaningfully distinct approaches it can identify from the spec and research.
 
-**a. Prepare shared context**: Resolve absolute paths for `lifecycle/{feature}/spec.md` and `lifecycle/{feature}/research.md` — absolutify `{spec_path}` and `{research_path}` via `git rev-parse --show-toplevel` joined with the lifecycle paths before injection into the prompt template. Each plan agent reads the files itself rather than receiving inline contents. Do NOT share one agent's draft with another — each agent must work independently.
+**a. Prepare shared context**: Resolve absolute paths for `cortex/lifecycle/{feature}/spec.md` and `cortex/lifecycle/{feature}/research.md` — absolutify `{spec_path}` and `{research_path}` via `git rev-parse --show-toplevel` joined with the lifecycle paths before injection into the prompt template. Each plan agent reads the files itself rather than receiving inline contents. Do NOT share one agent's draft with another — each agent must work independently.
 
 **b. Dispatch plan agents**: Launch each agent as a parallel Task tool sub-task. Use the plan agent prompt template below **verbatim** for each — substitute the variables (including `{spec_path}` and `{research_path}` as absolute paths) but do not omit, reorder, or paraphrase any instructions. Each agent reads the same spec and research files but is instructed to design an independent approach. The dispatched agents emit plans in the §3 Write Plan Artifact format below; for critical tier only, they also populate the `**Architectural Pattern**` field in the Overview per the closed enum `{event-driven, pipeline, layered, shared-state, plug-in}`.
 **Model**: `sonnet` (competing plan agents always use sonnet)
@@ -83,7 +83,7 @@ Use the plan format defined in §3 Write Plan Artifact below. Required fields pe
 
 - **Model**: `opus`
 - **System prompt**: load the canonical synthesizer prompt fragment from `cortex_command/overnight/prompts/plan-synthesizer.md` via `importlib.resources.files()` (e.g. `importlib.resources.files("cortex_command.overnight.prompts").joinpath("plan-synthesizer.md").read_text()`). Do not paraphrase or inline the fragment elsewhere — load the canonical file so both interactive and overnight surfaces stay in lockstep.
-- **User prompt**: inline the variant file paths (e.g. `lifecycle/{feature}/plan-variant-A.md`, `plan-variant-B.md`, optionally `plan-variant-C.md`) plus the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped and require agreement before assigning `confidence: "high"` or `"medium"`. The user prompt must direct the synthesizer to emit a JSON envelope per the schema in the system prompt fragment.
+- **User prompt**: inline the variant file paths (e.g. `cortex/lifecycle/{feature}/plan-variant-A.md`, `plan-variant-B.md`, optionally `plan-variant-C.md`) plus the swap-and-require-agreement instruction directing the synthesizer to compare the variants twice with order swapped and require agreement before assigning `confidence: "high"` or `"medium"`. The user prompt must direct the synthesizer to emit a JSON envelope per the schema in the system prompt fragment.
 
 The synthesizer is dispatched as a fresh Task sub-agent — it shares no context with the plan-gen sub-agents from §1b.b — so its judgment is fresh by construction.
 
@@ -95,7 +95,7 @@ The synthesizer is dispatched as a fresh Task sub-agent — it shares no context
 
 **f. Route on verdict + confidence**:
 
-- **`verdict ∈ {"A","B","C"}` AND `confidence ∈ {"high","medium"}`**: present the chosen variant to the operator with the synthesizer's `rationale`. The default operator action is **rubber-stamp** (Enter to accept the synthesizer's pick); to override, the operator types a different variant label (`A`, `B`, or `C`). On rubber-stamp, write the chosen variant's content to `lifecycle/{feature}/plan.md`. On override, write the operator-chosen variant's content to `lifecycle/{feature}/plan.md`. Verdict `"C"` (tie) at high/medium confidence is a logically impossible state per the synthesizer prompt fragment's instruction to pair `"C"` with `confidence: "low"`; if it occurs, treat as malformed envelope and fall back to the legacy comparison table below.
+- **`verdict ∈ {"A","B","C"}` AND `confidence ∈ {"high","medium"}`**: present the chosen variant to the operator with the synthesizer's `rationale`. The default operator action is **rubber-stamp** (Enter to accept the synthesizer's pick); to override, the operator types a different variant label (`A`, `B`, or `C`). On rubber-stamp, write the chosen variant's content to `cortex/lifecycle/{feature}/plan.md`. On override, write the operator-chosen variant's content to `cortex/lifecycle/{feature}/plan.md`. Verdict `"C"` (tie) at high/medium confidence is a logically impossible state per the synthesizer prompt fragment's instruction to pair `"C"` with `confidence: "low"`; if it occurs, treat as malformed envelope and fall back to the legacy comparison table below.
 
 - **`confidence: "low"` OR malformed envelope**: display the legacy comparison table for manual user-pick. The synthesizer's preliminary rationale is hidden from the comparison table to preserve fresh-judgment freshness — the operator must form an independent verdict from the variant content rather than anchoring on a low-confidence synthesizer recommendation. Render this table:
 
@@ -106,11 +106,11 @@ The synthesizer is dispatched as a fresh Task sub-agent — it shares no context
   | **Risk profile** | [key risks] | [key risks] | [key risks] |
   | **Key trade-offs** | [what this approach gains/sacrifices] | [what this approach gains/sacrifices] | [what this approach gains/sacrifices] |
 
-  Omit the Plan C column if only 2 agents were dispatched or only 2 succeeded. Ask the operator to select a variant or reject all. On selection, write the selected variant's content to `lifecycle/{feature}/plan.md`. On rejection, fall back to the standard single-plan flow (§2-§3) in the main context.
+  Omit the Plan C column if only 2 agents were dispatched or only 2 succeeded. Ask the operator to select a variant or reject all. On selection, write the selected variant's content to `cortex/lifecycle/{feature}/plan.md`. On rejection, fall back to the standard single-plan flow (§2-§3) in the main context.
 
-  When presenting the comparison, surface to the operator that a `plan_comparison` may also be resolved by **combining variants** — selecting one variant as the base and grafting a named task or module from another variant into it (a cross-graft producing a combined plan). Record the graft in the §1b.g event log via `selection_rationale` (e.g. `"operator graft: Plan A base + Plan B Task 3"`) and write the combined plan content to `lifecycle/{feature}/plan.md`.
+  When presenting the comparison, surface to the operator that a `plan_comparison` may also be resolved by **combining variants** — selecting one variant as the base and grafting a named task or module from another variant into it (a cross-graft producing a combined plan). Record the graft in the §1b.g event log via `selection_rationale` (e.g. `"operator graft: Plan A base + Plan B Task 3"`) and write the combined plan content to `cortex/lifecycle/{feature}/plan.md`.
 
-**g. Log v2 `plan_comparison` event**: Append a JSONL event to `lifecycle/{feature}/events.log` with `schema_version: 2` plus the five new fields:
+**g. Log v2 `plan_comparison` event**: Append a JSONL event to `cortex/lifecycle/{feature}/events.log` with `schema_version: 2` plus the five new fields:
 
 ```
 {"ts": "<ISO 8601>", "event": "plan_comparison", "schema_version": 2, "feature": "<name>", "variants": [{"label": "Plan A", "approach": "<summary>", "task_count": <N>, "risk": "<risk summary>"}], "selected": "Plan A|none", "selection_rationale": "<synthesizer rationale or 'fallback: low-confidence user-pick' or 'fallback: malformed envelope user-pick'>", "selector_confidence": "high|medium|low", "position_swap_check_result": "agreed|disagreed", "disposition": "rubber_stamp|override|deferred|auto_select", "operator_choice": "Plan A|null"}
@@ -140,7 +140,7 @@ The plan structure below — specifically the `## Outline` / `## Tasks` / `## Ri
 
 Renamed from `## Veto Surface` 2026-05-11 — retro searches for the prior name still apply to plans authored before this date.
 
-Produce `lifecycle/{feature}/plan.md` with this structure:
+Produce `cortex/lifecycle/{feature}/plan.md` with this structure:
 
 ```markdown
 # Plan: {feature}
@@ -254,7 +254,7 @@ Plans are prose with structural context. The line between design and implementat
 - Any code that an implementer would copy-paste rather than write
 - Verification steps that reference artifacts (files, log entries, status fields) the executing task creates solely for the purpose of satisfying verification — this is self-sealing and passes tautologically
 
-After writing `plan.md`, update `lifecycle/{feature}/index.md`:
+After writing `plan.md`, update `cortex/lifecycle/{feature}/index.md`:
 - If `"plan"` is already in the `artifacts` array, skip entirely (no-op)
 - Otherwise: append `"plan"` to the artifacts inline array
 - Update the `updated` field to today's date
@@ -281,7 +281,7 @@ Present the plan summary (overview + task list) and use the AskUserQuestion tool
 
 Enumerate the options on that call explicitly as: `Approve` | `Request changes` | `Cancel`. Route on the response:
 
-- **Approve**: append a `plan_approved` event to `lifecycle/{feature}/events.log`, then append the `phase_transition` event from §5 below, then auto-advance to Implement. Proceed automatically — do not ask the user for confirmation again.
+- **Approve**: append a `plan_approved` event to `cortex/lifecycle/{feature}/events.log`, then append the `phase_transition` event from §5 below, then auto-advance to Implement. Proceed automatically — do not ask the user for confirmation again.
   ```
   {"ts": "<ISO 8601>", "event": "plan_approved", "feature": "<name>"}
   ```
@@ -290,13 +290,13 @@ Enumerate the options on that call explicitly as: `Approve` | `Request changes` 
 
 ### 5. Transition
 
-On `Approve`, append a `phase_transition` event to `lifecycle/{feature}/events.log` (the `plan_approved` event from §4 must precede this one in the log):
+On `Approve`, append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log` (the `plan_approved` event from §4 must precede this one in the log):
 
 ```
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "plan", "to": "implement"}
 ```
 
-If `commit-artifacts` is enabled in project config (default), stage `lifecycle/{feature}/` and commit using `/cortex-core:commit`.
+If `commit-artifacts` is enabled in project config (default), stage `cortex/lifecycle/{feature}/` and commit using `/cortex-core:commit`.
 
 After approval, proceed to Implement automatically — do not ask the user for confirmation.
 
@@ -307,5 +307,5 @@ Do NOT write implementation code in the plan. Plans describe WHAT each task does
 | Thought | Reality |
 |---------|---------|
 | "This plan is so detailed I might as well write the code" | If you are writing function bodies, you have violated the code budget. Plans provide structure, not implementation. |
-| "The backlog item said to do it this way" | Backlog items suggest approaches — they don't prescribe them. Unless the backlog item has linked research/spec artifacts that already validated the approach, evaluate it critically and weigh alternatives. |
+| "The backlog item said to do it this way" | Backlog items suggest approaches — they don't prescribe them. Unless the backlog item has linked cortex/research/spec artifacts that already validated the approach, evaluate it critically and weigh alternatives. |
 | "The agent can verify by checking the file it just wrote" | Verification that checks an artifact the same task creates solely for verification is self-sealing — it passes tautologically. Use test commands, pre-existing state, or prior-task outputs instead. |

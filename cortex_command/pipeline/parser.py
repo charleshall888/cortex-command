@@ -38,7 +38,7 @@ class MasterPlanConfig:
 
 @dataclass
 class MasterPlan:
-    """Parsed representation of lifecycle/master-plan.md."""
+    """Parsed representation of cortex/lifecycle/master-plan.md."""
 
     name: str
     features: list[MasterPlanFeature] = field(default_factory=list)

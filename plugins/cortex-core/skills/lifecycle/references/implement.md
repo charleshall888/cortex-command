@@ -11,7 +11,7 @@ Execute the plan by dispatching a fresh implementation sub-task per task. Each s
 
 ### 1. Pre-Flight Check
 
-Read `lifecycle/{feature}/plan.md` and identify pending tasks (those with `[ ]`).
+Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with `[ ]`).
 
 **Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with three options:
 
@@ -57,11 +57,11 @@ This section runs **only** when the user selected "Implement in autonomous workt
 
 There is **no `.dispatching` noclobber marker** on this path — the `$$`-based mechanism is unsuitable for a detached background subprocess (the dispatching shell's PID `$$` dies milliseconds after the Bash call returns). The `daytime.pid` guard below is sufficient to prevent double-dispatch.
 
-**i. Plan.md prerequisite check.** Before any guards or subprocess launch, verify `lifecycle/{feature}/plan.md` exists. If absent: surface to the user "plan.md not found — cannot launch autonomous worktree. Run /cortex-core:lifecycle plan first." and exit §1a. Do NOT proceed to the guards or the subprocess launch.
+**i. Plan.md prerequisite check.** Before any guards or subprocess launch, verify `cortex/lifecycle/{feature}/plan.md` exists. If absent: surface to the user "plan.md not found — cannot launch autonomous worktree. Run /cortex-core:lifecycle plan first." and exit §1a. Do NOT proceed to the guards or the subprocess launch.
 
 **ii. Double-dispatch guard.** Two separate Bash calls (no compound commands):
 
-1. Read PID file: `cat lifecycle/{feature}/daytime.pid 2>/dev/null`
+1. Read PID file: `cat cortex/lifecycle/{feature}/daytime.pid 2>/dev/null`
 2. Liveness check on the PID (if the file was non-empty): `kill -0 $pid 2>/dev/null`
 
 If `kill -0` exits 0 (process alive): reject with "Autonomous daytime run already in progress (PID {pid}) — wait for it to complete or check events.log" and exit §1a. If the exit code is non-zero or the file was empty/absent: proceed.
@@ -70,7 +70,7 @@ If `kill -0` exits 0 (process alive): reject with "Autonomous daytime run alread
 
 1. Read active session descriptor: `cat ~/.local/share/overnight-sessions/active-session.json 2>/dev/null`. If absent or empty: proceed normally (no overnight session active).
 2. Parse `repo_path`, `phase`, and `state_path` fields from the JSON. If `repo_path` does not equal the current working directory, **or** `phase` is not `"executing"`: proceed normally.
-3. Derive the session directory as the parent directory of `state_path` (i.e., `Path(state_path).parent`). `state_path` is the full path to the session's state JSON file (e.g., `lifecycle/sessions/{id}/overnight-state.json`); the session directory is the containing directory. Read the runner lock file: `cat {session_dir}/.runner.lock 2>/dev/null` and extract the runner PID.
+3. Derive the session directory as the parent directory of `state_path` (i.e., `Path(state_path).parent`). `state_path` is the full path to the session's state JSON file (e.g., `cortex/lifecycle/sessions/{id}/overnight-state.json`); the session directory is the containing directory. Read the runner lock file: `cat {session_dir}/.runner.lock 2>/dev/null` and extract the runner PID.
 4. Liveness check: `kill -0 $runner_pid 2>/dev/null`. If the runner is alive (exit 0): reject with "Overnight runner is active (PID {pid}) — wait for it to complete before launching a daytime run." and exit §1a. If the runner is dead (non-zero exit): emit warning "overnight state shows executing but no live runner found — may be stale; proceeding" and continue.
 
 **iv. Background subprocess launch.** Three preparatory Bash calls before the launch, then one launch call, then one post-launch update call — five calls total (no compound commands):
@@ -88,10 +88,10 @@ Invoke `daytime_dispatch_writer` in init mode — see the module for the canonic
 **Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed:
 
 ```
-DAYTIME_DISPATCH_ID={uuid} python3 -m cortex_command.overnight.daytime_pipeline --feature {slug} > lifecycle/{feature}/daytime.log 2>&1
+DAYTIME_DISPATCH_ID={uuid} python3 -m cortex_command.overnight.daytime_pipeline --feature {slug} > cortex/lifecycle/{feature}/daytime.log 2>&1
 ```
 
-The subprocess is responsible for writing `lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID file — it only reads it.
+The subprocess is responsible for writing `cortex/lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID file — it only reads it.
 
 **Step 4 — Update `daytime-dispatch.json` with subprocess PID.** After the PID file has been written (following the initial-wait in §v), update the `pid` field via the canonical helper:
 
@@ -105,13 +105,13 @@ Invoke `daytime_dispatch_writer` in update-pid mode — see the module for the c
 
 **Initial wait**: issue a `sleep 10` Bash call with `timeout: 15000` (15 seconds — ample margin over the 10-second sleep). This follows a background launch, so it is not a blocking subprocess wait; it gives the subprocess time to write its PID file.
 
-**After initial wait**: read the PID file with `cat lifecycle/{feature}/daytime.pid 2>/dev/null`. If the file is absent: this is a startup failure — skip the polling loop and go directly to result surfacing (§vi) using the content of `daytime.log`.
+**After initial wait**: read the PID file with `cat cortex/lifecycle/{feature}/daytime.pid 2>/dev/null`. If the file is absent: this is a startup failure — skip the polling loop and go directly to result surfacing (§vi) using the content of `daytime.log`.
 
 **Per-iteration steps** (each a separate Bash call):
 - (a) Liveness: `kill -0 $pid 2>/dev/null`. Non-zero exit means the process has exited — break out of the polling loop and proceed to result surfacing.
 - (b) Inter-iteration sleep: `sleep 120` Bash call with `timeout: 130000` (130 seconds — ample margin over the 120-second sleep).
 
-**Termination bound**: 120 iterations (~4 hours). Context window exhaustion — not iteration count — is the practical binding constraint for long runs. At **30 iterations (~1 hour)**, pause and offer the user the option to suspend polling: "Subprocess still running after 30 iterations (~1 hour). Continue polling or stop? (The process continues in background — monitor `lifecycle/{feature}/daytime.log` and `events.log` directly.)" If the user chooses to stop, exit the polling loop (the subprocess keeps running; skip result surfacing and log `dispatch_complete` with outcome `"paused"` only if the subprocess is still alive — otherwise surface results normally). On reaching 120 iterations without the subprocess exiting: surface "Polling timeout — subprocess may still be running (PID {pid}). Check `lifecycle/{feature}/daytime.log` directly for status." and exit the polling loop.
+**Termination bound**: 120 iterations (~4 hours). Context window exhaustion — not iteration count — is the practical binding constraint for long runs. At **30 iterations (~1 hour)**, pause and offer the user the option to suspend polling: "Subprocess still running after 30 iterations (~1 hour). Continue polling or stop? (The process continues in background — monitor `cortex/lifecycle/{feature}/daytime.log` and `events.log` directly.)" If the user chooses to stop, exit the polling loop (the subprocess keeps running; skip result surfacing and log `dispatch_complete` with outcome `"paused"` only if the subprocess is still alive — otherwise surface results normally). On reaching 120 iterations without the subprocess exiting: surface "Polling timeout — subprocess may still be running (PID {pid}). Check `cortex/lifecycle/{feature}/daytime.log` directly for status." and exit the polling loop.
 
 **vi. Result surfacing.** Surface results via `daytime_result_reader`, which matches `dispatch_id` against `daytime-dispatch.json` to discriminate stale prior-run files from current dispatch and classifies per the helper's tier-1/tier-3 output schema. Single Bash call:
 
@@ -124,10 +124,10 @@ Parse the JSON dict the helper prints to stdout (fields: `outcome`, `terminated_
 After displaying a tier-1 result, issue a separate Bash call to delete `daytime-dispatch.json` and mark the dispatch as consumed:
 
 ```
-rm lifecycle/{feature}/daytime-dispatch.json
+rm cortex/lifecycle/{feature}/daytime-dispatch.json
 ```
 
-**vii. Log `dispatch_complete` event.** After result surfacing, a separate Bash call appends to `lifecycle/{feature}/events.log`:
+**vii. Log `dispatch_complete` event.** After result surfacing, a separate Bash call appends to `cortex/lifecycle/{feature}/events.log`:
 
 ```
 {"ts": "<ISO 8601>", "event": "dispatch_complete", "feature": "<name>", "mode": "daytime", "outcome": "complete|deferred|paused|failed|unknown", "pr_url": "<url>|null"}
@@ -162,7 +162,7 @@ For each batch, in order:
 
 **Model**: `sonnet` for low/medium criticality, `opus` for high/critical (read criticality from events.log).
 
-After launching, append a `batch_dispatch` event to `lifecycle/{feature}/events.log`:
+After launching, append a `batch_dispatch` event to `cortex/lifecycle/{feature}/events.log`:
 ```
 {"ts": "<ISO 8601>", "event": "batch_dispatch", "feature": "<name>", "batch": <N>, "tasks": [<task IDs in this batch>]}
 ```
@@ -218,7 +218,7 @@ You are implementing a single task for the {feature} feature.
 5. Report what you did and any issues encountered. For each task completed, report: task name, status (completed/partial/failed), files modified, verification outcome, issues or deviations from the spec.
 6. Do not write files or artifacts solely to satisfy your own verification check. If a verification step requires checking something you created in this task for the purpose of satisfying verification (not as the task's primary deliverable), flag it as self-sealing in your exit report rather than self-certifying.
 
-If this task references the specification, read lifecycle/{feature}/spec.md.
+If this task references the specification, read cortex/lifecycle/{feature}/spec.md.
 Do not implement other tasks. Do not modify files not listed in this task.
 Do not add features beyond what is specified.
 ```
@@ -227,12 +227,12 @@ Do not add features beyond what is specified.
 
 If re-entering from a Review phase with CHANGES_REQUESTED:
 
-Append a `phase_transition` event to `lifecycle/{feature}/events.log` to capture the rework cycle start:
+Append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log` to capture the rework cycle start:
 ```
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "from": "review", "to": "implement-rework"}
 ```
 
-1. Read `lifecycle/{feature}/review.md` for the reviewer's feedback
+1. Read `cortex/lifecycle/{feature}/review.md` for the reviewer's feedback
 2. Identify which tasks were flagged
 3. For each flagged task, dispatch a fresh sub-task with:
    - The original task text
@@ -256,7 +256,7 @@ When all tasks are `[x]`, determine the next phase using both complexity tier an
 
 High and critical criticality forces Review regardless of complexity tier. Low and medium criticality proceeds to Complete for simple tier, and to Review for complex tier.
 
-Append a `phase_transition` event to `lifecycle/{feature}/events.log`:
+Append a `phase_transition` event to `cortex/lifecycle/{feature}/events.log`:
 ```
 {"ts": "<ISO 8601>", "event": "phase_transition", "feature": "<name>", "tier": "simple|complex", "from": "implement", "to": "review|complete"}
 ```

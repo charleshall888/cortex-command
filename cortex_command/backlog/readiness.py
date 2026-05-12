@@ -2,7 +2,7 @@
 
 This module owns the canonical "is this item ready to work on?" predicate
 shared by ``cortex_command.overnight.backlog.filter_ready``,
-``backlog/generate_index.py``, and the ``bin/cortex-backlog-ready`` script.
+``cortex/backlog/generate_index.py``, and the ``bin/cortex-backlog-ready`` script.
 
 The helper does **no** filesystem I/O: artifact-existence checks
 (``research.md`` / ``spec.md`` / pipeline-branch merge) remain in

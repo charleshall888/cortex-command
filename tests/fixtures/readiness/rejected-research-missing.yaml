@@ -7,8 +7,8 @@ tags: []
 created: 2026-01-01
 updated: 2026-01-01
 blocked-by: []
-research: lifecycle/research-missing-feature/research.md
-spec: lifecycle/research-missing-feature/spec.md
+research: cortex/lifecycle/research-missing-feature/research.md
+spec: cortex/lifecycle/research-missing-feature/spec.md
 ---
 
 A backlog item whose research file does not exist on disk — should be rejected at step 5.

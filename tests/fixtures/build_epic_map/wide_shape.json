@@ -37,7 +37,7 @@
     "blocked_by": [],
     "parent": "100",
     "research": null,
-    "spec": "lifecycle/example-feature/spec.md",
+    "spec": "cortex/lifecycle/example-feature/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": null,

@@ -5,9 +5,9 @@ disable-model-invocation: true
 inputs: []
 outputs:
   - "deferred/{feature}-q*.md — user answers appended under ## User Answer section"
-  - "lifecycle/{feature}/events.log — phase_transition and feature_complete events appended for completed features"
+  - "cortex/lifecycle/{feature}/events.log — phase_transition and feature_complete events appended for completed features"
 preconditions:
-  - "Morning report exists in one of: $CORTEX_COMMAND_ROOT/lifecycle/sessions/latest-overnight/morning-report.md, lifecycle/sessions/latest-overnight/morning-report.md, or lifecycle/morning-report.md"
+  - "Morning report exists in one of: $CORTEX_COMMAND_ROOT/lifecycle/sessions/latest-overnight/morning-report.md, cortex/lifecycle/sessions/latest-overnight/morning-report.md, or cortex/lifecycle/morning-report.md"
 ---
 
 # Morning Review
@@ -27,7 +27,7 @@ Before locating the report, mark the current overnight session as complete if it
 Locate the session to update:
 
 1. Check `~/.local/share/overnight-sessions/active-session.json`. If it exists and contains `"phase": "executing"`, use its `state_path` value as the path to `overnight-state.json`.
-2. If the pointer file does not exist, is not readable, or its `phase` is not `"executing"`, fall back to resolving `lifecycle/sessions/latest-overnight/overnight-state.json` (via the `latest-overnight` symlink).
+2. If the pointer file does not exist, is not readable, or its `phase` is not `"executing"`, fall back to resolving `cortex/lifecycle/sessions/latest-overnight/overnight-state.json` (via the `latest-overnight` symlink).
 3. If neither path resolves to a readable file, skip Step 0 entirely — do not error.
 
 If `<resolved_state_path>` resolves to a readable file, mark the session complete by invoking the C11 helper. The helper owns the `phase == "executing"` precondition (silent-skip on any other phase per spec R5), the canonical state-machine transition, the atomic write, and the optional pointer-file cleanup.
@@ -38,7 +38,7 @@ If `<resolved_state_path>` resolves to a readable file, mark the session complet
   cortex-morning-review-complete-session <resolved_state_path> --pointer <pointer_path>
   ```
 
-- If you used the `lifecycle/sessions/latest-overnight` fallback (line 2 above), invoke the helper WITHOUT `--pointer` — there is no pointer file to clean up:
+- If you used the `cortex/lifecycle/sessions/latest-overnight` fallback (line 2 above), invoke the helper WITHOUT `--pointer` — there is no pointer file to clean up:
 
   ```
   cortex-morning-review-complete-session <resolved_state_path>
@@ -67,8 +67,8 @@ Skip Step 0 entirely if neither path-resolution branch resolved to a readable st
 Check for the morning report in order:
 
 1. `$CORTEX_COMMAND_ROOT/lifecycle/sessions/latest-overnight/morning-report.md` — the MC session directory (new-style worktree sessions).
-2. `lifecycle/sessions/latest-overnight/morning-report.md` — reachable via a project-local `latest-overnight` symlink (if one exists)
-3. `lifecycle/morning-report.md` — regular file overwritten by each overnight session's writer.
+2. `cortex/lifecycle/sessions/latest-overnight/morning-report.md` — reachable via a project-local `latest-overnight` symlink (if one exists)
+3. `cortex/lifecycle/morning-report.md` — regular file overwritten by each overnight session's writer.
 
 Use whichever path resolves first. If none exist, report that no morning report was found. Tell the user that no overnight session has been run yet, or the report was not generated. Suggest running `python3 -m cortex_command.overnight.report` to generate one. Stop.
 
@@ -86,7 +86,7 @@ Work through the report sections in sequence. Delegate the per-section interacti
 
 1. **Completed Features** — display all features at once (grouped by round, enriched with overnight metadata), ask a single batch verification question
 2. **Demo Setup** — if `demo-commands:` (list) or `demo-command:` (single string) is configured and the session is local, offer to spin up a demo worktree from the overnight branch; for `demo-commands:`, the agent reasons from Section 2 context to select the most relevant entry (or skips if none is relevant).
-3. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `lifecycle/{feature}/events.log`
+3. **Lifecycle Advancement** — immediately after verification: append completion events to each feature's `cortex/lifecycle/{feature}/events.log`
 4. **Deferred Questions** — display each question and collect a user answer; write the answer back to the corresponding `deferred/` file
 5. **Failed Features** — display error summary and suggested next step; offer to create a backlog investigation item (should-have)
 
@@ -124,8 +124,8 @@ Before committing, run a preflight git sync:
 4. If the count is greater than `0`, run `git pull --rebase origin main`. If the rebase succeeds, proceed to step 5. If it fails (conflict or other error), surface git's output, pause, and ask the user to resolve the issue and confirm before continuing. Do not invoke `/commit` until the user confirms the branch is clean.
 5. Invoke the `/commit` skill to commit all changes produced during the review:
 
-- `lifecycle/{feature}/events.log` — newly created completion event logs
-- `backlog/` — closed/archived ticket files and updated index
+- `cortex/lifecycle/{feature}/events.log` — newly created completion event logs
+- `cortex/backlog/` — closed/archived ticket files and updated index
 
 No additional user input is needed before committing — the review is authoritative. Let the `/commit` skill compose the message from the staged diff.
 
@@ -139,5 +139,5 @@ After a successful merge, Section 6a of the walkthrough handles post-merge sync:
 
 - Does not re-run or resume overnight sessions (use `/overnight resume`)
 - Does not re-generate the morning report (use `python3 -m cortex_command.overnight.report`)
-- Reads `overnight-state.json` for metadata from the session directory (resolved via `lifecycle/sessions/latest-overnight/` symlink for new-style worktree sessions, or directly from `lifecycle/overnight-state.json` for old-style sessions); Step 0 may write `phase: "complete"` to it — all other steps are read-only
+- Reads `overnight-state.json` for metadata from the session directory (resolved via `cortex/lifecycle/sessions/latest-overnight/` symlink for new-style worktree sessions, or directly from `cortex/lifecycle/overnight-state.json` for old-style sessions); Step 0 may write `phase: "complete"` to it — all other steps are read-only
 - Does not support resuming a partially-completed review; restart if interrupted
