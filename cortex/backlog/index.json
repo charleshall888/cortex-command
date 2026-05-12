@@ -28,6 +28,37 @@
     "repo": null
   },
   {
+    "id": 208,
+    "title": "Harden autonomous-dispatch path for interactive Claude Code sessions",
+    "status": "backlog",
+    "priority": "high",
+    "type": "chore",
+    "tags": [
+      "overnight",
+      "lifecycle",
+      "daytime-pipeline",
+      "sandbox",
+      "auth",
+      "packaging"
+    ],
+    "areas": [],
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "d5bbd0b7-7968-4c1f-b4fc-2a2ef3669800",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",

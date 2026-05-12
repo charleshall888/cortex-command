@@ -12,7 +12,7 @@ tags: [requirements, skills, process]
 created: 2026-05-12
 updated: 2026-05-12
 session_id: null
-lifecycle_phase: research
+lifecycle_phase: implement
 lifecycle_slug: requirements-skill-v2
 complexity: complex
 criticality: critical

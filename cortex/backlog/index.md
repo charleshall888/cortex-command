@@ -3,6 +3,7 @@
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
 | 207 | Rebuild /requirements skill and docs as v2 | in_progress | high | chore | — | 9 | — |
+| 208 | Harden autonomous-dispatch path for interactive Claude Code sessions | backlog | high | chore | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
@@ -13,6 +14,7 @@
 
 ## Backlog
 
+- **208** Harden autonomous-dispatch path for interactive Claude Code sessions
 - **142** Multi-session host concurrency registry for cortex overnight
 
 ## In-Progress
