@@ -114,7 +114,108 @@
     "uuid": "acb70ac0-3581-40bf-acb3-e09577f050b5",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "implement",
+    "lifecycle_phase": "complete",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 200,
+    "title": "Consolidate cortex-command artifacts under a single cortex/ root",
+    "status": "refined",
+    "priority": "medium",
+    "type": "epic",
+    "tags": [
+      "installer-experience",
+      "repo-layout",
+      "consolidate-artifacts-under-cortex-root"
+    ],
+    "areas": [
+      "init",
+      "overnight-runner",
+      "dashboard",
+      "backlog",
+      "skills"
+    ],
+    "created": "2026-05-11",
+    "updated": "2026-05-11",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/consolidate-artifacts-under-cortex-root/research.md",
+    "plan": null,
+    "uuid": "6c21da16-1c97-4809-a389-7a87115b6483",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 201,
+    "title": "Add upward-walking project-root detection in _resolve_user_project_root()",
+    "status": "refined",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "cli-ergonomics",
+      "consolidate-artifacts-under-cortex-root"
+    ],
+    "areas": [
+      "cli",
+      "init"
+    ],
+    "created": "2026-05-11",
+    "updated": "2026-05-11",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "200",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/consolidate-artifacts-under-cortex-root/research.md",
+    "plan": null,
+    "uuid": "391e2823-ea89-4b72-8b35-54660eb983a3",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 202,
+    "title": "Relocate cortex-command artifacts under cortex/ root",
+    "status": "refined",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "installer-experience",
+      "repo-layout",
+      "consolidate-artifacts-under-cortex-root"
+    ],
+    "areas": [
+      "init",
+      "overnight-runner",
+      "dashboard",
+      "backlog",
+      "skills",
+      "docs"
+    ],
+    "created": "2026-05-11",
+    "updated": "2026-05-11",
+    "blocks": [],
+    "blocked_by": [
+      "201"
+    ],
+    "parent": "200",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/consolidate-artifacts-under-cortex-root/research.md",
+    "plan": null,
+    "uuid": "47fde14d-e2a0-48e3-9a56-84d4cf6018ca",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },
@@ -145,6 +246,39 @@
     "lifecycle_slug": "make-cortex-check-parity-context-aware-skip-tokens-inside-fenced-code-blocks",
     "session_id": null,
     "lifecycle_phase": "specify",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 203,
+    "title": "Add path-hardcoding parity gate to prevent cortex/ root drift",
+    "status": "refined",
+    "priority": "low",
+    "type": "feature",
+    "tags": [
+      "drift-prevention",
+      "parity",
+      "consolidate-artifacts-under-cortex-root"
+    ],
+    "areas": [
+      "parity",
+      "hooks"
+    ],
+    "created": "2026-05-11",
+    "updated": "2026-05-11",
+    "blocks": [],
+    "blocked_by": [
+      "202"
+    ],
+    "parent": "200",
+    "research": null,
+    "spec": null,
+    "discovery_source": "research/consolidate-artifacts-under-cortex-root/research.md",
+    "plan": null,
+    "uuid": "7f9dd538-380e-49cf-8492-3bd6fb561fb2",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },
