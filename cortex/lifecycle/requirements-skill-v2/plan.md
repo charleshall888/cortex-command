@@ -99,7 +99,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Critical-review flagged Phase 1 Checkpoint as presence-only. This task adds the execution-level gate so a regression in any one of the 6 consumer references is caught before PR merge, not silently after. Test pattern follows existing `tests/test_*` conventions.
 - **Verification**: `test -f tests/test_load_requirements_protocol.py` AND `python3 -m pytest tests/test_load_requirements_protocol.py -v` exits `0` AND the 6-file union grep returns `6` AND `grep -c "Requirements loading: deliberately exempt" skills/critical-review/SKILL.md` ≥`1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit aa4f3685; 9 tests passing)
 
 ### Task 8b: Phase 1 PR
 - **Files**: (no new files; PR groups Tasks 1-8)
@@ -108,7 +108,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: trivial
 - **Context**: PR cadence = one-PR-per-phase. Use `/cortex-core:pr`. Phase 2 work does not begin until this PR is merged.
 - **Verification**: Phase 1 Checkpoint commands (from Outline) all pass on `main` after merge.
-- **Status**: [ ] pending
+- **Status**: [x] adapted (operator chose trunk-based mode; Phase 1 Checkpoint commands verified directly on main — union grep returned 6, all index.md files have tags, load-requirements.md exists, critical-review exemption anchor present, 9/9 smoke tests pass; no PR opened)
 
 ### Task 9: Enforce Suggested Update section + retry logic in review.md (R7 part 1)
 - **Files**: `skills/lifecycle/references/review.md`, `tests/test_drift_enforcement_protocol.py` (new — integration test simulating a reviewer omitting the Suggested Update section; asserts the re-dispatch fires and `drift_protocol_breach` event is emitted after retry exhaustion)
