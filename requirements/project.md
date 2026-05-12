@@ -67,7 +67,7 @@ Agentic workflow toolkit for AI-assisted software development. Defines the globa
 
 ## Conditional Loading
 
-Working on statusline, dashboard, or notifications → requirements/observability.md
-Working on pipeline, overnight runner, conflict resolution, or deferral → requirements/pipeline.md
-Working on remote access, tmux, mosh, or Tailscale → requirements/remote-access.md
-Working on agent spawning, parallel dispatch, worktrees, or model selection → requirements/multi-agent.md
+Working on statusline, dashboard, or notifications → cortex/requirements/observability.md
+Working on pipeline, overnight runner, conflict resolution, or deferral → cortex/requirements/pipeline.md
+Working on remote access, tmux, mosh, or Tailscale → cortex/requirements/remote-access.md
+Working on agent spawning, parallel dispatch, worktrees, or model selection → cortex/requirements/multi-agent.md
