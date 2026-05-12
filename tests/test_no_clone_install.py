@@ -153,7 +153,7 @@ def _install_wheel_isolated(wheel_path: Path, tmp_path: Path) -> dict[str, str]:
 # Each tuple is (package, resource_name) — exactly the form
 # ``importlib.resources.files(package).joinpath(resource)`` consumes.
 PACKAGE_INTERNAL_SITES: list[tuple[str, str]] = [
-    ("cortex_command.init.templates", "lifecycle.config.md"),
+    ("cortex_command.init.templates", "cortex/lifecycle.config.md"),
     ("cortex_command.overnight.prompts", "repair-agent.md"),
     ("cortex_command.pipeline.prompts", "review.md"),
     ("cortex_command.overnight.prompts", "batch-brain.md"),

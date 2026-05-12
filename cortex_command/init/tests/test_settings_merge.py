@@ -542,8 +542,8 @@ def test_partial_failure_recovery_step5(
 
     # Scaffold + marker present.
     assert (repo / ".cortex-init").exists()
-    assert (repo / "lifecycle" / "README.md").exists()
-    assert (repo / "requirements" / "project.md").exists()
+    assert (repo / "cortex" / "lifecycle" / "README.md").exists()
+    assert (repo / "cortex" / "requirements" / "project.md").exists()
 
     # Settings file byte-unchanged.
     assert settings.read_bytes() == pre_bytes
@@ -601,7 +601,7 @@ def test_partial_failure_recovery_step4(
         init_main(_make_args(repo))
 
     # Scaffold files landed; marker did not.
-    assert (repo / "lifecycle" / "README.md").exists()
+    assert (repo / "cortex" / "lifecycle" / "README.md").exists()
     assert not (repo / ".cortex-init").exists()
 
     # Recovery with --update.
@@ -656,7 +656,7 @@ def test_partial_failure_recovery_step3(
     # framing calls the gitignore step "step 3" semantically). The key
     # structural assertion per the task:
     #   scaffold files present, .gitignore absent-or-incomplete, marker absent.
-    assert (repo / "lifecycle" / "README.md").exists()
+    assert (repo / "cortex" / "lifecycle" / "README.md").exists()
     # Gitignore still has the orphan and has NOT been repaired.
     gi_text = (repo / ".gitignore").read_text(encoding="utf-8")
     assert ".cortex-init-backu" in gi_text.splitlines()
@@ -696,10 +696,10 @@ def test_partial_failure_recovery_step2(
     _git_init(repo)
 
     SCAFFOLD_FILES = (
-        "lifecycle/README.md",
-        "backlog/README.md",
-        "requirements/project.md",
-        "lifecycle.config.md",
+        "cortex/lifecycle/README.md",
+        "cortex/backlog/README.md",
+        "cortex/requirements/project.md",
+        "cortex/lifecycle.config.md",
     )
 
     real_scaffold_atomic_write = scaffold.atomic_write
