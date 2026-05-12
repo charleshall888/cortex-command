@@ -144,7 +144,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: This is an interactive session-time operation, not an overnight pass. Per spec edge case, ≤1 intractable artifact is acceptable.
 - **Verification**: `grep -L "## Suggested Requirements Update" $(grep -rln 'requirements_drift: "detected"\|requirements_drift: detected' cortex/lifecycle/ cortex/lifecycle/archive/ --include=review.md)` returns ≤`1` line.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 64e6f7eb; 9/9 patched, 0 intractable)
 
 ### Task 13: Parity-audit script + just recipe (R9) + Phase 2 PR
 - **Files**: `bin/cortex-requirements-parity-audit`, `justfile`, `plugins/cortex-core/bin/cortex-requirements-parity-audit` (auto-mirrored), `tests/test_requirements_parity_audit.py` (new — fixture-based test that runs the audit against a known-shape archived review.md fixture and asserts output JSON schema)
