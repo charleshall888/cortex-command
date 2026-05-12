@@ -1,9 +1,12 @@
 {
   "ts": "2026-05-04T00:00:00Z",
   "feature": "install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions",
-  "artifact": "lifecycle/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/plan.md",
+  "artifact": "cortex/lifecycle/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
     {
       "class": "B",

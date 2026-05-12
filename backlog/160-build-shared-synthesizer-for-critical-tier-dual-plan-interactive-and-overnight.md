@@ -10,10 +10,10 @@ updated: 2026-05-04
 parent: "158"
 blocked-by: []
 tags: [competing-plan-synthesis, lifecycle, plan, synthesizer, overnight]
-discovery_source: research/competing-plan-synthesis/research.md
+discovery_source: cortex/research/competing-plan-synthesis/research.md
 complexity: complex
 criticality: critical
-spec: lifecycle/archive/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight/spec.md
+spec: cortex/lifecycle/archive/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight/spec.md
 areas: [overnight-runner]
 session_id: null
 lifecycle_phase: complete

@@ -9,7 +9,7 @@ blocked-by: []
 tags: [lifecycle, refine, critical-review, discovery, densification, vertical-planning, token-efficiency]
 created: 2026-05-06
 updated: 2026-05-11
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 ---
 
 # Lifecycle skill + artifact densification + vertical-planning adoption

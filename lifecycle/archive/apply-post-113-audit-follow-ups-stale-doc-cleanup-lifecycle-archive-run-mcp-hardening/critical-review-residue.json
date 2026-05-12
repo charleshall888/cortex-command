@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-27T19:15:04Z",
   "feature": "apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening",
-  "artifact": "lifecycle/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/plan.md",
+  "artifact": "cortex/lifecycle/apply-post-113-audit-follow-ups-stale-doc-cleanup-lifecycle-archive-run-mcp-hardening/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -22,7 +22,7 @@
     },
     {
       "class": "B",
-      "finding": "Trap find . -name '*.md.bak' -delete unscoped \u2014 runs against entire repo tree, silently deletes editor backups unrelated to recipe.",
+      "finding": "Trap find . -name '*.md.bak' -delete unscoped — runs against entire repo tree, silently deletes editor backups unrelated to recipe.",
       "reviewer_angle": "Path-rewriting fragility in N6.3 (Task 12)",
       "evidence_quote": "Trap: trap 'find . -name \"*.md.bak\" -delete' EXIT INT TERM set near the top of the recipe"
     },
@@ -36,7 +36,7 @@
       "class": "B",
       "finding": "Plan asserts slug values must be regex-escaped before substitution but does not specify the escape helper or character set; latent footgun if slug naming evolves to include regex metacharacters.",
       "reviewer_angle": "Path-rewriting fragility in N6.3 (Task 12)",
-      "evidence_quote": "Three regex anchored substitutions per archived slug \u2014 slug values must be regex-escaped before substitution"
+      "evidence_quote": "Three regex anchored substitutions per archived slug — slug values must be regex-escaped before substitution"
     },
     {
       "class": "B",

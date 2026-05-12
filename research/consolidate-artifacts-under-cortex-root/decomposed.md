@@ -27,7 +27,7 @@
 
 ## Created Files
 
-- `backlog/200-consolidate-cortex-artifacts-under-cortex-root.md` — Epic
-- `backlog/201-add-upward-walking-project-root-detection.md` — Foundation feature
-- `backlog/202-relocate-cortex-command-artifacts-under-cortex-root.md` — The relocation
-- `backlog/203-add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift.md` — Drift-prevention follow-up
+- `cortex/backlog/200-consolidate-cortex-artifacts-under-cortex-root.md` — Epic
+- `cortex/backlog/201-add-upward-walking-project-root-detection.md` — Foundation feature
+- `cortex/backlog/202-relocate-cortex-command-artifacts-under-cortex-root.md` — The relocation
+- `cortex/backlog/203-add-path-hardcoding-parity-gate-to-prevent-cortex-root-drift.md` — Drift-prevention follow-up

@@ -11,13 +11,13 @@ blocked-by: []
 tags: [requirements, skills, process]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/requirements-audit/research.md
+discovery_source: cortex/research/requirements-audit/research.md
 session_id: null
 lifecycle_phase: research
 lifecycle_slug: redesign-requirements-skill-and-rewrite-project-md
 complexity: simple
 criticality: high
-spec: lifecycle/archive/redesign-requirements-skill-and-rewrite-project-md/spec.md
+spec: cortex/lifecycle/archive/redesign-requirements-skill-and-rewrite-project-md/spec.md
 ---
 
 # Redesign /requirements skill and rewrite project.md

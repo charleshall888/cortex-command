@@ -14,11 +14,11 @@ blocked-by: []
 blocks: []
 complexity: complex
 criticality: high
-discovery_source: research/morning-review-demo-setup/research.md
+discovery_source: cortex/research/morning-review-demo-setup/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: agent-driven-demoability-assessment-and-validation-setup-at-morning-review
-spec: lifecycle/archive/agent-driven-demoability-assessment-and-validation-setup-at-morning-review/spec.md
+spec: cortex/lifecycle/archive/agent-driven-demoability-assessment-and-validation-setup-at-morning-review/spec.md
 ---
 
 # Agent-driven demoability assessment and validation setup at morning review

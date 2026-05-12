@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-06T18:30:00Z",
   "feature": "trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression",
-  "artifact": "lifecycle/trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression/plan.md",
+  "artifact": "cortex/lifecycle/trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,

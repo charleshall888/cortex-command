@@ -52,16 +52,16 @@
 - **Retiring #006/#007 shareable-install code merged into 117**. Was originally a standalone cleanup ticket; merged because it touches the same file surface (`~/.claude/*` deployment) that 117 replaces with `cortex setup`.
 
 ## Created Files
-- `backlog/113-distribute-cortex-command-as-cli-plus-plugin-marketplace.md` — Epic
-- `backlog/114-cortex-cli-skeleton.md`
-- `backlog/115-port-overnight-runner-into-cortex-cli.md`
-- `backlog/116-mcp-control-plane-server-and-runner-ipc-contract.md`
-- `backlog/117-cortex-setup-subcommand-and-retire-shareable-install-scaffolding.md`
-- `backlog/118-bootstrap-installer-curl-sh-pipeline.md`
-- `backlog/119-cortex-init-per-repo-scaffolder.md`
-- `backlog/120-cortex-interactive-plugin.md`
-- `backlog/121-cortex-overnight-integration-plugin.md`
-- `backlog/122-cortex-command-plugin-marketplace-manifest.md`
-- `backlog/123-lifecycle-autonomous-worktree-graceful-degrade.md`
-- `backlog/124-migration-guide-and-script-for-existing-installs.md`
-- `backlog/125-homebrew-tap-for-cortex-command.md`
+- `cortex/backlog/113-distribute-cortex-command-as-cli-plus-plugin-marketplace.md` — Epic
+- `cortex/backlog/114-cortex-cli-skeleton.md`
+- `cortex/backlog/115-port-overnight-runner-into-cortex-cli.md`
+- `cortex/backlog/116-mcp-control-plane-server-and-runner-ipc-contract.md`
+- `cortex/backlog/117-cortex-setup-subcommand-and-retire-shareable-install-scaffolding.md`
+- `cortex/backlog/118-bootstrap-installer-curl-sh-pipeline.md`
+- `cortex/backlog/119-cortex-init-per-repo-scaffolder.md`
+- `cortex/backlog/120-cortex-interactive-plugin.md`
+- `cortex/backlog/121-cortex-overnight-integration-plugin.md`
+- `cortex/backlog/122-cortex-command-plugin-marketplace-manifest.md`
+- `cortex/backlog/123-lifecycle-autonomous-worktree-graceful-degrade.md`
+- `cortex/backlog/124-migration-guide-and-script-for-existing-installs.md`
+- `cortex/backlog/125-homebrew-tap-for-cortex-command.md`

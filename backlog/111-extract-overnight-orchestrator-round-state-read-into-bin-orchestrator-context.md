@@ -10,10 +10,10 @@ blocked-by: []
 tags: [harness, scripts, overnight, pipeline]
 created: 2026-04-21
 updated: 2026-04-29
-discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+discovery_source: cortex/research/extract-scripts-from-agent-tool-sequences/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/archive/extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context/spec.md
+spec: cortex/lifecycle/archive/extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context/spec.md
 areas: [overnight-runner]
 session_id: null
 lifecycle_phase: complete

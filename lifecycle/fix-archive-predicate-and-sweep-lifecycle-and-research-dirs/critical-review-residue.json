@@ -1,9 +1,12 @@
 {
   "ts": "2026-05-05T21:35:00Z",
   "feature": "fix-archive-predicate-and-sweep-lifecycle-and-research-dirs",
-  "artifact": "lifecycle/fix-archive-predicate-and-sweep-lifecycle-and-research-dirs/plan.md",
+  "artifact": "cortex/lifecycle/fix-archive-predicate-and-sweep-lifecycle-and-research-dirs/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
     {
       "class": "B",

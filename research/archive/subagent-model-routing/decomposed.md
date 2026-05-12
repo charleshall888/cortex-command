@@ -16,6 +16,6 @@
 2. **046** after spike resolves — the approach (env var vs per-skill params) depends entirely on the spike result
 
 ## Created Files
-- `backlog/044-route-interactive-subagents-to-sonnet-epic.md` — Epic: Route interactive subagents to Sonnet by default
-- `backlog/045-verify-subagent-model-env-var-priority.md` — Spike: Verify CLAUDE_CODE_SUBAGENT_MODEL priority order
-- `backlog/046-implement-sonnet-default-for-interactive-subagents.md` — Feature: Implement Sonnet default for interactive subagents
+- `cortex/backlog/044-route-interactive-subagents-to-sonnet-epic.md` — Epic: Route interactive subagents to Sonnet by default
+- `cortex/backlog/045-verify-subagent-model-env-var-priority.md` — Spike: Verify CLAUDE_CODE_SUBAGENT_MODEL priority order
+- `cortex/backlog/046-implement-sonnet-default-for-interactive-subagents.md` — Feature: Implement Sonnet default for interactive subagents

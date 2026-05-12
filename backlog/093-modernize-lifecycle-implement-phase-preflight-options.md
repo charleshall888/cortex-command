@@ -8,7 +8,7 @@ type: epic
 created: 2026-04-20
 updated: 2026-04-22
 tags: [lifecycle, daytime-pipeline, worktree, preflight]
-discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
+discovery_source: cortex/research/revisit-lifecycle-implement-preflight-options/research.md
 areas: [lifecycle, skills, pipeline]
 ---
 

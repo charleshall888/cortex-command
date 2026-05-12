@@ -10,7 +10,7 @@ created: 2026-04-10
 updated: 2026-04-11
 parent: null
 blocked-by: []
-discovery_source: research/user-configurable-setup/research.md
+discovery_source: cortex/research/user-configurable-setup/research.md
 ---
 
 # User-configurable setup: per-component opt-in and per-repo permissions scoping

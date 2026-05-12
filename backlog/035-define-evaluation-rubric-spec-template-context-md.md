@@ -11,10 +11,10 @@ blocked-by: []
 tags: [dashboard, ui, quality, evaluation]
 created: 2026-04-03
 updated: 2026-04-08
-discovery_source: research/generative-ui-harness/research.md
+discovery_source: cortex/research/generative-ui-harness/research.md
 complexity: simple
 criticality: low
-spec: lifecycle/archive/add-dashboard-visual-evaluation-criteria-to-designmd/spec.md
+spec: cortex/lifecycle/archive/add-dashboard-visual-evaluation-criteria-to-designmd/spec.md
 areas: [dashboard]
 session_id: null
 ---

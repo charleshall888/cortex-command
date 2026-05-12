@@ -11,13 +11,13 @@ blocked-by: []
 tags: [requirements, process]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/requirements-audit/research.md
+discovery_source: cortex/research/requirements-audit/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: gather-area-requirements-docs-for-four-missing-areas
 complexity: complex
 criticality: medium
-spec: lifecycle/archive/gather-area-requirements-docs-for-four-missing-areas/spec.md
+spec: cortex/lifecycle/archive/gather-area-requirements-docs-for-four-missing-areas/spec.md
 ---
 
 # Gather area requirements docs for four missing areas

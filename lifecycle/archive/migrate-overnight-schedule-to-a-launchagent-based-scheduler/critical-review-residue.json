@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-04T17:55:00Z",
   "feature": "migrate-overnight-schedule-to-a-launchagent-based-scheduler",
-  "artifact": "lifecycle/migrate-overnight-schedule-to-a-launchagent-based-scheduler/plan.md",
+  "artifact": "cortex/lifecycle/migrate-overnight-schedule-to-a-launchagent-based-scheduler/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -16,7 +16,7 @@
     },
     {
       "class": "B",
-      "finding": "Two distinct deleters of runner.spawn-pending (parent handle_start in run-now path; runner subprocess in launchd path) with no ordering specification relative to runner.pid visibility \u2014 a status query in the gap can observe pid-absent + sentinel-absent.",
+      "finding": "Two distinct deleters of runner.spawn-pending (parent handle_start in run-now path; runner subprocess in launchd path) with no ordering specification relative to runner.pid visibility — a status query in the gap can observe pid-absent + sentinel-absent.",
       "reviewer_angle": "Async-spawn handshake race",
       "evidence_quote": "the spawn-pending sentinel is written by the launcher, and the launchd-spawned runner deletes it after writing runner.pid (covered by the existing runner code path; no change here)"
     },
@@ -40,7 +40,7 @@
     },
     {
       "class": "B",
-      "finding": "justfile:75 overnight-run recipe invokes cortex overnight start synchronously; README.md:125 documents just overnight-run as Run overnight in foreground. After Task 6 the recipe returns within 5s and the runner detaches \u2014 foreground becomes false. Task 10 does not touch the justfile recipe or README.",
+      "finding": "justfile:75 overnight-run recipe invokes cortex overnight start synchronously; README.md:125 documents just overnight-run as Run overnight in foreground. After Task 6 the recipe returns within 5s and the runner detaches — foreground becomes false. Task 10 does not touch the justfile recipe or README.",
       "reviewer_angle": "Hidden internal callers",
       "evidence_quote": "cortex overnight start --state {{ state }} --time-limit {{ time-limit }} --max-rounds {{ max-rounds }} --tier {{ tier }}"
     },

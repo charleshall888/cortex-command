@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-24T22:55:00Z",
   "feature": "lifecycle-skill-gracefully-degrades-autonomous-worktree-option-when-runner-absent",
-  "artifact": "lifecycle/lifecycle-skill-gracefully-degrades-autonomous-worktree-option-when-runner-absent/plan.md",
+  "artifact": "cortex/lifecycle/lifecycle-skill-gracefully-degrades-autonomous-worktree-option-when-runner-absent/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -16,7 +16,7 @@
     },
     {
       "class": "B",
-      "finding": "Dispatch list at implement.md:19-22 documents the handler routing for 'Implement in autonomous worktree' but on the degrade path that option is removed from the menu \u2014 leaving an unreachable dispatch branch with no annotation. Plan forbids editing the dispatch list.",
+      "finding": "Dispatch list at implement.md:19-22 documents the handler routing for 'Implement in autonomous worktree' but on the degrade path that option is removed from the menu — leaving an unreachable dispatch branch with no annotation. Plan forbids editing the dispatch list.",
       "reviewer_angle": "Task decomposition coverage gaps",
       "evidence_quote": "Do not alter the guard paragraph, the branch-selection intro, the option bullets, or the dispatch list."
     },
@@ -42,7 +42,7 @@
       "class": "B",
       "finding": "Task 3's hook-rejection recovery prose hard-codes a single failure cause ('just build-plugin was not run or produced different output'), foreclosing recovery from a Task 1 source-content error. Re-running the recipe in that case faithfully propagates the broken source.",
       "reviewer_angle": "Inter-task failure recovery",
-      "evidence_quote": "If the pre-commit hook rejects the commit, treat it as a signal that `just build-plugin` was not run or produced different output than what was staged \u2014 re-run the recipe, re-stage, re-commit. Do not `--no-verify`."
+      "evidence_quote": "If the pre-commit hook rejects the commit, treat it as a signal that `just build-plugin` was not run or produced different output than what was staged — re-run the recipe, re-stage, re-commit. Do not `--no-verify`."
     },
     {
       "class": "B",

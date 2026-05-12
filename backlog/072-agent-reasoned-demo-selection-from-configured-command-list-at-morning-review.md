@@ -17,7 +17,7 @@ lifecycle_phase: research
 lifecycle_slug: agent-reasoned-demo-selection-from-configured-command-list-at-morning-review
 complexity: simple
 criticality: high
-spec: lifecycle/archive/agent-reasoned-demo-selection-from-configured-command-list-at-morning-review/spec.md
+spec: cortex/lifecycle/archive/agent-reasoned-demo-selection-from-configured-command-list-at-morning-review/spec.md
 ---
 
 Follow-up to #071, which added a single `demo-command` string that always

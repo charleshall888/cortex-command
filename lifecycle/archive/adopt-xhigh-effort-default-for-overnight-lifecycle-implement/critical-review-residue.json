@@ -1,9 +1,12 @@
 {
   "ts": "2026-05-04T11:25:00Z",
   "feature": "adopt-xhigh-effort-default-for-overnight-lifecycle-implement",
-  "artifact": "lifecycle/adopt-xhigh-effort-default-for-overnight-lifecycle-implement/plan.md",
+  "artifact": "cortex/lifecycle/adopt-xhigh-effort-default-for-overnight-lifecycle-implement/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
     {
       "class": "B",

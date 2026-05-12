@@ -31,6 +31,6 @@ Either can ship first; they're fully independent. `#065` carries `critical` prio
 
 ## Created Files
 
-- `backlog/063-user-configurable-setup-per-component-opt-in-and-per-repo-permissions-scoping.md` — Epic
-- `backlog/064-extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks.md` — Install-time per-component opt-in
-- `backlog/065-document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping.md` — Per-repo permissions scoping via documented Claude Code feature
+- `cortex/backlog/063-user-configurable-setup-per-component-opt-in-and-per-repo-permissions-scoping.md` — Epic
+- `cortex/backlog/064-extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks.md` — Install-time per-component opt-in
+- `cortex/backlog/065-document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping.md` — Per-repo permissions scoping via documented Claude Code feature

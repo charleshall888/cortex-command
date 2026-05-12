@@ -10,13 +10,13 @@ blocked-by: []
 tags: [harness, scripts, discoverability, observability]
 created: 2026-04-21
 updated: 2026-04-28
-discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+discovery_source: cortex/research/extract-scripts-from-agent-tool-sequences/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7
 complexity: complex
 criticality: high
-spec: lifecycle/archive/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md
+spec: cortex/lifecycle/archive/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/spec.md
 areas: []
 ---
 

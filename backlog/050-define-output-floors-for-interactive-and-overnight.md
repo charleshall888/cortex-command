@@ -8,13 +8,13 @@ parent: 49
 tags: [output-efficiency, context-management, overnight]
 created: 2026-04-09
 updated: 2026-04-09
-discovery_source: research/agent-output-efficiency/research.md
+discovery_source: cortex/research/agent-output-efficiency/research.md
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: define-output-floors-for-interactive-approval-and-overnight-compaction
 complexity: complex
 criticality: high
-spec: lifecycle/archive/define-output-floors-for-interactive-approval-and-overnight-compaction/spec.md
+spec: cortex/lifecycle/archive/define-output-floors-for-interactive-approval-and-overnight-compaction/spec.md
 areas: [skills,lifecycle]
 ---
 

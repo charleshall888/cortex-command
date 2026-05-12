@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-25T15:30:00Z",
   "feature": "lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke",
-  "artifact": "lifecycle/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke/plan.md",
+  "artifact": "cortex/lifecycle/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 3,

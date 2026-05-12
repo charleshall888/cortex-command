@@ -11,13 +11,13 @@ parent: "074"
 blocked-by: []
 tags: [lifecycle, overnight-runner, daytime-pipeline, autonomous-worktree]
 areas: [lifecycle, overnight-runner]
-discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+discovery_source: cortex/research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
 session_id: null
 lifecycle_phase: plan
 lifecycle_slug: build-daytime-pipeline-module-and-cli
 complexity: complex
 criticality: high
-spec: lifecycle/archive/build-daytime-pipeline-module-and-cli/spec.md
+spec: cortex/lifecycle/archive/build-daytime-pipeline-module-and-cli/spec.md
 ---
 
 ## Scope

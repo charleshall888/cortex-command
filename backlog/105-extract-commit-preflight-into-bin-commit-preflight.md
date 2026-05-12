@@ -10,13 +10,13 @@ blocked-by: []
 tags: [harness, scripts, commit]
 created: 2026-04-21
 updated: 2026-04-28
-discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+discovery_source: cortex/research/extract-scripts-from-agent-tool-sequences/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: extract-commit-preflight-into-bin-commit-preflight
 complexity: simple
 criticality: high
-spec: lifecycle/archive/extract-commit-preflight-into-bin-commit-preflight/spec.md
+spec: cortex/lifecycle/archive/extract-commit-preflight-into-bin-commit-preflight/spec.md
 areas: [skills]
 ---
 

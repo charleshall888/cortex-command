@@ -9,7 +9,7 @@ blocked-by: []
 tags: [harness, scripts, discoverability]
 created: 2026-04-21
 updated: 2026-04-29
-discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+discovery_source: cortex/research/extract-scripts-from-agent-tool-sequences/research.md
 ---
 
 # Extract deterministic tool-call sequences into agent-invokable scripts

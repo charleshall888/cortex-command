@@ -11,7 +11,7 @@ created: 2026-05-05
 updated: 2026-05-11
 blocks: []
 blocked-by: []
-discovery_source: research/repo-spring-cleaning/research.md
+discovery_source: cortex/research/repo-spring-cleaning/research.md
 ---
 
 # Repo spring cleaning: share-readiness for installer audience

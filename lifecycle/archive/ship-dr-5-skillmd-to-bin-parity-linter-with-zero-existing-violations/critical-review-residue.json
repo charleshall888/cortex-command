@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-28T00:00:00Z",
   "feature": "ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations",
-  "artifact": "lifecycle/ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations/plan.md",
+  "artifact": "cortex/lifecycle/ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -18,11 +18,11 @@
       "class": "B",
       "finding": "Task 12 (no --staged) and Task 13 (with --staged) exercise different code paths but the Verification Strategy frames them as redundant independent surfaces.",
       "reviewer_angle": "Bootstrap and ordering risk",
-      "evidence_quote": "Shell: cd \"$(git rev-parse --show-toplevel)\"; python3 bin/cortex-check-parity \u2014 exit code propagates."
+      "evidence_quote": "Shell: cd \"$(git rev-parse --show-toplevel)\"; python3 bin/cortex-check-parity — exit code propagates."
     },
     {
       "class": "B",
-      "finding": "Veto Surface claim about half-staged rename is factually wrong about git mv semantics \u2014 after git mv + partial unstage, working tree contains only the prefixed file, so the described block does not occur. Synthesizer downgraded A\u2192B (adjacent: invalidates a documentation claim, not the plan's actual hook behavior).",
+      "finding": "Veto Surface claim about half-staged rename is factually wrong about git mv semantics — after git mv + partial unstage, working tree contains only the prefixed file, so the described block does not occur. Synthesizer downgraded A→B (adjacent: invalidates a documentation claim, not the plan's actual hook behavior).",
       "reviewer_angle": "Bootstrap and ordering risk",
       "evidence_quote": "Half-staged rename edge case (Spec edge case 3): if developer stages bin/cortex-validate-spec without staging bin/validate-spec deletion, working tree has both files, un-prefixed one is unwired, hook blocks. Resolution requires `git add -u bin/`."
     },

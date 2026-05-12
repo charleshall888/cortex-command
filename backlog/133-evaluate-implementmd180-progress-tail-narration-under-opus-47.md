@@ -11,7 +11,7 @@ parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
 complexity: complex
 criticality: high
-spec: lifecycle/archive/evaluate-implementmd119-progress-tail-narration-under-opus-47/spec.md
+spec: cortex/lifecycle/archive/evaluate-implementmd119-progress-tail-narration-under-opus-47/spec.md
 areas: [lifecycle]
 session_id: null
 lifecycle_phase: complete

@@ -10,10 +10,10 @@ blocked-by: []
 tags: [dispatch, critical-review, plan, review, token-efficiency]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/lifecycle-discovery-token-audit/research.md
+discovery_source: cortex/research/lifecycle-discovery-token-audit/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/reduce-sub-agent-dispatch-artifact-duplication/spec.md
+spec: cortex/lifecycle/reduce-sub-agent-dispatch-artifact-duplication/spec.md
 areas: [skills]
 session_id: null
 ---

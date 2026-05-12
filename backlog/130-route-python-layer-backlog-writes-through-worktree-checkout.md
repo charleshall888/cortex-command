@@ -15,10 +15,10 @@ lifecycle_phase: research
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/orchestrator-worktree-escape/research.md
+discovery_source: cortex/research/orchestrator-worktree-escape/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/archive/route-python-layer-backlog-writes-through-worktree-checkout/spec.md
+spec: cortex/lifecycle/archive/route-python-layer-backlog-writes-through-worktree-checkout/spec.md
 ---
 
 # Route Python-layer backlog writes through worktree checkout

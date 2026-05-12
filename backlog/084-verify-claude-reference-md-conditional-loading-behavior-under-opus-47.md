@@ -9,13 +9,13 @@ created: 2026-04-18
 updated: 2026-04-20
 parent: "82"
 tags: [opus-4-7-harness-adaptation, spike]
-discovery_source: research/opus-4-7-harness-adaptation/research.md
+discovery_source: cortex/research/opus-4-7-harness-adaptation/research.md
 session_id: null
 lifecycle_phase: review
 lifecycle_slug: verify-claude-reference-md-conditional-loading-behavior-under-opus-47
 complexity: complex
 criticality: high
-spec: lifecycle/archive/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spec.md
+spec: cortex/lifecycle/archive/verify-claude-reference-md-conditional-loading-behavior-under-opus-47/spec.md
 areas: []
 ---
 

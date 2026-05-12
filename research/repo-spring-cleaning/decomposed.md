@@ -24,7 +24,7 @@ Soft dependencies expressed as suggested ordering rather than `blocked-by` to av
 **User decisions ratified during research → decompose handoff** (post-critical-review):
 
 - **DR-1 = Option B** (aggressive README cut). What's Inside cut entirely per OQ §6 — installer pre-install evaluation does not need a repo-structure tour; CLI-bin row is a recurring drift vector unenforced by parity check.
-- **DR-2 = Option C** (leave lifecycle/research dir top-level visibility alone post-archive-run). Earlier `.gitignore`-only proposal was mechanically inert on already-tracked files. Corrected mechanisms (`git rm --cached` + `.gitignore`, structural relocation) deferred until post-archive-run signal.
+- **DR-2 = Option C** (leave cortex/lifecycle/research dir top-level visibility alone post-archive-run). Earlier `.gitignore`-only proposal was mechanically inert on already-tracked files. Corrected mechanisms (`git rm --cached` + `.gitignore`, structural relocation) deferred until post-archive-run signal.
 - **DR-3 = Option B** (move strict-internals `pipeline.md`/`sdk.md`/`mcp-contract.md` to `docs/internals/`; leave `plugin-development.md` + `release-process.md` at `docs/` root).
 - **DR-4 = Option A with parallel requirements retirement**. Delete unwired hooks AND retire `requirements/project.md:36` `output-filters.conf` mention in same commit, OR keep implementation. Either path; no spec/code drift.
 - **OQ §7 = P-A** (forker affordances stay unless they cause user-facing noise). Maintainer's own development workflow IS clone-and-commit forker workflow; `CLAUDE.md:18`/`L48`, `install.sh:25`, statusline manual-wire path stay.
@@ -42,11 +42,11 @@ Soft dependencies expressed as suggested ordering rather than `blocked-by` to av
 
 ## Created Files
 
-- `backlog/165-repo-spring-cleaning-share-readiness-epic.md` — Epic
-- `backlog/166-rewrite-readme-aggressively-and-migrate-content-to-setupmd.md` — README + setup.md content migration + docs/ reorg + skill-table dedup + stale-path fixes (consolidated post-decompose)
-- `backlog/168-delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements.md` — Code/script/hook deletion + paired requirements retirement
-- `backlog/169-fix-archive-predicate-and-sweep-lifecycle-and-research-dirs.md` — Archive predicate fix + lifecycle/research sweep
+- `cortex/backlog/165-repo-spring-cleaning-share-readiness-epic.md` — Epic
+- `cortex/backlog/166-rewrite-readme-aggressively-and-migrate-content-to-setupmd.md` — README + setup.md content migration + docs/ reorg + skill-table dedup + stale-path fixes (consolidated post-decompose)
+- `cortex/backlog/168-delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements.md` — Code/script/hook deletion + paired requirements retirement
+- `cortex/backlog/169-fix-archive-predicate-and-sweep-lifecycle-and-research-dirs.md` — Archive predicate fix + cortex/lifecycle/research sweep
 
 ## Removed Files (during consolidation)
 
-- `backlog/167-reorganize-docs-merge-skill-tables-and-fix-stale-paths.md` — folded into #166.
+- `cortex/backlog/167-reorganize-docs-merge-skill-tables-and-fix-stale-paths.md` — folded into #166.

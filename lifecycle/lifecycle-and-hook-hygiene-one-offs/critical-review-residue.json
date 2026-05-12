@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-11T19:55:00Z",
   "feature": "lifecycle-and-hook-hygiene-one-offs",
-  "artifact": "lifecycle/lifecycle-and-hook-hygiene-one-offs/plan.md",
+  "artifact": "cortex/lifecycle/lifecycle-and-hook-hygiene-one-offs/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,

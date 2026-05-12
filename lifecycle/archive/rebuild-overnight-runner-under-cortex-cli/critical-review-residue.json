@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-24T16:45:00Z",
   "feature": "rebuild-overnight-runner-under-cortex-cli",
-  "artifact": "lifecycle/rebuild-overnight-runner-under-cortex-cli/plan.md",
+  "artifact": "cortex/lifecycle/rebuild-overnight-runner-under-cortex-cli/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -10,13 +10,13 @@
   "findings": [
     {
       "class": "B",
-      "finding": "No console_scripts entry for batch_runner in pyproject.toml; invocation mechanism unspecified \u2014 Task 2 only adds psutil dependency",
+      "finding": "No console_scripts entry for batch_runner in pyproject.toml; invocation mechanism unspecified — Task 2 only adds psutil dependency",
       "reviewer_angle": "R5 grep-acceptance vs batch_runner subprocess spawning",
       "evidence_quote": "Task 6b: External-process spawns: claude -p for orchestrator agent; cortex_command.overnight.batch_runner entrypoint for feature-dispatch subprocess. Task 2: Adds psutil>=5.9 to [project.dependencies]."
     },
     {
       "class": "B",
-      "finding": "R5 grep acceptance criterion blind to runtime-constructed argv like [sys.executable, \"-m\", \"cortex_command.overnight.batch_runner\"] \u2014 passes the check while implementing the banned pattern",
+      "finding": "R5 grep acceptance criterion blind to runtime-constructed argv like [sys.executable, \"-m\", \"cortex_command.overnight.batch_runner\"] — passes the check while implementing the banned pattern",
       "reviewer_angle": "R5 grep-acceptance vs batch_runner subprocess spawning",
       "evidence_quote": "R5 acceptance: grep -rn python3 -c|python3 -m cortex_command cortex_command/overnight/*.py returns exit code 1 (no matches)."
     },
@@ -34,7 +34,7 @@
     },
     {
       "class": "B",
-      "finding": "handle_start / runner.run startup block has no read-verify-before-write guard against live concurrent session \u2014 spec Edge Cases specifies concurrent-start must exit nonzero with session already running",
+      "finding": "handle_start / runner.run startup block has no read-verify-before-write guard against live concurrent session — spec Edge Cases specifies concurrent-start must exit nonzero with session already running",
       "reviewer_angle": "Cancel handler cleanup gap",
       "evidence_quote": "Spec Edge Cases: Concurrent cortex overnight start invocations: second invocation detects existing runner.pid with live PID + matching magic + start_time; exits nonzero with session already running."
     }

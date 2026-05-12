@@ -11,7 +11,7 @@ created: 2026-04-29
 updated: 2026-04-29
 complexity: complex
 criticality: high
-spec: lifecycle/archive/resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers/spec.md
+spec: cortex/lifecycle/archive/resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers/spec.md
 areas: [scripts]
 lifecycle_phase: implement
 session_id: null

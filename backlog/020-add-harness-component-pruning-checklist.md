@@ -11,7 +11,7 @@ blocked-by: []
 tags: [overnight, harness, maintenance, quality]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/harness-design-long-running-apps/research.md
+discovery_source: cortex/research/harness-design-long-running-apps/research.md
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: add-harness-component-pruning-checklist

@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-04T00:10:00Z",
   "feature": "remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release",
-  "artifact": "lifecycle/remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release/plan.md",
+  "artifact": "cortex/lifecycle/remove-dead-throttled-dispatch-wrapper-keep-concurrencymanager-acquire-release/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -18,23 +18,23 @@
       "class": "B",
       "finding": "Tasks 11 and 12 add new branches on paused_reason==api_rate_limit but no existing test covers paused_reason / API rate / API budget; verification is per-line regex + just test, neither of which witnesses the additive branch reachability or propagation fidelity.",
       "reviewer_angle": "Verification gates: tautology and behavioral blind spots",
-      "evidence_quote": "**NOT introducing** new tests beyond modifying/deleting existing ones \u2014 deletion shrinks the test surface."
+      "evidence_quote": "**NOT introducing** new tests beyond modifying/deleting existing ones — deletion shrinks the test surface."
     },
     {
       "class": "B",
       "finding": "Tasks 11/12 verification regex paused_reason.*api_rate_limit|api_rate_limit.*paused_reason is line-scoped, missing implementations that split tokens across adjacent lines and passing trivially for unrelated single lines mentioning both strings.",
       "reviewer_angle": "Verification gates: tautology and behavioral blind spots",
-      "evidence_quote": "`grep -cE 'paused_reason.*api_rate_limit|api_rate_limit.*paused_reason' cortex_command/overnight/report.py` \u2265 1"
+      "evidence_quote": "`grep -cE 'paused_reason.*api_rate_limit|api_rate_limit.*paused_reason' cortex_command/overnight/report.py` ≥ 1"
     },
     {
       "class": "B",
-      "finding": "Task 10 verification (literal-absence + symbol-presence \u22652) is satisfiable by deleting branches rather than rewriting them; the api_rate_limit propagation case has no test coverage.",
+      "finding": "Task 10 verification (literal-absence + symbol-presence ≥2) is satisfiable by deleting branches rather than rewriting them; the api_rate_limit propagation case has no test coverage.",
       "reviewer_angle": "Verification gates: tautology and behavioral blind spots",
-      "evidence_quote": "`grep -cE '\"budget_exhausted\"' cortex_command/overnight/orchestrator.py` = 0 (the 8 verified sites all replaced) AND `grep -c '_SESSION_HALT_ERROR_TYPES' cortex_command/overnight/orchestrator.py` \u2265 2"
+      "evidence_quote": "`grep -cE '\"budget_exhausted\"' cortex_command/overnight/orchestrator.py` = 0 (the 8 verified sites all replaced) AND `grep -c '_SESSION_HALT_ERROR_TYPES' cortex_command/overnight/orchestrator.py` ≥ 2"
     },
     {
       "class": "B",
-      "finding": "Task 3 deletion + Task 2 test removal leaves no end-to-end runtime witness for post-deletion 429 dispatch behavior in brain.py \u2192 orchestrator.py \u2192 runner.py chain.",
+      "finding": "Task 3 deletion + Task 2 test removal leaves no end-to-end runtime witness for post-deletion 429 dispatch behavior in brain.py → orchestrator.py → runner.py chain.",
       "reviewer_angle": "Verification gates: tautology and behavioral blind spots",
       "evidence_quote": "`python3 -c 'from cortex_command.overnight import throttle; ...; m = ConcurrencyManager(ThrottleConfig()); assert hasattr(m, \"acquire\") and hasattr(m, \"release\")'` exits 0"
     },
@@ -42,7 +42,7 @@
       "class": "B",
       "finding": "cortex_command/overnight/plan.py:206 contains live string 'Tier-based adaptive throttle' rendered into the user-facing morning-review session plan; no task in the plan touches plan.py.",
       "reviewer_angle": "Missed references in unenumerated consumer surfaces",
-      "evidence_quote": "Documentation alignment (R9, R10, R14): the three doc surfaces no longer describe the deleted behavior; new pointers target the surviving `api_rate_limit` \u2192 `pause_session` path."
+      "evidence_quote": "Documentation alignment (R9, R10, R14): the three doc surfaces no longer describe the deleted behavior; new pointers target the surviving `api_rate_limit` → `pause_session` path."
     },
     {
       "class": "B",

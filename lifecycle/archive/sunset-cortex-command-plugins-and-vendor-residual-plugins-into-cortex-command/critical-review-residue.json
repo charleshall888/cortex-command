@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-27T00:00:00Z",
   "feature": "sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command",
-  "artifact": "lifecycle/sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command/plan.md",
+  "artifact": "cortex/lifecycle/sunset-cortex-command-plugins-and-vendor-residual-plugins-into-cortex-command/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -16,15 +16,15 @@
     },
     {
       "class": "B",
-      "finding": "Task 4 \u00a74-obligations regex satisfied by an empty section header",
+      "finding": "Task 4 §4-obligations regex satisfied by an empty section header",
       "reviewer_angle": "Verification tautology / self-sealing AC",
-      "evidence_quote": "grep -ciE (apache.{0,5}(license)? *\u00a7? *4|section *4|requires.*derivative.*work) HOW-TO-SYNC.md \u2265 1"
+      "evidence_quote": "grep -ciE (apache.{0,5}(license)? *§? *4|section *4|requires.*derivative.*work) HOW-TO-SYNC.md ≥ 1"
     },
     {
       "class": "B",
       "finding": "Task 8 plugin-count grep does not cross-check against jq plugins length",
       "reviewer_angle": "Verification tautology / self-sealing AC",
-      "evidence_quote": "grep -cE six plugins|6 plugins README.md \u2265 1"
+      "evidence_quote": "grep -cE six plugins|6 plugins README.md ≥ 1"
     },
     {
       "class": "B",

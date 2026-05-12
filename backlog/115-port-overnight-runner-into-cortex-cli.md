@@ -15,7 +15,7 @@ lifecycle_phase: implement
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/overnight-layer-distribution/research.md
+discovery_source: cortex/research/overnight-layer-distribution/research.md
 complexity: complex
 criticality: critical
 ---

@@ -15,10 +15,10 @@ lifecycle_phase: implement
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/sandbox-overnight-child-agents/research.md
+discovery_source: cortex/research/sandbox-overnight-child-agents/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/archive/add-sandbox-violation-tracker-hook-for-posttoolusebash/spec.md
+spec: cortex/lifecycle/archive/add-sandbox-violation-tracker-hook-for-posttoolusebash/spec.md
 ---
 
 # Add sandbox-violation tracker hook for PostToolUse(Bash)

@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-25T21:50:00Z",
   "feature": "decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration",
-  "artifact": "lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/plan.md",
+  "artifact": "cortex/lifecycle/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 3,

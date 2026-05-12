@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, plan-template, spec-template, vertical-planning, orchestrator-review, parser, metrics-parser]
 created: 2026-05-06
 updated: 2026-05-11
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/vertical-planning-adoption-as-replacement-outline-absorbs-scope-boundaries-verification-strategy-risks-preserves-veto-surface-tier-conditional-acceptance/spec.md
+spec: cortex/lifecycle/vertical-planning-adoption-as-replacement-outline-absorbs-scope-boundaries-verification-strategy-risks-preserves-veto-surface-tier-conditional-acceptance/spec.md
 areas: [lifecycle]
 session_id: null
 lifecycle_phase: plan

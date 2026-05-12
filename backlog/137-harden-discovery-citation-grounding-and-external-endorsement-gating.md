@@ -11,7 +11,7 @@ tags: [discovery, rigor, skills]
 areas: [skills]
 created: 2026-04-22
 updated: 2026-04-22
-discovery_source: research/audit-and-improve-discovery-skill-rigor/research.md
+discovery_source: cortex/research/audit-and-improve-discovery-skill-rigor/research.md
 ---
 
 # Harden /discovery citation grounding and external-endorsement value gating

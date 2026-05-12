@@ -9,13 +9,13 @@ tags: [permissions-audit, security]
 created: 2026-04-09
 updated: 2026-04-09
 parent: 054
-discovery_source: research/permissions-audit/research.md
+discovery_source: cortex/research/permissions-audit/research.md
 session_id: null
 lifecycle_phase: review
 lifecycle_slug: verify-escape-hatch-bypass-mechanism
 complexity: simple
 criticality: high
-spec: lifecycle/archive/verify-escape-hatch-bypass-mechanism/spec.md
+spec: cortex/lifecycle/archive/verify-escape-hatch-bypass-mechanism/spec.md
 areas: [skills]
 ---
 

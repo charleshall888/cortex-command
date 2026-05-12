@@ -9,7 +9,7 @@ created: 2026-04-18
 updated: 2026-04-29
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
-discovery_source: research/opus-4-7-harness-adaptation/research.md
+discovery_source: cortex/research/opus-4-7-harness-adaptation/research.md
 blocked-by: []
 ---
 

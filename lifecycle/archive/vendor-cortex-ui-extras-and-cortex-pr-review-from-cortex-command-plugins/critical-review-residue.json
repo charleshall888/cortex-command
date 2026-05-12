@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-24T20:58:00Z",
   "feature": "vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins",
-  "artifact": "lifecycle/vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins/plan.md",
+  "artifact": "cortex/lifecycle/vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,

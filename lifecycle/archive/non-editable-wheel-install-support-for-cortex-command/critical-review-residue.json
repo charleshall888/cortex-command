@@ -1,19 +1,72 @@
 {
   "ts": "2026-04-29T00:00:00Z",
   "feature": "non-editable-wheel-install-support-for-cortex-command",
-  "artifact": "lifecycle/non-editable-wheel-install-support-for-cortex-command/plan.md",
+  "artifact": "cortex/lifecycle/non-editable-wheel-install-support-for-cortex-command/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
-    {"class": "B", "finding": "Task 7 install.sh hardcodes v0.1.0 with no fallback or sentinel; curl|sh failures during merge-but-pre-tag window are silent.", "reviewer_angle": "Tag bootstrap chicken-and-egg", "evidence_quote": "Hardcode `v0.1.0` for the initial implementation; a follow-up can wire `gh release view` once tag discipline is established."},
-    {"class": "B", "finding": "Task 6 advisory cortex upgrade message points users at https://github.com/.../releases for current tags during the bootstrap window when no release exists.", "reviewer_angle": "Tag bootstrap chicken-and-egg", "evidence_quote": "Or run `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<tag>` for the bare-shell path; see https://github.com/charleshall888/cortex-command/releases for current tags."},
-    {"class": "B", "finding": "Task 10 tests cannot detect dangling-tag hazard because subprocess.run is mocked and test_target_state builds wheel from working tree, not git+...@v0.1.0.", "reviewer_angle": "Tag bootstrap chicken-and-egg", "evidence_quote": "Use unittest.mock.patch(\"subprocess.run\", ...) to capture invocations without running the real uv tool install."},
-    {"class": "B", "finding": "Task 14 verification (grep -E 'uv build|softprops/action-gh-release|gh release create' .github/workflows/release.yml | wc -l >= 2) does not validate YAML syntax, permissions, or runner availability; partial failures pass verification.", "reviewer_angle": "Tag bootstrap chicken-and-egg", "evidence_quote": "Wait for .github/workflows/release.yml to complete (workflow created in Task 13). Verify via gh run list --workflow=release.yml --limit 5 and gh release list --limit 5."},
-    {"class": "B", "finding": "orchestrator.py:189 references outcome_router._PROJECT_ROOT inside a try/except Exception: pass block; Task 5 deletes _PROJECT_ROOT but the exception-swallowing erodes diagnostics silently.", "reviewer_angle": "Call-time path resolution and worker isolation", "evidence_quote": "Caller enumeration: grep -rn _LIFECYCLE_ROOT cortex_command/overnight/ to confirm internal-only — these are module-private constants prefixed with underscore, no external callers."},
-    {"class": "B", "finding": "_PROJECT_ROOT/'backlog' and _resolve_user_project_root()/'backlog' have different anchor semantics (module-file vs CWD/env-var); plan elides the semantic shift.", "reviewer_angle": "sys.path.insert deletion claimed vestigial", "evidence_quote": "Replace _PROJECT_ROOT / \"backlog\" references on lines 360 and 417 with _resolve_user_project_root() / \"backlog\" evaluated in-function"},
-    {"class": "B", "finding": "Task 5 specifies updating outcome_router.py:312 comment but verification only asserts grep -c '_PROJECT_ROOT' = 0; comment update is unverified.", "reviewer_angle": "sys.path.insert deletion claimed vestigial", "evidence_quote": "overnight/outcome_router.py:312 — comment block referencing _PROJECT_ROOT becomes stale; update to reference _resolve_user_project_root()."},
-    {"class": "B", "finding": "MCP-side _orchestrate_upgrade and _orchestrate_schema_floor_upgrade build flock paths and run git -C $cortex_root commands against the package install path under Task 6; orchestrator dies silently or writes into venv.", "reviewer_angle": "print-root JSON schema compatibility", "evidence_quote": "Caller enumeration for _resolve_cortex_root: grep -rn _resolve_cortex_root cortex_command/ returns cli.py:222 (Task 6 reworks), cli.py:260 (Task 6 deletes — line is inside _dispatch_upgrade's removed body)."},
-    {"class": "B", "finding": "tests/test_cli_print_root.py asserts len(head_sha)==40 and len(remote_url)>0; Task 6 breaks this. Task 15's fallback framing under-specifies the rewrite.", "reviewer_angle": "print-root JSON schema compatibility", "evidence_quote": "Also tests/test_cli_print_root.py and tests/test_cli_upgrade.py may reference it via patching — search grep -rn _resolve_cortex_root|CORTEX_COMMAND_ROOT tests/ and update test fixtures to inject CORTEX_REPO_ROOT instead."},
-    {"class": "B", "finding": "_resolve_user_project_root() resolves to CWD/CORTEX_REPO_ROOT (user project), while _dispatch_print_root resolves root to Path(cortex_command.__file__).parent (package install). Two distinct answers to 'where am I?' for the same user; MCP must reconcile.", "reviewer_angle": "print-root JSON schema compatibility", "evidence_quote": "Rework _dispatch_print_root to derive root from Path(cortex_command.__file__).parent (with optional CORTEX_REPO_ROOT override) and emit empty strings for remote_url / head_sha when no git clone exists."}
+    {
+      "class": "B",
+      "finding": "Task 7 install.sh hardcodes v0.1.0 with no fallback or sentinel; curl|sh failures during merge-but-pre-tag window are silent.",
+      "reviewer_angle": "Tag bootstrap chicken-and-egg",
+      "evidence_quote": "Hardcode `v0.1.0` for the initial implementation; a follow-up can wire `gh release view` once tag discipline is established."
+    },
+    {
+      "class": "B",
+      "finding": "Task 6 advisory cortex upgrade message points users at https://github.com/.../releases for current tags during the bootstrap window when no release exists.",
+      "reviewer_angle": "Tag bootstrap chicken-and-egg",
+      "evidence_quote": "Or run `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@<tag>` for the bare-shell path; see https://github.com/charleshall888/cortex-command/releases for current tags."
+    },
+    {
+      "class": "B",
+      "finding": "Task 10 tests cannot detect dangling-tag hazard because subprocess.run is mocked and test_target_state builds wheel from working tree, not git+...@v0.1.0.",
+      "reviewer_angle": "Tag bootstrap chicken-and-egg",
+      "evidence_quote": "Use unittest.mock.patch(\"subprocess.run\", ...) to capture invocations without running the real uv tool install."
+    },
+    {
+      "class": "B",
+      "finding": "Task 14 verification (grep -E 'uv build|softprops/action-gh-release|gh release create' .github/workflows/release.yml | wc -l >= 2) does not validate YAML syntax, permissions, or runner availability; partial failures pass verification.",
+      "reviewer_angle": "Tag bootstrap chicken-and-egg",
+      "evidence_quote": "Wait for .github/workflows/release.yml to complete (workflow created in Task 13). Verify via gh run list --workflow=release.yml --limit 5 and gh release list --limit 5."
+    },
+    {
+      "class": "B",
+      "finding": "orchestrator.py:189 references outcome_router._PROJECT_ROOT inside a try/except Exception: pass block; Task 5 deletes _PROJECT_ROOT but the exception-swallowing erodes diagnostics silently.",
+      "reviewer_angle": "Call-time path resolution and worker isolation",
+      "evidence_quote": "Caller enumeration: grep -rn _LIFECYCLE_ROOT cortex_command/overnight/ to confirm internal-only — these are module-private constants prefixed with underscore, no external callers."
+    },
+    {
+      "class": "B",
+      "finding": "_PROJECT_ROOT/'backlog' and _resolve_user_project_root()/'backlog' have different anchor semantics (module-file vs CWD/env-var); plan elides the semantic shift.",
+      "reviewer_angle": "sys.path.insert deletion claimed vestigial",
+      "evidence_quote": "Replace _PROJECT_ROOT / \"backlog\" references on lines 360 and 417 with _resolve_user_project_root() / \"backlog\" evaluated in-function"
+    },
+    {
+      "class": "B",
+      "finding": "Task 5 specifies updating outcome_router.py:312 comment but verification only asserts grep -c '_PROJECT_ROOT' = 0; comment update is unverified.",
+      "reviewer_angle": "sys.path.insert deletion claimed vestigial",
+      "evidence_quote": "overnight/outcome_router.py:312 — comment block referencing _PROJECT_ROOT becomes stale; update to reference _resolve_user_project_root()."
+    },
+    {
+      "class": "B",
+      "finding": "MCP-side _orchestrate_upgrade and _orchestrate_schema_floor_upgrade build flock paths and run git -C $cortex_root commands against the package install path under Task 6; orchestrator dies silently or writes into venv.",
+      "reviewer_angle": "print-root JSON schema compatibility",
+      "evidence_quote": "Caller enumeration for _resolve_cortex_root: grep -rn _resolve_cortex_root cortex_command/ returns cli.py:222 (Task 6 reworks), cli.py:260 (Task 6 deletes — line is inside _dispatch_upgrade's removed body)."
+    },
+    {
+      "class": "B",
+      "finding": "tests/test_cli_print_root.py asserts len(head_sha)==40 and len(remote_url)>0; Task 6 breaks this. Task 15's fallback framing under-specifies the rewrite.",
+      "reviewer_angle": "print-root JSON schema compatibility",
+      "evidence_quote": "Also tests/test_cli_print_root.py and tests/test_cli_upgrade.py may reference it via patching — search grep -rn _resolve_cortex_root|CORTEX_COMMAND_ROOT tests/ and update test fixtures to inject CORTEX_REPO_ROOT instead."
+    },
+    {
+      "class": "B",
+      "finding": "_resolve_user_project_root() resolves to CWD/CORTEX_REPO_ROOT (user project), while _dispatch_print_root resolves root to Path(cortex_command.__file__).parent (package install). Two distinct answers to 'where am I?' for the same user; MCP must reconcile.",
+      "reviewer_angle": "print-root JSON schema compatibility",
+      "evidence_quote": "Rework _dispatch_print_root to derive root from Path(cortex_command.__file__).parent (with optional CORTEX_REPO_ROOT override) and emit empty strings for remote_url / head_sha when no git clone exists."
+    }
   ]
 }

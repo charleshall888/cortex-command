@@ -9,7 +9,7 @@ blocked-by: []
 tags: [lifecycle, phase-shape, refine, token-efficiency, six-phase]
 created: 2026-05-06
 updated: 2026-05-11
-discovery_source: research/epic-172-audit/research.md
+discovery_source: cortex/research/epic-172-audit/research.md
 complexity: complex
 criticality: high
 ---

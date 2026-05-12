@@ -11,13 +11,13 @@ blocked-by: []
 tags: [overnight, merge-conflicts, scheduling, backlog]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/overnight-merge-conflict-prevention/research.md
+discovery_source: cortex/research/overnight-merge-conflict-prevention/research.md
 session_id: null
 lifecycle_phase: plan
 lifecycle_slug: investigate-and-solve-conflict-aware-round-scheduling-in-overnight-runner
 complexity: complex
 criticality: high
-spec: lifecycle/archive/investigate-and-solve-conflict-aware-round-scheduling-in-overnight-runner/spec.md
+spec: cortex/lifecycle/archive/investigate-and-solve-conflict-aware-round-scheduling-in-overnight-runner/spec.md
 areas: [overnight-runner]
 ---
 

@@ -16,7 +16,7 @@ blocks: []
 blocked-by: []
 complexity: complex
 criticality: high
-spec: lifecycle/archive/investigate-overnight-morning-review-git-sync-gaps/spec.md
+spec: cortex/lifecycle/archive/investigate-overnight-morning-review-git-sync-gaps/spec.md
 ---
 
 # Investigate overnight/morning-review git sync gaps

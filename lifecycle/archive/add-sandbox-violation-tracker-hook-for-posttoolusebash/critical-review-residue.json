@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-05T00:03:00Z",
   "feature": "add-sandbox-violation-tracker-hook-for-posttoolusebash",
-  "artifact": "lifecycle/add-sandbox-violation-tracker-hook-for-posttoolusebash/plan.md",
+  "artifact": "cortex/lifecycle/add-sandbox-violation-tracker-hook-for-posttoolusebash/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -46,13 +46,13 @@
     },
     {
       "class": "B",
-      "finding": "The Verification Strategy enumerates unit / integration / manual-smoke layers but no failure-injection layer for malformed bash.log, malformed overnight-state.json, or AttributeError-on-non-dict-YAML-doc \u2014 the exact failure modes most likely to surface in a real overnight session.",
+      "finding": "The Verification Strategy enumerates unit / integration / manual-smoke layers but no failure-injection layer for malformed bash.log, malformed overnight-state.json, or AttributeError-on-non-dict-YAML-doc — the exact failure modes most likely to surface in a real overnight session.",
       "reviewer_angle": "Failure propagation in render path",
       "evidence_quote": "End-to-end verification proceeds in three layers: 1. Unit-level ... 2. Integration-level ... 3. Live-system smoke (manual)"
     },
     {
       "class": "B",
-      "finding": "Veto Surface enumerates consolidation scope, counter sources, and repo-root identification but does not enumerate 'collector raises and kills the entire morning report' \u2014 the highest-blast-radius risk of the change.",
+      "finding": "Veto Surface enumerates consolidation scope, counter sources, and repo-root identification but does not enumerate 'collector raises and kills the entire morning report' — the highest-blast-radius risk of the change.",
       "reviewer_angle": "Failure propagation in render path",
       "evidence_quote": "Repo-root identification source. Task 6 reads `lifecycle/overnight-state.json` for home/cross repo roots."
     }

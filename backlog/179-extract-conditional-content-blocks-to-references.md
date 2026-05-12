@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, refine, critical-review, conditional-extraction, hot-path-context, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-11
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/extract-conditional-content-blocks-to-references-a-b-downgrade-rubric-implement-daytime-trimmed-scope/spec.md
+spec: cortex/lifecycle/extract-conditional-content-blocks-to-references-a-b-downgrade-rubric-implement-daytime-trimmed-scope/spec.md
 areas: [skills]
 session_id: null
 ---

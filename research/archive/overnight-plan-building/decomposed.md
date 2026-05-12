@@ -14,4 +14,4 @@
 Single ticket — no ordering needed.
 
 ## Created Files
-- `backlog/048-trim-and-instrument-overnight-plan-gen-prompt.md` — Conditional prompt trimming + plan-gen trigger event logging
+- `cortex/backlog/048-trim-and-instrument-overnight-plan-gen-prompt.md` — Conditional prompt trimming + plan-gen trigger event logging

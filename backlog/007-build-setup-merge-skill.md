@@ -9,13 +9,13 @@ blocked-by: []
 tags: [shareability, install, setup, skills]
 created: 2026-04-02
 updated: 2026-04-03
-discovery_source: research/shareable-install/research.md
+discovery_source: cortex/research/shareable-install/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: build-setup-merge-local-skill
 complexity: complex
 criticality: high
-spec: lifecycle/archive/build-setup-merge-local-skill/spec.md
+spec: cortex/lifecycle/archive/build-setup-merge-local-skill/spec.md
 ---
 
 # Build /setup-merge local skill

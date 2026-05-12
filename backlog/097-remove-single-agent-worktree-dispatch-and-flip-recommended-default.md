@@ -10,15 +10,15 @@ updated: 2026-04-22
 parent: "93"
 blocked-by: []
 tags: [lifecycle, preflight, worktree, cleanup]
-discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
+discovery_source: cortex/research/revisit-lifecycle-implement-preflight-options/research.md
 areas: [skills,lifecycle,hooks]
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch
 complexity: complex
 criticality: high
-spec: lifecycle/archive/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/spec.md
-plan: lifecycle/archive/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/plan.md
+spec: cortex/lifecycle/archive/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/spec.md
+plan: cortex/lifecycle/archive/remove-single-agent-worktree-dispatch-and-flip-recommended-default-to-current-branch/plan.md
 ---
 
 # Remove single-agent worktree dispatch and flip recommended default to current branch

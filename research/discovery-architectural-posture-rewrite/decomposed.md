@@ -43,7 +43,7 @@ One ticket, no ordering. Within the ticket's spec.md, the spec-phase re-walk obl
 
 ## Created Files
 
-- `backlog/195-reframe-discovery-to-principal-architect-posture.md` — the ticket
+- `cortex/backlog/195-reframe-discovery-to-principal-architect-posture.md` — the ticket
 
 ## Notes
 

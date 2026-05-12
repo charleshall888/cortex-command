@@ -16,7 +16,7 @@ absorbed: ["145"]
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration
-spec: lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md
+spec: cortex/lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md
 ---
 
 # Decouple MCP server from CLI Python imports + own auto-update orchestration

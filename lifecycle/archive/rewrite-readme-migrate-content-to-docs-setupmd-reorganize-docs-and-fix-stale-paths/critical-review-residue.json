@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-05T22:30:00Z",
   "feature": "rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths",
-  "artifact": "lifecycle/rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths/plan.md",
+  "artifact": "cortex/lifecycle/rewrite-readme-migrate-content-to-docs-setupmd-reorganize-docs-and-fix-stale-paths/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,

@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-23T23:36:56Z",
   "feature": "build-cortex-setup-subcommand-and-retire-shareable-install-scaffolding",
-  "artifact": "lifecycle/build-cortex-setup-subcommand-and-retire-shareable-install-scaffolding/plan.md",
+  "artifact": "cortex/lifecycle/build-cortex-setup-subcommand-and-retire-shareable-install-scaffolding/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,

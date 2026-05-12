@@ -44,8 +44,8 @@ Intermediate-state analysis: no state between tickets is strictly worse than tod
 
 ## Created Files
 
-- `backlog/093-modernize-lifecycle-implement-phase-preflight-options.md` — epic
-- `backlog/094-fix-daytime-pipeline-worktree-atomicity-and-stderr-logging.md`
-- `backlog/095-replace-daytime-log-sentinel-classification-with-structured-result-file.md`
-- `backlog/096-add-uncommitted-changes-guard-to-lifecycle-implement-phase-preflight.md`
-- `backlog/097-remove-single-agent-worktree-dispatch-and-flip-recommended-default.md`
+- `cortex/backlog/093-modernize-lifecycle-implement-phase-preflight-options.md` — epic
+- `cortex/backlog/094-fix-daytime-pipeline-worktree-atomicity-and-stderr-logging.md`
+- `cortex/backlog/095-replace-daytime-log-sentinel-classification-with-structured-result-file.md`
+- `cortex/backlog/096-add-uncommitted-changes-guard-to-lifecycle-implement-phase-preflight.md`
+- `cortex/backlog/097-remove-single-agent-worktree-dispatch-and-flip-recommended-default.md`

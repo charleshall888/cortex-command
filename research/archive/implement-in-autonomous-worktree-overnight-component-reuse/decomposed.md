@@ -72,7 +72,7 @@ hard blocker.
   Avoids the TC8 staleness pattern.
 - **Per-feature `lifecycle/{feature}/deferred/`** (DR-4). Avoids
   collisions with overnight's morning report in shared
-  `lifecycle/deferred/`.
+  `cortex/lifecycle/deferred/`.
 - **3-way split chosen over 2-way or 4-way**: orchestrator /
   feature_executor / outcome_router. Each answers one question; 4-way
   fragments outcome dispatch across too many modules.
@@ -108,17 +108,17 @@ review):
 
 ## Created Files
 
-- `backlog/075-extract-feature-executor-module-from-batch-runner.md`
-- `backlog/076-extract-outcome-router-module-from-batch-runner.md`
-- `backlog/077-rename-batch-runner-to-orchestrator-and-add-integration-tests.md`
-- `backlog/078-build-daytime-pipeline-module-and-cli.md`
-- `backlog/079-integrate-autonomous-worktree-option-into-lifecycle-pre-flight.md`
-- `backlog/080-add-characterization-tests-for-batch-runner-pre-extraction.md`
+- `cortex/backlog/075-extract-feature-executor-module-from-batch-runner.md`
+- `cortex/backlog/076-extract-outcome-router-module-from-batch-runner.md`
+- `cortex/backlog/077-rename-batch-runner-to-orchestrator-and-add-integration-tests.md`
+- `cortex/backlog/078-build-daytime-pipeline-module-and-cli.md`
+- `cortex/backlog/079-integrate-autonomous-worktree-option-into-lifecycle-pre-flight.md`
+- `cortex/backlog/080-add-characterization-tests-for-batch-runner-pre-extraction.md`
   (added after critical review to close the regression-oracle gap
   before extraction begins)
 
 ## Updated Files
 
-- `backlog/074-implement-in-autonomous-worktree-overnight-component-reuse.md` —
+- `cortex/backlog/074-implement-in-autonomous-worktree-overnight-component-reuse.md` —
   title updated, framing reworked, children enumerated, priority
   raised to high (reflects the must-do refactor half)

@@ -11,13 +11,13 @@ blocked-by: []
 tags: [overnight, context, performance, quality]
 created: 2026-04-03
 updated: 2026-04-04
-discovery_source: research/harness-design-long-running-apps/research.md
+discovery_source: cortex/research/harness-design-long-running-apps/research.md
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: replace-spec-dump-with-jit-loading-in-implement-prompt
 complexity: complex
 criticality: high
-spec: lifecycle/archive/replace-spec-dump-with-jit-loading-in-implement-prompt/spec.md
+spec: cortex/lifecycle/archive/replace-spec-dump-with-jit-loading-in-implement-prompt/spec.md
 areas: [overnight-runner]
 ---
 

@@ -11,13 +11,13 @@ blocked-by: []
 tags: [overnight, reliability, state, bugs]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/harness-design-long-running-apps/research.md
+discovery_source: cortex/research/harness-design-long-running-apps/research.md
 session_id: null
 lifecycle_phase: research
 lifecycle_slug: fix-non-atomic-state-writes-in-overnight-runner
 complexity: complex
 criticality: high
-spec: lifecycle/archive/fix-non-atomic-state-writes-in-overnight-runner/spec.md
+spec: cortex/lifecycle/archive/fix-non-atomic-state-writes-in-overnight-runner/spec.md
 areas: [overnight-runner]
 ---
 

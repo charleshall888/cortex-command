@@ -8,13 +8,13 @@ parent: 003
 tags: [shareability, install, hooks]
 created: 2026-04-02
 updated: 2026-04-02
-discovery_source: research/shareable-install/research.md
+discovery_source: cortex/research/shareable-install/research.md
 session_id: null
 lifecycle_phase: review
 lifecycle_slug: prep-hooks-and-apikey-for-sharing
 complexity: complex
 criticality: high
-spec: lifecycle/archive/prep-hooks-and-apikey-for-sharing/spec.md
+spec: cortex/lifecycle/archive/prep-hooks-and-apikey-for-sharing/spec.md
 ---
 
 # Prep hooks and apiKeyHelper for sharing

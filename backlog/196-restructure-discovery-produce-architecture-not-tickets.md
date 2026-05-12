@@ -9,7 +9,7 @@ blocked-by: []
 tags: [discovery, skill-rewrite, superseded]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/discovery-architectural-posture-rewrite/research.md
+discovery_source: cortex/research/discovery-architectural-posture-rewrite/research.md
 superseded_by: 195
 ---
 

@@ -11,13 +11,13 @@ parent: "074"
 blocked-by: []
 tags: [overnight-runner, refactor, modularization]
 areas: [overnight-runner]
-discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+discovery_source: cortex/research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
 session_id: cc8a5677-ab5c-44be-8a50-d195df45f54a
 lifecycle_phase: complete
 lifecycle_slug: extract-feature-executor-module-from-batch-runner
 complexity: complex
 criticality: high
-spec: lifecycle/extract-feature-executor-module-from-batch-runner/spec.md
+spec: cortex/lifecycle/extract-feature-executor-module-from-batch-runner/spec.md
 ---
 
 ## Scope

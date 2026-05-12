@@ -12,7 +12,7 @@ complexity: complex
 criticality: medium
 areas: [init, overnight-runner, dashboard, backlog, skills]
 session_id: null
-discovery_source: research/consolidate-artifacts-under-cortex-root/research.md
+discovery_source: cortex/research/consolidate-artifacts-under-cortex-root/research.md
 ---
 
 # Consolidate cortex-command artifacts under a single cortex/ root

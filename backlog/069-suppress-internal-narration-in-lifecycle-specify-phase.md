@@ -6,7 +6,7 @@ status: complete
 priority: high
 parent: 66
 tags: [output-signal-noise, lifecycle, specify]
-discovery_source: research/audit-interactive-phase-output-for-decision-signal/research.md
+discovery_source: cortex/research/audit-interactive-phase-output-for-decision-signal/research.md
 created: 2026-04-11
 updated: 2026-04-17
 session_id: null
@@ -14,7 +14,7 @@ lifecycle_phase: research
 lifecycle_slug: suppress-internal-narration-in-lifecycle-specify-phase
 complexity: simple
 criticality: high
-spec: lifecycle/archive/suppress-internal-narration-in-lifecycle-specify-phase/spec.md
+spec: cortex/lifecycle/archive/suppress-internal-narration-in-lifecycle-specify-phase/spec.md
 areas: [lifecycle]
 ---
 

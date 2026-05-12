@@ -10,10 +10,10 @@ blocked-by: []
 tags: [events-log, emission-discipline, escalations, clarify-critic, token-efficiency]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/lifecycle-discovery-token-audit/research.md
+discovery_source: cortex/research/lifecycle-discovery-token-audit/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/clean-up-eventslog-emission-and-reader-discipline/spec.md
+spec: cortex/lifecycle/clean-up-eventslog-emission-and-reader-discipline/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

@@ -8,7 +8,7 @@ type: epic
 tags: [permissions-audit, security, shareability]
 created: 2026-04-09
 updated: 2026-04-09
-discovery_source: research/permissions-audit/research.md
+discovery_source: cortex/research/permissions-audit/research.md
 ---
 
 # Harden settings.json permissions for public distribution

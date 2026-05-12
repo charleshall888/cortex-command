@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-28T17:34:48Z",
   "feature": "extract-commit-preflight-into-bin-commit-preflight",
-  "artifact": "lifecycle/extract-commit-preflight-into-bin-commit-preflight/plan.md",
+  "artifact": "cortex/lifecycle/extract-commit-preflight-into-bin-commit-preflight/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -11,7 +11,7 @@
     {
       "class": "B",
       "reviewer_angle": "Bootstrap atomicity vs Phase-3 build-plugin idempotency",
-      "finding": "Phase 1.5 parity enforcement triggers on staged bin/cortex-* paths; plan provides zero analysis of whether new bin/cortex-commit-preflight \u2194 skills/commit/SKILL.md pairing satisfies linter contract.",
+      "finding": "Phase 1.5 parity enforcement triggers on staged bin/cortex-* paths; plan provides zero analysis of whether new bin/cortex-commit-preflight ↔ skills/commit/SKILL.md pairing satisfies linter contract.",
       "evidence_quote": "Phase 1.5 (parity), Phase 1.6 (shim presence), Phase 3 (build-plugin re-run), and Phase 4 (plugin-drift) must all pass on this commit."
     },
     {

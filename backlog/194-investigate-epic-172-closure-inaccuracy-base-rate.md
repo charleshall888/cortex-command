@@ -10,7 +10,7 @@ blocked-by: []
 tags: [process, closure-quality, epic-172, dr-5]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/lifecycle-discovery-token-audit/research.md
+discovery_source: cortex/research/lifecycle-discovery-token-audit/research.md
 findings: research/epic-172-closure-audit/findings.md
 ---
 

@@ -14,7 +14,7 @@ lifecycle_phase: null
 session_id: null
 blocks: [102, 103, 104]
 blocked-by: []
-discovery_source: research/overnight-layer-distribution/research.md
+discovery_source: cortex/research/overnight-layer-distribution/research.md
 ---
 
 # Distribute cortex-command as cortex CLI + plugin marketplace

@@ -15,10 +15,10 @@ lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/sandbox-overnight-child-agents/research.md
+discovery_source: cortex/research/sandbox-overnight-child-agents/research.md
 complexity: complex
 criticality: critical
-spec: lifecycle/archive/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/spec.md
+spec: cortex/lifecycle/archive/apply-per-spawn-sandboxfilesystemdenywrite-at-all-overnight-spawn-sites/spec.md
 ---
 
 # Apply per-spawn sandbox.filesystem.denyWrite at all overnight spawn sites

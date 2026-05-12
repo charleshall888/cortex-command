@@ -15,10 +15,10 @@ lifecycle_phase: complete
 session_id: null
 blocks: [122]
 blocked-by: []
-discovery_source: research/overnight-layer-distribution/research.md
+discovery_source: cortex/research/overnight-layer-distribution/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/archive/vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins/spec.md
+spec: cortex/lifecycle/archive/vendor-cortex-ui-extras-and-cortex-pr-review-from-cortex-command-plugins/spec.md
 ---
 
 # Vendor cortex-ui-extras and cortex-pr-review from cortex-command-plugins

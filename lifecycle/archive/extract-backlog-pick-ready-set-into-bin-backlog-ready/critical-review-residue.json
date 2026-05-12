@@ -1,9 +1,12 @@
 {
   "ts": "2026-04-28T17:55:00Z",
   "feature": "extract-backlog-pick-ready-set-into-bin-backlog-ready",
-  "artifact": "lifecycle/extract-backlog-pick-ready-set-into-bin-backlog-ready/plan.md",
+  "artifact": "cortex/lifecycle/extract-backlog-pick-ready-set-into-bin-backlog-ready/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
     {
       "class": "B",

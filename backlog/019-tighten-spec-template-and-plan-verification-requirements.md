@@ -11,13 +11,13 @@ blocked-by: []
 tags: [overnight, specs, quality, lifecycle]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/harness-design-long-running-apps/research.md
+discovery_source: cortex/research/harness-design-long-running-apps/research.md
 session_id: null
 lifecycle_phase: review
 lifecycle_slug: tighten-spec-template-and-plan-verification-requirements
 complexity: complex
 criticality: high
-spec: lifecycle/archive/tighten-spec-template-and-plan-verification-requirements/spec.md
+spec: cortex/lifecycle/archive/tighten-spec-template-and-plan-verification-requirements/spec.md
 areas: [lifecycle]
 ---
 

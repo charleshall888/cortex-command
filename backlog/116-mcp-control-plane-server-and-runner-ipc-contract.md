@@ -15,10 +15,10 @@ lifecycle_phase: implement
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/overnight-layer-distribution/research.md
+discovery_source: cortex/research/overnight-layer-distribution/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/archive/build-mcp-control-plane-server-with-versioned-runner-ipc-contract/spec.md
+spec: cortex/lifecycle/archive/build-mcp-control-plane-server-with-versioned-runner-ipc-contract/spec.md
 ---
 
 # Build MCP control-plane server with versioned runner IPC contract

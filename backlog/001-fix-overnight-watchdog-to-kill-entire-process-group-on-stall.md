@@ -13,7 +13,7 @@ criticality: high
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: fix-overnight-watchdog-to-kill-entire-process-group-on-stall
-spec: lifecycle/archive/fix-overnight-watchdog-to-kill-entire-process-group-on-stall/spec.md
+spec: cortex/lifecycle/archive/fix-overnight-watchdog-to-kill-entire-process-group-on-stall/spec.md
 ---
 
 # Fix overnight watchdog to kill entire process group on stall

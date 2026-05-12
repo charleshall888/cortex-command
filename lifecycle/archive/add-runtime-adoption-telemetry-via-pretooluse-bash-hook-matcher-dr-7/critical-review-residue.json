@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-28T11:33:06Z",
   "feature": "add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7",
-  "artifact": "lifecycle/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/plan.md",
+  "artifact": "cortex/lifecycle/add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,

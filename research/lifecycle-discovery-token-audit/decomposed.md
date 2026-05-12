@@ -40,11 +40,11 @@ Cross-cutting note: research phases for #188, #189, #190, #191 each commit to sp
 - Two optional structural follow-ups identified during alternative-exploration (skill consolidation after invocation audit; large-body trims) are folded into #191's scope rather than separate tickets.
 
 ## Created Files
-- `backlog/187-lifecycle-discovery-token-waste-cuts-and-architectural-cleanup.md` — Epic
-- `backlog/188-reduce-sub-agent-dispatch-artifact-duplication.md`
-- `backlog/189-clean-up-events-log-emission-and-reader-discipline.md`
-- `backlog/190-promote-lifecycle-state-out-of-events-log-full-reads.md`
-- `backlog/191-reduce-boot-context-surface-claudemd-and-skillmd.md`
-- `backlog/192-reference-file-hygiene-cross-skill-and-ceremonial-content.md`
-- `backlog/193-lifecycle-and-hook-hygiene-one-offs.md`
-- `backlog/194-investigate-epic-172-closure-inaccuracy-base-rate.md`
+- `cortex/backlog/187-lifecycle-discovery-token-waste-cuts-and-architectural-cleanup.md` — Epic
+- `cortex/backlog/188-reduce-sub-agent-dispatch-artifact-duplication.md`
+- `cortex/backlog/189-clean-up-events-log-emission-and-reader-discipline.md`
+- `cortex/backlog/190-promote-lifecycle-state-out-of-events-log-full-reads.md`
+- `cortex/backlog/191-reduce-boot-context-surface-claudemd-and-skillmd.md`
+- `cortex/backlog/192-reference-file-hygiene-cross-skill-and-ceremonial-content.md`
+- `cortex/backlog/193-lifecycle-and-hook-hygiene-one-offs.md`
+- `cortex/backlog/194-investigate-epic-172-closure-inaccuracy-base-rate.md`

@@ -47,14 +47,14 @@
 
 ## Created Files
 
-- `backlog/082-adapt-harness-to-opus-47-prompt-delta-capability-adoption.md` — epic
-- `backlog/083-run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff.md`
-- `backlog/084-verify-claude-reference-md-conditional-loading-behavior-under-opus-47.md`
-- `backlog/085-audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns.md`
-- `backlog/086-extend-output-floorsmd-with-m1-subagent-disposition-section.md`
-- `backlog/087-instrument-eventslog-aggregation-for-turns-and-cost-per-tier.md`
-- `backlog/088-collect-47-baseline-rounds-then-remove-progress-update-scaffolding.md`
-- `backlog/089-measure-xhigh-vs-high-effort-cost-delta-on-representative-task.md`
-- `backlog/090-adopt-xhigh-effort-default-for-overnight-lifecycle-implement.md`
-- `backlog/091-decide-and-document-post-47-policy-settings-must-escalation-tone-regression.md`
-- `backlog/092-remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1.md` — split out of original #88 during 2026-04-18 critical-review
+- `cortex/backlog/082-adapt-harness-to-opus-47-prompt-delta-capability-adoption.md` — epic
+- `cortex/backlog/083-run-claude-api-migrate-to-opus-4-7-on-throwaway-branch-and-report-diff.md`
+- `cortex/backlog/084-verify-claude-reference-md-conditional-loading-behavior-under-opus-47.md`
+- `cortex/backlog/085-audit-dispatch-skill-prompts-and-reference-docs-for-47-at-risk-patterns.md`
+- `cortex/backlog/086-extend-output-floorsmd-with-m1-subagent-disposition-section.md`
+- `cortex/backlog/087-instrument-eventslog-aggregation-for-turns-and-cost-per-tier.md`
+- `cortex/backlog/088-collect-47-baseline-rounds-then-remove-progress-update-scaffolding.md`
+- `cortex/backlog/089-measure-xhigh-vs-high-effort-cost-delta-on-representative-task.md`
+- `cortex/backlog/090-adopt-xhigh-effort-default-for-overnight-lifecycle-implement.md`
+- `cortex/backlog/091-decide-and-document-post-47-policy-settings-must-escalation-tone-regression.md`
+- `cortex/backlog/092-remove-progress-update-scaffolding-from-long-running-prompts-dr-3-wave-1.md` — split out of original #88 during 2026-04-18 critical-review

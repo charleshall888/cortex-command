@@ -15,7 +15,7 @@ criticality: high
 session_id: null
 lifecycle_phase: closed
 lifecycle_slug: lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke
-spec: lifecycle/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke/spec.md
+spec: cortex/lifecycle/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke/spec.md
 complexity: complex
 criticality: high
 ---

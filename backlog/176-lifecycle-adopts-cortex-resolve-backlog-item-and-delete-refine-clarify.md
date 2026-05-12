@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, refine, dual-source, deduplication, backlog-resolution, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd/spec.md
+spec: cortex/lifecycle/lifecycle-adopts-cortex-resolve-backlog-item-delete-refine-references-clarifymd/spec.md
 areas: [skills]
 session_id: null
 ---

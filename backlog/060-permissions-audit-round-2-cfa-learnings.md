@@ -15,7 +15,7 @@ lifecycle_phase: complete
 lifecycle_slug: permissions-audit-round-2-cfa-android-learnings
 complexity: complex
 criticality: high
-spec: lifecycle/archive/permissions-audit-round-2-cfa-android-learnings/spec.md
+spec: cortex/lifecycle/archive/permissions-audit-round-2-cfa-android-learnings/spec.md
 areas: []
 ---
 

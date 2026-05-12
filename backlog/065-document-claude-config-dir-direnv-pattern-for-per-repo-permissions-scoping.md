@@ -10,10 +10,10 @@ created: 2026-04-10
 updated: 2026-04-11
 parent: "063"
 blocked-by: []
-discovery_source: research/user-configurable-setup/research.md
+discovery_source: cortex/research/user-configurable-setup/research.md
 complexity: simple
 criticality: high
-spec: lifecycle/archive/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/spec.md
+spec: cortex/lifecycle/archive/document-claude-config-dir-direnv-pattern-for-per-repo-permissions-scoping/spec.md
 areas: [docs]
 session_id: null
 lifecycle_phase: complete

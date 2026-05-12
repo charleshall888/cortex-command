@@ -9,13 +9,13 @@ created: 2026-05-04
 updated: 2026-05-04
 blocked-by: []
 tags: [refine, clarify-critic, epic-alignment, drift]
-discovery_source: research/refine-load-epic-context/research.md
+discovery_source: cortex/research/refine-load-epic-context/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: add-parent-epic-alignment-check-to-refine-clarify-critic
 complexity: complex
 criticality: high
-spec: lifecycle/archive/add-parent-epic-alignment-check-to-refine-clarify-critic/spec.md
+spec: cortex/lifecycle/archive/add-parent-epic-alignment-check-to-refine-clarify-critic/spec.md
 areas: [skills]
 ---
 

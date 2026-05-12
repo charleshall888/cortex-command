@@ -10,10 +10,10 @@ blocked-by: []
 tags: [harness, scripts, backlog]
 created: 2026-04-21
 updated: 2026-04-28
-discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+discovery_source: cortex/research/extract-scripts-from-agent-tool-sequences/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/archive/extract-backlog-pick-ready-set-into-bin-backlog-ready/spec.md
+spec: cortex/lifecycle/archive/extract-backlog-pick-ready-set-into-bin-backlog-ready/spec.md
 areas: [backlog]
 session_id: null
 lifecycle_phase: complete

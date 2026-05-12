@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, content-trim, token-efficiency, gate-compression, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression/spec.md
+spec: cortex/lifecycle/trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1bb-skillmd-gate-compression/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

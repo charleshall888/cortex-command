@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-11T14:05:41Z",
   "feature": "extract-conditional-content-blocks-to-references-a-b-downgrade-rubric-implement-daytime-trimmed-scope",
-  "artifact": "lifecycle/extract-conditional-content-blocks-to-references-a-b-downgrade-rubric-implement-daytime-trimmed-scope/plan.md",
+  "artifact": "cortex/lifecycle/extract-conditional-content-blocks-to-references-a-b-downgrade-rubric-implement-daytime-trimmed-scope/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,

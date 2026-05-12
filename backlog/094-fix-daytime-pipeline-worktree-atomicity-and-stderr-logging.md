@@ -9,11 +9,11 @@ created: 2026-04-20
 updated: 2026-04-21
 parent: "93"
 tags: [lifecycle, daytime-pipeline, worktree, reliability]
-discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
+discovery_source: cortex/research/revisit-lifecycle-implement-preflight-options/research.md
 areas: [pipeline]
 complexity: complex
 criticality: high
-spec: lifecycle/archive/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/spec.md
+spec: cortex/lifecycle/archive/fix-daytime-pipeline-worktree-atomicity-and-stderr-logging/spec.md
 session_id: null
 lifecycle_phase: implement
 ---

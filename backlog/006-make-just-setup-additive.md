@@ -9,13 +9,13 @@ blocked-by: []
 tags: [shareability, install, setup]
 created: 2026-04-02
 updated: 2026-04-02
-discovery_source: research/shareable-install/research.md
+discovery_source: cortex/research/shareable-install/research.md
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: make-just-setup-additive-by-default
 complexity: complex
 criticality: high
-spec: lifecycle/archive/make-just-setup-additive-by-default/spec.md
+spec: cortex/lifecycle/archive/make-just-setup-additive-by-default/spec.md
 ---
 
 # Make `just setup` additive by default

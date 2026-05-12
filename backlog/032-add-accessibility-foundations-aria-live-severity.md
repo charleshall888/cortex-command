@@ -11,10 +11,10 @@ blocked-by: []
 tags: [dashboard, ui, accessibility, a11y, aria]
 created: 2026-04-03
 updated: 2026-04-08
-discovery_source: research/generative-ui-harness/research.md
+discovery_source: cortex/research/generative-ui-harness/research.md
 complexity: complex
 criticality: medium
-spec: lifecycle/archive/add-accessibility-foundations-aria-live-multi-modal-severity/spec.md
+spec: cortex/lifecycle/archive/add-accessibility-foundations-aria-live-multi-modal-severity/spec.md
 areas: [dashboard]
 session_id: null
 ---

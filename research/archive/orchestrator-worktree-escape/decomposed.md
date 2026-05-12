@@ -43,9 +43,9 @@ Pragmatic sequence when stacking into overnight rounds:
 
 ## Created Files
 
-- `backlog/126-eliminate-home-repo-vs-worktree-context-drift-in-overnight-runner.md` — Epic
-- `backlog/127-disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape.md`
-- `backlog/128-install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions.md`
-- `backlog/129-un-silence-morning-report-commit-and-backfill-4-historical-reports.md`
-- `backlog/130-route-python-layer-backlog-writes-through-worktree-checkout.md`
-- `backlog/131-gate-overnight-pr-creation-on-merged-over-zero.md` — Standalone (not in epic)
+- `cortex/backlog/126-eliminate-home-repo-vs-worktree-context-drift-in-overnight-runner.md` — Epic
+- `cortex/backlog/127-disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape.md`
+- `cortex/backlog/128-install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions.md`
+- `cortex/backlog/129-un-silence-morning-report-commit-and-backfill-4-historical-reports.md`
+- `cortex/backlog/130-route-python-layer-backlog-writes-through-worktree-checkout.md`
+- `cortex/backlog/131-gate-overnight-pr-creation-on-merged-over-zero.md` — Standalone (not in epic)

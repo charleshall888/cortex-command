@@ -9,7 +9,7 @@ tags: [lifecycle, overnight-runner, worktrees, multi-agent, refactor, modulariza
 areas: [lifecycle, skills, overnight-runner]
 created: 2026-04-13
 updated: 2026-04-14
-discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+discovery_source: cortex/research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
 ---
 
 ## Framing (post-discovery)

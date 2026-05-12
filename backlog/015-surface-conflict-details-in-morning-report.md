@@ -10,13 +10,13 @@ parent: 014
 tags: [overnight, merge-conflicts, morning-report]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/overnight-merge-conflict-prevention/research.md
+discovery_source: cortex/research/overnight-merge-conflict-prevention/research.md
 session_id: null
 lifecycle_phase: research
 lifecycle_slug: surface-conflict-details-inline-in-morning-report
 complexity: simple
 criticality: medium
-spec: lifecycle/archive/surface-conflict-details-inline-in-morning-report/spec.md
+spec: cortex/lifecycle/archive/surface-conflict-details-inline-in-morning-report/spec.md
 ---
 
 # Surface conflict details inline in morning report

@@ -42,4 +42,4 @@ T2 is the medium-sized work item deferred to a full `/lifecycle` run. It has its
 
 ## Created Files
 
-- `backlog/112-migrate-overnight-schedule-to-launchagent-based-scheduler.md`
+- `cortex/backlog/112-migrate-overnight-schedule-to-launchagent-based-scheduler.md`

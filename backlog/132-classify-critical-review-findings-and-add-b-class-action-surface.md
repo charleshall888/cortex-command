@@ -12,12 +12,12 @@ updated: 2026-04-22
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/critical-review-scope-expansion-bias/research.md
+discovery_source: cortex/research/critical-review-scope-expansion-bias/research.md
 complexity: complex
 criticality: medium
 lifecycle_phase: plan
 lifecycle_slug: classify-critical-review-findings-by-class-and-add-b-class-action-surface
-spec: lifecycle/archive/classify-critical-review-findings-by-class-and-add-b-class-action-surface/spec.md
+spec: cortex/lifecycle/archive/classify-critical-review-findings-by-class-and-add-b-class-action-surface/spec.md
 ---
 
 # Classify /critical-review findings by class and add B-class action surface

@@ -8,13 +8,13 @@ parent: 49
 tags: [output-efficiency, hooks]
 created: 2026-04-09
 updated: 2026-04-09
-discovery_source: research/agent-output-efficiency/research.md
+discovery_source: cortex/research/agent-output-efficiency/research.md
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: add-hook-based-preprocessing-for-test-build-output
 complexity: complex
 criticality: high
-spec: lifecycle/archive/add-hook-based-preprocessing-for-test-build-output/spec.md
+spec: cortex/lifecycle/archive/add-hook-based-preprocessing-for-test-build-output/spec.md
 areas: [hooks]
 ---
 

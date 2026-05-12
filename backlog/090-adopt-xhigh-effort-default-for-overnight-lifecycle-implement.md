@@ -9,11 +9,11 @@ created: 2026-04-18
 updated: 2026-05-04
 parent: "82"
 tags: [opus-4-7-harness-adaptation, capability-adoption]
-discovery_source: research/opus-4-7-harness-adaptation/research.md
+discovery_source: cortex/research/opus-4-7-harness-adaptation/research.md
 blocked-by: []
 complexity: complex
 criticality: high
-spec: lifecycle/archive/adopt-xhigh-effort-default-for-overnight-lifecycle-implement/spec.md
+spec: cortex/lifecycle/archive/adopt-xhigh-effort-default-for-overnight-lifecycle-implement/spec.md
 areas: [overnight-runner]
 session_id: null
 lifecycle_phase: implement

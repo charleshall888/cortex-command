@@ -10,13 +10,13 @@ blocked-by: []
 tags: [harness, observability, pipeline]
 created: 2026-04-21
 updated: 2026-04-28
-discovery_source: research/extract-scripts-from-agent-tool-sequences/research.md
+discovery_source: cortex/research/extract-scripts-from-agent-tool-sequences/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates
 complexity: complex
 criticality: high
-spec: lifecycle/archive/instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates/spec.md
+spec: cortex/lifecycle/archive/instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates/spec.md
 areas: [overnight-runner]
 ---
 

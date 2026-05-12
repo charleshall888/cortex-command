@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-24T13:35:00Z",
   "feature": "add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements",
-  "artifact": "lifecycle/add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements/plan.md",
+  "artifact": "cortex/lifecycle/add-cortex-init-per-repo-scaffolder-for-lifecycle-backlog-retros-requirements/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -23,8 +23,8 @@
     {
       "class": "B",
       "reviewer_angle": "symlink-safety",
-      "finding": "Forward-direction symlink bypass \u2014 a symlink created at lifecycle/sessions/ after cortex init runs is never rechecked, yet its target is already in allowWrite; overnight runner's --dangerously-skip-permissions makes allowWrite the sole enforcement surface",
-      "evidence_quote": "Revalidating the registered path after the fact \u2014 cortex init registers $(repo-root)/lifecycle/sessions/ once per invocation; it does not later detect stale entries for deleted repos"
+      "finding": "Forward-direction symlink bypass — a symlink created at lifecycle/sessions/ after cortex init runs is never rechecked, yet its target is already in allowWrite; overnight runner's --dangerously-skip-permissions makes allowWrite the sole enforcement surface",
+      "evidence_quote": "Revalidating the registered path after the fact — cortex init registers $(repo-root)/lifecycle/sessions/ once per invocation; it does not later detect stale entries for deleted repos"
     },
     {
       "class": "B",
@@ -35,7 +35,7 @@
     {
       "class": "B",
       "reviewer_angle": "partial-failure recovery",
-      "finding": "ADR-2 framing claims concurrent callers serialize such that each sees the prior writer's mutation \u2014 only true between two successful callers; failed-caller scenario leaves caller-B reading pre-failure state",
+      "finding": "ADR-2 framing claims concurrent callers serialize such that each sees the prior writer's mutation — only true between two successful callers; failed-caller scenario leaves caller-B reading pre-failure state",
       "evidence_quote": "Concurrent callers serialize through the kernel's advisory lock; each sees the prior writer's mutation."
     },
     {
@@ -60,7 +60,7 @@
       "class": "B",
       "reviewer_angle": "handler branch matrix",
       "finding": "Task 9 step 3 calls settings_merge.validate_settings(home) but Task 7/8 don't expose such a signature; ADR-3 ordering guarantee untestable if inlined into register",
-      "evidence_quote": "Pre-flight malformed-settings validation (R14) \u2014 call a thin settings_merge.validate_settings(home) that acquires/releases the lock quickly."
+      "evidence_quote": "Pre-flight malformed-settings validation (R14) — call a thin settings_merge.validate_settings(home) that acquires/releases the lock quickly."
     },
     {
       "class": "B",

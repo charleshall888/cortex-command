@@ -15,9 +15,9 @@ lifecycle_phase: implement
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/overnight-layer-distribution/research.md
-spec: lifecycle/archive/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/spec.md
-plan: lifecycle/archive/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/plan.md
+discovery_source: cortex/research/overnight-layer-distribution/research.md
+spec: cortex/lifecycle/archive/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/spec.md
+plan: cortex/lifecycle/archive/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/plan.md
 ---
 
 # Build cortex CLI skeleton with uv tool install entry point

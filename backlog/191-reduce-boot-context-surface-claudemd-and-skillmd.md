@@ -10,10 +10,10 @@ blocked-by: []
 tags: [boot-context, claude-md, skill-md, descriptions, skill-routing, workflow-trimming]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/lifecycle-discovery-token-audit/research.md
+discovery_source: cortex/research/lifecycle-discovery-token-audit/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md
+spec: cortex/lifecycle/reduce-boot-context-surface-claudemd-skillmd/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

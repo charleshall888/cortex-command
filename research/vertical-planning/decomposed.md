@@ -76,15 +76,15 @@ The audit's pressure-test pass and skill-creator-lens pass led to inline correct
 
 ## Created Files
 
-- `backlog/172-lifecycle-skill-and-artifact-densification-and-vertical-planning-adoption.md` — Epic
-- `backlog/173-fix-duplicated-block-bug-in-refine-skillmd-and-5-stale-skill-references.md`
-- `backlog/174-collapse-byte-identical-refine-references-files-orchestrator-review-and-specify.md`
-- `backlog/175-promote-refine-clarify-critic-to-canonical-with-schema-aware-migration.md`
-- `backlog/176-lifecycle-adopts-cortex-resolve-backlog-item-and-delete-refine-clarify.md`
-- `backlog/177-trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1b-and-skill-gate-compression.md`
-- `backlog/178-apply-skill-creator-lens-improvements-tocs-descriptions-oq3-frontmatter.md`
-- `backlog/179-extract-conditional-content-blocks-to-references.md`
-- `backlog/180-artifact-template-cleanups-architectural-pattern-scope-boundaries-indexmd.md`
-- `backlog/181-skill-design-test-infrastructure-descriptions-handoff-paths-budget.md`
-- `backlog/182-vertical-planning-adoption-outline-and-phases-and-p9-s7-gates-and-parser-test.md`
-- `backlog/183-migrate-complexity-escalation-gates-to-deterministic-python-hook.md`
+- `cortex/backlog/172-lifecycle-skill-and-artifact-densification-and-vertical-planning-adoption.md` — Epic
+- `cortex/backlog/173-fix-duplicated-block-bug-in-refine-skillmd-and-5-stale-skill-references.md`
+- `cortex/backlog/174-collapse-byte-identical-refine-references-files-orchestrator-review-and-specify.md`
+- `cortex/backlog/175-promote-refine-clarify-critic-to-canonical-with-schema-aware-migration.md`
+- `cortex/backlog/176-lifecycle-adopts-cortex-resolve-backlog-item-and-delete-refine-clarify.md`
+- `cortex/backlog/177-trim-verbose-lifecycle-skill-content-implementmd-1a-planmd-1b-and-skill-gate-compression.md`
+- `cortex/backlog/178-apply-skill-creator-lens-improvements-tocs-descriptions-oq3-frontmatter.md`
+- `cortex/backlog/179-extract-conditional-content-blocks-to-references.md`
+- `cortex/backlog/180-artifact-template-cleanups-architectural-pattern-scope-boundaries-indexmd.md`
+- `cortex/backlog/181-skill-design-test-infrastructure-descriptions-handoff-paths-budget.md`
+- `cortex/backlog/182-vertical-planning-adoption-outline-and-phases-and-p9-s7-gates-and-parser-test.md`
+- `cortex/backlog/183-migrate-complexity-escalation-gates-to-deterministic-python-hook.md`

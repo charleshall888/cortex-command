@@ -19,4 +19,4 @@ When anthropics/claude-code#34243 ships, implement 008. No action until then.
 
 ## Created Files
 
-- `backlog/008-auto-rename-claude-session-to-lifecycle-feature.md` — Auto-rename Claude Code session to active lifecycle feature name (blocked)
+- `cortex/backlog/008-auto-rename-claude-session-to-lifecycle-feature.md` — Auto-rename Claude Code session to active lifecycle feature name (blocked)

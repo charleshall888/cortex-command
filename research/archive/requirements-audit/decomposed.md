@@ -19,8 +19,8 @@
 010 and 011 are good overnight candidates run back-to-back in a single session. 012 is interactive (requires codebase reconnaissance per area). 013 is a focused lifecycle skill edit.
 
 ## Created Files
-- `backlog/009-requirements-management-overhaul.md` — Epic
-- `backlog/010-fix-skill-subfile-path-bug.md` — Fix skill sub-file path bug across all skills
-- `backlog/011-redesign-requirements-skill-and-rewrite-project-md.md` — Redesign /requirements skill and rewrite project.md
-- `backlog/012-gather-area-requirements-docs.md` — Gather area requirements docs for four missing areas
-- `backlog/013-wire-requirements-drift-check-into-lifecycle-review.md` — Wire requirements drift check into lifecycle review
+- `cortex/backlog/009-requirements-management-overhaul.md` — Epic
+- `cortex/backlog/010-fix-skill-subfile-path-bug.md` — Fix skill sub-file path bug across all skills
+- `cortex/backlog/011-redesign-requirements-skill-and-rewrite-project-md.md` — Redesign /requirements skill and rewrite project.md
+- `cortex/backlog/012-gather-area-requirements-docs.md` — Gather area requirements docs for four missing areas
+- `cortex/backlog/013-wire-requirements-drift-check-into-lifecycle-review.md` — Wire requirements drift check into lifecycle review

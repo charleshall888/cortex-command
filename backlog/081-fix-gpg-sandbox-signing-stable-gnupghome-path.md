@@ -7,7 +7,7 @@ priority: high
 tags: [gpg, sandbox, hooks, signing]
 created: 2026-04-13
 updated: 2026-04-13
-discovery_source: research/gpg-signing-claude-code-sandbox/research.md
+discovery_source: cortex/research/gpg-signing-claude-code-sandbox/research.md
 ---
 
 # Fix GPG sandbox signing with stable gnupghome path and read-only options

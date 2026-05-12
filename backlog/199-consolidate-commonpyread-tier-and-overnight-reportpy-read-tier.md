@@ -10,7 +10,7 @@ updated: 2026-05-11
 tags: [refactor, lifecycle, deduplication]
 complexity: complex
 criticality: medium
-spec: lifecycle/consolidate-commonpyread-tier-and-overnight-reportpy-read-tier/spec.md
+spec: cortex/lifecycle/consolidate-commonpyread-tier-and-overnight-reportpy-read-tier/spec.md
 areas: [overnight-runner]
 session_id: null
 ---

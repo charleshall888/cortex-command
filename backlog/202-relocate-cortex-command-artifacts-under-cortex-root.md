@@ -14,8 +14,8 @@ areas: []
 session_id: null
 parent: 200
 blocked-by: []
-discovery_source: research/consolidate-artifacts-under-cortex-root/research.md
-spec: lifecycle/relocate-cortex-command-artifacts-under-cortex-root/spec.md
+discovery_source: cortex/research/consolidate-artifacts-under-cortex-root/research.md
+spec: cortex/lifecycle/relocate-cortex-command-artifacts-under-cortex-root/spec.md
 ---
 
 # Relocate cortex-command artifacts under cortex/ root

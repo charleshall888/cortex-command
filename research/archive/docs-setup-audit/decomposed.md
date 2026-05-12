@@ -30,7 +30,7 @@ Single ticket — recommended sequence within the lifecycle plan phase:
 
 ## Created Files
 
-- `backlog/150-restructure-readme-and-setupmd-for-clearer-onboarding.md` — Restructure README and setup.md for clearer onboarding
+- `cortex/backlog/150-restructure-readme-and-setupmd-for-clearer-onboarding.md` — Restructure README and setup.md for clearer onboarding
 
 ## Next Step
 

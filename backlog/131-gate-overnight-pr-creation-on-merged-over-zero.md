@@ -14,10 +14,10 @@ lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/orchestrator-worktree-escape/research.md
+discovery_source: cortex/research/orchestrator-worktree-escape/research.md
 complexity: simple
 criticality: high
-spec: lifecycle/archive/gate-overnight-pr-creation-on-merged-over-zero/spec.md
+spec: cortex/lifecycle/archive/gate-overnight-pr-creation-on-merged-over-zero/spec.md
 ---
 
 # Gate overnight PR creation on merged>0 (draft on zero-merge)

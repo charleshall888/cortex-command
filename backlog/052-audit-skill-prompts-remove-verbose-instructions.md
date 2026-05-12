@@ -9,13 +9,13 @@ blocked-by: []
 tags: [output-efficiency, skills]
 created: 2026-04-09
 updated: 2026-04-10
-discovery_source: research/agent-output-efficiency/research.md
+discovery_source: cortex/research/agent-output-efficiency/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: audit-skill-prompts-and-remove-verbose-instructions-above-the-floor
 complexity: complex
 criticality: high
-spec: lifecycle/archive/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/spec.md
+spec: cortex/lifecycle/archive/audit-skill-prompts-and-remove-verbose-instructions-above-the-floor/spec.md
 areas: [skills]
 ---
 

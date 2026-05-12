@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-11T13:56:34Z",
   "feature": "artifact-template-cleanups-architectural-pattern-optional-indexmd-body-trim-frontmatter-preserved-d4-open-decisions-optional",
-  "artifact": "lifecycle/artifact-template-cleanups-architectural-pattern-optional-indexmd-body-trim-frontmatter-preserved-d4-open-decisions-optional/plan.md",
+  "artifact": "cortex/lifecycle/artifact-template-cleanups-architectural-pattern-optional-indexmd-body-trim-frontmatter-preserved-d4-open-decisions-optional/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -10,7 +10,7 @@
   "findings": [
     {
       "class": "B",
-      "finding": "D3a has no permanent regression guard beyond ticket-acceptance grep \u2014 no test in tests/, no pre-commit hook check, no inline guard comment in the template. A future SKILL.md edit can re-introduce per-artifact wikilinks without alarm.",
+      "finding": "D3a has no permanent regression guard beyond ticket-acceptance grep — no test in tests/, no pre-commit hook check, no inline guard comment in the template. A future SKILL.md edit can re-introduce per-artifact wikilinks without alarm.",
       "reviewer_angle": "D3a verification-only",
       "evidence_quote": "Req 3 (D3a) acceptance: grep -c \"Feature lifecycle for\" skills/lifecycle/SKILL.md returns >= 1 (passes on current state at L150) ..."
     },
@@ -22,7 +22,7 @@
     },
     {
       "class": "B",
-      "finding": "Task 4 Req 9 verification only checks the blocked-by frontmatter field exists (which passes on entry) \u2014 does not verify the structural prerequisite that Gate 2 prose has been removed from skills/lifecycle/SKILL.md before Task 3 commits. The adjacent enforcement contract (the actual sequencing the spec promises) is left unwired.",
+      "finding": "Task 4 Req 9 verification only checks the blocked-by frontmatter field exists (which passes on entry) — does not verify the structural prerequisite that Gate 2 prose has been removed from skills/lifecycle/SKILL.md before Task 3 commits. The adjacent enforcement contract (the actual sequencing the spec promises) is left unwired.",
       "reviewer_angle": "D4 vs blocked-by:[183]",
       "evidence_quote": "Req 9 (blocked-by:[183] sequencing) acceptance: grep -E \"^blocked-by:\" backlog/180-... matches a line containing [183]."
     }

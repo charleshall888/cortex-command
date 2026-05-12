@@ -13,8 +13,8 @@ criticality: medium
 areas: [backlog]
 session_id: null
 parent: 200
-discovery_source: research/consolidate-artifacts-under-cortex-root/research.md
-spec: lifecycle/add-upward-walking-project-root-detection-in-resolve-user-project-root/spec.md
+discovery_source: cortex/research/consolidate-artifacts-under-cortex-root/research.md
+spec: cortex/lifecycle/add-upward-walking-project-root-detection-in-resolve-user-project-root/spec.md
 lifecycle_phase: complete
 lifecycle_slug: add-upward-walking-project-root-detection-in-resolve-user-project-root
 ---

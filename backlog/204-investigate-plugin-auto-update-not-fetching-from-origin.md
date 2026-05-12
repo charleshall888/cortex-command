@@ -14,7 +14,7 @@ areas: [docs]
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: investigate-plugin-auto-update-not-fetching-from-origin
-spec: lifecycle/investigate-plugin-auto-update-not-fetching-from-origin/spec.md
+spec: cortex/lifecycle/investigate-plugin-auto-update-not-fetching-from-origin/spec.md
 ---
 
 # Investigate plugin auto-update not fetching from origin

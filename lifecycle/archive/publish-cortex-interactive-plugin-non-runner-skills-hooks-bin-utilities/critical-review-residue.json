@@ -1,9 +1,12 @@
 {
   "ts": "2026-04-24T13:00:00Z",
   "feature": "publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities",
-  "artifact": "lifecycle/publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities/plan.md",
+  "artifact": "cortex/lifecycle/publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
     {
       "class": "B",

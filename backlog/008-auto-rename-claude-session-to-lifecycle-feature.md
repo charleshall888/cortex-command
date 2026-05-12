@@ -8,7 +8,7 @@ tags: [lifecycle, session-naming, observability]
 blocked-by: [anthropics/claude-code#34243]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/session-window-naming/research.md
+discovery_source: cortex/research/session-window-naming/research.md
 ---
 
 # Auto-rename Claude Code session to active lifecycle feature name

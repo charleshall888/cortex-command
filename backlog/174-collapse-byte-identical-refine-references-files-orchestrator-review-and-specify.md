@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, refine, dual-source, deduplication, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical/spec.md
+spec: cortex/lifecycle/collapse-byte-identical-refine-references-files-orchestrator-reviewmd-specifymd-lifecycle-canonical/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: plan

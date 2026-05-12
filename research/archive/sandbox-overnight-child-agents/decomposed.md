@@ -35,9 +35,9 @@ No items flagged. All Value statements have codebase-grounded `[file:line]` cita
 
 ## Created Files
 
-- `backlog/162-sandbox-overnight-agents-at-the-os-layer.md` — Epic
-- `backlog/163-apply-per-spawn-sandbox-denywrite-at-all-overnight-spawn-sites.md` — #163 (load-bearing, absorbs original #166 + #167 docs)
-- `backlog/164-add-sandbox-violation-tracker-hook-for-posttooluse-bash.md` — #164 (observability, includes its own docs subsection)
+- `cortex/backlog/162-sandbox-overnight-agents-at-the-os-layer.md` — Epic
+- `cortex/backlog/163-apply-per-spawn-sandbox-denywrite-at-all-overnight-spawn-sites.md` — #163 (load-bearing, absorbs original #166 + #167 docs)
+- `cortex/backlog/164-add-sandbox-violation-tracker-hook-for-posttooluse-bash.md` — #164 (observability, includes its own docs subsection)
 
 ## Restructure history
 

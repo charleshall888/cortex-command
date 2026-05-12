@@ -10,7 +10,7 @@ updated: 2026-05-11
 tags: [bin, performance, shim]
 complexity: complex
 criticality: high
-spec: lifecycle/trim-cortex-log-invocation-shim-cost-per-call-21ms/spec.md
+spec: cortex/lifecycle/trim-cortex-log-invocation-shim-cost-per-call-21ms/spec.md
 areas: []
 session_id: null
 ---

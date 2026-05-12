@@ -15,7 +15,7 @@ lifecycle_phase: implement
 lifecycle_slug: add-overnight-session-observability-from-within-claude-code-sandbox
 complexity: complex
 criticality: high
-spec: lifecycle/archive/add-overnight-session-observability-from-within-claude-code-sandbox/spec.md
+spec: cortex/lifecycle/archive/add-overnight-session-observability-from-within-claude-code-sandbox/spec.md
 ---
 
 When checking overnight session status from a sandboxed Claude Code session, the only visibility is reading state files and event logs. The sandbox blocks tmux socket access (`/private/tmp/tmux-503/default` — "Operation not permitted"), so `tmux has-session`, `tmux list-sessions`, and `tmux attach` are all unavailable. This makes it impossible to check if the runner is alive, view its output, or diagnose crashes without leaving the Claude Code session.

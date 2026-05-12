@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-23T03:55:00Z",
   "feature": "investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks",
-  "artifact": "lifecycle/investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks/plan.md",
+  "artifact": "cortex/lifecycle/investigate-daytime-pipeline-blockers-subprocess-auth-task-selection-re-runs-completed-tasks/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -16,7 +16,7 @@
     },
     {
       "class": "B",
-      "finding": "monkeypatch.setattr(pathlib.Path, 'home', lambda: tmp_path) only redirects pathlib.Path.home() \u2014 it does not cover os.path.expanduser('~/...') or direct $HOME reads. The plan never pins which API auth.py must use to look up the home directory.",
+      "finding": "monkeypatch.setattr(pathlib.Path, 'home', lambda: tmp_path) only redirects pathlib.Path.home() — it does not cover os.path.expanduser('~/...') or direct $HOME reads. The plan never pins which API auth.py must use to look up the home directory.",
       "reviewer_angle": "Test isolation",
       "evidence_quote": "Use monkeypatch.setattr(pathlib.Path, 'home', lambda: tmp_path) to redirect ~/.claude/... lookups into pytest's tmp_path."
     },
@@ -24,7 +24,7 @@
       "class": "B",
       "finding": "The conftest's _install_sdk_stub() runs at module import time and is not designed for parallel workers. The plan inherits this fixture pattern across Tasks 2, 6, and 7 without addressing pytest-xdist serialization or stub state across tests in the same worker.",
       "reviewer_angle": "Test isolation",
-      "evidence_quote": "Use tests/_stubs.py::install_sdk_stub if SDK module needs stubbing \u2014 not strictly required since auth.py has no SDK dependency."
+      "evidence_quote": "Use tests/_stubs.py::install_sdk_stub if SDK module needs stubbing — not strictly required since auth.py has no SDK dependency."
     }
   ]
 }

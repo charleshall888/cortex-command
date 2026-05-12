@@ -12,7 +12,7 @@ updated: 2026-05-11
 parent: "165"
 blocks: []
 blocked-by: [166, 168]
-discovery_source: research/repo-spring-cleaning/research.md
+discovery_source: cortex/research/repo-spring-cleaning/research.md
 session_id: 9989f0e6-17df-44ec-8f26-4e22c0face84
 lifecycle_phase: implement
 lifecycle_slug: fix-archive-predicate-and-sweep-lifecycle-and-research-dirs

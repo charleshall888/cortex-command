@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-24T17:39:03Z",
   "feature": "ship-curl-sh-bootstrap-installer-for-cortex-command",
-  "artifact": "lifecycle/ship-curl-sh-bootstrap-installer-for-cortex-command/plan.md",
+  "artifact": "cortex/lifecycle/ship-curl-sh-bootstrap-installer-for-cortex-command/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -23,7 +23,7 @@
     {
       "class": "B",
       "reviewer_angle": "Task 6 test mocking surface",
-      "finding": "Task 7's Files list was 'justfile' but Context directed editing tests/test_install.sh \u2014 P6 inconsistency. Now lists both.",
+      "finding": "Task 7's Files list was 'justfile' but Context directed editing tests/test_install.sh — P6 inconsistency. Now lists both.",
       "evidence_quote": "Simpler: add it as a step inside tests/test_install.sh as the first test case"
     },
     {
@@ -41,7 +41,7 @@
     {
       "class": "B",
       "reviewer_angle": "install.sh vs cortex upgrade safety divergence",
-      "finding": "Task 4's 'Critical invariant: no rm -rf' framing is true but misleading \u2014 git pull --ff-only on a dirty tree with non-overlapping paths can still interleave upstream commits with uncommitted edits.",
+      "finding": "Task 4's 'Critical invariant: no rm -rf' framing is true but misleading — git pull --ff-only on a dirty tree with non-overlapping paths can still interleave upstream commits with uncommitted edits.",
       "evidence_quote": "**Critical invariant**: no rm -rf anywhere in the file."
     },
     {

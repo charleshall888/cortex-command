@@ -15,10 +15,10 @@ lifecycle_phase: implement
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/orchestrator-worktree-escape/research.md
+discovery_source: cortex/research/orchestrator-worktree-escape/research.md
 complexity: complex
 criticality: critical
-spec: lifecycle/archive/disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape/spec.md
+spec: cortex/lifecycle/archive/disambiguate-orchestrator-prompt-tokens-to-stop-lexical-priming-escape/spec.md
 ---
 
 # Disambiguate orchestrator prompt tokens to stop lexical-priming escape

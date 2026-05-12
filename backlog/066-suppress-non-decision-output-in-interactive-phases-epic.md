@@ -5,7 +5,7 @@ type: epic
 status: complete
 priority: high
 tags: [output-signal-noise, interactive-phases]
-discovery_source: research/audit-interactive-phase-output-for-decision-signal/research.md
+discovery_source: cortex/research/audit-interactive-phase-output-for-decision-signal/research.md
 created: 2026-04-11
 updated: 2026-04-17
 ---

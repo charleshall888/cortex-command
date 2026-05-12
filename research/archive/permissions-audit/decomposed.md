@@ -28,8 +28,8 @@
 056 and 058 both modify `claude/settings.json` but touch different sections (allow/deny list vs. sandbox config + gh patterns), so they can be implemented in parallel or sequentially.
 
 ## Created Files
-- `backlog/054-harden-settingsjson-permissions-for-public-distribution.md` — Epic
-- `backlog/055-verify-escape-hatch-bypass-mechanism.md` — Spike: test bash -c bypass
-- `backlog/056-apply-confirmed-safe-permission-tightening.md` — Remove Read(~/**), wildcards, expand deny list, etc.
-- `backlog/057-remove-interpreter-escape-hatch-commands.md` — Remove bash/sh/python/node wildcards (blocked by 055)
-- `backlog/058-close-exfiltration-channels-in-sandbox-excluded-commands.md` — Narrow gh, prompt WebFetch, deny git remote add
+- `cortex/backlog/054-harden-settingsjson-permissions-for-public-distribution.md` — Epic
+- `cortex/backlog/055-verify-escape-hatch-bypass-mechanism.md` — Spike: test bash -c bypass
+- `cortex/backlog/056-apply-confirmed-safe-permission-tightening.md` — Remove Read(~/**), wildcards, expand deny list, etc.
+- `cortex/backlog/057-remove-interpreter-escape-hatch-commands.md` — Remove bash/sh/python/node wildcards (blocked by 055)
+- `cortex/backlog/058-close-exfiltration-channels-in-sandbox-excluded-commands.md` — Narrow gh, prompt WebFetch, deny git remote add

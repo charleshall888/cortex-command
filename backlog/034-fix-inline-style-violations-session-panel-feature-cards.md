@@ -11,10 +11,10 @@ blocked-by: []
 tags: [dashboard, ui, quality, css]
 created: 2026-04-03
 updated: 2026-04-08
-discovery_source: research/generative-ui-harness/research.md
+discovery_source: cortex/research/generative-ui-harness/research.md
 complexity: simple
 criticality: medium
-spec: lifecycle/archive/fix-inline-style-violations-in-session-panel-and-feature-cards-templates/spec.md
+spec: cortex/lifecycle/archive/fix-inline-style-violations-in-session-panel-and-feature-cards-templates/spec.md
 areas: [dashboard]
 session_id: null
 ---

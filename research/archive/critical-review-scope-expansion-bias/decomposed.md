@@ -16,8 +16,8 @@ Ship ticket 132 via `/lifecycle` when ready. Validate classifier accuracy on at 
 
 ## Created Files
 
-- `backlog/132-classify-critical-review-findings-and-add-b-class-action-surface.md` — primary ticket
-- `backlog/132-classify-critical-review-findings-and-add-b-class-action-surface.events.jsonl` — sidecar
+- `cortex/backlog/132-classify-critical-review-findings-and-add-b-class-action-surface.md` — primary ticket
+- `cortex/backlog/132-classify-critical-review-findings-and-add-b-class-action-surface.events.jsonl` — sidecar
 
 ## Key Design Decisions
 

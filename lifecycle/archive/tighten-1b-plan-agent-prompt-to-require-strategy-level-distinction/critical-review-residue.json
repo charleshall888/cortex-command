@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-04T00:00:00Z",
   "feature": "tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction",
-  "artifact": "lifecycle/tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction/plan.md",
+  "artifact": "cortex/lifecycle/tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -10,9 +10,9 @@
   "findings": [
     {
       "class": "B",
-      "finding": "Plan \u00a7Context for Task 2 says \"Two opening fences total in \u00a71b\" \u2014 actual count is 4 fence-lines (2 pairs).",
+      "finding": "Plan §Context for Task 2 says \"Two opening fences total in §1b\" — actual count is 4 fence-lines (2 pairs).",
       "reviewer_angle": "Verification escape robustness",
-      "evidence_quote": "Two opening fences total in \u00a71b: the template fence (line 32) and any code-fence inside the template"
+      "evidence_quote": "Two opening fences total in §1b: the template fence (line 32) and any code-fence inside the template"
     },
     {
       "class": "B",
@@ -22,7 +22,7 @@
     },
     {
       "class": "B",
-      "finding": "Task 4 \u226520-collected-items floor cannot discriminate filtered (36) from unfiltered-with-xfail (39).",
+      "finding": "Task 4 ≥20-collected-items floor cannot discriminate filtered (36) from unfiltered-with-xfail (39).",
       "reviewer_angle": "Verification escape robustness",
       "evidence_quote": "pytest tests/test_dual_source_reference_parity.py -v && [ count -ge 20 ]"
     },
@@ -64,7 +64,7 @@
     },
     {
       "class": "B",
-      "finding": "No existing convention for canonical\u2192mirror byte-equality pytest in cortex tree; plan does not consider both BUILD_OUTPUT_PLUGINS generalization.",
+      "finding": "No existing convention for canonical→mirror byte-equality pytest in cortex tree; plan does not consider both BUILD_OUTPUT_PLUGINS generalization.",
       "reviewer_angle": "Task 4 specification incoherence",
       "evidence_quote": "tests/test_check_parity.py is a sibling for naming reference but tests a different concern"
     }

@@ -8,7 +8,7 @@ type: epic
 created: 2026-04-18
 updated: 2026-05-04
 tags: [opus-4-7-harness-adaptation]
-discovery_source: research/opus-4-7-harness-adaptation/research.md
+discovery_source: cortex/research/opus-4-7-harness-adaptation/research.md
 ---
 
 # Adapt harness to Opus 4.7 (prompt delta + capability adoption)

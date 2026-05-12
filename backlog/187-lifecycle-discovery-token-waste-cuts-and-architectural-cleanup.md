@@ -9,7 +9,7 @@ blocked-by: []
 tags: [lifecycle, discovery, token-efficiency, architectural-cleanup]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/lifecycle-discovery-token-audit/research.md
+discovery_source: cortex/research/lifecycle-discovery-token-audit/research.md
 ---
 
 # Lifecycle/discovery token-waste cuts and architectural cleanup

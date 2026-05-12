@@ -9,7 +9,7 @@ blocked-by: []
 tags: [output-efficiency, multi-agent, skills, anthropic-migration]
 created: 2026-04-09
 updated: 2026-04-10
-discovery_source: research/agent-output-efficiency/research.md
+discovery_source: cortex/research/agent-output-efficiency/research.md
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: add-subagent-output-formats-compress-synthesis

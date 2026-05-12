@@ -7,13 +7,13 @@ type: chore
 tags: [overnight, orchestrator, plan-gen]
 created: 2026-04-09
 updated: 2026-04-11
-discovery_source: research/overnight-plan-building/research.md
+discovery_source: cortex/research/overnight-plan-building/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: trim-and-instrument-overnight-plan-gen-prompt
 complexity: simple
 criticality: high
-spec: lifecycle/archive/trim-and-instrument-overnight-plan-gen-prompt/spec.md
+spec: cortex/lifecycle/archive/trim-and-instrument-overnight-plan-gen-prompt/spec.md
 areas: [overnight-runner]
 ---
 

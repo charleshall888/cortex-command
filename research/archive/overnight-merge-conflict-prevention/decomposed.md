@@ -18,7 +18,7 @@
 3. **017 last** — the scheduling root-cause fix. More complex (algorithm inversion in `group_into_batches()`), limited reliability on net-new projects. Ships after the visibility/recovery improvements provide near-term mitigation.
 
 ## Created Files
-- `backlog/014-overnight-conflict-visibility-epic.md` — Epic: overnight conflict prevention and visibility improvements
-- `backlog/015-surface-conflict-details-in-morning-report.md` — Surface conflict details inline in morning report
-- `backlog/016-add-recovery-guidance-to-morning-report.md` — Add recovery guidance to morning report for conflicted features
-- `backlog/017-areas-field-conflict-aware-scheduling.md` — Add `areas:` field to backlog items for conflict-aware round scheduling
+- `cortex/backlog/014-overnight-conflict-visibility-epic.md` — Epic: overnight conflict prevention and visibility improvements
+- `cortex/backlog/015-surface-conflict-details-in-morning-report.md` — Surface conflict details inline in morning report
+- `cortex/backlog/016-add-recovery-guidance-to-morning-report.md` — Add recovery guidance to morning report for conflicted features
+- `cortex/backlog/017-areas-field-conflict-aware-scheduling.md` — Add `areas:` field to backlog items for conflict-aware round scheduling

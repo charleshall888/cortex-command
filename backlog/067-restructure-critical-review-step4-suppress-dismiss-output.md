@@ -6,7 +6,7 @@ status: complete
 priority: high
 parent: 66
 tags: [output-signal-noise, critical-review]
-discovery_source: research/audit-interactive-phase-output-for-decision-signal/research.md
+discovery_source: cortex/research/audit-interactive-phase-output-for-decision-signal/research.md
 created: 2026-04-11
 updated: 2026-04-17
 session_id: null
@@ -14,7 +14,7 @@ lifecycle_phase: implement
 lifecycle_slug: restructure-critical-review-step-4-to-suppress-dismiss-output
 complexity: complex
 criticality: high
-spec: lifecycle/archive/restructure-critical-review-step-4-to-suppress-dismiss-output/spec.md
+spec: cortex/lifecycle/archive/restructure-critical-review-step-4-to-suppress-dismiss-output/spec.md
 areas: [skills]
 ---
 

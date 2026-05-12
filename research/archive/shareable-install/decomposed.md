@@ -19,8 +19,8 @@
 3. **007** — the `/setup-merge` skill requires finalized hook names (004) and the conflict list output from `just setup` (006).
 
 ## Created Files
-- `backlog/003-shareable-install-epic.md` — Epic: Make cortex-command shareable
-- `backlog/004-prep-hooks-and-apikey-for-sharing.md` — Rename hooks + apiKeyHelper stub
-- `backlog/005-non-destructive-claude-md-strategy.md` — Verify rules/ + split Agents.md
-- `backlog/006-make-just-setup-additive.md` — Additive install + setup-force
-- `backlog/007-build-setup-merge-skill.md` — /setup-merge local skill
+- `cortex/backlog/003-shareable-install-epic.md` — Epic: Make cortex-command shareable
+- `cortex/backlog/004-prep-hooks-and-apikey-for-sharing.md` — Rename hooks + apiKeyHelper stub
+- `cortex/backlog/005-non-destructive-claude-md-strategy.md` — Verify rules/ + split Agents.md
+- `cortex/backlog/006-make-just-setup-additive.md` — Additive install + setup-force
+- `cortex/backlog/007-build-setup-merge-skill.md` — /setup-merge local skill

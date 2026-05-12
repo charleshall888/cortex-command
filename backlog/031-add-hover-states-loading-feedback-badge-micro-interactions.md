@@ -11,10 +11,10 @@ blocked-by: []
 tags: [dashboard, ui, micro-interactions, ux, animation]
 created: 2026-04-03
 updated: 2026-04-08
-discovery_source: research/generative-ui-harness/research.md
+discovery_source: cortex/research/generative-ui-harness/research.md
 complexity: complex
 criticality: low
-spec: lifecycle/archive/add-hover-states-loading-feedback-and-badge-micro-interactions/spec.md
+spec: cortex/lifecycle/archive/add-hover-states-loading-feedback-and-badge-micro-interactions/spec.md
 areas: [dashboard]
 session_id: null
 ---

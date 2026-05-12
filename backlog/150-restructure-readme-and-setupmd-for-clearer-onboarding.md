@@ -11,13 +11,13 @@ created: 2026-04-27
 updated: 2026-04-27
 blocks: []
 blocked-by: []
-discovery_source: research/docs-setup-audit/research.md
+discovery_source: cortex/research/docs-setup-audit/research.md
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: restructure-readme-and-setupmd-for-clearer-onboarding
 complexity: complex
 criticality: medium
-spec: lifecycle/archive/restructure-readme-and-setupmd-for-clearer-onboarding/spec.md
+spec: cortex/lifecycle/archive/restructure-readme-and-setupmd-for-clearer-onboarding/spec.md
 ---
 
 # Restructure README and setup.md for clearer onboarding

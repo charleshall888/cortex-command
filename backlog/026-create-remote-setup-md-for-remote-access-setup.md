@@ -16,7 +16,7 @@ lifecycle_phase: research
 lifecycle_slug: remove-dangling-remote-setup-references
 complexity: simple
 criticality: low
-spec: lifecycle/archive/remove-dangling-remote-setup-references/spec.md
+spec: cortex/lifecycle/archive/remove-dangling-remote-setup-references/spec.md
 ---
 
 # Remove dangling remote/SETUP.md references from docs/setup.md

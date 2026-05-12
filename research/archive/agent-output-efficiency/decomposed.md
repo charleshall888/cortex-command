@@ -26,8 +26,8 @@
 **Scoped all tickets to both interactive and overnight contexts.** Originally implicit interactive-only. Critical review identified that shared skills (lifecycle) run in both contexts, compaction at 12% retention means overnight needs different (possibly less aggressive) compression, and interactive stress-testing doesn't validate overnight behavior.
 
 ## Created Files
-- `backlog/049-improve-agent-output-signal-to-noise-ratio.md` — Epic
-- `backlog/050-define-output-floors-for-interactive-and-overnight.md` — Output floor definitions
-- `backlog/051-add-hook-based-preprocessing-for-tool-output.md` — Hook-based preprocessing
-- `backlog/052-audit-skill-prompts-remove-verbose-instructions.md` — Skill prompt audit
-- `backlog/053-add-subagent-output-formats-compress-synthesis.md` — Subagent format specs + synthesis
+- `cortex/backlog/049-improve-agent-output-signal-to-noise-ratio.md` — Epic
+- `cortex/backlog/050-define-output-floors-for-interactive-and-overnight.md` — Output floor definitions
+- `cortex/backlog/051-add-hook-based-preprocessing-for-tool-output.md` — Hook-based preprocessing
+- `cortex/backlog/052-audit-skill-prompts-remove-verbose-instructions.md` — Skill prompt audit
+- `cortex/backlog/053-add-subagent-output-formats-compress-synthesis.md` — Subagent format specs + synthesis

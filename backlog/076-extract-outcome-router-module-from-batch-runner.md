@@ -11,7 +11,7 @@ parent: "074"
 blocked-by: ["075"]
 tags: [overnight-runner, refactor, modularization]
 areas: [overnight-runner]
-discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+discovery_source: cortex/research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
 session_id: null
 lifecycle_phase: plan
 lifecycle_slug: extract-outcome-router-module-from-batch-runner

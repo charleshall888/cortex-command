@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, hooks, hygiene, scan-script, auto-scan]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/lifecycle-discovery-token-audit/research.md
+discovery_source: cortex/research/lifecycle-discovery-token-audit/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/lifecycle-and-hook-hygiene-one-offs/spec.md
+spec: cortex/lifecycle/lifecycle-and-hook-hygiene-one-offs/spec.md
 areas: [skills]
 session_id: null
 ---

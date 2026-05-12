@@ -10,7 +10,7 @@ blocked-by: []
 tags: [overnight, specs, harness, quality]
 created: 2026-04-03
 updated: 2026-04-08
-discovery_source: research/harness-design-long-running-apps/research.md
+discovery_source: cortex/research/harness-design-long-running-apps/research.md
 ---
 
 # Improve overnight execution quality through spec improvements and harness maintainability

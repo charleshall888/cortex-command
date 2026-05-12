@@ -35,4 +35,4 @@ The discovery went through three round-and-redirect cycles before landing on thi
 
 ## Created Files
 
-- `backlog/161-add-parent-epic-alignment-check-to-refine-clarify-critic.md` — the implementation ticket
+- `cortex/backlog/161-add-parent-epic-alignment-check-to-refine-clarify-critic.md` — the implementation ticket

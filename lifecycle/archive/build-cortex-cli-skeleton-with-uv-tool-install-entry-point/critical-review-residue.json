@@ -1,9 +1,12 @@
 {
   "ts": "2026-04-23T18:50:00Z",
   "feature": "build-cortex-cli-skeleton-with-uv-tool-install-entry-point",
-  "artifact": "lifecycle/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/plan.md",
+  "artifact": "cortex/lifecycle/build-cortex-cli-skeleton-with-uv-tool-install-entry-point/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
     {
       "class": "B",

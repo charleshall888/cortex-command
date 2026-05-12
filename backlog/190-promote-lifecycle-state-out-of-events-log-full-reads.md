@@ -10,11 +10,11 @@ blocked-by: []
 tags: [lifecycle, state-storage, events-log, data-model]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/lifecycle-discovery-token-audit/research.md
-spec: lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/spec.md
+discovery_source: cortex/research/lifecycle-discovery-token-audit/research.md
+spec: cortex/lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/spec.md
 areas: [skills]
 lifecycle_phase: implement
-plan: lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/plan.md
+plan: cortex/lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/plan.md
 session_id: null
 ---
 

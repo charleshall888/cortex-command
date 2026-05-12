@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, hooks, complexity-escalation, token-efficiency, deterministic-execution, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-11
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/migrate-gate-1-researchspecify-open-questions-escalation-to-python-hook-remove-gate-2-entirely/spec.md
+spec: cortex/lifecycle/migrate-gate-1-researchspecify-open-questions-escalation-to-python-hook-remove-gate-2-entirely/spec.md
 areas: [lifecycle]
 session_id: null
 lifecycle_phase: complete

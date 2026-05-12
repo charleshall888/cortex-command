@@ -10,10 +10,10 @@ blocked-by: []
 tags: [tests, skill-design, lifecycle, refine, critical-review, discovery, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/spec.md
+spec: cortex/lifecycle/skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/spec.md
 areas: [tests]
 session_id: null
 lifecycle_phase: plan

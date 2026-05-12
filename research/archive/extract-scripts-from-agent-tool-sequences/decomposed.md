@@ -62,14 +62,14 @@ Both are adoption infrastructure but cover different failure modes (static lint 
 
 ## Created Files
 
-- `backlog/101-extract-deterministic-tool-call-sequences-into-agent-invokable-scripts.md` — Epic
-- `backlog/102-ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations.md`
-- `backlog/103-add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7.md`
-- `backlog/104-instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates.md`
-- `backlog/105-extract-commit-preflight-into-bin-commit-preflight.md`
-- `backlog/106-extract-morning-review-deterministic-sequences-c11-c15-bundle.md`
-- `backlog/107-extract-dev-epic-map-parse-into-bin-build-epic-map.md`
-- `backlog/108-extract-backlog-pick-ready-set-into-bin-backlog-ready.md`
-- `backlog/109-extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout.md`
-- `backlog/110-unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception.md`
-- `backlog/111-extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context.md`
+- `cortex/backlog/101-extract-deterministic-tool-call-sequences-into-agent-invokable-scripts.md` — Epic
+- `cortex/backlog/102-ship-dr-5-skillmd-to-bin-parity-linter-with-zero-existing-violations.md`
+- `cortex/backlog/103-add-runtime-adoption-telemetry-via-pretooluse-bash-hook-matcher-dr-7.md`
+- `cortex/backlog/104-instrument-skill-name-on-dispatch-start-for-per-skill-pipeline-aggregates.md`
+- `cortex/backlog/105-extract-commit-preflight-into-bin-commit-preflight.md`
+- `cortex/backlog/106-extract-morning-review-deterministic-sequences-c11-c15-bundle.md`
+- `cortex/backlog/107-extract-dev-epic-map-parse-into-bin-build-epic-map.md`
+- `cortex/backlog/108-extract-backlog-pick-ready-set-into-bin-backlog-ready.md`
+- `cortex/backlog/109-extract-refine-resolution-into-bin-resolve-backlog-item-with-bailout.md`
+- `cortex/backlog/110-unify-lifecycle-phase-detection-around-claudecommon-with-statusline-exception.md`
+- `cortex/backlog/111-extract-overnight-orchestrator-round-state-read-into-bin-orchestrator-context.md`

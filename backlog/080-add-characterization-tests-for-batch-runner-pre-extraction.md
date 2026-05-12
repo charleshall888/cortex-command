@@ -10,7 +10,7 @@ updated: 2026-04-13
 parent: "074"
 tags: [overnight-runner, refactor, modularization, tests]
 areas: [overnight-runner]
-discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+discovery_source: cortex/research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
 session_id: null
 lifecycle_phase: research
 lifecycle_slug: add-characterization-tests-for-batch-runner-pre-extraction

@@ -20,4 +20,4 @@ Single ticket, implement as one lifecycle run:
 3. Verify end-to-end: start a new session, confirm gnupghome is created, confirm `git commit` signs successfully
 
 ## Created Files
-- `backlog/081-fix-gpg-sandbox-signing-stable-gnupghome-path.md` — Fix GPG sandbox signing with stable gnupghome path and read-only options
+- `cortex/backlog/081-fix-gpg-sandbox-signing-stable-gnupghome-path.md` — Fix GPG sandbox signing with stable gnupghome path and read-only options

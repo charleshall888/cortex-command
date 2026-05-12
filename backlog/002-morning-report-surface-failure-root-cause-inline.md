@@ -12,7 +12,7 @@ lifecycle_phase: research
 lifecycle_slug: morning-report-surface-failure-root-cause-inline
 complexity: complex
 criticality: high
-spec: lifecycle/archive/morning-report-surface-failure-root-cause-inline/spec.md
+spec: cortex/lifecycle/archive/morning-report-surface-failure-root-cause-inline/spec.md
 areas: [overnight-runner,report]
 ---
 

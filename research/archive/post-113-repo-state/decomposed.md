@@ -26,5 +26,5 @@ Both tickets use `type: feature` rather than `type: epic` per backlog schema (ep
 
 ## Created Files
 
-- `backlog/147-sunset-cortex-command-plugins-and-vendor-residual-into-cortex-command.md` — Sunset cortex-command-plugins
-- `backlog/148-apply-post-113-audit-followups-stale-doc-cleanup-lifecycle-archive-mcp-hardening.md` — Apply post-113 audit follow-ups
+- `cortex/backlog/147-sunset-cortex-command-plugins-and-vendor-residual-into-cortex-command.md` — Sunset cortex-command-plugins
+- `cortex/backlog/148-apply-post-113-audit-followups-stale-doc-cleanup-lifecycle-archive-mcp-hardening.md` — Apply post-113 audit follow-ups

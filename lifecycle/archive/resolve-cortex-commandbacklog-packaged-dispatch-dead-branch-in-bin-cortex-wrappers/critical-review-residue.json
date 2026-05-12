@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-29T10:56:49Z",
   "feature": "resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers",
-  "artifact": "lifecycle/resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers/plan.md",
+  "artifact": "cortex/lifecycle/resolve-cortex-commandbacklog-packaged-dispatch-dead-branch-in-bin-cortex-wrappers/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -41,7 +41,7 @@
     {
       "class": "B",
       "finding": "Original T7 audit grep covered only python3 -m cortex_command.<sub> module-form invocations; missed shell-form cortex upgrade invocations (currently absent in tree but a future maintainer-friendliness gap). Mitigation applied: T7 now includes a second sweep for shell-form cortex upgrade invocations.",
-      "reviewer_angle": "Carve-out removal regression \u2014 dashboard initiator and runner-child paths",
+      "reviewer_angle": "Carve-out removal regression — dashboard initiator and runner-child paths",
       "evidence_quote": "Audit command exactly as-spec d: grep -rn \"python3 -m cortex_command.\" --include=\"*.md\" --include=\"*.sh\" --include=\"*.toml\" --include=\"Justfile\" --include=\"justfile\" ."
     }
   ]

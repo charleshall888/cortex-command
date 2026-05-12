@@ -1,9 +1,12 @@
 {
   "ts": "2026-04-28T17:35:00Z",
   "feature": "extract-dev-epic-map-parse-into-bin-build-epic-map",
-  "artifact": "lifecycle/extract-dev-epic-map-parse-into-bin-build-epic-map/plan.md",
+  "artifact": "cortex/lifecycle/extract-dev-epic-map-parse-into-bin-build-epic-map/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 3, "dispatched": 3},
+  "reviewers": {
+    "completed": 3,
+    "dispatched": 3
+  },
   "findings": [
     {
       "class": "B",

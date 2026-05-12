@@ -10,7 +10,7 @@ created: 2026-05-06
 updated: 2026-05-06
 complexity: complex
 criticality: high
-spec: lifecycle/remove-fresh-evolve-and-retro-skills/spec.md
+spec: cortex/lifecycle/remove-fresh-evolve-and-retro-skills/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

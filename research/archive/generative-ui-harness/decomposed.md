@@ -45,10 +45,10 @@
 Start 027 and 028 in Wave 1 immediately — both are high priority, no dependencies, and together they establish the baseline and quality framework that all downstream tickets need. 029, 031, and 032 can proceed in parallel once both Wave 1 tickets close. 030 (swim-lane) is the last ticket and the most technically complex.
 
 ## Created Files
-- `backlog/033-dashboard-ui-quality-baseline-epic.md` — epic
-- `backlog/034-fix-inline-style-violations-session-panel-feature-cards.md` — CSS violation cleanup
-- `backlog/035-define-evaluation-rubric-spec-template-context-md.md` — rubric + spec template + CONTEXT.md
-- `backlog/029-add-playwright-htmx-test-patterns-dev-toolchain.md` — Playwright toolchain
-- `backlog/030-investigate-fix-swim-lane-inline-styles-layout.md` — swim-lane fix
-- `backlog/031-add-hover-states-loading-feedback-badge-micro-interactions.md` — micro-interactions
-- `backlog/032-add-accessibility-foundations-aria-live-severity.md` — accessibility foundations
+- `cortex/backlog/033-dashboard-ui-quality-baseline-epic.md` — epic
+- `cortex/backlog/034-fix-inline-style-violations-session-panel-feature-cards.md` — CSS violation cleanup
+- `cortex/backlog/035-define-evaluation-rubric-spec-template-context-md.md` — rubric + spec template + CONTEXT.md
+- `cortex/backlog/029-add-playwright-htmx-test-patterns-dev-toolchain.md` — Playwright toolchain
+- `cortex/backlog/030-investigate-fix-swim-lane-inline-styles-layout.md` — swim-lane fix
+- `cortex/backlog/031-add-hover-states-loading-feedback-badge-micro-interactions.md` — micro-interactions
+- `cortex/backlog/032-add-accessibility-foundations-aria-live-severity.md` — accessibility foundations

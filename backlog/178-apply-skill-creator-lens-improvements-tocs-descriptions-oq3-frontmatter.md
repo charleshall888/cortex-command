@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, refine, critical-review, discovery, skill-design, descriptions, oq3, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/spec.md
+spec: cortex/lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

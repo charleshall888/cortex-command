@@ -20,4 +20,4 @@ Single ticket — implement `demo-command` schema addition and morning review St
 
 ## Created Files
 
-- `backlog/071-auto-launch-demo-at-morning-review.md` — Auto-launch demo at morning review via lifecycle.config.md demo-command
+- `cortex/backlog/071-auto-launch-demo-at-morning-review.md` — Auto-launch demo at morning review via lifecycle.config.md demo-command

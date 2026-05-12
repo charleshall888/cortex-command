@@ -17,7 +17,7 @@ lifecycle_phase: complete
 lifecycle_slug: null
 complexity: simple
 criticality: high
-discovery_source: research/subagent-model-routing/research.md
+discovery_source: cortex/research/subagent-model-routing/research.md
 ---
 
 # Implement Sonnet default for interactive subagents

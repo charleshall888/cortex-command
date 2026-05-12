@@ -14,7 +14,7 @@ lifecycle_phase: null
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/sandbox-overnight-child-agents/research.md
+discovery_source: cortex/research/sandbox-overnight-child-agents/research.md
 ---
 
 # Sandbox overnight agents at the OS layer

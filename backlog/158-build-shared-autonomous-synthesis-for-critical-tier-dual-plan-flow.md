@@ -9,7 +9,7 @@ created: 2026-05-04
 updated: 2026-05-04
 blocked-by: []
 tags: [competing-plan-synthesis, lifecycle, plan, overnight]
-discovery_source: research/competing-plan-synthesis/research.md
+discovery_source: cortex/research/competing-plan-synthesis/research.md
 ---
 
 ## Background

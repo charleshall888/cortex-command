@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-06T19:30:00Z",
   "feature": "skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget",
-  "artifact": "lifecycle/skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/plan.md",
+  "artifact": "cortex/lifecycle/skill-design-test-infrastructure-description-snapshots-cross-skill-handoff-ref-file-path-resolution-skill-size-budget/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -18,17 +18,17 @@
       "class": "B",
       "finding": "Task 6's grep -c verification can be satisfied by any two mentions of test-skill-design regardless of whether the recipe body actually references the four new test files.",
       "reviewer_angle": "Verification self-sealing & meta-fragility",
-      "evidence_quote": "grep -c \"test-skill-design\" justfile \u2265 2 AND just test-skill-design exits 0."
+      "evidence_quote": "grep -c \"test-skill-design\" justfile ≥ 2 AND just test-skill-design exits 0."
     },
     {
       "class": "B",
-      "finding": "Test #3's per-form coverage gate >= 1 is trivially satisfied and gives no signal about whether the audit's specific named drift mode (lifecycle plan.md \u2192 skills/critical-review/SKILL.md citation drift) is actually exercised.",
+      "finding": "Test #3's per-form coverage gate >= 1 is trivially satisfied and gives no signal about whether the audit's specific named drift mode (lifecycle plan.md → skills/critical-review/SKILL.md citation drift) is actually exercised.",
       "reviewer_angle": "Test utility / semantic-drift gap",
       "evidence_quote": "Per-form coverage gate: assert per_form_resolved['file_line_citation'] >= 1."
     },
     {
       "class": "B",
-      "finding": "Task 4 declares Depends on: none but the Context block requires reading tests/test_lifecycle_references_resolve.py to understand FORM_REGEXES structure before editing \u2014 reading-comprehension prerequisite not edge-listed.",
+      "finding": "Task 4 declares Depends on: none but the Context block requires reading tests/test_lifecycle_references_resolve.py to understand FORM_REGEXES structure before editing — reading-comprehension prerequisite not edge-listed.",
       "reviewer_angle": "Task sizing & integration risk",
       "evidence_quote": "Depends on: none (does NOT depend on Task 1 helpers) ... Read the file before editing to confirm."
     },
@@ -36,7 +36,7 @@
       "class": "B",
       "finding": "Task 6 insertion point at 'around line 435' has no deterministic resolution procedure when the line drifts.",
       "reviewer_angle": "Task sizing & integration risk",
-      "evidence_quote": "around line 435 \u2014 this line drifts; the plan acknowledges 're-check before editing'"
+      "evidence_quote": "around line 435 — this line drifts; the plan acknowledges 're-check before editing'"
     },
     {
       "class": "B",
@@ -48,7 +48,7 @@
       "class": "B",
       "finding": "Task 3 (handoff schema test) has not earned its place: zero historical handoff-rename incidents are cited and empirical pre-audit shows all current pairs satisfied.",
       "reviewer_angle": "Parent-epic alignment / friction-without-affordance",
-      "evidence_quote": "Task 3: 4 NEW files \u2014 tests/test_skill_handoff.py, tests/fixtures/skill_handoff_schema.yaml"
+      "evidence_quote": "Task 3: 4 NEW files — tests/test_skill_handoff.py, tests/fixtures/skill_handoff_schema.yaml"
     }
   ]
 }

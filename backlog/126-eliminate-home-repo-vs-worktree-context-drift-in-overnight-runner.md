@@ -14,7 +14,7 @@ lifecycle_phase: null
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/orchestrator-worktree-escape/research.md
+discovery_source: cortex/research/orchestrator-worktree-escape/research.md
 ---
 
 # Eliminate home-repo-vs-worktree context drift in overnight runner

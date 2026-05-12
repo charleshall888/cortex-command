@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-11T00:04:00Z",
   "feature": "promote-lifecycle-state-out-of-eventslog-full-reads",
-  "artifact": "lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/plan.md",
+  "artifact": "cortex/lifecycle/promote-lifecycle-state-out-of-eventslog-full-reads/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,

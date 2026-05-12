@@ -15,10 +15,10 @@ lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/overnight-layer-distribution/research.md
+discovery_source: cortex/research/overnight-layer-distribution/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/archive/publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities/spec.md
+spec: cortex/lifecycle/archive/publish-cortex-interactive-plugin-non-runner-skills-hooks-bin-utilities/spec.md
 ---
 
 # Publish cortex-interactive plugin (non-runner skills + hooks + bin utilities)

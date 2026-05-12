@@ -10,10 +10,10 @@ blocked-by: []
 tags: [skills, references, cross-skill-collapse, ceremony, process-gap]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/lifecycle-discovery-token-audit/research.md
+discovery_source: cortex/research/lifecycle-discovery-token-audit/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/reference-file-hygiene-cross-skill-ceremonial-179-extractions/spec.md
+spec: cortex/lifecycle/reference-file-hygiene-cross-skill-ceremonial-179-extractions/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, refine, dual-source, schema-migration, clarify-critic, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-06
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/spec.md
+spec: cortex/lifecycle/promote-refine-references-clarify-criticmd-to-canonical-with-schema-aware-migration/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

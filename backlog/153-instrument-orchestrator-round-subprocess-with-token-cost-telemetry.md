@@ -12,7 +12,7 @@ created: 2026-04-29
 updated: 2026-04-29
 complexity: complex
 criticality: high
-spec: lifecycle/archive/instrument-orchestrator-round-subprocess-with-token-cost-telemetry/spec.md
+spec: cortex/lifecycle/archive/instrument-orchestrator-round-subprocess-with-token-cost-telemetry/spec.md
 session_id: null
 lifecycle_phase: complete
 ---

@@ -15,7 +15,7 @@ lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: [118]
-discovery_source: research/overnight-layer-distribution/research.md
+discovery_source: cortex/research/overnight-layer-distribution/research.md
 ---
 
 # Migration guide + script for existing symlink-based installs

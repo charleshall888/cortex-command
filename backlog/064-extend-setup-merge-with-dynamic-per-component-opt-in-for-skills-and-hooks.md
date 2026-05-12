@@ -10,12 +10,12 @@ created: 2026-04-10
 updated: 2026-04-11
 parent: "063"
 blocked-by: []
-discovery_source: research/user-configurable-setup/research.md
+discovery_source: cortex/research/user-configurable-setup/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/spec.md
+spec: cortex/lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/spec.md
 areas: [skills]
-research: lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/research.md
+research: cortex/lifecycle/archive/extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks/research.md
 lifecycle_slug: extend-setup-merge-with-dynamic-per-component-opt-in-for-skills-and-hooks
 session_id: null
 lifecycle_phase: complete

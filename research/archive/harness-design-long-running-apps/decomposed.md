@@ -20,9 +20,9 @@
 4. **021** last, after 019 has run in overnight sessions — only build the evaluator rubric once you can observe what failures 019 didn't prevent.
 
 ## Created Files
-- `backlog/018-harness-quality-improvements-epic.md` — epic
-- `backlog/019-tighten-spec-template-and-plan-verification-requirements.md` — tighten spec template and plan.md verification requirements
-- `backlog/020-add-harness-component-pruning-checklist.md` — harness component pruning checklist (updated with specific candidates)
-- `backlog/021-define-evaluator-rubric-for-software-features.md` — evaluator rubric spike
-- `backlog/022-fix-non-atomic-state-writes-in-overnight-runner.md` — fix crash-risk state write bugs
-- `backlog/023-replace-spec-dump-with-jit-loading-in-implement-prompt.md` — eliminate context bloat in worker and brain prompts
+- `cortex/backlog/018-harness-quality-improvements-epic.md` — epic
+- `cortex/backlog/019-tighten-spec-template-and-plan-verification-requirements.md` — tighten spec template and plan.md verification requirements
+- `cortex/backlog/020-add-harness-component-pruning-checklist.md` — harness component pruning checklist (updated with specific candidates)
+- `cortex/backlog/021-define-evaluator-rubric-for-software-features.md` — evaluator rubric spike
+- `cortex/backlog/022-fix-non-atomic-state-writes-in-overnight-runner.md` — fix crash-risk state write bugs
+- `cortex/backlog/023-replace-spec-dump-with-jit-loading-in-implement-prompt.md` — eliminate context bloat in worker and brain prompts

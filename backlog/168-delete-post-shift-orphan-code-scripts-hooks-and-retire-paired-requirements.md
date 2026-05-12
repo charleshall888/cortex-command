@@ -12,13 +12,13 @@ updated: 2026-05-05
 parent: "165"
 blocks: []
 blocked-by: []
-discovery_source: research/repo-spring-cleaning/research.md
+discovery_source: cortex/research/repo-spring-cleaning/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements
 complexity: complex
 criticality: medium
-spec: lifecycle/archive/delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements/spec.md
+spec: cortex/lifecycle/archive/delete-post-shift-orphan-code-scripts-hooks-and-retire-paired-requirements/spec.md
 ---
 
 # Delete post-shift orphan code/scripts/hooks and retire paired requirements

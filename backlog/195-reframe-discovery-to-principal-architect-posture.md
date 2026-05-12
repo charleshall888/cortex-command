@@ -9,10 +9,10 @@ blocked-by: []
 tags: [discovery, skill-rewrite]
 created: 2026-05-11
 updated: 2026-05-11
-discovery_source: research/discovery-architectural-posture-rewrite/research.md
+discovery_source: cortex/research/discovery-architectural-posture-rewrite/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/reframe-discovery-to-principal-architect-posture/spec.md
+spec: cortex/lifecycle/reframe-discovery-to-principal-architect-posture/spec.md
 areas: [skills]
 lifecycle_phase: implement
 session_id: null

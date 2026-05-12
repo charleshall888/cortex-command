@@ -17,7 +17,7 @@ lifecycle_phase: complete
 lifecycle_slug: wire-review-phase-into-overnight-runner
 complexity: complex
 criticality: high
-spec: lifecycle/archive/wire-review-phase-into-overnight-runner/spec.md
+spec: cortex/lifecycle/archive/wire-review-phase-into-overnight-runner/spec.md
 ---
 
 # Wire review phase into overnight runner

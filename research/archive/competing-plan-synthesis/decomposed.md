@@ -34,6 +34,6 @@ The discovery's roadmap question resolved to **shape (3): shared mechanism wired
 
 ## Created/Modified Files
 
-- `backlog/158-build-shared-autonomous-synthesis-for-critical-tier-dual-plan-flow.md` — Epic
-- `backlog/159-tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction.md` — Child
-- `backlog/160-build-shared-synthesizer-for-critical-tier-dual-plan-interactive-and-overnight.md` — Child (filename and title updated to reflect merged scope across both surfaces)
+- `cortex/backlog/158-build-shared-autonomous-synthesis-for-critical-tier-dual-plan-flow.md` — Epic
+- `cortex/backlog/159-tighten-1b-plan-agent-prompt-to-require-strategy-level-distinction.md` — Child
+- `cortex/backlog/160-build-shared-synthesizer-for-critical-tier-dual-plan-interactive-and-overnight.md` — Child (filename and title updated to reflect merged scope across both surfaces)

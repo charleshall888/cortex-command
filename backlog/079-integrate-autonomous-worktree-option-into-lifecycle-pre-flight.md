@@ -11,7 +11,7 @@ parent: "074"
 blocked-by: []
 tags: [lifecycle, skills, autonomous-worktree]
 areas: [lifecycle, skills]
-discovery_source: research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
+discovery_source: cortex/research/implement-in-autonomous-worktree-overnight-component-reuse/research.md
 session_id: null
 lifecycle_phase: research
 lifecycle_slug: integrate-autonomous-worktree-option-into-lifecycle-pre-flight

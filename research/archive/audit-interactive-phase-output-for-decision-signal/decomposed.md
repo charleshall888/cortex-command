@@ -28,7 +28,7 @@ All three tickets are independent. Suggested order by blast radius:
 
 ## Created Files
 
-- `backlog/066-suppress-non-decision-output-in-interactive-phases-epic.md` — Epic
-- `backlog/067-restructure-critical-review-step4-suppress-dismiss-output.md` — critical-review Step 4
-- `backlog/068-suppress-dismiss-rationale-leak-in-lifecycle-clarify-critic.md` — clarify critic Dismiss-rationale
-- `backlog/069-suppress-internal-narration-in-lifecycle-specify-phase.md` — specify phase narration
+- `cortex/backlog/066-suppress-non-decision-output-in-interactive-phases-epic.md` — Epic
+- `cortex/backlog/067-restructure-critical-review-step4-suppress-dismiss-output.md` — critical-review Step 4
+- `cortex/backlog/068-suppress-dismiss-rationale-leak-in-lifecycle-clarify-critic.md` — clarify critic Dismiss-rationale
+- `cortex/backlog/069-suppress-internal-narration-in-lifecycle-specify-phase.md` — specify phase narration

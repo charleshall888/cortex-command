@@ -9,11 +9,11 @@ created: 2026-04-20
 updated: 2026-04-21
 parent: "93"
 tags: [lifecycle, preflight, trunk-safety]
-discovery_source: research/revisit-lifecycle-implement-preflight-options/research.md
+discovery_source: cortex/research/revisit-lifecycle-implement-preflight-options/research.md
 areas: [skills]
 complexity: simple
 criticality: high
-spec: lifecycle/archive/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/spec.md
+spec: cortex/lifecycle/archive/add-uncommitted-changes-guard-to-lifecycle-implement-phase-pre-flight/spec.md
 session_id: null
 lifecycle_phase: complete
 ---

@@ -15,10 +15,10 @@ lifecycle_phase: null
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/orchestrator-worktree-escape/research.md
+discovery_source: cortex/research/orchestrator-worktree-escape/research.md
 complexity: complex
 criticality: critical
-spec: lifecycle/archive/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/spec.md
+spec: cortex/lifecycle/archive/install-pre-commit-hook-rejecting-main-commits-during-overnight-sessions/spec.md
 ---
 
 # Install pre-commit hook rejecting main commits during overnight sessions

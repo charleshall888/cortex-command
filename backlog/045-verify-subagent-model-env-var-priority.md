@@ -17,7 +17,7 @@ lifecycle_phase: complete
 lifecycle_slug: verify-subagent-model-env-var-priority
 complexity: simple
 criticality: high
-discovery_source: research/subagent-model-routing/research.md
+discovery_source: cortex/research/subagent-model-routing/research.md
 ---
 
 # Verify CLAUDE_CODE_SUBAGENT_MODEL priority order

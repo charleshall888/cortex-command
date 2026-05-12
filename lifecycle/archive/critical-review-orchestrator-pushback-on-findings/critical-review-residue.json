@@ -1,9 +1,12 @@
 {
   "ts": "2026-04-25T13:30:00Z",
   "feature": "critical-review-orchestrator-pushback-on-findings",
-  "artifact": "lifecycle/critical-review-orchestrator-pushback-on-findings/plan.md",
+  "artifact": "cortex/lifecycle/critical-review-orchestrator-pushback-on-findings/plan.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
     {
       "class": "B",

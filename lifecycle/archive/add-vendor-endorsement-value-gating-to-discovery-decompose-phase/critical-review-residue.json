@@ -1,27 +1,27 @@
 {
   "ts": "2026-04-23T02:48:17Z",
   "feature": "add-vendor-endorsement-value-gating-to-discovery-decompose-phase",
-  "artifact": "lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/plan.md",
+  "artifact": "cortex/lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
     "dispatched": 4
   },
   "prior_cycle": {
-    "artifact": "lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/spec.md",
+    "artifact": "cortex/lifecycle/add-vendor-endorsement-value-gating-to-discovery-decompose-phase/spec.md",
     "b_class_count": 4,
     "note": "Prior spec-phase B-class findings preserved in commit 9738d7b as an earlier version of this file."
   },
   "findings": [
     {
       "class": "B",
-      "finding": "No grep excludes Markdown comment blocks, fenced code blocks, or stale-section insertions. File already has HTML comment at line 71 \u2014 rule text stranded in <\\!--  --> or deprecated example blocks could satisfy every gate.",
+      "finding": "No grep excludes Markdown comment blocks, fenced code blocks, or stale-section insertions. File already has HTML comment at line 71 — rule text stranded in <\\!--  --> or deprecated example blocks could satisfy every gate.",
       "reviewer_angle": "Grep-verification fragility",
       "evidence_quote": "<\\!-- Note: lifecycle reads discovery_source: first"
     },
     {
       "class": "B",
-      "finding": "Task 7 pytest is circular with per-task greps \u2014 same string-presence predicate executed by different tool; not an independent signal.",
+      "finding": "Task 7 pytest is circular with per-task greps — same string-presence predicate executed by different tool; not an independent signal.",
       "reviewer_angle": "Grep-verification fragility",
       "evidence_quote": "pytest module asserting R1-R7 strings are present in decompose.md"
     },
@@ -29,13 +29,13 @@
       "class": "B",
       "finding": "E10 invariant (consolidation cannot reduce flagged set to zero) explicitly obligated as prose by Task 4 but Verification greps only on R5 propagation strings. Invariant sentence is droppable without test catching it.",
       "reviewer_angle": "Edge-case coverage gaps",
-      "evidence_quote": "The E10 invariant follows from the propagation rule \u2014 state it explicitly in the prose"
+      "evidence_quote": "The E10 invariant follows from the propagation rule — state it explicitly in the prose"
     },
     {
       "class": "B",
-      "finding": "E6 integration (drop event + section 6 Dropped Items + ack choice) split across Tasks 3/5/6 with each piece verified individually; cross-referencing not verified \u2014 three disconnected prose pieces pass all greps.",
+      "finding": "E6 integration (drop event + section 6 Dropped Items + ack choice) split across Tasks 3/5/6 with each piece verified individually; cross-referencing not verified — three disconnected prose pieces pass all greps.",
       "reviewer_angle": "Edge-case coverage gaps",
-      "evidence_quote": "E6 \u2014 User chooses Drop this item: item dropped, decompose_drop logged, recorded in section 6 Dropped Items subsection"
+      "evidence_quote": "E6 — User chooses Drop this item: item dropped, decompose_drop logged, recorded in section 6 Dropped Items subsection"
     },
     {
       "class": "B",
@@ -45,19 +45,19 @@
     },
     {
       "class": "B",
-      "finding": "E3/E4 cap branches merged in Task 3 grep via alternation \u2014 single match on either branch satisfies verification, so branch-comprehensive coverage is untested.",
+      "finding": "E3/E4 cap branches merged in Task 3 grep via alternation — single match on either branch satisfies verification, so branch-comprehensive coverage is untested.",
       "reviewer_angle": "Edge-case coverage gaps",
       "evidence_quote": "grep -c more than 3 OR all items are flagged >= 1"
     },
     {
       "class": "B",
-      "finding": "Orchestration location backwards \u2014 decompose_flag/ack/drop events fire at section 2 user approval (Task 3) but schema block lives at section 3a. Readers at fire site scroll past section 3 Consolidation Review to find event shapes.",
+      "finding": "Orchestration location backwards — decompose_flag/ack/drop events fire at section 2 user approval (Task 3) but schema block lives at section 3a. Readers at fire site scroll past section 3 Consolidation Review to find event shapes.",
       "reviewer_angle": "Section numbering conflict",
       "evidence_quote": "Place the block after section 3 Consolidation Review (e.g., as a new section 3a Event Logging)"
     },
     {
       "class": "B",
-      "finding": "Tasks 4 and 6 both touch section 3 boundary without explicit merge-order rule. Task 4 appends propagation paragraph inside section 3; Task 6 inserts new section 3a heading immediately after \u2014 adjacent-line edits with unspecified ordering.",
+      "finding": "Tasks 4 and 6 both touch section 3 boundary without explicit merge-order rule. Task 4 appends propagation paragraph inside section 3; Task 6 inserts new section 3a heading immediately after — adjacent-line edits with unspecified ordering.",
       "reviewer_angle": "Section numbering conflict",
       "evidence_quote": "Task 4: Add R5 flag propagation to section 3 ... Task 6: Place block after section 3"
     },
@@ -65,7 +65,7 @@
       "class": "B",
       "finding": "just test runs full aggregate suite (test-pipeline + test-overnight + pytest tests/) with no scope mechanism. Unrelated flakes block Task 8 even when R1-R9 correctly implemented.",
       "reviewer_angle": "Test shallowness + just test assumption",
-      "evidence_quote": "Run just test \u2014 pass if exit 0 and recipe summary reports zero failures"
+      "evidence_quote": "Run just test — pass if exit 0 and recipe summary reports zero failures"
     },
     {
       "class": "B",

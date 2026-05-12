@@ -9,7 +9,7 @@ created: 2026-04-18
 updated: 2026-04-20
 parent: "82"
 tags: [opus-4-7-harness-adaptation, instrumentation]
-discovery_source: research/opus-4-7-harness-adaptation/research.md
+discovery_source: cortex/research/opus-4-7-harness-adaptation/research.md
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: instrument-eventslog-aggregation-for-turns-and-cost-per-tier

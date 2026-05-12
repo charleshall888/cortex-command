@@ -10,10 +10,10 @@ blocked-by: []
 tags: [lifecycle, plan-template, spec-template, indexmd, artifact-densification, vertical-planning]
 created: 2026-05-06
 updated: 2026-05-11
-discovery_source: research/vertical-planning/research.md
+discovery_source: cortex/research/vertical-planning/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/artifact-template-cleanups-architectural-pattern-optional-indexmd-body-trim-frontmatter-preserved-d4-open-decisions-optional/spec.md
+spec: cortex/lifecycle/artifact-template-cleanups-architectural-pattern-optional-indexmd-body-trim-frontmatter-preserved-d4-open-decisions-optional/spec.md
 areas: [skills]
 session_id: null
 lifecycle_phase: complete

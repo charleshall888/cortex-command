@@ -14,7 +14,7 @@ areas: [parity, hooks]
 session_id: null
 parent: 200
 blocked-by: [202]
-discovery_source: research/consolidate-artifacts-under-cortex-root/research.md
+discovery_source: cortex/research/consolidate-artifacts-under-cortex-root/research.md
 ---
 
 # Add path-hardcoding parity gate to prevent cortex/ root drift

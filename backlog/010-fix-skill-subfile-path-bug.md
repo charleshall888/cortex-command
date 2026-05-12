@@ -10,13 +10,13 @@ parent: 009
 tags: [requirements, skills, sandbox]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/requirements-audit/research.md
+discovery_source: cortex/research/requirements-audit/research.md
 session_id: null
 lifecycle_phase: research
 lifecycle_slug: fix-skill-sub-file-path-bug-across-all-skills
 complexity: complex
 criticality: high
-spec: lifecycle/archive/fix-skill-sub-file-path-bug-across-all-skills/spec.md
+spec: cortex/lifecycle/archive/fix-skill-sub-file-path-bug-across-all-skills/spec.md
 ---
 
 # Fix skill sub-file path bug across all skills

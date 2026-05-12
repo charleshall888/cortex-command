@@ -1,9 +1,12 @@
 {
   "ts": "2026-05-11T00:45:00Z",
   "feature": "merge-clarify-and-research-lifecycle-phases-into-single-investigate-phase",
-  "artifact": "lifecycle/merge-clarify-and-research-lifecycle-phases-into-single-investigate-phase/spec.md",
+  "artifact": "cortex/lifecycle/merge-clarify-and-research-lifecycle-phases-into-single-investigate-phase/spec.md",
   "synthesis_status": "ok",
-  "reviewers": {"completed": 4, "dispatched": 4},
+  "reviewers": {
+    "completed": 4,
+    "dispatched": 4
+  },
   "findings": [
     {
       "class": "B",

@@ -9,10 +9,10 @@ blocked-by: []
 tags: [research-skill, token-efficiency, artifact-densification, sub-agent-output-shape]
 created: 2026-05-06
 updated: 2026-05-11
-discovery_source: research/epic-172-audit/research.md
+discovery_source: cortex/research/epic-172-audit/research.md
 complexity: complex
 criticality: high
-spec: lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/spec.md
+spec: cortex/lifecycle/audit-cortex-coreresearch-skill-output-shape-for-token-waste-in-researchmd-sections/spec.md
 areas: [lifecycle,skills]
 session_id: null
 lifecycle_phase: complete

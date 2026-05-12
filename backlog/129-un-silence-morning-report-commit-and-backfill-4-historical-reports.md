@@ -15,7 +15,7 @@ lifecycle_phase: complete
 session_id: null
 blocks: []
 blocked-by: []
-discovery_source: research/orchestrator-worktree-escape/research.md
+discovery_source: cortex/research/orchestrator-worktree-escape/research.md
 ---
 
 # Un-silence morning-report commit and backfill 4 historical reports

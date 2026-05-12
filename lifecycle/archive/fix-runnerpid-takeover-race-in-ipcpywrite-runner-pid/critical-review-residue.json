@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-01T15:03:58Z",
   "feature": "fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid",
-  "artifact": "lifecycle/fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid/plan.md",
+  "artifact": "cortex/lifecycle/fix-runnerpid-takeover-race-in-ipcpywrite-runner-pid/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -11,13 +11,13 @@
     {
       "class": "B",
       "finding": "install_guard.py timing-window shape changes pre/post fix; plan dismisses as pre-existing without verifying the wider window doesn't change observable behavior",
-      "reviewer_angle": "Concurrency correctness \u2014 residual unlocked paths",
+      "reviewer_angle": "Concurrency correctness — residual unlocked paths",
       "evidence_quote": "The known transient \"stale-active-session\" warning during a takeover window in install_guard.py is acknowledged as a pre-existing limitation, not introduced by this fix"
     },
     {
       "class": "B",
       "finding": "ConcurrentRunnerError reuses existing_pid=-1 sentinel that already means 'third party beat us on recreate path'; new lock-timeout collapses two distinct failures onto one wire signal",
-      "reviewer_angle": "Concurrency correctness \u2014 residual unlocked paths",
+      "reviewer_angle": "Concurrency correctness — residual unlocked paths",
       "evidence_quote": "On budget exhaustion, raise ConcurrentRunnerError(existing_session_id=\"<unknown>\", existing_pid=-1) with the explicit timeout message"
     },
     {

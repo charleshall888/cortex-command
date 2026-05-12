@@ -10,7 +10,7 @@ created: 2026-05-05
 updated: 2026-05-11
 complexity: complex
 criticality: high
-spec: lifecycle/fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh/spec.md
+spec: cortex/lifecycle/fix-pre-existing-scan-lifecycle-test-failures-in-tests-test-hookssh/spec.md
 areas: [hooks]
 session_id: null
 lifecycle_phase: complete

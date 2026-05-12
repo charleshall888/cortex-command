@@ -27,6 +27,6 @@ Both are S-effort rule edits to adjacent files in `skills/discovery/references/`
 
 ## Created Files
 
-- `backlog/137-harden-discovery-citation-grounding-and-external-endorsement-gating.md` — Epic
-- `backlog/138-codify-citation-norm-and-premise-as-verification-in-discovery-research.md` — Ticket A
-- `backlog/139-add-vendor-endorsement-value-gating-to-discovery-decompose.md` — Ticket C
+- `cortex/backlog/137-harden-discovery-citation-grounding-and-external-endorsement-gating.md` — Epic
+- `cortex/backlog/138-codify-citation-norm-and-premise-as-verification-in-discovery-research.md` — Ticket A
+- `cortex/backlog/139-add-vendor-endorsement-value-gating-to-discovery-decompose.md` — Ticket C

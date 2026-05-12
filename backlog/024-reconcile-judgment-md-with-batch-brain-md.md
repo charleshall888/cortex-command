@@ -11,13 +11,13 @@ blocked-by: []
 tags: [overnight, prompts, quality, triage]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/harness-design-long-running-apps/research.md
+discovery_source: cortex/research/harness-design-long-running-apps/research.md
 session_id: null
 lifecycle_phase: research
 lifecycle_slug: reconcile-judgment-md-with-batch-brain-md
 complexity: complex
 criticality: high
-spec: lifecycle/archive/reconcile-judgment-md-with-batch-brain-md/spec.md
+spec: cortex/lifecycle/archive/reconcile-judgment-md-with-batch-brain-md/spec.md
 areas: [overnight-runner,tests]
 ---
 

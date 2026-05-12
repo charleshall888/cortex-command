@@ -11,13 +11,13 @@ blocked-by: []
 tags: [overnight, reliability, verification, lifecycle]
 created: 2026-04-03
 updated: 2026-04-04
-discovery_source: research/harness-design-long-running-apps/research.md
+discovery_source: cortex/research/harness-design-long-running-apps/research.md
 session_id: null
 lifecycle_phase: implement
 lifecycle_slug: prevent-agents-from-writing-their-own-completion-evidence
 complexity: complex
 criticality: high
-spec: lifecycle/archive/prevent-agents-from-writing-their-own-completion-evidence/spec.md
+spec: cortex/lifecycle/archive/prevent-agents-from-writing-their-own-completion-evidence/spec.md
 areas: [lifecycle,overnight-runner]
 ---
 

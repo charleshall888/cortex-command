@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-06T00:00:00Z",
   "feature": "apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry",
-  "artifact": "lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/plan.md",
+  "artifact": "cortex/lifecycle/apply-skill-creator-lens-improvements-tocs-descriptions-disambiguators-per-must-oq3-disposition-u1-u2-u4-how-trims-frontmatter-symmetry/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -28,7 +28,7 @@
     },
     {
       "class": "B",
-      "finding": "Task 11's R7 title-substring heuristic ('clarify-critic' AND 'validator') is brittle to phrasing \u2014 broadened to also match 'schema' but title still not pinned in plan.",
+      "finding": "Task 11's R7 title-substring heuristic ('clarify-critic' AND 'validator') is brittle to phrasing — broadened to also match 'schema' but title still not pinned in plan.",
       "reviewer_angle": "Verification robustness",
       "evidence_quote": "any('clarify-critic' in i.get('title','').lower() and 'validator' in i.get('title','').lower() for i in d.get('items',[]))"
     },
@@ -48,7 +48,7 @@
       "class": "B",
       "finding": "Task 1's count >= 12 verification gate is severely under-discriminating; per-row exhaustiveness still relies on PR review.",
       "reviewer_angle": "Cross-task semantic dependencies on u2-decisions.md",
-      "evidence_quote": "pass if exit 0 AND count \u2265 12 (at least one decision per corpus file). PR review verifies the per-row exhaustiveness against the actual table contents."
+      "evidence_quote": "pass if exit 0 AND count ≥ 12 (at least one decision per corpus file). PR review verifies the per-row exhaustiveness against the actual table contents."
     },
     {
       "class": "B",

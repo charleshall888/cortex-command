@@ -10,13 +10,13 @@ parent: 014
 tags: [overnight, merge-conflicts, morning-report, dx]
 created: 2026-04-03
 updated: 2026-04-03
-discovery_source: research/overnight-merge-conflict-prevention/research.md
+discovery_source: cortex/research/overnight-merge-conflict-prevention/research.md
 session_id: null
 lifecycle_phase: complete
 lifecycle_slug: add-recovery-guidance-to-morning-report-for-conflicted-features
 complexity: simple
 criticality: medium
-spec: lifecycle/archive/add-recovery-guidance-to-morning-report-for-conflicted-features/spec.md
+spec: cortex/lifecycle/archive/add-recovery-guidance-to-morning-report-for-conflicted-features/spec.md
 ---
 
 # Add recovery guidance to morning report for conflicted features

@@ -15,7 +15,7 @@ lifecycle_phase: complete
 lifecycle_slug: fix-test-plan-py-failures-from-worktree-bootstrap-changes
 complexity: simple
 criticality: high
-spec: lifecycle/archive/fix-test-plan-py-failures-from-worktree-bootstrap-changes/spec.md
+spec: cortex/lifecycle/archive/fix-test-plan-py-failures-from-worktree-bootstrap-changes/spec.md
 ---
 
 ## Context

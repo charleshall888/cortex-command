@@ -1,7 +1,7 @@
 {
   "ts": "2026-04-25T14:30:00Z",
   "feature": "publish-cortex-overnight-integration-plugin-overnight-skill-runner-hooks",
-  "artifact": "lifecycle/publish-cortex-overnight-integration-plugin-overnight-skill-runner-hooks/plan.md",
+  "artifact": "cortex/lifecycle/publish-cortex-overnight-integration-plugin-overnight-skill-runner-hooks/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,

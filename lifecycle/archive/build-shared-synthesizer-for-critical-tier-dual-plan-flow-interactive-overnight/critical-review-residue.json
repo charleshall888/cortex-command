@@ -1,7 +1,7 @@
 {
   "ts": "2026-05-04T22:30:00Z",
   "feature": "build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight",
-  "artifact": "lifecycle/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight/plan.md",
+  "artifact": "cortex/lifecycle/build-shared-synthesizer-for-critical-tier-dual-plan-flow-interactive-overnight/plan.md",
   "synthesis_status": "ok",
   "reviewers": {
     "completed": 4,
@@ -12,7 +12,7 @@
       "class": "B",
       "finding": "The validation gate described in Spec Requirement 7 and Verification Strategy item 4 has no durable enforcement mechanism beyond a one-shot review of this lifecycle's implementation commit. No task adds a precommit hook, CI check, runtime assertion, or extends read_synthesizer_gate to cross-reference events.log for the two required validation events. After this lifecycle ships, any future commit can flip synthesizer_overnight_enabled: true with a single-line YAML edit and never record the validation events.",
       "reviewer_angle": "Validation gate enforcement",
-      "evidence_quote": "confirm the runtime gate stays `false` after this lifecycle's implementation lands \u2014 no flag-flip in the same commit. The flag is flipped only after the operator records `synthesizer_validated_interactive` and `synthesizer_validated_overnight` events in `lifecycle/{feature}/events.log` (Requirement 7) in a follow-up commit."
+      "evidence_quote": "confirm the runtime gate stays `false` after this lifecycle's implementation lands — no flag-flip in the same commit. The flag is flipped only after the operator records `synthesizer_validated_interactive` and `synthesizer_validated_overnight` events in `lifecycle/{feature}/events.log` (Requirement 7) in a follow-up commit."
     },
     {
       "class": "B",
