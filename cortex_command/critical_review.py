@@ -40,6 +40,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -50,21 +51,25 @@ from pathlib import Path
 
 def validate_artifact_path(
     candidate: str,
-    lifecycle_root: str,
+    lifecycle_root: str | Sequence[str],
     feature: str | None = None,
 ) -> str:
     """Validate ``candidate`` against the realpath-based security gate.
 
     Implements Requirement 9a-c:
       - realpath(candidate) MUST byte-equal abspath(candidate) (no symlinks)
-      - resolved path MUST be a strict path-component prefix of
-        ``lifecycle_root`` (rejects candidate equal to lifecycle_root)
+      - resolved path MUST be a strict path-component prefix of at least
+        one root in ``lifecycle_root`` (rejects candidate equal to a root)
       - when ``feature`` is supplied (auto-trigger flow), the resolved
-        path MUST additionally be under ``{lifecycle_root}/{feature}/``
+        path MUST additionally be under ``{matched-root}/{feature}/``
 
     Args:
         candidate: Caller-supplied artifact path.
-        lifecycle_root: Absolute path to the ``cortex/lifecycle/`` directory.
+        lifecycle_root: One or more acceptable artifact roots. When a
+            sequence is supplied, the candidate matches if it is strictly
+            under any root. Callers pass a single root (back-compat) or
+            a sequence (e.g. ``(cortex/lifecycle, cortex/research)``) when
+            the artifact may live under either tree.
         feature: Optional feature slug to narrow the prefix.
 
     Returns:
@@ -80,41 +85,64 @@ def validate_artifact_path(
         raise ValueError(
             f"Path validation failed (Req 9a/9c): symlink detected in "
             f"{candidate!r}; realpath={realpath!r} != abspath={abspath!r}. "
-            f"cortex/lifecycle/ must not contain symlinks."
+            f"Artifact directories must not contain symlinks."
         )
 
-    root_abs = os.path.abspath(lifecycle_root)
-    root_real = os.path.realpath(lifecycle_root)
-    if root_real != root_abs:
+    if isinstance(lifecycle_root, str):
+        roots: list[str] = [lifecycle_root]
+    else:
+        roots = list(lifecycle_root)
+    if not roots:
         raise ValueError(
-            f"Path validation failed (Req 9c): lifecycle_root "
-            f"{lifecycle_root!r} resolves through a symlink "
-            f"(realpath={root_real!r} != abspath={root_abs!r})."
+            "Path validation failed: no artifact roots supplied."
         )
 
     candidate_path = Path(realpath)
-    root_path = Path(root_real)
-    # Strict prefix: candidate must be *under* the root, not equal to it.
-    if candidate_path == root_path or not candidate_path.is_relative_to(root_path):
-        raise ValueError(
-            f"Path validation failed (Req 9b): {realpath!r} is not "
-            f"strictly under {root_real!r}."
-        )
+    last_err: ValueError | None = None
+    for root in roots:
+        root_abs = os.path.abspath(root)
+        root_real = os.path.realpath(root)
+        if root_real != root_abs:
+            last_err = ValueError(
+                f"Path validation failed (Req 9c): artifact root "
+                f"{root!r} resolves through a symlink "
+                f"(realpath={root_real!r} != abspath={root_abs!r})."
+            )
+            continue
 
-    if feature is not None:
-        feature_root = root_path / feature
-        if not candidate_path.is_relative_to(feature_root):
+        root_path = Path(root_real)
+        # Strict prefix: candidate must be *under* the root, not equal to it.
+        if candidate_path == root_path or not candidate_path.is_relative_to(root_path):
+            last_err = ValueError(
+                f"Path validation failed (Req 9b): {realpath!r} is not "
+                f"strictly under {root_real!r}."
+            )
+            continue
+
+        if feature is not None:
+            feature_root = root_path / feature
+            if not candidate_path.is_relative_to(feature_root):
+                last_err = ValueError(
+                    f"Path validation failed (Req 9b auto-trigger): {realpath!r} "
+                    f"is not under {feature_root!s}/."
+                )
+                continue
+
+        # Root + feature checks passed; the file check is invariant of root.
+        if not candidate_path.is_file():
             raise ValueError(
-                f"Path validation failed (Req 9b auto-trigger): {realpath!r} "
-                f"is not under {feature_root!s}/."
+                f"Path validation failed: {realpath!r} is not a regular file."
             )
 
-    if not candidate_path.is_file():
-        raise ValueError(
-            f"Path validation failed: {realpath!r} is not a regular file."
-        )
+        return realpath
 
-    return realpath
+    if len(roots) > 1:
+        raise ValueError(
+            f"Path validation failed (Req 9b): {realpath!r} is not "
+            f"strictly under any of: {', '.join(repr(r) for r in roots)}."
+        )
+    assert last_err is not None  # single-root loop always sets last_err on failure
+    raise last_err
 
 
 # ---------------------------------------------------------------------------
@@ -136,14 +164,15 @@ def sha256_of_path(path: str) -> str:
 
 def prepare_dispatch(
     candidate: str,
-    lifecycle_root: str,
+    lifecycle_root: str | Sequence[str],
     feature: str | None = None,
 ) -> dict:
     """Fuse path validation + SHA-256 into one operation.
 
     Args:
         candidate: Caller-supplied artifact path.
-        lifecycle_root: Absolute path to the ``cortex/lifecycle/`` directory.
+        lifecycle_root: One or more acceptable artifact roots. See
+            ``validate_artifact_path`` for multi-root semantics.
         feature: Optional feature slug to narrow the prefix.
 
     Returns:
@@ -245,8 +274,8 @@ def append_event(events_log_path: Path, event: dict) -> None:
 # Defaults: resolve lifecycle_root from git toplevel
 # ---------------------------------------------------------------------------
 
-def _default_lifecycle_root() -> str:
-    """Resolve ``{git toplevel}/lifecycle`` as the default lifecycle root."""
+def _git_toplevel() -> str:
+    """Return the absolute path to the enclosing git repository toplevel."""
     try:
         toplevel = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"],
@@ -257,7 +286,26 @@ def _default_lifecycle_root() -> str:
             "Could not resolve git toplevel; run from inside a git "
             "repository or pass --lifecycle-root explicitly."
         ) from e
-    return str(Path(toplevel) / "cortex" / "lifecycle")
+    return toplevel
+
+
+def _default_lifecycle_root() -> str:
+    """Resolve ``{git toplevel}/cortex/lifecycle`` as the default lifecycle root."""
+    return str(Path(_git_toplevel()) / "cortex" / "lifecycle")
+
+
+def _default_artifact_roots() -> tuple[str, str]:
+    """Resolve ``(cortex/lifecycle, cortex/research)`` under the git toplevel.
+
+    ``prepare-dispatch`` accepts artifacts produced by either the lifecycle
+    state machine (``cortex/lifecycle/<feature>/``) or the discovery skill
+    (``cortex/research/<topic>/``). Downstream telemetry subcommands
+    (``verify-synth-output``, ``record-exclusion``) remain single-root —
+    the discovery flow's ``<path>``-arg invocation form omits ``--feature``
+    and those telemetry calls are documented to be skipped in that mode.
+    """
+    cortex = Path(_git_toplevel()) / "cortex"
+    return (str(cortex / "lifecycle"), str(cortex / "research"))
 
 
 def _now_iso() -> str:
@@ -271,7 +319,9 @@ def _now_iso() -> str:
 
 def _cmd_prepare_dispatch(args: argparse.Namespace) -> int:
     try:
-        lifecycle_root = args.lifecycle_root or _default_lifecycle_root()
+        roots: str | tuple[str, ...] = (
+            args.lifecycle_root if args.lifecycle_root else _default_artifact_roots()
+        )
     except RuntimeError as e:
         print(str(e), file=sys.stderr)
         return 2
@@ -279,7 +329,7 @@ def _cmd_prepare_dispatch(args: argparse.Namespace) -> int:
     try:
         result = prepare_dispatch(
             args.path,
-            lifecycle_root,
+            roots,
             feature=args.feature,
         )
     except ValueError as e:

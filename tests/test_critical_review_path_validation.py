@@ -27,6 +27,7 @@ from pathlib import Path
 import pytest
 
 from cortex_command.critical_review import (
+    _default_artifact_roots,
     prepare_dispatch,
     validate_artifact_path,
 )
@@ -39,14 +40,17 @@ from cortex_command.critical_review import (
 
 @pytest.fixture
 def lifecycle_layout(tmp_path: Path) -> dict:
-    """Build a minimal ``cortex/lifecycle/foo/`` tree with a real file and a symlink.
+    """Build a ``cortex/{lifecycle,research}/`` layout with real files and a symlink.
 
     Returns a dict with keys:
-        lifecycle_root: tmp_path/'lifecycle'
-        feature_dir:    tmp_path/'lifecycle'/'foo'
-        good_file:      tmp_path/'lifecycle'/'foo'/'spec.md' (regular file)
-        evil_symlink:   tmp_path/'lifecycle'/'foo'/'evil.md' -> /etc/hostname
-        outside_file:   tmp_path/'outside.md' (regular file, not under lifecycle)
+        lifecycle_root:  tmp_path/'cortex'/'lifecycle'
+        feature_dir:     tmp_path/'cortex'/'lifecycle'/'foo'
+        good_file:       tmp_path/'cortex'/'lifecycle'/'foo'/'spec.md' (regular file)
+        evil_symlink:    tmp_path/'cortex'/'lifecycle'/'foo'/'evil.md' -> /etc/hostname
+        research_root:   tmp_path/'cortex'/'research'
+        topic_dir:       tmp_path/'cortex'/'research'/'bar'
+        research_file:   tmp_path/'cortex'/'research'/'bar'/'research.md' (regular file)
+        outside_file:    tmp_path/'outside.md' (regular file, not under either root)
     """
     lifecycle_root = tmp_path / "cortex" / "lifecycle"
     feature_dir = lifecycle_root / "foo"
@@ -58,14 +62,24 @@ def lifecycle_layout(tmp_path: Path) -> dict:
     evil_symlink = feature_dir / "evil.md"
     evil_symlink.symlink_to("/etc/hostname")
 
+    research_root = tmp_path / "cortex" / "research"
+    topic_dir = research_root / "bar"
+    topic_dir.mkdir(parents=True)
+
+    research_file = topic_dir / "research.md"
+    research_file.write_text("discovery research\n", encoding="utf-8")
+
     outside_file = tmp_path / "outside.md"
-    outside_file.write_text("not under lifecycle\n", encoding="utf-8")
+    outside_file.write_text("not under either root\n", encoding="utf-8")
 
     return {
         "lifecycle_root": lifecycle_root,
         "feature_dir": feature_dir,
         "good_file": good_file,
         "evil_symlink": evil_symlink,
+        "research_root": research_root,
+        "topic_dir": topic_dir,
+        "research_file": research_file,
         "outside_file": outside_file,
     }
 
@@ -199,3 +213,76 @@ def test_cli_accepts_valid_path_and_emits_json(lifecycle_layout: dict) -> None:
     assert "sha256" in payload
     assert payload["resolved_path"] == str(good.resolve())
     assert payload["sha256"] == hashlib.sha256(good.read_bytes()).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# (3) Multi-root tests — discovery research artifacts (cortex/research/<topic>/)
+# ---------------------------------------------------------------------------
+
+
+def test_multi_root_accepts_lifecycle_path(lifecycle_layout: dict) -> None:
+    """Multi-root: path under cortex/lifecycle/ accepted when both roots passed."""
+    good = lifecycle_layout["good_file"]
+    roots = [
+        str(lifecycle_layout["lifecycle_root"]),
+        str(lifecycle_layout["research_root"]),
+    ]
+    resolved = validate_artifact_path(str(good), roots)
+    assert resolved == str(good.resolve())
+
+
+def test_multi_root_accepts_research_path(lifecycle_layout: dict) -> None:
+    """Multi-root: path under cortex/research/ accepted when both roots passed."""
+    research_file = lifecycle_layout["research_file"]
+    roots = [
+        str(lifecycle_layout["lifecycle_root"]),
+        str(lifecycle_layout["research_root"]),
+    ]
+    resolved = validate_artifact_path(str(research_file), roots)
+    assert resolved == str(research_file.resolve())
+
+
+def test_multi_root_rejects_path_outside_all_roots(lifecycle_layout: dict) -> None:
+    """Multi-root: path under neither root is rejected; message lists both roots."""
+    outside = lifecycle_layout["outside_file"]
+    roots = [
+        str(lifecycle_layout["lifecycle_root"]),
+        str(lifecycle_layout["research_root"]),
+    ]
+    with pytest.raises(ValueError) as exc_info:
+        validate_artifact_path(str(outside), roots)
+    msg = str(exc_info.value)
+    # Message must surface that multiple roots were tried.
+    assert "any of" in msg
+    assert str(lifecycle_layout["lifecycle_root"]) in msg
+    assert str(lifecycle_layout["research_root"]) in msg
+
+
+def test_multi_root_prepare_dispatch_research_path(lifecycle_layout: dict) -> None:
+    """prepare_dispatch returns realpath + SHA for a path under the research root."""
+    research_file = lifecycle_layout["research_file"]
+    roots = (
+        str(lifecycle_layout["lifecycle_root"]),
+        str(lifecycle_layout["research_root"]),
+    )
+    result = prepare_dispatch(str(research_file), roots)
+    assert result == {
+        "resolved_path": str(research_file.resolve()),
+        "sha256": hashlib.sha256(research_file.read_bytes()).hexdigest(),
+    }
+
+
+def test_multi_root_rejects_empty_root_sequence(lifecycle_layout: dict) -> None:
+    """Passing an empty sequence of roots raises ValueError with a clear message."""
+    good = lifecycle_layout["good_file"]
+    with pytest.raises(ValueError) as exc_info:
+        validate_artifact_path(str(good), [])
+    assert "no artifact roots" in str(exc_info.value).lower()
+
+
+def test_default_artifact_roots_returns_lifecycle_and_research(tmp_path: Path) -> None:
+    """``_default_artifact_roots`` returns (cortex/lifecycle, cortex/research) under git toplevel."""
+    roots = _default_artifact_roots()
+    assert len(roots) == 2
+    assert roots[0].endswith("/cortex/lifecycle")
+    assert roots[1].endswith("/cortex/research")
