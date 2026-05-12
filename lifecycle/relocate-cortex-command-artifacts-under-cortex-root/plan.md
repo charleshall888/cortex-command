@@ -31,7 +31,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: The function lives at `cortex_command/common.py:55-103`. The detection predicate is a single line (line 89). Single-condition `(current / "cortex").is_dir()` because both prior anchors (`lifecycle/` and `backlog/`) move under `cortex/`. The upward-walk loop (lines 85–96) and `.git/` terminator (line 91) are unchanged. The test fixture pattern lives somewhere under `cortex_command/tests/` or `cortex_command/*/tests/`; use `pytest`'s `tmp_path` + `monkeypatch.chdir` (the resolver is invoked at call time per the docstring, so chdir-based tests work).
 - **Verification**: `grep -nE '\(current / "cortex"\)\.is_dir\(\)' cortex_command/common.py` returns exactly 1 match; `grep -nE '\(current / "lifecycle"\)\.is_dir\(\) or \(current / "backlog"\)\.is_dir\(\)' cortex_command/common.py` returns 0 matches; `just test` exits 0 (resolver tests pass).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit c6c2e0c)
 
 ### Task 2: Collapse `_CONTENT_DECLINE_TARGETS` + add `cortex.gitignore` template entry
 - **Files**: `cortex_command/init/scaffold.py`, `cortex_command/init/tests/test_scaffold.py`
@@ -40,7 +40,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: `_CONTENT_DECLINE_TARGETS` is consumed by R19 gate logic (search `scaffold.py` for `_CONTENT_DECLINE_TARGETS` usage — likely a `for target in _CONTENT_DECLINE_TARGETS:` loop near the decline-gate function). `_GITIGNORE_TARGETS` at line 52 currently contains `(_MARKER_FILENAME, _BACKUP_DIR_PATTERN)` = `(".cortex-init", ".cortex-init-backup/")`; do NOT add `cortex/` to this tuple (which would unconditionally gitignore) — instead, append the commented-out `cortex/` line in the literal-text emission of the `.gitignore` append. The test fixture pattern: `cortex_command/init/tests/test_scaffold.py` has existing R19 tests against the prior tuple — update fixtures to create a `cortex/` directory and assert the decline-gate raises.
 - **Verification**: `grep -nE '_CONTENT_DECLINE_TARGETS = \("cortex",\)' cortex_command/init/scaffold.py` returns 1 match; `grep -nE '# Uncomment to gitignore cortex tool state' cortex_command/init/scaffold.py` returns at least 1 match; `pytest cortex_command/init/tests/test_scaffold.py -k decline` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 776d6f4)
 
 ### Task 3: Collapse sandbox registration to umbrella `cortex/`
 - **Files**: `cortex_command/init/handler.py`, `cortex_command/init/tests/test_settings_merge.py`
@@ -49,7 +49,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: The dual-registration invariant exists for TOCTOU closure between the narrow legacy path (`lifecycle/sessions/`) and the wide path (`lifecycle/`). The umbrella `cortex/` is itself a parent of `cortex/lifecycle/sessions/`, so the TOCTOU window closes via the single broader grant — no two-entry coexistence needed. Reference `settings_merge.register()` (search for it) for the existing append contract; reuse without modification. The test file is at `cortex_command/init/tests/test_settings_merge.py` — read existing tests for the dual-registration assertion pattern and replace with single-entry assertion.
 - **Verification**: `grep -nE '"lifecycle/sessions"|"lifecycle"' cortex_command/init/handler.py` returns 0 matches inside the registration block (lines 125–153 region); `pytest cortex_command/init/tests/test_settings_merge.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit b41c338)
 
 ### Task 4: Rebase overnight runtime path literals — state.py + runner.py
 - **Files**: `cortex_command/overnight/state.py`, `cortex_command/overnight/runner.py`
@@ -103,7 +103,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: Shell variable values use literal path fragments — straightforward sed-style substitutions. Pre-commit hook (`.githooks/pre-commit`) orchestrates parity + drift checks; glob update keeps the trigger firing when staged diffs touch the relocated requirements. `bin/cortex-check-parity` at lines 1001/1005/1010/1019/1027/1052/1064/1080/1090 consume `PREFLIGHT_PATH` — those callsites read the constant, no per-callsite edit needed. `bin/cortex-log-invocation:46` is one line; verify its exact path-string and edit.
 - **Verification**: `grep -nE '"\$CWD/lifecycle"' hooks/cortex-scan-lifecycle.sh` returns 0 matches; `grep -nE 'TRACK_DIR="lifecycle/' claude/hooks/cortex-tool-failure-tracker.sh` returns 0 matches; `grep -nE '"requirements/\*\*/\*\.md"' bin/cortex-check-parity` returns 0 matches; `grep -nE 'PREFLIGHT_PATH = "lifecycle/' bin/cortex-check-parity` returns 0 matches; `grep -cE 'cortex/lifecycle' hooks/cortex-scan-lifecycle.sh` ≥ 8.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit a029b87)
 
 ### Task 10: Rebase plugin canonical non-mirror
 - **Files**: `plugins/cortex-overnight/server.py`
@@ -112,7 +112,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: Per CLAUDE.md and the discovery research §"Plugin mirrors", `plugins/cortex-overnight/server.py` is NOT auto-mirrored from a canonical source — it is hand-maintained Python. Plugin mirrors at `plugins/cortex-core/{skills,hooks,bin}/` and `plugins/cortex-overnight/{skills,hooks}/` regenerate via `just build-plugin` and need no manual edit. The other hand-maintained plugins (`cortex-pr-review`, `cortex-ui-extras`, `cortex-dev-extras`, `android-dev-extras`) have zero references to relocated paths per research.
 - **Verification**: `grep -nE 'Path\(cortex_root\) / "lifecycle"' plugins/cortex-overnight/server.py` returns 0 matches; `grep -nE '"(lifecycle|backlog|research|requirements|retros|debug)"' plugins/cortex-overnight/server.py` returns 0 matches.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit fe8778e)
 
 ### Task 11: Author + run encoded-data migration script
 - **Files**: `cortex_command/init/_relocation_migration.py` (new, one-time), `cortex_command/init/tests/test_relocation_migration.py` (new), plus every file the script mutates (287 backlog YAML lines + 61 critical-review-residue JSON keys + ~6 research/<topic>/decomposed.md prose cross-refs)
@@ -121,7 +121,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: complex
 - **Context**: 287 backlog YAML lines across 4 fields per discovery research; 61 `"artifact"` keys across active + archive per discovery. Use `ruamel.yaml` or in-memory YAML round-trip if available (preserves frontmatter ordering); else regex-based line-level rewrite is acceptable given the field-key prefixes are deterministic. JSON loader: `json.loads`/`json.dumps(..., indent=2)`. Idempotency invariant: `re.sub(r'^((discovery_source|spec|plan|research): )(?!cortex/)(lifecycle|backlog|research)/', r'\1cortex/\3/', line)` — only rewrites when value lacks the `cortex/` prefix.
 - **Verification**: `pytest cortex_command/init/tests/test_relocation_migration.py` exits 0; after running the script, `grep -rEn '^(discovery_source|spec|plan|research): (lifecycle|backlog|research)/' backlog/` returns 0 matches; running the script a second time produces zero `git diff` output.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 99725dd)
 
 ### Task 12: Rebase requirements/project.md sandbox-constraint text + Conditional Loading footer
 - **Files**: `requirements/project.md`
@@ -130,7 +130,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: The constraint at line 28 names the literal path `lifecycle/` and the change semantics are governed by DR-5 — the umbrella grant is a contract change, not just spirit-preservation. Surrounding text at lines 27–34 describes the additive registration + lockfile + flock pattern; preserve those facts, only the path reference and umbrella framing change.
 - **Verification**: `grep -nE "registers the repo' \\?s \\?\`lifecycle/\\?\`" requirements/project.md` returns 0 matches; `grep -nE "registers the repo' \\?s \\?\`cortex/\\?\`" requirements/project.md` returns at least 1 match.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commits 1461a1e + a78b2b7 follow-up)
 
 ### Task 13: Rebase operational docs + CHANGELOG entry
 - **Files**: `CLAUDE.md`, `docs/setup.md`, `docs/agentic-layer.md`, `README.md`, `CHANGELOG.md`
@@ -139,7 +139,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: These are prose edits, not code — manual inspection is appropriate. CHANGELOG entry should follow the existing CHANGELOG format (read the top few entries to confirm style). The discovery research enumerates 5 CLAUDE.md path refs (verified low count). docs/setup.md and docs/agentic-layer.md are operational documentation per research — they describe literal user-observable state and must update lock-step.
 - **Verification**: `grep -nE '(^|[^/])(lifecycle|research|backlog|requirements|retros|debug)/' CLAUDE.md docs/setup.md docs/agentic-layer.md README.md` shows no matches that reference the post-relocation layout incorrectly (manual review of any remaining matches confirms they're either inside `cortex/...` compositions or are intentional historical references); `head -30 CHANGELOG.md | grep -iE 'cortex/ umbrella|relocate|plugin update cortex-core'` returns at least 2 matches.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 10d7edd)
 
 ### Task 14: Rebase skill prose + author cortex/README.md
 - **Files**: `skills/lifecycle/SKILL.md`, `skills/refine/SKILL.md`, `cortex/README.md` (new)
@@ -148,7 +148,7 @@ Single atomic commit that rebases every cortex-managed path from repo-root scatt
 - **Complexity**: simple
 - **Context**: Most skill prose mentions are in protocol-step descriptions and example tables. Use `grep -nE '(^|[^/])lifecycle/\{?(feature|slug)\}?' skills/lifecycle/SKILL.md skills/refine/SKILL.md` for the placeholder sites and `grep -nE '(^|[^/])lifecycle/[a-z]' skills/lifecycle/SKILL.md skills/refine/SKILL.md` for any literal-slug sites. cortex/README.md: lead with one sentence stating "Tool-managed working area for cortex-command. Safe to gitignore as a unit." Then one-paragraph descriptions per child. No need to enumerate every lifecycle subdirectory — high-level only.
 - **Verification**: `grep -rEn '(^|[^/])lifecycle/\{?(feature|slug)\}?' skills/lifecycle/SKILL.md skills/refine/SKILL.md` returns 0 matches; `test -f cortex/README.md && [ $(wc -l < cortex/README.md) -ge 20 ]` succeeds; `head -1 cortex/README.md | grep -iE 'tool-managed|cortex-command'` returns a match.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 518a2d5)
 
 ### Task 15: Rebase test fixtures
 - **Files**: `tests/test_lifecycle_phase_parity.py`, `tests/test_resolve_backlog_item.py`

@@ -5,3 +5,4 @@
 {"ts": "2026-05-12T10:44:51Z", "event": "phase_transition", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "from": "specify", "to": "plan"}
 {"ts": "2026-05-12T10:50:05Z", "event": "phase_transition", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "from": "plan", "to": "implement"}
 {"ts": "2026-05-12T11:00:00Z", "event": "batch_dispatch", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "batch": 0, "tasks": [1, 2, 3, 9, 10, 11, 12, 13, 14]}
+{"ts": "2026-05-12T11:30:00Z", "event": "batch_dispatch", "feature": "relocate-cortex-command-artifacts-under-cortex-root", "batch": 1, "tasks": [4, 5, 6, 7, 8]}

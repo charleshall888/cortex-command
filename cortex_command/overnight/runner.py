@@ -402,7 +402,7 @@ def _generate_morning_report(
     post-loop path. When ``state.worktree_path`` is set the followup
     backlog items land inside the worktree so the post-session commit
     pushes them onto the integration branch (lifecycle 130 Task 7);
-    otherwise they fall back to ``repo_path / "backlog"``.
+    otherwise they fall back to ``repo_path / "cortex" / "backlog"``.
 
     All exceptions are swallowed — morning-report generation is best-effort
     and must not abort the cleanup sequence.
@@ -418,9 +418,9 @@ def _generate_morning_report(
         except Exception:
             worktree_path = None
         if worktree_path:
-            backlog_dir = Path(worktree_path) / "backlog"
+            backlog_dir = Path(worktree_path) / "cortex" / "backlog"
         else:
-            backlog_dir = repo_path / "backlog"
+            backlog_dir = repo_path / "cortex" / "backlog"
         data.new_backlog_items = report.create_followup_backlog_items(
             data, backlog_dir=backlog_dir
         )
@@ -543,9 +543,9 @@ def _commit_morning_report_in_repo(
     and the legitimate runner-direct commit is allowed to land on local
     ``main``.
 
-    Stages only the tracked top-level copy ``lifecycle/morning-report.md``
+    Stages only the tracked top-level copy ``cortex/lifecycle/morning-report.md``
     (the load-bearing path per ticket 129's relocation). The per-session
-    path ``lifecycle/sessions/<session_id>/morning-report.md`` is
+    path ``cortex/lifecycle/sessions/<session_id>/morning-report.md`` is
     intentionally skipped: it is gitignored at ``.gitignore:41`` by design
     as a session-archive artifact, so attempting to ``git add`` it would
     be a no-op without ``-f`` and the archive is not meant to land in
@@ -1525,7 +1525,7 @@ def _post_loop(
                 body_summary = (
                     f"**ZERO PROGRESS** — Overnight session "
                     f"{session_id} merged 0 features. See "
-                    f"`lifecycle/sessions/{session_id}/morning-report.md` "
+                    f"`cortex/lifecycle/sessions/{session_id}/morning-report.md` "
                     f"for failure analysis."
                 )
             else:
@@ -1800,9 +1800,7 @@ def _post_loop(
                                         log_event as pipeline_log_event,
                                     )
                                     pipeline_log_event(
-                                        repo_path
-                                        / "lifecycle"
-                                        / "pipeline-events.log",
+                                        repo_path / "cortex" / "lifecycle" / "pipeline-events.log",
                                         {
                                             "event": "pr_ready_failed",
                                             "session_id": session_id,
@@ -1925,7 +1923,7 @@ def run(
 
     Args:
         state_path: Path to ``overnight-state.json`` for this session.
-        session_dir: Directory under ``lifecycle/sessions/{id}/``.
+        session_dir: Directory under ``cortex/lifecycle/sessions/{id}/``.
         repo_path: Absolute path to the home repository root.
         plan_path: Path to ``overnight-plan.md``.
         events_path: Path to ``overnight-events.log``.

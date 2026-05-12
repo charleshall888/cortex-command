@@ -295,7 +295,7 @@ def _default_state_path() -> Path:
     Spec R3c forbids module-level capture of `_resolve_user_project_root()`;
     every consumer must invoke this function (or supply an explicit path).
     """
-    return _resolve_user_project_root() / "lifecycle" / "overnight-state.json"
+    return _resolve_user_project_root() / "cortex" / "lifecycle" / "overnight-state.json"
 
 
 # ---------------------------------------------------------------------------
@@ -318,7 +318,7 @@ def session_dir(
     Returns:
         ``lifecycle_root / "sessions" / session_id``
     """
-    lifecycle_root = lifecycle_root or _resolve_user_project_root() / "lifecycle"
+    lifecycle_root = lifecycle_root or _resolve_user_project_root() / "cortex" / "lifecycle"
     return lifecycle_root / "sessions" / session_id
 
 
@@ -338,7 +338,7 @@ def latest_symlink_path(
     Returns:
         ``lifecycle_root / "sessions" / f"latest-{session_type}"``
     """
-    lifecycle_root = lifecycle_root or _resolve_user_project_root() / "lifecycle"
+    lifecycle_root = lifecycle_root or _resolve_user_project_root() / "cortex" / "lifecycle"
     return lifecycle_root / "sessions" / f"latest-{session_type}"
 
 
