@@ -29,21 +29,29 @@ if [ -z "${LIFECYCLE_SESSION_ID:-}" ]; then
     exit 0
 fi
 
-repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+repo_root=""
+if [ -n "${CORTEX_REPO_ROOT:-}" ]; then
+    if [ -d "$CORTEX_REPO_ROOT/.git" ] || [ -f "$CORTEX_REPO_ROOT/.git" ]; then
+        repo_root="$CORTEX_REPO_ROOT"
+    fi
+fi
+if [ -z "$repo_root" ]; then
+    repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
+fi
 if [ -z "$repo_root" ]; then
     _log_breadcrumb no_repo_root ""
     exit 0
 fi
 
 session_dir="$repo_root/lifecycle/sessions/$LIFECYCLE_SESSION_ID"
-mkdir -p "$session_dir" 2>/dev/null
+[ -d "$session_dir" ] || mkdir -p "$session_dir" 2>/dev/null
 if [ ! -d "$session_dir" ]; then
     _log_breadcrumb session_dir_missing "$session_dir"
     exit 0
 fi
 
 script_path="${1:-}"
-script_name="$(basename "$script_path" 2>/dev/null)"
+script_name="${script_path##*/}"
 argv_count=$(( $# - 1 ))
 [ "$argv_count" -lt 0 ] && argv_count=0
 ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
