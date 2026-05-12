@@ -187,8 +187,8 @@ def _build_fixture_backlog(tmp_path: Path) -> Path:
     the ``blocked_by: ["9"]`` reference via the source-tree scan rather
     than the index, exercising the ticket-152 fix.
     """
-    backlog_dir = tmp_path / "backlog"
-    backlog_dir.mkdir()
+    backlog_dir = tmp_path / "cortex" / "backlog"
+    backlog_dir.mkdir(parents=True)
     for record in _FIXTURE_RECORDS:
         _write_md(backlog_dir, record)
 

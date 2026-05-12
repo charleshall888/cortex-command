@@ -66,7 +66,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from cortex_command.backlog import partition_ready  # noqa: E402
 from cortex_command.common import TERMINAL_STATUSES  # noqa: E402,F401
 
-BACKLOG_DIR = Path.cwd() / "backlog"
+BACKLOG_DIR = Path.cwd() / "cortex" / "backlog"
 
 # Canonical priority ordering. Unknown priorities sort alphabetically
 # *after* "contingent" and are only emitted when non-empty.
