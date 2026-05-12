@@ -96,8 +96,8 @@ def _feature_entry(slug: str, status: str, round_assigned: int,
         "completed_at": ts_at(completed_offset) if completed_offset is not None else None,
         "error": error,
         "deferred_questions": 0,
-        "spec_path": f"lifecycle/{slug}/spec.md",
-        "plan_path": f"lifecycle/{slug}/plan.md",
+        "spec_path": f"cortex/lifecycle/{slug}/spec.md",
+        "plan_path": f"cortex/lifecycle/{slug}/plan.md",
         "backlog_id": slug,
     }
 
@@ -107,7 +107,7 @@ def write_overnight_state(session_dir: Path, session_id: str) -> None:
 
     Writes to:
       {session_dir}/overnight-state.json
-      lifecycle/overnight-state.json  (copy via shutil.copy2)
+      cortex/lifecycle/overnight-state.json  (copy via shutil.copy2)
     """
     # Build features dict
     features: dict = {}
@@ -178,7 +178,7 @@ def write_overnight_state(session_dir: Path, session_id: str) -> None:
 
     # Copy to canonical path (must be a regular file, not a symlink)
     repo_root = _resolve_user_project_root()
-    canonical = repo_root / "lifecycle" / "overnight-state.json"
+    canonical = repo_root / "cortex" / "lifecycle" / "overnight-state.json"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     # Remove symlink or existing file before copy so shutil.copy2 writes a fresh regular file
     if canonical.exists() or canonical.is_symlink():
@@ -186,7 +186,7 @@ def write_overnight_state(session_dir: Path, session_id: str) -> None:
     shutil.copy2(str(session_path), str(canonical))
 
     print(f"  Wrote {session_path.relative_to(repo_root)}")
-    print(f"  Copied to lifecycle/overnight-state.json")
+    print(f"  Copied to cortex/lifecycle/overnight-state.json")
 
 
 def write_overnight_events(session_dir: Path, session_id: str) -> None:
@@ -194,7 +194,7 @@ def write_overnight_events(session_dir: Path, session_id: str) -> None:
 
     Writes to:
       {session_dir}/overnight-events.log
-      lifecycle/overnight-events.log  (copy via shutil.copy2)
+      cortex/lifecycle/overnight-events.log  (copy via shutil.copy2)
 
     Produces 30+ JSONL events covering the full session timeline.
     """
@@ -279,7 +279,7 @@ def write_overnight_events(session_dir: Path, session_id: str) -> None:
 
     # Copy to canonical path (must be a regular file, not a symlink)
     repo_root = _resolve_user_project_root()
-    canonical = repo_root / "lifecycle" / "overnight-events.log"
+    canonical = repo_root / "cortex" / "lifecycle" / "overnight-events.log"
     canonical.parent.mkdir(parents=True, exist_ok=True)
     # Remove symlink or existing file before copy so shutil.copy2 writes a fresh regular file
     if canonical.exists() or canonical.is_symlink():
@@ -287,7 +287,7 @@ def write_overnight_events(session_dir: Path, session_id: str) -> None:
     shutil.copy2(str(session_path), str(canonical))
 
     print(f"  Wrote {session_path.relative_to(repo_root)} ({len(events)} events)")
-    print(f"  Copied to lifecycle/overnight-events.log")
+    print(f"  Copied to cortex/lifecycle/overnight-events.log")
 
 
 # ---------------------------------------------------------------------------
@@ -296,8 +296,8 @@ def write_overnight_events(session_dir: Path, session_id: str) -> None:
 
 
 def write_pipeline_fixtures(repo_root: Path) -> None:
-    """Write lifecycle/pipeline-state.json and lifecycle/pipeline-events.log."""
-    lifecycle_dir = repo_root / "lifecycle"
+    """Write cortex/lifecycle/pipeline-state.json and cortex/lifecycle/pipeline-events.log."""
+    lifecycle_dir = repo_root / "cortex" / "lifecycle"
     lifecycle_dir.mkdir(parents=True, exist_ok=True)
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -364,8 +364,8 @@ def write_pipeline_fixtures(repo_root: Path) -> None:
 
 
 def write_metrics(repo_root: Path) -> None:
-    """Write lifecycle/metrics.json with per-feature and aggregate data."""
-    lifecycle_dir = repo_root / "lifecycle"
+    """Write cortex/lifecycle/metrics.json with per-feature and aggregate data."""
+    lifecycle_dir = repo_root / "cortex" / "lifecycle"
     lifecycle_dir.mkdir(parents=True, exist_ok=True)
 
     generated_at = datetime.now(timezone.utc).isoformat()
@@ -447,7 +447,7 @@ def write_feature_files(repo_root: Path, slug: str, status: str) -> None:
         status: Feature status string (e.g. ``"running"``, ``"merged"``).
             Accepted but not used in file content — reserved for future use.
     """
-    feature_dir = repo_root / "lifecycle" / slug
+    feature_dir = repo_root / "cortex" / "lifecycle" / slug
     feature_dir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
@@ -465,7 +465,7 @@ def write_feature_files(repo_root: Path, slug: str, status: str) -> None:
             "ts": ts_at(call_offsets[i]),
             "event": "tool_call",
             "tool": tool,
-            "input_summary": f"lifecycle/{slug}/spec.md",
+            "input_summary": f"cortex/lifecycle/{slug}/spec.md",
         })
         activity_events.append({
             "ts": ts_at(result_offsets[i]),
@@ -576,7 +576,7 @@ def write_backlog_items(repo_root: Path) -> list[Path]:
     Returns:
         List of Paths that were written.
     """
-    backlog_dir = repo_root / "backlog"
+    backlog_dir = repo_root / "cortex" / "backlog"
     backlog_dir.mkdir(parents=True, exist_ok=True)
 
     written: list[Path] = []
@@ -593,7 +593,7 @@ def write_backlog_items(repo_root: Path) -> list[Path]:
         path = backlog_dir / filename
         path.write_text(content, encoding="utf-8")
         written.append(path)
-        print(f"  wrote backlog/{filename}")
+        print(f"  wrote cortex/backlog/{filename}")
 
     return written
 
@@ -611,30 +611,30 @@ def write_all(repo_root: Path, session_id: str) -> None:
         repo_root: Absolute path to the repository root.
         session_id: Session ID string for the seed session.
     """
-    session_dir = repo_root / "lifecycle" / "sessions" / session_id
+    session_dir = repo_root / "cortex" / "lifecycle" / "sessions" / session_id
     written_paths: list[Path] = []
 
     write_overnight_state(session_dir, session_id)
     written_paths.append(session_dir / "overnight-state.json")
-    written_paths.append(repo_root / "lifecycle" / "overnight-state.json")
+    written_paths.append(repo_root / "cortex" / "lifecycle" / "overnight-state.json")
 
     write_overnight_events(session_dir, session_id)
     written_paths.append(session_dir / "overnight-events.log")
-    written_paths.append(repo_root / "lifecycle" / "overnight-events.log")
+    written_paths.append(repo_root / "cortex" / "lifecycle" / "overnight-events.log")
 
     for slug, status, *_ in _FEATURES:
         write_feature_files(repo_root, slug, status)
-        feature_dir = repo_root / "lifecycle" / slug
+        feature_dir = repo_root / "cortex" / "lifecycle" / slug
         written_paths.append(feature_dir / "agent-activity.jsonl")
         written_paths.append(feature_dir / "events.log")
         written_paths.append(feature_dir / "plan.md")
 
     write_pipeline_fixtures(repo_root)
-    written_paths.append(repo_root / "lifecycle" / "pipeline-state.json")
-    written_paths.append(repo_root / "lifecycle" / "pipeline-events.log")
+    written_paths.append(repo_root / "cortex" / "lifecycle" / "pipeline-state.json")
+    written_paths.append(repo_root / "cortex" / "lifecycle" / "pipeline-events.log")
 
     write_metrics(repo_root)
-    written_paths.append(repo_root / "lifecycle" / "metrics.json")
+    written_paths.append(repo_root / "cortex" / "lifecycle" / "metrics.json")
 
     backlog_paths = write_backlog_items(repo_root)
     written_paths.extend(backlog_paths)
@@ -655,22 +655,22 @@ def clean_all(repo_root: Path) -> None:
     """Remove all files created by a previous seed run.
 
     Removal order:
-    1. lifecycle/overnight-state.json — only if session_id contains "overnight-seed"
-    2. lifecycle/overnight-events.log — only if first line contains "overnight-seed"
-    3. lifecycle/sessions/overnight-seed-*/ directories (shutil.rmtree)
-    4. lifecycle/seed-feature-*/ directories (shutil.rmtree)
-    5. lifecycle/pipeline-state.json
-    6. lifecycle/pipeline-events.log
-    7. lifecycle/metrics.json
-    8. backlog/990-seed-*.md through backlog/994-seed-*.md
+    1. cortex/lifecycle/overnight-state.json — only if session_id contains "overnight-seed"
+    2. cortex/lifecycle/overnight-events.log — only if first line contains "overnight-seed"
+    3. cortex/lifecycle/sessions/overnight-seed-*/ directories (shutil.rmtree)
+    4. cortex/lifecycle/seed-feature-*/ directories (shutil.rmtree)
+    5. cortex/lifecycle/pipeline-state.json
+    6. cortex/lifecycle/pipeline-events.log
+    7. cortex/lifecycle/metrics.json
+    8. cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md
 
     Args:
         repo_root: Absolute path to the repository root.
     """
     removed: list[str] = []
-    lifecycle_dir = repo_root / "lifecycle"
+    lifecycle_dir = repo_root / "cortex" / "lifecycle"
 
-    # 1. lifecycle/overnight-state.json — guard: session_id must contain "overnight-seed"
+    # 1. cortex/lifecycle/overnight-state.json — guard: session_id must contain "overnight-seed"
     overnight_state = lifecycle_dir / "overnight-state.json"
     if overnight_state.exists():
         try:
@@ -678,64 +678,64 @@ def clean_all(repo_root: Path) -> None:
             session_id = data.get("session_id", "")
             if "overnight-seed" in session_id:
                 overnight_state.unlink()
-                removed.append("lifecycle/overnight-state.json")
+                removed.append("cortex/lifecycle/overnight-state.json")
             else:
                 print(
-                    f"  WARNING: lifecycle/overnight-state.json has session_id={session_id!r}"
+                    f"  WARNING: cortex/lifecycle/overnight-state.json has session_id={session_id!r}"
                     " — not a seed file, skipping."
                 )
         except Exception as exc:
-            print(f"  WARNING: could not parse lifecycle/overnight-state.json ({exc}), skipping.")
+            print(f"  WARNING: could not parse cortex/lifecycle/overnight-state.json ({exc}), skipping.")
 
-    # 2. lifecycle/overnight-events.log — guard: first line must contain "overnight-seed"
+    # 2. cortex/lifecycle/overnight-events.log — guard: first line must contain "overnight-seed"
     overnight_events = lifecycle_dir / "overnight-events.log"
     if overnight_events.exists():
         try:
             first_line = overnight_events.read_text(encoding="utf-8").splitlines()[0]
             if "overnight-seed" in first_line:
                 overnight_events.unlink()
-                removed.append("lifecycle/overnight-events.log")
+                removed.append("cortex/lifecycle/overnight-events.log")
             else:
                 print(
-                    "  WARNING: lifecycle/overnight-events.log first line does not contain"
+                    "  WARNING: cortex/lifecycle/overnight-events.log first line does not contain"
                     " 'overnight-seed' — not a seed file, skipping."
                 )
         except Exception as exc:
-            print(f"  WARNING: could not read lifecycle/overnight-events.log ({exc}), skipping.")
+            print(f"  WARNING: could not read cortex/lifecycle/overnight-events.log ({exc}), skipping.")
 
-    # 3. lifecycle/sessions/overnight-seed-*/ directories
+    # 3. cortex/lifecycle/sessions/overnight-seed-*/ directories
     sessions_dir = lifecycle_dir / "sessions"
     for session_dir in sessions_dir.glob("overnight-seed-*/"):
         shutil.rmtree(session_dir)
-        removed.append(f"lifecycle/sessions/{session_dir.name}/")
+        removed.append(f"cortex/lifecycle/sessions/{session_dir.name}/")
 
-    # 4. lifecycle/seed-feature-*/ directories
+    # 4. cortex/lifecycle/seed-feature-*/ directories
     for feature_dir in lifecycle_dir.glob("seed-feature-*/"):
         shutil.rmtree(feature_dir)
-        removed.append(f"lifecycle/{feature_dir.name}/")
+        removed.append(f"cortex/lifecycle/{feature_dir.name}/")
 
-    # 5. lifecycle/pipeline-state.json
+    # 5. cortex/lifecycle/pipeline-state.json
     with suppress(FileNotFoundError):
         (lifecycle_dir / "pipeline-state.json").unlink()
-        removed.append("lifecycle/pipeline-state.json")
+        removed.append("cortex/lifecycle/pipeline-state.json")
 
-    # 6. lifecycle/pipeline-events.log
+    # 6. cortex/lifecycle/pipeline-events.log
     with suppress(FileNotFoundError):
         (lifecycle_dir / "pipeline-events.log").unlink()
-        removed.append("lifecycle/pipeline-events.log")
+        removed.append("cortex/lifecycle/pipeline-events.log")
 
-    # 7. lifecycle/metrics.json
+    # 7. cortex/lifecycle/metrics.json
     with suppress(FileNotFoundError):
         (lifecycle_dir / "metrics.json").unlink()
-        removed.append("lifecycle/metrics.json")
+        removed.append("cortex/lifecycle/metrics.json")
 
-    # 8. backlog/990-seed-*.md through backlog/994-seed-*.md
-    backlog_dir = repo_root / "backlog"
+    # 8. cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md
+    backlog_dir = repo_root / "cortex" / "backlog"
     for prefix in range(990, 995):
         for path in backlog_dir.glob(f"{prefix}-seed-*.md"):
             with suppress(FileNotFoundError):
                 path.unlink()
-                removed.append(f"backlog/{path.name}")
+                removed.append(f"cortex/backlog/{path.name}")
 
     # Summary
     if removed:

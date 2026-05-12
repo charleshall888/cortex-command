@@ -102,8 +102,8 @@ def _resolve_session_path(root: Path) -> tuple[Path, Path]:
 
     All exceptions are swallowed and the fallback is returned.
     """
-    fallback_state = root / "lifecycle" / "sessions" / "latest-overnight" / "overnight-state.json"
-    fallback_events = root / "lifecycle" / "sessions" / "latest-overnight" / "overnight-events.log"
+    fallback_state = root / "cortex" / "lifecycle" / "sessions" / "latest-overnight" / "overnight-state.json"
+    fallback_events = root / "cortex" / "lifecycle" / "sessions" / "latest-overnight" / "overnight-events.log"
 
     try:
         pointer_path = Path.home() / ".local" / "share" / "overnight-sessions" / "active-session.json"
@@ -125,7 +125,7 @@ async def _poll_state_files(state: DashboardState, root: Path) -> None:
     Retains the last-good value on error (i.e. does not overwrite a valid
     cached value with None on a transient read failure).
     """
-    lifecycle_dir = root / "lifecycle"
+    lifecycle_dir = root / "cortex" / "lifecycle"
     pipeline_path = lifecycle_dir / "sessions" / "latest-pipeline" / "pipeline-state.json"
 
     while True:
@@ -160,7 +160,7 @@ async def _poll_state_files(state: DashboardState, root: Path) -> None:
                     try:
                         pr_path = Path(project_root)
                         if pr_path.exists():
-                            project_lifecycle_dir = pr_path / "lifecycle"
+                            project_lifecycle_dir = pr_path / "cortex" / "lifecycle"
                     except OSError:
                         pass  # degrade gracefully to default
                 if project_lifecycle_dir is lifecycle_dir and not project_root:
@@ -169,7 +169,7 @@ async def _poll_state_files(state: DashboardState, root: Path) -> None:
                     )
                     if integration_branches:
                         first_key = next(iter(integration_branches))
-                        candidate = Path(first_key) / "lifecycle"
+                        candidate = Path(first_key) / "cortex" / "lifecycle"
                         if candidate.exists():
                             project_lifecycle_dir = candidate
 
@@ -282,8 +282,8 @@ async def _poll_jsonl_events(state: DashboardState, root: Path) -> None:
 
 async def _poll_slow(state: DashboardState, root: Path) -> None:
     """Poll backlog counts every 30 seconds."""
-    backlog_dir = root / "backlog"
-    lifecycle_dir = root / "lifecycle"
+    backlog_dir = root / "cortex" / "backlog"
+    lifecycle_dir = root / "cortex" / "lifecycle"
 
     while True:
         try:
@@ -304,7 +304,7 @@ async def _poll_slow(state: DashboardState, root: Path) -> None:
 
 async def _poll_alerts(state: DashboardState, root: Path) -> None:
     """Evaluate alert conditions and fire notifications every 5 seconds."""
-    lifecycle_dir = root / "lifecycle"
+    lifecycle_dir = root / "cortex" / "lifecycle"
 
     while True:
         try:

@@ -922,7 +922,7 @@ def parse_session_detail(session_id: str, lifecycle_dir: Path) -> dict | None:
         try:
             pr_path = Path(project_root)
             if pr_path.exists():
-                project_lifecycle_dir = pr_path / "lifecycle"
+                project_lifecycle_dir = pr_path / "cortex" / "lifecycle"
         except OSError:
             pass  # degrade gracefully to default
 
