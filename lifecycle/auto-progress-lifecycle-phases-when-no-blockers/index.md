@@ -7,7 +7,7 @@ tier: complex
 criticality: high
 created: 2026-05-11
 updated: 2026-05-11
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 ---
 
 # Auto-progress lifecycle phases when no blockers
