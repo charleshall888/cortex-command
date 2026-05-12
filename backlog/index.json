@@ -135,21 +135,14 @@
       "repo-layout",
       "consolidate-artifacts-under-cortex-root"
     ],
-    "areas": [
-      "init",
-      "overnight-runner",
-      "dashboard",
-      "backlog",
-      "skills",
-      "docs"
-    ],
+    "areas": [],
     "created": "2026-05-11",
     "updated": "2026-05-12",
     "blocks": [],
     "blocked_by": [],
     "parent": "200",
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/relocate-cortex-command-artifacts-under-cortex-root/spec.md",
     "discovery_source": "research/consolidate-artifacts-under-cortex-root/research.md",
     "plan": null,
     "uuid": "47fde14d-e2a0-48e3-9a56-84d4cf6018ca",

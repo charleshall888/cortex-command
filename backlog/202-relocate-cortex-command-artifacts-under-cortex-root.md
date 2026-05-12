@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 47fde14d-e2a0-48e3-9a56-84d4cf6018ca
 title: "Relocate cortex-command artifacts under cortex/ root"
-status: ready
+status: refined
 priority: medium
 type: feature
 created: 2026-05-11
@@ -10,11 +10,12 @@ updated: 2026-05-12
 tags: [installer-experience, repo-layout, consolidate-artifacts-under-cortex-root]
 complexity: complex
 criticality: medium
-areas: [init, overnight-runner, dashboard, backlog, skills, docs]
+areas: []
 session_id: null
 parent: 200
 blocked-by: []
 discovery_source: research/consolidate-artifacts-under-cortex-root/research.md
+spec: lifecycle/relocate-cortex-command-artifacts-under-cortex-root/spec.md
 ---
 
 # Relocate cortex-command artifacts under cortex/ root
