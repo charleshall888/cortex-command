@@ -122,21 +122,14 @@ def _run(args: argparse.Namespace) -> int:
     # no longer exist).
     if args.unregister:
         resolved_path = Path(args.path or os.getcwd()).resolve()
-        legacy_target_path = str(resolved_path / "lifecycle" / "sessions") + "/"
-        wide_target_path = str(resolved_path / "lifecycle") + "/"
-        research_target_path = str(resolved_path / "research") + "/"
+        cortex_target_path = str(resolved_path / "cortex") + "/"
         # R14 pre-flight still fires so a malformed settings file surfaces
         # before we try to mutate it.
         settings_merge.validate_settings(home)
-        # Unconditionally attempt removal of the legacy narrow
-        # `lifecycle/sessions/` entry, the wide `lifecycle/` entry, and
-        # the new `research/` entry (R9). The exact-string equality filter
-        # is a no-op when an entry is absent (idempotent), so a fresh-init
-        # repo that only registered a subset safely no-ops on the missing
-        # entries.
-        settings_merge.unregister(resolved_path, legacy_target_path, home=home)
-        settings_merge.unregister(resolved_path, wide_target_path, home=home)
-        settings_merge.unregister(resolved_path, research_target_path, home=home)
+        # Remove the umbrella cortex/ entry. The exact-string equality filter
+        # is a no-op when the entry is absent (idempotent), so a repo that
+        # was never registered under cortex/ safely no-ops.
+        settings_merge.unregister(resolved_path, cortex_target_path, home=home)
         return 0
 
     # Step 1: git-repo + submodule gates (R2, R3). Resolution is done
@@ -144,13 +137,15 @@ def _run(args: argparse.Namespace) -> int:
     # step so no downstream helper calls resolve() independently.
     repo_root = _resolve_repo_root(args.path)
 
-    # Step 2: symlink-safety gate (R13). Returns the canonical lifecycle
-    # path string that is passed into register() at step 7 so registration
-    # uses the exact value validated here (no TOCTOU re-resolve).
-    lifecycle_target = scaffold.check_symlink_safety(repo_root)
-    # R9: derive the research/ target string. cortex does not scaffold
-    # research/, so no symlink-safety gate is run for this path.
-    research_target = str(repo_root / "research") + "/"
+    # Step 2: symlink-safety gate (R13). Still runs to validate that the
+    # lifecycle/ path does not escape the repo via a symlink; the return
+    # value is no longer threaded into register() since the umbrella cortex/
+    # grant supersedes the narrow lifecycle/ path.
+    scaffold.check_symlink_safety(repo_root)
+    # Derive the umbrella cortex/ target. A single broader grant covers
+    # cortex/lifecycle/sessions/ and all other cortex-managed state,
+    # closing the same TOCTOU window as the prior dual-narrow grants.
+    cortex_target = str(repo_root / "cortex") + "/"
 
     # Step 3: malformed-settings pre-flight (R14) — no mutation.
     settings_merge.validate_settings(home)
@@ -196,12 +191,11 @@ def _run(args: argparse.Namespace) -> int:
     # branches above may or may not have touched .gitignore.
     scaffold.ensure_gitignore(repo_root)
 
-    # Step 7: register allowWrite entries last (ADR-3). Uses the canonical
-    # lifecycle_target captured from check_symlink_safety to avoid TOCTOU.
-    # R9: register lifecycle FIRST, research SECOND. Order is invariant —
-    # do not reorder; the test suite asserts on this ordering.
-    settings_merge.register(repo_root, lifecycle_target, home=home)
-    settings_merge.register(repo_root, research_target, home=home)
+    # Step 7: register allowWrite entry last (ADR-3). A single umbrella
+    # cortex/ grant covers all cortex-managed state under the repo root;
+    # no TOCTOU re-resolve is needed because repo_root was resolved once
+    # at step 1.
+    settings_merge.register(repo_root, cortex_target, home=home)
 
     return 0
 
