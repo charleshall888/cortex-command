@@ -81,6 +81,14 @@ Combine findings into `cortex/research/{topic}/research.md`:
 ```markdown
 # Research: {topic}
 
+## Headline Finding
+<!--
+One paragraph. State the verdict and the one or two key findings supporting it.
+This is the first content section the principal-architect gate reads; it must
+stand on its own without requiring the reader to scan downstream sections to
+recover the bottom line.
+-->
+
 ## Research Questions
 1. [Question] → **[Answer or "Unresolved: reason"]**
 2. ...
