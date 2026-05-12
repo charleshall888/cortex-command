@@ -1,0 +1,11 @@
+{
+  "feature": "improve-discovery-gate-presentation",
+  "artifact_sha256": "5928d156bb0c9f57122798df318791b6f9bdbee814e63ec3c682ae4b7888f46d",
+  "b_class_findings": [
+    {
+      "angle": "Kept-pauses parity-test pattern applicability",
+      "finding": "R8 specifies the discovery ## Kept user pauses inventory uses H2, but the lifecycle parity test the discovery test is supposed to mirror hardcodes H3 in its section-parsing regex. The spec does not flag that the inventory-parser scaffolding must diverge from the lifecycle test regex, contradicting the mirrors exactly framing.",
+      "evidence_quote": "Discovery inventory anchor is ## Kept user pauses heading (H2, matching the lifecycle file H3 modulo level \u2014 picked H2 because discovery SKILL.md has fewer existing H2 sections)."
+    }
+  ]
+}
