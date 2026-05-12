@@ -72,7 +72,7 @@ Cleanup-then-deploy ordering: refactor the two empirically-surfaced pre-relocati
   - **Empty staged set** — `--staged` with no in-scope staged files exits 0 immediately.
   Each test invokes `subprocess.run([str(REPO_ROOT / "bin/cortex-check-path-hardcoding"), <mode>, "--root", str(fixture_dir)], capture_output=True, text=True)` and asserts on `returncode`, `stdout`, `stderr`. Resolve `REPO_ROOT` via the same `_repo_root()` helper sibling test files use (`Path(__file__).resolve().parents[1]`). Fixture files for the gate test are committed (not generated at test time) because they contain the bare-prefix violation strings that the gate is designed to flag — generating them at test time would mean the test file itself contains those strings, which is fine under tests/ exclusion but slightly cleaner to keep as committed fixtures.
 - **Verification**: `just test 2>&1 | grep -E 'test_check_path_hardcoding'` returns the test file's results AND `just test` overall exit code is 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (used inline `tmp_path` writes instead of committed fixture files — same coverage, fewer committed files)
 
 ### Task 6: Whole-repo audit verification
 - **Files**: (no files modified — verification-only task)
