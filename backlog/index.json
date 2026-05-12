@@ -1,34 +1,5 @@
 [
   {
-    "id": 195,
-    "title": "Reframe discovery to principal-architect posture",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "discovery",
-      "skill-rewrite"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-11",
-    "updated": "2026-05-11",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "lifecycle/reframe-discovery-to-principal-architect-posture/spec.md",
-    "discovery_source": "research/discovery-architectural-posture-rewrite/research.md",
-    "plan": null,
-    "uuid": "ce49fbc8-a968-48ed-b1e7-de59ef6f171e",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -122,7 +93,7 @@
   {
     "id": 198,
     "title": "Trim cortex-log-invocation shim cost (per-call ~21ms)",
-    "status": "backlog",
+    "status": "refined",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -137,13 +108,13 @@
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/trim-cortex-log-invocation-shim-cost-per-call-21ms/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "acb70ac0-3581-40bf-acb3-e09577f050b5",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -180,7 +151,7 @@
   {
     "id": 199,
     "title": "Consolidate common.py:read_tier and overnight/report.py:_read_tier",
-    "status": "backlog",
+    "status": "refined",
     "priority": "low",
     "type": "chore",
     "tags": [
@@ -188,20 +159,22 @@
       "lifecycle",
       "deduplication"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner"
+    ],
     "created": "2026-05-11",
     "updated": "2026-05-11",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "lifecycle/consolidate-commonpyread-tier-and-overnight-reportpy-read-tier/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "d88b8d0f-df9f-4f14-98f3-1bfcc994c475",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

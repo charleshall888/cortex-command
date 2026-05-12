@@ -3,7 +3,7 @@ schema_version: "1"
 uuid: ce49fbc8-a968-48ed-b1e7-de59ef6f171e
 title: "Reframe discovery to principal-architect posture"
 type: feature
-status: refined
+status: complete
 priority: high
 blocked-by: []
 tags: [discovery, skill-rewrite]
@@ -15,6 +15,7 @@ criticality: high
 spec: lifecycle/reframe-discovery-to-principal-architect-posture/spec.md
 areas: [skills]
 lifecycle_phase: implement
+session_id: null
 ---
 
 > **Direction history**: This ticket landed DR-1 from the discovery_source. A subsequent reconsideration shifted to DR-G (demote-decompose: tickets promoted on-demand instead of created at discovery time) as #196 — that direction was reverted when honest re-examination showed it was solving a hypothetical pain (stale-ticket accumulation) not in the user's stated pain list, while DR-1 directly addresses all six stated pains. #196 is closed superseded by this ticket. The DR-G exploration produced 9 concrete strengthenings folded into this ticket's edges and spec-phase deliverables below. See `research/discovery-architectural-posture-rewrite/research.md` revision note 4 for the full audit trail.

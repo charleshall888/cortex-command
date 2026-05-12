@@ -9,3 +9,11 @@
 {"ts": "2026-05-12T00:19:25Z", "event": "batch_dispatch", "feature": "reframe-discovery-to-principal-architect-posture", "batch": 1, "tasks": [2]}
 {"ts": "2026-05-12T00:23:16Z", "event": "batch_dispatch", "feature": "reframe-discovery-to-principal-architect-posture", "batch": 2, "tasks": [9]}
 {"ts": "2026-05-12T00:23:17Z", "event": "architecture_section_written", "feature": "reframe-discovery-to-principal-architect-posture", "topic": "reframe-discovery-to-principal-architect-posture", "piece_count": 0, "has_why_n_justification": false, "status": "re_walk", "re_walk_attempt": 1}
+{"ts": "2026-05-12T00:28:02Z", "event": "batch_dispatch", "feature": "reframe-discovery-to-principal-architect-posture", "batch": 3, "tasks": [3, 4, 8], "dispatch_order": "sequential-on-main"}
+{"ts": "2026-05-12T00:35:04Z", "event": "batch_dispatch", "feature": "reframe-discovery-to-principal-architect-posture", "batch": 4, "tasks": [5]}
+{"ts": "2026-05-12T00:38:14Z", "event": "batch_dispatch", "feature": "reframe-discovery-to-principal-architect-posture", "batch": 5, "tasks": [6]}
+{"ts": "2026-05-12T00:42:58Z", "event": "batch_dispatch", "feature": "reframe-discovery-to-principal-architect-posture", "batch": 6, "tasks": [7]}
+{"ts": "2026-05-12T00:49:21Z", "event": "phase_transition", "feature": "reframe-discovery-to-principal-architect-posture", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-12T00:54:23Z", "event": "review_verdict", "feature": "reframe-discovery-to-principal-architect-posture", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-12T00:54:23Z", "event": "phase_transition", "feature": "reframe-discovery-to-principal-architect-posture", "from": "review", "to": "complete"}
+{"ts": "2026-05-12T00:55:55Z", "event": "feature_complete", "feature": "reframe-discovery-to-principal-architect-posture", "tasks_total": 9, "rework_cycles": 0}

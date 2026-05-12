@@ -39,7 +39,7 @@ Reframe `/cortex-core:discovery` from finding-mirroring to architectural distill
 - **Complexity**: complex
 - **Context**: Lines targeted for removal per spec R10 + research §"Files that will change": `:24-27` (R2(a)/R2(b)/E9), `:37-42` (R3 per-item-ack), `:35` (R4 cap), `:70` (R5 flag propagation), `:46-52` (R7 flag-event-types), E10 invariant. Edge-vs-Touch-point distinction (spec R5): `## Edges` documents structural constraints naming contract surfaces by name (e.g., "phase-transition contract"); `## Touch points` documents specific paths/lines/section indices. If an edge would name a path:line to express its constraint, the path:line moves to Touch points and the structural-constraint summary remains in Edges. Test partition for Task 3 (revised from spec R11): ≥10 functions = 3 architecture-consumption §2 tests + 2 single-piece §4 tests + 2 zero-piece §4 tests + 3 uniform-template body-section tests. R15 batch-review (2 tests) + prescriptive-prose integration (2 tests) are added by Task 5 so the file ends at the spec R11 target of ≥14 functions after Task 5 lands. Removed: tests for R2(a)/(b)/E9, R3 per-item-ack, R4 cap, R5 propagation, R7 flag-events, E10 invariant.
 - **Verification**: `grep -c "premise-unverified\|canonical pattern\|all items flagged\|Return to research\|propagation\|originating\|invariant" skills/discovery/references/decompose.md` = 0 AND `grep -c "## Architecture\|single-piece\|zero-piece" skills/discovery/references/decompose.md` ≥ 3 AND `grep -c "^## Role$\|^## Integration$\|^## Edges$\|^## Touch points$" skills/discovery/references/decompose.md` ≥ 4 AND `grep -c "PASSES\|FLAGS\|NOT flagged" skills/discovery/references/decompose.md` ≥ 4 AND `just test tests/test_decompose_rules.py` exits 0 (10+ functions, no R15/prescriptive-integration assertions yet) — pass if all conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (9cc1489)
 
 ### Task 4: R2 — scope envelope output in clarify.md §6
 - **Files**: `skills/discovery/references/clarify.md`
@@ -48,7 +48,7 @@ Reframe `/cortex-core:discovery` from finding-mirroring to architectural distill
 - **Complexity**: simple
 - **Context**: `skills/discovery/references/clarify.md` (65 ln). Existing §6 ends ~line 56 with the requirements-alignment note. Append after that. Spec R2 acceptance documents both cases inline.
 - **Verification**: `grep -c "Scope envelope" skills/discovery/references/clarify.md` ≥ 1 AND `grep -c "No envelope needed\|optional\|tractable" skills/discovery/references/clarify.md` ≥ 1 — pass if both conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (d435726)
 
 ### Task 5: Unit E — research.md Architecture section + falsification gate + decompose.md R15 batch-review gate + R15/prescriptive-integration tests
 - **Files**: `skills/discovery/references/research.md`, `skills/discovery/references/decompose.md`, `skills/discovery/SKILL.md`, `tests/test_decompose_rules.py`
@@ -57,7 +57,7 @@ Reframe `/cortex-core:discovery` from finding-mirroring to architectural distill
 - **Complexity**: complex
 - **Context**: `skills/discovery/references/research.md` (155 ln). §6 output template insertion point: after Feasibility (after line ~107), before Decision Records. Non-constructive topic shapes (diagnostic/policy/migration): single permissive paragraph allowing pieces as rule/scope/exceptions OR sequence steps within the same Role/Integration/Edges shape per spec R1. `skills/discovery/references/decompose.md` §5 insertion: after Task 3's trim has landed. R15 gate semantics per spec edge-case: revise-piece re-walks ticket N's Role/Integration/Edges/Touch-points and re-presents the FULL batch (not just ticket N). Event emission path resolution depends on Task 6's helper module — but the prose just names the event by literal name (`"event": "approval_checkpoint_responded"`); actual emission code lives in `cortex_command/discovery.py` (Task 6). SKILL.md (73 ln) cross-reference: a single mention of the R15 gate near the §3 phase-routing table — placed AFTER the existing research-phase entry so the cross-reference reads forward into Task 6's R4 approval-gate insertion (which lands in §3 between research-phase and decompose-phase entries). Test additions (2 R15 + 2 prescriptive-prose integration) follow the existing test-file conventions in `tests/test_decompose_rules.py`.
 - **Verification**: `grep -c "^## Architecture$" skills/discovery/references/research.md` = 1 AND `grep -c "^### Pieces$\|^### Integration shape$\|^### Seam-level edges$\|^### Why N pieces$" skills/discovery/references/research.md` = 4 AND `grep -c "named contract surface\|one Role/Integration/Edges paragraph\|distinguishing detail" skills/discovery/references/research.md` ≥ 2 AND `grep -c "approve-all\|revise-piece\|drop-piece\|decompose-commit" skills/discovery/references/decompose.md skills/discovery/SKILL.md` ≥ 4 AND `bin/cortex-check-events-registry --staged --root .` exits 0 AND `just test tests/test_decompose_rules.py` exits 0 (now ≥14 functions per spec R11) — pass if all conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (7338a2e)
 
 ### Task 6: Unit F — `cortex_command/discovery.py` helper module + approval-gate prose
 - **Files**: `cortex_command/discovery.py`, `tests/test_discovery_module.py`, `skills/discovery/SKILL.md`
@@ -66,7 +66,7 @@ Reframe `/cortex-core:discovery` from finding-mirroring to architectural distill
 - **Complexity**: complex
 - **Context**: `cortex_command/critical_review.py` is the precedent pattern — atomic subcommands fusing validation + JSONL emission + telemetry. Argparse with subcommand dispatch. Stdlib-only. The `LIFECYCLE_SESSION_ID` and any lifecycle-slug env var set by the SessionStart hook should be the lookup keys for active-lifecycle detection (verify the existing env shape during implementation). Test file partition per spec R9 acceptance: ≥7 functions covering (i) each emit-* subcommand's validation + emission, (ii) `resolve-events-log-path` honors `-N` slug suffix, (iii) `resolve-events-log-path` honors active-lifecycle env override, (iv) the emit-* subcommands invoke `resolve-events-log-path` (not a hardcoded path). SKILL.md (73 ln) approval-gate prose insertion point: between the research-phase entry and decompose-phase entry in §3 phase routing. No `parent_discovery:` frontmatter field — body-section reference only per spec Non-Requirements. No nested-skill recursion.
 - **Verification**: `python3 -m cortex_command.discovery --help` exits 0 AND `python3 -m cortex_command.discovery resolve-events-log-path --help` exits 0 AND `just test tests/test_discovery_module.py` exits 0 AND `grep -c "approval_checkpoint_responded\|approve\|revise\|drop\|promote-sub-topic" skills/discovery/SKILL.md skills/discovery/references/*.md` ≥ 4 AND `grep -c "parent_discovery:" skills/discovery/ -r` = 0 AND `bin/cortex-check-events-registry --staged --root .` exits 0 — pass if all conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (0266152)
 
 ### Task 7: R13 — re-run slug-collision semantics + frontmatter-tolerance smoke test
 - **Files**: `skills/discovery/SKILL.md`, `tests/test_superseded_frontmatter_tolerance.py`
@@ -75,7 +75,7 @@ Reframe `/cortex-core:discovery` from finding-mirroring to architectural distill
 - **Complexity**: simple
 - **Context**: `skills/discovery/SKILL.md:42-46` is the existing "phase = complete (offer to re-run or update)" routing area where the re-run semantics belong. Downstream parsers to test (spec R13 acceptance): refine's clarify-critic loader, lifecycle's discovery-bootstrap loader, the backlog index generator. Locate these via `grep -rn "discovery_source\|research:" skills/refine skills/lifecycle cortex_command/` during implementation. Smoke-test pattern: write a temp YAML/markdown fixture with the `superseded:` field; invoke each parser entry point with the fixture; assert no exception and no validation rejection. Depends on Task 6 because SKILL.md is also touched by Task 6 (approval gate) — serialize to avoid merge conflicts.
 - **Verification**: `grep -c "superseded:\|topic-N\|slug.*collision" skills/discovery/SKILL.md` ≥ 2 AND `just test tests/test_superseded_frontmatter_tolerance.py` exits 0 — pass if both conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] complete (faf7f30)
 
 ### Task 8: Unit D — rewrite ticket #195 body to comply with prescriptive-prose check
 - **Files**: `backlog/195-reframe-discovery-to-principal-architect-posture.md`
@@ -84,7 +84,7 @@ Reframe `/cortex-core:discovery` from finding-mirroring to architectural distill
 - **Complexity**: simple
 - **Context**: `backlog/195-reframe-discovery-to-principal-architect-posture.md` currently has citations in Integration (line 33), Edges (lines 40-48), and Edges-from-DR-G-carryover (lines 50-58). The scanner from Task 2 enforces the constraint. If the rewrite is impossible coherently, that is evidence the gate is over-strict — escalate to LEX-2 regex refinement per spec R6's stopping rule (one use only per cycle).
 - **Verification**: `bin/cortex-check-prescriptive-prose --root . backlog/195-reframe-discovery-to-principal-architect-posture.md` exits 0 — pass if exit code = 0 (zero violations).
-- **Status**: [ ] pending
+- **Status**: [x] complete (946689c)
 
 ### Task 9: R12 — pre-implementation spec-phase re-walk against two corpora (gates Tasks 3-8)
 - **Files**: `lifecycle/reframe-discovery-to-principal-architect-posture/re-walk.md`
