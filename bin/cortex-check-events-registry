@@ -67,7 +67,11 @@ ALLOWED_CATEGORIES: frozenset[str] = frozenset(
     {"live", "audit-affordance", "deprecated-pending-removal"}
 )
 ALLOWED_TARGETS: frozenset[str] = frozenset(
-    {"per-feature-events-log", "overnight-events-log"}
+    {
+        "per-feature-events-log",
+        "overnight-events-log",
+        "research-topic-events-log",
+    }
 )
 ALLOWED_SCAN_COVERAGE: frozenset[str] = frozenset({"gate-enforced", "manual"})
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -90,6 +94,35 @@ REGISTRY_COLUMNS: tuple[str, ...] = (
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
+
+def _split_table_row(stripped: str) -> list[str]:
+    """Split a markdown table row on unescaped ``|`` boundaries.
+
+    Recognizes ``\\|`` as a literal pipe inside a cell so dual-target syntax
+    (e.g. ``per-feature-events-log \\| research-topic-events-log``) survives
+    cell-splitting and reaches the target-cell parser as a single value with
+    one embedded literal pipe.
+    """
+    body = stripped.strip("|")
+    cells: list[str] = []
+    current = []
+    i = 0
+    while i < len(body):
+        ch = body[i]
+        if ch == "\\" and i + 1 < len(body) and body[i + 1] == "|":
+            current.append("|")
+            i += 2
+            continue
+        if ch == "|":
+            cells.append("".join(current).strip())
+            current = []
+            i += 1
+            continue
+        current.append(ch)
+        i += 1
+    cells.append("".join(current).strip())
+    return cells
 
 
 @dataclass(frozen=True)
@@ -147,7 +180,7 @@ def parse_registry(
             saw_separator = False
             header_indices = {}
             continue
-        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        cells = _split_table_row(stripped)
         if not saw_header:
             lower_cells = [c.lower().strip("`").strip() for c in cells]
             if "event_name" in lower_cells:
@@ -195,15 +228,29 @@ def parse_registry(
         )
 
         # Schema validation: required-always fields.
-        if row.target and row.target not in ALLOWED_TARGETS:
-            errors.append(
-                GateError(
-                    source_path,
-                    idx,
-                    "INVALID_ROW",
-                    f"row {event_name!r} has target {row.target!r}; set target to one of {sorted(ALLOWED_TARGETS)}",
+        # Target cells may declare a single target (e.g. ``per-feature-events-log``)
+        # or a dual-target pipe-separated list
+        # (e.g. ``per-feature-events-log | research-topic-events-log``). Each
+        # part validates independently against ALLOWED_TARGETS so single-target
+        # cells keep their pre-pipe-split semantics.
+        if row.target:
+            target_parts = [
+                part.strip().strip("`").strip()
+                for part in row.target.split("|")
+            ]
+            invalid_parts = [
+                part for part in target_parts if part and part not in ALLOWED_TARGETS
+            ]
+            empty_part = any(not part for part in target_parts)
+            if invalid_parts or empty_part:
+                errors.append(
+                    GateError(
+                        source_path,
+                        idx,
+                        "INVALID_ROW",
+                        f"row {event_name!r} has target {row.target!r}; set each pipe-separated part to one of {sorted(ALLOWED_TARGETS)}",
+                    )
                 )
-            )
         if row.scan_coverage and row.scan_coverage not in ALLOWED_SCAN_COVERAGE:
             errors.append(
                 GateError(
