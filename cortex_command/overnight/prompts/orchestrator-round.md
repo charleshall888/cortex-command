@@ -232,8 +232,8 @@ from cortex_command.overnight.events import (
 )
 import json
 
-# Repo-root lifecycle.config.md (fail-closed: missing file -> gate False).
-gate_enabled = read_synthesizer_gate(Path("lifecycle.config.md"))
+# Repo-root cortex/lifecycle.config.md (fail-closed: missing file -> gate False).
+gate_enabled = read_synthesizer_gate(Path("cortex/lifecycle.config.md"))
 
 def _read_criticality(feature_slug: str) -> str:
     """Most-recent ``lifecycle_start`` or ``criticality_override`` event wins.
@@ -241,7 +241,7 @@ def _read_criticality(feature_slug: str) -> str:
     Default to ``"medium"`` when no criticality field is found, mirroring
     ``skills/lifecycle/references/plan.md`` §1a precedent.
     """
-    events_path = Path(f"lifecycle/{feature_slug}/events.log")
+    events_path = Path(f"cortex/lifecycle/{feature_slug}/events.log")
     if not events_path.exists():
         return "medium"
     last = "medium"
@@ -283,8 +283,8 @@ log_event(
     details={
         "variant_count": variant_count,  # 2 or 3
         "variant_paths": [
-            f"lifecycle/{f['slug']}/plan-variant-A.md",
-            f"lifecycle/{f['slug']}/plan-variant-B.md",
+            f"cortex/lifecycle/{f['slug']}/plan-variant-A.md",
+            f"cortex/lifecycle/{f['slug']}/plan-variant-B.md",
             # plan-variant-C.md if variant_count == 3
         ],
     },
@@ -331,7 +331,7 @@ The `last occurrence` semantics tolerate prose that quotes the `<!--findings-jso
 - **`verdict ∈ {"A","B","C"}` AND `confidence ∈ {"high","medium"}`**: copy the selected variant's content to `lifecycle/{{feature_slug}}/plan.md` (verdict `"A"` → `plan-variant-A.md`, `"B"` → `plan-variant-B.md`, `"C"` → tie at high/medium confidence is a logically impossible state per the synthesizer fragment, so treat as malformed and follow the deferred branch). Then append a v2 `plan_comparison` event to `lifecycle/{{feature_slug}}/events.log`:
 
   ```python
-  with open(f"lifecycle/{f['slug']}/events.log", "a", encoding="utf-8") as fh:
+  with open(f"cortex/lifecycle/{f['slug']}/events.log", "a", encoding="utf-8") as fh:
       fh.write(json.dumps({
           "ts": "<ISO 8601 UTC>",
           "event": "plan_comparison",
@@ -448,7 +448,7 @@ Use the overnight batch plan generator to create a temporary master plan for thi
 from cortex_command.overnight.batch_plan import generate_batch_plan
 plan_path, excluded = generate_batch_plan(
     features=["feature-a", "feature-b"],
-    feature_plan_paths={"feature-a": "lifecycle/<feature-a-slug>/plan.md", "feature-b": "lifecycle/<feature-b-slug>/plan.md"},
+    feature_plan_paths={"feature-a": "cortex/lifecycle/<feature-a-slug>/plan.md", "feature-b": "cortex/lifecycle/<feature-b-slug>/plan.md"},
     test_command=None,
     base_branch=integration_branch,
     output_path=Path("{session_dir}") / "batch-plan-round-{round_number}.md",
