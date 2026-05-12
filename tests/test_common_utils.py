@@ -10,6 +10,7 @@ Tests cover:
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,9 @@ from cortex_command.common import (
     read_tier,
     requires_review,
 )
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+TIER_PARITY_ROOT = REPO_ROOT / "tests" / "fixtures" / "state" / "tier_parity"
 
 
 # ---------------------------------------------------------------------------
@@ -293,3 +297,98 @@ class TestMarkTaskDoneInPlanIdempotent:
         updated = plan_pending.read_text(encoding="utf-8")
         assert "- **Status**: [x] pending" in updated
         assert "- **Status**: [ ] pending" not in updated
+
+
+# ---------------------------------------------------------------------------
+# read_tier — canonical-rule cases (i)–(iii) using tier_parity fixtures
+# ---------------------------------------------------------------------------
+
+CANONICAL_CASES = [
+    ("lifecycle_start_only", "simple"),
+    ("start_then_override", "complex"),
+    ("stray_tier_after_override", "simple"),
+]
+
+
+def _stage_tier_parity_fixture(tmp_path: Path, slug: str) -> None:
+    """Stage ``tests/fixtures/state/tier_parity/<slug>/events.log`` under
+    ``tmp_path/lifecycle/<slug>/events.log`` so read_tier can be invoked with
+    an absolute lifecycle_base."""
+    source = TIER_PARITY_ROOT / slug / "events.log"
+    feature_dir = tmp_path / "lifecycle" / slug
+    feature_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy(source, feature_dir / "events.log")
+
+
+@pytest.mark.parametrize(
+    "slug,expected",
+    CANONICAL_CASES,
+    ids=[c[0] for c in CANONICAL_CASES],
+)
+def test_canonical_tier_rule(
+    tmp_path: Path,
+    slug: str,
+    expected: str,
+) -> None:
+    """Cases (i)–(iii): read_tier returns the canonical tier value for each
+    tier_parity fixture.
+
+    Slugs: lifecycle_start_only, start_then_override, stray_tier_after_override.
+    """
+    source = TIER_PARITY_ROOT / slug / "events.log"
+    assert source.exists(), f"missing fixture: {source}"
+    _stage_tier_parity_fixture(tmp_path, slug)
+
+    result = read_tier(slug, lifecycle_base=tmp_path / "lifecycle")
+
+    assert result == expected, (
+        f"read_tier({slug!r}) returned {result!r}, expected {expected!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# read_tier — key-name tests: T-A and T-B (migrated from test_report.py)
+# ---------------------------------------------------------------------------
+
+
+def test_read_tier_ignores_complexity_field_only_returns_default(
+    tmp_path: Path,
+) -> None:
+    """T-A: read_tier on an events.log containing only a ``complexity`` field
+    (no ``tier`` field) returns ``"simple"`` — the default. The wrong key is
+    silently ignored."""
+    feature = "tA-complexity-only"
+    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir.mkdir(parents=True, exist_ok=True)
+    events_log = feature_dir / "events.log"
+    events_log.write_text(
+        json.dumps({"event": "lifecycle_start", "feature": feature, "complexity": "complex"})
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "simple"
+
+
+def test_read_tier_canonical_tier_wins_over_stray_complexity(
+    tmp_path: Path,
+) -> None:
+    """T-B: read_tier on an events.log containing BOTH ``tier: "complex"`` and
+    a stray ``complexity: "simple"`` returns ``"complex"`` — the canonical
+    ``tier`` key wins."""
+    feature = "tB-both-keys"
+    feature_dir = tmp_path / "lifecycle" / feature
+    feature_dir.mkdir(parents=True, exist_ok=True)
+    events_log = feature_dir / "events.log"
+    events_log.write_text(
+        json.dumps({
+            "event": "lifecycle_start",
+            "feature": feature,
+            "tier": "complex",
+            "complexity": "simple",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    assert read_tier(feature, lifecycle_base=tmp_path / "lifecycle") == "complex"
