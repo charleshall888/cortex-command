@@ -58,6 +58,28 @@ If resuming, report the detected phase and offer to continue or restart from an 
 
 Read **only** the reference for the current phase.
 
+### Research → Decompose approval gate (spec R4)
+
+Between the Research and Decompose phases a single-question user-blocking gate fires, presenting the approved `## Architecture` section (sub-sections `### Pieces`, `### Integration shape`, `### Seam-level edges`, optionally `### Why N pieces`). No decompose work begins until the user answers. Four options:
+
+- **`approve`** — continue to the Decompose phase. The agent emits one `approval_checkpoint_responded` event with `checkpoint: research-decompose`, `response: approve`, and the current `revision_round` integer, then proceeds.
+- **`revise`** — open a free-text revision prompt scoped to the Architecture section. The agent re-walks the Architecture write protocol per spec R4 GATE-2 (iii) (re-emit `### Pieces`, re-run `### Integration shape` and `### Seam-level edges`, re-run the `### Why N pieces` falsification gate if piece_count > 5), re-presents the gate, and increments `revision_round`. Emits one `approval_checkpoint_responded` event with `response: revise` per loop iteration. Loop continues until `approve` or `drop`.
+- **`drop`** — abandon this discovery. The agent emits one `approval_checkpoint_responded` event with `response: drop` and exits without writing to `backlog/`. The research artifact stays in place as a durable audit trail.
+- **`promote-sub-topic`** — minimal-surface affordance per spec R4 + Non-Requirements: the user supplies a sub-topic description, and the agent creates a single `needs-discovery` backlog ticket whose body includes a `## Promoted from` section reading exactly `## Promoted from\n\nDiscovery: research/<current-topic>/`. No frontmatter linkage field is introduced — the body-section reference is the sole linkage (no consumer reads a frontmatter pointer). No nested `/cortex-core:discovery` invocation. After ticket creation the agent emits one `approval_checkpoint_responded` event with `response: promote-sub-topic` and returns to this gate so the user can still `approve`, `revise`, or `drop` the current Architecture section.
+
+All emissions go through the helper module — never hardcode the events.log path. Invoke via:
+
+```
+python3 -m cortex_command.discovery emit-checkpoint-response \
+    --topic <topic> --checkpoint research-decompose \
+    --response <approve|revise|drop|promote-sub-topic> \
+    --revision-round <int>
+```
+
+The helper resolves the correct events.log target (lifecycle-attached, R13 re-run `-N` slug, or standalone `research/<topic>/events.log`) via its `resolve-events-log-path` subcommand. See `cortex_command/discovery.py` for the full subcommand surface.
+
+### Decompose-commit batch-review gate
+
 Within the Decompose phase, a user-blocking post-decompose batch-review gate (`checkpoint: decompose-commit`) fires after all ticket bodies are authored and the prescriptive-prose scanner has passed, BEFORE any tickets commit to `backlog/`. The gate offers `approve-all`, `revise-piece <N>`, and `drop-piece <N>` options and emits an `approval_checkpoint_responded` event per response. See decompose.md §5 for the gate semantics.
 
 ## Phase Transition
