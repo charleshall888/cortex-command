@@ -41,7 +41,7 @@ Cleanup-then-deploy ordering: refactor the two empirically-surfaced pre-relocati
 - **Complexity**: simple
 - **Context**: Mirror `bin/.parity-exceptions.md`'s shape and tone. Table columns: `file | line_pattern | category | rationale | lifecycle_id | added_date`. Closed-enum categories: `archive-rewriter`, `docstring-narrative`, `migration-script`. Rationale: ≥30 chars after trim; reject case-insensitive substrings `internal`, `misc`, `tbd`, `n/a`, `pending`, `temporary`. `line_pattern` is a regex (or exact substring) matched against the offending line — document that authors who want literal-match should escape regex metacharacters. Initial seed rows (4 total): `bin/cortex-archive-rewrite-paths` line 65 (`Path("lifecycle") / "archive"` — `archive-rewriter`), line 66 (`Path("lifecycle") / "sessions"` — `archive-rewriter`), line 69 (`Path("research") / "archive"` — `archive-rewriter`), line 203 (`"lifecycle/sessions/, retros/). ..."` — `docstring-narrative`). `lifecycle_id`: `203`. `added_date`: `2026-05-12`.
 - **Verification**: `test -f bin/.path-hardcoding-allowlist.md` exits 0 AND `grep -cE '\| `archive-rewriter` \|' bin/.path-hardcoding-allowlist.md` ≥ 3 AND `grep -cE '\| `docstring-narrative` \|' bin/.path-hardcoding-allowlist.md` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Gate script with three modes + pre-commit and justfile wiring
 - **Files**: `bin/cortex-check-path-hardcoding`, `.githooks/pre-commit`, `justfile`
