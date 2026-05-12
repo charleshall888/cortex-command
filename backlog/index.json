@@ -148,7 +148,7 @@
     "uuid": "47fde14d-e2a0-48e3-9a56-84d4cf6018ca",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": "specify",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },

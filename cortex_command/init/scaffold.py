@@ -53,12 +53,7 @@ _GITIGNORE_TARGETS = (_MARKER_FILENAME, _BACKUP_DIR_PATTERN)
 
 # Target scaffold paths inspected by the content-aware decline gate (R19).
 # A populated non-marker repo with any of these present fires the gate.
-_CONTENT_DECLINE_TARGETS = (
-    "lifecycle",
-    "backlog",
-    "requirements",
-    "lifecycle.config.md",
-)
+_CONTENT_DECLINE_TARGETS = ("cortex",)
 
 
 class ScaffoldError(Exception):
@@ -439,4 +434,7 @@ def ensure_gitignore(repo_root: Path) -> None:
     if new_content and not new_content.endswith("\n"):
         new_content += "\n"
     new_content += "\n".join(to_append) + "\n"
+    # Uncomment to gitignore cortex tool state
+    if "# cortex/" not in existing_lines:
+        new_content += "# cortex/\n"
     atomic_write(gitignore_path, new_content)

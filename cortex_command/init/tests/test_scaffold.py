@@ -305,9 +305,9 @@ def test_content_aware_decline(
     )
     pre_bytes = settings_path.read_bytes()
 
-    lifecycle_dir = repo / "lifecycle"
-    lifecycle_dir.mkdir()
-    (lifecycle_dir / "unrelated.md").write_text(
+    cortex_dir = repo / "cortex"
+    cortex_dir.mkdir()
+    (cortex_dir / "unrelated.md").write_text(
         "user content\n", encoding="utf-8"
     )
 
@@ -317,7 +317,7 @@ def test_content_aware_decline(
     captured = capsys.readouterr()
     assert "pre-existing content" in captured.err
 
-    # No scaffold files were written (lifecycle/unrelated.md persists,
+    # No scaffold files were written (cortex/unrelated.md persists,
     # but the scaffold targets are absent).
     assert not (repo / "backlog" / "README.md").exists()
     assert not (repo / "requirements" / "project.md").exists()
