@@ -42,7 +42,20 @@ def _write_breadcrumb(category: str, snippet: str = "") -> None:
 
 
 def _resolve_repo_root() -> str:
-    """Return git toplevel; empty string on any failure (matches bash)."""
+    """Return git toplevel; empty string on any failure (matches bash).
+
+    Consults ``CORTEX_REPO_ROOT`` first with a ``.git``-marker validation
+    that mirrors the bash shim's ``[ -d "$root/.git" ] || [ -f "$root/.git" ]``
+    guard. The Python predicate is pinned to ``marker.is_dir() or
+    marker.is_file()`` — agrees with bash on regular files, directories,
+    and broken symlinks. Falls back to ``git rev-parse --show-toplevel``
+    on absent or invalid env (Spec #198 Task 2).
+    """
+    env_root = _os.environ.get("CORTEX_REPO_ROOT")
+    if env_root:
+        marker = _Path(env_root) / ".git"
+        if marker.is_dir() or marker.is_file():
+            return env_root
     try:
         result = _subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],

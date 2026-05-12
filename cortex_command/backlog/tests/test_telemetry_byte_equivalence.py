@@ -42,11 +42,24 @@ def _normalize_ts(line: str) -> str:
     not BASH_SHIM.is_file(),
     reason="bin/cortex-log-invocation not present (CLI tier not installed)",
 )
+@pytest.mark.parametrize("use_env_var", [False, True], ids=["slow-path", "fast-path"])
 def test_python_helper_byte_equivalent_to_bash_shim(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    use_env_var: bool,
 ) -> None:
-    """Each side writes one JSONL record; the records (sans ts) must match byte-for-byte."""
+    """Each side writes one JSONL record; the records (sans ts) must match byte-for-byte.
+
+    Parametrized over the two repo-root resolution paths the shim and
+    Python emitter both implement (#198 Task 2):
+
+    - ``slow-path``: ``CORTEX_REPO_ROOT`` is unset; both sides fall through
+      to ``git rev-parse --show-toplevel``. Original coverage.
+    - ``fast-path``: ``CORTEX_REPO_ROOT`` is set to the fake repo; both
+      sides take the env-var fast path with ``.git``-marker validation.
+      Closes the gap where the new env-var branch was previously unreached
+      by this test.
+    """
     session_id = "session-test-byte-equivalence-20260429"
 
     # Stage a fake repo: HOME so breadcrumbs land in tmp; CWD inside a git
@@ -65,6 +78,10 @@ def test_python_helper_byte_equivalent_to_bash_shim(
     fake_home.mkdir()
     monkeypatch.setenv("HOME", str(fake_home))
     monkeypatch.setenv("LIFECYCLE_SESSION_ID", session_id)
+    if use_env_var:
+        monkeypatch.setenv("CORTEX_REPO_ROOT", str(fake_repo))
+    else:
+        monkeypatch.delenv("CORTEX_REPO_ROOT", raising=False)
     monkeypatch.chdir(fake_repo)
 
     session_dir = fake_repo / "lifecycle" / "sessions" / session_id
@@ -75,13 +92,18 @@ def test_python_helper_byte_equivalent_to_bash_shim(
     # Bash shim takes argv: <script_path> [args...]; argv_count = $# - 1.
     # Use script_path "cortex-test-script" and two synthetic args to make
     # argv_count = 2 deterministic.
+    bash_env = {
+        **os.environ,
+        "HOME": str(fake_home),
+        "LIFECYCLE_SESSION_ID": session_id,
+    }
+    if use_env_var:
+        bash_env["CORTEX_REPO_ROOT"] = str(fake_repo)
+    else:
+        bash_env.pop("CORTEX_REPO_ROOT", None)
     bash_result = subprocess.run(
         [str(BASH_SHIM), "cortex-test-script", "arg-one", "arg-two"],
-        env={
-            **os.environ,
-            "HOME": str(fake_home),
-            "LIFECYCLE_SESSION_ID": session_id,
-        },
+        env=bash_env,
         cwd=str(fake_repo),
         capture_output=True,
         text=True,
