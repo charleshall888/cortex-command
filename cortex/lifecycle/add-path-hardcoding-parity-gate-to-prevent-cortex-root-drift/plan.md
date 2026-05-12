@@ -81,7 +81,7 @@ Cleanup-then-deploy ordering: refactor the two empirically-surfaced pre-relocati
 - **Complexity**: simple
 - **Context**: This task surfaces any wiring-recognition gap or allowlist miss that the per-task verifications didn't catch in isolation. If `just check-parity --staged` flags the new gate as W003 (orphan), inspect `bin/cortex-check-parity`'s wiring-detection logic — most likely the justfile recipe + pre-commit reference satisfy the existing in-scope scan, but if not, add a `bin/.parity-exceptions.md` row with category `maintainer-only-tool` and a ≥30-char rationale citing #203's lifecycle.
 - **Verification**: `just check-path-hardcoding-audit && just check-parity --staged && just test` — pass if all three commands exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Risks
 
