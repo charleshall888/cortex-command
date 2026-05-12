@@ -66,7 +66,7 @@ Direct-swap consolidation (research §A): `overnight/report.py:535` migrates to 
   - `grep -c "from cortex_command.common import .*\bread_tier\b\|from cortex_command.common import read_tier" cortex_command/overnight/tests/test_report.py` ≥ 1 — pass if count ≥ 1 (R4).
   - `grep -rn "report\._read_tier" tests/ cortex_command/` returns no results — pass if exit code = 1.
   - `uv run pytest cortex_command/overnight/tests/test_report.py -q` exits 0 — pass if exit code = 0 (R5).
-- **Status**: [ ] pending
+- **Status**: [x] complete (7c3b86f)
 
 ### Task 4: Delete tests/test_read_tier_parity.py and commit Phase 1
 - **Files**:
