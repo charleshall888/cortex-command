@@ -90,7 +90,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Tag source is the backlog item referenced by `parent_backlog_id`. `cortex/backlog/{id}-*.md` carries canonical tags. Files in `cortex/lifecycle/archive/` are out of scope. The audit memo + operator-review step protects against a silent miscategorization that would regress 10 active lifecycles' context-loading (no rollback exists at the artifact level — getting it right pre-merge is the protection).
 - **Verification**: `test -f cortex/lifecycle/requirements-skill-v2/tag-backfill-mapping.md` (mapping memo exists) AND `find cortex/lifecycle -maxdepth 2 -name index.md -exec grep -L "^tags:" {} \;` returns empty AND the Phase 1 PR body references the audit memo (`grep -ciE 'tag-backfill-mapping\.md' <PR-body>` ≥`1`).
-- **Status**: [ ] pending
+- **Status**: [x] completed (memo 2aad5a8f + edits 8a499d56; PR-body grep deferred to Task 8b)
 
 ### Task 8: Phase 1 union check + execution smoke test (R5)
 - **Files**: `tests/test_load_requirements_protocol.py` (new — hermetic smoke test exercising the shared loader against a synthetic tagged index.md fixture; asserts each of the 6 consumer references resolves and project.md + tag-matched area docs are surfaced as expected)
