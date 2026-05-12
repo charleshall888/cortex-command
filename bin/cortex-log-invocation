@@ -3,7 +3,7 @@
 #
 # Usage: cortex-log-invocation <script_path> [argv...]
 #
-# Writes one JSON line to lifecycle/sessions/<LIFECYCLE_SESSION_ID>/bin-invocations.jsonl.
+# Writes one JSON line to cortex/lifecycle/sessions/<LIFECYCLE_SESSION_ID>/bin-invocations.jsonl.
 # Always exits 0. On any failure, records a breadcrumb to ~/.cache/cortex/log-invocation-errors.log
 # with one of: no_session_id, no_repo_root, session_dir_missing, write_denied, other.
 #
@@ -43,7 +43,7 @@ if [ -z "$repo_root" ]; then
     exit 0
 fi
 
-session_dir="$repo_root/lifecycle/sessions/$LIFECYCLE_SESSION_ID"
+session_dir="$repo_root/cortex/lifecycle/sessions/$LIFECYCLE_SESSION_ID"
 [ -d "$session_dir" ] || mkdir -p "$session_dir" 2>/dev/null
 if [ ! -d "$session_dir" ]; then
     _log_breadcrumb session_dir_missing "$session_dir"

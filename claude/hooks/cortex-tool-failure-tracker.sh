@@ -39,7 +39,7 @@ fi
 # morning-report aggregator can read it. Otherwise fall back to /tmp keyed by the
 # Claude Code session_id (interactive runs).
 if [[ -n "${LIFECYCLE_SESSION_ID:-}" && "$LIFECYCLE_SESSION_ID" != "null" ]]; then
-  TRACK_DIR="lifecycle/sessions/${LIFECYCLE_SESSION_ID}/tool-failures"
+  TRACK_DIR="cortex/lifecycle/sessions/${LIFECYCLE_SESSION_ID}/tool-failures"
 else
   if [[ -n "$SESSION_ID" && "$SESSION_ID" != "null" ]]; then
     SESSION_KEY="$SESSION_ID"

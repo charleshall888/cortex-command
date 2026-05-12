@@ -6,7 +6,7 @@
 #      .name field, and fail closed if any discovered plugin dir is not
 #      classified in BUILD_OUTPUT_PLUGINS or HAND_MAINTAINED_PLUGINS.
 #   1.5. When staged paths match the parity trigger pattern (skills/, bin/cortex-,
-#      justfile, bin/.parity-exceptions.md, CLAUDE.md, requirements/, tests/,
+#      justfile, bin/.parity-exceptions.md, CLAUDE.md, cortex/requirements/, tests/,
 #      hooks/cortex-, claude/hooks/cortex-), run the parity linter against
 #      the staged blob view to enforce SKILL.md-to-bin parity.
 #   2. Decide whether a build is needed based on staged paths. Build is
@@ -78,7 +78,7 @@ parity_triggered=0
 while IFS= read -r f; do
     [ -z "$f" ] && continue
     case "$f" in
-        skills/*|bin/cortex-*|justfile|bin/.parity-exceptions.md|CLAUDE.md|requirements/*|tests/*|hooks/cortex-*|claude/hooks/cortex-*)
+        skills/*|bin/cortex-*|justfile|bin/.parity-exceptions.md|CLAUDE.md|cortex/requirements/*|tests/*|hooks/cortex-*|claude/hooks/cortex-*)
             parity_triggered=1
             break
             ;;

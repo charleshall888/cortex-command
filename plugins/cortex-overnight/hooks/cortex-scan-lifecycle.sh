@@ -23,13 +23,13 @@ if [[ -z "${CORTEX_REPO_ROOT:-}" && -e "$CWD/.git" && -n "${CLAUDE_ENV_FILE:-}" 
   echo "export CORTEX_REPO_ROOT='$CWD'" >> "$CLAUDE_ENV_FILE"
 fi
 
-LIFECYCLE_DIR="$CWD/lifecycle"
+LIFECYCLE_DIR="$CWD/cortex/lifecycle"
 
-# No lifecycle directory — nothing to inject
+# No cortex/lifecycle directory — nothing to inject
 [[ -d "$LIFECYCLE_DIR" ]] || exit 0
 
 # --- Precondition: cortex_command must be importable ---
-# Non-cortex repos exit silently above. Cortex repos (lifecycle/ exists) require
+# Non-cortex repos exit silently above. Cortex repos (cortex/lifecycle/ exists) require
 # the cortex CLI; fail loudly with remediation rather than producing empty output.
 if ! (command -v python3 >/dev/null && python3 -c "import cortex_command.common" 2>/dev/null); then
   echo "cortex_command not available; cortex-scan-lifecycle hook requires the cortex CLI — install via 'uv tool install -e .' from the cortex-command repo" >&2
@@ -171,7 +171,7 @@ if [[ -f "$PIPELINE_STATE" ]]; then
 fi
 
 # --- Phase detection ---
-# Inline-batches cortex_command.common.detect_lifecycle_phase across all lifecycle/*/ dirs
+# Inline-batches cortex_command.common.detect_lifecycle_phase across all cortex/lifecycle/*/ dirs
 # in one Python invocation. Statusline (claude/statusline.sh) is a separate documented
 # bash-only mirror — see DR-6 / parity test tests/test_lifecycle_phase_parity.py.
 
@@ -218,7 +218,7 @@ phase_label() {
 
 # --- Scan feature directories ---
 
-# Collect candidate lifecycle dirs (skipping archive + morning-review-suppressed features).
+# Collect candidate cortex/lifecycle dirs (skipping archive + morning-review-suppressed features).
 candidate_dirs=()
 candidate_features=()
 for dir in "$LIFECYCLE_DIR"/*/; do
@@ -322,7 +322,7 @@ active_phase=""
 active_idx=-1
 session_matched=false
 
-# Match session_id against lifecycle/{feature}/.session files
+# Match session_id against cortex/lifecycle/{feature}/.session files
 if [[ -n "$SESSION_ID" ]]; then
   for i in "${!incomplete_features[@]}"; do
     session_file="$LIFECYCLE_DIR/${incomplete_features[$i]}/.session"
@@ -358,7 +358,7 @@ if [[ -n "$active_feature" ]]; then
   label=$(phase_label "$active_phase")
 
   context="${context}Active lifecycle: $active_feature | Phase: $label
-Artifacts: lifecycle/$active_feature/"
+Artifacts: cortex/lifecycle/$active_feature/"
 
   # Interrupted state hints
   case "$active_phase" in
@@ -378,7 +378,7 @@ Interrupted: review cycle $cycle returned CHANGES_REQUESTED. Re-enter implementa
       ;;
     escalated)
       context="$context
-Action needed: review returned REJECTED. See lifecycle/$active_feature/review.md for analysis."
+Action needed: review returned REJECTED. See cortex/lifecycle/$active_feature/review.md for analysis."
       ;;
   esac
 
