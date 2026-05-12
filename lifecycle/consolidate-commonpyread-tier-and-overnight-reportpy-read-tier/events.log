@@ -1,0 +1,3 @@
+{"schema_version": 3, "ts": "2026-05-11T00:00:00Z", "event": "clarify_critic", "feature": "consolidate-commonpyread-tier-and-overnight-reportpy-read-tier", "parent_epic_loaded": false, "findings_count": 5, "dispositions": {"apply": 5, "dismiss": 0, "ask": 0}, "applied_fixes_count": 5, "dismissals_count": 0, "status": "ok"}
+{"ts":"2026-05-12T00:38:14Z","event":"synthesizer_drift","feature":"consolidate-commonpyread-tier-and-overnight-reportpy-read-tier","expected_sha":"e845e757e2bb4ab7a5f47870e02f688a571c75554b7fc03379c9fb4c166f6d89","observed_sha_or_null":null}
+{"ts":"2026-05-12T00:53:34Z","event":"phase_transition","feature":"consolidate-commonpyread-tier-and-overnight-reportpy-read-tier","from":"plan","to":"implement"}
