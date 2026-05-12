@@ -1,5 +1,7 @@
 # Cortex Command
 
+[![Cortex Command — Earn the spec, pick the harness](assets/hero.png)](https://charleshall888.github.io/cortex-command/)
+
 Cortex Command is an AI workflow framework for Claude Code built on a single insight: autonomous execution is only as good as the specification that precedes it.
 
 📖 **[Read the overview →](https://charleshall888.github.io/cortex-command/)**
