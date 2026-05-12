@@ -81,7 +81,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: trivial
 - **Context**: Per research §1.3, critical-review reads only Overview (~250 words). The exemption must be a documented design choice, not an oversight. The specific anchor phrase prevents casual mentions ("this is not narrow Overview", "tag-based loading is not relevant elsewhere") from accidentally passing a loose regex.
 - **Verification**: `grep -c "Requirements loading: deliberately exempt" skills/critical-review/SKILL.md` ≥`1` (specific anchor phrase, not loose regex).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 5f9697f1)
 
 ### Task 7: Backfill `tags:` into existing index.md files (R6)
 - **Files**: All `cortex/lifecycle/*/index.md` files currently lacking a `tags:` field (research identifies 10 such files; verify count at task-execution time and backfill all of them) AND `cortex/lifecycle/requirements-skill-v2/tag-backfill-mapping.md` (new audit memo capturing each (lifecycle-slug → parent-backlog-id → derived-tags) decision)
