@@ -552,6 +552,12 @@ async def dispatch_task(
     # /tmp (spec R9 of #164).
     if _lifecycle_session_id := os.environ.get("LIFECYCLE_SESSION_ID"):
         _env["LIFECYCLE_SESSION_ID"] = _lifecycle_session_id
+    # Pin CORTEX_REPO_ROOT to this dispatch's worktree (#198) so the
+    # bin/cortex-log-invocation shim's fast path skips git rev-parse.
+    # Sourced from the worktree_path arg, not os.environ — each dispatch
+    # knows its own worktree; the orchestrator's parent shell may carry a
+    # stale value pointing at a different project.
+    _env["CORTEX_REPO_ROOT"] = str(worktree_path)
 
     # Build the per-dispatch sandbox-settings JSON via the shared layer module
     # (spec Req 5, REVISED 2026-05-05). The per-feature deny-set is intentionally

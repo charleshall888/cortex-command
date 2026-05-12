@@ -15,6 +15,14 @@ fi
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 [[ -n "$CWD" ]] || CWD="$(pwd)"
 
+# Inject CORTEX_REPO_ROOT (#198) so bin/cortex-log-invocation's fast path
+# skips git rev-parse. Only emit when the user has NOT set a deliberate
+# override (cortex_command/common.py:75-77 documents this as a user-facing
+# env var) AND $CWD is a real cortex repo (.git marker present).
+if [[ -z "${CORTEX_REPO_ROOT:-}" && -e "$CWD/.git" && -n "${CLAUDE_ENV_FILE:-}" ]]; then
+  echo "export CORTEX_REPO_ROOT='$CWD'" >> "$CLAUDE_ENV_FILE"
+fi
+
 LIFECYCLE_DIR="$CWD/lifecycle"
 
 # No lifecycle directory — nothing to inject

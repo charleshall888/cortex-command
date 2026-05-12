@@ -2012,6 +2012,11 @@ def run(
     # agent and cortex-batch-runner) pick up the per-session events-log
     # suffix expected by peer modules.
     os.environ["LIFECYCLE_SESSION_ID"] = session_id
+    # Export CORTEX_REPO_ROOT (#198) so bin/cortex-log-invocation's shim
+    # fast path skips the ~6ms git rev-parse fork. Set from runner's own
+    # resolved repo_path, not propagated from the operator's parent shell,
+    # so a stale shell value cannot misroute telemetry.
+    os.environ["CORTEX_REPO_ROOT"] = str(repo_path)
 
     spawned_procs: list[tuple[subprocess.Popen, str]] = []
 
