@@ -39,6 +39,7 @@ from pathlib import Path
 from cortex_command.init import scaffold, settings_merge
 from cortex_command.init.scaffold import ScaffoldError
 from cortex_command.init.settings_merge import SettingsMergeError
+from cortex_command.pipeline.worktree import resolve_worktree_root
 
 
 def _resolve_repo_root(path_arg: str | None) -> Path:
@@ -196,6 +197,18 @@ def _run(args: argparse.Namespace) -> int:
     # no TOCTOU re-resolve is needed because repo_root was resolved once
     # at step 1.
     settings_merge.register(repo_root, cortex_target, home=home)
+
+    # Step 8: register the worktree root (R7). Resolves the worktree root
+    # via the same resolver consumed by dispatch, then registers it
+    # additively in sandbox.filesystem.allowWrite. This makes the default
+    # .claude/worktrees/ sandbox-writable without a per-skill env-prefix.
+    # Cross-repo paths (those starting with $TMPDIR) are already
+    # sandbox-writable per convention and skip registration.
+    worktree_root_path = resolve_worktree_root("", session_id=None)
+    tmpdir = os.environ.get("TMPDIR", "/tmp")
+    if not str(worktree_root_path).startswith(tmpdir):
+        worktree_target = str(worktree_root_path) + "/"
+        settings_merge.register(repo_root, worktree_target, home=home)
 
     return 0
 
