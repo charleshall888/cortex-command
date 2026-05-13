@@ -3,6 +3,7 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "mcp>=1.27,<2",
+#     "packaging>=24,<26",
 #     "pydantic>=2.5,<3",
 # ]
 # ///
@@ -436,34 +437,386 @@ def _release_install_flock(fd: int) -> None:
         os.close(fd)
 
 
+def _plugin_pid_verifier(pid_data: dict) -> bool:
+    """Stdlib-only pid verifier for the plugin's PEP 723 venv (no psutil).
+
+    The plugin's venv intentionally excludes psutil to keep the
+    surface minimal; the vendored
+    ``install_guard.check_in_flight_install_core`` therefore receives
+    this verifier callable as a parameter rather than importing
+    ``cortex_command.overnight.ipc``. Best-effort verification:
+
+    * ``magic == "cortex-runner-v1"`` and ``schema_version`` is a
+      positive int (matches the CLI-side schema floor).
+    * ``os.kill(pid, 0)`` succeeds (process exists; treats EPERM as
+      alive — kernel rejected the signal but the pid is bound).
+    * On macOS/Linux a ``ps -p <pid> -o lstart=`` probe roughly
+      matches the recorded ``start_time`` (within a generous tolerance
+      to absorb recycled-pid risk).
+
+    Returns ``False`` on any mismatch, missing-process, or probe
+    failure — the conservative direction is to treat unverifiable pids
+    as stale, allowing the install to proceed.
+    """
+    if not isinstance(pid_data, dict):
+        return False
+
+    if pid_data.get("magic") != "cortex-runner-v1":
+        return False
+
+    schema_version = pid_data.get("schema_version")
+    if not isinstance(schema_version, int) or schema_version < 1:
+        return False
+
+    pid = pid_data.get("pid")
+    if not isinstance(pid, int):
+        return False
+
+    # Step 1: existence check via signal 0. EPERM = process exists but
+    # we lack permission to signal it (treat as alive). ESRCH = no such
+    # process (definitively dead).
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # Process exists, owned by another user. Treat as alive — the
+        # in-flight guard's purpose is to block clobbering a live
+        # session, and we should err on the safe side.
+        return True
+    except OSError:
+        return False
+
+    # Step 2: optional recycled-pid mitigation via ``ps -p <pid>
+    # -o lstart=``. Skip silently on probe failure (the os.kill check
+    # already established existence, so we lean toward "alive" rather
+    # than spuriously unblocking a real runner).
+    start_time_str = pid_data.get("start_time")
+    if not isinstance(start_time_str, str):
+        return True
+
+    try:
+        proc = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "lstart="],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return True
+
+    if proc.returncode != 0 or not proc.stdout.strip():
+        # ps disagrees with os.kill — treat as stale (recycled pid).
+        return False
+
+    # The lstart format is "Day Mon DD HH:MM:SS YYYY"; we don't need
+    # bit-exact parity with psutil's create_time(). The existence-plus-
+    # ps-agreement signal is sufficient for the plugin's coarse
+    # liveness check; the CLI-side path retains the precise
+    # ``psutil.Process(pid).create_time()`` comparison via
+    # ``ipc.verify_runner_pid``.
+    return True
+
+
+def _plugin_active_session_path() -> Path:
+    """Return the active-session pointer path for the plugin venv.
+
+    Mirrors ``cortex_command.install_guard._ACTIVE_SESSION_PATH`` —
+    duplicated by design so the plugin's PEP 723 venv does not import
+    ``cortex_command.*`` (R1 architectural invariant).
+    """
+    return (
+        Path.home()
+        / ".local"
+        / "share"
+        / "overnight-sessions"
+        / "active-session.json"
+    )
+
+
+def _resolve_installed_cortex_path() -> Optional[str]:
+    """Return the absolute path of the installed ``cortex`` console script.
+
+    Strategy: shell out to ``uv tool list --show-paths`` and parse the
+    ``- cortex (/abs/path)`` line under the ``cortex-command`` package
+    block. This closes the PATH-poisoning surface flagged in research
+    §H/§I: the post-install verification probe targets the absolute
+    path uv just wrote, not whichever ``cortex`` happens to be first on
+    PATH after the reinstall.
+
+    Returns ``None`` on parse/probe failure; callers fall back to a
+    failure-emitting NDJSON record rather than silently regressing to
+    bare-PATH ``cortex``.
+    """
+    try:
+        result = subprocess.run(
+            ["uv", "tool", "list", "--show-paths"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    # Match lines like: ``- cortex (/Users/.../bin/cortex)``. The first
+    # match is the cortex console script (other entries are
+    # ``cortex-*`` siblings — we anchor the script name with a literal
+    # space-paren to disambiguate).
+    for raw_line in result.stdout.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("- cortex ("):
+            continue
+        # Strip ``- cortex (`` prefix and the trailing ``)``.
+        path_str = line[len("- cortex (") :]
+        if not path_str.endswith(")"):
+            continue
+        return path_str[:-1]
+    return None
+
+
+def _run_install_and_verify(*, stage: str) -> None:
+    """Run ``uv tool install --reinstall`` + verification probe.
+
+    Shared body for both the first-install branch (``stage=
+    "first_install"``) and the version-mismatch branches (``stage=
+    "version_mismatch_reinstall"`` and
+    ``stage="version_mismatch_reinstall_parse_failure"``). All NDJSON
+    records emitted from this helper carry the supplied ``stage`` so
+    integration tests can disambiguate which branch fired.
+
+    Acquires the install flock, re-verifies CLI presence under the
+    lock (skip on contending process), runs ``uv tool install``, then
+    verifies via the absolute-path-pinned ``cortex --print-root
+    --format json`` (closes the PATH-poisoning surface).
+    """
+    lock_path = _install_lock_path()
+    fd = _acquire_install_flock(lock_path)
+    if fd is None:
+        error = (
+            f"timed out waiting "
+            f"{int(_INSTALL_FLOCK_WAIT_BUDGET_SECONDS)}s for "
+            f"{lock_path}"
+        )
+        _append_error_ndjson(
+            stage=stage,
+            error=error,
+            context={
+                "cli_pin": CLI_PIN[0],
+                "exit_code": -1,
+                "phase": "flock_timeout",
+            },
+        )
+        raise CortexInstallFailed(
+            f"cortex auto-install: {error}; another MCP session is "
+            f"holding the install lock."
+        )
+
+    try:
+        # Re-verify under the lock: a contending process may have just
+        # finished installing matching version. For first-install,
+        # bare ``which`` suffices. For version-mismatch we re-enter
+        # the outer loop only by retry; this helper does not loop.
+        if stage == "first_install" and shutil.which("cortex") is not None:
+            return
+
+        install_argv = [
+            "uv",
+            "tool",
+            "install",
+            "--reinstall",
+            f"git+https://github.com/charleshall888/cortex-command.git"
+            f"@{CLI_PIN[0]}",
+        ]
+        try:
+            install_result = subprocess.run(
+                install_argv,
+                timeout=_INSTALL_SUBPROCESS_TIMEOUT_SECONDS,
+                capture_output=True,
+                text=True,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            error = f"{exc.__class__.__name__}: {exc}"
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage=stage,
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": -1,
+                    "phase": "uv_tool_install",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(
+                f"cortex auto-install (`uv tool install --reinstall "
+                f"git+...@{CLI_PIN[0]}`) failed: {error}"
+            ) from exc
+
+        if install_result.returncode != 0:
+            error = (
+                f"uv tool install exit={install_result.returncode}; "
+                f"stderr={install_result.stderr!r}"
+            )
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage=stage,
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": install_result.returncode,
+                    "phase": "uv_tool_install",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(
+                f"cortex auto-install (`uv tool install --reinstall "
+                f"git+...@{CLI_PIN[0]}`) failed: {error}"
+            )
+
+        # Resolve the absolute path of the just-installed cortex
+        # console script. Falls back to a failure NDJSON record rather
+        # than regressing to bare-PATH ``cortex`` (closes the
+        # PATH-poisoning surface flagged in research §H/§I).
+        cortex_abs_path = _resolve_installed_cortex_path()
+        if cortex_abs_path is None:
+            error = (
+                "post-install verification: could not resolve absolute "
+                "cortex path via `uv tool list --show-paths`"
+            )
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage=stage,
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": -1,
+                    "phase": "resolve_absolute_path",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(error)
+
+        # Post-install verification — `cortex --print-root --format json`,
+        # invoked via the absolute path (NOT bare PATH).
+        try:
+            verify_result = subprocess.run(
+                [cortex_abs_path, "--print-root", "--format", "json"],
+                timeout=_INSTALL_VERIFY_TIMEOUT_SECONDS,
+                capture_output=True,
+                text=True,
+            )
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            error = (
+                f"post-install verification "
+                f"(`{cortex_abs_path} --print-root --format json`) "
+                f"raised: {exc.__class__.__name__}: {exc}"
+            )
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage=stage,
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": -1,
+                    "phase": "verify_print_root",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(error) from exc
+
+        if verify_result.returncode != 0:
+            error = (
+                f"post-install verification "
+                f"(`{cortex_abs_path} --print-root --format json`) "
+                f"exit={verify_result.returncode}; "
+                f"stderr={verify_result.stderr!r}"
+            )
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage=stage,
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": verify_result.returncode,
+                    "phase": "verify_print_root",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(error)
+
+        try:
+            json.loads(verify_result.stdout)
+        except json.JSONDecodeError as exc:
+            error = (
+                f"post-install verification "
+                f"(`{cortex_abs_path} --print-root --format json`) "
+                f"emitted unparseable JSON: {exc}; "
+                f"stdout={verify_result.stdout!r}"
+            )
+            sentinel_path = _write_install_failed_sentinel(error)
+            _append_error_ndjson(
+                stage=stage,
+                error=error,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "exit_code": verify_result.returncode,
+                    "phase": "verify_print_root_parse",
+                    "sentinel": str(sentinel_path),
+                },
+            )
+            raise CortexInstallFailed(error) from exc
+    finally:
+        _release_install_flock(fd)
+
+
 def _ensure_cortex_installed() -> None:
-    """R4 — auto-install the ``cortex`` CLI on first MCP tool call.
+    """R4 — auto-install/upgrade the ``cortex`` CLI on first MCP tool call.
 
-    Behaviour:
+    Two branches:
 
-    * If ``cortex`` is already on PATH, return silently.
-    * If ``CORTEX_AUTO_INSTALL=0``, fall through to the notice-only path
-      (return silently; the existing missing-CLI surface in
+    * **First install** (R4) — ``shutil.which("cortex") is None``:
+      acquire the install flock, run ``uv tool install --reinstall
+      git+<url>@CLI_PIN[0]``, and verify via the absolute-path-pinned
+      ``cortex --print-root --format json``. NDJSON records carry
+      ``stage="first_install"``.
+    * **Version-mismatch reinstall** (R9/R10/R12/R15/R16, Task 11) —
+      ``cortex`` is on PATH: invoke ``cortex --print-root --format
+      json``, parse ``payload["version"]`` (the package version under
+      Phase 1's envelope migration), compare to ``CLI_PIN[0]`` via
+      ``packaging.version.Version`` and reinstall on mismatch.
+
+      Before reinstalling, the vendored
+      ``install_guard.check_in_flight_install_core`` is consulted; an
+      active overnight session aborts the reinstall with an NDJSON
+      record carrying
+      ``stage="version_mismatch_blocked_by_inflight_session"``. The
+      session completes and the next tool call retries.
+
+      On ``packaging.version.InvalidVersion`` the branch still
+      reinstalls (defensive fallback), but the NDJSON record carries
+      ``stage="version_mismatch_reinstall_parse_failure"`` instead of
+      ``stage="version_mismatch_reinstall"`` so integration tests can
+      disambiguate legitimate-mismatch from parse-failure-fallback.
+
+    * If ``CORTEX_AUTO_INSTALL=0``, fall through to the notice-only
+      path (return silently; the existing missing-CLI surface in
       :data:`_CORTEX_CLI_MISSING_ERROR` handles user messaging).
     * If a recent ``install-failed.*`` sentinel exists (within
       :data:`_INSTALL_SENTINEL_WINDOW_SECONDS`), raise
       :class:`CortexInstallFailed` with the prior failure context
       instead of retrying on partial state.
-    * Otherwise acquire ``${XDG_STATE_HOME}/cortex-command/install.lock``
-      with a 60s budget, re-verify CLI presence (skip install if a
-      contending process landed it), and shell out to
-      ``uv tool install --reinstall git+<url>@CLI_PIN[0]``. Verify
-      success via ``cortex --print-root --format json``. On any
-      failure, write a sentinel + append a ``stage="first_install"``
-      record to ``last-error.log`` and raise.
 
     Wired into :func:`_resolve_cortex_argv` so every cortex subprocess
     invocation triggers the hook implicitly (zero per-handler call-site
     additions).
     """
-
-    if shutil.which("cortex") is not None:
-        return
+    # Lazy import — ``packaging`` is declared in the PEP 723 dependency
+    # block. Deferring keeps the import cost off the hot path when the
+    # hook returns immediately on the no-op success branch.
+    from packaging.version import InvalidVersion, Version
 
     if os.environ.get("CORTEX_AUTO_INSTALL") == "0":
         # R19 notice-only path: the missing-CLI error string already
@@ -489,158 +842,132 @@ def _ensure_cortex_installed() -> None:
             f"@{CLI_PIN[0]}` manually to recover."
         )
 
-    lock_path = _install_lock_path()
-    fd = _acquire_install_flock(lock_path)
-    if fd is None:
+    # ------------------------------------------------------------------
+    # Branch A — first install (cortex absent from PATH)
+    # ------------------------------------------------------------------
+    if shutil.which("cortex") is None:
+        _run_install_and_verify(stage="first_install")
+        return
+
+    # ------------------------------------------------------------------
+    # Branch B — version-comparison reinstall (Task 11 / R9, R12, R16)
+    # ------------------------------------------------------------------
+    # ``cortex`` is on PATH; invoke ``--print-root`` and compare the
+    # package version against ``CLI_PIN[0]``. Defensive: parse failure
+    # falls through to a flagged-fallback reinstall so a malformed
+    # payload doesn't lock the user out of upgrade-on-mismatch.
+    try:
+        probe_result = subprocess.run(
+            ["cortex", "--print-root", "--format", "json"],
+            timeout=_INSTALL_VERIFY_TIMEOUT_SECONDS,
+            capture_output=True,
+            text=True,
+        )
+    except (subprocess.TimeoutExpired, OSError):
+        # Probe failed — treat as "cannot determine version, proceed
+        # without reinstall and let downstream subprocess raise the
+        # canonical missing/broken-CLI error".
+        return
+
+    if probe_result.returncode != 0:
+        return
+
+    try:
+        probe_payload = json.loads(probe_result.stdout)
+    except json.JSONDecodeError:
+        return
+
+    if not isinstance(probe_payload, dict):
+        return
+
+    installed_version_str = probe_payload.get("version")
+    target_version_str = CLI_PIN[0].lstrip("v")
+
+    if not isinstance(installed_version_str, str):
+        # No package-version field on the payload — pre-T4 envelope or
+        # a payload shape this branch cannot make a decision on. Bail
+        # out silently rather than spuriously reinstalling: the
+        # schema-floor check (R13) will surface a structured error
+        # downstream if the envelope is truly incompatible.
+        return
+
+    try:
+        installed_version = Version(installed_version_str)
+        target_version = Version(target_version_str)
+    except InvalidVersion:
+        # Spec R9: the version-compare branch is wrapped in
+        # try/except InvalidVersion. On parse failure we still
+        # reinstall (defensive — better to refresh than leave a
+        # potentially-broken pin in place), but the NDJSON record
+        # carries ``stage="version_mismatch_reinstall_parse_failure"``
+        # so the integration test (R23 phase c) can disambiguate
+        # legitimate-mismatch from parse-failure-fallback.
+        parse_failure = True
+    else:
+        if installed_version == target_version:
+            # Versions match — no reinstall needed.
+            return
+        parse_failure = False
+
+    # At this point: either a legitimate version mismatch OR a parse
+    # failure. Both lead to reinstall, but with distinct NDJSON stage
+    # labels so tests can disambiguate.
+    mismatch_stage = (
+        "version_mismatch_reinstall_parse_failure"
+        if parse_failure
+        else "version_mismatch_reinstall"
+    )
+
+    # R12 — honor the in-flight install guard via the vendored sibling
+    # before clobbering the running package.
+    try:
+        from install_guard import check_in_flight_install_core
+    except ImportError as exc:
+        # The vendored sibling is required for R12; surface the import
+        # failure rather than silently bypassing the guard.
         error = (
-            f"timed out waiting "
-            f"{int(_INSTALL_FLOCK_WAIT_BUDGET_SECONDS)}s for "
-            f"{lock_path}"
+            f"cortex auto-install: cannot import vendored "
+            f"install_guard sibling: {exc}"
         )
         _append_error_ndjson(
-            stage="first_install",
+            stage=mismatch_stage,
             error=error,
             context={
                 "cli_pin": CLI_PIN[0],
+                "installed_version": installed_version_str,
                 "exit_code": -1,
-                "phase": "flock_timeout",
+                "phase": "import_install_guard",
             },
         )
-        raise CortexInstallFailed(
-            f"cortex auto-install: {error}; another MCP session is "
-            f"holding the install lock."
-        )
+        raise CortexInstallFailed(error) from exc
 
-    try:
-        # Re-verify under the lock: a contending process may have just
-        # finished installing. If so, skip the install.
-        if shutil.which("cortex") is not None:
+    if os.environ.get("CORTEX_ALLOW_INSTALL_DURING_RUN") != "1":
+        reason = check_in_flight_install_core(
+            _plugin_active_session_path(),
+            pid_verifier=_plugin_pid_verifier,
+        )
+        if reason is not None:
+            _append_error_ndjson(
+                stage="version_mismatch_blocked_by_inflight_session",
+                error=reason,
+                context={
+                    "cli_pin": CLI_PIN[0],
+                    "installed_version": installed_version_str,
+                    "exit_code": -1,
+                    "phase": "inflight_guard",
+                },
+            )
+            # Surface the guard's remediation message to stderr; the
+            # session completes, then the next MCP tool call retries
+            # the reinstall.
+            print(reason, file=sys.stderr, flush=True)
             return
 
-        install_argv = [
-            "uv",
-            "tool",
-            "install",
-            "--reinstall",
-            f"git+https://github.com/charleshall888/cortex-command.git"
-            f"@{CLI_PIN[0]}",
-        ]
-        try:
-            install_result = subprocess.run(
-                install_argv,
-                timeout=_INSTALL_SUBPROCESS_TIMEOUT_SECONDS,
-                capture_output=True,
-                text=True,
-            )
-        except (subprocess.TimeoutExpired, OSError) as exc:
-            error = f"{exc.__class__.__name__}: {exc}"
-            sentinel_path = _write_install_failed_sentinel(error)
-            _append_error_ndjson(
-                stage="first_install",
-                error=error,
-                context={
-                    "cli_pin": CLI_PIN[0],
-                    "exit_code": -1,
-                    "phase": "uv_tool_install",
-                    "sentinel": str(sentinel_path),
-                },
-            )
-            raise CortexInstallFailed(
-                f"cortex auto-install (`uv tool install --reinstall "
-                f"git+...@{CLI_PIN[0]}`) failed: {error}"
-            ) from exc
-
-        if install_result.returncode != 0:
-            error = (
-                f"uv tool install exit={install_result.returncode}; "
-                f"stderr={install_result.stderr!r}"
-            )
-            sentinel_path = _write_install_failed_sentinel(error)
-            _append_error_ndjson(
-                stage="first_install",
-                error=error,
-                context={
-                    "cli_pin": CLI_PIN[0],
-                    "exit_code": install_result.returncode,
-                    "phase": "uv_tool_install",
-                    "sentinel": str(sentinel_path),
-                },
-            )
-            raise CortexInstallFailed(
-                f"cortex auto-install (`uv tool install --reinstall "
-                f"git+...@{CLI_PIN[0]}`) failed: {error}"
-            )
-
-        # Post-install verification — `cortex --print-root --format json`.
-        try:
-            verify_result = subprocess.run(
-                ["cortex", "--print-root", "--format", "json"],
-                timeout=_INSTALL_VERIFY_TIMEOUT_SECONDS,
-                capture_output=True,
-                text=True,
-            )
-        except (subprocess.TimeoutExpired, OSError) as exc:
-            error = (
-                f"post-install verification "
-                f"(`cortex --print-root --format json`) raised: "
-                f"{exc.__class__.__name__}: {exc}"
-            )
-            sentinel_path = _write_install_failed_sentinel(error)
-            _append_error_ndjson(
-                stage="first_install",
-                error=error,
-                context={
-                    "cli_pin": CLI_PIN[0],
-                    "exit_code": -1,
-                    "phase": "verify_print_root",
-                    "sentinel": str(sentinel_path),
-                },
-            )
-            raise CortexInstallFailed(error) from exc
-
-        if verify_result.returncode != 0:
-            error = (
-                f"post-install verification "
-                f"(`cortex --print-root --format json`) exit="
-                f"{verify_result.returncode}; "
-                f"stderr={verify_result.stderr!r}"
-            )
-            sentinel_path = _write_install_failed_sentinel(error)
-            _append_error_ndjson(
-                stage="first_install",
-                error=error,
-                context={
-                    "cli_pin": CLI_PIN[0],
-                    "exit_code": verify_result.returncode,
-                    "phase": "verify_print_root",
-                    "sentinel": str(sentinel_path),
-                },
-            )
-            raise CortexInstallFailed(error)
-
-        try:
-            json.loads(verify_result.stdout)
-        except json.JSONDecodeError as exc:
-            error = (
-                f"post-install verification "
-                f"(`cortex --print-root --format json`) emitted "
-                f"unparseable JSON: {exc}; "
-                f"stdout={verify_result.stdout!r}"
-            )
-            sentinel_path = _write_install_failed_sentinel(error)
-            _append_error_ndjson(
-                stage="first_install",
-                error=error,
-                context={
-                    "cli_pin": CLI_PIN[0],
-                    "exit_code": verify_result.returncode,
-                    "phase": "verify_print_root_parse",
-                    "sentinel": str(sentinel_path),
-                },
-            )
-            raise CortexInstallFailed(error) from exc
-    finally:
-        _release_install_flock(fd)
+    # Fall through to the shared install-and-verify helper, tagged
+    # with the appropriate mismatch stage. The helper preserves the
+    # sentinel/flock/post-install-verification logic and pins the
+    # verification probe to the absolute path.
+    _run_install_and_verify(stage=mismatch_stage)
 
 
 def _resolve_cortex_argv() -> list[str]:
@@ -772,6 +1099,11 @@ _NDJSON_ERROR_STAGES = frozenset(
         "verification_probe",
         "flock_timeout",
         "first_install",
+        # R4 version-comparison branch stages (Task 11). See
+        # ``_ensure_cortex_installed``.
+        "version_mismatch_reinstall",
+        "version_mismatch_reinstall_parse_failure",
+        "version_mismatch_blocked_by_inflight_session",
     }
 )
 
