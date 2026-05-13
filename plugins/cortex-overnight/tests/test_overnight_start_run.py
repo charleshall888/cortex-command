@@ -98,7 +98,7 @@ def test_async_return_shape(server_module) -> None:
             import json
             return _completed(
                 stdout=json.dumps({
-                    "version": "1.0",
+                    "schema_version": "2.0",
                     "root": "/fake/root",
                     "remote_url": "git@github.com:user/repo.git",
                     "head_sha": "0" * 40,
@@ -140,7 +140,7 @@ def test_slow_spawn_within_30s(server_module) -> None:
         if "--print-root" in argv:
             return _completed(
                 stdout=json.dumps({
-                    "version": "1.0",
+                    "schema_version": "2.0",
                     "root": "/fake/root",
                     "remote_url": "git@github.com:user/repo.git",
                     "head_sha": "0" * 40,
@@ -188,7 +188,7 @@ def test_timeout_boundary_at_30s(server_module) -> None:
         if "--print-root" in argv:
             return _completed(
                 stdout=json.dumps({
-                    "version": "1.0",
+                    "schema_version": "2.0",
                     "root": "/fake/root",
                     "remote_url": "git@github.com:user/repo.git",
                     "head_sha": "0" * 40,
