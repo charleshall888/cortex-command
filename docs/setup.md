@@ -189,7 +189,7 @@ If `cortex --print-root` returns `command not found`, your shell's `PATH` is mis
 
 ## Upgrade & maintenance
 
-Keeping up to date is easy as long as you turn on auto-update in the plugin marketplace.
+Keeping up to date is easy as long as you turn on auto-update in the plugin marketplace. For the full design — two-layer architecture, component map, release ritual, and the intent-vs-currently-wired audit — see [`docs/internals/auto-update.md`](internals/auto-update.md).
 
 From inside Claude Code make sure to turn on auto-updates for the cortex-command marketplace plugins. The plugin's MCP server detects the embedded `CLI_PIN` tag bump on its next tool call and updates to the matching cortex CLI tag automatically. 
 
