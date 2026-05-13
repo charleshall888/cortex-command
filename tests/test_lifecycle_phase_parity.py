@@ -586,3 +586,74 @@ def test_hook_end_to_end_emit_matches_glue_prediction(
         f"expected wire-format {expected!r}, got {actual!r}. "
         f"Raw context: {result['raw_context']!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# feature_wontfix terminal-state parity (#210 R12–R17)
+# ---------------------------------------------------------------------------
+#
+# The feature_wontfix event is the operator-decided terminal-state marker.
+# Both the canonical Python detector and the statusline bash ladder must
+# return phase=complete for any events.log containing a feature_wontfix
+# event. The fixture at tests/fixtures/lifecycle_phase_parity/events-
+# feature-wontfix/ already exercises the parametrized parity tests above;
+# this explicit test covers all three layers (R12a/R12b/R12c equivalents)
+# with `feature_wontfix` in the test name so `pytest -k 'wontfix or
+# feature_wontfix'` selects at least one test.
+
+
+_WONTFIX_FIXTURE_DIR = (
+    PARITY_FIXTURE_DIR / "events-feature-wontfix"
+)
+
+
+def test_feature_wontfix_canonical_python_returns_complete() -> None:
+    """R13: canonical Python detector returns phase=complete for feature_wontfix.
+
+    Layer-a (canonical Python) parity check for the new terminal-state
+    convention. The fixture's events.log contains a single
+    feature_wontfix JSONL event; detect_lifecycle_phase must return
+    phase=complete.
+    """
+    result = detect_lifecycle_phase(_WONTFIX_FIXTURE_DIR)
+    assert result["phase"] == "complete", (
+        f"Canonical detector returned {result!r} for the feature_wontfix "
+        f"fixture; expected phase=complete."
+    )
+
+
+def test_feature_wontfix_statusline_ladder_returns_complete() -> None:
+    """R14: statusline bash ladder returns _lc_phase=complete for feature_wontfix.
+
+    Layer-b (statusline mirror) parity check. The bash ladder mirrors the
+    canonical Python detector and must emit the bare phase string
+    "complete" when events.log contains a feature_wontfix event.
+    """
+    emitted = _invoke_statusline_ladder(_WONTFIX_FIXTURE_DIR)
+    parsed_phase, _, _ = _parse_statusline_phase(emitted)
+    assert parsed_phase == "complete", (
+        f"Statusline ladder emitted {emitted!r} for the feature_wontfix "
+        f"fixture; expected bare 'complete'."
+    )
+
+
+def test_feature_wontfix_hook_end_to_end(tmp_path: Path) -> None:
+    """R12c-equivalent: hook end-to-end agrees with glue prediction for feature_wontfix.
+
+    Layer-c (hook end-to-end) parity check. Drives the actual
+    hooks/cortex-scan-lifecycle.sh against the feature_wontfix fixture
+    and asserts the emitted wire-format matches the R3 glue prediction.
+    The hook filters `complete` features out of its enumeration, so the
+    sentinel wire value is "complete" — the same as the glue prediction.
+    """
+    expected = _expected_wire_from_canonical(_WONTFIX_FIXTURE_DIR)
+    assert expected == "complete", (
+        f"Glue prediction for feature_wontfix fixture is {expected!r}; "
+        f"expected 'complete'."
+    )
+    result = _invoke_hook_for_fixture(_WONTFIX_FIXTURE_DIR, tmp_path)
+    assert result["wire"] == expected, (
+        f"Hook end-to-end emit for feature_wontfix fixture: "
+        f"expected wire-format {expected!r}, got {result['wire']!r}. "
+        f"Raw context: {result['raw_context']!r}"
+    )
