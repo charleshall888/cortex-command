@@ -21,7 +21,11 @@ from pathlib import Path
 import pytest
 
 from cortex_command.overnight import auth
-from cortex_command.overnight.auth import ensure_sdk_auth, resolve_auth_for_shell
+from cortex_command.overnight.auth import (
+    ensure_sdk_auth,
+    probe_keychain_presence,
+    resolve_auth_for_shell,
+)
 from cortex_command.pipeline import state as pipeline_state
 
 
@@ -335,3 +339,56 @@ def test_environ_write(
 
     assert result["vector"] == "oauth_file"
     assert os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") == fixture_value
+
+
+# ---------------------------------------------------------------------------
+# R2 — probe_keychain_presence() — Keychain entry-presence probe.
+# ---------------------------------------------------------------------------
+
+
+def test_keychain_presence_probe(monkeypatch: pytest.MonkeyPatch) -> None:
+    """probe_keychain_presence() returns correct literals across all four spec cases.
+
+    Cases (per spec R2 acceptance requirements):
+      (a) Darwin + present       → "present"
+      (b) Darwin + absent        → "absent"
+      (c) non-Darwin             → "unavailable"
+      (d) Darwin + search-list-unavailable (exit 36 / errSecInteractionNotAllowed) → "unavailable"
+    """
+    import platform as _platform
+    import types
+
+    # Helper: build a fake CompletedProcess with the given returncode.
+    def _fake_run(returncode: int):
+        def _run(*args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+            return subprocess.CompletedProcess(args=[], returncode=returncode)
+        return _run
+
+    # -------------------------------------------------------------------------
+    # (a) Darwin + present: security exits 0 → "present"
+    # -------------------------------------------------------------------------
+    monkeypatch.setattr(_platform, "system", lambda: "Darwin")
+    monkeypatch.setattr("cortex_command.overnight.auth.subprocess.run", _fake_run(0))
+    assert probe_keychain_presence() == "present"
+
+    # -------------------------------------------------------------------------
+    # (b) Darwin + absent: security exits 44 (errSecItemNotFound) → "absent"
+    # -------------------------------------------------------------------------
+    monkeypatch.setattr(_platform, "system", lambda: "Darwin")
+    monkeypatch.setattr("cortex_command.overnight.auth.subprocess.run", _fake_run(44))
+    assert probe_keychain_presence() == "absent"
+
+    # -------------------------------------------------------------------------
+    # (c) non-Darwin: platform.system() != "Darwin" → "unavailable"
+    # -------------------------------------------------------------------------
+    monkeypatch.setattr(_platform, "system", lambda: "Linux")
+    # subprocess.run should NOT be called on non-Darwin; no need to patch.
+    assert probe_keychain_presence() == "unavailable"
+
+    # -------------------------------------------------------------------------
+    # (d) Darwin + search-list-unavailable: exit 36 (errSecInteractionNotAllowed)
+    #     → "unavailable" (locked login keychain in launchd pre-unlock context)
+    # -------------------------------------------------------------------------
+    monkeypatch.setattr(_platform, "system", lambda: "Darwin")
+    monkeypatch.setattr("cortex_command.overnight.auth.subprocess.run", _fake_run(36))
+    assert probe_keychain_presence() == "unavailable"
