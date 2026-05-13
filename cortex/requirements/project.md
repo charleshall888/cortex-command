@@ -28,7 +28,7 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - **Per-repo sandbox registration**: `cortex init` additively adds the repo's `cortex/` umbrella to `~/.claude/settings.local.json` `sandbox.filesystem.allowWrite` — the only write cortex-command makes in `~/.claude/`. `fcntl.flock` serialized.
 - **SKILL.md-to-bin parity enforcement**: `bin/cortex-*` scripts wire through an in-scope SKILL.md/requirements/docs/hooks/justfile/tests reference. `bin/cortex-check-parity` blocks drift; exceptions at `bin/.parity-exceptions.md`.
 - **SKILL.md size cap**: 500 lines (`tests/test_skill_size_budget.py`). Exceptions via in-file `<!-- size-budget-exception: ... -->`. Default fix: extract to `skills/<name>/references/`.
-- **Skill-helper modules**: when a SKILL.md dispatch ceremony invites paraphrase, collapse it into atomic `cortex_command/<skill>.py` subcommands fusing validation+mutation+telemetry. New events register in `bin/.events-registry.md`.
+- **Skill-helper modules**: when a SKILL.md dispatch ceremony invites paraphrase, collapse it into atomic `cortex_command/<skill>.py` subcommands fusing validation+mutation+telemetry. Promoted modules expose a `[project.scripts]` console-script entry (e.g. `cortex-<skill>`) as the recommended invocation idiom; `python3 -m cortex_command.<skill> <subcommand>` is retained as a readable fallback for ad-hoc invocation. New events register in `bin/.events-registry.md`.
 
 ## Quality Attributes
 
