@@ -16,6 +16,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Migration note — v0.1.0 → v0.2.0
+
+v0.1.0 users upgrading to v0.2.0 must run a full reinstall to pick up new console-script entries (R17):
+
+```
+uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@v0.2.0
+```
+
+A plain `uv tool install` (without `--reinstall`) will not overwrite the existing v0.1.0 entry-points; the `--reinstall` flag is required to register the new `[project.scripts]` console-scripts added in this release.
+
+**In-flight install-guard interaction**: the pre-install guard (`cortex/requirements/pipeline.md`, "Pre-install in-flight guard") aborts the reinstall when an active overnight session is detected (phase ≠ `complete` and `verify_runner_pid` succeeds). Do not run `uv tool install --reinstall` while an overnight session is in-flight. Carve-outs — pytest, runner-spawned children (`CORTEX_RUNNER_CHILD=1`), the dashboard process, and `cortex overnight cancel --force` — are unaffected. An emergency bypass (`CORTEX_ALLOW_INSTALL_DURING_RUN=1`) exists but should not be exported to the shell environment.
+
 ### Added
 
 - **`bin/cortex-check-events-registry` gate** and `bin/.events-registry.md` allowlist (R5/R6 of the events.log emission-discipline work). The static gate validates that every skill-prompt-emitted event name is registered with a documented consumer. Runs in `--staged` mode from `.githooks/pre-commit` Phase 1.8 (triggers only on `skills/*`, `cortex_command/overnight/prompts/*`, and the gate/registry files themselves — never on `cortex_command/**/*.py`) and in `--audit` mode via `just check-events-registry-audit` for off-critical-path deprecation-date review. Schema, scope split (`gate-enforced` vs `manual`), two-mode design, and stale-row recovery path are documented in `docs/internals/events-registry.md`.
