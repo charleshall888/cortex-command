@@ -8,7 +8,7 @@ Verifies:
     (success path emits versioned JSON to stdout; failures use the
     JSON error envelope).
 (c) ``cortex overnight start --format json`` against a pre-existing
-    live ``runner.pid`` produces ``{"version": "1.0", "error":
+    live ``runner.pid`` produces ``{"schema_version": "2.0", "error":
     "concurrent_runner", ...}`` on stdout with non-zero exit.
 
 Each handler is exercised through :mod:`cortex_command.overnight.cli_handler`
@@ -114,9 +114,9 @@ def test_overnight_logs_format_json_emits_versioned_json(
         # Stdout is a single JSON object parseable in one shot.
         payload = json.loads(captured.out)
 
-        # R15 schema-floor: version field present and major == 1.
-        assert isinstance(payload.get("version"), str)
-        assert payload["version"].startswith("1.")
+        # R15 schema-floor: schema_version field present and major == 2.
+        assert isinstance(payload.get("schema_version"), str)
+        assert payload["schema_version"].startswith("2.")
 
         # Lines from the fixture flow through verbatim.
         assert "lines" in payload
@@ -175,8 +175,8 @@ def test_overnight_cancel_format_json_emits_versioned_json(
         payload = json.loads(captured.out)
 
         # R15 schema-floor.
-        assert isinstance(payload.get("version"), str)
-        assert payload["version"].startswith("1.")
+        assert isinstance(payload.get("schema_version"), str)
+        assert payload["schema_version"].startswith("2.")
 
         # Error envelope shape.
         assert payload.get("error") == "no_active_session"
@@ -199,7 +199,7 @@ def test_overnight_start_format_json_concurrent_runner(
 
       - non-zero exit code
       - stdout parses as JSON
-      - ``version`` major == 1
+      - ``schema_version`` major == 2
       - ``error`` is exactly ``"concurrent_runner"``
       - ``session_id`` is the pre-existing claim's session id
 
@@ -250,7 +250,7 @@ def test_overnight_start_format_json_concurrent_runner(
         # Spec acceptance (c): stdout parses as JSON.
         payload = json.loads(captured.out)
 
-        assert isinstance(payload.get("version"), str)
-        assert payload["version"].startswith("1.")
+        assert isinstance(payload.get("schema_version"), str)
+        assert payload["schema_version"].startswith("2.")
         assert payload.get("error") == "concurrent_runner"
         assert payload.get("session_id") == session_id

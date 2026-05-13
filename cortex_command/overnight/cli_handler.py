@@ -110,10 +110,10 @@ _JSON_SCHEMA_VERSION = "2.0"
 def _emit_json(payload: dict) -> None:
     """Print ``payload`` as a one-line JSON object stamped with the schema version.
 
-    Always prefixes ``"version": _JSON_SCHEMA_VERSION`` so the consumer can
-    enforce the schema-floor check without reaching past the first field.
+    Always prefixes ``"schema_version": _JSON_SCHEMA_VERSION`` so the consumer
+    can enforce the schema-floor check without reaching past the first field.
     """
-    versioned = {"version": _JSON_SCHEMA_VERSION, **payload}
+    versioned = {"schema_version": _JSON_SCHEMA_VERSION, **payload}
     print(json.dumps(versioned))
 
 
