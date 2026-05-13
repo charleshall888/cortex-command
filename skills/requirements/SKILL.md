@@ -1,116 +1,29 @@
 ---
 name: requirements
-description: Use /cortex-core:requirements to gather requirements or define project scope. disable-model-invocation:true — invoked only by explicit slash command.
+description: Use /cortex-core:requirements to gather requirements or define project scope. Thin orchestrator that routes to /requirements-gather then /requirements-write; disable-model-invocation:true — invoked only by explicit slash command.
 disable-model-invocation: true
-argument-hint: "[area]"
+argument-hint: "[area|project|list]"
 inputs:
-  - "area: string (optional) — area name (kebab-case) for area-level requirements; omit for project-level; 'list' to show all documented areas"
+  - "$ARGUMENTS: optional — empty or 'project' for project scope; an area kebab-case slug for area scope; 'list' to enumerate existing requirements docs"
 outputs:
-  - "cortex/requirements/project.md — master project requirements document (project-level invocation)"
-  - "cortex/requirements/{{area}}.md — area-specific requirements document (area-level invocation)"
-preconditions:
-  - "Run from project root"
-  - "cortex/requirements/ directory will be created if it does not exist"
+  - "cortex/requirements/project.md (project scope) OR cortex/requirements/{area}.md (area scope) — written by /requirements-write"
 ---
 
-# Requirements
+# Requirements (orchestrator)
 
-Structured requirements gathering through interactive interview. Produces durable requirements artifacts that downstream flows (lifecycle, discovery, pipeline) reference during research, spec, planning, and review.
+Thin routing surface for the v2 requirements workflow. Sequence: parse `$ARGUMENTS` → optionally short-circuit on `list` → dispatch `/requirements-gather` → hand the returned Q&A block to `/requirements-write`.
 
-Area: $ARGUMENTS (if non-empty, scope interview to this area; if empty, run full project requirements gathering).
+## Argument shapes (every shape is load-bearing — see `cortex/lifecycle/requirements-skill-v2/requirements-caller-audit.md`)
 
-## Invocation
+- `/cortex-core:requirements` — bare invocation; project scope.
+- `/cortex-core:requirements project` — explicit project-scope alias of the bare form.
+- `/cortex-core:requirements {area}` — area scope; `{area}` is a kebab-case slug (e.g. `multiplayer`, `observability`).
+- `/cortex-core:requirements list` — read-only enumeration of `cortex/requirements/*.md`; does NOT enter the gather/write pipeline.
 
-- `/cortex-core:requirements` — start or resume project-level requirements
-- `/cortex-core:requirements {{area}}` — start or resume area-level requirements (e.g., `/cortex-core:requirements multiplayer`)
-- `/cortex-core:requirements list` — show all documented requirements areas
+## Routing
 
-## Storage
-
-Requirements live in `cortex/requirements/` at the project root:
-
-- `cortex/requirements/project.md` — master project requirements
-- `cortex/requirements/{area}.md` — area-specific requirements (e.g., `cortex/requirements/multiplayer.md`)
-
-Area names use lowercase-kebab-case (same convention as lifecycle directories).
-
-## Step 1: Determine Scope
-
-Parse the invocation to determine scope:
-
-- **No argument or "project"**: Project-level requirements
-- **"list"**: Show existing requirements (Step 1a)
-- **Any other argument**: Area-level requirements for that topic
-
-### Step 1a: List
-
-Scan `cortex/requirements/` for all `.md` files. For each, read the first heading and the Overview section. Present a summary table:
-
-| File | Scope | Last Gathered | Requirement Count |
-|------|-------|---------------|-------------------|
-| project.md | Project | {date} | {count} |
-| multiplayer.md | Area | {date} | {count} |
-
-If no requirements directory exists, report: "No requirements documented yet. Run `/cortex-core:requirements` to start with project-level requirements."
-
-## Step 2: Check for Existing State
-
-Check if the target file already exists:
-
-- **If `cortex/requirements/{scope}.md` exists**: Read it, present a summary, and ask:
-  - **Update** — Run a follow-up interview to refine or extend
-  - **Replace** — Start fresh (confirms overwrite)
-  - **View** — Display the current requirements
-- **If not**: Proceed to Step 3
-
-## Step 3: Codebase Reconnaissance
-
-If the project has existing source code, launch a focused codebase exploration to understand:
-
-- Project structure, languages, and frameworks
-- Existing features and capabilities already built
-- Architecture patterns, conventions, and technology choices already made
-- README, docs, or any existing cortex/requirements/spec/design files
-- CLAUDE.md or equivalent project instructions — understand what operational context is already documented so the interview and artifact avoid duplicating it
-
-**For existing codebases** (retroactive documentation): Mine the code for what's already been decided. The codebase IS the current requirements — extract them rather than asking the user to re-state what the code already shows. Focus the interview on intent, priorities, and boundaries the code can't tell you.
-
-**For greenfield projects** (no meaningful source code): Skip this step.
-
-For area-level requirements, also read `cortex/requirements/project.md` if it exists — area requirements should be consistent with project-level decisions.
-
-## Step 4: Structured Interview
-
-Read and follow [gather.md](${CLAUDE_SKILL_DIR}/references/gather.md) for the interview protocol.
-
-## Step 5: Write Requirements Artifact
-
-After the interview, compile answers into the requirements document following the artifact format in [gather.md](${CLAUDE_SKILL_DIR}/references/gather.md).
-
-## Step 6: User Approval
-
-Present the requirements document summary. The user must approve before finalizing. If the user requests changes, revise and re-present.
-
-## Step 7: Commit
-
-Stage `cortex/requirements/` and commit using `/cortex-core:commit`.
-
-## Downstream Integration
-
-Requirements documents are passive artifacts — they don't drive workflows directly. Instead, downstream skills consult them automatically:
-
-- **Lifecycle research**: Loads project requirements and relevant area requirements as context for codebase exploration
-- **Lifecycle specify**: References requirements during the structured interview to avoid re-asking settled questions
-- **Lifecycle review**: Checks implementation against project and area requirements for compliance
-- **Discovery research**: Loads relevant requirements to scope investigation
-- **Pipeline**: Inherits lifecycle's requirements awareness through shared reference files
-
-Requirements are never auto-generated by other skills. Only this skill creates and modifies requirements documents.
-
-## Constraints
-
-**Requirements vs specifications**: Requirements define WHAT the project or area needs at a high level. Specifications (produced by lifecycle's specify phase) define detailed acceptance criteria for a single feature. Requirements are broader and more stable; specs are narrower and feature-specific.
-
-**Requirements vs CLAUDE.md**: CLAUDE.md provides operational context loaded every session — repo structure, commands, dependencies, conventions, and working patterns. Requirements provide strategic context loaded on-demand by downstream skills — project vision, feature priorities, quality attributes, and scope boundaries. Do not duplicate operational content from CLAUDE.md in requirements. If something is already documented in CLAUDE.md, reference it rather than restating it.
-
-**Light "how"**: Capture architectural constraints that narrow the solution space (e.g., "must support 16 concurrent players" or "must work offline") because they shape what's feasible. Do not prescribe implementation decisions (e.g., "use WebSockets" or "use SQLite") — leave those to lifecycle's research and planning phases.
+1. If `$ARGUMENTS == "list"`: scan `cortex/requirements/` and present a table (file, scope, last-gathered date, requirement count). Exit. If the directory is absent, report "No requirements documented yet. Run `/cortex-core:requirements` to start with project-level requirements." and exit.
+2. Otherwise resolve `scope`: empty or `project` → `project`; any other single token → that token as the area slug.
+3. Invoke `/requirements-gather` with the resolved `scope` and, when `cortex/requirements/{scope}.md` already exists, pass its path as `existing-doc` so the interview refines rather than rewrites.
+4. When gather returns the Q&A block, invoke `/requirements-write` with the same `scope`, the Q&A block, and the same `existing-doc` (if any). Surface the written artifact path to the user for approval.
+5. After user approval, stage `cortex/requirements/` and commit via `/cortex-core:commit`. Requirements are passive artifacts — downstream skills (lifecycle, refine, discovery, review) consume them on their own loading schedule; do not auto-dispatch any consumer here.
