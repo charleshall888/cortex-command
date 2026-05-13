@@ -27,7 +27,41 @@ from cortex_command.overnight.outcome_router import (
     OutcomeContext,
     apply_feature_result,
 )
+from cortex_command.overnight.readiness import ReadinessResult
 from cortex_command.overnight.types import CircuitBreakerState, FeatureResult
+
+
+def _ok_readiness_result() -> ReadinessResult:
+    """Build a ReadinessResult with ok=True for patching verify_dispatch_readiness.
+
+    Used by tests that call run_daytime in a temp dir (no git repo) to bypass
+    the real auth and worktree probes that require a functional git environment.
+    Task 17 added verify_dispatch_readiness() as Phase A of run_daytime; tests
+    that predate Task 17 need this patch to remain focused on the guards and
+    routing behaviors they were written to cover.
+    """
+    from cortex_command.overnight.auth import AuthProbeResult
+
+    auth_ok = AuthProbeResult(
+        ok=True,
+        vector="env_preexisting",
+        keychain="skipped",
+        result="ok",
+        auth_event={
+            "ts": "2026-01-01T00:00:00+00:00",
+            "event": "auth_bootstrap",
+            "vector": "env_preexisting",
+            "message": "ok",
+        },
+        probe_event=None,
+    )
+    return ReadinessResult(
+        ok=True,
+        failed_check=None,
+        cause=None,
+        remediation_hint=None,
+        auth_probe_result=auth_ok,
+    )
 
 
 def _make_ctx(feature: str = "feat") -> OutcomeContext:
@@ -119,7 +153,14 @@ class TestRunDaytimeStartupGuards(unittest.IsolatedAsyncioTestCase):
             feat_dir = Path(td) / "cortex" / "lifecycle" / "feat"
             feat_dir.mkdir(parents=True)
             stderr = io.StringIO()
-            with _CwdCtx(Path(td)), patch.object(sys, "stderr", stderr):
+            with (
+                _CwdCtx(Path(td)),
+                patch.object(sys, "stderr", stderr),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
+            ):
                 rc = await run_daytime("feat")
         self.assertEqual(rc, 1)
         self.assertIn("plan.md not found", stderr.getvalue())
@@ -137,7 +178,14 @@ class TestRunDaytimeStartupGuards(unittest.IsolatedAsyncioTestCase):
                 str(os.getpid()), encoding="utf-8"
             )
             stderr = io.StringIO()
-            with _CwdCtx(Path(td)), patch.object(sys, "stderr", stderr):
+            with (
+                _CwdCtx(Path(td)),
+                patch.object(sys, "stderr", stderr),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
+            ):
                 rc = await run_daytime("feat")
         self.assertEqual(rc, 1)
         self.assertIn("already running", stderr.getvalue())
@@ -160,6 +208,14 @@ class TestRunDaytimeStartupGuards(unittest.IsolatedAsyncioTestCase):
 
             with (
                 _CwdCtx(Path(td)),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
+                patch.object(
+                    daytime_pipeline, "_worktree_path",
+                    return_value=worktree_info.path,
+                ),
                 patch.object(
                     daytime_pipeline, "_recover_stale"
                 ) as m_recover,
@@ -214,6 +270,10 @@ class TestRunDaytimeRouting(unittest.IsolatedAsyncioTestCase):
             self._setup_dirs(td, feature)
             with (
                 _CwdCtx(Path(td)),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
                 patch.object(
                     daytime_pipeline,
                     "create_worktree",
@@ -258,6 +318,10 @@ class TestRunDaytimeRouting(unittest.IsolatedAsyncioTestCase):
             self._setup_dirs(td, feature)
             with (
                 _CwdCtx(Path(td)),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
                 patch.object(
                     daytime_pipeline,
                     "create_worktree",
@@ -303,6 +367,10 @@ class TestRunDaytimeRouting(unittest.IsolatedAsyncioTestCase):
             self._setup_dirs(td, feature)
             with (
                 _CwdCtx(Path(td)),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
                 patch.object(
                     daytime_pipeline,
                     "create_worktree",
@@ -550,6 +618,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                         {"DAYTIME_DISPATCH_ID": "a" * 32},
                         clear=False,
                     ),
+                    patch(
+                        "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                        return_value=_ok_readiness_result(),
+                    ),
                     patch.object(
                         daytime_pipeline,
                         "create_worktree",
@@ -608,6 +680,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                     {"DAYTIME_DISPATCH_ID": "a" * 32},
                     clear=False,
                 ),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
                 patch.object(
                     daytime_pipeline,
                     "create_worktree",
@@ -664,6 +740,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                     {"DAYTIME_DISPATCH_ID": "a" * 32},
                     clear=False,
                 ),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
                 patch.object(
                     daytime_pipeline,
                     "create_worktree",
@@ -715,6 +795,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                     {"DAYTIME_DISPATCH_ID": "a" * 32},
                     clear=False,
                 ),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
                 patch.object(
                     daytime_pipeline,
                     "create_worktree",
@@ -764,6 +848,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                     {"DAYTIME_DISPATCH_ID": "a" * 32},
                     clear=False,
                 ),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
                 patch.object(
                     daytime_pipeline,
                     "create_worktree",
@@ -812,6 +900,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                     os.environ,
                     {"DAYTIME_DISPATCH_ID": "a" * 32},
                     clear=False,
+                ),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
                 ),
                 patch.object(
                     daytime_pipeline,
@@ -909,6 +1001,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                     {"DAYTIME_DISPATCH_ID": "a" * 32},
                     clear=False,
                 ),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
+                ),
             ):
                 rc = await run_daytime(feature)
 
@@ -948,6 +1044,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                 os.environ.pop("DAYTIME_DISPATCH_ID", None)
 
                 with (
+                    patch(
+                        "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                        return_value=_ok_readiness_result(),
+                    ),
                     patch.object(
                         daytime_pipeline,
                         "create_worktree",
@@ -1000,6 +1100,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                     os.environ,
                     {"DAYTIME_DISPATCH_ID": "not-a-uuid!"},
                     clear=False,
+                ),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
                 ),
                 patch.object(
                     daytime_pipeline,
@@ -1065,6 +1169,10 @@ class TestDaytimeResultFile(unittest.IsolatedAsyncioTestCase):
                     os.environ,
                     {"DAYTIME_DISPATCH_ID": "a" * 32},
                     clear=False,
+                ),
+                patch(
+                    "cortex_command.overnight.daytime_pipeline.verify_dispatch_readiness",
+                    return_value=_ok_readiness_result(),
                 ),
                 patch.object(
                     daytime_pipeline,
