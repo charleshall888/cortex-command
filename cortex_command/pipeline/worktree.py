@@ -18,6 +18,7 @@ import json
 import os
 import shutil
 import subprocess
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,6 +31,15 @@ class WorktreeInfo:
     path: Path
     branch: str
     exists: bool
+
+
+@dataclass
+class ProbeResult:
+    """Result of a worktree writability probe."""
+
+    ok: bool
+    cause: str | None
+    remediation_hint: str | None
 
 
 def _repo_root() -> Path:
@@ -417,3 +427,160 @@ def list_worktrees(repo_path: Path | None = None) -> list[WorktreeInfo]:
         )
 
     return worktrees
+
+
+def probe_worktree_writable(root: Path) -> ProbeResult:
+    """Probe whether a worktree root is writable and git-worktree-add-capable.
+
+    Performs two checks in order:
+        (a) No-op file create + delete under ``root`` — catches sandbox-blocked
+            roots where the filesystem denies writes entirely.
+        (b) No-op ``git worktree add <root>/cortex-probe-<uuid> <throwaway-branch>``
+            + immediate cleanup — catches hardcoded-deny paths such as ``.vscode/``
+            or ``.idea/`` that the Claude Code sandbox blocks even when the parent
+            root passes check (a).
+
+    On failure, returns a ``ProbeResult`` with ``ok=False``, a ``cause`` field
+    naming the likely root cause, and a ``remediation_hint`` field. On success,
+    returns a ``ProbeResult`` with ``ok=True`` and no artifacts left behind.
+
+    Cleanup runs unconditionally via a ``finally`` block; cleanup failures are
+    suppressed (they do not raise).
+
+    Args:
+        root: The worktree root directory to probe. Need not exist; created as
+            a side-effect of the git worktree add probe if absent.
+
+    Returns:
+        ProbeResult with ``ok`` indicating whether the root is usable.
+    """
+    token = uuid.uuid4().hex[:8]
+    probe_file = root / f".cortex-probe-{token}"
+    probe_wt_path = root / f"cortex-probe-{token}"
+    probe_branch = f"cortex-probe-{token}"
+
+    # ------------------------------------------------------------------
+    # Check (a): filesystem write access
+    # ------------------------------------------------------------------
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        probe_file.write_text("")
+        probe_file.unlink()
+    except OSError as exc:
+        return ProbeResult(
+            ok=False,
+            cause="sandbox_blocked",
+            remediation_hint=(
+                f"Cannot write to worktree root {root}: {exc}. "
+                "Add the root to sandbox.filesystem.allowWrite in "
+                "~/.claude/settings.local.json (run 'cortex init' to register it automatically)."
+            ),
+        )
+    finally:
+        # Best-effort cleanup; must not raise.
+        try:
+            if probe_file.exists():
+                probe_file.unlink()
+        except OSError:
+            pass
+
+    # ------------------------------------------------------------------
+    # Check (b): git worktree add capability (catches hardcoded denies)
+    # ------------------------------------------------------------------
+    # We need a git repo to run `git worktree add` from. Walk up from root
+    # to find one; if none found, skip this check (not a blocker).
+    repo = _find_git_repo(root)
+    if repo is None:
+        # No git repo reachable from root — skip check (b), report success.
+        return ProbeResult(ok=True, cause=None, remediation_hint=None)
+
+    # Create a throwaway branch name that doesn't exist yet.
+    # We use an orphan commit-less worktree via --detach if the branch
+    # would conflict, but the uuid prefix makes collision essentially impossible.
+    probe_wt_created = False
+    probe_branch_created = False
+    try:
+        # Create an empty throwaway commit so the branch has something to point at.
+        # Use --orphan to avoid needing an existing commit. We run `git worktree add`
+        # with `-b <branch>` from HEAD so it doesn't need a prior empty commit.
+        result = subprocess.run(
+            ["git", "worktree", "add", str(probe_wt_path), "-b", probe_branch, "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=str(repo),
+        )
+        if result.returncode != 0:
+            stderr = (result.stderr or "").strip()
+            return ProbeResult(
+                ok=False,
+                cause="hardcoded_deny",
+                remediation_hint=(
+                    f"git worktree add failed under {root}: {stderr}. "
+                    "This likely means the root path falls under a Claude Code "
+                    "hardcoded sandbox deny (e.g. .vscode/ or .idea/). "
+                    "Workarounds: (1) use sparse-checkout to untrack the directory, "
+                    "(2) add 'git' to excludedCommands to run outside the sandbox, "
+                    "or (3) use dangerouslyDisableSandbox (last resort). "
+                    "See https://github.com/anthropics/claude-code/issues/51303"
+                ),
+            )
+        probe_wt_created = True
+        probe_branch_created = True
+        return ProbeResult(ok=True, cause=None, remediation_hint=None)
+    finally:
+        # Cleanup: remove the probe worktree and branch unconditionally.
+        # All cleanup failures are suppressed.
+        if probe_wt_created:
+            try:
+                subprocess.run(
+                    ["git", "worktree", "remove", "--force", str(probe_wt_path)],
+                    capture_output=True,
+                    text=True,
+                    cwd=str(repo),
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        if probe_branch_created:
+            try:
+                subprocess.run(
+                    ["git", "branch", "-D", probe_branch],
+                    capture_output=True,
+                    text=True,
+                    cwd=str(repo),
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        # Prune stale worktree refs after cleanup.
+        try:
+            subprocess.run(
+                ["git", "worktree", "prune"],
+                capture_output=True,
+                text=True,
+                cwd=str(repo),
+            )
+        except Exception:  # noqa: BLE001
+            pass
+        # Remove probe worktree directory if still present.
+        try:
+            if probe_wt_path.exists():
+                shutil.rmtree(probe_wt_path, ignore_errors=True)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def _find_git_repo(start: Path) -> Path | None:
+    """Walk up from ``start`` to find the root of a git repository.
+
+    Returns the first directory containing a ``.git`` entry, or None if none
+    is found before reaching the filesystem root.
+    """
+    candidate = start.resolve()
+    # Limit traversal to avoid infinite loops on unusual filesystems.
+    for _ in range(64):
+        if (candidate / ".git").exists():
+            return candidate
+        parent = candidate.parent
+        if parent == candidate:
+            break
+        candidate = parent
+    return None
