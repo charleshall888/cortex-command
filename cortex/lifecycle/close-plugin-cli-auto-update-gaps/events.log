@@ -9,3 +9,6 @@
 {"ts":"2026-05-13T19:25:10Z","event":"sentinel_absence","feature":"close-plugin-cli-auto-update-gaps","reviewer_angle":"Integration test fidelity and acceptance coverage residuals","reason":"absent","model_tier":"sonnet","expected_sha":"7fb7e94eb46d2eb8c4629df4c75a35dc1cf08c89fc71140836c61b5ecea9f539","observed_sha_or_null":null}
 {"ts": "2026-05-13T19:37:32Z", "event": "plan_approved", "feature": "close-plugin-cli-auto-update-gaps"}
 {"ts": "2026-05-13T19:37:32Z", "event": "phase_transition", "feature": "close-plugin-cli-auto-update-gaps", "from": "plan", "to": "implement"}
+{"ts": "2026-05-13T21:04:43Z", "event": "batch_dispatch", "feature": "close-plugin-cli-auto-update-gaps", "batch": 5, "tasks": [19, 22]}
+{"ts": "2026-05-13T21:24:55Z", "event": "batch_dispatch", "feature": "close-plugin-cli-auto-update-gaps", "batch": 6, "tasks": [23]}
+{"ts": "2026-05-13T21:33:31Z", "event": "batch_dispatch", "feature": "close-plugin-cli-auto-update-gaps", "batch": 7, "tasks": [25]}
