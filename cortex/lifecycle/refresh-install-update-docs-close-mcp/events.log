@@ -1,0 +1,7 @@
+{"schema_version": 3, "ts": "2026-05-13T13:17:18Z", "event": "clarify_critic", "feature": "refresh-install-update-docs-close-mcp", "parent_epic_loaded": false, "findings_count": 8, "dispositions": {"apply": 1, "dismiss": 3, "ask": 4}, "applied_fixes_count": 1, "dismissals_count": 3, "status": "ok"}
+{"ts": "2026-05-13T13:29:38Z", "event": "lifecycle_start", "feature": "refresh-install-update-docs-close-mcp", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-13T13:30:00Z", "event": "phase_transition", "feature": "refresh-install-update-docs-close-mcp", "from": "clarify", "to": "research"}
+{"ts": "2026-05-13T13:47:38Z", "event": "phase_transition", "feature": "refresh-install-update-docs-close-mcp", "from": "research", "to": "specify"}
+{"ts": "2026-05-13T13:47:44Z", "event": "complexity_override", "feature": "refresh-install-update-docs-close-mcp", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-13T14:13:55Z", "event": "spec_approved", "feature": "refresh-install-update-docs-close-mcp"}
+{"ts": "2026-05-13T14:14:27Z", "event": "phase_transition", "feature": "refresh-install-update-docs-close-mcp", "from": "specify", "to": "plan"}
