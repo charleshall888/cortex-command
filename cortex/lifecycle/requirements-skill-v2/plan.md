@@ -225,7 +225,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: Existing v1 templates live in `skills/requirements/references/gather.md` (being retired in Task 25) and in the canonical `cortex/requirements/project.md` post-trim. Required sections per R10/R14: Overview, Philosophy of Work, Architectural Constraints, Quality Attributes, Project Boundaries (with discovery/backlog inline clarification), Conditional Loading, Optional.
 - **Verification**: `test -f cortex/lifecycle/requirements-skill-v2/artifact-format.md` AND file contains H2 sections for both `## Parent (project.md) template` and `## Area template`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit a2fb1dec; both Parent and Area H2 templates present)
 
 ### Task 22: Create `/requirements-gather` skill (R15)
 - **Files**: `skills/requirements-gather/SKILL.md`
