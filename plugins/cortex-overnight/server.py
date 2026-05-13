@@ -121,29 +121,16 @@ class SchemaVersionError(RuntimeError):
     """
 
 
-def _parse_major_minor(version: str) -> tuple[int, int]:
-    """Parse a ``"M.m"`` string into ``(major, minor)``.
-
-    Strict — raises :class:`ValueError` on any non-conforming input. The
-    schema-version helper catches this and re-raises as
-    :class:`SchemaVersionError` with context.
-    """
-    parts = str(version).split(".", 1)
-    if len(parts) != 2:
-        raise ValueError(f"version must be 'M.m'; got {version!r}")
-    return int(parts[0]), int(parts[1])
-
-
 def _check_version(payload: dict, *, verb: str) -> None:
     """Enforce the schema-floor on a CLI JSON payload (R15).
 
     Raises :class:`SchemaVersionError` when:
 
-    * ``payload['version']`` is missing (with the documented exception
-      for the legacy ``{"active": false}`` no-active-session shape from
-      ``cortex overnight status --format json``, which pre-dates the
-      versioned envelope).
-    * ``payload['version']``'s major component differs from
+    * ``payload['schema_version']`` is missing (with the documented
+      exception for the legacy ``{"active": false}`` no-active-session
+      shape from ``cortex overnight status --format json``, which
+      pre-dates the versioned envelope).
+    * ``payload['schema_version']``'s major component differs from
       ``MCP_REQUIRED_CLI_VERSION``'s major.
 
     Minor-greater is accepted; the payload's unknown fields are dropped
@@ -151,7 +138,9 @@ def _check_version(payload: dict, *, verb: str) -> None:
     output model.
     """
 
-    version = payload.get("version") if isinstance(payload, dict) else None
+    version = (
+        payload.get("schema_version") if isinstance(payload, dict) else None
+    )
     if version is None:
         # Legacy unversioned shape: ``cortex overnight status --format
         # json`` emits ``{"active": false}`` (and the active branch is
@@ -168,17 +157,24 @@ def _check_version(payload: dict, *, verb: str) -> None:
                 _STATUS_LEGACY_VERSION_WARNED = True
             return
         raise SchemaVersionError(
-            f"{verb}: missing 'version' field in CLI JSON payload"
+            f"{verb}: missing 'schema_version' field in CLI JSON payload"
         )
 
     try:
-        major, _minor = _parse_major_minor(version)
-    except (ValueError, TypeError) as exc:
+        major = int(str(version).split(".")[0])
+    except (ValueError, TypeError, AttributeError) as exc:
         raise SchemaVersionError(
-            f"{verb}: malformed version {version!r}: {exc}"
+            f"{verb}: malformed schema_version {version!r}: {exc}"
         ) from exc
 
-    required_major, _ = _parse_major_minor(MCP_REQUIRED_CLI_VERSION)
+    try:
+        required_major = int(MCP_REQUIRED_CLI_VERSION.split(".")[0])
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise SchemaVersionError(
+            f"{verb}: malformed MCP_REQUIRED_CLI_VERSION "
+            f"{MCP_REQUIRED_CLI_VERSION!r}: {exc}"
+        ) from exc
+
     if major != required_major:
         raise SchemaVersionError(
             f"{verb}: major-version mismatch — CLI emitted {version!r}, "
@@ -1501,21 +1497,21 @@ def _schema_floor_violated(cortex_root_payload: dict[str, Any]) -> bool:
 
     Spec R13: closes the bidirectional staleness window during
     plugin-update + CLI-update interaction. The CLI's reported
-    ``version`` comes from the discovery cache (Task 6); that cache
-    never expires for the MCP-server lifetime.
+    ``schema_version`` comes from the discovery cache (Task 6); that
+    cache never expires for the MCP-server lifetime.
 
     Returns ``False`` when the discovery payload has no parseable
-    version (defensive: the caller falls through to the regular R8
-    throttle path; ``_check_version`` will surface the malformed-version
-    error during tool dispatch).
+    schema_version (defensive: the caller falls through to the regular
+    R8 throttle path; ``_check_version`` will surface the
+    malformed-version error during tool dispatch).
     """
-    cli_version = cortex_root_payload.get("version")
+    cli_version = cortex_root_payload.get("schema_version")
     if cli_version is None:
         return False
     try:
-        cli_major, _ = _parse_major_minor(cli_version)
-        required_major, _ = _parse_major_minor(MCP_REQUIRED_CLI_VERSION)
-    except (ValueError, TypeError):
+        cli_major = int(str(cli_version).split(".")[0])
+        required_major = int(MCP_REQUIRED_CLI_VERSION.split(".")[0])
+    except (ValueError, TypeError, AttributeError):
         return False
     return required_major > cli_major
 

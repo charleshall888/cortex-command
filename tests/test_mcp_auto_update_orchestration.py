@@ -1341,7 +1341,7 @@ def test_schema_floor_triggers_synchronous_upgrade(
     cortex_root = tmp_path / "cortex"
     (cortex_root / ".git").mkdir(parents=True)
     server_module._CORTEX_ROOT_CACHE = {
-        "version": "0.9",
+        "schema_version": "0.9",
         "root": str(cortex_root),
         "remote_url": "git@github.com:user/cortex-command.git",
         "head_sha": "a" * 40,
@@ -1432,7 +1432,7 @@ def test_schema_floor_tool_call_runs_after_upgrade(
     cortex_root = tmp_path / "cortex"
     (cortex_root / ".git").mkdir(parents=True)
     server_module._CORTEX_ROOT_CACHE = {
-        "version": "0.9",
+        "schema_version": "0.9",
         "root": str(cortex_root),
         "remote_url": "git@github.com:user/cortex-command.git",
         "head_sha": "a" * 40,
