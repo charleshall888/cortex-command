@@ -234,7 +234,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Patterns sourced from research §4: `mattpocock/skills/skills/productivity/grill-me/SKILL.md` and `engineering/grill-with-docs/SKILL.md`. Follow cortex's "prescribe What and Why, not How" principle — describe decision criteria, not procedure. The 80-line cap is the structural enforcement of brevity. No new MUST/CRITICAL/REQUIRED escalations.
 - **Verification**: `wc -l skills/requirements-gather/SKILL.md | awk '{print $1}'` ≤`80` AND `grep -ciE 'recommend.*before.*ask|recommended answer' skills/requirements-gather/SKILL.md` ≥`1` AND `grep -ciE 'codebase.*trump|explore.*code.*instead' skills/requirements-gather/SKILL.md` ≥`1` AND `grep -ciE 'lazy|only.*write.*when' skills/requirements-gather/SKILL.md` ≥`1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 7fe49722; 73 lines ≤80 cap, all 3 mattpocock anchors present)
 
 ### Task 23: Create `/requirements-write` skill (R16)
 - **Files**: `skills/requirements-write/SKILL.md`
