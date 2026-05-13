@@ -2,13 +2,20 @@
 schema_version: "1"
 uuid: 4f90fc64-cae9-4a87-9245-8256ddf9b234
 title: "Close plugin/CLI auto-update gaps and author authoritative internals doc"
-status: backlog
+status: refined
 priority: high
 type: feature
 created: 2026-05-13
 updated: 2026-05-13
 discovery_source: 210-refresh-install-update-docs-close-mcp-only-auto-update-gaps.md
 tags: [mcp, upgrade, internals, plugin]
+session_id: 5a6fc0f7-aeca-40b9-a626-21e5b67fd06e
+lifecycle_phase: research
+lifecycle_slug: close-plugin-cli-auto-update-gaps
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/close-plugin-cli-auto-update-gaps/spec.md
+areas: [overnight-runner,skills]
 ---
 
 ## Intent (what the system is supposed to deliver)
