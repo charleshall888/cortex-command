@@ -760,12 +760,12 @@ def _cli_normalize_status(args: list[str]) -> None:
     print(normalize_status(args[0]))
 
 
-if __name__ == "__main__":
+def _run() -> None:
     argv = sys.argv[1:]
 
     if not argv:
         print(
-            "Usage: python3 -m cortex_command.common <subcommand> [args]\n"
+            "Usage: cortex-common <subcommand> [args]\n"
             "\n"
             "Subcommands:\n"
             "  detect-phase <dir>      Detect lifecycle phase for a feature directory\n"
@@ -784,3 +784,10 @@ if __name__ == "__main__":
     else:
         print(f"Unknown subcommand: {subcommand}", file=sys.stderr)
         sys.exit(1)
+
+
+def main() -> None: _run()
+
+
+if __name__ == "__main__":
+    _run()

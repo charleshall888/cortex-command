@@ -24,6 +24,21 @@ cortex-update-item = "cortex_command.backlog.update_item:main"
 cortex-create-backlog-item = "cortex_command.backlog.create_item:main"
 cortex-generate-backlog-index = "cortex_command.backlog.generate_index:main"
 cortex-build-epic-map = "cortex_command.backlog.build_epic_map:main"
+# Phase 3 console-script sweep (R13): promoted from python3 -m callsites
+cortex-auth = "cortex_command.overnight.auth:_main"
+cortex-common = "cortex_command.common:main"
+cortex-critical-review = "cortex_command.critical_review:main"
+cortex-dashboard-seed = "cortex_command.dashboard.seed:main"
+cortex-daytime-dispatch-writer = "cortex_command.overnight.daytime_dispatch_writer:main"
+cortex-daytime-pipeline = "cortex_command.overnight.daytime_pipeline:_run"
+cortex-daytime-result-reader = "cortex_command.overnight.daytime_result_reader:main"
+cortex-discovery = "cortex_command.discovery:main"
+cortex-integration-recovery = "cortex_command.overnight.integration_recovery:main"
+cortex-interrupt = "cortex_command.overnight.interrupt:main"
+cortex-morning-review-complete-session = "cortex_command.overnight.complete_morning_review_session:main"
+cortex-pipeline-metrics = "cortex_command.pipeline.metrics:main"
+cortex-report = "cortex_command.overnight.report:main"
+cortex-smoke-test = "cortex_command.overnight.smoke_test:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["cortex_command"]
