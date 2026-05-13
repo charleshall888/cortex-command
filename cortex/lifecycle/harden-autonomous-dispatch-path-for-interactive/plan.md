@@ -194,7 +194,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: complex
 - **Context**: Spec R18 details the rationale for the two-check (not three-check) design: a `find_spec("claude_agent_sdk")` check is informationally vacuous (the surrounding `daytime_pipeline` module is already imported); a `shutil.which("cortex-daytime-pipeline")` check tests a future invocation's launcher health, not the current dispatch — failing on `which=None` would abort successful launches while passing broken launches. F3 surfaces at process start via Python's normal import-error path or `command not found`. `ReadinessResult` shape: `@dataclass class ReadinessResult: ok: bool; failed_check: Literal["auth", "worktree"] | None; cause: str | None; remediation_hint: str | None`. `daytime-result.json` must include the structured `error` on failed-readiness runs (existing contract at `daytime_pipeline.py:496-554`).
 - **Verification**: run `pytest cortex_command/overnight/tests/test_dispatch_readiness.py -q` — pass if exit 0; AND `grep -c 'def verify_dispatch_readiness' cortex_command/overnight/daytime_pipeline.py cortex_command/overnight/readiness.py 2>/dev/null` — pass if count ≥ 1 (whichever location holds the function).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 18: Add `tests/test_dispatch_parity.py` with acceptance-bar honesty docstring
 - **Files**: `tests/test_dispatch_parity.py`
@@ -203,7 +203,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: complex
 - **Context**: `_OPTIONAL_ENV_KEYS` lives at `cortex_command/overnight/scheduler/macos.py:53-62` (research.md citation). `_install_sdk_stub` installed by `cortex_command/overnight/tests/conftest.py:33-35`. Existing fixture pattern: `cortex_command/overnight/tests/test_daytime_auth.py` for CWD pinning, env preservation, hermetic fixtures. Phase B detection: after `run_daytime` returns or after the dispatch loop logs the `phase_b_start` (or equivalent) event — assert against `events.log` content rather than internal state. The fixture trivial-task plan can be a one-line scratch plan.md in a `pytest.TempPathFactory`-managed dir.
 - **Verification**: run `pytest tests/test_dispatch_parity.py -q` — pass if exit 0; AND `grep -A 5 'regression freeze' tests/test_dispatch_parity.py` — pass if the exact wording from spec R21 appears in the docstring.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 19: Add `just test-dispatch-parity-launchd-real` opt-in recipe
 - **Files**: `justfile`

@@ -245,12 +245,21 @@ def test_circuit_breaker_marks_features_paused(
         runner_module, "restore_signal_handlers", lambda _prior: None
     )
 
-    # Auth pre-flight — runner already wraps this in try/except, but
-    # keep the test offline.
+    # Auth pre-flight — keep the test offline by stubbing the shared
+    # resolve_and_probe helper to return a successful AuthProbeResult.
+    from cortex_command.overnight.auth import AuthProbeResult
+
     monkeypatch.setattr(
         runner_module.auth,
-        "ensure_sdk_auth",
-        lambda event_log_path=None: {},
+        "resolve_and_probe",
+        lambda event_log_path=None, **kw: AuthProbeResult(
+            ok=True,
+            vector="api_key",
+            keychain="skipped",
+            result="ok",
+            auth_event={"event": "auth_bootstrap", "vector": "api_key"},
+            probe_event=None,
+        ),
     )
 
     # _spawn_orchestrator — return a stub Popen + watchdog tuple. The
