@@ -1,0 +1,8 @@
+{"schema_version": 3, "ts": "2026-05-13T00:01:11Z", "event": "clarify_critic", "feature": "lead-refine-4-complexity-value-gate", "parent_epic_loaded": false, "findings_count": 9, "dispositions": {"apply": 2, "dismiss": 7, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 7, "status": "ok"}
+{"ts": "2026-05-13T00:15:22Z", "event": "complexity_override", "feature": "lead-refine-4-complexity-value-gate", "from": "simple", "to": "complex", "gate": "specify_open_decisions"}
+{"ts":"2026-05-13T00:15:24Z","event":"lifecycle_start","feature":"lead-refine-4-complexity-value-gate","tier":"simple","criticality":"high"}
+{"ts":"2026-05-13T00:15:24Z","event":"spec_approved","feature":"lead-refine-4-complexity-value-gate"}
+{"ts":"2026-05-13T00:15:24Z","event":"phase_transition","feature":"lead-refine-4-complexity-value-gate","from":"specify","to":"plan"}
+{"ts":"2026-05-13T00:16:18Z","event":"complexity_override","feature":"lead-refine-4-complexity-value-gate","from":"complex","to":"simple","gate":"specify_open_decisions","note":"prior override was a counting artifact; spec body bullets in Open Decisions are explanatory not deferred decisions; re-run returned empty"}
+{"ts":"2026-05-13T11:56:52Z","event":"plan_approved","feature":"lead-refine-4-complexity-value-gate"}
+{"ts":"2026-05-13T11:56:52Z","event":"phase_transition","feature":"lead-refine-4-complexity-value-gate","from":"plan","to":"implement"}
