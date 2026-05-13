@@ -360,6 +360,10 @@ measure-l1-surface:
 check-events-registry-audit:
     bin/cortex-check-events-registry --audit
 
+# Audit repo for bare bare-python-m cortex_command callsites against allowlist (R12, off critical path)
+check-bare-python-callsites:
+    python3 bin/cortex-check-parity --audit-bare-python-m-callsites
+
 # Check Python sources for bare-prefix path literals (#203 — prevents pre-#202 layout regression)
 check-path-hardcoding *args:
     bin/cortex-check-path-hardcoding --staged {{args}}

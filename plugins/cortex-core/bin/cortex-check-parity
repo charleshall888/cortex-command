@@ -81,6 +81,20 @@ SCAN_GLOBS: tuple[str, ...] = (
 # R8: allowlist file location.
 ALLOWLIST_PATH = "bin/.parity-exceptions.md"
 
+# R12(c/d): bare-python-m audit allowlist location.
+BARE_PYTHON_M_ALLOWLIST_PATH = "bin/.audit-bare-python-m-allowlist.md"
+
+# R12(c): paths scanned by --audit-bare-python-m-callsites (relative to repo root).
+BARE_PYTHON_M_SCAN_PATHS: tuple[str, ...] = (
+    "skills",
+    "hooks",
+    "claude",
+    "bin",
+    "docs",
+    "justfile",
+    "tests",
+)
+
 # Sandbox pre-flight gate (spec Req 17 / Task 12) ---------------------------
 # Watched files whose staged diff hunks are scanned for sandbox-source patterns.
 # Maps file path -> tuple of regex patterns (any match in a staged diff hunk
@@ -115,6 +129,15 @@ PREFLIGHT_PATH = (
 
 ALLOWED_CATEGORIES: frozenset[str] = frozenset(
     {"maintainer-only-tool", "library-internal", "deprecated-pending-removal"}
+)
+
+# R12(d): closed-enum categories for the bare-python-m allowlist.
+BARE_PYTHON_M_ALLOWED_CATEGORIES: frozenset[str] = frozenset(
+    {
+        "module-execution-pathway-test",
+        "document-content-invariant",
+        "wrapper-script-r14-pending",
+    }
 )
 FORBIDDEN_RATIONALE_LITERALS: frozenset[str] = frozenset(
     {"internal", "misc", "tbd", "n/a", "pending", "temporary"}
@@ -810,6 +833,258 @@ def _has_loose_wiring(text: str, name: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Bare python3 -m cortex_command.* audit gate (R12 part c/d/e)
+# ---------------------------------------------------------------------------
+
+
+def _parse_bare_python_m_allowlist(
+    text: str,
+    *,
+    source_path: str = BARE_PYTHON_M_ALLOWLIST_PATH,
+) -> tuple[set[tuple[str, int]], list[str]]:
+    """Parse bin/.audit-bare-python-m-allowlist.md and return allowlisted (file, line) pairs.
+
+    The allowlist format uses ``## Entries`` section with ``### <file>:<line>[, :<line>...]``
+    headings and field tables. Each heading may list multiple line numbers (comma-separated
+    with optional ``:`` prefix on subsequent numbers).
+
+    Returns (allowed_pairs, errors) where ``allowed_pairs`` is a set of (rel_path, line_number)
+    tuples and ``errors`` is a list of human-readable parse-error strings.
+    """
+    allowed: set[tuple[str, int]] = set()
+    errors: list[str] = []
+
+    in_entries_section = False
+    current_file: str | None = None
+    current_lines: list[int] = []
+    current_category: str | None = None
+    current_rationale: str | None = None
+
+    def _commit_entry(heading_text: str) -> None:
+        """Validate and commit the current entry to allowed set."""
+        if current_file is None:
+            return
+        if not current_lines:
+            errors.append(f"{source_path}: entry '{heading_text}' has no parseable line numbers")
+            return
+        if current_category not in BARE_PYTHON_M_ALLOWED_CATEGORIES:
+            errors.append(
+                f"{source_path}: entry '{heading_text}' has invalid category "
+                f"{current_category!r} — must be one of "
+                f"{sorted(BARE_PYTHON_M_ALLOWED_CATEGORIES)}"
+            )
+            return
+        rationale = (current_rationale or "").strip()
+        if len(rationale) < 30:
+            errors.append(
+                f"{source_path}: entry '{heading_text}' rationale too short "
+                f"({len(rationale)} chars, need ≥30)"
+            )
+            return
+        for ln in current_lines:
+            allowed.add((current_file, ln))
+
+    # We iterate twice: first to extract entries with a simple state machine.
+    last_heading: str = ""
+    state_file: str | None = None
+    state_lines: list[int] = []
+    state_category: str | None = None
+    state_rationale: str | None = None
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+
+        # Detect ## Entries section header.
+        if line == "## Entries":
+            in_entries_section = True
+            continue
+
+        if not in_entries_section:
+            continue
+
+        # Detect a new entry heading: ### <file>:<line>[, :<line>...]
+        if line.startswith("### "):
+            # Commit previous entry if any.
+            if state_file is not None:
+                # validate + commit
+                if not state_lines:
+                    errors.append(
+                        f"{source_path}: entry '{last_heading}' has no parseable line numbers"
+                    )
+                elif state_category not in BARE_PYTHON_M_ALLOWED_CATEGORIES:
+                    errors.append(
+                        f"{source_path}: entry '{last_heading}' has invalid category "
+                        f"{state_category!r} — must be one of "
+                        f"{sorted(BARE_PYTHON_M_ALLOWED_CATEGORIES)}"
+                    )
+                else:
+                    rationale = (state_rationale or "").strip()
+                    if len(rationale) < 30:
+                        errors.append(
+                            f"{source_path}: entry '{last_heading}' rationale too short "
+                            f"({len(rationale)} chars, need ≥30)"
+                        )
+                    else:
+                        for ln in state_lines:
+                            allowed.add((state_file, ln))
+
+            heading_body = line[4:].strip()  # strip "### "
+            last_heading = heading_body
+            state_file = None
+            state_lines = []
+            state_category = None
+            state_rationale = None
+
+            # Parse the heading: "filename:N[, :M, :P]"
+            # Split on first colon to get filename; then parse line numbers.
+            colon_idx = heading_body.find(":")
+            if colon_idx < 0:
+                errors.append(
+                    f"{source_path}: heading '{heading_body}' has no ':' separator for line number"
+                )
+                continue
+            state_file = heading_body[:colon_idx].strip()
+            line_part = heading_body[colon_idx + 1:]
+            # line_part may be "507" or "319, :332" or "356, :403, :419"
+            for token in line_part.split(","):
+                token = token.strip().lstrip(":")
+                try:
+                    state_lines.append(int(token))
+                except ValueError:
+                    errors.append(
+                        f"{source_path}: cannot parse line number {token!r} in heading '{heading_body}'"
+                    )
+            continue
+
+        # Detect field table rows: | field | value |
+        if line.startswith("|") and state_file is not None:
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if len(cells) == 2:
+                field, value = cells[0].strip().lower(), cells[1].strip()
+                # Strip backticks from value.
+                value = value.strip("`").strip()
+                if field == "category":
+                    state_category = value
+                elif field == "rationale":
+                    state_rationale = value
+            continue
+
+    # Commit last entry.
+    if state_file is not None:
+        if not state_lines:
+            errors.append(
+                f"{source_path}: entry '{last_heading}' has no parseable line numbers"
+            )
+        elif state_category not in BARE_PYTHON_M_ALLOWED_CATEGORIES:
+            errors.append(
+                f"{source_path}: entry '{last_heading}' has invalid category "
+                f"{state_category!r} — must be one of "
+                f"{sorted(BARE_PYTHON_M_ALLOWED_CATEGORIES)}"
+            )
+        else:
+            rationale = (state_rationale or "").strip()
+            if len(rationale) < 30:
+                errors.append(
+                    f"{source_path}: entry '{last_heading}' rationale too short "
+                    f"({len(rationale)} chars, need ≥30)"
+                )
+            else:
+                for ln in state_lines:
+                    allowed.add((state_file, ln))
+
+    return allowed, errors
+
+
+def _grep_bare_python_m_callsites(root: Path) -> list[tuple[str, int, str]]:
+    """Grep for ``python3 -m cortex_command.`` across BARE_PYTHON_M_SCAN_PATHS.
+
+    Returns a list of (rel_path, line_number, matched_line) triples.
+    Skips the allowlist file and this tool itself to avoid false positives.
+    """
+    pattern = "python3 -m cortex_command."
+    # Files excluded from the scan: the allowlist (contains rationale text) and
+    # this tool's own source (contains the pattern as string literals and comments).
+    excluded_rel_paths: frozenset[str] = frozenset(
+        {
+            BARE_PYTHON_M_ALLOWLIST_PATH,
+            f"bin/{SELF_REFERENCE}",
+        }
+    )
+    results: list[tuple[str, int, str]] = []
+
+    for path_fragment in BARE_PYTHON_M_SCAN_PATHS:
+        target = root / path_fragment
+        if target.is_file():
+            # Single file (e.g. justfile).
+            rel = path_fragment
+            if rel in excluded_rel_paths:
+                continue
+            try:
+                text = target.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            for idx, line_text in enumerate(text.splitlines(), start=1):
+                if pattern in line_text:
+                    results.append((rel, idx, line_text))
+        elif target.is_dir():
+            # Walk recursively.
+            for dirpath, _dirnames, filenames in os.walk(target):
+                for fname in filenames:
+                    abs_file = Path(dirpath) / fname
+                    try:
+                        rel = str(abs_file.relative_to(root))
+                    except ValueError:
+                        continue
+                    if rel in excluded_rel_paths:
+                        continue
+                    try:
+                        text = abs_file.read_text(encoding="utf-8", errors="replace")
+                    except OSError:
+                        continue
+                    for idx, line_text in enumerate(text.splitlines(), start=1):
+                        if pattern in line_text:
+                            results.append((rel, idx, line_text))
+
+    return results
+
+
+def audit_bare_python_m_callsites(root: Path) -> tuple[list[str], list[str]]:
+    """Run the bare-python-m callsite audit (R12 part c).
+
+    Returns (violations, parse_errors). Violations are human-readable strings;
+    parse_errors are allowlist schema errors (treated as fatal by the caller).
+    Exit 0 iff both lists are empty.
+    """
+    allowlist_path = root / BARE_PYTHON_M_ALLOWLIST_PATH
+    if not allowlist_path.is_file():
+        return (
+            [],
+            [f"{BARE_PYTHON_M_ALLOWLIST_PATH}: allowlist file not found — cannot audit"],
+        )
+
+    try:
+        allowlist_text = allowlist_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [], [f"{BARE_PYTHON_M_ALLOWLIST_PATH}: cannot read: {exc}"]
+
+    allowed_pairs, parse_errors = _parse_bare_python_m_allowlist(allowlist_text)
+    if parse_errors:
+        return [], parse_errors
+
+    hits = _grep_bare_python_m_callsites(root)
+    violations: list[str] = []
+    for rel, lineno, line_text in sorted(hits):
+        if (rel, lineno) in allowed_pairs:
+            continue
+        violations.append(
+            f"{rel}:{lineno}: bare 'python3 -m cortex_command.*' callsite not in allowlist"
+            f" — add to {BARE_PYTHON_M_ALLOWLIST_PATH} with rationale or replace with"
+            f" the promoted console-script name"
+        )
+    return violations, []
+
+
+# ---------------------------------------------------------------------------
 # Sandbox pre-flight gate (spec Req 17 / Task 12)
 # ---------------------------------------------------------------------------
 
@@ -1418,6 +1693,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--staged", action="store_true", help="Read referenced set from git staged blobs (R13)")
     p.add_argument("--print-scan-paths", action="store_true", help="Print the R7 scan globs (sorted) and exit")
     p.add_argument("--verbose", action="store_true", help="Verbose self-test output (PASS lines)")
+    p.add_argument(
+        "--audit-bare-python-m-callsites",
+        action="store_true",
+        help=(
+            "Audit repo for bare 'python3 -m cortex_command.*' callsites (R12 part c). "
+            "Off the pre-commit critical path; invoked via morning-review or just check-bare-python-callsites."
+        ),
+    )
     return p
 
 
@@ -1431,6 +1714,19 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.self_test:
         return run_self_test(args.verbose, as_json=args.as_json)
+
+    if args.audit_bare_python_m_callsites:
+        root = Path(os.getcwd()).resolve()
+        violations, parse_errors = audit_bare_python_m_callsites(root)
+        if parse_errors:
+            for err in parse_errors:
+                print(f"ERROR: {err}", file=sys.stderr)
+            return 2
+        if violations:
+            for v in violations:
+                print(v)
+            return 1
+        return 0
 
     root = Path(os.getcwd()).resolve()
     try:
