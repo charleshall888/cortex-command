@@ -59,7 +59,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Existing registry file has one entry per event with field-list and producer. Follow the established row shape. The events-registry parity check is `bin/cortex-check-events-registry`. Task 3 emits the event from `auth.py` (source: `ensure_sdk_auth`); registration must precede or accompany the emit-site landing.
 - **Verification**: run `bin/cortex-check-events-registry` — pass if exit 0; AND `grep -c 'auth_probe' bin/.events-registry.md` — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 5: Add `resolve_worktree_root()` resolver in `pipeline/worktree.py`
 - **Files**: `cortex_command/pipeline/worktree.py`, `tests/test_worktree.py`
@@ -68,7 +68,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Today's reads happen inline at `worktree.py:11-14, 102-109` and `daytime_pipeline.py:116-126`. Cross-repo convention is in `cortex/requirements/multi-agent.md` ("Cross-repo worktrees go to `$TMPDIR` to avoid sandbox restrictions"). `$TMPDIR` expansion: `os.path.expandvars(os.environ.get("CORTEX_WORKTREE_ROOT", ""))`. "Cortex-registered entry" is identified by reading `~/.claude/settings.local.json` `sandbox.filesystem.allowWrite` and matching a path that contains `worktrees/` (or equivalent stable marker — keep this private to the resolver). Test must cover each branch in isolation via `monkeypatch.setenv`.
 - **Verification**: run `pytest tests/test_worktree.py -q` — pass if exit 0; AND `grep -c 'def resolve_worktree_root' cortex_command/pipeline/worktree.py` — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 6: Wire `cortex init` to register the resolved worktree root in `~/.claude/settings.local.json`
 - **Files**: `cortex_command/init/handler.py`, `cortex_command/init/settings_merge.py`, `tests/test_init_worktree_registration.py`
@@ -113,7 +113,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Naming convention for promotions is in spec.md R13: kebab-case, prefixed `cortex-` (e.g., `cortex-daytime-pipeline`, `cortex-critical-review`). Research.md lines 32-46 enumerates 13 candidate modules with their `_main`/`main` callables (`daytime_pipeline:_run`, `daytime_dispatch_writer:main`, `daytime_result_reader:main`, `report:main`, `integration_recovery:main`, `interrupt:main`, `complete_morning_review_session:main`, `critical_review:main`, `discovery:main`, `common:main`, `backlog.ready:main`, `pipeline.metrics:main`, `overnight.auth:_main`). The audit may discover additional callsites; expand the candidate list as the grep finds them. Each chosen console-script name must clear a collision check via `command -v <name>` against a clean PATH (Edge Cases note in spec).
 - **Verification**: state the file exists with at least one callsite row — `[ -f cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive/audit-callsites.md ]` exits 0 AND `grep -cE 'cortex_command\.' cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive/audit-callsites.md` ≥ 13.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 11: Wire `--audit-bare-python-m-callsites` mode + allowlist + just recipe
 - **Files**: `bin/cortex-check-parity`, `bin/.audit-bare-python-m-allowlist.md`, `justfile`
