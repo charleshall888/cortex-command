@@ -32,7 +32,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: `auth.py` line 2 docstring states stdlib-only constraint (load-bearing — module runs as `python3 -m cortex_command.overnight.auth --shell` pre-venv). Existing `ensure_sdk_auth` resolution chain order: cloud-provider env → `ANTHROPIC_API_KEY` → `apiKeyHelper` → `CLAUDE_CODE_OAUTH_TOKEN` → none. `_build_event` (lines 160-166) returns `{ts, event, vector, message}`. Documented SDK chain: https://code.claude.com/docs/en/authentication. Test pattern: `test_auth.py` already covers R1–R8 vectors — add a parallel `test_auth_token_vector` covering both env-shape and resolution-precedence cases.
 - **Verification**: run `pytest cortex_command/overnight/tests/test_auth.py -q` — pass if exit 0; AND `grep -c ANTHROPIC_AUTH_TOKEN cortex_command/overnight/auth.py` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 2: Add stdlib `probe_keychain_presence()` to `auth.py`
 - **Files**: `cortex_command/overnight/auth.py`, `cortex_command/overnight/tests/test_auth.py`
@@ -104,7 +104,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Source for the upstream issue: https://github.com/anthropics/claude-code/issues/51303. Prose should describe What and Why (the deny is hardcoded in the binary's `_SBX` module and not configurable via settings) without prescribing implementation details. Cross-link wording can be terse — one sentence per document.
 - **Verification**: run `grep -c vscode docs/overnight-operations.md` — pass if count ≥ 1; AND `grep -c vscode cortex/requirements/pipeline.md` — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 10: Produce `audit-callsites.md` source-of-truth deliverable
 - **Files**: `cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive/audit-callsites.md`
@@ -167,7 +167,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Existing clause language: "the ceremony may be collapsed into atomic subcommands of a skill-specific module at `cortex_command/<skill>.py`, invoked from SKILL.md prose via `python3 -m cortex_command.<skill> <subcommand>`" (research.md citation). Updated prose mentions both invocation forms — console-script as recommended and `python3 -m` as readable fallback.
 - **Verification**: run `grep -E 'console.script|cortex-<' cortex/requirements/project.md` — pass if match found; AND `grep -c 'python3 -m cortex_command' cortex/requirements/project.md` — pass if count ≥ 1 (the `python3 -m` form is still mentioned as alternative).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 15: Update `skills/overnight/references/new-session-flow.md:3` for dev-clone install path
 - **Files**: `skills/overnight/references/new-session-flow.md`
@@ -176,7 +176,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Why this matters: F3's promotion to console scripts requires reinstall to propagate; the in-flight install guard blocks `--reinstall` during partial active sessions; therefore the dev loop is `uv pip install -e . --no-deps`. The carve-outs are already in place — no new carve-out is added.
 - **Verification**: run `grep -c 'uv pip install -e' skills/overnight/references/new-session-flow.md` — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 16: Add CHANGELOG.md migration entry for `uv tool install --reinstall`
 - **Files**: `CHANGELOG.md`
@@ -185,7 +185,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: CHANGELOG format follows existing entries — version header, prose-line summary, bullet list of changes. The reinstall requirement applies once per v0.1.0 → v0.2.0 upgrade; the carve-out reference is the existing in-flight install-guard documented in `cortex/requirements/pipeline.md`.
 - **Verification**: run `grep -c reinstall CHANGELOG.md` — pass if count ≥ 1; AND `grep -A 3 reinstall CHANGELOG.md | grep -ciE 'install.guard|in-flight'` — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 17: Add `verify_dispatch_readiness()` fuse called from `run_daytime` Phase A
 - **Files**: `cortex_command/overnight/daytime_pipeline.py` (or new `cortex_command/overnight/readiness.py` if cleaner), `cortex_command/overnight/tests/test_dispatch_readiness.py`
