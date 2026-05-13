@@ -8,6 +8,7 @@ Tests three scenarios:
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -17,7 +18,9 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import patch
 
-from cortex_command.pipeline.worktree import create_worktree
+import pytest
+
+from cortex_command.pipeline.worktree import create_worktree, resolve_worktree_root
 
 
 def _init_git_repo(path: Path) -> str:
@@ -243,3 +246,168 @@ class TestWorktreeCreateFailure(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# Tests for resolve_worktree_root() — one test per resolution branch (R6).
+# Uses pytest monkeypatch to isolate env vars and patch settings.local.json.
+# ---------------------------------------------------------------------------
+
+class TestResolveWorktreeRoot:
+    """Tests for resolve_worktree_root() covering each resolution branch."""
+
+    def test_branch_a_cortex_worktree_root_env_var(self, monkeypatch, tmp_path):
+        """Branch (a): CORTEX_WORKTREE_ROOT env var takes precedence."""
+        custom_root = str(tmp_path / "custom-roots")
+        monkeypatch.setenv("CORTEX_WORKTREE_ROOT", custom_root)
+        # Unset TMPDIR so the $TMPDIR expansion is deterministic
+        monkeypatch.delenv("TMPDIR", raising=False)
+
+        result = resolve_worktree_root("my-feature", session_id=None)
+
+        assert result == tmp_path / "custom-roots" / "my-feature"
+
+    def test_branch_a_tmpdir_expansion_in_env_var(self, monkeypatch, tmp_path):
+        """Branch (a): $TMPDIR inside CORTEX_WORKTREE_ROOT is expanded."""
+        monkeypatch.setenv("TMPDIR", str(tmp_path))
+        monkeypatch.setenv("CORTEX_WORKTREE_ROOT", "$TMPDIR/worktrees")
+
+        result = resolve_worktree_root("feat", session_id="sess-1")
+
+        assert result == tmp_path / "worktrees" / "feat"
+
+    def test_branch_b_registered_path_from_settings(self, monkeypatch, tmp_path):
+        """Branch (b): registered path from settings.local.json used when env var absent."""
+        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+
+        # Write a fake settings.local.json with a worktrees/ entry.
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        registered_root = tmp_path / "sandbox-worktrees"
+        settings = {
+            "sandbox": {
+                "filesystem": {
+                    "allowWrite": [
+                        str(tmp_path / "cortex"),
+                        str(registered_root) + "/worktrees/",
+                    ]
+                }
+            }
+        }
+        (claude_dir / "settings.local.json").write_text(json.dumps(settings))
+
+        with patch(
+            "cortex_command.pipeline.worktree.Path.home",
+            return_value=tmp_path,
+        ):
+            result = resolve_worktree_root("feat", session_id=None)
+
+        # The first entry containing "worktrees/" is the registered root;
+        # feature is appended.
+        assert result == Path(str(registered_root) + "/worktrees/") / "feat"
+
+    def test_branch_c_default_same_repo(self, monkeypatch, tmp_path):
+        """Branch (c): default same-repo path when no env var and no registered path."""
+        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+
+        with patch(
+            "cortex_command.pipeline.worktree._registered_worktree_root",
+            return_value=None,
+        ), patch(
+            "cortex_command.pipeline.worktree._repo_root",
+            return_value=tmp_path,
+        ):
+            result = resolve_worktree_root("my-feat", session_id=None)
+
+        assert result == tmp_path / ".claude" / "worktrees" / "my-feat"
+
+    def test_branch_d_cross_repo_tmpdir(self, monkeypatch, tmp_path):
+        """Branch (d): cross-repo path uses $TMPDIR when session_id is provided."""
+        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+        monkeypatch.setenv("TMPDIR", str(tmp_path))
+
+        with patch(
+            "cortex_command.pipeline.worktree._registered_worktree_root",
+            return_value=None,
+        ):
+            result = resolve_worktree_root("feat", session_id="sess-42")
+
+        assert result == tmp_path / "overnight-worktrees" / "sess-42" / "feat"
+
+    def test_branch_a_wins_over_b_c_d(self, monkeypatch, tmp_path):
+        """Branch (a) takes priority over all other branches."""
+        monkeypatch.setenv("CORTEX_WORKTREE_ROOT", str(tmp_path / "override"))
+        monkeypatch.delenv("TMPDIR", raising=False)
+
+        registered_root = tmp_path / "registered" / "worktrees/"
+        with patch(
+            "cortex_command.pipeline.worktree._registered_worktree_root",
+            return_value=registered_root,
+        ), patch(
+            "cortex_command.pipeline.worktree._repo_root",
+            return_value=tmp_path / "repo",
+        ):
+            result = resolve_worktree_root("feat", session_id="sess-1")
+
+        assert result == tmp_path / "override" / "feat"
+
+    def test_branch_b_wins_over_c_d(self, monkeypatch, tmp_path):
+        """Branch (b) takes priority over (c) and (d) when env var is unset."""
+        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+        monkeypatch.setenv("TMPDIR", str(tmp_path / "tmp"))
+
+        registered_root = tmp_path / "registered-worktrees"
+        with patch(
+            "cortex_command.pipeline.worktree._registered_worktree_root",
+            return_value=registered_root,
+        ), patch(
+            "cortex_command.pipeline.worktree._repo_root",
+            return_value=tmp_path / "repo",
+        ):
+            result = resolve_worktree_root("feat", session_id="sess-1")
+
+        assert result == registered_root / "feat"
+
+    def test_no_settings_file_falls_through_to_c(self, monkeypatch, tmp_path):
+        """When settings.local.json is absent, branch (b) returns None and (c) is used."""
+        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+
+        with patch(
+            "cortex_command.pipeline.worktree.Path.home",
+            return_value=tmp_path,  # No .claude/settings.local.json here
+        ), patch(
+            "cortex_command.pipeline.worktree._repo_root",
+            return_value=tmp_path / "repo",
+        ):
+            result = resolve_worktree_root("feat", session_id=None)
+
+        assert result == tmp_path / "repo" / ".claude" / "worktrees" / "feat"
+
+    def test_settings_without_worktrees_marker_falls_through(self, monkeypatch, tmp_path):
+        """Settings entries without 'worktrees/' marker don't match branch (b)."""
+        monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        settings = {
+            "sandbox": {
+                "filesystem": {
+                    "allowWrite": [
+                        str(tmp_path / "cortex"),
+                        str(tmp_path / "other-path"),
+                    ]
+                }
+            }
+        }
+        (claude_dir / "settings.local.json").write_text(json.dumps(settings))
+
+        with patch(
+            "cortex_command.pipeline.worktree.Path.home",
+            return_value=tmp_path,
+        ), patch(
+            "cortex_command.pipeline.worktree._repo_root",
+            return_value=tmp_path / "repo",
+        ):
+            result = resolve_worktree_root("feat", session_id=None)
+
+        assert result == tmp_path / "repo" / ".claude" / "worktrees" / "feat"
