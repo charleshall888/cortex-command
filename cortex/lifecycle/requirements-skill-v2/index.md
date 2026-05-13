@@ -2,7 +2,7 @@
 feature: requirements-skill-v2
 parent_backlog_uuid: c5df69bc-ea51-4f85-94b4-bc0dbc72dfb6
 parent_backlog_id: 207
-artifacts: [research, spec, plan]
+artifacts: [research, spec, plan, review]
 tags: [requirements, skills, process]
 created: 2026-05-12
 updated: 2026-05-12
