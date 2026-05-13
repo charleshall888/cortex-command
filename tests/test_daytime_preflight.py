@@ -316,8 +316,9 @@ def test_skill_contracts() -> None:
     """implement.md §1a must satisfy six document invariants.
 
     Checks:
-      (a) invocation string `python3 -m cortex_command.overnight.daytime_pipeline
-          --feature` is present
+      (a) invocation string `cortex-daytime-pipeline --feature` is present
+          (renamed from `python3 -m cortex_command.overnight.daytime_pipeline`
+          by backlog 208 R10/R14 console-script promotion)
       (b) no extra flags on that invocation line (--tier, --criticality,
           --base-branch, --test-command absent from that line)
       (c) "plan.md" text appears before the first "daytime.pid" reference
@@ -325,15 +326,16 @@ def test_skill_contracts() -> None:
       (d) `"mode": "daytime"` appears exactly once in §1a
           (dispatch_complete only — implementation_dispatch emission was
           removed as part of the Wave 1 dead-event cleanup in feature #189)
-      (e) §1a.vi invokes the daytime_result_reader helper and documents the
-          full outcome enumeration (merged/deferred/paused/failed/unknown)
-          (step shifted from §vii to §vi after implementation_dispatch
-          emission was removed in feature #189 Wave 1 dead-event cleanup)
-      (f) `python3 -m cortex_command.overnight.daytime_dispatch_writer` appears
-          ≥ 2 times in §1a (init mode at Step 2, update-pid mode at Step 4) —
-          pins the canonical-helper-pointer pattern so a future edit cannot
-          silently re-inline the atomic-write Python recipes that #177 trimmed
-          out (closes adversarial finding A4).
+      (e) §1a.vi invokes the `cortex-daytime-result-reader` helper and
+          documents the full outcome enumeration
+          (merged/deferred/paused/failed/unknown) (step shifted from §vii
+          to §vi after implementation_dispatch emission was removed in
+          feature #189 Wave 1 dead-event cleanup)
+      (f) `cortex-daytime-dispatch-writer` appears ≥ 2 times in §1a
+          (init mode at Step 2, update-pid mode at Step 4) — pins the
+          canonical-helper-pointer pattern so a future edit cannot
+          silently re-inline the atomic-write Python recipes that #177
+          trimmed out (closes adversarial finding A4).
     """
     implement_md = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
     text = implement_md.read_text()
@@ -353,7 +355,7 @@ def test_skill_contracts() -> None:
     section = full_section[steps_start:]
 
     # (a) invocation string present
-    invocation = "python3 -m cortex_command.overnight.daytime_pipeline --feature"
+    invocation = "cortex-daytime-pipeline --feature"
     assert invocation in section, (
         f"§1b must contain the invocation string {invocation!r}"
     )
@@ -400,7 +402,7 @@ def test_skill_contracts() -> None:
     vi_end_marker = section.find("**vii.", vi_start)
     vi_section = section[vi_start:vi_end_marker] if vi_end_marker != -1 else section[vi_start:]
 
-    reader_invocation = "python3 -m cortex_command.overnight.daytime_result_reader"
+    reader_invocation = "cortex-daytime-result-reader"
     assert reader_invocation in vi_section, (
         f"§1a.vi must invoke the reader helper {reader_invocation!r}"
     )
@@ -416,7 +418,7 @@ def test_skill_contracts() -> None:
     # of detecting re-inlining of Steps 2 and 4. This invariant requires the
     # exact daytime_dispatch_writer module name and ≥ 2 occurrences (one per
     # replaced step).
-    writer_invocation = "python3 -m cortex_command.overnight.daytime_dispatch_writer"
+    writer_invocation = "cortex-daytime-dispatch-writer"
     writer_count = section.count(writer_invocation)
     assert writer_count >= 2, (
         f"§1a must invoke {writer_invocation!r} at least twice "

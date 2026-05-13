@@ -117,6 +117,11 @@ def runner_env(tmp_path: Path):
     env["PATH"] = str(mock_bin) + os.pathsep + env.get("PATH", "")
     env.setdefault("TMPDIR", str(tmp_path / "tmp"))
     (tmp_path / "tmp").mkdir(exist_ok=True)
+    # Backlog 208 R3: runner now hard-fails when no auth vector resolves and the
+    # Keychain probe returns "absent". Set a dummy API key so resolve_and_probe
+    # takes the env-vector path. The mock claude binary never actually calls
+    # the API, so a dummy value suffices.
+    env["ANTHROPIC_API_KEY"] = "sk-test-dummy-key-for-runner-signal-fixture"
 
     yield {
         "env": env,

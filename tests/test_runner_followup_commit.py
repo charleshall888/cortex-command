@@ -155,6 +155,11 @@ def worktree_runner_env(tmp_path: Path):
     # exports this itself later in its main loop, but the SIGHUP trap can fire
     # before that export, so pre-seed it here to match the state file.
     env["LIFECYCLE_SESSION_ID"] = session_id
+    # Backlog 208 R3: runner now hard-fails when no auth vector resolves and the
+    # Keychain probe returns "absent". Set a dummy API key so resolve_and_probe
+    # takes the env-vector path. The mock claude binary never actually calls
+    # the API, so a dummy value suffices.
+    env["ANTHROPIC_API_KEY"] = "sk-test-dummy-key-for-runner-followup-fixture"
 
     yield {
         "env": env,
