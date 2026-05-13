@@ -1,33 +1,5 @@
 [
   {
-    "id": 207,
-    "title": "Rebuild /requirements skill and docs as v2",
-    "status": "in_progress",
-    "priority": "high",
-    "type": "chore",
-    "tags": [
-      "requirements",
-      "skills",
-      "process"
-    ],
-    "areas": [],
-    "created": "2026-05-12",
-    "updated": "2026-05-12",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "9",
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "c5df69bc-ea51-4f85-94b4-bc0dbc72dfb6",
-    "lifecycle_slug": "requirements-skill-v2",
-    "session_id": null,
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 208,
     "title": "Harden autonomous-dispatch path for interactive Claude Code sessions",
     "status": "in_progress",

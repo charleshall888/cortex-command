@@ -4,7 +4,7 @@ uuid: c5df69bc-ea51-4f85-94b4-bc0dbc72dfb6
 id: 207
 title: "Rebuild /requirements skill and docs as v2"
 type: chore
-status: in_progress
+status: complete
 priority: high
 parent: 9
 blocked-by: []
