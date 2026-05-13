@@ -25,7 +25,7 @@ user sees. Do not ask questions or prompt for input during this step.
 No morning report found. No overnight session has been run yet, or the report was not
 generated. To generate one, run:
 
-    python3 -m cortex_command.overnight.report
+    cortex-report
 ```
 
 Then stop. Do not proceed to later sections.
@@ -556,7 +556,7 @@ After this section, the review is complete.
 | Situation | Action |
 |-----------|--------|
 | No morning report at `cortex/lifecycle/morning-report.md` | Print missing-report message (Section 1) and stop |
-| `cortex/lifecycle/sessions/` exists but report is missing | Print "Incomplete session detected — report not generated. Run: `python3 -m cortex_command.overnight.report`" and stop |
+| `cortex/lifecycle/sessions/` exists but report is missing | Print "Incomplete session detected — report not generated. Run: `cortex-report`" and stop |
 | No completed features | Skip Sections 2, 2b, and 5 entirely |
 | No deferred question files | Skip Section 3 entirely |
 | No failed features | Skip Section 4 entirely |

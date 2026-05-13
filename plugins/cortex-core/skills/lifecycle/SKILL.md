@@ -77,7 +77,7 @@ Scan for `cortex/lifecycle/{feature}/` at the project root.
 If no `cortex/lifecycle/{feature}/` directory exists, `phase = none` — start from the beginning. Otherwise, invoke the canonical detector and route on the returned `phase` field:
 
 ```bash
-python3 -m cortex_command.common detect-phase cortex/lifecycle/{feature}
+cortex-common detect-phase cortex/lifecycle/{feature}
 ```
 
 The command emits a single JSON object on stdout, e.g. `{"phase":"implement","checked":2,"total":5,"cycle":1}`. Parse the `phase` field and route accordingly. The `checked`/`total` fields report plan-task progress; `cycle` reports the review-cycle number.

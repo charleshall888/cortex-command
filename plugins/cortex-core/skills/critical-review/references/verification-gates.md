@@ -11,7 +11,7 @@ to `events.log` inline.
 Before deriving angles or dispatching any agent, fuse path validation and SHA-256 computation into a single subprocess call:
 
 ```bash
-python3 -m cortex_command.critical_review prepare-dispatch <artifact-path> [--feature <name>]
+cortex-critical-review prepare-dispatch <artifact-path> [--feature <name>]
 ```
 
 - `<artifact-path>` is the candidate artifact path resolved in Step 1 (e.g. `cortex/lifecycle/{feature}/plan.md` or the explicit `<path>` argument from `/cortex-core:critical-review <path>`).
@@ -44,7 +44,7 @@ The orchestrator captures the pre-dispatch SHA-256 of the artifact into orchestr
 4. **Atomic exclusion telemetry (per excluded reviewer).** For each reviewer classified Exclude in step 2 above, invoke `record-exclusion` exactly once. This is the only sanctioned way to log a sentinel_absence event — do NOT append to `events.log` inline:
 
    ```bash
-   python3 -m cortex_command.critical_review record-exclusion \
+   cortex-critical-review record-exclusion \
      --feature <name> \
      --reviewer-angle <angle> \
      --reason <absent|sha_mismatch|read_failed> \
@@ -73,7 +73,7 @@ The orchestrator captures the pre-dispatch SHA-256 of the artifact into orchestr
 After the synthesizer agent returns, pipe its **full output** through the `verify-synth-output` subcommand before surfacing anything to the user or proceeding to Step 2e. This fuses sentinel-parse + SHA-match + drift-event append into one subprocess call; do NOT parse `SYNTH_READ_OK:` lines inline or append to `events.log` directly.
 
 ```bash
-printf '%s' "$SYNTH_OUTPUT" | python3 -m cortex_command.critical_review verify-synth-output \
+printf '%s' "$SYNTH_OUTPUT" | cortex-critical-review verify-synth-output \
     --feature <name> \
     --expected-sha <hex>
 ```

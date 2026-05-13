@@ -16,7 +16,7 @@ Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with
 **Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with three options:
 
 - **Implement on current branch** (recommended) — trunk-based workflow, changes land directly on the current branch. **When to pick**: tiny, trunk-safe changes where a branch would be overhead.
-- **Implement in autonomous worktree** — dispatch to the daytime pipeline (`python3 -m cortex_command.overnight.daytime_pipeline`) which runs the full implement → review → complete cycle headlessly in the background without requiring live steering; note that uncommitted changes remain on main and do not travel to the worktree. **When to pick**: medium/many-task/no-live-steering-needed features where you want to kick off a longer autonomous run and move on. Proceeds to §1a below.
+- **Implement in autonomous worktree** — dispatch to the daytime pipeline (the `cortex-daytime-pipeline` console-script) which runs the full implement → review → complete cycle headlessly in the background without requiring live steering; note that uncommitted changes remain on main and do not travel to the worktree. **When to pick**: medium/many-task/no-live-steering-needed features where you want to kick off a longer autonomous run and move on. Proceeds to §1a below.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
 **Uncommitted-changes guard**: Immediately before the `AskUserQuestion` call, run `git status --porcelain` (no path filter, no additional flags). If non-empty output is returned, the option that keeps the user on the current branch is demoted in place: (a) prepend the fixed warning `Warning: uncommitted changes in working tree — this will mix them into the commit on main.` as a one-line prefix to that option's description, and (b) strip the `(recommended)` suffix from that option's label if present. The option remains selectable and stays at its existing position — no removal, no gating pre-question. If `git status --porcelain` exits non-zero (e.g., missing `.git`, corrupt index, bisect/rebase state), the guard does not fire — neither the demotion nor the warning prefix are applied — a single-line diagnostic `uncommitted-changes guard skipped: git status failed` is surfaced alongside the prompt, and the pre-flight continues normally as a fallback.
@@ -80,15 +80,15 @@ If `kill -0` exits 0 (process alive): reject with "Autonomous daytime run alread
 **Step 2 — Write `daytime-dispatch.json` atomically.** Single Bash call (before the subprocess launch):
 
 ```
-python3 -m cortex_command.overnight.daytime_dispatch_writer --feature {slug} --dispatch-id {uuid} --mode init
+cortex-daytime-dispatch-writer --feature {slug} --dispatch-id {uuid} --mode init
 ```
 
-Invoke `daytime_dispatch_writer` in init mode — see the module for the canonical atomic-write contract and `daytime-dispatch.json` schema.
+Invoke `cortex-daytime-dispatch-writer` in init mode — see the module for the canonical atomic-write contract and `daytime-dispatch.json` schema.
 
-**Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed:
+**Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed. The dispatch uses the promoted `cortex-daytime-pipeline` console-script — registration by `cortex init` makes the default sandbox-registered worktree root work without a per-skill env-prefix; the console-script closes the SDK-importability gap on the Bash-tool path:
 
 ```
-DAYTIME_DISPATCH_ID={uuid} python3 -m cortex_command.overnight.daytime_pipeline --feature {slug} > cortex/lifecycle/{feature}/daytime.log 2>&1
+DAYTIME_DISPATCH_ID={uuid} cortex-daytime-pipeline --feature {slug} > cortex/lifecycle/{feature}/daytime.log 2>&1
 ```
 
 The subprocess is responsible for writing `cortex/lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID file — it only reads it.
@@ -96,10 +96,10 @@ The subprocess is responsible for writing `cortex/lifecycle/{feature}/daytime.pi
 **Step 4 — Update `daytime-dispatch.json` with subprocess PID.** After the PID file has been written (following the initial-wait in §v), update the `pid` field via the canonical helper:
 
 ```
-python3 -m cortex_command.overnight.daytime_dispatch_writer --feature {slug} --mode update-pid --pid {pid}
+cortex-daytime-dispatch-writer --feature {slug} --mode update-pid --pid {pid}
 ```
 
-Invoke `daytime_dispatch_writer` in update-pid mode — see the module for the canonical atomic-write contract.
+Invoke `cortex-daytime-dispatch-writer` in update-pid mode — see the module for the canonical atomic-write contract.
 
 **v. Polling loop.** Sequential Bash calls only — no compound commands.
 
@@ -116,7 +116,7 @@ Invoke `daytime_dispatch_writer` in update-pid mode — see the module for the c
 **vi. Result surfacing.** Surface results via `daytime_result_reader`, which matches `dispatch_id` against `daytime-dispatch.json` to discriminate stale prior-run files from current dispatch and classifies per the helper's tier-1/tier-3 output schema. Single Bash call:
 
 ```
-python3 -m cortex_command.overnight.daytime_result_reader --feature {slug}
+cortex-daytime-result-reader --feature {slug}
 ```
 
 Parse the JSON dict the helper prints to stdout (fields: `outcome`, `terminated_via`, `message`, `source_tier`, `pr_url`, `deferred_files`, `error`, `log_tail`) and surface to the user per the helper's documented output schema. On tier-1 success the `outcome` field is one of `merged`, `deferred`, `paused`, or `failed` — display the `message`, plus `pr_url` (merged), `deferred_files` content (deferred), or `error` (failed) as appropriate; on tier-3 surface the `outcome` is `unknown` with a discriminated `message` and `log_tail` (last 20 lines of `daytime.log`) — do NOT silently re-classify as `failed`.

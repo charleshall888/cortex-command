@@ -57,7 +57,7 @@ When the user invokes `/cortex-core:discovery` on a topic whose `cortex/research
 (c) **Prior artifact untouched**: the existing `cortex/research/{{topic}}/` (or prior `-N`) directory is read-only for this re-run. No files in it are renamed, moved, or deleted; the decomposed.md (if any) remains in place as a durable audit trail.
 (d) **Reconciliation is manual**: the agent does NOT automatically reconcile the new architecture with the prior one. Surfacing differences, choosing which slug downstream `discovery_source:` fields should point at, and any archival of the prior artifact are explicit user decisions made outside the discovery skill.
 
-Events for re-runs route to `cortex/research/{{topic}}-N/events.log` via the helper module's `resolve-events-log-path` subcommand (see Step 2's `python3 -m cortex_command.discovery` invocations below), which inspects the slug for a `-N` suffix and returns the correctly-suffixed path. Skill prose should resolve event-log paths through the helper rather than hardcoding `cortex/research/{topic}/events.log`, so re-runs do not bleed events into the superseded artifact's log.
+Events for re-runs route to `cortex/research/{{topic}}-N/events.log` via the helper module's `resolve-events-log-path` subcommand (see Step 2's `cortex-discovery` invocations below), which inspects the slug for a `-N` suffix and returns the correctly-suffixed path. Skill prose should resolve event-log paths through the helper rather than hardcoding `cortex/research/{topic}/events.log`, so re-runs do not bleed events into the superseded artifact's log.
 
 ## Step 3: Execute Current Phase
 
@@ -81,7 +81,7 @@ Between the Research and Decompose phases a single-question user-blocking gate f
 All emissions go through the helper module — never hardcode the events.log path. Invoke via:
 
 ```
-python3 -m cortex_command.discovery emit-checkpoint-response \
+cortex-discovery emit-checkpoint-response \
     --topic <topic> --checkpoint research-decompose \
     --response <approve|revise|drop|promote-sub-topic> \
     --revision-round <int>
