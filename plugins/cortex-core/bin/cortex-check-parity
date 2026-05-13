@@ -423,6 +423,13 @@ def load_allowlist(
 FENCED_CODE_RE = re.compile(r"```.*?```", re.DOTALL)
 INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
 PATH_QUALIFIED_RE = re.compile(r"bin/(cortex-[a-z][a-z0-9-]*)")
+# Shell-command-invocation patterns. These match unambiguous invocation
+# sites (uv run / command -v) regardless of file type — they're not
+# narrative mentions but actual calls. Added by backlog 208 follow-up after
+# the parity scanner missed these in justfile and hooks/*.sh.
+SHELL_INVOCATION_RE = re.compile(
+    r"\b(?:uv run|command -v)\s+(cortex-[a-z][a-z0-9-]*)"
+)
 
 
 def _strip_excluded_tokens(text: str) -> str:
@@ -475,6 +482,16 @@ def _collect_path_qualified_tokens(text: str) -> set[str]:
     for m in PATH_QUALIFIED_RE.finditer(text):
         out.add(m.group(1))
     return out
+
+
+def _collect_shell_invocation_tokens(text: str) -> set[str]:
+    """Tokens invoked via `uv run X` or `command -v X`.
+
+    Both are unambiguous shell-command invocations. Detected regardless of
+    file type (markdown narrative, justfile, .sh) since the form itself
+    expresses intent to run the named script.
+    """
+    return {m.group(1) for m in SHELL_INVOCATION_RE.finditer(text)}
 
 
 # --- R6: detect "flat enumeration" markdown table cells -----------------
@@ -574,6 +591,7 @@ def collect_wiring_signals(text: str) -> set[str]:
     wired |= _collect_path_qualified_tokens(cleaned)
     wired |= _collect_inline_code_tokens(cleaned)
     wired |= _collect_fenced_code_tokens(cleaned)
+    wired |= _collect_shell_invocation_tokens(cleaned)
     # R6: drop table-only tokens.
     table_only = _table_only_tokens(text)
     wired -= table_only
@@ -604,6 +622,7 @@ def collect_reference_candidates(text: str) -> set[str]:
     # Inline-code and fenced-code tokens (R5(b) and R5(e) applied internally).
     candidates |= _collect_inline_code_tokens(cleaned)
     candidates |= _collect_fenced_code_tokens(cleaned)
+    candidates |= _collect_shell_invocation_tokens(cleaned)
     # Drop R5(c) plugin names + reserved non-bin names; drop R5(d) self-reference.
     candidates = {
         t

@@ -1,5 +1,18 @@
 # Audit: `python3 -m cortex_command.*` Callsites
 
+## Retro note (post-implement, 2026-05-13)
+
+Two corrections to the spec/plan record that future readers should know:
+
+1. **The "reference-before-deployment is permitted" claim was wrong.** Both `research.md` and `plan.md` Task 13a stated that the parity gate flags only `W003: deployed but not referenced`, allowing R14 callsite renames to land before R13's `[project.scripts]` entries. In practice the gate also fires `E002: referenced but not deployed`, which blocked Tasks 13a/13b mid-flight during implementation. The actual landing order during implement was: R13 (Task 12) → R14 (Tasks 13a/13b/13c). Future work re-doing this should plan R13 first or land the pair atomically.
+2. **`cortex_command.backlog.ready` was skipped.** The audit listed it as a promotion candidate, but the module doesn't exist — only `bin/cortex-backlog-ready` (a shell wrapper at the CLI in `cortex/backlog/ready.py`, outside the `cortex_command/` package). Task 12 correctly omitted it. Annotated in the audit table below.
+
+The above caveats supersede the optimistic language elsewhere in `research.md` ("Reference-before-deployment is permitted by the wiring co-location rule") and `plan.md` (Task 13a Context field). Those artifacts are preserved as written for history; this retro note is the live correction.
+
+A second post-implement follow-up landed the same day: `bin/cortex-check-parity` was extended with `SHELL_INVOCATION_RE` so `uv run cortex-X` and `command -v cortex-X` count as wiring signals. Three temporary `library-internal` allowlist rows (`cortex-dashboard-seed`, `cortex-pipeline-metrics`, `cortex-smoke-test`) were removed once their real wiring became visible to the scanner.
+
+---
+
 **Audit date**: 2026-05-12
 **Grep command**:
 ```
@@ -134,7 +147,7 @@ sweep (`cortex_command.overnight.smoke_test`, `cortex_command.dashboard.seed`).
 | `cortex_command.critical_review` | `cortex-critical-review` | `main` | CLEAR |
 | `cortex_command.discovery` | `cortex-discovery` | `main` | CLEAR |
 | `cortex_command.common` | `cortex-common` | `main` | CLEAR |
-| `cortex_command.backlog.ready` | `cortex-backlog-ready` | `main` | cortex-core plugin mirror (same package; not external) |
+| `cortex_command.backlog.ready` | `cortex-backlog-ready` | `main` | **SKIPPED in Task 12 — module `cortex_command.backlog.ready` does not exist; the `bin/cortex-backlog-ready` shell wrapper points at the CLI at `cortex/backlog/ready.py` (outside the `cortex_command/` package). Promoting requires either creating the module shim or relocating the CLI; both are out of 208 scope.** |
 | `cortex_command.pipeline.metrics` | `cortex-pipeline-metrics` | `main` | CLEAR |
 | `cortex_command.overnight.auth` | `cortex-auth` | `_main` | CLEAR |
 | `cortex_command.overnight.smoke_test` | `cortex-smoke-test` | `main` | CLEAR |
