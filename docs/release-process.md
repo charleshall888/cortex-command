@@ -97,17 +97,17 @@ gh release view v0.2.0 --json assets -q '.assets[].name'
 
 ### 7. (Conditional) Bump the plugin's `CLI_PIN`
 
-**Tag-before-coupling**: only after the tag is pushed AND the release workflow succeeded — never before — bump the `cortex-overnight` plugin's `CLI_PIN` constant in `plugins/cortex-overnight/server.py`:
+**Post-fix flow (normal path)**: as of ticket #213's auto-release workflow, you do **not** manually bump `CLI_PIN[0]` for routine releases. Push to `main` triggers `.github/workflows/auto-release.yml`, which invokes `bin/cortex-auto-bump-version` to determine the next tag and `bin/cortex-rewrite-cli-pin` to update the `CLI_PIN` literal in `plugins/cortex-overnight/server.py`, then commits `Release vX.Y.Z`, creates and pushes the tag using the `AUTO_RELEASE_PAT` so `release.yml` fires normally on the tag push. See the "Auto-release PAT setup (one-time)" section below for the one-time setup the maintainer performs.
 
-```python
-CLI_PIN: tuple[str, str] = ("v0.2.0", "1.0")
-```
-
-If the schema major did not change, the second tuple element stays at the current schema floor. If the print-root JSON envelope shape changed in a breaking way, bump it:
+**Manual edit only on emergency tags**: if the auto-release workflow is disabled or you push a tag manually (PAT revoked, transient failure, emergency release), edit the `cortex-overnight` plugin's `CLI_PIN` constant in `plugins/cortex-overnight/server.py` directly:
 
 ```python
 CLI_PIN: tuple[str, str] = ("v0.2.0", "2.0")
 ```
+
+The CI lint in `.github/workflows/release.yml` (per #213 R18) hard-fails the release-tag push when `CLI_PIN[0]` does not match the pushed tag, catching drift in this emergency path.
+
+If the schema major did not change, the second tuple element stays at the current schema floor. If the print-root JSON envelope shape changed in a breaking way, bump it alongside.
 
 Commit the bump:
 
@@ -118,6 +118,142 @@ Commit the bump:
 Suggested commit message: `Bump plugin CLI_PIN to v0.2.0`.
 
 This is the moment the plugin starts requiring the new CLI tag. Until you bump the plugin, users running plugin auto-update remain on the old `CLI_PIN`, which still works because the old CLI tag is still installed for them.
+
+---
+
+## Auto-release PAT setup (one-time)
+
+The auto-release workflow at `.github/workflows/auto-release.yml` runs on every push to `main`. It needs to push a release commit and tag back to `main` in a way that **retriggers** `release.yml`. GitHub's default `GITHUB_TOKEN` cannot retrigger other workflows by design (anti-loop protection), so the auto-release workflow uses a Personal Access Token stored as the repo secret `AUTO_RELEASE_PAT`.
+
+This is a one-time interactive setup the maintainer performs manually. **The PAT MUST be configured BEFORE the implement-PR for ticket #213 lands on `main`** — the merge to main is the first auto-release workflow invocation; without the PAT, the workflow fails on its first run.
+
+### Create the PAT
+
+1. Go to GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token.
+2. Scope it to **this single repository** (`charleshall888/cortex-command`). Do not grant org-wide or all-repo access.
+3. Set permissions:
+   - **Contents**: **Read and write** (required to push the release commit + tag).
+4. Set expiry. A 90-day expiry is the recommended cadence (see "Rotation" below).
+5. Generate and **copy the token immediately** — GitHub shows it once.
+
+### Store as repo secret
+
+```bash
+gh secret set AUTO_RELEASE_PAT --body '<paste-token-here>'
+```
+
+Verify presence (does **not** reveal the value):
+
+```bash
+gh secret list | grep AUTO_RELEASE_PAT
+```
+
+### Pre-merge gate
+
+Before merging the #213 implement-PR (or any future PR that depends on the auto-release workflow being functional), confirm `AUTO_RELEASE_PAT` is set:
+
+```bash
+gh secret list | grep AUTO_RELEASE_PAT
+```
+
+If the secret is missing, configure it first, then merge.
+
+### Rotation
+
+Rotate the PAT every 90 days, or whenever GitHub emails you about pending expiry. Workflow:
+
+1. Generate a new fine-grained PAT with the same `contents: write` scope on this repo.
+2. `gh secret set AUTO_RELEASE_PAT --body '<new-token>'` (overwrites the old value).
+3. The next push to `main` exercises the new token; if it fails, follow the failure-recovery runbook below.
+
+**Set a calendar reminder for T+80 days** from PAT issuance so you have a ~10-day window to rotate before the in-workflow probe (described below) starts warning.
+
+### Expiry monitoring
+
+`auto-release.yml` runs a scheduled weekly probe (cron-triggered) that checks whether `AUTO_RELEASE_PAT` is present and posts a workflow annotation if the secret is missing. This catches the case where the secret was deleted or never configured; it does **not** detect token-expiry directly (GitHub's API surfaces PAT expiry only to the token's owner, not via repo-secret introspection). The calendar reminder at T+80 days is the primary pre-expiry signal; the weekly probe is the post-expiry detection net.
+
+If you see a missing-secret annotation in the weekly probe, follow the failure-recovery runbook.
+
+### Failure-recovery runbook
+
+If the auto-release workflow fails because the PAT is missing, expired, or revoked:
+
+1. Generate a new fine-grained PAT (see "Create the PAT" above).
+2. Update the secret:
+
+   ```bash
+   gh secret set AUTO_RELEASE_PAT --body '<new-token>'
+   ```
+
+3. Retry the workflow on the current `main`:
+
+   ```bash
+   gh workflow run auto-release.yml --ref main
+   ```
+
+   The `workflow_dispatch` trigger declared in `auto-release.yml` (per #213 R19) enables this manual retry path without needing to push another commit.
+
+4. Watch the run:
+
+   ```bash
+   gh run watch $(gh run list --workflow=auto-release.yml --limit 1 --json databaseId -q '.[0].databaseId')
+   ```
+
+### Runaway-workflow recovery
+
+If the auto-release workflow misfires repeatedly (e.g., a commit-message parse bug, an infinite-retry loop, or runaway queued runs), disable the workflow and drain the queue:
+
+1. Disable the workflow so no new runs start:
+
+   ```bash
+   gh workflow disable auto-release.yml
+   ```
+
+2. Cancel each queued run, iterating until the queue is empty:
+
+   ```bash
+   gh run list --workflow auto-release.yml --status queued --json databaseId --jq '.[].databaseId' \
+     | xargs -I{} gh run cancel {}
+   ```
+
+   Or, one-by-one:
+
+   ```bash
+   gh run list --workflow auto-release.yml --status queued --json databaseId
+   gh run cancel <id>
+   ```
+
+3. Verify the queue is empty:
+
+   ```bash
+   gh run list --workflow auto-release.yml --status queued | wc -l
+   ```
+
+   Should return `0` (header-only output stripped, or no rows at all depending on `gh` version).
+
+4. Fix the underlying issue (commit-message marker bug, rewriter regression, etc.). Land the fix on `main` while the workflow is still disabled.
+
+5. Re-enable the workflow:
+
+   ```bash
+   gh workflow enable auto-release.yml
+   ```
+
+6. Trigger a fresh run on the now-fixed `main`:
+
+   ```bash
+   gh workflow run auto-release.yml --ref main
+   ```
+
+### Recommended one-time setup: tag protection
+
+In addition to the CI lint (#213 R18) that hard-fails on `CLI_PIN[0]` drift, enable GitHub branch/tag protection on the `v*` tag namespace as a complementary safety net against force-pushed tags overwriting published releases:
+
+1. GitHub → Settings → **Tags** → **Add rule**.
+2. Pattern: `v*`.
+3. Enable **Restrict force-pushes**.
+
+This is a recommended one-time setup. The CI lint catches `CLI_PIN[0]` drift on tag-push events; tag protection prevents anyone (including the maintainer mid-mistake) from force-pushing over an existing `v*` tag. Together they cover both the drift-at-creation and the drift-after-creation failure modes.
 
 ---
 
