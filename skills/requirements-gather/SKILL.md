@@ -2,7 +2,6 @@
 name: requirements-gather
 description: Interview-only sub-skill that produces a structured Q&A markdown block for /requirements-write to synthesize. Invoked by the /cortex-core:requirements orchestrator. Adopts mattpocock interview patterns (recommend-before-asking, codebase trumps interview, lazy artifact creation).
 when_to_use: "Use only as a sub-skill of /cortex-core:requirements. Different from /cortex-core:requirements — gather only conducts the interview; the orchestrator hands the resulting Q&A block to /requirements-write for synthesis."
-disable-model-invocation: true
 argument-hint: "<scope>"
 inputs:
   - "scope: string (required) — 'project' for project-level, or area kebab-case slug for area-level"
@@ -61,7 +60,7 @@ One H3 per template section. Sections with no live questions (because code alrea
 
 ## Handoff contract
 
-When the interview is complete, announce completion and return the Q&A block to the caller. Do NOT invoke `/requirements-write` directly — the `/cortex-core:requirements` orchestrator owns sequencing. <!-- callgraph: ignore --> If the user requests changes after handoff, the orchestrator re-enters this sub-skill with the prior Q&A block as starting context.
+When the interview is complete, announce completion and return the Q&A block to the caller. Do NOT invoke `/requirements-write` directly — the `/cortex-core:requirements` orchestrator owns sequencing. If the user requests changes after handoff, the orchestrator re-enters this sub-skill with the prior Q&A block as starting context.
 
 ## Constraints
 

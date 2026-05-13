@@ -2,7 +2,6 @@
 name: requirements-write
 description: Synthesize-only sub-skill that turns a Q&A markdown block from /requirements-gather into a v2-compliant cortex/requirements/{project|area}.md. Invoked by the /cortex-core:requirements orchestrator; never conducts an interview itself.
 when_to_use: "Use only as a sub-skill of /cortex-core:requirements after /requirements-gather has produced a Q&A block. Different from /requirements-gather — gather interviews, write synthesizes and is the only sub-skill that touches the filesystem."
-disable-model-invocation: true
 argument-hint: "<scope>"
 inputs:
   - "scope: string (required) — 'project' for parent doc, or area kebab-case slug for an area doc"
