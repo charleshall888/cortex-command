@@ -180,7 +180,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: This is the intersection check between Phase 1's backfilled tags and Phase 3's trimmed Conditional Loading section. Area-doc stems: `multi-agent`, `observability`, `pipeline`, `remote-access`.
 - **Verification**: `python3 cortex/lifecycle/requirements-skill-v2/scripts/verify-conditional-loading.py` exits `0` AND for each of the 4 area-doc stems, `sed -n '/^## Conditional Loading$/,/^## /p' cortex/requirements/project.md | grep -c "<stem>"` ≥`1`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit b169059e; 4/4 area-doc stems present, script exits 0)
 
 ### Task 17: Phase 3 PR — parent trim + Optional partition
 - **Files**: (no new files; PR groups Tasks 14-16)
@@ -189,7 +189,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: trivial
 - **Context**: PR cadence — one-PR-per-phase. Use `/cortex-core:pr`.
 - **Verification**: Phase 3 Checkpoint commands (from Outline) all pass on `main` after merge.
-- **Status**: [ ] pending
+- **Status**: [x] adapted (operator chose trunk-based mode; Phase 3 Checkpoint verified directly on main — tokens=1199 ≤1200, ## Optional H2 present, intersection verifier exits 0)
 
 ### Task 18: Area-doc spot-check audit (R13)
 - **Files**: `cortex/lifecycle/requirements-skill-v2/area-audit.md`
