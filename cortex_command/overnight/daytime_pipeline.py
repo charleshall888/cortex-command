@@ -27,7 +27,6 @@ from pathlib import Path
 from typing import Optional
 
 from cortex_command.common import CortexProjectRootError, _resolve_user_project_root
-from cortex_command.overnight.auth import resolve_and_probe
 from cortex_command.overnight.batch_runner import BatchConfig
 from cortex_command.overnight.deferral import DEFAULT_DEFERRED_DIR
 from cortex_command.overnight.feature_executor import execute_feature
@@ -40,6 +39,7 @@ from cortex_command.overnight.state import (
     save_daytime_result,
     save_state,
 )
+from cortex_command.overnight.readiness import verify_dispatch_readiness
 from cortex_command.overnight.types import CircuitBreakerState
 from cortex_command.pipeline.worktree import cleanup_worktree, create_worktree, resolve_worktree_root
 
@@ -330,21 +330,30 @@ async def run_daytime(feature: str) -> int:
     daytime_log_path = Path(f"cortex/lifecycle/{feature}/daytime.log")
 
     try:
-        # Phase A: resolve SDK auth vector + Keychain probe (R3 policy).
-        # Runs INSIDE the try-block so the outer except/finally classifies
-        # a startup failure as startup_failure and writes daytime-result.json.
-        # Events are buffered (event_log_path=None) for Phase B emission once
-        # pipeline_events_path is known; probe_event (if any) is also emitted
-        # in Phase B alongside the auth_bootstrap event.
-        probe_result = resolve_and_probe(feature=feature, event_log_path=None)
-        if not probe_result.ok:
-            # Keychain entry absent — fail loudly with probe-outcome context.
-            sys.stderr.write(
-                f"error: auth probe failed: vector=none, keychain={probe_result.keychain} "
-                f"— Keychain entry absent; no auth vector available\n"
+        # Phase A: dispatch readiness fuse (R18).
+        # Fuses the auth resolution+probe (R3) and worktree-writability probe
+        # (R8) into a single call. Runs INSIDE the try-block so the outer
+        # except/finally classifies a startup failure as startup_failure and
+        # writes daytime-result.json with a structured error naming the failed
+        # check. Events are buffered (event_log_path=None) for Phase B emission
+        # once pipeline_events_path is known.
+        #
+        # Entry-point importability is intentionally NOT checked here — see
+        # cortex_command/overnight/readiness.py module docstring for rationale.
+        readiness = verify_dispatch_readiness(feature=feature, session_id=None)
+        probe_result = readiness.auth_probe_result  # type: ignore[assignment]
+        if not readiness.ok:
+            check_name = readiness.failed_check or "unknown"
+            cause = readiness.cause or "dispatch readiness check failed"
+            hint = readiness.remediation_hint
+            diagnostic = (
+                f"error: dispatch readiness check failed [{check_name}]: {cause}"
             )
+            if hint:
+                diagnostic += f"\n  hint: {hint}"
+            sys.stderr.write(diagnostic + "\n")
             _top_exc = RuntimeError(
-                "no auth vector available: Keychain entry absent (probe result=absent)"
+                f"dispatch readiness failed [failed_check={check_name}]: {cause}"
             )
             _terminated_via = "startup_failure"
             _outcome = "failed"
