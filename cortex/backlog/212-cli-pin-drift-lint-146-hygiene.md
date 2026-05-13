@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 906b88bb-880d-4c16-ba42-1133a4c1f875
 title: "CLI_PIN drift lint (#146 hygiene)"
-status: backlog
+status: superseded
 priority: medium
 type: chore
 created: 2026-05-13
@@ -27,3 +27,7 @@ The lint is the smaller patch; the auto-derive removes the failure mode entirely
 ## Origin
 
 Filed as a #146 follow-up during refine of #210 (item 6 — "CLI_PIN drift lint"). Parent ticket explicitly flagged this as a candidate to break out into its own backlog item rather than fold into the docs/hygiene-scoped #210 work.
+
+## Superseded by #213
+
+Superseded by #213 (close-plugin-cli-auto-update-gaps): the CI lint at T16 realizes #212's lint goal, and the auto-release workflow at T13 closes the root cause by removing hand-edited CLI pin drift entirely.

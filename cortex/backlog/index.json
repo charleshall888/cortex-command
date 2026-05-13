@@ -27,7 +27,7 @@
     "uuid": "4f90fc64-cae9-4a87-9245-8256ddf9b234",
     "lifecycle_slug": "close-plugin-cli-auto-update-gaps",
     "session_id": "5a6fc0f7-aeca-40b9-a626-21e5b67fd06e",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
     "schema_version": "1",
     "repo": null
   },
@@ -128,7 +128,7 @@
   {
     "id": 211,
     "title": "R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up)",
-    "status": "backlog",
+    "status": "superseded",
     "priority": "medium",
     "type": "bug",
     "tags": [
@@ -155,7 +155,7 @@
   {
     "id": 212,
     "title": "CLI_PIN drift lint (#146 hygiene)",
-    "status": "backlog",
+    "status": "superseded",
     "priority": "medium",
     "type": "chore",
     "tags": [
