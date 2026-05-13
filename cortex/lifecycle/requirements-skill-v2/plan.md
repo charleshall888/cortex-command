@@ -243,7 +243,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Use the parent and area templates drafted in Task 21. Both scopes (project.md and `{area}.md`) must be addressed by inline template references. Follow What/Why-not-How.
 - **Verification**: `wc -l skills/requirements-write/SKILL.md | awk '{print $1}'` ≤`50` AND `grep -c "project\.md\|area\.md" skills/requirements-write/SKILL.md` ≥`2`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit af25fd7a; 49 lines ≤50 cap, grep returns 4 ≥2)
 
 ### Task 24: Rewrite `/requirements` as thin orchestrator (R17)
 - **Files**: `skills/requirements/SKILL.md`, `cortex/lifecycle/requirements-skill-v2/requirements-caller-audit.md` (new — enumeration of every active-source reference to `/cortex-core:requirements` or `/requirements` invocation patterns, including argument shapes the v1 orchestrator supported)
