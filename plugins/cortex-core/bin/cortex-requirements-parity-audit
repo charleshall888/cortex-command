@@ -1,0 +1,330 @@
+#!/usr/bin/env python3
+"""Requirements drift parity audit (R9).
+
+Scans post-#013 (2026-04-03+) lifecycle review.md files for detected-drift
+artifacts and emits a JSON report on stdout listing logged-but-not-applied
+requirements suggestions. Informational; never fails the gate. Pre-#013 reviews
+are silently skipped. Stdlib-only. See spec.md R9 and the contract block below
+the shim for full detection rules and output schema.
+"""
+
+from __future__ import annotations
+
+import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+
+import argparse
+import datetime
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Contract
+# ---------------------------------------------------------------------------
+# Detection rules:
+#
+#   A review.md is in scope iff its git first-commit timestamp is on or after
+#   2026-04-03 (#013 cutoff). When git history is unavailable (e.g. fixture
+#   trees), file mtime is used as a fallback.
+#
+#   A review.md is a "drift candidate" iff:
+#     1. it contains a `## Requirements Drift` H2 section, AND
+#     2. that section contains a `**State**: detected` line, AND
+#     3. it contains a `## Suggested Requirements Update` H2 section, AND
+#     4. that section contains a parseable `**File**:` or `**Target**:` line
+#        citing a `requirements/<doc>.md` path.
+#
+#   A drift candidate is "applied" iff `git log` shows at least one commit
+#   touching the cited `cortex/requirements/<doc>.md` dated strictly after the
+#   review's first-commit timestamp. Otherwise it is "not_applied". When git
+#   history is unavailable for the target doc, the candidate is reported as
+#   "not_applied" — false-positive on that side is safer than silently hiding
+#   a gap.
+#
+# Output schema (JSON on stdout):
+#
+#   {
+#     "audited": <int>,             # in-scope review.md count
+#     "applied": <int>,             # candidates with a post-review target commit
+#     "not_applied": [
+#       {"review_path": str, "target": str, "review_date": <ISO-8601>},
+#       ...
+#     ]
+#   }
+#
+# Exit code is 0 regardless of not_applied count — informational audit only.
+#
+# Usage:
+#     cortex-requirements-parity-audit              # repo-root cwd
+#     cortex-requirements-parity-audit --root <dir> # alternate repo root (tests)
+#     cortex-requirements-parity-audit --help
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+# Date the `requirements_drift` field was introduced to the review template
+# (#013 shipped 2026-04-03). Reviews authored before this date silently
+# predate the protocol and are dropped from the audit.
+CUTOFF_DATE = datetime.datetime(2026, 4, 3, 0, 0, 0, tzinfo=datetime.timezone.utc)
+
+REQUIREMENTS_DRIFT_HEADING_RE = re.compile(r"^## Requirements Drift\b", re.MULTILINE)
+STATE_DETECTED_RE = re.compile(r"^\*\*State\*\*:\s*\"?detected\"?\b", re.MULTILINE)
+SUGGESTED_HEADING_RE = re.compile(r"^## Suggested Requirements Update\b", re.MULTILINE)
+NEXT_H2_RE = re.compile(r"^## ", re.MULTILINE)
+
+# Match a `**File**: <path>` or `**Target**: <path>` line, accepting either a
+# bare-path or backtick-wrapped path. The captured group is the path text.
+FILE_LINE_RE = re.compile(
+    r"^\*\*(?:File|Target)\*\*:\s*`?([^`\n]+?)`?\s*$",
+    re.MULTILINE,
+)
+
+# Normalize cited paths: reviewers commonly write `requirements/project.md`
+# (no `cortex/` prefix because the prose lives inside a cortex/lifecycle dir).
+# We probe both forms.
+REQUIREMENTS_PATH_RE = re.compile(r"(?:cortex/)?requirements/([A-Za-z0-9_\-]+\.md)")
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def git_first_commit_ts(repo_root: Path, rel_path: str) -> datetime.datetime | None:
+    """Return the first-commit ISO timestamp for ``rel_path``, or None.
+
+    Uses `git log --diff-filter=A --reverse --format=%aI -- <path>` to find
+    the add-commit author date. Returns None if git is unavailable, the path
+    is untracked, or any subprocess error occurs.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo_root),
+                "log",
+                "--diff-filter=A",
+                "--reverse",
+                "--format=%aI",
+                "--",
+                rel_path,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (FileNotFoundError, OSError):
+        return None
+    if result.returncode != 0:
+        return None
+    line = (result.stdout or "").strip().splitlines()
+    if not line:
+        return None
+    try:
+        return datetime.datetime.fromisoformat(line[0])
+    except ValueError:
+        return None
+
+
+def file_mtime(path: Path) -> datetime.datetime | None:
+    """Return file mtime as a UTC datetime, or None on error."""
+    try:
+        return datetime.datetime.fromtimestamp(path.stat().st_mtime, tz=datetime.timezone.utc)
+    except OSError:
+        return None
+
+
+def review_in_scope_ts(repo_root: Path, review_path: Path) -> datetime.datetime | None:
+    """Return the review's "in-scope" timestamp if on/after the cutoff, else None.
+
+    Prefers git first-commit time; falls back to mtime when git is unavailable
+    (test fixture trees that are not git repos). Returns None when neither
+    source places the file at/after CUTOFF_DATE.
+    """
+    rel = str(review_path.relative_to(repo_root))
+    ts = git_first_commit_ts(repo_root, rel)
+    if ts is None:
+        ts = file_mtime(review_path)
+    if ts is None:
+        return None
+    # Normalize naive timestamps to UTC for comparison.
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=datetime.timezone.utc)
+    if ts < CUTOFF_DATE:
+        return None
+    return ts
+
+
+def extract_drift_candidate(text: str) -> tuple[bool, str | None]:
+    """Return (is_candidate, target_relpath) for a review.md body.
+
+    is_candidate is True iff:
+      - the file contains `## Requirements Drift` followed by `**State**: detected`
+        before the next H2, AND
+      - the file contains `## Suggested Requirements Update`, AND
+      - the Suggested section contains a parseable `**File**:` or `**Target**:`
+        line citing a `requirements/<doc>.md` path.
+
+    target_relpath is the cited path, normalized to start with `cortex/`.
+    """
+    # Check Requirements Drift + State: detected co-location.
+    drift_match = REQUIREMENTS_DRIFT_HEADING_RE.search(text)
+    if not drift_match:
+        return (False, None)
+    drift_start = drift_match.end()
+    next_h2 = NEXT_H2_RE.search(text, drift_start)
+    drift_end = next_h2.start() if next_h2 else len(text)
+    drift_section = text[drift_start:drift_end]
+    if not STATE_DETECTED_RE.search(drift_section):
+        return (False, None)
+
+    # Check Suggested Requirements Update presence + parseable File/Target line.
+    suggested_match = SUGGESTED_HEADING_RE.search(text)
+    if not suggested_match:
+        return (False, None)
+    suggested_start = suggested_match.end()
+    suggested_next = NEXT_H2_RE.search(text, suggested_start)
+    suggested_end = suggested_next.start() if suggested_next else len(text)
+    suggested_section = text[suggested_start:suggested_end]
+
+    file_match = FILE_LINE_RE.search(suggested_section)
+    if not file_match:
+        return (False, None)
+    raw = file_match.group(1).strip()
+    path_match = REQUIREMENTS_PATH_RE.search(raw)
+    if not path_match:
+        return (False, None)
+    doc_stem = path_match.group(1)
+    return (True, f"cortex/requirements/{doc_stem}")
+
+
+def target_applied_after(repo_root: Path, target_relpath: str, after_ts: datetime.datetime) -> bool:
+    """Return True iff `target_relpath` has at least one git commit after `after_ts`.
+
+    Uses `git log --format=%aI -- <path>` and compares each commit timestamp
+    against `after_ts`. Returns False when git is unavailable, the path has
+    no commit history, or no commit is strictly after the cutoff.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo_root),
+                "log",
+                "--format=%aI",
+                "--",
+                target_relpath,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (FileNotFoundError, OSError):
+        return False
+    if result.returncode != 0:
+        return False
+    for line in (result.stdout or "").strip().splitlines():
+        try:
+            ts = datetime.datetime.fromisoformat(line.strip())
+        except ValueError:
+            continue
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=datetime.timezone.utc)
+        if ts > after_ts:
+            return True
+    return False
+
+
+def iter_review_paths(repo_root: Path) -> list[Path]:
+    """Yield review.md paths under cortex/lifecycle/{,archive/}*/."""
+    lifecycle_root = repo_root / "cortex" / "lifecycle"
+    if not lifecycle_root.is_dir():
+        return []
+    results: list[Path] = []
+    # Active lifecycle reviews.
+    for p in sorted(lifecycle_root.glob("*/review.md")):
+        if p.is_file():
+            results.append(p)
+    # Archived lifecycle reviews.
+    archive_root = lifecycle_root / "archive"
+    if archive_root.is_dir():
+        for p in sorted(archive_root.glob("*/review.md")):
+            if p.is_file():
+                results.append(p)
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+def audit(repo_root: Path) -> dict:
+    """Run the audit and return the result dict (the JSON payload)."""
+    audited = 0
+    applied = 0
+    not_applied: list[dict] = []
+
+    for review_path in iter_review_paths(repo_root):
+        in_scope_ts = review_in_scope_ts(repo_root, review_path)
+        if in_scope_ts is None:
+            continue
+        audited += 1
+        try:
+            text = review_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        is_candidate, target = extract_drift_candidate(text)
+        if not is_candidate or target is None:
+            continue
+        if target_applied_after(repo_root, target, in_scope_ts):
+            applied += 1
+        else:
+            not_applied.append(
+                {
+                    "review_path": str(review_path.relative_to(repo_root)),
+                    "target": target,
+                    "review_date": in_scope_ts.isoformat(),
+                }
+            )
+    return {
+        "audited": audited,
+        "applied": applied,
+        "not_applied": not_applied,
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="cortex-requirements-parity-audit",
+        description=(
+            "Scan post-#013 lifecycle review.md files for detected-drift artifacts "
+            "and report logged-but-not-applied requirements suggestions as JSON on "
+            "stdout. Informational only — never fails the gate."
+        ),
+    )
+    parser.add_argument(
+        "--root",
+        default=None,
+        help="Repository root (defaults to current working directory).",
+    )
+    args = parser.parse_args(argv)
+
+    repo_root = Path(args.root).resolve() if args.root else Path.cwd().resolve()
+    if not (repo_root / "cortex" / "lifecycle").is_dir():
+        # No lifecycle tree → emit an empty audit and exit 0 (informational).
+        print(json.dumps({"audited": 0, "applied": 0, "not_applied": []}))
+        return 0
+
+    report = audit(repo_root)
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
