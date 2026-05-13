@@ -162,7 +162,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: R10 uses `tiktoken.get_encoding('cl100k_base')`. The measurement script is iteration aid for Task 15; it remains in the lifecycle dir as documentation.
 - **Verification**: `python3 -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"` exits `0` AND `test -x cortex/lifecycle/requirements-skill-v2/scripts/measure-tokens.py`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 73343967; baseline 2179 tokens — research's 1,785 estimate is stale, file grew 22%)
 
 ### Task 15: Trim parent project.md to ≤1,200 tokens + add Optional partition (R10, R11)
 - **Files**: `cortex/requirements/project.md`, `cortex/lifecycle/requirements-skill-v2/trim-anchor-audit.md` (new — pre-trim enumeration of every `cortex/requirements/project.md#<anchor>` reference and named-section reference across active source, with exemption list for sections that must be preserved)
