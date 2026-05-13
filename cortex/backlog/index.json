@@ -30,7 +30,7 @@
   {
     "id": 208,
     "title": "Harden autonomous-dispatch path for interactive Claude Code sessions",
-    "status": "backlog",
+    "status": "in_progress",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -41,20 +41,22 @@
       "auth",
       "packaging"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner"
+    ],
     "created": "2026-05-12",
     "updated": "2026-05-12",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "d5bbd0b7-7968-4c1f-b4fc-2a2ef3669800",
     "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
+    "session_id": "f073ff5d-c2e5-41c5-91e0-12e13cb2a16d",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
@@ -115,6 +117,37 @@
     "discovery_source": null,
     "plan": null,
     "uuid": "067e739f-eda7-4ea6-88c9-c4c76e219e68",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 209,
+    "title": "Lead refine §4 complexity-value gate with recommended option + rationale",
+    "status": "refined",
+    "priority": "medium",
+    "type": "chore",
+    "tags": [
+      "skills",
+      "refine",
+      "lifecycle",
+      "ux"
+    ],
+    "areas": [
+      "skills"
+    ],
+    "created": "2026-05-12",
+    "updated": "2026-05-12",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": "cortex/lifecycle/lead-refine-4-complexity-value-gate/spec.md",
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "b0545923-2dac-42f3-977e-6b6307a816f7",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,

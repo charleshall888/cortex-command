@@ -1,0 +1,4 @@
+{"schema_version": 3, "ts": "2026-05-12T23:10:25Z", "event": "clarify_critic", "feature": "harden-autonomous-dispatch-path-for-interactive", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 3, "dismiss": 2, "ask": 2}, "applied_fixes_count": 2, "dismissals_count": 2, "status": "ok"}
+{"ts": "2026-05-12T23:58:17Z", "event": "spec_approved", "feature": "harden-autonomous-dispatch-path-for-interactive"}
+{"ts": "2026-05-13T00:28:35Z", "event": "plan_approved", "feature": "harden-autonomous-dispatch-path-for-interactive"}
+{"ts": "2026-05-13T00:28:35Z", "event": "phase_transition", "feature": "harden-autonomous-dispatch-path-for-interactive", "from": "plan", "to": "implement"}
