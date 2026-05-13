@@ -143,7 +143,8 @@ def _print_root_payload(root: str = "/fake/root") -> str:
     """Return a JSON string matching ``cortex --print-root``'s contract."""
     return json.dumps(
         {
-            "version": "1.0",
+            "version": "0.1.0",
+            "schema_version": "2.0",
             "root": root,
             "remote_url": "git@github.com:user/cortex-command.git",
             "head_sha": "0" * 40,
@@ -208,7 +209,7 @@ def test_overnight_logs_invokes_expected_argv(server_module) -> None:
 
     logs_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "lines": ['{"msg":"hello"}'],
             "next_cursor": "@128",
             "files": "events",
@@ -253,7 +254,7 @@ def test_overnight_cancel_invokes_expected_argv(server_module) -> None:
 
     cancel_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "cancelled": True,
             "session_id": "alpha",
             "pgid": 12345,
@@ -293,7 +294,7 @@ def test_overnight_list_sessions_invokes_expected_argv(
 
     list_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "active": [
                 {
                     "session_id": "active-1",
@@ -344,7 +345,7 @@ def test_overnight_start_run_concurrent_refusal_via_mock(
 
     refusal_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "error": "concurrent_runner",
             "session_id": "existing-session",
             "existing_pid": 99999,
@@ -484,7 +485,7 @@ def test_overnight_start_concurrent_runner_json_shape() -> None:
 
       * exit non-zero
       * emit a parseable JSON envelope on stdout containing
-        ``"version": "1.0"`` and ``"error": "concurrent_runner"``
+        ``"schema_version": "2.0"`` and ``"error": "concurrent_runner"``
       * include the existing session's id
     """
 

@@ -343,7 +343,8 @@ def _fail_completed(stderr: str = "uv tool install: simulated failure") -> subpr
 def _print_root_success_stdout() -> str:
     return json.dumps(
         {
-            "version": "1.1",
+            "version": "0.1.0",
+            "schema_version": "2.0",
             "root": "/fake/user/project",
             "package_root": "/fake/site-packages/cortex_command",
             "remote_url": "git@github.com:user/cortex-command.git",
