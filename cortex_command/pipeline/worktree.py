@@ -14,6 +14,7 @@ the host sandbox blocks writes under .claude/ (e.g., Claude Code Seatbelt
 profile blocks .mcp.json checkout into .claude/worktrees/).
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -65,6 +66,80 @@ def _resolve_branch_name(feature: str, repo: Path) -> str:
     while _branch_exists(f"{base}-{suffix}", repo):
         suffix += 1
     return f"{base}-{suffix}"
+
+
+def _registered_worktree_root() -> Path | None:
+    """Return the cortex-registered worktree root from settings.local.json, if any.
+
+    Reads ``~/.claude/settings.local.json`` and returns the first entry in
+    ``sandbox.filesystem.allowWrite`` that contains the ``worktrees/`` marker.
+    This is the stable private marker for cortex-registered worktree roots.
+
+    Returns None if the file is absent, the key is missing, or no matching
+    entry is found.
+    """
+    settings_path = Path.home() / ".claude" / "settings.local.json"
+    if not settings_path.exists():
+        return None
+    try:
+        raw = settings_path.read_text(encoding="utf-8")
+        data = json.loads(raw) if raw.strip() else {}
+    except (json.JSONDecodeError, OSError):
+        return None
+
+    allow_write = (
+        data.get("sandbox", {})
+        .get("filesystem", {})
+        .get("allowWrite", [])
+    )
+    if not isinstance(allow_write, list):
+        return None
+
+    for entry in allow_write:
+        if isinstance(entry, str) and "worktrees/" in entry:
+            return Path(entry)
+    return None
+
+
+def resolve_worktree_root(feature: str, session_id: str | None) -> Path:
+    """Resolve the worktree root directory for a feature.
+
+    Resolution order (R6):
+        (a) ``CORTEX_WORKTREE_ROOT`` env var, after ``$TMPDIR`` expansion,
+            appended with ``/<feature>``.
+        (b) Cortex-registered path from ``~/.claude/settings.local.json``
+            ``sandbox.filesystem.allowWrite`` (first entry containing
+            ``worktrees/`` marker), appended with ``/<feature>``.
+        (c) Default same-repo path: ``<repo_root>/.claude/worktrees/<feature>``.
+        (d) Cross-repo path: ``$TMPDIR/overnight-worktrees/<session_id>/<feature>``
+            when ``session_id`` is provided (and no earlier branch matched).
+
+    Args:
+        feature: Feature name used as the final path component.
+        session_id: Overnight session ID for cross-repo worktrees. Required
+            for branch (d) to be reached; if None, branch (c) is returned.
+
+    Returns:
+        Resolved absolute Path for the worktree directory.
+    """
+    # (a) Explicit env-var override with $TMPDIR expansion.
+    override_root = os.environ.get("CORTEX_WORKTREE_ROOT", "")
+    if override_root:
+        expanded = os.path.expandvars(override_root)
+        return Path(expanded) / feature
+
+    # (b) Cortex-registered path from settings.local.json.
+    registered = _registered_worktree_root()
+    if registered is not None:
+        return registered / feature
+
+    # (d) Cross-repo: $TMPDIR-based path when session_id is provided.
+    if session_id is not None:
+        tmpdir = Path(os.environ.get("TMPDIR", "/tmp"))
+        return tmpdir / "overnight-worktrees" / session_id / feature
+
+    # (c) Default same-repo path.
+    return _repo_root() / ".claude" / "worktrees" / feature
 
 
 def create_worktree(
