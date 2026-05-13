@@ -204,7 +204,7 @@ def _run(args: argparse.Namespace) -> int:
     # .claude/worktrees/ sandbox-writable without a per-skill env-prefix.
     # Cross-repo paths (those starting with $TMPDIR) are already
     # sandbox-writable per convention and skip registration.
-    worktree_root_path = resolve_worktree_root("", session_id=None)
+    worktree_root_path = resolve_worktree_root("", session_id=None, repo_root=repo_root)
     tmpdir = os.environ.get("TMPDIR", "/tmp")
     if not str(worktree_root_path).startswith(tmpdir):
         worktree_target = str(worktree_root_path) + "/"
