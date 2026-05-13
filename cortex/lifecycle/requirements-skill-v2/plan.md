@@ -252,7 +252,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: The orchestrator is a routing surface; preserving the v1 contract is load-bearing for downstream callers. Critical-review flagged that line-count + string-presence verification doesn't prove contract preservation. The caller audit enumerates the contract surface so the rewrite can verify against it.
 - **Verification**: `test -f cortex/lifecycle/requirements-skill-v2/requirements-caller-audit.md` (audit exists) AND `wc -l skills/requirements/SKILL.md | awk '{print $1}'` ≤`30` AND `grep -c "/requirements-gather\|requirements-gather" skills/requirements/SKILL.md` ≥`1` AND `grep -c "/requirements-write\|requirements-write" skills/requirements/SKILL.md` ≥`1` AND every argument shape enumerated in `requirements-caller-audit.md` is supported by the new orchestrator (verified by inspection in PR review).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 97a84f7b; 116→29 lines, 4/4 argument shapes preserved, 10 callers audited)
 
 ### Task 25: Retire `references/gather.md` and sweep stale refs (R18)
 - **Files**: `skills/requirements/references/gather.md` (delete) AND the pre-enumerated list of active-source files referencing it (from `cortex/lifecycle/requirements-skill-v2/gather-md-callers.md` — captured at plan-authoring time below)
