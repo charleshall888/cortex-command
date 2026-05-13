@@ -1,5 +1,34 @@
 [
   {
+    "id": 213,
+    "title": "Close plugin/CLI auto-update gaps and author authoritative internals doc",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "mcp",
+      "upgrade",
+      "internals",
+      "plugin"
+    ],
+    "areas": [],
+    "created": "2026-05-13",
+    "updated": "2026-05-13",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "210-refresh-install-update-docs-close-mcp-only-auto-update-gaps.md",
+    "plan": null,
+    "uuid": "4f90fc64-cae9-4a87-9245-8256ddf9b234",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
