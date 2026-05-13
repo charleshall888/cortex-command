@@ -100,13 +100,19 @@ Spot-check counts: 3 per area doc × 4 area docs = 12 total.
     `overnight-status (the deployed script)`, which would resolve only if a
     third-party shim is installed — but the cortex-core plugin no longer ships
     one.
-- **Verdict**: ✗
+- **Verdict**: ✗ → patched in this commit (Task 19)
 - **Notes**: Drift. The doc describes a retired shim. Task 19 should rewrite
   the In-Session Status CLI block to describe `cortex overnight status` (the
   Python subcommand) as the canonical entry point, and adjust the
   "Description" / "Outputs" / "Dependencies" lines accordingly. The skill at
   `skills/overnight/SKILL.md:102` is out of scope for this task but is the
   trailing edge of the same drift.
+- **Patch**: In-Session Status CLI block (lines 61–74) and the Overview /
+  Dependencies references updated in-place to reference
+  `cortex overnight status` (dispatched by `cortex_command/cli.py:54`,
+  installed via `uv tool install` as the `cortex` console script). Patched
+  in this commit. The `skills/overnight/SKILL.md:102` trailing-edge
+  reference remains out of scope per Task 19 instructions.
 
 ---
 
@@ -236,8 +242,8 @@ Spot-check counts: 3 per area doc × 4 area docs = 12 total.
 
 **Drift summary**: One verdict ✗ on
 `observability.md:63` — the In-Session Status CLI block describes a retired
-`bin/overnight-status` bash shim. Replace with the `cortex overnight status`
-Python subcommand description in Task 19.
+`bin/overnight-status` bash shim. Replaced with the `cortex overnight status`
+Python subcommand description in Task 19 (patched in this commit).
 
 All other 11 claims are confirmed against current code/docs. Drift is minor —
 consistent with research §1.2's finding that area-doc quality is high (research's

@@ -6,7 +6,7 @@
 
 ## Overview
 
-The observability area covers five subsystems that give the developer visibility into active Claude sessions: the terminal statusline (in-session context and lifecycle state), the web dashboard (full overnight session monitoring), the notification system (macOS desktop and Android push alerts), the in-session status CLI (`overnight-status` for sandbox-safe one-shot status), and optional sandbox socket access (tmux socket allowlisting for full interactive access). The first four subsystems read from the same file-based session state; none can write to it. Sandbox socket access is a configuration concern, not a runtime subsystem.
+The observability area covers five subsystems that give the developer visibility into active Claude sessions: the terminal statusline (in-session context and lifecycle state), the web dashboard (full overnight session monitoring), the notification system (macOS desktop and Android push alerts), the in-session status CLI (`cortex overnight status` for sandbox-safe one-shot status), and optional sandbox socket access (tmux socket allowlisting for full interactive access). The first four subsystems read from the same file-based session state; none can write to it. Sandbox socket access is a configuration concern, not a runtime subsystem.
 
 ## Functional Requirements
 
@@ -60,17 +60,17 @@ The observability area covers five subsystems that give the developer visibility
 
 ### In-Session Status CLI
 
-- **Description**: A standalone bash script (`bin/overnight-status`, deployed to `~/.local/bin/overnight-status`) that produces a one-shot status report of the active overnight session from within a sandboxed Claude Code session. Also invocable as `/overnight status` via the overnight skill.
-- **Inputs**: `~/.local/share/overnight-sessions/active-session.json` (session pointer), `cortex/lifecycle/sessions/{id}/overnight-state.json`, `cortex/lifecycle/sessions/{id}/.runner.lock`, `cortex/lifecycle/sessions/{id}/overnight-events.log`
-- **Outputs**: Human-readable status report to stdout including runner liveness, session phase, feature progress, recent events, and failed-feature errors
+- **Description**: The `cortex overnight status` Python subcommand (dispatched by `cortex_command/cli.py:_dispatch_overnight_status` → `cortex_command.overnight.cli_handler.handle_status`) produces a one-shot status report of the active overnight session from within a sandboxed Claude Code session. Installed as the `cortex` console script via `uv tool install` (typically `~/.local/bin/cortex`). Also invocable as `/overnight status` via the overnight skill. The legacy `bin/overnight-status` bash shim is retired (see `pipeline.md:28`).
+- **Inputs**: `~/.local/share/overnight-sessions/active-session.json` (session pointer), `cortex/lifecycle/sessions/{id}/overnight-state.json`, `cortex/lifecycle/sessions/{id}/runner.pid`, `cortex/lifecycle/sessions/{id}/overnight-events.log`
+- **Outputs**: Human-readable status report to stdout (default) or JSON object (`--format json`) including runner liveness, session phase, feature progress, recent events, and failed-feature errors
 - **Acceptance criteria**:
-  - Exits 0 when session data found (active or last-known); exits 1 only when no session data exists at all
-  - Runner liveness reported via `kill -0` on PID from `.runner.lock` ("alive", "dead", or "no lock file")
+  - Exits 0 when session data found (active or last-known); exits 0 with "No active session" / `{"active": false}` when no session data exists
+  - Runner liveness reported via PID liveness check on `runner.pid` (with `phase: starting` during the spawn-pending handshake window before `runner.pid` is claimed)
   - Session phase and feature counts by status (pending/running/merged/failed/deferred) from `overnight-state.json`
-  - Last 5 events from `overnight-events.log` displayed as timeline
+  - Recent events from `overnight-events.log` displayed as timeline
   - Failed features listed with error messages
   - Falls back to most recent `cortex/lifecycle/sessions/` directory when `active-session.json` is absent or shows `phase: complete`
-  - Handles corrupt `overnight-state.json` gracefully (falls back to events-only output)
+  - Handles corrupt `overnight-state.json` gracefully (falls back to events-only / `{"active": false}` output)
 - **Priority**: must-have
 
 ### Sandbox Socket Access
@@ -105,7 +105,7 @@ The observability area covers five subsystems that give the developer visibility
 - **Statusline**: `jq` (with pure-bash fallback), `git`
 - **Dashboard**: Python 3, FastAPI, Jinja2, HTMX (embedded in templates); file-based session state at `lifecycle/`
 - **Notifications (macOS)**: `terminal-notifier` (installed via `brew install terminal-notifier`); Ghostty terminal
-- **In-Session Status CLI**: `jq`, `bash`; file-based session state at `cortex/lifecycle/sessions/` and `~/.local/share/overnight-sessions/`
+- **In-Session Status CLI**: Python 3, `cortex_command` package (installed as `cortex` console script via `uv tool install`); file-based session state at `cortex/lifecycle/sessions/` and `~/.local/share/overnight-sessions/`
 - **Sandbox Socket Access**: `jq`, `just` (setup recipe); `~/.claude/settings.json` and `~/.claude/settings.local.json`
 
 ## Edge Cases
