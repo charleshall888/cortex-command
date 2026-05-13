@@ -153,7 +153,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Read archived review.md files (pre-#013 reviews without the field are skipped silently). Pre-commit hook will auto-mirror to `plugins/cortex-core/bin/`. The just recipe satisfies the bin-script parity gate. PR is opened via `/cortex-core:pr`. The fixture test mitigates the implicit dependency on archived-data shape that critical-review flagged.
 - **Verification**: `test -x bin/cortex-requirements-parity-audit` AND `bin/cortex-requirements-parity-audit --help` exits `0` AND `just --list 2>&1 | grep -c requirements-parity` ≥`1` AND `python3 -m pytest tests/test_requirements_parity_audit.py -v` exits `0`. After PR merge, Phase 2 Checkpoint (from Outline) all-pass on `main`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commits 5ed10953 + d9735f39; 7 tests pass; Phase 2 Checkpoint verified on trunk per operator-adapted mode)
 
 ### Task 14: Add tiktoken dependency + verifier helper (R10 prep)
 - **Files**: `pyproject.toml`, `cortex/lifecycle/requirements-skill-v2/scripts/measure-tokens.py`
