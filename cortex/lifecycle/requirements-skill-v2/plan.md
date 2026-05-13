@@ -171,7 +171,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Current baseline ~1,785 tokens. Use Task 14's measurement script. Per spec edge case, critical-review flagged that named-anchor references could silently break post-trim — this task's pre-enumeration is the protection. Look for: `project.md#`, `Overview`, `Philosophy of Work`, `Architectural Constraints`, `Quality Attributes`, `Project Boundaries`, `Conditional Loading`, `Optional`, and any other H2 references.
 - **Verification**: `test -f cortex/lifecycle/requirements-skill-v2/trim-anchor-audit.md` (pre-trim audit exists) AND `python3 -c "import tiktoken, pathlib; n=len(tiktoken.get_encoding('cl100k_base').encode(pathlib.Path('cortex/requirements/project.md').read_text())); assert n<=1200"` exits `0` AND `grep -c "^## Optional$" cortex/requirements/project.md` returns `1` AND `sed -n '/^## Optional$/,/^## /p' cortex/requirements/project.md | head -3 | grep -ciE 'prunable|optional|deferrable'` ≥`1` AND **post-trim anchor check**: every anchor enumerated in `trim-anchor-audit.md` is still resolvable in the trimmed project.md (verified via script that greps each anchor against the post-trim file).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 7d76fa8d; 2179 → 1199 tokens, 45% reduction; 29/29 audit anchors resolve post-trim)
 
 ### Task 16: Verify Conditional Loading triggers intersect with real tags (R12)
 - **Files**: `cortex/lifecycle/requirements-skill-v2/scripts/verify-conditional-loading.py`
