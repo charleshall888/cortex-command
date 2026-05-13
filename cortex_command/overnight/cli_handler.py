@@ -104,7 +104,7 @@ def read_synthesizer_gate(config_path: Path) -> bool:
 # Schema-floor version stamped on every JSON payload emitted by the CLI for
 # MCP consumption. Major.minor per Terraform's ``format_version`` convention
 # (R15): consumers reject mismatched majors; minor bumps are additive.
-_JSON_SCHEMA_VERSION = "1.0"
+_JSON_SCHEMA_VERSION = "2.0"
 
 
 def _emit_json(payload: dict) -> None:

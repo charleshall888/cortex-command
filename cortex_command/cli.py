@@ -187,6 +187,7 @@ def _dispatch_print_root(_args: argparse.Namespace) -> int:
 
     import json
     import subprocess
+    from importlib.metadata import PackageNotFoundError, version as _pkg_version
     from pathlib import Path
 
     import cortex_command
@@ -194,6 +195,12 @@ def _dispatch_print_root(_args: argparse.Namespace) -> int:
         CortexProjectRootError,
         _resolve_user_project_root,
     )
+    from cortex_command.overnight.cli_handler import _JSON_SCHEMA_VERSION
+
+    try:
+        package_version = _pkg_version("cortex-command")
+    except PackageNotFoundError:
+        package_version = "0.0.0+source"
 
     try:
         root = str(_resolve_user_project_root().resolve())
@@ -223,7 +230,8 @@ def _dispatch_print_root(_args: argparse.Namespace) -> int:
     head_sha = head_proc.stdout.strip() if head_proc.returncode == 0 else ""
 
     payload = {
-        "version": "1.1",
+        "version": package_version,
+        "schema_version": _JSON_SCHEMA_VERSION,
         "root": root,
         "package_root": package_root,
         "remote_url": remote_url,
