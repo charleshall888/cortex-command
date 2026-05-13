@@ -183,15 +183,7 @@ def create_worktree(
 
     repo = repo_path if cross_repo else _repo_root()
 
-    if cross_repo:
-        tmpdir = Path(os.environ.get("TMPDIR", "/tmp"))
-        worktree_path = tmpdir / "overnight-worktrees" / session_id / feature
-    else:
-        override_root = os.environ.get("CORTEX_WORKTREE_ROOT")
-        if override_root:
-            worktree_path = Path(override_root) / feature
-        else:
-            worktree_path = repo / ".claude" / "worktrees" / feature
+    worktree_path = resolve_worktree_root(feature, session_id if cross_repo else None)
 
     # If the worktree path already exists and is a valid worktree, return it
     if worktree_path.exists():
