@@ -61,7 +61,7 @@ One H3 per template section. Sections with no live questions (because code alrea
 
 ## Handoff contract
 
-When the interview is complete, announce completion and return the Q&A block to the caller. Do NOT invoke `/requirements-write` directly — the `/cortex-core:requirements` orchestrator owns sequencing. If the user requests changes after handoff, the orchestrator re-enters this sub-skill with the prior Q&A block as starting context.
+When the interview is complete, announce completion and return the Q&A block to the caller. Do NOT invoke `/requirements-write` directly — the `/cortex-core:requirements` orchestrator owns sequencing. <!-- callgraph: ignore --> If the user requests changes after handoff, the orchestrator re-enters this sub-skill with the prior Q&A block as starting context.
 
 ## Constraints
 
