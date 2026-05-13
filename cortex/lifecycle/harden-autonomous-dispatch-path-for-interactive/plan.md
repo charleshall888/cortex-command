@@ -131,7 +131,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Existing `[project.scripts]` block in `pyproject.toml:18-24` has 6 entries — extend additively. Module-level callable forms allowed: `module:main`, `module:_main`. Audit list source-of-truth is Task 10's `audit-callsites.md`. The plugin parity gate `bin/cortex-check-parity` already first-class-supports entry-point names via `gather_entry_point_names` (research.md citation) — strictly additive; no gate logic change. Spec Edge Case "Console-script name collision": verify each chosen name via `command -v` against a clean PATH before commit. Note: this task may touch >1 file when modules need a `main()` wrapper added — keep wrapper edits to the strict minimum (one `def main(): _run()` line per module). If wrapper additions push file count above 5, split per phase boundary in the audit (e.g., 12a overnight modules, 12b skill modules).
 - **Verification**: run `bin/cortex-check-parity --staged` — pass if exit 0; AND for each script name `<name>` listed in audit-callsites.md, run `python -c "import importlib; m = importlib.import_module('cortex_command.<module>'); assert callable(getattr(m, 'main', None) or getattr(m, '_main', None))"` — pass if exit 0 for each.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13a: Update lifecycle-skill callsites + implement.md §1a launch rewrite (R14 + R10)
 - **Files**: `skills/lifecycle/references/implement.md`, `skills/lifecycle/SKILL.md`
@@ -140,7 +140,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Specific callsite anchors from research.md: `skills/lifecycle/references/implement.md` lines 83, 91, 99, 119; `skills/lifecycle/SKILL.md:80`. Console-script names come from the audit (Task 10's `audit-callsites.md`). Per spec R10: the new launch line uses the promoted console-script for `cortex-daytime-pipeline` and drops the env-prefix. R10 and R14 share the same source-of-truth check — both verify via the parity gate. Reference-before-deployment is permitted by the wiring co-location rule: references can land before `[project.scripts]` entries — the parity gate flags `W003: deployed but not referenced`, not the reverse.
 - **Verification**: run `grep -rn 'python3 -m cortex_command\.' skills/lifecycle/` — pass if no hits; AND `grep -c 'python3 -m cortex_command' skills/lifecycle/references/implement.md` — pass if count = 0; AND `bin/cortex-check-parity --staged` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13b: Update remaining skill-tree callsites (R14)
 - **Files**: `skills/critical-review/SKILL.md`, `skills/critical-review/references/verification-gates.md`, `skills/morning-review/SKILL.md`, `skills/morning-review/references/walkthrough.md`, `skills/discovery/SKILL.md`
@@ -149,7 +149,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Callsite anchors from research.md cover the five files in this task's Files field. The audit (Task 10) drives the exact list of names to substitute. If audit-callsites.md surfaces additional skill-tree callsites beyond this set, split into a 13b-bis task or fold into 13c if they land outside `skills/`.
 - **Verification**: run `grep -rn 'python3 -m cortex_command\.' skills/critical-review/ skills/morning-review/ skills/discovery/` — pass if no hits; AND `bin/cortex-check-parity --staged` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 13c: Update non-skill callsites (`hooks/`, `docs/`, `justfile`, `tests/`, `bin/`)
 - **Files**: `hooks/cortex-scan-lifecycle.sh`, `docs/overnight-operations.md`, `justfile`, plus any `tests/` and `bin/` files surfaced by the Task 10 audit (target ≤5 files total — if audit surfaces more, split into 13c-bis)
@@ -158,7 +158,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: `hooks/cortex-scan-lifecycle.sh:425` is the named overnight scan-lifecycle hook callsite. `docs/overnight-operations.md` references `python3 -m cortex_command.overnight.daytime_pipeline` in install/walkthrough text. Tests directory callsites may include `tests/test_*` files invoking `subprocess.run(["python3", "-m", "cortex_command.<x>", ...])` — those become `subprocess.run(["cortex-<name>", ...])` or stay on `python3 -m` if the test is exercising the module-execution pathway specifically (allowlist those in Task 11's allowlist with rationale).
 - **Verification**: run `grep -rn 'python3 -m cortex_command\.' hooks/ docs/ justfile tests/ bin/` — pass if no hits except inside `cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive/audit-callsites.md` (audit log self-reference) or inside `bin/.audit-bare-python-m-allowlist.md` (allowlisted callsites with rationale); AND `bin/cortex-check-parity --staged` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 14: Update skill-helper-modules clause in `cortex/requirements/project.md`
 - **Files**: `cortex/requirements/project.md`
