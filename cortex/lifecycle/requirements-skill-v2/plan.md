@@ -216,7 +216,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: R14 resolves the documentation gap from research §1.2 (discovery/backlog listed In Scope without area docs). The prose change is small but must use specific wording matching the grep patterns. Re-verify token cap from Task 15 still holds after the additions.
 - **Verification**: `grep -ciE "discovery.*documented inline|inline.*discovery" cortex/requirements/project.md` ≥`1` AND `grep -ciE "backlog.*documented inline|inline.*backlog" cortex/requirements/project.md` ≥`1` AND `test ! -f cortex/requirements/discovery.md && test ! -f cortex/requirements/backlog.md` AND post-merge Phase 4 Checkpoint passes.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 5fed0d7c; tokens=1200 at cap, both inline-doc greps match, Phase 4 Checkpoint passes on trunk)
 
 ### Task 21: Define artifact-format templates for parent and area scopes
 - **Files**: `cortex/lifecycle/requirements-skill-v2/artifact-format.md` (working draft used to seed Tasks 22-23)
