@@ -71,7 +71,7 @@ After removal, hook still does: SESSION_ID injection (L7-13), session-migration 
   - L255 prose: similar edit, drop "and any fresh-resume prompts".
 - `docs/setup.md` L94, L109, L147-148 — EDIT (drop `retros/,` from scaffolding directory lists; remove `retros/` and `retros/README.md` from worked-example tree).
 - `docs/overnight-operations.md` L11 — stylistic mention of "a retro back-reference"; spec author's call whether to scrub. Doc still works without retro existence.
-- `skills/requirements/references/gather.md` L140 — DELETE single bullet `**Retro surfaces unmet assumption**: a session retrospective identifies a requirement that was assumed but never documented...` (bullet 2 of 5 in `## Re-Gather Triggers`; section header and other 4 bullets stay).
+- The requirements gather reference doc (since retired by requirements-skill-v2 Task 25 / R18), L140 — DELETE single bullet `**Retro surfaces unmet assumption**: a session retrospective identifies a requirement that was assumed but never documented...` (bullet 2 of 5 in `## Re-Gather Triggers`; section header and other 4 bullets stay).
 - `skills/refine/references/clarify-critic.md` — NO EDITS (verified — no references to deleted skills; "fresh agent" usages are unrelated).
 
 ### CLAUDE.md edits — line-precise

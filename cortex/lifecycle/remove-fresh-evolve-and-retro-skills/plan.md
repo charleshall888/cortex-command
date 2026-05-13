@@ -96,13 +96,13 @@ Hard-delete `/fresh`, `/evolve`, `/retro` and the session-feedback infrastructur
 - **Verification**: `! rg -q '\b(/fresh|/evolve|/retro|retros)\b' docs/ --glob '!docs/internals/**'` — pass if exit 0.
 - **Status**: [x] complete (commit 6c12c11)
 
-### Task 11: Remove the "Retro surfaces unmet assumption" bullet from `skills/requirements/references/gather.md`
-- **Files**: `skills/requirements/references/gather.md`
+### Task 11: Remove the "Retro surfaces unmet assumption" bullet from the requirements gather reference doc (now-retired)
+- **Files**: the requirements gather reference doc (since retired by requirements-skill-v2 Task 25 / R18)
 - **What**: Inside the `## Re-Gather Triggers` section at L140, delete only the second bullet `**Retro surfaces unmet assumption**: a session retrospective identifies a requirement that was assumed but never documented...`. The section header and the other four bullets remain.
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: The section is bulleted with `- **Heading**: prose` shape; the four surviving bullets share that shape. The verification awk extracts only the section's bullets (file-wide bullet count is irrelevant because templates elsewhere in the file have identical-shape bullets).
-- **Verification**: `! rg -q 'Retro surfaces unmet assumption' skills/requirements/` — pass if exit 0; `awk '/^## Re-Gather Triggers/{f=1; next} /^## /{f=0} f' skills/requirements/references/gather.md | grep -cE '^- \*\*' | xargs -I{} test {} -eq 4` — pass if exit 0.
+- **Verification (historical)**: `! rg -q 'Retro surfaces unmet assumption' skills/requirements/` — pass if exit 0; a section-scoped `awk` extracted from the `## Re-Gather Triggers` block of the gather reference doc verified the bullet count was exactly 4 after the edit. (Path string elided post-R18 retirement.)
 - **Status**: [x] complete (commit f58b31c)
 
 ### Task 12: Update justfile SKILLS array, `.gitignore`, and the dual-source parity test PLUGINS dict in one commit
