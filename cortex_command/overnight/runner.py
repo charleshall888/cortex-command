@@ -2037,12 +2037,21 @@ def run(
         else:
             state = state_module.load_state(state_path)
 
-        # Optional pre-flight: the auth helper resolves API keys for SDK
-        # subagents. Errors are non-fatal — log and continue.
-        try:
-            auth.ensure_sdk_auth(event_log_path=events_path)
-        except Exception:
-            pass
+        # Phase A pre-flight: resolve SDK auth vector + Keychain probe (R3).
+        # Parity with daytime_pipeline.py: both paths call resolve_and_probe
+        # so policy cannot diverge. The runner path has no per-feature slug
+        # (feature=None) and writes events to the session-level events_path.
+        probe_result = auth.resolve_and_probe(
+            feature=None,
+            event_log_path=events_path,
+        )
+        if not probe_result.ok:
+            sys.stderr.write(
+                f"error: auth probe failed: vector=none, "
+                f"keychain={probe_result.keychain} "
+                f"— Keychain entry absent; no auth vector available\n"
+            )
+            return 1
 
         # Main round loop.
         start_wall = time.monotonic()

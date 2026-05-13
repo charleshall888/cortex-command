@@ -25,6 +25,13 @@ same exit-code table as part of the R2 contract; this file is retained in
 `tests/` so the top-level runner-auth test name survives the migration and
 ensures `grep -rn 'runner_auth' tests/` still returns a hit for devs auditing
 the migration.
+
+R3 parity tests (runner.py now uses resolve_and_probe):
+
+  4. resolve_and_probe with resolved vector — ok=True, no probe needed.
+  5. resolve_and_probe with vector=none + probe=absent — ok=False (startup_failure).
+  6. resolve_and_probe with vector=none + probe=unavailable — ok=True (continue).
+  7. resolve_and_probe with vector=none + probe=present — ok=True (continue).
 """
 
 from __future__ import annotations
@@ -36,7 +43,9 @@ from pathlib import Path
 
 import pytest
 
-from cortex_command.overnight.auth import resolve_auth_for_shell
+from unittest.mock import patch
+
+from cortex_command.overnight.auth import resolve_and_probe, resolve_auth_for_shell
 
 
 # ---------------------------------------------------------------------------
@@ -183,3 +192,147 @@ def test_env_api_key_precedence(
     # set in the parent shell. Stderr carries the "Using pre-existing" notice.
     assert "export " not in captured.out
     assert "Using pre-existing ANTHROPIC_API_KEY" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# R3 parity tests — resolve_and_probe (the helper runner.py now calls)
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_and_probe_resolved_vector(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """resolve_and_probe returns ok=True when a non-none vector is resolved.
+
+    When vector != "none", no Keychain probe is needed and probe_event is None.
+    This covers the runner's happy path: an env credential is set and the
+    probe is skipped entirely.
+    """
+    _clear_auth_env(monkeypatch)
+    _redirect_home(monkeypatch, tmp_path)
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-from-env-resolver")
+
+    result = resolve_and_probe(feature=None, event_log_path=None)
+
+    assert result.ok is True
+    assert result.vector == "env_preexisting"
+    assert result.keychain == "skipped"
+    assert result.result == "ok"
+    assert result.probe_event is None
+
+
+def test_resolve_and_probe_absent_keychain_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """resolve_and_probe returns ok=False when vector=none and probe=absent.
+
+    This replicates the runner's startup_failure path: no env credential,
+    no oauth file, and the Keychain entry is confirmed absent.
+    """
+    _clear_auth_env(monkeypatch)
+    _redirect_home(monkeypatch, tmp_path)
+
+    with patch(
+        "cortex_command.overnight.auth.probe_keychain_presence",
+        return_value="absent",
+    ):
+        result = resolve_and_probe(feature=None, event_log_path=None)
+
+    assert result.ok is False
+    assert result.vector == "none"
+    assert result.keychain == "absent"
+    assert result.result == "absent"
+    assert result.probe_event is not None
+    assert result.probe_event["event"] == "auth_probe"
+    assert result.probe_event["result"] == "absent"
+
+
+def test_resolve_and_probe_unavailable_keychain_continues(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """resolve_and_probe returns ok=True when vector=none and probe=unavailable.
+
+    R3 policy: "unavailable" (locked Keychain or non-Darwin) is informational;
+    the runner continues and lets the SDK surface real auth errors later.
+    """
+    _clear_auth_env(monkeypatch)
+    _redirect_home(monkeypatch, tmp_path)
+
+    with patch(
+        "cortex_command.overnight.auth.probe_keychain_presence",
+        return_value="unavailable",
+    ):
+        result = resolve_and_probe(feature=None, event_log_path=None)
+
+    assert result.ok is True
+    assert result.vector == "none"
+    assert result.keychain == "unavailable"
+    assert result.result == "ok"
+    assert result.probe_event is not None
+    assert result.probe_event["event"] == "auth_probe"
+    assert result.probe_event["result"] == "ok"
+
+
+def test_resolve_and_probe_present_keychain_continues(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """resolve_and_probe returns ok=True when vector=none and probe=present.
+
+    R3 policy: "present" → continue with auth_probe event recording keychain="resolved".
+    The event's keychain field uses "resolved" (not "present") per the event schema.
+    """
+    _clear_auth_env(monkeypatch)
+    _redirect_home(monkeypatch, tmp_path)
+
+    with patch(
+        "cortex_command.overnight.auth.probe_keychain_presence",
+        return_value="present",
+    ):
+        result = resolve_and_probe(feature=None, event_log_path=None)
+
+    assert result.ok is True
+    assert result.vector == "none"
+    assert result.keychain == "resolved"
+    assert result.result == "ok"
+    assert result.probe_event is not None
+    assert result.probe_event["keychain"] == "resolved"
+
+
+def test_resolve_and_probe_writes_events_to_log(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """resolve_and_probe writes both auth_bootstrap and auth_probe events to the log.
+
+    When event_log_path is provided and vector=="none", both events are appended
+    as JSONL lines. This covers the runner path where events_path is passed.
+    """
+    _clear_auth_env(monkeypatch)
+    _redirect_home(monkeypatch, tmp_path)
+
+    events_log = tmp_path / "pipeline-events.log"
+
+    with patch(
+        "cortex_command.overnight.auth.probe_keychain_presence",
+        return_value="absent",
+    ):
+        result = resolve_and_probe(feature=None, event_log_path=events_log)
+
+    assert events_log.exists(), "events log was not created"
+    lines = [line for line in events_log.read_text().splitlines() if line.strip()]
+    assert len(lines) == 2, f"expected 2 event lines, got {len(lines)}: {lines}"
+
+    bootstrap_event = json.loads(lines[0])
+    probe_event = json.loads(lines[1])
+
+    assert bootstrap_event["event"] == "auth_bootstrap"
+    assert probe_event["event"] == "auth_probe"
+    assert probe_event["result"] == "absent"
+    assert probe_event["source"] == "ensure_sdk_auth"
+    # feature=None → "feature" key should be absent from runner-path events
+    assert "feature" not in probe_event

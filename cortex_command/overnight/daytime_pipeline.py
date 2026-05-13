@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Optional
 
 from cortex_command.common import CortexProjectRootError, _resolve_user_project_root
-from cortex_command.overnight.auth import ensure_sdk_auth
+from cortex_command.overnight.auth import resolve_and_probe
 from cortex_command.overnight.batch_runner import BatchConfig
 from cortex_command.overnight.deferral import DEFAULT_DEFERRED_DIR
 from cortex_command.overnight.feature_executor import execute_feature
@@ -334,18 +334,21 @@ async def run_daytime(feature: str) -> int:
     daytime_log_path = Path(f"cortex/lifecycle/{feature}/daytime.log")
 
     try:
-        # Phase A: resolve SDK auth vector. Must run INSIDE the try-block so
-        # the outer except/finally classify a no-vector hard-fail as
-        # startup_failure and write daytime-result.json. Buffer the event
-        # payload for Phase B emission once pipeline_events_path is known.
-        auth_event = ensure_sdk_auth(event_log_path=None)
-        if auth_event["vector"] == "none":
+        # Phase A: resolve SDK auth vector + Keychain probe (R3 policy).
+        # Runs INSIDE the try-block so the outer except/finally classifies
+        # a startup failure as startup_failure and writes daytime-result.json.
+        # Events are buffered (event_log_path=None) for Phase B emission once
+        # pipeline_events_path is known; probe_event (if any) is also emitted
+        # in Phase B alongside the auth_bootstrap event.
+        probe_result = resolve_and_probe(feature=feature, event_log_path=None)
+        if not probe_result.ok:
+            # Keychain entry absent — fail loudly with probe-outcome context.
             sys.stderr.write(
-                "error: no auth vector available: "
-                f"{auth_event['message']}\n"
+                f"error: auth probe failed: vector=none, keychain={probe_result.keychain} "
+                f"— Keychain entry absent; no auth vector available\n"
             )
             _top_exc = RuntimeError(
-                "no auth vector available: " + auth_event["message"]
+                "no auth vector available: Keychain entry absent (probe result=absent)"
             )
             _terminated_via = "startup_failure"
             _outcome = "failed"
@@ -390,14 +393,17 @@ async def run_daytime(feature: str) -> int:
         config = build_config(feature, cwd, session_id)
         deferred_dir = cwd / Path("cortex/lifecycle") / feature / "deferred"
 
-        # Phase B: emit the buffered auth_bootstrap event to pipeline-events.log.
+        # Phase B: emit the buffered auth events to pipeline-events.log.
         # Byte-format matches cortex_command.pipeline.state.log_event (single
-        # json.dumps(event) + "\n", parent dir pre-created). The event dict
-        # already has "ts" first from ensure_sdk_auth.
+        # json.dumps(event) + "\n", parent dir pre-created). The auth_bootstrap
+        # event dict already has "ts" first from ensure_sdk_auth. If the probe
+        # ran (vector=="none"), also emit the auth_probe event.
         pipeline_events_path = config.pipeline_events_path
         pipeline_events_path.parent.mkdir(parents=True, exist_ok=True)
         with open(pipeline_events_path, "a", encoding="utf-8") as _auth_log:
-            _auth_log.write(json.dumps(auth_event["event"]) + "\n")
+            _auth_log.write(json.dumps(probe_result.auth_event) + "\n")
+            if probe_result.probe_event is not None:
+                _auth_log.write(json.dumps(probe_result.probe_event) + "\n")
 
         worktree_info = create_worktree(feature)
 
