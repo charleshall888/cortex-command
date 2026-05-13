@@ -168,7 +168,7 @@ A 4-line SKILL.md that produces a single-shot conversational interview. Walks th
 ### Not transferable
 
 - Pocock's skills are stateless and single-pass — no list/update/replace, no scope hierarchy. Cortex needs all of these.
-- No downstream-consumer contract — Pocock's PRDs are read by humans in flat triage. Cortex requirements are loaded by lifecycle/discovery/pipeline at phase gates; the trigger-table structure is genuinely required.
+- No downstream-consumer contract — Pocock's PRDs are read by humans in flat triage. Cortex requirements are loaded by lifecycle, discovery, and pipeline at phase gates; the trigger-table structure is genuinely required.
 - No re-gather workflow — Pocock's tracker model makes drift irrelevant; cortex's "Re-Gather Triggers" section (gather.md:136-149) is a genuine cortex contribution.
 
 ### Where cortex already beats Pocock
@@ -209,7 +209,7 @@ The adversarial dispatch produced 7 steel-manned objections. Three are load-bear
 
 - *Risk*: v1 at 5 weeks judged on aesthetics, not function.
 - *Rebuttal test*: Invalid if there are ≥3 documented instances across distinct sessions where v1 demonstrably failed a *consumer* skill.
-- **Research verdict**: Indirect evidence supports the rebuild case. The consumer audit reveals 6 of 7 consumers don't use tag-based loading — every lifecycle/discovery/refine session in the last 5 weeks has been silently navigating around v1's parent-trigger table. The 8/26 drift-without-suggestion artifacts are also failures in active use. **This isn't aesthetic frustration — it's measurable infrastructure underperformance.** The v2 case stands.
+- **Research verdict**: Indirect evidence supports the rebuild case. The consumer audit reveals 6 of 7 consumers don't use tag-based loading — every lifecycle, discovery, and refine session in the last 5 weeks has been silently navigating around v1's parent-trigger table. The 8/26 drift-without-suggestion artifacts are also failures in active use. **This isn't aesthetic frustration — it's measurable infrastructure underperformance.** The v2 case stands.
 
 ### Secondary objections (3, 4, 5, 7)
 
