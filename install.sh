@@ -38,11 +38,9 @@ normalize_repo_url() {
 
 resolve_latest_tag() {
 	url="$1"
-	git ls-remote --tags --refs "$url" 2>/dev/null \
-		| awk -F/ '{print $NF}' \
-		| grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
-		| sort -V \
-		| tail -1
+	# Pipe-and-capture pattern can't trivially go through run() (fatal-on-error,
+	# doesn't capture stdout). Inline the call instead.
+	git ls-remote --tags --refs "$url" 2>/dev/null | awk -F/ '{print $NF}' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1  # allow-direct
 }
 
 main() {
