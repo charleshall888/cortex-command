@@ -5,7 +5,6 @@
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 209 | Lead refine §4 complexity-value gate with recommended option + rationale | refined | medium | chore | — | — | ✓ |
-| 210 | Refresh install/update docs + close MCP-only auto-update gaps | refined | medium | chore | — | — | ✓ |
 | 211 | R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up) | backlog | medium | bug | — | — | — |
 | 212 | CLI_PIN drift lint (#146 hygiene) | backlog | medium | chore | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
@@ -14,7 +13,6 @@
 ## Refined
 
 - **209** Lead refine §4 complexity-value gate with recommended option + rationale
-- **210** Refresh install/update docs + close MCP-only auto-update gaps
 
 ## Backlog
 

@@ -2,13 +2,13 @@
 schema_version: "1"
 uuid: 905e8b61-56a8-4401-ac59-44b17bf3d743
 title: "Refresh install/update docs + close MCP-only auto-update gaps"
-status: refined
+status: complete
 priority: medium
 type: chore
 tags: [distribution, upgrade, docs, mcp]
 created: 2026-05-13
 updated: 2026-05-13
-session_id: 0ef921dd-0101-45d9-8b7a-0bd874179699
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: refresh-install-update-docs-close-mcp
 complexity: complex

@@ -94,37 +94,6 @@
     "repo": null
   },
   {
-    "id": 210,
-    "title": "Refresh install/update docs + close MCP-only auto-update gaps",
-    "status": "refined",
-    "priority": "medium",
-    "type": "chore",
-    "tags": [
-      "distribution",
-      "upgrade",
-      "docs",
-      "mcp"
-    ],
-    "areas": [
-      "lifecycle"
-    ],
-    "created": "2026-05-13",
-    "updated": "2026-05-13",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/refresh-install-update-docs-close-mcp/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "905e8b61-56a8-4401-ac59-44b17bf3d743",
-    "lifecycle_slug": "refresh-install-update-docs-close-mcp",
-    "session_id": "0ef921dd-0101-45d9-8b7a-0bd874179699",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 211,
     "title": "R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up)",
     "status": "backlog",
