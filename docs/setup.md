@@ -183,6 +183,8 @@ claude /plugin list
 
 `claude /plugin list` should list the plugins you installed from the `cortex-command` marketplace (e.g. `cortex-core`, `cortex-overnight`, etc.). If a plugin you installed is missing, run `/reload-plugins` inside Claude Code to refresh the plugin metadata cache.
 
+If `cortex --print-root` returns `command not found`, your shell's `PATH` is missing the `uv` tool bin directory — run `uv tool update-shell` and then reload your shell (open a new terminal or `source` your shell rc file). The installer prints the same `uv tool update-shell` hint in-flight (see `install.sh:48`) when it detects a missing PATH entry.
+
 ---
 
 ## Upgrade & maintenance
