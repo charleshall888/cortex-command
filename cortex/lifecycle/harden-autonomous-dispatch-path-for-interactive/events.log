@@ -2,3 +2,7 @@
 {"ts": "2026-05-12T23:58:17Z", "event": "spec_approved", "feature": "harden-autonomous-dispatch-path-for-interactive"}
 {"ts": "2026-05-13T00:28:35Z", "event": "plan_approved", "feature": "harden-autonomous-dispatch-path-for-interactive"}
 {"ts": "2026-05-13T00:28:35Z", "event": "phase_transition", "feature": "harden-autonomous-dispatch-path-for-interactive", "from": "plan", "to": "implement"}
+{"ts": "2026-05-13T01:39:15Z", "event": "batch_dispatch", "feature": "harden-autonomous-dispatch-path-for-interactive", "batch": 0, "wave": 1, "tasks": [4, 5, 10]}
+{"ts": "2026-05-13T01:43:43Z", "event": "batch_dispatch", "feature": "harden-autonomous-dispatch-path-for-interactive", "batch": 0, "wave": 2, "tasks": [1, 9, 14, 15, 16]}
+{"ts": "2026-05-13T01:47:24Z", "event": "batch_dispatch", "feature": "harden-autonomous-dispatch-path-for-interactive", "batch": 0, "wave": 3, "tasks": [2, 19]}
+{"ts": "2026-05-13T01:50:09Z", "event": "batch_dispatch", "feature": "harden-autonomous-dispatch-path-for-interactive", "batch": 1, "wave": 4, "tasks": [12, "13a", "13b", "13c"]}
