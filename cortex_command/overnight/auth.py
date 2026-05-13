@@ -4,11 +4,12 @@ Stdlib-only module invokable both pre-venv (via ``python3 -m cortex_command.over
 --shell`` from ``runner.sh``) and in-process (via ``ensure_sdk_auth()`` from
 ``daytime_pipeline.py``). Resolves the SDK auth vector in the priority order:
 
-    1. Pre-existing ``ANTHROPIC_API_KEY`` env var  (vector: env_preexisting)
-    2. ``apiKeyHelper`` from ``~/.claude/settings.json`` or
+    1. Pre-existing ``ANTHROPIC_AUTH_TOKEN`` env var       (vector: auth_token)
+    2. Pre-existing ``ANTHROPIC_API_KEY`` env var          (vector: env_preexisting)
+    3. ``apiKeyHelper`` from ``~/.claude/settings.json`` or
        ``~/.claude/settings.local.json``                   (vector: api_key_helper)
-    3. ``~/.claude/personal-oauth-token`` file             (vector: oauth_file)
-    4. None resolved                                       (vector: none)
+    4. ``~/.claude/personal-oauth-token`` file             (vector: oauth_file)
+    5. None resolved                                       (vector: none)
 
 Tokens are written into ``os.environ`` so they inherit to child processes.
 All user-facing messages are sanitized: ``sk-ant-[a-zA-Z0-9_-]+`` becomes
@@ -183,11 +184,13 @@ def _write_event(event_log_path: pathlib.Path, event: dict) -> None:
 def ensure_sdk_auth(event_log_path: pathlib.Path | None = None) -> dict:
     """Resolve an SDK auth vector and write it into ``os.environ``.
 
-    Priority: pre-existing ``ANTHROPIC_API_KEY`` → ``apiKeyHelper`` →
+    Priority: pre-existing ``ANTHROPIC_AUTH_TOKEN`` → pre-existing
+    ``ANTHROPIC_API_KEY`` → ``apiKeyHelper`` →
     ``~/.claude/personal-oauth-token`` → none.
 
     On resolution, writes the credential to the appropriate env var
-    (``ANTHROPIC_API_KEY`` for api-key-helper, ``CLAUDE_CODE_OAUTH_TOKEN``
+    (``ANTHROPIC_AUTH_TOKEN`` is already set so inherits as-is;
+    ``ANTHROPIC_API_KEY`` for api-key-helper, ``CLAUDE_CODE_OAUTH_TOKEN``
     for oauth-file). The pre-existing branch does not re-write.
 
     Args:
@@ -197,20 +200,25 @@ def ensure_sdk_auth(event_log_path: pathlib.Path | None = None) -> dict:
 
     Returns:
         ``{"vector": str, "message": str, "event": dict}`` where ``vector``
-        is one of ``env_preexisting``, ``api_key_helper``, ``oauth_file``,
-        ``none``, and ``event`` is the exact payload written to the log
-        (or the payload that *would* have been written had a path been given).
+        is one of ``auth_token``, ``env_preexisting``, ``api_key_helper``,
+        ``oauth_file``, ``none``, and ``event`` is the exact payload written
+        to the log (or the payload that *would* have been written had a path
+        been given).
 
     Raises:
         _HelperInternalError: on malformed ``~/.claude/settings.json`` or
             other deterministic helper-internal defects.
     """
-    # 1. Pre-existing ANTHROPIC_API_KEY.
-    if os.environ.get("ANTHROPIC_API_KEY"):
+    # 1. Pre-existing ANTHROPIC_AUTH_TOKEN (resolves to vector: auth_token).
+    if os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        vector = "auth_token"
+        message = "Using pre-existing ANTHROPIC_AUTH_TOKEN from environment"
+    # 2. Pre-existing ANTHROPIC_API_KEY.
+    elif os.environ.get("ANTHROPIC_API_KEY"):
         vector = "env_preexisting"
         message = "Using pre-existing ANTHROPIC_API_KEY from environment"
     else:
-        # 2. apiKeyHelper from settings.json / settings.local.json.
+        # 3. apiKeyHelper from settings.json / settings.local.json.
         helper = _read_api_key_helper()
         api_key = _invoke_api_key_helper(helper) if helper else ""
         if api_key:
@@ -222,7 +230,7 @@ def ensure_sdk_auth(event_log_path: pathlib.Path | None = None) -> dict:
             vector = "env_preexisting"
             message = "Using pre-existing CLAUDE_CODE_OAUTH_TOKEN from environment"
         else:
-            # 3. personal-oauth-token file.
+            # 4. personal-oauth-token file.
             token, warning = _read_oauth_file()
             if token:
                 os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = token
@@ -263,6 +271,13 @@ def resolve_auth_for_shell() -> int:
         # don't have one, and the R1 contract routes the message to stderr.
         # We pass None for event_log_path so ensure_sdk_auth writes message
         # to stderr, then we additionally handle the export line here.
+        if os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+            # Already set in parent shell env — nothing to export.
+            sys.stderr.write(
+                "Using pre-existing ANTHROPIC_AUTH_TOKEN from environment\n"
+            )
+            return 0
+
         if os.environ.get("ANTHROPIC_API_KEY"):
             # Already set in parent shell env — nothing to export.
             sys.stderr.write(
