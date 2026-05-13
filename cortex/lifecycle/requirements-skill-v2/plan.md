@@ -198,7 +198,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Research §1.2 demonstrates the spot-check pattern (claim + source + verdict + evidence file). Drift verdicts (✗) lead to Task 19 patches. Per research, drift is expected to be minor (research's own 5-claim sample was 5/5 confirmed).
 - **Verification**: `wc -l cortex/lifecycle/requirements-skill-v2/area-audit.md` ≥ baseline + content for ≥12 spot-checks; manual inspection confirms 4 area docs each have ≥3 spot-checks with file:line + quote + verdict.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 92c2399c; 11/12 ✓, 1 drift on observability.md:63 routes to Task 19)
 
 ### Task 19: Patch area docs where drift was found (R13 follow-through)
 - **Files**: Whichever of `cortex/requirements/{multi-agent,observability,pipeline,remote-access}.md` have ✗ verdicts in Task 18's audit memo
