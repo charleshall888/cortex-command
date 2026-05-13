@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: d5bbd0b7-7968-4c1f-b4fc-2a2ef3669800
 title: "Harden autonomous-dispatch path for interactive Claude Code sessions"
-status: in_progress
+status: complete
 priority: high
 type: chore
 tags: [overnight, lifecycle, daytime-pipeline, sandbox, auth, packaging]
@@ -12,7 +12,7 @@ complexity: complex
 criticality: high
 spec: cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive/spec.md
 areas: [overnight-runner]
-session_id: f073ff5d-c2e5-41c5-91e0-12e13cb2a16d
+session_id: null
 lifecycle_phase: implement
 ---
 
