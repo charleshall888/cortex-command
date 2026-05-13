@@ -279,7 +279,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: complex
 - **Context**: Existing test patterns live in `tests/`. The test must fail if either sub-skill is not invoked, if the artifact is missing, or if required sections are absent. Per spec edge case, must be hermetic with respect to external dispatches.
 - **Verification**: `test -f tests/test_requirements_skill_e2e.py` AND `python3 -m pytest tests/test_requirements_skill_e2e.py -v` exits `0`.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit a5d3980b; 11 tests passing)
 
 ### Task 28: Parity-mirror hygiene + Phase 5 PR (R21)
 - **Files**: `plugins/cortex-core/skills/requirements-gather/`, `plugins/cortex-core/skills/requirements-write/`, `plugins/cortex-core/skills/requirements/` (auto-mirrored by pre-commit hook); `bin/.parity-exceptions.md` (only if hook fails)
