@@ -14,3 +14,4 @@
 {"schema_version": 3, "ts": "2026-05-12T23:09:14Z", "event": "batch_dispatch", "feature": "requirements-skill-v2", "batch": 0, "tasks": [1]}
 {"schema_version": 3, "ts": "2026-05-12T23:19:10Z", "event": "batch_dispatch", "feature": "requirements-skill-v2", "batch": 1, "tasks": [2,3,4,5,6,7], "note": "sequential within batch (trunk-based mode; concurrent dispatch unsafe on shared git index)"}
 {"schema_version": 3, "ts": "2026-05-12T23:37:47Z", "event": "batch_dispatch", "feature": "requirements-skill-v2", "batch": 4, "tasks": [9]}
+{"schema_version": 3, "ts": "2026-05-13T01:01:25Z", "event": "phase_transition", "feature": "requirements-skill-v2", "tier": "complex", "from": "implement", "to": "review"}

@@ -288,7 +288,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: Pre-commit hook is the canonical regeneration path per CLAUDE.md. The just-shipped hook should auto-mirror; allowlist exception is fallback. PR opened via `/cortex-core:pr`.
 - **Verification**: `find plugins/cortex-core/skills -maxdepth 2 -type d -name "requirements-*" | wc -l` ≥`2` AND `bin/cortex-check-parity` exits `0` AND post-merge Phase 5 Checkpoint (from Outline) all-passes on `main`.
-- **Status**: [ ] pending
+- **Status**: [x] adapted (trunk mode; verified on main — 2 plugin mirrors present, cortex-check-parity exits 0, 151/160 lines, gather.md retired, e2e 11/11 pass; no Phase 5 PR opened)
 
 ## Risks
 - **Strict sequential phase gating extends total wall-clock time vs. a layered or parallel-shipped variant.** Phases 1→5 form a 5-merge sequence; the user may want to revisit whether Phases 3 (parent trim) and 4 (area-doc audit) could safely overlap, since neither depends on the other's content. The pipeline pattern intentionally serializes them to keep each PR's blast radius minimal.
