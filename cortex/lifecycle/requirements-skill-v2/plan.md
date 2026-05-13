@@ -270,7 +270,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: trivial
 - **Context**: Caps are 30 + 80 + 50 = 160; this task confirms the sum holds after edits. Per-file caps already enforced by Tasks 22-24's verification.
 - **Verification**: `wc -l skills/requirements/SKILL.md skills/requirements-gather/SKILL.md skills/requirements-write/SKILL.md | tail -1 | awk '{print $1}'` ≤`160`.
-- **Status**: [ ] pending
+- **Status**: [x] verified inline (29+73+49=151 ≤160 cap; 9-line headroom)
 
 ### Task 27: End-to-end routing test (R20)
 - **Files**: `tests/test_requirements_skill_e2e.py`
