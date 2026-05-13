@@ -207,7 +207,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: Patch-in-place rule from spec: total replacement is out of scope. If a ✗ requires structural change, that becomes a separate ticket and is noted in `area-audit.md`.
 - **Verification**: Every ✗ row in `cortex/lifecycle/requirements-skill-v2/area-audit.md` has a linked commit hash AND `git log --oneline --all -- cortex/requirements/multi-agent.md cortex/requirements/observability.md cortex/requirements/pipeline.md cortex/requirements/remote-access.md | head -20` shows the patch commits.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 442049ab; 1/1 ✗ row patched — observability.md In-Session Status CLI block)
 
 ### Task 20: Project Boundaries clarification for discovery/backlog (R14) + Phase 4 PR
 - **Files**: `cortex/requirements/project.md`
