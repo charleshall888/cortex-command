@@ -1836,6 +1836,15 @@ def _schema_floor_violated(cortex_root_payload: dict[str, Any]) -> bool:
     schema_version (defensive: the caller falls through to the regular
     R8 throttle path; ``_check_version`` will surface the
     malformed-version error during tool dispatch).
+
+    Under wheel install (no ``.git`` dir at ``cortex_root``), the
+    R13/R10/R11/R12 flock + ``cortex upgrade`` machinery is inert (see
+    :func:`_orchestrate_schema_floor_upgrade`). Rather than letting the
+    caller invoke a silent no-op, surface a single-line stderr
+    remediation message naming the manual ``uv tool install --reinstall``
+    command the user must run, then return ``False`` so the caller skips
+    the dead orchestration path. The return value remains a ``bool`` —
+    callers that gate on truthiness still work.
     """
     cli_version = cortex_root_payload.get("schema_version")
     if cli_version is None:
@@ -1845,7 +1854,20 @@ def _schema_floor_violated(cortex_root_payload: dict[str, Any]) -> bool:
         required_major = int(MCP_REQUIRED_CLI_VERSION.split(".")[0])
     except (ValueError, TypeError, AttributeError):
         return False
-    return required_major > cli_major
+    violated = required_major > cli_major
+    if violated:
+        cortex_root = cortex_root_payload.get("root")
+        if cortex_root and not (Path(str(cortex_root)) / ".git").is_dir():
+            print(
+                f"Schema-floor violation: installed CLI schema_version="
+                f"{cli_version}, required={CLI_PIN[1]}; run "
+                f"'uv tool install --reinstall "
+                f"git+https://github.com/charleshall888/cortex-command.git"
+                f"@{CLI_PIN[0]}' to upgrade",
+                file=sys.stderr,
+            )
+            return False
+    return violated
 
 
 def _orchestrate_schema_floor_upgrade(
