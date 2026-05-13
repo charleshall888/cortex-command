@@ -13,7 +13,7 @@ criticality: high
 spec: cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive/spec.md
 areas: [overnight-runner]
 session_id: f073ff5d-c2e5-41c5-91e0-12e13cb2a16d
-lifecycle_phase: plan
+lifecycle_phase: implement
 ---
 
 # Harden autonomous-dispatch path for interactive Claude Code sessions
