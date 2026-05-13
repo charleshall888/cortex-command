@@ -31,14 +31,20 @@ import shlex
 import subprocess
 import sys
 from subprocess import DEVNULL
-from typing import Literal
+from typing import Literal, NamedTuple
 
 # Re-export the pipeline timestamp source so auth_bootstrap events byte-match
 # existing log_event output. Both emission paths call the same function, which
 # keeps the R7 byte-equivalence test monkey-patchable from a single site.
 from cortex_command.pipeline.state import _now_iso
 
-__all__ = ["ensure_sdk_auth", "probe_keychain_presence", "resolve_auth_for_shell"]
+__all__ = [
+    "ensure_sdk_auth",
+    "probe_keychain_presence",
+    "resolve_and_probe",
+    "resolve_auth_for_shell",
+    "AuthProbeResult",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +196,7 @@ def _read_oauth_file() -> tuple[str, str]:
     if not token_file.exists():
         return "", (
             f"Warning: no apiKeyHelper configured and no OAuth token file "
-            f"at {token_file} — claude -p will use Keychain auth if available"
+            f"at {token_file} — no explicit auth vector resolved"
         )
     try:
         raw = token_file.read_text(encoding="utf-8")
@@ -200,7 +206,7 @@ def _read_oauth_file() -> tuple[str, str]:
     if not token:
         return "", (
             f"Warning: {token_file} exists but is empty — "
-            f"claude -p will use Keychain auth if available"
+            f"no explicit auth vector resolved"
         )
     return token, f"Using OAuth token from {token_file}"
 
@@ -226,6 +232,162 @@ def _write_event(event_log_path: pathlib.Path, event: dict) -> None:
     # cortex_command/pipeline/state.py::log_event byte-for-byte.
     with open(event_log_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(event) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# AuthProbeResult — structured return type for resolve_and_probe
+# ---------------------------------------------------------------------------
+
+
+class AuthProbeResult(NamedTuple):
+    """Result of the combined auth resolution + Keychain probe (R3 policy).
+
+    Fields:
+        ok:          True if the caller should continue; False signals
+                     startup failure (probe returned "absent").
+        vector:      Resolved vector string from ``ensure_sdk_auth``
+                     (e.g. ``"auth_token"``, ``"oauth_file"``, ``"none"``).
+        keychain:    Probe outcome (``"present"``, ``"absent"``,
+                     ``"unavailable"``) when the probe ran; ``"skipped"``
+                     when ``vector != "none"`` and no probe was needed.
+        result:      ``"ok"`` when the caller should proceed; ``"absent"``
+                     when the probe confirmed the Keychain entry is missing.
+        auth_event:  The ``auth_bootstrap`` event dict written by
+                     ``ensure_sdk_auth``.
+        probe_event: The ``auth_probe`` event dict written when the probe
+                     ran; ``None`` when the probe was skipped.
+    """
+
+    ok: bool
+    vector: str
+    keychain: str
+    result: str
+    auth_event: dict
+    probe_event: dict | None
+
+
+def _build_probe_event(
+    feature: str | None,
+    vector: str,
+    keychain: str,
+    result: str,
+) -> dict:
+    """Build the ``auth_probe`` event payload (ts field first).
+
+    Schema: ``{ts, event: "auth_probe", feature, vector, keychain, result, source}``.
+    ``feature`` is ``None`` for the runner path (session-level); the field is
+    omitted from the payload in that case so downstream consumers can distinguish
+    runner-path events from per-feature events without relying on a sentinel value.
+    """
+    entry: dict = {"ts": _now_iso()}
+    entry["event"] = "auth_probe"
+    if feature is not None:
+        entry["feature"] = feature
+    entry["vector"] = vector
+    entry["keychain"] = keychain
+    entry["result"] = result
+    entry["source"] = "ensure_sdk_auth"
+    return entry
+
+
+def resolve_and_probe(
+    feature: str | None = None,
+    event_log_path: pathlib.Path | None = None,
+) -> AuthProbeResult:
+    """Resolve the SDK auth vector and apply the R3 Keychain probe policy.
+
+    Combines ``ensure_sdk_auth`` with ``probe_keychain_presence()`` and
+    enforces the spec's Phase 1 R3 policy in one place so both
+    ``runner.py`` and ``daytime_pipeline.py`` call a single function and
+    cannot diverge:
+
+    * ``vector != "none"`` → continue (no probe needed).
+    * ``vector == "none"`` AND probe in ``{"present", "unavailable"}`` →
+      continue; emit ``auth_probe`` event with ``result="ok"`` and the
+      probe outcome in ``keychain``.
+    * ``vector == "none"`` AND probe ``"absent"`` → return failure;
+      emit ``auth_probe`` event with ``result="absent"``.
+
+    Args:
+        feature:        Feature slug for per-feature event logs (daytime
+                        path).  Pass ``None`` from the runner path.
+        event_log_path: Path to which both the ``auth_bootstrap`` and
+                        ``auth_probe`` events are appended.  ``None``
+                        causes ``ensure_sdk_auth`` to write the bootstrap
+                        message to stderr instead; the probe event is
+                        suppressed (no path to write to).
+
+    Returns:
+        ``AuthProbeResult`` with all fields populated.  Callers check
+        ``result.ok`` to decide whether to continue or fail with
+        ``startup_failure``.
+    """
+    auth_info = ensure_sdk_auth(event_log_path=event_log_path)
+    vector = auth_info["vector"]
+    auth_event = auth_info["event"]
+
+    if vector != "none":
+        # Auth vector resolved — probe is not needed.  Continue.
+        return AuthProbeResult(
+            ok=True,
+            vector=vector,
+            keychain="skipped",
+            result="ok",
+            auth_event=auth_event,
+            probe_event=None,
+        )
+
+    # vector == "none": run the Keychain presence probe.
+    raw_probe = probe_keychain_presence()
+
+    # Map probe_keychain_presence literals to the event's keychain field.
+    # The event schema uses "resolved" for "present" to signal that the
+    # probe found an entry (the entry is *present*, resolving ambiguity).
+    keychain_field = "resolved" if raw_probe == "present" else raw_probe
+
+    # Determine pass/fail outcome per R3 policy.
+    if raw_probe == "absent":
+        result_field = "absent"
+        ok = False
+        probe_message = (
+            "auth_probe: vector=none, keychain=absent — "
+            "Keychain entry not found; startup will fail"
+        )
+    else:
+        # raw_probe in {"present", "unavailable"}: informational; continue.
+        result_field = "ok"
+        ok = True
+        if raw_probe == "present":
+            probe_message = (
+                "auth_probe: vector=none, keychain=resolved — "
+                "Keychain entry present; SDK will attempt retrieval"
+            )
+        else:  # "unavailable"
+            probe_message = (
+                "auth_probe: vector=none, keychain=unavailable — "
+                "Keychain probe inconclusive (locked or non-Darwin); continuing"
+            )
+
+    probe_event = _build_probe_event(
+        feature=feature,
+        vector=vector,
+        keychain=keychain_field,
+        result=result_field,
+    )
+
+    if event_log_path is not None:
+        _write_event(event_log_path, probe_event)
+    else:
+        sys.stderr.write(_sanitize(probe_message) + "\n")
+
+    return AuthProbeResult(
+        ok=ok,
+        vector=vector,
+        keychain=keychain_field,
+        result=result_field,
+        auth_event=auth_event,
+        probe_event=probe_event,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -292,7 +454,7 @@ def ensure_sdk_auth(event_log_path: pathlib.Path | None = None) -> dict:
                 vector = "none"
                 message = warning or (
                     "Warning: no auth vector resolved — "
-                    "claude -p will use Keychain auth if available"
+                    "no explicit auth vector found"
                 )
 
     message = _sanitize(message)
@@ -366,7 +528,7 @@ def resolve_auth_for_shell() -> int:
         else:
             sys.stderr.write(
                 "Warning: no auth vector resolved — "
-                "claude -p will use Keychain auth if available\n"
+                "no explicit auth vector found\n"
             )
         return 1
     except _HelperInternalError as exc:
