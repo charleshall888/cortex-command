@@ -25,17 +25,20 @@ import argparse
 import json
 import os
 import pathlib
+import platform
 import re
 import shlex
 import subprocess
 import sys
+from subprocess import DEVNULL
+from typing import Literal
 
 # Re-export the pipeline timestamp source so auth_bootstrap events byte-match
 # existing log_event output. Both emission paths call the same function, which
 # keeps the R7 byte-equivalence test monkey-patchable from a single site.
 from cortex_command.pipeline.state import _now_iso
 
-__all__ = ["ensure_sdk_auth", "resolve_auth_for_shell"]
+__all__ = ["ensure_sdk_auth", "probe_keychain_presence", "resolve_auth_for_shell"]
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +64,55 @@ class _HelperInternalError(Exception):
     Translates to exit code 2 in the shell entry point and re-raised from
     ``ensure_sdk_auth`` per the spec's Edge Cases table.
     """
+
+
+# ---------------------------------------------------------------------------
+# Keychain presence probe (R2)
+# ---------------------------------------------------------------------------
+
+_KEYCHAIN_SERVICE_NAME = "Claude Code-credentials"
+
+
+def probe_keychain_presence() -> Literal["present", "absent", "unavailable"]:
+    """Probe whether the canonical Claude Code Keychain entry is present.
+
+    Checks exit code only — never ``-w`` (no secret retrieval, no ACL prompt).
+    Returns:
+        ``"present"``     — entry found (exit 0 from ``security find-generic-password``).
+        ``"absent"``      — entry not found (exit 44 or other non-zero exit from
+                            ``security``, indicating the entry does not exist).
+        ``"unavailable"`` — probe could not run: non-Darwin platform, or Darwin
+                            but the search list is unavailable (locked login keychain
+                            in launchd pre-unlock context; ``errSecInteractionNotAllowed``
+                            == exit 36).
+
+    The probe's purpose is bounded: it catches the ``vector == "none" AND
+    entry-genuinely-absent`` failure mode at startup.  It does NOT prove the
+    SDK can read the credential (ACL trust, unlock state, and stale-vs-live
+    entry data remain downstream concerns surfaced as ordinary SDK auth errors).
+    """
+    if platform.system() != "Darwin":
+        return "unavailable"
+
+    try:
+        result = subprocess.run(
+            ["security", "find-generic-password", "-s", _KEYCHAIN_SERVICE_NAME],
+            stdout=DEVNULL,
+            stderr=DEVNULL,
+        )
+    except (FileNotFoundError, OSError):
+        # ``security`` binary not found or not executable — treat as unavailable.
+        return "unavailable"
+
+    if result.returncode == 0:
+        return "present"
+
+    # errSecInteractionNotAllowed (exit 36): search list unavailable
+    # (locked login keychain — launchd pre-unlock or first-after-reboot).
+    if result.returncode == 36:
+        return "unavailable"
+
+    return "absent"
 
 
 # ---------------------------------------------------------------------------
