@@ -261,7 +261,7 @@ Ship v2 as five sequential phase-PRs, each consuming the previous phase's output
 - **Complexity**: simple
 - **Context**: Critical-review flagged that "any active-source files referencing it" is anti-pattern runtime discovery rather than plan-time enumeration. The pre-enumeration memo turns runtime discovery into a reviewable artifact: PR reviewers can see exactly which callers were updated and verify each update is correct. Spec R18 explicitly excludes lifecycle/archive/research/backlog/test paths from the sweep — those are historical artifacts that legitimately reference the old path.
 - **Verification**: `test -f cortex/lifecycle/requirements-skill-v2/gather-md-callers.md` (pre-enumeration exists) AND `test ! -f skills/requirements/references/gather.md` AND `grep -rln "references/gather.md\|requirements/references/gather" . --exclude-dir=.git --exclude-dir=docs/internals --exclude-dir=cortex/lifecycle/requirements-skill-v2 --exclude-dir=cortex/lifecycle/archive --exclude-dir=cortex/research --exclude-dir=cortex/backlog --exclude-dir=tests` returns no matches.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 6a9691e3; gather.md + plugin mirror deleted, 3 callers updated, sweep clean)
 
 ### Task 26: Verify skill total weight ≤160 lines (R19)
 - **Files**: (verification-only; no edits unless cap breached)
