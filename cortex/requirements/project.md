@@ -1,75 +1,75 @@
 # Requirements: cortex-command
 
-> Last gathered: 2026-04-01 (updated 2026-04-03)
+> Last gathered: 2026-04-01 (updated 2026-05-12)
 
 ## Overview
 
-Agentic workflow toolkit for AI-assisted software development. Defines the global skills, lifecycle state machine, pipeline orchestrator, and overnight execution framework for Claude Code. The north star is autonomous multi-hour development: send Claude to work with a plan, let it spin up its own teams, and review results afterward. Distributed CLI-first as a non-editable wheel installed from a tag-pinned git URL (`uv tool install git+<url>@<tag>`); cloning or forking the repo remains a secondary path for advanced users who want to modify the source. Favors a highly customized, iteratively improved system over generic solutions.
+Agentic workflow toolkit for AI-assisted software development on Claude Code: skills, lifecycle state machine, pipeline orchestrator, overnight execution. North star: autonomous multi-hour development — Claude works from a plan, spins up teams, reports afterward. Ships CLI-first as a non-editable wheel: `uv tool install git+<url>@<tag>`.
 
 ## Philosophy of Work
 
-**Day/night split**: Daytime is close, iterative collaboration — define goals, research, spec. Overnight is full handoff — Claude plans and executes without intervention. Morning is strategic review — not debugging sessions.
+**Day/night split**: Daytime is iterative collaboration; overnight is handoff; morning is strategic review, not debugging.
 
-**Handoff readiness**: A feature isn't ready for overnight until the spec has no open questions, success criteria are verifiable by an agent with zero prior context, and all lifecycle artifacts are fully self-contained. The spec is the entire communication channel.
+**Handoff readiness**: A feature isn't overnight-ready until the spec has no open questions, criteria are agent-verifiable from zero context, artifacts self-contained.
 
-**Failure handling**: Surface all failures in the morning report. Keep working on other tasks. Stop only if the failure blocks all remaining work in the session.
+**Failure handling**: Surface failures in the morning report; keep working unless blocked.
 
-**Daytime work quality**: Research before asking. Don't fill unknowns with assumptions — jumping to solutions before understanding the problem produces wasted work.
+**Daytime work**: Research before asking; don't fill unknowns with assumptions.
 
-**Complexity**: Must earn its place by solving a real problem that exists now. When in doubt, the simpler solution is correct.
+**Complexity**: Must earn its place by solving a real problem now. When in doubt, simpler wins.
 
-**Solution horizon**: This is a long-term project, and proposed fixes should reflect that. Before suggesting a fix, ask: do I currently know this will need to be redone — because a follow-up is already planned, the same patch would apply in multiple known places I can name, or it sidesteps a constraint I can already name? If yes, propose the durable version, or surface both choices with the tradeoff. If no, **Complexity** above still applies — the simpler fix is correct, and speculating about future redo is itself over-engineering. A deliberately-scoped phase of a multi-phase lifecycle is not a stop-gap; stop-gap means unplanned-redo. The test is current knowledge, not prediction.
+**Solution horizon**: Long-term project — fixes reflect that. Before suggesting a fix, ask: do I already know this needs redoing (follow-up planned, patch applies in multiple known places, sidesteps a known constraint)? If yes, propose the durable version or surface both with tradeoff. If no, **Complexity** applies. A scoped phase of a multi-phase lifecycle is not a stop-gap (stop-gap means unplanned-redo). Test: current knowledge, not prediction.
 
-**Quality bar**: Tests pass and the feature works as specced. ROI matters — the system exists to make shipping faster, not to be a project in itself.
-
-**Workflow trimming**: Workflows that have not earned their place are removed wholesale rather than deprecated in stages. Hard-deletion is preferred over deprecation notices, tombstone skills, or env-var soft-deletes when the surface has zero downstream consumers (verified per-PR). Retired surfaces are documented in `CHANGELOG.md` with replacement entry points and any user-side cleanup paths the scaffolder cannot auto-prune.
+**Quality bar**: Tests pass; the feature works as specced. ROI matters — ship faster, not be a project.
 
 ## Architectural Constraints
 
-- **File-based state**: Lifecycle artifacts, backlog items, pipeline state, and session tracking all use plain files (markdown, JSON, YAML frontmatter). No database or server. May evolve if complexity warrants it, but simplicity is preferred.
-- **Per-repo sandbox registration**: `cortex init` additively registers the repo's `cortex/` umbrella in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array. This is the only write cortex-command performs inside `~/.claude/`; it is serialized across concurrent invocations via `fcntl.flock` on a sibling lockfile.
-- **SKILL.md-to-bin parity enforcement**: `bin/cortex-*` scripts must be wired through an in-scope SKILL.md / requirements / docs / hooks / justfile / tests reference (see `bin/cortex-check-parity` for the static gate). Drift between deployed scripts and references is a pre-commit-blocking failure mode. Allowlist exceptions live at `bin/.parity-exceptions.md` with closed-enum categories and ≥30-char rationales. The closed plugin list in the linter is intentional friction — adding a plugin or reserved name requires editing the linter source.
-- **SKILL.md size cap**: SKILL.md files are capped at 500 lines per Anthropic skill-authoring guidance (`tests/test_skill_size_budget.py` enforces). Exceptions land via in-file `<!-- size-budget-exception: <reason ≥30 chars>, lifecycle-id=<NNN>, date=<YYYY-MM-DD> -->` marker (modeled on `bin/.parity-exceptions.md` schema). Default remediation is extracting content to `skills/<name>/references/`; a marker is appropriate only when the SKILL.md inherently exceeds the cap (e.g., dense protocol surfaces with no extractable references).
-- **Sandbox preflight gate**: `bin/cortex-check-parity` extends its SKILL.md-to-bin parity scope to validate `cortex/lifecycle/{feature}/preflight.md` against a structured YAML schema when staged diffs touch sandbox-source files (`cortex_command/overnight/sandbox_settings.py`, `cortex_command/pipeline/dispatch.py`, `cortex_command/overnight/runner.py`, `pyproject.toml`). The gate fails on missing/invalid preflight, stale `commit_hash`, or `claude --version` drift. This protects the per-spawn sandbox enforcement contract from silent regression on SDK pin bumps, function-name refactors, and CLI binary upgrades.
-- **Two-mode gate pattern**: pre-commit critical-path gates may pair a `--staged` mode (referential schema check on staged diffs) with an `--audit` mode (time-based or repo-wide check) wired off the critical path via `just <recipe>-audit`. Time-based checks (date staleness, calendar windows) belong in `--audit` mode surfaced via morning-review or on-demand — keeping them off the pre-commit path avoids day-15 tripwires on unrelated commits. The pre-commit trigger is scoped to staged paths the gate can actually enforce; backend-only commits should not invoke skill-prompt-only gates. Fail-closed-vs-fail-open on missing allowlist is a per-gate design decision: fail-closed when the allowlist's absence indicates incomplete authoring (e.g., `bin/.events-registry.md`); fail-open when the allowlist is opt-in or backward-compat (e.g., legacy parity exceptions). Document the choice in the gate's docstring and the relevant `docs/internals/<gate>.md`. See `bin/cortex-check-events-registry` for the two-mode precedent.
-- **Skill-helper modules**: when a SKILL.md's dispatch ceremony is load-bearing enough that a weakly-grounded LLM would skip or paraphrase steps if expressed inline, the ceremony may be collapsed into atomic subcommands of a skill-specific module at `cortex_command/<skill>.py`, invoked from SKILL.md prose via `python3 -m cortex_command.<skill> <subcommand>`. Each subcommand must fuse the load-bearing operations (validation + mutation + telemetry) so partial execution is not addressable. The module's public functions are importable for unit testing. New event types emitted by the helper module register in `bin/.events-registry.md` even when SKILL.md does not contain the literal `"event": "<name>"` string that the static gate scans for.
+- **File-based state**: Lifecycle, backlog, pipeline, sessions in plain files (markdown/JSON/YAML). No database.
+- **Per-repo sandbox registration**: `cortex init` additively adds the repo's `cortex/` umbrella to `~/.claude/settings.local.json` `sandbox.filesystem.allowWrite` — the only write cortex-command makes in `~/.claude/`. `fcntl.flock` serialized.
+- **SKILL.md-to-bin parity enforcement**: `bin/cortex-*` scripts wire through an in-scope SKILL.md/requirements/docs/hooks/justfile/tests reference. `bin/cortex-check-parity` blocks drift; exceptions at `bin/.parity-exceptions.md`.
+- **SKILL.md size cap**: 500 lines (`tests/test_skill_size_budget.py`). Exceptions via in-file `<!-- size-budget-exception: ... -->`. Default fix: extract to `skills/<name>/references/`.
+- **Skill-helper modules**: when a SKILL.md dispatch ceremony invites paraphrase, collapse it into atomic `cortex_command/<skill>.py` subcommands fusing validation+mutation+telemetry. New events register in `bin/.events-registry.md`.
 
 ## Quality Attributes
 
-- **Graceful partial failure**: Individual tasks in an autonomous plan may fail. The system should retry, potentially hand off to a fresh agent with clean context, and fail that task gracefully if unresolvable — while completing the rest.
-- **Maintainability through simplicity**: Complexity is managed by iteratively trimming skills and workflows. The system should remain navigable by Claude even as it grows.
-- **Iterative improvement**: The architecture must tolerate exploratory development. Not everything is planned upfront — some design will be discovered through use.
-- **Defense-in-depth for permissions**: The global `settings.json` template ships conservative defaults — minimal allow list, comprehensive deny list, sandbox enabled. For sandbox-excluded commands (git, gh, WebFetch), the permission allow/deny list is the sole enforcement layer; keep global allows read-only and let write operations fall through to prompt. The overnight runner bypasses permissions entirely (`--dangerously-skip-permissions`), making sandbox configuration the critical security surface for autonomous execution.
-- **Destructive operations preserve uncommitted state**: Cleanup scripts that remove user-visible artifacts (worktrees, branches, session directories) check for uncommitted or untracked state in the target before destruction and SKIP rather than destroy. Inline destructive sequences are extracted into named scripts when they reach this complexity bar so the precondition is testable. Stderr logs the skip with a tagged source prefix.
+- **Graceful partial failure**: Tasks may fail. The system retries, optionally hands off to a fresh agent, fails gracefully — completing the rest.
+- **Maintainability through simplicity**: Complexity is managed by iteratively trimming skills/workflows.
+- **Iterative improvement**: Architecture tolerates exploratory development; design emerges through use.
+- **Defense-in-depth for permissions**: `settings.json` ships minimal allow, comprehensive deny, sandbox on. For sandbox-excluded commands (git, gh, WebFetch) the allow/deny list is sole enforcement — keep global allows read-only. Overnight runs `--dangerously-skip-permissions`; sandbox is the critical surface.
+- **Destructive operations preserve uncommitted state**: Cleanup scripts removing user-visible artifacts (worktrees, branches, sessions) SKIP on uncommitted state. Inline destructive sequences extract into named scripts.
 
 ## Project Boundaries
 
 ### In Scope
 
-- AI workflow orchestration (skills, lifecycle, pipeline, discovery, backlog)
-- Overnight execution framework, session management, scheduled launch, and morning reporting
-- Dashboard (~1800 LOC FastAPI): real-time web monitoring of overnight sessions
-- Conflict resolution pipeline (~2500 LOC): classifies conflicts, dispatches repair agents, retries merges
-- Remote access integration (Tailscale, mosh, tmux, Cloudflare Tunnel)
-- Observability (statusline, notifications, metrics, cost tracking)
-- Multi-agent orchestration: parallel dispatch, worktree isolation, Haiku/Sonnet/Opus model selection matrix
-- Global agent configuration (settings, hooks, reference docs)
+- AI workflow orchestration (skills, lifecycle, pipeline, discovery, backlog); discovery and backlog are documented inline (`skills/discovery/SKILL.md`, `cortex/backlog/`).
+- Overnight execution: framework, sessions, scheduled launch, morning report
+- Dashboard (~1800 LOC FastAPI), conflict resolution pipeline (~2500 LOC), remote access (Tailscale/mosh/tmux/Cloudflare Tunnel)
+- Observability (statusline, notifications, metrics, cost); global agent config
+- Multi-agent: parallel dispatch, worktrees, Haiku/Sonnet/Opus selection
 
 ### Out of Scope
 
-- Dotfiles and machine configuration (terminals, shells, prompts, fonts, git) — those belong in machine-config
-- Application code or libraries — those belong in their own repos
-- Published packages or reusable modules for others — the `cortex` CLI ships as a non-editable wheel installed from a tag-pinned git URL via `uv tool install git+<url>@<tag>`; PyPI publication remains out of scope.
-- Setup automation for new machines (owned by machine-config)
+- Dotfiles, machine configuration, setup automation for new machines — belong in machine-config
+- Application code or libraries — belong in their own repos
+- Published packages or reusable modules for others — out of scope; cortex ships as a non-editable wheel
 
 ### Deferred
 
-- Migration from file-based state if/when complexity demands it
-- Cross-repo work in a single overnight session
+- Migration from file-based state if complexity demands it
+- Cross-repo work in one overnight session
 
 ## Conditional Loading
 
-Working on statusline, dashboard, or notifications → cortex/requirements/observability.md
-Working on pipeline, overnight runner, conflict resolution, or deferral → cortex/requirements/pipeline.md
-Working on remote access, tmux, mosh, or Tailscale → cortex/requirements/remote-access.md
-Working on agent spawning, parallel dispatch, worktrees, or model selection → cortex/requirements/multi-agent.md
+- statusline/dashboard/notifications → cortex/requirements/observability.md
+- pipeline/overnight runner/conflict resolution/deferral → cortex/requirements/pipeline.md
+- remote access/tmux/mosh/Tailscale → cortex/requirements/remote-access.md
+- agent spawning/parallel dispatch/worktrees/model selection → cortex/requirements/multi-agent.md
+
+## Optional
+
+Content here is prunable under token pressure — skip without losing spec-required guidance.
+
+- **Sandbox preflight gate**: `bin/cortex-check-parity` validates `cortex/lifecycle/{feature}/preflight.md` on sandbox-source diffs; fails on missing/invalid preflight or `claude --version` drift.
+- **Two-mode gate pattern**: pre-commit gates pair `--staged` (diff schema) with `--audit` (time/repo-wide, `just <recipe>-audit`). See `bin/cortex-check-events-registry`.
+- **Workflow trimming**: unearned workflows are removed wholesale. Retirements in `CHANGELOG.md`.
