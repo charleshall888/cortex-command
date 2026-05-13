@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0`) plus plugins installed via `/plugin install` in Claude Code; `cortex init` additionally registers the repo's `cortex/` umbrella path in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so interactive sessions and the overnight runner can write under it without sandbox prompts.
+An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install git+https://github.com/charleshall888/cortex-command.git@<latest-tag>`, where `<latest-tag>` resolves to the highest `vX.Y.Z` ref from `git ls-remote --tags` — see `docs/setup.md` for the full snippet) plus plugins installed via `/plugin install` in Claude Code; `cortex init` additionally registers the repo's `cortex/` umbrella path in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so interactive sessions and the overnight runner can write under it without sandbox prompts.
 
 ## Repository Structure
 
@@ -19,7 +19,7 @@ An opinionated AI workflow framework for Claude Code. Provides skills (slash com
 
 ## Distribution
 
-Cortex-command ships as a CLI installed via `uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0` plus plugins installed via `/plugin install`. It no longer deploys symlinks into `~/.claude/`.
+Cortex-command ships as a CLI installed via `uv tool install git+https://github.com/charleshall888/cortex-command.git@<latest-tag>` (resolve `<latest-tag>` via `git ls-remote --tags --refs`; see `docs/setup.md` Quickstart) plus plugins installed via `/plugin install`. It no longer deploys symlinks into `~/.claude/`.
 
 ## Commands
 

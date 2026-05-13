@@ -476,7 +476,10 @@ def test_mcp_first_install_hook(
     # ``_resolve_installed_cortex_path()``.
     mock_cortex_abs_path = "/tmp/uv-tools/cortex/bin/cortex"
     success_outputs = [
-        # Call 1: uv tool install --reinstall git+...@v0.1.0 — succeeds.
+        # Call 1: uv tool install --reinstall git+...@<CLI_PIN[0]> —
+        # succeeds. Assertion below verifies the trailer pins CLI_PIN[0]
+        # rather than asserting a literal tag here, so this comment
+        # stays stable across CLI_PIN bumps.
         _success_completed("installed cortex-command vX.Y.Z"),
         # Call 2: uv tool list --show-paths — succeeds and emits the
         # ``- cortex (<abs path>)`` line parsed by
