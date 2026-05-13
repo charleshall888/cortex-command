@@ -41,7 +41,7 @@ from cortex_command.overnight.state import (
     save_state,
 )
 from cortex_command.overnight.types import CircuitBreakerState
-from cortex_command.pipeline.worktree import cleanup_worktree, create_worktree
+from cortex_command.pipeline.worktree import cleanup_worktree, create_worktree, resolve_worktree_root
 
 # Compiled regex for PR URL scanning (used by _scan_pr_url).
 _PR_URL_RE = re.compile(r"https://github\.com/[^/\s]+/[^/\s]+/pull/[0-9]+")
@@ -116,14 +116,10 @@ def _write_pid(pid_path: Path) -> None:
 def _worktree_path(feature: str) -> Path:
     """Return the worktree path for a given feature.
 
-    Matches the same-repo resolution in cortex_command.pipeline.worktree: if
-    CORTEX_WORKTREE_ROOT is set, use it; otherwise default to
-    .claude/worktrees/.
+    Delegates to resolve_worktree_root() (R9) for consistent same-repo
+    resolution across all callsites.
     """
-    override_root = os.environ.get("CORTEX_WORKTREE_ROOT")
-    if override_root:
-        return Path(override_root) / feature
-    return Path(".claude") / "worktrees" / feature
+    return resolve_worktree_root(feature, session_id=None)
 
 
 def _recover_stale(feature: str, worktree_path: Path) -> None:
