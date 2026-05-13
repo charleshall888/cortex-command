@@ -5,3 +5,5 @@
 {"ts": "2026-05-13T13:47:44Z", "event": "complexity_override", "feature": "refresh-install-update-docs-close-mcp", "from": "simple", "to": "complex", "gate": "research_open_questions"}
 {"ts": "2026-05-13T14:13:55Z", "event": "spec_approved", "feature": "refresh-install-update-docs-close-mcp"}
 {"ts": "2026-05-13T14:14:27Z", "event": "phase_transition", "feature": "refresh-install-update-docs-close-mcp", "from": "specify", "to": "plan"}
+{"ts": "2026-05-13T14:40:12Z", "event": "plan_approved", "feature": "refresh-install-update-docs-close-mcp"}
+{"ts": "2026-05-13T14:40:12Z", "event": "phase_transition", "feature": "refresh-install-update-docs-close-mcp", "from": "plan", "to": "implement"}
