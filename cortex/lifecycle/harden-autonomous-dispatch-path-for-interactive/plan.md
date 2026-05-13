@@ -221,7 +221,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Gate logic lives in `bin/cortex-check-parity` (`_check_sandbox_preflight_gate`, lines 84-109). Sandbox-source files this lifecycle touches that trip the gate: `pyproject.toml` (Task 12), `cortex_command/pipeline/worktree.py` (Tasks 5, 7, 8 — though this file is NOT in `SANDBOX_WATCHED_FILES`, verify), `cortex_command/overnight/runner.py` (Task 3 — verify watched-files membership), plus any others surfaced during implementation. The exact schema is enforced by the gate's YAML validator — produce a file that matches the existing preflight.md examples elsewhere in the repo. The file list in preflight.md must be a superset of (or equal to) the union of files modified by Tasks 1–19.
 - **Verification**: run `bin/cortex-check-parity --staged` — pass if exit 0 with the preflight file staged; AND `[ -f cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive/preflight.md ]` — pass if file exists.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ## Risks
 
