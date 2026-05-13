@@ -31,7 +31,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: simple
 - **Context**: Use `git mv` (not `mv`) to preserve the file-rename history. The new path is `cortex/lifecycle/archive/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke/`. Pre-spec verification confirmed the source dir exists and contains an `events.log` with `feature_wontfix` at line 12.
 - **Verification**: `test -d cortex/lifecycle/archive/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke && ! test -d cortex/lifecycle/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke && grep -q feature_wontfix cortex/lifecycle/archive/lazy-apply-cortex-cli-auto-update-via-sessionstart-probe-in-process-apply-on-invoke/events.log` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (83af97f2)
 
 ### Task 2: Run duplicate-check + create + enrich item 5 backlog item (R1 + R2)
 - **Files**: `cortex/backlog/NNN-…installed-wheel-…md` (new file, NNN auto-assigned by `cortex-create-backlog-item`), `cortex/backlog/index.json` (auto-regenerated), `cortex/backlog/index.md` (auto-regenerated)
@@ -43,7 +43,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: simple
 - **Context**: The real CLI is `cortex-create-backlog-item` (not `cortex-backlog add` — there is no such command). Argparse contract: only `--title`, `--status`, `--type`, `--priority`, `--rework-of`, `--parent` are accepted; `--discovery-source`, `--tags`, and `--body` are NOT supported and must be added post-create via `cortex-update-item` and `Edit` respectively. `cortex-update-item` accepts arbitrary `key=value` pairs and writes them to the YAML frontmatter (proven by this lifecycle's own `cortex-update-item ... lifecycle_slug=refresh-install-update-docs-close-mcp` call). The Edit tool appends body content to the file after the `---` closing marker; do not edit the frontmatter via Edit (use `cortex-update-item` for frontmatter changes to preserve atomicity).
 - **Verification**: `ls cortex/backlog/ | grep -iE 'r8|cli_pin|cli-pin|wheel-commit|installed-wheel|maybe_check_upstream'` (R1 pre-check) exits 1 AND, after sub-steps 2–3, the new file is present and well-formed: `python3 -c "import re, glob; files = glob.glob('cortex/backlog/*.md'); matches = [f for f in files if 'discovery_source: 210-refresh-install-update-docs-close-mcp-only-auto-update-gaps' in open(f).read() and 'installed-wheel' in open(f).read() and re.search(r'^uuid: [a-f0-9-]+', open(f).read(), re.M) and re.search(r'^status: backlog', open(f).read(), re.M) and re.search(r'^type: bug', open(f).read(), re.M) and re.search(r'^tags:', open(f).read(), re.M) and len(open(f).read()) > 800]; assert len(matches) == 1, f'expected 1 well-formed item 5 file, got {len(matches)}: {matches}'"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (192389a5; item 211)
 
 ### Task 3: Create + enrich item 6 backlog item (R3)
 - **Files**: `cortex/backlog/NNN-cli-pin-drift-…md` (new file, NNN auto-assigned), `cortex/backlog/index.json` (auto-regenerated), `cortex/backlog/index.md` (auto-regenerated)
@@ -52,7 +52,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: simple
 - **Context**: Same CLI semantics as Task 2. The discovery_source field is approximate (selected by elimination per spec Technical Constraints — `parent:` rejects UUID hyphens and ticket 210 is `chore` not `epic`); future refine of items 5/6 may revise.
 - **Verification**: After sub-steps complete, `python3 -c "import re, glob; files = glob.glob('cortex/backlog/*.md'); matches = [f for f in files if 'discovery_source: 210-refresh-install-update-docs-close-mcp-only-auto-update-gaps' in open(f).read() and 'CLI_PIN' in open(f).read() and re.search(r'^uuid: [a-f0-9-]+', open(f).read(), re.M) and re.search(r'^status: backlog', open(f).read(), re.M) and re.search(r'^type: chore', open(f).read(), re.M) and re.search(r'^tags:', open(f).read(), re.M) and len(open(f).read()) > 600]; assert len(matches) == 1, f'expected 1 well-formed item 6 file, got {len(matches)}: {matches}'"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (caeb388a; item 212)
 
 ### Task 4: Extend `docs/setup.md ## Upgrade & maintenance` with two-layer disambiguation (R6)
 - **Files**: `docs/setup.md`
@@ -61,7 +61,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: simple
 - **Context**: Existing `## Upgrade & maintenance` H2 starts at line 188 with content covering MCP auto-update mechanics + uv foot-guns + commands (lines 188-220). Place the new paragraph between the H2 intro and the existing `### uv foot-guns` H3 (~line 197). Spec R6 has the full required tokens for acceptance: `MCP-tool-call-gated`, `two-layer`/`two layers`, `#146` or `decouple-mcp-server`, `marketplace auto-update at Claude Code startup`, `pre-delegate`, `fail-fast preflight` or `R10`.
 - **Verification**: `grep -q 'MCP-tool-call-gated' docs/setup.md && grep -q 'two-layer\|two layers' docs/setup.md && grep -q '#146\|decouple-mcp-server' docs/setup.md && grep -q 'marketplace auto-update at Claude Code startup' docs/setup.md && grep -q 'pre-delegate' docs/setup.md && grep -q 'fail-fast preflight\|R10' docs/setup.md && ! grep -q '_ensure_cortex_installed' docs/setup.md` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (743a5b22)
 
 ### Task 5: Add `CORTEX_ALLOW_INSTALL_DURING_RUN=1` callout to setup.md (R7)
 - **Files**: `docs/setup.md`
@@ -70,7 +70,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: simple
 - **Context**: The canonical contract source is `cortex/requirements/pipeline.md:154`. Place the callout adjacent to (or inside) Task 4's two-layer paragraph for narrative continuity.
 - **Verification**: `grep -q 'CORTEX_ALLOW_INSTALL_DURING_RUN' docs/setup.md && grep -q 'do NOT export' docs/setup.md && ! grep -E '^export CORTEX_ALLOW_INSTALL_DURING_RUN' docs/setup.md` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (6c916360)
 
 ### Task 6: Extend `#### Verify install` H4 with PATH-not-found remediation (R8)
 - **Files**: `docs/setup.md`
@@ -79,7 +79,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: simple
 - **Context**: The H4 at line 167 already uses `cortex --print-root` (no `--format json` flag). Add the remediation prose as a new paragraph at the end of the section, before the next heading.
 - **Verification**: `awk '/^#### Verify install/,/^##? /' docs/setup.md | grep -q 'uv tool update-shell' && awk '/^#### Verify install/,/^##? /' docs/setup.md | grep -q 'command not found'` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (ccb5da22)
 
 ### Task 7: Transform README line 24 to "Recommended:" markdown bullet (R5)
 - **Files**: `README.md`
@@ -88,7 +88,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: simple
 - **Context**: The cross-reference target (`docs/setup.md#upgrade--maintenance`) must have the disambiguated content (added by Task 4) before this bullet links to it. Bullet wording shape: "**Recommended:** turn on Auto-Update Marketplace Plugins. This refreshes the plugin file at Claude Code startup; the next MCP tool call triggers the cortex-overnight server's pre-delegate auto-update orchestration, which auto-updates the CLI via `uv tool install --reinstall`. See [docs/setup.md#upgrade--maintenance](docs/setup.md#upgrade--maintenance) for the two-layer mechanism."
 - **Verification**: `! grep -q '# Recommended to turn on Auto-Update Marketplace Plugins' README.md && grep -q 'Recommended.*Auto-Update Marketplace Plugins' README.md && grep -q 'next MCP tool' README.md && grep -q 'upgrade--maintenance' README.md && ! grep -q '_ensure_cortex_installed' README.md` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (286bd16a)
 
 ### Task 8: Verify `install.sh:48` PATH hint stays intact (R9)
 - **Files**: `install.sh` (read-only verification — no modification)
@@ -97,7 +97,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: trivial
 - **Context**: Phase 2 docs work does not modify `install.sh`, but the hub-and-spoke trim discussion in research raised the possibility — this task makes the non-change explicit.
 - **Verification**: `grep -qF "if 'cortex' is not on your PATH, run 'uv tool update-shell' and reload your shell." install.sh` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (verification-only; install.sh:48 PATH hint intact, no commit)
 
 ### Task 9: Add `command -v cortex-daytime-pipeline` preflight to `implement.md §1a` Step 3 (R10)
 - **Files**: `skills/lifecycle/references/implement.md`
@@ -106,7 +106,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: simple
 - **Context**: `implement.md §1a` Step 3 sits at lines 76–100, with the dispatch line at 88–91. Surrounding control flow includes existing guards at lines 62–67 (double-dispatch) and 69–74 (overnight concurrent) — both use the "separate Bash call" pattern. The new preflight follows the same convention. Reference precedent: `skills/lifecycle/references/complete.md:39,42` for inline `command -v` usage (warn-and-continue posture there; here is fail-fast per dispatch-readiness criticality).
 - **Verification**: `grep -q 'command -v cortex-daytime-pipeline' skills/lifecycle/references/implement.md && grep -q 'uv tool install --reinstall' skills/lifecycle/references/implement.md && awk '/§1a/,/§2/' skills/lifecycle/references/implement.md | grep -q 'command -v cortex-daytime-pipeline'` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (b2ba8304 + 574433fe fixup)
 
 ### Task 10: Run parity audit + confirm no W003 for new preflight (R11)
 - **Files**: none modified (audit-only)
@@ -115,7 +115,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: trivial
 - **Context**: Parity check verifies that every `bin/cortex-*` reference in skill prose has a matching script (or vice versa) and that orphan references emit W003.
 - **Verification**: `bin/cortex-check-parity --audit` exits 0 (or the project's `just`-recipe form — check `justfile` for the exact invocation).
-- **Status**: [ ] pending
+- **Status**: [x] done (audit-only; exit 0, no W003 for cortex-daytime-pipeline)
 
 ### Task 11: Phase 4 wontfix terminal-state convention — single composite task (R12 + R13 + R14 + R15 + R16 + R17)
 - **Files**: `skills/lifecycle/references/wontfix.md` (new), `cortex_command/common.py`, `claude/statusline.sh`, `tests/fixtures/lifecycle_phase_parity/events-feature-wontfix/events.log` (new), `tests/test_lifecycle_phase_parity.py`, `bin/.events-registry.md`, plus optionally a 2-3 line cross-reference in `skills/lifecycle/SKILL.md`
@@ -130,7 +130,7 @@ Four-phase sequential execution matching the spec phases. Phase 1 housekeeping (
 - **Complexity**: complex (4+ files, architectural change introducing new terminal-state convention)
 - **Context**: This task supersedes the original Tasks 11–17 deferred-commit choreography flagged by critical-review as structurally broken under autonomous execution. Collapsing to one task makes the six-way atomicity a single-session property: the task spans one Claude session that authors all changes, runs the gates, and commits — eliminating the "fresh sub-agent per task" failure mode. The host file is pinned to `skills/lifecycle/references/wontfix.md` (a new file) to eliminate Task 15's contradictory size-budget criteria; the wontfix.md choice produces unambiguous producer-attribution in the registry row. Sources verified during critical-review: `cortex_command/common.py:216–235` JSON-parsing loop structure (review_verdict, spec_approved, plan_approved, phase_transition branches); `claude/statusline.sh:403` `feature_complete` grep line; `tests/test_lifecycle_phase_parity.py:300–347` parity test structure; `bin/.events-registry.md:11–12` row shape (lifecycle_cancelled at line 22 as a precedent for the producer/consumer column format).
 - **Verification**: All six gates pass in sequence: (a) `test -f skills/lifecycle/references/wontfix.md` AND step-order check `python3 -c "import pathlib; src = pathlib.Path('skills/lifecycle/references/wontfix.md').read_text(); gm = src.find('git mv'); ev = src.find('feature_wontfix'); ui = src.find('cortex-update-item'); assert 0 <= gm < ev < ui, f'order check failed: git-mv={gm} event={ev} update={ui}'"` exits 0 AND `grep -q '\"event\": \"feature_wontfix\"' skills/lifecycle/references/wontfix.md` AND `grep -q 'references/wontfix' skills/lifecycle/SKILL.md`; (b) `python3 -c "import cortex_command.common as c; import tempfile, pathlib, json; d = pathlib.Path(tempfile.mkdtemp())/'feat'; d.mkdir(); (d/'events.log').write_text(json.dumps({'event': 'feature_wontfix', 'feature': 'x'}) + chr(10)); assert c.detect_lifecycle_phase(str(d))['phase'] == 'complete'"` exits 0 AND `grep -n 'event_type == \"feature_wontfix\"' cortex_command/common.py | wc -l` ≥ 1; (c) `grep -A2 '\"feature_wontfix\"' claude/statusline.sh | grep -q '_lc_phase=\"complete\"'`; (d) `test -f tests/fixtures/lifecycle_phase_parity/events-feature-wontfix/events.log && grep -q feature_wontfix tests/fixtures/lifecycle_phase_parity/events-feature-wontfix/events.log`; (e) `pytest tests/test_lifecycle_phase_parity.py` exits 0 AND `pytest tests/test_lifecycle_phase_parity.py -v -k 'wontfix or feature_wontfix'` reports ≥1 test passing; (f) `grep -q feature_wontfix bin/.events-registry.md` AND `grep -B2 -A4 'feature_wontfix' bin/.events-registry.md | grep -q 'references/wontfix'` (producer column references wontfix.md, not SKILL.md) AND `bin/cortex-check-events-registry --staged` exits 0; (g) commit hygiene — `git log -1 --name-only --pretty=format: HEAD | grep -cE '^(cortex_command/common\.py|claude/statusline\.sh|tests/fixtures/lifecycle_phase_parity/events-feature-wontfix/events\.log|tests/test_lifecycle_phase_parity\.py|skills/lifecycle/references/wontfix\.md|bin/\.events-registry\.md|skills/lifecycle/SKILL\.md)$'` returns ≥6 AND `git log -1 --pretty=%s HEAD | grep -qE 'wontfix|R12.*R17'`.
-- **Status**: [ ] pending
+- **Status**: [x] done (b6a33f95)
 
 ## Risks
 

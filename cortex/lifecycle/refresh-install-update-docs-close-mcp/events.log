@@ -7,3 +7,7 @@
 {"ts": "2026-05-13T14:14:27Z", "event": "phase_transition", "feature": "refresh-install-update-docs-close-mcp", "from": "specify", "to": "plan"}
 {"ts": "2026-05-13T14:40:12Z", "event": "plan_approved", "feature": "refresh-install-update-docs-close-mcp"}
 {"ts": "2026-05-13T14:40:12Z", "event": "phase_transition", "feature": "refresh-install-update-docs-close-mcp", "from": "plan", "to": "implement"}
+{"ts": "2026-05-13T15:03:07Z", "event": "batch_dispatch", "feature": "refresh-install-update-docs-close-mcp", "batch": 0, "tasks": [1, 4, 6, 9, 11]}
+{"ts": "2026-05-13T15:17:12Z", "event": "batch_dispatch", "feature": "refresh-install-update-docs-close-mcp", "batch": 1, "tasks": [2, 5, 10]}
+{"ts": "2026-05-13T15:21:10Z", "event": "batch_dispatch", "feature": "refresh-install-update-docs-close-mcp", "batch": 2, "tasks": [3, 7]}
+{"ts": "2026-05-13T15:25:16Z", "event": "batch_dispatch", "feature": "refresh-install-update-docs-close-mcp", "batch": 3, "tasks": [8]}
