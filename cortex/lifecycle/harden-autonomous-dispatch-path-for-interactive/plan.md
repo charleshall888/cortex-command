@@ -41,7 +41,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Service name source: https://github.com/anthropics/claude-code/issues/9403. Behavior contract documented in spec.md R2 and Edge Cases (first-after-reboot Keychain unlock, v2.0.14 service-name aliasing, ACL trust mismatch). Function signature returns a string literal; use `platform.system()` to detect Darwin without importing third-party libs. Stdlib-only — no `keyring`, no `subprocess32`. Test must cover (a) Darwin + present, (b) Darwin + absent, (c) non-Darwin → "unavailable", (d) Darwin + search-list-unavailable → "unavailable" (mock `subprocess.run` to simulate exit 36 / `errSecInteractionNotAllowed`).
 - **Verification**: run `pytest cortex_command/overnight/tests/test_auth.py::test_keychain_presence_probe -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 3: Shared auth resolver+probe helper; converge `runner.py` and `daytime_pipeline.py`; remove patches; replace messaging
 - **Files**: `cortex_command/overnight/auth.py`, `cortex_command/overnight/daytime_pipeline.py`, `cortex_command/overnight/runner.py`, `cortex_command/overnight/tests/test_daytime_auth.py`, `tests/test_runner_auth.py`
@@ -212,7 +212,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Pattern reference: existing justfile recipes around lines 405-417 (`test-overnight`, `test-pipeline`). The launchctl flow uses the existing `cortex_command/overnight/scheduler/macos.py` machinery — recipe body wraps a shell script that schedules a one-shot fire, waits for completion, captures result, then runs the same fixture from a Bash-tool-shaped env in the same shell and compares the two `daytime-result.json` outcomes.
 - **Verification**: run `just --list | grep test-dispatch-parity-launchd-real` — pass if match found; AND `grep -A 5 test-dispatch-parity-launchd-real justfile | grep -c uname` — pass if count ≥ 1 (platform guard present).
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 20: Produce sandbox preflight artifact `preflight.md`
 - **Files**: `cortex/lifecycle/harden-autonomous-dispatch-path-for-interactive/preflight.md`
