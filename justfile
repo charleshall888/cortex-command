@@ -420,6 +420,120 @@ test-overnight:
     [ -f .venv/bin/pytest ] || { echo "venv not found — run 'just python-setup' first"; exit 1; }
     .venv/bin/pytest cortex_command/overnight/tests/ -q
 
+# Opt-in real-launchd parity test: fires a real launchctl bootstrap against a fixture and
+# compares reach-Phase-B with a Bash-tool invocation in the same shell (R20).
+# macOS-only; requires an active subscription or ANTHROPIC_API_KEY.
+# NOT included in the default `just test` aggregator — run explicitly.
+test-dispatch-parity-launchd-real:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "test-dispatch-parity-launchd-real: requires an active Claude subscription or ANTHROPIC_API_KEY set in env"
+    if [[ "$(uname)" != "Darwin" ]]; then
+        echo "Skipping: not macOS ($(uname)); this test requires launchctl"
+        exit 0
+    fi
+    if [[ -z "${ANTHROPIC_API_KEY:-}" ]] && ! security find-generic-password -s "Claude Code-credentials" >/dev/null 2>&1; then
+        echo "ERROR: no ANTHROPIC_API_KEY set and no Claude Code keychain entry found; cannot run real-auth test"
+        exit 1
+    fi
+    FIXTURE_DIR="$(mktemp -d "$TMPDIR/cortex-dispatch-parity-XXXXXX")"
+    trap 'rm -rf "$FIXTURE_DIR"' EXIT
+    # Write a minimal one-task fixture plan into the temp dir
+    cat > "$FIXTURE_DIR/plan.md" << 'PLAN'
+    # Fixture Plan: dispatch-parity-launchd-real
+    ## Task 1: noop
+    - **Files**: none
+    - **What**: Echo a sentinel line and exit immediately
+    - **Status**: [ ] pending
+    PLAN
+    RESULT_LAUNCHD="$FIXTURE_DIR/daytime-result-launchd.json"
+    RESULT_BASH="$FIXTURE_DIR/daytime-result-bash.json"
+    # --- launchd-shaped invocation ---
+    echo "Running launchd-shaped invocation via launchctl bootstrap..."
+    PLIST_DIR="$(mktemp -d "$TMPDIR/cortex-parity-plist-XXXXXX")"
+    trap 'rm -rf "$PLIST_DIR" "$FIXTURE_DIR"' EXIT
+    LABEL="com.cortex.parity-test.$$"
+    PLIST="$PLIST_DIR/$LABEL.plist"
+    LAUNCHD_LOG="$FIXTURE_DIR/launchd-run.log"
+    # Build a minimal plist for a one-shot launchd job that runs cortex-daytime-pipeline
+    python3 - <<PYEOF
+    import plistlib, os, sys
+    env_keys = ("ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "CORTEX_REPO_ROOT", "CORTEX_WORKTREE_ROOT")
+    env_snapshot = {"PATH": os.environ.get("PATH", "")}
+    for k in env_keys:
+        if k in os.environ:
+            env_snapshot[k] = os.environ[k]
+    plist = {
+        "Label": "$LABEL",
+        "ProgramArguments": [
+            sys.executable, "-m", "cortex_command.overnight.daytime_pipeline",
+            "--fixture-plan", "$FIXTURE_DIR/plan.md",
+            "--result-out", "$RESULT_LAUNCHD",
+            "--phase-b-probe-only",
+        ],
+        "EnvironmentVariables": env_snapshot,
+        "RunAtLoad": True,
+        "StandardOutPath": "$LAUNCHD_LOG",
+        "StandardErrorPath": "$LAUNCHD_LOG",
+    }
+    with open("$PLIST", "wb") as f:
+        plistlib.dump(plist, f)
+    print("Plist written: $PLIST")
+    PYEOF
+    launchctl bootstrap "gui/$(id -u)" "$PLIST"
+    # Wait up to 30s for the result file to appear
+    WAITED=0
+    until [[ -f "$RESULT_LAUNCHD" ]] || [[ $WAITED -ge 30 ]]; do
+        sleep 1
+        WAITED=$((WAITED + 1))
+    done
+    launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+    if [[ ! -f "$RESULT_LAUNCHD" ]]; then
+        echo "ERROR: launchd invocation did not produce $RESULT_LAUNCHD within 30s"
+        echo "launchd log:"
+        cat "$LAUNCHD_LOG" 2>/dev/null || true
+        exit 1
+    fi
+    echo "launchd result: $(cat "$RESULT_LAUNCHD")"
+    # --- Bash-tool-shaped invocation (same shell, sandbox-clean PATH) ---
+    echo "Running Bash-tool-shaped invocation (clean PATH, no CORTEX_* snapshot)..."
+    CLEAN_PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+    env -i \
+        HOME="$HOME" \
+        USER="${USER:-$(id -un)}" \
+        TMPDIR="$TMPDIR" \
+        PATH="$CLEAN_PATH" \
+        ${ANTHROPIC_API_KEY:+ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"} \
+        python3 -m cortex_command.overnight.daytime_pipeline \
+            --fixture-plan "$FIXTURE_DIR/plan.md" \
+            --result-out "$RESULT_BASH" \
+            --phase-b-probe-only \
+        2>"$FIXTURE_DIR/bash-run.log" || true
+    if [[ ! -f "$RESULT_BASH" ]]; then
+        echo "ERROR: Bash-tool invocation did not produce $RESULT_BASH"
+        echo "Bash-tool log:"
+        cat "$FIXTURE_DIR/bash-run.log" 2>/dev/null || true
+        exit 1
+    fi
+    echo "Bash-tool result: $(cat "$RESULT_BASH")"
+    # --- Compare Phase-B reach ---
+    python3 - <<PYEOF
+    import json, sys
+    launchd = json.load(open("$RESULT_LAUNCHD"))
+    bash   = json.load(open("$RESULT_BASH"))
+    lphase = launchd.get("reached_phase_b", False)
+    bphase = bash.get("reached_phase_b", False)
+    print(f"launchd reached_phase_b: {lphase}")
+    print(f"bash   reached_phase_b: {bphase}")
+    if lphase != bphase:
+        print(f"FAIL: dispatch-parity mismatch — launchd={lphase}, bash={bphase}", file=sys.stderr)
+        sys.exit(1)
+    if not lphase:
+        print(f"FAIL: neither invocation reached Phase B; check auth/worktree readiness", file=sys.stderr)
+        sys.exit(1)
+    print("PASS: both invocations reached Phase B")
+    PYEOF
+
 # Run cortex init tests (requires venv — run 'just python-setup' first)
 test-init:
     #!/usr/bin/env bash
