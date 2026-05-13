@@ -206,6 +206,18 @@ This second layer is **MCP-tool-call-gated by design**. Bash-tool subprocess dis
 
 For the full design rationale — why the MCP server orchestrates its own auto-update rather than importing the cortex package — see `cortex/lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md` (decouple-mcp-server, ticket `#146`).
 
+### Carve-out: in-flight install guard (`CORTEX_ALLOW_INSTALL_DURING_RUN`)
+
+> **In-flight install guard.** `cortex` aborts when an active overnight session is detected (phase != `complete` AND `verify_runner_pid` succeeds); bypassable inline via `CORTEX_ALLOW_INSTALL_DURING_RUN=1` (do NOT export). Carve-outs: pytest, runner-spawned children (`CORTEX_RUNNER_CHILD=1`), dashboard, cancel-force invocation.
+>
+> Invoke the bypass inline, as a one-shot environment prefix on the install command itself:
+>
+> ```bash
+> CORTEX_ALLOW_INSTALL_DURING_RUN=1 uv tool install --reinstall git+<url>@<tag>
+> ```
+>
+> Do **not** `export` the variable into your shell — the inline form scopes the bypass to a single command, which is the contract. The four carve-outs above are honored automatically; you do not need to set the variable for those paths.
+
 ### `uv` foot-guns
 
 Warning: do **not** run `uv tool uninstall uv`. Removing `uv` via itself breaks the tool environment that hosts cortex-command (and every other `uv tool`-installed CLI on your machine) — recovery requires reinstalling `uv` from scratch via `brew install uv` or the upstream installer. Use `brew uninstall uv` (or the upstream uninstall path matching your install method) if you genuinely need to remove `uv`.
