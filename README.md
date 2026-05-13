@@ -30,7 +30,7 @@ cd <your-project>
 cortex init
 ```
 
-- **Recommended:** turn on Auto-Update Marketplace Plugins. This refreshes the plugin file at Claude Code startup; the next MCP tool call triggers the cortex-overnight server's pre-delegate auto-update orchestration, which auto-updates the CLI via `uv tool install --reinstall`. See [docs/setup.md#upgrade--maintenance](docs/setup.md#upgrade--maintenance) for the user-facing summary and [docs/internals/auto-update.md](docs/internals/auto-update.md) for the full two-layer architecture and component map.
+- **Recommended:** turn on Auto-Update Marketplace Plugins so the cortex CLI stays in sync with the cortex-overnight plugin. See [docs/internals/auto-update.md](docs/internals/auto-update.md) for the two-layer architecture, component map, and release ritual.
 
 Full Setup Guide[Setup guide](docs/setup.md).
 

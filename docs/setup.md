@@ -24,12 +24,14 @@ Cortex-command ships as a Python CLI plus a set of Claude Code plugins. Installa
 ### 1. Install the `cortex` CLI
 
 ```bash
-uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0
+LATEST_TAG=$(git ls-remote --tags --refs https://github.com/charleshall888/cortex-command.git \
+  | awk -F/ '{print $NF}' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+uv tool install git+https://github.com/charleshall888/cortex-command.git@"$LATEST_TAG"
 ```
 
-This installs the CLI as a non-editable `uv tool` directly from the tagged git URL — no clone is required. The `cortex` binary lands on your `PATH` (run `uv tool update-shell` once if it does not).
+This installs the CLI as a non-editable `uv tool` directly from the tagged git URL — no clone is required. The `cortex` binary lands on your `PATH` (run `uv tool update-shell` once if it does not). To pin to a specific tag instead of the latest, replace `"$LATEST_TAG"` with the tag literal (for example, `v1.0.2`).
 
-If you do not have `uv` available yet, the `install.sh` bootstrap script installs `uv` first and runs the same command:
+If you do not have `uv` available yet, the `install.sh` bootstrap script installs `uv` first and runs the same resolve-then-install command:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/install.sh | sh
@@ -189,22 +191,9 @@ If `cortex --print-root` returns `command not found`, your shell's `PATH` is mis
 
 ## Upgrade & maintenance
 
-Keeping up to date is easy as long as you turn on auto-update in the plugin marketplace. For the full design — two-layer architecture, component map, release ritual, and the intent-vs-currently-wired audit — see [`docs/internals/auto-update.md`](internals/auto-update.md).
+Turn on auto-update for the cortex-command marketplace plugins from inside Claude Code. With auto-update enabled, Claude Code refreshes the plugin in the background and the next MCP tool call detects the embedded `CLI_PIN` bump and auto-installs the matching `cortex` CLI tag via `uv tool install --reinstall`. With auto-update disabled, the plugin and CLI stay pinned to whatever pair you installed — schema versions still match, so the stale pair keeps working.
 
-From inside Claude Code make sure to turn on auto-updates for the cortex-command marketplace plugins. The plugin's MCP server detects the embedded `CLI_PIN` tag bump on its next tool call and updates to the matching cortex CLI tag automatically. 
-
-The `cortex-overnight` plugin's MCP server embeds a `CLI_PIN` constant (a `(tag, schema_version)` tuple) that pairs the plugin with a specific cortex CLI tag — the upgrade arrow flows plugin → CLI, not the other way. With plugin auto-update enabled, Claude Code refreshes the plugin in the background; the next MCP tool call detects a `CLI_PIN[0]` bump and auto-installs the matching CLI tag. With auto-update disabled, the embedded `CLI_PIN` stays pinned to whatever tag was current when you installed the plugin — schema versions match between the embedded `CLI_PIN[1]` and the installed CLI's print-root envelope, so a stale-but-self-consistent plugin/CLI pair keeps working.
-
-### Two-layer upgrade model
-
-Upgrades happen in **two layers**, and it helps to keep them mentally distinct:
-
-1. **Marketplace auto-update at Claude Code startup.** When Claude Code launches, the plugin marketplace mechanism refreshes the plugin's files (including the `cortex-overnight` server module that carries the `CLI_PIN` constant). This is the marketplace auto-update at Claude Code startup layer where a `CLI_PIN` bump arrives on your machine. Claude Code controls this layer; cortex-command does not.
-2. **Pre-delegate auto-update orchestration on the next MCP tool call.** The next time the `cortex-overnight` MCP server is invoked (e.g., `overnight_start_run`, `overnight_status`), its pre-delegate orchestration runs the upstream-advance check and the schema-floor check, then — on mismatch — orchestrates `uv tool install --reinstall git+<url>@<tag>` synchronously before delegating to the CLI. The MCP server owns this layer end-to-end; it does not import the cortex Python package.
-
-This second layer is **MCP-tool-call-gated by design**. Bash-tool subprocess dispatches that shell out to `cortex …` directly (without going through the MCP server) do **not** trigger the upgrade check — that path is an intentional gap (see `#145`'s wontfix), not an oversight. The `implement.md §1a` preflight (R10) is a **fail-fast preflight** diagnostic that surfaces the gap loudly when it bites, not coverage that closes it.
-
-For the full design rationale — why the MCP server orchestrates its own auto-update rather than importing the cortex package — see `cortex/lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md` (decouple-mcp-server, ticket `#146`).
+For the full design — two-layer architecture, component map, release ritual, the wheel-vs-editable and Bash-tool subprocess carve-outs, and the intent-vs-currently-wired audit — see [`docs/internals/auto-update.md`](internals/auto-update.md).
 
 ### Carve-out: in-flight install guard (`CORTEX_ALLOW_INSTALL_DURING_RUN`)
 

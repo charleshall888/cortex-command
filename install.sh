@@ -36,9 +36,26 @@ normalize_repo_url() {
 	esac
 }
 
+resolve_latest_tag() {
+	url="$1"
+	git ls-remote --tags --refs "$url" 2>/dev/null \
+		| awk -F/ '{print $NF}' \
+		| grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+		| sort -V \
+		| tail -1
+}
+
 main() {
 	resolved_url=$(normalize_repo_url)
-	tag="${CORTEX_INSTALL_TAG:-v0.1.0}"
+	if [ -n "${CORTEX_INSTALL_TAG:-}" ]; then
+		tag="$CORTEX_INSTALL_TAG"
+	else
+		tag=$(resolve_latest_tag "$resolved_url" || true)
+		if [ -z "$tag" ]; then
+			printf '[cortex-install] error: could not resolve latest release tag from %s; set CORTEX_INSTALL_TAG=vX.Y.Z to override\n' "$resolved_url" >&2
+			exit 1
+		fi
+	fi
 	command -v uv >/dev/null 2>&1 || install_uv
 	log "resolved repo URL: $resolved_url"
 	log "install tag: $tag"
