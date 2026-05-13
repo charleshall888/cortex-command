@@ -421,8 +421,8 @@ fi
 
 # --- Regenerate and inject metrics summary ---
 
-if [[ -n "$active_feature" ]] && command -v python3 &>/dev/null; then
-  python3 -m cortex_command.pipeline.metrics --root "$CWD" >/dev/null 2>&1 || true
+if [[ -n "$active_feature" ]] && command -v cortex-pipeline-metrics &>/dev/null; then
+  cortex-pipeline-metrics --root "$CWD" >/dev/null 2>&1 || true
 
   METRICS_FILE="$LIFECYCLE_DIR/metrics.json"
   if [[ -f "$METRICS_FILE" ]]; then

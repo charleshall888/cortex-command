@@ -24,6 +24,9 @@ cortex-update-item = "cortex_command.backlog.update_item:main"
 cortex-create-backlog-item = "cortex_command.backlog.create_item:main"
 cortex-generate-backlog-index = "cortex_command.backlog.generate_index:main"
 cortex-build-epic-map = "cortex_command.backlog.build_epic_map:main"
+cortex-auth = "cortex_command.overnight.auth:_main"
+cortex-integration-recovery = "cortex_command.overnight.integration_recovery:main"
+cortex-interrupt = "cortex_command.overnight.interrupt:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["cortex_command"]

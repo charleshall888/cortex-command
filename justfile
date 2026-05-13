@@ -76,7 +76,7 @@ overnight-run state="cortex/lifecycle/sessions/latest-overnight/overnight-state.
 
 # Run the overnight smoke test (verifies worker commit round-trip)
 overnight-smoke-test:
-    uv run python3 -m cortex_command.overnight.smoke_test
+    uv run cortex-smoke-test
 
 # Tail the current session's events log with pretty-printed JSON output
 overnight-logs:
@@ -114,11 +114,11 @@ dashboard:
 
 # Write fixture files for visual dashboard testing (overnight state, events, features, backlog)
 dashboard-seed:
-    uv run python3 -m cortex_command.dashboard.seed
+    uv run cortex-dashboard-seed
 
 # Remove all fixture files written by dashboard-seed
 dashboard-seed-clean:
-    uv run python3 -m cortex_command.dashboard.seed --clean
+    uv run cortex-dashboard-seed --clean
 
 # --- Backlog ---
 
