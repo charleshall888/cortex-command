@@ -14,6 +14,7 @@ dependencies = [
     "markdown",
     "psutil>=5.9",
     "mcp>=1.27.0",
+    "tiktoken>=0.7.0,<1.0",
 ]
 
 [project.scripts]
