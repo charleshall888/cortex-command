@@ -227,11 +227,11 @@ def classify_result(
 #   python3 -m cortex_command.overnight.daytime_result_reader --feature {slug}
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
+def _run() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="python3 -m cortex_command.overnight.daytime_result_reader",
+        prog="cortex-daytime-result-reader",
         description="Classify a daytime dispatch outcome via 3-tier fallback.",
     )
     parser.add_argument(
@@ -250,3 +250,10 @@ if __name__ == "__main__":
     result = classify_result(args.feature, lifecycle_root=lifecycle_root)
     print(json.dumps(result, indent=2))
     sys.exit(0 if result["outcome"] == "merged" else 1)
+
+
+def main() -> None: _run()
+
+
+if __name__ == "__main__":
+    _run()

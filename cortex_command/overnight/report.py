@@ -2142,7 +2142,7 @@ def generate_and_write_report(
 # CLI entry point
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
+def _run() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Generate overnight morning report")
@@ -2211,3 +2211,10 @@ if __name__ == "__main__":
         print(f"Report written to {path}", file=sys.stderr)
     else:
         print("Report not written (no session dir)", file=sys.stderr)
+
+
+def main() -> None: _run()
+
+
+if __name__ == "__main__":
+    _run()
