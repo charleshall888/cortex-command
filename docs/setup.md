@@ -193,6 +193,16 @@ From inside Claude Code make sure to turn on auto-updates for the cortex-command
 
 The `cortex-overnight` plugin's MCP server embeds a `CLI_PIN` constant (a `(tag, schema_version)` tuple) that pairs the plugin with a specific cortex CLI tag — the upgrade arrow flows plugin → CLI, not the other way. With plugin auto-update enabled, Claude Code refreshes the plugin in the background; the next MCP tool call detects a `CLI_PIN[0]` bump and auto-installs the matching CLI tag. With auto-update disabled, the embedded `CLI_PIN` stays pinned to whatever tag was current when you installed the plugin — schema versions match between the embedded `CLI_PIN[1]` and the installed CLI's print-root envelope, so a stale-but-self-consistent plugin/CLI pair keeps working.
 
+### Two-layer upgrade model
+
+Upgrades happen in **two layers**, and it helps to keep them mentally distinct:
+
+1. **Marketplace auto-update at Claude Code startup.** When Claude Code launches, the plugin marketplace mechanism refreshes the plugin's files (including the `cortex-overnight` server module that carries the `CLI_PIN` constant). This is the marketplace auto-update at Claude Code startup layer where a `CLI_PIN` bump arrives on your machine. Claude Code controls this layer; cortex-command does not.
+2. **Pre-delegate auto-update orchestration on the next MCP tool call.** The next time the `cortex-overnight` MCP server is invoked (e.g., `overnight_start_run`, `overnight_status`), its pre-delegate orchestration runs the upstream-advance check and the schema-floor check, then — on mismatch — orchestrates `uv tool install --reinstall git+<url>@<tag>` synchronously before delegating to the CLI. The MCP server owns this layer end-to-end; it does not import the cortex Python package.
+
+This second layer is **MCP-tool-call-gated by design**. Bash-tool subprocess dispatches that shell out to `cortex …` directly (without going through the MCP server) do **not** trigger the upgrade check — that path is an intentional gap (see `#145`'s wontfix), not an oversight. The `implement.md §1a` preflight (R10) is a **fail-fast preflight** diagnostic that surfaces the gap loudly when it bites, not coverage that closes it.
+
+For the full design rationale — why the MCP server orchestrates its own auto-update rather than importing the cortex package — see `cortex/lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md` (decouple-mcp-server, ticket `#146`).
 
 ### `uv` foot-guns
 
