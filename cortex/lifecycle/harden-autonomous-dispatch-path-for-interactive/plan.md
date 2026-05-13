@@ -50,7 +50,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: complex
 - **Context**: Both callsites today diverge: `daytime_pipeline.py:336-352` hard-fails (`startup_failure`); `runner.py:2042-2045` swallows. Parity by construction means a single helper, one call site of policy. Event shape (per Task 4 registration): `{ts, event: "auth_probe", feature, vector: "<resolved>" | "none", keychain: "resolved" | "absent" | "unavailable", result: "ok" | "absent", source: "ensure_sdk_auth"}`. Failure path slots into existing `_top_exc` / `_terminated_via="startup_failure"` / `_outcome="failed"` machinery in `daytime_pipeline.py:496-554`. Event logging targets: `cortex/lifecycle/pipeline-events.log` (runner path) and `cortex/lifecycle/{feature}/events.log` (daytime path). Existing message text grep: `grep -n 'will use Keychain' cortex_command/overnight/auth.py`. `_build_event` and `_now_iso` byte-equivalence with `pipeline.state.log_event` is load-bearing — reuse them.
 - **Verification**: run `pytest cortex_command/overnight/tests/test_auth.py cortex_command/overnight/tests/test_daytime_auth.py tests/test_runner_auth.py -q` — pass if exit 0; AND `grep -c 'try:\s*$' cortex_command/overnight/runner.py | head -n1` — manual check that lines 2042-2045's bare `try/except: pass` is gone (alternative: `grep -A 1 'ensure_sdk_auth' cortex_command/overnight/runner.py | grep -c 'except: pass'` = 0); AND `grep -i 'will use Keychain' cortex_command/overnight/auth.py` — pass if no match.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 4: Register `auth_probe` event in `bin/.events-registry.md`
 - **Files**: `bin/.events-registry.md`
@@ -77,7 +77,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: `settings_merge.register_path` is the canonical helper; it is idempotent and additive — pre-existing manual entries are preserved (per spec Edge Cases). The `fcntl.flock` lock file convention is already in place. Handler entry point is the `cortex init` command's main flow in `handler.py:138-198`. Cross-repo detection: any path whose resolved value starts with `$TMPDIR` (after expansion) skips registration. Test must cover (a) same-repo path is registered, (b) cross-repo `$TMPDIR` path is NOT registered, (c) `cortex init` is idempotent (re-run does not duplicate the entry).
 - **Verification**: run `pytest tests/test_init_worktree_registration.py -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 7: Add `probe_worktree_writable()` to `pipeline/worktree.py`
 - **Files**: `cortex_command/pipeline/worktree.py`, `tests/test_worktree_probe.py`
@@ -86,7 +86,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Hardcoded-deny prior art: https://github.com/anthropics/claude-code/issues/51303. The throwaway branch can be derived from `uuid.uuid4().hex[:8]` to avoid collisions. Cleanup must succeed even if either probe step fails (use a `finally` block — but cleanup itself must not raise). `ProbeResult` shape: `@dataclass class ProbeResult: ok: bool; cause: str | None; remediation_hint: str | None`. Test must cover (i) writable root (success), (ii) sandbox-blocked root simulated via a read-only fixture path (failure with cause naming sandbox), (iii) fixture repo with a tracked `.vscode/` directory (`git worktree add` failure with cause naming hardcoded deny).
 - **Verification**: run `pytest tests/test_worktree_probe.py -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 8: Worktree-creation callsites consult the resolver
 - **Files**: `cortex_command/pipeline/worktree.py`, `cortex_command/overnight/daytime_pipeline.py`
@@ -95,7 +95,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Today's two callsites diverge in subtle ways (`$TMPDIR` expansion not consistent). Routing through one resolver eliminates drift. The resolver's signature requires `feature` and (optionally) `session_id`; `create_worktree` already takes a feature name; `_worktree_path` already takes a feature and has session context.
 - **Verification**: run `grep -rn 'os\.environ\.get(.CORTEX_WORKTREE_ROOT.)' cortex_command/` — pass if at most 1 hit (the resolver itself); AND `pytest tests/test_worktree.py -q` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 9: Document `.vscode`/`.idea` hardcoded denies
 - **Files**: `docs/overnight-operations.md`, `cortex/requirements/pipeline.md`
@@ -122,7 +122,7 @@ Land a four-phase, parity-by-construction hardening of the autonomous-dispatch p
 - **Complexity**: simple
 - **Context**: Two-mode gate precedent: `bin/cortex-check-parity` already has `--staged` (pre-commit critical path) and `--audit` (repo-wide off-critical-path) modes (research.md citation). The audit mode pattern reuses existing argument-parsing in the script. Allowlist file schema: `## <Category>` headings (closed enum) followed by entries `- {path}:{line} — {rationale ≥30 chars}` mirroring `.parity-exceptions.md`. Initial allowlist starts empty (or includes only entries justified by Task 10's audit). Recipe should be a `#!/usr/bin/env bash`-style block in the justfile invoking the script with the new flag.
 - **Verification**: run `bin/cortex-check-parity --audit-bare-python-m-callsites` — pass if exit 0; AND `just --list | grep check-bare-python-callsites` — pass if match found; AND `[ -f bin/.audit-bare-python-m-allowlist.md ]` — pass if file exists.
-- **Status**: [ ] pending
+- **Status**: [x] complete
 
 ### Task 12: Promote audited modules to `[project.scripts]` in `pyproject.toml`
 - **Files**: `pyproject.toml`
