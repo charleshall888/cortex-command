@@ -34,6 +34,7 @@ REPO_ROOT = str(Path(__file__).resolve().parents[3])
 
 
 def _clear_auth_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
 
@@ -112,6 +113,37 @@ def test_vector_resolution(
     result = ensure_sdk_auth(event_log_path=tmp_path / "events.log")
 
     assert result["vector"] == expected_vector
+
+
+# ---------------------------------------------------------------------------
+# R1 (auth_token extension) — ANTHROPIC_AUTH_TOKEN vector env-shape and
+# resolution-precedence cases.
+# ---------------------------------------------------------------------------
+
+
+def test_auth_token_vector(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """ANTHROPIC_AUTH_TOKEN resolves to vector='auth_token' and takes priority over ANTHROPIC_API_KEY."""
+    _clear_auth_env(monkeypatch)
+    _redirect_home(monkeypatch, tmp_path)
+
+    # --- Case 1: env-shape — ANTHROPIC_AUTH_TOKEN set alone resolves to auth_token.
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "some-auth-token-value")
+    result = ensure_sdk_auth(event_log_path=tmp_path / "events-auth-token.log")
+    assert result["vector"] == "auth_token", (
+        f"expected vector='auth_token', got {result['vector']!r}"
+    )
+
+    # --- Case 2: resolution-precedence — ANTHROPIC_AUTH_TOKEN beats ANTHROPIC_API_KEY.
+    _clear_auth_env(monkeypatch)
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "auth-token-should-win")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "api-key-should-lose")
+    result = ensure_sdk_auth(event_log_path=tmp_path / "events-precedence.log")
+    assert result["vector"] == "auth_token", (
+        f"expected ANTHROPIC_AUTH_TOKEN to take precedence, got vector={result['vector']!r}"
+    )
 
 
 # ---------------------------------------------------------------------------
