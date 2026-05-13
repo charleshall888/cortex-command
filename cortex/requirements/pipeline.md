@@ -164,6 +164,7 @@ The pipeline area covers the overnight execution framework: how sessions are orc
 - **TMPDIR cleared between sessions**: Stale integration worktree paths are re-created on next access; git tracking is pruned and retried
 - **All features pause in a round**: Circuit breaker fires; no further features dispatched; morning report surfaces reason
 - **Feature paused with no recovery attempts remaining**: Status transitions to `paused` permanently until human intervenes
+- **Hardcoded `.vscode`/`.idea` sandbox denies**: Claude Code's binary permanently blocks writes to these directories even when the path is in `sandbox.filesystem.allowWrite`; see `docs/overnight-operations.md` "Edge Cases" for workarounds (sparse checkout, `excludedCommands`, or `dangerouslyDisableSandbox`).
 
 ## Open Questions
 

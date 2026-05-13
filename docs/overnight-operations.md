@@ -604,6 +604,13 @@ Overnight spawns two distinct kinds of `claude` subprocess: the per-round orches
 
 - **Linux invocation advisory.** Sandbox enforcement is macOS-Seatbelt-only per parent epic #162. On non-Darwin platforms the settings-builder emits a one-line stderr warning at first invocation and continues; behavior under Linux/bwrap is undefined.
 
+### Edge Cases
+
+- **Hardcoded binary denies for `.vscode/` and `.idea/`.** Claude Code's binary contains a hardcoded `_SBX` deny list that permanently blocks writes to `.vscode/` and `.idea/` directories regardless of what is present in `sandbox.filesystem.allowWrite`. These denies are in the binary itself and cannot be overridden via settings JSON — they apply even when the worktree path or any ancestor is listed in the allow-set. The underlying issue is tracked at [anthropics/claude-code#51303](https://github.com/anthropics/claude-code/issues/51303). Three workarounds are available, ordered by invasiveness:
+  1. **Sparse checkout** (preferred): untrack `.vscode/` and `.idea/` from the worktree via `git sparse-checkout` so the agent never attempts to write there. The directories become invisible to the agent and no deny is triggered.
+  2. **`excludedCommands`**: add the relevant `git` subcommands to `excludedCommands` in the spawn settings so `git` runs outside the sandbox — useful when the IDE directory must be tracked but the agent needs to commit changes that touch it.
+  3. **`dangerouslyDisableSandbox`** (last resort): pass `--dangerously-skip-permissions` to the `claude` subprocess to disable sandbox enforcement entirely for that spawn. This removes all OS-kernel write protection for the duration of the spawn and should be reserved for debugging or one-off manual runs, never for automated overnight sessions.
+
 ---
 
 ## Internal APIs
