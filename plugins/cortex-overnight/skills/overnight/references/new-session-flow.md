@@ -1,6 +1,8 @@
 # New Session Flow (`/overnight`) — Detailed Steps
 
 > **Python module note**: After `uv tool install git+<url>@<tag>`, the `cortex` console script is available globally and the `cortex_command.*` package is importable inside the tool venv — no `PYTHONPATH` manipulation required. Invoke planning helpers either through the CLI entry point (`cortex <subcommand>`) or, where subcommands are not yet wired, via `python3 -m cortex_command.<module>`.
+>
+> **Dev-clone install path (R16)**: When working from a local clone, use `uv pip install -e . --no-deps` against the active `.venv` to pick up edits (including F3 console-script promotions) without reinstalling the full tool. Do not use `uv tool install --reinstall` during active sessions: the in-flight install guard blocks reinstall while any partial session is running to prevent mid-session environment changes. The existing carve-outs — pytest, `CORTEX_RUNNER_CHILD=1`, dashboard, and cancel-force — are unchanged; no new carve-out is added by this workflow.
 
 ## Step 1: Check for Existing Session
 
