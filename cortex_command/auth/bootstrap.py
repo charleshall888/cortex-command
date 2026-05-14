@@ -8,9 +8,12 @@ This module implements the full bootstrap flow for
 * **Mint + write** (Task 3) — sibling-lockfile flock, ``claude setup-token``
   invocation, regex-validated single-token capture, atomic write to
   ``~/.claude/personal-oauth-token`` with mode ``0o600``.
+* **Post-write shadowing diagnostic** (Task 4) — re-runs the auth resolution
+  chain via ``ensure_sdk_auth(event_log_path=None)`` and warns if a
+  higher-precedence vector will silently override the freshly-written token.
 
 See ``cortex/lifecycle/restore-subscription-auth-for-autonomous-worktree/spec.md``
-for the full requirements (R2–R7, R14, R15) this module satisfies.
+for the full requirements (R2–R7, R14, R15, R16) this module satisfies.
 """
 
 from __future__ import annotations
@@ -266,6 +269,38 @@ def _mint_and_write() -> int:
             os.close(lock_fd)
 
 
+def _warn_if_shadowed() -> None:
+    """Warn (non-fatally) if a higher-precedence auth vector shadows the file.
+
+    Re-runs the SDK auth resolution chain via
+    :func:`cortex_command.overnight.auth.ensure_sdk_auth` (with
+    ``event_log_path=None`` so the routine call's status line goes to stderr,
+    not an event log) and inspects the resolved vector. If any vector other
+    than ``oauth_file`` wins, the freshly-minted token sitting in
+    ``~/.claude/personal-oauth-token`` will be silently overridden — the user
+    needs to know.
+
+    Bootstrap still exits 0; the file write itself succeeded. The warning is
+    purely informational. Import is lazy (inside the function) to keep the
+    package's import-time cost low, mirroring the pattern in
+    ``cortex_command/auth/status.py``.
+    """
+
+    # Lazy import: keeps top-of-module import cost low and matches the
+    # convention established in cortex_command/auth/status.py:167.
+    from cortex_command.overnight.auth import ensure_sdk_auth
+
+    info = ensure_sdk_auth(event_log_path=None)
+    vector = info.get("vector")
+    if vector != "oauth_file":
+        print(
+            f"warning: token file written, but resolved vector is "
+            f"{vector} — your fresh subscription token will be shadowed "
+            f"by {vector}. Run 'cortex auth status' to investigate.",
+            file=sys.stderr,
+        )
+
+
 def run(_args: argparse.Namespace) -> int:
     """Entry point for ``cortex auth bootstrap``."""
 
@@ -274,4 +309,11 @@ def run(_args: argparse.Namespace) -> int:
     _check_stdin_tty()
     _print_heartbeat()
 
-    return _mint_and_write()
+    exit_code = _mint_and_write()
+    if exit_code == 0:
+        # Post-write shadowing diagnostic (Requirement 16). Runs ONLY on
+        # successful write; on failure the file state is unchanged so there
+        # is no fresh token to be shadowed. Warning is non-fatal — bootstrap
+        # still exits 0 because the file write itself succeeded.
+        _warn_if_shadowed()
+    return exit_code
