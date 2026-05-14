@@ -2,13 +2,13 @@
 schema_version: "1"
 uuid: 9780ae26-602f-4eee-9027-0e18894d613d
 title: "Restore subscription auth for autonomous worktree subprocess"
-status: in_progress
+status: complete
 priority: medium
 type: feature
 tags: [overnight, auth, regression, subscription, plugin]
 created: 2026-05-14
 updated: 2026-05-14
-session_id: 9d7c9d1c-e839-4dc5-b393-e148092c2f6d
+session_id: null
 lifecycle_phase: plan
 lifecycle_slug: restore-subscription-auth-for-autonomous-worktree
 complexity: complex
