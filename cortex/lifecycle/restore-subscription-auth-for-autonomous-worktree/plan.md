@@ -39,7 +39,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: Existing subparser pattern at `cortex_command/cli.py:361` (`overnight = subparsers.add_parser(...)`, `overnight_sub = overnight.add_subparsers(...)`). Each verb sub-parser sets `func` via `set_defaults(func=...)`. Module entry signature follows the rest of `cortex_command/cli.py` handlers: `def run(args: argparse.Namespace) -> int`. Package layout siblings the existing `cortex_command/init/`. Imports of `cortex_command.auth.bootstrap` and `cortex_command.auth.status` must be lazy (inside the subparser-handler closure) to avoid pulling submodules at every `cortex --help` invocation.
 - **Verification**: Run `cortex auth --help` — pass if exit code is 0 AND `grep -cE "^[[:space:]]+(bootstrap|status)" <(cortex auth --help)` ≥ 2. Run `cortex auth bootstrap` — pass if exit code is non-zero AND stderr contains `not implemented` AND no Python traceback is emitted (`! cortex auth bootstrap 2>&1 | grep -q Traceback`).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Implement bootstrap pre-flight checks (PATH, verb-probe, TTY, heartbeat)
 - **Files**: `cortex_command/auth/bootstrap.py`
