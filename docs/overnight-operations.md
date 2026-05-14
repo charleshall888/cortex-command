@@ -666,6 +666,8 @@ Because field drift across consumers is possible, the template is the one place 
 
 Auth resolution is owned by the shared `cortex_command/overnight/auth.py` module. Both the overnight entry point (`runner.sh`) and the daytime entry point (`daytime_pipeline.py`) delegate to this one module so they share one priority order, one sanitization rule, and one event schema — divergence between the two paths would be a silent correctness hazard.
 
+> See [Subscription Auth Setup](setup.md#subscription-auth-setup) for the producer-side bootstrap workflow.
+
 The module resolves Anthropic authentication in a strict 4-step fallback order before any subprocess is spawned. Each step short-circuits on success.
 
 1. **`ANTHROPIC_API_KEY` already in the environment** — use it as-is and stop. This is the common CI/dev path (vector: `env_preexisting`).
