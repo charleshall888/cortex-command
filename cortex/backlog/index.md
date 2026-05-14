@@ -2,7 +2,6 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 213 | Close plugin/CLI auto-update gaps and author authoritative internals doc | refined | high | feature | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 209 | Lead refine §4 complexity-value gate with recommended option + rationale | refined | medium | chore | — | — | ✓ |
@@ -13,7 +12,6 @@
 
 ## Refined
 
-- **213** Close plugin/CLI auto-update gaps and author authoritative internals doc
 - **209** Lead refine §4 complexity-value gate with recommended option + rationale
 
 ## Backlog

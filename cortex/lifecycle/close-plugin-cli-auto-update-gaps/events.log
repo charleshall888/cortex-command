@@ -13,3 +13,4 @@
 {"ts": "2026-05-13T21:24:55Z", "event": "batch_dispatch", "feature": "close-plugin-cli-auto-update-gaps", "batch": 6, "tasks": [23]}
 {"ts": "2026-05-13T21:33:31Z", "event": "batch_dispatch", "feature": "close-plugin-cli-auto-update-gaps", "batch": 7, "tasks": [25]}
 {"ts": "2026-05-13T22:10:15Z", "event": "review_verdict", "feature": "close-plugin-cli-auto-update-gaps", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-05-14T13:22:52Z", "event": "feature_complete", "feature": "close-plugin-cli-auto-update-gaps", "tasks_total": 25, "rework_cycles": 1}
