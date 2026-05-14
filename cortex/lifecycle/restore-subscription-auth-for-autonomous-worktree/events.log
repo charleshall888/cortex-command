@@ -12,3 +12,4 @@
 {"ts": "2026-05-14T19:15:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 1, "tasks": [6]}
 {"ts": "2026-05-14T19:25:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 2, "tasks": [7]}
 {"ts": "2026-05-14T19:32:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 3, "tasks": [8]}
+{"ts": "2026-05-14T19:42:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 4, "tasks": [2]}
