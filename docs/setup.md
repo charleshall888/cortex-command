@@ -301,6 +301,25 @@ This shows cortex-specific session state in the Claude Code statusline. The scri
 A conservative deny list is a useful safety baseline: `sudo`, destructive `rm -rf` patterns, `git push --force` against protected branches, reads of secrets directories (`~/.ssh`, `~/.aws`, etc.). Cortex-command does not prescribe a specific list — compose your own. Do not paste any list blindly; review each rule against your own threat model.
 
 
+## Subscription Auth Setup
+
+Use this when you are a Claude Pro / Max subscription user without an Anthropic Console API key and want a one-shot path to populate `~/.claude/personal-oauth-token` (the file the overnight runner reads when no `apiKeyHelper` is configured). It is the automated alternative to the manual `claude setup-token` + `printf` + `chmod` sequence in [Authentication › Option B](#option-b-oauth-token-claude-pro--max-subscription) above.
+
+Run:
+
+```bash
+cortex auth bootstrap
+```
+
+Under the hood this wraps `claude setup-token` (Anthropic's documented mint command — opens a browser for OAuth), captures the printed one-year subscription token, and writes it atomically to `~/.claude/personal-oauth-token` with mode `0600`. Re-run when the token expires (yearly cadence — Anthropic-issued subscription OAuth tokens are valid one year, with no automatic refresh).
+
+**Precedence:** `ANTHROPIC_API_KEY` and `apiKeyHelper` (configured via `~/.claude/settings.local.json`) both take precedence over the personal-oauth-token file, so per-repo API-key use continues to work unchanged when those are configured. Run `cortex auth status` to see the resolved vector and any shadowed lower-precedence vectors.
+
+**CI / headless:** `cortex auth bootstrap` requires an interactive terminal and a browser (`stdin` must be a TTY; the subcommand exits with an error otherwise). For CI or headless hosts, either copy a token file that was bootstrapped on a browser-capable machine to `~/.claude/personal-oauth-token` (mode `0600`), or set `ANTHROPIC_API_KEY` and let the precedence chain resolve it.
+
+**Upstream contract note:** `cortex auth bootstrap` pins Anthropic's `claude setup-token` verb name and output shape via a regex. If a future Claude Code release renames the verb or changes the printed output format, bootstrap will surface a clear error pointing at `claude --help` so you can confirm the current verb name.
+
+
 ## macOS Notifications
 
 For desktop notifications when Claude Code needs attention:
