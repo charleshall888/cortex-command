@@ -1,19 +1,43 @@
 """Implementation of ``cortex auth bootstrap``.
 
-This module currently implements Task 2 of the
-``restore-subscription-auth-for-autonomous-worktree`` feature: pre-flight
-gates that must succeed before any state-changing work runs. The actual
-``claude setup-token`` invocation, atomic write, and lock handling land
-in Task 3 (see
-``cortex/lifecycle/restore-subscription-auth-for-autonomous-worktree/spec.md``).
+This module implements the full bootstrap flow for
+``restore-subscription-auth-for-autonomous-worktree``:
+
+* **Pre-flight gates** (Task 2) — ``claude`` on PATH, ``setup-token --help``
+  verb probe, stdin TTY, heartbeat line.
+* **Mint + write** (Task 3) — sibling-lockfile flock, ``claude setup-token``
+  invocation, regex-validated single-token capture, atomic write to
+  ``~/.claude/personal-oauth-token`` with mode ``0o600``.
+
+See ``cortex/lifecycle/restore-subscription-auth-for-autonomous-worktree/spec.md``
+for the full requirements (R2–R7, R14, R15) this module satisfies.
 """
 
 from __future__ import annotations
 
 import argparse
+import fcntl
+import os
+import re
 import shutil
 import subprocess
 import sys
+import tempfile
+from pathlib import Path
+
+from cortex_command.common import durable_fsync
+
+
+# CONTRACT: This regex pins the assumed output shape of Anthropic's
+# ``claude setup-token`` CLI — a single line containing a token of the form
+# ``sk-ant-oat<digits>-<base64url-ish-suffix>``. Drift in token-prefix format
+# (e.g. ``sk-ant-oat02-`` becoming ``sk-ant-oa3-``), banner placement in the
+# CLI's stdout, or the addition of unrelated lines that happen to start with
+# ``sk-ant-oat`` is the most likely cause of bootstrap failures. If
+# ``cortex auth bootstrap`` starts emitting "did not contain a recognizable
+# OAuth token" or "multiple OAuth-token candidate lines" errors, audit the
+# Anthropic CLI release notes for output-shape changes and update this regex.
+_TOKEN_RE = re.compile(r"^sk-ant-oat[0-9]+-[A-Za-z0-9_-]{20,}$")
 
 
 def _check_claude_on_path() -> None:
@@ -81,6 +105,167 @@ def _print_heartbeat() -> None:
     )
 
 
+def _token_path() -> Path:
+    """Return the canonical ``~/.claude/personal-oauth-token`` path."""
+
+    return Path("~/.claude/personal-oauth-token").expanduser()
+
+
+def _claude_dir() -> Path:
+    """Return the canonical ``~/.claude/`` directory path."""
+
+    return Path("~/.claude").expanduser()
+
+
+def _lockfile_path() -> Path:
+    """Return the sibling lockfile path.
+
+    Sibling-of-target naming so the lock survives the ``os.replace`` inode
+    swap performed during atomic write of the token file. Mirrors the
+    pattern in ``cortex_command/init/settings_merge.py:_lockfile_path``.
+    """
+
+    return _claude_dir() / ".personal-oauth-token.lock"
+
+
+def _atomic_write_token(token: str) -> None:
+    """Atomically write ``<token>\\n`` to ``~/.claude/personal-oauth-token``.
+
+    Writes via tempfile-in-same-directory + ``os.replace`` so the canonical
+    path is either unchanged or contains the complete new token (never a
+    partial). Mode ``0o600`` is set on the tempfile **before** the rename so
+    the canonical path never appears world-readable, even momentarily.
+    """
+
+    target = _token_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    fd, tmp_path = tempfile.mkstemp(
+        dir=target.parent,
+        prefix=f".{target.name}-",
+        suffix=".tmp",
+    )
+    closed = False
+    try:
+        os.write(fd, (token + "\n").encode("utf-8"))
+        durable_fsync(fd)
+        os.fchmod(fd, 0o600)
+        os.close(fd)
+        closed = True
+        os.replace(tmp_path, target)
+    except BaseException:
+        if not closed:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def _mint_and_write() -> int:
+    """Run ``claude setup-token``, parse, and atomically write the token.
+
+    Caller has already invoked the pre-flight gates and printed the
+    heartbeat. This function performs the lock acquisition, subprocess
+    invocation, output parsing, and atomic write. Returns an exit code.
+    """
+
+    # Reject pre-existing directory shape before any locking — destructive
+    # remediation (rmtree) is intentionally NOT automated; surface a clear
+    # error so the user removes it manually.
+    token_target = _token_path()
+    if token_target.exists() and token_target.is_dir():
+        print(
+            f"error: {token_target} exists as a directory; refusing to "
+            "overwrite. Remove the directory manually (e.g. "
+            f"'rmdir {token_target}' if empty, or inspect its contents "
+            "first) and retry.",
+            file=sys.stderr,
+        )
+        return 2
+
+    # Ensure ~/.claude/ exists with mode 0o755 before opening the lockfile —
+    # os.open(..., O_CREAT) inside a missing parent directory would fail.
+    claude_dir = _claude_dir()
+    claude_dir.mkdir(mode=0o755, parents=True, exist_ok=True)
+
+    lockfile_path = _lockfile_path()
+    lock_fd = os.open(
+        lockfile_path, os.O_RDWR | os.O_CREAT | os.O_CLOEXEC, 0o600
+    )
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+
+        # `start_new_session=False` is the default; specified explicitly
+        # so the SIGINT-propagation contract is documented in code: the
+        # `claude` child shares the parent's process group, so terminal
+        # Ctrl-C reaches both processes. `stderr=None` inherits parent
+        # stderr so the user sees the OAuth URL the CLI prints; this is
+        # mutually exclusive with `capture_output=True` (which forces
+        # stderr=PIPE) — DO NOT swap to `capture_output`.
+        completed = subprocess.run(
+            ["claude", "setup-token"],
+            stdout=subprocess.PIPE,
+            stderr=None,
+            text=True,
+            check=False,
+            start_new_session=False,
+        )
+
+        if completed.returncode != 0:
+            print(
+                f"error: 'claude setup-token' exited with code "
+                f"{completed.returncode}; no token written. Common "
+                "causes: the verb may have been renamed or its output "
+                "format changed in your installed Claude Code version; "
+                "run 'claude --help' to verify and consider upgrading.",
+                file=sys.stderr,
+            )
+            return completed.returncode
+
+        # Scan all non-blank lines for token matches (per spec R3 — the
+        # "last non-blank line" heuristic is defeated by trailing upgrade
+        # banners).
+        matches = [
+            line
+            for line in (completed.stdout or "").splitlines()
+            if _TOKEN_RE.match(line.strip()) is not None
+        ]
+        # Re-strip captured matches to discard accidental surrounding
+        # whitespace; the regex is anchored, so .strip() preserves the
+        # match payload.
+        matches = [m.strip() for m in matches]
+
+        if len(matches) == 0:
+            print(
+                "error: claude setup-token output did not contain a "
+                "recognizable OAuth token (output format may have "
+                "changed)",
+                file=sys.stderr,
+            )
+            return 2
+
+        if len(matches) > 1:
+            print(
+                "error: claude setup-token output contained multiple "
+                "OAuth-token candidate lines; refusing to guess",
+                file=sys.stderr,
+            )
+            return 2
+
+        _atomic_write_token(matches[0])
+        return 0
+    finally:
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        finally:
+            os.close(lock_fd)
+
+
 def run(_args: argparse.Namespace) -> int:
     """Entry point for ``cortex auth bootstrap``."""
 
@@ -89,5 +274,4 @@ def run(_args: argparse.Namespace) -> int:
     _check_stdin_tty()
     _print_heartbeat()
 
-    print("error: not implemented (mint phase pending)", file=sys.stderr)
-    return 2
+    return _mint_and_write()
