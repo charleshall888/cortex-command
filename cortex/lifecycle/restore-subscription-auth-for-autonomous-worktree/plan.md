@@ -84,7 +84,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: Current message at `auth.py:381` (per spec): `"auth_probe: vector=none, keychain=absent — Keychain entry not found; startup will fail"`. Concatenate the new suffix as a single string literal (preserve the existing em-dash separator pattern). The two test files test `test_runner_auth.py` (339 lines) and `cortex_command/overnight/tests/test_daytime_auth.py` (191 lines) both pin the probe-absent stderr string in multiple assertions — search every occurrence with `grep -n "Keychain entry not found" tests/test_runner_auth.py cortex_command/overnight/tests/test_daytime_auth.py` and update each.
 - **Verification**: `grep -F "run 'cortex auth bootstrap'" cortex_command/overnight/auth.py` — pass if count = 1. `pytest tests/test_runner_auth.py cortex_command/overnight/tests/test_daytime_auth.py -v` — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (no test assertions pinned the prior text — only auth.py edit needed)
 
 ### Task 7: Add explicit `test_apikeyhelper_overrides_oauth_file` precedence-pin test
 - **Files**: `tests/test_auth_precedence.py`
@@ -93,7 +93,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: Existing apiKeyHelper test patterns at `tests/test_runner_auth.py` (search for `apiKeyHelper`) show the fixture shape: a tiny shell script in a tmp dir that prints an API key to stdout, referenced by the settings.json `apiKeyHelper` key. Use `monkeypatch.setenv`/`delenv` to scrub conflicting env vars before the call. The `ensure_sdk_auth` return shape is documented in `cortex_command/overnight/auth.py:398–468`.
 - **Verification**: `pytest tests/test_auth_precedence.py::test_apikeyhelper_overrides_oauth_file -v` — pass if exit code = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 8: Add fixture scripts for `claude setup-token` (clean, banner-trailing, banner-only)
 - **Files**: `tests/fixtures/fake_claude_setup_token.sh`, `tests/fixtures/fake_claude_setup_token_banner.sh`, `tests/fixtures/fake_claude_setup_token_banner_only.sh`
@@ -102,7 +102,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: Existing fixtures pattern in `tests/fixtures/` (the directory exists per the `ls tests/` check). Shell script must dispatch on `$1`: `if [ "$1" = "setup-token" ] && [ "$2" = "--help" ]; then exit 0; fi` for the verb-probe path; otherwise emit the canned output. Use `chmod +x` after creation to set the executable bit. Fixture filename convention: `fake_<binary>.sh` is the precedent (search `tests/fixtures/` for examples). The banner shapes are deliberately constructed to pin two regex-correctness contracts: (a) banner-trailing: regex must capture the token line and reject the URL's `sk-ant-oat01-`-shaped substring (line anchor enforcement); (b) banner-only: regex must reject all lines and bootstrap must error rather than write the file.
 - **Verification**: `bash tests/fixtures/fake_claude_setup_token.sh setup-token` — pass if exit code = 0 AND stdout matches `^sk-ant-oat[0-9]+-[A-Za-z0-9_-]{20,}$` (single line). `bash tests/fixtures/fake_claude_setup_token.sh setup-token --help` — pass if exit code = 0 AND stdout is empty. `bash tests/fixtures/fake_claude_setup_token_banner.sh setup-token` — pass if exit code = 0 AND stdout has ≥ 1 line matching the token regex AND ≥ 1 line containing `WARNING:` AND ≥ 1 line containing `release.html`. `bash tests/fixtures/fake_claude_setup_token_banner_only.sh setup-token` — pass if exit code = 0 AND `grep -cE '^sk-ant-oat[0-9]+-' <(bash tests/fixtures/fake_claude_setup_token_banner_only.sh setup-token)` = 0. All three fixtures executable (`test -x` exits 0).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 9: Bootstrap unit tests (full sub-case matrix)
 - **Files**: `tests/test_auth_bootstrap.py`
