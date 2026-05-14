@@ -28,25 +28,30 @@ jobs:
           set -u
           URL='https://github.com/charleshall888/cortex-command.git/info/refs?service=git-receive-pack'
 
-          echo "=== 1. Bearer (capital B) ==="
-          curl -sS -o /dev/null -w "  HTTP %{http_code}\n" \
-            -H "Authorization: Bearer $AUTO_RELEASE_PAT" "$URL"
+          probe() {
+            local label="$1"
+            local header="$2"
+            echo "=== $label ==="
+            # -i prints response headers; we grep for status line and
+            # WWW-Authenticate (the server's authoritative declaration
+            # of which schemes it accepts).
+            curl -sS -i -o /tmp/resp.txt -H "$header" "$URL" || true
+            head -1 /tmp/resp.txt
+            grep -i '^WWW-Authenticate:' /tmp/resp.txt || echo "  (no WWW-Authenticate header)"
+            echo ""
+          }
 
-          echo "=== 2. bearer (lowercase) ==="
-          curl -sS -o /dev/null -w "  HTTP %{http_code}\n" \
-            -H "Authorization: bearer $AUTO_RELEASE_PAT" "$URL"
+          probe "1. Bearer (capital B)" "Authorization: Bearer $AUTO_RELEASE_PAT"
+          probe "2. bearer (lowercase)" "Authorization: bearer $AUTO_RELEASE_PAT"
+          probe "3. token (legacy GitHub scheme)" "Authorization: token $AUTO_RELEASE_PAT"
 
-          echo "=== 3. token (legacy GitHub scheme) ==="
-          curl -sS -o /dev/null -w "  HTTP %{http_code}\n" \
-            -H "Authorization: token $AUTO_RELEASE_PAT" "$URL"
-
-          echo "=== 4. Basic with x-access-token (control — expected 200) ==="
           B64=$(printf '%s' "x-access-token:$AUTO_RELEASE_PAT" | base64 | tr -d '\n')
-          curl -sS -o /dev/null -w "  HTTP %{http_code}\n" \
-            -H "Authorization: Basic $B64" "$URL"
+          probe "4. Basic with x-access-token (control)" "Authorization: Basic $B64"
 
-          echo ""
-          echo "Interpretation:"
-          echo "  401 = scheme rejected"
-          echo "  200 = scheme accepted"
-          echo "  Other = unexpected — check raw response with -i"
+          # Also probe with NO auth header — the WWW-Authenticate from
+          # this anonymous request is GitHub's unprompted declaration of
+          # what schemes it advertises.
+          echo "=== 5. No Authorization header (anonymous — see WWW-Authenticate) ==="
+          curl -sS -i -o /tmp/resp.txt "$URL" || true
+          head -1 /tmp/resp.txt
+          grep -i '^WWW-Authenticate:' /tmp/resp.txt || echo "  (no WWW-Authenticate header)"
