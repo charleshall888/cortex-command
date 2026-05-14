@@ -161,16 +161,22 @@ jobs:
           # PAT is injected via -c http.extraheader at the push command only;
           # it is NEVER persisted to .git/config. This keeps the PAT off-disk
           # for any subsequent step (and out of validate-job's checkout
-          # entirely, since that job ran in a separate runner).
-          if ! git -c http.https://github.com/.extraheader="AUTHORIZATION: bearer ${AUTO_RELEASE_PAT}" push origin main; then
+          # entirely, since that job ran in a separate runner). We use HTTP
+          # Basic with x-access-token:PAT base64-encoded — the same scheme
+          # actions/checkout@v4 uses internally, which works reliably for
+          # both fine-grained and classic PATs. The bearer-auth alternative
+          # was observed to not authenticate git's HTTPS push for fine-grained
+          # PATs in this repo (PR #11 release-job log).
+          TOKEN_B64=$(printf '%s' "x-access-token:${AUTO_RELEASE_PAT}" | base64 | tr -d '\n')
+          if ! git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${TOKEN_B64}" push origin main; then
             echo "First push to main failed (likely non-fast-forward). Rebasing once and retrying."
             git pull --rebase origin main
-            if ! git -c http.https://github.com/.extraheader="AUTHORIZATION: bearer ${AUTO_RELEASE_PAT}" push origin main; then
+            if ! git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${TOKEN_B64}" push origin main; then
               echo "::error::Second push to main failed after rebase. Manual recovery required: re-run via workflow_dispatch (gh workflow run auto-release.yml --ref main)."
               exit 1
             fi
           fi
-          git -c http.https://github.com/.extraheader="AUTHORIZATION: bearer ${AUTO_RELEASE_PAT}" push origin "${NEXT_TAG}"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${TOKEN_B64}" push origin "${NEXT_TAG}"
 
   pat-expiry-probe:
     name: PAT presence probe (scheduled)
