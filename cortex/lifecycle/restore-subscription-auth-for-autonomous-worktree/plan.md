@@ -48,7 +48,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: All four checks are independent functions (`_check_claude_on_path() -> None`, `_probe_setup_token_verb() -> None`, `_check_stdin_tty() -> None`, `_print_heartbeat() -> None`) called from `run(args)` in the listed order. Exit-on-fail uses `sys.exit(2)` (or returns 2 from `run`). Heartbeat uses `print(..., file=sys.stderr, flush=True)` so the line is visible before the child takes over the terminal. `subprocess.run` import — verb-probe must specify `timeout=5`; on `subprocess.TimeoutExpired`, `e.returncode` does not exist — substitute the literal string `timeout` in the error message. The verb-probe is honest about its narrow scope: a `--help` exit-zero is a stub-friendly signal that does not validate the mint-mode contract — the error string reflects this. If the actual mint subprocess later fails (Task 3), its generic exit-code surface is augmented by Task 3's "Common causes" hint pointing at verb-contract drift.
 - **Verification**: Manual smoke (no test infrastructure yet — formal coverage lands in Task 9): `PATH= cortex auth bootstrap` — pass if exit 2 AND stderr contains `'claude' CLI not found on PATH`. `cortex auth bootstrap < /dev/null` — pass if exit 2 AND stderr contains `requires an interactive terminal`. (Verb-probe and heartbeat exercised in Task 9 unit tests; covered by P4 form (c) — interactive smoke before fixture exists.)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Implement bootstrap mint + atomic write under sibling lockfile
 - **Files**: `cortex_command/auth/bootstrap.py`
@@ -57,7 +57,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: complex
 - **Context**: Sibling-lockfile lock pattern at `cortex_command/init/settings_merge.py:60–82` is the canonical reference (`_lockfile_path`, `os.open` with `O_RDWR | O_CREAT | O_CLOEXEC`, `fcntl.flock(lock_fd, fcntl.LOCK_EX)`, `try/finally` releases via `fcntl.LOCK_UN` + `os.close`). Atomic-write helper: `cortex_command.common.atomic_write(path, content)` writes via tempfile + `os.replace` with `durable_fsync`. The token regex MUST be a module-level `re.compile` constant `_TOKEN_RE = re.compile(r"^sk-ant-oat[0-9]+-[A-Za-z0-9_-]{20,}$")` and MUST carry an inline `# CONTRACT:` comment noting that the regex pins the assumed output shape of Anthropic's `claude setup-token` CLI — drift in token-prefix format, banner placement, or non-token line shapes is the most likely cause of bootstrap failures. `start_new_session=False` is the default but specify explicitly so the SIGINT-propagation behavior is documented in code. `stderr=None` is mutually exclusive with `capture_output=True` — do NOT use `capture_output`.
 - **Verification**: Interactive/session-dependent: covered by Task 9 unit tests (regex banner-trailing, regex banner-only, idempotence, atomic-write crash, lock cleanup on KeyboardInterrupt, mode 0600). Manual interactive smoke is browser-flow-dependent and therefore unsuitable for plan-level binary verification; structural pre-flight smoke from Task 2 still passes. (P4 form (c).)
-- **Status**: [ ] pending
+- **Status**: [x] done (note: hand-rolled tempfile+fsync+chmod-before-rename flow used instead of common.atomic_write because atomic_write doesn't expose mode setting before rename)
 
 ### Task 4: Implement post-write shadowing diagnostic
 - **Files**: `cortex_command/auth/bootstrap.py`
@@ -66,7 +66,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: `ensure_sdk_auth(event_log_path=None)` returns a result object whose `vector` field is one of `env_authtoken`, `env_apikey`, `api_key_helper`, `env_preexisting`, `oauth_file`, `none` (per `cortex_command/overnight/auth.py:398–468`). The string substituted into `<X>` is the literal vector name. Import is lazy (inside the function) to keep the package's import-time cost low, mirroring the existing pattern.
 - **Verification**: Interactive/session-dependent: covered by the Task 9 unit test `test_bootstrap_warns_on_post_write_shadowing` (mocks `claude setup-token` to print a fresh token, exports `CLAUDE_CODE_OAUTH_TOKEN=stale-fixture` in the test env, asserts bootstrap exits 0 AND stderr contains `warning: token file written, but resolved vector is env_preexisting`). (P4 form (c).)
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Implement `cortex auth status`
 - **Files**: `cortex_command/auth/status.py`
@@ -75,7 +75,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: Vector → human-readable source mapping: `env_authtoken` → `ANTHROPIC_AUTH_TOKEN environment variable`, `env_apikey` → `ANTHROPIC_API_KEY environment variable`, `api_key_helper` → `settings.json apiKeyHelper`, `env_preexisting` → `CLAUDE_CODE_OAUTH_TOKEN environment variable`, `oauth_file` → `~/.claude/personal-oauth-token`, `none` → `(none)`. Shadowing detection inspects `os.environ` for `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` and `pathlib.Path("~/.claude/personal-oauth-token").expanduser().exists()` and `pathlib.Path("~/.claude/settings.json")` / `settings.local.json` for the `apiKeyHelper` key. Higher-precedence-than-resolved vectors don't constitute shadowing — we report only lower-precedence vectors that are present-but-not-picked. Lazy import of `cortex_command.overnight.auth.ensure_sdk_auth` inside `run()`.
 - **Verification**: Interactive/session-dependent: covered by Task 10 unit tests (`test_status_oauth_file_only`, `test_status_env_shadows_file`, `test_status_vector_none_remediation`, `test_status_no_secrets_in_output`, `test_status_malformed_apikeyhelper_propagates`). Each test patches `os.environ` and the home dir, invokes the handler, and inspects captured stdout. (P4 form (c).)
-- **Status**: [ ] pending
+- **Status**: [x] done (note: actual vector return values are `auth_token`/`env_preexisting` not `env_authtoken`/`env_apikey` — plan mapping was inaccurate; status.py uses real values)
 
 ### Task 6: Update `auth.py:381` probe-absent stderr message + refresh existing test assertions
 - **Files**: `cortex_command/overnight/auth.py`, `tests/test_runner_auth.py`, `cortex_command/overnight/tests/test_daytime_auth.py`
@@ -111,7 +111,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: complex
 - **Context**: Test harness pattern: `monkeypatch.setattr(pathlib.Path, "home", lambda: tmp_path)` to redirect `~/.claude/`. `monkeypatch.setenv("PATH", f"{fixture_dir}:{os.environ['PATH']}")` to inject the fake `claude`. Subprocess mocking for tests that don't invoke the fixture script — `monkeypatch.setattr(subprocess, "run", mock_run)` patching at module level. Each test gets a fresh tmp_path; test isolation is per-function. Fixture directory: `tests/fixtures/`. Token regex literal must match what the bootstrap module compiles. The KeyboardInterrupt test must use a real `fcntl.flock` race — patch the inner `subprocess.run` to raise `KeyboardInterrupt` mid-flow, then in the same test acquire the lock with `LOCK_NB` from a fresh fd and assert success.
 - **Verification**: `pytest tests/test_auth_bootstrap.py -v` — pass if exit code = 0 AND every test in the file (count ≥ 12) passes.
-- **Status**: [ ] pending
+- **Status**: [x] done (12/12 tests pass; learnings: redirect both Path.home and HOME env, keep /usr/bin:/bin in PATH for fixture shebangs, TTY-gate test accounts for verb-probe subprocess call)
 
 ### Task 10: Status unit tests (all four spec sub-cases + malformed apiKeyHelper)
 - **Files**: `tests/test_auth_status.py`
@@ -120,7 +120,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: Same harness pattern as Task 9. The `_HelperInternalError` exception is defined in `cortex_command/overnight/auth.py` — import via `from cortex_command.overnight.auth import _HelperInternalError`. Status handler must NOT swallow the exception; the test asserts on the resulting exit code (non-zero) and stderr message presence.
 - **Verification**: `pytest tests/test_auth_status.py -v` — pass if exit code = 0 AND all 5 tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 11: Integration smoke test `tests/test_auth_bootstrap_integration.py`
 - **Files**: `tests/test_auth_bootstrap_integration.py`
@@ -135,7 +135,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: The `[sys.executable, "-m", "cortex_command.cli"]` invocation pattern has 8+ precedents in `tests/` (verified via `grep -rn "sys.executable.*-m.*cortex_command" tests/`). The `pty.openpty()` approach was considered and rejected — zero precedent in `tests/`, and `capture_output=True` × pty master/slave fd routing introduces unwarranted test-harness complexity. The split (subprocess for TTY rejection, in-process `cli.main` for the full chain) covers both the cli.py wiring boundary (subprocess test) and the chain-of-modules boundary (in-process test) without `pty`. The `serial` marker is configured in `pyproject.toml` — confirm via `grep -n serial pyproject.toml`. `cortex_command.cli.main(argv)` returns int (matches the pattern used by other test files invoking `cli.main` directly).
 - **Verification**: `pytest tests/test_auth_bootstrap_integration.py -v` — pass if exit code = 0 AND both tests (`test_bootstrap_tty_rejection_via_subprocess` and `test_bootstrap_full_chain_writes_token_and_resolves_oauth_file`) pass.
-- **Status**: [ ] pending
+- **Status**: [x] done (note: `ensure_sdk_auth` returns a dict not an object — used `info["vector"]`; required env-scrubbing between bootstrap and status phases since post-write shadowing check writes CLAUDE_CODE_OAUTH_TOKEN into env)
 
 ### Task 12: `docs/setup.md` Subscription Auth Setup section
 - **Files**: `docs/setup.md`
@@ -143,8 +143,8 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Depends on**: [1]
 - **Complexity**: simple
 - **Context**: `docs/setup.md` exists; preserve existing section ordering and prose style (search for the existing H2 layout via `grep -n "^## " docs/setup.md`). The new section anchors as `#subscription-auth-setup` (markdown auto-anchor from the H2 title). Task 12 is independent of Task 11's integration test — the docs describe a UX that is fully derivable from the spec, the Task 1 CLI surface, and the Task 3 atomic-write contract. The dependency is on Task 1 only (the `cortex auth` subparser must exist for `cortex auth --help` examples in the docs to be valid).
-- **Verification**: `grep -F "cortex auth bootstrap" docs/setup.md` — pass if count ≥ 1. `grep -F "ANTHROPIC_API_KEY" docs/setup.md` — pass if count ≥ 1 within the new section (the in-section check uses `awk '/^## Subscription Auth Setup/,/^## /' docs/setup.md | grep -F ANTHROPIC_API_KEY` — pass if count ≥ 1). `grep -F "apiKeyHelper" docs/setup.md` — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Verification**: `grep -F "cortex auth bootstrap" docs/setup.md` — pass if count ≥ 1. `grep -F "ANTHROPIC_API_KEY" docs/setup.md` — pass if count ≥ 1 within the new section (the in-section check uses `awk '/^## Subscription Auth Setup/{flag=1; next} flag && /^## /{flag=0} flag' docs/setup.md | grep -F ANTHROPIC_API_KEY` — pass if count ≥ 1). `grep -F "apiKeyHelper" docs/setup.md` — pass if count ≥ 1.
+- **Status**: [x] done
 
 ### Task 13: `docs/overnight-operations.md` cross-reference to `docs/setup.md#subscription-auth-setup`
 - **Files**: `docs/overnight-operations.md`
@@ -153,7 +153,7 @@ Add a `cortex auth` subparser with `bootstrap` and `status` verbs in a new `cort
 - **Complexity**: simple
 - **Context**: The existing section spans lines 667–697 (per research.md). Search for the section heading via `grep -n "^### .*Auth\|^## .*Auth" docs/overnight-operations.md` to confirm the exact anchor before editing. The cross-reference link target uses the relative path `setup.md#subscription-auth-setup` (both files live under `docs/`).
 - **Verification**: `grep -F "subscription-auth-setup" docs/overnight-operations.md` — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 

@@ -13,3 +13,12 @@
 {"ts": "2026-05-14T19:25:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 2, "tasks": [7]}
 {"ts": "2026-05-14T19:32:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 3, "tasks": [8]}
 {"ts": "2026-05-14T19:42:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 4, "tasks": [2]}
+{"ts": "2026-05-14T19:50:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 5, "tasks": [5]}
+{"ts": "2026-05-14T19:58:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 6, "tasks": [12]}
+{"ts": "2026-05-14T20:05:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 7, "tasks": [3]}
+{"ts": "2026-05-14T20:18:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 8, "tasks": [10]}
+{"ts": "2026-05-14T20:28:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 9, "tasks": [13]}
+{"ts": "2026-05-14T20:36:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 10, "tasks": [4]}
+{"ts": "2026-05-14T20:46:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 11, "tasks": [9]}
+{"ts": "2026-05-14T20:55:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 12, "tasks": [11]}
+{"ts": "2026-05-14T21:10:00Z", "event": "phase_transition", "feature": "restore-subscription-auth-for-autonomous-worktree", "tier": "complex", "from": "implement", "to": "review"}
