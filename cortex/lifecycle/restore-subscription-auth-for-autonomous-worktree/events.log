@@ -22,3 +22,5 @@
 {"ts": "2026-05-14T20:46:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 11, "tasks": [9]}
 {"ts": "2026-05-14T20:55:00Z", "event": "batch_dispatch", "feature": "restore-subscription-auth-for-autonomous-worktree", "batch": 12, "tasks": [11]}
 {"ts": "2026-05-14T21:10:00Z", "event": "phase_transition", "feature": "restore-subscription-auth-for-autonomous-worktree", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-14T21:25:00Z", "event": "review_verdict", "feature": "restore-subscription-auth-for-autonomous-worktree", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-14T21:25:01Z", "event": "phase_transition", "feature": "restore-subscription-auth-for-autonomous-worktree", "from": "review", "to": "complete"}

@@ -34,6 +34,7 @@ import importlib
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -233,11 +234,14 @@ def test_target_state(built_wheel: Path, tmp_path: Path) -> None:
         assert key in payload, (
             f"missing key {key!r} in --print-root payload: {payload!r}"
         )
-    # version is the v1.1 envelope (additive: package_root is also
-    # present, but R6b's listed required keys are the four above).
+    # version is the PEP 440 package version of cortex-command. R6b
+    # requires the field's presence and well-formed shape; the major
+    # version is intentionally not pinned here so the gate survives
+    # major-version bumps (v1.x → v2.x → ...) without test churn.
     assert isinstance(payload["version"], str)
-    assert payload["version"].startswith("1."), (
-        f"version field does not start with '1.': {payload['version']!r}"
+    assert re.match(r"^\d+\.\d+", payload["version"]), (
+        f"version field is not a leading-digit-dot-digit string: "
+        f"{payload['version']!r}"
     )
 
     # ------------------------------------------------------------------

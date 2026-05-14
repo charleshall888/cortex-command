@@ -93,7 +93,6 @@ def test_single_home_repo_feature() -> None:
 # pytest-compatible tests (TDD and regression)
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(reason="Pre-Task 4: render_completed_features ignores integration_branches")
 def test_render_uses_home_repo_name_from_integration_branches():
     """render_completed_features uses integration_branches to determine home repo name.
 

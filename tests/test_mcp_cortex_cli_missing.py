@@ -91,6 +91,14 @@ def _load_server_module():
     if "cortex_plugin_server" in sys.modules:
         return sys.modules["cortex_plugin_server"]
     os.environ["CLAUDE_PLUGIN_ROOT"] = str(PLUGIN_ROOT)
+    # Insert PLUGIN_ROOT onto sys.path so the server module's bare sibling
+    # imports (e.g. `from install_guard import check_in_flight_install_core`
+    # at server.py:924) resolve. The Claude Code plugin runtime adds the
+    # plugin directory to sys.path in production; the test loader has to
+    # simulate that here. Idempotent insert — repeat calls are no-ops.
+    plugin_root_str = str(PLUGIN_ROOT)
+    if plugin_root_str not in sys.path:
+        sys.path.insert(0, plugin_root_str)
     spec = importlib.util.spec_from_file_location(
         "cortex_plugin_server", SERVER_PATH
     )
@@ -137,15 +145,29 @@ def _status_payload() -> str:
 
 
 @pytest.fixture
-def server_module(monkeypatch: pytest.MonkeyPatch):
+def server_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     """Load server.py once and reset module caches per-test.
 
     Sets ``CORTEX_DEV_MODE=1`` so :func:`_gate_dispatch` short-circuits
     its R8/R9/R10 update-check before any extraneous ``subprocess.run``
     calls reach our mocks (otherwise ``git status``/``git ls-remote``
     would interact with the FNF mock and confuse the per-test budget).
+
+    Also redirects ``XDG_STATE_HOME`` to a per-test tmpdir so install-lock
+    and install-failed sentinels (R4c, R4d) write inside the test sandbox
+    rather than the user's real ``~/.local/state/cortex-command/``. Tests
+    that exercise the recovery path (FNF → ``_ensure_cortex_installed``)
+    would otherwise hit a sandbox-write or permissions error on the real
+    state dir.
     """
     monkeypatch.setenv("CORTEX_DEV_MODE", "1")
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    # Disable auto-install so FNF-recovery tests don't try to invoke
+    # ``uv tool install`` / ``uv tool list`` (which the per-test
+    # subprocess mocks don't model). The recovery path's notice-only
+    # branch (server.py:804–806) still allows the second cortex call
+    # to succeed via the test's ``_flaky_run`` retry handler.
+    monkeypatch.setenv("CORTEX_AUTO_INSTALL", "0")
     mod = _load_server_module()
     # Reset caches every test so we start from a clean slate.
     mod._CORTEX_ROOT_CACHE = None
