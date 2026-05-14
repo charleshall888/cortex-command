@@ -675,7 +675,7 @@ def _coerce_bool_namespace(args: argparse.Namespace, name: str) -> argparse.Name
     return args
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
     return args.func(args)

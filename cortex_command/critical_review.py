@@ -485,7 +485,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
     return args.func(args)
