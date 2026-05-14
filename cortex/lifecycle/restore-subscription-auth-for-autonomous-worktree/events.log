@@ -1,0 +1,7 @@
+{"schema_version": 3, "ts": "2026-05-14T15:50:37Z", "event": "clarify_critic", "feature": "restore-subscription-auth-for-autonomous-worktree", "parent_epic_loaded": false, "findings_count": 9, "dispositions": {"apply": 2, "dismiss": 7, "ask": 0}, "applied_fixes_count": 2, "dismissals_count": 7, "status": "ok"}
+{"ts": "2026-05-14T15:51:00Z", "event": "lifecycle_start", "feature": "restore-subscription-auth-for-autonomous-worktree", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-14T15:51:30Z", "event": "phase_transition", "feature": "restore-subscription-auth-for-autonomous-worktree", "from": "clarify", "to": "research"}
+{"ts": "2026-05-14T17:33:57Z", "event": "complexity_override", "feature": "restore-subscription-auth-for-autonomous-worktree", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-14T17:35:00Z", "event": "phase_transition", "feature": "restore-subscription-auth-for-autonomous-worktree", "from": "research", "to": "specify"}
+{"ts": "2026-05-14T18:10:00Z", "event": "spec_approved", "feature": "restore-subscription-auth-for-autonomous-worktree"}
+{"ts": "2026-05-14T18:10:01Z", "event": "phase_transition", "feature": "restore-subscription-auth-for-autonomous-worktree", "from": "specify", "to": "plan"}
