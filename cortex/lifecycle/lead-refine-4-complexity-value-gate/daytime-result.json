@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "dispatch_id": "9140df1e6abc42e6bb7e0165fd01b18c",
+  "feature": "lead-refine-4-complexity-value-gate",
+  "start_ts": "2026-05-14T14:56:42.566817+00:00",
+  "end_ts": "2026-05-14T14:56:42.581568+00:00",
+  "outcome": "failed",
+  "terminated_via": "startup_failure",
+  "deferred_files": [],
+  "error": "dispatch readiness failed [failed_check=auth]: auth probe failed: vector=none, keychain=absent \u2014 Keychain entry absent; no auth vector available",
+  "pr_url": null
+}

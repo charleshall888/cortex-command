@@ -1,0 +1,4 @@
+Warning: no apiKeyHelper configured and no OAuth token file at /Users/charlie.hall/.claude/personal-oauth-token — no explicit auth vector resolved
+auth_probe: vector=none, keychain=absent — Keychain entry not found; startup will fail
+error: dispatch readiness check failed [auth]: auth probe failed: vector=none, keychain=absent — Keychain entry absent; no auth vector available
+  hint: Ensure an SDK auth credential is available: set ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, or authenticate via 'claude auth login' so a Keychain entry is present under the service name 'Claude Code-credentials'.

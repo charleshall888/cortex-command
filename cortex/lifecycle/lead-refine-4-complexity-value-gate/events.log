@@ -6,3 +6,4 @@
 {"ts":"2026-05-13T00:16:18Z","event":"complexity_override","feature":"lead-refine-4-complexity-value-gate","from":"complex","to":"simple","gate":"specify_open_decisions","note":"prior override was a counting artifact; spec body bullets in Open Decisions are explanatory not deferred decisions; re-run returned empty"}
 {"ts":"2026-05-13T11:56:52Z","event":"plan_approved","feature":"lead-refine-4-complexity-value-gate"}
 {"ts":"2026-05-13T11:56:52Z","event":"phase_transition","feature":"lead-refine-4-complexity-value-gate","from":"plan","to":"implement"}
+{"ts":"2026-05-14T14:58:36Z","event":"dispatch_complete","feature":"lead-refine-4-complexity-value-gate","mode":"daytime","outcome":"failed","pr_url":null}
