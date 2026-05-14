@@ -668,6 +668,85 @@ build-plugin:
         fi
     done
 
+# Regenerate plugins/cortex-overnight/install_guard.py from cortex_command/install_guard.py
+# Extracts the check_in_flight_install_core function between BEGIN/END sync markers
+# and writes a stdlib-only sibling file. Pass --check to verify byte-identity without writing.
+sync-install-guard *args:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    python3 - {{args}} <<'PYEOF'
+    import sys
+    from pathlib import Path
+    import re
+
+    REPO = Path(__file__).resolve().parent if False else Path.cwd()
+    CANONICAL = REPO / "cortex_command" / "install_guard.py"
+    SIBLING = REPO / "plugins" / "cortex-overnight" / "install_guard.py"
+    BEGIN = "# BEGIN sync-install-guard:check_in_flight_install_core\n"
+    END = "# END sync-install-guard:check_in_flight_install_core\n"
+
+    HEADER = (
+        '"""Vendored sibling of cortex_command.install_guard.check_in_flight_install_core.\n'
+        "\n"
+        "GENERATED FILE — DO NOT EDIT.\n"
+        "\n"
+        "Regenerate via ``just sync-install-guard``. The canonical source-of-truth\n"
+        "is ``cortex_command/install_guard.py``. The ``.githooks/pre-commit`` parity\n"
+        "gate enforces byte-identity of the ``check_in_flight_install_core``\n"
+        "function source between this file and the canonical via\n"
+        "``just sync-install-guard --check``.\n"
+        "\n"
+        "This sibling exists so the cortex-overnight plugin's PEP 723 venv\n"
+        "(stdlib + mcp + pydantic, no psutil) can honor R28's in-flight install\n"
+        "guard. Callers in this venv supply their own pid-verifier callable\n"
+        "(e.g., os.kill(pid, 0) + ``ps -p <pid> -o lstart=`` parse for macOS\n"
+        "recycled-pid semantics) instead of psutil-backed verification.\n"
+        '"""\n'
+        "\n"
+        "from __future__ import annotations\n"
+        "\n"
+        "import json\n"
+        "import sys\n"
+        "import time\n"
+        "from pathlib import Path\n"
+        "from typing import Callable, Optional\n"
+        "\n"
+        "\n"
+    )
+
+    def extract(text: str) -> str:
+        try:
+            start = text.index(BEGIN) + len(BEGIN)
+            end = text.index(END, start)
+        except ValueError as exc:
+            print(
+                f"sync-install-guard: marker not found in {CANONICAL}: {exc}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        return text[start:end]
+
+    canonical_text = CANONICAL.read_text(encoding="utf-8")
+    body = extract(canonical_text)
+    desired = HEADER + body
+
+    check_mode = "--check" in sys.argv[1:]
+    if check_mode:
+        actual = SIBLING.read_text(encoding="utf-8") if SIBLING.exists() else ""
+        if actual != desired:
+            print(
+                "sync-install-guard: plugins/cortex-overnight/install_guard.py is out of sync.\n"
+                "Run `just sync-install-guard` to regenerate, then stage the result.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        sys.exit(0)
+
+    SIBLING.parent.mkdir(parents=True, exist_ok=True)
+    SIBLING.write_text(desired, encoding="utf-8")
+    print(f"sync-install-guard: wrote {SIBLING.relative_to(REPO)}")
+    PYEOF
+
 # Point git at .githooks/ so the dual-source drift pre-commit hook runs on every commit
 setup-githooks:
     git config core.hooksPath .githooks

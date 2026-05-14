@@ -213,6 +213,7 @@ def _detect_lifecycle_phase_inner(
     plan_approved = False
     spec_transitioned_out = False
     plan_transitioned_out = False
+    feature_wontfix_seen = False
     for line in events_content.splitlines():
         line = line.strip()
         if not line:
@@ -233,7 +234,24 @@ def _detect_lifecycle_phase_inner(
                 spec_transitioned_out = True
             if event.get("from") == "plan":
                 plan_transitioned_out = True
+        elif event_type == "feature_wontfix":
+            feature_wontfix_seen = True
     cycle = review_verdict_count if review_verdict_count > 0 else 1
+
+    # Terminal-state check: feature_wontfix is the operator-decided
+    # terminal marker (per skills/lifecycle/references/wontfix.md). Treat
+    # it as phase=complete so SessionStart enumeration drops the lifecycle
+    # and statusline / dashboard surfaces match. Exact-match on event_type
+    # (not substring scan) — placed before the legacy feature_complete
+    # substring scan at the next step, which stays as a fallback for
+    # legacy logs.
+    if feature_wontfix_seen:
+        return {
+            "phase": "complete",
+            "checked": checked,
+            "total": total,
+            "cycle": cycle,
+        }
 
     # Read review.md only for verdict-value extraction (Step 2 below).
     review_md = feature_dir / "review.md"

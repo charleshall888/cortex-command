@@ -76,7 +76,11 @@ new_sandbox() {
 	export PATH="$TMPDIR_T/bin:/usr/bin:/bin"
 	# Default: stubs not in failure mode.
 	unset STUB_UV_FAIL STUB_CURL_FAIL
-	# Default: no install-tag override (install.sh defaults to v0.1.0).
+	# Default: no install-tag override. Without CORTEX_INSTALL_TAG,
+	# install.sh resolves the latest tag via `git ls-remote --tags`,
+	# which would hit the network and break hermeticity. Tests that do
+	# not specifically exercise the resolver path MUST export
+	# CORTEX_INSTALL_TAG explicitly to short-circuit the resolver.
 	unset CORTEX_INSTALL_TAG
 	unset CORTEX_REPO_URL
 }
@@ -98,8 +102,10 @@ run_install() {
 # ---------------------------------------------------------------------------
 # Test: R2 — when `uv` is absent, the curl-installer bootstrap runs and
 # leaves a usable uv at $HOME/.local/bin/uv before the tool-install step.
+# Pinned tag keeps the resolver off-path (no network).
 # ---------------------------------------------------------------------------
 new_sandbox
+export CORTEX_INSTALL_TAG="v0.2.0"
 rm -f "$TMPDIR_T/bin/uv"
 run_install "$TMPDIR_T/stdout" "$TMPDIR_T/stderr"
 exit_code=$(cat "$TMPDIR_T/.exit")
@@ -112,23 +118,83 @@ fi
 cleanup_sandbox
 
 # ---------------------------------------------------------------------------
-# Test: happy-path — invokes `uv tool install git+<url>@<tag> --force`
-# with the default repo + tag.
+# Test: happy-path-tag-resolver — when CORTEX_INSTALL_TAG is unset,
+# install.sh runs `git ls-remote --tags --refs <url>`, filters for vX.Y.Z
+# tags, sorts via `sort -V`, and picks the highest one. Hermetic via a
+# per-test git shim that intercepts `ls-remote` and emits a fixed
+# fixture; every other git subcommand passes through to real git.
 # ---------------------------------------------------------------------------
 new_sandbox
+# Install a per-test git shim that hands install.sh a controlled set of
+# tag refs. The shim emits the standard `git ls-remote` line format
+# ("<sha>\trefs/tags/<tag>") for a mixed bag of valid/invalid tag names,
+# letting us assert the awk/grep/sort-V pipeline picks v0.9.10 over
+# v0.9.2 (lexical-vs-version sort), and rejects pre-release labels.
+cat > "$TMPDIR_T/bin/git" <<'EOF'
+#!/bin/sh
+# Per-test git shim for happy-path-tag-resolver: intercepts `ls-remote`
+# only, delegates everything else to real git.
+if [ "${1:-}" = "ls-remote" ]; then
+	# Print a representative set of refs to stdout. install.sh's pipeline
+	# (awk -F/ '{print $NF}' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' |
+	# sort -V | tail -1) must pick v0.9.10.
+	cat <<'REFS'
+abcdef0000000000000000000000000000000001	refs/tags/v0.1.0
+abcdef0000000000000000000000000000000002	refs/tags/v0.9.2
+abcdef0000000000000000000000000000000003	refs/tags/v0.9.10
+abcdef0000000000000000000000000000000004	refs/tags/v1.0.0-rc.1
+REFS
+	exit 0
+fi
+exec /usr/bin/git "$@"
+EOF
+chmod +x "$TMPDIR_T/bin/git"
 run_install "$TMPDIR_T/stdout" "$TMPDIR_T/stderr"
 exit_code=$(cat "$TMPDIR_T/.exit")
 uv_argv=$(cat "$TMPDIR_T/uv.argv" 2>/dev/null || echo "")
 ok=1
 [[ $exit_code -eq 0 ]] || ok=0
 [[ "$uv_argv" == *"tool install"* ]] || ok=0
-[[ "$uv_argv" == *"git+https://github.com/charleshall888/cortex-command.git@v0.1.0"* ]] || ok=0
+[[ "$uv_argv" == *"git+https://github.com/charleshall888/cortex-command.git@v0.9.10"* ]] || ok=0
 [[ "$uv_argv" == *"--force"* ]] || ok=0
 if [[ $ok -eq 1 ]]; then
-	pass "install/happy-path-default-tag"
+	pass "install/happy-path-tag-resolver"
 else
-	fail "install/happy-path-default-tag" \
-		"expected exit 0 with `uv tool install git+...@v0.1.0 --force`; got exit=$exit_code, uv.argv=$uv_argv, stderr=$(cat "$TMPDIR_T/stderr")"
+	fail "install/happy-path-tag-resolver" \
+		"expected exit 0 with uv tool install git+...@v0.9.10 --force; got exit=$exit_code, uv.argv=$uv_argv, stderr=$(cat "$TMPDIR_T/stderr")"
+fi
+cleanup_sandbox
+
+# ---------------------------------------------------------------------------
+# Test: tag-resolver-failure — when CORTEX_INSTALL_TAG is unset AND
+# `git ls-remote` produces no matching vX.Y.Z tag, install.sh prints a
+# remediation hint pointing at CORTEX_INSTALL_TAG and exits 1.
+# ---------------------------------------------------------------------------
+new_sandbox
+cat > "$TMPDIR_T/bin/git" <<'EOF'
+#!/bin/sh
+# Per-test git shim: ls-remote returns refs that don't match vX.Y.Z, so
+# the resolver pipeline yields the empty string and install.sh aborts.
+if [ "${1:-}" = "ls-remote" ]; then
+	cat <<'REFS'
+abcdef0000000000000000000000000000000001	refs/tags/release-foo
+abcdef0000000000000000000000000000000002	refs/tags/v1
+REFS
+	exit 0
+fi
+exec /usr/bin/git "$@"
+EOF
+chmod +x "$TMPDIR_T/bin/git"
+run_install "$TMPDIR_T/stdout" "$TMPDIR_T/stderr"
+exit_code=$(cat "$TMPDIR_T/.exit")
+stderr_content=$(cat "$TMPDIR_T/stderr")
+if [[ $exit_code -eq 1 \
+	&& "$stderr_content" == *"could not resolve latest release tag"* \
+	&& "$stderr_content" == *"CORTEX_INSTALL_TAG"* ]]; then
+	pass "install/tag-resolver-no-match-aborts-with-hint"
+else
+	fail "install/tag-resolver-no-match-aborts-with-hint" \
+		"expected exit 1 with remediation hint; got exit=$exit_code, stderr=$stderr_content"
 fi
 cleanup_sandbox
 
@@ -151,9 +217,12 @@ cleanup_sandbox
 # ---------------------------------------------------------------------------
 # Test: CORTEX_REPO_URL shorthand normalization — `<owner>/<repo>` becomes
 # `https://github.com/<owner>/<repo>.git` in the resolved URL log line.
+# Pinned tag short-circuits the resolver so this test isolates the URL
+# normalization surface from the tag-resolver pipeline.
 # ---------------------------------------------------------------------------
 new_sandbox
 export CORTEX_REPO_URL="someone/different-fork"
+export CORTEX_INSTALL_TAG="v0.2.0"
 run_install "$TMPDIR_T/stdout" "$TMPDIR_T/stderr"
 exit_code=$(cat "$TMPDIR_T/.exit")
 stderr_content=$(cat "$TMPDIR_T/stderr")
@@ -168,10 +237,11 @@ cleanup_sandbox
 
 # ---------------------------------------------------------------------------
 # Test: CORTEX_REPO_URL passthrough — full URLs (https/ssh/git@) flow
-# through verbatim.
+# through verbatim. Pinned tag short-circuits the resolver.
 # ---------------------------------------------------------------------------
 new_sandbox
 export CORTEX_REPO_URL="git@github.com:fork-owner/cortex-command.git"
+export CORTEX_INSTALL_TAG="v0.2.0"
 run_install "$TMPDIR_T/stdout" "$TMPDIR_T/stderr"
 exit_code=$(cat "$TMPDIR_T/.exit")
 stderr_content=$(cat "$TMPDIR_T/stderr")
@@ -188,9 +258,11 @@ cleanup_sandbox
 # Test: R7 — pre-tool-install stderr ordering. The resolved-URL log line
 # must appear BEFORE any uv invocation. Verified by line-number comparison
 # within stderr (uv runs silently when stubbed, so we instead verify the
-# log line precedes the install-completion log line).
+# log line precedes the install-completion log line). Pinned tag keeps
+# the resolver off-path.
 # ---------------------------------------------------------------------------
 new_sandbox
+export CORTEX_INSTALL_TAG="v0.2.0"
 run_install "$TMPDIR_T/stdout" "$TMPDIR_T/stderr"
 exit_code=$(cat "$TMPDIR_T/.exit")
 url_line=$(grep -n '\[cortex-install\] resolved repo URL' "$TMPDIR_T/stderr" | head -1 | cut -d: -f1)
@@ -214,8 +286,10 @@ cleanup_sandbox
 # Test: R10 — idempotent re-run. Two consecutive invocations both exit 0
 # and each calls `uv tool install ... --force`, so the second run picks
 # up any upstream changes via the --force-driven entry-point regeneration.
+# Pinned tag keeps the resolver off-path.
 # ---------------------------------------------------------------------------
 new_sandbox
+export CORTEX_INSTALL_TAG="v0.2.0"
 run_install "$TMPDIR_T/stdout1" "$TMPDIR_T/stderr1"
 exit1=$(cat "$TMPDIR_T/.exit")
 calls_after_1=$(wc -l < "$TMPDIR_T/uv.argv" 2>/dev/null | tr -d ' ')
@@ -237,9 +311,12 @@ cleanup_sandbox
 
 # ---------------------------------------------------------------------------
 # Test: R11 — failing uv -> exit 1 (not uv's native code). The run() wrapper
-# catches non-zero exits and re-exits with the canonical 1.
+# catches non-zero exits and re-exits with the canonical 1. Pinned tag
+# keeps the resolver off-path so the failure path under test is the uv
+# invocation, not the resolver.
 # ---------------------------------------------------------------------------
 new_sandbox
+export CORTEX_INSTALL_TAG="v0.2.0"
 export STUB_UV_FAIL=1
 run_install "$TMPDIR_T/stdout" "$TMPDIR_T/stderr"
 exit_code=$(cat "$TMPDIR_T/.exit")

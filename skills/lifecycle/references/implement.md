@@ -85,7 +85,21 @@ cortex-daytime-dispatch-writer --feature {slug} --dispatch-id {uuid} --mode init
 
 Invoke `cortex-daytime-dispatch-writer` in init mode — see the module for the canonical atomic-write contract and `daytime-dispatch.json` schema.
 
-**Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed. The dispatch uses the promoted `cortex-daytime-pipeline` console-script — registration by `cortex init` makes the default sandbox-registered worktree root work without a per-skill env-prefix; the console-script closes the SDK-importability gap on the Bash-tool path:
+**Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed. The dispatch uses the promoted `cortex-daytime-pipeline` console-script — registration by `cortex init` makes the default sandbox-registered worktree root work without a per-skill env-prefix; the console-script closes the SDK-importability gap on the Bash-tool path.
+
+**Preflight (dispatch-readiness fail-fast).** Before the launch line below, run a separate Bash call to confirm the console-script is reachable on PATH:
+
+```
+command -v cortex-daytime-pipeline >/dev/null 2>&1
+```
+
+When the command is found (exit 0), proceed to the launch line. When the command is missing (non-zero exit), surface a fail-fast diagnostic to the user with these three lines and exit §1a — do not proceed to subprocess launch:
+
+- Autonomous daytime worktree dispatch requires the `cortex-daytime-pipeline` console-script.
+- It is normally installed by `uv tool install` of the cortex-command package. The current shell PATH may be missing it.
+- Re-run `uv tool upgrade cortex-command` (which defers tag resolution to `uv tool`) or `uv tool update-shell` and reload your shell, then retry. Exiting §1a.
+
+The scope of this preflight is **dispatch-readiness** only: it is the fail-fast diagnostic for the intentional MCP-tool-call-gate gap on the Bash-tool subprocess dispatch path (per #145's wontfix and #146's two-layer auto-update model — see `docs/setup.md ## Upgrade & maintenance`). Future skill authors should not copy this fail-fast pattern to non-dispatch-readiness contexts; `command -v` elsewhere in skill prose (e.g., `complete.md:39,42`) remains warn-and-continue. The launch line follows:
 
 ```
 DAYTIME_DISPATCH_ID={uuid} cortex-daytime-pipeline --feature {slug} > cortex/lifecycle/{feature}/daytime.log 2>&1

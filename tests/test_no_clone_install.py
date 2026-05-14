@@ -343,7 +343,8 @@ def _fail_completed(stderr: str = "uv tool install: simulated failure") -> subpr
 def _print_root_success_stdout() -> str:
     return json.dumps(
         {
-            "version": "1.1",
+            "version": "0.1.0",
+            "schema_version": "2.0",
             "root": "/fake/user/project",
             "package_root": "/fake/site-packages/cortex_command",
             "remote_url": "git@github.com:user/cortex-command.git",
@@ -468,11 +469,27 @@ def test_mcp_first_install_hook(
     monkeypatch.setenv("XDG_STATE_HOME", str(fresh_state_home))
     monkeypatch.setenv("HOME", str(fresh_state_home))
 
+    # R15 (T11): post-install verification now invokes ``cortex`` via the
+    # absolute path resolved by ``uv tool list --show-paths`` (NOT bare
+    # PATH). The mock ``uv tool list --show-paths`` stdout uses the line
+    # format ``- cortex (/abs/path)`` consumed by
+    # ``_resolve_installed_cortex_path()``.
+    mock_cortex_abs_path = "/tmp/uv-tools/cortex/bin/cortex"
     success_outputs = [
-        # Call 1: uv tool install --reinstall git+...@v0.1.0 — succeeds.
+        # Call 1: uv tool install --reinstall git+...@<CLI_PIN[0]> —
+        # succeeds. Assertion below verifies the trailer pins CLI_PIN[0]
+        # rather than asserting a literal tag here, so this comment
+        # stays stable across CLI_PIN bumps.
         _success_completed("installed cortex-command vX.Y.Z"),
-        # Call 2: cortex --print-root --format json — succeeds with v1.1
-        # JSON envelope.
+        # Call 2: uv tool list --show-paths — succeeds and emits the
+        # ``- cortex (<abs path>)`` line parsed by
+        # ``_resolve_installed_cortex_path()``.
+        _success_completed(
+            "cortex-command v0.1.0\n"
+            f"- cortex ({mock_cortex_abs_path})\n"
+        ),
+        # Call 3: <abs path> --print-root --format json — succeeds with
+        # v1.1 JSON envelope.
         _success_completed(_print_root_success_stdout()),
     ]
     success_run = MagicMock(side_effect=success_outputs)
@@ -492,11 +509,27 @@ def test_mcp_first_install_hook(
         f"phase-3 install URL does not pin CLI_PIN[0]: {success_argvs[0]!r}"
     )
 
-    # Assertion 2 (success path): post-install verification call.
-    expected_verify_argv = ["cortex", "--print-root", "--format", "json"]
-    assert success_argvs[1] == expected_verify_argv, (
-        f"phase-3 second call was not `cortex --print-root --format json`: "
+    # Assertion 2a (success path, R15): ``uv tool list --show-paths`` is
+    # invoked between the install and the verification probe to resolve
+    # the absolute cortex path.
+    expected_resolve_argv = ["uv", "tool", "list", "--show-paths"]
+    assert success_argvs[1] == expected_resolve_argv, (
+        f"phase-3 second call was not `uv tool list --show-paths`: "
         f"{success_argvs[1]!r}"
+    )
+
+    # Assertion 2b (success path, R15): post-install verification call
+    # uses the *absolute* path resolved from ``uv tool list
+    # --show-paths`` (NOT bare ``cortex`` on PATH).
+    expected_verify_argv = [
+        mock_cortex_abs_path,
+        "--print-root",
+        "--format",
+        "json",
+    ]
+    assert success_argvs[2] == expected_verify_argv, (
+        f"phase-3 third call was not `<abs path> --print-root --format "
+        f"json`: {success_argvs[2]!r}"
     )
 
 

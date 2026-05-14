@@ -21,7 +21,6 @@ curl -fsSL https://raw.githubusercontent.com/charleshall888/cortex-command/main/
 
 # 2. In Claude Code, add the marketplace and install plugins
 claude /plugin marketplace add charleshall888/cortex-command
-# Recommended to turn on Auto-Update Marketplace Plugins (this will keep CLI auto updated as well)
 claude /plugin install cortex-core@cortex-command        # Base skills + hooks
 claude /plugin install cortex-overnight@cortex-command   # OPTIONAL - autonomous overnight runs
 
@@ -30,6 +29,8 @@ claude /plugin install cortex-overnight@cortex-command   # OPTIONAL - autonomous
 cd <your-project>
 cortex init
 ```
+
+- **Recommended:** turn on Auto-Update Marketplace Plugins so the cortex CLI stays in sync with the cortex-overnight plugin. See [docs/internals/auto-update.md](docs/internals/auto-update.md) for the two-layer architecture, component map, and release ritual.
 
 Full Setup Guide[Setup guide](docs/setup.md).
 

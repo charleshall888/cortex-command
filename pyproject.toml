@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling>=1.27"]
+requires = ["hatchling>=1.27", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "cortex-command"
-version = "0.1.0"
+dynamic = ["version"]
 requires-python = ">=3.12"
 dependencies = [
     "claude-agent-sdk>=0.1.46,<0.1.47",
@@ -40,6 +40,15 @@ cortex-pipeline-metrics = "cortex_command.pipeline.metrics:main"
 cortex-report = "cortex_command.overnight.report:main"
 cortex-smoke-test = "cortex_command.overnight.smoke_test:main"
 
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "cortex_command/_version.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["cortex_command"]
 
@@ -55,6 +64,7 @@ packages = ["cortex_command"]
 [tool.pytest.ini_options]
 testpaths = ["tests", "cortex_command/dashboard/tests", "cortex_command/pipeline/tests", "cortex_command/overnight/tests", "cortex_command/init/tests", "cortex_command/backlog/tests", "cortex_command/tests"]
 pythonpath = ["."]
+xfail_strict = true
 markers = [
     "slow: opt-in tests that invoke live models (use --run-slow to enable)",
     "serial: tests that spawn real subprocesses and must not run in parallel against each other (R26 / Task 20)",

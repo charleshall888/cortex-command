@@ -222,3 +222,4 @@ Beyond the per-phase references in the table above, these references cover cross
 - [complexity-escalation.md](${CLAUDE_SKILL_DIR}/references/complexity-escalation.md) — `cortex-complexity-escalator` gates at phase transitions
 - [discovery-bootstrap.md](${CLAUDE_SKILL_DIR}/references/discovery-bootstrap.md) — epic-research detection from backlog frontmatter, epic-context injection during refine
 - [backlog-writeback.md](${CLAUDE_SKILL_DIR}/references/backlog-writeback.md) — backlog status check, index.md creation, and write-back to the originating backlog item
+- [wontfix.md](${CLAUDE_SKILL_DIR}/references/wontfix.md) — three-step terminal-state workflow (`git mv` to `archive/` → emit `feature_wontfix` event → `cortex-update-item status=wontfix`) for operator-decided lifecycle termination

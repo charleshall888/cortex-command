@@ -945,12 +945,12 @@ def test_dual_registration_idempotent(
     assert allow.count(cortex_target) == 1
 
 
-# (d) single-entry: exactly one new entry per cortex init invocation
+# (d) single-entry: exactly one cortex/ entry per cortex init invocation
 def test_dual_registration_order_lifecycle_first(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """cortex init adds exactly one cortex/ entry; the registered path ends
-    with /cortex/."""
+    """cortex init registers exactly one cortex/ entry and one worktrees/
+    entry (R7); neither is duplicated."""
     _isolate_home(monkeypatch, tmp_path)
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -963,10 +963,13 @@ def test_dual_registration_order_lifecycle_first(
     )
     allow = data["sandbox"]["filesystem"]["allowWrite"]
     cortex_target = _cortex_target_for(repo)
+    worktree_target = str(repo.resolve() / ".claude" / "worktrees") + "/"
     assert cortex_target in allow
     assert cortex_target.endswith("/cortex/")
-    # Exactly one entry added per invocation.
-    assert len(allow) == 1
+    # Exactly one of each entry per invocation — no duplicates.
+    assert allow.count(cortex_target) == 1
+    assert allow.count(worktree_target) == 1
+    assert len(allow) == 2
 
 
 # (e) malformed-sandbox refusal: R14 gate still rejects

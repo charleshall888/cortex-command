@@ -1,0 +1,54 @@
+{
+  "ts": "2026-05-13T19:27:33Z",
+  "feature": "close-plugin-cli-auto-update-gaps",
+  "artifact": "cortex/lifecycle/close-plugin-cli-auto-update-gaps/plan.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 2,
+    "dispatched": 4
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "cortex_command/overnight/tests/test_cli_schedule.py:140 and test_cancel_scheduled.py:230 (both asserting payload['version'] == '1.0') are not in T4/T5/T6/T9 Files lists; they directly exercise the _emit_json producer and will cause T9's just-test gate to fail with no instruction telling the implementer where to fix them.",
+      "reviewer_angle": "Schema migration atomicity claims and consumer enumeration gaps",
+      "evidence_quote": "Migrate test-mock assertions in tests/test_cli_print_root.py and tests/test_cli_overnight_format_json.py that currently expect 'version': '1.x' to expect 'schema_version': '2.0' ... T6 covers the plugin's tests in parallel."
+    },
+    {
+      "class": "B",
+      "finding": "T4 directive targets '\"version\": \"1.x\"' literals in tests/test_cli_overnight_format_json.py that do not exist as such; actual assertions use payload['version'].startswith('1.') at lines 118-119, 178-179, 253-254. Literal-minded migration would silently change semantics from schema-floor major check to PEP 440 prefix check on the package version.",
+      "reviewer_angle": "Schema migration atomicity claims and consumer enumeration gaps",
+      "evidence_quote": "Migrate test-mock assertions in tests/test_cli_print_root.py and tests/test_cli_overnight_format_json.py that currently expect 'version': '1.x' to expect 'schema_version': '2.0'"
+    },
+    {
+      "class": "B",
+      "finding": "[release-type: skip] marker convention is opt-in with implicit-patch as default; no PR-time lint or branch protection requires the marker. GitHub UI merges by non-skill-aware contributors trigger unwanted patch releases.",
+      "reviewer_angle": "Auto-release workflow security and operational blast radius",
+      "evidence_quote": "Document implicit-patch default. ... [release-type: skip] marker convention (T14 step iii) + the no-bump gate at T13 step (d) when no commits OR explicit skip."
+    },
+    {
+      "class": "B",
+      "finding": "CI lint at T16 fires on push: tags: v*.*.* \u2014 by then the bad tag already exists. The lint can block wheel publish but cannot prevent or roll back the orphan tag pointing at stale CLI_PIN code.",
+      "reviewer_angle": "Auto-release workflow security and operational blast radius",
+      "evidence_quote": "Add a job/step on push: tags: v*.*.* that compares the CLI_PIN[0] literal in plugins/cortex-overnight/server.py:~105 to github.ref_name. Mismatch exits non-zero, blocking the release."
+    },
+    {
+      "class": "B",
+      "finding": "PAT 90-day rotation has no in-workflow expiry detection; silent expiry produces failing push-to-main pipelines with no out-of-band alert or pre-expiry warning.",
+      "reviewer_angle": "Auto-release workflow security and operational blast radius",
+      "evidence_quote": "AUTO_RELEASE_PAT is a long-term secret with 90-day rotation. If revoked silently, auto-release fails on next push to main. T18's runbook documents recovery via workflow_dispatch retry."
+    },
+    {
+      "class": "B",
+      "finding": "Force-pushed tag identity collision is acknowledged residual risk with no detection. Recommended remediation pushes uv-cache-clean burden onto every downstream consumer rather than preventing force-push via tag protection rules.",
+      "reviewer_angle": "Auto-release workflow security and operational blast radius",
+      "evidence_quote": "Force-pushed tag identity collision: documented residual risk in T22 internals doc. CI lint at T16 cannot detect it; recommended remediation is uv cache clean cortex-command on rebuild."
+    },
+    {
+      "class": "B",
+      "finding": "concurrency cancel-in-progress: false queues runs unbounded under push-storm conditions; no justification over cancel-in-progress: true (which would coalesce idempotent release operations and reduce PAT exposure window).",
+      "reviewer_angle": "Auto-release workflow security and operational blast radius",
+      "evidence_quote": "concurrency: { group: auto-release, cancel-in-progress: false }."
+    }
+  ]
+}

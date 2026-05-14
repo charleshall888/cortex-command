@@ -402,6 +402,8 @@ if [ -d "$_lc_base" ]; then
 
     if [ -f "$_lc_fdir/events.log" ] && grep -q '"feature_complete"' "$_lc_fdir/events.log" 2>/dev/null; then
       _lc_phase="complete"
+    elif [ -f "$_lc_fdir/events.log" ] && grep -q '"feature_wontfix"' "$_lc_fdir/events.log" 2>/dev/null; then
+      _lc_phase="complete"
     elif [ -f "$_lc_fdir/review.md" ]; then
       _lc_verdict=$(grep -o '"verdict"[[:space:]]*:[[:space:]]*"[A-Z_]*"' "$_lc_fdir/review.md" 2>/dev/null | tail -1 | sed 's/.*"\([A-Z_]*\)".*/\1/')
       case "$_lc_verdict" in

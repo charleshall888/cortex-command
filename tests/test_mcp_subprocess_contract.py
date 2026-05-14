@@ -143,7 +143,8 @@ def _print_root_payload(root: str = "/fake/root") -> str:
     """Return a JSON string matching ``cortex --print-root``'s contract."""
     return json.dumps(
         {
-            "version": "1.0",
+            "version": "0.1.0",
+            "schema_version": "2.0",
             "root": root,
             "remote_url": "git@github.com:user/cortex-command.git",
             "head_sha": "0" * 40,
@@ -208,7 +209,7 @@ def test_overnight_logs_invokes_expected_argv(server_module) -> None:
 
     logs_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "lines": ['{"msg":"hello"}'],
             "next_cursor": "@128",
             "files": "events",
@@ -253,7 +254,7 @@ def test_overnight_cancel_invokes_expected_argv(server_module) -> None:
 
     cancel_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "cancelled": True,
             "session_id": "alpha",
             "pgid": 12345,
@@ -293,7 +294,7 @@ def test_overnight_list_sessions_invokes_expected_argv(
 
     list_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "active": [
                 {
                     "session_id": "active-1",
@@ -344,7 +345,7 @@ def test_overnight_start_run_concurrent_refusal_via_mock(
 
     refusal_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "error": "concurrent_runner",
             "session_id": "existing-session",
             "existing_pid": 99999,
@@ -390,7 +391,13 @@ def test_major_version_mismatch_is_rejected(server_module) -> None:
 
     bad_payload = json.dumps(
         {
-            "version": "2.0",
+            # Re-keyed from "version" -> "schema_version" by T9 (consumer
+            # migration). Under the post-T10 floor (MCP_REQUIRED_CLI_VERSION
+            # = "2.0") a forward-major value (e.g. "3.0") is the canonical
+            # mismatch case: it preserves the original test intent
+            # (a CLI emitting a major newer than the MCP supports must be
+            # rejected) under the new floor. Task 11 follow-up.
+            "schema_version": "3.0",
             "lines": [],
             "next_cursor": None,
             "files": "events",
@@ -418,7 +425,14 @@ def test_minor_version_greater_skips_unknown_fields(server_module) -> None:
 
     forward_compat_payload = json.dumps(
         {
-            "version": "1.99",
+            # Re-keyed from "1.99" -> "2.99" by T11 follow-up. Under
+            # the post-T10 floor (MCP_REQUIRED_CLI_VERSION = "2.0") a
+            # minor-greater value within the same major is the canonical
+            # forward-compat case: it preserves the original test intent
+            # (minor-greater within the same major is accepted; unknown
+            # fields silently dropped by Pydantic's extra="ignore") under
+            # the new floor.
+            "schema_version": "2.99",
             "lines": ['{"msg":"hi"}'],
             "next_cursor": "@1",
             "files": "events",
@@ -484,7 +498,7 @@ def test_overnight_start_concurrent_runner_json_shape() -> None:
 
       * exit non-zero
       * emit a parseable JSON envelope on stdout containing
-        ``"version": "1.0"`` and ``"error": "concurrent_runner"``
+        ``"schema_version": "2.0"`` and ``"error": "concurrent_runner"``
       * include the existing session's id
     """
 
@@ -538,7 +552,14 @@ def test_overnight_start_concurrent_runner_json_shape() -> None:
     )
 
     payload = json.loads(completed.stdout)
-    assert isinstance(payload.get("version"), str)
-    assert payload["version"].startswith("1.")
+    # Re-keyed from "version" -> "schema_version" by T9 (consumer
+    # migration) and bumped 1.x -> 2.x by T10 (schema-major bump).
+    # Under the post-T10 envelope, the concurrent_runner refusal
+    # carries ``"schema_version": "2.0"`` (M.m form per Terraform's
+    # ``format_version`` precedent); ``version`` is now the package
+    # version which the CLI emits only on ``--print-root``, not on
+    # error refusal envelopes.
+    assert isinstance(payload.get("schema_version"), str)
+    assert payload["schema_version"].startswith("2.")
     assert payload.get("error") == "concurrent_runner"
     assert payload.get("session_id") == session_id

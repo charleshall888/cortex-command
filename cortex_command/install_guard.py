@@ -35,6 +35,21 @@ stale — the guard returns and emits a stderr warning recommending
 ``cortex overnight cancel <id> --force``. This reuses the self-heal
 pattern at ``cli_handler.py:382-397`` so a crashed runner cannot
 permanently lock out reinstalls.
+
+Architecture: the active-session.json read + liveness check logic
+lives in :func:`check_in_flight_install_core` — a stdlib-only function
+that takes the active-session path, a pid-verifier callable, and a
+``now`` callable (defaulting to ``time.time``) as parameters. The
+``now`` parameter exists purely to enable deterministic tests. The
+core is vendored byte-identically into
+``plugins/cortex-overnight/install_guard.py`` (enforced by
+``.githooks/pre-commit`` + ``just sync-install-guard``) so the
+plugin's PEP 723 venv — which deliberately has no psutil dependency —
+can honor R28 by supplying its own pid-verifier callable. The
+CLI-specific carve-outs (``CORTEX_ALLOW_INSTALL_DURING_RUN``,
+argparse cancel-bypass) live in the wrapper :func:`check_in_flight_install`,
+NOT in the core, because those are dispatch-path concerns that do not
+apply to MCP-tool-call-gated paths.
 """
 
 from __future__ import annotations
@@ -43,7 +58,9 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
+from typing import Callable, Optional
 
 # Mirror of ``cortex_command.overnight.ipc.ACTIVE_SESSION_PATH``. We
 # duplicate the path derivation rather than importing ``ipc`` because
@@ -127,67 +144,68 @@ def _is_cancel_force_invocation(argv: list[str]) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Main guard entry point
+# Core guard logic — stdlib-only, vendored to plugins/cortex-overnight/
 # ---------------------------------------------------------------------------
+# BEGIN sync-install-guard:check_in_flight_install_core
+def check_in_flight_install_core(
+    active_session_path: Path,
+    pid_verifier: Callable[[dict], bool],
+    now: Callable[[], float] = time.time,
+) -> Optional[str]:
+    """Return a reason-string when an in-flight install must be blocked, else None.
 
-def check_in_flight_install() -> None:
-    """Abort if an overnight session is live and this is an install-mutation path.
+    Stdlib-only. The ``pid_verifier`` callable AND the ``now`` callable
+    are parameters to preserve the stdlib-only contract: callers in the
+    CLI (psutil available) and in the plugin's PEP 723 venv (no psutil)
+    each supply an appropriate pid-verifier. ``now`` enables
+    deterministic tests.
 
-    Carve-outs evaluated top-to-bottom; first match returns immediately:
+    Returns:
+        ``None`` when the active-session pointer is absent, malformed,
+        complete, or stale (with a stderr self-heal warning in the
+        stale cases). A non-empty reason-string when a live in-flight
+        runner is detected and the caller must abort.
 
-    1. ``CORTEX_ALLOW_INSTALL_DURING_RUN=1`` — explicit user opt-out.
-    2. ``overnight cancel <id> --force`` cancel-bypass.
+    This function is vendored byte-identically into
+    ``plugins/cortex-overnight/install_guard.py`` via
+    ``just sync-install-guard``; the ``.githooks/pre-commit`` parity
+    gate enforces source identity. Do not edit the vendored sibling
+    directly — edit this function and regenerate.
 
-    Then the main active-session + liveness check.
+    The ``now`` parameter is unused in the current logic but reserved
+    for time-windowed decisions (e.g., stale-pointer TTL). It is part
+    of the signature so future additions remain stdlib-only.
     """
-    # (1) explicit user opt-out. PASS INLINE; do not `export` in the
-    # shell, because exporting inherits into spawned children and
-    # silently re-disables R28 across the whole shell session.
-    if os.environ.get("CORTEX_ALLOW_INSTALL_DURING_RUN") == "1":
-        return
+    _ = now  # reserved for future use (e.g., stale-pointer TTL)
 
-    # (2) cancel-bypass — a user mid-run must always be able to run
-    # ``cortex overnight cancel <id> --force`` to clear a pointer.
-    if _is_cancel_force_invocation(sys.argv[1:]):
-        return
-
-    # -------------------------------------------------------------------
-    # Main check: read the active-session pointer directly. Defer the
-    # ``ipc`` import (which pulls in psutil) until we actually need
-    # ``verify_runner_pid`` — that way invocations with no overnight
-    # session in flight don't trip on a missing psutil.
-    # -------------------------------------------------------------------
-    if not _ACTIVE_SESSION_PATH.exists():
-        return
+    if not active_session_path.exists():
+        return None
 
     try:
-        active = json.loads(_ACTIVE_SESSION_PATH.read_text(encoding="utf-8"))
+        active = json.loads(active_session_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return  # Unreadable / malformed — treat as absent.
+        return None  # Unreadable / malformed — treat as absent.
 
     if not isinstance(active, dict):
-        return
+        return None
 
     phase = active.get("phase")
     if phase == "complete":
-        return
+        return None
 
     # Liveness check: even if phase != "complete", the active-session
     # pointer may be stale after a runner crash. Read the named session's
-    # runner.pid and verify the recorded process is alive with the right
-    # magic/start_time. If not, treat the pointer as stale — the guard
-    # returns and recommends `cortex overnight cancel <id> --force` to
-    # clear the stale state. (Same self-heal pattern as
-    # cli_handler.py:382-397.)
+    # runner.pid and call the supplied pid_verifier. If not alive,
+    # treat the pointer as stale — return None and emit a stderr
+    # warning recommending `cortex overnight cancel <id> --force`.
     session_dir_str = active.get("session_dir")
     session_id = active.get("session_id", "<unknown>")
     if not isinstance(session_dir_str, str):
-        return  # Malformed pointer — treat as stale.
+        return None  # Malformed pointer — treat as stale.
 
     session_dir = Path(session_dir_str)
     runner_pid_path = session_dir / "runner.pid"
     if not runner_pid_path.exists():
-        # Pointer references a session whose runner.pid is gone — stale.
         print(
             f"warning: stale active-session pointer for {session_id!r} "
             f"(runner.pid missing). Run "
@@ -195,18 +213,14 @@ def check_in_flight_install() -> None:
             file=sys.stderr,
             flush=True,
         )
-        return
+        return None
 
     try:
         pid_data = json.loads(runner_pid_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         pid_data = None
 
-    # Only now do we need psutil — defer the ``ipc`` import here so
-    # absent / malformed paths don't pay it.
-    from cortex_command.overnight import ipc
-
-    if pid_data is None or not ipc.verify_runner_pid(pid_data):
+    if pid_data is None or not pid_verifier(pid_data):
         # Runner is dead/missing but pointer lingers. Warn and allow.
         print(
             f"warning: stale active-session pointer for {session_id!r} "
@@ -215,10 +229,10 @@ def check_in_flight_install() -> None:
             file=sys.stderr,
             flush=True,
         )
-        return
+        return None
 
-    # Real, live in-flight runner — abort.
-    raise InstallInFlightError(
+    # Real, live in-flight runner — block.
+    return (
         f"cortex: overnight session {session_id!r} is in-flight "
         f"(phase={phase!r}). Refusing to run to avoid clobbering the "
         f"running package mid-session.\n"
@@ -231,3 +245,49 @@ def check_in_flight_install() -> None:
         f"inherited by spawned children and silently re-disable R28 "
         f"across the whole shell session).\n"
     )
+# END sync-install-guard:check_in_flight_install_core
+
+
+# ---------------------------------------------------------------------------
+# CLI-side wrapper: carve-outs + psutil-backed pid_verifier
+# ---------------------------------------------------------------------------
+
+def _cli_pid_verifier(pid_data: dict) -> bool:
+    """psutil-backed pid verifier — defers the ipc import to keep
+    stdlib-only callers (e.g., absent-session paths) from paying it.
+    """
+    # Defer the ``ipc`` import (which pulls in psutil) until we actually
+    # need ``verify_runner_pid``.
+    from cortex_command.overnight import ipc
+    return ipc.verify_runner_pid(pid_data)
+
+
+def check_in_flight_install() -> None:
+    """Abort if an overnight session is live and this is an install-mutation path.
+
+    Carve-outs evaluated top-to-bottom; first match returns immediately:
+
+    1. ``CORTEX_ALLOW_INSTALL_DURING_RUN=1`` — explicit user opt-out.
+    2. ``overnight cancel <id> --force`` cancel-bypass.
+
+    Then delegates to :func:`check_in_flight_install_core` for the
+    active-session + liveness check. If the core returns a non-None
+    reason-string, raise :class:`InstallInFlightError`.
+    """
+    # (1) explicit user opt-out. PASS INLINE; do not `export` in the
+    # shell, because exporting inherits into spawned children and
+    # silently re-disables R28 across the whole shell session.
+    if os.environ.get("CORTEX_ALLOW_INSTALL_DURING_RUN") == "1":
+        return
+
+    # (2) cancel-bypass — a user mid-run must always be able to run
+    # ``cortex overnight cancel <id> --force`` to clear a pointer.
+    if _is_cancel_force_invocation(sys.argv[1:]):
+        return
+
+    reason = check_in_flight_install_core(
+        _ACTIVE_SESSION_PATH,
+        pid_verifier=_cli_pid_verifier,
+    )
+    if reason is not None:
+        raise InstallInFlightError(reason)

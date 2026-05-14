@@ -19,11 +19,72 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  # Defense-in-depth lint per spec R18: verify that the CLI_PIN[0] literal in
+  # plugins/cortex-overnight/server.py matches the pushed tag. The auto-release
+  # workflow (auto-release.yml) bumps CLI_PIN on every push to main, so on the
+  # happy path this lint is redundant. It catches drift on manual emergency
+  # tag pushes (PAT revoked, workflow disabled, etc.) and blocks the release
+  # so a stale wheel never gets published. Subsumes #212's drift-lint goal.
+  cli-pin-lint:
+    name: CLI_PIN drift lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify CLI_PIN[0] matches pushed tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          tag = os.environ["TAG"]
+          path = "plugins/cortex-overnight/server.py"
+          with open(path, encoding="utf-8") as f:
+              text = f.read()
+          # Same regex shape as bin/cortex-rewrite-cli-pin: format-tolerant,
+          # anchored at start-of-line, captures CLI_PIN[0] in group(2).
+          cli_pin_re = re.compile(
+              r"""
+              ^CLI_PIN\s*=\s*\(
+              \s*(['"])([^'"]*)\1
+              \s*,
+              \s*(['"])([^'"]*)\3
+              \s*,?
+              \s*\)
+              """,
+              re.MULTILINE | re.VERBOSE,
+          )
+          matches = list(cli_pin_re.finditer(text))
+          if len(matches) != 1:
+              print(
+                  f"::error::expected exactly 1 CLI_PIN declaration in {path}, "
+                  f"found {len(matches)}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+          cli_pin_0 = matches[0].group(2)
+          if cli_pin_0 != tag:
+              print(
+                  f"::error::CLI_PIN[0] drift: {path} has CLI_PIN[0]={cli_pin_0!r} "
+                  f"but pushed tag is {tag!r}. Release blocked. "
+                  f"Recovery: rebuild the tag from a commit where CLI_PIN[0] "
+                  f"matches, or re-run the auto-release workflow.",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+          print(f"CLI_PIN[0]={cli_pin_0!r} matches pushed tag {tag!r}.")
+          PY
+
+  release:
+    needs: cli-pin-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3

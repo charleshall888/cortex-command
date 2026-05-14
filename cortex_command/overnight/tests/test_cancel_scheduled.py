@@ -227,7 +227,7 @@ def test_cancel_scheduled_launch_json_envelope(
 
     assert rc == 0
     payload = json.loads(captured.out.strip())
-    assert payload["version"] == "1.0"
+    assert payload["schema_version"] == "2.0"
     assert payload["cancelled"] is True
     assert payload["session_id"] == session_id
     assert payload["kind"] == "scheduled"

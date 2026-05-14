@@ -61,7 +61,7 @@ def _completed(stdout: str = "", stderr: str = "", returncode: int = 0):
 def _print_root_response():
     """Return a minimal valid ``--print-root`` JSON payload."""
     return json.dumps({
-        "version": "1.0",
+        "schema_version": "2.0",
         "root": "/fake/root",
         "remote_url": "git@github.com:user/repo.git",
         "head_sha": "0" * 40,
@@ -95,7 +95,7 @@ def test_happy_path(server_module) -> None:
     parsed JSON.
     """
     schedule_response = json.dumps({
-        "version": "1.0",
+        "schema_version": "2.0",
         "scheduled": True,
         "session_id": "sess-abc123",
         "label": "com.cortex.overnight.sess-abc123",

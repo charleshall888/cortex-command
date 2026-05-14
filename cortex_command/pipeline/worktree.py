@@ -111,7 +111,11 @@ def _registered_worktree_root() -> Path | None:
     return None
 
 
-def resolve_worktree_root(feature: str, session_id: str | None) -> Path:
+def resolve_worktree_root(
+    feature: str,
+    session_id: str | None,
+    repo_root: Path | None = None,
+) -> Path:
     """Resolve the worktree root directory for a feature.
 
     Resolution order (R6):
@@ -128,6 +132,10 @@ def resolve_worktree_root(feature: str, session_id: str | None) -> Path:
         feature: Feature name used as the final path component.
         session_id: Overnight session ID for cross-repo worktrees. Required
             for branch (d) to be reached; if None, branch (c) is returned.
+        repo_root: Optional pre-resolved repo root. When provided, branch (c)
+            uses it directly instead of running ``git rev-parse``. Pass this
+            when the caller has already resolved the target repo (e.g. via
+            ``--path``) and the process CWD may not be inside that repo.
 
     Returns:
         Resolved absolute Path for the worktree directory.
@@ -149,7 +157,9 @@ def resolve_worktree_root(feature: str, session_id: str | None) -> Path:
         return tmpdir / "overnight-worktrees" / session_id / feature
 
     # (c) Default same-repo path.
-    return _repo_root() / ".claude" / "worktrees" / feature
+    if repo_root is None:
+        repo_root = _repo_root()
+    return repo_root / ".claude" / "worktrees" / feature
 
 
 def create_worktree(

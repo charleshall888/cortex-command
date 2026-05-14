@@ -135,7 +135,8 @@ def server_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     fake_root = tmp_path / "fake-cortex-root"
     (fake_root / ".git").mkdir(parents=True)
     fake_payload = {
-        "version": "1.0",
+        "version": "0.1.0",
+        "schema_version": "2.0",
         "root": str(fake_root),
         "remote_url": "git@github.com:user/cortex-command.git",
         "head_sha": "a" * 40,
@@ -478,13 +479,15 @@ def test_throttle_cache_key_includes_cortex_root_and_remote(
     fake_run, calls = _make_subprocess_recorder()
 
     payload_a = {
-        "version": "1.0",
+        "version": "0.1.0",
+        "schema_version": "2.0",
         "root": str(fork_a),
         "remote_url": "git@github.com:user-a/cortex.git",
         "head_sha": "a" * 40,
     }
     payload_b = {
-        "version": "1.0",
+        "version": "0.1.0",
+        "schema_version": "2.0",
         "root": str(fork_b),
         "remote_url": "git@github.com:user-b/cortex.git",
         "head_sha": "a" * 40,
@@ -606,7 +609,7 @@ def _make_upgrade_recorder(
             return _completed(
                 stdout=json.dumps(
                     {
-                        "version": "1.0",
+                        "schema_version": "2.0",
                         "session_id": "test-session",
                         "phase": "executing",
                         "current_round": 1,
@@ -658,7 +661,8 @@ def test_upgrade_orchestration_invocation_order(
     cortex_root = tmp_path / "cortex"
     (cortex_root / ".git").mkdir(parents=True)
     server_module._CORTEX_ROOT_CACHE = {
-        "version": "1.0",
+        "version": "0.1.0",
+        "schema_version": "2.0",
         "root": str(cortex_root),
         "remote_url": "git@github.com:user/cortex-command.git",
         "head_sha": "a" * 40,
@@ -752,7 +756,8 @@ def test_upgrade_orchestration_post_flock_skip_when_local_caught_up(
     cortex_root = tmp_path / "cortex"
     (cortex_root / ".git").mkdir(parents=True)
     server_module._CORTEX_ROOT_CACHE = {
-        "version": "1.0",
+        "version": "0.1.0",
+        "schema_version": "2.0",
         "root": str(cortex_root),
         "remote_url": "git@github.com:user/cortex-command.git",
         "head_sha": "a" * 40,
@@ -822,7 +827,8 @@ def _concurrent_upgrade_worker(
     spec.loader.exec_module(mod)
 
     mod._CORTEX_ROOT_CACHE = {
-        "version": "1.0",
+        "version": "0.1.0",
+        "schema_version": "2.0",
         "root": cortex_root_str,
         "remote_url": remote_url,
         "head_sha": head_sha,
@@ -1245,7 +1251,8 @@ def test_verification_probe_failure_falls_through_to_on_disk_cli(
     cortex_root = tmp_path / "cortex"
     (cortex_root / ".git").mkdir(parents=True)
     server_module._CORTEX_ROOT_CACHE = {
-        "version": "1.0",
+        "version": "0.1.0",
+        "schema_version": "2.0",
         "root": str(cortex_root),
         "remote_url": "git@github.com:user/cortex-command.git",
         "head_sha": "a" * 40,
@@ -1334,7 +1341,7 @@ def test_schema_floor_triggers_synchronous_upgrade(
     cortex_root = tmp_path / "cortex"
     (cortex_root / ".git").mkdir(parents=True)
     server_module._CORTEX_ROOT_CACHE = {
-        "version": "0.9",
+        "schema_version": "0.9",
         "root": str(cortex_root),
         "remote_url": "git@github.com:user/cortex-command.git",
         "head_sha": "a" * 40,
@@ -1425,7 +1432,7 @@ def test_schema_floor_tool_call_runs_after_upgrade(
     cortex_root = tmp_path / "cortex"
     (cortex_root / ".git").mkdir(parents=True)
     server_module._CORTEX_ROOT_CACHE = {
-        "version": "0.9",
+        "schema_version": "0.9",
         "root": str(cortex_root),
         "remote_url": "git@github.com:user/cortex-command.git",
         "head_sha": "a" * 40,
@@ -1433,7 +1440,7 @@ def test_schema_floor_tool_call_runs_after_upgrade(
 
     status_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "session_id": "alpha",
             "phase": "executing",
             "current_round": 1,
@@ -1650,7 +1657,7 @@ def test_ls_remote_timeout_tool_call_still_returns(
     """
     status_payload = json.dumps(
         {
-            "version": "1.0",
+            "schema_version": "2.0",
             "session_id": "alpha",
             "phase": "executing",
             "current_round": 1,
