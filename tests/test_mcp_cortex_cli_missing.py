@@ -115,7 +115,8 @@ def _print_root_payload(root: str = "/fake/root") -> str:
     """Return a JSON string matching ``cortex --print-root``'s contract."""
     return json.dumps(
         {
-            "version": "1.0",
+            "version": "0.1.0",
+            "schema_version": "2.0",
             "root": root,
             "remote_url": "git@github.com:user/cortex-command.git",
             "head_sha": "0" * 40,

@@ -1,9 +1,10 @@
 """Integration tests for `cortex --print-root` (R3, R16, R2d).
 
 Verifies the forever-public-API JSON shape emitted by the top-level
-``--print-root`` flag (envelope ``version`` ``"1.1"``):
+``--print-root`` flag (envelope ``schema_version`` ``"2.0"``):
 
-  - ``version`` equals ``"1.1"`` (currently shipped envelope version)
+  - ``schema_version`` equals ``"2.0"`` (current schema-floor major)
+  - ``version`` parses as PEP 440 (the installed cortex-command release)
   - ``root`` is an absolute path that exists (the user's cortex project)
   - ``package_root`` is an absolute path that exists (the install location)
   - ``head_sha`` is exactly 40 hex chars when ``root`` is a git repo
@@ -69,8 +70,8 @@ class TestCortexPrintRoot(unittest.TestCase):
         env["CORTEX_REPO_ROOT"] = str(REPO_ROOT)
         return env
 
-    def test_print_root_envelope_v1_1_shape(self):
-        """Exit 0; stdout parses as JSON with version 1.1 envelope fields."""
+    def test_print_root_envelope_v2_0_shape(self):
+        """Exit 0; stdout parses as JSON with schema_version 2.0 envelope fields."""
         proc = _invoke_print_root(self._env_with_repo_root())
 
         self.assertEqual(
@@ -81,11 +82,24 @@ class TestCortexPrintRoot(unittest.TestCase):
 
         payload = json.loads(proc.stdout)
 
-        # version is exactly "1.1" under the current envelope contract.
+        # schema_version is exactly "2.0" under the current envelope contract.
         self.assertEqual(
-            payload.get("version"),
-            "1.1",
-            msg=f"unexpected envelope version: {payload.get('version')!r}",
+            payload.get("schema_version"),
+            "2.0",
+            msg=f"unexpected envelope schema_version: {payload.get('schema_version')!r}",
+        )
+
+        # version is the PEP 440 package version of the installed cortex-command
+        # release (sourced from importlib.metadata; falls back to
+        # ``0.0.0+source`` under a source/editable path). Assert non-empty
+        # string + a digit-led leading segment as a lightweight PEP 440 shape
+        # check — pinning a literal would couple the test to release cadence.
+        version = payload.get("version")
+        self.assertIsInstance(version, str)
+        self.assertGreater(len(version), 0, msg="package version is empty")
+        self.assertTrue(
+            version[0].isdigit(),
+            msg=f"package version does not start with a digit: {version!r}",
         )
 
         # root must be an absolute path that exists on disk.
@@ -167,7 +181,14 @@ class TestCortexPrintRoot(unittest.TestCase):
             msg=f"non-zero exit: stdout={proc.stdout!r} stderr={proc.stderr!r}",
         )
         payload = json.loads(proc.stdout)
-        self.assertEqual(payload.get("version"), "1.1")
+        self.assertEqual(payload.get("schema_version"), "2.0")
+        version = payload.get("version")
+        self.assertIsInstance(version, str)
+        self.assertGreater(len(version), 0, msg="package version is empty")
+        self.assertTrue(
+            version[0].isdigit(),
+            msg=f"package version does not start with a digit: {version!r}",
+        )
         self.assertIn("root", payload)
         self.assertIn("package_root", payload)
 

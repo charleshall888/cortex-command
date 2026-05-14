@@ -97,7 +97,7 @@ When the command is found (exit 0), proceed to the launch line. When the command
 
 - Autonomous daytime worktree dispatch requires the `cortex-daytime-pipeline` console-script.
 - It is normally installed by `uv tool install` of the cortex-command package. The current shell PATH may be missing it.
-- Re-run `uv tool install --reinstall git+https://github.com/charleshall888/cortex-command.git@v0.1.0` or `uv tool update-shell` and reload your shell, then retry. Exiting §1a.
+- Re-run `uv tool upgrade cortex-command` (which defers tag resolution to `uv tool`) or `uv tool update-shell` and reload your shell, then retry. Exiting §1a.
 
 The scope of this preflight is **dispatch-readiness** only: it is the fail-fast diagnostic for the intentional MCP-tool-call-gate gap on the Bash-tool subprocess dispatch path (per #145's wontfix and #146's two-layer auto-update model — see `docs/setup.md ## Upgrade & maintenance`). Future skill authors should not copy this fail-fast pattern to non-dispatch-readiness contexts; `command -v` elsewhere in skill prose (e.g., `complete.md:39,42`) remains warn-and-continue. The launch line follows:
 

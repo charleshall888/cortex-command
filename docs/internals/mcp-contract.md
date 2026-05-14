@@ -6,21 +6,34 @@ The contract exists so the plugin and the CLI can evolve and ship on independent
 
 ## Schema versioning
 
-Every JSON payload the CLI emits for MCP consumption carries a `"version"` string field of the form `"M.m"` — major-dot-minor. The shape follows Terraform's `format_version` precedent (e.g. `terraform show -json` emits `"format_version": "1.0"`): a versioned envelope on every payload, with two-axis evolution rules.
+Every JSON payload the CLI emits for MCP consumption carries two version fields:
 
-- **String, not number.** `"1.10"` parses correctly as a string; as a float it would equal `1.1`. Always parse as `str` then split on `.`.
-- **Initial version: `"1.0"`.** Stamped on every payload from `cortex --print-root`, `cortex overnight start --format json`, `cortex overnight status --format json`, `cortex overnight logs --format json`, and `cortex overnight cancel --format json`. The CLI side of the constant lives at `cortex_command/overnight/cli_handler.py::_JSON_SCHEMA_VERSION`.
-- **Major bump (M increments) = breaking change.** The MCP consumer hard-rejects payloads whose major component differs from its baked-in `MCP_REQUIRED_CLI_VERSION` constant. A major bump is reserved for renaming or retyping an existing field, removing a field, or changing its semantics.
-- **Minor bump (m increments) = additive change.** The MCP consumer skips unknown fields and accepts payloads with a greater minor than its required floor. Minor bumps are how new fields land without breaking older MCP plugins paired with newer CLIs.
-- **Single CLI major in scope.** The first implementation pins the MCP to one CLI major schema version. Multi-major compatibility is explicitly out of scope (see `cortex/lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md` Non-Requirements).
+- **`version`** — the installed cortex-command package version, sourced from `importlib.metadata.version("cortex-command")`. A PEP 440 string (e.g. `"2.0.0"`, `"2.1.0"`, `"0.0.0+source"` on editable installs where package metadata is unavailable). This is what MCP consumers compare against `CLI_PIN[0]` for the auto-update reinstall decision.
+- **`schema_version`** — the envelope schema floor, in `"M.m"` major-dot-minor form. This is what MCP consumers compare against their baked-in `MCP_REQUIRED_CLI_VERSION` constant for the schema-floor compatibility check. The shape follows Terraform's `format_version` precedent (e.g. `terraform show -json` emits `"format_version": "1.0"`): a versioned envelope on every payload, with two-axis evolution rules.
+
+The two fields evolve on independent cadences: a package patch release that adds no schema changes bumps `version` but leaves `schema_version` alone; a schema-only change (e.g. adding a new optional field) bumps `schema_version` but only ships in the next package release.
+
+- **Both fields are strings, not numbers.** `"1.10"` parses correctly as a string; as a float it would equal `1.1`. Always parse `schema_version` as `str` then split on `.`. Parse `version` with `packaging.version.Version` to handle PEP 440 forms like `2.0.0+source`.
+- **Current schema_version: `"2.0"`.** Stamped on every payload from `cortex --print-root`, `cortex overnight start --format json`, `cortex overnight status --format json`, `cortex overnight logs --format json`, and `cortex overnight cancel --format json`. The CLI side of the constant lives at `cortex_command/overnight/cli_handler.py::_JSON_SCHEMA_VERSION`. See the [Schema evolution log](#schema-evolution-log) below for the 1.x → 2.0 major-bump rationale.
+- **Major bump (M increments) = breaking change.** The MCP consumer hard-rejects payloads whose `schema_version` major component differs from its baked-in `MCP_REQUIRED_CLI_VERSION` constant. A major bump is reserved for renaming or retyping an existing field, removing a field, or changing its semantics.
+- **Minor bump (m increments) = additive change.** The MCP consumer skips unknown fields and accepts payloads with a greater `schema_version` minor than its required floor. Minor bumps are how new fields land without breaking older MCP plugins paired with newer CLIs.
+- **Single CLI major in scope.** The first implementation pins the MCP to one CLI schema major. Multi-major compatibility is explicitly out of scope (see `cortex/lifecycle/archive/decouple-mcp-server-from-cli-python-imports-own-auto-update-orchestration/spec.md` Non-Requirements).
 
 ### Forever-public API
 
-The shape of `cortex --print-root` is forever-public-API: append-only after publication; existing fields never change semantics or types without a major bump. Concretely, the four fields named in the [JSON payload reference](#json-payload-reference) below — `version`, `root`, `remote_url`, `head_sha` — are stable forever in their current types and meanings. New fields may be added under a minor bump; existing fields may not be renamed, retyped, or repurposed without a major bump.
+The shape of `cortex --print-root` is forever-public-API: append-only after publication; existing fields never change semantics or types without a major bump. Concretely, the five fields named in the [JSON payload reference](#json-payload-reference) below — `version`, `schema_version`, `root`, `remote_url`, `head_sha` — are stable forever in their current types and meanings. New fields may be added under a minor bump; existing fields may not be renamed, retyped, or repurposed without a major bump.
 
 This stability commitment exists because `cortex --print-root` is the bootstrap call: it is what the MCP uses to discover where the CLI lives, what remote it tracks, and what HEAD it is at. The MCP cannot version-negotiate before reading this payload, so the payload itself must not move underneath it.
 
-The same append-only rule applies to the four overnight verbs documented below (`overnight start`, `overnight status`, `overnight logs`, `overnight cancel`), but those verbs are co-versioned with the CLI: a major bump on any of them is allowed in lock-step with a major bump of `cortex --print-root`'s `version` field. `cortex --print-root` itself is the anchor.
+The same append-only rule applies to the four overnight verbs documented below (`overnight start`, `overnight status`, `overnight logs`, `overnight cancel`), but those verbs are co-versioned with the CLI: a major bump on any of them is allowed in lock-step with a major bump of `cortex --print-root`'s `schema_version` field. `cortex --print-root` itself is the anchor.
+
+### Schema evolution log
+
+A running ledger of every `schema_version` change, with the rationale and the ticket that drove it. New entries land at the top.
+
+- **`2.0`** — ticket [#213](https://github.com/charleshall888/cortex-command/issues/213). The envelope split into two version axes: `version` was repurposed to carry the installed cortex-command package version (PEP 440, sourced from `importlib.metadata.version("cortex-command")`), and a new `schema_version` field was introduced to carry the M.m schema-floor semantic that `version` previously held. Because repurposing an existing field changes its semantics, the [Forever-public API](#forever-public-api) rule mandates a major bump; the schema floor moved from `"1.1"` to `"2.0"`. The split decoupled release versioning from MCP schema compatibility so the plugin can compare `version` against `CLI_PIN[0]` for the auto-update reinstall decision and `schema_version` against `MCP_REQUIRED_CLI_VERSION` for the schema-floor compatibility check on independent cadences. Pre-v2.0.0 plugin/CLI combinations are not supported — a one-time coordinated reinstall of both halves is required.
+- **`1.1`** — ticket #141. Added `package_root` to the `cortex --print-root` envelope. Additive change; `1.0` consumers ignore the new field.
+- **`1.0`** — initial release. Established the versioned-envelope convention across `cortex --print-root`, `cortex overnight start --format json`, `cortex overnight status --format json`, `cortex overnight logs --format json`, and `cortex overnight cancel --format json`.
 
 ## JSON payload reference
 
@@ -34,7 +47,8 @@ Source: `cortex_command/cli.py::_dispatch_print_root` (around lines 128–165).
 
 ```json
 {
-  "version": "1.1",
+  "version": "2.0.0",
+  "schema_version": "2.0",
   "root": "/abs/path/to/user/project",
   "package_root": "/abs/path/to/site-packages/cortex_command",
   "remote_url": "git@github.com:user/their-project.git",
@@ -44,13 +58,14 @@ Source: `cortex_command/cli.py::_dispatch_print_root` (around lines 128–165).
 
 Field semantics:
 
-- `version` — schema-floor stamp; see [Schema versioning](#schema-versioning). Bumped from `"1.0"` to `"1.1"` in ticket 141 when `package_root` was added (additive change — `1.0` consumers ignore the new field).
+- `version` — installed cortex-command package version (PEP 440), sourced from `importlib.metadata.version("cortex-command")`. Falls back to `"0.0.0+source"` on editable/source installs where package metadata is unavailable. MCP consumers compare this against `CLI_PIN[0]` for the auto-update reinstall decision. See [Schema versioning](#schema-versioning).
+- `schema_version` — envelope schema-floor stamp in `"M.m"` form; see [Schema versioning](#schema-versioning). Current value `"2.0"`; see [Schema evolution log](#schema-evolution-log) for the 1.x → 2.0 major-bump rationale.
 - `root` — absolute path to the **user's project** (the directory where they ran `cortex init`). Resolution chain: `CORTEX_REPO_ROOT` env override → CWD when CWD contains either `cortex/lifecycle/` or `cortex/backlog/` → hard-fail on stderr (exit 2) with a guidance message. Note that under non-editable wheel install this is **not** the cortex-command install location — see `package_root` for that.
-- `package_root` — absolute path to the cortex-command package install (e.g. inside `~/.local/share/uv/tools/cortex-command/lib/python<ver>/site-packages/cortex_command/`). Resolved via `Path(cortex_command.__file__).resolve().parent`. Useful for diagnostic introspection; not consumed by R8 throttle keying or R13 schema-floor checks.
+- `package_root` — absolute path to the cortex-command package install (e.g. inside `~/.local/share/uv/tools/cortex-command/lib/python<ver>/site-packages/cortex_command/`). Resolved via `Path(cortex_command.__file__).resolve().parent`. Useful for diagnostic introspection; not consumed by R8 throttle keying or the `schema_version` schema-floor checks.
 - `remote_url` — output of `git -C $root remote get-url origin`, stripped (where `$root` is the user's project root, not the package install). Empty string if the user's project is not a git repository or the git command fails. Never `null`.
 - `head_sha` — output of `git -C $root rev-parse HEAD`, stripped. Empty string if the user's project is not a git repository. Never `null`.
 
-This payload is the MCP's canonical source of truth for the upstream URL and local HEAD that R8 and R13 compare against.
+This payload is the MCP's canonical source of truth for the upstream URL and local HEAD that R8 and the schema-floor check compare against. The `version` field additionally feeds the `_ensure_cortex_installed` reinstall decision against `CLI_PIN[0]`.
 
 ### `cortex overnight start --format json`
 
@@ -62,7 +77,8 @@ The JSON contract is intentionally narrow: it only covers the structured refusal
 
 ```json
 {
-  "version": "1.0",
+  "version": "<package-version>",
+  "schema_version": "2.0",
   "error": "concurrent_runner",
   "session_id": "<existing session id>",
   "existing_pid": 12345
@@ -83,7 +99,7 @@ Source: `cortex_command/overnight/cli_handler.py::handle_status` (around lines 2
 {"active": false}
 ```
 
-Note: this payload pre-dates the schema-versioning convention and does **not** carry a `"version"` field. The MCP treats an absent `"version"` on a `{"active": false}` payload as the legacy unversioned no-active-session signal and accepts it. Future major bumps may version-stamp this branch.
+Note: this payload pre-dates the schema-versioning convention and does **not** carry `"version"` or `"schema_version"` fields. The MCP treats an absent envelope on a `{"active": false}` payload as the legacy unversioned no-active-session signal and accepts it. Future major bumps may version-stamp this branch.
 
 **Active session (exit 0):**
 
@@ -103,7 +119,7 @@ Field semantics:
 - `current_round` — integer; defaults to `0` when missing.
 - `features` — object; the `features` map from `overnight-state.json` passed through verbatim. May be empty.
 
-Note: this payload is also unversioned in the current shape, mirroring the `{"active": false}` legacy. The MCP's schema-floor check (R13) reads `version` from `cortex --print-root`, not from `overnight status`, so the absence here does not block the schema-floor gate.
+Note: this payload is also unversioned in the current shape, mirroring the `{"active": false}` legacy. The MCP's schema-floor check reads `schema_version` from `cortex --print-root`, not from `overnight status`, so the absence here does not block the schema-floor gate.
 
 ### `cortex overnight logs --format json`
 
@@ -113,7 +129,8 @@ Source: `cortex_command/overnight/cli_handler.py::handle_logs` (around lines 500
 
 ```json
 {
-  "version": "1.0",
+  "version": "<package-version>",
+  "schema_version": "2.0",
   "lines": ["...", "..."],
   "next_cursor": "@<byte-offset>",
   "files": "events"
@@ -122,7 +139,8 @@ Source: `cortex_command/overnight/cli_handler.py::handle_logs` (around lines 500
 
 Field semantics:
 
-- `version` — schema-floor stamp.
+- `version` — package version (PEP 440).
+- `schema_version` — schema-floor stamp.
 - `lines` — array of strings, one per log line, in file order.
 - `next_cursor` — opaque cursor of the form `"@<int>"` (byte offset). Pass back unchanged as `--since`.
 - `files` — echo of the `--files` argument: `"events"`, `"agent-activity"`, or `"escalations"`.
@@ -131,7 +149,8 @@ Field semantics:
 
 ```json
 {
-  "version": "1.0",
+  "version": "<package-version>",
+  "schema_version": "2.0",
   "error": "invalid_session_id" | "no_active_session" | "invalid_cursor",
   "message": "<human string>"
 }
@@ -145,7 +164,8 @@ Source: `cortex_command/overnight/cli_handler.py::handle_cancel` (around lines 3
 
 ```json
 {
-  "version": "1.0",
+  "version": "<package-version>",
+  "schema_version": "2.0",
   "cancelled": true,
   "session_id": "<id>",
   "pgid": 12345
@@ -158,7 +178,8 @@ Source: `cortex_command/overnight/cli_handler.py::handle_cancel` (around lines 3
 
 ```json
 {
-  "version": "1.0",
+  "version": "<package-version>",
+  "schema_version": "2.0",
   "error": "invalid_session_id" | "no_active_session" | "stale_lock_cleared" | "cancel_failed",
   "message": "<human string>"
 }
@@ -180,7 +201,7 @@ Mitigations that exist:
 
 - **Skip predicates (R9).** `CORTEX_DEV_MODE=1`, dirty working tree, or non-`main` branch all suppress the auto-update path. The dogfooding case has a per-machine kill switch via the env var.
 - **Bare-shell users opt out by default.** No MCP-orchestrated upgrade fires for invocations that aren't running through the MCP server. `cortex upgrade` from a terminal stays explicit and user-driven.
-- **Schema-floor refusal (R13).** A compromised CLI that emits malformed `version` payloads will be rejected by the MCP's schema-floor check rather than silently consumed.
+- **Schema-floor refusal (R13).** A compromised CLI that emits malformed `schema_version` payloads will be rejected by the MCP's schema-floor check rather than silently consumed.
 
 Mitigations that are explicitly out of scope for this ticket:
 

@@ -4,6 +4,25 @@ All notable changes to cortex-command will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.0.0] - 2026-05-13
+
+Closes the plugin/CLI auto-update gaps end-to-end (#213). This is a major release because the print-root JSON envelope's `version` field semantic changes (see BREAKING below) and the schema-version floor bumps 1.x → 2.0.
+
+### Added
+
+- **Gap A closed via auto-release workflow on push to main** — `.github/workflows/release.yml` (or equivalent) now auto-bumps the cortex-overnight plugin's `CLI_PIN` via a PAT-authenticated GitHub Actions job that tags and pushes on each merge to `main`; the existing release workflow fires on the new tag and publishes the wheel as a release asset. A defense-in-depth CI lint at `.github/workflows/release.yml` flags manual-tag emergencies where the auto-bump path was bypassed. Subsumes #212. PR-body marker convention (`release-bump: major|minor|patch`) drives the bump selection; this PR carries `release-bump: major` to land v2.0.0.
+- **Gap C closed via R4 version-comparison branch** — `_ensure_cortex_installed` in `plugins/cortex-overnight/server.py` now reads `payload["version"]` (package version, PEP 440) from the print-root envelope and reinstalls when it diverges from `CLI_PIN[0]`. The branch honors the in-flight install guard via the vendored `install_guard.check_in_flight_install_core` and emits an NDJSON record with stage `version_mismatch_reinstall` on success or `version_mismatch_blocked_by_inflight_session` when an active overnight session blocks the reinstall.
+- **`install_guard` vendored as a plugin sibling with dual-source parity** — `cortex_command/install_guard.py` is refactored to expose a stdlib-only `check_in_flight_install_core(active_session_path)` function; the same function is vendored byte-identically to `plugins/cortex-overnight/install_guard.py` so the plugin's PEP 723 venv can import it without depending on the installed CLI. Byte-level parity is enforced by `.githooks/pre-commit` (analogous to `BUILD_OUTPUT_PLUGINS` mirroring) and asserted by `tests/test_install_guard_parity.py` across a fixture matrix covering live-pid, dead-pid, recycled-pid, and each carve-out env var.
+- **`schema_version` field on every JSON envelope** emitted by `cortex_command/` for MCP consumption — carries the M.m schema-floor semantic that the `version` field previously held; initial value `"2.0"`.
+
+### Changed
+
+- **Gap B closed via hatch-vcs dynamic versioning + envelope schema-major bump 1.x → 2.0** — the CLI wheel now sources its version from `hatch-vcs` (driven by the release tag), and `cortex_command/overnight/cli_handler.py:_JSON_SCHEMA_VERSION` is bumped from `"1.0"` to `"2.0"`. `docs/internals/mcp-contract.md` is rewritten to declare the envelope as carrying both `version` (package, PEP 440) and `schema_version` (schema-floor, M.m), with a new "Schema evolution log" subsection citing #213. All 17 `_emit_json` call sites in `cli_handler.py` now stamp `schema_version` instead of `version` for the schema-floor; consumer reads in `plugins/cortex-overnight/server.py` (`_check_version`, `_schema_floor_violated`) migrate to `payload.get("schema_version")`. The R13 silent short-circuit at `server.py:1499-1565` is replaced with a stderr remediation message (`Schema-floor violation: installed CLI schema_version=...`).
+
+### Breaking
+
+- **BREAKING: print-root envelope `version` field semantic changes from schema-major-minor (M.m) to PEP 440 package version**. `cortex --print-root --format json` previously emitted `"version": "1.1"` (the schema floor). It now emits `"version": "<package-version>"` (e.g. `"2.0.0"`, sourced from `importlib.metadata.version("cortex-command")`) and the M.m schema-floor moves to a new sibling field `"schema_version": "2.0"`. Consumers that previously parsed `version` as M.m must migrate to reading `schema_version`. The schema-major bump (1.x → 2.0) is a one-way change per `docs/internals/mcp-contract.md`'s forever-public-API rule that repurposing an existing field requires a major bump; pre-v2.0.0 plugin/CLI pairings hard-fail by design via `_check_version` and `_schema_floor_violated`. **Operator action**: bump both `cortex-command` CLI and the `cortex-overnight` plugin together to v2.0.0+ — running an older plugin against a v2.0.0+ CLI (or vice versa) is unsupported.
+
 ## [v1.0.0] - 2026-05-12
 
 ### Changed
@@ -81,5 +100,7 @@ The first tagged release of cortex-command. Establishes the no-clone install pat
 - **`cortex_command/overnight/outcome_router.py:307-309`** — vestigial `sys.path.insert(0, str(_PROJECT_ROOT))` block. Under wheel install, `site-packages/` is on `sys.path` and the qualified imports resolve correctly without the manual insert.
 - **`cortex_command/cli.py:_dispatch_upgrade`** install-mutation logic (subprocess + git operations). The function is retained as an advisory printer only.
 
-[Unreleased]: https://github.com/charleshall888/cortex-command/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/charleshall888/cortex-command/compare/v2.0.0...HEAD
+[v2.0.0]: https://github.com/charleshall888/cortex-command/releases/tag/v2.0.0
+[v1.0.0]: https://github.com/charleshall888/cortex-command/releases/tag/v1.0.0
 [v0.1.0]: https://github.com/charleshall888/cortex-command/releases/tag/v0.1.0

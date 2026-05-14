@@ -1,37 +1,5 @@
 [
   {
-    "id": 213,
-    "title": "Close plugin/CLI auto-update gaps and author authoritative internals doc",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "mcp",
-      "upgrade",
-      "internals",
-      "plugin"
-    ],
-    "areas": [
-      "overnight-runner",
-      "skills"
-    ],
-    "created": "2026-05-13",
-    "updated": "2026-05-13",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/close-plugin-cli-auto-update-gaps/spec.md",
-    "discovery_source": "210-refresh-install-update-docs-close-mcp-only-auto-update-gaps.md",
-    "plan": null,
-    "uuid": "4f90fc64-cae9-4a87-9245-8256ddf9b234",
-    "lifecycle_slug": "close-plugin-cli-auto-update-gaps",
-    "session_id": "5a6fc0f7-aeca-40b9-a626-21e5b67fd06e",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -128,7 +96,7 @@
   {
     "id": 211,
     "title": "R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up)",
-    "status": "backlog",
+    "status": "superseded",
     "priority": "medium",
     "type": "bug",
     "tags": [
@@ -155,7 +123,7 @@
   {
     "id": 212,
     "title": "CLI_PIN drift lint (#146 hygiene)",
-    "status": "backlog",
+    "status": "superseded",
     "priority": "medium",
     "type": "chore",
     "tags": [

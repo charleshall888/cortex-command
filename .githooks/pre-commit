@@ -225,6 +225,33 @@ if [ "$path_hardcoding_triggered" -eq 1 ]; then
 fi
 
 # -----------------------------------------------------------------------------
+# Phase 1.95 — install_guard byte-identity parity (R11 / T8)
+# -----------------------------------------------------------------------------
+# When any staged path is the canonical install_guard, the vendored sibling, or
+# the sync recipe itself, run `just sync-install-guard --check` to verify the
+# vendored sibling at plugins/cortex-overnight/install_guard.py is byte-identical
+# to the regenerated artifact from cortex_command/install_guard.py. Without this
+# gate, an autoformatter pass on the canonical can silently drift the sibling
+# and break the plugin's stdlib-only in-flight guard.
+install_guard_triggered=0
+while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    case "$f" in
+        cortex_command/install_guard.py|plugins/cortex-overnight/install_guard.py|justfile)
+            install_guard_triggered=1
+            break
+            ;;
+    esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+
+if [ "$install_guard_triggered" -eq 1 ]; then
+    if ! just sync-install-guard --check; then
+        echo "pre-commit: install_guard parity failed — run 'just sync-install-guard' and stage plugins/cortex-overnight/install_guard.py." >&2
+        exit 1
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Phase 2 — Short-circuit decision
 # -----------------------------------------------------------------------------
 staged=$(git diff --cached --name-only --diff-filter=ACMR)

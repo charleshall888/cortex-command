@@ -1,0 +1,201 @@
+# Auto-release workflow — on push to main, bumps CLI_PIN[0] in the
+# cortex-overnight plugin source, commits, tags vX.Y.Z, and pushes both
+# branch and tag using a PAT so the resulting tag-push retriggers
+# release.yml (GITHUB_TOKEN-authored pushes do not retrigger workflows).
+#
+# Trigger: push to main, manual workflow_dispatch (PAT-recovery retry path),
+# and a weekly cron probe for AUTO_RELEASE_PAT secret presence.
+#
+# Self-retrigger guards (defense-in-depth, layered):
+#   1. Workflow-level if: filter excludes commits whose message contains
+#      `[release-type: skip]` OR matches the auto-generated release commit
+#      subject `^Release v[0-9]+\.[0-9]+\.[0-9]+$`.
+#   2. The auto-generated release commit body embeds `[release-type: skip]`
+#      as a standalone line, so even if guard (1) is bypassed (e.g.,
+#      workflow_dispatch), `bin/cortex-auto-bump-version` returns `no-bump`
+#      and the release job exits cleanly before the rewriter.
+#   3. concurrency.cancel-in-progress: true coalesces push storms; the
+#      release is idempotent so collapsing to the latest push is safe.
+#
+# PAT isolation:
+#   - validate job uses default GITHUB_TOKEN; persist-credentials: false so
+#     no token lingers in .git/config for test code to read.
+#   - release job also uses persist-credentials: false on checkout. The PAT
+#     is only ever injected at the explicit push step via
+#     `git -c http.https://github.com/.extraheader=...` — never persisted.
+#
+# Forward references: bin/cortex-auto-bump-version (T14) and
+# bin/cortex-rewrite-cli-pin (T15) land immediately after this workflow.
+
+name: Auto-release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Weekly PAT-expiry probe (Mondays 12:00 UTC). Partial monitoring for
+    # silent secret expiry — see pat-expiry-probe job below.
+    - cron: '0 12 * * MON'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-release
+  # Release is idempotent (read latest tag + commits → emit new tag); under
+  # push-storms, coalescing to the latest push is correct and avoids an
+  # unbounded queue. See T13 critical-review correction #1.
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate (low-privilege)
+    # Skip self-retriggered runs from the auto-generated release commit.
+    # The startsWith check is the workflow-level self-retrigger guard;
+    # standalone-line [release-type: skip] markers are honored by
+    # cortex-auto-bump-version's anchored regex (T14 contract), which
+    # outputs no-bump and short-circuits the release steps. The earlier
+    # contains() check was too loose — it matched prose mentions of the
+    # marker inside commit bodies and self-disabled valid releases.
+    if: >-
+      github.event_name != 'schedule' &&
+      !startsWith(github.event.head_commit.message, 'Release v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (no token persistence)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Validate plugin skills
+        run: |
+          for skills_dir in plugins/*/skills; do
+            python3 scripts/validate-skill.py "$skills_dir"
+          done
+
+      - name: Call-graph guard — no programmatic callee may carry disable-model-invocation
+        run: |
+          python3 scripts/validate-callgraph.py \
+            plugins/cortex-pr-review/skills \
+            plugins/cortex-ui-extras/skills \
+            plugins/cortex-dev-extras/skills \
+            plugins/cortex-core/skills \
+            plugins/cortex-overnight/skills \
+            plugins/android-dev-extras/skills
+
+  release:
+    name: Release (PAT-authenticated push)
+    needs: validate
+    # See validate-job comment for rationale on the dropped contains() check.
+    if: >-
+      github.event_name != 'schedule' &&
+      !startsWith(github.event.head_commit.message, 'Release v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main (no token persistence, full history + tags)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          fetch-tags: true
+          ref: main
+
+      - name: Configure git identity (commit author for auto-release commit)
+        run: |
+          git config user.name "cortex-auto-release[bot]"
+          git config user.email "cortex-auto-release[bot]@users.noreply.github.com"
+
+      - name: Refresh against concurrent pushes (rebase main)
+        run: git pull --rebase origin main
+
+      - name: Determine next tag (no-bump gate fires BEFORE rewriter)
+        id: bump
+        run: |
+          set -euo pipefail
+          NEXT_TAG="$(bin/cortex-auto-bump-version)"
+          echo "next_tag=${NEXT_TAG}" >> "$GITHUB_OUTPUT"
+          if [ "${NEXT_TAG}" = "no-bump" ]; then
+            echo "no-bump signal from bin/cortex-auto-bump-version — exiting release job cleanly without commit/tag/push."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Next tag determined: ${NEXT_TAG}"
+          fi
+
+      - name: Rewrite CLI_PIN[0] to new tag
+        if: steps.bump.outputs.skip == 'false'
+        run: bin/cortex-rewrite-cli-pin "${{ steps.bump.outputs.next_tag }}"
+
+      - name: "Commit release (embeds [release-type: skip] as body marker)"
+        if: steps.bump.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          NEXT_TAG="${{ steps.bump.outputs.next_tag }}"
+          git add plugins/cortex-overnight/server.py
+          # Standalone-line [release-type: skip] body marker ensures any
+          # re-trigger path (e.g., workflow_dispatch on this commit, or the
+          # workflow-level if-filter being bypassed) self-no-bumps via the
+          # bin/cortex-auto-bump-version regex.
+          git commit -m "$(printf 'Release %s\n\n[release-type: skip]\n' "${NEXT_TAG}")"
+
+      - name: Create tag at release commit
+        if: steps.bump.outputs.skip == 'false'
+        run: git tag "${{ steps.bump.outputs.next_tag }}"
+
+      - name: Push branch and tag (PAT injected only at push moment)
+        if: steps.bump.outputs.skip == 'false'
+        env:
+          AUTO_RELEASE_PAT: ${{ secrets.AUTO_RELEASE_PAT }}
+        run: |
+          set -euo pipefail
+          NEXT_TAG="${{ steps.bump.outputs.next_tag }}"
+          # PAT is injected via -c http.extraheader at the push command only;
+          # it is NEVER persisted to .git/config. This keeps the PAT off-disk
+          # for any subsequent step (and out of validate-job's checkout
+          # entirely, since that job ran in a separate runner). We use HTTP
+          # Basic with x-access-token:PAT base64-encoded — the same scheme
+          # actions/checkout@v4 uses internally, which works reliably for
+          # both fine-grained and classic PATs. The bearer-auth alternative
+          # was observed to not authenticate git's HTTPS push for fine-grained
+          # PATs in this repo (PR #11 release-job log).
+          TOKEN_B64=$(printf '%s' "x-access-token:${AUTO_RELEASE_PAT}" | base64 | tr -d '\n')
+          if ! git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${TOKEN_B64}" push origin main; then
+            echo "First push to main failed (likely non-fast-forward). Rebasing once and retrying."
+            git pull --rebase origin main
+            if ! git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${TOKEN_B64}" push origin main; then
+              echo "::error::Second push to main failed after rebase. Manual recovery required: re-run via workflow_dispatch (gh workflow run auto-release.yml --ref main)."
+              exit 1
+            fi
+          fi
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${TOKEN_B64}" push origin "${NEXT_TAG}"
+
+  pat-expiry-probe:
+    name: PAT presence probe (scheduled)
+    # Cron-only job: weekly check that AUTO_RELEASE_PAT exists. Posts a
+    # workflow annotation on missing — partial monitoring for silent expiry.
+    # Does NOT validate the PAT's permissions or remaining lifetime (GitHub
+    # does not expose either via the secrets API); presence-only.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Probe AUTO_RELEASE_PAT secret presence
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh api "/repos/${GITHUB_REPOSITORY}/actions/secrets/AUTO_RELEASE_PAT" >/dev/null 2>&1; then
+            echo "AUTO_RELEASE_PAT secret is present."
+          else
+            echo "::warning::AUTO_RELEASE_PAT secret is missing or unreadable. Auto-release will fail on next push to main. Recovery: gh secret set AUTO_RELEASE_PAT --body <new-token>, then gh workflow run auto-release.yml --ref main. See docs/release-process.md \"Auto-release PAT setup\" section."
+          fi

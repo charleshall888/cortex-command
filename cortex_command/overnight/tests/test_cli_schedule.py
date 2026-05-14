@@ -137,7 +137,7 @@ def test_schedule_dry_run_json_envelope(
 
     assert rc == 0, f"expected exit 0; stderr={captured.err!r}"
     payload = json.loads(captured.out.strip())
-    assert payload["version"] == "1.0"
+    assert payload["schema_version"] == "2.0"
     assert payload["dry_run"] is True
     assert payload["session_id"] == session_id
     assert payload["label"].startswith(

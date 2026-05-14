@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+"""Rewrite the ``CLI_PIN[0]`` literal in ``plugins/cortex-overnight/server.py``.
+
+Stdlib-only. Takes one positional arg (the new tag in ``vX.Y.Z`` form) and
+performs a pattern-based, format-tolerant, read-modify-write of the
+``CLI_PIN`` literal. Preserves ``CLI_PIN[1]`` (the schema-floor major.minor
+string) unchanged.
+
+Contract (per spec R19.5 in cortex/lifecycle/close-plugin-cli-auto-update-gaps):
+    (i)   **pattern-based, not line-anchored** — regex anchored on
+          ``^CLI_PIN\\s*=\\s*\\(`` at start of line, NOT on a fixed line
+          number, so PEP 723 dep additions or imports above CLI_PIN do not
+          break it.
+    (ii)  **format-tolerant** — the regex handles single-line and multi-line
+          tuple forms, single-quoted and double-quoted strings, and intra-
+          tuple whitespace variations.
+    (iii) **read-modify-write preserves CLI_PIN[1]** — the rewriter extracts
+          the existing ``CLI_PIN[1]`` value (schema major.minor) and writes
+          it back unchanged alongside the new tag in ``CLI_PIN[0]``; it does
+          NOT write a hardcoded ``"2.0"`` template.
+    (iv)  **fail-loud on 0-or-≥2 matches** — if zero ``CLI_PIN`` declarations
+          are found OR more than one (e.g. a comment containing a CLI_PIN-
+          shaped pattern), exit non-zero with a clear error naming the file
+          and the match count.
+    (v)   **idempotent on no-op input** — when invoked with a tag equal to
+          the current ``CLI_PIN[0]`` value, exits 0 with no file changes.
+    (vi)  **post-rewrite verification** — after rewrite, the rewriter calls
+          ``git diff plugins/cortex-overnight/server.py`` and validates that
+          exactly one line changed AND the diff matches the expected shape
+          (old line contains the old tag, new line contains the new tag,
+          both have the same ``CLI_PIN[1]`` value); fails non-zero on diff
+          mismatch.
+"""
+
+import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+
+import argparse
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+# Default target path (relative to cwd). Caller may override via --path for
+# tests; the auto-release workflow at R19 invokes the helper from repo root
+# so the default is the canonical target.
+DEFAULT_TARGET = "plugins/cortex-overnight/server.py"
+
+# Tag-shape validation: ``vX.Y.Z`` where X/Y/Z are non-negative integers.
+TAG_RE = re.compile(r"^v\d+\.\d+\.\d+$")
+
+# CLI_PIN literal regex. Format-tolerant per contract (ii):
+#   - anchored on start-of-line ``^CLI_PIN\s*=\s*\(`` (re.MULTILINE)
+#   - tolerates whitespace and newlines inside the tuple parens
+#   - tolerates both single- and double-quoted strings independently for
+#     each element
+#   - captures the two string contents into groups (tag, schema)
+#
+# Group layout:
+#   group(1) = quote char for element 0 (the tag)
+#   group(2) = element 0 contents (e.g. ``v0.1.0``)
+#   group(3) = quote char for element 1 (the schema major.minor)
+#   group(4) = element 1 contents (e.g. ``2.0``)
+CLI_PIN_RE = re.compile(
+    r"""
+    ^CLI_PIN\s*=\s*\(            # start of declaration, anchored at line start
+    \s*(['"])([^'"]*)\1          # element 0: quoted string (tag)
+    \s*,                         # comma separator
+    \s*(['"])([^'"]*)\3          # element 1: quoted string (schema)
+    \s*,?                        # optional trailing comma
+    \s*\)                        # closing paren
+    """,
+    re.MULTILINE | re.VERBOSE,
+)
+
+
+def find_cli_pin_matches(text: str) -> list[re.Match[str]]:
+    """Return all CLI_PIN declaration matches in ``text``."""
+    return list(CLI_PIN_RE.finditer(text))
+
+
+def rewrite_text(text: str, new_tag: str) -> tuple[str, str, str]:
+    """Rewrite the single CLI_PIN literal in ``text`` to use ``new_tag``.
+
+    Returns ``(new_text, old_tag, schema)``. Raises ValueError if the
+    number of CLI_PIN declarations found is not exactly 1.
+    """
+    matches = find_cli_pin_matches(text)
+    if len(matches) != 1:
+        raise ValueError(
+            f"expected exactly 1 CLI_PIN declaration, found {len(matches)}"
+        )
+    m = matches[0]
+    old_tag = m.group(2)
+    schema = m.group(4)
+    # Build the replacement, preserving the original tag quote char (group 1)
+    # and the original schema quote char (group 3). This minimizes the diff —
+    # only the tag literal characters change, not surrounding punctuation.
+    tag_quote = m.group(1)
+    schema_quote = m.group(3)
+    replacement = (
+        f"CLI_PIN = ({tag_quote}{new_tag}{tag_quote}, "
+        f"{schema_quote}{schema}{schema_quote})"
+    )
+    new_text = text[: m.start()] + replacement + text[m.end():]
+    return new_text, old_tag, schema
+
+
+def _git(args: list[str], cwd: Path) -> tuple[int, str, str]:
+    """Run a git subcommand; return (rc, stdout, stderr) decoded as utf-8."""
+    try:
+        out = subprocess.run(
+            ["git", *args],
+            cwd=str(cwd),
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+    except (FileNotFoundError, OSError) as exc:
+        return 127, "", str(exc)
+    return out.returncode, out.stdout, out.stderr
+
+
+def verify_git_diff(
+    target_rel: str, old_tag: str, new_tag: str, schema: str, repo_root: Path
+) -> tuple[bool, str]:
+    """Verify ``git diff <target>`` shows the expected single-line change.
+
+    Returns ``(ok, detail)``. Empty ``detail`` on success; descriptive error
+    string on failure.
+
+    Acceptance per contract (vi):
+      * exactly one ``-`` line and one ``+`` line changed (excluding diff
+        metadata headers)
+      * the ``-`` line contains the old tag
+      * the ``+`` line contains the new tag
+      * both lines contain the same ``CLI_PIN[1]`` (schema) value
+    """
+    rc, stdout, stderr = _git(["diff", "--", target_rel], cwd=repo_root)
+    if rc != 0:
+        return False, f"git diff failed (rc={rc}): {stderr.strip()}"
+    removed: list[str] = []
+    added: list[str] = []
+    for ln in stdout.splitlines():
+        # Skip diff metadata; capture only content +/- lines.
+        if ln.startswith("+++") or ln.startswith("---"):
+            continue
+        if ln.startswith("+"):
+            added.append(ln[1:])
+        elif ln.startswith("-"):
+            removed.append(ln[1:])
+    if len(removed) != 1 or len(added) != 1:
+        return False, (
+            f"expected exactly one removed and one added line, got "
+            f"removed={len(removed)} added={len(added)}"
+        )
+    old_line = removed[0]
+    new_line = added[0]
+    if old_tag not in old_line:
+        return False, f"removed line does not contain old tag {old_tag!r}: {old_line!r}"
+    if new_tag not in new_line:
+        return False, f"added line does not contain new tag {new_tag!r}: {new_line!r}"
+    if schema not in old_line or schema not in new_line:
+        return False, (
+            f"schema marker {schema!r} not present in both diff lines "
+            f"(old={old_line!r}, new={new_line!r})"
+        )
+    return True, ""
+
+
+def rewrite_file(target: Path, new_tag: str, *, verify: bool = True) -> int:
+    """Read-modify-write the CLI_PIN literal in ``target`` to ``new_tag``.
+
+    Returns the process exit code: 0 on success or idempotent no-op, non-zero
+    on any failure. Writes diagnostics to stderr.
+    """
+    if not TAG_RE.match(new_tag):
+        print(
+            f"cortex-rewrite-cli-pin: invalid tag {new_tag!r}: "
+            f"expected form vX.Y.Z",
+            file=sys.stderr,
+        )
+        return 2
+
+    if not target.is_file():
+        print(
+            f"cortex-rewrite-cli-pin: target file not found: {target}",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        text = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        print(
+            f"cortex-rewrite-cli-pin: cannot read {target}: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+
+    matches = find_cli_pin_matches(text)
+    if len(matches) != 1:
+        print(
+            f"cortex-rewrite-cli-pin: expected exactly 1 CLI_PIN declaration "
+            f"in {target}, found {len(matches)}",
+            file=sys.stderr,
+        )
+        return 1
+
+    old_tag = matches[0].group(2)
+    schema = matches[0].group(4)
+
+    if old_tag == new_tag:
+        # Idempotent no-op: tag already matches, write nothing.
+        return 0
+
+    new_text, _old_tag, _schema = rewrite_text(text, new_tag)
+    try:
+        target.write_text(new_text, encoding="utf-8")
+    except OSError as exc:
+        print(
+            f"cortex-rewrite-cli-pin: cannot write {target}: {exc}",
+            file=sys.stderr,
+        )
+        return 2
+
+    if verify:
+        # Resolve repo root by walking up from the target. The post-rewrite
+        # diff verification needs the path relative to the repo root for
+        # ``git diff`` to work cleanly.
+        repo_root = _find_repo_root(target)
+        if repo_root is None:
+            print(
+                f"cortex-rewrite-cli-pin: cannot find git repo root above "
+                f"{target} — skipping post-rewrite diff verification",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            target_rel = str(target.resolve().relative_to(repo_root))
+        except ValueError:
+            target_rel = str(target)
+        ok, detail = verify_git_diff(target_rel, old_tag, new_tag, schema, repo_root)
+        if not ok:
+            print(
+                f"cortex-rewrite-cli-pin: post-rewrite git diff verification "
+                f"failed: {detail}",
+                file=sys.stderr,
+            )
+            return 1
+    return 0
+
+
+def _find_repo_root(start: Path) -> Path | None:
+    """Walk upward from ``start`` to find a directory containing ``.git``."""
+    cur = start.resolve()
+    if cur.is_file():
+        cur = cur.parent
+    while True:
+        if (cur / ".git").exists():
+            return cur
+        if cur.parent == cur:
+            return None
+        cur = cur.parent
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="cortex-rewrite-cli-pin",
+        description=(
+            "Rewrite plugins/cortex-overnight/server.py's CLI_PIN[0] "
+            "literal to a new tag. Pattern-based; preserves CLI_PIN[1]. "
+            "See spec R19.5."
+        ),
+    )
+    p.add_argument(
+        "tag",
+        help="New tag (vX.Y.Z form) to write into CLI_PIN[0].",
+    )
+    p.add_argument(
+        "--path",
+        default=DEFAULT_TARGET,
+        help=(
+            "Target file (default: plugins/cortex-overnight/server.py). "
+            "Resolved relative to cwd."
+        ),
+    )
+    p.add_argument(
+        "--no-verify",
+        action="store_true",
+        help=(
+            "Skip the post-rewrite git diff verification step. Used by unit "
+            "tests that operate outside a git repo."
+        ),
+    )
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    target = Path(args.path)
+    return rewrite_file(target, args.tag, verify=not args.no_verify)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

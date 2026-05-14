@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 3178e5ca-2289-4c21-a2f8-967112806956
 title: "R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up)"
-status: backlog
+status: superseded
 priority: medium
 type: bug
 created: 2026-05-13
@@ -24,3 +24,7 @@ R8 should compare upstream against the **installed wheel's** pinned commit/tag r
 ## Origin
 
 Filed as a #146 follow-up during refine of #210 (item 5 — "R8 cwd-vs-installed-wheel divergence"). Parent ticket explicitly flagged this as a candidate to break out into its own backlog item rather than fold into the docs/hygiene-scoped #210 work.
+
+## Superseded by #213
+
+Superseded by #213 (close-plugin-cli-auto-update-gaps): the R8 reformat decision was absorbed into #213's R4 wiring, which re-roots the freshness check on the installed wheel's pinned commit rather than CWD-HEAD.

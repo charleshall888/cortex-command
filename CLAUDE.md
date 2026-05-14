@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0`) plus plugins installed via `/plugin install` in Claude Code; `cortex init` additionally registers the repo's `cortex/` umbrella path in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so interactive sessions and the overnight runner can write under it without sandbox prompts.
+An opinionated AI workflow framework for Claude Code. Provides skills (slash commands), hooks (event handlers), an autonomous overnight runner, a web dashboard, a lifecycle state machine, and backlog management. Ships as a CLI (`uv tool install git+https://github.com/charleshall888/cortex-command.git@<latest-tag>`, where `<latest-tag>` resolves to the highest `vX.Y.Z` ref from `git ls-remote --tags` — see `docs/setup.md` for the full snippet) plus plugins installed via `/plugin install` in Claude Code; `cortex init` additionally registers the repo's `cortex/` umbrella path in `~/.claude/settings.local.json`'s `sandbox.filesystem.allowWrite` array so interactive sessions and the overnight runner can write under it without sandbox prompts.
 
 ## Repository Structure
 
@@ -19,7 +19,7 @@ An opinionated AI workflow framework for Claude Code. Provides skills (slash com
 
 ## Distribution
 
-Cortex-command ships as a CLI installed via `uv tool install git+https://github.com/charleshall888/cortex-command.git@v0.1.0` plus plugins installed via `/plugin install`. It no longer deploys symlinks into `~/.claude/`.
+Cortex-command ships as a CLI installed via `uv tool install git+https://github.com/charleshall888/cortex-command.git@<latest-tag>` (resolve `<latest-tag>` via `git ls-remote --tags --refs`; see `docs/setup.md` Quickstart) plus plugins installed via `/plugin install`. It no longer deploys symlinks into `~/.claude/`.
 
 ## Commands
 
@@ -47,7 +47,7 @@ Run `just` to see all available recipes. Key commands:
 - New global utilities ship via the `cortex-core` plugin's `bin/` directory; see `just --list` for available recipes.
 - Run `just setup-githooks` after clone to enable the dual-source drift pre-commit hook.
 - Use `cortex-jcc <recipe>` to invoke cortex-command recipes from any directory. The wrapper (shipped in `plugins/cortex-core/bin/`) runs recipes in this repo's directory context, so it's suitable for repo-specific operations (`cortex-jcc backlog-index`, `cortex-jcc validate-commit`), not for operations that should act on another repo's files (use `cortex-update-item`, `cortex-generate-backlog-index`, etc. for those — also shipped via the cortex-core plugin's `bin/`).
-- Overnight docs source of truth: `docs/overnight-operations.md` owns the round loop and orchestrator behavior, `docs/internals/pipeline.md` owns pipeline-module internals, and `docs/internals/sdk.md` owns SDK model-selection mechanics. When editing overnight-related docs, update the owning doc and link from the others rather than duplicating content.
+- Overnight docs source of truth: `docs/overnight-operations.md` owns the round loop and orchestrator behavior, `docs/internals/pipeline.md` owns pipeline-module internals, `docs/internals/sdk.md` owns SDK model-selection mechanics, and `docs/internals/auto-update.md` owns the plugin/CLI auto-update flow (two-layer architecture, component map, release ritual). When editing overnight-related docs, update the owning doc and link from the others rather than duplicating content.
 
 ## Skill / phase authoring guidelines
 
