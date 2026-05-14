@@ -1,0 +1,52 @@
+# Diagnostic workflow: probe GitHub's git smart-HTTP backend with various
+# Authorization schemes using AUTO_RELEASE_PAT. Manual-trigger only.
+#
+# Use case: when investigating PAT auth-scheme behavior (e.g. "does Bearer
+# work for git push?"), trigger this and read the per-scheme HTTP status
+# from the workflow log. The PAT value never leaves the runner — only
+# status codes are emitted.
+#
+# Endpoint: /info/refs?service=git-receive-pack — same auth-gated path
+# git push uses, but a GET request that makes no state changes.
+
+name: PAT auth-scheme diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      AUTO_RELEASE_PAT: ${{ secrets.AUTO_RELEASE_PAT }}
+    steps:
+      - name: Probe four Authorization schemes against git-receive-pack info-refs
+        run: |
+          set -u
+          URL='https://github.com/charleshall888/cortex-command.git/info/refs?service=git-receive-pack'
+
+          echo "=== 1. Bearer (capital B) ==="
+          curl -sS -o /dev/null -w "  HTTP %{http_code}\n" \
+            -H "Authorization: Bearer $AUTO_RELEASE_PAT" "$URL"
+
+          echo "=== 2. bearer (lowercase) ==="
+          curl -sS -o /dev/null -w "  HTTP %{http_code}\n" \
+            -H "Authorization: bearer $AUTO_RELEASE_PAT" "$URL"
+
+          echo "=== 3. token (legacy GitHub scheme) ==="
+          curl -sS -o /dev/null -w "  HTTP %{http_code}\n" \
+            -H "Authorization: token $AUTO_RELEASE_PAT" "$URL"
+
+          echo "=== 4. Basic with x-access-token (control — expected 200) ==="
+          B64=$(printf '%s' "x-access-token:$AUTO_RELEASE_PAT" | base64 | tr -d '\n')
+          curl -sS -o /dev/null -w "  HTTP %{http_code}\n" \
+            -H "Authorization: Basic $B64" "$URL"
+
+          echo ""
+          echo "Interpretation:"
+          echo "  401 = scheme rejected"
+          echo "  200 = scheme accepted"
+          echo "  Other = unexpected — check raw response with -i"
