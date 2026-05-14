@@ -103,7 +103,7 @@ from pydantic import BaseModel, ConfigDict, Field  # noqa: E402
 #: CLI's import path. Updates flow plugin -> CLI: bumping ``CLI_PIN``
 #: and shipping a new plugin version drives the next MCP tool call to
 #: reinstall the matching CLI tag via R4's ``_ensure_cortex_installed``.
-CLI_PIN = ("v0.1.0", "2.0")
+CLI_PIN = ("v2.0.0", "2.0")
 
 #: Schema floor the MCP refuses to operate below. ``M.m`` per Terraform's
 #: ``format_version`` precedent: a *major* mismatch is hard-rejected
