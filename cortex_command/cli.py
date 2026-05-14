@@ -81,6 +81,24 @@ def _dispatch_overnight_schedule(args: argparse.Namespace) -> int:
     return cli_handler.handle_schedule(args)
 
 
+# ---------------------------------------------------------------------------
+# Auth dispatchers — lazy-import the auth submodules so `cortex --help`
+# (and unrelated subcommands) do not pay the import cost when the user
+# never invokes ``cortex auth``.
+# ---------------------------------------------------------------------------
+
+def _dispatch_auth_bootstrap(args: argparse.Namespace) -> int:
+    from cortex_command.auth import bootstrap
+
+    return bootstrap.run(args)
+
+
+def _dispatch_auth_status(args: argparse.Namespace) -> int:
+    from cortex_command.auth import status
+
+    return status.run(args)
+
+
 _MCP_SERVER_DEPRECATION_BASE = (
     "cortex mcp-server is removed; install the cortex-overnight "
     "plugin (/plugin install cortex-overnight@cortex-command) "
@@ -633,6 +651,45 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Output format (default: human)",
     )
     schedule.set_defaults(func=_dispatch_overnight_schedule)
+
+    # -------------------------------------------------------------------
+    # cortex auth — subscription OAuth bootstrap + diagnostics.
+    # See cortex/lifecycle/restore-subscription-auth-for-autonomous-worktree/spec.md.
+    # -------------------------------------------------------------------
+    auth = subparsers.add_parser(
+        "auth",
+        help="Manage Claude subscription OAuth credentials",
+        description=(
+            "Bootstrap or inspect the personal-OAuth-token vector consumed "
+            "by the overnight runner's auth resolver."
+        ),
+    )
+    auth_sub = auth.add_subparsers(
+        dest="auth_command",
+        required=True,
+        metavar="<subcommand>",
+    )
+
+    auth_bootstrap = auth_sub.add_parser(
+        "bootstrap",
+        help="Mint a subscription OAuth token via 'claude setup-token'",
+        description=(
+            "Wrap 'claude setup-token' to mint a one-year subscription "
+            "OAuth token and atomically write it to "
+            "~/.claude/personal-oauth-token."
+        ),
+    )
+    auth_bootstrap.set_defaults(func=_dispatch_auth_bootstrap)
+
+    auth_status = auth_sub.add_parser(
+        "status",
+        help="Report the resolved auth vector and shadowed alternatives",
+        description=(
+            "Print the auth vector resolved by ensure_sdk_auth() and flag "
+            "any lower-precedence vectors that are being shadowed."
+        ),
+    )
+    auth_status.set_defaults(func=_dispatch_auth_status)
 
     # -------------------------------------------------------------------
     # Remaining stubs — not yet implemented.
