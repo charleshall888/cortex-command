@@ -352,6 +352,7 @@ def resolve_and_probe(
         probe_message = (
             "auth_probe: vector=none, keychain=absent — "
             "Keychain entry not found; startup will fail"
+            " — run 'cortex auth bootstrap' to mint a subscription OAuth token."
         )
     else:
         # raw_probe in {"present", "unavailable"}: informational; continue.
