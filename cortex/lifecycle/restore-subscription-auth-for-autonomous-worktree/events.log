@@ -5,3 +5,6 @@
 {"ts": "2026-05-14T17:35:00Z", "event": "phase_transition", "feature": "restore-subscription-auth-for-autonomous-worktree", "from": "research", "to": "specify"}
 {"ts": "2026-05-14T18:10:00Z", "event": "spec_approved", "feature": "restore-subscription-auth-for-autonomous-worktree"}
 {"ts": "2026-05-14T18:10:01Z", "event": "phase_transition", "feature": "restore-subscription-auth-for-autonomous-worktree", "from": "specify", "to": "plan"}
+{"ts":"2026-05-14T18:50:18Z","event":"synthesizer_drift","feature":"restore-subscription-auth-for-autonomous-worktree","expected_sha":"726136fd25b0fe50edd2b8c8c38dae84a6e51c5c32a0400981cb5d9a75385edc","observed_sha_or_null":null}
+{"ts": "2026-05-14T19:05:00Z", "event": "plan_approved", "feature": "restore-subscription-auth-for-autonomous-worktree"}
+{"ts": "2026-05-14T19:05:01Z", "event": "phase_transition", "feature": "restore-subscription-auth-for-autonomous-worktree", "from": "plan", "to": "implement"}

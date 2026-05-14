@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "feature": "restore-subscription-auth-for-autonomous-worktree",
+  "ts": "2026-05-14T18:55:00Z",
+  "artifact_path": "cortex/lifecycle/restore-subscription-auth-for-autonomous-worktree/plan.md",
+  "artifact_sha256": "726136fd25b0fe50edd2b8c8c38dae84a6e51c5c32a0400981cb5d9a75385edc",
+  "b_class_findings": [
+    {
+      "angle": "Test fixture as the sole production-contract proxy",
+      "finding": "Bootstrap token regex anchored ^...$ and fixture emits clean single line; no Task 9 sub-case exercises CRLF, ANSI, leading whitespace, JSON-wrap, or quoted tokens."
+    },
+    {
+      "angle": "Test fixture as the sole production-contract proxy",
+      "finding": "Task 9 banner sub-cases reference output shapes the fixture does not produce; banner string left to test-author invention."
+    },
+    {
+      "angle": "Integration test integrity",
+      "finding": "Task 11 Context shows stdin=DEVNULL example then notes it would fail TTY check; mentions pty.openpty as corrective without restating corrected invocation or addressing capture_output \u00d7 master/slave fd interaction."
+    },
+    {
+      "angle": "Task-graph over-coupling",
+      "finding": "Task 12 Depends on [11] has no input-consumption basis; docs derive from spec, Task 1 CLI surface, Task 3 atomic-write contract."
+    }
+  ]
+}
