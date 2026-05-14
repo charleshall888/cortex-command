@@ -148,6 +148,10 @@ Verify presence (does **not** reveal the value):
 gh secret list | grep AUTO_RELEASE_PAT
 ```
 
+### Auth scheme: Basic, not Bearer
+
+The auto-release workflow authenticates the push with HTTP Basic (`Authorization: Basic <base64(x-access-token:<PAT>)>`), matching `actions/checkout@v4`'s production scheme. **Do not change the workflow to use `Bearer` auth** — GitHub's git smart-HTTP backend only accepts Basic and returns 401 on `Bearer`, `bearer`, and `token` schemes regardless of PAT permissions. The `.github/workflows/pat-auth-scheme-probe.yml` workflow verifies this empirically; re-run it via `gh workflow run pat-auth-scheme-probe.yml` if GitHub's server contract changes. See [`docs/internals/auto-update.md#pat-authentication-scheme-maintainer-only`](internals/auto-update.md#pat-authentication-scheme-maintainer-only) for the full diagnostic results.
+
 ### Pre-merge gate
 
 Before merging the #213 implement-PR (or any future PR that depends on the auto-release workflow being functional), confirm `AUTO_RELEASE_PAT` is set:

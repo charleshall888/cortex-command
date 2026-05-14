@@ -69,6 +69,20 @@ The post-fix happy-path release ritual is:
 
 The CI lint at `release.yml` is **defense-in-depth for manual emergencies** (PAT revoked, workflow disabled, manual tag push from a branch where `CLI_PIN[0]` was not bumped). On the happy path, `auto-release.yml` already bumped `CLI_PIN[0]` before tagging, so the lint is redundant but cheap; it ensures a stale wheel is never published even when the auto-release path is bypassed.
 
+### PAT authentication scheme (maintainer-only)
+
+The PAT push in step 2 uses **HTTP Basic** with username `x-access-token` and the PAT as the password, base64-encoded — matching `actions/checkout@v4`'s production scheme. This is not interchangeable with the `Bearer` scheme GitHub's REST API accepts: GitHub's git smart-HTTP backend advertises `WWW-Authenticate: Basic realm="GitHub"` on every 401 and rejects all non-Basic schemes. Empirical results from `.github/workflows/pat-auth-scheme-probe.yml`:
+
+| Scheme | HTTP code | WWW-Authenticate returned |
+|---|---|---|
+| `Authorization: Bearer <PAT>` (capital B) | 401 | `Basic realm="GitHub"` |
+| `Authorization: bearer <PAT>` (lowercase) | 401 | `Basic realm="GitHub"` |
+| `Authorization: token <PAT>` (legacy GitHub) | 401 | `Basic realm="GitHub"` |
+| `Authorization: Basic base64(x-access-token:<PAT>)` | **200** | — (authenticated) |
+| (no Authorization header — anonymous) | 401 | `Basic realm="GitHub"` |
+
+The scheme rejection happens at the auth-middleware layer, before token-permission checking. Adding additional PAT permissions does not unblock non-Basic schemes. To re-verify if GitHub changes their server contract, dispatch the diagnostic workflow via `gh workflow run pat-auth-scheme-probe.yml`.
+
 ---
 
 ## Intent vs currently-wired
