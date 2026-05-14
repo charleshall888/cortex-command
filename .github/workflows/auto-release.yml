@@ -51,12 +51,15 @@ concurrency:
 jobs:
   validate:
     name: Validate (low-privilege)
-    # Skip self-retriggered runs from the auto-generated release commit and
-    # any commit explicitly marked [release-type: skip]. Belt-and-suspenders
-    # alongside the in-body marker the release commit also carries.
+    # Skip self-retriggered runs from the auto-generated release commit.
+    # The startsWith check is the workflow-level self-retrigger guard;
+    # standalone-line [release-type: skip] markers are honored by
+    # cortex-auto-bump-version's anchored regex (T14 contract), which
+    # outputs no-bump and short-circuits the release steps. The earlier
+    # contains() check was too loose — it matched prose mentions of the
+    # marker inside commit bodies and self-disabled valid releases.
     if: >-
       github.event_name != 'schedule' &&
-      !contains(github.event.head_commit.message, '[release-type: skip]') &&
       !startsWith(github.event.head_commit.message, 'Release v')
     runs-on: ubuntu-latest
     steps:
@@ -92,9 +95,9 @@ jobs:
   release:
     name: Release (PAT-authenticated push)
     needs: validate
+    # See validate-job comment for rationale on the dropped contains() check.
     if: >-
       github.event_name != 'schedule' &&
-      !contains(github.event.head_commit.message, '[release-type: skip]') &&
       !startsWith(github.event.head_commit.message, 'Release v')
     runs-on: ubuntu-latest
     steps:
