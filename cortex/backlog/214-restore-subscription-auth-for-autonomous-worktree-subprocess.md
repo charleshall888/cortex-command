@@ -9,10 +9,12 @@ tags: [overnight, auth, regression, subscription, plugin]
 created: 2026-05-14
 updated: 2026-05-14
 session_id: 9d7c9d1c-e839-4dc5-b393-e148092c2f6d
-lifecycle_phase: research
+lifecycle_phase: plan
 lifecycle_slug: restore-subscription-auth-for-autonomous-worktree
 complexity: complex
 criticality: high
+spec: cortex/lifecycle/restore-subscription-auth-for-autonomous-worktree/spec.md
+areas: [overnight-runner]
 ---
 
 ## Background

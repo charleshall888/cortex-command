@@ -192,20 +192,22 @@
       "subscription",
       "plugin"
     ],
-    "areas": [],
+    "areas": [
+      "overnight-runner"
+    ],
     "created": "2026-05-14",
     "updated": "2026-05-14",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "cortex/lifecycle/restore-subscription-auth-for-autonomous-worktree/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "9780ae26-602f-4eee-9027-0e18894d613d",
     "lifecycle_slug": "restore-subscription-auth-for-autonomous-worktree",
     "session_id": "9d7c9d1c-e839-4dc5-b393-e148092c2f6d",
-    "lifecycle_phase": "research",
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
