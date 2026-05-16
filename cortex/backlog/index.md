@@ -18,13 +18,11 @@
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 217 | Port overnight scheduler to Windows Task Scheduler | not-started | low | feature | 216 | 215 | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
-| 220 | Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run | refined | should-have | feature | — | — | ✓ |
 
 ## Refined
 
 - **224** Add docs/adr/ with 3 seed ADRs and emission rule
 - **227** Discovery output density — investigate author-centric prose at gate
-- **220** Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run
 
 ## Backlog
 

@@ -472,34 +472,5 @@
     "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
-  },
-  {
-    "id": 220,
-    "title": "Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run",
-    "status": "refined",
-    "priority": "should-have",
-    "type": "feature",
-    "tags": [
-      "overnight",
-      "sandbox",
-      "worktree",
-      "evidence-durability"
-    ],
-    "areas": [],
-    "created": "2026-05-15",
-    "updated": "2026-05-16",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/re-validate-test-worktree-seatbeltpy-on/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "1d44844b-a690-4eeb-97e3-31a176af2e80",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
   }
 ]
