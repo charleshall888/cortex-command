@@ -1,0 +1,6 @@
+{"schema_version": 3, "ts": "2026-05-16T13:36:16Z", "event": "clarify_critic", "feature": "wire-daytime-dispatch-through-cortex-cli", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 5, "dismiss": 0, "ask": 2}, "applied_fixes_count": 5, "dismissals_count": 0, "status": "ok"}
+{"ts":"2026-05-16T15:02:59Z","event":"synthesizer_drift","feature":"wire-daytime-dispatch-through-cortex-cli","expected_sha":"7d9fb58e8ec1f0399f171c51f09bdea8eea0d09e42382e7becea4470fbda0e57","observed_sha_or_null":null}
+{"ts": "2026-05-16T15:26:04Z", "event": "spec_approved", "feature": "wire-daytime-dispatch-through-cortex-cli"}
+{"ts": "2026-05-16T15:26:30Z", "event": "lifecycle_start", "feature": "wire-daytime-dispatch-through-cortex-cli", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-16T15:51:32Z", "event": "plan_approved", "feature": "wire-daytime-dispatch-through-cortex-cli"}
+{"ts": "2026-05-16T15:51:32Z", "event": "phase_transition", "feature": "wire-daytime-dispatch-through-cortex-cli", "from": "plan", "to": "implement"}

@@ -2,15 +2,16 @@
 schema_version: "1"
 uuid: 5fef3a25-7e3d-4ddb-9d18-8bd45a4b5dba
 title: "Wire daytime dispatch through cortex CLI + MCP with launchd detachment"
-status: backlog
+status: refined
 priority: high
 type: feature
 tags: [daytime-pipeline, mcp, cli, launchd, overnight-runner]
 created: 2026-05-16
 updated: 2026-05-16
 complexity: complex
-criticality: medium
+criticality: high
 areas: [overnight-runner]
+spec: cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/spec.md
 ---
 
 # Wire daytime dispatch through cortex CLI + MCP with launchd detachment

@@ -2,7 +2,7 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 228 | Wire daytime dispatch through cortex CLI + MCP with launchd detachment | backlog | high | feature | — | — | — |
+| 228 | Wire daytime dispatch through cortex CLI + MCP with launchd detachment | refined | high | feature | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 209 | Lead refine §4 complexity-value gate with recommended option + rationale | in_progress | medium | chore | — | — | ✓ |
@@ -19,11 +19,11 @@
 
 ## Refined
 
+- **228** Wire daytime dispatch through cortex CLI + MCP with launchd detachment
 - **227** Discovery output density — investigate author-centric prose at gate
 
 ## Backlog
 
-- **228** Wire daytime dispatch through cortex CLI + MCP with launchd detachment
 - **142** Multi-session host concurrency registry for cortex overnight
 
 ## In-Progress

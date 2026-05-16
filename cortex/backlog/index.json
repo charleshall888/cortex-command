@@ -2,7 +2,7 @@
   {
     "id": 228,
     "title": "Wire daytime dispatch through cortex CLI + MCP with launchd detachment",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -21,7 +21,7 @@
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "5fef3a25-7e3d-4ddb-9d18-8bd45a4b5dba",
