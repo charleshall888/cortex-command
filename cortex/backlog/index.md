@@ -14,8 +14,9 @@
 | 216 | Add platform abstraction package for Windows | not-started | medium | feature | — | 215 | — |
 | 218 | Bootstrap Windows install and validate hook execution | not-started | medium | feature | — | 215 | — |
 | 219 | Add Windows posture surface and advisory CI | not-started | medium | feature | 216 | 215 | — |
-| 222 | Adopt one-at-a-time grilling cadence in requirements interview | backlog | medium | feature | — | 221 | — |
+| 222 | Adopt one-at-a-time grilling cadence in requirements interview | refined | medium | feature | — | 221 | ✓ |
 | 226 | Rebuild docs/index.html as a multi-file landing-page source tree | backlog | medium | feature | — | — | — |
+| 227 | Discovery output density — investigate author-centric prose at gate | refined | medium | needs-discovery | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 217 | Port overnight scheduler to Windows Task Scheduler | not-started | low | feature | 216 | 215 | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
@@ -24,13 +25,14 @@
 ## Refined
 
 - **209** Lead refine §4 complexity-value gate with recommended option + rationale
+- **222** Adopt one-at-a-time grilling cadence in requirements interview
+- **227** Discovery output density — investigate author-centric prose at gate
 
 ## Backlog
 
 - **221** Adopt grill-with-docs progressive-disclosure system
 - **223** Add project glossary at cortex/requirements/glossary.md
 - **224** Add docs/adr/ with 3 seed ADRs and emission rule
-- **222** Adopt one-at-a-time grilling cadence in requirements interview
 - **226** Rebuild docs/index.html as a multi-file landing-page source tree
 - **142** Multi-session host concurrency registry for cortex overnight
 - **220** Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run
