@@ -30,7 +30,7 @@
   {
     "id": 223,
     "title": "Add project glossary at cortex/requirements/glossary.md",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -38,27 +38,29 @@
       "vocabulary",
       "grill-me-with-docs-learnings"
     ],
-    "areas": [],
+    "areas": [
+      "skills"
+    ],
     "created": "2026-05-15",
-    "updated": "2026-05-15",
+    "updated": "2026-05-16",
     "blocks": [],
     "blocked_by": [],
     "parent": "221",
     "research": null,
-    "spec": null,
+    "spec": "cortex/lifecycle/add-project-glossary-at-cortex-requirements/spec.md",
     "discovery_source": "cortex/research/grill-me-with-docs-learnings/research.md",
     "plan": null,
     "uuid": "4badee5f-3e18-401e-ae82-e1f1d69d6cd9",
     "lifecycle_slug": null,
     "session_id": null,
-    "lifecycle_phase": null,
+    "lifecycle_phase": "plan",
     "schema_version": "1",
     "repo": null
   },
   {
     "id": 224,
     "title": "Add docs/adr/ with 3 seed ADRs and emission rule",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "feature",
     "tags": [
@@ -66,14 +68,16 @@
       "decisions",
       "grill-me-with-docs-learnings"
     ],
-    "areas": [],
+    "areas": [
+      "lifecycle"
+    ],
     "created": "2026-05-15",
-    "updated": "2026-05-15",
+    "updated": "2026-05-16",
     "blocks": [],
     "blocked_by": [],
     "parent": "221",
     "research": null,
-    "spec": null,
+    "spec": "cortex/lifecycle/add-docs-adr-with-3-seed/spec.md",
     "discovery_source": "cortex/research/grill-me-with-docs-learnings/research.md",
     "plan": null,
     "uuid": "3704a6a7-056c-4783-8fa2-b33c91a0026f",
@@ -348,67 +352,6 @@
     "session_id": null,
     "lifecycle_phase": null,
     "schema_version": null,
-    "repo": null
-  },
-  {
-    "id": 222,
-    "title": "Adopt one-at-a-time grilling cadence in requirements interview",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "requirements",
-      "skills",
-      "lifecycle",
-      "grill-me-with-docs-learnings"
-    ],
-    "areas": [
-      "lifecycle"
-    ],
-    "created": "2026-05-15",
-    "updated": "2026-05-16",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "221",
-    "research": null,
-    "spec": "cortex/lifecycle/adopt-one-at-a-time-grilling/spec.md",
-    "discovery_source": "cortex/research/grill-me-with-docs-learnings/research.md",
-    "plan": null,
-    "uuid": "3c6cede4-bbe1-4e72-9413-04feb0206afb",
-    "lifecycle_slug": "adopt-one-at-a-time-grilling",
-    "session_id": "283e5d30-087a-407f-83eb-001a85c13bb9",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 226,
-    "title": "Rebuild docs/index.html as a multi-file landing-page source tree",
-    "status": "backlog",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "landing-page",
-      "devx",
-      "build"
-    ],
-    "areas": [
-      "docs"
-    ],
-    "created": "2026-05-16",
-    "updated": "2026-05-16",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "b96fac46-a683-4b7b-a000-25c1e5184685",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
     "repo": null
   },
   {

@@ -2,13 +2,14 @@
 schema_version: "1"
 uuid: b96fac46-a683-4b7b-a000-25c1e5184685
 title: Rebuild docs/index.html as a multi-file landing-page source tree
-status: backlog
+status: abandoned
 priority: medium
 type: feature
 tags: [landing-page, devx, build]
 areas: [docs]
 created: 2026-05-16
 updated: 2026-05-16
+abandoned_reason: "YAGNI on second look. Edit volume on a marketing landing page is low; single-file pain is at most a quarterly cost. The v10-import argument is weak — Claude Design exports are generative, not incremental, so a v10 means re-applying tweaks regardless of source-tree shape. The reverse-diff tool was the only piece with real leverage and can be filed separately if and when a second painful edit cycle hits."
 lifecycle_slug: null
 lifecycle_phase: null
 session_id: null
