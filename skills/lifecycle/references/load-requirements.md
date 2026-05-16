@@ -6,7 +6,7 @@ Shared protocol for loading project and area-level requirements docs into a phas
 
 Follow these five steps in order:
 
-1. **Always load `cortex/requirements/project.md`.** This is the project-level requirements doc and is unconditionally in scope for every consumer.
+1. **Always load `cortex/requirements/project.md` and every path enumerated in its `## Global Context` section.** `project.md` is the project-level requirements doc and is unconditionally in scope for every consumer. The `## Global Context` section (positioned between `## Conditional Loading` and `## Optional`) is a bulleted list of paths under `cortex/requirements/` that are always loaded alongside `project.md`, regardless of tag matches. Resolve each entry against the repo root. If an entry's file is absent on disk, record it in the loaded-files list step 4 produces as `<path> (skipped: file absent)` — explicit notation, not silent omission — so downstream drift-check and reviewer-dispatch consumers can distinguish "loaded" from "skipped because absent."
 
 2. **Read the consumer's lifecycle `index.md` and extract the `tags:` array from its YAML frontmatter.** The index lives at `cortex/lifecycle/{feature}/index.md` (or the analogous discovery/refine path). The `tags:` field is a YAML list of short tag words inherited from the parent backlog item.
 
@@ -21,6 +21,7 @@ Follow these five steps in order:
 - **Case-insensitive substring match against the Conditional Loading phrase text.** A tag word `harness` matches a phrase "Harness adaptation work". A tag word `agent` matches "agent dispatch".
 - **Tag words that match nothing are silently dropped.** Other tags in the same array are still evaluated independently. The lifecycle does not fail if a tag word is unrecognized.
 - **Whole-tag matching, not partial-tag.** The tag word is the unit of comparison; do not split a tag like `harness-adaptation` into `harness` and `adaptation` unless the tags array itself contains those as separate entries.
+- **Global Context uses list-of-paths semantics, not phrase matching.** Each bullet under the `## Global Context` section of `project.md` is a path relative to repo root (e.g. `cortex/requirements/glossary.md`). The loader reads each listed path on every consumer invocation — there is no tag-driven gating and no substring match against the bullet text. Absent paths are recorded as skipped per step 1's `<path> (skipped: file absent)` notation; this is the documented behavior, not an error condition. The section may be empty; an empty `## Global Context` means no always-load files beyond `project.md` itself.
 
 ## Why this protocol
 
