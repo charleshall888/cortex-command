@@ -23,7 +23,7 @@ Prose-only edits to three files: `skills/requirements-gather/SKILL.md`, `skills/
 - **Complexity**: simple
 - **Context**: File is 72 lines today. The existing `## Decision criteria` block contains two H3 subsections (`### Codebase trumps interview` at line 23, `### Recommend before asking` at line 27, `### Lazy artifact creation` at line 31). Pick the natural insertion point — a new `### Ask one at a time` H3 between Recommend before asking and Lazy artifact creation is the most readable home for cadence prose. Use soft-positive phrasing analogous to the existing decision-criteria entries (e.g., "Ask questions one at a time…" rather than "MUST ask…"). The cross-reference pointer reads roughly: "Mirrored in `skills/lifecycle/references/specify.md` §2 — when editing this rule, update the other surface too." For the `**Code evidence:**` rule, append a phrase to the existing field's parenthetical (current text: `{file paths or excerpts, when codebase-trumps-interview applied; omit otherwise}`) — e.g., add a sentence below the output-shape block stating: "When the **Recommended answer** is derived from code, the **Code evidence** field names the file path that grounds it; omit when the answer is intent-only."
 - **Verification**: `awk '/^## Decision criteria/,/^## Output shape/' skills/requirements-gather/SKILL.md | grep -ci "one at a time"` returns ≥ 1 AND `awk '/^## Decision criteria/,/^## Output shape/' skills/requirements-gather/SKILL.md | grep -c "specify.md"` returns ≥ 1 AND `grep -ci "derived from code\|grounded in code" skills/requirements-gather/SKILL.md` returns ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 3f70c6ce)
 
 ### Task 2: Edit specify.md §2 — cadence prose, cross-reference pointer, and grounded file-path citation
 - **Files**: `skills/lifecycle/references/specify.md`
@@ -32,7 +32,7 @@ Prose-only edits to three files: `skills/requirements-gather/SKILL.md`, `skills/
 - **Complexity**: simple
 - **Context**: §2 currently lists interview areas in sequence (Problem statement line 23, Requirements line 25, Non-requirements line 30, Edge cases line 32, Technical constraints line 34) with a final paragraph at line 36 about asking probing questions. Insert the cadence prose either as a new opening paragraph in §2 (before the bullet sequence) or at the closing paragraph (line 36 area). Cross-reference pointer reads roughly: "Mirrored in `skills/requirements-gather/SKILL.md` — when editing this rule, update the other surface too." Grounded file-path citation reads roughly: "When recommending an acceptance criterion derived from code, name the file path that grounds it; omit when the criterion is intent-only." Match soft-positive phrasing to surrounding §2 prose (the section already uses imperative-but-soft framing like "Ask probing questions…", "Push back on vague boundaries", "Challenge optimistic assumptions"). Do NOT introduce new MUST/CRITICAL/REQUIRED tokens. Do NOT add new `AskUserQuestion` call sites; cadence is encoded as prose only.
 - **Verification**: `awk '/^### 2\. Structured Interview/,/^### 2a/' skills/lifecycle/references/specify.md | grep -ci "one at a time"` returns ≥ 1 AND `awk '/^### 2\. Structured Interview/,/^### 2a/' skills/lifecycle/references/specify.md | grep -c "requirements-gather"` returns ≥ 1 AND `awk '/^### 2\. Structured Interview/,/^### 2a/' skills/lifecycle/references/specify.md | grep -ci "file path\|file-path"` returns ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit a810e905)
 
 ### Task 3: Edit specify.md §2 — soft mid-interview verification guideline
 - **Files**: `skills/lifecycle/references/specify.md`
@@ -41,7 +41,7 @@ Prose-only edits to three files: `skills/requirements-gather/SKILL.md`, `skills/
 - **Complexity**: simple
 - **Context**: Lands inside the §2 awk window (between `### 2. Structured Interview` line 11 and `### 2a` line 38). The guideline pairs with the grounded file-path citation rule added in Task 2 — when the agent cites a file path in a recommendation, it confirms the path exists; when it cites a function's behavior, it verifies against the actual function before locking the criterion. Soft-positive phrasing: "When citing a file path or function-behavior claim during the interview, verify it against the actual code before accepting the user's confirmation. This does NOT replace the §2b Pre-Write Verification check — that gate still fires end-of-interview on the full candidate claim-set." Adds 1–2 new lines containing `\bverify\b`.
 - **Verification**: `(awk '/^### 2\. Structured Interview/,/^### 2a/' skills/lifecycle/references/specify.md | grep -ci '\bverify\b')` returns ≥ 1 (baseline on main is 0, so any non-zero count satisfies R7's delta).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 352d07b9)
 
 ### Task 4: Edit specify.md §2 — judgmental edge-case invention prose
 - **Files**: `skills/lifecycle/references/specify.md`
@@ -50,7 +50,7 @@ Prose-only edits to three files: `skills/requirements-gather/SKILL.md`, `skills/
 - **Complexity**: simple
 - **Context**: Lands inside the §2 awk window. The guideline pairs with the existing "**Edge cases**" interview area at line 32 (section-level edge-case prompts) — this new guideline is per-requirement and judgmental: fires when the agent senses the acceptance criteria are loose, not categorically on every requirement. Soft-positive phrasing: "When a requirement's acceptance criteria look under-specified, invent one concrete edge-case scenario that would stress the criterion and surface it to the user before locking. Apply judgmentally — skip when criteria are already tight." Must use the literal token `under-specified` to satisfy R8's AC.
 - **Verification**: `awk '/^### 2\. Structured Interview/,/^### 2a/' skills/lifecycle/references/specify.md | grep -ci "under-specified"` returns ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 1ca0af67)
 
 ### Task 5: Update kept-user-pauses tolerance prose in skills/lifecycle/SKILL.md
 - **Files**: `skills/lifecycle/SKILL.md`
@@ -59,7 +59,7 @@ Prose-only edits to three files: `skills/requirements-gather/SKILL.md`, `skills/
 - **Complexity**: simple
 - **Context**: Single-character class swap inside the kept-user-pauses inventory introduction. Current line 191 reads: "The parity test at `tests/test_lifecycle_kept_pauses_parity.py` enforces that this inventory and the actual call sites stay in sync (±20-line tolerance)." Replace `±20-line tolerance` with `±35-line tolerance`. Use `Edit` tool with `old_string`/`new_string` for an exact replacement; the surrounding sentence stays intact. Do not change `LINE_TOLERANCE` in the test file; the spec's Non-Requirements explicitly forbid lowering the constant.
 - **Verification**: `grep -c "±35-line tolerance" skills/lifecycle/SKILL.md` returns ≥ 1 AND `grep -c "±20-line tolerance" skills/lifecycle/SKILL.md` returns 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 5736c0a9)
 
 ### Task 6: Run global verification gates on the final state of all three edited files
 - **Files**: `skills/requirements-gather/SKILL.md`, `skills/lifecycle/references/specify.md`, `skills/lifecycle/SKILL.md` (read-only inspection)

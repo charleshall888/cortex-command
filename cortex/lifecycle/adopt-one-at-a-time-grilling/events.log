@@ -8,3 +8,7 @@
 {"ts": "2026-05-16T04:23:34Z", "event": "phase_transition", "feature": "adopt-one-at-a-time-grilling", "from": "specify", "to": "plan"}
 {"ts": "2026-05-16T10:50:17Z", "event": "plan_approved", "feature": "adopt-one-at-a-time-grilling"}
 {"ts": "2026-05-16T10:50:17Z", "event": "phase_transition", "feature": "adopt-one-at-a-time-grilling", "from": "plan", "to": "implement"}
+{"ts": "2026-05-16T11:43:39Z", "event": "phase_transition", "feature": "adopt-one-at-a-time-grilling", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-16T11:48:09Z", "event": "review_verdict", "feature": "adopt-one-at-a-time-grilling", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-16T11:48:09Z", "event": "phase_transition", "feature": "adopt-one-at-a-time-grilling", "from": "review", "to": "complete"}
+{"ts": "2026-05-16T11:49:36Z", "event": "feature_complete", "feature": "adopt-one-at-a-time-grilling", "tasks_total": 6, "rework_cycles": 1}

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 3c6cede4-bbe1-4e72-9413-04feb0206afb
 title: "Adopt one-at-a-time grilling cadence in requirements interview"
-status: refined
+status: complete
 priority: medium
 type: feature
 parent: 221
@@ -10,7 +10,7 @@ tags: [requirements, skills, lifecycle, grill-me-with-docs-learnings]
 created: 2026-05-15
 updated: 2026-05-16
 discovery_source: cortex/research/grill-me-with-docs-learnings/research.md
-session_id: 283e5d30-087a-407f-83eb-001a85c13bb9
+session_id: null
 lifecycle_phase: research
 lifecycle_slug: adopt-one-at-a-time-grilling
 complexity: complex
