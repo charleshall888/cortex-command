@@ -1,0 +1,60 @@
+{
+  "ts": "2026-05-16T04:20:05Z",
+  "feature": "add-project-glossary-at-cortex-requirements",
+  "artifact": "cortex/lifecycle/add-project-glossary-at-cortex-requirements/spec.md",
+  "synthesis_status": "ok",
+  "reviewers": {
+    "completed": 3,
+    "dispatched": 3
+  },
+  "findings": [
+    {
+      "class": "B",
+      "finding": "Requirement 6's term-already-exists probe reads only cortex/requirements/glossary.md \u2014 a candidate parked in spec Open Decisions has no glossary entry yet, probe cannot deduplicate against prior deferred definitions.",
+      "reviewer_angle": "Single-producer deferral mechanism",
+      "evidence_quote": "on resolving a term inline, (a) reads cortex/requirements/glossary.md if it exists, (b) if the term is already present: uses the existing entry verbatim or surfaces the conflict to the user before reclassifying"
+    },
+    {
+      "class": "B",
+      "finding": "Requirement 5 narrows requirements-gather's no-filesystem contract for glossary writes and explicitly excludes glossary from lazy artifact creation, but does not specify the semantics of partial glossary state when a user abandons mid-interview after some terms have been appended.",
+      "reviewer_angle": "Single-producer deferral mechanism",
+      "evidence_quote": "Lazy artifact creation still applies to project.md and area docs \u2014 the Q&A block is held in conversation context until /requirements-write synthesizes"
+    },
+    {
+      "class": "B",
+      "finding": "Requirement 15 specifies the four-bucket classifier applies at skill-edit time and at glossary-audit time, but the spec defines no glossary-audit surface anywhere \u2014 no skill, no requirement, no event invokes one. The advisory doc has no consumer.",
+      "reviewer_angle": "Single-producer deferral mechanism",
+      "evidence_quote": "it applies at skill-edit time and at glossary-audit time, NOT at inline-write time"
+    },
+    {
+      "class": "B",
+      "finding": "Req 4's embed-in-step-1 alternative silently redefines step 1 from a single unconditional file load to a doc-parse-and-multi-load; only the rename-and-rescope branch of Req 4 is clean. Downgraded A\u2192B because the requirement offers a clean alternative.",
+      "reviewer_angle": "Global Context schema-protocol semantics",
+      "evidence_quote": "Either rename and rescope the test to match a new step count, or preserve the five-step shape by embedding the Global Context read inside step 1 rather than adding a new step."
+    },
+    {
+      "class": "B",
+      "finding": "Req 3 introduces a silent-skip-on-absence semantic for Global Context entries but does not update step 4's 'Record the full list of loaded requirements files' clause to specify whether absent entries are recorded as attempted-but-skipped or omitted entirely; downstream drift-check and reviewer-dispatch consumers cited in step 4 have no documented contract for that distinction.",
+      "reviewer_angle": "Global Context schema-protocol semantics",
+      "evidence_quote": "silently skipping any listed file that does not exist on disk"
+    },
+    {
+      "class": "B",
+      "finding": "Req 1 positions ## Global Context as a structural peer of ## Conditional Loading, but the Matching Semantics sub-section of load-requirements.md documents only Conditional Loading's substring-match-against-phrase semantics; the spec does not propose adding a Global Context counterpart describing the list-of-paths semantic.",
+      "reviewer_angle": "Global Context schema-protocol semantics",
+      "evidence_quote": "between ## Conditional Loading and ## Optional"
+    },
+    {
+      "class": "B",
+      "finding": "Requirement 11's Language-section-only read at critical-review Step 2a filters by section name but not by section content; the spec does not constrain what producers write into ## Language, so four-bucket reasoning can leak into the critical-review Project Context block by being encoded into Language entries themselves.",
+      "reviewer_angle": "Hybrid classifier boundary durability",
+      "evidence_quote": "Do NOT read the ## Relationships, ## Example dialogue, or ## Flagged ambiguities sections \u2014 those could approach 'existing reasoning' territory."
+    },
+    {
+      "class": "B",
+      "finding": "Open Decisions defers advisory-doc location to implementation time while Non-Requirements asserts the boundary holds regardless; the location is load-bearing for that Non-Requirement (cortex/requirements/ placement co-locates with the producer's read surface; docs/skills/ does not), so the deferral leaves a durability-relevant choice outside spec review.",
+      "reviewer_angle": "Hybrid classifier boundary durability",
+      "evidence_quote": "Advisory-doc location: cortex/requirements/glossary-classifier.md (lives alongside the glossary it advises) or docs/skills/glossary-classifier.md (lives where skill-author guidance lives)."
+    }
+  ]
+}

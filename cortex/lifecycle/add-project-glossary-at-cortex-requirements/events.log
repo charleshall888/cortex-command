@@ -1,0 +1,8 @@
+{"schema_version": 3, "ts": "2026-05-16T03:24:31Z", "event": "clarify_critic", "feature": "add-project-glossary-at-cortex-requirements", "parent_epic_loaded": true, "findings_count": 8, "dispositions": {"apply": 2, "dismiss": 2, "ask": 4}, "applied_fixes_count": 2, "dismissals_count": 2, "status": "ok"}
+{"ts": "2026-05-16T03:44:15Z", "event": "lifecycle_start", "feature": "add-project-glossary-at-cortex-requirements", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-16T03:44:15Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "from": "clarify", "to": "research"}
+{"ts": "2026-05-16T04:02:12Z", "event": "complexity_override", "feature": "add-project-glossary-at-cortex-requirements", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-16T04:02:21Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "from": "research", "to": "specify"}
+{"ts":"2026-05-16T04:17:54Z","event":"synthesizer_drift","feature":"add-project-glossary-at-cortex-requirements","expected_sha":"24d32cae11b08c09638356c9c56157cbed4b090eaf8ef688b5818722d3ae208a","observed_sha_or_null":null}
+{"ts": "2026-05-16T11:35:54Z", "event": "spec_approved", "feature": "add-project-glossary-at-cortex-requirements"}
+{"ts": "2026-05-16T11:35:54Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "from": "specify", "to": "plan"}
