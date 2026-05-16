@@ -8,3 +8,4 @@
 {"ts": "2026-05-16T11:35:54Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "from": "specify", "to": "plan"}
 {"ts": "2026-05-16T11:55:56Z", "event": "plan_approved", "feature": "add-project-glossary-at-cortex-requirements"}
 {"ts": "2026-05-16T11:55:56Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "from": "plan", "to": "implement"}
+{"ts": "2026-05-16T12:53:53Z", "event": "batch_dispatch", "feature": "add-project-glossary-at-cortex-requirements", "batch": 0, "tasks": [1]}

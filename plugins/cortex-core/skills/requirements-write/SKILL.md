@@ -23,7 +23,7 @@ Synthesize the Q&A block plus any existing target doc into a v2-compliant artifa
 
 ## Project template — `cortex/requirements/project.md`
 
-Header `# Requirements: {project-name}` + `> Last gathered: {YYYY-MM-DD}` blockquote, then these seven H2s in order:
+Header `# Requirements: {project-name}` + `> Last gathered: {YYYY-MM-DD}` blockquote, then these eight H2s in order:
 
 1. `## Overview` — 1–2 paragraph north star; distribution posture if load-bearing.
 2. `## Philosophy of Work` — Cross-cutting principles, bold-led bullets.
@@ -31,7 +31,16 @@ Header `# Requirements: {project-name}` + `> Last gathered: {YYYY-MM-DD}` blockq
 4. `## Quality Attributes` — Non-functional bar, bold-led bullets.
 5. `## Project Boundaries` — H3s `### In Scope`, `### Out of Scope`, `### Deferred`. Discovery/backlog scope clarified inline per R14.
 6. `## Conditional Loading` — `{trigger phrase} → cortex/requirements/{area}.md` lines; trigger phrases must intersect real lifecycle `index.md` `tags:` words.
-7. `## Optional` — Prunable. First non-heading line states the prunability convention; bold-led bullets for deferred notes. Token budget ≤1,200 (`cl100k_base`), verified at acceptance — overflow goes into `## Optional` or an area doc, never new top-level H2s.
+7. `## Global Context` — Bulleted list of paths under `cortex/requirements/` that are always loaded by every consumer regardless of tag matches. Each bullet is a bare path (e.g. `- cortex/requirements/glossary.md`); no trigger phrases, no conditional prose. Use sparingly — entries here load on every consumer invocation, so they belong only where the content is genuinely cross-cutting and small.
+8. `## Optional` — Prunable. First non-heading line states the prunability convention; bold-led bullets for deferred notes. Token budget ≤1,200 (`cl100k_base`), verified at acceptance — overflow goes into `## Optional` or an area doc, never new top-level H2s.
+
+### Global Context schema entry
+
+The H2 heading written into `project.md` is, verbatim:
+
+## Global Context
+
+Content rule: a bulleted list of paths under `cortex/requirements/` that every consumer loads on every invocation, regardless of tag matches. No trigger-phrase syntax, no conditional prose. The loader treats absent paths as silently skipped (recorded per the load-requirements protocol), so adding an entry before the target file exists is valid and intentional.
 
 ## Area template — `cortex/requirements/{area}.md`
 
