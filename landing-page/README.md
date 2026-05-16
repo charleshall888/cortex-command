@@ -50,3 +50,29 @@ Refinement channel hierarchy (cheapest → most expensive):
 2. **Direct text edits** (click-and-type into the canvas) — free
 3. **Inline comments** — batch many into ONE model turn before sending
 4. **Chat reprompts** — full context reprocess, expensive, structural changes only
+
+## Post-export workflow (v9 hybrid, current state)
+
+The v9 export is committed at `landing-page/_imports/Cortex Command v9.html` (~270KB, 6,304 lines) and treated as the **read-only canonical** artifact from Claude Design. The deployed `docs/index.html` is a stripped + edited copy of v9, hand-modified for ship-readiness:
+
+- edit-mode scaffold removed (`.tweaks-panel` CSS + markup + the `__edit_mode_*` postMessage protocol)
+- `data-stain="carbon"` set on `<html>` so the carbon default survives the JS-shim removal
+- SEO/social meta tags, favicon.svg, robots.txt, sitemap.xml, og-image.png added
+- mobile (<600px) + a11y + reduced-motion fixes
+- copy rewrites in §02 / §03 / §06
+- progressive scroll-scrub reveal on the hood gatefold (Fig 9)
+- R3 sidebar stamp doubles as the redline-mode toggle
+
+This was landed across five atomic commits (`a0d137bc` → `87b41b14` on `main`), each tagged Phase 1 through 5 in the subject.
+
+### Future v10 imports — interim workflow
+
+Until the proper multi-file build pipeline lands (see backlog ticket `cortex/backlog/226-landing-multi-file-rebuild.md`), the path for a new Claude Design export is:
+
+1. Export the new draft from Claude Design as a single HTML file.
+2. Save to `landing-page/_imports/Cortex Command v<N>.html`.
+3. Diff against the current `docs/index.html` to surface what changed.
+4. Manually replay the post-export edits listed above on the new export.
+5. Replace `docs/index.html` with the new stripped+edited version.
+
+This is fragile — the goal of ticket 226 is to make it reliable.
