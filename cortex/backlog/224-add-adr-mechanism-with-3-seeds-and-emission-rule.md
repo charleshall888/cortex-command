@@ -2,14 +2,16 @@
 schema_version: "1"
 uuid: 3704a6a7-056c-4783-8fa2-b33c91a0026f
 title: "Add docs/adr/ with 3 seed ADRs and emission rule"
-status: backlog
+status: refined
 priority: high
 type: feature
 parent: 221
 tags: [requirements, decisions, grill-me-with-docs-learnings]
 created: 2026-05-15
-updated: 2026-05-15
+updated: 2026-05-16
 discovery_source: cortex/research/grill-me-with-docs-learnings/research.md
+spec: cortex/lifecycle/add-docs-adr-with-3-seed/spec.md
+areas: [lifecycle]
 ---
 
 ## Role

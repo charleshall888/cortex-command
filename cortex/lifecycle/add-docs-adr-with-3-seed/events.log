@@ -1,0 +1,8 @@
+{"schema_version": 3, "ts": "2026-05-16T03:24:56Z", "event": "clarify_critic", "feature": "add-docs-adr-with-3-seed", "parent_epic_loaded": true, "findings_count": 7, "dispositions": {"apply": 3, "dismiss": 3, "ask": 1}, "applied_fixes_count": 3, "dismissals_count": 3, "status": "ok"}
+{"ts": "2026-05-16T03:43:40Z", "event": "lifecycle_start", "feature": "add-docs-adr-with-3-seed", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-16T03:43:55Z", "event": "phase_transition", "feature": "add-docs-adr-with-3-seed", "from": "clarify", "to": "research"}
+{"ts": "2026-05-16T03:53:58Z", "event": "phase_transition", "feature": "add-docs-adr-with-3-seed", "from": "research", "to": "specify"}
+{"ts": "2026-05-16T03:54:15Z", "event": "complexity_override", "feature": "add-docs-adr-with-3-seed", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts":"2026-05-16T04:10:02Z","event":"synthesizer_drift","feature":"add-docs-adr-with-3-seed","expected_sha":"1b0bdd65fbbfc6a8f5d5def9d958ee9216ac6c5d136b5ce1c57b560f0bf71372","observed_sha_or_null":null}
+{"ts": "2026-05-16T11:39:19Z", "event": "spec_approved", "feature": "add-docs-adr-with-3-seed"}
+{"ts": "2026-05-16T11:39:19Z", "event": "phase_transition", "feature": "add-docs-adr-with-3-seed", "from": "specify", "to": "plan"}
