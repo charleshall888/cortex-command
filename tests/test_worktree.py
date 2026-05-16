@@ -646,3 +646,81 @@ class TestVerifyR5NegativeProperty:
             result = resolve_worktree_root("foo", session_id=None)
 
         assert not str(result).startswith(str(fake_repo) + "/.claude/")
+
+
+# R11: atime-touch guard on create_worktree()'s idempotent return branch.
+#
+# The guard refreshes the worktree's access time on lifecycle resume so
+# macOS's nightly dirhelper purge (3-day atime-based eviction of
+# /var/folders/) does not silently delete paused/deferred features. The
+# tests below are module-level functions (not class methods) so they match
+# the plan.md Task 9 verification selector:
+#   pytest tests/test_worktree.py::test_atime_touch_distinguishes_guard_set_from_creation_fresh
+
+
+def test_atime_touch_distinguishes_guard_set_from_creation_fresh(
+    monkeypatch, tmp_path
+):
+    """Positive: idempotent re-invocation advances the worktree's atime."""
+    import time as _time
+
+    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+    monkeypatch.delenv("CORTEX_SKIP_ATIME_TOUCH", raising=False)
+    isolated_tmpdir = tmp_path / "tmp"
+    isolated_tmpdir.mkdir()
+    monkeypatch.setenv("TMPDIR", str(isolated_tmpdir))
+
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    branch = _init_git_repo(repo_dir)
+
+    with patch(
+        "cortex_command.pipeline.worktree._repo_root", return_value=repo_dir
+    ):
+        info = create_worktree("atime-guard-positive", base_branch=branch)
+
+        # Set both atime and mtime to a known-old timestamp so we can
+        # observe whether the guard moved atime forward.
+        old_time = _time.time() - 3600
+        os.utime(info.path, (old_time, old_time))
+
+        # Re-invoke create_worktree to exercise the idempotent return.
+        create_worktree("atime-guard-positive", base_branch=branch)
+
+    new_atime = os.stat(info.path).st_atime
+    assert new_atime > old_time + 60, (
+        f"expected guard to advance atime; old_time={old_time}, "
+        f"new_atime={new_atime}, delta={new_atime - old_time}"
+    )
+
+
+def test_atime_touch_skipped_with_env_opt_out(monkeypatch, tmp_path):
+    """Negative: CORTEX_SKIP_ATIME_TOUCH=1 leaves atime unchanged."""
+    import time as _time
+
+    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+    isolated_tmpdir = tmp_path / "tmp"
+    isolated_tmpdir.mkdir()
+    monkeypatch.setenv("TMPDIR", str(isolated_tmpdir))
+
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    branch = _init_git_repo(repo_dir)
+
+    with patch(
+        "cortex_command.pipeline.worktree._repo_root", return_value=repo_dir
+    ):
+        info = create_worktree("atime-guard-negative", base_branch=branch)
+
+        old_time = _time.time() - 3600
+        os.utime(info.path, (old_time, old_time))
+
+        # Opt out of the guard before the idempotent re-invocation.
+        monkeypatch.setenv("CORTEX_SKIP_ATIME_TOUCH", "1")
+        create_worktree("atime-guard-negative", base_branch=branch)
+
+    new_atime = os.stat(info.path).st_atime
+    assert abs(new_atime - old_time) <= 5, (
+        f"expected atime unchanged with opt-out; old_time={old_time}, "
+        f"new_atime={new_atime}, delta={new_atime - old_time}"
+    )

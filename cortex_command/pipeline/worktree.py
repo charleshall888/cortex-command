@@ -20,6 +20,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -239,6 +240,15 @@ def create_worktree(
                 current_branch = line[len("branch refs/heads/"):]
             elif line == "":
                 if current_path == str(worktree_path) and current_branch:
+                    # Touch atime to defend against macOS dirhelper's nightly
+                    # 3-day atime-based eviction of /var/folders/ — refreshes
+                    # access time on lifecycle resume so paused/deferred
+                    # features are not silently purged. Opt-out via
+                    # CORTEX_SKIP_ATIME_TOUCH=1 for tests that need to
+                    # observe the pre-touch atime.
+                    if not os.environ.get("CORTEX_SKIP_ATIME_TOUCH"):
+                        now = time.time()
+                        os.utime(worktree_path, (now, now))
                     return WorktreeInfo(
                         feature=feature,
                         path=worktree_path,
@@ -249,6 +259,9 @@ def create_worktree(
                 current_branch = None
         # Check last entry if output doesn't end with a blank line
         if current_path == str(worktree_path) and current_branch:
+            if not os.environ.get("CORTEX_SKIP_ATIME_TOUCH"):
+                now = time.time()
+                os.utime(worktree_path, (now, now))
             return WorktreeInfo(
                 feature=feature,
                 path=worktree_path,
