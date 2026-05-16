@@ -2795,6 +2795,13 @@
   @media (max-width: 900px) {
     .install .ship-grid { grid-template-columns: 1fr; }
   }
+  .install .ship-aside {
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: var(--ink-faint);
+  }
   .install .repo-line {
     margin-top: 32px;
     display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
@@ -3647,7 +3654,7 @@
             </g>
           </svg>
         </div>
-        <p>One prompt, deeply researched. Discovery clarifies ambiguities, reviews adversarially, and spawns one ticket per scoped piece of work.</p>
+        <p>One prompt. Discovery clarifies ambiguities, reviews adversarially, and spawns one ticket per scoped piece of work.</p>
       </div>
       <div class="ex">
         <span class="ex-num">02</span>
@@ -3821,7 +3828,7 @@
       <div class="body">
         <span class="placeholder">[ pending — scroll to capture from interview ]</span>
         <div class="real">
-          What does it feel like to set a nightline well? Player loop: <em>choose tackle → cast at dusk → set depth → leave the line → return at dawn.</em> Fish simulated overnight. Catch determined by depth, bait, weather, patience. Scope-in: a satisfying choice + <span class="u-target" data-u="clarify">a felt morning</span>.
+          What does it feel like to set a nightline well? Player loop: <em>choose tackle → cast at dusk → set depth → leave the line → return at dawn.</em> Fish simulated overnight. Catch determined by depth, bait, weather, patience. Scope-in: a satisfying choice + <span class="u-target" data-u="clarify">a morning the night actually paid for</span>.
         </div>
       </div>
     </article>
@@ -3874,7 +3881,7 @@
     </article>
 
     <article class="sec" data-phase="plan" id="sec-plan">
-      <span class="redline" aria-hidden="true" style="top:-10px; right:-180px;">the soul of the feature. mock it badly and the loop collapses. ask me how i know.</span>
+      <span class="redline" aria-hidden="true" style="top:-10px; right:-180px;">if the resolver doesn't feel right, nothing else does either. mock it badly and the loop collapses.</span>
       <div class="margin">
         <div class="num">§ 04</div>
         <div class="ticks">
@@ -3890,7 +3897,7 @@
       <div class="body">
         <span class="placeholder">[ pending — implementation order resolves here ]</span>
         <div class="real">
-          Implementation: <em>(a)</em> tackle data model + UI, <em>(b)</em> cast/set screen, <em>(c)</em> overnight resolver, <em>(d)</em> dawn reveal animation, <em>(e)</em> catch encyclopedia. Acceptance: a player who sets a line and sleeps wakes to a result that feels earned. Risk: the resolver is <span class="u-target" data-u="plan">the soul of the feature</span>; mock it badly and the loop collapses.
+          Implementation: <em>(a)</em> tackle data model + UI, <em>(b)</em> cast/set screen, <em>(c)</em> overnight resolver, <em>(d)</em> dawn reveal animation, <em>(e)</em> catch encyclopedia. Acceptance: a player who sets a line and sleeps wakes to a result that feels earned. Risk: the resolver <span class="u-target" data-u="plan">carries the loop</span>. Mock it badly and the loop collapses.
         </div>
       </div>
     </article>
@@ -3913,7 +3920,7 @@
       </div>
       <div class="pipe-annot" id="annot-refine"
            style="left: 47%; top: 70%;">
-        each ticket runs in its own claude window · clears spec → research → critical-review before it earns a plan
+        each ticket runs in its own claude window · clears spec → research → critical-review before a plan is approved
       </div>
       <div class="pipe-annot" id="annot-morning"
            style="right: 4%; top: 70%;">
@@ -4922,7 +4929,7 @@
   <!-- ───────── What ships ───────── -->
   <section class="install" id="install">
     <span class="redline" aria-hidden="true" style="top:8px; right:0;">don't take the whole framework. take the part that fits your week.</span>
-    <div class="marker">§06 · what ships · 3 surfaces, opt-in</div>
+    <div class="marker">§06 · what installs · 2 plugins · CLI + MCP auto-bundle</div>
     <h2>Start with the skills. <em>Add overnight when you want autonomy.</em></h2>
 
     <div class="ship-grid two-col">
@@ -4932,20 +4939,23 @@
           <span class="ship-opt req">required · start here</span>
         </div>
         <h3 class="ship-name">cortex-core</h3>
-        <p class="ship-desc">The interactive lifecycle — <code>/discovery</code>, <code>/refine</code>, <code>/critical-review</code>, <code>/lifecycle</code> — installed as a Claude Code plugin. <strong>Start here.</strong> Run <code>/lifecycle</code> on a real ticket to feel the gates — clarify, research, spec, plan, critical-review, implement, review — with you in the loop. The lowest-risk way to evaluate spec quality before adopting autonomy.</p>
+        <p class="ship-desc">The interactive lifecycle — <code>/discovery</code>, <code>/refine</code>, <code>/critical-review</code>, <code>/lifecycle</code> — installed as a Claude Code plugin. <strong>Start here.</strong> Run <code>/lifecycle</code> on a real ticket to feel the gates — clarify, research, spec, plan, critical-review, implement, review — with you in the loop.</p>
         <p class="ship-when"><span class="k">install:</span> <code>/plugin install cortex-core@cortex-command</code></p>
       </article>
 
       <article class="ship-card optional" data-surface="overnight">
         <div class="ship-head">
           <span class="ship-num">02</span>
-          <span class="ship-opt opt">optional · auto-installs cli + mcp</span>
+          <span class="ship-opt opt">optional · auto-bundles cli + mcp</span>
         </div>
         <h3 class="ship-name"><span class="ship-icon-moon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.5 A8 8 0 1 1 9.5 4.5 A6 6 0 0 0 19.5 14.5 Z" fill="currentColor" fill-opacity="0.18"/><circle cx="4.5" cy="5.5" r="0.6" fill="currentColor" stroke="none"/><circle cx="20" cy="19" r="0.6" fill="currentColor" stroke="none"/><circle cx="6.5" cy="20" r="0.5" fill="currentColor" stroke="none"/></svg></span>cortex-overnight</h3>
-        <p class="ship-desc">The autonomous half. Installing the plugin auto-installs the <code>cortex</code> CLI (<code>cortex overnight</code> / <code>cortex morning-review</code>) and an MCP server (<code>read_spec</code>, <code>advance_phase</code>, <code>list_lifecycles</code>) so any MCP-speaking agent can read Cortex state. Skip it if you only want gated lifecycles in-session.</p>
-        <p class="ship-when"><span class="k">install:</span> <code>/plugin install cortex-overnight@cortex-command</code> — only when you're ready to hand off work overnight.</p>
+        <p class="ship-desc">The autonomous half. Installing this plugin auto-bundles the <code>cortex</code> CLI (<code>cortex overnight</code> / <code>cortex morning-review</code>) and an MCP server (<code>read_spec</code>, <code>advance_phase</code>, <code>list_lifecycles</code>) so any MCP-speaking agent can read Cortex state. Skip it if you only want gated lifecycles in-session.</p>
+        <p class="ship-when"><span class="k">install:</span> <code>/plugin install cortex-overnight@cortex-command</code></p>
+        <p class="ship-when"><span class="k">first run:</span> <code>cortex init</code> — registers Cortex's umbrella path with Claude Code's sandbox.</p>
       </article>
     </div>
+
+    <p class="ship-aside">plugins auto-update the CLI · MCP server stays in sync · no separate install loop</p>
 
     <div class="repo-line">
       <a class="install-cta" href="https://github.com/charleshall888/cortex-command#install" target="_blank" rel="noopener">install instructions →</a>
