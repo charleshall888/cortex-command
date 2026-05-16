@@ -3,3 +3,5 @@
 {"ts":"2026-05-16T11:31:31Z","event":"sentinel_absence","feature":"re-validate-test-worktree-seatbeltpy-on","reviewer_angle":"claude -p JSON envelope vs. subprocess exit-code semantics","reason":"absent","model_tier":"sonnet","expected_sha":"f33ed391034b5ac3223eeb410c5ac08a4bdf9555666aff6f5914b2481c84dd97","observed_sha_or_null":null}
 {"ts":"2026-05-16T11:31:31Z","event":"sentinel_absence","feature":"re-validate-test-worktree-seatbeltpy-on","reviewer_angle":"Parent-lifecycle compatibility and stale-evidence handling","reason":"absent","model_tier":"sonnet","expected_sha":"f33ed391034b5ac3223eeb410c5ac08a4bdf9555666aff6f5914b2481c84dd97","observed_sha_or_null":null}
 {"ts": "2026-05-16T11:48:20Z", "event": "spec_approved", "feature": "re-validate-test-worktree-seatbeltpy-on"}
+{"ts": "2026-05-16T13:34:34Z", "event": "plan_approved", "feature": "re-validate-test-worktree-seatbeltpy-on"}
+{"ts": "2026-05-16T13:34:34Z", "event": "phase_transition", "feature": "re-validate-test-worktree-seatbeltpy-on", "from": "plan", "to": "implement"}
