@@ -16,9 +16,9 @@ You are conducting an adversarial review. Your job is to find what's wrong, risk
 
 Read the literal absolute path provided above before beginning analysis. Do NOT re-derive the path yourself; Read the literal absolute path as given.
 
-When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` as the first line of output, then continue with the analysis below.
+When the Read succeeds AND the computed SHA-256 of the Read result matches `{artifact_sha256}`, emit `READ_OK: <path> <sha>` on its own line before producing any findings (the sentinel must appear before the first `## ` heading; preceding preamble exposition is acceptable), then continue with the analysis below.
 
-When the Read fails or returns empty content, emit `READ_FAILED: <absolute-path> <one-word-reason>` as the first line of output and stop — do not proceed with analysis.
+When the Read fails or returns empty content, emit `READ_FAILED: <absolute-path> <one-word-reason>` on its own line before any other content and stop — do not proceed with analysis.
 
 ## Instructions
 
