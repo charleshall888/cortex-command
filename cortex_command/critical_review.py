@@ -217,6 +217,61 @@ def verify_synth_output(
 
 
 # ---------------------------------------------------------------------------
+# verify-reviewer-output (parse READ_OK / READ_FAILED with OK-first precedence)
+# ---------------------------------------------------------------------------
+
+_REVIEWER_OK_RE = re.compile(r"^READ_OK: (\S+) ([0-9a-f]{64})\s*$", re.MULTILINE)
+_REVIEWER_FAILED_RE = re.compile(r"^READ_FAILED: (\S+) (\S+)\s*$", re.MULTILINE)
+
+
+def verify_reviewer_output(
+    output: str,
+    expected_sha: str,
+    window_lines: int = 50,
+) -> tuple[str, str | None]:
+    """Inspect a reviewer's stdout for ``READ_OK`` / ``READ_FAILED`` sentinels.
+
+    Uses **first-match-whose-SHA-equals-expected** (OK-first precedence)
+    rather than earliest-position matching, so that adversarial preamble
+    containing quoted ``READ_OK``/``READ_FAILED`` lines (e.g. when a reviewer
+    reviews this fix's own artifacts) cannot misclassify a real success
+    or failure sentinel that appears later in the window.
+
+    Args:
+        output: The reviewer's full stdout text.
+        expected_sha: The orchestrator's pre-dispatch SHA.
+        window_lines: How many leading lines of ``output`` to scan (default 50).
+
+    Returns:
+        ``("ok", expected_sha)`` if any ``READ_OK`` in the window has the
+            expected SHA.
+        ``("read_failed", reason)`` if no matching ``READ_OK`` exists but
+            at least one ``READ_FAILED`` line is present; ``reason`` is the
+            first failure's reason token.
+        ``("mismatch", observed_sha)`` if ``READ_OK`` lines exist in the
+            window but none match the expected SHA; ``observed_sha`` is the
+            first ``READ_OK``'s SHA (diagnostic only — may be quoted text).
+        ``("absent", None)`` if neither sentinel appears in the window.
+
+    Note:
+        The path-capture group is diagnostic only — only the SHA is
+        validated. ``splitlines()`` normalizes ``\\r\\n`` line endings
+        before the regex sees them.
+    """
+    window = "\n".join(output.splitlines()[:window_lines])
+    ok_matches = list(_REVIEWER_OK_RE.finditer(window))
+    for match in ok_matches:
+        if match.group(2) == expected_sha:
+            return ("ok", expected_sha)
+    failed_matches = list(_REVIEWER_FAILED_RE.finditer(window))
+    if failed_matches:
+        return ("read_failed", failed_matches[0].group(2))
+    if ok_matches:
+        return ("mismatch", ok_matches[0].group(2))
+    return ("absent", None)
+
+
+# ---------------------------------------------------------------------------
 # Atomic events.log append (tempfile + os.replace)
 # ---------------------------------------------------------------------------
 
