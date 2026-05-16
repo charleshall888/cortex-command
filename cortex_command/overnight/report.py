@@ -321,6 +321,33 @@ def create_followup_backlog_items(
 # Section renderers
 # ---------------------------------------------------------------------------
 
+def render_seatbelt_probe_header(data: ReportData) -> str:
+    """Render the per-session Seatbelt probe outcome (spec R6).
+
+    Scans ``data.events`` for the most recent ``seatbelt_probe`` entry produced
+    by the runner's session-start emitter and renders a single header line of
+    the form ``Seatbelt probe: <result> | pytest_summary="<summary>" |
+    softfail_active=<bool>``. Returns the empty string when no probe event is
+    present so the caller can omit the section cleanly.
+
+    Always renders (when present) — including ``result=ok`` — so operators can
+    confirm at a glance that the kernel-anchored sandbox-writability gate ran.
+    """
+    last_event: dict | None = None
+    for evt in data.events:
+        if evt.get("event") == "seatbelt_probe":
+            last_event = evt
+    if last_event is None:
+        return ""
+    result = last_event.get("result", "unknown")
+    summary = last_event.get("pytest_summary", "")
+    softfail = last_event.get("softfail_active", False)
+    return (
+        f"Seatbelt probe: {result} | pytest_summary=\"{summary}\" | "
+        f"softfail_active={softfail}"
+    )
+
+
 def render_soft_fail_header(data: ReportData) -> str:
     """Render the unconditional CORTEX_SANDBOX_SOFT_FAIL header (spec Req 20).
 
@@ -1954,6 +1981,10 @@ def generate_report(data: ReportData) -> str:
     # active at any settings-builder invocation during the session. The event
     # `sandbox_soft_fail_active` is emitted by the per-spawn settings builder
     # (cortex_command.overnight.sandbox_settings) at first activation.
+    seatbelt_probe_header = render_seatbelt_probe_header(data)
+    if seatbelt_probe_header:
+        sections.append(seatbelt_probe_header)
+        sections.append("")
     soft_fail_header = render_soft_fail_header(data)
     if soft_fail_header:
         sections.append(soft_fail_header)
