@@ -8,19 +8,16 @@
 | 209 | Lead refine §4 complexity-value gate with recommended option + rationale | in_progress | medium | chore | — | — | ✓ |
 | 211 | R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up) | superseded | medium | bug | — | — | — |
 | 212 | CLI_PIN drift lint (#146 hygiene) | superseded | medium | chore | — | — | — |
-| 215 | Add native Windows host support for the agentic harness | not-started | medium | epic | — | — | — |
-| 216 | Add platform abstraction package for Windows | not-started | medium | feature | — | 215 | — |
-| 218 | Bootstrap Windows install and validate hook execution | not-started | medium | feature | — | 215 | — |
-| 219 | Add Windows posture surface and advisory CI | not-started | medium | feature | 216 | 215 | — |
 | 227 | Discovery output density — investigate author-centric prose at gate | refined | medium | needs-discovery | — | — | — |
+| 229 | Critical-review sentinel gate: relax first-line strictness to accept lead-in exposition | refined | medium | bug | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
-| 217 | Port overnight scheduler to Windows Task Scheduler | not-started | low | feature | 216 | 215 | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
 
 ## Refined
 
 - **228** Wire daytime dispatch through cortex CLI + MCP with launchd detachment
 - **227** Discovery output density — investigate author-centric prose at gate
+- **229** Critical-review sentinel gate: relax first-line strictness to accept lead-in exposition
 
 ## Backlog
 

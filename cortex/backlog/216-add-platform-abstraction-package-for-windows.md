@@ -2,12 +2,12 @@
 id: 216
 title: "Add platform abstraction package for Windows"
 type: feature
-status: not-started
+status: wontfix
 priority: medium
 parent: 215
 tags: [windows-support, platform, locking, processes]
 created: 2026-05-15
-updated: 2026-05-15
+updated: 2026-05-16
 discovery_source: cortex/research/windows-support/research.md
 ---
 

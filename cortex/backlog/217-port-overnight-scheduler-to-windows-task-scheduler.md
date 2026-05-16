@@ -2,13 +2,13 @@
 id: 217
 title: "Port overnight scheduler to Windows Task Scheduler"
 type: feature
-status: not-started
+status: wontfix
 priority: low
 parent: 215
-blocked-by: [216]
+blocked-by: []
 tags: [windows-support, overnight, scheduler]
 created: 2026-05-15
-updated: 2026-05-15
+updated: 2026-05-16
 discovery_source: cortex/research/windows-support/research.md
 ---
 

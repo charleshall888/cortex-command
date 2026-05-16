@@ -2,11 +2,11 @@
 id: 215
 title: "Add native Windows host support for the agentic harness"
 type: epic
-status: not-started
+status: wontfix
 priority: medium
 tags: [windows-support, platform, port]
 created: 2026-05-15
-updated: 2026-05-15
+updated: 2026-05-16
 discovery_source: cortex/research/windows-support/research.md
 ---
 

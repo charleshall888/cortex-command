@@ -2,12 +2,12 @@
 id: 218
 title: "Bootstrap Windows install and validate hook execution"
 type: feature
-status: not-started
+status: wontfix
 priority: medium
 parent: 215
 tags: [windows-support, install, hooks, validation, bootstrap]
 created: 2026-05-15
-updated: 2026-05-15
+updated: 2026-05-16
 discovery_source: cortex/research/windows-support/research.md
 ---
 
