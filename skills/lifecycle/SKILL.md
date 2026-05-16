@@ -188,7 +188,7 @@ Specify and Plan retain a single user-facing approval surface at §4 of their re
 
 ### Kept user pauses
 
-The following user-facing pauses are deliberate and remain in scope. Each entry names the file and the rough line anchor of the `AskUserQuestion` call site, plus a one-line rationale. The parity test at `tests/test_lifecycle_kept_pauses_parity.py` enforces that this inventory and the actual call sites stay in sync (±20-line tolerance).
+The following user-facing pauses are deliberate and remain in scope. Each entry names the file and the rough line anchor of the `AskUserQuestion` call site, plus a one-line rationale. The parity test at `tests/test_lifecycle_kept_pauses_parity.py` enforces that this inventory and the actual call sites stay in sync (±35-line tolerance).
 
 - `skills/lifecycle/SKILL.md:60` — ambiguous backlog match needs operator disambiguation.
 - `skills/lifecycle/references/clarify.md:57` — low-confidence clarify question batch surfaces unknowns the model cannot resolve alone.
