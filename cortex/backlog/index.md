@@ -5,9 +5,10 @@
 | 221 | Adopt grill-with-docs progressive-disclosure system | backlog | high | epic | — | — | — |
 | 223 | Add project glossary at cortex/requirements/glossary.md | refined | high | feature | — | 221 | ✓ |
 | 224 | Add docs/adr/ with 3 seed ADRs and emission rule | refined | high | feature | — | 221 | ✓ |
+| 228 | Wire daytime dispatch through cortex CLI + MCP with launchd detachment | backlog | high | feature | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
-| 209 | Lead refine §4 complexity-value gate with recommended option + rationale | refined | medium | chore | — | — | ✓ |
+| 209 | Lead refine §4 complexity-value gate with recommended option + rationale | in_progress | medium | chore | — | — | ✓ |
 | 211 | R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up) | superseded | medium | bug | — | — | — |
 | 212 | CLI_PIN drift lint (#146 hygiene) | superseded | medium | chore | — | — | — |
 | 215 | Add native Windows host support for the agentic harness | not-started | medium | epic | — | — | — |
@@ -18,23 +19,24 @@
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 217 | Port overnight scheduler to Windows Task Scheduler | not-started | low | feature | 216 | 215 | — |
 | 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
-| 220 | Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run | backlog | should-have | feature | — | — | — |
+| 220 | Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run | refined | should-have | feature | — | — | ✓ |
 
 ## Refined
 
 - **223** Add project glossary at cortex/requirements/glossary.md
 - **224** Add docs/adr/ with 3 seed ADRs and emission rule
-- **209** Lead refine §4 complexity-value gate with recommended option + rationale
 - **227** Discovery output density — investigate author-centric prose at gate
+- **220** Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run
 
 ## Backlog
 
 - **221** Adopt grill-with-docs progressive-disclosure system
+- **228** Wire daytime dispatch through cortex CLI + MCP with launchd detachment
 - **142** Multi-session host concurrency registry for cortex overnight
-- **220** Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run
 
 ## In-Progress
 
+- **209** Lead refine §4 complexity-value gate with recommended option + rationale (in_progress)
 
 ## Warnings
 

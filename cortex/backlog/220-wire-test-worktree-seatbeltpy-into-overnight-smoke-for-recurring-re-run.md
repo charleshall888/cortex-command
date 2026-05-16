@@ -2,12 +2,13 @@
 schema_version: "1"
 uuid: 1d44844b-a690-4eeb-97e3-31a176af2e80
 title: "Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run"
-status: backlog
+status: refined
 priority: should-have
 type: feature
 tags: [overnight, sandbox, worktree, evidence-durability]
 created: 2026-05-15
 updated: 2026-05-16
+spec: cortex/lifecycle/re-validate-test-worktree-seatbeltpy-on/spec.md
 ---
 
 Originated from critical-review of `cortex/lifecycle/restore-worktree-root-env-prefix/plan.md` (Objection: R10/R11 evidence chain not re-validated after lifecycle close).

@@ -88,6 +88,38 @@
     "repo": null
   },
   {
+    "id": 228,
+    "title": "Wire daytime dispatch through cortex CLI + MCP with launchd detachment",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "daytime-pipeline",
+      "mcp",
+      "cli",
+      "launchd",
+      "overnight-runner"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-05-16",
+    "updated": "2026-05-16",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "5fef3a25-7e3d-4ddb-9d18-8bd45a4b5dba",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -153,7 +185,7 @@
   {
     "id": 209,
     "title": "Lead refine §4 complexity-value gate with recommended option + rationale",
-    "status": "refined",
+    "status": "in_progress",
     "priority": "medium",
     "type": "chore",
     "tags": [
@@ -166,7 +198,7 @@
       "skills"
     ],
     "created": "2026-05-12",
-    "updated": "2026-05-12",
+    "updated": "2026-05-16",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
@@ -474,7 +506,7 @@
   {
     "id": 220,
     "title": "Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run",
-    "status": "backlog",
+    "status": "refined",
     "priority": "should-have",
     "type": "feature",
     "tags": [
@@ -490,7 +522,7 @@
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "cortex/lifecycle/re-validate-test-worktree-seatbeltpy-on/spec.md",
     "discovery_source": null,
     "plan": null,
     "uuid": "1d44844b-a690-4eeb-97e3-31a176af2e80",
