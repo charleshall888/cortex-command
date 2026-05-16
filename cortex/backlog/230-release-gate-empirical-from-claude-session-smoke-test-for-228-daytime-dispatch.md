@@ -41,7 +41,7 @@ After #228's lifecycle reaches `feature_complete` and the implementation PR has 
 
 After §Results is populated with all three assertions PASS:
 
-1. Set this ticket's status to `merged` via `cortex-update-item 995-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch status=merged`.
+1. Set this ticket's status to `merged` via `cortex-update-item 230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch status=merged`.
 2. Push a follow-up empty commit on `main` with the message body containing `[release-type: minor]` (or `[release-type: major]` if the spec field changes warrant it) on its own line. The auto-release workflow at `.github/workflows/auto-release.yml` will fire on that commit and cut the version tag including #228.
 
 If ANY assertion FAILS:
