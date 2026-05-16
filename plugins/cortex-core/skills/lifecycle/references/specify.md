@@ -29,6 +29,8 @@ Ask about these areas in sequence, adapting based on answers:
 - Measurable success criteria
 - User-facing vs internal requirements
 
+**ADR posture (in-the-moment)**: When negotiating a requirement decision, if it meets the three-criteria gate from `cortex/adr/README.md` (Hard to reverse + Surprising without context + Real trade-off), draft an ADR proposal in the spec's `## Proposed ADR` section in the same turn rather than deferring.
+
 **Non-requirements**: What does this feature intentionally NOT do? Explicit exclusions prevent scope creep during implementation. Push back on vague boundaries.
 
 **Edge cases**: What happens when inputs are unexpected, systems are unavailable, or users behave unexpectedly? Challenge optimistic assumptions.
@@ -146,6 +148,14 @@ Omit this callout entirely when §2a passed cleanly or no loop-back occurred.
 
 ## Open Decisions
 - [Only when implementation-level context is required and unavailable at spec time — include a one-sentence reason why. Resolution at spec time is strongly preferred; ask the user if uncertain.]
+
+## Proposed ADR
+None considered.
+<!-- For each ADR-shaped decision negotiated during the interview, replace the default body above with one sub-entry per proposal in the shape:
+
+### Proposed ADR: <NNNN-slug>
+[One-paragraph context, decision, and trade-off summary suitable for promotion into cortex/adr/<NNNN-slug>.md.]
+-->
 ```
 
 ### 3a. Orchestrator Review
@@ -174,6 +184,7 @@ Present the specification summary and use the AskUserQuestion tool to collect th
 - **Produced** (one-line summary of the artifact)
 - **Value** (what problem this solves and why it's worth building now — flag weak value cases explicitly)
 - **Trade-offs** (alternatives considered and rationale for chosen approach)
+- **Proposed ADRs** (comma-separated `<NNNN-slug>` list from the spec's `## Proposed ADR` section; value is `None` when that section's body is `None considered.`)
 
 Enumerate the options on that call explicitly as: `Approve` | `Request changes` | `Cancel`. Route on the response:
 
