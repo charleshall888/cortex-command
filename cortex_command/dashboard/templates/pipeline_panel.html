@@ -1,18 +1,23 @@
 {% from "patterns/badge.html" import badge %}
+<span class="sec-num"><strong>§ 06</strong>pipeline</span>
+<h2>Pipeline <span class="phase-tag">{% if state.pipeline %}{{ state.pipeline.phase }}{% else %}idle{% endif %}</span></h2>
 {% if state.pipeline %}
-<h2>Pipeline</h2>
+<div class="stream-line">
+  <span>phase · {{ state.pipeline.phase }}</span>
+  <span>features · {{ state.pipeline.features | length }}</span>
+</div>
 <div class="card-row">
-  <span class="phase-label">Phase</span>
+  <span class="phase-label">current phase</span>
   {{ badge(status=state.pipeline.phase) }}
 </div>
 <div class="feature-list">
   {% for feature in state.pipeline.features %}
   <div class="card-row">
-    <span>{{ feature.name }}</span>
+    <span style="font-family: var(--font-serif); font-weight: 500; font-size: 14px;">{{ feature.name }}</span>
     {{ badge(status=feature.status) }}
   </div>
   {% endfor %}
 </div>
 {% else %}
-<p class="phase-label m-0">No active pipeline.</p>
+<p class="empty-state">no pipeline · refinement queue empty</p>
 {% endif %}

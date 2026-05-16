@@ -1,9 +1,11 @@
-<h2>Round History</h2>
+<span class="sec-num"><strong>§ 05</strong>rounds</span>
+<h2>Round history <span class="phase-tag">{% if state.overnight and state.overnight.round_history %}{{ state.overnight.round_history | length }} cleared{% else %}—{% endif %}</span></h2>
 {% if state.overnight and state.overnight.round_history %}
+<div class="overflow-x-auto">
 <table class="round-table" aria-label="Round history">
   <thead>
     <tr>
-      <th>#</th>
+      <th>R#</th>
       <th>Started</th>
       <th>Completed</th>
       <th>Duration</th>
@@ -16,7 +18,7 @@
     {% for round in state.overnight.round_history %}
     {% set rt = state.round_timestamps.get(round.round_number, {}) %}
     <tr>
-      <td>{{ round.round_number }}</td>
+      <td>R{{ round.round_number }}</td>
       <td>{{ rt.get('started_at') | format_date }}</td>
       <td>{{ rt.get('completed_at') | format_date }}</td>
       <td>{{ rt.get('started_at') | format_duration(rt.get('completed_at')) }}</td>
@@ -27,6 +29,7 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% else %}
-<p class="empty-state">No completed rounds yet.</p>
+<p class="empty-state">no rounds cleared yet</p>
 {% endif %}

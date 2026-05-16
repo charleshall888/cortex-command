@@ -1,20 +1,22 @@
+<span class="sec-num"><strong>§ 04</strong>timing</span>
+<h2>Timeline <span class="phase-tag">{% if summary_mode %}summary · ticks hidden{% else %}scrub · per-feature{% endif %}</span></h2>
 {% if lanes %}
 <div class="overflow-x-auto" aria-label="Feature timeline">
   {% for lane in lanes %}
   <div class="flex items-center gap-3 mb-2">
     <div class="lane-label" title="{{ lane.slug }}">
-      {{ lane.slug[:20] }}
+      {{ lane.slug[:24] }}
     </div>
     <div class="lane-track">
       {% for event in lane.events %}
-      <div class="lane-event lane-status-{{ lane.status }} absolute top-1 h-8 py-0.5 px-1.5 rounded-sm text-xs text-white z-1" style="left: {{ event.x_pct }}%"
+      <div class="lane-event lane-status-{{ lane.status }}" style="left: {{ event.x_pct }}%"
            title="{{ event.tooltip }}">
         {{ event.label }}
       </div>
       {% endfor %}
       {% if not summary_mode %}
         {% for x_pct in lane.tool_tick_xs %}
-        <div class="lane-tick-mark absolute top-0 h-10 w-0.5" style="left: {{ x_pct }}%"></div>
+        <div class="lane-tick-mark absolute top-0 h-full w-0.5" style="left: {{ x_pct }}%"></div>
         {% endfor %}
       {% endif %}
     </div>
@@ -29,8 +31,8 @@
 </div>
 {% endif %}
 {% if summary_mode %}
-<p class="empty-state mt-2">Summary mode — tool ticks hidden (&gt;200 events)</p>
+<p class="empty-state" style="margin-top: 14px;">summary mode · tool ticks hidden · &gt;200 events</p>
 {% endif %}
 {% else %}
-<p class="empty-state">{{ swim_lane_empty_label | default("No active session") }}</p>
+<p class="empty-state">{{ swim_lane_empty_label | default("no active timeline · awaiting session") }}</p>
 {% endif %}

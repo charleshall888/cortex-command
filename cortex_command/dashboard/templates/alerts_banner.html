@@ -1,39 +1,38 @@
 {% from "patterns/alert-banner.html" import alert_badge %}
 {% if state.overnight %}
-<div>
-  {% if state.circuit_breaker_active %}
-  <div class="circuit-breaker-banner">Circuit breaker active — overnight runner has been halted.</div>
+{% if state.circuit_breaker_active %}
+<div class="circuit-breaker-banner">circuit breaker engaged · overnight runner halted</div>
+{% endif %}
+
+{% set failed_slugs = [] %}
+{% for slug, feat in state.overnight.features.items() %}
+  {% if feat["status"] == "failed" %}
+    {% if failed_slugs.append(slug) %}{% endif %}
   {% endif %}
+{% endfor %}
 
-  {% set failed_slugs = [] %}
-  {% for slug, feat in state.overnight.features.items() %}
-    {% if feat["status"] == "failed" %}
-      {% if failed_slugs.append(slug) %}{% endif %}
-    {% endif %}
-  {% endfor %}
-
-  {% set stall_slugs = [] %}
-  {% set amber_items = [] %}
-  {% for key, entry in state.alerts.items() %}
-    {% if key[1] == "stall" %}
-      {% if stall_slugs.append(key[0]) %}{% endif %}
-    {% elif key[1] in ("deferred", "high_rework") %}
-      {% if amber_items.append(key[0] ~ " (" ~ key[1] ~ ")") %}{% endif %}
-    {% endif %}
-  {% endfor %}
-
-  {% if failed_slugs or stall_slugs or amber_items %}
-  <div class="card-row flex-wrap gap-2">
-    {% for slug in failed_slugs %}
-    {{ alert_badge("red", slug ~ " failed") }}
-    {% endfor %}
-    {% for slug in stall_slugs %}
-    {{ alert_badge("red", slug ~ " stalled") }}
-    {% endfor %}
-    {% for item in amber_items %}
-    {{ alert_badge("amber", item) }}
-    {% endfor %}
-  </div>
+{% set stall_slugs = [] %}
+{% set amber_items = [] %}
+{% for key, entry in state.alerts.items() %}
+  {% if key[1] == "stall" %}
+    {% if stall_slugs.append(key[0]) %}{% endif %}
+  {% elif key[1] in ("deferred", "high_rework") %}
+    {% if amber_items.append(key[0] ~ " (" ~ key[1] ~ ")") %}{% endif %}
   {% endif %}
+{% endfor %}
+
+{% if failed_slugs or stall_slugs or amber_items %}
+<div class="card-row" style="flex-wrap: wrap; gap: 8px; padding: 12px 16px; background: var(--color-parchment-2); border: 1px solid var(--color-rule-soft); border-left: 3px solid var(--color-ochre);">
+  <span style="font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-ink-faint); margin-right: 4px;">marginalia ·</span>
+  {% for slug in failed_slugs %}
+  {{ alert_badge("red", slug ~ " failed") }}
+  {% endfor %}
+  {% for slug in stall_slugs %}
+  {{ alert_badge("red", slug ~ " stalled") }}
+  {% endfor %}
+  {% for item in amber_items %}
+  {{ alert_badge("amber", item) }}
+  {% endfor %}
 </div>
+{% endif %}
 {% endif %}

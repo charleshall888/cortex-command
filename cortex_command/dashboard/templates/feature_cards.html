@@ -1,7 +1,8 @@
 {% from "patterns/badge.html" import badge %}
 {% from "patterns/alert-banner.html" import alert_badge %}
 {% import "patterns/feature-card.html" as fc %}
-<h2>Features</h2>
+<span class="sec-num"><strong>§ 02</strong>features</span>
+<h2>Features <span class="phase-tag">{% if state.overnight %}{{ state.overnight.features | length }} in play{% else %}none in play{% endif %}</span></h2>
 {% if state.overnight %}
   {% set ordered_slugs = state.feature_display_order if state.feature_display_order else state.overnight.features.keys() %}
   {% for slug in ordered_slugs %}
@@ -36,7 +37,6 @@
       </div>
       {# Status-specific rows #}
       {% if feat.status == 'running' %}
-        {# Row 2: current phase + elapsed + plan progress #}
         <div class="card-row">
           <span class="phase-label">{{ fs.get('current_phase') or '—' }}</span>
           {% if ft.get('started_at') %}
@@ -47,63 +47,55 @@
           <span class="task-ratio">{{ plan_prog[0] }}/{{ plan_prog[1] }} tasks</span>
           {% endif %}
         </div>
-        {# Row 3: alerts #}
         <div class="card-row">
           {% if feat.deferred_questions %}{{ badge(css_class="badge-amber", label=feat.deferred_questions ~ " deferred q") }}{% endif %}
-          {% if state.slow_flags.get(slug) %}{{ alert_badge("amber", "&#9201; slow") }}{% endif %}
-          {% if rework >= 2 and (slug, 'high_rework') not in state.alerts %}{{ alert_badge("amber", "&#8635; rework") }}{% endif %}
-          {% if (slug, 'stall') in state.alerts %}{{ alert_badge("red", "&#9888; stall") }}{% endif %}
-          {% if (slug, 'failed') in state.alerts %}{{ alert_badge("red", "&#10007; failed") }}{% endif %}
-          {% if (slug, 'deferred') in state.alerts %}{{ alert_badge("amber", "&#9208; deferred") }}{% endif %}
-          {% if (slug, 'high_rework') in state.alerts %}{{ alert_badge("amber", "&#8635; high rework") }}{% endif %}
+          {% if state.slow_flags.get(slug) %}{{ alert_badge("amber", "⏱ slow") }}{% endif %}
+          {% if rework >= 2 and (slug, 'high_rework') not in state.alerts %}{{ alert_badge("amber", "↻ rework") }}{% endif %}
+          {% if (slug, 'stall') in state.alerts %}{{ alert_badge("red", "⚠ stall") }}{% endif %}
+          {% if (slug, 'failed') in state.alerts %}{{ alert_badge("red", "✗ failed") }}{% endif %}
+          {% if (slug, 'deferred') in state.alerts %}{{ alert_badge("amber", "⏸ deferred") }}{% endif %}
+          {% if (slug, 'high_rework') in state.alerts %}{{ alert_badge("amber", "↻ high rework") }}{% endif %}
         </div>
       {% elif feat.status in ('merged', 'deferred', 'paused') %}
-        {# Row 2: duration if available #}
         <div class="card-row">
-          <span class="phase-label">{{ ft.get('duration_secs') | format_duration_secs }}</span>
+          <span class="phase-label">duration · {{ ft.get('duration_secs') | format_duration_secs }}</span>
         </div>
-        {# Row 3: alerts #}
         <div class="card-row">
           {% if feat.deferred_questions %}{{ badge(css_class="badge-amber", label=feat.deferred_questions ~ " deferred q") }}{% endif %}
-          {% if state.slow_flags.get(slug) %}{{ alert_badge("amber", "&#9201; slow") }}{% endif %}
-          {% if rework >= 2 and (slug, 'high_rework') not in state.alerts %}{{ alert_badge("amber", "&#8635; rework") }}{% endif %}
-          {% if (slug, 'stall') in state.alerts %}{{ alert_badge("red", "&#9888; stall") }}{% endif %}
-          {% if (slug, 'failed') in state.alerts %}{{ alert_badge("red", "&#10007; failed") }}{% endif %}
-          {% if (slug, 'deferred') in state.alerts %}{{ alert_badge("amber", "&#9208; deferred") }}{% endif %}
-          {% if (slug, 'high_rework') in state.alerts %}{{ alert_badge("amber", "&#8635; high rework") }}{% endif %}
+          {% if state.slow_flags.get(slug) %}{{ alert_badge("amber", "⏱ slow") }}{% endif %}
+          {% if rework >= 2 and (slug, 'high_rework') not in state.alerts %}{{ alert_badge("amber", "↻ rework") }}{% endif %}
+          {% if (slug, 'stall') in state.alerts %}{{ alert_badge("red", "⚠ stall") }}{% endif %}
+          {% if (slug, 'failed') in state.alerts %}{{ alert_badge("red", "✗ failed") }}{% endif %}
+          {% if (slug, 'deferred') in state.alerts %}{{ alert_badge("amber", "⏸ deferred") }}{% endif %}
+          {% if (slug, 'high_rework') in state.alerts %}{{ alert_badge("amber", "↻ high rework") }}{% endif %}
         </div>
       {% elif feat.status == 'failed' %}
-        {# Row 2: error text prominently #}
         {% if feat.error %}
-        <div class="card-row"><span style="font-size: var(--text-base); color: var(--color-error);">{{ feat.error }}</span></div>
+        <div class="card-row"><span style="font-family: var(--font-mono); font-size: 11.5px; color: var(--color-status-red); letter-spacing: 0.02em;">— {{ feat.error }}</span></div>
         {% endif %}
-        {# Row 3: recovery attempts if any #}
         {% if feat.get('recovery_attempts', 0) > 0 %}
         <div class="card-row"><span class="phase-label">{{ feat.recovery_attempts }} recovery attempts</span></div>
         {% endif %}
-        {# Row 4: alerts #}
         <div class="card-row">
           {% if feat.deferred_questions %}{{ badge(css_class="badge-amber", label=feat.deferred_questions ~ " deferred q") }}{% endif %}
-          {% if state.slow_flags.get(slug) %}{{ alert_badge("amber", "&#9201; slow") }}{% endif %}
-          {% if rework >= 2 and (slug, 'high_rework') not in state.alerts %}{{ alert_badge("amber", "&#8635; rework") }}{% endif %}
-          {% if (slug, 'stall') in state.alerts %}{{ alert_badge("red", "&#9888; stall") }}{% endif %}
-          {% if (slug, 'failed') in state.alerts %}{{ alert_badge("red", "&#10007; failed") }}{% endif %}
-          {% if (slug, 'deferred') in state.alerts %}{{ alert_badge("amber", "&#9208; deferred") }}{% endif %}
-          {% if (slug, 'high_rework') in state.alerts %}{{ alert_badge("amber", "&#8635; high rework") }}{% endif %}
+          {% if state.slow_flags.get(slug) %}{{ alert_badge("amber", "⏱ slow") }}{% endif %}
+          {% if rework >= 2 and (slug, 'high_rework') not in state.alerts %}{{ alert_badge("amber", "↻ rework") }}{% endif %}
+          {% if (slug, 'stall') in state.alerts %}{{ alert_badge("red", "⚠ stall") }}{% endif %}
+          {% if (slug, 'failed') in state.alerts %}{{ alert_badge("red", "✗ failed") }}{% endif %}
+          {% if (slug, 'deferred') in state.alerts %}{{ alert_badge("amber", "⏸ deferred") }}{% endif %}
+          {% if (slug, 'high_rework') in state.alerts %}{{ alert_badge("amber", "↻ high rework") }}{% endif %}
         </div>
       {% else %}
-        {# Pending and any other status #}
-        {# Row 2: round assigned or dash #}
         <div class="card-row">
           {% if feat.round_assigned %}
-          <span class="phase-label">Round {{ feat.round_assigned }}</span>
+          <span class="phase-label">queued · round {{ feat.round_assigned }}</span>
           {% else %}
-          <span class="phase-label">—</span>
+          <span class="phase-label">queued · awaiting round</span>
           {% endif %}
         </div>
       {% endif %}
     {% endcall %}
   {% endfor %}
 {% else %}
-<p class="empty-state">No features active.</p>
+<p class="empty-state">no features in play · awaiting next round</p>
 {% endif %}

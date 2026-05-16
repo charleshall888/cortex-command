@@ -1,31 +1,35 @@
 {% extends "base.html" %}
 {% from "patterns/badge.html" import badge %}
 
-{% block title %}Session History{% endblock %}
+{% block title %}Cortex · History{% endblock %}
 
 {% block page_main %}
 <section>
-  <div class="card-row justify-between mb-3">
-    <h2 class="m-0">Session History</h2>
-    <a href="/" class="phase-label no-underline">← Live view</a>
+  <span class="sec-num"><strong>§ 01</strong>archive</span>
+  <h2>Session history <span class="phase-tag">all overnight runs · most recent first</span></h2>
+  <div class="stream-line">
+    <span>doc · /sessions</span>
+    <span>{{ sessions | length }} entries</span>
+    <span style="margin-left: auto;"><a href="/" class="text-brand-primary">← live view</a></span>
   </div>
 
   {% if not sessions %}
-  <p class="text-text-secondary">No sessions found.</p>
+  <p class="empty-state">no sessions recorded</p>
   {% else %}
+  <div class="overflow-x-auto">
   <table class="round-table">
     <thead>
       <tr>
         <th>Session</th>
         <th>Started</th>
         <th>Duration</th>
-        <th>Features</th>
+        <th>Outcome</th>
       </tr>
     </thead>
     <tbody>
       {% for s in sessions %}
       <tr>
-        <td><a href="/sessions/{{ s.session_id }}" class="text-brand-primary no-underline">{{ s.session_id }}</a></td>
+        <td><a href="/sessions/{{ s.session_id }}" style="color: var(--color-blue); text-decoration: none; border-bottom: 1px dashed var(--color-blue-faint);">{{ s.session_id }}</a></td>
         <td>{{ s.start_ts | format_date }}</td>
         <td>{{ s.duration_str | default("—") }}</td>
         <td>
@@ -43,6 +47,7 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% endif %}
 </section>
 {% endblock %}
