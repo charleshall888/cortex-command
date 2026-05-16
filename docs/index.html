@@ -299,51 +299,6 @@
     font-size: 9.5px; color: var(--ink-faint); letter-spacing: 0.1em;
   }
 
-  /* The R3 sidebar stamp doubles as the redlined-mode toggle. Click types
-     the stamp from "R3" → "R4 · redlined", mirroring the .self-correct
-     strike-and-replace pattern used elsewhere in the page. */
-  .rev-toggle {
-    cursor: pointer;
-    border-bottom: 1px dotted transparent;
-    transition: border-bottom-color 180ms ease;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  .rev-toggle:hover { border-bottom-color: var(--ink-faint); }
-  .rev-toggle:focus-visible {
-    outline: 2px solid var(--ink);
-    outline-offset: 2px;
-  }
-  .rev-toggle .rev-current { position: relative; transition: color 0.4s ease; }
-  .rev-toggle .rev-current::after {
-    content: "";
-    position: absolute;
-    left: -2px; right: -2px;
-    top: 52%;
-    height: 0;
-    border-top: 1.2px solid var(--ochre);
-    transform: scaleX(0);
-    transform-origin: left center;
-    transition: transform 0.4s ease;
-  }
-  .rev-toggle .rev-replace {
-    color: var(--ochre);
-    opacity: 0;
-    max-width: 0;
-    display: inline-block;
-    overflow: hidden;
-    white-space: nowrap;
-    vertical-align: baseline;
-    transition: opacity 0.35s ease 0.4s, max-width 0.5s ease 0.4s, margin-left 0.35s ease 0.4s;
-  }
-  body.redlined .rev-toggle .rev-current::after { transform: scaleX(1); }
-  body.redlined .rev-toggle .rev-current { color: var(--ink-faint); }
-  body.redlined .rev-toggle .rev-replace { opacity: 1; max-width: 14ch; margin-left: 4px; }
-  /* Instant-mode for ?mode=redlined initial paint — skip the typing animation
-     so the toggled state appears in one frame. Subsequent clicks animate. */
-  body.redlined-instant .rev-toggle .rev-current,
-  body.redlined-instant .rev-toggle .rev-current::after,
-  body.redlined-instant .rev-toggle .rev-replace { transition: none !important; }
   .ms-fm {
     background: var(--parchment-2);
     border: 1px solid var(--rule-soft);
@@ -3604,53 +3559,6 @@
   html[data-stain="carbon"] .pg-svg text.pg-branch-label { fill: var(--blue-soft); }
   .pg-svg .pg-rail.dim { opacity: 0.6; }
 
-  /* ───────────── Redline mode (Konami / ?mode=redlined) ───────────── */
-  body.redlined .redline {
-    display: block;
-    position: absolute;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: #c2410c;
-    line-height: 1.45;
-    max-width: 30ch;
-    transform: rotate(-1.2deg);
-    pointer-events: none;
-    z-index: 6;
-  }
-  body.redlined .redline::before {
-    content: "✎ ";
-    color: #c2410c;
-    margin-right: 2px;
-    opacity: 0.6;
-  }
-  .redline { display: none; }
-  body.redlined .redline-banner {
-    display: flex;
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 60;
-    background: #fff5e6;
-    border-bottom: 1px solid #c2410c;
-    padding: 6px 16px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: #c2410c;
-    letter-spacing: 0.06em;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .redline-banner { display: none; }
-  body.redlined .redline-banner button {
-    background: transparent;
-    border: 1px solid #c2410c;
-    color: #c2410c;
-    font-family: var(--mono);
-    font-size: 10px;
-    padding: 2px 8px;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
 
   /* ───────────── Second toast (First Light) ───────────── */
   .toast.first-light {
@@ -3669,11 +3577,7 @@
 
   <div class="meta-spec" id="meta-spec" aria-label="this page as a spec">
     <div class="ms-head">
-      <span class="ms-rev rev-toggle"
-            role="button"
-            tabindex="0"
-            aria-pressed="false"
-            aria-label="toggle redlined revision mode"><span class="rev-current">R3</span><span class="rev-replace">R4 · redlined</span></span>
+      <span class="ms-rev">R3</span>
     </div>
     <ol class="ms-gates" id="ms-gates">
       <li data-section="hero">
@@ -3908,7 +3812,6 @@
 
   <!-- ───────── Lifecycle playground (the framework's gate map — abstract first) ───────── -->
   <section class="playground-section" id="playground">
-    <span class="redline" aria-hidden="true" style="top:8px; right:0;">i mostly drag this to 'critical' to remind myself what review feels like.</span>
     <div class="pg-header">
       <div class="marker">§02 · lifecycle playground</div>
       <h2 class="pg-title">The same lifecycle, <em>three different gate sequences.</em></h2>
@@ -3939,7 +3842,6 @@
     </div>
 
     <article class="sec" data-phase="clarify" id="sec-clarify">
-      <span class="redline" aria-hidden="true" style="top:-12px; right:-180px;">this gate exists because i kept skipping it and paying for it at review.</span>
       <div class="margin">
         <div class="num">§ 01</div>
         <div class="ticks">
@@ -4008,7 +3910,6 @@
     </article>
 
     <article class="sec" data-phase="plan" id="sec-plan">
-      <span class="redline" aria-hidden="true" style="top:-10px; right:-180px;">if the resolver doesn't feel right, nothing else does either.</span>
       <div class="margin">
         <div class="num">§ 04</div>
         <div class="ticks">
@@ -4141,14 +4042,12 @@
 
   <!-- ───────── §05 · Trust grid · what the harness does when you're not watching ───────── -->
   <section class="trust-grid" id="trust-grid" aria-labelledby="tg-h">
-    <span class="redline" aria-hidden="true" style="top:8px; right:0;">if you can't show me the kill switch, i can't leave it running.</span>
     <div class="marker">§05 · /overnight · operational guarantees</div>
     <h2 id="tg-h">Inside <code style="font-family:var(--mono); font-size:0.78em; font-weight:500; letter-spacing:0;">/overnight</code> · <em>the safety contract.</em></h2>
     <div class="tg-cards">
 
       <!-- FIG 3 — Knows when to stop. -->
       <article class="tg-card" data-fig="fig 3" data-active="0">
-        <span class="redline" aria-hidden="true" style="top:4px; right:4px;">the failures counter nearly always trips first. that's why it's ochre.</span>
         <h4>Knows when to stop.</h4>
         <div class="tg-frame">
           <svg viewBox="0 0 220 120" preserveAspectRatio="xMidYMid meet" class="tg-fig-stop" aria-hidden="true">
@@ -4242,7 +4141,6 @@
            the old FIG 9 folded in: ladder ends in either a brain decision
            or, if even the brain can't triage, a PAUSED · NEEDS HUMAN stamp.) -->
       <article class="tg-card" data-fig="fig 4" data-active="0">
-        <span class="redline" aria-hidden="true" style="top:4px; right:4px;">the brain agent saved me twice. once by skipping a ticket i'd have fought for an hour.</span>
         <h4>Climbs when stuck — <em>stops calmly when it can't.</em></h4>
         <div class="tg-frame">
           <svg viewBox="0 0 260 140" preserveAspectRatio="xMidYMid meet" class="tg-fig-climb" aria-hidden="true">
@@ -4453,7 +4351,6 @@
 
       <!-- FIG 7 — Survives interruption. -->
       <article class="tg-card" data-fig="fig 7" data-active="0">
-        <span class="redline" aria-hidden="true" style="top:4px; right:4px;">closed my laptop on the train once. came back to no work lost.</span>
         <h4>Survives interruption.</h4>
         <div class="tg-frame">
           <svg viewBox="0 0 240 120" preserveAspectRatio="xMidYMid meet" class="tg-fig-resume" aria-hidden="true">
@@ -5119,7 +5016,6 @@
 
   <!-- ───────── What ships ───────── -->
   <section class="install" id="install">
-    <span class="redline" aria-hidden="true" style="top:8px; right:0;">don't take the whole framework. take the part that fits your week.</span>
     <div class="marker">§06 · what installs · 2 plugins · CLI + MCP auto-bundle</div>
     <h2>Start with the skills. <em>Add overnight when you want autonomy.</em></h2>
 
@@ -5135,7 +5031,6 @@
       </article>
 
       <article class="ship-card optional" data-surface="overnight">
-        <span class="redline" aria-hidden="true" style="top:8px; right:8px;">run /lifecycle on one real ticket before you install this. if it doesn't change how you think, don't bother.</span>
         <div class="ship-head">
           <span class="ship-num">02</span>
           <span class="ship-opt opt">optional · auto-bundles cli + mcp</span>
@@ -5157,7 +5052,6 @@
   </section>
 
   <footer id="page-footer">
-    <span class="redline" aria-hidden="true" style="top:8px; right:0;">the espresso is a real project. the framework is too. one of them ships faster than the other.</span>
     <div class="links">
       <a href="https://github.com/charleshall888/cortex-command">github</a>
       <a href="https://github.com/charleshall888/cortex-command/blob/main/LICENSE">MIT license</a>
@@ -5210,12 +5104,6 @@
   <path d="M2 2 L2 14 L5 11 L7 16 L9 15 L7 10 L11 10 Z"
         fill="currentColor" stroke="currentColor" stroke-width="0.6" stroke-linejoin="round"/>
 </svg>
-
-<!-- Redline-mode banner: passive status only; the R3/R4 stamp in the sidebar
-     is the discoverable toggle. Konami code still flips the state as backup. -->
-<div class="redline-banner">
-  <span>R4 · redlined · click R3 to exit</span>
-</div>
 
 <script>
   // ─────────── Section lock + sidebar agents ───────────
@@ -5845,56 +5733,6 @@
     }, { threshold: [0, 0.1, 0.2, 0.5, 0.8, 1] });
     _io.observe(_pipeSection);
   }
-
-  // ─────────── Redline mode ───────────
-  function setRedlined(on) {
-    document.body.classList.toggle('redlined', on);
-    const tog = document.querySelector('.rev-toggle');
-    if (tog) tog.setAttribute('aria-pressed', on ? 'true' : 'false');
-    // history.replaceState throws on file:// (origin "null"); guard so the
-    // toggle still works when the page is opened from disk for previewing.
-    try {
-      const url = new URL(window.location);
-      if (on) url.searchParams.set('mode', 'redlined');
-      else url.searchParams.delete('mode');
-      history.replaceState({}, '', url);
-    } catch (_) {}
-  }
-
-  // Sidebar R3 stamp is the primary discoverable toggle. Click or Enter/Space.
-  const revToggle = document.querySelector('.rev-toggle');
-  if (revToggle) {
-    revToggle.addEventListener('click', () => setRedlined(!document.body.classList.contains('redlined')));
-    revToggle.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        setRedlined(!document.body.classList.contains('redlined'));
-      }
-    });
-  }
-
-  // URL-param initial paint: when ?mode=redlined is in the URL, apply the
-  // redlined state without running the typing animation. Double rAF lets the
-  // no-transition paint commit before we strip the instant class, so any
-  // subsequent toggle still animates normally.
-  if (new URLSearchParams(window.location.search).get('mode') === 'redlined') {
-    document.body.classList.add('redlined-instant');
-    setRedlined(true);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => document.body.classList.remove('redlined-instant'));
-    });
-  }
-
-  // Konami: ↑↑↓↓←→←→ba
-  const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
-  let kPos = 0;
-  window.addEventListener('keydown', (e) => {
-    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    if (key === KONAMI[kPos]) {
-      kPos++;
-      if (kPos === KONAMI.length) { setRedlined(true); kPos = 0; }
-    } else { kPos = (key === KONAMI[0]) ? 1 : 0; }
-  });
 
   // ─────────── Meta-spec sidebar (this page, as a spec) ───────────
   const msGates = Array.from(document.querySelectorAll('#ms-gates li'));
