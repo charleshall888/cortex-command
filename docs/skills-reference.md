@@ -100,7 +100,7 @@ Create GitHub pull requests with well-crafted titles and descriptions. Detects t
 ## Thinking Tools
 
 ### critical-review
-Derives 3-4 challenge angles from the artifact and project context, then dispatches one reviewer agent per angle in parallel for deep, unanchored criticism. An Opus synthesis agent merges the parallel findings into a single coherent challenge. Also auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval.
+Derives 3-4 challenge angles from the artifact and project context, then dispatches one reviewer agent per angle in parallel for deep, unanchored criticism. An Opus synthesis agent merges the parallel findings into a single coherent challenge. Also auto-triggers in the lifecycle for Complex + medium/high/critical features before spec and plan approval.
 
 [skills/critical-review/SKILL.md](../skills/critical-review/SKILL.md)
 

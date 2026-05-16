@@ -1,6 +1,6 @@
 ---
 name: critical-review
-description: Parallel adversarial review — dispatches reviewer agents on distinct challenge angles, then synthesizes findings with an Opus agent. Use when user says "critical review", "pressure test", "adversarial review", "pre-commit challenge", "deeply question", or "challenge from multiple angles". Auto-triggers in the lifecycle for Complex + medium/high/critical features after plan approval.
+description: Parallel adversarial review — dispatches reviewer agents on distinct challenge angles, then synthesizes findings with an Opus agent. Use when user says "critical review", "pressure test", "adversarial review", "pre-commit challenge", "deeply question", or "challenge from multiple angles". Auto-triggers in the lifecycle for Complex + medium/high/critical features before spec and plan approval.
 when_to_use: "Use when you want to stress-test a plan, spec, or research artifact before committing (\"poke holes in the plan\", \"stress test the spec\", \"is this actually a good idea\", \"review before I commit\"). Different from /devils-advocate — devils-advocate runs inline in the current agent context for a lightweight solo deliberation; critical-review dispatches parallel sub-agents and synthesizes findings."
 argument-hint: "[<artifact-path>]"
 inputs:

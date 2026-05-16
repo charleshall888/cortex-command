@@ -1,0 +1,4 @@
+{"schema_version": 3, "ts": "2026-05-15T00:00:00Z", "event": "clarify_critic", "feature": "reduce-critical-review-influence", "parent_epic_loaded": false, "findings_count": 7, "dispositions": {"apply": 2, "dismiss": 2, "ask": 3}, "applied_fixes_count": 2, "dismissals_count": 2, "status": "ok"}
+{"ts": "2026-05-15T00:00:00Z", "event": "lifecycle_start", "feature": "reduce-critical-review-influence", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-15T00:00:00Z", "event": "phase_transition", "feature": "reduce-critical-review-influence", "from": "clarify", "to": "research"}
+{"ts": "2026-05-15T00:00:00Z", "event": "feature_wontfix", "feature": "reduce-critical-review-influence", "reason": "research-only outcome: only clean win (auto-trigger gate fix) split out to backlog 225; broader weighting tuning deferred pending Apply-rate telemetry"}

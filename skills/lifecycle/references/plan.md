@@ -266,11 +266,18 @@ Before presenting the artifact to the user, read and follow `references/orchestr
 
 ### 3b. Critical Review
 
-After orchestrator review passes, read the active tier by running `cortex-lifecycle-state --feature {feature} --field tier` (emits JSON applying the canonical rule that `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when the key is absent).
+After orchestrator review passes, read the active tier and criticality:
 
-**Run** when `tier = complex`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval.
+- `cortex-lifecycle-state --feature {feature} --field tier` — canonical rule: `lifecycle_start.tier` is superseded by the most recent `complexity_override.to`; defaults to `simple` when absent.
+- `cortex-lifecycle-state --feature {feature} --field criticality` — defaults to `medium` when absent.
 
-**Skip** when `tier = simple`. Proceed directly to user approval.
+**Run** when `tier = complex` AND `criticality ∈ {medium, high, critical}`: invoke the `critical-review` skill with the plan artifact. Present the synthesis to the user before plan approval.
+
+**Skip** otherwise. When the skip is because `tier = complex` AND `criticality = low`, first append a `lifecycle_critical_review_skipped` event to `cortex/lifecycle/{feature}/events.log` so the skip rate is observable, then proceed to user approval:
+
+```
+{"ts": "<ISO 8601>", "event": "lifecycle_critical_review_skipped", "feature": "<name>", "phase": "plan", "tier": "complex", "criticality": "low"}
+```
 
 ### 4. User Approval
 
