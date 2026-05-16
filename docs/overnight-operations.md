@@ -604,6 +604,24 @@ Overnight spawns two distinct kinds of `claude` subprocess: the per-round orches
 
 - **Linux invocation advisory.** Sandbox enforcement is macOS-Seatbelt-only per parent epic #162. On non-Darwin platforms the settings-builder emits a one-line stderr warning at first invocation and continues; behavior under Linux/bwrap is undefined.
 
+### Seatbelt probe
+
+Per-spawn sandbox configuration is necessary but not sufficient: a regression in `cortex_command/pipeline/worktree.py:resolve_worktree_root()` (the single chokepoint for Seatbelt-writability per `cortex/requirements/multi-agent.md:77`) would silently break per-feature dispatch worktrees without tripping any existing gate. The Seatbelt probe is the runtime re-attestation that closes this gap.
+
+**Kernel-probe gate.** `tests/test_worktree_seatbelt.py`'s `seatbelt_active` fixture attempts to open `<repo>/.git/HEAD` for write (`O_WRONLY`, no truncation, no creation). `.git/HEAD` is one of the suffixes denied by `build_orchestrator_deny_paths` in `cortex_command/overnight/sandbox_settings.py`, so a `PermissionError` confirms the sandbox is actually enforcing the deny rule. A successful open means no sandbox is active and the test skips with a kernel-anchored reason. This replaces the legacy `CLAUDE_CODE_SANDBOX=1` env-var gate, which was undocumented on macOS Seatbelt and silently skipped in every Claude-Code-spawned automation context — see `cortex/lifecycle/re-validate-test-worktree-seatbeltpy-on/research.md` for the full history.
+
+**Session-start cadence.** Every overnight session, after auth probe resolution and before round 1 dispatches, the runner invokes `cortex_command.overnight.seatbelt_probe.run_probe(session_dir, home_repo)`. `run_probe` spawns `claude -p` under orchestrator-style sandbox-active settings (a tight deny set anchored on `build_orchestrator_deny_paths`, with `allow_paths=[resolved-$TMPDIR]` as the only writable target) and has the spawned agent run `pytest tests/test_worktree_seatbelt.py -v` via a Bash tool call. The agent's command writes pytest stdout to `$TMPDIR/cortex-seatbelt-output-<uuid>.txt` and its exit code to `$TMPDIR/cortex-seatbelt-result-<uuid>.txt` via `tee`/`printf`. The probe reads those files after the spawn returns, computing `sha256` on the captured stdout — pytest's exit code and summary come from agent-emitted files, not from the model's turn-final paraphrase, which bypasses the model-paraphrase failure mode entirely.
+
+**F-row schema.** Each probe emits one JSONL event:
+
+```json
+{"ts": "<ISO 8601 Z>", "event": "seatbelt_probe", "session_id": "<id>", "result": "ok|failed", "pytest_exit_code": <int|null>, "pytest_summary": "<paraphrase-free summary string, e.g. \"passed=2 failed=0 skipped=0 error=0\">", "stdout_path": "<path|null>", "stdout_sha256": "<hex|null>", "softfail_active": <bool>, "source": "seatbelt_probe.run_probe"}
+```
+
+**Dual emission targets.** The event is appended atomically to both the per-session `cortex/lifecycle/sessions/<session_id>/overnight-events.log` and the top-level tracked log `cortex/lifecycle/seatbelt-probe.log` — the top-level log accumulates indefinitely across sessions and is the durable evidence trail for re-validation cadence.
+
+**Non-blocking failure.** `result=failed` (claude binary missing, non-zero spawn exit, agent paraphrase, pytest exit nonzero, count assertion fails) does not abort the session or pause the runner. The event is logged and the runner proceeds to round 1. The morning report renderer (`cortex_command/overnight/report.py::render_seatbelt_probe_header`) surfaces the outcome in the session header band so a regression is visible at glance without breaking the overnight cycle. The probe is the canonical operator-facing recurring re-attestation; manual `pytest tests/test_worktree_seatbelt.py -q` from an active Claude Code session remains valid for on-demand checking.
+
 ### Edge Cases
 
 - **Hardcoded binary denies for `.vscode/` and `.idea/`.** Claude Code's binary contains a hardcoded `_SBX` deny list that permanently blocks writes to `.vscode/` and `.idea/` directories regardless of what is present in `sandbox.filesystem.allowWrite`. These denies are in the binary itself and cannot be overridden via settings JSON — they apply even when the worktree path or any ancestor is listed in the allow-set. The underlying issue is tracked at [anthropics/claude-code#51303](https://github.com/anthropics/claude-code/issues/51303). Three workarounds are available, ordered by invasiveness:
