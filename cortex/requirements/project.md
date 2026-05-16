@@ -4,7 +4,7 @@
 
 ## Overview
 
-Agentic workflow toolkit for AI-assisted software development on Claude Code: skills, lifecycle state machine, pipeline orchestrator, overnight execution. North star: autonomous multi-hour development — Claude works from a plan, spins up teams, reports afterward. Ships CLI-first as a non-editable wheel: `uv tool install git+<url>@<tag>`.
+Agentic workflow toolkit for AI-assisted software development on Claude Code: skills, lifecycle state machine, pipeline orchestrator, overnight execution. North star: autonomous multi-hour development — Claude works from a plan, spins up teams, reports afterward. Ships CLI-first as a non-editable wheel plus Claude Code plugins (→ ADR-0002).
 
 ## Philosophy of Work
 
@@ -24,12 +24,12 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 ## Architectural Constraints
 
-- **File-based state**: Lifecycle, backlog, pipeline, sessions in plain files (markdown/JSON/YAML). No database.
-- **Per-repo sandbox registration**: `cortex init` additively adds the repo's `cortex/` umbrella to `~/.claude/settings.local.json` `sandbox.filesystem.allowWrite` — the only write cortex-command makes in `~/.claude/`. `fcntl.flock` serialized.
+- **File-based state**: → ADR-0001: File-based state, no database
+- **Per-repo sandbox registration**: → ADR-0003: Per-repo sandbox registration
 - **SKILL.md-to-bin parity enforcement**: `bin/cortex-*` scripts wire through an in-scope SKILL.md/requirements/docs/hooks/justfile/tests reference. `bin/cortex-check-parity` blocks drift; exceptions at `bin/.parity-exceptions.md`.
 - **SKILL.md size cap**: 500 lines (`tests/test_skill_size_budget.py`). Exceptions via in-file `<!-- size-budget-exception: ... -->`. Default fix: extract to `skills/<name>/references/`.
 - **Skill-helper modules**: when a SKILL.md dispatch ceremony invites paraphrase, collapse it into atomic `cortex_command/<skill>.py` subcommands fusing validation+mutation+telemetry. Promoted modules expose a `[project.scripts]` console-script entry (e.g. `cortex-<skill>`) as the recommended invocation idiom; `python3 -m cortex_command.<skill> <subcommand>` is retained as a readable fallback for ad-hoc invocation. New events register in `bin/.events-registry.md`.
-- **CLI/plugin version contract**: The cortex CLI wheel and the cortex-overnight plugin ship via independent channels (wheel via `uv tool install`; plugin via Claude Code marketplace). They couple through (a) `plugins/cortex-overnight/server.py`'s `CLI_PIN` tuple — `(<tag>, <schema_major.minor>)` — and (b) the `cortex --print-root --format json` envelope's `version` (PEP 440 package) and `schema_version` (M.m floor) fields. Schema-floor majors are forever-public-API per `docs/internals/mcp-contract.md`: repurposing an existing field requires a major bump. The auto-release workflow at `.github/workflows/auto-release.yml` and the CI drift-lint at `.github/workflows/release.yml` jointly maintain `CLI_PIN[0] == tag` invariance.
+- **CLI/plugin version contract**: → ADR-0002: CLI wheel + plugin distribution
 
 ## Quality Attributes
 
