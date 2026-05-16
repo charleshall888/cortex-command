@@ -35,6 +35,10 @@ Ask about these areas in sequence, adapting based on answers:
 
 Ask probing questions — challenge assumptions, probe unstated expectations, identify missing requirements. Do not just confirm what is already written. Use the AskUserQuestion tool to present questions interactively — not as plain markdown text. Continue until all ambiguities are resolved.
 
+**Cadence**: Ask interview questions one at a time, waiting for the user's response before posing the next. The previous answer is the gate to the next question, so each question can be shaped by what just landed. Avoid batching multiple questions into a single turn — batched questions invite partial answers, hide decision-tree branches that should resolve sequentially, and create respondent fatigue. Mirrored in `skills/requirements-gather/SKILL.md` — when editing this rule, update the other surface too.
+
+**File-path citation**: When recommending an acceptance criterion derived from code, name the file path that grounds it so the user can flag a wrong-place-to-implement before any code is written. For intent-only criteria with no codebase grounding, omit the citation per existing semantics — do not fabricate.
+
 ### 2a. Research Confidence Check
 
 **Missing research.md guard**: Before evaluating any signals, check whether `cortex/lifecycle/{feature}/research.md` exists.
