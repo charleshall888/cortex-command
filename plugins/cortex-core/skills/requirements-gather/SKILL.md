@@ -34,7 +34,25 @@ Ask interview questions one at a time, waiting for the user's response before po
 
 ### Lazy artifact creation
 
-Hold the Q&A block in conversation context until the orchestrator's handoff. Only write when synthesis has something concrete to produce — that decision belongs to `/requirements-write`. This sub-skill never touches the filesystem under `cortex/requirements/`. If the user abandons mid-interview, no partial file is left behind.
+Hold the Q&A block in conversation context until the orchestrator's handoff. Synthesis of project.md and area docs belongs to `/requirements-write`. The writable set for this sub-skill is narrow and explicit: `cortex/requirements/glossary.md` per-term append, with lazy file creation on the first resolved term. `cortex/requirements/project.md` and area docs under `cortex/requirements/` are explicitly excluded — those writes remain `/requirements-write`'s. Lazy artifact creation still applies to project.md and area docs: the Q&A block is held in conversation context until `/requirements-write` synthesizes, so abandoning the interview leaves no partial project.md or area doc behind.
+
+For glossary writes, the mid-interview abandonment semantic is different by design: each per-term append is durably persisted at the moment it fires; entries appended before abandonment remain in the file. Partial-monotonic-growth is the documented behavior — every appended entry was a complete unit at write time, so an abandoned interview still leaves the glossary in a coherent state.
+
+### Inline glossary write with term-already-exists probe
+
+When a term resolves during the interview, probe before writing: read `cortex/requirements/glossary.md` if it exists, and check whether the term is already present. If it is, use the existing entry verbatim, or surface the conflict via `AskUserQuestion` ("the glossary defines X as Y; this interview suggests Z — keep / replace / surface as Flagged Ambiguity?") before any reclassification. If the term is absent, apply the classifier described below; on a project-specific verdict, append the entry to `glossary.md` (creating the file lazily if it does not yet exist).
+
+### Project-specific vs general programming
+
+The binary classifier decides whether a resolved term earns a glossary entry. Pocock's rule: project-specific terms get written, general programming terms do not. "Phase transition," "kept user pauses," "sentinel-as-used-here" are project-specific — their meaning is shaped by this repo's conventions and would not be obvious to a reader who knew Python and Claude Code generally. "Timeout," "callback," "race condition" are general programming — defining them in the glossary adds noise rather than disambiguation. When the classifier rejects a term, explain the rejection in the interview turn and proceed; nothing is written.
+
+### User-confirmation gate
+
+A user-confirmation gate sits in front of every inline write: only user-named or user-confirmed terms persist. A term that surfaced only in a `Recommended answer:` line and was never user-named or user-confirmed does NOT trigger an inline write — the recommendation alone is not consent to persist. If the user later names or confirms the term explicitly, the write fires then. This keeps the glossary anchored to the user's vocabulary rather than the model's paraphrases.
+
+### Language-content constraint
+
+Entries written into the glossary's `## Language` section must be definitional, not classification-shaped. The Language section feeds `critical-review`'s Project Context block, so classification framing leaking in would carry "existing reasoning" into a surface that is deliberately reasoning-free. Anchor pair: `phase_transition: the named event emitted when ...` is admitted because it defines what the term means; `phase_transition — genuinely-domain term; contract-shaped in lifecycle.md` is rejected because it classifies the term rather than defining it. Write the first shape; never the second.
 
 ## Scope shaping
 
