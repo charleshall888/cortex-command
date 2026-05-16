@@ -48,6 +48,7 @@ from cortex_command.overnight import map_results
 from cortex_command.overnight import plan
 from cortex_command.overnight import report
 from cortex_command.overnight import sandbox_settings
+from cortex_command.overnight import seatbelt_probe
 from cortex_command.overnight import smoke_test
 from cortex_command.overnight import state as state_module
 from cortex_command.overnight.batch_runner import main as batch_runner_main  # noqa: F401  (R5: in-process import list)
@@ -2052,6 +2053,58 @@ def run(
                 f"— Keychain entry absent; no auth vector available\n"
             )
             return 1
+
+        # Phase B pre-flight: seatbelt-writability re-attestation (R5).
+        # Spawns ``claude -p`` under sandbox-active settings to run
+        # ``tests/test_worktree_seatbelt.py``; reads pytest result from
+        # ``$TMPDIR``-resident files the agent's Bash command writes via
+        # tee/printf so model paraphrase cannot corrupt evidence. Per
+        # ``re-validate-test-worktree-seatbeltpy-on`` spec R5. Non-blocking:
+        # ``result=failed`` is logged and the runner proceeds to round 1;
+        # the morning report surfaces the outcome via
+        # ``render_seatbelt_probe_header``.
+        seatbelt_ts = datetime.now(timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
+        try:
+            probe = seatbelt_probe.run_probe(session_dir, repo_path)
+            seatbelt_event = {
+                "ts": seatbelt_ts,
+                "event": "seatbelt_probe",
+                "session_id": session_id,
+                "result": probe.result,
+                "pytest_exit_code": probe.pytest_exit_code,
+                "pytest_summary": probe.pytest_summary
+                or (probe.cause or ""),
+                "stdout_path": str(probe.stdout_path)
+                if probe.stdout_path
+                else None,
+                "stdout_sha256": probe.stdout_sha256,
+                "softfail_active": sandbox_settings.read_soft_fail_env(),
+                "source": "seatbelt_probe.run_probe",
+            }
+        except Exception as exc:  # noqa: BLE001 — non-blocking probe contract
+            seatbelt_event = {
+                "ts": seatbelt_ts,
+                "event": "seatbelt_probe",
+                "session_id": session_id,
+                "result": "failed",
+                "pytest_exit_code": None,
+                "pytest_summary": f"run_probe raised: {exc!s}",
+                "stdout_path": None,
+                "stdout_sha256": None,
+                "softfail_active": sandbox_settings.read_soft_fail_env(),
+                "source": "seatbelt_probe.run_probe",
+            }
+        seatbelt_line = json.dumps(seatbelt_event) + "\n"
+        # Dual emission: per-session overnight-events.log AND top-level
+        # tracked log ``cortex/lifecycle/seatbelt-probe.log``.
+        with open(events_path, "a", encoding="utf-8") as _f:
+            _f.write(seatbelt_line)
+        _top_level_log = Path("cortex/lifecycle/seatbelt-probe.log")
+        _top_level_log.parent.mkdir(parents=True, exist_ok=True)
+        with open(_top_level_log, "a", encoding="utf-8") as _f:
+            _f.write(seatbelt_line)
 
         # Main round loop.
         start_wall = time.monotonic()
