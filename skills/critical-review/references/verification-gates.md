@@ -34,33 +34,30 @@ The orchestrator captures the pre-dispatch SHA-256 of the artifact into orchestr
 
 **Phase 1 — Sentinel verification (per reviewer):**
 
-1. Read the reviewer's first output line. Expected form: `READ_OK: <path> <sha>` (success sentinel) or `READ_FAILED: <absolute-path> <reason>` (read-failure sentinel).
-2. Classify the reviewer's status using these routes:
-   - **Pass** — first line is `READ_OK: <path> <sha>` AND `<sha>` equals the orchestrator's pre-dispatch SHA. Proceed to Phase 2 for this reviewer.
-   - **Exclude (SHA drift)** — first line is `READ_OK: <path> <sha>` but `<sha>` differs from the orchestrator's pre-dispatch SHA. Emit warning with reason `SHA drift detected (expected <expected-sha>, got <reviewer-sha>)`.
-   - **Exclude (sentinel absent)** — first line is neither a `READ_OK:` nor a `READ_FAILED:` line. Emit warning with reason `sentinel absent`.
-   - **Exclude (read failure)** — first line is `READ_FAILED: <path> <reason>`. Emit warning with reason `Read failed: <reason>`.
-3. Excluded reviewers drop from ALL downstream tallies (A-class, B-class, C-class) AND from the untagged-prose pathway. Their output is not parsed for envelope JSON and not surfaced to the synthesizer as prose. Emit the standardized warning `⚠ Reviewer {angle} excluded: {reason}` to the orchestrator log, and include the same warning line in the synthesizer prompt preamble (Step 2d) so the synthesizer sees the partial reviewer set explicitly rather than silently working from a reduced count.
-4. **Atomic exclusion telemetry (per excluded reviewer).** For each reviewer classified Exclude in step 2 above, invoke `record-exclusion` exactly once. This is the only sanctioned way to log a sentinel_absence event — do NOT append to `events.log` inline:
+For each reviewer, write the reviewer's raw stdout to a tempfile (do NOT pipe through stdin to avoid shell-quoting hazards on four parallel outputs), then invoke:
 
-   ```bash
-   cortex-critical-review record-exclusion \
-     --feature <name> \
-     --reviewer-angle <angle> \
-     --reason <absent|sha_mismatch|read_failed> \
-     --model-tier <haiku|sonnet|opus> \
-     --expected-sha <hex> \
-     [--observed-sha <hex>]
-   ```
+```bash
+cortex-critical-review verify-reviewer-output \
+    --feature <name> \
+    --reviewer-angle <angle> \
+    --expected-sha <hex> \
+    --model-tier <haiku|sonnet|opus> \
+    --input-file <tmpfile-path>
+```
 
-   - `--reason` maps from the exclusion route: `sentinel absent` → `absent`; `SHA drift detected` → `sha_mismatch`; `Read failed` → `read_failed`.
-   - `--observed-sha` is supplied only on the `sha_mismatch` route (the reviewer's emitted SHA from its `READ_OK:` first line). Omit for `absent` and `read_failed`.
-   - `--feature` is the same value passed to `prepare-dispatch` in Step 2a.5; on the `<path>`-arg invocation form (no feature in scope), skip the call — sentinel_absence telemetry requires a lifecycle feature directory to write into.
-   - The subcommand performs an atomic tempfile + rename append to `cortex/lifecycle/{feature}/events.log`. Exit 0 = appended.
+- `<hex>` is the same `{artifact_sha256}` captured in Step 2a.5 from `prepare-dispatch`.
+- `<name>` is the same `--feature` argument used in Step 2a.5; on the `<path>`-arg invocation form (no feature in scope), skip this verification step — sentinel_absence telemetry requires a lifecycle feature directory to write into.
 
-5. **Total-failure path (all reviewers excluded).** When every dispatched reviewer is classified Exclude in step 2 (zero pass through Phase 2), surface verbatim to the user — do NOT proceed to Step 2d synthesis:
+Routes based on exit code:
 
-   `All reviewers excluded — drift or Read failure detected; critical-review pass invalidated. Re-run after resolving concurrent write source.`
+- **Exit 0** — sentinel present on its own line (anywhere in the first 50 lines) AND SHA matches. Pass — proceed to Phase 2 for this reviewer.
+- **Exit 3** — sentinel absent, SHA mismatch (drift), or `READ_FAILED` route. The subcommand has already appended the `sentinel_absence` event to `cortex/lifecycle/{feature}/events.log` atomically; the orchestrator MUST NOT append to `events.log` inline and MUST NOT invoke `record-exclusion` separately (would cause double-emission). Emit the standardized warning `⚠ Reviewer {angle} excluded: {reason}` to the orchestrator log; reason maps from the subcommand's stdout (`EXCLUDED absent | EXCLUDED sha_mismatch | EXCLUDED read_failed`).
+
+Excluded reviewers drop from ALL downstream tallies (A-class, B-class, C-class) AND from the untagged-prose pathway. Their output is not parsed for envelope JSON and not surfaced to the synthesizer as prose. Include the warning line in the synthesizer prompt preamble (Step 2d) so the synthesizer sees the partial reviewer set explicitly rather than silently working from a reduced count.
+
+**Total-failure path (all reviewers excluded)**: when every reviewer returns exit 3, surface verbatim to the user — do NOT proceed to Step 2d synthesis:
+
+`All reviewers excluded — drift or Read failure detected; critical-review pass invalidated. Re-run after resolving concurrent write source.`
 
 **Phase 2 — Envelope extraction (only for reviewers that passed Phase 1):**
 
