@@ -4,10 +4,13 @@ R10 of restore-worktree-root-env-prefix: prove the new branch-(c) default
 (``$TMPDIR/cortex-worktrees/<feature>``) passes the Seatbelt writability
 probe AND that the bash hook's path matches end-to-end.
 
-These tests are skipped outside an active Claude Code Bash session (where
-``CLAUDE_CODE_SANDBOX=1`` is set). The skip is structural — running them
-without an active sandbox would not exercise the property they are designed
-to verify (whether the Seatbelt OS-level sandbox actually permits the path).
+These tests skip outside an active sandbox via a kernel-level capability
+probe: the ``seatbelt_active`` fixture attempts to open ``<repo>/.git/HEAD``
+for write (``O_WRONLY``, no truncation, no creation). ``.git/HEAD`` is one
+of the suffixes denied by ``build_orchestrator_deny_paths`` in
+``cortex_command/overnight/sandbox_settings.py``, so a successful open
+means no sandbox is enforcing and the tests would not actually exercise
+the Seatbelt property they are designed to verify.
 """
 
 from __future__ import annotations
@@ -15,7 +18,6 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -25,9 +27,6 @@ from cortex_command.pipeline.worktree import (
     probe_worktree_writable,
     resolve_worktree_root,
 )
-
-
-SEATBELT_REASON = "requires active Claude Code Seatbelt sandbox (CLAUDE_CODE_SANDBOX=1)"
 
 
 def _repo_root() -> Path:
@@ -41,11 +40,37 @@ def _repo_root() -> Path:
     return Path(result.stdout.strip())
 
 
-@pytest.mark.skipif(
-    os.environ.get("CLAUDE_CODE_SANDBOX") != "1",
-    reason=SEATBELT_REASON,
-)
-def test_python_resolver_default_passes_probe_under_seatbelt():
+@pytest.fixture(scope="module")
+def seatbelt_active() -> bool:
+    """Kernel-level capability probe: is Seatbelt denying writes to .git/HEAD?
+
+    Replaces the legacy ``CLAUDE_CODE_SANDBOX`` env-var gate (which was
+    undocumented on macOS Seatbelt and silently skipped). The probe attempts
+    ``O_WRONLY`` on ``<repo>/.git/HEAD`` without ``O_TRUNC`` or ``O_CREAT`` —
+    the file exists and the open does not truncate or write any bytes.
+
+    Returns ``True`` when ``PermissionError`` is raised (sandbox enforcing).
+    Calls ``pytest.skip`` when the open succeeds (no sandbox active). Calls
+    ``pytest.fail`` when the sentinel is missing (test must run from a git
+    checkout — silent skip would be the failure mode this lifecycle closes).
+    """
+    sentinel = _repo_root() / ".git" / "HEAD"
+    try:
+        fd = os.open(sentinel, os.O_WRONLY)
+    except PermissionError:
+        return True
+    except FileNotFoundError:
+        pytest.fail(
+            "kernel probe sentinel .git/HEAD missing; run from a git checkout"
+        )
+    else:
+        os.close(fd)
+        pytest.skip(
+            "sandbox not active (open-for-write to .git/HEAD succeeded)"
+        )
+
+
+def test_python_resolver_default_passes_probe_under_seatbelt(seatbelt_active):
     """R10(a): the Python resolver's branch-(c) default is writable under Seatbelt."""
     feature = "verify-r10-py"
     try:
@@ -60,11 +85,7 @@ def test_python_resolver_default_passes_probe_under_seatbelt():
         cleanup_worktree(feature)
 
 
-@pytest.mark.skipif(
-    os.environ.get("CLAUDE_CODE_SANDBOX") != "1",
-    reason=SEATBELT_REASON,
-)
-def test_hook_emitted_path_passes_probe_under_seatbelt():
+def test_hook_emitted_path_passes_probe_under_seatbelt(seatbelt_active):
     """R10(b): the bash hook's emitted path is writable under Seatbelt."""
     feature = "verify-r10-hook"
     repo = _repo_root()
