@@ -6,3 +6,5 @@
 {"ts":"2026-05-16T04:17:54Z","event":"synthesizer_drift","feature":"add-project-glossary-at-cortex-requirements","expected_sha":"24d32cae11b08c09638356c9c56157cbed4b090eaf8ef688b5818722d3ae208a","observed_sha_or_null":null}
 {"ts": "2026-05-16T11:35:54Z", "event": "spec_approved", "feature": "add-project-glossary-at-cortex-requirements"}
 {"ts": "2026-05-16T11:35:54Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "from": "specify", "to": "plan"}
+{"ts": "2026-05-16T11:55:56Z", "event": "plan_approved", "feature": "add-project-glossary-at-cortex-requirements"}
+{"ts": "2026-05-16T11:55:56Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "from": "plan", "to": "implement"}
