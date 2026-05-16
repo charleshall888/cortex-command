@@ -247,6 +247,30 @@ CANNED_ANSWERS: dict[str, str] = {
 }
 
 
+# Canned glossary inline-writes that the simulated interview would have
+# resolved in real runtime. Each entry models a user-named or
+# user-confirmed term that passed ``/requirements-gather``'s binary
+# classifier (project-specific, not general programming) per spec Req 7
+# and Req 8. The simulation appends each entry to a stub
+# ``glossary.md`` under ``tmp_path`` so the producer's inline-write
+# path has automated coverage at e2e simulation time — see spec Req 17
+# option (a). Definitional shape (not classification-shaped) per spec
+# Req 12's Language-content constraint.
+CANNED_GLOSSARY_TERMS: tuple[tuple[str, str], ...] = (
+    (
+        "statusline",
+        "the bottom-of-window text surface that renders session state for "
+        "the interactive Claude Code harness.",
+    ),
+    (
+        "kept user pause",
+        "a phase boundary in the lifecycle state machine where the agent "
+        "halts so the human can redirect, reject, or reshape the work "
+        "before advancement.",
+    ),
+)
+
+
 def _parse_orchestrator_argument(arg: str) -> dict[str, str]:
     """Mock the orchestrator's $ARGUMENTS parser.
 
@@ -303,6 +327,7 @@ def _simulate_write(
     area_slug: str | None,
     qa_block: str,
     output_dir: Path,
+    glossary_terms: tuple[tuple[str, str], ...] = CANNED_GLOSSARY_TERMS,
 ) -> Path:
     """Mock ``/requirements-write``'s synthesis + disk write.
 
@@ -311,6 +336,16 @@ def _simulate_write(
     ``cortex/requirements/``). Returns the written path. Synthesis
     reads each section from the Q&A block's ``**User answer:**`` lines
     and writes the canonical H2 spine in order.
+
+    Per spec Req 17 (option a), this also writes a stub ``glossary.md``
+    in ``output_dir`` when ``glossary_terms`` is non-empty — modeling
+    the per-term inline-write path that ``/requirements-gather`` would
+    have fired during a real interview. The stub lives under the
+    isolated tmp path, NOT under ``cortex/requirements/``, preserving
+    hermeticity. This gives the producer's inline-write path automated
+    coverage at e2e simulation time (without it, the producer's write
+    path would have zero coverage at any phase — critical-review
+    flagged this gap).
     """
     if scope != "area":
         raise NotImplementedError("simulation only covers area scope for R20")
@@ -342,6 +377,27 @@ def _simulate_write(
 
     output_path = output_dir / f"{area_slug}.md"
     output_path.write_text("\n".join(lines), encoding="utf-8")
+
+    # Simulate the inline glossary writes that ``/requirements-gather``
+    # would have performed during the interview. Real runtime appends
+    # each resolved project-specific term per-turn under a ``## Language``
+    # section; the stub here collapses those appends into a single
+    # lazy-creation write because the simulation does not model turn
+    # ordering. Lazy creation: only fire if there is at least one
+    # resolved term.
+    if glossary_terms:
+        glossary_path = output_dir / "glossary.md"
+        glossary_lines = [
+            "# Project Glossary",
+            "",
+            "## Language",
+            "",
+        ]
+        for term, definition in glossary_terms:
+            glossary_lines.append(f"- **{term}**: {definition}")
+        glossary_lines.append("")
+        glossary_path.write_text("\n".join(glossary_lines), encoding="utf-8")
+
     return output_path
 
 
@@ -409,6 +465,51 @@ def test_e2e_orchestrator_routes_area_to_gather_then_write(tmp_path: Path) -> No
     # artifact-format.md as required navigation).
     assert "# Requirements: observability" in content
     assert "**Parent doc**: [requirements/project.md](project.md)" in content
+
+    # Step 5: the simulated inline-write path lays down a stub
+    # ``glossary.md`` next to the area doc. This is spec Req 17's
+    # option (a): without it, the producer's inline-write surface
+    # (added in Phase 2 Task 4) would have zero automated coverage at
+    # any phase. The stub lives inside ``tmp_path``, not under the
+    # live ``cortex/requirements/`` directory.
+    glossary_path = tmp_path / "glossary.md"
+    assert glossary_path.is_file(), (
+        f"simulated inline-write path did not produce glossary stub at "
+        f"{glossary_path}. Spec Req 17 option (a) coverage broken."
+    )
+    glossary_content = glossary_path.read_text(encoding="utf-8")
+    assert "## Language" in glossary_content, (
+        "glossary stub missing the ## Language section that "
+        "critical-review's Step 2a reads. Spec Req 12 anchor lost."
+    )
+
+
+def test_e2e_inline_glossary_write_is_lazy_when_no_terms_resolved(
+    tmp_path: Path,
+) -> None:
+    """The inline-write path is lazy: no terms resolved -> no glossary file.
+
+    Spec Req 6 names lazy file creation as part of the writable-set
+    contract for ``/requirements-gather``. If no project-specific term
+    surfaces during the interview, the producer must NOT create
+    ``glossary.md``. The simulation models this by passing an empty
+    ``glossary_terms`` tuple to ``_simulate_write``.
+    """
+    parsed = _parse_orchestrator_argument("observability")
+    qa_block = _simulate_gather(parsed["scope"], parsed.get("area_slug"))
+    written = _simulate_write(
+        parsed["scope"],
+        parsed.get("area_slug"),
+        qa_block,
+        tmp_path,
+        glossary_terms=(),
+    )
+    assert written.is_file(), f"write did not produce area doc at {written}"
+    assert not (tmp_path / "glossary.md").exists(), (
+        "lazy-creation contract violated: glossary.md was created "
+        "even though no project-specific terms resolved in the "
+        "simulated interview"
+    )
 
 
 def test_e2e_fails_loud_when_gather_drops_a_section(tmp_path: Path) -> None:
