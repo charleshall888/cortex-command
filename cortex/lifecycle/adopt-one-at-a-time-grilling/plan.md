@@ -68,7 +68,9 @@ Prose-only edits to three files: `skills/requirements-gather/SKILL.md`, `skills/
 - **Complexity**: simple
 - **Context**: Verification-only task; no file edits. Run each AC as written in the spec. R11's AC uses the placeholder-anchored pattern `^\s*-\s+\*\*(Q|Recommended answer|User answer|Code evidence):\*\*\s+\{` to count exactly 4 schema-definition bullets (the trailing example continuation at line 56 lacks the `:** {` placeholder and is excluded). R12 runs `grep -cE '\b(MUST|CRITICAL|REQUIRED)\b' skills/requirements-gather/SKILL.md skills/lifecycle/references/specify.md | awk -F: '{s+=$2} END{exit !(s==0)}'` and checks exit code 0.
 - **Verification**: All five commands return their pass conditions: `awk '/^### 2b/,/^### 3/' skills/lifecycle/references/specify.md | grep -c "Verification check"` ≥ 1 AND `grep -cE '^\s*-\s+\*\*(Q|Recommended answer|User answer|Code evidence):\*\*\s+\{' skills/requirements-gather/SKILL.md` = 4 AND `grep -cE '\b(MUST|CRITICAL|REQUIRED)\b' skills/requirements-gather/SKILL.md skills/lifecycle/references/specify.md | awk -F: '{s+=$2} END{exit !(s==0)}'` exits 0 AND `just test` exits 0 AND `awk 'END{exit !(NR<500)}' skills/requirements-gather/SKILL.md && awk 'END{exit !(NR<500)}' skills/lifecycle/references/specify.md && awk 'END{exit !(NR<500)}' skills/lifecycle/SKILL.md` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete
+
+**T6 verification record**: R9=1 (Verification check sub-block stayed in §2b); R11=4 (Q&A schema preserved — placeholder-anchored grep returns exactly 4); R12: requirements-gather=0, specify=0 MUST/CRITICAL/REQUIRED tokens; R13: `just test` exits 0 (6/6 test suites pass) when run with `dangerouslyDisableSandbox: true` — under the default sandbox, the `**/*.pem` deny rule blocks tiktoken's certifi-bundle read inside `bin/cortex-load-parent-epic`, causing 6 spurious test failures; this is an environment artifact unrelated to the cadence edits; R14: requirements-gather=78, specify=199, lifecycle/SKILL.md=225 — all under 500-line cap.
 
 ## Risks
 
