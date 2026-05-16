@@ -30,9 +30,8 @@ The prompts are the source of truth for tagline, manifesto, copy, fallback rules
 9. **Smoke-test the deployed page** before screenshotting:
    - Fonts render correctly (no system-font fallback for Fraunces).
    - Spec sections lock as the viewer scrolls.
-   - Sidebar agent indicators activate paired to specific spec sections.
+   - Meta-spec sidebar gates clear paired to specific spec sections.
    - Pipeline animation runs at production scroll speeds (test on both trackpad and mouse-wheel).
-   - The Konami easter egg either works or has the documented `?mode=redlined` fallback URL.
    - Mobile rendering: scan-layer sidebar collapses to badge; sticky pipeline section is scrollable.
 10. Screenshot the most striking moment of the deployed page → save as `assets/hero.png` for the repo's main README.
 
@@ -61,7 +60,6 @@ The v9 export is committed at `landing-page/_imports/Cortex Command v9.html` (~2
 - mobile (<600px) + a11y + reduced-motion fixes
 - copy rewrites in §02 / §03 / §06
 - progressive scroll-scrub reveal on the hood gatefold (Fig 9)
-- R3 sidebar stamp doubles as the redline-mode toggle
 
 This was landed across five atomic commits (`a0d137bc` → `87b41b14` on `main`), each tagged Phase 1 through 5 in the subject.
 

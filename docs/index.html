@@ -6,7 +6,7 @@
 <title>Cortex Command — workflow framework for Claude Code</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,30..100,0..1&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 
 <meta name="description" content="An opinionated AI workflow framework for Claude Code. Tight specs. Faster ships. Optional autonomy." />
 <link rel="canonical" href="https://charleshall888.github.io/cortex-command/" />
@@ -18,6 +18,8 @@
 <meta property="og:description" content="A Claude Code harness that earns its autonomy. Tight specs. Faster ships." />
 <meta property="og:url" content="https://charleshall888.github.io/cortex-command/" />
 <meta property="og:image" content="https://charleshall888.github.io/cortex-command/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Cortex Command" />
@@ -30,10 +32,25 @@
        Without JS, show it always so readers still see the static (all-zones-lit, per
        the .scrub-engaged rest-state rule) anatomy diagram. */
     .hood-panel { display: block !important; }
+    /* Spec-stream sections normally hide .real content until scroll-driven JS adds
+       the .locked class. Without JS, swap placeholders for real prose so screen
+       readers and crawlers see the actual content. */
+    .sec:not(.locked) .body .real { display: block !important; }
+    .sec:not(.locked) .body .placeholder { display: none !important; }
   </style>
 </noscript>
 
 <style>
+  .skip-link {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--ink); color: var(--parchment);
+    font-family: var(--mono); font-size: 13px;
+    padding: 8px 14px;
+    text-decoration: none;
+    z-index: 9999;
+  }
+  .skip-link:focus { left: 16px; top: 16px; outline: 2px solid var(--ochre); }
+
   :root {
     --parchment: #f7f4ec;
     --parchment-2: #efeadd;
@@ -44,7 +61,7 @@
     --ink-50: #6a6e78;
     --ink-30: #a4a8af;
     --ink-70: #3a3e48;
-    --ink-faint: #8b8a82;
+    --ink-faint: #6e6c63;
     --paper: #f7f4ec;
     --rule: #2a2e3a;
     --rule-soft: #c8c2b0;
@@ -82,7 +99,7 @@
     --ink-50: #4a619a;
     --ink-30: #8093bd;
     --ink-70: #1f3470;
-    --ink-faint: #6b80b0;
+    --ink-faint: #52679a;
     --paper: #d9e3f3;
     --rule: #1e3370;
     --rule-soft: #8ea4ce;
@@ -113,7 +130,7 @@
     --ink-50: #908b7a;
     --ink-30: #62604f;
     --ink-70: #c0baa6;
-    --ink-faint: #76705f;
+    --ink-faint: #9a9382;
     --paper: #15151a;
     --rule: #ece6d3;
     --rule-soft: #44434c;
@@ -334,7 +351,7 @@
     border: 1px solid var(--ink-faint);
     border-radius: 1px;
     position: relative;
-    transition: background 0.5s ease, border-color 0.5s ease;
+    transition: border-color 0.5s ease, box-shadow 0.5s ease;
     align-self: center;
   }
   .ms-name {
@@ -459,7 +476,7 @@
   }
   .hero h1 {
     font-family: var(--serif);
-    font-weight: 350;
+    font-weight: 400;
     font-size: clamp(48px, 6.4vw, 88px);
     line-height: 1.02;
     letter-spacing: -0.025em;
@@ -482,6 +499,100 @@
     margin: 0 0 28px 0;
   }
 
+  /* ── Hero install figure · fig 0 · diegetic terminal plate ── */
+  .hero-install {
+    margin: 8px 0 18px;
+    padding: 18px 22px 18px 26px;
+    background: var(--ink);
+    color: var(--parchment);
+    border-radius: 2px;
+    border-left: 3px solid var(--ochre);
+    position: relative;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 64ch;
+    box-shadow: 0 1px 0 var(--rule-soft), 0 14px 30px -22px var(--shadow-tint-deep);
+  }
+  .hero-install figcaption {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-30);
+    margin-bottom: 10px;
+  }
+  .hero-install pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
+  .hero-install code { color: var(--parchment); font-family: var(--mono); font-size: 13px; }
+  .hero-install .prompt { color: var(--ochre-soft); user-select: none; margin-right: 8px; }
+  .hero-install .kbd {
+    color: var(--blue-faint);
+    background: rgba(200, 210, 238, 0.07);
+    padding: 0 4px;
+    border-radius: 2px;
+  }
+  .hero-install .copy-affordance {
+    position: absolute; top: 14px; right: 14px;
+    background: transparent;
+    color: var(--ink-30);
+    border: 1px solid var(--ink-70);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .hero-install .copy-affordance:hover,
+  .hero-install .copy-affordance:focus-visible {
+    color: var(--parchment);
+    border-color: var(--ochre);
+    outline: none;
+  }
+  .hero-install .copy-affordance[data-state="copied"] {
+    color: var(--ochre-soft);
+    border-color: var(--ochre);
+  }
+  html[data-stain="carbon"] .hero-install {
+    background: #0a0a0e;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .hero-pointers {
+    display: flex; flex-wrap: wrap; align-items: baseline;
+    gap: 4px 0;
+    margin: 0 0 32px 0;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+  }
+  .hero-pointers .ptr {
+    color: var(--ink-2);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--rule-soft);
+    padding-bottom: 1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .hero-pointers .ptr:hover,
+  .hero-pointers .ptr:focus-visible {
+    color: var(--ochre);
+    border-bottom-color: var(--ochre);
+    outline: none;
+  }
+  .hero-pointers .ptr-sep { color: var(--ink-30); margin: 0 12px; }
+
+  @media (max-width: 600px) {
+    .hero-install { padding: 14px 14px 14px 18px; font-size: 12px; }
+    .hero-install .copy-affordance { position: static; margin-top: 10px; display: inline-block; }
+    .hero-pointers { flex-direction: column; gap: 8px; }
+    .hero-pointers .ptr-sep { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-install .copy-affordance,
+    .hero-pointers .ptr { transition: none; }
+  }
+
   /* ── Hero fork: ledger-style decision split, sits below the 01/02/03 explainer ── */
   /* ── Step 03 · the fork: structured 3-col grid (spec | connector | options) ── */
   .hero-fork {
@@ -497,11 +608,11 @@
     font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
     color: var(--ochre); text-transform: uppercase;
   }
-  .hf-head h3 {
+  .hf-head h2 {
     font-family: var(--serif); font-weight: 400; font-size: 19px;
     margin: 0 0 6px 0; letter-spacing: -0.01em; color: var(--ink);
   }
-  .hf-head h3 em { font-style: italic; color: var(--ink); }
+  .hf-head h2 em { font-style: italic; color: var(--ink); }
   .hf-head p {
     font-family: var(--serif); font-size: 14px; line-height: 1.5;
     color: var(--ink-mute); margin: 0; max-width: 60ch;
@@ -692,7 +803,7 @@
     font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em;
     color: var(--ochre); text-transform: uppercase;
   }
-  .hero-explain h3 {
+  .hero-explain h2 {
     font-family: var(--serif); font-weight: 400; font-size: 19px;
     margin: 0 0 8px 0; letter-spacing: -0.01em; color: var(--ink);
   }
@@ -1234,6 +1345,9 @@
     .sec.locking, .sec.locked { transition: none; }
     .self-correct .strike::after,
     .self-correct .replace { transition: none; }
+    .hf-fork-halo,
+    .ms-gates li.active::after,
+    .term .body .cur::after { animation: none !important; }
   }
   .toast .icon {
     width: 60px;
@@ -1349,7 +1463,7 @@
   .tg-card .tg-frame svg {
     display: block; width: 100%; height: auto;
   }
-  .tg-card h4 {
+  .tg-card h3 {
     font-family: var(--serif);
     font-weight: 500;
     font-style: italic;
@@ -3415,7 +3529,7 @@
   .node-g.gold circle.node { fill: var(--ochre); stroke: var(--ochre); }
   .node-g text.node-label {
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 14px;
     fill: var(--ink);
     letter-spacing: 0.03em;
     transition: fill 1.2s ease;
@@ -3571,6 +3685,8 @@
 </head>
 <body>
 
+<a class="skip-link" href="#hero">Skip to content</a>
+
 <!-- Sidebar / scan-layer -->
 <aside class="sidebar" aria-label="document header">
   <h3>Cortex Command<br/><span style="font-weight:400;color:var(--ink-mute);font-size:13px;">workflow framework for Claude Code</span></h3>
@@ -3583,7 +3699,7 @@
       <li data-section="hero">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">clarify</span>
-        <span class="ms-desc">what is this page selling, and to whom</span>
+        <span class="ms-desc">pin the unknowns &middot; name the user</span>
       </li>
       <li data-section="playground">
         <span class="ms-tick" aria-hidden="true"></span>
@@ -3593,22 +3709,22 @@
       <li data-section="sec-research">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">research</span>
-        <span class="ms-desc">prior art &middot; engineer-direct landing pages</span>
+        <span class="ms-desc">cite prior art &middot; name the risks</span>
       </li>
       <li data-section="sec-specify">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">specify</span>
-        <span class="ms-desc">what does the page need to demonstrate</span>
+        <span class="ms-desc">acceptance &middot; scope &middot; what &ldquo;done&rdquo; looks like</span>
       </li>
       <li data-section="pipe-section">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">implement</span>
-        <span class="ms-desc">build the artifact &middot; this artifact</span>
+        <span class="ms-desc">gates fire &middot; safety triggers &middot; written down</span>
       </li>
       <li data-section="install">
         <span class="ms-tick" aria-hidden="true"></span>
         <span class="ms-name">ship</span>
-        <span class="ms-desc">CLI &middot; skills &middot; MCP &middot; pick the surface that fits</span>
+        <span class="ms-desc">CLI &middot; skills &middot; MCP &middot; pick the surface</span>
       </li>
     </ol>
     <div class="ms-progress"><span class="ms-progress-fill" id="ms-progress-fill"></span></div>
@@ -3627,16 +3743,31 @@
   <section class="hero" id="hero">
     <div class="doc-meta">
       <span class="left">cortex-command · <strong>landing.spec.md</strong></span>
-      <span>R3 · live document</span>
+      <span>R3 · live document · MIT · v0.4</span>
     </div>
 
-    <h1>A Claude Code harness <em>that earns its autonomy.</em></h1>
-    <p class="sub">Deep research, then interrogation — until the spec is extracted from your head onto the page. <em>An orchestrator agent with a tight spec and a solid harness can be trusted to work while you sleep.</em></p>
+    <h1>A spec-first workflow framework <em>for Claude Code.</em></h1>
+    <p class="sub">Skills, hooks, a lifecycle state machine, and an overnight runner. <em>Earn the spec, then ship it — gated, logged, recoverable.</em> When a spec is tight enough, the orchestrator can run while you sleep.</p>
+
+    <figure class="hero-install" aria-label="install commands">
+      <figcaption>fig 0 · install · two commands</figcaption>
+      <pre><code><span class="prompt">$</span> uv tool install git+https://github.com/charleshall888/cortex-command.git
+<span class="prompt">$</span> <span class="kbd">/plugin install</span> cortex-core@cortex-command</code></pre>
+      <button class="copy-affordance" type="button" data-copy="uv tool install git+https://github.com/charleshall888/cortex-command.git" aria-label="copy install command">copy</button>
+    </figure>
+
+    <nav class="hero-pointers" aria-label="primary actions">
+      <a href="#install" class="ptr">setup walkthrough <span aria-hidden="true">↓</span></a>
+      <span class="ptr-sep" aria-hidden="true">·</span>
+      <a href="https://github.com/charleshall888/cortex-command/tree/main/cortex/lifecycle" class="ptr" target="_blank" rel="noopener">browse a real lifecycle log <span aria-hidden="true">↗</span></a>
+      <span class="ptr-sep" aria-hidden="true">·</span>
+      <a href="https://github.com/charleshall888/cortex-command/blob/main/docs/overnight-operations.md" class="ptr" target="_blank" rel="noopener">overnight-operations.md <span aria-hidden="true">↗</span></a>
+    </nav>
 
     <div class="hero-explain">
       <div class="ex">
         <span class="ex-num">01</span>
-        <h3><code>/discovery</code> fires it off</h3>
+        <h2><code>/discovery</code> fires it off</h2>
         <div class="ex-fig" data-fig="fig 1 · prompt → tickets" aria-hidden="true">
           <svg viewBox="0 0 360 130" preserveAspectRatio="xMidYMid meet">
             <!-- prompt box (left) -->
@@ -3688,7 +3819,7 @@
       </div>
       <div class="ex">
         <span class="ex-num">02</span>
-        <h3><code>/refine</code> each ticket separately</h3>
+        <h2><code>/refine</code> each ticket separately</h2>
         <div class="ex-fig" data-fig="fig 2 · the loop, three times" aria-hidden="true">
           <svg viewBox="0 0 360 130" preserveAspectRatio="xMidYMid meet">
             <!-- 3 panels, sized to match fig 1's 130h viewBox -->
@@ -3748,7 +3879,7 @@
     <div class="hero-fork" aria-labelledby="hf-h">
       <div class="hf-head">
         <span class="hf-num">03</span>
-        <h3>Earn the spec, <em>pick the harness.</em></h3>
+        <h2>Earn the spec, <em>pick the harness.</em></h2>
       </div>
 
       <div class="hf-body">
@@ -3802,7 +3933,7 @@
             </span>
             <span class="hf-opt-tag">option b · guided lifecycle</span>
             <div class="hf-opt-name">ships with you, in-session</div>
-            <div class="hf-opt-desc">One ticket at a time, planned and implemented in-terminal. Can implement in a mini-autonomous pipeline/worktree or in session on the current branch or feature branch.</div>
+            <div class="hf-opt-desc">One ticket at a time, planned and shipped with you in the terminal. Optionally runs in an isolated worktree so your working tree stays clean.</div>
           </div>
         </div>
       </div>
@@ -3815,7 +3946,7 @@
     <div class="pg-header">
       <div class="marker">§02 · lifecycle playground</div>
       <h2 class="pg-title">The same lifecycle, <em>three different gate sequences.</em></h2>
-      <p class="pg-lede">Frontmatter declares <code>complexity</code> and <code>criticality</code>. Those two values decide which gates fire. Drag the slider — a ghost-train runs the new sequence so you can see exactly which phases the framework forces.</p>
+      <p class="pg-lede">Frontmatter declares <code>complexity</code> and <code>criticality</code>. Those two values decide which gates fire. Drag the slider — a ghost-train runs the new sequence so you can see exactly which phases the framework runs.</p>
     </div>
     <div class="pg-body">
       <div class="pg-controls">
@@ -4048,7 +4179,7 @@
 
       <!-- FIG 3 — Knows when to stop. -->
       <article class="tg-card" data-fig="fig 3" data-active="0">
-        <h4>Knows when to stop.</h4>
+        <h3>Knows when to stop.</h3>
         <div class="tg-frame">
           <svg viewBox="0 0 220 120" preserveAspectRatio="xMidYMid meet" class="tg-fig-stop" aria-hidden="true">
             <!-- Three vertical "circuit breaker" gauges. Each gauge is a column
@@ -4141,7 +4272,7 @@
            the old FIG 9 folded in: ladder ends in either a brain decision
            or, if even the brain can't triage, a PAUSED · NEEDS HUMAN stamp.) -->
       <article class="tg-card" data-fig="fig 4" data-active="0">
-        <h4>Climbs when stuck — <em>stops calmly when it can't.</em></h4>
+        <h3>Climbs when stuck — <em>stops calmly when it can't.</em></h3>
         <div class="tg-frame">
           <svg viewBox="0 0 260 140" preserveAspectRatio="xMidYMid meet" class="tg-fig-climb" aria-hidden="true">
             <!-- Vertical ladder centered-left. Each rung is a model-tier
@@ -4228,13 +4359,14 @@
             <text class="schem-cap" x="130" y="130" text-anchor="middle">three rungs · one judge · calm pause</text>
           </svg>
         </div>
-        <p class="tg-body">Failed gates don't loop blindly. The first retry runs on the same model. The next escalates to <code>opus</code>. If that still doesn't pass, a separate brain agent reads the failure and decides what to do — <code>SKIP</code>, <code>DEFER</code>, or continue. And when even the brain can't decide cleanly, the harness doesn't guess: it writes <code>./deferred/&lt;ticket&gt;.md</code> with exactly what it tried and what it needs from you, then carries on with the rest of the queue. Three rungs, a judge, and one calm exit — never infinite re-rolls, never a 3am crash.</p>
+        <p class="tg-body">Failed gates don't loop blindly. The first retry runs on the same model; the next escalates to <code>opus</code>; the third hands off to a separate brain agent that decides <code>SKIP</code>, <code>DEFER</code>, or continue.</p>
+        <p class="tg-body">When even the brain can't decide cleanly, the harness writes <code>./deferred/&lt;ticket&gt;.md</code> with what it tried and what it needs from you — then carries on with the rest of the queue. Three rungs, a judge, one calm exit.</p>
         <div class="tg-cap">retry → escalate → triage → calm pause</div>
       </article>
 
       <!-- FIG 5 — Stays in its lane. -->
       <article class="tg-card" data-fig="fig 5" data-active="0">
-        <h4>Stays in its lane.</h4>
+        <h3>Stays in its lane.</h3>
         <div class="tg-frame">
           <svg viewBox="0 0 220 120" preserveAspectRatio="xMidYMid meet" class="tg-fig-fence" aria-hidden="true">
             <!-- hatched perimeter pattern -->
@@ -4282,7 +4414,7 @@
            BOTTOM: the rare cross-round conflict still gets the graded
            heal (trivial fast-path / one bounded repair / defer). -->
       <article class="tg-card" data-fig="fig 6" data-active="0">
-        <h4>Schedules around conflicts. <em>Heals what slips through.</em></h4>
+        <h3>Schedules around conflicts. <em>Heals what slips through.</em></h3>
         <div class="tg-frame">
           <svg viewBox="0 0 240 130" preserveAspectRatio="xMidYMid meet" class="tg-fig-merge" aria-hidden="true">
             <!-- ─── TOP: round scheduler ─── -->
@@ -4351,7 +4483,7 @@
 
       <!-- FIG 7 — Survives interruption. -->
       <article class="tg-card" data-fig="fig 7" data-active="0">
-        <h4>Survives interruption.</h4>
+        <h3>Survives interruption.</h3>
         <div class="tg-frame">
           <svg viewBox="0 0 240 120" preserveAspectRatio="xMidYMid meet" class="tg-fig-resume" aria-hidden="true">
             <!-- clock face -->
@@ -4392,7 +4524,7 @@
 
       <!-- FIG 8 — Tells you everything it did. -->
       <article class="tg-card" data-fig="fig 8" data-active="0">
-        <h4>Tells you everything it did.</h4>
+        <h3>Tells you everything it did.</h3>
         <div class="tg-frame">
           <svg viewBox="0 0 240 120" preserveAspectRatio="xMidYMid meet" class="tg-fig-report" aria-hidden="true">
             <!-- 5 log streams flowing right into the morning report.
@@ -4426,7 +4558,7 @@
           </svg>
         </div>
         <p class="tg-body">Five JSONL streams record everything during the run: phase transitions, agent spawns, retries, conflicts, and brain triage decisions. At dawn they’re collated into a single <code>morning-report.md</code> — what merged, what was skipped and why, what’s waiting for you. Every decision is auditable; nothing happens off the record.</p>
-        <div class="tg-cap">five logs · one report · full audit</div>
+        <div class="tg-cap">five logs · one morning-report</div>
       </article>
 
     </div>
@@ -5026,7 +5158,7 @@
           <span class="ship-opt req">required · start here</span>
         </div>
         <h3 class="ship-name">cortex-core</h3>
-        <p class="ship-desc">The interactive lifecycle — <code>/discovery</code>, <code>/refine</code>, <code>/critical-review</code>, <code>/lifecycle</code> — installed as a Claude Code plugin. <strong>Start here.</strong> Run <code>/lifecycle</code> on a real ticket to feel the gates — clarify, research, spec, plan, critical-review, implement, review — with you in the loop.</p>
+        <p class="ship-desc">The interactive lifecycle — <code>/discovery</code>, <code>/refine</code>, <code>/critical-review</code>, <code>/lifecycle</code> — installed as a Claude Code plugin. <strong>Start here.</strong> Run <code>/lifecycle</code> on a real ticket to feel the gates with you in the loop.</p>
         <p class="ship-when"><span class="k">install:</span> <code>/plugin install cortex-core@cortex-command</code></p>
       </article>
 
@@ -5045,24 +5177,24 @@
     <p class="ship-aside">plugins keep the CLI and MCP server in sync — no separate install loop</p>
 
     <div class="repo-line">
-      <a class="install-cta" href="https://github.com/charleshall888/cortex-command#install" target="_blank" rel="noopener">install instructions →</a>
+      <a class="install-cta" href="https://github.com/charleshall888/cortex-command/blob/main/docs/setup.md" target="_blank" rel="noopener">full setup walkthrough →</a>
       <a href="https://github.com/charleshall888/cortex-command" target="_blank" rel="noopener">github.com/charleshall888/cortex-command ↗</a>
       <span class="repo-meta">MIT · v0.4 · plain markdown state · readable commands</span>
     </div>
   </section>
 
-  <footer id="page-footer">
-    <div class="links">
-      <a href="https://github.com/charleshall888/cortex-command">github</a>
-      <a href="https://github.com/charleshall888/cortex-command/blob/main/LICENSE">MIT license</a>
-    </div>
-    <div class="author">
-      Built by Charlie Hall.
-      <span class="author-aside">Want an excellent espresso shot while you run /morning-review? Check out my AI Gaggimate project, gaggimate-barista.</span>
-    </div>
-  </footer>
-
 </main>
+
+<footer id="page-footer">
+  <div class="links">
+    <a href="https://github.com/charleshall888/cortex-command">github</a>
+    <a href="https://github.com/charleshall888/cortex-command/blob/main/LICENSE">MIT license</a>
+  </div>
+  <div class="author">
+    Built by Charlie Hall.
+    <span class="author-aside">Other projects: <a href="https://github.com/charleshall888/gaggimate-barista" target="_blank" rel="noopener">gaggimate-barista</a>.</span>
+  </div>
+</footer>
 
 <!-- Achievement toast (Spec Earned) -->
 <div class="toast" id="toast-spec-earned" role="status" aria-live="polite">
@@ -5095,7 +5227,7 @@
   <div class="body">
     <div class="top">Achievement</div>
     <div class="title">First Light</div>
-    <div class="sub">overnight run completed before you woke up.</div>
+    <div class="sub">overnight run completed before you woke up</div>
   </div>
 </div>
 
@@ -5298,8 +5430,11 @@
       lbl.textContent = N.label; g.appendChild(lbl);
       const sub = el('text', { class: 'node-sub', x: 0, y: 28, 'text-anchor': 'middle' });
       sub.textContent = N.sub; g.appendChild(sub);
+      g.setAttribute('tabindex', '0');
       g.addEventListener('mouseenter', (e) => showTip(N, g));
       g.addEventListener('mouseleave', hideTip);
+      g.addEventListener('focus', () => showTip(N, g));
+      g.addEventListener('blur', hideTip);
       nodesLayer.appendChild(g);
       return g;
     }
@@ -5372,9 +5507,17 @@
   }
 
   // Drive everything from scrollProgress 0..1 across pipeWrap
+  // Cache pipeWrap.offsetHeight — it only changes on resize, so reading it
+  // every scroll frame would force layout unnecessarily.
+  let _pipeWrapHeight = pipeWrap ? pipeWrap.offsetHeight : 0;
+  window.addEventListener('resize', () => {
+    if (pipeWrap) _pipeWrapHeight = pipeWrap.offsetHeight;
+  });
   function pipeProgress() {
+    if (!pipeWrap) return 0;
     const r = pipeWrap.getBoundingClientRect();
-    const total = pipeWrap.offsetHeight - window.innerHeight;
+    const total = _pipeWrapHeight - window.innerHeight;
+    if (total <= 0) return 0;
     const scrolled = Math.max(0, -r.top);
     return Math.max(0, Math.min(1, scrolled / total));
   }
@@ -5719,16 +5862,17 @@
     else sb.classList.remove('compact-badge');
   }
 
-  // Fade the corner badge while the pipeline is the active surface
+  // Fade the corner badge while the pipeline is the active surface,
+  // and gate the per-frame applyPipe call so it doesn't run when off-screen.
+  let _pipeVisible = true;
   const _pipeSection = document.getElementById('pipe-section');
   const _sidebarEl = document.querySelector('.sidebar');
-  if (_pipeSection && _sidebarEl && 'IntersectionObserver' in window) {
+  if (_pipeSection && 'IntersectionObserver' in window) {
     const _io = new IntersectionObserver((entries) => {
       entries.forEach(e => {
-        // Hide while the pipeline section overlaps the viewport meaningfully
-        // but not for the full sticky-scrub run — this keeps the window of
-        // invisibility short and predictable.
-        _sidebarEl.classList.toggle('pipe-active', e.intersectionRatio > 0.2);
+        if (_sidebarEl) _sidebarEl.classList.toggle('pipe-active', e.intersectionRatio > 0.2);
+        _pipeVisible = e.isIntersecting;
+        if (_pipeVisible) onScroll();
       });
     }, { threshold: [0, 0.1, 0.2, 0.5, 0.8, 1] });
     _io.observe(_pipeSection);
@@ -5742,25 +5886,19 @@
 
   function updateMetaSpec() {
     const anchor = window.innerHeight * 0.45;
-    const footer = document.getElementById('page-footer');
     let cleared = 0;
     let activeIdx = -1;
     for (let i = 0; i < msTargets.length; i++) {
       const { li, el } = msTargets[i];
       const r = el.getBoundingClientRect();
-      // Last gate (ship/install) uses the footer as its clear sentinel — install is taller
-      // than the viewport so its own bottom never crosses the anchor.
+      // Last gate (ship/install) clears when its bottom passes viewport center —
+      // the install section is taller than the viewport, so use a more lenient
+      // threshold than the 0.45 anchor used for shorter sections.
       const isLast = (i === msTargets.length - 1);
-      let isCleared, isActive;
-      if (isLast) {
-        const fr = footer ? footer.getBoundingClientRect() : null;
-        // Footer is short — clear once it's visible at all (you've finished reading).
-        isCleared = fr ? fr.top < window.innerHeight : false;
-        isActive = !isCleared && r.top < anchor;
-      } else {
-        isCleared = r.bottom < anchor;
-        isActive = !isCleared && r.top < anchor;
-      }
+      const isCleared = isLast
+        ? r.bottom < window.innerHeight * 0.5
+        : r.bottom < anchor;
+      const isActive = !isCleared && r.top < anchor;
       li.classList.toggle('cleared', isCleared);
       li.classList.toggle('active', isActive);
       if (isCleared) cleared++;
@@ -5786,19 +5924,45 @@
   }
 
   // ─────────── Master scroll loop ───────────
+  const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let raf = null;
   function frame() {
     raf = null;
     tryLock();
-    applyPipe(pipeProgress());
+    if (!REDUCED && _pipeVisible) applyPipe(pipeProgress());
     updateMetaSpec();
-    if (window.__applyHood) window.__applyHood();
+    if (!REDUCED && window.__applyHood) window.__applyHood();
   }
   function onScroll() { if (!raf) raf = requestAnimationFrame(frame); }
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', () => { checkCompact(); frame(); });
   checkCompact();
   frame();
+  if (REDUCED) {
+    // Paint static "poster" frames once so the artwork is readable without scroll-tied motion.
+    applyPipe(0.92);
+    if (window.__applyHood) window.__applyHood(1.0);
+  }
+
+  // ─────────── Hero install · copy affordance ───────────
+  document.querySelectorAll('.hero-install .copy-affordance').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.copy;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.dataset.state = 'copied';
+        const original = btn.textContent;
+        btn.textContent = 'copied ✓';
+        setTimeout(() => {
+          delete btn.dataset.state;
+          btn.textContent = original;
+        }, 1400);
+      } catch (err) {
+        btn.textContent = 'select & copy';
+        setTimeout(() => { btn.textContent = 'copy'; }, 1800);
+      }
+    });
+  });
 </script>
 
 <!-- ───────── Pop-the-hood gatefold script ───────── -->
@@ -5888,54 +6052,12 @@
     if (hoodAnatomy) hoodAnatomy.classList.remove('scrub-engaged');
   }
 
-  let _hoodAutoOpenFired = false;
-  function _tryAutoOpenHood() {
-    if (_hoodAutoOpenFired) return;
-    if (!hoodCta || !hoodPanel) return;
-    if (hoodPanel.getAttribute('data-open') !== '0') {
-      _hoodAutoOpenFired = true;
-      return;
-    }
-    const r = hoodCta.getBoundingClientRect();
-    // Fire when the CTA is at least partially visible.
-    if (r.top < window.innerHeight * 0.85 && r.bottom > 0) {
-      openHood();
-      _hoodAutoOpenFired = true;
-      if (window.__applyHood) requestAnimationFrame(window.__applyHood);
-    }
-  }
-
   if (hoodCta && hoodPanel) {
     hoodCta.addEventListener('click', function(){
       const isOpen = hoodPanel.getAttribute('data-open') === '1';
-      if (isOpen) {
-        closeHood();
-        _hoodAutoOpenFired = true; // user manually closed — don't re-auto-open
-      } else {
-        openHood();
-        _hoodAutoOpenFired = true;
-      }
+      if (isOpen) closeHood();
+      else openHood();
     });
-
-    // Primary auto-open: a scroll-event check. Reliable across browsers and
-    // independent of the panel/wrap layout state. IntersectionObserver is
-    // kept as a redundant secondary trigger below (cheaper when supported).
-    window.addEventListener('scroll', _tryAutoOpenHood, { passive: true });
-    window.addEventListener('resize', _tryAutoOpenHood);
-    _tryAutoOpenHood(); // check initial state in case the page loaded with CTA already in viewport
-
-    if ('IntersectionObserver' in window) {
-      const _hoodIO = new IntersectionObserver((entries) => {
-        entries.forEach((e) => {
-          if (e.intersectionRatio > 0.05 && hoodPanel.getAttribute('data-open') === '0') {
-            openHood();
-            _hoodAutoOpenFired = true;
-            if (window.__applyHood) requestAnimationFrame(window.__applyHood);
-          }
-        });
-      }, { threshold: [0, 0.05, 0.2] });
-      _hoodIO.observe(hoodCta);
-    }
   }
 
   // ── Progressive reveal · zone thresholds along the wrap's scroll length ──
@@ -5969,8 +6091,22 @@
       }
     });
   }
+  // Gate per-frame work on visibility — skips when the wrap is off-screen.
+  let _hoodVisible = false;
+  if ('IntersectionObserver' in window && hoodWrap) {
+    const _hoodIO = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { _hoodVisible = e.isIntersecting; });
+    });
+    _hoodIO.observe(hoodWrap);
+  }
   // Exposed to the main IIFE's frame() so we share a single rAF loop.
-  window.__applyHood = function () { applyHood(hoodProgress()); };
+  // Accepts an optional progress override so the main script can paint a
+  // poster frame for reduced-motion users; otherwise we no-op when off-screen.
+  window.__applyHood = function (p) {
+    if (p !== undefined) { applyHood(p); return; }
+    if (!_hoodVisible) return;
+    applyHood(hoodProgress());
+  };
 
 })();
 </script>
