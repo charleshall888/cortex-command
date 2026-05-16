@@ -39,6 +39,7 @@ cortex-morning-review-complete-session = "cortex_command.overnight.complete_morn
 cortex-pipeline-metrics = "cortex_command.pipeline.metrics:main"
 cortex-report = "cortex_command.overnight.report:main"
 cortex-smoke-test = "cortex_command.overnight.smoke_test:main"
+cortex-worktree-resolve = "cortex_command.pipeline.worktree_resolve_cli:main"
 
 [tool.hatch.version]
 source = "vcs"

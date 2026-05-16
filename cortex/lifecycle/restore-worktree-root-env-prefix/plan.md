@@ -31,7 +31,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: simple
 - **Context**: Anchor edit on `cortex_command/pipeline/worktree.py:159-162` (the existing branch-(c) `repo_root / ".claude" / "worktrees" / feature` expression). Branch (d) at `cortex_command/pipeline/worktree.py:154-157` already uses the `Path(os.environ.get("TMPDIR", "/tmp"))` pattern — mirror it. The `repo_root` parameter (line 117) and `_repo_root()` call (line 161) are no longer needed on branch (c) and may be dropped from this branch's logic (still required by other callers of the signature — preserve the parameter, just stop dereferencing it on branch (c)). R2's canonicalization applies only on branch (c) — do NOT call `.resolve()` on branches (a), (b), or (d). For the precondition gate: a single Python one-liner (e.g., `python3 -c "import json, sys, re; d = json.load(open(__import__('os').path.expanduser('~/.claude/settings.local.json'))); aw = d.get('sandbox',{}).get('filesystem',{}).get('allowWrite',[]); bad = [e for e in aw if isinstance(e,str) and re.search(r'worktrees/?$', e) and not e.endswith('#cortex-worktree-root')]; sys.exit(0 if not bad else (print('Legacy worktrees entry detected — remove these before continuing Phase 1: '+repr(bad), file=sys.stderr) or 2))"`) suffices. The gate runs once at Phase 1 entry — its failure is recoverable (operator removes entry; re-run task).
 - **Verification**: TWO gates both pass: (a) precondition: `python3 -c "import json, os, re; d = json.load(open(os.path.expanduser('~/.claude/settings.local.json'))); aw = d.get('sandbox',{}).get('filesystem',{}).get('allowWrite',[]); bad = [e for e in aw if isinstance(e,str) and re.search(r'worktrees/?$', e) and not e.endswith('#cortex-worktree-root')]; assert not bad, bad"` exits 0; (b) behavior: `python3 -c "import os, tempfile; os.environ['TMPDIR'] = tempfile.mkdtemp(); from cortex_command.pipeline.worktree import resolve_worktree_root; p = resolve_worktree_root('verify-r1', None); print(p); assert str(p).startswith(os.path.realpath(os.environ['TMPDIR'])); assert p.parts[-2:] == ('cortex-worktrees', 'verify-r1')"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 2: Tighten branch (b) marker to sentinel-suffix `#cortex-worktree-root`
 - **Files**: `cortex_command/pipeline/worktree.py`
@@ -40,7 +40,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: simple
 - **Context**: Anchor edit on `cortex_command/pipeline/worktree.py:81-111` (`_registered_worktree_root` function definition; substring check at line 109 `if isinstance(entry, str) and "worktrees/" in entry:`). The new shape: iterate `allow_write`, for each string entry split on `#` once with `entry.split("#", 1)`, accept only when the trailing segment equals `cortex-worktree-root`, then return `Path(<leading-segment>)`. Update the function docstring (lines 82-90) to describe the sentinel-suffix scheme. The function continues to return `Path` or `None`; signature is preserved.
 - **Verification**: `python3 -c "import json, os, tempfile, pathlib; home = tempfile.mkdtemp(); os.environ['HOME'] = home; d = pathlib.Path(home, '.claude'); d.mkdir(); (d/'settings.local.json').write_text(json.dumps({'sandbox':{'filesystem':{'allowWrite':['/some/foreign/worktrees/path']}}})); from cortex_command.pipeline.worktree import _registered_worktree_root; assert _registered_worktree_root() is None"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 3: Route `cleanup_worktree()` fallback through `resolve_worktree_root()`
 - **Files**: `cortex_command/pipeline/worktree.py`
@@ -49,7 +49,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: simple
 - **Context**: Anchor edit on `cortex_command/pipeline/worktree.py:289` (the `wt_path = ... else (repo / ".claude" / "worktrees" / feature)` expression). Three callers invoke `cleanup_worktree(feature)` without an explicit `worktree_path`: `cortex_command/overnight/daytime_pipeline.py:260`, `cortex_command/overnight/daytime_pipeline.py:451`, `cortex_command/overnight/smoke_test.py:124`. These callers do not need to change — they consume the resolver via the fallback automatically. `repo_root=repo` matches the existing `repo` local (computed at line 288).
 - **Verification**: `grep -E 'else \(repo / "\.claude" / "worktrees" / feature\)' cortex_command/pipeline/worktree.py` returns no matches AND `grep -c "resolve_worktree_root(feature" cortex_command/pipeline/worktree.py` returns ≥2 (one in `create_worktree`, one in the new `cleanup_worktree` fallback).
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 4: Update existing tests + add positive/negative/behavioral regression tests in `tests/test_worktree.py`
 - **Files**: `tests/test_worktree.py`, `cortex_command/init/tests/test_settings_merge.py`
@@ -58,7 +58,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: complex
 - **Context**: Existing test layout uses `monkeypatch.setenv("TMPDIR", str(tmp_path))` pattern; mirror it. For R2's symlink test: create `real_path = tmp_path / "real"` then `(tmp_path / "tmpdir").symlink_to(real_path)`, monkeypatch `TMPDIR` to the symlink, assert the result starts with `str(real_path.resolve())`. For R4's resolver-routing test: monkeypatch `resolve_worktree_root` to a sentinel via `monkeypatch.setattr("cortex_command.pipeline.worktree.resolve_worktree_root", lambda *a, **k: sentinel)` and assert `cleanup_worktree` calls it; OR run end-to-end against a real worktree and assert `git worktree list` no longer contains the entry after cleanup. R3 needs a settings.local.json fixture written under `tmp_path / ".claude"` with `HOME` monkeypatched. Tests MUST exercise the actual resolver call paths — `grep -c` counts are insufficient per spec R5.
 - **Verification**: `pytest tests/test_worktree.py -q` exits 0 AND `pytest tests/test_worktree.py --collect-only | grep -cE "verify-r[1-5]|test_branch_c_default_returns_tmpdir|test_branch_c_path_is_resolved|test_branch_b_ignores_unrelated_worktrees_substring|test_cleanup_worktree_routes_through_resolver"` returns ≥4.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 5: Add `cortex-worktree-resolve` console script entry point
 - **Files**: `pyproject.toml`, `cortex_command/pipeline/worktree_resolve_cli.py`
@@ -67,7 +67,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: simple
 - **Context**: Existing `[project.scripts]` block lives at `pyproject.toml:20-41`. Console-script wrappers in this repo follow the `cortex_command/<area>/<thing>:main` pattern (e.g., `cortex_command.common:main`). The wrapper must NOT duplicate path-computation logic — it is a thin call into the existing resolver. Skip `argparse` if a single positional argument suffices; `sys.argv[1]` plus a `len(sys.argv) != 2` guard is acceptable for a one-arg CLI. `pyproject.toml` only modifies the `[project.scripts]` block; do NOT touch the `claude-agent-sdk` version pin line — that's the `cortex-check-parity` SANDBOX_WATCHED_FILES gate's trigger (`bin/cortex-check-parity:120-122`, regex `r"claude-agent-sdk"`), and editing other lines does not fire the gate. Re-install via `uv sync` or `pip install -e .` after the change so the entry is on PATH for downstream tasks.
 - **Verification**: After re-install (`uv sync` or `pip install -e .`), `cortex-worktree-resolve verify-r5 | grep -E "/cortex-worktrees/verify-r5$"` exits 0 (path ends with the expected segment) AND `grep -c "cortex-worktree-resolve" pyproject.toml` returns ≥1 AND `command -v cortex-worktree-resolve` exits 0 (entry on PATH).
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 6: Remove `cortex init` Step 8 and delete the now-invalid registration tests
 - **Files**: `cortex_command/init/handler.py`, `tests/test_init_worktree_registration.py`, `tests/test_init_worktree_registration_removed.py`
@@ -76,7 +76,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: simple
 - **Context**: Step 8 lives at `cortex_command/init/handler.py:201-211`. Step 7 (umbrella `cortex/` registration at line 199) is unchanged. The deleted test file `tests/test_init_worktree_registration.py` is 183 lines (three tests, all targeting Step 8). Pattern the new replacement test on `tests/test_init.py`'s existing handler-invocation patterns (subprocess or in-process via `_run` from `cortex_command.init.handler`). The replacement test uses HOME monkeypatching to write `settings.local.json` under `tmp_path`.
 - **Verification**: `grep -E "^[[:space:]]*# Step 8|worktree_root_path|worktree_target" cortex_command/init/handler.py` returns no matches AND `test ! -e tests/test_init_worktree_registration.py` exits 0 AND `pytest tests/test_init_worktree_registration_removed.py -q` exits 0 AND `grep -rln "test_init_worktree_registration" cortex_command/ tests/ bin/ skills/ | grep -v test_init_worktree_registration_removed` returns no matches (no orphan imports).
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 7: Retarget `cortex-worktree-create.sh` hook to shell out to `cortex-worktree-resolve` (with launchd-aware PATH bootstrap)
 - **Files**: `claude/hooks/cortex-worktree-create.sh`
@@ -85,7 +85,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: simple
 - **Context**: Anchor on `claude/hooks/cortex-worktree-create.sh:29` (`WORKTREE_PATH="$CWD/.claude/worktrees/$NAME"`) and line 41 (`mkdir -p "$CWD/.claude/worktrees" >&2`). The PATH-prepending covers the dominant macOS install layouts: `~/.local/bin` (uv tool install default), `~/.cargo/bin` (rare; defensive), `/opt/homebrew/bin` (Apple Silicon Homebrew), `/usr/local/bin` (Intel Homebrew). The PATH-prepending does NOT change the failure semantics for systems where the script is genuinely uninstalled; it only narrows the population of "launchd-PATH miss" false-failures. Use `command -v cortex-worktree-resolve >/dev/null 2>&1 || { echo "..." >&2; exit 1; }` for the PATH check AFTER the PATH-prepending. Capture the resolver's stdout with command substitution (`$(...)`); the resolver prints a path followed by a newline, which `$(...)` strips. Hook stdout still emits the worktree path verbatim at line 66 (Claude Code contract unchanged). DO NOT edit `plugins/cortex-core/hooks/cortex-worktree-create.sh` — that's an auto-regenerated mirror; `just build-plugin` (or the pre-commit hook) propagates the edit.
 - **Verification**: Interactive/session-dependent: the hook is invoked by Claude Code's interactive `--worktree` flow and cannot be exercised without a Claude Code session. Static checks: `grep -c 'cortex-worktree-resolve' claude/hooks/cortex-worktree-create.sh` returns ≥1 AND `grep -E '\\.claude/worktrees' claude/hooks/cortex-worktree-create.sh` returns no matches AND `grep -c '\.local/bin' claude/hooks/cortex-worktree-create.sh` returns ≥1 (PATH-bootstrap present) AND `grep -c 'launchd' claude/hooks/cortex-worktree-create.sh` returns ≥1 (diagnostic mentions launchd cause) AND `shellcheck claude/hooks/cortex-worktree-create.sh` exits 0 (if shellcheck is on PATH) AND launchd-minimal-PATH simulation: `env -i HOME="$HOME" PATH=/usr/bin:/bin bash -c 'echo {\"cwd\":\"$PWD\",\"name\":\"verify-r7-launchd\"} | claude/hooks/cortex-worktree-create.sh' 2>&1` either prints a `$TMPDIR/cortex-worktrees/verify-r7-launchd` path (success — PATH-prepending found the tool) or exits non-zero with the launchd-mentioning diagnostic (acceptable failure with correct error message). Cleanup: `git worktree remove --force ... && git branch -D worktree/verify-r7-launchd` after a successful path.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 8: Update `tests/test_hooks.sh` assertions + add resolver-parity byte-identity test
 - **Files**: `tests/test_hooks.sh`, `tests/test_hooks_resolver_parity.sh`
@@ -94,7 +94,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: simple
 - **Context**: Existing `tests/test_hooks.sh` uses `expected_path=` lines anchored on `$WT_TMPDIR/.claude/worktrees/my-feature` and three other variations. Use `cortex-worktree-resolve "$NAME"` directly in the test fixture (NOT a mock — the spec's R8 acceptance (a) describes a mock-replacement test where the hook calls a sentinel-emitting stub, and acceptance (b) describes a byte-identity test using the real resolver; this task implements both, mock-replacement for the four `test_hooks.sh` assertions and byte-identity in the new file). For the mock-replacement assertion, prepend a tmp PATH directory containing a `cortex-worktree-resolve` executable that prints a sentinel, then run the hook and assert `WORKTREE_PATH` equals the sentinel.
 - **Verification**: `tests/test_hooks.sh` exits 0 AND `tests/test_hooks_resolver_parity.sh` exits 0 AND `grep -c "cortex-worktree-resolve" tests/test_hooks.sh` returns ≥4 (one per assertion) AND `test -x tests/test_hooks_resolver_parity.sh` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 9: Atime-touch guard on lifecycle resume in `create_worktree()` idempotent branch
 - **Files**: `cortex_command/pipeline/worktree.py`, `tests/test_worktree.py`

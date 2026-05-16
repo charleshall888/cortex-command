@@ -9,6 +9,14 @@
 
 set -euo pipefail
 
+# PATH bootstrap: when Claude Code is launched via macOS Dock/Finder, the
+# session inherits launchd's minimal PATH, which excludes the user-site bin
+# directories where cortex-command's console scripts (cortex-worktree-resolve)
+# live. Prepend the dominant cortex-tool bin layouts so the resolver is
+# reachable regardless of launch context. This does NOT mask a genuinely
+# uninstalled tool — see the diagnostic below.
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 # Read stdin once into a variable so we can parse multiple fields
 INPUT=$(cat)
 
@@ -26,7 +34,20 @@ if [ -z "$NAME" ] || [ "$NAME" = "null" ]; then
   exit 1
 fi
 
-WORKTREE_PATH="$CWD/.claude/worktrees/$NAME"
+# Single-chokepoint path resolution: shell out to the Python resolver via
+# the cortex-worktree-resolve console script. Both Python and bash dispatch
+# paths share one source of truth (cortex_command.pipeline.worktree
+# .resolve_worktree_root). Do NOT duplicate the path logic inline — the hook
+# fails loud if the resolver is unreachable.
+if ! command -v cortex-worktree-resolve >/dev/null 2>&1; then
+  echo "WorktreeCreate hook error: cortex-worktree-resolve not on PATH or failed. Possible causes: (1) cortex-command not installed (install via 'uv tool install git+https://github.com/charleshall888/cortex-command.git@<tag>'); (2) Claude Code launched via Dock/Finder on macOS — launchd's minimal PATH may not include the cortex-tool bin dir; try launching Claude Code from Terminal, OR add the cortex-tool bin path to a launchd plist (see docs/setup.md)." >&2
+  exit 1
+fi
+
+if ! WORKTREE_PATH=$(cortex-worktree-resolve "$NAME"); then
+  echo "WorktreeCreate hook error: cortex-worktree-resolve not on PATH or failed. Possible causes: (1) cortex-command not installed (install via 'uv tool install git+https://github.com/charleshall888/cortex-command.git@<tag>'); (2) Claude Code launched via Dock/Finder on macOS — launchd's minimal PATH may not include the cortex-tool bin dir; try launching Claude Code from Terminal, OR add the cortex-tool bin path to a launchd plist (see docs/setup.md)." >&2
+  exit 1
+fi
 BRANCH="worktree/$NAME"
 
 # Edge case: worktree path already exists — fail clearly
@@ -38,7 +59,7 @@ fi
 echo "Creating worktree '$NAME' at $WORKTREE_PATH (branch: $BRANCH)" >&2
 
 # Ensure the parent directory exists
-mkdir -p "$CWD/.claude/worktrees" >&2
+mkdir -p "$(dirname "$WORKTREE_PATH")" >&2
 
 # Create the worktree with a new branch from HEAD
 # Run git from the repo root so worktree add resolves correctly

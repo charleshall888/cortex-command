@@ -9,3 +9,4 @@
 {"ts":"2026-05-16T02:38:39Z","event":"plan_approved","feature":"restore-worktree-root-env-prefix"}
 {"ts":"2026-05-16T02:38:39Z","event":"phase_transition","feature":"restore-worktree-root-env-prefix","from":"plan","to":"implement"}
 {"ts":"2026-05-16T02:52:27Z","event":"batch_dispatch","feature":"restore-worktree-root-env-prefix","batch":0,"tasks":[1,2,3,4]}
+{"ts":"2026-05-16T03:05:09Z","event":"batch_dispatch","feature":"restore-worktree-root-env-prefix","batch":1,"tasks":[5,6,7,8]}

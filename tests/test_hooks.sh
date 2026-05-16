@@ -151,6 +151,31 @@ WT_CREATE_FIXTURE_DIR="$REPO_ROOT/tests/fixtures/hooks/worktree-create"
 WT_TMPDIR="$TMPDIR/test_hooks_wt_$$"
 mkdir -p "$WT_TMPDIR"
 
+# Mock-replacement: shim cortex-worktree-resolve on PATH so the hook's
+# shell-out (Task 7) returns a sentinel under $WT_TMPDIR. This exercises
+# the hook → resolver shell-out integration (R8/R9 acceptance check (a)
+# of restore-worktree-root-env-prefix) without depending on the global
+# installed console script. The shim prints $WT_TMPDIR/mock-worktrees/$1
+# so all four worktree-create assertions can compute the same expected
+# path. The full Python-resolver byte-identity property is covered
+# separately by tests/test_hooks_resolver_parity.sh.
+#
+# The hook prepends $HOME/.local/bin to PATH at the top of the script
+# (launchd-PATH bootstrap, R8). To force the mock to win regardless of
+# what's installed globally, we shadow HOME so the hook's prepended
+# $HOME/.local/bin resolves to our mock directory. WT_FAKE_HOME holds
+# the synthetic home; WT_FAKE_HOME/.local/bin holds the mock executable.
+WT_FAKE_HOME="$WT_TMPDIR/fake-home"
+WT_MOCK_BIN="$WT_FAKE_HOME/.local/bin"
+mkdir -p "$WT_MOCK_BIN"
+cat > "$WT_MOCK_BIN/cortex-worktree-resolve" <<EOF
+#!/bin/bash
+echo "$WT_TMPDIR/mock-worktrees/\$1"
+EOF
+chmod +x "$WT_MOCK_BIN/cortex-worktree-resolve"
+export HOME="$WT_FAKE_HOME"
+export PATH="$WT_MOCK_BIN:$PATH"
+
 # --- Test: valid-input — creates worktree, prints path to stdout ---
 
 # Set up a minimal git repo with main branch so `git worktree add ... main` works.
@@ -161,7 +186,7 @@ mkdir -p "$WT_TMPDIR"
   && git symbolic-ref HEAD refs/heads/main >/dev/null 2>&1 \
   && git -c commit.gpgsign=false -c user.email="test@test.com" -c user.name="Test" commit --allow-empty -m "init" >/dev/null 2>&1)
 
-expected_path="$WT_TMPDIR/.claude/worktrees/my-feature"
+expected_path=$(cortex-worktree-resolve "my-feature")
 output=$(sed "s|__TMPDIR__|$WT_TMPDIR|g" "$WT_CREATE_FIXTURE_DIR/valid-input.json" \
   | SKIP_NOTIFICATIONS=1 bash "$WT_CREATE_HOOK" 2>/dev/null)
 exit_code=$?
@@ -196,7 +221,7 @@ fi
 
 # --- Test: path-already-exists — exits 1 ---
 
-WT_PREEXIST="$WT_TMPDIR/.claude/worktrees/my-feature"
+WT_PREEXIST=$(cortex-worktree-resolve "my-feature")
 mkdir -p "$WT_PREEXIST"
 
 stderr_out=$(sed "s|__TMPDIR__|$WT_TMPDIR|g" "$WT_CREATE_FIXTURE_DIR/path-already-exists.json" \
@@ -217,7 +242,7 @@ output=$(sed "s|__TMPDIR__|$WT_TMPDIR|g" "$WT_CREATE_FIXTURE_DIR/valid-input-ven
   | SKIP_NOTIFICATIONS=1 bash "$WT_CREATE_HOOK" 2>/dev/null)
 exit_code=$?
 
-venv_target="$WT_TMPDIR/.claude/worktrees/my-feature-venv/.venv"
+venv_target="$(cortex-worktree-resolve "my-feature-venv")/.venv"
 if [[ $exit_code -eq 0 && -L "$venv_target" ]]; then
   pass "worktree-create/venv-symlinked"
 else
@@ -232,7 +257,7 @@ output=$(sed "s|__TMPDIR__|$WT_TMPDIR|g" "$WT_CREATE_FIXTURE_DIR/valid-input-nov
   | SKIP_NOTIFICATIONS=1 bash "$WT_CREATE_HOOK" 2>/dev/null)
 exit_code=$?
 
-novenv_target="$WT_TMPDIR/.claude/worktrees/my-feature-novenv/.venv"
+novenv_target="$(cortex-worktree-resolve "my-feature-novenv")/.venv"
 if [[ $exit_code -eq 0 && ! -e "$novenv_target" ]]; then
   pass "worktree-create/no-venv-no-symlink"
 else
