@@ -476,7 +476,7 @@
   }
   .hero h1 {
     font-family: var(--serif);
-    font-weight: 400;
+    font-weight: 350;
     font-size: clamp(48px, 6.4vw, 88px);
     line-height: 1.02;
     letter-spacing: -0.025em;
@@ -497,100 +497,6 @@
     line-height: 1.5;
     font-weight: 350;
     margin: 0 0 28px 0;
-  }
-
-  /* ── Hero install figure · fig 0 · diegetic terminal plate ── */
-  .hero-install {
-    margin: 8px 0 18px;
-    padding: 18px 22px 18px 26px;
-    background: var(--ink);
-    color: var(--parchment);
-    border-radius: 2px;
-    border-left: 3px solid var(--ochre);
-    position: relative;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.7;
-    max-width: 64ch;
-    box-shadow: 0 1px 0 var(--rule-soft), 0 14px 30px -22px var(--shadow-tint-deep);
-  }
-  .hero-install figcaption {
-    font-family: var(--mono);
-    font-size: 10.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-30);
-    margin-bottom: 10px;
-  }
-  .hero-install pre { margin: 0; white-space: pre-wrap; word-break: break-all; }
-  .hero-install code { color: var(--parchment); font-family: var(--mono); font-size: 13px; }
-  .hero-install .prompt { color: var(--ochre-soft); user-select: none; margin-right: 8px; }
-  .hero-install .kbd {
-    color: var(--blue-faint);
-    background: rgba(200, 210, 238, 0.07);
-    padding: 0 4px;
-    border-radius: 2px;
-  }
-  .hero-install .copy-affordance {
-    position: absolute; top: 14px; right: 14px;
-    background: transparent;
-    color: var(--ink-30);
-    border: 1px solid var(--ink-70);
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 4px 8px;
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .hero-install .copy-affordance:hover,
-  .hero-install .copy-affordance:focus-visible {
-    color: var(--parchment);
-    border-color: var(--ochre);
-    outline: none;
-  }
-  .hero-install .copy-affordance[data-state="copied"] {
-    color: var(--ochre-soft);
-    border-color: var(--ochre);
-  }
-  html[data-stain="carbon"] .hero-install {
-    background: #0a0a0e;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  }
-
-  .hero-pointers {
-    display: flex; flex-wrap: wrap; align-items: baseline;
-    gap: 4px 0;
-    margin: 0 0 32px 0;
-    font-family: var(--mono);
-    font-size: 12.5px;
-    letter-spacing: 0.02em;
-  }
-  .hero-pointers .ptr {
-    color: var(--ink-2);
-    text-decoration: none;
-    border-bottom: 1px dashed var(--rule-soft);
-    padding-bottom: 1px;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .hero-pointers .ptr:hover,
-  .hero-pointers .ptr:focus-visible {
-    color: var(--ochre);
-    border-bottom-color: var(--ochre);
-    outline: none;
-  }
-  .hero-pointers .ptr-sep { color: var(--ink-30); margin: 0 12px; }
-
-  @media (max-width: 600px) {
-    .hero-install { padding: 14px 14px 14px 18px; font-size: 12px; }
-    .hero-install .copy-affordance { position: static; margin-top: 10px; display: inline-block; }
-    .hero-pointers { flex-direction: column; gap: 8px; }
-    .hero-pointers .ptr-sep { display: none; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .hero-install .copy-affordance,
-    .hero-pointers .ptr { transition: none; }
   }
 
   /* ── Hero fork: ledger-style decision split, sits below the 01/02/03 explainer ── */
@@ -3746,23 +3652,8 @@
       <span>R3 · live document · MIT · v0.4</span>
     </div>
 
-    <h1>A spec-first workflow framework <em>for Claude Code.</em></h1>
-    <p class="sub">Skills, hooks, a lifecycle state machine, and an overnight runner. <em>Earn the spec, then ship it — gated, logged, recoverable.</em> When a spec is tight enough, the orchestrator can run while you sleep.</p>
-
-    <figure class="hero-install" aria-label="install commands">
-      <figcaption>fig 0 · install · two commands</figcaption>
-      <pre><code><span class="prompt">$</span> uv tool install git+https://github.com/charleshall888/cortex-command.git
-<span class="prompt">$</span> <span class="kbd">/plugin install</span> cortex-core@cortex-command</code></pre>
-      <button class="copy-affordance" type="button" data-copy="uv tool install git+https://github.com/charleshall888/cortex-command.git" aria-label="copy install command">copy</button>
-    </figure>
-
-    <nav class="hero-pointers" aria-label="primary actions">
-      <a href="#install" class="ptr">setup walkthrough <span aria-hidden="true">↓</span></a>
-      <span class="ptr-sep" aria-hidden="true">·</span>
-      <a href="https://github.com/charleshall888/cortex-command/tree/main/cortex/lifecycle" class="ptr" target="_blank" rel="noopener">browse a real lifecycle log <span aria-hidden="true">↗</span></a>
-      <span class="ptr-sep" aria-hidden="true">·</span>
-      <a href="https://github.com/charleshall888/cortex-command/blob/main/docs/overnight-operations.md" class="ptr" target="_blank" rel="noopener">overnight-operations.md <span aria-hidden="true">↗</span></a>
-    </nav>
+    <h1>A Claude Code harness <em>that earns its autonomy.</em></h1>
+    <p class="sub">Deep research, then interrogation — until the spec is extracted from your head onto the page. <em>An orchestrator agent with a tight spec and a solid harness can be trusted to work while you sleep.</em></p>
 
     <div class="hero-explain">
       <div class="ex">
@@ -5944,25 +5835,6 @@
     if (window.__applyHood) window.__applyHood(1.0);
   }
 
-  // ─────────── Hero install · copy affordance ───────────
-  document.querySelectorAll('.hero-install .copy-affordance').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const text = btn.dataset.copy;
-      try {
-        await navigator.clipboard.writeText(text);
-        btn.dataset.state = 'copied';
-        const original = btn.textContent;
-        btn.textContent = 'copied ✓';
-        setTimeout(() => {
-          delete btn.dataset.state;
-          btn.textContent = original;
-        }, 1400);
-      } catch (err) {
-        btn.textContent = 'select & copy';
-        setTimeout(() => { btn.textContent = 'copy'; }, 1800);
-      }
-    });
-  });
 </script>
 
 <!-- ───────── Pop-the-hood gatefold script ───────── -->
