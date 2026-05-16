@@ -1,0 +1,10 @@
+{"schema_version": 3, "ts": "2026-05-16T01:16:09Z", "event": "clarify_critic", "feature": "restore-worktree-root-env-prefix", "parent_epic_loaded": false, "findings_count": 8, "dispositions": {"apply": 7, "dismiss": 1, "ask": 0}, "applied_fixes_count": 5, "dismissals_count": 1, "status": "ok"}
+{"ts": "2026-05-16T01:16:09Z", "event": "lifecycle_start", "feature": "restore-worktree-root-env-prefix", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-16T01:18:05Z", "event": "phase_transition", "feature": "restore-worktree-root-env-prefix", "from": "clarify", "to": "research"}
+{"ts": "2026-05-16T01:37:39Z", "event": "phase_transition", "feature": "restore-worktree-root-env-prefix", "from": "research", "to": "specify"}
+{"ts": "2026-05-16T01:37:43Z", "event": "complexity_override", "feature": "restore-worktree-root-env-prefix", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-16T02:02:44Z", "event": "spec_approved", "feature": "restore-worktree-root-env-prefix"}
+{"ts": "2026-05-16T02:02:44Z", "event": "phase_transition", "feature": "restore-worktree-root-env-prefix", "from": "specify", "to": "plan"}
+{"ts":"2026-05-16T02:21:42Z","event":"synthesizer_drift","feature":"restore-worktree-root-env-prefix","expected_sha":"a593dc99fdaccc14be78c4a0208138aeacf486dc319ea1893cd8dd836ac2905e","observed_sha_or_null":null}
+{"ts":"2026-05-16T02:38:39Z","event":"plan_approved","feature":"restore-worktree-root-env-prefix"}
+{"ts":"2026-05-16T02:38:39Z","event":"phase_transition","feature":"restore-worktree-root-env-prefix","from":"plan","to":"implement"}

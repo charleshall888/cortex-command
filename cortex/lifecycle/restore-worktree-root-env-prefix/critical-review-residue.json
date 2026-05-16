@@ -1,0 +1,38 @@
+{
+  "schema_version": 4,
+  "ts": "2026-05-16T02:25:25Z",
+  "feature": "restore-worktree-root-env-prefix",
+  "phase": "plan",
+  "artifact": "cortex/lifecycle/restore-worktree-root-env-prefix/plan.md",
+  "artifact_sha256": "a593dc99fdaccc14be78c4a0208138aeacf486dc319ea1893cd8dd836ac2905e",
+  "b_findings": [
+    {
+      "angle": "Hook PATH-dependency tradeoff",
+      "finding": "Task 5's verification confirms PATH-availability only in the implementer's interactive shell; the Task 7 hook contract has no acceptance test covering its critical PATH-availability assumption in the hook-subprocess environment."
+    },
+    {
+      "angle": "Hook PATH-dependency tradeoff",
+      "finding": "The plan considers only console-script vs inline-path; never considers python3 -c shell-out (python3 is universally at /usr/bin/python3 on macOS)."
+    },
+    {
+      "angle": "Phase ordering and re-install bootstrap",
+      "finding": "Task 5's Verification treats uv sync/pip install -e . as a prose prerequisite. A stale wrapper would let Task 5 pass but surface in Task 8 as misleading byte-parity divergence."
+    },
+    {
+      "angle": "Phase ordering and re-install bootstrap",
+      "finding": "Phase 2's atomic commit contains the producer + consumer but the installed-environment mutation is not captured in the commit. A fresh checkout without re-installing leaves the hook broken."
+    },
+    {
+      "angle": "No-migration + sentinel-suffix corner case",
+      "finding": "Task 4's positive-match counterpart for R3 never enumerates malformed-sentinel inputs. Task 2's split('#', 1) parser silently mishandles paths containing # mid-path and trailing whitespace."
+    },
+    {
+      "angle": "R10/R11/R14 evidence-chain brittleness",
+      "finding": "Task 16's byte-parity diff and sup['ts'] > evi['ts'] together prove only structural symmetry and temporal ordering, not content integrity."
+    },
+    {
+      "angle": "R10/R11/R14 evidence-chain brittleness",
+      "finding": "Task 11 plan text says CLAUDE_CODE_SANDBOX=1 is set by the harness but provides no precondition check \u2014 if implementer runs from a non-sandbox shell and pytest reports skipped, nothing instructs them to inspect output before writing outcome:passed."
+    }
+  ]
+}
