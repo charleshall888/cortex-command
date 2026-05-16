@@ -369,6 +369,54 @@ def _now_iso() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Shared event-construction helper (single schema source for sentinel_absence)
+# ---------------------------------------------------------------------------
+
+def _build_sentinel_absence_event(
+    feature: str,
+    reviewer_angle: str,
+    reason: str,
+    model_tier: str,
+    expected_sha: str,
+    observed_sha: str | None,
+) -> dict:
+    """Return the canonical 8-field ``sentinel_absence`` event dict.
+
+    This is the single schema source for ``sentinel_absence`` events,
+    consumed by both ``_cmd_record_exclusion`` (manual operator path) and
+    ``_cmd_verify_reviewer_output`` (atomic reviewer-side parse + classify
+    + telemetry path). Centralizing construction here eliminates schema
+    duplication: future field additions or renames happen in exactly one
+    place.
+
+    Args:
+        feature: Feature slug (e.g. ``critical-review-sentinel-gate-relax-first``).
+        reviewer_angle: Reviewer-angle identifier (e.g. ``code-quality``).
+        reason: One of ``"absent"``, ``"sha_mismatch"``, ``"read_failed"``.
+        model_tier: One of ``"haiku"``, ``"sonnet"``, ``"opus"``.
+        expected_sha: Orchestrator's pre-dispatch SHA-256 hex string.
+        observed_sha: Observed SHA on ``sha_mismatch``; ``None`` on the
+            ``absent`` and ``read_failed`` paths (the signature enforces
+            this convention via the caller-supplied argument).
+
+    Returns:
+        Dict with exactly the keys ``{"ts", "event", "feature",
+        "reviewer_angle", "reason", "model_tier", "expected_sha",
+        "observed_sha_or_null"}``.
+    """
+    return {
+        "ts": _now_iso(),
+        "event": "sentinel_absence",
+        "feature": feature,
+        "reviewer_angle": reviewer_angle,
+        "reason": reason,
+        "model_tier": model_tier,
+        "expected_sha": expected_sha,
+        "observed_sha_or_null": observed_sha,
+    }
+
+
+# ---------------------------------------------------------------------------
 # CLI subcommands
 # ---------------------------------------------------------------------------
 
@@ -448,6 +496,64 @@ def _cmd_verify_synth_output(args: argparse.Namespace) -> int:
     return 3
 
 
+def _cmd_verify_reviewer_output(args: argparse.Namespace) -> int:
+    try:
+        lifecycle_root = args.lifecycle_root or _default_lifecycle_root()
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 2
+
+    try:
+        with open(args.input_file, "r", encoding="utf-8", errors="strict") as fh:
+            output = fh.read()
+    except OSError as e:
+        print(
+            f"verify-reviewer-output: cannot read {args.input_file!r}: {e}",
+            file=sys.stderr,
+        )
+        return 2
+
+    status, observed = verify_reviewer_output(
+        output, args.expected_sha, args.window_lines
+    )
+
+    if status == "ok":
+        sys.stdout.write(f"OK {observed}\n")
+        return 0
+
+    # status is one of {"absent", "mismatch", "read_failed"}.
+    # Map verify_reviewer_output status -> record-exclusion reason enum.
+    if status == "mismatch":
+        reason = "sha_mismatch"
+        observed_for_event: str | None = observed
+    elif status == "read_failed":
+        reason = "read_failed"
+        observed_for_event = None
+    else:  # absent
+        reason = "absent"
+        observed_for_event = None
+
+    event = _build_sentinel_absence_event(
+        feature=args.feature,
+        reviewer_angle=args.reviewer_angle,
+        reason=reason,
+        model_tier=args.model_tier,
+        expected_sha=args.expected_sha,
+        observed_sha=observed_for_event,
+    )
+
+    events_log = Path(lifecycle_root) / args.feature / "events.log"
+    sys.stdout.write(f"EXCLUDED {reason}\n")
+    try:
+        append_event(events_log, event)
+    except OSError as e:
+        print(
+            f"WARN: failed to append sentinel_absence event: {e}",
+            file=sys.stderr,
+        )
+    return 3
+
+
 def _cmd_record_exclusion(args: argparse.Namespace) -> int:
     try:
         lifecycle_root = args.lifecycle_root or _default_lifecycle_root()
@@ -456,16 +562,14 @@ def _cmd_record_exclusion(args: argparse.Namespace) -> int:
         return 2
 
     events_log = Path(lifecycle_root) / args.feature / "events.log"
-    event = {
-        "ts": _now_iso(),
-        "event": "sentinel_absence",
-        "feature": args.feature,
-        "reviewer_angle": args.reviewer_angle,
-        "reason": args.reason,
-        "model_tier": args.model_tier,
-        "expected_sha": args.expected_sha,
-        "observed_sha_or_null": args.observed_sha,
-    }
+    event = _build_sentinel_absence_event(
+        feature=args.feature,
+        reviewer_angle=args.reviewer_angle,
+        reason=args.reason,
+        model_tier=args.model_tier,
+        expected_sha=args.expected_sha,
+        observed_sha=args.observed_sha,
+    )
     try:
         append_event(events_log, event)
     except OSError as e:
@@ -516,6 +620,39 @@ def _build_parser() -> argparse.ArgumentParser:
     vs.add_argument("--feature", required=True)
     vs.add_argument("--expected-sha", required=True)
     vs.set_defaults(func=_cmd_verify_synth_output)
+
+    vr = sub.add_parser(
+        "verify-reviewer-output",
+        help=(
+            "Read reviewer output from --input-file, verify READ_OK SHA "
+            "with OK-first precedence, log sentinel_absence on "
+            "absent/mismatch/read_failed."
+        ),
+    )
+    vr.add_argument("--feature", required=True)
+    vr.add_argument("--reviewer-angle", required=True)
+    vr.add_argument("--expected-sha", required=True)
+    vr.add_argument(
+        "--model-tier",
+        required=True,
+        choices=("haiku", "sonnet", "opus"),
+    )
+    vr.add_argument(
+        "--input-file",
+        required=True,
+        help=(
+            "Path to a UTF-8 file containing the reviewer's stdout. "
+            "Reviewer outputs contain backticks/quotes/JSON-envelope content; "
+            "--input-file avoids shell-quoting hazards (vs stdin on synth side)."
+        ),
+    )
+    vr.add_argument(
+        "--window-lines",
+        type=int,
+        default=50,
+        help="Leading lines of reviewer output to scan (default: 50).",
+    )
+    vr.set_defaults(func=_cmd_verify_reviewer_output)
 
     re_ = sub.add_parser(
         "record-exclusion",
