@@ -23,7 +23,7 @@ Replace the env-var-gated skip in `tests/test_worktree_seatbelt.py` with a kerne
 - **Complexity**: simple
 - **Context**: The file currently uses `os.environ.get(...)` at lines 173 and 253 without an `import os` at module top. Place the import alphabetically among existing stdlib imports. Spec R2; spec "Changes to Existing Behavior" item 2.
 - **Verification**: `grep -c "^import os" cortex_command/overnight/smoke_test.py` returns `1` AND `uv run python3 -c "import cortex_command.overnight.smoke_test as m; assert hasattr(m, 'os')"` exits 0 — pass if both conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Replace env-var skipif with kernel-probe fixture in `tests/test_worktree_seatbelt.py`
 
@@ -33,7 +33,7 @@ Replace the env-var-gated skip in `tests/test_worktree_seatbelt.py` with a kerne
 - **Complexity**: simple
 - **Context**: Fixture signature: `@pytest.fixture(scope="module")` then `def seatbelt_active() -> bool`. `_repo_root()` already exists in the file at the top level. The `<repo>/.git/HEAD` path is a member of `GIT_DENY_SUFFIXES` in `cortex_command/overnight/sandbox_settings.py:55-60` and is denied by `build_orchestrator_deny_paths`. Test bodies start at lines 48–60 and 67–95. Spec R1; spec "Edge Cases" item "Sentinel path `.git/HEAD` is missing"; spec "Technical Constraints" item "`os.O_WRONLY` open without `O_TRUNC` is safe".
 - **Verification**: `uv run pytest tests/test_worktree_seatbelt.py -v` from a plain shell exits 0 with stdout containing `2 skipped` and the reason text `sandbox not active (open-for-write to .git/HEAD succeeded)` — pass if both conditions hold. (Pass-under-Seatbelt branch is verified end-to-end by Task 7's runner integration; per-test sandbox-active verification is interactive/session-dependent.)
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Register `seatbelt_probe` row in events registry
 
@@ -43,7 +43,7 @@ Replace the env-var-gated skip in `tests/test_worktree_seatbelt.py` with a kerne
 - **Complexity**: simple
 - **Context**: The existing `auth_probe` row at `bin/.events-registry.md:118` is the closest precedent (dual targets, `scan_coverage: manual`, Python-source emission). Match its column layout exactly. Spec R3; spec "Technical Constraints" item "No prompt-corpus emission".
 - **Verification**: `grep -c "\bseatbelt_probe\b" bin/.events-registry.md` returns `>= 1` AND `bin/cortex-check-events-registry --audit` exits 0 — pass if both conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Update parent lifecycle's R10 acceptance command
 
@@ -53,7 +53,7 @@ Replace the env-var-gated skip in `tests/test_worktree_seatbelt.py` with a kerne
 - **Complexity**: simple
 - **Context**: This is a should-have item per the spec's priority block. The parent lifecycle's plan.md may also mention the old command — a follow-up search of `cortex/lifecycle/restore-worktree-root-env-prefix/plan.md` should catch any sibling reference; if found, amend it the same way. Spec R7.
 - **Verification**: `grep -c "CLAUDE_CODE_SANDBOX=1 pytest" cortex/lifecycle/restore-worktree-root-env-prefix/spec.md` returns `0` AND `grep -c "kernel-level probe" cortex/lifecycle/restore-worktree-root-env-prefix/spec.md` returns `>= 1` — pass if both conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Implement `seatbelt_probe.py` module
 
@@ -73,7 +73,7 @@ Replace the env-var-gated skip in `tests/test_worktree_seatbelt.py` with a kerne
   - `cause` strings to use: `"claude binary not found"` (FileNotFoundError); `"claude exit nonzero: <code>, stderr tail: <last 200 chars>"`; `"result file not written; agent likely paraphrased instead of executing the bash command"`; `"pytest exit nonzero: <code>"`; `"unparseable pytest summary"`; `"result file empty"`; `"skipped count > 0; sandbox not enforcing"`.
   - The module does not write events. Spec R4; spec "Edge Cases" items "claude binary missing", "claude -p returns non-zero", "agent paraphrases", "pytest summary line format change", "test count drift", "$TMPDIR resolves to a denied path", "concurrent probe invocations".
 - **Verification**: `uv run python3 -c "from cortex_command.overnight.seatbelt_probe import run_probe, ProbeResult; import dataclasses; assert dataclasses.is_dataclass(ProbeResult); assert callable(run_probe)"` exits 0 — pass if exit 0. (Behavioral correctness is covered by Task 6's unit tests, which mock the subprocess boundary.)
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 6: Unit tests for `seatbelt_probe`
 
@@ -83,7 +83,7 @@ Replace the env-var-gated skip in `tests/test_worktree_seatbelt.py` with a kerne
 - **Complexity**: simple
 - **Context**: Test pattern: each test calls `run_probe(tmp_path, home_repo=Path.cwd())` after pre-staging the `$TMPDIR/`-resident output_path/result_path contents the mocked subprocess "would" have written, then asserts on `ProbeResult` fields. For branch (v), patch `subprocess.run` (or `Popen`) to raise `FileNotFoundError`. For branch (iii), pre-write `exit=1` to the result file. For branch (iv), pre-write a pytest summary containing `1 skipped`. Use `pytest.fixture` for shared setup if it reduces duplication. Spec R4 acceptance — the five branches.
 - **Verification**: `uv run pytest tests/test_seatbelt_probe.py -v` exits 0 — pass if exit 0 and 5 tests pass.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 7: Wire `run_probe` into runner session-start with dual JSONL emission
 
@@ -100,7 +100,7 @@ Replace the env-var-gated skip in `tests/test_worktree_seatbelt.py` with a kerne
   - The runner does NOT transition state on `result=failed` — no `state.phase` mutation, no `state_module.save_state` call from this block.
   - Spec R5; spec "Edge Cases" item "`runner.py`-context probe failure".
 - **Verification**: `grep -n "seatbelt_probe.run_probe\|seatbelt-probe.log" cortex_command/overnight/runner.py | wc -l` returns `>= 2` (at least one call site and one top-level log reference) — pass if count >= 2. End-to-end emission verification is interactive/session-dependent: starting an actual overnight session and inspecting both logs requires the operator's overnight cadence.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 8: Extend morning-report renderer with `Seatbelt probe` line
 
@@ -110,7 +110,7 @@ Replace the env-var-gated skip in `tests/test_worktree_seatbelt.py` with a kerne
 - **Complexity**: simple
 - **Context**: Existing pattern at `cortex_command/overnight/report.py:324-343` (`render_soft_fail_header`) is the closest precedent: scan `data.events`, return a single header string or empty. `ReportData.events` is a `list[dict]` per the dataclass at line 67. The new function reads `evt.get("event") == "seatbelt_probe"` and pulls `result`, `pytest_summary`, `softfail_active` fields. If multiple `seatbelt_probe` events exist (multiple sessions reported in one window), select the last one chronologically (iterate the events list in order and overwrite the captured event each match — events are append-only and chronological per `pipeline.md:129`). Spec R6.
 - **Verification**: After implementation, a synthetic test invocation `uv run python3 -c "from cortex_command.overnight.report import render_seatbelt_probe_header; from cortex_command.overnight.report import ReportData; from datetime import datetime; data = ReportData(date='2026-05-16', state=None, events=[{'event':'seatbelt_probe','result':'ok','pytest_summary':'passed=2 failed=0 skipped=0 error=0','softfail_active':False}], batch_results=[], deferred=[], paused=[], escalations=[]); out = render_seatbelt_probe_header(data); assert out.startswith('Seatbelt probe: '); print('OK')"` exits 0 with stdout `OK`. (Adjust the `ReportData` constructor kwargs to match the actual dataclass field set discovered during implementation.) — pass if exit 0 and stdout contains `OK`.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 9: Document the Seatbelt probe in overnight operations
 
@@ -120,7 +120,7 @@ Replace the env-var-gated skip in `tests/test_worktree_seatbelt.py` with a kerne
 - **Complexity**: simple
 - **Context**: Place the section near the existing Sandbox/Auth-probe discussion (search for `auth_probe` or `Sandbox enforcement` to find the right neighborhood). The file currently ends at line 713; choose insertion point by topic, not file end. Spec R8; spec "Non-Requirements" item "Hard-blocking the overnight session on probe failure".
 - **Verification**: `grep -cE "^#+ Seatbelt probe" docs/overnight-operations.md` returns `>= 1` AND `grep -c "cortex/lifecycle/seatbelt-probe.log" docs/overnight-operations.md` returns `>= 1` AND `grep -c "morning report" docs/overnight-operations.md` returns `>= 1` — pass if all three conditions hold.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Risks
 
