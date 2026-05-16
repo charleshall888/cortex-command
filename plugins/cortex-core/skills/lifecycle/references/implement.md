@@ -197,9 +197,9 @@ After checkpoint, merge each completed task's worktree branch back into the feat
 For each task in the batch (in task order):
 
 1. **No-changes case**: If the task's Agent result shows no changes were made, the worktree was already auto-cleaned by the Agent tool. Skip merge and cleanup for that task.
-2. **Failed-commit case**: If `git log HEAD..worktree/{task-name} --oneline` showed zero lines (the task failed to produce a commit), skip the merge but still run cleanup: `git worktree remove .claude/worktrees/{task-name}` then `git branch -d worktree/{task-name}`.
+2. **Failed-commit case**: If `git log HEAD..worktree/{task-name} --oneline` showed zero lines (the task failed to produce a commit), skip the merge but still run cleanup: `git worktree remove "$(cortex-worktree-resolve {task-name})"` then `git branch -d worktree/{task-name}`.
 3. **Merge**: For tasks that passed the checkpoint (produced commits), run `git merge worktree/{task-name}` from the feature branch.
-4. **Cleanup**: After a successful merge, run `git worktree remove .claude/worktrees/{task-name}` then `git branch -d worktree/{task-name}`.
+4. **Cleanup**: After a successful merge, run `git worktree remove "$(cortex-worktree-resolve {task-name})"` then `git branch -d worktree/{task-name}`. The `cortex-worktree-resolve` console script returns the canonical worktree path (`$TMPDIR/cortex-worktrees/{task-name}/`) via the single resolver chokepoint.
 5. **Partial integration failure**: If `git merge worktree/{task-name}` produces a conflict, surface it as an integration error including the branch name `worktree/{task-name}`. Continue processing remaining tasks in the batch — do not roll back already-merged branches.
 
 **f. Report**: Summarize what the batch accomplished and any issues before dispatching the next batch.

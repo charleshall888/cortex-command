@@ -11,10 +11,10 @@ Agent(
 
 **Do not use `git worktree add` manually in sandboxed sessions.** This fails for two reasons:
 
-1. **`.claude/` is sandbox-restricted at the Seatbelt OS level**: Any worktree target inside `.claude/` (e.g., `.claude/worktrees/{feature}`) will fail because git tries to write tracked `.claude/**` files into the new worktree. The restriction is broader than what `denyWithinAllow` explicitly shows.
+1. **Seatbelt mandatory deny on `.mcp.json` blocks worktrees under the repo `.claude/` scope**: any worktree target inside the repo's `.claude/` directory fails because `git worktree add` checks out the tracked `.mcp.json` file into the new worktree, and Anthropic's `sandbox-runtime` enforces a mandatory deny on filename `.mcp.json` that operates below user-level `sandbox.filesystem.allowWrite`. Same-repo worktrees now resolve to `$TMPDIR/cortex-worktrees/{feature}/` via `cortex_command/pipeline/worktree.py::resolve_worktree_root()` so they live in the per-user `$TMPDIR` carve-out, outside the deny scope.
 2. **Orphaned branches**: `git worktree add` creates the branch *before* checking out files. A failed checkout leaves an orphaned branch that blocks the next attempt with "branch already exists". Clean up with `git branch -d <name>` before retrying.
 
-The `Agent` tool's `isolation: "worktree"` handles all of this correctly — it creates the worktree outside the sandbox write path and auto-cleans if no changes are made. If manual worktree creation is ever needed, use `$TMPDIR` (not `.claude/`) as the target.
+The `Agent` tool's `isolation: "worktree"` handles all of this correctly — it shells out via `claude/hooks/cortex-worktree-create.sh` (which invokes the single-chokepoint `cortex-worktree-resolve` console script), creating the worktree at `$TMPDIR/cortex-worktrees/{feature}/` and auto-cleaning if no changes are made. If manual worktree creation is ever needed, compute the target via `cortex-worktree-resolve {name}` rather than hardcoding a path.
 
 ## Worktree Inspection Invariant
 

@@ -11,3 +11,4 @@
 {"ts": "2026-05-13T02:23:08Z", "event": "batch_dispatch", "feature": "harden-autonomous-dispatch-path-for-interactive", "batch": 3, "wave": 7, "tasks": [18]}
 {"ts": "2026-05-13T02:36:51Z", "event": "phase_transition", "feature": "harden-autonomous-dispatch-path-for-interactive", "tier": "simple", "from": "implement", "to": "complete"}
 {"ts": "2026-05-13T02:45:52Z", "event": "feature_complete", "feature": "harden-autonomous-dispatch-path-for-interactive", "tasks_total": 22, "rework_cycles": 0}
+{"ts": "2026-05-16T03:36:38Z", "event": "requirement_superseded", "requirement": "R7", "superseded_by": "restore-worktree-root-env-prefix"}

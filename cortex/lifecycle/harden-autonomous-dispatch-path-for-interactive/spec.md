@@ -31,6 +31,20 @@
 
 7. **`cortex init` registers the worktree root**: Extend `cortex_command/init/handler.py` to call `resolve_worktree_root()` and register the result via existing `settings_merge.register_path` in `~/.claude/settings.local.json` `sandbox.filesystem.allowWrite`. Uses the same `fcntl.flock`-serialized additive append already in use for the `cortex/` umbrella. Cross-repo paths (resolved to `$TMPDIR/...`) skip registration — they're already sandbox-writable per the existing convention. **Acceptance**: after `cortex init` in a test repo, `jq '.sandbox.filesystem.allowWrite' ~/.claude/settings.local.json` includes the resolved worktree-root path; new test `tests/test_init_worktree_registration.py` (or extension of existing init tests) exit 0. **Phase**: 2. **Priority**: must-have
 
+<!-- supersession-note-start -->
+**Supersession of R7 (must-have) of `harden-autonomous-dispatch-path-for-interactive`**
+
+R7 (the `cortex init` Step 8 that registers the worktree root in `~/.claude/settings.local.json::sandbox.filesystem.allowWrite`) is retired. The premise that user-level `allowWrite` registration could relieve the Seatbelt deny on `.mcp.json` is structurally unachievable; the architectural fix is to move the same-repo worktree default out of the `.claude/` deny scope to `$TMPDIR/cortex-worktrees/<feature>` (R1 of `restore-worktree-root-env-prefix`).
+
+Citations:
+- (a) Lifecycle slug: `restore-worktree-root-env-prefix`.
+- (b) Research artifact: `cortex/lifecycle/restore-worktree-root-env-prefix/research.md` (empirical A/B probe; Adversarial review findings FM-1 cleanup_worktree fallback, FM-2 legacy settings entries, FM-3 hook unfixed-codepath).
+- (c) Web research evidence: DeepWiki sandbox-runtime mandatory deny list documents `.mcp.json` as always-blocked-from-writes regardless of `allowWrite` (Anthropic settings array-merge precedence model).
+- (d) F-row evidence: `cortex/lifecycle/restore-worktree-root-env-prefix/events.log` contains an `f_row_evidence` event recording the Seatbelt-active integration test (`tests/test_worktree_seatbelt.py`, R10 of restore-worktree-root-env-prefix) passing under `CLAUDE_CODE_SANDBOX=1`. The test covers both the Python resolver AND the bash hook dispatch paths.
+
+R6 (resolver) and R8 (probe) of harden-autonomous-dispatch-path-for-interactive remain in force. Only R7 is retired.
+<!-- supersession-note-end -->
+
 8. **`probe_worktree_writable()` at dispatch start**: Add `probe_worktree_writable(root: Path) -> ProbeResult` to `cortex_command/pipeline/worktree.py`. Two checks: (a) no-op file create + delete under the resolved root (catches sandbox-blocked roots); (b) no-op `git worktree add <root>/cortex-probe-<uuid> <throwaway-branch>` + cleanup (catches hardcoded `.vscode/`/`.idea/` denies — https://github.com/anthropics/claude-code/issues/51303). On failure, returns a `ProbeResult` with a `cause` field naming the likely root cause and a `remediation_hint` field. **Acceptance**: function exists; new test `tests/test_worktree_probe.py` exit 0 with cases for (i) writable root, (ii) sandbox-blocked root (simulated), (iii) tracked `.vscode/` (fixture repo). **Phase**: 2. **Priority**: must-have
 
 9. **Worktree-creation callsites consult the resolver**: `cortex_command/pipeline/worktree.py:create_worktree` and `cortex_command/overnight/daytime_pipeline.py:_worktree_path` both call `resolve_worktree_root()` instead of reading `CORTEX_WORKTREE_ROOT` directly. **Acceptance**: `grep -rn 'os\.environ\.get(.CORTEX_WORKTREE_ROOT.)' cortex_command/` returns at most one match (inside `resolve_worktree_root()` itself); all other reads route through the resolver. **Phase**: 2. **Priority**: must-have

@@ -231,11 +231,10 @@ def _setup_repo(tmp_path: Path) -> Path:
     (root / ".git" / "COMMIT_EDITMSG.md").write_text(
         "lifecycle/foo (excluded git internal)\n", encoding="utf-8"
     )
-    # Excluded: .claude/worktrees (other agents' working copies)
-    (root / ".claude" / "worktrees" / "agent-x").mkdir(parents=True)
-    (root / ".claude" / "worktrees" / "agent-x" / "notes.md").write_text(
-        "lifecycle/foo (excluded worktree)\n", encoding="utf-8"
-    )
+    # (Worktrees no longer live under the repo — they resolve to
+    # `$TMPDIR/cortex-worktrees/{feature}/` per
+    # `cortex/lifecycle/restore-worktree-root-env-prefix/` — so the rewriter
+    # never walks into them and no in-repo exclusion fixture is needed.)
     # Excluded: .venv (vendored package docs)
     (root / ".venv" / "lib").mkdir(parents=True)
     (root / ".venv" / "lib" / "package.md").write_text(
@@ -272,9 +271,6 @@ def test_rewrite_for_slug_writes_in_place_and_skips_excluded(helper, tmp_path):
     ).read_text(encoding="utf-8")
     assert "lifecycle/foo" in (
         root / ".git" / "COMMIT_EDITMSG.md"
-    ).read_text(encoding="utf-8")
-    assert "lifecycle/foo" in (
-        root / ".claude" / "worktrees" / "agent-x" / "notes.md"
     ).read_text(encoding="utf-8")
     assert "lifecycle/foo" in (
         root / ".venv" / "lib" / "package.md"

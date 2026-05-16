@@ -58,14 +58,14 @@ from typing import Iterable, List
 # `.venv` excluded because virtual environments contain vendored markdown docs
 # from packages — not part of the project's citation graph.
 EXCLUDED_DIR_NAMES = frozenset({".git", ".venv"})
-# `.claude/worktrees/` excluded because each worktree is a separate working
-# copy on a separate branch; rewriting their files from the main worktree
-# corrupts in-progress agent work that is owned by other sessions.
+# Worktrees themselves are not under the repo tree (they resolve to
+# `$TMPDIR/cortex-worktrees/{feature}/` via `resolve_worktree_root()` — outside
+# the deny scope of the Seatbelt mandatory deny on `.mcp.json`) so no in-repo
+# exclusion is needed; see `cortex/lifecycle/restore-worktree-root-env-prefix/`.
 EXCLUDED_REL_PREFIXES = (
     Path("lifecycle") / "archive",
     Path("lifecycle") / "sessions",
     Path("retros"),
-    Path(".claude") / "worktrees",
     Path("research") / "archive",
 )
 

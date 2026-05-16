@@ -948,11 +948,12 @@ def test_dual_registration_idempotent(
 # (d) single-entry: exactly one cortex/ entry per cortex init invocation.
 # Note: the former `test_dual_registration_order_lifecycle_first` test was
 # removed by the `restore-worktree-root-env-prefix` lifecycle (Phase 1) — it
-# asserted on the legacy `<repo>/.claude/worktrees/` registration path
-# produced by R7's Step 8 in `cortex init`, which Phase 2 of that lifecycle
-# deletes entirely. The dual-registration test was structurally tied to a
-# step being retired; removing it here lets Phase 1's atomic commit land
-# without a transient `just test` red state. See
+# asserted on the legacy in-repo `<repo>/.claude/...`-prefixed worktree-root
+# registration path produced by R7's Step 8 in `cortex init`, which Phase 2
+# of that lifecycle deletes entirely (the new resolver default is
+# `$TMPDIR/cortex-worktrees/<feature>`). The dual-registration test was
+# structurally tied to a step being retired; removing it here lets Phase 1's
+# atomic commit land without a transient `just test` red state. See
 # `cortex/lifecycle/restore-worktree-root-env-prefix/spec.md` (R7
 # supersession).
 

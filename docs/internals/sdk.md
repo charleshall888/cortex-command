@@ -26,7 +26,7 @@ Skills that run daytime dispatch use the `Agent` tool directly inside their SKIL
 
 **Key constraint: no `subagent_type` on write agents.** Worktree-isolated agents omit `subagent_type` (defaults to general-purpose). Only read-only agents explicitly pass `subagent_type: "general-purpose"`.
 
-**Key constraint: worktree isolation is mandatory in sandbox.** `.claude/worktrees/` is Seatbelt-restricted. `Agent(isolation: "worktree")` triggers the `WorktreeCreate` hook which creates the directory — manual `git worktree add` is blocked. See [Worktree Isolation](#worktree-isolation) below.
+**Key constraint: worktree isolation is mandatory in sandbox.** The Seatbelt mandatory deny on `.mcp.json` (enforced by Anthropic's `sandbox-runtime`, below user-level `sandbox.filesystem.allowWrite`) blocks `git worktree add` from checking out `.mcp.json` into any path under the repo `.claude/` scope. `Agent(isolation: "worktree")` triggers the `WorktreeCreate` hook which creates the directory at `$TMPDIR/cortex-worktrees/{name}/` via the single `resolve_worktree_root()` chokepoint — manual `git worktree add` into the repo is blocked. See [Worktree Isolation](#worktree-isolation) below.
 
 ---
 
@@ -141,7 +141,7 @@ Both paths use worktree isolation for parallel execution. The SDK's `isolation: 
 
 **`claude/hooks/cortex-worktree-create.sh`** (registered on `WorktreeCreate` event):
 - Receives `{"cwd": "...", "name": "...", "session_id": "..."}` on stdin
-- Creates `$CWD/.claude/worktrees/$NAME` as a git worktree
+- Shells out to `cortex-worktree-resolve "$NAME"` (the single resolver chokepoint) to compute the worktree path — `$TMPDIR/cortex-worktrees/$NAME` for same-repo dispatch — then creates it as a git worktree
 - Creates branch `worktree/$NAME` from HEAD
 - Symlinks `.venv` into the worktree for Python tooling
 - Writes absolute worktree path to stdout (required by SDK)
@@ -157,8 +157,8 @@ Both paths use worktree isolation for parallel execution. The SDK's `isolation: 
 **Stale worktrees:** If an interactive session (Path A) is interrupted mid-run, the worktree directory and branch may be left behind. The next run of the same skill with the same feature name will fail at hook level because `cortex-worktree-create.sh` exits non-zero when the target directory already exists. Clean up manually before retrying:
 
 ```bash
-git worktree remove .claude/worktrees/{name}   # removes the directory
-git branch -d worktree/{name}                  # removes the branch (use -D if unmerged)
+git worktree remove "$(cortex-worktree-resolve {name})"   # removes the directory (resolves to $TMPDIR/cortex-worktrees/{name})
+git branch -d worktree/{name}                              # removes the branch (use -D if unmerged)
 ```
 
 ---
