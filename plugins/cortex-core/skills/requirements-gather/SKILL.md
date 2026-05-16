@@ -28,6 +28,10 @@ Before drafting a question, decide whether the answer is recoverable from code, 
 
 Every question carries a **Recommended answer:** line stating the position the model would adopt if the user said "go with your best guess." The user adjusts the recommendation rather than answering from scratch. Recommendations are grounded — derived from explored code, the existing target doc, the parent requirements (for area scope), or stated project conventions. When no grounded recommendation is possible, mark the recommendation as `none — open question` and explain why so the user understands the gap.
 
+### Ask one at a time
+
+Ask interview questions one at a time, waiting for the user's response before posing the next. The previous answer is the gate to the next question, so each question can be shaped by what just landed. Avoid batching multiple questions into a single turn — batched questions invite partial answers, hide decision-tree branches that should resolve sequentially, and create respondent fatigue. Mirrored in `skills/lifecycle/references/specify.md` §2 — when editing this rule, update the other surface too.
+
 ### Lazy artifact creation
 
 Hold the Q&A block in conversation context until the orchestrator's handoff. Only write when synthesis has something concrete to produce — that decision belongs to `/requirements-write`. This sub-skill never touches the filesystem under `cortex/requirements/`. If the user abandons mid-interview, no partial file is left behind.
@@ -57,6 +61,8 @@ Return one markdown block of the form:
 ```
 
 One H3 per template section. Sections with no live questions (because code already answered everything and the user confirmed) collapse to a single bullet noting the confirmed code-derived position. The orchestrator passes this block verbatim to `/requirements-write`.
+
+When the **Recommended answer** is derived from code, the **Code evidence** field names the file path that grounds it (so the user can flag a wrong-place-to-implement before any code is written). For intent-only questions with no codebase grounding, omit the field per the existing semantics — do not fabricate a citation or write `N/A`.
 
 ## Handoff contract
 
