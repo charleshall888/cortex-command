@@ -26,6 +26,8 @@ Present questions to the user for review. Add any questions they raise.
 
 Load requirements using the shared tag-based loading protocol — read `../../lifecycle/references/load-requirements.md` and follow it. Use requirements to inform research — identify where this topic intersects with established requirements and constraints. If no `cortex/requirements/` directory or files exist, note this and skip this step.
 
+If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
+
 ### 2. Codebase Analysis
 
 Launch a focused codebase exploration to investigate:

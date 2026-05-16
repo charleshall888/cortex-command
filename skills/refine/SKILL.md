@@ -67,6 +67,8 @@ When both artifacts exist and the user has explicitly requested a re-run via a f
 
 Read `../lifecycle/references/clarify.md` and follow its full protocol (§2–§7). Requirements loading within Clarify uses the shared tag-based loading protocol at `../lifecycle/references/load-requirements.md` (the citation chain is refine SKILL.md → lifecycle clarify.md → load-requirements.md).
 
+If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
+
 Key outputs from Clarify (record these for use in subsequent phases):
 - Clarified intent statement
 - Complexity: `simple | complex`

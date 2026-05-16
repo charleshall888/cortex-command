@@ -14,6 +14,8 @@ The input is a raw topic name or description. There is no backlog item to resolv
 
 Load requirements using the shared tag-based loading protocol — read `../../lifecycle/references/load-requirements.md` and follow it. If no `cortex/requirements/` directory or files exist, note this and skip to §3.
 
+If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
+
 ### 3. Check Existing Backlog Coverage
 
 Scan `cortex/backlog/[0-9]*-*.md` titles, tags, and descriptions for overlap with the topic. If a backlog item already covers this topic substantially, surface it to the user and ask whether to proceed with discovery or work from the existing ticket.
