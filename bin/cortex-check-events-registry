@@ -71,6 +71,7 @@ ALLOWED_TARGETS: frozenset[str] = frozenset(
         "per-feature-events-log",
         "overnight-events-log",
         "research-topic-events-log",
+        "seatbelt-probe-log",
     }
 )
 ALLOWED_SCAN_COVERAGE: frozenset[str] = frozenset({"gate-enforced", "manual"})
