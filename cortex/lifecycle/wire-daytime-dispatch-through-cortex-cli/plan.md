@@ -14,9 +14,9 @@ Implement Alternative B (Popen + `start_new_session` + documented harness depend
 **Goal**: Wire `cortex daytime start` CLI verb (parent-side O_EXCL, handshake, JSON envelope) and stand up the new `plugins/cortex-daytime/` MCP plugin with 4 tools (start_run, status, logs, cancel) using overnight's delegate pattern.
 **Checkpoint**: `cortex daytime start --feature smoke --format json` from a fresh terminal exits 0 with a JSON envelope and a detached child; `mcp__plugin_cortex-daytime_cortex-daytime__daytime_start_run` is invocable from a Claude session; concurrent-dispatch refusal and killpg cancel paths exercised by pytest.
 
-### Phase 3: Documentation, tests, validation (tasks: 14, 15, 16, 17)
-**Goal**: Document the two entry points and harness dependencies honestly; add the detached-spawn test; record the from-Claude-session release-gate result.
-**Checkpoint**: `docs/daytime-operations.md` exists with honest framing; MCP contract docs enumerate the 4 new tools; `release-gate-results.md` records the empirical from-Claude-session smoke test result with zero EPERM events.
+### Phase 3: Documentation, tests, autonomous-validation (tasks: 14, 15, 16)
+**Goal**: Document the two entry points and harness dependencies honestly; add the detached-spawn test; finalize MCP contract docs. The empirical from-Claude-session release-gate is split out into a separate backlog ticket (#995) that blocks the release tag, not the lifecycle's `feature_complete` event — the cortex pipeline has no native "interactive complexity tier" affordance (`cortex_command/pipeline/dispatch.py:127-235` enforces a closed `trivial|simple|complex` enum), so the manual gate cannot live inside plan.md without booby-trapping every autonomous run.
+**Checkpoint**: `docs/daytime-operations.md` exists with honest framing; MCP contract docs enumerate the 4 new tools; detached-spawn test green; lifecycle reaches `feature_complete` autonomously; #995 release-gate ticket sits in `backlog` blocking the production release tag.
 
 ## Tasks
 
@@ -196,33 +196,14 @@ print('ok')
 
 ### Task 16: Write `tests/test_daytime_cli_detached_spawn.py`
 - **Files**: `tests/test_daytime_cli_detached_spawn.py` (new)
-- **What**: Per spec R15: after `cortex daytime start --feature smoke-detached`, assert `os.getpgid(returned_pid) != os.getpgid(os.getpid())` (the spawned child is in a different process group). Explicitly does NOT claim this proves Seatbelt escape — Task 17's release gate is the load-bearing empirical verification. Test asserts only PGID detachment.
+- **What**: Per spec R15: after `cortex daytime start --feature smoke-detached`, assert `os.getpgid(returned_pid) != os.getpgid(os.getpid())` (the spawned child is in a different process group). Explicitly does NOT claim this proves Seatbelt escape — backlog ticket #995's manual release gate is the load-bearing empirical verification. Test asserts only PGID detachment.
 - **Depends on**: [7]
 - **Complexity**: simple
 - **Context**: Use `subprocess.run(["cortex", "daytime", "start", "--feature", "smoke-detached", "--format", "json"], capture_output=True, text=True)` to invoke the CLI verb, parse the returned `pid` field, then `os.getpgid(pid)` and compare to `os.getpgid(os.getpid())`. After assertion, send SIGTERM to clean up the spawned child to avoid leaking processes between test runs.
 - **Verification**: `pytest tests/test_daytime_cli_detached_spawn.py -v` exits 0
 - **Status**: [ ] pending
 
-### Task 17: Run the from-Claude-session release-gate procedure and record results (manual / requires human Claude session)
-- **Files**: `cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/release-gate-results.md` (new), `cortex/lifecycle/smoke-release-gate/events.log` (real artifact produced by the gate dispatch — NOT created by the agent)
-- **What**: Per spec R16 (release-gate, no documentation-only fallback). **This task MUST be executed by a human operator inside a real interactive Claude session — it is NOT routine-pipeline-executable**. Procedure: (1) From inside an interactive Claude session, invoke `daytime_start_run` via the MCP tool with feature slug `smoke-release-gate`. (2) Wait for the dispatch to reach at least `feature_dispatched` event in `cortex/lifecycle/smoke-release-gate/events.log`. (3) Assert from the resulting events.log: `grep -c "EPERM" = 0` AND `grep -c "Sandbox failed to initialize" = 0` AND `grep -c "feature_dispatched" >= 1`. (4) Record in `release-gate-results.md`: the dispatch ID (must match a real entry in the events.log), the events.log absolute path, the three assertion outcomes, the operator's initials, the UTC ISO 8601 datetime, AND a non-fabricable artifact: paste the actual `feature_dispatched` event line verbatim from the events.log. The verification command below cross-checks that the pasted line appears in the referenced events.log.
-- **Depends on**: [7, 8, 9, 12, 13, 14]
-- **Complexity**: interactive — outside the routine `trivial|simple|complex` taxonomy. Pipeline must defer this task and surface it in the morning report; autonomous dispatch must NOT mark it complete by writing the results file itself.
-- **Context**: pytest cannot exercise this — the MCP tool runs inside a Claude Code MCP host. The autonomous overnight dispatch agent MUST NOT execute this task. Verification requires cross-referencing the results.md against an external `cortex/lifecycle/smoke-release-gate/events.log` that contains the pasted `feature_dispatched` line — if the agent fabricates the results.md, the cross-reference check fails because no real dispatch event exists in the smoke-release-gate events.log. **Lifecycle behavior**: when the pipeline encounters Task 17, it should write a deferral to `cortex/lifecycle/deferred/release-gate-{feature}-q001.md` and pause the feature; lifecycle completion requires the operator to run the procedure and re-trigger Task 17.
-- **Verification**: `test -f cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/release-gate-results.md && test -f cortex/lifecycle/smoke-release-gate/events.log && python3 -c "
-import pathlib, re
-results = pathlib.Path('cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/release-gate-results.md').read_text()
-events = pathlib.Path('cortex/lifecycle/smoke-release-gate/events.log').read_text()
-# Results must contain the operator's initials block AND a verbatim feature_dispatched event line
-assert re.search(r'operator initials:\s*[A-Z]{2,5}', results, re.IGNORECASE), 'missing operator initials'
-assert 'EPERM count: 0' in results and 'sandbox init failure count: 0' in results and 'feature_dispatched count:' in results
-# Extract the pasted event line from results.md and verify it exists verbatim in the actual events.log
-m = re.search(r'pasted feature_dispatched line:\s*(\\{.*?\\})', results, re.DOTALL)
-assert m, 'missing pasted feature_dispatched line'
-assert m.group(1).strip() in events, 'pasted line not found in actual events.log — fabrication suspected'
-print('ok')
-" 2>&1 | tail -1 | grep -c "^ok$" = 1; pass if count = 1`
-- **Status**: [ ] pending
+<!-- Task 17 (manual release-gate) was split out into backlog ticket #995 per Angle-3 critical-review finding: the cortex pipeline's complexity enum is closed (`trivial|simple|complex`) and `cortex_command/pipeline/dispatch.py:231-233` raises `ValueError` on unknown tier. A task with `Complexity: interactive` would crash every autonomous dispatch. The release-gate procedure now lives at `cortex/backlog/995-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` and gates the production release tag (not the lifecycle's `feature_complete` event). The implementation PR should merge with a `[release-type: skip]` marker; the version tag fires only after #995 is marked merged. -->
 
 ## Risks
 
@@ -234,7 +215,7 @@ print('ok')
 - **Task 11 size**: 8 Pydantic models (4 inputs + 4 outputs) with regex constraints. The duplicated regex string + duplicated containment-check logic in server.py (R1 invariant cost) makes the task larger than `simple` typical. Parity tests in Task 13 catch regex drift; the inline-containment-helper drift is harder to detect — Task 12 implementer should manually compare against Task 1's module.
 - **Task 13 complexity upgrade**: critical review flagged 5-file/5-acceptance-area surface at `simple` as understated; upgraded to `complex`. Now also covers R11 delegate stdout-branching + R13 status/logs delegate + regex/containment parity, expanding scope further. If implementer overruns, split into Task 13a (CLI handler tests) + Task 13b (MCP plugin tests).
 - **Task 13's two-parent race test** uses `multiprocessing.Process` to spawn two parents; on slow CI this could be flaky. Mitigation: a `time.sleep(0.05)` sync barrier. If flakes persist, candidate for `@pytest.mark.flaky(retries=2)`.
-- **Task 17 is interactive — not autonomously executable**: marked `Complexity: interactive` (outside trivial/simple/complex taxonomy). The autonomous overnight dispatch agent MUST defer this task; lifecycle completion requires a human operator to run the procedure inside a real Claude Code MCP host session. Verification cross-references the operator-pasted `feature_dispatched` event line against the actual smoke-release-gate `events.log`, preventing fabrication. **Lifecycle reviewer note**: this task must be handled outside the autonomous loop — pipeline should write a `deferred/release-gate-*.md` and require manual re-triggering. If the pipeline runs Task 17 routinely and writes a fabricated results.md, the cross-reference check catches it but the lifecycle wastes a turn.
+- **Release gate split into backlog #995**: post-implementation pressure-test (Angle 3) revealed the cortex pipeline has no "interactive complexity tier" affordance — `cortex_command/pipeline/dispatch.py:231-233` raises `ValueError` on any complexity outside `trivial|simple|complex`. Original Task 17 (`Complexity: interactive`) would crash autonomous dispatch. The release-gate procedure now lives in `cortex/backlog/995-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` and gates the production release tag (`[release-type: skip]` on the implementation PR's merge commit; tag fires from a follow-up commit only after #995 is `merged`). **Operator responsibility**: when this lifecycle reaches `feature_complete`, the operator MUST run the #995 procedure before pushing any commit without `[release-type: skip]` to `main`. The autonomous lifecycle is now fully completable without the manual gate; the gate is a release-tag concern, not a lifecycle-completion concern.
 - **R1 invariant cost (Tasks 11, 12)**: server.py duplicates Task 1's regex AND containment-check logic to honor the zero-`cortex_command.*`-imports rule. Two regex parity tests + one containment parity test in Task 13 detect drift. This is an explicit architectural cost reviewed during critical review.
 - **CLI_PIN value in Task 10** hardcodes the current published tag via `git describe --tags --abbrev=0`; the existing CI workflow at `.github/workflows/release.yml` updates this on release. If this lifecycle ships between release cuts, the pinned value may need a one-line bump in a follow-up commit before merge.
 - **Critical review identified Bash-path as convenience packaging not sandbox fix**: documented honestly in Task 14. Reviewers approving the spec should know that the user-facing value is primarily the MCP-path; the Bash-path is parity with the existing direct invocation under `dangerouslyDisableSandbox: true`.
@@ -243,6 +224,7 @@ print('ok')
 ## Acceptance
 
 - `cortex daytime start --feature <slug> --format json` from a fresh terminal exits 0 with a JSON envelope referencing a detached process; concurrent invocations reliably emit `concurrent_dispatch` refusal (not `spawn_timeout`); cancel via `cortex daytime cancel` cleanly terminates the spawned dispatch and all SDK children via killpg.
-- `mcp__plugin_cortex-daytime_cortex-daytime__daytime_start_run` invoked from a real Claude session successfully spawns a dispatch whose `events.log` contains zero `EPERM` events, zero `Sandbox failed to initialize` events, and reaches at least `feature_dispatched`. The release-gate-results.md artifact records this empirical run.
+- `mcp__plugin_cortex-daytime_cortex-daytime__daytime_start_run` is invocable from a Claude session via FastMCP — its Pydantic schema rejects `confirm_dangerously_skip_permissions=False` and feature slugs containing `..`, leading `-`, or path-traversal patterns. Functional MCP-from-Claude verification is split into backlog #995 (release-gate) and gates the production release tag.
 - Direct `cortex-daytime-pipeline --feature <slug>` from a fresh terminal continues to work with the new JSON PID schema and is protected against path-traversal by Task 3's runtime guard.
 - All Phase 1 / Phase 2 / Phase 3 pytest files green; `cortex upgrade` aborts during a live daytime dispatch unless `CORTEX_ALLOW_INSTALL_DURING_RUN=1` is set inline.
+- Lifecycle reaches `feature_complete` autonomously after Task 16; the implementation PR merges with `[release-type: skip]` so the auto-release workflow does not cut a version tag until backlog #995 is marked `merged` (operator runs the release-gate procedure and pushes a follow-up `[release-type: minor]` commit).
