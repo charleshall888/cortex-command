@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://charleshall888.github.io/cortex-command/sitemap.xml
