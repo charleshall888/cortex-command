@@ -945,31 +945,16 @@ def test_dual_registration_idempotent(
     assert allow.count(cortex_target) == 1
 
 
-# (d) single-entry: exactly one cortex/ entry per cortex init invocation
-def test_dual_registration_order_lifecycle_first(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """cortex init registers exactly one cortex/ entry and one worktrees/
-    entry (R7); neither is duplicated."""
-    _isolate_home(monkeypatch, tmp_path)
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    _git_init(repo)
-
-    assert init_main(_make_args(repo)) == 0
-
-    data = json.loads(
-        _settings_path(tmp_path / "fake-home").read_text(encoding="utf-8")
-    )
-    allow = data["sandbox"]["filesystem"]["allowWrite"]
-    cortex_target = _cortex_target_for(repo)
-    worktree_target = str(repo.resolve() / ".claude" / "worktrees") + "/"
-    assert cortex_target in allow
-    assert cortex_target.endswith("/cortex/")
-    # Exactly one of each entry per invocation — no duplicates.
-    assert allow.count(cortex_target) == 1
-    assert allow.count(worktree_target) == 1
-    assert len(allow) == 2
+# (d) single-entry: exactly one cortex/ entry per cortex init invocation.
+# Note: the former `test_dual_registration_order_lifecycle_first` test was
+# removed by the `restore-worktree-root-env-prefix` lifecycle (Phase 1) — it
+# asserted on the legacy `<repo>/.claude/worktrees/` registration path
+# produced by R7's Step 8 in `cortex init`, which Phase 2 of that lifecycle
+# deletes entirely. The dual-registration test was structurally tied to a
+# step being retired; removing it here lets Phase 1's atomic commit land
+# without a transient `just test` red state. See
+# `cortex/lifecycle/restore-worktree-root-env-prefix/spec.md` (R7
+# supersession).
 
 
 # (e) malformed-sandbox refusal: R14 gate still rejects

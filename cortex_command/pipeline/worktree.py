@@ -2,16 +2,18 @@
 
 Each pipeline feature gets its own git worktree so agents working on
 different features never interfere with each other's working directory.
-Worktrees are created at {repo_root}/.claude/worktrees/{feature} with branches
-named pipeline/{feature}.
+Same-repo worktrees default to $TMPDIR/cortex-worktrees/{feature} (canonicalized
+via Path.resolve()) with branches named pipeline/{feature}. The default lives
+outside Seatbelt's mandatory deny on .mcp.json, which applies under .claude/
+regardless of user-level sandbox.filesystem.allowWrite entries.
 
 Cross-repo worktrees (repo_path is not None) are placed at
 $TMPDIR/overnight-worktrees/{session_id}/{feature} instead.
 
 If CORTEX_WORKTREE_ROOT is set, same-repo worktrees are placed at
-$CORTEX_WORKTREE_ROOT/{feature} instead of .claude/worktrees/. Needed when
-the host sandbox blocks writes under .claude/ (e.g., Claude Code Seatbelt
-profile blocks .mcp.json checkout into .claude/worktrees/).
+$CORTEX_WORKTREE_ROOT/{feature} instead. A cortex-registered worktree root
+may also be supplied via a `<path>#cortex-worktree-root` sentinel-suffixed
+entry in ~/.claude/settings.local.json::sandbox.filesystem.allowWrite.
 """
 
 import json
@@ -82,8 +84,16 @@ def _registered_worktree_root() -> Path | None:
     """Return the cortex-registered worktree root from settings.local.json, if any.
 
     Reads ``~/.claude/settings.local.json`` and returns the first entry in
-    ``sandbox.filesystem.allowWrite`` that contains the ``worktrees/`` marker.
-    This is the stable private marker for cortex-registered worktree roots.
+    ``sandbox.filesystem.allowWrite`` whose value uses the structurally-distinct
+    sentinel-suffix marker scheme: an entry of the form
+    ``"<path>#cortex-worktree-root"``. The entry is split on the first ``#``
+    separator; only when the trailing segment equals ``cortex-worktree-root``
+    is the entry treated as a cortex-registered worktree root. The leading
+    segment is returned as the ``Path``.
+
+    Unrelated entries that happen to contain the substring ``worktrees/`` in
+    their path (e.g. ``/some/foreign/worktrees/path``) are ignored — the
+    sentinel suffix is the only accepted marker.
 
     Returns None if the file is absent, the key is missing, or no matching
     entry is found.
@@ -106,8 +116,11 @@ def _registered_worktree_root() -> Path | None:
         return None
 
     for entry in allow_write:
-        if isinstance(entry, str) and "worktrees/" in entry:
-            return Path(entry)
+        if not isinstance(entry, str):
+            continue
+        path_part, sep, marker = entry.partition("#")
+        if sep and marker == "cortex-worktree-root":
+            return Path(path_part)
     return None
 
 
@@ -122,9 +135,19 @@ def resolve_worktree_root(
         (a) ``CORTEX_WORKTREE_ROOT`` env var, after ``$TMPDIR`` expansion,
             appended with ``/<feature>``.
         (b) Cortex-registered path from ``~/.claude/settings.local.json``
-            ``sandbox.filesystem.allowWrite`` (first entry containing
-            ``worktrees/`` marker), appended with ``/<feature>``.
-        (c) Default same-repo path: ``<repo_root>/.claude/worktrees/<feature>``.
+            ``sandbox.filesystem.allowWrite`` (first entry whose value matches
+            the structurally-distinct sentinel suffix ``#cortex-worktree-root``,
+            with the leading segment used as the worktree root), appended with
+            ``/<feature>``.
+        (c) Default same-repo path: ``$TMPDIR/cortex-worktrees/<feature>``,
+            canonicalized via ``Path.resolve()`` so downstream Seatbelt path
+            comparisons that operate on the canonical ``/private/var/folders``
+            form still match. ``$TMPDIR`` falls back to ``/tmp`` when unset
+            (mirrors branch (d)). The ``repo_root`` parameter is preserved on
+            the function signature for other callers but is no longer
+            dereferenced on this branch — same-repo worktrees no longer live
+            under ``<repo>/.claude/`` because Seatbelt's mandatory deny on
+            ``.mcp.json`` blocks ``git worktree add`` there.
         (d) Cross-repo path: ``$TMPDIR/overnight-worktrees/<session_id>/<feature>``
             when ``session_id`` is provided (and no earlier branch matched).
 
@@ -132,10 +155,9 @@ def resolve_worktree_root(
         feature: Feature name used as the final path component.
         session_id: Overnight session ID for cross-repo worktrees. Required
             for branch (d) to be reached; if None, branch (c) is returned.
-        repo_root: Optional pre-resolved repo root. When provided, branch (c)
-            uses it directly instead of running ``git rev-parse``. Pass this
-            when the caller has already resolved the target repo (e.g. via
-            ``--path``) and the process CWD may not be inside that repo.
+        repo_root: Optional pre-resolved repo root. Preserved on the signature
+            for callers that still pass it (e.g. ``cleanup_worktree``); branch
+            (c) no longer dereferences it.
 
     Returns:
         Resolved absolute Path for the worktree directory.
@@ -156,10 +178,13 @@ def resolve_worktree_root(
         tmpdir = Path(os.environ.get("TMPDIR", "/tmp"))
         return tmpdir / "overnight-worktrees" / session_id / feature
 
-    # (c) Default same-repo path.
-    if repo_root is None:
-        repo_root = _repo_root()
-    return repo_root / ".claude" / "worktrees" / feature
+    # (c) Default same-repo path: $TMPDIR/cortex-worktrees/<feature>,
+    # canonicalized via Path.resolve() so downstream Seatbelt comparisons that
+    # operate on /private/var/folders/... form still match. `repo_root` is
+    # accepted on the signature for compatibility with other callers but is
+    # no longer dereferenced here — same-repo worktrees live outside the repo
+    # to escape Seatbelt's mandatory deny on .mcp.json under .claude/.
+    return Path(os.environ.get("TMPDIR", "/tmp")).resolve() / "cortex-worktrees" / feature
 
 
 def create_worktree(
@@ -283,10 +308,18 @@ def cleanup_worktree(
         repo_path: Explicit repository path for cross-repo features.
             When None, uses _repo_root().
         worktree_path: Explicit worktree path (e.g. $TMPDIR-based).
-            When None, derives from repo / ".claude" / "worktrees" / feature.
+            When None, derives the path by routing through
+            ``resolve_worktree_root(feature, session_id=None, repo_root=repo)``
+            so the fallback honors the same single resolver chokepoint as
+            creation, including the branch (c) default and any operator
+            overrides via env var or settings.local.json sentinel-suffix entry.
     """
     repo = repo_path if repo_path is not None else _repo_root()
-    wt_path = worktree_path if worktree_path is not None else (repo / ".claude" / "worktrees" / feature)
+    wt_path = (
+        worktree_path
+        if worktree_path is not None
+        else resolve_worktree_root(feature, session_id=None, repo_root=repo)
+    )
 
     # Remove the worktree if it exists
     if wt_path.exists():

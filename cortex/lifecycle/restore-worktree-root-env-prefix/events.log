@@ -8,3 +8,4 @@
 {"ts":"2026-05-16T02:21:42Z","event":"synthesizer_drift","feature":"restore-worktree-root-env-prefix","expected_sha":"a593dc99fdaccc14be78c4a0208138aeacf486dc319ea1893cd8dd836ac2905e","observed_sha_or_null":null}
 {"ts":"2026-05-16T02:38:39Z","event":"plan_approved","feature":"restore-worktree-root-env-prefix"}
 {"ts":"2026-05-16T02:38:39Z","event":"phase_transition","feature":"restore-worktree-root-env-prefix","from":"plan","to":"implement"}
+{"ts":"2026-05-16T02:52:27Z","event":"batch_dispatch","feature":"restore-worktree-root-env-prefix","batch":0,"tasks":[1,2,3,4]}
