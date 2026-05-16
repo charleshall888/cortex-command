@@ -8,6 +8,8 @@ Structured interview to surface hidden requirements, edge cases, and priorities 
 
 Read `cortex/lifecycle/{feature}/research.md` for codebase analysis and open questions. If `cortex/lifecycle.config.md` exists at the project root, read it for project-specific constraints. Load requirements using the shared tag-based loading protocol — read `references/load-requirements.md` and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed. Use requirements to avoid re-asking settled questions — focus the interview on feature-specific details that requirements don't already cover.
 
+If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
+
 ### 2. Structured Interview
 
 Before asking questions, review the research artifact and feature description. For each interview area below, assess whether the answer is already evident:

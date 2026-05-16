@@ -32,6 +32,8 @@ Branch on the exit code:
 
 Load requirements using the shared tag-based loading protocol — read `references/load-requirements.md` and follow it. If no `cortex/requirements/` directory or files exist, note this and proceed.
 
+If a concept you need is not yet defined in the glossary, treat the absence as a signal to surface the term in the next requirements interview.
+
 ### 3. Confidence Assessment
 
 Assess confidence across three dimensions:
