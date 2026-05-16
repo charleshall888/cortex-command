@@ -2,12 +2,12 @@
 schema_version: "1"
 uuid: cf4444d3-be30-453b-8d60-53776e43b237
 title: "Adopt grill-with-docs progressive-disclosure system"
-status: backlog
+status: complete
 priority: high
 type: epic
 tags: [requirements, skills, grill-me-with-docs-learnings]
 created: 2026-05-15
-updated: 2026-05-15
+updated: 2026-05-16
 discovery_source: cortex/research/grill-me-with-docs-learnings/research.md
 ---
 

@@ -11,3 +11,7 @@
 {"ts": "2026-05-16T13:53:44Z", "event": "batch_dispatch", "feature": "add-docs-adr-with-3-seed", "batch": 0, "tasks": [1]}
 {"ts": "2026-05-16T13:57:02Z", "event": "batch_dispatch", "feature": "add-docs-adr-with-3-seed", "batch": 1, "tasks": [2, 3, 4, 6]}
 {"ts": "2026-05-16T14:01:19Z", "event": "batch_dispatch", "feature": "add-docs-adr-with-3-seed", "batch": 2, "tasks": [5]}
+{"ts": "2026-05-16T14:05:53Z", "event": "phase_transition", "feature": "add-docs-adr-with-3-seed", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-16T14:09:42Z", "event": "review_verdict", "feature": "add-docs-adr-with-3-seed", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-05-16T14:10:15Z", "event": "phase_transition", "feature": "add-docs-adr-with-3-seed", "from": "review", "to": "complete"}
+{"ts": "2026-05-16T14:17:09Z", "event": "feature_complete", "feature": "add-docs-adr-with-3-seed", "tasks_total": 6, "rework_cycles": 1}

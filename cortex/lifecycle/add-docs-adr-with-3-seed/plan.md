@@ -28,7 +28,7 @@ Two-phase implementation: Phase 1 (Mechanism) creates `cortex/adr/` with a 5-sec
 
 ### Task 2: Write seed ADR 0001 (file-based state)
 - **Files**: `cortex/adr/0001-file-based-state-no-database.md` (new)
-- **What**: Author the seed ADR for "File-based state, no database" — 1-3 sentences fusing context (cortex stores lifecycle/backlog/pipeline/sessions across many small files), decision (chose plain markdown/JSON/YAML over a database), and reasoning (sandbox-write registration is the only `~/.claude/` write; file-based state composes with the per-repo `cortex/` umbrella that `cortex init` already authorizes). Frontmatter: `status: accepted`, no `area:` field.
+- **What**: Author the seed ADR for "File-based state, no database" — 1-3 sentences fusing context (cortex stores lifecycle, backlog, pipeline, and session state across many small files), decision (chose plain markdown/JSON/YAML over a database), and reasoning (sandbox-write registration is the only `~/.claude/` write; file-based state composes with the per-repo `cortex/` umbrella that `cortex init` already authorizes). Frontmatter: `status: accepted`, no `area:` field.
 - **Depends on**: [1]
 - **Complexity**: simple
 - **Context**: Source prose lives at `cortex/requirements/project.md:27` ("File-based state: Lifecycle, backlog, pipeline, sessions in plain files (markdown/JSON/YAML). No database.") with additional context at CLAUDE.md:12 (cortex/ umbrella description). The ADR carries the *why* compressed out of the one-line bullet. Pocock format: title is `# File-based state, no database` (no `ADR-NNNN` prefix in title; the prefix is in the filename only).

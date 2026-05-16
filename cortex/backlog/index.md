@@ -2,8 +2,6 @@
 
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
-| 221 | Adopt grill-with-docs progressive-disclosure system | backlog | high | epic | — | — | — |
-| 224 | Add docs/adr/ with 3 seed ADRs and emission rule | refined | high | feature | — | 221 | ✓ |
 | 228 | Wire daytime dispatch through cortex CLI + MCP with launchd detachment | backlog | high | feature | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
@@ -21,12 +19,10 @@
 
 ## Refined
 
-- **224** Add docs/adr/ with 3 seed ADRs and emission rule
 - **227** Discovery output density — investigate author-centric prose at gate
 
 ## Backlog
 
-- **221** Adopt grill-with-docs progressive-disclosure system
 - **228** Wire daytime dispatch through cortex CLI + MCP with launchd detachment
 - **142** Multi-session host concurrency registry for cortex overnight
 
