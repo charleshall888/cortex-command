@@ -103,7 +103,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: simple
 - **Context**: Anchor on `cortex_command/pipeline/worktree.py:199-232` (the `if worktree_path.exists():` block in `create_worktree`). The guard fires only on the idempotent return path, NOT on fresh creation (fresh creates have fresh atimes by definition). For the positive test, use `os.utime(worktree_path, (old_time, old_time))` after the initial `create_worktree` call to set both atime and mtime to a known-old value (e.g., `time.time() - 3600`); then re-invoke `create_worktree(feature)` to exercise the idempotent return; then `os.stat(worktree_path).st_atime > old_time + 60` proves the guard advanced. For the negative test, set both atime/mtime then `monkeypatch.setenv("CORTEX_SKIP_ATIME_TOUCH", "1")` before the idempotent re-invocation; `os.stat(...).st_atime` should remain within 5s of `old_time`. Use `os.utime(path, (atime, mtime))` two-tuple form (not None) to set both values explicitly.
 - **Verification**: `pytest tests/test_worktree.py::test_atime_touch_distinguishes_guard_set_from_creation_fresh tests/test_worktree.py::test_atime_touch_skipped_with_env_opt_out -q` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 10: Seatbelt-active integration test for both Python resolver and bash hook (with body-content lint)
 - **Files**: `tests/test_worktree_seatbelt.py`
@@ -112,7 +112,7 @@ Move `resolve_worktree_root()`'s same-repo default out of the `.claude/` deny sc
 - **Complexity**: simple
 - **Context**: `probe_worktree_writable` lives at `cortex_command/pipeline/worktree.py:434`. The hook is at `claude/hooks/cortex-worktree-create.sh`. Use `subprocess.run([str(hook_path)], input=json.dumps(payload), capture_output=True, text=True)` to invoke the hook. The hook prints its result path to stdout (line 66) — capture `result.stdout.strip()`. The skipif gate means the test is collected but skipped in normal runs; it executes only when the implementer sets `CLAUDE_CODE_SANDBOX=1` in Task 11. The verification's body-content lint defends against the no-op-body failure mode (a test that says `def test_...(): pass` would satisfy all collect-time gates but prove nothing).
 - **Verification**: FIVE checks all pass: (a) `grep -c "def test_" tests/test_worktree_seatbelt.py` returns ≥2; (b) `pytest tests/test_worktree_seatbelt.py --collect-only -q` lists both tests; (c) `pytest tests/test_worktree_seatbelt.py -q` exits 0 with both tests reported as skipped (normal non-sandbox run); (d) **body-content lint**: `grep -c 'probe_worktree_writable(' tests/test_worktree_seatbelt.py` returns ≥2 (one call per test function) AND `grep -cE '\.ok is True' tests/test_worktree_seatbelt.py` returns ≥2 (one assertion per test function); (e) `grep -c 'cleanup_worktree' tests/test_worktree_seatbelt.py` returns ≥2 (each test cleans up its own worktree).
-- **Status**: [ ] pending
+- **Status**: [x] pending
 
 ### Task 11: Run R10 test under active Claude Code Seatbelt and record `f_row_evidence` event (with integrity-bound payload)
 - **Files**: `cortex/lifecycle/restore-worktree-root-env-prefix/events.log`
