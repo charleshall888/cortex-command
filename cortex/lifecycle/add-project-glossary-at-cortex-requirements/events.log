@@ -9,3 +9,11 @@
 {"ts": "2026-05-16T11:55:56Z", "event": "plan_approved", "feature": "add-project-glossary-at-cortex-requirements"}
 {"ts": "2026-05-16T11:55:56Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "from": "plan", "to": "implement"}
 {"ts": "2026-05-16T12:53:53Z", "event": "batch_dispatch", "feature": "add-project-glossary-at-cortex-requirements", "batch": 0, "tasks": [1]}
+{"ts": "2026-05-16T12:56:22Z", "event": "batch_dispatch", "feature": "add-project-glossary-at-cortex-requirements", "batch": 1, "tasks": [2, 3]}
+{"ts": "2026-05-16T13:00:30Z", "event": "batch_dispatch", "feature": "add-project-glossary-at-cortex-requirements", "batch": 2, "tasks": [4, 9, 10]}
+{"ts": "2026-05-16T13:06:45Z", "event": "batch_dispatch", "feature": "add-project-glossary-at-cortex-requirements", "batch": 3, "tasks": [5, 7, 8]}
+{"ts": "2026-05-16T13:14:53Z", "event": "batch_dispatch", "feature": "add-project-glossary-at-cortex-requirements", "batch": 4, "tasks": [6, 11]}
+{"ts": "2026-05-16T13:19:26Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-16T13:26:35Z", "event": "review_verdict", "feature": "add-project-glossary-at-cortex-requirements", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-16T13:26:35Z", "event": "phase_transition", "feature": "add-project-glossary-at-cortex-requirements", "from": "review", "to": "complete"}
+{"ts": "2026-05-16T13:36:30Z", "event": "feature_complete", "feature": "add-project-glossary-at-cortex-requirements", "tasks_total": 11, "rework_cycles": 1}

@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 4badee5f-3e18-401e-ae82-e1f1d69d6cd9
 title: "Add project glossary at cortex/requirements/glossary.md"
-status: refined
+status: complete
 priority: high
 type: feature
 parent: 221
@@ -13,6 +13,7 @@ discovery_source: cortex/research/grill-me-with-docs-learnings/research.md
 spec: cortex/lifecycle/add-project-glossary-at-cortex-requirements/spec.md
 areas: [skills]
 lifecycle_phase: plan
+session_id: null
 ---
 
 ## Role

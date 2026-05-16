@@ -28,36 +28,6 @@
     "repo": null
   },
   {
-    "id": 223,
-    "title": "Add project glossary at cortex/requirements/glossary.md",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "requirements",
-      "vocabulary",
-      "grill-me-with-docs-learnings"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-15",
-    "updated": "2026-05-16",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "221",
-    "research": null,
-    "spec": "cortex/lifecycle/add-project-glossary-at-cortex-requirements/spec.md",
-    "discovery_source": "cortex/research/grill-me-with-docs-learnings/research.md",
-    "plan": null,
-    "uuid": "4badee5f-3e18-401e-ae82-e1f1d69d6cd9",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": "plan",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 224,
     "title": "Add docs/adr/ with 3 seed ADRs and emission rule",
     "status": "refined",

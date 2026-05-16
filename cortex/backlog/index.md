@@ -3,7 +3,6 @@
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
 | 221 | Adopt grill-with-docs progressive-disclosure system | backlog | high | epic | — | — | — |
-| 223 | Add project glossary at cortex/requirements/glossary.md | refined | high | feature | — | 221 | ✓ |
 | 224 | Add docs/adr/ with 3 seed ADRs and emission rule | refined | high | feature | — | 221 | ✓ |
 | 228 | Wire daytime dispatch through cortex CLI + MCP with launchd detachment | backlog | high | feature | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
@@ -23,7 +22,6 @@
 
 ## Refined
 
-- **223** Add project glossary at cortex/requirements/glossary.md
 - **224** Add docs/adr/ with 3 seed ADRs and emission rule
 - **227** Discovery output density — investigate author-centric prose at gate
 - **220** Re-validate test_worktree_seatbelt.py on a recurring sandbox-active run

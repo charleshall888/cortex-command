@@ -27,7 +27,7 @@ Documentation-only feature implemented across three sequential phases: loading i
 - **Complexity**: simple
 - **Context**: The existing template enumeration sits inside the description of how `/requirements-write` synthesizes project.md. Insertion order is: `## Conditional Loading` → **`## Global Context` (new)** → `## Optional`. Keep the prose tight (≤6 lines for the new H2 explanation). The classifier instruction (project-specific vs general programming) is producer-side and does NOT belong here — `requirements-write` only documents the schema.
 - **Verification**: `grep -c "^## Global Context" skills/requirements-write/SKILL.md` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 0c97c048)
 
 ### Task 2: Seed `## Global Context` in cortex/requirements/project.md
 - **Files**: `cortex/requirements/project.md`
@@ -36,7 +36,7 @@ Documentation-only feature implemented across three sequential phases: loading i
 - **Complexity**: simple
 - **Context**: Match the H2 placement Task 1 documented. One-line body: a single bullet `- glossary.md`. Do NOT add explanatory prose about the loader's absent-file behavior — that lives in `load-requirements.md` per Task 3.
 - **Verification**: `awk '/^## Global Context$/{flag=1; next} /^## /{flag=0} flag' cortex/requirements/project.md | grep -c "glossary.md"` = 1 AND `grep -c "^## Global Context$" cortex/requirements/project.md` = 1 — pass if both true. (The awk pattern reads until the next H2 boundary so it stays correct as the section grows past its single initial entry.)
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 51be472c)
 
 ### Task 3: Extend load-requirements.md protocol and update its parity test
 - **Files**: `skills/lifecycle/references/load-requirements.md`, `tests/test_load_requirements_protocol.py`
@@ -45,7 +45,7 @@ Documentation-only feature implemented across three sequential phases: loading i
 - **Complexity**: complex
 - **Context**: `load-requirements.md` is 27 lines today; step 1 is L9, Matching Semantics is L19-L23. The test file's step-count assertion is at `tests/test_load_requirements_protocol.py:91-114`. The deliberate-exemption anchor test at `:74-88` must NOT be touched here — that test remains intact through this task (it gates Task 9's exemption-rationale narrowing). The new "skipped: file absent" recording must be explicit prose, not silent omission, because downstream drift-check and reviewer-dispatch consumers cited in step 4 have a contract for the distinction.
 - **Verification**: `grep -c "Global Context" skills/lifecycle/references/load-requirements.md` ≥ 2 AND `grep -c "skipped: file absent\|skipped because absent" skills/lifecycle/references/load-requirements.md` ≥ 1 AND `pytest tests/test_load_requirements_protocol.py -k enumerates --exitfirst` exits 0 — pass if all three.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 67d99153)
 
 ### Task 4: Narrow requirements-gather contract; add inline-write rule, probe, gate, Language-content constraint
 - **Files**: `skills/requirements-gather/SKILL.md`
@@ -62,7 +62,7 @@ Documentation-only feature implemented across three sequential phases: loading i
   - `grep -c "user-confirmation gate" skills/requirements-gather/SKILL.md` = 1 (sub-edit d anchor)
   - `grep -c "Language-content constraint" skills/requirements-gather/SKILL.md` = 1 (sub-edit e anchor)
   - `grep -c "definitional, not classification-shaped" skills/requirements-gather/SKILL.md` = 1 (sub-edit e content rule)
-- **Status**: [ ] pending
+- **Status**: [x] done (commit c9d0b18f)
 
 ### Task 5: Narrow requirements-write/SKILL.md exclusive-write claim
 - **Files**: `skills/requirements-write/SKILL.md`
@@ -71,7 +71,7 @@ Documentation-only feature implemented across three sequential phases: loading i
 - **Complexity**: simple
 - **Context**: The frontmatter description and the when_to_use block at the top of the file both carry the "only sub-skill" claim — both need narrowing for coherence. Caller enumeration: this contract phrasing is cited by `skills/requirements/SKILL.md` (Task 6's territory), `tests/test_requirements_skill_e2e.py` (Task 7), and indirectly by the orchestrator's three-tier architecture documentation. No callers beyond Task 6's and Task 7's scope need editing here.
 - **Verification**: `grep -c "glossary" skills/requirements-write/SKILL.md` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 46191c03)
 
 ### Task 6: Update requirements/SKILL.md orchestrator framing and list subcommand handling
 - **Files**: `skills/requirements/SKILL.md`
@@ -80,7 +80,7 @@ Documentation-only feature implemented across three sequential phases: loading i
 - **Complexity**: simple
 - **Context**: `skills/requirements/SKILL.md` is the orchestrator that routes `gather → write`. The `:5` framing currently treats requirements as passive artifacts; the glossary's producer-managed exception narrows but does not invert that framing. The `list` subcommand is implementation prose in the orchestrator, not a separate binary — edit the prose to reflect the chosen handling.
 - **Verification**: `grep -ci "glossary" skills/requirements/SKILL.md` ≥ 2 — pass if count ≥ 2 (one for the framing sentence, one for the list-subcommand handling).
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 05e79146)
 
 ### Task 7: Extend test_requirements_skill_e2e.py simulation to cover glossary write path
 - **Files**: `tests/test_requirements_skill_e2e.py`
@@ -89,7 +89,7 @@ Documentation-only feature implemented across three sequential phases: loading i
 - **Complexity**: simple
 - **Context**: The simulation today writes only project.md or area-template artifacts — see `:86-101` for invocation and `:301-345` for the writer. Modeling per-term appends keeps the simulation runtime-faithful at modest test-code cost. Match the existing tmp_path discipline; the stub glossary lives inside the tmp_path used by other simulation outputs, not under `cortex/requirements/`.
 - **Verification**: `pytest tests/test_requirements_skill_e2e.py` exits 0 AND `grep -ci "glossary" tests/test_requirements_skill_e2e.py` ≥ 1 AND `grep -ci "_simulate_write" tests/test_requirements_skill_e2e.py | head -1` shows the function is still defined (sanity that the edit landed inside the right symbol) — pass if all three.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 376932a2)
 
 ### Task 8: Extend critical-review Step 2a with Language-section-only read; narrow exemption rationale
 - **Files**: `skills/critical-review/SKILL.md`
@@ -103,7 +103,7 @@ Documentation-only feature implemented across three sequential phases: loading i
   - `grep -c "Language-section-only" skills/critical-review/SKILL.md` = 1 (Step 2a sub-edit anchor)
   - `grep -c "Requirements loading: deliberately exempt" skills/critical-review/SKILL.md` = 1 (parity-pinned anchor preserved)
   - `grep -c "not vocabulary" skills/critical-review/SKILL.md` = 1 (`:41` rationale-narrowing sub-edit anchor)
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 3af9a2a1)
 
 ### Task 9: Add consumer-rule prose to lifecycle consumers (3 of 6)
 - **Files**: `skills/lifecycle/references/clarify.md`, `skills/lifecycle/references/specify.md`, `skills/lifecycle/references/review.md`
@@ -111,8 +111,8 @@ Documentation-only feature implemented across three sequential phases: loading i
 - **Depends on**: [3]
 - **Complexity**: simple
 - **Context**: Existing load-requirements citations: `clarify.md:33`, `specify.md:9`, `review.md:12`. Place the new prose line within 10 lines of each citation. Keep wording verbatim across all three so Task 11's parity grep can use a single pattern. NOTE: adding ~1-2 lines to `specify.md` near `:9` will shift `specify.md`'s later `AskUserQuestion` anchors — Task 11 verifies these stay within `test_lifecycle_kept_pauses_parity.py`'s LINE_TOLERANCE=35 window. (The plan reference numbers AskUserQuestion anchors loosely as the inventory in `skills/lifecycle/SKILL.md` rounds them; the actual call-site line numbers are what the parity test reads against.)
-- **Verification**: For each of the three files, a single proximity check: `awk -v f="<file>" '/load-requirements/{lc=NR} /absence as a signal|surface the term/{if(lc && NR-lc>=0 && NR-lc<=10){print f": OK"; exit 0}} END {exit 1}' <file>` exits 0 — pass if all three files pass. (The awk captures the load-requirements line number, then verifies the consumer-rule prose appears within the next 10 lines.)
-- **Status**: [ ] pending
+- **Verification**: For each of the three files, a single proximity check: `awk -v f="<file>" 'BEGIN{found=0} /load-requirements/{lc=NR} /absence as a signal|surface the term/{if(lc && NR-lc>=0 && NR-lc<=10){found=1}} END{if(found){print f": OK"; exit 0} exit 1}' <file>` exits 0 — pass if all three files pass. (The awk captures the load-requirements line number, then verifies the consumer-rule prose appears within the next 10 lines.)
+- **Status**: [x] done (commit 5bac5b20)
 
 ### Task 10: Add consumer-rule prose to discovery and refine consumers (3 of 6)
 - **Files**: `skills/discovery/references/clarify.md`, `skills/discovery/references/research.md`, `skills/refine/SKILL.md`
@@ -120,8 +120,8 @@ Documentation-only feature implemented across three sequential phases: loading i
 - **Depends on**: [3]
 - **Complexity**: simple
 - **Context**: Existing load-requirements citations: `discovery/references/clarify.md:15`, `discovery/references/research.md:27`, `refine/SKILL.md:68`. The refine citation is in a chain reference (refine → lifecycle clarify → load-requirements); the prose still belongs at the local cite, placed within 10 lines of it.
-- **Verification**: For each of the three files, the same proximity-check awk: `awk -v f="<file>" '/load-requirements/{lc=NR} /absence as a signal|surface the term/{if(lc && NR-lc>=0 && NR-lc<=10){print f": OK"; exit 0}} END {exit 1}' <file>` exits 0 — pass if all three files pass.
-- **Status**: [ ] pending
+- **Verification**: For each of the three files, the same proximity-check awk: `awk -v f="<file>" 'BEGIN{found=0} /load-requirements/{lc=NR} /absence as a signal|surface the term/{if(lc && NR-lc>=0 && NR-lc<=10){found=1}} END{if(found){print f": OK"; exit 0} exit 1}' <file>` exits 0 — pass if all three files pass.
+- **Status**: [x] done (commit 6d32efb9)
 
 ### Task 11: Update test_load_requirements_protocol.py for consumer-rule prose and verify kept-pauses tolerance
 - **Files**: `tests/test_load_requirements_protocol.py`, `tests/test_lifecycle_kept_pauses_parity.py`
@@ -130,7 +130,7 @@ Documentation-only feature implemented across three sequential phases: loading i
 - **Complexity**: complex
 - **Context**: `CONSUMER_REFS` at `tests/test_load_requirements_protocol.py:38-45` enumerates the six non-exempt consumers. The new assertion can be a single loop checking `grep -c "absence as a signal\|surface the term" <file>` ≥ 1 for each. The kept-pauses parity is tested by `tests/test_lifecycle_kept_pauses_parity.py` (LINE_TOLERANCE=35); the canonical inventory is in `skills/lifecycle/SKILL.md` under "Kept user pauses" — the parity test reads that file as its source of truth. If anchors drift, update the inventory's line numbers, NOT the tolerance value.
 - **Verification**: `pytest tests/test_load_requirements_protocol.py` exits 0 AND `pytest tests/test_lifecycle_kept_pauses_parity.py` exits 0 — pass if both.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit e233236e)
 
 ## Risks
 
