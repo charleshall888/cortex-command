@@ -41,6 +41,8 @@ Ask probing questions — challenge assumptions, probe unstated expectations, id
 
 **Verification posture**: When citing a file path or a function-behavior claim during the interview, verify it against the actual code before accepting the user's confirmation. This does not replace the §2b end-of-interview Verification check — that gate still fires on the complete candidate claim-set; it surfaces wrong-place-to-implement and stale claims earlier as a passive precondition.
 
+**Edge-case invention**: When a requirement's acceptance criteria look under-specified, invent one concrete edge-case scenario that would stress the criterion and surface it to the user before locking. Apply judgmentally — skip when the criteria are already tight. This is additive to the section-level **Edge cases** interview area above; it fires per requirement only when the criteria leave a stress-test surface open.
+
 ### 2a. Research Confidence Check
 
 **Missing research.md guard**: Before evaluating any signals, check whether `cortex/lifecycle/{feature}/research.md` exists.
