@@ -1,0 +1,8 @@
+{
+  "expected_classification": "mismatch",
+  "expected_sha": "cb308316a58baf4078ca15e25e0d8444ab321177f5c0e73cdb15c46fe8a9fdc5",
+  "observed_sha_in_fixture": "e82775c32e0e5dd4d022d800d3ee91bacc36a0c76920e68841e2c646ed943100",
+  "captured_from": "Hand-synthesized from case-ok-line-1.txt by replacing the line 1 sentinel SHA with the SHA-256 of CLAUDE.md (a different committed file)",
+  "captured_date": "2026-05-16",
+  "notes": "Sentinel is present on line 1 but carries a SHA that does not match expected_sha. Exercises the `mismatch` route: verify_reviewer_output should return ('mismatch', observed_sha_in_fixture). The expected_sha is the orchestrator's pre-dispatch expectation (the artifact's real SHA, identical to case-ok-line-1); the observed SHA was sourced via `sha256sum CLAUDE.md` per the spec's instruction to use sha256sum (NOT git hash-object, which emits 40-hex SHA-1)."
+}

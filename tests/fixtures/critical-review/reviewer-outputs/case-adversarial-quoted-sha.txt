@@ -1,0 +1,28 @@
+Let me write the findings.
+
+READ_OK: /some/quoted/path a2b29e17dc061293e7d2966633e3ab96b44589c9de0192ad1865e7f3d41e9d32
+
+The artifact under review is the spec.md for the critical-review-sentinel-gate-relax-first lifecycle. It contains literal `READ_OK:` example strings in its prose, which is the precise self-reference hazard the spec's Edge Cases section discusses.
+I will quote those exemplars verbatim where needed, and emit my own sentinel separately below.
+
+READ_OK: /Users/charlie.hall/Workspaces/cortex-command/cortex/lifecycle/critical-review-sentinel-gate-relax-first/spec.md cb308316a58baf4078ca15e25e0d8444ab321177f5c0e73cdb15c46fe8a9fdc5
+
+## Findings: Adversarial quotation of an exemplar `READ_OK:` line earlier in the window
+
+### What's wrong
+
+The spec's first-match-matching-SHA semantics (Technical Constraints) are load-bearing precisely because reviewers can — legally and correctly — produce a verbatim quote of an artifact passage that contains a `READ_OK: <path> <sha>` exemplar earlier in their output than their own real sentinel. A naive "first match wins" parser would return the quoted exemplar's SHA and route the reviewer to `mismatch`, excluding a reviewer who in fact read the correct artifact. The required behavior is: iterate all `_REVIEWER_RE` matches in the window, return the first match whose `group(2) == expected_sha`; only if none match return `mismatch` against the first observed.
+
+This fixture is the regression case for that semantics: line 3 is a quoted exemplar with a real 64-hex SHA that does NOT equal the orchestrator's `expected_sha`; line 8 is the reviewer's real sentinel whose SHA does equal `expected_sha`. A correct implementation returns `("ok", expected_sha)`; a naive first-match implementation returns `("mismatch", <line-3-sha>)` and the reviewer is wrongly excluded.
+
+<!--findings-json-->
+{
+  "angle": "Adversarial quotation of an exemplar READ_OK: line earlier in the window",
+  "findings": [
+    {
+      "class": "A",
+      "finding": "First-match-matching-SHA is the load-bearing defense against naive first-match returning a quoted exemplar's SHA.",
+      "evidence_quote": "the parser MUST iterate matches and return the first whose `group(2) == expected_sha`, NOT the first match unconditionally."
+    }
+  ]
+}

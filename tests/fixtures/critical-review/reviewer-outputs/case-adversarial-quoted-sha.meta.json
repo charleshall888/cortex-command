@@ -1,0 +1,9 @@
+{
+  "expected_classification": "ok",
+  "expected_sha": "cb308316a58baf4078ca15e25e0d8444ab321177f5c0e73cdb15c46fe8a9fdc5",
+  "decoy_sha_on_line_3": "a2b29e17dc061293e7d2966633e3ab96b44589c9de0192ad1865e7f3d41e9d32",
+  "real_sentinel_line": 8,
+  "captured_from": "Hand-synthesized to exercise Technical Constraints' first-match-matching-SHA semantics (spec.md:85)",
+  "captured_date": "2026-05-16",
+  "notes": "Load-bearing adversarial fixture for the OK-first precedence algorithm. Line 3 carries a quoted exemplar `READ_OK:` line whose SHA (sha256sum of README.md) does NOT equal expected_sha. The reviewer's real sentinel appears later (preceded by intervening prose) and carries expected_sha. A naive first-match parser would misclassify this as `mismatch` against the decoy; the required first-match-matching-SHA semantics route to the real sentinel and return ('ok', expected_sha). DO NOT re-baseline this fixture without re-reading spec.md:85 and Edge Case 'Multiple READ_OK: lines in the window with different SHAs' (Requirement 6 test case (g))."
+}

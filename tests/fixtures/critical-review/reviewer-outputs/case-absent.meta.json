@@ -1,0 +1,7 @@
+{
+  "expected_classification": "absent",
+  "expected_sha": "cb308316a58baf4078ca15e25e0d8444ab321177f5c0e73cdb15c46fe8a9fdc5",
+  "captured_from": "Hand-synthesized from case-ok-line-1.txt by deleting the line 1 READ_OK sentinel",
+  "captured_date": "2026-05-16",
+  "notes": "Sentinel is entirely absent from the output; reviewer findings prose remains intact. Exercises the `absent` route of verify_reviewer_output. The expected_sha is the SHA of the artifact the orchestrator dispatched the reviewer against (matches case-ok-line-1)."
+}
