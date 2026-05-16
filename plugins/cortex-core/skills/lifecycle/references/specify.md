@@ -39,6 +39,8 @@ Ask probing questions — challenge assumptions, probe unstated expectations, id
 
 **File-path citation**: When recommending an acceptance criterion derived from code, name the file path that grounds it so the user can flag a wrong-place-to-implement before any code is written. For intent-only criteria with no codebase grounding, omit the citation per existing semantics — do not fabricate.
 
+**Verification posture**: When citing a file path or a function-behavior claim during the interview, verify it against the actual code before accepting the user's confirmation. This does not replace the §2b end-of-interview Verification check — that gate still fires on the complete candidate claim-set; it surfaces wrong-place-to-implement and stale claims earlier as a passive precondition.
+
 ### 2a. Research Confidence Check
 
 **Missing research.md guard**: Before evaluating any signals, check whether `cortex/lifecycle/{feature}/research.md` exists.
