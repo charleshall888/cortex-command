@@ -67,6 +67,10 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 - remote access/tmux/mosh/Tailscale → cortex/requirements/remote-access.md
 - agent spawning/parallel dispatch/worktrees/model selection → cortex/requirements/multi-agent.md
 
+## Global Context
+
+- glossary.md
+
 ## Optional
 
 Content here is prunable under token pressure — skip without losing spec-required guidance.
