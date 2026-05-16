@@ -8,3 +8,6 @@
 {"ts": "2026-05-16T11:39:19Z", "event": "phase_transition", "feature": "add-docs-adr-with-3-seed", "from": "specify", "to": "plan"}
 {"ts": "2026-05-16T13:27:51Z", "event": "plan_approved", "feature": "add-docs-adr-with-3-seed"}
 {"ts": "2026-05-16T13:27:51Z", "event": "phase_transition", "feature": "add-docs-adr-with-3-seed", "from": "plan", "to": "implement"}
+{"ts": "2026-05-16T13:53:44Z", "event": "batch_dispatch", "feature": "add-docs-adr-with-3-seed", "batch": 0, "tasks": [1]}
+{"ts": "2026-05-16T13:57:02Z", "event": "batch_dispatch", "feature": "add-docs-adr-with-3-seed", "batch": 1, "tasks": [2, 3, 4, 6]}
+{"ts": "2026-05-16T14:01:19Z", "event": "batch_dispatch", "feature": "add-docs-adr-with-3-seed", "batch": 2, "tasks": [5]}

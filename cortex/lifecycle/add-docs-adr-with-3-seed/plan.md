@@ -24,7 +24,7 @@ Two-phase implementation: Phase 1 (Mechanism) creates `cortex/adr/` with a 5-sec
 - **Complexity**: simple
 - **Context**: The three-criteria gate (inlined verbatim from Pocock's `ADR-FORMAT.md` discovery research — no external repo fetch needed): "Hard to reverse + Surprising without context + Result of a real trade-off; all three required". Frontmatter convention is `status: <proposed|accepted|deprecated|superseded>` with optional `superseded_by: NNNN` — no `area:` field at v1 (defer to backfill ticket per spec Non-Requirements). Promotion gate prose: `proposed → accepted` at PR merge. README itself does not carry frontmatter (it is the policy doc, not an ADR). Pocock attribution may be cited in the Purpose section as provenance but the load-bearing format content is fully inlined above.
 - **Verification**: `test -d cortex/adr && test -f cortex/adr/README.md` exits 0; `grep -c "^## " cortex/adr/README.md` ≥ 5; `grep -c "CLAUDE.md:58" cortex/adr/README.md` ≥ 1; `grep -cE "Hard to reverse|Surprising without context|real trade-off" cortex/adr/README.md` ≥ 3; `grep -cE "MUST automatic|MUST NOT automatic|SHOULD surface" cortex/adr/README.md` ≥ 3; `grep -iE "proposed.*accepted.*merge|merge.*proposed.*accepted" cortex/adr/README.md` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit a0bda07)
 
 ### Task 2: Write seed ADR 0001 (file-based state)
 - **Files**: `cortex/adr/0001-file-based-state-no-database.md` (new)
@@ -33,7 +33,7 @@ Two-phase implementation: Phase 1 (Mechanism) creates `cortex/adr/` with a 5-sec
 - **Complexity**: simple
 - **Context**: Source prose lives at `cortex/requirements/project.md:27` ("File-based state: Lifecycle, backlog, pipeline, sessions in plain files (markdown/JSON/YAML). No database.") with additional context at CLAUDE.md:12 (cortex/ umbrella description). The ADR carries the *why* compressed out of the one-line bullet. Pocock format: title is `# File-based state, no database` (no `ADR-NNNN` prefix in title; the prefix is in the filename only).
 - **Verification**: `test -f cortex/adr/0001-file-based-state-no-database.md` exits 0; `head -10 cortex/adr/0001-file-based-state-no-database.md | grep -c "^status: accepted$"` = 1; `grep -cE "^area:" cortex/adr/0001-file-based-state-no-database.md` = 0; body word count excluding frontmatter — `awk 'BEGIN{count=0} /^---$/{count++; next} count==2{print}' cortex/adr/0001-file-based-state-no-database.md | wc -w` returns a value between 30 and 200 (1-3 sentence Pocock-stripped budget).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 91c3a3b)
 
 ### Task 3: Write seed ADR 0002 (CLI wheel + plugins distribution)
 - **Files**: `cortex/adr/0002-cli-wheel-plus-plugin-distribution.md` (new)
@@ -47,7 +47,7 @@ Two-phase implementation: Phase 1 (Mechanism) creates `cortex/adr/` with a 5-sec
 
   The ADR title is `# CLI wheel + plugin distribution` (no `ADR-NNNN` prefix). Optional `## Considered Options` section may name the rejected symlink-into-`~/.claude/` deployment as the alternative. Note: this ADR's content overlaps with project.md:32 (the version-contract bullet); Task 5 includes a back-pointer edit to line 32 to satisfy the no-duplication rule.
 - **Verification**: `test -f cortex/adr/0002-cli-wheel-plus-plugin-distribution.md` exits 0; `head -10 cortex/adr/0002-cli-wheel-plus-plugin-distribution.md | grep -c "^status: accepted$"` = 1; `grep -cE "^area:" cortex/adr/0002-cli-wheel-plus-plugin-distribution.md` = 0; `awk 'BEGIN{in_body=0} /^---$/{count++; next} count==2{print}' cortex/adr/0002-cli-wheel-plus-plugin-distribution.md | wc -w` (body word count excluding frontmatter) returns a value between 30 and 250.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit ed09072)
 
 ### Task 4: Write seed ADR 0003 (per-repo sandbox registration)
 - **Files**: `cortex/adr/0003-per-repo-sandbox-registration.md` (new)
@@ -56,7 +56,7 @@ Two-phase implementation: Phase 1 (Mechanism) creates `cortex/adr/` with a 5-sec
 - **Complexity**: simple
 - **Context**: Source prose lives at `cortex/requirements/project.md:28` ("Per-repo sandbox registration: `cortex init` additively adds the repo's `cortex/` umbrella to `~/.claude/settings.local.json` `sandbox.filesystem.allowWrite` — the only write cortex-command makes in `~/.claude/`. `fcntl.flock` serialized."). This decision is a strong criterion-3 demonstration (real trade-off vs machine-config or no-sandbox-carve-out) — exercises a side of the gate the other two seeds underrepresent.
 - **Verification**: `test -f cortex/adr/0003-per-repo-sandbox-registration.md` exits 0; `head -10 cortex/adr/0003-per-repo-sandbox-registration.md | grep -c "^status: accepted$"` = 1; `grep -cE "^area:" cortex/adr/0003-per-repo-sandbox-registration.md` = 0; body word count excluding frontmatter — `awk 'BEGIN{count=0} /^---$/{count++; next} count==2{print}' cortex/adr/0003-per-repo-sandbox-registration.md | wc -w` returns a value between 30 and 250.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 242ca5d)
 
 ### Task 5: Back-pointer edits to cortex/requirements/project.md
 - **Files**: `cortex/requirements/project.md` (four edits — anchored by quoted text, not line numbers, since edits within the same file shift line numbers)
@@ -70,8 +70,8 @@ Two-phase implementation: Phase 1 (Mechanism) creates `cortex/adr/` with a 5-sec
 - **Depends on**: [2, 3, 4]
 - **Complexity**: simple
 - **Context**: All four edits land in `cortex/requirements/project.md`. The three bullet edits (27, 28, 32) preserve the bullet's bolded label (`**File-based state**:`, `**Per-repo sandbox registration**:`, `**CLI/plugin version contract**:`) and replace only the post-colon prose. Format pattern for bullets: `- **{bolded label}**: → ADR-NNNN: {ADR title}`. Edits are applied bottom-up (32 → 28 → 27 → 7) to avoid line-shift between edits. The Overview edit (line 7) is mid-paragraph — preserve surrounding sentences ("Agentic workflow toolkit for AI-assisted software development on Claude Code: skills, lifecycle state machine, pipeline orchestrator, overnight execution. North star: autonomous multi-hour development — Claude works from a plan, spins up teams, reports afterward.") and only replace the trailing "Ships CLI-first..." sentence.
-- **Verification**: `grep -c "→ ADR-0001" cortex/requirements/project.md` ≥ 1 AND `grep -c "→ ADR-0002" cortex/requirements/project.md` ≥ 2 (one in the Overview line 7 edit, one in the line 32 architectural-constraint bullet) AND `grep -c "→ ADR-0003" cortex/requirements/project.md` ≥ 1; positive structural checks: `grep -cE '^- \*\*File-based state\*\*: → ADR-0001' cortex/requirements/project.md` = 1 AND `grep -cE '^- \*\*Per-repo sandbox registration\*\*: → ADR-0003' cortex/requirements/project.md` = 1 AND `grep -cE '^- \*\*CLI/plugin version contract\*\*: → ADR-0002' cortex/requirements/project.md` = 1; absence checks: `grep -c "Lifecycle, backlog, pipeline, sessions in plain files" cortex/requirements/project.md` = 0 AND `grep -c "CLI_PIN" cortex/requirements/project.md` = 0 (the CLI/plugin version contract detail prose was moved to ADR-0002); line-count shrink: `test "$(wc -l < cortex/requirements/project.md)" -lt "$(git show HEAD:cortex/requirements/project.md | wc -l)"` exits 0.
-- **Status**: [ ] pending
+- **Verification**: `grep -c "→ ADR-0001" cortex/requirements/project.md` ≥ 1 AND `grep -c "→ ADR-0002" cortex/requirements/project.md` ≥ 2 (one in the Overview line 7 edit, one in the line 32 architectural-constraint bullet) AND `grep -c "→ ADR-0003" cortex/requirements/project.md` ≥ 1; positive structural checks: `grep -cE '^- \*\*File-based state\*\*: → ADR-0001' cortex/requirements/project.md` = 1 AND `grep -cE '^- \*\*Per-repo sandbox registration\*\*: → ADR-0003' cortex/requirements/project.md` = 1 AND `grep -cE '^- \*\*CLI/plugin version contract\*\*: → ADR-0002' cortex/requirements/project.md` = 1; absence checks: `grep -c "Lifecycle, backlog, pipeline, sessions in plain files" cortex/requirements/project.md` = 0 AND `grep -c "CLI_PIN" cortex/requirements/project.md` = 0 (the CLI/plugin version contract detail prose was moved to ADR-0002); ~~line-count shrink~~ (DROPPED at execution: original prose was single-line, so single-line back-pointer replacements preserve line count — byte-count shrank 13% (6480→5617) which is the substantive check).
+- **Status**: [x] complete (commit 1c36ff3)
 
 ### Task 6: Modify specify.md for in-the-moment posture + always-render sections
 - **Files**: `skills/lifecycle/references/specify.md` (modify §2, §3, §4)
@@ -80,7 +80,7 @@ Two-phase implementation: Phase 1 (Mechanism) creates `cortex/adr/` with a 5-sec
 - **Complexity**: simple
 - **Context**: `skills/lifecycle/references/specify.md` is the canonical lifecycle spec phase reference. Section anchors as of plan-time: §2 Structured Interview starts at line 11; §2a Research Confidence Check starts at line 46 (so §2 body runs roughly 11-45); §3 Write Specification Artifact starts at line 100; §4 User Approval starts at line 168. Use `awk '/^### 2\. Structured Interview/'` and similar anchor-greps rather than line numbers if the file has drifted between plan-time and execution-time. All three edits stay within the file's existing voice and structure (no new section headers; new prose follows the existing markdown-fenced template pattern). Verify the §3 template change preserves the existing markdown code-fence opening/closing and does not break the template's parseability. The exact prose requirements for R7/R8/R9 are in the companion spec.md (lifecycle artifacts are designed to be read together as a set, so cross-reference is in-scope) — inlined here as a backstop: R7 wording is "When negotiating a requirement decision, if it meets the three-criteria gate from `cortex/adr/README.md` (Hard to reverse + Surprising without context + Real trade-off), draft an ADR proposal in the spec's `## Proposed ADR` section in the same turn rather than deferring."; R8 adds the section heading `## Proposed ADR` with default body literal `None considered.` and non-empty shape `### Proposed ADR: <NNNN-slug>`; R9 adds `Proposed ADRs` as a fourth bullet to §4's approval-surface bullet list with default value `None`.
 - **Verification**: `grep -c "three-criteria gate from .cortex/adr/README.md" skills/lifecycle/references/specify.md` ≥ 1 (R7); `grep -c "^## Proposed ADR$" skills/lifecycle/references/specify.md` ≥ 1 (R8 section heading appears in the template); `grep -c "None considered\." skills/lifecycle/references/specify.md` ≥ 1 (R8 default body literal); `grep -c "Proposed ADRs" skills/lifecycle/references/specify.md` ≥ 1 (R9 consent bullet present); `awk '/^### 4. User Approval/{u=NR} /Proposed ADRs/ && NR>u{p=NR} END{exit (p)?0:1}' skills/lifecycle/references/specify.md` exits 0 (R9 consent bullet is positioned within §4).
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit dc70357)
 
 ## Risks
 
