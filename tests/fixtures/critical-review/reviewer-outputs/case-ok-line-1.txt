@@ -1,0 +1,43 @@
+READ_OK: /Users/charlie.hall/Workspaces/cortex-command/cortex/lifecycle/critical-review-sentinel-gate-relax-first/spec.md cb308316a58baf4078ca15e25e0d8444ab321177f5c0e73cdb15c46fe8a9fdc5
+
+## Findings: Fragile assumptions in the 50-line window-size choice
+
+### What's wrong
+
+The spec hard-codes `window_lines: int = 50` as the default in Requirement 2 ("scan the first `window_lines` of `output` (slice on `\n`)") and reinforces it in Edge Cases: "50 lines is the chosen tradeoff between robustness to Opus 4.7 verbosity and false-positive surface." Nowhere in the spec is the 50 figure justified by measurement against captured reviewer outputs. The Problem Statement cites Opus 4.7 and Sonnet 4.6 emitting "short preamble" like *"I have enough context. Let me write the findings."* — a single line — but the leap from "one-line preamble observed" to "50 lines is the right window" is not bridged.
+
+The spec is internally inconsistent on this point. Requirement 5 mandates fixtures at "lines 1, 3-5, and 10-15 to cover preamble depth", and Requirement 6 names test case (c) `test_sentinel_at_line_15_pass`. The corpus the spec itself prescribes tops out at line 15, yet the window is 50. That is a 3.3x safety margin chosen with no stated reasoning — which means it is also a 50-line attack surface chosen with no stated reasoning. The asymmetry is conspicuous: the spec is meticulous about the regex anchor (`^...\s*$`, MULTILINE) and the first-match-matching-SHA semantics, but offhand about the window dimension that the regex operates on.
+
+Worse, Non-Requirement "No code-fence-aware parsing in this ticket" defers code-fence handling on the grounds that "the synthetic fixture corpus shows reviewer outputs that quote `READ_OK:` inside ` ``` ` fences early enough to fall within the 50-line window" is the trigger for revisiting. But the trigger condition is window-dependent: at window=50 a code-fenced quoted sentinel must appear in lines 1-50; at window=20 it would need to appear in lines 1-20, materially shrinking the attack surface. Choosing 50 silently expands the deferred-limitation's exposure without acknowledging that the window choice and the deferral are coupled.
+
+### Assumptions at risk
+
+The spec assumes (a) future Opus/Sonnet verbosity calibration will not push preamble past 50 lines, (b) reviewer prompts will continue to discourage long preamble, and (c) the rate at which reviewer outputs quote artifact-internal `READ_OK:` strings in fenced blocks within 50 lines is acceptably low. None of these are measured; all three move with model behavior that the spec elsewhere acknowledges has already shifted once (Problem Statement: "prefilling is deprecated on those models, and Opus 4.7's verbosity calibration produces preamble before substantive analysis"). The spec is fixing a window that was wrong (line 1) by picking a new fixed number (50) using the same evidence-free methodology that produced the original choice.
+
+The `--window-lines` parameter is exposed for tuning per Non-Requirement, which sounds like a hedge, but the hedge is operationally weak: the orchestrator (`verification-gates.md`) does not pass `--window-lines`, so the default is what every production invocation will use. Tuning by passing a flag the caller does not pass is not tuning.
+
+### Convergence signal
+
+This angle's concerns overlap most strongly with the "code-level parser vs. alternatives" angle (any out-of-band signaling channel sidesteps the window-size question entirely) and with the adversarial-forgery angle (a larger window strictly increases the surface across which an evidence-quote can land a forged `READ_OK:` line).
+
+<!--findings-json-->
+{
+  "angle": "Fragile assumptions in the 50-line window-size choice",
+  "findings": [
+    {
+      "class": "C",
+      "finding": "The 50-line window default is asserted without measurement against the observed preamble distribution; the corpus the spec mandates tops out at line 15, yielding a 3.3x margin chosen with no stated reasoning.",
+      "evidence_quote": "50 lines is the chosen tradeoff between robustness to Opus 4.7 verbosity and false-positive surface."
+    },
+    {
+      "class": "B",
+      "finding": "The `--window-lines` parameter is exposed for tuning but the orchestrator's documented invocation in `verification-gates.md` does not pass it, so the default is what every production invocation uses; the tuning hedge is operationally inert.",
+      "evidence_quote": "No removal of the `--window-lines` parameter — exposed for future tuning even though the default is 50 today."
+    },
+    {
+      "class": "B",
+      "finding": "The window-size choice and the deferred code-fence-parsing limitation are coupled (a larger window strictly enlarges the fenced-quote attack surface) but the spec discusses them in separate sections without acknowledging the coupling.",
+      "evidence_quote": "Will revisit only if the synthetic fixture corpus shows reviewer outputs that quote `READ_OK:` inside ` ``` ` fences early enough to fall within the 50-line window."
+    }
+  ]
+}

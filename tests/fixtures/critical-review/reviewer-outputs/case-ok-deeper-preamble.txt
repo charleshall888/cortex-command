@@ -1,0 +1,60 @@
+Before producing the findings I will work through the adversarial-forgery angle in stages to make the reasoning auditable.
+
+First, I read the artifact at the literal absolute path provided in the prompt: `/Users/charlie.hall/Workspaces/cortex-command/cortex/lifecycle/critical-review-sentinel-gate-relax-first/spec.md`. I did not re-derive the path.
+
+Second, I computed the SHA-256 of the Read result and compared it to the expected SHA in the prompt envelope. The digests match.
+
+Third, before emitting the sentinel I want to flag — for the orchestrator's awareness — that this very artifact contains literal `READ_OK:` strings inside its own narrative prose. The Edge Cases section discusses "Sentinel inside a reviewer's `evidence_quote` (artifact under review names `READ_OK:`)" and acknowledges the chicken-and-egg self-reference risk. I will be careful to keep my evidence quotes verbatim from the artifact so the orchestrator can reproduce the parse.
+
+With those preliminaries recorded, emitting the sentinel now:
+
+READ_OK: /Users/charlie.hall/Workspaces/cortex-command/cortex/lifecycle/critical-review-sentinel-gate-relax-first/spec.md cb308316a58baf4078ca15e25e0d8444ab321177f5c0e73cdb15c46fe8a9fdc5
+
+## Findings: Adversarial sentinel forgery risk
+
+### What's wrong
+
+The spec's defense against forged sentinels rests entirely on the "first-match-matching-SHA semantics" enshrined in Technical Constraints: "the parser MUST iterate matches and return the first whose `group(2) == expected_sha`, NOT the first match unconditionally." This defense works perfectly under one assumption — that no other 64-hex string in the reviewer's output happens to equal the expected SHA — and works less well as that assumption weakens.
+
+Consider what is actually in scope for landing within the 50-line window:
+
+(1) **Self-quotation in evidence_quote.** Critical-review reviewers are instructed (`reviewer-prompt.md:71`) to include `"evidence_quote": "<verbatim quote from the artifact>"` in the JSON envelope. When the artifact under review is this spec.md, the verbatim-quote requirement means a reviewer may legally and correctly produce `evidence_quote` strings that contain the literal substring "the parser MUST iterate matches and return the first whose `group(2) == expected_sha`" or "emit `READ_OK: <path> <sha>` on its own line". The first variant is not a `READ_OK:` line and is harmless; the second variant, if reproduced inline (not blockquoted), IS a `READ_OK:` line as far as `^READ_(?:OK|FAILED): (\S+) ([0-9a-f]{64})\s*$` is concerned. The spec's own example reviewer-prompt text contains literal placeholder strings; if a reviewer quotes one of those exemplars verbatim and the orchestrator happens to substitute the same path and SHA at runtime, the regex matches the quotation. The spec acknowledges this in its Edge Cases section but dismisses it with "for in-scope artifacts no realistic attack surface exists" — a hand-wave, not an analysis. The "in-scope" qualifier is doing all the work in that sentence, and the spec never names which artifacts are in-scope vs out.
+
+(2) **Adversarial SHA collision construction.** The first-match-matching-SHA defense assumes the attacker cannot place the expected SHA into a `READ_OK:`-prefixed line in the reviewer's output earlier than the genuine sentinel. But the reviewer's output IS the attacker-controlled surface in any threat model where the reviewer-agent itself is untrusted. The spec frames the reviewer as a benign generator (Opus 4.7 producing preamble), but the architectural choice "regex-parse the reviewer's stdout" is exactly the choice that puts trust in reviewer-controlled bytes. A malicious or compromised reviewer can emit a forged `READ_OK: <attacker-chosen-path> <expected-sha>` line on line 1, followed by the genuine sentinel on line N, and the parser will route to the forgery. The path field is `\S+` with no validation against the expected path; the parser does not check that `group(1)` equals `{artifact_path}`. The orchestrator trusts the SHA but accepts any path string.
+
+(3) **The chicken-and-egg dismissal is wrong on closer inspection.** The spec argues: "If the quote happens to contain the same SHA (impossible for SHAs that did not exist when the artifact was written — chicken-and-egg), the gate would route incorrectly; for in-scope artifacts no realistic attack surface exists." This dismisses static artifacts but ignores artifacts that contain SHAs of OTHER artifacts (e.g., a spec that quotes `git log` output of its own commit history, a plan.md that references previous spec.md SHAs, a research.md that pastes commit hashes). A reviewer's evidence quote of such a passage could contain a real 64-hex string. If the orchestrator's expected_sha for THIS pass collides with any 64-hex string the artifact transcribes, the chicken-and-egg argument no longer applies.
+
+The path-field validation gap (point 2) is the most concrete: it is one line of code to add (`if match.group(1) != expected_path: continue`) and the spec mentions no reason not to. The omission appears to be oversight rather than design.
+
+### Assumptions at risk
+
+The spec assumes the reviewer's stdout is non-adversarial bytes — the threat model is "Opus 4.7 produces preamble", not "reviewer subprocess produces malicious bytes". This assumption is reasonable for the current Anthropic-hosted reviewer pipeline but becomes load-bearing if reviewers ever run under different trust boundaries (e.g., a fallback path that dispatches to a smaller local model, or a future MCP-based reviewer plugin). The spec freezes a trust model without naming it.
+
+The spec assumes path validation is unnecessary because the SHA match is sufficient. This is incorrect: `\S+` accepts any non-whitespace string as path, and the parser returns the first SHA-matching pair as `("ok", expected_sha)` regardless of whether `group(1)` matches the prompt-provided `{artifact_path}`. A forged `READ_OK: /tmp/attacker-controlled-file cb308316...` would be accepted as a valid sentinel.
+
+### Convergence signal
+
+This angle's concerns overlap with the alternatives angle (structured tags with attribute parsing would force path-field validation by construction) and partially with the window-size angle (a smaller window strictly shrinks the surface across which a forged line can land before the genuine sentinel).
+
+<!--findings-json-->
+{
+  "angle": "Adversarial sentinel forgery risk",
+  "findings": [
+    {
+      "class": "A",
+      "finding": "The parser accepts any path in `group(1)` (regex is `\\S+`) and does not validate against the prompt's `{artifact_path}`, so a `READ_OK:` line with an attacker-chosen path but the expected SHA passes the gate.",
+      "evidence_quote": "_REVIEWER_RE = re.compile(r\"^READ_(?:OK|FAILED): (\\S+) ([0-9a-f]{64})\\s*$\", re.MULTILINE)",
+      "fix_invalidation_argument": "The spec's stated goal is to gate on the reviewer having actually read the intended artifact; SHA match alone does not establish path identity, so a forged line with the expected SHA but a wrong path bypasses the goal."
+    },
+    {
+      "class": "C",
+      "finding": "The chicken-and-egg dismissal in Edge Cases (\"impossible for SHAs that did not exist when the artifact was written\") is incomplete: it ignores artifacts that transcribe SHAs of other artifacts (git log dumps, prior-spec references), where a 64-hex collision is no longer chicken-and-egg.",
+      "evidence_quote": "If the quote happens to contain the same SHA (impossible for SHAs that did not exist when the artifact was written — chicken-and-egg), the gate would route incorrectly; for in-scope artifacts no realistic attack surface exists."
+    },
+    {
+      "class": "B",
+      "finding": "The threat model is implicit (reviewer stdout assumed non-adversarial) and becomes fragile if reviewers ever run under different trust boundaries — e.g., a fallback dispatch to a local model or an MCP plugin reviewer. The spec freezes a trust assumption without naming it.",
+      "evidence_quote": "the parser MUST iterate matches and return the first whose `group(2) == expected_sha`, NOT the first match unconditionally. This is the load-bearing false-positive defense"
+    }
+  ]
+}

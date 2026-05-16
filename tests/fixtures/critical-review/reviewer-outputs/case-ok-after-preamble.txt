@@ -1,0 +1,51 @@
+I have read the artifact and computed its SHA-256. Confirming the digest matches the expected value before proceeding with the analysis.
+
+READ_OK: /Users/charlie.hall/Workspaces/cortex-command/cortex/lifecycle/critical-review-sentinel-gate-relax-first/spec.md cb308316a58baf4078ca15e25e0d8444ab321177f5c0e73cdb15c46fe8a9fdc5
+
+## Findings: Unexamined alternatives to a code-level regex parser
+
+### What's wrong
+
+The spec frames the design choice as a binary: keep the existing prose-only "literal first line" check (status quo, broken) or replace it with `verify_reviewer_output` — a regex window-search parser inside `cortex_command/critical_review.py`. The "Technical Constraints" section justifies the latter with two references — `cortex/requirements/project.md:31` (Skill-helper modules constraint) and `CLAUDE.md:58` (structural separation over prose-only enforcement) — and a precedent appeal to `_SYNTH_RE`/`verify_synth_output`. No alternative mechanism is considered or rejected on the record.
+
+At least three alternatives sit in plain sight and would deserve a paragraph each:
+
+(1) **Structured sentinel tags.** Instead of regex-matching a free-form line `READ_OK: <path> <sha>`, the reviewer prompt could require a structured tag like `<read-ok path="..." sha="..."/>` emitted in a fixed prelude position. This eliminates the position-vs-window tradeoff entirely (parse by XML tag, not by line position), eliminates blockquote and code-fence ambiguity (tags inside fences can be distinguished from tags in the document body via a single state machine pass), and aligns with the `<!--findings-json-->` delimiter pattern the spec already uses for envelope extraction in `reviewer-prompt.md:62-77`. The spec acknowledges the JSON-envelope delimiter approach as already-working precedent ("After the prose findings above, emit a JSON envelope so the orchestrator can extract structured class tags") but does not apply the same idea to the sentinel.
+
+(2) **Exit-code signaling from the reviewer subprocess.** If the reviewer is dispatched via a subprocess wrapper (as the Phase 2 envelope extraction implies), the wrapper itself can pass the artifact-read confirmation out-of-band — write `READ_OK <sha>` to a sidecar file, or use a non-zero exit code on Read-failure. This removes the sentinel-in-stdout coupling entirely. The spec's Edge Case "All four reviewers fail Phase 1 verification" already presumes a per-reviewer exit signal exists at the orchestrator level; extending that signal to also carry the SHA-confirmation result is a smaller delta than introducing a new regex parser.
+
+(3) **Hash-prefix-keyed line search.** Even within the regex-parser approach, the spec could mandate that the reviewer emit the line `READ_OK: <path> <first-8-hex-of-sha>` and then the orchestrator verifies the full SHA from the file the reviewer Read (rather than trusting the reviewer's own SHA computation). This costs one extra Read but eliminates the "reviewer claims to have read the file with SHA X, but actually Read a stale cache and computed X' that happens to collide with X" failure mode the spec does not address.
+
+The spec's appeal to "the established `verify_synth_output` precedent" (Technical Constraints) is a precedent argument, not a design argument. Precedent says "we did the same thing on the synth side"; design asks "is the synth-side choice itself correct, and does the reviewer-side context match?" The asymmetry the spec acknowledges — `--input-file` on the reviewer side vs. stdin on the synth side, four reviewer outputs vs. one synth output, evidence-quote content vs. synthesizer-prose content — suggests the contexts are not symmetric, which weakens the precedent appeal.
+
+### Assumptions at risk
+
+The spec assumes regex parsing of stdout is the right interface for reviewer-output verification. This assumption is load-bearing: every Edge Case in the spec (CRLF, BOM, blockquote, code-fence, evidence-quote-sentinel) is a regex-parser failure mode. A different mechanism would have a different (possibly smaller) failure-mode set, and the spec does not compare failure-mode sets across mechanisms. It commits to the regex parser and then enumerates its known edge cases as if they are unavoidable.
+
+The spec also assumes the orchestrator-invokes-subprocess-per-reviewer architecture is fixed. The "atomic subcommand" framing ("fusing validation + mutation + telemetry") presents subprocess invocation as a virtue, but a subprocess per reviewer is also four process spawns per critical-review pass, which is the spec's own load-bearing operational cost — and a cost that would be zero under an in-process structured-tag approach.
+
+### Convergence signal
+
+This angle's concerns overlap with the window-size angle (any out-of-band mechanism eliminates the window dimension) and partially with the adversarial-forgery angle (structured tags with attribute parsing are harder to forge in a free-form text quote than a `READ_OK:` line is).
+
+<!--findings-json-->
+{
+  "angle": "Unexamined alternatives to a code-level regex parser",
+  "findings": [
+    {
+      "class": "C",
+      "finding": "The spec presents the design as a binary between status-quo prose and a regex window-search parser, without considering structured sentinel tags, exit-code/sidecar signaling, or hash-prefix-keyed verification — any of which would eliminate at least one named edge case.",
+      "evidence_quote": "Mirrors the established `_SYNTH_RE` / `verify_synth_output` precedent."
+    },
+    {
+      "class": "C",
+      "finding": "The precedent appeal to `verify_synth_output` is asymmetric on the spec's own terms (stdin vs. --input-file, one vs. four outputs, synthesizer prose vs. evidence-quote content), which weakens the precedent argument the design rests on.",
+      "evidence_quote": "I/O contract deviates from synth-side: read reviewer output from `--input-file <path>` (UTF-8, errors='strict'), NOT from stdin."
+    },
+    {
+      "class": "B",
+      "finding": "The spec enumerates edge cases (CRLF, BOM, blockquote, code-fence, evidence-quote) as regex-parser-specific failure modes without comparing them against the failure-mode set of an alternative mechanism — leaving the reader unable to judge whether the chosen mechanism's failure-mode set is smaller than the alternatives'.",
+      "evidence_quote": "No code-fence-aware parsing in this ticket — deferred as a known limitation."
+    }
+  ]
+}

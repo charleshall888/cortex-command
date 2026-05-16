@@ -1,0 +1,7 @@
+{
+  "expected_classification": "ok",
+  "expected_sha": "cb308316a58baf4078ca15e25e0d8444ab321177f5c0e73cdb15c46fe8a9fdc5",
+  "captured_from": "Agent dispatch (general-purpose) against cortex/lifecycle/critical-review-sentinel-gate-relax-first/spec.md",
+  "captured_date": "2026-05-16",
+  "notes": "Sentinel appears at line 11 (1-indexed); substantial multi-paragraph preamble before the sentinel. Angle: adversarial sentinel forgery risk."
+}
