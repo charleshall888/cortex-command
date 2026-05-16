@@ -48,6 +48,7 @@
     --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
     --ui: "Inter", system-ui, -apple-system, sans-serif;
     --pipe-tempo: 320; /* vh multiplier — Tempo tweak */
+    --hood-tempo: 220; /* vh multiplier for the hood gatefold sticky pane */
     /* stain-aware tints — overridden per stain */
     --grid-tint: rgba(30, 64, 175, 0.05);
     --grid-tint-soft: rgba(30, 64, 175, 0.04);
@@ -2554,13 +2555,20 @@
        9.c  How a worker bows out · the three deferral severities
      Plus a lettered registry footnote so the schematic is self-keyed. */
 
-  .hood-anatomy { position: relative; margin-top: 24px; margin-bottom: 16px; }
-  .hood-anatomy-svg {
-    display: block;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1280 / 1870;
-  }
+  /* Hood gatefold: a sticky-scroll reveal. .hood-wrap is the scroll-distance
+     spacer; .hood-anatomy is the sticky pane the SVG sits inside; zones light
+     up as the user scrolls through the wrapper. Below 900px the SVG hides
+     and the .hood-manifest <ol> takes over (see mobile block at the bottom). */
+  .hood-wrap { position: relative; height: calc(var(--hood-tempo) * 1vh); }
+  .hood-anatomy { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .hood-anatomy-svg { max-height: 100%; width: auto; max-width: 100%; }
+  .hood-zone { transition: opacity 280ms ease-out, filter 280ms ease-out; opacity: 0.18; filter: grayscale(0.8); }
+  .hood-zone.lit { opacity: 1; filter: none; }
+  /* Rest state — if scrubbing hasn't engaged (no JS or above-the-fold), all
+     zones render fully lit so the diagram still works as a complete poster. */
+  .hood-anatomy:not(.scrub-engaged) .hood-zone { opacity: 1; filter: none; }
+  /* When the integration rail lights, run its rail-pulse once instead of looping. */
+  .hood-zone[data-zone="integration"].lit .a-rail-pulse { animation-iteration-count: 1; }
 
   .hood-anatomy-svg .a-rect { fill: var(--paper); stroke: var(--ink); stroke-width: 1.1; }
   .hood-anatomy-svg .a-rect.soft { stroke: color-mix(in srgb, var(--ink) 55%, transparent); }
@@ -3174,6 +3182,63 @@
       font-size: 11px; color: var(--ink-mute);
     }
   }
+
+  /* Hood gatefold mobile fallback — at <900px the 1280×1870 anatomy SVG
+     can't be read; we hide it and present the same content as a vertical
+     manifest (mirroring .pipe-manifest). We also collapse the sticky-100vh
+     scroll pane so the section flows inline like a normal block. */
+  .hood-manifest { display: none; }
+  @media (max-width: 900px) {
+    .hood-wrap { height: auto; }
+    .hood-anatomy { position: relative; height: auto; display: block; }
+    .hood-anatomy-svg { display: none; }
+    .hood-manifest {
+      display: flex; flex-direction: column;
+      gap: 0;
+      margin: 20px 24px 8px;
+      padding-left: 18px;
+      border-left: 1px dashed var(--rule-soft);
+      font-family: var(--mono);
+      list-style: none;
+    }
+    .hood-manifest .hm-row {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px dashed var(--rule-soft);
+      position: relative;
+    }
+    .hood-manifest .hm-row:last-child { border-bottom: none; }
+    .hood-manifest .hm-dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--ink); margin-top: 4px;
+      box-shadow: 0 0 0 4px var(--parchment), 0 0 0 5px var(--rule-soft);
+      margin-left: -22px;
+    }
+    .hood-manifest .hm-row[data-state="paused"] .hm-dot { background: var(--ochre); }
+    .hood-manifest .hm-row[data-state="skipped"] { opacity: 0.55; }
+    .hood-manifest .hm-row[data-state="skipped"] .hm-dot { background: transparent; border: 1px dashed var(--ink-50); box-shadow: 0 0 0 3px var(--parchment); }
+    .hood-manifest .hm-row[data-state="gate"] .hm-dot { background: var(--ochre); }
+    .hood-manifest .hm-row[data-state="dawn"] .hm-dot,
+    .hood-manifest .hm-row.gold .hm-dot { background: var(--ochre-soft); }
+    .hood-manifest .hm-name {
+      font-size: 13px; color: var(--ink);
+      text-transform: lowercase; letter-spacing: 0.02em; font-weight: 500;
+    }
+    .hood-manifest .hm-sub {
+      font-size: 11px; color: var(--ink-mute);
+      margin-top: 2px;
+    }
+    .hood-manifest .hm-detail {
+      font-family: var(--serif);
+      font-style: italic; font-size: 12.5px;
+      color: var(--ink-faint);
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+  }
+
   /* Inline "under the hood" annotations on the pipeline (visible at all widths >900px) */
   .pipe-annot {
     position: absolute;
@@ -4446,6 +4511,7 @@
 
                The diagram is intentionally generic — feature ①, feature ②, etc.
                — so it reads as the SYSTEM, not as one specific night. -->
+          <div class="hood-wrap" id="hood-wrap">
           <div class="hood-anatomy">
             <svg class="hood-anatomy-svg" viewBox="0 0 1280 1870" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomy of an overnight session, flowing top to bottom: dusk (refine, plan, launch), night (runner: orchestrator first fans out parallel planning agents, then runs rounds; rounds feed into an integration branch), and dawn (morning-report.md, session PR, /morning-review).">
 
@@ -4453,7 +4519,7 @@
                    3 sub-columns horizontally: refine queue · overnight plan
                    artifacts · launch. The vertical flow reads top-to-bottom
                    as time advances. -->
-              <g>
+              <g class="hood-zone" data-zone="dusk">
                 <!-- row cap -->
                 <line class="a-line dashed" x1="0" y1="42" x2="1280" y2="42"/>
                 <text class="a-col-cap" x="640" y="28" text-anchor="middle">dusk · before bed · interactive · human-shaped</text>
@@ -4546,7 +4612,7 @@
                      time is to fan out planners (one per feature in that round). These
                      three pods are Round 1's planners; planner ④ and ⑤ live just above
                      their respective rounds, not here. -->
-                <g>
+                <g class="hood-zone" data-zone="round-1-plan">
                   <text class="a-mono xs faint" x="36"   y="492">ROUND 1 · PRE-ROUND PLANNING · ORCHESTRATOR FANS OUT · ~22:00 → 22:06</text>
                   <text class="a-mono xs faint" x="1244" y="492" text-anchor="end">3 planners · in parallel · one plan.md each</text>
 
@@ -4595,7 +4661,7 @@
                 <text class="a-mono sm b" x="640" y="510" text-anchor="middle">round 1 plans in hand · orchestrator dispatches leads</text>
 
                 <!-- ─── ROUND 1 ─── (height 200: workers now 144 tall with 4 buttons + review verdict + rework loop) -->
-                <g>
+                <g class="hood-zone" data-zone="round-1">
                   <rect class="a-rect" x="20" y="522" width="1240" height="200"/>
                   <text class="a-mono sm faint" x="36" y="546">ROUND 1 · 22:00 → 00:15</text>
                   <text class="a-mono sm faint" x="1244" y="546" text-anchor="end">3 leads · post-merge review gates complex / high-criticality features</text>
@@ -4675,7 +4741,7 @@
                      to spawn planner ④, who reads spec.md for the next eligible feature
                      and writes plan.md just-in-time. Only after this plan lands does
                      round 2 dispatch its lead. -->
-                <g>
+                <g class="hood-zone" data-zone="round-2-plan">
                   <text class="a-mono xs faint" x="640" y="766" text-anchor="middle" letter-spacing="0.08em">ROUND 2 · PRE-ROUND PLANNING · ORCHESTRATOR FANS OUT · ~00:25 → 00:30</text>
 
                   <!-- planner ④ pod, horizontally compact (badge + sheet inline) -->
@@ -4699,7 +4765,7 @@
                 <g transform="translate(0, 104)">
 
                 <!-- ─── ROUND 2 ─── -->
-                <g>
+                <g class="hood-zone" data-zone="round-2">
                   <rect class="a-rect" x="20" y="734" width="1240" height="148"/>
                   <text class="a-mono sm faint" x="36" y="758">ROUND 2 · 00:30 → 02:15</text>
                   <text class="a-mono sm faint" x="1244" y="758" text-anchor="end">1 lead · stuck in implement retries · others held by file-overlap</text>
@@ -4743,7 +4809,7 @@
                      round 3 has no eligible features (feature ⑤ depended on feature ④,
                      which deferred), this planner is shown dashed/faded to indicate
                      the orchestrator's intent never materialized. -->
-                <g>
+                <g class="hood-zone" data-zone="round-3-skipped">
                   <text class="a-mono xs faint" x="640" y="922" text-anchor="middle" letter-spacing="0.08em">ROUND 3 · PRE-ROUND PLANNING (would have run) · dep on feature ④ unmet</text>
 
                   <!-- planner ⑤ pod, faded/dashed since round 3 never starts -->
@@ -4770,7 +4836,7 @@
                 </g>
 
                 <!-- ─── ROUND 3 ─── -->
-                <g>
+                <g class="hood-zone" data-zone="round-3-skipped">
                   <rect class="a-rect dashed" x="20" y="930" width="1240" height="74"/>
                   <text class="a-mono sm faint" x="36" y="954">ROUND 3 · skipped — dep gap</text>
                   <text class="a-mono sm faint" x="1244" y="954" text-anchor="end">depended on feature ④</text>
@@ -4778,7 +4844,7 @@
                 </g>
 
                 <!-- ─── INTEGRATION RAIL ─── -->
-                <g>
+                <g class="hood-zone" data-zone="integration">
                   <text class="a-letter ink" x="14" y="1028">[E]</text>
                   <text class="a-mono b blue" x="50" y="1028">integration: overnight/&lt;sess-id&gt;</text>
 
@@ -4802,11 +4868,14 @@
                        if --test-command is armed; on fail → cortex-integration-recovery
                        (≤2 tries) → sets integration_health = degraded · PR is still pushed.
                        Diamond shape (vs. the round-marker circles) flags it as a gate, not
-                       a commit. -->
-                  <line class="a-line gold" x1="950" y1="1038" x2="950" y2="1058"/>
-                  <polygon class="a-dot gold" points="950,1040 960,1048 950,1056 940,1048" fill="var(--ochre)"/>
-                  <text class="a-mono sm gold b" x="950" y="1072" text-anchor="middle">test gate</text>
-                  <text class="a-mono xs dim it" x="950" y="1088" text-anchor="middle">--test-command · once at session-end · if armed</text>
+                       a commit. Nested as its own .hood-zone so the gate marker lights up
+                       a moment after the integration rail. -->
+                  <g class="hood-zone" data-zone="test-gate">
+                    <line class="a-line gold" x1="950" y1="1038" x2="950" y2="1058"/>
+                    <polygon class="a-dot gold" points="950,1040 960,1048 950,1056 940,1048" fill="var(--ochre)"/>
+                    <text class="a-mono sm gold b" x="950" y="1072" text-anchor="middle">test gate</text>
+                    <text class="a-mono xs dim it" x="950" y="1088" text-anchor="middle">--test-command · once at session-end · if armed</text>
+                  </g>
                 </g>
 
                 <text class="a-mono dim sm it" x="640" y="1118" text-anchor="middle">rounds run sequentially · workers within a round run in parallel · per-feature merge + ci · session-end test gate before PR</text>
@@ -4817,7 +4886,7 @@
 
               <!-- Transition + dawn row are shifted down by 370px so the dawn arrow
                    starts well below the runner box bottom (y=1482). -->
-              <g transform="translate(0, 370)">
+              <g class="hood-zone" data-zone="dawn" transform="translate(0, 370)">
 
               <!-- transition: night → dawn -->
               <g>
@@ -4901,7 +4970,64 @@
               </g><!-- /dawn-shift transform -->
 
             </svg>
-          </div>
+
+            <!-- Mobile fallback (≤900px): swap the 1280×1870 anatomy for a
+                 vertical manifest that carries the same nodes in plain prose.
+                 The .hood-anatomy-svg is display:none at this width and the
+                 sticky 100vh pane is unstuck, so this list flows inline. -->
+            <ol class="hood-manifest" aria-label="overnight session as a vertical manifest">
+              <li class="hm-row" data-state="active">
+                <span class="hm-dot" aria-hidden="true"></span>
+                <div>
+                  <div class="hm-name">dusk · 22:00</div>
+                  <div class="hm-sub">refine queue · overnight plan written · runner detaches</div>
+                  <div class="hm-detail">3 specs ready · plan.md immutable · cortex overnight start runs in tmux.</div>
+                </div>
+              </li>
+              <li class="hm-row" data-state="active">
+                <span class="hm-dot" aria-hidden="true"></span>
+                <div>
+                  <div class="hm-name">round 1 · 22:00 → 00:15</div>
+                  <div class="hm-sub">orchestrator fans out · 3 planners · 3 leads · merge gate</div>
+                  <div class="hm-detail">all three features merge. one runs rework; ci passes; review approves.</div>
+                </div>
+              </li>
+              <li class="hm-row" data-state="paused">
+                <span class="hm-dot" aria-hidden="true"></span>
+                <div>
+                  <div class="hm-name">round 2 · 00:30 → 02:15</div>
+                  <div class="hm-sub">planner ④ · ralph loop exhausted · brain.py DEFER</div>
+                  <div class="hm-detail">feature ④ writes a blocking question to deferred/q001.md. integration held.</div>
+                </div>
+              </li>
+              <li class="hm-row" data-state="skipped">
+                <span class="hm-dot" aria-hidden="true"></span>
+                <div>
+                  <div class="hm-name">round 3 · skipped</div>
+                  <div class="hm-sub">dep gap — feature ⑤ depends on ④</div>
+                  <div class="hm-detail">planner ⑤ never runs. carried over to morning.</div>
+                </div>
+              </li>
+              <li class="hm-row" data-state="gate">
+                <span class="hm-dot" aria-hidden="true"></span>
+                <div>
+                  <div class="hm-name">integration · 05:30</div>
+                  <div class="hm-sub">overnight/&lt;sess-id&gt; → main · test gate</div>
+                  <div class="hm-detail">3 features in · 2 carry over · session-end test gate (if armed).</div>
+                </div>
+              </li>
+              <li class="hm-row gold" data-state="dawn">
+                <span class="hm-dot" aria-hidden="true"></span>
+                <div>
+                  <div class="hm-name">dawn · 05:42</div>
+                  <div class="hm-sub">morning-report.md · session PR · /morning-review</div>
+                  <div class="hm-detail">3 merged, 1 paused, 1 deferred. walk the report; answer the blocking q; merge the PR.</div>
+                </div>
+              </li>
+            </ol>
+
+          </div><!-- /.hood-anatomy -->
+          </div><!-- /.hood-wrap -->
         </div>
       </div>
     </div>
@@ -5739,6 +5865,7 @@
     tryLock();
     applyPipe(pipeProgress());
     updateMetaSpec();
+    if (window.__applyHood) window.__applyHood();
   }
   function onScroll() { if (!raf) raf = requestAnimationFrame(frame); }
   window.addEventListener('scroll', onScroll, { passive: true });
@@ -5807,25 +5934,87 @@
   buildGear(document.getElementById('hood-gear-a'), 12, 15, 3.5, 4.5);
   buildGear(document.getElementById('hood-gear-b'), 16, 19, 4,   6);
 
-  // ── Toggle open/close ──
-  const cta = document.getElementById('hood-cta');
-  const panel = document.getElementById('hood-panel');
-  if (cta && panel) {
-    cta.addEventListener('click', function(){
-      const isOpen = panel.getAttribute('data-open') === '1';
-      if (isOpen) {
-        cta.setAttribute('aria-expanded', 'false');
-        panel.setAttribute('data-open', '0');
-        panel.setAttribute('aria-hidden', 'true');
-        cta.classList.remove('open');
-      } else {
-        cta.setAttribute('aria-expanded', 'true');
-        panel.setAttribute('data-open', '1');
-        panel.setAttribute('aria-hidden', 'false');
-        cta.classList.add('open');
+  // ── Toggle open/close + auto-open on first intersection ──
+  const hoodCta = document.getElementById('hood-cta');
+  const hoodPanel = document.getElementById('hood-panel');
+  const hoodWrap = document.getElementById('hood-wrap');
+  const hoodAnatomy = document.querySelector('.hood-anatomy');
+
+  function openHood() {
+    if (!hoodPanel || !hoodCta) return;
+    hoodPanel.setAttribute('data-open', '1');
+    hoodPanel.setAttribute('aria-hidden', 'false');
+    hoodCta.setAttribute('aria-expanded', 'true');
+    hoodCta.classList.add('open');
+    // .scrub-engaged toggles the default "all zones lit" fallback off so the
+    // .hood-zone dim/lit rules can do the progressive reveal.
+    if (hoodAnatomy) hoodAnatomy.classList.add('scrub-engaged');
+  }
+  function closeHood() {
+    if (!hoodPanel || !hoodCta) return;
+    hoodPanel.setAttribute('data-open', '0');
+    hoodPanel.setAttribute('aria-hidden', 'true');
+    hoodCta.setAttribute('aria-expanded', 'false');
+    hoodCta.classList.remove('open');
+  }
+
+  if (hoodCta && hoodPanel) {
+    hoodCta.addEventListener('click', function(){
+      const isOpen = hoodPanel.getAttribute('data-open') === '1';
+      if (isOpen) closeHood(); else openHood();
+    });
+
+    // Auto-open the panel when the CTA enters the viewport. We observe the
+    // CTA rather than the wrap because the wrap lives inside the collapsed
+    // panel (display:none) and IO won't fire on display:none nodes.
+    if ('IntersectionObserver' in window) {
+      const _hoodIO = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          if (e.intersectionRatio > 0.05 && hoodPanel.getAttribute('data-open') === '0') {
+            openHood();
+            // After opening, the master scroll loop will start lighting zones
+            // as the user scrolls. Nudge it once so the initial state is right.
+            if (window.__applyHood) requestAnimationFrame(window.__applyHood);
+          }
+        });
+      }, { threshold: [0, 0.05, 0.2] });
+      _hoodIO.observe(hoodCta);
+    }
+  }
+
+  // ── Progressive reveal · zone thresholds along the wrap's scroll length ──
+  const HOOD_THRESHOLDS = {
+    'dusk':              0.00,
+    'round-1-plan':      0.10,
+    'round-1':           0.18,
+    'round-2-plan':      0.32,
+    'round-2':           0.40,
+    'round-3-skipped':   0.55,
+    'integration':       0.62,
+    'test-gate':         0.78,
+    'dawn':              0.88,
+  };
+
+  function hoodProgress() {
+    if (!hoodWrap) return 0;
+    const total = hoodWrap.offsetHeight - window.innerHeight;
+    if (total <= 0) return 0;
+    const r = hoodWrap.getBoundingClientRect();
+    const scrolled = Math.max(0, -r.top);
+    return Math.max(0, Math.min(1, scrolled / total));
+  }
+  function applyHood(p) {
+    // Monotonic — zones only ever gain .lit. Scroll-back doesn't dim.
+    Object.keys(HOOD_THRESHOLDS).forEach((zone) => {
+      if (p >= HOOD_THRESHOLDS[zone]) {
+        document.querySelectorAll('.hood-zone[data-zone="' + zone + '"]').forEach((el) => {
+          el.classList.add('lit');
+        });
       }
     });
   }
+  // Exposed to the main IIFE's frame() so we share a single rAF loop.
+  window.__applyHood = function () { applyHood(hoodProgress()); };
 
 })();
 </script>
