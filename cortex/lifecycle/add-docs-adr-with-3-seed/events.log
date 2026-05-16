@@ -6,3 +6,5 @@
 {"ts":"2026-05-16T04:10:02Z","event":"synthesizer_drift","feature":"add-docs-adr-with-3-seed","expected_sha":"1b0bdd65fbbfc6a8f5d5def9d958ee9216ac6c5d136b5ce1c57b560f0bf71372","observed_sha_or_null":null}
 {"ts": "2026-05-16T11:39:19Z", "event": "spec_approved", "feature": "add-docs-adr-with-3-seed"}
 {"ts": "2026-05-16T11:39:19Z", "event": "phase_transition", "feature": "add-docs-adr-with-3-seed", "from": "specify", "to": "plan"}
+{"ts": "2026-05-16T13:27:51Z", "event": "plan_approved", "feature": "add-docs-adr-with-3-seed"}
+{"ts": "2026-05-16T13:27:51Z", "event": "phase_transition", "feature": "add-docs-adr-with-3-seed", "from": "plan", "to": "implement"}
