@@ -51,6 +51,13 @@ CRITICAL_REVIEW_PATH = REPO_ROOT / "skills" / "critical-review" / "SKILL.md"
 # ``grep -l 'load-requirements.md\|tag-based.*loading' ...``
 _CITATION_RE = re.compile(r"load-requirements\.md|tag-based.*loading")
 
+# Consumer-rule prose matched by the spec R14 union grep:
+# ``grep -c 'absence as a signal\|surface the term' <file>`` >= 1.
+# Surfaces an undefined-glossary-term to the user as a signal to raise in
+# the next requirements interview — the only signal-handling path for
+# absent terms (no spec-side parking artifact, no automated promotion).
+_CONSUMER_RULE_RE = re.compile(r"absence as a signal|surface the term")
+
 
 def test_six_consumer_references_cite_shared_protocol() -> None:
     """Each of the 6 non-exempt consumers contains the canonical citation.
@@ -68,6 +75,29 @@ def test_six_consumer_references_cite_shared_protocol() -> None:
     assert not missing, (
         "consumer references lacking 'load-requirements.md' or "
         f"'tag-based ... loading' citation: {missing}"
+    )
+
+
+def test_six_consumer_references_carry_consumer_rule_prose() -> None:
+    """Each of the 6 non-exempt consumers contains the consumer-rule prose.
+
+    Mirrors the spec's R14 union grep — ``grep -c "absence as a signal\\|
+    surface the term" <file>`` >= 1 for each consumer. The prose surfaces
+    an undefined glossary term to the user as a signal to raise in the
+    next requirements interview; absent the prose, a consumer would
+    silently swallow the gap. This test prevents a future edit from
+    accidentally stripping the rule while rewriting nearby text.
+    """
+    missing: list[str] = []
+    for ref in CONSUMER_REFS:
+        assert ref.is_file(), f"consumer reference missing: {ref}"
+        text = ref.read_text(encoding="utf-8")
+        if not _CONSUMER_RULE_RE.search(text):
+            missing.append(str(ref.relative_to(REPO_ROOT)))
+    assert not missing, (
+        "consumer references lacking the consumer-rule prose "
+        "('absence as a signal' or 'surface the term'): "
+        f"{missing}"
     )
 
 
