@@ -2,12 +2,17 @@
 schema_version: "1"
 uuid: 57aa1034-b590-4f84-ba13-ab37f95dbd8f
 title: "Propagate backlog criticality to lifecycle_start event in refine workflow"
-status: backlog
+status: complete
 priority: medium
 type: bug
 created: 2026-05-17
-updated: 2026-05-17
+updated: 2026-05-18
 tags: [lifecycle, refine, criticality]
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/propagate-backlog-criticality-to-lifecycle-start/spec.md
+areas: [lifecycle]
+session_id: null
 ---
 
 # Propagate backlog criticality to lifecycle_start event in refine workflow
