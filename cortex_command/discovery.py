@@ -258,6 +258,20 @@ def append_event(events_log_path: Path, event: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Gate brief word cap (derived from corpus measurement; see
+# cortex/lifecycle/discovery-output-density-investigate-author-centric/word-cap-derivation.md)
+# ---------------------------------------------------------------------------
+
+GATE_BRIEF_WORD_CAP: int = 150
+"""Maximum word count for the research→decompose gate brief.
+
+Derived as the 90th percentile of compressed Headline Finding word counts
+across the cortex/research corpus, applying the 2.5× compression baseline
+from the prior reader study, rounded to the nearest 25 words.
+"""
+
+
+# ---------------------------------------------------------------------------
 # Event payload validators
 # ---------------------------------------------------------------------------
 
