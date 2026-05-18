@@ -95,12 +95,19 @@ def _branch_exists(branch: str, repo: Path) -> bool:
     return result.returncode == 0
 
 
-def _resolve_branch_name(feature: str, repo: Path) -> str:
+def _resolve_branch_name(feature: str, repo: Path, prefix: str = "pipeline") -> str:
     """Find an available branch name for the feature.
 
-    Tries pipeline/{feature} first, then pipeline/{feature}-2, -3, etc.
+    Tries {prefix}/{feature} first, then {prefix}/{feature}-2, -3, etc.
+
+    Args:
+        feature: Feature name used as the branch path component.
+        repo: Path to the git repository.
+        prefix: Branch namespace prefix (default: "pipeline"). Pass
+            "interactive" for worktrees created by the interactive
+            lifecycle path.
     """
-    base = f"pipeline/{feature}"
+    base = f"{prefix}/{feature}"
     if not _branch_exists(base, repo):
         return base
     suffix = 2
@@ -297,7 +304,12 @@ def create_worktree(
                 exists=True,
             )
 
-    branch = _resolve_branch_name(feature, repo)
+    _INTERACTIVE_SENTINEL = "interactive-"
+    if feature.startswith(_INTERACTIVE_SENTINEL):
+        slug = feature[len(_INTERACTIVE_SENTINEL):]
+        branch = _resolve_branch_name(slug, repo, prefix="interactive")
+    else:
+        branch = _resolve_branch_name(feature, repo)
 
     worktree_path.parent.mkdir(parents=True, exist_ok=True)
 

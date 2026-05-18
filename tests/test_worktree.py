@@ -20,7 +20,11 @@ from unittest.mock import patch
 
 import pytest
 
-from cortex_command.pipeline.worktree import create_worktree, resolve_worktree_root
+from cortex_command.pipeline.worktree import (
+    _resolve_branch_name,
+    create_worktree,
+    resolve_worktree_root,
+)
 
 
 def _init_git_repo(path: Path) -> str:
@@ -724,3 +728,38 @@ def test_atime_touch_skipped_with_env_opt_out(monkeypatch, tmp_path):
         f"expected atime unchanged with opt-out; old_time={old_time}, "
         f"new_atime={new_atime}, delta={new_atime - old_time}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests for _resolve_branch_name() prefix parameter (T6 — interactive support).
+# ---------------------------------------------------------------------------
+
+
+class TestResolveBranchNamePrefix:
+    """Tests for the prefix parameter added to _resolve_branch_name()."""
+
+    def test_interactive_prefix_returns_interactive_slug(self, tmp_path):
+        """verify-t6: prefix="interactive" yields interactive/{slug} branch name."""
+        _init_git_repo(tmp_path)
+        result = _resolve_branch_name("test-fixture", repo=tmp_path, prefix="interactive")
+        assert result == "interactive/test-fixture"
+
+    def test_default_prefix_is_pipeline(self, tmp_path):
+        """Default prefix produces pipeline/{feature} (backward-compatible)."""
+        _init_git_repo(tmp_path)
+        result = _resolve_branch_name("my-feature", repo=tmp_path)
+        assert result == "pipeline/my-feature"
+
+    def test_interactive_prefix_collision_appends_suffix(self, tmp_path):
+        """Collision suffix increments correctly for interactive/ prefix."""
+        _init_git_repo(tmp_path)
+        # Pre-create the branch so the first probe finds a collision.
+        subprocess.run(
+            ["git", "branch", "interactive/collision-feat"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=str(tmp_path),
+        )
+        result = _resolve_branch_name("collision-feat", repo=tmp_path, prefix="interactive")
+        assert result == "interactive/collision-feat-2"
