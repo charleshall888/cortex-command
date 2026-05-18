@@ -646,7 +646,7 @@ build-plugin:
         case "$p" in
             cortex-core)
                 SKILLS=(commit pr lifecycle backlog requirements requirements-gather requirements-write research discovery refine dev diagnose critical-review)
-                HOOKS=(hooks/cortex-validate-commit.sh claude/hooks/cortex-worktree-create.sh claude/hooks/cortex-worktree-remove.sh)
+                HOOKS=(hooks/cortex-validate-commit.sh claude/hooks/cortex-session-start-path-bootstrap.sh claude/hooks/cortex-worktree-create.sh claude/hooks/cortex-worktree-remove.sh)
                 BIN=(cortex-)
                 ;;
             cortex-overnight)

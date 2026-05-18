@@ -9,14 +9,6 @@
 
 set -euo pipefail
 
-# PATH bootstrap: when Claude Code is launched via macOS Dock/Finder, the
-# session inherits launchd's minimal PATH, which excludes the user-site bin
-# directories where cortex-command's console scripts (cortex-worktree-resolve)
-# live. Prepend the dominant cortex-tool bin layouts so the resolver is
-# reachable regardless of launch context. This does NOT mask a genuinely
-# uninstalled tool — see the diagnostic below.
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
-
 # Read stdin once into a variable so we can parse multiple fields
 INPUT=$(cat)
 
