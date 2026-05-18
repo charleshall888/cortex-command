@@ -16,7 +16,7 @@ Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with
 **Branch selection**: If the current branch is `main` or `master`, prompt the user via AskUserQuestion with three options:
 
 - **Implement on current branch** (recommended) — trunk-based workflow, changes land directly on the current branch. **When to pick**: tiny, trunk-safe changes where a branch would be overhead.
-- **Implement in autonomous worktree** — dispatch to the daytime pipeline (the `cortex-daytime-pipeline` console-script) which runs the full implement → review → complete cycle headlessly in the background without requiring live steering; note that uncommitted changes remain on main and do not travel to the worktree. **When to pick**: medium/many-task/no-live-steering-needed features where you want to kick off a longer autonomous run and move on. Proceeds to §1a below.
+- **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `$TMPDIR/cortex-worktrees/interactive-{slug}/` and returns the path; the user then manually cd's into the worktree OR opens a fresh `claude --worktree=<path>` session to continue the implement phase there (Variant A vs Variant B dispatch is owned by epic #240; T10 ships only the create + handoff step). **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
 **Uncommitted-changes guard**: Immediately before the `AskUserQuestion` call, run `git status --porcelain` (no path filter, no additional flags). If non-empty output is returned, the option that keeps the user on the current branch is demoted in place: (a) prepend the fixed warning `Warning: uncommitted changes in working tree — this will mix them into the commit on main.` as a one-line prefix to that option's description, and (b) strip the `(recommended)` suffix from that option's label if present. The option remains selectable and stays at its existing position — no removal, no gating pre-question. If `git status --porcelain` exits non-zero (e.g., missing `.git`, corrupt index, bisect/rebase state), the guard does not fire — neither the demotion nor the warning prefix are applied — a single-line diagnostic `uncommitted-changes guard skipped: git status failed` is surfaced alongside the prompt, and the pre-flight continues normally as a fallback.
@@ -36,14 +36,14 @@ except Exception:
 
 Route by exit code into one of three menu dispositions:
 
-- **exit 0** → the `cortex_command` module is present → all three options remain unchanged: `Implement on current branch`, `Implement in autonomous worktree`, and `Create feature branch`.
-- **exit 1** → the module is absent → remove `Implement in autonomous worktree` from the options array; this is a silent hide, with no diagnostic surfaced. The post-degrade option set is `Implement on current branch` and `Create feature branch`.
+- **exit 0** → the `cortex_command` module is present → all three options remain unchanged: `Implement on current branch`, `Implement on feature branch with worktree`, and `Create feature branch`.
+- **exit 1** → the module is absent → remove `Implement on feature branch with worktree` from the options array; this is a silent hide, with no diagnostic surfaced. The post-degrade option set is `Implement on current branch` and `Create feature branch`.
 - **any other exit** (including 2 and 127) → the probe failed → fail open: all three options remain, and the literal diagnostic string `runtime probe skipped: import probe failed` is surfaced alongside the prompt.
 
 After the probe completes and the options array has been resolved per the routing rules above, the resolved options array is then passed to `AskUserQuestion`.
 
 Dispatch by selection:
-- If the user selects **Implement in autonomous worktree**, proceed to §1a (Daytime Dispatch alternate path below).
+- If the user selects **Implement on feature branch with worktree**, proceed to §1a (Interactive Worktree Creation alternate path below).
 - If the user selects **"Implement on current branch"**, remain on the current branch and proceed to §2 Task Dispatch.
 - If the user selects **"Create feature branch"**, create and check out `feature/{lifecycle-slug}` before dispatching any tasks. All lifecycle artifacts (research, spec, plan) are already committed to main at this point, so the feature branch starts with the full artifact trail and only implementation commits diverge. Then proceed to §2 Task Dispatch.
 
@@ -51,113 +51,49 @@ If the current branch is not `main`/`master` (already on a feature branch or res
 
 **Dependency graph analysis**: Parse the `**Depends on**` field from every pending task. Build an adjacency list: for each task, record which tasks it depends on. If a cycle is detected, stop and surface the error to the user — do not dispatch any tasks.
 
-### 1a. Daytime Dispatch (Alternate Path)
+### 1a. Interactive Worktree Creation (Alternate Path)
 
-This section runs **only** when the user selected "Implement in autonomous worktree" in §1. It **replaces §2–§4 for the main session**: the main session does not run Task Dispatch, Rework, or Transition directly. Instead, it launches the daytime pipeline as a background subprocess, polls for progress, surfaces the final outcome, and exits /cortex-core:lifecycle.
+This section runs **only** when the user selected "Implement on feature branch with worktree" in §1. It **replaces §2–§4 for the main session**: the main session creates the worktree, returns the path to the user, and exits `/cortex-core:lifecycle`. The user then continues implementation inside the worktree (Variant A: `cd` into it; Variant B: open a fresh `claude --worktree=<path>` session) — that handoff dispatch is owned by epic #240 and is out of scope here.
 
-There is **no `.dispatching` noclobber marker** on this path — the `$$`-based mechanism is unsuitable for a detached background subprocess (the dispatching shell's PID `$$` dies milliseconds after the Bash call returns). The `daytime.pid` guard below is sufficient to prevent double-dispatch.
+**i. Interactive worktree liveness check.** Two separate Bash calls (no compound commands):
 
-**i. Plan.md prerequisite check.** Before any guards or subprocess launch, verify `cortex/lifecycle/{feature}/plan.md` exists. If absent: surface to the user "plan.md not found — cannot launch autonomous worktree. Run /cortex-core:lifecycle plan first." and exit §1a. Do NOT proceed to the guards or the subprocess launch.
+1. Read the interactive PID file: `cat cortex/lifecycle/sessions/{slug}.interactive.pid 2>/dev/null`
+2. If the file was non-empty, liveness check on the PID: `kill -0 $pid 2>/dev/null`
 
-**ii. Double-dispatch guard.** Two separate Bash calls (no compound commands):
+If `kill -0` exits 0 (process alive): reject with "An interactive worktree session is already live for `{slug}` (PID {pid}). Resolve it before creating a new worktree." and exit §1a without creating a worktree. If the exit code is non-zero or the file was absent/empty: proceed.
 
-1. Read PID file: `cat cortex/lifecycle/{feature}/daytime.pid 2>/dev/null`
-2. Liveness check on the PID (if the file was non-empty): `kill -0 $pid 2>/dev/null`
-
-If `kill -0` exits 0 (process alive): reject with "Autonomous daytime run already in progress (PID {pid}) — wait for it to complete or check events.log" and exit §1a. If the exit code is non-zero or the file was empty/absent: proceed.
-
-**iii. Overnight concurrent guard.** Four separate Bash calls (no compound commands):
+**ii. Overnight concurrent guard.** Two separate Bash calls (no compound commands):
 
 1. Read active session descriptor: `cat ~/.local/share/overnight-sessions/active-session.json 2>/dev/null`. If absent or empty: proceed normally (no overnight session active).
-2. Parse `repo_path`, `phase`, and `state_path` fields from the JSON. If `repo_path` does not equal the current working directory, **or** `phase` is not `"executing"`: proceed normally.
-3. Derive the session directory as the parent directory of `state_path` (i.e., `Path(state_path).parent`). `state_path` is the full path to the session's state JSON file (e.g., `cortex/lifecycle/sessions/{id}/overnight-state.json`); the session directory is the containing directory. Read the runner lock file: `cat {session_dir}/.runner.lock 2>/dev/null` and extract the runner PID.
-4. Liveness check: `kill -0 $runner_pid 2>/dev/null`. If the runner is alive (exit 0): reject with "Overnight runner is active (PID {pid}) — wait for it to complete before launching a daytime run." and exit §1a. If the runner is dead (non-zero exit): emit warning "overnight state shows executing but no live runner found — may be stale; proceeding" and continue.
+2. Parse the `repo_path` field from the JSON. If `repo_path` equals the current working directory: reject with "Overnight runner is active for this repo — wait for it to complete before creating an interactive worktree." and exit §1a. If `repo_path` does not match (different repo's overnight session): proceed normally.
 
-**iv. Background subprocess launch.** Three preparatory Bash calls before the launch, then one launch call, then one post-launch update call — five calls total (no compound commands):
+**iii. Worktree creation.** Single Bash call invoking `create_worktree` from `cortex_command.pipeline.worktree`:
 
-**Step 1 — Mint dispatch UUID.** Single Bash call to `cortex_command.overnight.daytime_pipeline`'s UUID-minting entry (the helper prints a 32-char lowercase hex string); the main session stashes the printed value into conversation memory as the active `dispatch_id` for the current feature.
-
-**Step 2 — Write `daytime-dispatch.json` atomically.** Single Bash call (before the subprocess launch):
-
-```
-cortex-daytime-dispatch-writer --feature {slug} --dispatch-id {uuid} --mode init
+```python
+from cortex_command.pipeline.worktree import create_worktree
+info = create_worktree(feature="interactive-{slug}", base_branch="main")
 ```
 
-Invoke `cortex-daytime-dispatch-writer` in init mode — see the module for the canonical atomic-write contract and `daytime-dispatch.json` schema.
+The `interactive-` prefix causes `create_worktree` to resolve the branch as `interactive/{slug}` (via `_resolve_branch_name` with `prefix="interactive"`), and the worktree is materialized at `$TMPDIR/cortex-worktrees/interactive-{slug}/`. The function copies `.claude/settings.local.json` into the worktree and symlinks `.venv` as part of the standard post-creation steps.
 
-**Step 3 — Launch background subprocess.** Single Bash call with `run_in_background: true`, with `DAYTIME_DISPATCH_ID` prefixed. The dispatch uses the promoted `cortex-daytime-pipeline` console-script — registration by `cortex init` makes the default sandbox-registered worktree root work without a per-skill env-prefix; the console-script closes the SDK-importability gap on the Bash-tool path.
+If creation fails (raises `ValueError`): surface the error to the user and exit §1a — do not proceed to handoff.
 
-**Preflight (dispatch-readiness fail-fast).** Before the launch line below, run a separate Bash call to confirm the console-script is reachable on PATH:
-
-```
-command -v cortex-daytime-pipeline >/dev/null 2>&1
-```
-
-When the command is found (exit 0), proceed to the launch line. When the command is missing (non-zero exit), surface a fail-fast diagnostic to the user with these three lines and exit §1a — do not proceed to subprocess launch:
-
-- Autonomous daytime worktree dispatch requires the `cortex-daytime-pipeline` console-script.
-- It is normally installed by `uv tool install` of the cortex-command package. The current shell PATH may be missing it.
-- Re-run `uv tool upgrade cortex-command` (which defers tag resolution to `uv tool`) or `uv tool update-shell` and reload your shell, then retry. Exiting §1a.
-
-The scope of this preflight is **dispatch-readiness** only: it is the fail-fast diagnostic for the intentional MCP-tool-call-gate gap on the Bash-tool subprocess dispatch path (per #145's wontfix and #146's two-layer auto-update model — see `docs/setup.md ## Upgrade & maintenance`). Future skill authors should not copy this fail-fast pattern to non-dispatch-readiness contexts; `command -v` elsewhere in skill prose (e.g., `complete.md:39,42`) remains warn-and-continue. The launch line follows:
+**iv. Handoff.** Surface the worktree path to the user with the following message (substituting the actual resolved path from `info.path`):
 
 ```
-DAYTIME_DISPATCH_ID={uuid} cortex-daytime-pipeline --feature {slug} > cortex/lifecycle/{feature}/daytime.log 2>&1
+Interactive worktree created at: {info.path}
+Branch: interactive/{slug}
+
+To continue implementation:
+  Variant A — cd into the worktree and resume in this session:
+    cd {info.path}
+  Variant B — open a fresh Claude Code session inside the worktree:
+    claude --worktree={info.path}
+
+(Variant A vs Variant B dispatch is owned by epic #240. This step — worktree creation — is complete.)
 ```
 
-The subprocess is responsible for writing `cortex/lifecycle/{feature}/daytime.pid` at its own startup. The skill does not write the PID file — it only reads it.
-
-**Step 4 — Update `daytime-dispatch.json` with subprocess PID.** After the PID file has been written (following the initial-wait in §v), update the `pid` field via the canonical helper:
-
-```
-cortex-daytime-dispatch-writer --feature {slug} --mode update-pid --pid {pid}
-```
-
-Invoke `cortex-daytime-dispatch-writer` in update-pid mode — see the module for the canonical atomic-write contract.
-
-**v. Polling loop.** Sequential Bash calls only — no compound commands.
-
-**Initial wait**: issue a `sleep 10` Bash call with `timeout: 15000` (15 seconds — ample margin over the 10-second sleep). This follows a background launch, so it is not a blocking subprocess wait; it gives the subprocess time to write its PID file.
-
-**After initial wait**: read the PID file with `cat cortex/lifecycle/{feature}/daytime.pid 2>/dev/null`. If the file is absent: this is a startup failure — skip the polling loop and go directly to result surfacing (§vi) using the content of `daytime.log`.
-
-**Per-iteration steps** (each a separate Bash call):
-- (a) Liveness: `kill -0 $pid 2>/dev/null`. Non-zero exit means the process has exited — break out of the polling loop and proceed to result surfacing.
-- (b) Inter-iteration sleep: `sleep 120` Bash call with `timeout: 130000` (130 seconds — ample margin over the 120-second sleep).
-
-**Termination bound**: 120 iterations (~4 hours). Context window exhaustion — not iteration count — is the practical binding constraint for long runs. At **30 iterations (~1 hour)**, pause and offer the user the option to suspend polling: "Subprocess still running after 30 iterations (~1 hour). Continue polling or stop? (The process continues in background — monitor `cortex/lifecycle/{feature}/daytime.log` and `events.log` directly.)" If the user chooses to stop, exit the polling loop (the subprocess keeps running; skip result surfacing and log `dispatch_complete` with outcome `"paused"` only if the subprocess is still alive — otherwise surface results normally). On reaching 120 iterations without the subprocess exiting: surface "Polling timeout — subprocess may still be running (PID {pid}). Check `cortex/lifecycle/{feature}/daytime.log` directly for status." and exit the polling loop.
-
-**vi. Result surfacing.** Surface results via `daytime_result_reader`, which matches `dispatch_id` against `daytime-dispatch.json` to discriminate stale prior-run files from current dispatch and classifies per the helper's tier-1/tier-3 output schema. Single Bash call:
-
-```
-cortex-daytime-result-reader --feature {slug}
-```
-
-Parse the JSON dict the helper prints to stdout (fields: `outcome`, `terminated_via`, `message`, `source_tier`, `pr_url`, `deferred_files`, `error`, `log_tail`) and surface to the user per the helper's documented output schema. On tier-1 success the `outcome` field is one of `merged`, `deferred`, `paused`, or `failed` — display the `message`, plus `pr_url` (merged), `deferred_files` content (deferred), or `error` (failed) as appropriate; on tier-3 surface the `outcome` is `unknown` with a discriminated `message` and `log_tail` (last 20 lines of `daytime.log`) — do NOT silently re-classify as `failed`.
-
-After displaying a tier-1 result, issue a separate Bash call to delete `daytime-dispatch.json` and mark the dispatch as consumed:
-
-```
-rm cortex/lifecycle/{feature}/daytime-dispatch.json
-```
-
-**vii. Log `dispatch_complete` event.** After result surfacing, a separate Bash call appends to `cortex/lifecycle/{feature}/events.log`:
-
-```
-{"ts": "<ISO 8601>", "event": "dispatch_complete", "feature": "<name>", "mode": "daytime", "outcome": "complete|deferred|paused|failed|unknown", "pr_url": "<url>|null"}
-```
-
-The `outcome` field maps from the result-surfacing classification:
-
-- Tier-1 `outcome: "merged"` → `"complete"`
-- Tier-1 `outcome: "deferred"` → `"deferred"`
-- Tier-1 `outcome: "paused"` → `"paused"`
-- Tier-1 `outcome: "failed"` → `"failed"`
-- Tier-3 surface (all discrimination variants) → `"unknown"`
-
-The `pr_url` field is the PR URL string if one was surfaced from the result file during Tier-1 success (merged outcome), or the JSON literal `null` otherwise.
-
-**viii. Exit /cortex-core:lifecycle entirely.** Do not transition to any further phase. The daytime pipeline has already run the full lifecycle; the main session's role is done.
+**v. Exit /cortex-core:lifecycle entirely.** Do not transition to any further phase. The worktree has been created; the user's next action is inside the worktree.
 
 ### 2. Task Dispatch
 
