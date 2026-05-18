@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 824e3022-3287-4634-b771-1560ef67cc9d
 title: "Manage interactive feature worktree lifecycle (creation + cleanup)"
-status: backlog
+status: complete
 priority: high
 type: feature
 created: 2026-05-18
@@ -10,13 +10,14 @@ updated: 2026-05-18
 parent: "237"
 blocked-by: []
 tags: [lifecycle, worktree-interactive, daytime-swap]
-areas: [skills, lifecycle, pipeline, hooks]
+areas: [lifecycle]
 discovery_source: cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md
 session_id: null
 lifecycle_phase: null
 lifecycle_slug: null
 complexity: complex
 criticality: high
+spec: cortex/lifecycle/manage-interactive-feature-worktree-lifecycle-creation/spec.md
 ---
 
 ## Role

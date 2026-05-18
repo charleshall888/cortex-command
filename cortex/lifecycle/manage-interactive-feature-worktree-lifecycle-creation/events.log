@@ -15,3 +15,4 @@
 {"ts": "2026-05-18T23:32:13Z", "event": "phase_transition", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "tier": "complex", "from": "implement", "to": "review", "note": "supersedes earlier implement→complete transition after backlog/events criticality mismatch surfaced and user chose to honor recorded high/complex"}
 {"ts": "2026-05-18T23:41:12Z", "event": "review_verdict", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "detected"}
 {"ts": "2026-05-18T23:41:12Z", "event": "phase_transition", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "from": "review", "to": "complete"}
+{"ts": "2026-05-18T23:42:01Z", "event": "feature_complete", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "tasks_total": 13, "rework_cycles": 1, "merge_anchor": "merge"}

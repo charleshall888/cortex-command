@@ -32,6 +32,144 @@
     "repo": null
   },
   {
+    "id": 237,
+    "title": "Swap daytime autonomous for worktree-interactive implement mode",
+    "status": "backlog",
+    "priority": "high",
+    "type": "epic",
+    "tags": [
+      "lifecycle",
+      "worktree-interactive",
+      "daytime-swap",
+      "epic"
+    ],
+    "areas": [
+      "lifecycle",
+      "skills",
+      "pipeline",
+      "overnight-runner"
+    ],
+    "created": "2026-05-18",
+    "updated": "2026-05-18",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md",
+    "plan": null,
+    "uuid": "9de0e122-b600-41b0-8519-838148d36617",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 238,
+    "title": "Swap implement-phase preflight option 2 to worktree-interactive",
+    "status": "refined",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "worktree-interactive",
+      "daytime-swap"
+    ],
+    "areas": [
+      "skills",
+      "lifecycle"
+    ],
+    "created": "2026-05-18",
+    "updated": "2026-05-18",
+    "blocks": [],
+    "blocked_by": [
+      "240"
+    ],
+    "parent": "237",
+    "research": null,
+    "spec": "cortex/lifecycle/swap-implement-phase-preflight-option-2/spec.md",
+    "discovery_source": "cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md",
+    "plan": null,
+    "uuid": "d26e66a6-04f4-49bb-8203-f3a56bdd9db4",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 240,
+    "title": "Implement Variant A end-to-end (interaction model + PR-creation hook)",
+    "status": "backlog",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "worktree-interactive",
+      "daytime-swap",
+      "refactor",
+      "pr"
+    ],
+    "areas": [
+      "skills",
+      "lifecycle",
+      "python"
+    ],
+    "created": "2026-05-18",
+    "updated": "2026-05-18",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "237",
+    "research": null,
+    "spec": null,
+    "discovery_source": "cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md",
+    "plan": null,
+    "uuid": "cfc426e7-5325-4a05-b6a0-bc1a97ee50c3",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 246,
+    "title": "Remove daytime autonomous pipeline and cancel #228/#230",
+    "status": "backlog",
+    "priority": "high",
+    "type": "chore",
+    "tags": [
+      "lifecycle",
+      "worktree-interactive",
+      "daytime-swap",
+      "removal"
+    ],
+    "areas": [
+      "pipeline",
+      "overnight-runner",
+      "skills",
+      "dashboard"
+    ],
+    "created": "2026-05-18",
+    "updated": "2026-05-18",
+    "blocks": [],
+    "blocked_by": [
+      "238",
+      "240"
+    ],
+    "parent": "237",
+    "research": null,
+    "spec": null,
+    "discovery_source": "cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md",
+    "plan": null,
+    "uuid": "f5b675af-6e35-4cd5-9260-b0cc7b897e47",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -180,27 +318,26 @@
     "repo": null
   },
   {
-    "id": 234,
-    "title": "Propagate backlog criticality to lifecycle_start event in refine workflow",
-    "status": "backlog",
+    "id": 235,
+    "title": "Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift",
+    "status": "refined",
     "priority": "medium",
-    "type": "bug",
-    "tags": [
-      "lifecycle",
-      "refine",
-      "criticality"
+    "type": "feature",
+    "tags": [],
+    "areas": [
+      "overnight-runner",
+      "hooks"
     ],
-    "areas": [],
-    "created": "2026-05-17",
-    "updated": "2026-05-17",
+    "created": "2026-05-18",
+    "updated": "2026-05-18",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
     "research": null,
-    "spec": null,
+    "spec": "cortex/lifecycle/trigger-cortex-cli-reinstall-at-sessionstart/spec.md",
     "discovery_source": null,
     "plan": null,
-    "uuid": "57aa1034-b590-4f84-ba13-ab37f95dbd8f",
+    "uuid": "e697d252-3c14-4d08-a7aa-5e1390186f9f",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -208,13 +345,54 @@
     "repo": null
   },
   {
-    "id": 235,
-    "title": "Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift",
+    "id": 241,
+    "title": "Add bidirectional concurrency guards for interactive worktree mode",
+    "status": "refined",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "worktree-interactive",
+      "daytime-swap",
+      "concurrency"
+    ],
+    "areas": [
+      "lifecycle",
+      "skills",
+      "overnight-runner"
+    ],
+    "created": "2026-05-18",
+    "updated": "2026-05-18",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": "237",
+    "research": null,
+    "spec": "cortex/lifecycle/add-bidirectional-concurrency-guards-for-interactive/spec.md",
+    "discovery_source": "cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md",
+    "plan": null,
+    "uuid": "8e7f4c78-1ce2-4a63-8309-a3727730598c",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 248,
+    "title": "Convert bin/cortex-* and skill-embedded python3 -c callsites to use the cortex CLI",
     "status": "backlog",
     "priority": "medium",
     "type": "feature",
-    "tags": [],
-    "areas": [],
+    "tags": [
+      "skills",
+      "hooks",
+      "bin",
+      "install-topology"
+    ],
+    "areas": [
+      "skills",
+      "hooks"
+    ],
     "created": "2026-05-18",
     "updated": "2026-05-18",
     "blocks": [],
@@ -224,7 +402,7 @@
     "spec": null,
     "discovery_source": null,
     "plan": null,
-    "uuid": "e697d252-3c14-4d08-a7aa-5e1390186f9f",
+    "uuid": "8c7e1f4a-d92b-4a7e-8c1f-7b2a9f3e4d5c",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,
@@ -262,49 +440,22 @@
     "repo": null
   },
   {
-    "id": 232,
-    "title": "Re-evaluate cross-skill brief framework — discovery-output-density Phase 2 trigger",
+    "id": 247,
+    "title": "Offer consolidation clusters before R15 gate in discovery decompose",
     "status": "backlog",
     "priority": "low",
     "type": "feature",
     "tags": [
-      "phase2-trigger"
-    ],
-    "areas": [
       "discovery",
-      "lifecycle"
-    ],
-    "created": "2026-05-17",
-    "updated": "2026-05-17",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "b3a82a40-4c42-494f-8002-031733975a43",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 233,
-    "title": "Add `--tag` filter to backlog query CLI for phase2-trigger discoverability",
-    "status": "backlog",
-    "priority": "low",
-    "type": "chore",
-    "tags": [
-      "tooling-gap"
+      "skills",
+      "decompose"
     ],
     "areas": [
-      "backlog",
-      "cli"
+      "skills",
+      "discovery"
     ],
-    "created": "2026-05-17",
-    "updated": "2026-05-17",
+    "created": "2026-05-18",
+    "updated": "2026-05-18",
     "blocks": [],
     "blocked_by": [],
     "parent": null,
@@ -312,34 +463,7 @@
     "spec": null,
     "discovery_source": null,
     "plan": null,
-    "uuid": "1288aefd-5f4a-4007-b8b6-8b999eb4b45d",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 142,
-    "title": "Multi-session host concurrency registry for cortex overnight",
-    "status": "backlog",
-    "priority": "contingent",
-    "type": "feature",
-    "tags": [
-      "overnight",
-      "ipc"
-    ],
-    "areas": [],
-    "created": "2026-04-24",
-    "updated": "2026-04-24",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": null,
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "092f85f8-4ffa-4af6-a32e-e466a6bfdd0f",
+    "uuid": "fafa9ddc-f2b3-4a7f-9401-c92932e2d367",
     "lifecycle_slug": null,
     "session_id": null,
     "lifecycle_phase": null,

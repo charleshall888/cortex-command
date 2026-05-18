@@ -3,29 +3,33 @@
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
 | 228 | Wire daytime dispatch through cortex CLI + MCP with launchd detachment | refined | high | feature | — | — | ✓ |
+| 237 | Swap daytime autonomous for worktree-interactive implement mode | backlog | high | epic | — | — | — |
+| 238 | Swap implement-phase preflight option 2 to worktree-interactive | refined | high | feature | 240 | 237 | ✓ |
+| 240 | Implement Variant A end-to-end (interaction model + PR-creation hook) | backlog | high | feature | — | 237 | — |
+| 246 | Remove daytime autonomous pipeline and cancel #228/#230 | backlog | high | chore | 238, 240 | 237 | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 209 | Lead refine §4 complexity-value gate with recommended option + rationale | in_progress | medium | chore | — | — | ✓ |
 | 211 | R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up) | superseded | medium | bug | — | — | — |
 | 212 | CLI_PIN drift lint (#146 hygiene) | superseded | medium | chore | — | — | — |
-| 234 | Propagate backlog criticality to lifecycle_start event in refine workflow | backlog | medium | bug | — | — | — |
-| 235 | Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift | backlog | medium | feature | — | — | — |
+| 235 | Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift | refined | medium | feature | — | — | ✓ |
+| 241 | Add bidirectional concurrency guards for interactive worktree mode | refined | medium | feature | — | 237 | ✓ |
+| 248 | Convert bin/cortex-* and skill-embedded python3 -c callsites to use the cortex CLI | backlog | medium | feature | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
-| 232 | Re-evaluate cross-skill brief framework — discovery-output-density Phase 2 trigger | backlog | low | feature | — | — | — |
-| 233 | Add `--tag` filter to backlog query CLI for phase2-trigger discoverability | backlog | low | chore | — | — | — |
-| 142 | Multi-session host concurrency registry for cortex overnight | backlog | contingent | feature | — | — | — |
+| 247 | Offer consolidation clusters before R15 gate in discovery decompose | backlog | low | feature | — | — | — |
 
 ## Refined
 
 - **228** Wire daytime dispatch through cortex CLI + MCP with launchd detachment
+- **235** Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift
+- **241** Add bidirectional concurrency guards for interactive worktree mode
 
 ## Backlog
 
-- **234** Propagate backlog criticality to lifecycle_start event in refine workflow
-- **235** Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift
-- **232** Re-evaluate cross-skill brief framework — discovery-output-density Phase 2 trigger
-- **233** Add `--tag` filter to backlog query CLI for phase2-trigger discoverability
-- **142** Multi-session host concurrency registry for cortex overnight
+- **237** Swap daytime autonomous for worktree-interactive implement mode
+- **240** Implement Variant A end-to-end (interaction model + PR-creation hook)
+- **248** Convert bin/cortex-* and skill-embedded python3 -c callsites to use the cortex CLI
+- **247** Offer consolidation clusters before R15 gate in discovery decompose
 
 ## In-Progress
 
