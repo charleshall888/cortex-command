@@ -7,13 +7,11 @@
 # and a weekly cron probe for AUTO_RELEASE_PAT secret presence.
 #
 # Self-retrigger guards (defense-in-depth, layered):
-#   1. Workflow-level if: filter excludes commits whose message contains
-#      `[release-type: skip]` OR matches the auto-generated release commit
-#      subject `^Release v[0-9]+\.[0-9]+\.[0-9]+$`.
-#   2. The auto-generated release commit body embeds `[release-type: skip]`
-#      as a standalone line, so even if guard (1) is bypassed (e.g.,
-#      workflow_dispatch), `bin/cortex-auto-bump-version` returns `no-bump`
-#      and the release job exits cleanly before the rewriter.
+#   1. Workflow-level if: filter excludes commits whose subject matches the
+#      auto-generated release commit subject `^Release v[0-9]+\.[0-9]+\.[0-9]+$`.
+#   2. The auto-generated release commit lives AT the new tag, so on retrigger
+#      `bin/cortex-auto-bump-version` sees an empty `<tag>..HEAD` range and
+#      emits `no-bump`, exiting the release job cleanly before the rewriter.
 #   3. concurrency.cancel-in-progress: true coalesces push storms; the
 #      release is idempotent so collapsing to the latest push is safe.
 #
@@ -53,11 +51,8 @@ jobs:
     name: Validate (low-privilege)
     # Skip self-retriggered runs from the auto-generated release commit.
     # The startsWith check is the workflow-level self-retrigger guard;
-    # standalone-line [release-type: skip] markers are honored by
-    # cortex-auto-bump-version's anchored regex (T14 contract), which
-    # outputs no-bump and short-circuits the release steps. The earlier
-    # contains() check was too loose — it matched prose mentions of the
-    # marker inside commit bodies and self-disabled valid releases.
+    # belt-and-suspenders, the bumper itself emits no-bump on the retrigger
+    # because HEAD == latest-tag (empty <tag>..HEAD range).
     if: >-
       github.event_name != 'schedule' &&
       !startsWith(github.event.head_commit.message, 'Release v')
@@ -135,17 +130,13 @@ jobs:
         if: steps.bump.outputs.skip == 'false'
         run: bin/cortex-rewrite-cli-pin "${{ steps.bump.outputs.next_tag }}"
 
-      - name: "Commit release (embeds [release-type: skip] as body marker)"
+      - name: "Commit release"
         if: steps.bump.outputs.skip == 'false'
         run: |
           set -euo pipefail
           NEXT_TAG="${{ steps.bump.outputs.next_tag }}"
           git add plugins/cortex-overnight/server.py
-          # Standalone-line [release-type: skip] body marker ensures any
-          # re-trigger path (e.g., workflow_dispatch on this commit, or the
-          # workflow-level if-filter being bypassed) self-no-bumps via the
-          # bin/cortex-auto-bump-version regex.
-          git commit -m "$(printf 'Release %s\n\n[release-type: skip]\n' "${NEXT_TAG}")"
+          git commit -m "Release ${NEXT_TAG}"
 
       - name: Create tag at release commit
         if: steps.bump.outputs.skip == 'false'

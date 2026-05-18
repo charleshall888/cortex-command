@@ -74,15 +74,6 @@ def test_classify_major_marker_standalone_in_body():
     assert MOD.classify_messages([msg]) == "major"
 
 
-def test_classify_skip_marker_wins_over_major():
-    """Skip precedence: explicit skip beats explicit major in same range."""
-    msgs = [
-        "Add feature X\n\n[release-type: major]",
-        "Tweak skip-worthy doc\n\n[release-type: skip]",
-    ]
-    assert MOD.classify_messages(msgs) == "skip"
-
-
 def test_classify_breaking_fallback_fires_major_without_explicit_marker():
     """BREAKING: standalone line in body triggers major when no marker set."""
     msg = "Restructure plugin loader\n\nBREAKING: removes legacy path"
@@ -112,10 +103,25 @@ def test_classify_prose_embedded_marker_does_not_fire():
 def test_classify_breaking_token_inside_prose_does_not_fire():
     """`BREAKING:` mentioned mid-sentence does NOT fire the fallback.
 
-    The regex anchors at line-start (``(?im)^\\s*BREAKING…``), so a phrase
+    The regex anchors at column 0 (``(?im)^BREAKING…``), so a phrase
     like "discusses breaking: behavior" mid-line is ignored.
     """
     msg = "docs: clarify that breaking: changes need markers"
+    assert MOD.classify_messages([msg]) == "patch"
+
+
+def test_classify_breaking_indented_under_bullet_does_not_fire():
+    """Indented `BREAKING:` (bullet continuation) does NOT fire the fallback.
+
+    The fallback is for declared breaking footers (column-0 convention),
+    not for prose that happens to mention the BREAKING token while
+    describing the convention itself.
+    """
+    msg = (
+        "Apply review feedback\n\n"
+        "- R20: regex-validated marker syntax; add\n"
+        "  BREAKING: fallback for defense-in-depth against marker misses"
+    )
     assert MOD.classify_messages([msg]) == "patch"
 
 
@@ -144,12 +150,6 @@ def test_bump_tag_major_zeroes_minor_and_patch():
 def test_decide_empty_messages_returns_no_bump():
     """HEAD == latest tag (no new commits) → ``no-bump\\n`` per spec (vi)."""
     assert MOD.decide("v1.0.2", [], "deadbeef") == "no-bump\n"
-
-
-def test_decide_skip_marker_returns_no_bump():
-    """Skip marker present → ``no-bump\\n`` per spec (vi)."""
-    msgs = ["Release v1.0.2\n\n[release-type: skip]"]
-    assert MOD.decide("v1.0.2", msgs, "deadbeef") == "no-bump\n"
 
 
 def test_decide_no_tags_with_commits_emits_default_tag():
@@ -316,20 +316,6 @@ def test_script_explicit_minor_marker_in_subject(tmp_path: Path):
     result = _run_script(tmp_path)
     assert result.returncode == 0, result.stderr
     assert result.stdout == "v1.1.0\n"
-
-
-def test_script_skip_marker_short_circuits_to_no_bump(tmp_path: Path):
-    """Skip marker present in any commit since tag → no-bump."""
-    _init_git_repo(tmp_path)
-    _commit(tmp_path, "a.txt", "initial commit")
-    _tag(tmp_path, "v1.0.2")
-    _commit(
-        tmp_path, "b.txt",
-        "Release v1.0.2 follow-up\n\n[release-type: skip]\n",
-    )
-    result = _run_script(tmp_path)
-    assert result.returncode == 0, result.stderr
-    assert result.stdout == "no-bump\n"
 
 
 def test_script_prose_embedded_marker_does_not_fire(tmp_path: Path):

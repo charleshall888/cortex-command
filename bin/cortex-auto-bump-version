@@ -4,7 +4,7 @@
 Stdlib-only. No required args; supports ``--dry-run`` (read-only mode that
 performs no filesystem mutations and runs the same selection logic).
 
-Logic (per spec R20 in cortex/lifecycle/close-plugin-cli-auto-update-gaps):
+Logic:
     (i)   read latest tag via ``git describe --tags --abbrev=0`` (no tag →
           default ``v0.1.0``).
     (ii)  read full commit messages since the latest tag via
@@ -12,14 +12,13 @@ Logic (per spec R20 in cortex/lifecycle/close-plugin-cli-auto-update-gaps):
           multi-line bodies are captured cleanly; matches GitHub squash-merge
           semantics where per-commit markers land in the merge commit's body).
     (iii) parse each message for a *positionally-anchored* marker matching
-          ``(?im)^\\s*\\[release-type:\\s*(major|minor|skip)\\s*\\]\\s*$``.
+          ``(?im)^\\s*\\[release-type:\\s*(major|minor)\\s*\\]\\s*$``.
           The marker MUST occupy its own line (modulo whitespace); prose-
           embedded mentions do not fire.
-    (iv)  precedence: skip > major > minor > patch (default).
+    (iv)  precedence: major > minor > patch (default).
     (v)   ``BREAKING:`` / ``BREAKING CHANGE:`` standalone-line fallback fires
           a major-bump when no explicit ``[release-type: …]`` marker is found.
-    (vi)  on ``skip`` OR when HEAD == latest-tag, emit ``no-bump\\n`` and
-          exit 0.
+    (vi)  on HEAD == latest-tag (empty range), emit ``no-bump\\n`` and exit 0.
     (vii) otherwise emit ``vX.Y.Z\\n`` per bump scope.
 """
 
@@ -37,16 +36,16 @@ import sys
 # this excludes prose-embedded mentions like
 # "we add a `[release-type: major]` marker to the commit".
 RELEASE_TYPE_RE = re.compile(
-    r"(?im)^\s*\[release-type:\s*(major|minor|skip)\s*\]\s*$"
+    r"(?im)^\s*\[release-type:\s*(major|minor)\s*\]\s*$"
 )
 
 # Standalone-line BREAKING fallback. Matches ``BREAKING:`` or
-# ``BREAKING CHANGE:`` (case-insensitive) at the start of a line followed by
-# optional whitespace/content. Spec calls this out as a defense-in-depth
-# signal for schema-breaking commits that lack an explicit marker; the
-# canonical convention is the colon-suffixed standalone token starting a
-# body paragraph, so we anchor at line-start.
-BREAKING_RE = re.compile(r"(?im)^\s*BREAKING(?:\s+CHANGE)?:")
+# ``BREAKING CHANGE:`` (case-insensitive) at column 0 of a line — the
+# Conventional Commits footer convention. We deliberately do NOT permit
+# leading whitespace: indented bullet continuations that happen to mention
+# ``BREAKING:`` (e.g., a bullet describing the BREAKING fallback as a
+# feature) are prose, not declarations, and must not fire the fallback.
+BREAKING_RE = re.compile(r"(?im)^BREAKING(?:\s+CHANGE)?:")
 
 # Tag-shape regex used when parsing the latest tag for bumping.
 TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
@@ -55,7 +54,7 @@ TAG_RE = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 DEFAULT_TAG = "v0.1.0"
 
 # Precedence order: lowest index = highest precedence.
-PRECEDENCE: tuple[str, ...] = ("skip", "major", "minor", "patch")
+PRECEDENCE: tuple[str, ...] = ("major", "minor", "patch")
 
 
 def _git(args: list[str]) -> tuple[int, str, str]:
@@ -118,13 +117,12 @@ def commit_messages_since(tag: str | None) -> list[str]:
 
 
 def classify_messages(messages: list[str]) -> str:
-    """Return the bump scope: one of ``skip``, ``major``, ``minor``, ``patch``.
+    """Return the bump scope: one of ``major``, ``minor``, ``patch``.
 
-    Precedence: skip > major > minor > patch. ``BREAKING:`` standalone-line
-    fallback fires a major-bump iff no explicit ``[release-type: …]`` marker
-    is present in any message (per spec R20 step v — "if NO ``[release-
-    type:major]`` marker is found AND any commit message contains the …
-    standalone-line token …, treat as major-bump").
+    Precedence: major > minor > patch. ``BREAKING:`` standalone-line fallback
+    fires a major-bump when no explicit ``[release-type: …]`` marker is
+    present, OR promotes an explicit ``minor`` to ``major`` as defense-in-
+    depth (breaking-change signal wins; promotion never demotion).
     """
     explicit: set[str] = set()
     breaking = False
@@ -134,21 +132,9 @@ def classify_messages(messages: list[str]) -> str:
         if BREAKING_RE.search(msg):
             breaking = True
 
-    if "skip" in explicit:
-        return "skip"
     if "major" in explicit:
         return "major"
-    if breaking and not explicit:
-        # Explicit-marker absence is what triggers the fallback. Per spec:
-        # "if NO ``[release-type:major]`` marker is found" — but the broader
-        # intent is fallback only when no explicit version-bump intent has
-        # been declared (skip already short-circuited above, so the only
-        # remaining explicit options here are minor).
-        return "major"
-    if breaking and "minor" in explicit:
-        # Defense-in-depth: if a maintainer declared minor but the body
-        # carries BREAKING:, the breaking-change signal wins (it's a
-        # safety promotion, never a demotion).
+    if breaking:
         return "major"
     if "minor" in explicit:
         return "minor"
@@ -185,8 +171,6 @@ def decide(latest: str | None, messages: list[str], head: str | None) -> str:
     if not messages:
         return "no-bump\n"
     scope = classify_messages(messages)
-    if scope == "skip":
-        return "no-bump\n"
     base = latest if latest is not None else "v0.0.0"
     # No tags case: caller passes ``latest=None``; emit DEFAULT_TAG when
     # any commits exist (the helper must still produce a tag — bumping is
