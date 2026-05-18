@@ -5,3 +5,11 @@
 {"schema_version": 1, "ts": "2026-05-18T20:45:00Z", "event": "spec_approved", "feature": "manage-interactive-feature-worktree-lifecycle-creation"}
 {"ts": "2026-05-18T21:33:26Z", "event": "plan_approved", "feature": "manage-interactive-feature-worktree-lifecycle-creation"}
 {"ts": "2026-05-18T21:33:26Z", "event": "phase_transition", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "from": "plan", "to": "implement"}
+{"ts": "2026-05-18T21:37:48Z", "event": "batch_dispatch", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "batch": 0, "tasks": [1, 2, 4, 5, 7, 8]}
+{"ts": "2026-05-18T22:08:29Z", "event": "batch_dispatch", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "batch": 1, "tasks": [3, 6, 11]}
+{"ts": "2026-05-18T22:19:10Z", "event": "batch_dispatch", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "batch": 2, "tasks": [9, 10]}
+{"ts": "2026-05-18T22:35:19Z", "event": "batch_dispatch", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "batch": 3, "tasks": [12, 13]}
+{"ts": "2026-05-18T22:56:19Z", "event": "phase_transition", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "tier": "simple", "from": "implement", "to": "complete"}
+{"ts": "2026-05-18T23:32:13Z", "event": "criticality_override", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "from": "medium", "to": "high", "reason": "backlog item #239 explicitly recorded criticality:high; events.log lifecycle_start was set to medium before criticality-propagation lifecycle landed"}
+{"ts": "2026-05-18T23:32:13Z", "event": "complexity_override", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "from": "simple", "to": "complex", "reason": "backlog item #239 explicitly recorded complexity:complex; events.log lifecycle_start was set to simple"}
+{"ts": "2026-05-18T23:32:13Z", "event": "phase_transition", "feature": "manage-interactive-feature-worktree-lifecycle-creation", "tier": "complex", "from": "implement", "to": "review", "note": "supersedes earlier implement→complete transition after backlog/events criticality mismatch surfaced and user chose to honor recorded high/complex"}

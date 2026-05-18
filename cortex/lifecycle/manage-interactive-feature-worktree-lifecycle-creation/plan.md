@@ -22,7 +22,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: complex
 - **Context**: Lockstep change deliberately bundles 7 files because intermediate states fail `just test`; the caller-enumeration rule in `plan.md` overrides the 5-file soft target. Caller sites enumerated by `grep -rn 'cleanup_worktree(' cortex_command/ tests/ --include='*.py'`: `daytime_pipeline.py:260,451`, `smoke_test.py:125`, `outcome_router.py:503,582,604,867,928,1059,1078`, `test_worktree.py:599,622`, `test_worktree_seatbelt.py:85,116`. The spec listed 11 call sites; verification re-counted 14 (`test_worktree_seatbelt.py` adds 2; `outcome_router.py` is 7 not 6). Pass `branch=f"pipeline/{feature}"` at every legacy call site; the `interactive/` prefix call site lands in T10 (Phase 2). Function signature target: `def cleanup_worktree(feature: str, *, branch: str, force: bool = False, repo_path: Path | None = None, worktree_path: Path | None = None) -> None`. New helper `_main_worktree_root()` lives alongside `_repo_root()` at `cortex_command/pipeline/worktree.py:50-67` (the existing private-helper neighborhood). Parity-test fixture creates a temp git repo via `git init` + commits, then calls `wt_mod.cleanup_worktree("test-fixture", repo_path=tmp_repo)` without `branch=` and asserts `TypeError`.
 - **Verification**: run `just test` — pass if exit 0, all tests pass; AND `python3 -c "from cortex_command.pipeline.worktree import cleanup_worktree, _main_worktree_root; import inspect; sig = inspect.signature(cleanup_worktree); assert 'force' in sig.parameters and sig.parameters['force'].default is False; assert 'branch' in sig.parameters and sig.parameters['branch'].default is inspect.Parameter.empty"` — pass if exit 0; AND `grep -nE 'cleanup_worktree\(' cortex_command/ tests/ --include='*.py' -r | grep -vE 'branch=|^[^:]+:[0-9]+:def cleanup_worktree' | wc -l` returns 0 (every call site passes branch=); AND `grep -nE "cleanup_worktree\(.*force=True" cortex_command/overnight/daytime_pipeline.py` returns exactly 1 match at the `_orphan_guard` site.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit a272cf24)
 
 ### Task 2: Extend `feature_complete` event schema with `merge_anchor` field
 - **Files**: `bin/.events-registry.md`, `cortex_command/pipeline/review_dispatch.py`, `cortex_command/pipeline/metrics.py`, `cortex_command/overnight/report.py`
@@ -31,7 +31,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: simple
 - **Context**: Today's interactive `complete.md` does NOT emit `merge_anchor` — it's rewritten in T9 to emit `"merge"`. The spec calls the legacy default `"review"` (matches today's pre-merge-anchor semantics where `feature_complete` fired at PR-create time, not post-merge). The events-registry row currently reads `| feature_complete | per-feature-events-log | gate-enforced | ...producers... | ...consumers... | live | 2026-05-11 | | | |` (see `bin/.events-registry.md:12`); the schema docs in `docs/internals/events-registry.md` need a sibling note about the field. Reader sites: `cortex_command/pipeline/metrics.py:212` (aggregation key), `cortex_command/common.py:198` (`_detect_lifecycle_phase_inner` reads only the event presence, no field branching needed there — but verify), `cortex_command/overnight/report.py:1691`. Producer payloads in `review_dispatch.py` are already JSON-shaped; add `"merge_anchor": "review"` to both `_emit_feature_complete` style calls (the `:287` and `:535` lines map to two emit sites).
 - **Verification**: `grep -c "merge_anchor" bin/.events-registry.md` returns ≥1; AND `grep -c '"merge_anchor"' cortex_command/pipeline/review_dispatch.py` returns ≥2 (one per emit site); AND `grep -c 'merge_anchor' cortex_command/pipeline/metrics.py cortex_command/overnight/report.py` returns ≥2 (reader sites consume the field); AND `just test` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 90127ac8); report.py:1691 ref was stale — agent added _read_feature_complete_merge_anchor() helper (flagged as self-sealing, not yet wired)
 
 ### Task 3: Segment metrics aggregates by `merge_anchor`
 - **Files**: `cortex_command/pipeline/metrics.py`, `cortex_command/pipeline/tests/test_metrics.py`
@@ -40,7 +40,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: simple
 - **Context**: `cortex_command/pipeline/metrics.py:161-276` contains the phase-duration aggregation logic; the relevant aggregation key is the `phase_durations` dict (or equivalent). The new shape is `phase_durations: dict[tuple[str, str], list[float]]` keyed by `(phase, merge_anchor)`, OR a flat partition `phase_durations_by_anchor: dict[str, dict[str, list[float]]]`. Choose whichever fits the existing aggregator's shape with the minimum churn. The existing tests at `cortex_command/pipeline/tests/test_metrics.py:1421-1460` exercise `plan_comparison` events — follow the same fixture pattern.
 - **Verification**: `just test cortex_command/pipeline/tests/test_metrics.py` exits 0 (the new mixed-anchor fixture must assert that `merge_anchor="review"` and `merge_anchor="merge"` events accumulate into separate buckets, and that absent-field events default to the `"review"` bucket).
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 0406dad5); shape: avg_phase_durations_by_anchor dict-of-dicts
 
 ### Task 4: Reorder morning-review walkthrough Section 5 → 6b
 - **Files**: `skills/morning-review/references/walkthrough.md`, `tests/test_morning_review_status_close_ordering.py`
@@ -49,7 +49,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: simple
 - **Context**: `walkthrough.md:424` opens `## Section 5 — Auto-Close Backlog Tickets`; `walkthrough.md:462` opens `## Section 6 — PR Review and Merge`; `walkthrough.md:530` opens `## Section 6a — Post-merge sync`. The new `## Section 6b — Close Backlog Tickets` heading goes after 6a's success path and before any subsequent section. The test asserts ordering by parsing the walkthrough markdown and checking that the `cortex-update-item status=complete` literal appears strictly AFTER the `gh pr merge` literal in source order — a structural assertion that is robust to renumbering.
 - **Verification**: `awk '/## Section 6 — PR Review/{m=NR} /cortex-update-item.*status=complete/{u=NR} END{exit !(u>m)}' skills/morning-review/references/walkthrough.md` exits 0 (status=complete appears after the merge section header); AND `just test tests/test_morning_review_status_close_ordering.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit f06c0ad8); awk verification needs gawk or python (BSD awk em-dash issue); semantic ordering confirmed
 
 ### Task 5: Land the ADR documenting multi-step Complete + interactive worktree decisions
 - **Files**: `cortex/adr/NNNN-multi-step-complete-and-interactive-worktree-lifecycle.md`
@@ -58,7 +58,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: simple
 - **Context**: ADR conventions live at `cortex/adr/README.md`; existing ADRs in `cortex/adr/` show the YAML frontmatter shape (status: proposed | accepted, plus typical fields). The three-criteria gate (hard-to-reverse + surprising-without-context + real-trade-off) is met per the spec's Proposed ADR section — copy the rationale prose from spec.md's `## Proposed ADR` (lines 140-144) as the ADR body's "Decision" section. Resolve `NNNN` via `ls cortex/adr/ | grep -E '^[0-9]+-' | sort -n | tail -1` and increment.
 - **Verification**: `ls cortex/adr/*multi-step-complete*.md` exits 0 (one file matches); AND `grep -c -i "rejected alternative" cortex/adr/*multi-step-complete*.md` returns ≥4; AND the file's frontmatter `status:` value is one of `proposed` or `accepted` (verify via `grep -E '^status: (proposed|accepted)$' cortex/adr/*multi-step-complete*.md` — exit 0).
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 793376b9, ADR-0004)
 
 ### Task 6: Generalize `_resolve_branch_name()` to accept the `interactive/` prefix
 - **Files**: `cortex_command/pipeline/worktree.py`, `tests/test_worktree.py`
@@ -67,7 +67,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: simple
 - **Context**: `_resolve_branch_name()` at lines 70-81 hardcodes `base = f"pipeline/{feature}"` and then probes for collisions. The generalization replaces `"pipeline"` with the new `prefix` parameter. Callers: line 272 inside `create_worktree()`. The convention for distinguishing interactive vs pipeline worktrees in `create_worktree(feature, ...)` is the `feature` argument's prefix: T10 passes `feature="interactive-" + slug` so `_resolve_branch_name` sees `feature="interactive-{slug}"` — the cleanest path is to detect the `interactive-` sentinel inside `create_worktree()` and forward `prefix="interactive"`, with `feature` stripped of the prefix when passed into the branch name (so the branch is `interactive/{slug}`, not `interactive/interactive-{slug}`).
 - **Verification**: `python3 -c "from cortex_command.pipeline.worktree import _resolve_branch_name; import inspect; sig = inspect.signature(_resolve_branch_name); assert 'prefix' in sig.parameters and sig.parameters['prefix'].default == 'pipeline'"` exits 0; AND `just test tests/test_worktree.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 4cf8213b)
 
 ### Task 7: New SessionStart PATH-bootstrap hook with cortex-shape gate
 - **Files**: `claude/hooks/cortex-session-start-path-bootstrap.sh`, `claude/hooks/cortex-worktree-create.sh`, `plugins/cortex-core/hooks/hooks.json`, `tests/test_session_start_path_bootstrap.sh`
@@ -76,7 +76,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: simple
 - **Context**: SessionStart hook conventions: the existing WorktreeCreate hook at `claude/hooks/cortex-worktree-create.sh` shows the stdin-JSON pattern. The cortex-shape gate pattern lives at `hooks/cortex-scan-lifecycle.sh:26-29`. Plugins-mirror auto-regenerates from `claude/hooks/` via the pre-commit dual-source hook; do NOT edit `plugins/cortex-core/hooks/cortex-session-start-path-bootstrap.sh` directly. The plugins-hooks.json `SessionStart` entry shape: follow the WorktreeCreate entry's pattern at `plugins/cortex-core/hooks/hooks.json:13-22`. Make the new shell file executable (`chmod +x`).
 - **Verification**: `grep -cE "\\.local/bin|opt/homebrew/bin" claude/hooks/cortex-worktree-create.sh` returns 0 (PATH bootstrap removed); AND `grep -cE "\\.local/bin|opt/homebrew/bin" claude/hooks/cortex-session-start-path-bootstrap.sh` returns ≥1; AND `grep -c "SessionStart" plugins/cortex-core/hooks/hooks.json` returns ≥1; AND `grep -cE 'cortex/lifecycle|LIFECYCLE_DIR' claude/hooks/cortex-session-start-path-bootstrap.sh` returns ≥1 (cortex-shape gate present); AND `bash tests/test_session_start_path_bootstrap.sh` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 2146a2cc); justfile HOOKS array updated for dual-source build-plugin recipe (deviation flagged, mechanically necessary)
 
 ### Task 8: Register `pr_opened` event in events-registry
 - **Files**: `bin/.events-registry.md`
@@ -85,7 +85,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: trivial
 - **Context**: Existing registry rows live at `bin/.events-registry.md:11-24`. The header row at line 9 documents the column order: `event_name | target | scan_coverage | producers | consumers | category | added_date | deprecation_date | rationale | owner`. Reference the `spec_approved` row at line 20 for the cleanest non-trivial example with `rationale` and `owner` populated.
 - **Verification**: `grep -c "pr_opened" bin/.events-registry.md` returns ≥1; AND `awk -F '|' '/pr_opened/ {print NF}' bin/.events-registry.md | head -1` returns 12 (11 columns + 2 boundary pipes); AND `bin/cortex-check-events-registry --audit` exits 0 (gate confirms producer + consumers reachable at HEAD — this passes only after T9, T11 land in the same commit).
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 57d64d37); plan's --audit description was inaccurate, but verification passes
 
 ### Task 9: Rewrite `complete.md` as 12-step multi-step phase
 - **Files**: `skills/lifecycle/references/complete.md`
@@ -94,7 +94,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: complex
 - **Context**: Today's `complete.md` (104 lines, 7 sections) is the canonical pre-rewrite shape — see lines 1-104 of `skills/lifecycle/references/complete.md`. The new protocol preserves the no-op-on-main semantics (steps 2-5 short-circuit if on main without an open PR, since `gh pr create` will refuse — or detect the on-main case earlier and skip to step 11). Step 7's evaluation order is documented in spec §12 with the full nine-branch routing table; the prose in complete.md must enumerate each branch with the exact exit message string from the spec. Step 4's atomic write follows `cortex/requirements/pipeline.md:124-130` (tempfile + `os.replace`); the `repo` field is resolved at PR-creation time via `gh repo view --json nameWithOwner -q .nameWithOwner` and locked so step 7's `gh pr view --repo <repo>` queries the recorded repo even if `origin` later changes. The phase-exit pause at step 6 is the kept-pause registered in T12. The `feature_complete` emission in step 11 includes `"merge_anchor": "merge"` (post-restructure regime, distinct from T2's overnight `"review"` regime). The worktree-cleanup recipe at step 8 must refuse to run from inside the target worktree (hard guard via `realpath PWD` comparison) per the spec's "Recipe invoked from inside the target worktree" edge case.
 - **Verification**: `grep -cE "^### Step [0-9]+" skills/lifecycle/references/complete.md` returns ≥12; AND `grep -c "pr_opened" skills/lifecycle/references/complete.md` returns ≥1; AND `grep -c "merge_anchor" skills/lifecycle/references/complete.md` returns ≥1; AND `grep -c "interactive/" skills/lifecycle/references/complete.md` returns ≥1; AND `grep -cE "gh pr view.*state.*mergedAt" skills/lifecycle/references/complete.md` returns ≥1.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit 42a519d0); 12 steps, 9-branch routing table, atomic pr.json write
 
 ### Task 10: Wire implement.md option 2 to materialize the `interactive/{slug}` worktree
 - **Files**: `skills/lifecycle/references/implement.md`, `tests/test_implement_option2_worktree_creation.py`
@@ -103,7 +103,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: simple
 - **Context**: The option-2 body lives in implement.md's branch-selection block (lines 17-21 list the three options; line 46 dispatches into the selected option). This task changes the body of option 2 to invoke worktree creation. The current option-2 body (today: "Daytime Dispatch alternate path" at §1a, lines 54+) is being superseded by epic #237's daytime-swap (sibling lifecycle `swap-daytime-autonomous-for-worktree-interactive`); this work assumes #237's swap has landed OR this work bundles the swap (verify: read `cortex/lifecycle/swap-daytime-autonomous-for-worktree-interactive/research.md` to confirm scope split). If the swap has NOT landed, the rewriter must coordinate with that lifecycle — surface this dependency in the implementation report. The `interactive-` feature prefix convention is established in T6 (create_worktree detects it and forwards `prefix="interactive"` to `_resolve_branch_name`). The pre-flight liveness check on `interactive.pid` uses `kill -0 <pid>` — semantics: returns 0 if pid is live, 1 if not; concurrency-lock writer semantics are owned by sibling #241 (out of scope here). The integration test runs in sandbox-aware mode under `$TMPDIR`.
 - **Verification**: `grep -c "create_worktree" skills/lifecycle/references/implement.md` returns ≥1; AND `grep -c "interactive/" skills/lifecycle/references/implement.md` returns ≥1; AND `grep -cE "interactive\.pid|active-session\.json" skills/lifecycle/references/implement.md` returns ≥2 (both liveness probes referenced); AND `just test tests/test_implement_option2_worktree_creation.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit bc32dc0d); per user "best option" call, T10 absorbed epic #237's swap — daytime-pipeline dispatch removed, option 2 renamed to "Implement on feature branch with worktree", Variant A/B handoff deferred to #240
 
 ### Task 11: Render "Complete (awaiting merge)" sub-state in statusline and scan-lifecycle
 - **Files**: `claude/statusline.sh`, `hooks/cortex-scan-lifecycle.sh`, `tests/test_statusline_complete_awaiting_merge.sh`
@@ -112,7 +112,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: simple
 - **Context**: `phase_label()` at `hooks/cortex-scan-lifecycle.sh:204-217` is a single case statement keyed on `phase`. The sub-state detection happens upstream of `phase_label()` — in the caller that determines the phase string — OR the case-statement's `complete)` branch grows a nested events.log lookup. Statusline's phase-detection block lives in the `_lc_base` lifecycle-line section (around line 240+ of `claude/statusline.sh`, the same neighborhood as the `_refined_indicator` setup). Use the events.log inside `$LIFECYCLE_DIR/{feature}/events.log` — both files already have $LIFECYCLE_DIR resolved. The wontfix-precedence rule matches the existing `feature_wontfix` consumer at `claude/statusline.sh` (registered in events-registry row 24).
 - **Verification**: `bash tests/test_statusline_complete_awaiting_merge.sh` exits 0 (asserts all 3 fixture cases); AND `grep -c "awaiting merge" hooks/cortex-scan-lifecycle.sh` returns ≥1; AND `grep -c "awaiting merge" claude/statusline.sh` returns ≥1.
-- **Status**: [ ] pending
+- **Status**: [x] done (commit e039700b)
 
 ### Task 12: Extend kept-pauses inventory for phase-exit pause
 - **Files**: `skills/lifecycle/SKILL.md`, `tests/test_lifecycle_kept_pauses_parity.py`
@@ -121,7 +121,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: simple
 - **Context**: Today's parity test at `tests/test_lifecycle_kept_pauses_parity.py:1-186` parses bullet lines with the regex at line 31-34: `r"^-\s+`?([^`\s:]+(?:/[^`\s:]+)*\.md)`?:(\d+)\b"`. Forward direction asserts every inventory entry points at an `AskUserQuestion` call site within ±35 lines of the recorded anchor. The extension introduces a kind tag: parse a trailing keyword pattern from the rationale (e.g., `phase-exit pause` → validate via step-heading lookup; absent → keep today's `AskUserQuestion` check). The new inventory entry follows the existing format: `- skills/lifecycle/references/complete.md:<line> — phase-exit pause: merge-wait pause inside the multi-step Complete phase; user re-invokes /cortex-core:lifecycle complete <slug> after merging on GitHub.` Resolve `<line>` after T9 lands by `grep -n "^### Step 6" skills/lifecycle/references/complete.md` and using that line.
 - **Verification**: `grep -c "phase-exit pause" skills/lifecycle/SKILL.md` returns ≥1; AND `grep -c "phase-exit pause" tests/test_lifecycle_kept_pauses_parity.py` returns ≥1; AND `just test tests/test_lifecycle_kept_pauses_parity.py` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done; step-6 anchor at complete.md:73
 
 ### Task 13: Add tests for Complete state routing, cleanup gates, and pr.json schema
 - **Files**: `tests/test_lifecycle_complete_state_routing.py`, `tests/test_complete_cleanup_gates.py`, `tests/test_complete_pr_json_schema.py`
@@ -130,7 +130,7 @@ Restructure the lifecycle Complete phase into a 12-step protocol that pauses mid
 - **Complexity**: complex
 - **Context**: The 9-branch routing table from spec §12 maps to the test cases (the test count is 12 because three of the routing branches split into multiple cases — pr.json-absent has three orphan-PR sub-cases). Mock pattern for `gh pr view` and `gh pr list`: monkeypatch `subprocess.run` with a wrapper that matches the command argv and returns a fixture `CompletedProcess`. Use `pytest.mark.parametrize` to enumerate the routing branches with one assertion per branch. Atomic-write test: write a sentinel into the tempfile path, then assert the target path either contains a valid full JSON OR doesn't exist (no partial-write window). The `gh repo view --json nameWithOwner` resolution is mocked in the routing tests too. These tests do not invoke the actual /cortex-core:lifecycle complete skill; they invoke the underlying Python helpers that the skill's Bash calls would execute (e.g., the pr.json writer if extracted into `cortex_command/lifecycle/complete.py`, or fallback to subprocess-level testing).
 - **Verification**: `just test tests/test_lifecycle_complete_state_routing.py tests/test_complete_cleanup_gates.py tests/test_complete_pr_json_schema.py` exits 0; AND each test file contains ≥1 assertion per routing branch (verified by `grep -cE "assert" tests/test_lifecycle_complete_state_routing.py` returning ≥12).
-- **Status**: [ ] pending
+- **Status**: [x] done (commit c2d0b79f); 57 tests pass; pr.json atomic-write group partially self-sealing (flagged), structural assertions on complete.md prose are non-self-sealing
 
 ## Risks
 
