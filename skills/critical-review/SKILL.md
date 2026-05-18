@@ -57,7 +57,7 @@ Pick angles most likely to reveal real problems for this specific artifact. Repr
 
 For each angle derived in Step 2b, dispatch one general-purpose agent as a parallel Task tool sub-task. All agents run simultaneously — do not wait for one to finish before launching the next.
 
-Each agent receives the canonical reviewer prompt from `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{angle name}`, `{angle description}`, and the Step 2a Project Context block substituted at runtime. The prompt instructs the reviewer to Read the literal absolute path and emit `READ_OK: <path> <sha>` as the first line on success (or `READ_FAILED: <path> <reason>` on failure), then to produce class-tagged findings (A — fix-invalidating, B — adjacent-gap, C — framing) with a `<!--findings-json-->` JSON envelope appended after prose findings.
+Each agent receives the canonical reviewer prompt from `${CLAUDE_SKILL_DIR}/references/reviewer-prompt.md` verbatim, with `{artifact_path}`, `{artifact_sha256}`, `{angle name}`, `{angle description}`, and the Step 2a Project Context block substituted at runtime. The prompt instructs the reviewer to Read the literal absolute path and emit `READ_OK: <path> <sha>` on its own line before findings (or `READ_FAILED: <path> <reason>` on failure), then to produce class-tagged findings (A — fix-invalidating, B — adjacent-gap, C — framing) with a `<!--findings-json-->` JSON envelope appended after prose findings.
 
 #### Failure Handling
 
