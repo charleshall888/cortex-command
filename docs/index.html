@@ -442,8 +442,11 @@
     }
   }
   /* While the pipeline section is the active surface, fade the corner badge so it
-     stops competing with the SVG. (Class added/removed by IntersectionObserver below.) */
-  .sidebar.pipe-active { opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+     stops competing with the SVG. Same treatment when the hood gatefold is being
+     scrubbed so the compact-badge doesn't sit on top of the time/stage readout.
+     (Classes added/removed by IntersectionObserver below.) */
+  .sidebar.pipe-active,
+  .sidebar.hood-active { opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
 
   /* Phone (<600px): drop the corner badge entirely and tighten the page gutter
      so iPhone-class viewports don't waste edge real estate on a fixed chrome
@@ -3289,17 +3292,32 @@
   @media (max-width: 1100px) {
     .pipe-stage { width: 100%; margin: 0; }
   }
-  /* Below ~900px the 1800-wide SVG just isn't legible — swap it for a vertical
-     text manifest that carries the same nodes and labels in engineering-paper style. */
+  /* Below ~1100px the 1800-wide SVG just isn't legible — swap it for a vertical
+     text manifest that carries the same nodes and labels in engineering-paper style.
+     The 900→1100 raise covers the dead zone where the SVG was cramped but the
+     mobile fallback hadn't yet kicked in. */
   .pipe-manifest { display: none; }
-  @media (max-width: 900px) {
+  @media (max-width: 1100px) {
     .pipe-wrap { height: auto; }
-    .pipe-stage { position: relative; height: auto; padding: 32px 0 24px; }
+    .pipe-stage { position: relative; height: auto; padding: 28px 0 24px; }
     .pipe-svg, .timeline-bar { display: none; }
+    /* Stop floating the section title over the manifest — at this width the
+       SVG isn't behind them, so they should flow above the list. */
+    .pipe-header {
+      position: static;
+      padding: 0 24px;
+      margin: 0 0 4px 0;
+    }
+    .pipe-title {
+      position: static;
+      padding: 0 24px;
+      margin: 0 0 4px 0;
+      max-width: none;
+    }
     .pipe-manifest {
       display: flex; flex-direction: column;
       gap: 0;
-      margin: 28px 24px 8px;
+      margin: 24px 24px 8px;
       padding-left: 18px;
       border-left: 1px dashed var(--rule-soft);
       font-family: var(--mono);
@@ -6121,6 +6139,8 @@
     if (hoodAnatomy) hoodAnatomy.classList.remove('scrub-engaged');
     if (hoodSvg) hoodSvg.style.transform = '';
     if (hoodWrap) hoodWrap.style.height = '';
+    const sb = document.querySelector('.sidebar');
+    if (sb) sb.classList.remove('hood-active');
   }
 
   if (hoodCta && hoodPanel) {
@@ -6138,6 +6158,8 @@
       if (hoodAnatomy) hoodAnatomy.classList.remove('scrub-engaged');
       if (hoodSvg) hoodSvg.style.transform = '';
       if (hoodWrap) hoodWrap.style.height = '';
+      const sb = document.querySelector('.sidebar');
+      if (sb) sb.classList.remove('hood-active');
       const plate = document.querySelector('.hood-plate');
       if (plate) plate.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
@@ -6194,11 +6216,20 @@
   }
 
   // Gate per-frame work on visibility — skips when the wrap is off-screen.
+  // Also fade the corner badge (compact-badge sidebar) while the scrub is
+  // active so it stops sitting on top of the top-right readout.
   let _hoodVisible = false;
+  const _hoodSidebar = document.querySelector('.sidebar');
   if ('IntersectionObserver' in window && hoodWrap) {
     const _hoodIO = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) { _hoodVisible = e.isIntersecting; });
-    });
+      entries.forEach(function (e) {
+        _hoodVisible = e.isIntersecting;
+        if (_hoodSidebar) {
+          const engaged = hoodAnatomy && hoodAnatomy.classList.contains('scrub-engaged');
+          _hoodSidebar.classList.toggle('hood-active', engaged && e.intersectionRatio > 0.2);
+        }
+      });
+    }, { threshold: [0, 0.1, 0.2, 0.5, 0.8, 1] });
     _hoodIO.observe(hoodWrap);
   }
   // Exposed to the main IIFE's frame() so we share a single rAF loop.
