@@ -211,6 +211,34 @@
     "repo": null
   },
   {
+    "id": 234,
+    "title": "Propagate backlog criticality to lifecycle_start event in refine workflow",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "bug",
+    "tags": [
+      "lifecycle",
+      "refine",
+      "criticality"
+    ],
+    "areas": [],
+    "created": "2026-05-17",
+    "updated": "2026-05-17",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "57aa1034-b590-4f84-ba13-ab37f95dbd8f",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 990,
     "title": "Seed: Add authentication to API gateway",
     "status": "backlog",

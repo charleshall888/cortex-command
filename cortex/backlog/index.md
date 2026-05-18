@@ -9,6 +9,7 @@
 | 209 | Lead refine §4 complexity-value gate with recommended option + rationale | in_progress | medium | chore | — | — | ✓ |
 | 211 | R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up) | superseded | medium | bug | — | — | — |
 | 212 | CLI_PIN drift lint (#146 hygiene) | superseded | medium | chore | — | — | — |
+| 234 | Propagate backlog criticality to lifecycle_start event in refine workflow | backlog | medium | bug | — | — | — |
 | 990 | Seed: Add authentication to API gateway | backlog | medium | feature | — | — | — |
 | 991 | Seed: Migrate database schema to v2 | in_progress | medium | feature | — | — | — |
 | 992 | Seed: Refactor notification pipeline | on-hold | medium | feature | — | — | — |
@@ -25,6 +26,7 @@
 
 ## Backlog
 
+- **234** Propagate backlog criticality to lifecycle_start event in refine workflow
 - **990** Seed: Add authentication to API gateway
 - **232** Re-evaluate cross-skill brief framework — discovery-output-density Phase 2 trigger
 - **233** Add `--tag` filter to backlog query CLI for phase2-trigger discoverability
