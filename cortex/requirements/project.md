@@ -22,6 +22,10 @@ Agentic workflow toolkit for AI-assisted software development on Claude Code: sk
 
 **Quality bar**: Tests pass; the feature works as specced. ROI matters — ship faster, not be a project.
 
+**Multi-step lifecycle phases**: A lifecycle phase may be multi-step with a user-driven re-invocation point. The Complete phase is the canonical example — it creates a PR, exits with a handoff message, and finalizes only on re-invocation after the PR is merged on GitHub. Merge (not PR-open) is the terminal event for "Done"; this aligns with GitHub/Linear/Jira/GitLab conventions and is recorded in the `feature_complete` event with `merge_anchor: "merge"`. Re-invocation routing is state-aware and idempotent; consult `cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` for the design rationale.
+
+**Kept user pauses come in two kinds**: (a) `AskUserQuestion`-site pauses where a phase blocks for an interactive answer; (b) phase-exit pauses where a phase exits cleanly and waits for the user to re-invoke after performing an out-of-band action (e.g., merging a PR on GitHub). The `skills/lifecycle/SKILL.md` kept-pauses inventory and `tests/test_lifecycle_kept_pauses_parity.py` enforce both kinds.
+
 ## Architectural Constraints
 
 - **File-based state**: → ADR-0001: File-based state, no database
