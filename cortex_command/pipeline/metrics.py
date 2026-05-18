@@ -954,6 +954,13 @@ def compute_aggregates(
     Features with ``tier is None`` are excluded (pre-observability data
     that cannot be grouped).
 
+    ``avg_phase_durations`` aggregates all features in a tier regardless of
+    ``merge_anchor``, preserving the pre-existing all-features baseline.
+    ``avg_phase_durations_by_anchor`` partitions that same data by anchor so
+    the legacy overnight regime (``merge_anchor="review"``, fires at PR-create
+    time) and the interactive regime (``merge_anchor="merge"``, fires
+    post-merge) do not corrupt each other's historical calibration.
+
     Args:
         feature_metrics: List of per-feature metric dicts from
             :func:`extract_feature_metrics`.
@@ -961,7 +968,8 @@ def compute_aggregates(
     Returns:
         Dict keyed by tier name, each containing ``n``,
         ``avg_total_duration_s``, ``avg_phase_durations``,
-        ``avg_task_count``, ``avg_batch_count``, ``avg_rework_cycles``,
+        ``avg_phase_durations_by_anchor``, ``avg_task_count``,
+        ``avg_batch_count``, ``avg_rework_cycles``,
         and ``first_pass_approval_rate``.
     """
     # Group by tier, excluding null-tier features.
@@ -992,6 +1000,28 @@ def compute_aggregates(
             vals = [pd.get(label) for pd in phase_dicts]
             avg_phases[label] = _safe_mean(vals)
 
+        # Phase durations segmented by merge_anchor so that the legacy
+        # overnight regime ("review") and the interactive post-merge regime
+        # ("merge") accumulate into separate buckets.  Features lacking the
+        # field default to "review" (backwards-compatible with T2).
+        by_anchor: dict[str, list[dict[str, float | None]]] = defaultdict(list)
+        for m in members:
+            anchor = m.get("merge_anchor") or "review"
+            by_anchor[anchor].append(_phase_durations_as_dict(m["phase_durations"]))
+
+        avg_phase_durations_by_anchor: dict[str, dict[str, float | None]] = {}
+        for anchor, anchor_phase_dicts in sorted(by_anchor.items()):
+            anchor_labels: list[str] = []
+            for apd in anchor_phase_dicts:
+                for label in apd:
+                    if label not in anchor_labels:
+                        anchor_labels.append(label)
+            avg_anchor_phases: dict[str, float | None] = {}
+            for label in anchor_labels:
+                vals = [apd.get(label) for apd in anchor_phase_dicts]
+                avg_anchor_phases[label] = _safe_mean(vals)
+            avg_phase_durations_by_anchor[anchor] = avg_anchor_phases
+
         # Average numeric fields (skip None).
         avg_task = _safe_mean(
             [float(m["task_count"]) for m in members if m["task_count"] is not None]
@@ -1018,6 +1048,7 @@ def compute_aggregates(
             "n": n,
             "avg_total_duration_s": avg_total,
             "avg_phase_durations": avg_phases,
+            "avg_phase_durations_by_anchor": avg_phase_durations_by_anchor,
             "avg_task_count": avg_task,
             "avg_batch_count": avg_batch,
             "avg_rework_cycles": avg_rework,

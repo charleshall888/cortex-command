@@ -1570,5 +1570,135 @@ class TestExtractVerdict(unittest.TestCase):
         self.assertEqual(self._fn(event), "APPROVED")
 
 
+def test_compute_aggregates_phase_durations_segmented_by_merge_anchor(tmp_path):
+    """Mixed-anchor ``feature_complete`` events accumulate into separate buckets.
+
+    Three features share the same tier ("simple"):
+    - feat-review-1: ``merge_anchor="review"`` (legacy overnight; fires at PR-create)
+    - feat-review-2: ``merge_anchor`` absent → defaults to ``"review"``
+    - feat-merge-1:  ``merge_anchor="merge"`` (interactive post-merge regime)
+
+    Each feature has two phase_transition events so that ``_phase_durations``
+    produces one ``specify_to_plan`` duration entry.  The durations differ
+    across the two regimes so that mixing them would yield a wrong average.
+
+    Assertions:
+    - ``avg_phase_durations_by_anchor["review"]`` reflects only the two
+      "review" features (average of their durations).
+    - ``avg_phase_durations_by_anchor["merge"]`` reflects only the one
+      "merge" feature.
+    - ``avg_phase_durations`` (the pre-existing all-features baseline) is
+      the mean across all three features, unchanged by the segmentation.
+    - Features whose ``merge_anchor`` is absent default to the ``"review"``
+      bucket (backwards-compatible with historical events that predate T2).
+    """
+    import json as _json
+
+    from cortex_command.pipeline.metrics import (
+        compute_aggregates,
+        extract_feature_metrics,
+        parse_events,
+    )
+
+    def _make_events_log(tmp_dir, feature_name, anchor, duration_seconds, path_name):
+        """Write a minimal events.log for one feature with two phase_transition
+        events separated by *duration_seconds* and an optional merge_anchor."""
+        # Use a non-backfilled start time: T12:00:00Z does not match _BACKFILL_RE
+        # (which is T00:0\d:00Z) so _phase_durations will compute real durations.
+        from datetime import datetime, timedelta, timezone
+        dt0 = datetime(2026, 5, 10, 12, 0, 0, tzinfo=timezone.utc)
+        dt1 = dt0 + timedelta(seconds=duration_seconds)
+        t0 = dt0.strftime("%Y-%m-%dT%H:%M:%SZ")
+        t1 = dt1.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        lifecycle_start = {
+            "ts": t0, "event": "lifecycle_start", "feature": feature_name, "tier": "simple",
+        }
+        phase_from = {
+            "ts": t0, "event": "phase_transition", "feature": feature_name,
+            "from": "specify", "to": "specify",
+        }
+        phase_to = {
+            "ts": t1, "event": "phase_transition", "feature": feature_name,
+            "from": "plan", "to": "plan",
+        }
+        complete: dict = {
+            "ts": t1, "event": "feature_complete", "feature": feature_name,
+        }
+        if anchor is not None:
+            complete["merge_anchor"] = anchor
+
+        log_path = tmp_dir / path_name / "events.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [
+            _json.dumps(lifecycle_start),
+            _json.dumps(phase_from),
+            _json.dumps(phase_to),
+            _json.dumps(complete),
+        ]
+        log_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return log_path
+
+    # "review" regime: two features — one explicit anchor, one absent (defaults to "review").
+    log_review_1 = _make_events_log(tmp_path, "feat-review-1", "review", 100.0, "feat-review-1")
+    log_review_2 = _make_events_log(tmp_path, "feat-review-2", None,     200.0, "feat-review-2")
+
+    # "merge" regime: one feature with a much larger duration (PR-merge wait included).
+    log_merge_1 = _make_events_log(tmp_path, "feat-merge-1", "merge", 900.0, "feat-merge-1")
+
+    # Parse and extract per-feature metrics for all three logs.
+    all_metrics = []
+    for log_path in sorted([log_review_1, log_review_2, log_merge_1]):
+        events = parse_events(log_path)
+        m = extract_feature_metrics(events)
+        assert m is not None, f"Expected completed metrics for {log_path}"
+        all_metrics.append(m)
+
+    aggregates = compute_aggregates(all_metrics)
+
+    assert "simple" in aggregates, f"Expected 'simple' tier; got {list(aggregates.keys())}"
+    agg = aggregates["simple"]
+
+    # --- Segmented buckets ---
+    by_anchor = agg["avg_phase_durations_by_anchor"]
+
+    # "review" bucket: average of 100 s and 200 s = 150 s.
+    assert "review" in by_anchor, f"Expected 'review' anchor bucket; got {list(by_anchor.keys())}"
+    review_phases = by_anchor["review"]
+    assert len(review_phases) == 1, f"Expected 1 phase label in 'review' bucket; got {review_phases}"
+    review_duration = next(iter(review_phases.values()))
+    assert review_duration == 150.0, (
+        f"Expected 'review' anchor avg phase duration 150.0; got {review_duration}"
+    )
+
+    # "merge" bucket: only 900 s, so average is 900 s.
+    assert "merge" in by_anchor, f"Expected 'merge' anchor bucket; got {list(by_anchor.keys())}"
+    merge_phases = by_anchor["merge"]
+    assert len(merge_phases) == 1, f"Expected 1 phase label in 'merge' bucket; got {merge_phases}"
+    merge_duration = next(iter(merge_phases.values()))
+    assert merge_duration == 900.0, (
+        f"Expected 'merge' anchor avg phase duration 900.0; got {merge_duration}"
+    )
+
+    # Segmentation keeps buckets isolated: "merge" avg should not appear in "review".
+    assert review_duration != merge_duration, (
+        "Buckets must be isolated — 'review' and 'merge' durations should differ"
+    )
+
+    # --- Pre-existing all-features baseline (unchanged) ---
+    # avg_phase_durations covers all three features: (100 + 200 + 900) / 3 = 400.
+    all_phases = agg["avg_phase_durations"]
+    assert len(all_phases) == 1, f"Expected 1 phase label in all-features baseline; got {all_phases}"
+    all_duration = next(iter(all_phases.values()))
+    assert all_duration == 400.0, (
+        f"Expected all-features avg phase duration 400.0; got {all_duration}"
+    )
+
+    # --- Absent-field default: feat-review-2 (no merge_anchor) lands in "review" ---
+    # Confirmed implicitly: if it defaulted to "merge", the "review" average would
+    # be 100.0 (only feat-review-1) and the "merge" average would be 550.0
+    # ((200 + 900)/2).  The assertions above rule out that scenario.
+
+
 if __name__ == "__main__":
     unittest.main()
