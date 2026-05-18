@@ -3,6 +3,7 @@
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
 | 228 | Wire daytime dispatch through cortex CLI + MCP with launchd detachment | refined | high | feature | — | — | ✓ |
+| 991 | Seed: Migrate database schema to v2 | in_progress | high | feature | — | — | — |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 209 | Lead refine §4 complexity-value gate with recommended option + rationale | in_progress | medium | chore | — | — | ✓ |
@@ -10,8 +11,6 @@
 | 212 | CLI_PIN drift lint (#146 hygiene) | superseded | medium | chore | — | — | — |
 | 234 | Propagate backlog criticality to lifecycle_start event in refine workflow | backlog | medium | bug | — | — | — |
 | 990 | Seed: Add authentication to API gateway | backlog | medium | feature | — | — | — |
-| 991 | Seed: Migrate database schema to v2 | in_progress | medium | feature | — | — | — |
-| 992 | Seed: Refactor notification pipeline | on-hold | medium | feature | — | — | — |
 | 993 | Seed: Implement rate limiting for export endpoints | refined | medium | feature | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 232 | Re-evaluate cross-skill brief framework — discovery-output-density Phase 2 trigger | backlog | low | feature | — | — | — |
@@ -33,8 +32,8 @@
 
 ## In-Progress
 
-- **209** Lead refine §4 complexity-value gate with recommended option + rationale (in_progress)
 - **991** Seed: Migrate database schema to v2 (in_progress)
+- **209** Lead refine §4 complexity-value gate with recommended option + rationale (in_progress)
 
 ## Warnings
 

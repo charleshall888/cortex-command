@@ -1071,21 +1071,34 @@ def write_enriched_events_log(repo_root: Path, slug: str, status: str) -> None:
 # Backlog seed items
 # ---------------------------------------------------------------------------
 
-# Backlog seed definitions: (number, slug-suffix, status, title)
+# Backlog seed definitions: (number, slug-suffix, status, priority, type, title)
+# Statuses are drawn from the canonical enum in skills/backlog/references/schema.md
+# so the items parse cleanly against any tool that validates frontmatter.
 _BACKLOG_ITEMS = [
-    (990, "seed-feature-alpha",   "open",        "Seed: Add authentication to API gateway"),
-    (991, "seed-feature-beta",    "in-progress",  "Seed: Migrate database schema to v2"),
-    (992, "seed-feature-gamma",   "on-hold",     "Seed: Refactor notification pipeline"),
-    (993, "seed-feature-delta",   "refined",     "Seed: Implement rate limiting for export endpoints"),
-    (994, "seed-feature-epsilon", "done",        "Seed: Deprecate legacy webhook handler"),
+    (990, "seed-feature-alpha",   "backlog",     "medium", "feature", "Seed: Add authentication to API gateway"),
+    (991, "seed-feature-beta",    "in_progress", "high",   "feature", "Seed: Migrate database schema to v2"),
+    (992, "seed-feature-gamma",   "abandoned",   "low",    "chore",   "Seed: Refactor notification pipeline"),
+    (993, "seed-feature-delta",   "refined",     "medium", "feature", "Seed: Implement rate limiting for export endpoints"),
+    (994, "seed-feature-epsilon", "complete",    "low",    "chore",   "Seed: Deprecate legacy webhook handler"),
 ]
+
+# Deterministic UUIDs for seed backlog items so reruns don't churn frontmatter.
+# Distinct from the dispatch-ID range used for seed-feature-* lifecycle dirs.
+_BACKLOG_UUIDS = {
+    "seed-feature-alpha":   "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "seed-feature-beta":    "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "seed-feature-gamma":   "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    "seed-feature-delta":   "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    "seed-feature-epsilon": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+}
 
 
 def write_backlog_items(repo_root: Path) -> list[Path]:
     """Write 5 seed backlog items to cortex/backlog/990-seed-*.md through cortex/backlog/994-seed-*.md.
 
-    Each file has YAML frontmatter with ``status`` and ``title`` fields covering
-    all status variants: open, in-progress, on-hold, refined, done.
+    Frontmatter follows the schema at skills/backlog/references/schema.md
+    (schema_version, uuid, title, status, priority, type, created, updated) so
+    every tool that scans cortex/backlog/ parses these items without error.
 
     Args:
         repo_root: Absolute path to the repository root.
@@ -1096,13 +1109,25 @@ def write_backlog_items(repo_root: Path) -> list[Path]:
     backlog_dir = repo_root / "cortex" / "backlog"
     backlog_dir.mkdir(parents=True, exist_ok=True)
 
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
     written: list[Path] = []
-    for number, slug, status, title in _BACKLOG_ITEMS:
+    for number, slug, status, priority, item_type, title in _BACKLOG_ITEMS:
         filename = f"{number}-{slug}.md"
+        # YAML scalar containing a colon must be quoted so the second colon
+        # isn't parsed as a nested mapping key.
+        title_escaped = title.replace('"', '\\"')
         content = (
             f"---\n"
-            f"title: {title}\n"
+            f"schema_version: \"1\"\n"
+            f"uuid: {_BACKLOG_UUIDS[slug]}\n"
+            f"title: \"{title_escaped}\"\n"
             f"status: {status}\n"
+            f"priority: {priority}\n"
+            f"type: {item_type}\n"
+            f"tags: [dashboard-seed]\n"
+            f"created: {today}\n"
+            f"updated: {today}\n"
             f"---\n"
             f"\n"
             f"Seed backlog item for dashboard visual testing.\n"
