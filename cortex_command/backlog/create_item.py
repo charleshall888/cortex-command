@@ -39,6 +39,7 @@ def _get_next_id(backlog_dir: Path) -> str:
         int(m.group(1))
         for p in backlog_dir.glob("[0-9]*-*.md")
         if (m := re.match(r"^(\d+)-", p.name))
+        if not (990 <= int(m.group(1)) <= 999)  # reserved for dashboard-seed fixtures (cortex_command/dashboard/seed.py)
     ]
     next_id = (max(ids) + 1) if ids else 1
     return f"{next_id:03d}" if next_id < 1000 else str(next_id)
