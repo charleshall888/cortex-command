@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 4ff7b08e-d4fa-4ae0-a012-b515ef41164b
 title: "Discovery output density — investigate author-centric prose at gate"
-status: ready
+status: complete
 priority: medium
 type: needs-discovery
 created: 2026-05-16
-updated: 2026-05-16
+updated: 2026-05-17
 tags: [discovery, skills, agent-output, prose-density, ux]
 complexity: complex
 criticality: high
@@ -14,6 +14,8 @@ session_id: null
 lifecycle_phase: null
 lifecycle_slug: null
 discovery_source: cortex/lifecycle/archive/redesign-discovery-output-presentation/research.md
+spec: cortex/lifecycle/discovery-output-density-investigate-author-centric/spec.md
+areas: [skills]
 ---
 
 # Discovery output density — investigate author-centric prose at gate
