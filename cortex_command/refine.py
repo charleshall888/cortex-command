@@ -9,7 +9,9 @@ exposes only the argparse surface; the handler is a stub returning 0.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from cortex_command.backlog.update_item import _get_frontmatter_value
@@ -74,12 +76,107 @@ def _read_backlog_frontmatter(backlog_slug: str | None) -> tuple[str, str]:
     return (complexity, criticality)
 
 
-def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
-    """Stub handler for the emit-lifecycle-start subcommand.
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    Subsequent tasks fill in the frontmatter reader, idempotency scan, and
-    atomic append + read-after-write verify logic.
+
+def _lifecycle_start_present(events_log: Path) -> bool:
+    """Return True when ``events_log`` exists and contains a ``lifecycle_start``.
+
+    Each non-empty line is parsed as JSON; unparseable lines are skipped
+    silently (mirrors the tolerant parse pattern at
+    ``cortex_command/common.py:_read_criticality_inner:435-436``).
     """
+    if not events_log.exists():
+        return False
+    for line in events_log.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if record.get("event") == "lifecycle_start":
+            return True
+    return False
+
+
+def _cmd_emit_lifecycle_start(args: argparse.Namespace) -> int:
+    """Atomically seed ``cortex/lifecycle/{slug}/events.log`` with a row.
+
+    Idempotent: if a ``lifecycle_start`` row already exists in the file,
+    exits 0 silently without appending. Otherwise reads backlog frontmatter
+    via :func:`_read_backlog_frontmatter`, appends a row with the canonical
+    key order (``schema_version, ts, event, feature, tier, criticality,
+    entry_point``), and re-reads the last line to verify the write landed.
+    """
+    lifecycle_slug: str = args.lifecycle_slug
+    backlog_slug: str | None = args.backlog_slug
+
+    events_log = Path("cortex/lifecycle") / lifecycle_slug / "events.log"
+    events_log.parent.mkdir(parents=True, exist_ok=True)
+
+    if _lifecycle_start_present(events_log):
+        return 0
+
+    tier, criticality = _read_backlog_frontmatter(backlog_slug)
+
+    row = {
+        "schema_version": 1,
+        "ts": _now_iso(),
+        "event": "lifecycle_start",
+        "feature": lifecycle_slug,
+        "tier": tier,
+        "criticality": criticality,
+        "entry_point": "refine",
+    }
+
+    try:
+        with open(events_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row) + "\n")
+    except (PermissionError, OSError) as e:
+        print(
+            f"cortex-refine: failed to append to {events_log}: {e}. "
+            f"Ensure the cortex/ umbrella is registered for sandbox writes "
+            f"(run `cortex init` to register it in "
+            f"~/.claude/settings.local.json's sandbox.filesystem.allowWrite).",
+            file=sys.stderr,
+        )
+        return 70
+
+    # Read-after-write verify: re-read the last line and assert it matches.
+    try:
+        with open(events_log, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+    except OSError as e:
+        print(
+            f"cortex-refine: read_after_write_io_error reading {events_log}: {e}",
+            file=sys.stderr,
+        )
+        return 70
+
+    mismatch = False
+    if not lines:
+        mismatch = True
+    else:
+        last = lines[-1].strip()
+        try:
+            obj = json.loads(last)
+        except (json.JSONDecodeError, ValueError):
+            mismatch = True
+        else:
+            if (
+                obj.get("event") != "lifecycle_start"
+                or obj.get("tier") != tier
+                or obj.get("criticality") != criticality
+            ):
+                mismatch = True
+
+    if mismatch:
+        print("read_after_write_mismatch", file=sys.stderr)
+        return 70
+
     return 0
 
 
