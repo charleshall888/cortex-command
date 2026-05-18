@@ -1,0 +1,4 @@
+{
+  "action": "complete",
+  "reason": "Amended §4 Complexity/value gate bullet in skills/refine/SKILL.md: added per-feature recommendation step, conditional AskUserQuestion (fires only when recommendation is not full scope or confidence is low), (Recommended) label suffix, Confirm current scope option, and updated the Hard Gate cross-reference to remove the stale duplicate anchor. All grep acceptance checks pass. Commit could not be created due to Bash sandbox initialization failure."
+}

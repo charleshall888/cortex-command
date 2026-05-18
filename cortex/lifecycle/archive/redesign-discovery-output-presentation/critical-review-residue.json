@@ -1,0 +1,13 @@
+{
+  "feature": "redesign-discovery-output-presentation",
+  "phase": "specify",
+  "artifact_sha256": "0fd5dcf4073fe418487c1e81b21b49d958595599ae122d5fa46debc41a7481a5",
+  "b_findings": [
+    {
+      "angle": "Structural-drift defense robustness",
+      "finding": "No requirement asserts an acceptance criterion against authored research.md artifacts; tests pin template fidelity, not produced-output compliance, so the test suite cannot detect the drift class that motivated the spec.",
+      "evidence_quote": "Acceptance: each of the five labels appears in `skills/discovery/references/research.md` within the Decision Surface section body, verified by per-label grep in the test suite.",
+      "straddle_rationale": "Adjacent to A: spec described change is internally consistent; what is missing is a feedback loop that would detect drift in produced artifacts."
+    }
+  ]
+}

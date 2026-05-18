@@ -1,0 +1,6 @@
+{"schema_version": 3, "ts": "2026-05-15T00:00:00Z", "event": "clarify_critic", "feature": "bootstrap-windows-install-and-validate-hook", "parent_epic_loaded": true, "findings_count": 11, "dispositions": {"apply": 3, "dismiss": 6, "ask": 2}, "applied_fixes_count": 3, "dismissals_count": 6, "status": "ok"}
+{"ts": "2026-05-15T00:00:01Z", "event": "lifecycle_start", "feature": "bootstrap-windows-install-and-validate-hook", "tier": "complex", "criticality": "high"}
+{"ts": "2026-05-15T00:00:02Z", "event": "phase_transition", "feature": "bootstrap-windows-install-and-validate-hook", "from": "clarify", "to": "research"}
+{"ts": "2026-05-16T02:38:57Z", "event": "complexity_override", "feature": "bootstrap-windows-install-and-validate-hook", "from": "simple", "to": "complex", "gate": "research_open_questions"}
+{"ts": "2026-05-15T00:01:00Z", "event": "phase_transition", "feature": "bootstrap-windows-install-and-validate-hook", "from": "research", "to": "specify"}
+{"ts": "2026-05-15T00:02:00Z", "event": "feature_wontfix", "feature": "bootstrap-windows-install-and-validate-hook", "reason": "operator parked Windows support indefinitely — research complete, no spec/impl"}

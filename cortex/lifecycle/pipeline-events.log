@@ -1,0 +1,8 @@
+{"ts": "2026-05-18T13:24:39.247482+00:00", "event": "dispatch_start", "feature": "seed-pipeline-feature-one", "complexity": "complex", "criticality": "low", "model": "opus", "max_turns": 20, "max_budget_usd": 25.0}
+{"ts": "2026-05-18T13:39:39.247487+00:00", "event": "dispatch_start", "feature": "seed-pipeline-feature-two", "complexity": "simple", "criticality": "low", "model": "sonnet", "max_turns": 20, "max_budget_usd": 10.0}
+{"ts": "2026-05-18T13:54:39.247490+00:00", "event": "dispatch_start", "feature": "seed-pipeline-feature-three", "complexity": "trivial", "criticality": "low", "model": "haiku", "max_turns": 20, "max_budget_usd": 5.0}
+{"ts": "2026-05-18T12:56:39.247493+00:00", "event": "dispatch_start", "feature": "seed-feature-alpha", "complexity": "complex", "criticality": "low", "model": "opus", "max_turns": 20, "max_budget_usd": 25.0}
+{"ts": "2026-05-18T12:59:39.247496+00:00", "event": "dispatch_start", "feature": "seed-feature-beta", "complexity": "simple", "criticality": "low", "model": "sonnet", "max_turns": 20, "max_budget_usd": 10.0}
+{"ts": "2026-05-18T13:42:39.247499+00:00", "event": "dispatch_start", "feature": "seed-feature-gamma", "complexity": "complex", "criticality": "low", "model": "opus", "max_turns": 20, "max_budget_usd": 25.0}
+{"ts": "2026-05-18T13:22:39.247501+00:00", "event": "dispatch_start", "feature": "seed-feature-delta", "complexity": "complex", "criticality": "low", "model": "sonnet", "max_turns": 20, "max_budget_usd": 25.0}
+{"ts": "2026-05-18T13:43:39.247503+00:00", "event": "dispatch_start", "feature": "seed-feature-epsilon", "complexity": "trivial", "criticality": "low", "model": "haiku", "max_turns": 20, "max_budget_usd": 5.0}

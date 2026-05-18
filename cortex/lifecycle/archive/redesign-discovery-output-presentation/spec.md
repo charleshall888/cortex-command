@@ -1,0 +1,100 @@
+# Specification: redesign-discovery-output-presentation
+
+## Problem Statement
+
+The discovery skill's research→decompose approval gate presents the orchestrator with a dense, jargon-heavy block — `## Headline Finding` followed by the full `## Architecture` section. Empirical evidence from four post-Phase-1 production artifacts shows Headline Finding sections at 171, 296, 317, and 402 words (template asked for "one paragraph"), and each `### Pieces` bullet as 150-250 words of engineering manifest packed with file paths and contract names. The orchestrator's complaint — "ton of words to say not very much; slog to read" — reflects an audience mismatch: `## Architecture` is authored for the future decompose-agent reader (a ticket-synthesis contract surface) but displayed at the gate to a different reader (a human approver making approve/revise/drop). The prior fix (`cortex/lifecycle/improve-discovery-gate-presentation/`) added Headline Finding via a "tighter authoring directive" mechanism that did not bind in production. Phase 2 makes two changes that work together: (a) replace the paragraph slot with five labeled sub-fields (`Verdict`, `Pieces (N)`, `What you're approving`, `Reject if`, `Trade-offs`), giving each field its own short authoring directive; and (b) rewrite the gate prose so the gate shows only the Decision Surface and a one-line-per-piece extract from `### Pieces`, suppressing the full `## Architecture` body at gate display. (a) is finer-grained prose discipline, not structural enforcement — markdown bullets do not cap content length, and the same drift class that produced 171-402 word Headline Findings could recur at the sub-field level. The Phase 2 audit phase exists specifically to detect that drift; if it materializes, escalation follows CLAUDE.md's MUST-policy with documented dispatch evidence. (b) is the load-bearing change — by removing Architecture's full body from the gate's content surface, the orchestrator no longer sees the engineering manifest at decision time regardless of how Decision Surface is authored.
+
+## Phases
+
+- **Phase 1: Decision Surface ships end-to-end** — Add `## Decision Surface` section to `skills/discovery/references/research.md` template with five named sub-fields and per-field authoring guidance; rewrite `skills/discovery/SKILL.md` research→decompose gate prose to render Decision Surface as the gate's first and primary content section and a one-line-per-piece extract from `### Pieces`, suppressing `## Architecture`'s full body at gate display; update marker-phrase tests in lockstep. Template, gate prose, and tests ship as a single unit because Phase 1's user-facing affordance (orchestrator-readable gate) requires all three.
+- **Phase 2: Production audit + drift contingency** — After Phase 1 ships, audit produced `cortex/research/*/research.md` artifacts (target: N≥3 produced under Phase-1-revised template) for Decision Surface sub-field word-count drift. If aggregate sub-field length exceeds the Phase-1 Headline Finding baseline (171-402 words), record evidence per the CLAUDE.md MUST-escalation policy and propose a Phase-3 escalation (e.g., authored-artifact lint, or structured-field validator in `cortex_command/discovery.py`). If drift does not materialize at the audit threshold, Phase 2 closes the lifecycle.
+
+## Requirements
+
+1. **A new H2 section `## Decision Surface` exists in the research.md template** between `## Headline Finding` and `## Research Questions`. Acceptance: `grep -c '^## Decision Surface' skills/discovery/references/research.md` equals 1. **Phase**: Phase 1.
+
+2. **The `## Decision Surface` section template contains five named sub-fields**: `Verdict`, `Pieces (N)`, `What you're approving`, `Reject if`, `Trade-offs`, each formatted as a bullet starting with `- **<field>**:`. Acceptance: each of the five labels appears in `skills/discovery/references/research.md` within the Decision Surface section's body, verified by per-label `grep` in the test suite. **Phase**: Phase 1.
+
+3. **The Decision Surface authoring directive (HTML comment under the section heading) instructs single-line / one-sentence discipline per sub-field**. The directive uses soft positive routing (no MUST/REQUIRED/CRITICAL tokens). Acceptance: a stable marker phrase such as "Each sub-field is one line. Resist multi-paragraph prose." appears verbatim in the template, and the existing test suite pins it via a new marker-phrase constant. The directive is prose discipline, not structural enforcement; drift detection lives in the Phase 2 audit. **Phase**: Phase 1.
+
+4. **`tests/test_discovery_gate_presentation.py` gains marker-phrase tests for the Decision Surface section heading and each of the five sub-field labels**. Acceptance: `just test tests/test_discovery_gate_presentation.py` exits 0 with the new tests included; the tests fail if any pinned marker phrase or sub-field label is removed or reworded. **Phase**: Phase 1.
+
+5. **The research.md template's structural test asserts `## Decision Surface` precedes `## Architecture`**. Acceptance: a test in `tests/test_discovery_gate_presentation.py` asserts the byte offset of `^## Decision Surface` is less than the byte offset of `^## Architecture`. **Phase**: Phase 1.
+
+6. **`skills/discovery/SKILL.md` research→decompose gate prose (currently at line 74) is rewritten to instruct the gate's first content section is `## Decision Surface`**. The prose names `## Decision Surface` explicitly and removes the current "first content section is `## Headline Finding`" directive. Acceptance: `grep -c 'first content section is.*Decision Surface' skills/discovery/SKILL.md` equals 1 (or an equivalently structured marker phrase pinned in test); the prior `## Headline Finding` first-content-section directive is removed. **Phase**: Phase 1.
+
+7. **The gate prose instructs the gate to extract a one-line "Role + Why" per `### Pieces` bullet**, presented after Decision Surface as a structured one-line bullet list (format: `- **<piece>**: <role> — <why this piece exists>`). Markdown table upgrade is explicitly out of scope for Phase 1 (rendering at the chat-relay surface is not empirically verified). Acceptance: a pinned marker phrase (e.g., `"per-piece view from \`### Pieces\`"` or equivalent) appears verbatim in `skills/discovery/SKILL.md` gate prose AND is pinned as a constant in `tests/test_discovery_gate_presentation.py`; gate prose contains the bullet-list format example (`- **<piece>**:`) verbatim; `just test tests/test_discovery_gate_presentation.py` exits 0; `grep -Ec 'MUST|REQUIRED|CRITICAL' skills/discovery/SKILL.md` shows zero new occurrences vs main in the extraction-related lines. **Phase**: Phase 1.
+
+8. **The gate prose instructs the gate to suppress the rest of `## Architecture`'s body at gate display** (Integration shape, Seam-level edges, Why N pieces). The orchestrator does NOT see these subsections at the approval gate; they remain in `research.md` for decompose-phase consumption. Acceptance: a pinned marker phrase (e.g., `"suppress \`## Architecture\` body at gate display"` or equivalent) appears in `skills/discovery/SKILL.md` and is pinned by a constant in `tests/test_discovery_gate_presentation.py`; `grep -c '^### Integration shape\|^### Seam-level edges' skills/discovery/SKILL.md` returns 0 (no rendering instruction for these sections in gate prose). **Phase**: Phase 1.
+
+9. **`## Headline Finding` is preserved in the research.md template alongside Decision Surface**. R1's placement (Decision Surface between Headline Finding and Research Questions) already implies this; the spec makes it explicit. Decision Surface is the gate-primary surface; Headline Finding remains as a brief verdict paragraph for archival/reference readers (decompose-agent and future-researcher audiences). Acceptance: `grep -c '^## Headline Finding' skills/discovery/references/research.md` equals 1 after Phase 1 ships. **Phase**: Phase 1.
+
+10. **Existing `R1_HEADLINE_MARKER_PHRASE` test in `tests/test_discovery_gate_presentation.py` is updated in lockstep with the gate prose rewrite**. The Headline Finding section is no longer named as the gate's first content section in SKILL.md, so the existing marker-phrase test is updated or retired. Acceptance: the test reflects current SKILL.md gate prose; `just test tests/test_discovery_gate_presentation.py` exits 0. **Phase**: Phase 1.
+
+11. **No fallback logic is added or removed in the gate prose for pre-Phase-2 artifacts**. The existing `## Headline Finding`-missing fallback prose at `skills/discovery/SKILL.md:74` ("the gate falls back to Architecture-first presentation and surfaces a warning") is preserved verbatim — that fallback handles the pre-Phase-2 `## Headline Finding`-absent case and is orthogonal to Decision Surface. No fallback is added for the Decision-Surface-absent case (existing `cortex/research/*/research.md` artifacts that pre-date Phase 2 will simply have the gate quote `## Headline Finding` per the preserved existing fallback). Acceptance: the existing fallback prose at SKILL.md:74 is preserved verbatim (verified by grep before/after diff); no new "fallback" / "fall back" tokens are added for the Decision-Surface-absent case. **Phase**: Phase 1.
+
+12. **The `### Pieces` cardinality and 1:1 decompose-ticket contract is preserved**. The Decision Surface's `Pieces (N)` sub-field is a one-line summary list and does not replace or rename `### Pieces`. Acceptance: `skills/discovery/references/decompose.md` lines 11-13 are unchanged; `grep -c '^### Pieces' skills/discovery/references/research.md` is still 1 and appears under `## Architecture`. **Phase**: Phase 1.
+
+13. **The four-option gate set (`approve`/`revise`/`drop`/`promote-sub-topic`) and event emission via `cortex-discovery emit-checkpoint-response` are preserved**. Acceptance: `_RESPONSE_VALUES` in `cortex_command/discovery.py` is unchanged; SKILL.md gate prose enumerates exactly these four options. **Phase**: Phase 1.
+
+14. **All new prose in the template and SKILL.md uses soft positive routing — no new MUST/REQUIRED/CRITICAL tokens**. Acceptance: `grep -Ec 'MUST|REQUIRED|CRITICAL' skills/discovery/references/research.md skills/discovery/SKILL.md` against the diff shows zero new occurrences vs. main. **Phase**: Phase 1.
+
+15. **The plugin-mirror auto-regen pre-commit hook regenerates `plugins/cortex-core/skills/discovery/`** in lockstep with canonical edits in `skills/discovery/`. Acceptance: after `git add` + commit, the mirror is updated; CI passes the dual-source drift check. **Phase**: Phase 1.
+
+16. **After Phase 1 ships, audit produced `cortex/research/*/research.md` artifacts for Decision Surface sub-field drift**. Audit trigger: N≥3 new artifacts produced under the Phase-1-revised template (track via git log on `cortex/research/`). Audit method: word-count each sub-field across the N artifacts; report aggregate min/median/max per sub-field. Drift threshold: median sub-field word count > 25 OR aggregate Decision Surface word count > 200 (Phase-1 Headline Finding baseline was 171-402 words; staying under that range with five sub-fields is success). If threshold exceeded, document the evidence per CLAUDE.md MUST-escalation policy and propose a Phase-3 escalation (authored-artifact lint or structured-field validator). If threshold not exceeded, close the lifecycle as `feature_complete` and record the audit result in `events.log`. Acceptance: `cortex/lifecycle/redesign-discovery-output-presentation/audit-results.md` exists, naming the N artifacts audited, their per-field word counts, and the verdict (pass / escalate). **Phase**: Phase 2.
+
+## Non-Requirements
+
+- Does NOT change `### Pieces` cardinality, naming, or its source-of-truth contract with `skills/discovery/references/decompose.md`.
+- Does NOT introduce a sibling artifact (e.g., `brief.md`) alongside `research.md`. The Decision Surface lives inside research.md.
+- Does NOT remove or rename `## Architecture` or its subsections (`### Pieces`, `### Integration shape`, `### Seam-level edges`, `### Why N pieces`). The full body stays authored for decompose consumption; only its *gate display* is suppressed.
+- Does NOT remove `## Headline Finding` from the template (R9 explicitly preserves it).
+- Does NOT remove or alter the existing `## Headline Finding`-missing fallback prose at `SKILL.md:74` (R11 preserves it verbatim).
+- Does NOT add a Decision-Surface-missing fallback for pre-Phase-2 artifacts (those artifacts have `## Headline Finding`, which the existing preserved fallback handles).
+- Does NOT ship a migration script for `cortex/research/*/research.md` artifacts.
+- Does NOT update `tests/test_lifecycle_kept_pauses_parity.py` — the discovery gate is not in the lifecycle/refine parity inventory.
+- Does NOT update `bin/cortex-check-prescriptive-prose` — the LEX-1 scanner scans ticket bodies, not research.md.
+- Does NOT ship per-piece markdown tables in Phase 1 (R7 ships a structured bullet list; table upgrade is a future enhancement contingent on rendering verification).
+- Does NOT ship runtime word-count enforcement for sub-fields in Phase 1. Drift detection is the Phase 2 audit; runtime enforcement is a Phase-3 contingency (R16).
+- Does NOT add tone directives ("present warmly", "be empathetic", etc.) — `docs/policies.md` constrains skill prose to content shape and decision criteria, not voice.
+- Does NOT introduce topic-shape branching at the gate (the Phase 1 prior-lifecycle's Non-Requirements explicitly excluded this; Phase 2 honors that exclusion).
+- Does NOT introduce a Python rendering layer in `cortex_command/discovery.py`. The helper module remains event-emission + path-resolution only.
+- Does NOT change R13 re-run slug-collision semantics.
+
+## Edge Cases
+
+- **piece_count = 0 (no tickets verdict or fold-into-#N)**: Decision Surface still applies. `Pieces (0)` is the literal sub-field value; the `What you're approving` field carries the verdict ("no actionable work" or "fold-into-#N rationale"). The per-piece extract at gate is empty (no rows). Acceptance: an empty `Pieces (0)` value does not trigger a test failure.
+
+- **piece_count = 1 (single-piece branch, no epic)**: Decision Surface renders with `Pieces (1)`; the per-piece extract at gate is one row. No special-case prose in the template.
+
+- **piece_count > 5 (Why-N falsification fires)**: `### Why N pieces` continues to be authored under `## Architecture` per the existing template (lines 138-160) and is consumed by decompose. The gate suppresses `### Why N pieces` at gate display (per R8) because the falsification gate narrates the author's past-tense merge reasoning — author-facing, not decision-relevant for the orchestrator.
+
+- **Decision Surface section missing in a freshly-authored research.md (authoring error)**: Phase 1 marker-phrase tests + structural ordering test (R4, R5) fail in CI, surfacing the missing section before the artifact reaches a gate.
+
+- **Pre-Phase-2 artifact (Decision Surface absent on disk)**: Existing `cortex/research/*/research.md` artifacts that pre-date Phase 1's ship continue to render at the gate via the existing preserved `## Headline Finding`-missing fallback (R11). The gate quotes Headline Finding (when present), or falls back to Architecture-first with a warning (existing SKILL.md behavior). Phase 2's Decision-Surface-absent path is gracefully handled by the same existing fallback because Decision Surface absence implies these are pre-Phase-2 artifacts that also have Headline Finding.
+
+- **Decision Surface sub-field empty (e.g., `Reject if:` with no value)**: The template's authoring directive instructs single-line content per field; an empty field is a soft authoring failure. Phase 2 audit (R16) measures sub-field word count, which surfaces empty fields as a 0-count anomaly. Phase 1 ships without runtime enforcement (relying on the authoring directive); Phase-3 contingency may add render-time warnings if observed in practice.
+
+- **R13 re-run (`{topic}-N/research.md`)**: New artifacts use the Phase 2 template (with Decision Surface). The R13 multiplicative cost is bounded by the single-line sub-field discipline — significantly smaller than the current Headline Finding paragraph drift.
+
+## Changes to Existing Behavior
+
+- **ADDED**: `## Decision Surface` section in `skills/discovery/references/research.md` template between `## Headline Finding` and `## Research Questions`.
+- **MODIFIED**: `skills/discovery/SKILL.md` research→decompose gate prose. First-content-section instruction changed from `## Headline Finding` to `## Decision Surface`. New instruction added for the one-line-per-piece extract from `### Pieces`. New instruction added to suppress `## Architecture` body (Integration shape, Seam-level edges, Why N pieces) at gate display.
+- **MODIFIED**: `tests/test_discovery_gate_presentation.py` — marker-phrase tests added for Decision Surface section, its five sub-field labels, the per-piece extract format, and the Architecture-body suppression directive; existing `R1_HEADLINE_MARKER_PHRASE` test is updated to reflect Headline Finding's reduced gate role.
+- **PRESERVED**: All decompose-side behavior. `skills/discovery/references/decompose.md`, `cortex_command/discovery.py` event payloads, `bin/cortex-check-prescriptive-prose`, `bin/.events-registry.md`, the four-option gate set, R13 semantics, the existing `## Headline Finding`-missing fallback prose at SKILL.md:74, and the kept-user-pauses parity test are all out of scope for change.
+
+## Technical Constraints
+
+- **Decompose contract (load-bearing)**: `skills/discovery/references/decompose.md:11-13` consumes `### Pieces` bullets 1:1. The Decision Surface's `Pieces (N)` summary is a separate concern from `### Pieces` and does not replace it.
+- **SKILL.md size cap**: 500 lines per `tests/test_skill_size_budget.py`. `skills/discovery/SKILL.md` is currently 106 lines; the gate prose rewrite is expected to remain well under cap.
+- **MUST-escalation policy**: per `CLAUDE.md:72-81`, new MUST/REQUIRED/CRITICAL tokens require evidence-artifact citation. Phase 1 ships with soft positive routing only. Phase 2's audit (R16) is the canonical evidence-collection mechanism. If Phase 2 surfaces drift, escalation requires the evidence-artifact regime — unilateral MUST without that regime is policy-violating.
+- **Plugin-mirror dual-source**: canonical edits are in `skills/discovery/`; `plugins/cortex-core/skills/discovery/` regenerates via pre-commit. Edits to the plugin mirror directly are not permitted.
+- **Tone policy** (`docs/policies.md`): no tone directives in skill prose.
+- **`cortex/research/*/research.md` is unmigrated**: old artifacts continue to render via the existing preserved `## Headline Finding`-missing fallback (R11). The existing fallback handles both the Headline-Finding-absent case (with a warning) and the Decision-Surface-absent case (implicitly — these are pre-Phase-2 artifacts whose Headline Finding is present).
+- **Render surface for tables**: the gate's actual delivery surface is the orchestrator-model relaying markdown to the user via Claude Code chat. Markdown table rendering at this surface is not empirically verified; R7 ships a bullet-list format that renders consistently across surfaces. Table upgrade is a Phase-3-or-later future enhancement after rendering verification.
+- **Phase 1 ship-atomicity**: Phase 1 is a single shipping unit; template, gate prose, and tests must land together because the user-facing affordance (orchestrator-readable gate) requires all three. Splitting Phase 1 across PRs reintroduces the failed prior intervention's pattern (template change without gate change yields no user benefit).
+
+## Open Decisions
+
+(None. All three previously-deferred Open Decisions are resolved in this revision: OD-1 → R8 instructs Architecture body suppression at gate; OD-2 → R9 keeps Headline Finding alongside Decision Surface; OD-3 → R7 prescribes structured bullet list, table upgrade deferred to a future-phase enhancement contingent on rendering verification.)

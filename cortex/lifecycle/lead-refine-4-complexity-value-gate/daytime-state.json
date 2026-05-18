@@ -1,0 +1,38 @@
+{
+  "session_id": "daytime-lead-refine-4-complexity-value-gate-1778936388",
+  "plan_ref": "/Users/charlie.hall/Workspaces/cortex-command/cortex/lifecycle/lead-refine-4-complexity-value-gate/plan.md",
+  "plan_hash": null,
+  "current_round": 1,
+  "phase": "executing",
+  "features": {
+    "lead-refine-4-complexity-value-gate": {
+      "status": "running",
+      "round_assigned": 1,
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "deferred_questions": 0,
+      "spec_path": null,
+      "plan_path": null,
+      "backlog_id": null,
+      "recovery_attempts": 0,
+      "recovery_depth": 0,
+      "repo_path": null,
+      "intra_session_blocked_by": []
+    }
+  },
+  "round_history": [],
+  "started_at": "2026-05-16T12:59:48.121731+00:00",
+  "updated_at": "2026-05-16T12:59:48.121733+00:00",
+  "paused_from": null,
+  "paused_reason": null,
+  "integration_branch": null,
+  "integration_branches": {},
+  "worktree_path": null,
+  "project_root": null,
+  "integration_worktrees": {},
+  "scheduled_start": null,
+  "integration_pr_flipped_once": false,
+  "integration_degraded": false,
+  "schema_version": 1
+}

@@ -1,0 +1,32 @@
+{"ts": "2026-05-18T12:54:39.241324+00:00", "event": "SESSION_START", "round": 1, "session_id": "overnight-seed-2026-05-18-1424"}
+{"ts": "2026-05-18T12:56:39.241329+00:00", "event": "ROUND_START", "round": 1}
+{"ts": "2026-05-18T12:57:39.241331+00:00", "event": "BATCH_ASSIGNED", "round": 1, "features": ["seed-feature-alpha", "seed-feature-beta"]}
+{"ts": "2026-05-18T12:58:39.241332+00:00", "event": "FEATURE_START", "round": 1, "feature": "seed-feature-alpha"}
+{"ts": "2026-05-18T12:59:39.241333+00:00", "event": "FEATURE_START", "round": 1, "feature": "seed-feature-beta"}
+{"ts": "2026-05-18T13:06:39.241334+00:00", "event": "FEATURE_COMPLETE", "round": 1, "feature": "seed-feature-alpha", "status": "merged"}
+{"ts": "2026-05-18T13:09:39.241335+00:00", "event": "FEATURE_COMPLETE", "round": 1, "feature": "seed-feature-beta", "status": "merged"}
+{"ts": "2026-05-18T13:19:39.241336+00:00", "event": "ROUND_COMPLETE", "round": 1, "features_merged": ["seed-feature-alpha", "seed-feature-beta"]}
+{"ts": "2026-05-18T13:20:39.241337+00:00", "event": "ROUND_START", "round": 2}
+{"ts": "2026-05-18T13:21:39.241338+00:00", "event": "BATCH_ASSIGNED", "round": 2, "features": ["seed-feature-delta"]}
+{"ts": "2026-05-18T13:22:39.241339+00:00", "event": "FEATURE_START", "round": 2, "feature": "seed-feature-delta"}
+{"ts": "2026-05-18T13:29:39.241340+00:00", "event": "FEATURE_PAUSED", "round": 2, "feature": "seed-feature-delta", "reason": "Awaiting clarification"}
+{"ts": "2026-05-18T13:39:39.241341+00:00", "event": "ROUND_COMPLETE", "round": 2, "features_merged": [], "features_paused": ["seed-feature-delta"]}
+{"ts": "2026-05-18T13:40:39.241342+00:00", "event": "ROUND_START", "round": 3}
+{"ts": "2026-05-18T13:41:39.241343+00:00", "event": "BATCH_ASSIGNED", "round": 3, "features": ["seed-feature-gamma", "seed-feature-epsilon"]}
+{"ts": "2026-05-18T13:42:39.241344+00:00", "event": "FEATURE_START", "round": 3, "feature": "seed-feature-gamma"}
+{"ts": "2026-05-18T13:43:39.241345+00:00", "event": "FEATURE_START", "round": 3, "feature": "seed-feature-epsilon"}
+{"ts": "2026-05-18T13:46:39.241346+00:00", "event": "FEATURE_CHECKPOINT", "round": 3, "feature": "seed-feature-epsilon", "note": "Checkpoint before final step"}
+{"ts": "2026-05-18T13:49:39.241347+00:00", "event": "FEATURE_RETRY", "round": 3, "feature": "seed-feature-epsilon", "attempt": 2}
+{"ts": "2026-05-18T13:52:39.241348+00:00", "event": "FEATURE_FAILED", "round": 3, "feature": "seed-feature-epsilon", "error": "Agent exited with non-zero status"}
+{"ts": "2026-05-18T13:44:39.241349+00:00", "event": "FEATURE_CHECKPOINT", "round": 3, "feature": "seed-feature-gamma", "note": "Checkpoint after step 2"}
+{"ts": "2026-05-18T13:47:39.241350+00:00", "event": "FEATURE_CHECKPOINT", "round": 3, "feature": "seed-feature-gamma", "note": "Checkpoint after step 4"}
+{"ts": "2026-05-18T13:54:39.241351+00:00", "event": "FEATURE_CHECKPOINT", "round": 3, "feature": "seed-feature-gamma", "note": "Checkpoint after step 6"}
+{"ts": "2026-05-18T14:04:39.241352+00:00", "event": "FEATURE_CHECKPOINT", "round": 3, "feature": "seed-feature-gamma", "note": "Checkpoint after step 8"}
+{"ts": "2026-05-18T14:14:39.241353+00:00", "event": "FEATURE_CHECKPOINT", "round": 3, "feature": "seed-feature-gamma", "note": "Checkpoint after step 10"}
+{"ts": "2026-05-18T14:19:39.241354+00:00", "event": "FEATURE_CHECKPOINT", "round": 3, "feature": "seed-feature-gamma", "note": "Checkpoint after step 12"}
+{"ts": "2026-05-18T12:59:39.241356+00:00", "event": "PLAN_LOADED", "round": 1, "plan_ref": "main"}
+{"ts": "2026-05-18T13:00:39.241357+00:00", "event": "BRANCH_CREATED", "round": 1, "branch": "overnight/overnight-seed-2026-05-18-1424"}
+{"ts": "2026-05-18T13:10:39.241358+00:00", "event": "MERGE_STARTED", "round": 1, "feature": "seed-feature-alpha"}
+{"ts": "2026-05-18T13:12:39.241359+00:00", "event": "MERGE_STARTED", "round": 1, "feature": "seed-feature-beta"}
+{"ts": "2026-05-18T13:24:39.241361+00:00", "event": "BRANCH_SYNCED", "round": 2, "branch": "overnight/overnight-seed-2026-05-18-1424"}
+{"ts": "2026-05-18T14:22:39.241362+00:00", "event": "HEARTBEAT", "round": 3, "phase": "executing"}
