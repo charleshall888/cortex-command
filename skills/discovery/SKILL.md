@@ -71,7 +71,15 @@ Read **only** the reference for the current phase.
 
 ### Research → Decompose approval gate (spec R4)
 
-Between the Research and Decompose phases a single-question user-blocking gate fires. The gate's first content section is `## Headline Finding` from research.md, followed by the `## Architecture` sub-sections (`### Pieces`, `### Integration shape`, `### Seam-level edges`, optionally `### Why N pieces`). When the `## Headline Finding` section is missing in research.md, or its body is empty/whitespace-only, the gate falls back to Architecture-first presentation and surfaces a warning naming the condition (heading absent vs. empty body). No decompose work begins until the user answers. Four options:
+Between the Research and Decompose phases a single-question user-blocking gate fires. The gate's first content section is the contents of `cortex/research/<topic>/brief.md`, generated via:
+
+```
+python3 -m cortex_command.discovery generate-brief \
+    --research-md cortex/research/<topic>/research.md \
+    --persist-to cortex/research/<topic>/brief.md
+```
+
+If brief generation exits non-zero, OR `brief.md` is missing after the command runs, OR `brief.md` fails decision-content validation, the gate falls back to displaying the dense `## Architecture` section (sub-sections `### Pieces`, `### Integration shape`, `### Seam-level edges`, and optionally `### Why N pieces`) and surfaces a warning naming the failure condition (`brief_generation_failed: <reason>`). No decompose work begins until the user answers. Four options:
 
 - **`approve`** — continue to the Decompose phase. The agent emits one `approval_checkpoint_responded` event with `checkpoint: research-decompose`, `response: approve`, and the current `revision_round` integer, then proceeds.
 - **`revise`** — open a free-text revision prompt scoped to the Architecture section. The agent re-walks the Architecture write protocol per spec R4 GATE-2 (iii) (re-emit `### Pieces`, re-run `### Integration shape` and `### Seam-level edges`, re-run the `### Why N pieces` falsification gate if piece_count > 5), re-presents the gate, and increments `revision_round`. Emits one `approval_checkpoint_responded` event with `response: revise` per loop iteration. Loop continues until `approve` or `drop`.
