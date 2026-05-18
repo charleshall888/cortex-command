@@ -82,10 +82,11 @@
 - **Verdict**: PASS
 
 ### Requirement 15: Phase 2 trigger has operational arming mechanism
-- **Expected**: Backlog ticket with `tag: phase2-trigger` and `review_date: <merge_date + 6 months>`; surfaces in `cortex-backlog list --tag phase2-trigger` queries.
+- **Expected**: Backlog ticket with `tag: phase2-trigger` and `review_date: <merge_date + 6 months>`; surfaces in `cortex-backlog-ready --tag phase2-trigger` queries.
 - **Actual**: `cortex/backlog/232-re-evaluate-cross-skill-brief-framework-discovery-output-density-phase-2-trigger.md` exists with `tags: [phase2-trigger]`, `review_date: 2026-11-16`, body citing spec Req 15 + naming Candidate C and Candidate G triggers + evaluation criteria. Wiring ticket `cortex/backlog/233-...md` filed for missing `--tag` filter, per spec's escape hatch ("if `cortex-backlog` does not currently support `--tag` filtering, file a separate wiring ticket rather than dropping this requirement"). Verified: `cortex-backlog-ready --tag phase2-trigger` errors with "unrecognized arguments: --tag phase2-trigger" — the wiring is required for full query-discoverability and ticket #233 captures the gap.
+Resolved by ticket #233 (add-tag-filter-to-backlog-query) on 2026-05-18 — cortex-backlog-ready --tag phase2-trigger now functions.
 - **Verdict**: PASS
-- **Notes**: Spec's acceptance grep `cortex-backlog list --tag phase2-trigger | grep -c "discovery-output-density" ≥ 1` cannot be satisfied today because the CLI does not implement `--tag`. The spec anticipated this with the wiring-ticket escape hatch, which the implementation correctly exercised — the requirement explicitly permits this path. Operational arming is partial today: frontmatter tag is in place and #233 is queued for the CLI work.
+- **Notes**: Spec's acceptance grep `cortex-backlog-ready --tag phase2-trigger | grep -c "discovery-output-density" ≥ 1` was unsatisfiable at review time; ticket #233 landed --tag and the grep now passes. The spec anticipated this with the wiring-ticket escape hatch, which the implementation correctly exercised — the requirement explicitly permits this path. Operational arming is partial today: frontmatter tag is in place and #233 is queued for the CLI work.
 
 ## Stage 2: Code Quality
 

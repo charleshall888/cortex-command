@@ -41,7 +41,7 @@ This spec hypothesizes that decoupling brief generation from the dense artifact 
 
 14. **Test pins updated in lockstep**. `tests/test_discovery_gate_presentation.py` drops `R1_HEADLINE_MARKER_PHRASE`. Adds `BRIEF_INVOCATION_MARKER_PHRASE` and `GATE_OPTIONS_MARKER_PHRASE`. **Acceptance**: `pytest tests/test_discovery_gate_presentation.py` exits 0 AND `grep -c "R1_HEADLINE_MARKER_PHRASE" tests/test_discovery_gate_presentation.py` = 0. **Phase**: Phase 2.
 
-15. **Phase 2 trigger has an operational arming mechanism**. To distinguish "named Phase 2 trigger" from silent deferral per CLAUDE.md Solution Horizon: at merge time, a backlog ticket is auto-created (or manually added) with title "Re-evaluate cross-skill brief framework — discovery-output-density Phase 2 trigger" and a frontmatter field `review_date: <merge_date + 6 months>` plus tag `phase2-trigger`. This makes the trigger appear in `cortex-backlog list --tag phase2-trigger` queries and surfaces in any periodic backlog review. **Acceptance**: After merge, `cortex-backlog list --tag phase2-trigger | grep -c "discovery-output-density"` ≥ 1 (resolved by the implementer at Plan phase; if `cortex-backlog` does not currently support `--tag` filtering, file a separate wiring ticket rather than dropping this requirement). **Phase**: Phase 1.
+15. **Phase 2 trigger has an operational arming mechanism**. To distinguish "named Phase 2 trigger" from silent deferral per CLAUDE.md Solution Horizon: at merge time, a backlog ticket is auto-created (or manually added) with title "Re-evaluate cross-skill brief framework — discovery-output-density Phase 2 trigger" and a frontmatter field `review_date: <merge_date + 6 months>` plus tag `phase2-trigger`. This makes the trigger appear in `cortex-backlog-ready --tag phase2-trigger` queries and surfaces in any periodic backlog review. **Acceptance**: After merge, `cortex-backlog-ready --tag phase2-trigger | grep -c "discovery-output-density"` ≥ 1 (resolved by the implementer at Plan phase; if `cortex-backlog` does not currently support `--tag` filtering, file a separate wiring ticket rather than dropping this requirement). **Phase**: Phase 1.
 
 ## Non-Requirements
 
@@ -61,7 +61,7 @@ This spec hypothesizes that decoupling brief generation from the dense artifact 
 - **User re-runs `/cortex-core:discovery` on a topic with an existing brief.md**: Regenerate, overwrite. Derived artifact, no atomicity concern.
 - **Generated brief exceeds word-cap tolerance**: Req 5's test fails pre-merge. The tuning loop in Plan must preserve decision-content fidelity (Req 5b semantic-anchor check); if the cap is structurally below the honest length needed for a topic class, Req 4's corpus-derivation revisits and tunes the cap upward. **Tuning does not silently delete decision content**.
 - **Brief drifts toward author-centric prose on inputs not represented in fixtures**: Req 9's post-merge corpus check detects this on real produced output; failure triggers replan, not silent breakage. The fixtures in Req 5 must be expanded if Req 9 surfaces a topic class the fixtures didn't cover.
-- **Phase 2 trigger arming mechanism (Req 15) fails**: `cortex-backlog list --tag` not supported. Implementer files wiring ticket; spec is honest that the operational arming requires a working tag filter, not "trigger named in spec.md sentence."
+- **Phase 2 trigger arming mechanism (Req 15) fails**: `cortex-backlog-ready --tag` was not supported (resolved by ticket #233). Implementer files wiring ticket; spec is honest that the operational arming requires a working tag filter, not "trigger named in spec.md sentence."
 
 ## Changes to Existing Behavior
 
@@ -84,7 +84,7 @@ This spec hypothesizes that decoupling brief generation from the dense artifact 
 - **Helper module follows the established skill-helper pattern** (`cortex/requirements/project.md:31`).
 - **MUST-escalation policy alignment**. The spec adds no new MUST/CRITICAL/REQUIRED language. Binding lives in test fixtures + a hypothesized fresh-context mechanism; the test failure mode is observable in CI without requiring MUST language. Per `CLAUDE.md` MUST-escalation policy: no MUST escalation triggered.
 - **Dual-source mirror discipline preserved**. Template + SKILL.md edits land on canonical sources only.
-- **Solution Horizon framing — honest**. The user chose narrow scope at spec-interview. Req 15 provides an operational arming mechanism for the Phase 2 trigger so it is queryable, not just named in spec prose. The cadence of trigger evaluation is the operator's responsibility (via periodic `cortex-backlog list --tag phase2-trigger`), not an automated guarantee. This is "named Phase 2 trigger with discoverable arming," not "automatically-evaluated trigger."
+- **Solution Horizon framing — honest**. The user chose narrow scope at spec-interview. Req 15 provides an operational arming mechanism for the Phase 2 trigger so it is queryable, not just named in spec prose. The cadence of trigger evaluation is the operator's responsibility (via periodic `cortex-backlog-ready --tag phase2-trigger`), not an automated guarantee. This is "named Phase 2 trigger with discoverable arming," not "automatically-evaluated trigger."
 
 ## Phase 2 triggers (Solution Horizon — narrow scope chosen)
 
