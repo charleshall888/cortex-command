@@ -37,6 +37,7 @@ cortex-integration-recovery = "cortex_command.overnight.integration_recovery:mai
 cortex-interrupt = "cortex_command.overnight.interrupt:main"
 cortex-morning-review-complete-session = "cortex_command.overnight.complete_morning_review_session:main"
 cortex-pipeline-metrics = "cortex_command.pipeline.metrics:main"
+cortex-refine = "cortex_command.refine:main"
 cortex-report = "cortex_command.overnight.report:main"
 cortex-smoke-test = "cortex_command.overnight.smoke_test:main"
 cortex-worktree-resolve = "cortex_command.pipeline.worktree_resolve_cli:main"
