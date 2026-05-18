@@ -54,6 +54,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+from cortex_command._brief_scoring import _score_brief_patterns
+
 
 # ---------------------------------------------------------------------------
 # Defaults: resolve repo root from git toplevel
@@ -777,6 +779,133 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# score-corpus: post-merge regression scanner
+# ---------------------------------------------------------------------------
+
+def _extract_headline_and_architecture(research_md: Path) -> str:
+    """Extract the Headline Finding and Architecture sections from a research.md.
+
+    Used as the fallback scoring target when no brief.md exists for a topic.
+    Returns the concatenated text of those two sections, or the full file
+    content if neither heading is found.
+    """
+    try:
+        text = research_md.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+    lines = text.splitlines()
+    collected: list[str] = []
+    in_section = False
+    target_headings = {"## Headline Finding", "## Architecture"}
+
+    for line in lines:
+        stripped = line.rstrip()
+        if stripped in target_headings:
+            in_section = True
+            collected.append(line)
+            continue
+        if in_section and stripped.startswith("## ") and stripped not in target_headings:
+            in_section = False
+            continue
+        if in_section:
+            collected.append(line)
+
+    if collected:
+        return "\n".join(collected).strip()
+    # Fallback: return entire file when headings are absent.
+    return text.strip()
+
+
+def _cmd_score_corpus(args: argparse.Namespace) -> int:
+    """Handle the ``score-corpus`` subcommand.
+
+    Walks ``--root`` recursively for ``brief.md`` files. When a topic directory
+    contains no ``brief.md``, falls back to scoring the Headline Finding and
+    Architecture excerpts from ``research.md`` in the same directory.
+
+    Emits one line per file scored to stdout:
+        <path> patterns_reproducing=<N>/<6> word_count=<N>
+
+    Exit code is always 0 on a successful walk; non-zero only on argument or
+    I/O error.  Pattern-count failures are a report signal for operator retro
+    review, not a process-level gate.
+    """
+    root = Path(args.root).resolve()
+    if not root.exists():
+        print(f"score-corpus: root path does not exist: {root}", file=sys.stderr)
+        return 2
+
+    threshold: int = args.threshold
+
+    # Collect topic directories: any directory under root that either contains
+    # a brief.md or a research.md.
+    topic_dirs: list[Path] = []
+    for candidate in sorted(root.iterdir()):
+        if not candidate.is_dir():
+            continue
+        if (candidate / "brief.md").is_file() or (candidate / "research.md").is_file():
+            topic_dirs.append(candidate)
+
+    if not topic_dirs:
+        # Also try the root itself if it contains brief.md / research.md directly.
+        if (root / "brief.md").is_file() or (root / "research.md").is_file():
+            topic_dirs = [root]
+
+    if not topic_dirs:
+        print(
+            f"score-corpus: no topic directories found under {root} "
+            "(expected subdirectories containing brief.md or research.md)",
+            file=sys.stderr,
+        )
+        return 2
+
+    any_scored = False
+    for topic_dir in sorted(topic_dirs):
+        brief_path = topic_dir / "brief.md"
+        if brief_path.is_file():
+            try:
+                text = brief_path.read_text(encoding="utf-8").strip()
+            except OSError as e:
+                print(
+                    f"score-corpus: warning: could not read {brief_path}: {e}",
+                    file=sys.stderr,
+                )
+                continue
+            source_path = brief_path
+        else:
+            # Fall back to research.md Headline + Architecture excerpts.
+            research_path = topic_dir / "research.md"
+            if not research_path.is_file():
+                continue
+            text = _extract_headline_and_architecture(research_path)
+            source_path = research_path
+
+        if not text:
+            continue
+
+        scores = _score_brief_patterns(text)
+        reproducing = sum(scores.values())
+        word_count = len(text.split())
+
+        flag = " [FLAGGED]" if reproducing >= threshold else ""
+        print(
+            f"{source_path} patterns_reproducing={reproducing}/6"
+            f" word_count={word_count}{flag}"
+        )
+        any_scored = True
+
+    if not any_scored:
+        print(
+            f"score-corpus: no scoreable files found under {root}",
+            file=sys.stderr,
+        )
+        return 2
+
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # CLI subcommand dispatch
 # ---------------------------------------------------------------------------
 
@@ -1030,6 +1159,40 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     gb.set_defaults(func=_cmd_generate_brief)
+
+    # score-corpus
+    sc = sub.add_parser(
+        "score-corpus",
+        help=(
+            "Walk a corpus root for brief.md files (or research.md Headline + "
+            "Architecture excerpts when no brief.md exists) and score each "
+            "against the six reader-study patterns. "
+            "Emits one line per file: '<path> patterns_reproducing=N/6 word_count=N'. "
+            "Exit code 0 on success; pattern-count failures are a report signal "
+            "for operator retro review, not a process-level gate."
+        ),
+    )
+    sc.add_argument(
+        "--root",
+        required=True,
+        metavar="PATH",
+        help=(
+            "Root directory to scan for topic subdirectories containing "
+            "brief.md or research.md (e.g. cortex/research/)."
+        ),
+    )
+    sc.add_argument(
+        "--threshold",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "Pattern count at or above which a file is flagged with [FLAGGED] "
+            "in the report. Default: 1 (any pattern triggers the surface signal). "
+            "Operator-tunable; does not affect exit code."
+        ),
+    )
+    sc.set_defaults(func=_cmd_score_corpus)
 
     return p
 
