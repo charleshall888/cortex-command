@@ -423,39 +423,11 @@ For each failed feature (in the order listed in the report):
 
 ## Section 5 — Auto-Close Backlog Tickets
 
-Run after all sections above are complete. No per-feature confirmation is needed.
+Backlog ticket closure has moved to **Section 6b**, which runs immediately after a
+successful merge in Section 6. Closing tickets before confirming the PR has merged was
+a bug — the closure now happens on the post-merge success path only.
 
-For each completed feature (the same list as Section 2, in the same order):
-
-1. Run:
-
-   ```
-   cortex-update-item {backlog_id} status=complete
-   ```
-
-   Where `{backlog_id}` is the zero-padded numeric ID from `overnight-state.json`'s
-   `backlog_id` field (e.g., `078` not `78`). If `backlog_id` is null, fall back to
-   the lifecycle slug for fuzzy matching. Run from the repository root. The script
-   exits 0 on success (item updated) and exits 1 silently if no item is found.
-
-2. Report one of the following per feature:
-   - `closed #ID` — if the script printed "Parent epic also closed: ..." or the item
-     was found and updated (exit 0 with a matching item)
-   - `no ticket found` — if the script exited 1
-
-3. If `update_item.py` printed "Parent epic also closed: {path}", append
-   `(parent epic also closed)` to the line for that feature.
-
-Present the full closure results as a summary list at the end of the review. Example:
-
-```
-Ticket closure results:
-  auth-api         closed #042
-  data-pipeline    no ticket found
-  ui-dashboard     closed #039 (parent epic also closed)
-```
-
-After printing the summary, proceed to Section 6.
+Proceed to Section 6.
 
 ---
 
@@ -547,6 +519,47 @@ while remote main has the PR merge commit. This step reconciles the two.
    - **Exit 1**: report "Sync encountered unresolvable conflicts. Local main is diverged — resolve manually with `git pull --rebase origin main`."
    - **Exit 2**: report "Rebase succeeded but push failed. Run `git push origin main` when network is available."
 
+After this section, proceed to Section 6b.
+
+---
+
+## Section 6b — Close Backlog Tickets
+
+Run immediately after a successful post-merge sync in Section 6a. Skip this section
+entirely if the merge was declined, skipped, or the PR was already merged/closed before
+this review — backlog tickets should only be closed when the merge is confirmed in the
+current review session.
+
+For each completed feature (the same list as Section 2, in the same order):
+
+1. Run:
+
+   ```
+   cortex-update-item {backlog_id} status=complete
+   ```
+
+   Where `{backlog_id}` is the zero-padded numeric ID from `overnight-state.json`'s
+   `backlog_id` field (e.g., `078` not `78`). If `backlog_id` is null, fall back to
+   the lifecycle slug for fuzzy matching. Run from the repository root. The script
+   exits 0 on success (item updated) and exits 1 silently if no item is found.
+
+2. Report one of the following per feature:
+   - `closed #ID` — if the script printed "Parent epic also closed: ..." or the item
+     was found and updated (exit 0 with a matching item)
+   - `no ticket found` — if the script exited 1
+
+3. If `update_item.py` printed "Parent epic also closed: {path}", append
+   `(parent epic also closed)` to the line for that feature.
+
+Present the full closure results as a summary list at the end of the review. Example:
+
+```
+Ticket closure results:
+  auth-api         closed #042
+  data-pipeline    no ticket found
+  ui-dashboard     closed #039 (parent epic also closed)
+```
+
 After this section, the review is complete.
 
 ---
@@ -557,7 +570,7 @@ After this section, the review is complete.
 |-----------|--------|
 | No morning report at `cortex/lifecycle/morning-report.md` | Print missing-report message (Section 1) and stop |
 | `cortex/lifecycle/sessions/` exists but report is missing | Print "Incomplete session detected — report not generated. Run: `cortex-report`" and stop |
-| No completed features | Skip Sections 2, 2b, and 5 entirely |
+| No completed features | Skip Sections 2, 2b, and 6b entirely |
 | No deferred question files | Skip Section 3 entirely |
 | No failed features | Skip Section 4 entirely |
 | Single completed feature | Still use the batch prompt — consistent UX regardless of count |
@@ -587,7 +600,7 @@ After this section, the review is complete.
 | `cortex-git-sync-rebase` exits 0 | Report synced and pushed — fully up to date |
 | `cortex-git-sync-rebase` exits 1 (unresolvable conflicts) | Report diverged — resolve manually with `git pull --rebase origin main` |
 | `cortex-git-sync-rebase` exits 2 (push failed) | Report rebase succeeded — run `git push origin main` when network available |
-| Merge was declined or skipped | Skip Section 6a entirely |
+| Merge was declined or skipped | Skip Sections 6a and 6b entirely |
 | `cortex-git-sync-rebase` not found | Report missing script, skip sync, note "install the `cortex-core` plugin" |
 | Dirty `.git/rebase-merge/` detected | Script auto-aborts stale rebase, warns user, proceeds with sync |
 | Push fails after rebase | Report error, note local main is clean but not pushed |
