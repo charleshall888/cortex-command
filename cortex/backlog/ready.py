@@ -309,6 +309,7 @@ def _build_result(
     all_items_ns: list[types.SimpleNamespace],
     *,
     include_blocked: bool,
+    required_tags: list[str],
 ) -> dict[str, Any]:
     """Run partition_ready over *records* and build the wire-format dict.
 
@@ -316,7 +317,18 @@ def _build_result(
     classification input); *all_items_ns* is the full-corpus minimal
     record list (active + terminal + archived) used by the helper to
     resolve blocker references against terminal items as resolved.
+
+    *required_tags* is an AND-semantics, case-sensitive list of tags.
+    When non-empty, only records whose ``tags`` field (a list) contains
+    ALL of the required tags are passed to ``partition_ready``.
+    *all_items_ns* is intentionally left unfiltered so cross-corpus
+    blocker-status lookups remain correct for tagged items blocked by
+    untagged items.
     """
+    if required_tags:
+        required_set = set(required_tags)
+        records = [r for r in records if required_set <= set(r.get("tags") or [])]
+
     namespaces = [_build_namespace(r) for r in records]
     # Map id(namespace) → original dict so the output projection uses the
     # raw JSON record (per task context: "Preserve the original dict
@@ -389,7 +401,22 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "annotated with reason and rejection cause."
         ),
     )
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--tag",
+        action="append",
+        default=None,
+        dest="tag",
+        metavar="TAG",
+        help=(
+            "Filter to items carrying this tag. Repeatable; all specified "
+            "tags must be present (AND semantics). Matching is case-sensitive. "
+            "Example: --tag phase2-trigger --tag my-label"
+        ),
+    )
+    args = parser.parse_args(argv)
+    if args.tag is None:
+        args.tag = []
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -423,6 +450,7 @@ def main(argv: list[str] | None = None) -> int:
             records,
             all_items_ns,
             include_blocked=args.include_blocked,
+            required_tags=args.tag,
         )
     except Exception as exc:  # pragma: no cover - last-resort error path
         traceback.print_exc(file=sys.stderr)
