@@ -36,7 +36,7 @@ Add a `--tag <TAG>` argparse argument (repeatable, AND-semantics, case-sensitive
   - `cortex-backlog-ready --help | grep -c '\-\-tag'` = 1 (validates argparse registration + Req 8).
   - `cortex-backlog-ready --tag phase2-trigger; echo $?` prints `0` (validates Req 1 — argparse accepts the flag without error).
   - `cortex-backlog-ready; echo $?` prints `0` and stdout JSON parses without error (validates the dict-`get` fallback on tagless records — the no-`--tag` path must not crash on real-world records lacking `tags`).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Create `tests/test_backlog_ready_tag_filter.py` covering Reqs 2–7
 - **Files**: `tests/test_backlog_ready_tag_filter.py`
@@ -61,7 +61,7 @@ Add a `--tag <TAG>` argparse argument (repeatable, AND-semantics, case-sensitive
 - **Verification**:
   - `pytest tests/test_backlog_ready_tag_filter.py -q` exits 0 (validates Reqs 2, 3, 4, 5, 6 and the `all_items_ns` scoping invariant).
   - `pytest tests/test_backlog_ready_render.py -q` exits 0 (validates Req 7 — existing snapshot test unchanged; also catches any `record["tags"]` KeyError regression because the snapshot's tagless records pass through the new filter step).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Amend upstream `discovery-output-density-investigate-author-centric` spec and review to reference `cortex-backlog-ready --tag`
 - **Files**: `cortex/lifecycle/discovery-output-density-investigate-author-centric/spec.md`, `cortex/lifecycle/discovery-output-density-investigate-author-centric/review.md`
@@ -85,7 +85,7 @@ Add a `--tag <TAG>` argparse argument (repeatable, AND-semantics, case-sensitive
   - `grep -c 'cortex-backlog list --tag' cortex/lifecycle/discovery-output-density-investigate-author-centric/review.md` = 0 (validates Req 10 absence half).
   - `grep -c 'Resolved by ticket #233' cortex/lifecycle/discovery-output-density-investigate-author-centric/review.md` ≥ 1 (validates the forward-pointer; combined with the absence-grep, this distinguishes "preserved with forward-pointer" from "mechanically substituted").
   - `grep -c 'if cortex-backlog does not currently support --tag filtering, file a separate wiring ticket' cortex/lifecycle/discovery-output-density-investigate-author-centric/spec.md` ≥ 1 (validates the escape-hatch clause on line 44 was NOT swept up in mechanical substitution — preserves the rationale for ticket #233 existing).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 

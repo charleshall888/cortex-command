@@ -6,3 +6,9 @@
 {"ts": "2026-05-18T15:56:00Z", "event": "phase_transition", "feature": "add-tag-filter-to-backlog-query", "from": "specify", "to": "plan"}
 {"ts": "2026-05-18T16:10:00Z", "event": "plan_approved", "feature": "add-tag-filter-to-backlog-query"}
 {"ts": "2026-05-18T16:10:00Z", "event": "phase_transition", "feature": "add-tag-filter-to-backlog-query", "from": "plan", "to": "implement"}
+{"ts": "2026-05-18T16:15:00Z", "event": "batch_dispatch", "feature": "add-tag-filter-to-backlog-query", "batch": 0, "tasks": [1, 3]}
+{"ts": "2026-05-18T16:30:00Z", "event": "batch_dispatch", "feature": "add-tag-filter-to-backlog-query", "batch": 1, "tasks": [2]}
+{"ts": "2026-05-18T16:45:00Z", "event": "phase_transition", "feature": "add-tag-filter-to-backlog-query", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-18T17:00:00Z", "event": "review_verdict", "feature": "add-tag-filter-to-backlog-query", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-18T17:00:00Z", "event": "phase_transition", "feature": "add-tag-filter-to-backlog-query", "from": "review", "to": "complete"}
+{"ts": "2026-05-18T17:05:00Z", "event": "feature_complete", "feature": "add-tag-filter-to-backlog-query", "tasks_total": 3, "rework_cycles": 1}
