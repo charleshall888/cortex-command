@@ -413,6 +413,17 @@ if [ -d "$_lc_base" ]; then
       esac
     fi
 
+    # Detect "awaiting merge" sub-state: pr_opened present, feature_complete and
+    # feature_wontfix absent (wontfix takes precedence via the branch above).
+    # Override _lc_phase so the feature is not skipped and renders distinctly.
+    if [ "$_lc_phase" = "complete" ] \
+        && [ -f "$_lc_fdir/events.log" ] \
+        && grep -q '"event"[[:space:]]*:[[:space:]]*"pr_opened"' "$_lc_fdir/events.log" 2>/dev/null \
+        && ! grep -q '"event"[[:space:]]*:[[:space:]]*"feature_complete"' "$_lc_fdir/events.log" 2>/dev/null \
+        && ! grep -q '"event"[[:space:]]*:[[:space:]]*"feature_wontfix"' "$_lc_fdir/events.log" 2>/dev/null; then
+      _lc_phase="complete:awaiting-merge"
+    fi
+
     if [ -z "$_lc_phase" ] && [ -f "$_lc_fdir/plan.md" ]; then
       if [ "$_lc_plan_approved" -eq 0 ] && [ "$_lc_plan_transitioned_out" -eq 0 ]; then
         _lc_phase="plan"
@@ -544,13 +555,14 @@ if [ -d "$_lc_base" ]; then
         # N≥2: emit "N Phase-display-text"
         _lc_icon="$(_lc_phase_icon "$_lc_phase_key")"
         case "$_lc_phase_key" in
-          research)         _lc_display="Research" ;;
-          specify)          _lc_display="Specify" ;;
-          plan)             _lc_display="Plan" ;;
-          implement)        _lc_display="Implement" ;;
-          implement-rework) _lc_display="Implement (rework)" ;;
-          escalated)        _lc_display="Escalated" ;;
-          *)                _lc_display="$_lc_phase_key" ;;
+          research)                _lc_display="Research" ;;
+          specify)                 _lc_display="Specify" ;;
+          plan)                    _lc_display="Plan" ;;
+          implement)               _lc_display="Implement" ;;
+          implement-rework)        _lc_display="Implement (rework)" ;;
+          escalated)               _lc_display="Escalated" ;;
+          complete:awaiting-merge) _lc_display="Complete (awaiting merge)" ;;
+          *)                       _lc_display="$_lc_phase_key" ;;
         esac
         _lc_append "$(printf "${_lc_icon_color}%s ${_lc_name_color}%s${_lc_rst}" "$_lc_icon" "${_lc_count} ${_lc_display}")"
 
@@ -563,11 +575,12 @@ if [ -d "$_lc_base" ]; then
         _lc_icon="$(_lc_phase_icon "$_lc_single_phase")"
 
         case "$_lc_single_phase" in
-          research)         _lc_display="Research" ;;
-          specify)          _lc_display="Specify" ;;
-          plan)             _lc_display="Plan" ;;
-          implement-rework) _lc_display="Implement (rework)" ;;
-          escalated)        _lc_display="Escalated" ;;
+          research)                _lc_display="Research" ;;
+          specify)                 _lc_display="Specify" ;;
+          plan)                    _lc_display="Plan" ;;
+          implement-rework)        _lc_display="Implement (rework)" ;;
+          escalated)               _lc_display="Escalated" ;;
+          complete:awaiting-merge) _lc_display="Complete (awaiting merge)" ;;
           implement:*)
             _lc_frac="${_lc_single_phase#implement:}"
             _lc_checked="${_lc_frac%%/*}"

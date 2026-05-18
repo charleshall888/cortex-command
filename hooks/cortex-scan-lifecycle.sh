@@ -204,15 +204,16 @@ encode_phase() {
 phase_label() {
   local phase="$1"
   case "$phase" in
-    research)           echo "Research" ;;
-    specify)            echo "Specify" ;;
-    plan)               echo "Plan" ;;
-    implement:*)        echo "Implement (${phase#implement:} tasks done)" ;;
-    implement-rework:*) echo "Implement — rework (review cycle ${phase#implement-rework:})" ;;
-    review)             echo "Review" ;;
-    escalated)          echo "Escalated (REJECTED — needs user direction)" ;;
-    complete)           echo "Complete" ;;
-    *)                  echo "$phase" ;;
+    research)                echo "Research" ;;
+    specify)                 echo "Specify" ;;
+    plan)                    echo "Plan" ;;
+    implement:*)             echo "Implement (${phase#implement:} tasks done)" ;;
+    implement-rework:*)      echo "Implement — rework (review cycle ${phase#implement-rework:})" ;;
+    review)                  echo "Review" ;;
+    escalated)               echo "Escalated (REJECTED — needs user direction)" ;;
+    complete:awaiting-merge) echo "Complete (awaiting merge)" ;;
+    complete)                echo "Complete" ;;
+    *)                       echo "$phase" ;;
   esac
 }
 
@@ -303,7 +304,21 @@ for raw in sys.argv[1:]:
 
     encoded=$(encode_phase "$phase" "$checked" "$total" "$cycle")
 
-    [[ "$encoded" != "complete" ]] || continue
+    # Detect "awaiting merge" sub-state: pr_opened present, feature_complete and
+    # feature_wontfix absent.  Promote encoded from "complete" to
+    # "complete:awaiting-merge" so the feature is not filtered and phase_label()
+    # renders "Complete (awaiting merge)".
+    if [[ "$encoded" == "complete" ]]; then
+      _events_log="$dir/events.log"
+      if [ -f "$_events_log" ] \
+          && grep -q '"event"[[:space:]]*:[[:space:]]*"pr_opened"' "$_events_log" 2>/dev/null \
+          && ! grep -q '"event"[[:space:]]*:[[:space:]]*"feature_complete"' "$_events_log" 2>/dev/null \
+          && ! grep -q '"event"[[:space:]]*:[[:space:]]*"feature_wontfix"' "$_events_log" 2>/dev/null; then
+        encoded="complete:awaiting-merge"
+      else
+        continue
+      fi
+    fi
 
     incomplete_features+=("$feature")
     incomplete_phases+=("$encoded")
