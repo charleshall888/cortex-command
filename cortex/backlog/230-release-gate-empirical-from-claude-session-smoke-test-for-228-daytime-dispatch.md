@@ -2,16 +2,19 @@
 schema_version: "1"
 uuid: cb71a336-ce2f-48fb-9ade-33e1e033a7a2
 title: "Release-gate empirical from-Claude-session smoke test for #228 daytime dispatch"
-status: backlog
+status: in_progress
 priority: high
 type: chore
 tags: [daytime-pipeline, mcp, release-gate, manual-verification]
 created: 2026-05-16
-updated: 2026-05-16
+updated: 2026-05-17
 complexity: simple
 criticality: high
 areas: [overnight-runner]
 blocked_by: [228]
+spec: cortex/lifecycle/release-gate-empirical-from-claude-session/spec.md
+session_id: 73b5157c-f0de-4fe3-a9c8-94c8bec310d6
+lifecycle_phase: plan
 ---
 
 # Release-gate empirical from-Claude-session smoke test for #228 daytime dispatch
