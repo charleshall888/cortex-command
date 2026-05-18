@@ -14,35 +14,31 @@ lifecycle_phase: null
 lifecycle_slug: null
 ---
 
-## Context
+## Problem
 
-When the discovery skill's decompose phase produces N tickets (one per Architecture piece) and presents the R15 batch-review gate, the user sometimes notices natural consolidation opportunities and asks "can we combine some of these?" — at which point the agent backtracks, identifies clusters, and presents a separate consolidation question before re-presenting the gate.
+The discovery decompose skill produces one ticket per Architecture piece and presents the full set at the R15 batch-review gate. When the resulting set has tickets that would naturally ship as one PR (e.g., several small same-shape pieces, or a primitive paired with its consumer), the user has to notice the over-decomposition and ask "can we combine some of these?" — which kicks off a separate round of identification, an out-of-band consolidation question, and a re-presentation of R15. Two round trips at the gate where one would have done.
 
-Observed in the `swap-daytime-autonomous-for-worktree-interactive` discovery (2026-05-18): authored 10 tickets, user asked to consolidate, agent identified three plausible merge clusters (same-shape concurrency guards, create+cleanup pairs, interaction-model + dependent hook), user picked all three, final count was 6 tickets. Two round trips at the R15 gate when one would have sufficed.
+Observed in the `swap-daytime-autonomous-for-worktree-interactive` discovery (2026-05-18): authored 10 tickets, user asked to consolidate, agent surfaced merge clusters reactively, final count was 6 tickets.
 
-## Proposed change
+## Why it matters
 
-In `skills/discovery/references/decompose.md`, add a pre-R15 step between §4 (Determine Grouping) and §5 (Create Backlog Tickets), OR between §5's ticket authoring and §5's R15 gate, that:
+The R15 gate exists to give the user a pre-commit affordance — a place to redirect or reshape. When the agent presents an obvious-in-retrospect over-decomposition, the user spends that affordance on consolidation cleanup instead of substantive review. The skill should be the proactive party here: detect the consolidation question is likely, raise it explicitly before R15, and let the user answer it once.
 
-1. Scans the authored ticket bodies for natural consolidation clusters using lightweight heuristics:
-   - **Same-shape clusters**: multiple tickets whose Role paragraphs share a common verb-frame (e.g., three "Add ... guard ..." tickets)
-   - **Lifecycle pairs**: a create/initialize ticket and its corresponding cleanup/teardown ticket
-   - **End-to-end pairs**: an interaction-shape ticket and its dependent hook ticket
-2. Presents detected clusters via `AskUserQuestion` with `multiSelect: true` BEFORE the R15 gate, with options describing each cluster and its trade-off (one-PR-shape vs. dependency-boundary cleanliness)
-3. Applies user-selected merges, then proceeds to the R15 gate with the consolidated set
+## Desired behavior
 
-If no clusters are detected, skip the consolidation-offer step silently and go straight to R15.
+After authoring the ticket bodies but before invoking R15, the skill considers whether any subsets of the tickets are likely candidates for the user to want merged. If so, surface that question to the user — describe the candidate merges and the trade-off (one-PR-shape vs. dependency-boundary cleanliness), let the user pick which (if any) to apply, then proceed to R15 with the consolidated set. If no candidates surface, skip the pre-step silently — the gate is the right place to land.
+
+The specific signals worth treating as candidates are left to the plan phase, since the right detection shape probably won't be a fixed taxonomy — it's more like "tickets whose Roles describe the same verb-frame applied to parallel objects" or "tickets where one's Touch points are a strict subset of another's." Whatever the implementation, the principle is: the agent should generalize from "these N tickets look like they'd ship together," not match a closed enumeration of cluster types.
 
 ## Acceptance
 
-- A discovery topic that produces 6+ tickets fires the consolidation-offer step before R15
-- Each detected cluster surfaces with a clear trade-off in the option description
-- User-selected merges happen before R15 — the gate sees only the consolidated set
-- A discovery topic with no natural clusters skips the offer step (no false-positive questions)
-- The LEX-1 scanner still passes on merged ticket bodies
+- A discovery producing 6+ tickets fires the pre-R15 consolidation-offer step when natural merge candidates exist.
+- The offer surfaces candidate merges with their trade-offs visible to the user.
+- User-selected merges happen before R15 — the gate sees the consolidated set.
+- A discovery with no candidate merges skips the pre-step (no false-positive questions).
+- The LEX-1 scanner still passes on merged ticket bodies.
 
 ## Out of scope
 
-- Auto-merging without user confirmation
-- Defining a comprehensive cluster taxonomy beyond the three named heuristics
-- Retroactive consolidation of already-committed tickets
+- Auto-merging without user confirmation.
+- Retroactive consolidation of already-committed tickets.

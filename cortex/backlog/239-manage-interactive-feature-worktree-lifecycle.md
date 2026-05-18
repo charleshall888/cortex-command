@@ -15,6 +15,8 @@ discovery_source: cortex/research/swap-daytime-autonomous-for-worktree-interacti
 session_id: null
 lifecycle_phase: null
 lifecycle_slug: null
+complexity: complex
+criticality: high
 ---
 
 ## Role
@@ -24,6 +26,8 @@ Provide both ends of the long-lived interactive feature worktree lifecycle: crea
 ## Integration
 
 Creation is invoked by the preflight menu when option 2 is selected. Returns the canonical worktree path for downstream use by the Variant A interaction-model step. Reuses the `create_worktree` primitive's sandbox-friendly default location under `$TMPDIR` to avoid the Seatbelt `.mcp.json` deny that lives under `.claude/`. Cleanup is triggered after PR merge — candidate triggers include lifecycle complete-phase auto-cleanup (verifies merge state via `gh pr view`), a manual `cortex-cleanup-feature-worktree <slug>` recipe, or a periodic sweep. The chosen prefix `interactive/{slug}` is read by the cleanup contract to scope which worktrees it touches, and by the overnight inverse-direction guard inside the concurrency-guards ticket.
+
+The creation and cleanup halves of this ticket have different blocking conditions: creation is independent and can land first (unblocking the Variant A end-to-end ticket); cleanup depends on the PR-creation hook landing in that ticket. Refine should plan this as a two-PR sequence — a creation-only PR early, followed by a cleanup PR after the PR-creation hook ships. The ticket stays consolidated because the worktree-lifetime invariants are easier to reason about as one contract; the sequencing is a refine/plan concern, not a decompose-time split.
 
 ## Edges
 

@@ -25,6 +25,8 @@ Implement the Variant A interaction model end-to-end. Two coupled pieces: (a) Af
 
 The interaction-model piece sits between the worktree-creation step and task dispatch. The `cd` happens after worktree creation and before any further skill operations. The write-site refactor is the largest piece: events.log writers, backlog frontmatter mutations, statusline path resolution, and morning-report path resolution must all route through an explicit worktree-root parameter or a refreshed `CORTEX_REPO_ROOT` env var. Established precedent for this class of fix is the home-vs-worktree drift work that landed under prior tickets `#126` and `#130`. The PR-creation piece fires in the lifecycle complete phase after the existing summary step but before lifecycle exit; detects the worktree state by reading the per-feature `interactive.pid` (created by the concurrency-guards ticket) or worktree-path marker. User merges manually — no auto-merge in the skill layer.
 
+This ticket consolidates three operationally coupled pieces (cd-mid-session shape, write-site refactor, PR-creation hook), so it is not atomically deliverable in a single commit or PR. Refine should plan it as a multi-commit feature-branch sequence: the cd shape and per-tool-call CWD-refresh mechanism land first; the write-site refactor follows in commits scoped per writer site or small site cluster; the PR-creation hook lands last on the same branch. The branching itself is consistent with the new mode being shipped here, which provides a natural test bed for incremental landing.
+
 ## Edges
 
 - Bound by the cwd-relative-writer contract: all lifecycle file writes must resolve to the worktree once the worktree is the active CWD, not to the home repo.
