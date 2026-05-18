@@ -4,3 +4,7 @@
 {"ts": "2026-05-17T00:23:24Z", "event": "phase_transition", "feature": "fix-get-next-id-in-cortex", "from": "specify", "to": "plan"}
 {"ts": "2026-05-17T01:21:44Z", "event": "plan_approved", "feature": "fix-get-next-id-in-cortex"}
 {"ts": "2026-05-17T01:21:45Z", "event": "phase_transition", "feature": "fix-get-next-id-in-cortex", "from": "plan", "to": "implement"}
+{"ts": "2026-05-17T01:23:00Z", "event": "batch_dispatch", "feature": "fix-get-next-id-in-cortex", "batch": 0, "tasks": [1]}
+{"ts": "2026-05-17T01:25:00Z", "event": "batch_dispatch", "feature": "fix-get-next-id-in-cortex", "batch": 1, "tasks": [2]}
+{"ts": "2026-05-17T01:30:00Z", "event": "phase_transition", "feature": "fix-get-next-id-in-cortex", "tier": "simple", "from": "implement", "to": "complete"}
+{"ts": "2026-05-17T01:32:00Z", "event": "feature_complete", "feature": "fix-get-next-id-in-cortex", "tasks_total": 2, "rework_cycles": 0}

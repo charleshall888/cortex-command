@@ -27,7 +27,7 @@ Add an inline range-exclusion predicate to `_get_next_id` in `cortex_command/bac
     3. `test_zero_pads_small_ids` — populate `tmp_path` with `001-foo.md`; expect return value `"002"`.
   - Content of each `NNN-*.md` file may be a minimal stub (`# stub`); `_get_next_id` only reads filenames via the glob, not file contents.
 - **Verification**: `ls tests/test_create_backlog_item.py` exits 0; `grep -c "_get_next_id" tests/test_create_backlog_item.py` ≥ 3; `grep -c "tmp_path" tests/test_create_backlog_item.py` ≥ 3. Pass if all three checks hold.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Add reservation predicate to _get_next_id
 - **Files**: `cortex_command/backlog/create_item.py`
@@ -40,7 +40,7 @@ Add an inline range-exclusion predicate to `_get_next_id` in `cortex_command/bac
   - Style invariant: walrus-match pattern (`(m := re.match(...))`) stays intact; the new clause references `m.group(1)` and re-parses to int (negligible cost). Do not introduce module-level constants per spec Non-Requirements.
   - This file has a plugin mirror under `plugins/cortex-core/bin/cortex-create-backlog-item` — the canonical source is the one being edited; the pre-commit dual-source hook regenerates the mirror automatically. Do not edit the mirror by hand.
 - **Verification**: `pytest tests/test_create_backlog_item.py -v` exits 0; `grep -F "reserved for dashboard-seed fixtures" cortex_command/backlog/create_item.py` ≥ 1. Pass if both hold.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Risks
 
