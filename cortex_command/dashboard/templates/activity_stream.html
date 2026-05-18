@@ -1,0 +1,52 @@
+{% set event_glyphs = {
+  "session_start": "▶",
+  "round_start": "▷",
+  "round_complete": "◯",
+  "batch_assigned": "⧉",
+  "feature_start": "→",
+  "feature_complete": "✓",
+  "feature_paused": "⏸",
+  "feature_failed": "✕",
+  "feature_retry": "↻",
+  "feature_checkpoint": "·",
+  "merge_started": "⌥",
+  "branch_created": "⎇",
+  "branch_synced": "⎉",
+  "plan_loaded": "≡",
+  "heartbeat": "♥",
+} %}
+{% set event_color = {
+  "feature_complete": "var(--color-blue)",
+  "feature_failed": "var(--color-status-red)",
+  "feature_paused": "var(--color-ochre)",
+  "feature_retry": "var(--color-ochre)",
+  "round_complete": "var(--color-blue)",
+  "heartbeat": "var(--color-ink-faint)",
+  "feature_checkpoint": "var(--color-ink-mute)",
+} %}
+<span class="sec-num"><strong>§ 04</strong>recent<br>activity</span>
+<h2>Activity <em>stream</em> <span class="phase-tag">{% if state.recent_events %}last {{ state.recent_events | length }} events · newest first{% else %}awaiting signal{% endif %}</span></h2>
+{% if state.recent_events %}
+<div class="stream-line">
+  <span>doc · overnight-events.log</span>
+  <span>tail · {{ state.recent_events | length }} events</span>
+</div>
+<ol class="event-stream">
+  {% for ev in state.recent_events %}
+  {% set glyph = event_glyphs.get(ev.event, "›") %}
+  {% set color = event_color.get(ev.event, "var(--color-ink)") %}
+  <li class="event-row" style="--row-color: {{ color }};">
+    <span class="event-glyph" aria-hidden="true">{{ glyph }}</span>
+    <span class="event-time">{{ ev.ts | format_elapsed }}</span>
+    <span class="event-name">{{ ev.event | replace('_', ' ') }}</span>
+    <span class="event-body">
+      {% if ev.feature %}<span class="event-feature">{{ ev.feature }}</span>{% endif %}
+      {% if ev.detail %}<span class="event-detail">{{ ev.detail }}</span>{% endif %}
+    </span>
+    <span class="event-round-cell">{% if ev.round is not none %}<span class="event-round">R{{ ev.round }}</span>{% endif %}</span>
+  </li>
+  {% endfor %}
+</ol>
+{% else %}
+<p class="empty-state">no events yet · session has not started</p>
+{% endif %}

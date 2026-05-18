@@ -334,6 +334,33 @@ async def round_history(request: Request):
     )
 
 
+@app.get("/partials/escalations")
+async def escalations_panel(request: Request):
+    """Return the escalations / open-questions panel for HTMX polling."""
+    return templates.TemplateResponse(
+        "escalations_panel.html",
+        {"request": request, "state": state},
+    )
+
+
+@app.get("/partials/activity-stream")
+async def activity_stream(request: Request):
+    """Return the recent overnight events stream panel for HTMX polling."""
+    return templates.TemplateResponse(
+        "activity_stream.html",
+        {"request": request, "state": state},
+    )
+
+
+@app.get("/partials/backlog")
+async def backlog_panel(request: Request):
+    """Return the backlog ledger panel for HTMX polling."""
+    return templates.TemplateResponse(
+        "backlog_panel.html",
+        {"request": request, "state": state},
+    )
+
+
 @app.get("/partials/swim-lane")
 async def swim_lane(request: Request):
     """Return the swim lane timeline HTML fragment for HTMX polling."""

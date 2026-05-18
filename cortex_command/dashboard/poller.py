@@ -26,15 +26,28 @@ from cortex_command.dashboard.data import (
     compute_slow_flags,
     parse_backlog_counts,
     parse_backlog_titles,
+    parse_batches_per_round,
+    parse_checkpoints_per_feature,
+    parse_clarify_critic,
+    parse_complexity_overrides,
+    parse_daytime_result,
+    parse_daytime_state,
+    parse_dispatch_details,
+    parse_escalations,
+    parse_exit_reports,
     parse_feature_cost_delta,
     parse_feature_events,
     parse_feature_timestamps,
     parse_fleet_cards,
+    parse_learnings_progress,
     parse_metrics,
     parse_overnight_state,
     parse_pipeline_dispatch,
     parse_pipeline_state,
+    parse_recent_session_events,
+    parse_retries_per_feature,
     parse_round_timestamps,
+    parse_tool_usage,
     tail_jsonl,
 )
 
@@ -88,6 +101,20 @@ class DashboardState:
     feature_display_order: list = field(default_factory=list)
     feature_models: dict = field(default_factory=dict)
     feature_complexities: dict = field(default_factory=dict)
+    feature_escalations: dict = field(default_factory=dict)
+    feature_exit_reports: dict = field(default_factory=dict)
+    feature_daytime_state: dict = field(default_factory=dict)
+    feature_daytime_result: dict = field(default_factory=dict)
+    feature_learnings: dict = field(default_factory=dict)
+    feature_clarify_critic: dict = field(default_factory=dict)
+    feature_complexity_overrides: dict = field(default_factory=dict)
+    feature_tool_usage: dict = field(default_factory=dict)
+    feature_checkpoints: dict = field(default_factory=dict)
+    feature_retries: dict = field(default_factory=dict)
+    round_batches: dict = field(default_factory=dict)
+    recent_events: list = field(default_factory=list)
+    dispatch_details: dict = field(default_factory=dict)
+    open_questions_total: int = 0
     last_updated: str = ""
     _active_session_id: str = ""
 
@@ -238,6 +265,52 @@ async def _poll_state_files(state: DashboardState, root: Path) -> None:
                     if e.get("event") in ("worker_no_exit_report", "worker_malformed_exit_report")
                 )
 
+                # Per-feature deep state: escalations, exit reports,
+                # daytime artifacts, learnings, clarify critic, tool usage.
+                open_q_total = 0
+                for slug in features_raw:
+                    escalations = parse_escalations(slug, project_lifecycle_dir)
+                    state.feature_escalations[slug] = escalations
+                    open_q_total += len(escalations)
+                    state.feature_exit_reports[slug] = parse_exit_reports(
+                        slug, project_lifecycle_dir
+                    )
+                    dts = parse_daytime_state(slug, project_lifecycle_dir)
+                    if dts is not None:
+                        state.feature_daytime_state[slug] = dts
+                    dtr = parse_daytime_result(slug, project_lifecycle_dir)
+                    if dtr is not None:
+                        state.feature_daytime_result[slug] = dtr
+                    learnings = parse_learnings_progress(slug, project_lifecycle_dir)
+                    if learnings is not None:
+                        state.feature_learnings[slug] = learnings
+                    cc = parse_clarify_critic(slug, project_lifecycle_dir)
+                    if cc is not None:
+                        state.feature_clarify_critic[slug] = cc
+                    overrides = parse_complexity_overrides(
+                        slug, project_lifecycle_dir
+                    )
+                    if overrides:
+                        state.feature_complexity_overrides[slug] = overrides
+                    state.feature_tool_usage[slug] = parse_tool_usage(
+                        slug, project_lifecycle_dir
+                    )
+                state.open_questions_total = open_q_total
+
+                # Session-level derived collections
+                state.feature_checkpoints = parse_checkpoints_per_feature(
+                    state.overnight_events
+                )
+                state.feature_retries = parse_retries_per_feature(
+                    state.overnight_events
+                )
+                state.round_batches = parse_batches_per_round(
+                    state.overnight_events
+                )
+                state.recent_events = parse_recent_session_events(
+                    state.overnight_events
+                )
+
                 # Build feature_display_order: slugs with a started_at sorted by
                 # that timestamp (ISO string sort); slugs without go at the end in
                 # original iteration order from features_raw.
@@ -292,6 +365,7 @@ async def _poll_slow(state: DashboardState, root: Path) -> None:
             state.backlog_titles = parse_backlog_titles(backlog_dir)
 
             state.pipeline_dispatch = parse_pipeline_dispatch(lifecycle_dir)
+            state.dispatch_details = parse_dispatch_details(lifecycle_dir)
 
             metrics = parse_metrics(lifecycle_dir)
             if metrics is not None:

@@ -1,20 +1,31 @@
 {% from "patterns/badge.html" import badge %}
-<span class="sec-num"><strong>§ 06</strong>pipeline</span>
-<h2>Pipeline <span class="phase-tag">{% if state.pipeline %}{{ state.pipeline.phase }}{% else %}idle{% endif %}</span></h2>
+<span class="sec-num"><strong>§ 08</strong>pipeline</span>
+<h2>Pipeline <em>queue</em> <span class="phase-tag">{% if state.pipeline %}{{ state.pipeline.phase }} · {{ state.pipeline.features | length }} features{% else %}idle{% endif %}</span></h2>
 {% if state.pipeline %}
 <div class="stream-line">
-  <span>phase · {{ state.pipeline.phase }}</span>
-  <span>features · {{ state.pipeline.features | length }}</span>
+  <span>doc · pipeline-state.json</span>
+  <span>mode · {{ state.pipeline.mode or '—' }}</span>
+  <span>base · {{ state.pipeline.base_branch or '—' }}</span>
+  <span style="margin-left:auto;">created · {{ state.pipeline.created or '—' }}</span>
 </div>
-<div class="card-row">
-  <span class="phase-label">current phase</span>
-  {{ badge(status=state.pipeline.phase) }}
-</div>
+{% if state.pipeline.overlap_analysis %}
+<p class="pipeline-overlap"><em>overlap·</em> {{ state.pipeline.overlap_analysis }}</p>
+{% endif %}
 <div class="feature-list">
   {% for feature in state.pipeline.features %}
-  <div class="card-row">
-    <span style="font-family: var(--font-serif); font-weight: 500; font-size: 14px;">{{ feature.name }}</span>
+  {% set dispatch = state.dispatch_details.get(feature.name, {}) %}
+  <div class="card-row pipeline-row">
+    <span class="pipeline-priority">P{{ feature.priority }}</span>
+    <span class="pipeline-name">{{ feature.name }}</span>
     {{ badge(status=feature.status) }}
+    {% if dispatch.model %}
+      {% set model_class = 'badge-purple' if dispatch.model == 'opus' else ('badge-gray' if dispatch.model == 'haiku' else 'badge-blue') %}
+      {{ badge(css_class=model_class, label=dispatch.model) }}
+    {% endif %}
+    {% if dispatch.complexity %}{{ badge(css_class="badge-gray", label=dispatch.complexity) }}{% endif %}
+    {% if dispatch.max_budget_usd %}<span class="cost-chip">budget · ${{ '%.0f' | format(dispatch.max_budget_usd) }}</span>{% endif %}
+    {% if dispatch.max_turns %}<span class="cost-chip">{{ dispatch.max_turns }} turns</span>{% endif %}
+    {% if feature.backlog_id %}<span class="phase-label">#{{ feature.backlog_id }}</span>{% endif %}
   </div>
   {% endfor %}
 </div>

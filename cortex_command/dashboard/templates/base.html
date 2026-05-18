@@ -767,6 +767,7 @@
         display: grid;
         grid-template-columns: 1fr;
         gap: 28px;
+        align-items: start;
       }
       @media (min-width: 1024px) {
         .dash-grid { grid-template-columns: 3fr 2fr; }
@@ -777,6 +778,7 @@
         flex-direction: column;
         gap: 28px;
       }
+      .dash-grid-side > section { align-self: start; }
 
       /* Helpers used by Tailwind utility classes elsewhere */
       .word-break-all { word-break: break-all; }
@@ -867,6 +869,562 @@
       .font-mono { font-family: var(--font-mono); }
       .text-mono { font-family: var(--font-mono); }
 
+      /* ── Section-attention variant (ochre rail; for escalations etc) ─ */
+      .section-attention {
+        box-shadow:
+          inset 3px 0 0 0 var(--color-ochre),
+          inset 0 1px 0 var(--shadow-tint),
+          0 14px 36px -28px var(--shadow-tint-deep);
+      }
+
+      /* ── Session-panel headline grid (KPI ledger) ──────────────────── */
+      .session-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
+        margin: 14px 0 8px;
+        padding-bottom: 16px;
+        border-bottom: 1px dashed var(--color-rule-soft);
+      }
+      @media (max-width: 900px) { .session-grid { grid-template-columns: repeat(2, 1fr); } }
+      .session-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-right: 14px;
+        border-right: 1px dashed var(--color-rule-soft);
+      }
+      .session-cell:last-child { border-right: none; padding-right: 0; }
+      .cell-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+      }
+      .cell-value { display: flex; align-items: baseline; gap: 8px; }
+      .cell-numeral {
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: 28px;
+        line-height: 1;
+        font-variation-settings: "opsz" 144, "SOFT" 30;
+        color: var(--color-ink);
+      }
+      .cell-numeral--alert { color: var(--color-status-red); }
+      .cell-of {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.04em;
+        color: var(--color-ink-faint);
+      }
+      .cell-aux {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--color-ink-faint);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 4px;
+      }
+      .cell-mini {
+        padding: 2px 6px;
+        border: 1px dashed var(--color-rule-soft);
+        border-radius: 1px;
+        color: var(--color-ink-mute);
+      }
+      .cell-mini--alert {
+        color: var(--color-status-red);
+        border-color: var(--color-status-red);
+        border-style: solid;
+      }
+      .session-cell--alert {
+        position: relative;
+      }
+      .session-cell--alert::before {
+        content: "";
+        position: absolute;
+        left: -8px; top: 0; bottom: 0;
+        width: 2px;
+        background: var(--color-status-red);
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-status-red) 30%, transparent);
+      }
+
+      /* ── Status pip strip (compact glyph row) ──────────────────────── */
+      .status-pips { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px; }
+      .pip {
+        width: 9px;
+        height: 9px;
+        display: inline-block;
+        border: 1px solid var(--color-ink-faint);
+        border-radius: 1px;
+      }
+      .pip--merged   { background: var(--color-blue); border-color: var(--color-blue); }
+      .pip--running  { background: color-mix(in srgb, var(--color-blue) 50%, transparent); border-color: var(--color-blue); animation: pulse 1.8s ease-in-out infinite; }
+      .pip--paused   { background: transparent; border-color: var(--color-ochre); border-style: dashed; }
+      .pip--deferred { background: transparent; border-color: var(--color-ochre); border-style: dashed; }
+      .pip--failed   { background: color-mix(in srgb, var(--color-status-red) 40%, transparent); border-color: var(--color-status-red); }
+      .pip--pending  { background: transparent; border-color: var(--color-ink-faint); border-style: dotted; }
+
+      /* ── Phase-track (4-step lifecycle progress on feature cards) ──── */
+      .card-row--phase-timeline {
+        padding: 4px 0;
+      }
+      .phase-track {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        flex: 0 0 auto;
+      }
+      .phase-step {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 8px 2px 10px;
+        font-family: var(--font-mono);
+        font-size: 9.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        background: transparent;
+        border: 1px dotted var(--color-rule-soft);
+        border-right: none;
+        position: relative;
+      }
+      .phase-step:first-child { border-radius: 2px 0 0 2px; }
+      .phase-step:last-child { border-right: 1px dotted var(--color-rule-soft); border-radius: 0 2px 2px 0; }
+      .phase-step--done {
+        color: var(--color-blue);
+        background: color-mix(in srgb, var(--color-blue) 10%, transparent);
+        border-style: solid;
+        border-color: var(--color-blue);
+      }
+      .phase-step--current {
+        color: var(--color-blue);
+        background: color-mix(in srgb, var(--color-blue) 22%, transparent);
+        border-style: solid;
+        border-color: var(--color-blue);
+        box-shadow: 0 0 0 1px var(--shadow-blue-soft);
+        font-weight: 500;
+      }
+      .phase-step-label { line-height: 1.4; }
+
+      /* ── Tool ticker pips ─────────────────────────────────────────── */
+      .card-row--tools, .card-row--questions, .card-row--exitreport,
+      .card-row--checkpoints, .card-row--learnings, .card-row--links {
+        padding: 4px 0;
+        border-top: 1px dotted var(--color-rule-soft);
+        margin-top: 2px;
+        gap: 8px;
+        font-size: 11px;
+      }
+      .card-row--links {
+        opacity: 0; transition: opacity 0.18s ease;
+        gap: 14px;
+      }
+      .feature-card:hover .card-row--links { opacity: 1; }
+      .tool-ticker {
+        display: inline-flex;
+        gap: 3px;
+        align-items: center;
+      }
+      .tool-pip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--color-parchment);
+        background: var(--color-blue);
+        border: 1px solid var(--color-blue);
+        border-radius: 2px;
+      }
+      .tool-pip--failed {
+        background: color-mix(in srgb, var(--color-status-red) 50%, transparent);
+        border-color: var(--color-status-red);
+        color: var(--color-status-red);
+      }
+      .tool-count {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--color-ink-mute);
+        letter-spacing: 0.02em;
+      }
+      .tool-count em {
+        font-style: normal;
+        color: var(--color-ink);
+        font-weight: 500;
+      }
+
+      /* ── Open question summary (in card) ──────────────────────────── */
+      .open-q-summary {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 13.5px;
+        color: var(--color-ochre);
+        line-height: 1.45;
+      }
+
+      /* ── Exit report row ──────────────────────────────────────────── */
+      .exit-reason {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--color-ink-mute);
+        letter-spacing: 0.02em;
+      }
+
+      /* ── Learnings trace ──────────────────────────────────────────── */
+      .learning-trace {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--color-ink-mute);
+        letter-spacing: 0.01em;
+      }
+
+      /* ── Checkpoint trail ─────────────────────────────────────────── */
+      .checkpoint-trail {
+        display: inline-flex;
+        gap: 4px;
+        font-family: var(--font-mono);
+      }
+      .checkpoint-dot {
+        font-size: 14px;
+        line-height: 1;
+        color: var(--color-blue);
+        opacity: 0.6;
+      }
+      .checkpoint-dot:last-child { opacity: 1; }
+
+      /* ── Card links ───────────────────────────────────────────────── */
+      .card-link {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-ochre);
+        text-decoration: none;
+        border-bottom: 1px solid color-mix(in srgb, var(--color-ochre) 50%, transparent);
+        padding-bottom: 1px;
+      }
+      .card-link:hover { color: var(--color-ochre-soft); border-color: var(--color-ochre-soft); }
+
+      /* ── Error / emphasized inline text ───────────────────────────── */
+      .error-line {
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        color: var(--color-status-red);
+        letter-spacing: 0.02em;
+      }
+      .emph {
+        color: var(--color-ink);
+        font-weight: 500;
+      }
+      .inline-code {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        background: color-mix(in srgb, var(--color-ink) 6%, transparent);
+        padding: 1px 5px;
+        border-radius: 1px;
+        color: var(--color-ink);
+      }
+
+      /* ── Card status tinting ──────────────────────────────────────── */
+      .feature-card--failed::before { background: var(--color-status-red); }
+      .feature-card--failed {
+        background: color-mix(in srgb, var(--color-status-red) 5%, var(--color-parchment));
+      }
+      .feature-card--paused::before { background: var(--color-ochre); }
+      .feature-card--paused {
+        background: color-mix(in srgb, var(--color-ochre) 4%, var(--color-parchment));
+      }
+      .feature-card--merged::before { background: color-mix(in srgb, var(--color-blue) 70%, transparent); }
+
+      /* ── Budget track (cost of budget bar) ────────────────────────── */
+      .budget-track {
+        position: relative;
+        display: inline-block;
+        height: 4px;
+        width: 60px;
+        background: color-mix(in srgb, var(--color-ink) 8%, transparent);
+        border-radius: 0;
+        overflow: hidden;
+        margin: 0 4px;
+        vertical-align: middle;
+      }
+      .budget-fill {
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        background: var(--color-ochre);
+      }
+
+      /* ── Open-q card (escalations panel) ──────────────────────────── */
+      .open-q-card {
+        position: relative;
+        background: var(--color-parchment);
+        border: 1px solid var(--color-rule-soft);
+        border-left: 3px solid var(--color-ochre);
+        padding: 14px 18px 14px 18px;
+        margin-bottom: 12px;
+      }
+      .open-q-card:last-child { margin-bottom: 0; }
+      .open-q-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px dashed var(--color-rule-soft);
+      }
+      .open-q-count {
+        margin-left: auto;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--color-ochre);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .open-q-body {
+        margin: 8px 0 0;
+        padding: 0 0 0 14px;
+        border-left: 2px solid color-mix(in srgb, var(--color-ochre) 35%, transparent);
+      }
+      .open-q-body + .open-q-body { margin-top: 12px; }
+      .open-q-body p {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 14.5px;
+        line-height: 1.5;
+        color: var(--color-ink);
+        margin: 0 0 6px;
+      }
+      .open-q-context {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--color-ink-mute);
+        margin-bottom: 6px;
+        font-style: normal;
+      }
+      .open-q-meta {
+        display: flex;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 9.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+      }
+
+      /* ── Activity stream (event list) ─────────────────────────────── */
+      .event-stream {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        line-height: 1.6;
+      }
+      .event-row {
+        display: grid;
+        grid-template-columns: 16px 70px 135px minmax(0, 1fr) 32px;
+        gap: 12px;
+        align-items: center;
+        padding: 4px 0;
+        border-bottom: 1px dashed var(--color-rule-soft);
+        line-height: 1.4;
+        min-height: 22px;
+      }
+      .event-body {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+      .event-round-cell {
+        text-align: right;
+        white-space: nowrap;
+      }
+      .event-row:last-child { border-bottom: none; }
+      .event-row:hover { background: color-mix(in srgb, var(--color-blue) 4%, transparent); }
+      .event-glyph {
+        color: var(--row-color, var(--color-ink));
+        text-align: center;
+        font-size: 12px;
+      }
+      .event-time {
+        color: var(--color-ink-faint);
+        font-size: 10.5px;
+        letter-spacing: 0.04em;
+      }
+      .event-name {
+        color: var(--row-color, var(--color-ink));
+        font-weight: 500;
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .event-feature {
+        color: var(--color-ink);
+        font-weight: 500;
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .event-detail {
+        color: var(--color-ink-mute);
+        font-style: italic;
+        font-family: var(--font-serif);
+        font-size: 12.5px;
+        line-height: 1.4;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .event-round {
+        color: var(--color-ink-faint);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        padding: 1px 6px;
+        border: 1px dashed var(--color-rule-soft);
+        border-radius: 1px;
+      }
+      @media (max-width: 720px) {
+        .event-row { grid-template-columns: 18px 60px 1fr; gap: 6px; }
+        .event-name { grid-column: 1 / -1; padding-left: 28px; }
+        .event-detail, .event-feature, .event-round { grid-column: 1 / -1; padding-left: 28px; }
+      }
+
+      /* ── Round-history enhanced cell styles ───────────────────────── */
+      .round-id {
+        font-family: var(--font-mono);
+        font-weight: 600;
+        color: var(--color-blue);
+        letter-spacing: 0.06em;
+      }
+      .round-cell {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-family: var(--font-mono);
+      }
+      .round-cell--good { color: var(--color-blue); }
+      .round-cell--warn { color: var(--color-ochre); }
+
+      /* ── Pipeline panel polish ────────────────────────────────────── */
+      .pipeline-overlap {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 13.5px;
+        color: var(--color-ink-2);
+        line-height: 1.5;
+        margin: 8px 0 12px;
+        padding: 8px 12px;
+        background: color-mix(in srgb, var(--color-ink) 4%, transparent);
+        border-left: 2px solid var(--color-rule-soft);
+      }
+      .pipeline-overlap em {
+        font-style: normal;
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        margin-right: 6px;
+      }
+      .pipeline-row {
+        padding: 8px 0;
+        border-bottom: 1px dotted var(--color-rule-soft);
+        gap: 10px;
+      }
+      .pipeline-row:last-child { border-bottom: none; }
+      .pipeline-priority {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        font-weight: 500;
+        color: var(--color-blue);
+        letter-spacing: 0.06em;
+        min-width: 24px;
+      }
+      .pipeline-name {
+        font-family: var(--font-serif);
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--color-ink);
+        flex: 1;
+      }
+
+      /* ── Backlog ledger grid ─────────────────────────────────────── */
+      .backlog-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+        gap: 12px;
+        margin: 14px 0 0;
+        padding: 0;
+      }
+      @media (min-width: 1200px) {
+        .backlog-grid { grid-template-columns: repeat(9, 1fr); }
+      }
+      .backlog-cell {
+        background: var(--color-parchment);
+        border: 1px solid var(--color-rule-soft);
+        border-left: 3px solid var(--cell-color);
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .backlog-cell-label {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-faint);
+        margin: 0;
+      }
+      .backlog-cell-value {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin: 0;
+      }
+      .backlog-cell-value strong {
+        font-family: var(--font-serif);
+        font-weight: 400;
+        font-size: 22px;
+        line-height: 1;
+        color: var(--color-ink);
+        font-variation-settings: "opsz" 144, "SOFT" 30;
+      }
+      .backlog-cell-pct {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        color: var(--color-ink-faint);
+        letter-spacing: 0.04em;
+      }
+      .backlog-bar {
+        height: 3px;
+        background: color-mix(in srgb, var(--color-ink) 6%, transparent);
+        position: relative;
+      }
+      .backlog-bar-fill {
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        background: var(--cell-color);
+      }
+
       /* Responsive register */
       @media (max-width: 720px) {
         header.manuscript {
@@ -911,54 +1469,55 @@
         <p class="empty-state">loading session frontmatter</p>
       </section>
 
+      <section id="escalations-panel" class="section-attention" aria-live="polite" hx-get="/partials/escalations" hx-trigger="load, every 5s" hx-swap="morph">
+        <span class="sec-num"><strong>§ 02</strong>open<br>questions</span>
+        <p class="empty-state">loading escalations</p>
+      </section>
+
+      <section id="feature-cards" class="section-primary" aria-live="polite" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="morph">
+        <span class="sec-num"><strong>§ 03</strong>features</span>
+        <p class="empty-state">loading feature ledger</p>
+      </section>
+
       <div class="dash-grid">
         <div class="dash-grid-main">
-          <section id="feature-cards" class="section-primary" aria-live="polite" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="morph">
-            <span class="sec-num"><strong>§ 02</strong>features</span>
-            <p class="empty-state">loading feature ledger</p>
+          <section id="activity-stream" aria-label="Recent activity" hx-get="/partials/activity-stream" hx-trigger="load, every 3s" hx-swap="morph">
+            <span class="sec-num"><strong>§ 04</strong>recent<br>activity</span>
+            <p class="empty-state">loading activity stream</p>
           </section>
         </div>
 
         <div class="dash-grid-side">
           <section id="fleet-panel" aria-label="Agent fleet" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="morph">
-            <span class="sec-num"><strong>§ 03</strong>fleet</span>
-            <h2>Agent fleet <span class="phase-tag">live roster</span></h2>
+            <span class="sec-num"><strong>§ 05</strong>fleet</span>
             <p class="empty-state">loading roster</p>
           </section>
         </div>
       </div>
 
       <section id="swim-lane" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="morph">
-        <span class="sec-num"><strong>§ 04</strong>timing</span>
+        <span class="sec-num"><strong>§ 06</strong>timing</span>
         <h2>Timeline <span class="phase-tag">scrub · per-feature</span></h2>
         <p class="empty-state">loading timing diagram</p>
       </section>
 
       <section id="round-history" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="morph">
-        <span class="sec-num"><strong>§ 05</strong>rounds</span>
+        <span class="sec-num"><strong>§ 07</strong>rounds</span>
         <p class="empty-state">loading round ledger</p>
       </section>
 
-      <section id="pipeline-panel" class="section-primary">
-        <span class="sec-num"><strong>§ 06</strong>pipeline</span>
+      <section id="pipeline-panel">
         {% block pipeline_panel %}{% include "pipeline_panel.html" %}{% endblock %}
       </section>
 
-      <section id="backlog-panel">
-        <span class="sec-num"><strong>§ 07</strong>backlog</span>
-        <h2>Backlog <span class="phase-tag">unrefined items pending</span></h2>
-        {% set open_count = state.backlog_counts.get('open', 0) if state is defined and state.backlog_counts else 0 %}
-        {% set done_count = state.backlog_counts.get('done', 0) if state is defined and state.backlog_counts else 0 %}
-        <p class="phase-label">
-          <span style="color: var(--color-ink);">{{ open_count }}</span> open
-          <span style="margin: 0 6px; color: var(--color-rule-soft);">·</span>
-          <span style="color: var(--color-ink);">{{ done_count }}</span> done
-        </p>
+      <section id="backlog-panel" hx-get="/partials/backlog" hx-trigger="load, every 30s" hx-swap="morph">
+        <span class="sec-num"><strong>§ 09</strong>backlog</span>
+        <p class="empty-state">loading backlog ledger</p>
       </section>
 
       <div class="colophon">
         <span>cortex-command · overnight dashboard</span>
-        <span><em>a spec being filled in by the agents · refresh every 5s</em></span>
+        <span><em>a spec being filled in by the agents · refresh every 3-5s</em></span>
       </div>
       {% endblock %}
     </main>

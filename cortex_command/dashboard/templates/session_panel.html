@@ -1,19 +1,17 @@
 {% from "patterns/badge.html" import badge %}
 <span id="live-indicator" class="live-indicator{% if state.overnight and state.overnight.phase == 'executing' %} live-indicator--active{% endif %}" hx-swap-oob="true">{% if state.overnight and state.overnight.phase == 'executing' %}<span class="live-dot"></span> Live · scrubbing{% else %}No session · idle{% endif %}</span>
 <span class="sec-num"><strong>§ 01</strong>session</span>
-<h2>Session <span class="phase-tag">{% if state.overnight %}{{ state.overnight.phase or 'idle' }}{% else %}idle{% endif %}</span></h2>
+<h2>Session <em>frontmatter</em> <span class="phase-tag">{% if state.overnight %}{{ state.overnight.phase or 'idle' }}{% else %}idle{% endif %}</span></h2>
 {% if state.overnight is not none %}
 {% set is_executing = (state.overnight.phase == 'executing') %}
 <div class="stream-line">
   <span>id · {{ state.overnight.session_id }}</span>
   <span>round · {{ state.overnight.current_round }}</span>
   <span>{% if is_executing %}running for {{ state.overnight.started_at | format_elapsed_no_suffix }}{% else %}completed{% endif %}</span>
+  <span style="margin-left:auto;">tick · {{ state.last_updated | format_elapsed if state.last_updated else "—" }}</span>
 </div>
-<div class="card-row">
-  {{ badge(status=state.overnight.phase) }}
-  <span class="phase-label">started {{ state.overnight.started_at | format_elapsed }}</span>
-  {% if state.session_cost_total is not none %}<span class="cost-chip">· cost ${{ '%.2f' | format(state.session_cost_total) }}</span>{% endif %}
-</div>
+
+{# Status counters as headline ledger #}
 {% set ns = namespace(merged=0, running=0, pending=0, paused=0, failed=0, deferred=0) %}
 {% for feat in state.overnight.features.values() %}
   {% if feat.status == 'merged' %}{% set ns.merged = ns.merged + 1 %}
@@ -25,29 +23,88 @@
   {% endif %}
 {% endfor %}
 {% set total = state.overnight.features | length %}
-<div class="card-row" style="margin-top: 14px;">
-  <span class="phase-label">acceptance</span>
-  <div class="progress-bar">
-    <div class="progress-bar-fill" style="width: {{ ((ns.merged + ns.running * 0.5) / total * 100) | int if total > 0 else 0 }}%"></div>
+
+<div class="session-grid">
+  <div class="session-cell">
+    <span class="cell-label">acceptance</span>
+    <div class="cell-value">
+      <strong class="cell-numeral">{{ ns.merged }}</strong>
+      <span class="cell-of">of {{ total }} merged</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-bar-fill" style="width: {{ ((ns.merged + ns.running * 0.5) / total * 100) | int if total > 0 else 0 }}%"></div>
+    </div>
   </div>
-  <span class="task-ratio">{{ ns.merged }}/{{ total }} merged</span>
+
+  <div class="session-cell">
+    <span class="cell-label">in flight</span>
+    <div class="cell-value">
+      <strong class="cell-numeral">{{ ns.running }}</strong>
+      <span class="cell-of">{% if ns.pending %}+ {{ ns.pending }} queued{% else %}no queue{% endif %}</span>
+    </div>
+    <div class="status-pips">
+      {% for _ in range(ns.merged) %}<span class="pip pip--merged" title="merged"></span>{% endfor %}
+      {% for _ in range(ns.running) %}<span class="pip pip--running" title="running"></span>{% endfor %}
+      {% for _ in range(ns.paused) %}<span class="pip pip--paused" title="paused"></span>{% endfor %}
+      {% for _ in range(ns.deferred) %}<span class="pip pip--deferred" title="deferred"></span>{% endfor %}
+      {% for _ in range(ns.failed) %}<span class="pip pip--failed" title="failed"></span>{% endfor %}
+      {% for _ in range(ns.pending) %}<span class="pip pip--pending" title="pending"></span>{% endfor %}
+    </div>
+  </div>
+
+  <div class="session-cell">
+    <span class="cell-label">spend</span>
+    <div class="cell-value">
+      {% if state.session_cost_total is not none %}
+      <strong class="cell-numeral">${{ '%.2f' | format(state.session_cost_total) }}</strong>
+      {% else %}
+      <strong class="cell-numeral">—</strong>
+      {% endif %}
+      <span class="cell-of">session cost</span>
+    </div>
+    {% if state.open_questions_total %}
+    <div class="cell-aux"><a href="#escalations-panel" class="text-brand-primary">{{ state.open_questions_total }} open questions ↘</a></div>
+    {% else %}
+    <div class="cell-aux"><span class="phase-label">no open questions</span></div>
+    {% endif %}
+  </div>
+
+  <div class="session-cell{% set issues = (ns.failed + state.worker_exit_issues + (1 if state.circuit_breaker_active else 0)) %}{% if issues > 0 %} session-cell--alert{% endif %}">
+    <span class="cell-label">attention</span>
+    <div class="cell-value">
+      <strong class="cell-numeral{% if issues > 0 %} cell-numeral--alert{% endif %}">{{ issues }}</strong>
+      <span class="cell-of">{{ "item needs" if issues == 1 else "items need" }} triage</span>
+    </div>
+    <div class="cell-aux">
+      {% if ns.failed %}<span class="cell-mini cell-mini--alert">{{ ns.failed }} failed</span>{% endif %}
+      {% if state.worker_exit_issues %}<span class="cell-mini cell-mini--alert">{{ state.worker_exit_issues }} no-report</span>{% endif %}
+      {% if state.circuit_breaker_active %}<span class="cell-mini cell-mini--alert">circuit breaker</span>{% endif %}
+      {% if issues == 0 %}<span class="phase-label">clear</span>{% endif %}
+    </div>
+  </div>
 </div>
-<div class="card-row">
+
+<div class="card-row" style="margin-top: 12px; flex-wrap: wrap; gap: 6px;">
   {% if ns.merged > 0 %}{{ badge(css_class="badge-green", label=ns.merged ~ " merged") }}{% endif %}
   {% if ns.running > 0 %}{{ badge(css_class="badge-blue", label=ns.running ~ " running") }}{% endif %}
   {% if ns.pending > 0 %}{{ badge(css_class="badge-gray", label=ns.pending ~ " pending") }}{% endif %}
   {% if ns.paused > 0 %}{{ badge(css_class="badge-amber", label=ns.paused ~ " paused") }}{% endif %}
-  {% if ns.failed > 0 %}{{ badge(css_class="badge-red", label=ns.failed ~ " failed") }}{% endif %}
   {% if ns.deferred > 0 %}{{ badge(css_class="badge-amber", label=ns.deferred ~ " deferred") }}{% endif %}
+  {% if ns.failed > 0 %}{{ badge(css_class="badge-red", label=ns.failed ~ " failed") }}{% endif %}
 </div>
-{% if state.worker_exit_issues > 0 %}<div class="card-row"><span class="phase-label" style="color: var(--color-warning);">⚠ {{ state.worker_exit_issues }} workers exited without report</span></div>{% endif %}
+
+<div class="card-row" style="margin-top: 8px; flex-wrap: wrap; gap: 12px;">
+  {% if state.overnight.integration_branch %}<span class="phase-label">branch · <code class="inline-code">{{ state.overnight.integration_branch }}</code></span>{% endif %}
+  {% if state.overnight.plan_ref %}<span class="phase-label">plan · <code class="inline-code">{{ state.overnight.plan_ref }}</code></span>{% endif %}
+  {% if state.overnight.paused_from %}<span class="phase-label" style="color: var(--color-ochre);">paused from · {{ state.overnight.paused_from }}</span>{% endif %}
+</div>
+
+{% if state.worker_exit_issues > 0 %}
 <div class="card-row" style="margin-top: 10px;">
-  {% if state.overnight.integration_branch %}<span class="phase-label">branch · {{ state.overnight.integration_branch }}</span>{% endif %}
-  {% if state.overnight.plan_ref %}<span class="phase-label">plan · {{ state.overnight.plan_ref }}</span>{% endif %}
+  <span class="phase-label" style="color: var(--color-warning);">⚠ {{ state.worker_exit_issues }} workers exited without report</span>
 </div>
-<div class="card-row">
-  <span class="phase-label">last updated · {{ state.last_updated | format_elapsed if state.last_updated else "—" }}</span>
-</div>
+{% endif %}
+
 {% else %}
 <p class="empty-state">no active session</p>
 {% if last_session %}

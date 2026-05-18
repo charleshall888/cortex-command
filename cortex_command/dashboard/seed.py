@@ -11,6 +11,7 @@ import argparse
 import json
 import shutil
 import sys
+import uuid
 from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -338,18 +339,55 @@ def write_pipeline_fixtures(repo_root: Path) -> None:
     pipeline_state_path.write_text(json.dumps(pipeline_state, indent=2) + "\n")
     print(f"  wrote {pipeline_state_path.relative_to(repo_root)}")
 
-    # pipeline-events.log: one dispatch_start event per pipeline feature
+    # pipeline-events.log: dispatch_start events for both the 3 pipeline
+    # features (varied models/complexities/budgets) and the 5 overnight seed
+    # features (so the dashboard's feature_models lookup populates).
+    pipeline_variants = [
+        ("opus",   "complex", 25.0),
+        ("sonnet", "simple",  10.0),
+        ("haiku",  "trivial",  5.0),
+    ]
     events_lines = []
     for i, feature_name in enumerate(PIPELINE_FEATURES):
+        model, complexity, budget = pipeline_variants[i]
         event = {
             "ts": ts_at(60 - i * 15),
             "event": "dispatch_start",
             "feature": feature_name,
-            "complexity": "complex",
+            "complexity": complexity,
             "criticality": "low",
-            "model": "sonnet",
+            "model": model,
             "max_turns": 20,
-            "max_budget_usd": 25.0,
+            "max_budget_usd": budget,
+        }
+        events_lines.append(json.dumps(event))
+
+    # Per-seed-feature dispatch_start events (one per slug) so the dashboard's
+    # feature_models lookup can resolve each seed feature.
+    seed_dispatch_variants = {
+        "seed-feature-alpha":   ("opus",   "complex", 25.0),
+        "seed-feature-beta":    ("sonnet", "simple",  10.0),
+        "seed-feature-gamma":   ("opus",   "complex", 25.0),
+        "seed-feature-delta":   ("sonnet", "complex", 25.0),
+        "seed-feature-epsilon": ("haiku",  "trivial",  5.0),
+    }
+    seed_offsets = {
+        "seed-feature-alpha":   88,
+        "seed-feature-beta":    85,
+        "seed-feature-gamma":   42,
+        "seed-feature-delta":   62,
+        "seed-feature-epsilon": 41,
+    }
+    for slug, (model, complexity, budget) in seed_dispatch_variants.items():
+        event = {
+            "ts": ts_at(seed_offsets[slug]),
+            "event": "dispatch_start",
+            "feature": slug,
+            "complexity": complexity,
+            "criticality": "low",
+            "model": model,
+            "max_turns": 20,
+            "max_budget_usd": budget,
         }
         events_lines.append(json.dumps(event))
 
@@ -551,6 +589,485 @@ def write_feature_files(repo_root: Path, slug: str, status: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Extended per-feature fixtures (escalations, exit-reports, daytime artifacts,
+# learnings, enriched events.log) — added for the new dashboard panels.
+# ---------------------------------------------------------------------------
+
+# Per-feature tier and clarify_critic findings_count assignments.
+# Vary findings_count so some features show "clean clarify" (count=0).
+_FEATURE_TIER = {
+    "seed-feature-alpha":   "complex",
+    "seed-feature-beta":    "simple",
+    "seed-feature-gamma":   "complex",
+    "seed-feature-delta":   "complex",
+    "seed-feature-epsilon": "trivial",
+}
+
+_FEATURE_CLARIFY_FINDINGS = {
+    "seed-feature-alpha":   3,
+    "seed-feature-beta":    0,  # clean clarify
+    "seed-feature-gamma":   5,
+    "seed-feature-delta":   9,
+    "seed-feature-epsilon": 1,
+}
+
+# PR numbers for merged features
+_FEATURE_PR_NUMBER = {
+    "seed-feature-alpha": 421,
+    "seed-feature-beta":  422,
+}
+
+# Deterministic dispatch IDs per feature (uuid hex) so reruns produce diffs
+# only when content actually changes.
+_FEATURE_DISPATCH_IDS = {
+    "seed-feature-alpha":   uuid.UUID("11111111-1111-4111-8111-111111111111").hex,
+    "seed-feature-beta":    uuid.UUID("22222222-2222-4222-8222-222222222222").hex,
+    "seed-feature-gamma":   uuid.UUID("33333333-3333-4333-8333-333333333333").hex,
+    "seed-feature-delta":   uuid.UUID("44444444-4444-4444-8444-444444444444").hex,
+    "seed-feature-epsilon": uuid.UUID("55555555-5555-4555-8555-555555555555").hex,
+}
+
+# Escalation question/context pairs for the paused (delta) and failed (epsilon)
+# features. Each entry produces one escalation jsonl line.
+_FEATURE_ESCALATIONS = {
+    "seed-feature-delta": [
+        {
+            "question": (
+                "Should I implement variant A (per-endpoint token bucket) or variant B "
+                "(global rolling window) given the spec ambiguity around how export "
+                "endpoints share the rate-limit quota with the rest of the API?"
+            ),
+            "context": (
+                "Spec section 3.2 references both 'per-endpoint' and 'shared pool' "
+                "limits in adjacent paragraphs without disambiguating. The plan "
+                "task assumed variant A but the acceptance test scaffolding "
+                "appears to assert variant B."
+            ),
+            "round": 2,
+        },
+        {
+            "question": (
+                "The retry budget for 429 responses isn't specified — should "
+                "downstream clients receive Retry-After headers or rely on "
+                "exponential backoff?"
+            ),
+            "context": (
+                "Existing webhook handler uses fixed-interval retries; if we "
+                "diverge that breaks the contract documented in docs/api.md."
+            ),
+            "round": 2,
+        },
+    ],
+    "seed-feature-epsilon": [
+        {
+            "question": (
+                "The Bash tool sandbox failed to initialize on the third retry — "
+                "should I bypass the sandbox for this specific deprecation script, "
+                "or roll back the change?"
+            ),
+            "context": (
+                "Sandbox seatbelt-probe reports 'Operation not permitted' on the "
+                "legacy webhook handler's tmp directory. Running unsandboxed would "
+                "violate the MCP-unsandboxed framing policy without explicit user "
+                "consent."
+            ),
+            "round": 3,
+        },
+    ],
+}
+
+
+def write_escalations(repo_root: Path, slug: str) -> bool:
+    """Write escalations.jsonl for features that have escalations defined.
+
+    Returns True if a file was written, False if the feature has no escalations.
+    """
+    escalations = _FEATURE_ESCALATIONS.get(slug)
+    if not escalations:
+        return False
+
+    feature_dir = repo_root / "cortex" / "lifecycle" / slug
+    feature_dir.mkdir(parents=True, exist_ok=True)
+
+    lines = []
+    for i, esc in enumerate(escalations, start=1):
+        round_num = esc["round"]
+        entry = {
+            "type": "escalation",
+            "escalation_id": f"{slug}-r{round_num}-q{i}",
+            "session_id": SESSION_ID,
+            "feature": slug,
+            "round": round_num,
+            "question": esc["question"],
+            "context": esc["context"],
+            "ts": ts_at(50 - i * 5),
+        }
+        lines.append(json.dumps(entry))
+
+    path = feature_dir / "escalations.jsonl"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"  wrote cortex/lifecycle/{slug}/escalations.jsonl ({len(lines)} entries)")
+    return True
+
+
+def write_exit_reports(repo_root: Path, slug: str, status: str) -> int:
+    """Write per-plan-task exit-reports/{n}.json files for a feature.
+
+    Returns the number of report files written.
+    """
+    feature_dir = repo_root / "cortex" / "lifecycle" / slug
+    exit_dir = feature_dir / "exit-reports"
+    exit_dir.mkdir(parents=True, exist_ok=True)
+
+    # Per-feature task descriptions for realistic-sounding reasons
+    task_reasons = {
+        "seed-feature-alpha": [
+            "Researched existing auth middleware patterns in api/gateway/",
+            "Drafted JWT validation spec with refresh-token rotation",
+            "Implemented token validation middleware and wired into routes",
+            "Added integration tests covering expired/revoked tokens",
+            "Updated justfile recipe and docs/auth.md",
+            "Verified end-to-end with curl smoke test against staging",
+        ],
+        "seed-feature-beta": [
+            "Audited current schema usage across services",
+            "Wrote migration plan with backfill strategy",
+            "Implemented Alembic migration scripts for v2 tables",
+            "Added rollback fixtures and dry-run integration test",
+            "Updated ORM models and dependent query helpers",
+        ],
+        "seed-feature-gamma": [
+            "Mapped existing notification fan-out paths",
+            "Drafted refactor spec with adapter interface",
+            "Extracted publisher adapter and migrated email path",
+        ],
+        "seed-feature-delta": [
+            "Surveyed rate-limit libraries (slowapi, fastapi-limiter)",
+            "Drafted spec covering per-endpoint and shared-pool variants",
+            "Implemented token-bucket middleware skeleton",
+        ],
+        "seed-feature-epsilon": [
+            "Identified all callers of legacy webhook handler",
+            "Removed handler module and updated routing table",
+        ],
+    }
+
+    tasks = task_reasons.get(slug, [])
+    reports = []
+
+    if status == "merged":
+        # All complete
+        for i, reason in enumerate(tasks, start=1):
+            reports.append({
+                "task_number": i,
+                "action": "complete",
+                "reason": reason,
+                "ts": ts_at(80 - i * 2),
+            })
+    elif status == "paused":
+        # Early tasks complete, blocking task is "question"
+        for i, reason in enumerate(tasks, start=1):
+            if i < len(tasks):
+                reports.append({
+                    "task_number": i,
+                    "action": "complete",
+                    "reason": reason,
+                    "ts": ts_at(60 - i * 2),
+                })
+            else:
+                reports.append({
+                    "task_number": i,
+                    "action": "question",
+                    "reason": "Blocked on spec ambiguity for rate-limit scope",
+                    "question": (
+                        "Should rate limits be per-endpoint or pool-shared? "
+                        "Spec section 3.2 references both."
+                    ),
+                    "ts": ts_at(55),
+                })
+    elif status == "failed":
+        # Early tasks complete, last task failed
+        for i, reason in enumerate(tasks, start=1):
+            if i < len(tasks):
+                reports.append({
+                    "task_number": i,
+                    "action": "complete",
+                    "reason": reason,
+                    "ts": ts_at(38 - i * 2),
+                })
+            else:
+                reports.append({
+                    "task_number": i,
+                    "action": "failed",
+                    "reason": "Agent exited with non-zero status during execution",
+                    "error": (
+                        "task_failure: ProcessError: Command failed with exit "
+                        "code 1 (exit code: 1)"
+                    ),
+                    "ts": ts_at(32),
+                })
+    else:
+        # running (gamma) — write the completed tasks so far, no terminal report
+        for i, reason in enumerate(tasks, start=1):
+            reports.append({
+                "task_number": i,
+                "action": "complete",
+                "reason": reason,
+                "ts": ts_at(40 - i * 3),
+            })
+
+    for i, report in enumerate(reports, start=1):
+        path = exit_dir / f"{i}.json"
+        path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+
+    print(f"  wrote cortex/lifecycle/{slug}/exit-reports/ ({len(reports)} reports)")
+    return len(reports)
+
+
+def write_daytime_artifacts(repo_root: Path, slug: str, status: str) -> list[str]:
+    """Write daytime-state.json and/or daytime-result.json for a feature.
+
+    Returns list of relative filenames written.
+    """
+    feature_dir = repo_root / "cortex" / "lifecycle" / slug
+    feature_dir.mkdir(parents=True, exist_ok=True)
+
+    dispatch_id = _FEATURE_DISPATCH_IDS[slug]
+    written: list[str] = []
+
+    if status == "running":
+        # daytime-state for currently-executing feature
+        state = {
+            "schema_version": 1,
+            "dispatch_id": dispatch_id,
+            "feature": slug,
+            "phase": "executing",
+            "recovery_attempts": 0,
+            "recovery_depth": 0,
+            "started_at": ts_at(40),
+            "updated_at": ts_at(0),
+        }
+        path = feature_dir / "daytime-state.json"
+        path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
+        written.append("daytime-state.json")
+
+    if status == "merged":
+        pr_num = _FEATURE_PR_NUMBER[slug]
+        result = {
+            "schema_version": 1,
+            "dispatch_id": dispatch_id,
+            "feature": slug,
+            "start_ts": ts_at(88 if slug == "seed-feature-alpha" else 85),
+            "end_ts": ts_at(78 if slug == "seed-feature-alpha" else 75),
+            "outcome": "merged",
+            "terminated_via": "completion",
+            "deferred_files": [],
+            "error": None,
+            "pr_url": f"https://github.com/example/repo/pull/{pr_num}",
+        }
+        path = feature_dir / "daytime-result.json"
+        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        written.append("daytime-result.json")
+
+    if status == "failed":
+        result = {
+            "schema_version": 1,
+            "dispatch_id": dispatch_id,
+            "feature": slug,
+            "start_ts": ts_at(41),
+            "end_ts": ts_at(28),
+            "outcome": "failed",
+            "terminated_via": "agent_exit",
+            "deferred_files": [],
+            "error": "Agent exited with non-zero status",
+            "pr_url": None,
+        }
+        path = feature_dir / "daytime-result.json"
+        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+        written.append("daytime-result.json")
+
+    if written:
+        print(f"  wrote cortex/lifecycle/{slug}/{{{','.join(written)}}}")
+    return written
+
+
+def write_learnings_progress(repo_root: Path, slug: str, status: str) -> bool:
+    """Write learnings/progress.txt for failed and paused features.
+
+    Returns True if a file was written.
+    """
+    if status not in ("failed", "paused"):
+        return False
+
+    feature_dir = repo_root / "cortex" / "lifecycle" / slug
+    learnings_dir = feature_dir / "learnings"
+    learnings_dir.mkdir(parents=True, exist_ok=True)
+
+    if status == "failed":
+        attempts = [
+            {
+                "ts": ts_at(36),
+                "task": "Remove legacy webhook handler and update routing table",
+                "error": "task_failure: ProcessError: Command failed with exit code 1 (exit code: 1)",
+                "output": "Check stderr output for details",
+            },
+            {
+                "ts": ts_at(34),
+                "task": "Remove legacy webhook handler and update routing table",
+                "error": "task_failure: ProcessError: Command failed with exit code 1 (exit code: 1)",
+                "output": "Check stderr output for details",
+            },
+            {
+                "ts": ts_at(32),
+                "task": "Remove legacy webhook handler and update routing table",
+                "error": "task_failure: ProcessError: Sandbox initialization failed",
+                "output": "Operation not permitted on tmp directory",
+            },
+        ]
+    else:  # paused
+        attempts = [
+            {
+                "ts": ts_at(58),
+                "task": "Implement token-bucket middleware for export endpoints",
+                "error": "task_failure: SpecAmbiguity: per-endpoint vs shared-pool unresolved",
+                "output": "Halted before writing middleware module",
+            },
+            {
+                "ts": ts_at(55),
+                "task": "Escalate spec ambiguity for rate-limit scope",
+                "error": "task_failure: AwaitingClarification: blocked on user input",
+                "output": "Escalation written to escalations.jsonl",
+            },
+        ]
+
+    lines = [""]
+    for i, att in enumerate(attempts, start=1):
+        lines.append("============================================================")
+        lines.append(f"Attempt {i} | {att['ts']}")
+        lines.append("============================================================")
+        lines.append(f"Task: {att['task']}")
+        lines.append(f"Error: {att['error']}")
+        lines.append(f"Output:")
+        lines.append(att["output"])
+        lines.append("")
+
+    path = learnings_dir / "progress.txt"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"  wrote cortex/lifecycle/{slug}/learnings/progress.txt ({len(attempts)} attempts)")
+    return True
+
+
+def write_enriched_events_log(repo_root: Path, slug: str, status: str) -> None:
+    """Rewrite events.log with enriched prepended events.
+
+    Replaces the basic 3-event events.log produced by write_feature_files()
+    with a richer event stream including clarify_critic, complexity_override
+    (delta only), lifecycle_start with tier/criticality, phase_transitions,
+    and (for merged) spec_approved / plan_approved / dispatch_complete.
+    """
+    feature_dir = repo_root / "cortex" / "lifecycle" / slug
+    feature_dir.mkdir(parents=True, exist_ok=True)
+
+    tier = _FEATURE_TIER[slug]
+    findings = _FEATURE_CLARIFY_FINDINGS[slug]
+    # dispositions: roughly findings split into apply/dismiss with at most a
+    # small number of asks; for findings=0 all zero.
+    if findings == 0:
+        apply_n, dismiss_n, ask_n = 0, 0, 0
+    else:
+        apply_n = max(1, findings * 2 // 3)
+        dismiss_n = findings - apply_n
+        ask_n = 0
+    applied_fixes = apply_n
+    dismissals = dismiss_n
+
+    events: list[dict] = []
+
+    # 1. clarify_critic
+    events.append({
+        "schema_version": 3,
+        "ts": ts_at(86),
+        "event": "clarify_critic",
+        "feature": slug,
+        "parent_epic_loaded": False,
+        "findings_count": findings,
+        "dispositions": {"apply": apply_n, "dismiss": dismiss_n, "ask": ask_n},
+        "applied_fixes_count": applied_fixes,
+        "dismissals_count": dismissals,
+        "status": "ok",
+    })
+
+    # 2. complexity_override — delta only
+    if slug == "seed-feature-delta":
+        events.append({
+            "schema_version": 3,
+            "ts": ts_at(85.5),
+            "event": "complexity_override",
+            "feature": slug,
+            "from": "simple",
+            "to": "complex",
+            "gate": "specify_open_decisions",
+            "note": (
+                "Spec uncovered conflicting rate-limit semantics (per-endpoint "
+                "vs shared-pool); requires complex-tier deliberation."
+            ),
+        })
+
+    # 3. lifecycle_start
+    events.append({
+        "ts": ts_at(85),
+        "event": "lifecycle_start",
+        "feature": slug,
+        "tier": tier,
+        "criticality": "low",
+    })
+
+    # 4. existing phase_transitions
+    events.append({
+        "ts": ts_at(70),
+        "event": "phase_transition",
+        "feature": slug,
+        "from": "research",
+        "to": "specify",
+    })
+    events.append({
+        "ts": ts_at(45),
+        "event": "phase_transition",
+        "feature": slug,
+        "from": "specify",
+        "to": "implement",
+    })
+
+    # 5. merged-only: spec_approved, plan_approved, dispatch_complete
+    if status == "merged":
+        pr_num = _FEATURE_PR_NUMBER[slug]
+        events.append({
+            "ts": ts_at(82),
+            "event": "spec_approved",
+            "feature": slug,
+        })
+        events.append({
+            "ts": ts_at(80),
+            "event": "plan_approved",
+            "feature": slug,
+        })
+        events.append({
+            "ts": ts_at(75),
+            "event": "dispatch_complete",
+            "feature": slug,
+            "outcome": "merged",
+            "pr_url": f"https://github.com/example/repo/pull/{pr_num}",
+        })
+
+    path = feature_dir / "events.log"
+    path.write_text(
+        "\n".join(json.dumps(e) for e in events) + "\n",
+        encoding="utf-8",
+    )
+    print(f"  rewrote cortex/lifecycle/{slug}/events.log ({len(events)} events)")
+
+
+# ---------------------------------------------------------------------------
 # Backlog seed items
 # ---------------------------------------------------------------------------
 
@@ -628,6 +1145,23 @@ def write_all(repo_root: Path, session_id: str) -> None:
         written_paths.append(feature_dir / "agent-activity.jsonl")
         written_paths.append(feature_dir / "events.log")
         written_paths.append(feature_dir / "plan.md")
+
+        # Extended fixtures for the new dashboard panels.
+        # write_enriched_events_log replaces the basic events.log written above.
+        write_enriched_events_log(repo_root, slug, status)
+
+        if write_escalations(repo_root, slug):
+            written_paths.append(feature_dir / "escalations.jsonl")
+
+        report_count = write_exit_reports(repo_root, slug, status)
+        for i in range(1, report_count + 1):
+            written_paths.append(feature_dir / "exit-reports" / f"{i}.json")
+
+        for fname in write_daytime_artifacts(repo_root, slug, status):
+            written_paths.append(feature_dir / fname)
+
+        if write_learnings_progress(repo_root, slug, status):
+            written_paths.append(feature_dir / "learnings" / "progress.txt")
 
     write_pipeline_fixtures(repo_root)
     written_paths.append(repo_root / "cortex" / "lifecycle" / "pipeline-state.json")

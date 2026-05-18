@@ -1313,6 +1313,353 @@ def parse_feature_timestamps(
     return result
 
 
+def parse_escalations(
+    feature_slug: str, lifecycle_dir: Path, last_n: int = 5
+) -> list[dict]:
+    """Return up to ``last_n`` most recent escalation entries for a feature.
+
+    Reads ``lifecycle_dir/{feature_slug}/escalations.jsonl``. Each line is a
+    JSON object representing an open question that blocks the feature. Useful
+    fields: ``question`` (text), ``context`` (text), ``ts`` (ISO-8601).
+
+    Returns ``[]`` when the file is absent.
+    """
+    path = lifecycle_dir / feature_slug / "escalations.jsonl"
+    events, _ = _read_all_jsonl(path)
+    return events[-last_n:]
+
+
+def parse_exit_reports(feature_slug: str, lifecycle_dir: Path) -> list[dict]:
+    """Return all exit-report dicts for a feature, sorted by filename number.
+
+    Reads ``lifecycle_dir/{feature_slug}/exit-reports/*.json``. Each file
+    typically has ``action`` (complete/question/failed/paused), ``reason``,
+    optionally ``question`` or ``error``.
+
+    Returns ``[]`` when the directory is absent.
+    """
+    reports_dir = lifecycle_dir / feature_slug / "exit-reports"
+    if not reports_dir.is_dir():
+        return []
+    out: list[dict] = []
+    try:
+        for path in sorted(
+            reports_dir.glob("*.json"),
+            key=lambda p: (
+                int(p.stem) if p.stem.isdigit() else 1 << 30,
+                p.name,
+            ),
+        ):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(data, dict):
+                data = {**data, "_task_number": path.stem}
+                out.append(data)
+    except OSError:
+        return []
+    return out
+
+
+def parse_daytime_state(feature_slug: str, lifecycle_dir: Path) -> dict | None:
+    """Return parsed ``daytime-state.json`` dict, or None when absent."""
+    path = lifecycle_dir / feature_slug / "daytime-state.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def parse_daytime_result(feature_slug: str, lifecycle_dir: Path) -> dict | None:
+    """Return parsed ``daytime-result.json`` dict, or None when absent."""
+    path = lifecycle_dir / feature_slug / "daytime-result.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def parse_learnings_progress(
+    feature_slug: str, lifecycle_dir: Path, max_attempts: int = 3
+) -> dict | None:
+    """Parse ``learnings/progress.txt`` into a structured summary.
+
+    The file uses the format::
+
+        ============================================================
+        Attempt N | <iso ts>
+        ============================================================
+        Task: ...
+        Error: ...
+        Output: ...
+
+    Returns ``{"attempts": int, "recent": [{"n": int, "ts": str,
+    "task": str, "error": str}, ...]}`` or None when absent.
+    """
+    path = lifecycle_dir / feature_slug / "learnings" / "progress.txt"
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    if not text.strip():
+        return None
+
+    blocks: list[dict] = []
+    current: dict | None = None
+    pending_header = False
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("===="):
+            pending_header = True
+            continue
+        if pending_header and line.lower().startswith("attempt"):
+            pending_header = False
+            head_parts = line.split("|", 1)
+            n_str = head_parts[0].strip().split()[-1] if head_parts else ""
+            try:
+                n = int(n_str)
+            except (ValueError, IndexError):
+                n = len(blocks) + 1
+            ts = head_parts[1].strip() if len(head_parts) > 1 else ""
+            current = {"n": n, "ts": ts, "task": "", "error": ""}
+            blocks.append(current)
+            continue
+        pending_header = False
+        if current is None:
+            continue
+        if line.lower().startswith("task:"):
+            current["task"] = line.split(":", 1)[1].strip()
+        elif line.lower().startswith("error:"):
+            current["error"] = line.split(":", 1)[1].strip()
+
+    if not blocks:
+        return None
+    return {
+        "attempts": len(blocks),
+        "recent": blocks[-max_attempts:],
+    }
+
+
+def parse_clarify_critic(feature_slug: str, lifecycle_dir: Path) -> dict | None:
+    """Return the most recent ``clarify_critic`` event for a feature, or None.
+
+    Scans ``lifecycle_dir/{feature_slug}/events.log``.
+    """
+    path = lifecycle_dir / feature_slug / "events.log"
+    events, _ = _read_all_jsonl(path)
+    latest: dict | None = None
+    for ev in events:
+        if ev.get("event") == "clarify_critic":
+            latest = ev
+    return latest
+
+
+def parse_complexity_overrides(
+    feature_slug: str, lifecycle_dir: Path
+) -> list[dict]:
+    """Return all ``complexity_override`` events for a feature in order."""
+    path = lifecycle_dir / feature_slug / "events.log"
+    events, _ = _read_all_jsonl(path)
+    return [e for e in events if e.get("event") == "complexity_override"]
+
+
+def parse_dispatch_details(lifecycle_dir: Path) -> dict[str, dict]:
+    """Return per-feature dispatch details including budget and turn caps.
+
+    Extends ``parse_pipeline_dispatch`` by also surfacing ``max_turns``,
+    ``max_budget_usd``, and ``criticality`` from ``pipeline-events.log``.
+    Last-write-wins on re-dispatch.
+    """
+    path = lifecycle_dir / "pipeline-events.log"
+    events, _ = _read_all_jsonl(path)
+    out: dict[str, dict] = {}
+    for ev in events:
+        if ev.get("event") != "dispatch_start":
+            continue
+        feature = ev.get("feature")
+        if not feature:
+            continue
+        out[feature] = {
+            "model": ev.get("model", ""),
+            "complexity": ev.get("complexity", ""),
+            "criticality": ev.get("criticality", ""),
+            "max_turns": ev.get("max_turns"),
+            "max_budget_usd": ev.get("max_budget_usd"),
+            "ts": ev.get("ts", ""),
+        }
+    return out
+
+
+def parse_tool_usage(
+    feature_slug: str, lifecycle_dir: Path, last_n: int = 6
+) -> dict:
+    """Summarize per-feature agent tool usage.
+
+    Returns a dict with:
+      - ``counts``: dict[str, int] tool name -> total call count
+      - ``recent``: list of {"tool": str, "ts": str, "success": bool|None}
+        for the last ``last_n`` ``tool_call`` events
+      - ``last_tool_ts``: ISO-8601 of the most recent tool_call, or None
+      - ``total_calls``: int
+    """
+    path = lifecycle_dir / feature_slug / "agent-activity.jsonl"
+    events, _ = _read_all_jsonl(path)
+    counts: dict[str, int] = {}
+    recent: list[dict] = []
+    last_ts: str | None = None
+    total = 0
+    # Build a map of tool_result success keyed by (tool, idx) for matching;
+    # simpler: walk and pair sequentially.
+    for ev in events:
+        ev_type = ev.get("event")
+        if ev_type == "tool_call":
+            tool = ev.get("tool") or "unknown"
+            counts[tool] = counts.get(tool, 0) + 1
+            total += 1
+            ts = ev.get("ts")
+            if ts:
+                last_ts = ts
+            recent.append({"tool": tool, "ts": ts or "", "success": None})
+    # Match successes from tool_result events to the most recent call
+    last_results_by_tool: dict[str, bool] = {}
+    for ev in events:
+        if ev.get("event") == "tool_result":
+            tool = ev.get("tool") or "unknown"
+            last_results_by_tool[tool] = bool(ev.get("success"))
+    for entry in recent:
+        s = last_results_by_tool.get(entry["tool"])
+        entry["success"] = s
+    return {
+        "counts": counts,
+        "recent": recent[-last_n:],
+        "last_tool_ts": last_ts,
+        "total_calls": total,
+    }
+
+
+def parse_recent_session_events(
+    overnight_events: list[dict], last_n: int = 12
+) -> list[dict]:
+    """Return the last ``last_n`` overnight events with friendly labels.
+
+    Each entry: ``{"event": str, "ts": str, "round": int|None,
+    "feature": str|None, "detail": str}`` where ``detail`` is a short
+    human-readable summary derived from event-specific fields.
+    """
+    def _detail(ev: dict) -> str:
+        e = ev.get("event") or ""
+        if e == "batch_assigned":
+            feats = ev.get("features") or []
+            n = len(feats)
+            preview = ", ".join(feats[:3])
+            if n > 3:
+                preview += f" +{n - 3} more"
+            return f"batch · {preview}" if preview else "batch · —"
+        if e == "feature_checkpoint":
+            note = ev.get("note") or ""
+            return f"checkpoint · {note}" if note else "checkpoint"
+        if e == "feature_retry":
+            return f"retry attempt {ev.get('attempt', '?')}"
+        if e == "feature_failed":
+            return f"error · {ev.get('error', 'unknown')}"
+        if e == "feature_paused":
+            return ev.get("reason") or "paused"
+        if e == "feature_complete":
+            return f"status · {ev.get('status', '—')}"
+        if e == "merge_started":
+            return "merge started"
+        if e == "branch_created":
+            return ev.get("branch") or "branch created"
+        if e == "branch_synced":
+            return ev.get("branch") or "branch synced"
+        if e == "plan_loaded":
+            return f"plan · {ev.get('plan_ref', 'main')}"
+        if e == "heartbeat":
+            return f"phase · {ev.get('phase', '—')}"
+        if e == "round_start":
+            return "round started"
+        if e == "round_complete":
+            merged = ev.get("features_merged") or []
+            paused = ev.get("features_paused") or []
+            parts = []
+            if merged:
+                parts.append(f"{len(merged)} merged")
+            if paused:
+                parts.append(f"{len(paused)} paused")
+            return " · ".join(parts) if parts else "round complete"
+        if e == "session_start":
+            return "session start"
+        return ""
+
+    out: list[dict] = []
+    for ev in overnight_events[-last_n:]:
+        out.append({
+            "event": (ev.get("event") or "").lower(),
+            "ts": ev.get("ts") or "",
+            "round": ev.get("round"),
+            "feature": ev.get("feature"),
+            "detail": _detail(ev),
+        })
+    # Reverse so newest first for display
+    out.reverse()
+    return out
+
+
+def parse_checkpoints_per_feature(
+    overnight_events: list[dict],
+) -> dict[str, list[dict]]:
+    """Group ``feature_checkpoint`` events by feature slug, oldest first."""
+    out: dict[str, list[dict]] = {}
+    for ev in overnight_events:
+        if ev.get("event") != "feature_checkpoint":
+            continue
+        slug = ev.get("feature")
+        if not slug:
+            continue
+        out.setdefault(slug, []).append({
+            "ts": ev.get("ts") or "",
+            "note": ev.get("note") or "",
+        })
+    return out
+
+
+def parse_retries_per_feature(
+    overnight_events: list[dict],
+) -> dict[str, int]:
+    """Count ``feature_retry`` events per feature."""
+    out: dict[str, int] = {}
+    for ev in overnight_events:
+        if ev.get("event") != "feature_retry":
+            continue
+        slug = ev.get("feature")
+        if not slug:
+            continue
+        out[slug] = max(out.get(slug, 0), int(ev.get("attempt") or 0))
+    return out
+
+
+def parse_batches_per_round(
+    overnight_events: list[dict],
+) -> dict[int, list[str]]:
+    """Return the most recent ``BATCH_ASSIGNED`` features list per round."""
+    out: dict[int, list[str]] = {}
+    for ev in overnight_events:
+        if ev.get("event") != "batch_assigned":
+            continue
+        rn = ev.get("round")
+        try:
+            rn_int = int(rn)
+        except (TypeError, ValueError):
+            continue
+        feats = ev.get("features") or []
+        if isinstance(feats, list):
+            out[rn_int] = list(feats)
+    return out
+
+
 def parse_round_timestamps(
     overnight_events: list[dict],
 ) -> dict[int, dict]:

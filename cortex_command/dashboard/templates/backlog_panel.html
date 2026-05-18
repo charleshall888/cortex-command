@@ -1,0 +1,51 @@
+<span class="sec-num"><strong>§ 09</strong>backlog</span>
+<h2>Backlog <em>ledger</em> <span class="phase-tag">{% if state.backlog_counts %}{{ state.backlog_counts.values() | sum }} items tracked{% else %}empty{% endif %}</span></h2>
+{% if state.backlog_counts %}
+<div class="stream-line">
+  <span>doc · cortex/backlog/*.md frontmatter</span>
+  <span style="margin-left:auto;">refresh · 30s</span>
+</div>
+{% set status_order = ["open", "refined", "in-progress", "on-hold", "done", "blocked", "archived"] %}
+{% set status_color = {
+  "open": "var(--color-ink-mute)",
+  "refined": "var(--color-blue)",
+  "in-progress": "var(--color-blue)",
+  "on-hold": "var(--color-ochre)",
+  "blocked": "var(--color-status-red)",
+  "done": "var(--color-ink-faint)",
+  "archived": "var(--color-ink-30)",
+} %}
+{% set total = state.backlog_counts.values() | sum %}
+<dl class="backlog-grid">
+  {% set seen = [] %}
+  {% for status in status_order %}
+    {% set count = state.backlog_counts.get(status, 0) %}
+    {% if count > 0 %}
+    {% set _ = seen.append(status) %}
+    <div class="backlog-cell" style="--cell-color: {{ status_color.get(status, 'var(--color-ink-mute)') }};">
+      <dt class="backlog-cell-label">{{ status }}</dt>
+      <dd class="backlog-cell-value">
+        <strong>{{ count }}</strong>
+        <span class="backlog-cell-pct">{{ ((count / total * 100) | int) if total else 0 }}%</span>
+      </dd>
+      <div class="backlog-bar"><div class="backlog-bar-fill" style="width: {{ ((count / total * 100) | int) if total else 0 }}%;"></div></div>
+    </div>
+    {% endif %}
+  {% endfor %}
+  {# Any unknown statuses we haven't styled #}
+  {% for status, count in state.backlog_counts.items() %}
+    {% if status not in seen and count > 0 %}
+    <div class="backlog-cell" style="--cell-color: var(--color-ink-mute);">
+      <dt class="backlog-cell-label">{{ status }}</dt>
+      <dd class="backlog-cell-value">
+        <strong>{{ count }}</strong>
+        <span class="backlog-cell-pct">{{ ((count / total * 100) | int) if total else 0 }}%</span>
+      </dd>
+      <div class="backlog-bar"><div class="backlog-bar-fill" style="width: {{ ((count / total * 100) | int) if total else 0 }}%;"></div></div>
+    </div>
+    {% endif %}
+  {% endfor %}
+</dl>
+{% else %}
+<p class="empty-state">no backlog items found · run `just backlog-index`</p>
+{% endif %}

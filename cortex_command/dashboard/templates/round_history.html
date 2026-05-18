@@ -1,14 +1,19 @@
-<span class="sec-num"><strong>§ 05</strong>rounds</span>
-<h2>Round history <span class="phase-tag">{% if state.overnight and state.overnight.round_history %}{{ state.overnight.round_history | length }} cleared{% else %}—{% endif %}</span></h2>
+<span class="sec-num"><strong>§ 07</strong>rounds</span>
+<h2>Round <em>history</em> <span class="phase-tag">{% if state.overnight and state.overnight.round_history %}{{ state.overnight.round_history | length }} cleared{% else %}—{% endif %}</span></h2>
 {% if state.overnight and state.overnight.round_history %}
+<div class="stream-line">
+  <span>doc · round_history[]</span>
+  <span>batches · BATCH_ASSIGNED</span>
+  <span style="margin-left:auto;">durations · derived from events</span>
+</div>
 <div class="overflow-x-auto">
 <table class="round-table" aria-label="Round history">
   <thead>
     <tr>
       <th>R#</th>
       <th>Started</th>
-      <th>Completed</th>
       <th>Duration</th>
+      <th>Batched</th>
       <th>Merged</th>
       <th>Paused</th>
       <th>Deferred</th>
@@ -17,14 +22,18 @@
   <tbody>
     {% for round in state.overnight.round_history %}
     {% set rt = state.round_timestamps.get(round.round_number, {}) %}
+    {% set batch = state.round_batches.get(round.round_number, []) %}
+    {% set merged = round.features_merged or [] %}
+    {% set paused = round.features_paused or [] %}
+    {% set deferred = round.features_deferred or [] %}
     <tr>
-      <td>R{{ round.round_number }}</td>
+      <td><span class="round-id">R{{ round.round_number }}</span></td>
       <td>{{ rt.get('started_at') | format_date }}</td>
-      <td>{{ rt.get('completed_at') | format_date }}</td>
       <td>{{ rt.get('started_at') | format_duration(rt.get('completed_at')) }}</td>
-      <td>{% set items = round.features_merged %}{% if items | length > 3 %}{{ items[:3] | join(', ') }} +{{ items | length - 3 }} more{% elif items %}{{ items | join(', ') }}{% else %}—{% endif %}</td>
-      <td>{% set items = round.features_paused %}{% if items | length > 3 %}{{ items[:3] | join(', ') }} +{{ items | length - 3 }} more{% elif items %}{{ items | join(', ') }}{% else %}—{% endif %}</td>
-      <td>{% set items = round.features_deferred %}{% if items | length > 3 %}{{ items[:3] | join(', ') }} +{{ items | length - 3 }} more{% elif items %}{{ items | join(', ') }}{% else %}—{% endif %}</td>
+      <td>{% if batch %}<span class="round-cell">{{ batch | length }} · {{ batch[:3] | join(', ') }}{% if batch | length > 3 %} +{{ batch | length - 3 }}{% endif %}</span>{% else %}—{% endif %}</td>
+      <td>{% if merged %}<span class="round-cell round-cell--good">{{ merged | length }} · {{ merged[:2] | join(', ') }}{% if merged | length > 2 %} +{{ merged | length - 2 }}{% endif %}</span>{% else %}—{% endif %}</td>
+      <td>{% if paused %}<span class="round-cell round-cell--warn">{{ paused | length }} · {{ paused[:2] | join(', ') }}{% if paused | length > 2 %} +{{ paused | length - 2 }}{% endif %}</span>{% else %}—{% endif %}</td>
+      <td>{% if deferred %}<span class="round-cell round-cell--warn">{{ deferred | length }} · {{ deferred[:2] | join(', ') }}{% if deferred | length > 2 %} +{{ deferred | length - 2 }}{% endif %}</span>{% else %}—{% endif %}</td>
     </tr>
     {% endfor %}
   </tbody>

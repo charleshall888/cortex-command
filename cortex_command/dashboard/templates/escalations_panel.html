@@ -1,0 +1,43 @@
+{% from "patterns/badge.html" import badge %}
+{% from "patterns/alert-banner.html" import alert_badge %}
+<span class="sec-num"><strong>§ 02</strong>open<br>questions</span>
+<h2>Open <em>questions</em> <span class="phase-tag">{% if state.open_questions_total %}{{ state.open_questions_total }} awaiting an answer{% else %}clear · no human input required{% endif %}</span></h2>
+{% set ns = namespace(any_shown=false) %}
+{% if state.open_questions_total > 0 %}
+<div class="stream-line">
+  <span>doc · escalations.jsonl</span>
+  <span>scope · per feature</span>
+  <span style="margin-left:auto;">soft-block threshold reached</span>
+</div>
+{% if state.feature_escalations %}
+  {% for slug, escalations in state.feature_escalations.items() %}
+    {% if escalations %}
+      {% set ns.any_shown = true %}
+      {% set feat = state.overnight.features.get(slug, {}) %}
+      <div class="open-q-card">
+        <div class="open-q-head">
+          <strong>{{ state.backlog_titles.get(slug, slug) }}</strong>
+          <span class="phase-label">· {{ slug }}</span>
+          {{ badge(status=feat.status) }}
+          <span class="open-q-count">{{ escalations | length }} q</span>
+        </div>
+        {% for esc in escalations[-3:] %}
+        <blockquote class="open-q-body">
+          <p>{{ esc.question or esc.details and esc.details.question or "—" }}</p>
+          {% if esc.context %}
+          <footer class="open-q-context">context · {{ esc.context }}</footer>
+          {% endif %}
+          <footer class="open-q-meta">
+            <span>esc · {{ esc.escalation_id or 'unidentified' }}</span>
+            <span>·</span>
+            <span>{{ esc.ts | format_elapsed }}</span>
+          </footer>
+        </blockquote>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% else %}
+<p class="empty-state">no open escalations — agents have not raised blocking questions</p>
+{% endif %}
