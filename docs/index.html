@@ -3302,13 +3302,15 @@
     .pipe-stage { position: relative; height: auto; padding: 28px 0 24px; }
     .pipe-svg, .timeline-bar { display: none; }
     /* Stop floating the section title over the manifest — at this width the
-       SVG isn't behind them, so they should flow above the list. */
-    .pipe-header {
+       SVG isn't behind them, so they should flow above the list. Selector
+       includes .pipe-stage to outweigh the later, equal-specificity default
+       `.pipe-title { position: absolute }` rule that follows in source order. */
+    .pipe-stage .pipe-header {
       position: static;
       padding: 0 24px;
       margin: 0 0 4px 0;
     }
-    .pipe-title {
+    .pipe-stage .pipe-title {
       position: static;
       padding: 0 24px;
       margin: 0 0 4px 0;
