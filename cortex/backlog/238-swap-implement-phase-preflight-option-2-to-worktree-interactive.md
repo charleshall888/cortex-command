@@ -2,19 +2,22 @@
 schema_version: "1"
 uuid: d26e66a6-04f4-49bb-8203-f3a56bdd9db4
 title: "Swap implement-phase preflight option 2 to worktree-interactive"
-status: backlog
+status: refined
 priority: high
 type: feature
 created: 2026-05-18
 updated: 2026-05-18
 parent: "237"
-blocked-by: []
+blocked-by: ["239","240"]
 tags: [lifecycle, worktree-interactive, daytime-swap]
-areas: [skills, lifecycle]
+areas: [skills,lifecycle]
 discovery_source: cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md
 session_id: null
 lifecycle_phase: null
 lifecycle_slug: null
+complexity: simple
+criticality: high
+spec: cortex/lifecycle/swap-implement-phase-preflight-option-2/spec.md
 ---
 
 ## Role
