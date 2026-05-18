@@ -1,0 +1,20 @@
+{"schema_version": 3, "ts": "2026-05-16T19:07:01Z", "event": "clarify_critic", "feature": "critical-review-sentinel-gate-relax-first", "parent_epic_loaded": false, "findings_count": 8, "dispositions": {"apply": 8, "dismiss": 0, "ask": 0}, "applied_fixes_count": 8, "dismissals_count": 0, "status": "ok"}
+{"ts": "2026-05-16T19:07:30Z", "event": "lifecycle_start", "feature": "critical-review-sentinel-gate-relax-first", "tier": "simple", "criticality": "high"}
+{"ts": "2026-05-16T19:08:00Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-relax-first", "from": "clarify", "to": "research"}
+{"ts": "2026-05-16T19:30:00Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-relax-first", "from": "research", "to": "specify"}
+{"ts": "2026-05-16T20:15:00Z", "event": "spec_approved", "feature": "critical-review-sentinel-gate-relax-first"}
+{"ts": "2026-05-16T20:23:15Z", "event": "complexity_override", "feature": "critical-review-sentinel-gate-relax-first", "from": "simple", "to": "complex", "gate": "specify_open_decisions"}
+{"ts": "2026-05-16T20:23:30Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-relax-first", "from": "specify", "to": "plan"}
+{"ts":"2026-05-16T20:36:51Z","event":"sentinel_absence","feature":"critical-review-sentinel-gate-relax-first","reviewer_angle":"Fixture Operationalization","reason":"absent","model_tier":"sonnet","expected_sha":"36f5c8291a1e2c6ea273fbab25a1cf6ec4d45f71aa488d32db91d4f96f6a3cb3","observed_sha_or_null":null}
+{"ts":"2026-05-16T20:40:02Z","event":"synthesizer_drift","feature":"critical-review-sentinel-gate-relax-first","expected_sha":"36f5c8291a1e2c6ea273fbab25a1cf6ec4d45f71aa488d32db91d4f96f6a3cb3","observed_sha_or_null":null}
+{"ts": "2026-05-16T20:48:39Z", "event": "plan_approved", "feature": "critical-review-sentinel-gate-relax-first"}
+{"ts": "2026-05-16T20:48:39Z", "event": "phase_transition", "feature": "critical-review-sentinel-gate-relax-first", "from": "plan", "to": "implement"}
+{"ts": "2026-05-16T20:52:40.511265+00:00", "event": "batch_dispatch", "feature": "critical-review-sentinel-gate-relax-first", "batch": 0, "tasks": [1, "3a", 9]}
+{"ts": "2026-05-16T21:05:33.782973+00:00", "event": "batch_dispatch", "feature": "critical-review-sentinel-gate-relax-first", "batch": 1, "tasks": [2, "3b"]}
+{"ts": "2026-05-16T21:10:43.407877+00:00", "event": "batch_dispatch", "feature": "critical-review-sentinel-gate-relax-first", "batch": 2, "tasks": [4, 5, 6]}
+{"ts": "2026-05-16T21:16:21.741228+00:00", "event": "batch_dispatch", "feature": "critical-review-sentinel-gate-relax-first", "batch": 3, "tasks": [7]}
+{"ts": "2026-05-16T21:18:13.618744+00:00", "event": "batch_dispatch", "feature": "critical-review-sentinel-gate-relax-first", "batch": 4, "tasks": [8]}
+{"ts": "2026-05-16T21:21:16.876730+00:00", "event": "phase_transition", "feature": "critical-review-sentinel-gate-relax-first", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-16T21:26:32.525922+00:00", "event": "review_verdict", "feature": "critical-review-sentinel-gate-relax-first", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-16T21:26:32.550796+00:00", "event": "phase_transition", "feature": "critical-review-sentinel-gate-relax-first", "from": "review", "to": "complete"}
+{"ts": "2026-05-18T00:10:30.315858+00:00", "event": "feature_complete", "feature": "critical-review-sentinel-gate-relax-first", "tasks_total": 10, "rework_cycles": 1}

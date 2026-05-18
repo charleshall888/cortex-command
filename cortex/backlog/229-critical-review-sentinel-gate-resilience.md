@@ -2,14 +2,17 @@
 schema_version: "1"
 uuid: 41db000d-76db-4179-bb73-b0db3fde5076
 title: "Critical-review sentinel gate: relax first-line strictness to accept lead-in exposition"
-status: ready
+status: complete
 priority: medium
 type: bug
 tags: [critical-review, skills, verification-gate]
 created: 2026-05-16
-updated: 2026-05-16
+updated: 2026-05-17
 complexity: simple
 criticality: high
+spec: cortex/lifecycle/critical-review-sentinel-gate-relax-first/spec.md
+areas: [skills]
+session_id: null
 ---
 
 ## Problem
