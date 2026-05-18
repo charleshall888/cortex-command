@@ -198,6 +198,7 @@ The following user-facing pauses are deliberate and remain in scope. Each entry 
 - `skills/lifecycle/references/plan.md:277` — plan approval surface (Approve / Request changes / Cancel). Substantive user decision.
 - `skills/lifecycle/references/implement.md:22` — branch selection on main: trunk vs autonomous worktree vs feature branch.
 - `skills/lifecycle/references/backlog-writeback.md:11` — backlog write-back complete-lifecycle prompt on a backlog item already marked complete.
+- `skills/lifecycle/references/complete.md:73` — phase-exit pause: merge-wait pause inside the multi-step Complete phase; user re-invokes /cortex-core:lifecycle complete <slug> after merging on GitHub.
 
 If the user invokes `/cortex-core:lifecycle <phase>` to jump to a specific phase, honor the request but warn if prerequisite artifacts are missing (e.g., entering Plan without research.md).
 

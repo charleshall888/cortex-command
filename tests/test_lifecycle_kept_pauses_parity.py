@@ -33,12 +33,19 @@ _INVENTORY_BULLET = re.compile(
     re.MULTILINE,
 )
 
+# Step-heading pattern used to validate phase-exit pause entries.
+# Matches lines like "### Step 6", "### Step 6 — Title", or "## Step 6".
+_STEP_HEADING = re.compile(r"^#{1,4}\s+Step\s+(\d+)\b", re.MULTILINE)
 
-def _parse_inventory() -> list[tuple[Path, int, str]]:
-    """Return a list of (resolved_path, line_number, raw_line) inventory entries.
+_PHASE_EXIT_PAUSE_TAG = "phase-exit pause"
+
+
+def _parse_inventory() -> list[tuple[Path, int, str, str]]:
+    """Return a list of (resolved_path, line_number, raw_matched, rationale) entries.
 
     Reads the "Kept user pauses" subsection from SKILL.md and parses each
-    bullet line. Paths in the inventory are repo-root-relative.
+    bullet line. Paths in the inventory are repo-root-relative. ``rationale``
+    is the text on the bullet line after the file:line anchor (may be empty).
     """
     content = SKILL_MD.read_text(encoding="utf-8")
     # Anchor on the subsection heading; slice until the next H2 or H3.
@@ -53,13 +60,35 @@ def _parse_inventory() -> list[tuple[Path, int, str]]:
             f"{SKILL_MD.relative_to(REPO_ROOT)}"
         )
     section_body = section_match.group(1)
-    entries: list[tuple[Path, int, str]] = []
+    section_lines = section_body.splitlines()
+    entries: list[tuple[Path, int, str, str]] = []
     for match in _INVENTORY_BULLET.finditer(section_body):
         rel_path = match.group(1)
         line_num = int(match.group(2))
         full_path = (REPO_ROOT / rel_path).resolve()
-        entries.append((full_path, line_num, match.group(0)))
+        # Recover the full bullet line to extract the rationale text.
+        # match.start() is the offset into section_body; count newlines before
+        # it to get the line index.
+        line_start = section_body.rfind("\n", 0, match.start()) + 1
+        line_end_nl = section_body.find("\n", match.end())
+        full_line = section_body[line_start: line_end_nl if line_end_nl != -1 else None]
+        # Rationale: everything after the first em-dash or " — " separator.
+        rationale_match = re.search(r"[—\-]{1,2}\s*(.*)", full_line[match.end() - line_start:])
+        rationale = rationale_match.group(1).strip() if rationale_match else ""
+        entries.append((full_path, line_num, match.group(0), rationale))
     return entries
+
+
+def _step_heading_exists(path: Path, step_num: int) -> bool:
+    """Return True if ``path`` contains a step heading for ``step_num``."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return False
+    for m in _STEP_HEADING.finditer(text):
+        if int(m.group(1)) == step_num:
+            return True
+    return False
 
 
 def _askuserquestion_sites() -> dict[Path, list[int]]:
@@ -90,13 +119,51 @@ def _within_tolerance(anchor: int, candidates: list[int]) -> bool:
 
 
 def test_inventory_entries_resolve_to_real_askuserquestion_sites() -> None:
-    """Each inventory entry points to a file:line near an AskUserQuestion ref."""
+    """Each inventory entry points to a file:line near an AskUserQuestion ref.
+
+    Phase-exit pause entries (rationale contains 'phase-exit pause') are
+    validated differently: instead of checking for an AskUserQuestion call
+    site, we verify that the referenced file contains a step heading whose
+    number matches the step referenced at the anchor line (within ±LINE_TOLERANCE
+    lines of the heading). The line tolerance still applies — the anchor must
+    fall within ±LINE_TOLERANCE lines of the matching step heading.
+    """
     entries = _parse_inventory()
     assert entries, "Inventory parsed empty — section header may have drifted"
     sites = _askuserquestion_sites()
 
     violations: list[str] = []
-    for path, line_num, raw in entries:
+    for path, line_num, raw, rationale in entries:
+        # Phase-exit pause entries: validate via step-heading lookup.
+        if _PHASE_EXIT_PAUSE_TAG in rationale:
+            try:
+                file_text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                violations.append(
+                    f"Inventory entry {raw!r} (phase-exit pause) names "
+                    f"{path.relative_to(REPO_ROOT)} but the file cannot be read"
+                )
+                continue
+            heading_lines = [
+                file_text.count("\n", 0, m.start()) + 1
+                for m in _STEP_HEADING.finditer(file_text)
+            ]
+            if not heading_lines:
+                violations.append(
+                    f"Inventory entry {raw!r} (phase-exit pause) names "
+                    f"{path.relative_to(REPO_ROOT)} but no step headings "
+                    f"('### Step N') were found in that file"
+                )
+            elif not _within_tolerance(line_num, heading_lines):
+                violations.append(
+                    f"Inventory entry {raw!r} (phase-exit pause) points to "
+                    f"line {line_num} but the nearest step heading in "
+                    f"{path.relative_to(REPO_ROOT)} is at line(s) "
+                    f"{heading_lines} (±{LINE_TOLERANCE}-line tolerance exceeded)"
+                )
+            continue
+
+        # Standard AskUserQuestion entries.
         # Inventory may reference SKILL.md itself (e.g., SKILL.md:60 ambiguous
         # backlog match); allow that file too.
         if path == SKILL_MD.resolve():
@@ -129,7 +196,7 @@ def test_every_askuserquestion_site_has_inventory_entry() -> None:
     sites = _askuserquestion_sites()
     # Group inventory entries by file for quick lookup.
     by_file: dict[Path, list[int]] = {}
-    for path, line_num, _raw in entries:
+    for path, line_num, _raw, _rationale in entries:
         by_file.setdefault(path, []).append(line_num)
     # Also accept SKILL.md itself — but exclude AskUserQuestion mentions
     # inside the "Kept user pauses" subsection (those are inventory prose,
