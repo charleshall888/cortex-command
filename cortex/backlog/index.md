@@ -9,6 +9,7 @@
 | 211 | R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up) | superseded | medium | bug | — | — | — |
 | 212 | CLI_PIN drift lint (#146 hygiene) | superseded | medium | chore | — | — | — |
 | 234 | Propagate backlog criticality to lifecycle_start event in refine workflow | backlog | medium | bug | — | — | — |
+| 235 | Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift | backlog | medium | feature | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 232 | Re-evaluate cross-skill brief framework — discovery-output-density Phase 2 trigger | backlog | low | feature | — | — | — |
 | 233 | Add `--tag` filter to backlog query CLI for phase2-trigger discoverability | backlog | low | chore | — | — | — |
@@ -21,6 +22,7 @@
 ## Backlog
 
 - **234** Propagate backlog criticality to lifecycle_start event in refine workflow
+- **235** Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift
 - **232** Re-evaluate cross-skill brief framework — discovery-output-density Phase 2 trigger
 - **233** Add `--tag` filter to backlog query CLI for phase2-trigger discoverability
 - **142** Multi-session host concurrency registry for cortex overnight
