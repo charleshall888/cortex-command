@@ -1,51 +1,63 @@
-<span class="sec-num"><strong>§ 09</strong>backlog</span>
+{% set status_order = ["complete", "merged", "done", "in-progress", "in_progress", "refined", "open", "proposed", "backlog", "deferred", "on-hold", "blocked", "abandoned", "superseded", "archived"] %}
+{% set status_color = {
+  "complete":    "var(--c-state-merged)",
+  "merged":      "var(--c-state-merged)",
+  "done":        "var(--c-state-merged)",
+  "in-progress": "var(--c-state-running)",
+  "in_progress": "var(--c-state-running)",
+  "refined":     "var(--c-state-running)",
+  "open":        "var(--color-ink-mute)",
+  "proposed":    "var(--color-ink-mute)",
+  "backlog":     "var(--color-ink-mute)",
+  "deferred":    "var(--c-state-paused)",
+  "on-hold":     "var(--c-state-paused)",
+  "blocked":     "var(--c-state-failed)",
+  "abandoned":   "var(--color-ink-30)",
+  "superseded":  "var(--color-ink-30)",
+  "archived":    "var(--color-ink-30)",
+} %}
+<span class="sec-num"><strong>§ 10</strong>backlog</span>
 <h2>Backlog <em>ledger</em> <span class="phase-tag">{% if state.backlog_counts %}{{ state.backlog_counts.values() | sum }} items tracked{% else %}empty{% endif %}</span></h2>
 {% if state.backlog_counts %}
+{% set total = state.backlog_counts.values() | sum %}
+{% set complete = state.backlog_counts.get('complete', 0) + state.backlog_counts.get('merged', 0) + state.backlog_counts.get('done', 0) %}
 <div class="stream-line">
   <span>doc · cortex/backlog/*.md frontmatter</span>
-  <span style="margin-left:auto;">refresh · 30s</span>
+  <span class="ml-auto">refresh · 30s</span>
 </div>
-{% set status_order = ["open", "refined", "in-progress", "on-hold", "done", "blocked", "archived"] %}
-{% set status_color = {
-  "open": "var(--color-ink-mute)",
-  "refined": "var(--color-blue)",
-  "in-progress": "var(--color-blue)",
-  "on-hold": "var(--color-ochre)",
-  "blocked": "var(--color-status-red)",
-  "done": "var(--color-ink-faint)",
-  "archived": "var(--color-ink-30)",
-} %}
-{% set total = state.backlog_counts.values() | sum %}
-<dl class="backlog-grid">
-  {% set seen = [] %}
-  {% for status in status_order %}
-    {% set count = state.backlog_counts.get(status, 0) %}
-    {% if count > 0 %}
-    {% set _ = seen.append(status) %}
-    <div class="backlog-cell" style="--cell-color: {{ status_color.get(status, 'var(--color-ink-mute)') }};">
-      <dt class="backlog-cell-label">{{ status }}</dt>
-      <dd class="backlog-cell-value">
-        <strong>{{ count }}</strong>
-        <span class="backlog-cell-pct">{{ ((count / total * 100) | int) if total else 0 }}%</span>
-      </dd>
-      <div class="backlog-bar"><div class="backlog-bar-fill" style="width: {{ ((count / total * 100) | int) if total else 0 }}%;"></div></div>
-    </div>
-    {% endif %}
+
+<div class="card-row flex items-baseline gap-3 mt-2">
+  <span class="num num--lg" style="font-size: 32px;">{{ complete }}</span>
+  <span class="phase-label">/ {{ total }} complete</span>
+  <span class="num num--md" style="color: var(--c-state-merged);">{{ ((complete / total * 100) | int) if total else 0 }}%</span>
+</div>
+
+{# Sorted list of (status, count) tuples in the known order. #}
+{% set buckets = [] %}
+{% for s in status_order %}
+  {% set n = state.backlog_counts.get(s, 0) %}
+  {% if n > 0 %}{% set _ = buckets.append((s, n)) %}{% endif %}
+{% endfor %}
+{# Append unknown statuses at the end #}
+{% for s, n in state.backlog_counts.items() %}
+  {% if s not in status_order and n > 0 %}{% set _ = buckets.append((s, n)) %}{% endif %}
+{% endfor %}
+
+<div class="stack-bar mt-2" aria-label="Backlog distribution">
+  {% for s, n in buckets %}
+  <span class="tint-c fill-w" style="--c: {{ status_color.get(s, 'var(--color-ink-mute)') }}; --w: {{ (n / total * 100) }}%" title="{{ s }} · {{ n }}"></span>
   {% endfor %}
-  {# Any unknown statuses we haven't styled #}
-  {% for status, count in state.backlog_counts.items() %}
-    {% if status not in seen and count > 0 %}
-    <div class="backlog-cell" style="--cell-color: var(--color-ink-mute);">
-      <dt class="backlog-cell-label">{{ status }}</dt>
-      <dd class="backlog-cell-value">
-        <strong>{{ count }}</strong>
-        <span class="backlog-cell-pct">{{ ((count / total * 100) | int) if total else 0 }}%</span>
-      </dd>
-      <div class="backlog-bar"><div class="backlog-bar-fill" style="width: {{ ((count / total * 100) | int) if total else 0 }}%;"></div></div>
-    </div>
-    {% endif %}
+</div>
+
+<div class="stack-legend">
+  {% for s, n in buckets %}
+  <span style="--c: {{ status_color.get(s, 'var(--color-ink-mute)') }};">
+    <strong class="num">{{ n }}</strong>
+    <span class="sl-label">{{ s | replace('_','-') }}</span>
+    <span class="phase-label">{{ ((n / total * 100) | int) }}%</span>
+  </span>
   {% endfor %}
-</dl>
+</div>
 {% else %}
 <p class="empty-state">no backlog items found · run `just backlog-index`</p>
 {% endif %}

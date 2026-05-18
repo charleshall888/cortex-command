@@ -1,0 +1,81 @@
+{# Phase-baseline panel: aggregates the historical phase durations stored in
+   metrics.json so operators can see what "slow" actually means.
+   metrics.features is a dict keyed by feature slug; each entry has a
+   `tier` and a `phase_durations` dict {phase_key: seconds}. #}
+{% set entries = state.metrics.get('features') if state.metrics else None %}
+<span class="sec-num"><strong>§ 07</strong>metrics</span>
+<h2>Phase <em>baselines</em> <span class="phase-tag">{% if entries %}{{ entries | length }} sample features · 3× threshold flags slow{% else %}no baseline yet{% endif %}</span></h2>
+{% if entries %}
+<div class="stream-line">
+  <span>doc · cortex/lifecycle/metrics.json</span>
+  <span>compute · median + p90 + max per (tier, phase)</span>
+  <span class="ml-auto">slow threshold · 3× median</span>
+</div>
+{# Build map of (tier, phase) -> [secs, ...] #}
+{% set agg = {} %}
+{% set entry_list = entries.values() if entries is mapping else entries %}
+{% for entry in entry_list %}
+  {% if entry is mapping and entry.get('tier') and entry.get('phase_durations') %}
+    {% set tier = entry.tier %}
+    {% for phase, secs in entry.phase_durations.items() %}
+      {% set key = tier ~ '|' ~ phase %}
+      {% if key not in agg %}{% set _ = agg.update({key: []}) %}{% endif %}
+      {% set _ = agg[key].append(secs) %}
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+{% if agg %}
+<div class="overflow-x-auto">
+<table class="metrics-baseline" aria-label="Phase duration baselines">
+  <caption class="sr-only">Per-tier phase-duration baselines computed from historical metrics.json</caption>
+  <thead>
+    <tr>
+      <th scope="col">tier</th>
+      <th scope="col">phase key</th>
+      <th scope="col">samples</th>
+      <th scope="col">median (m)</th>
+      <th scope="col">p90 (m)</th>
+      <th scope="col">max (m)</th>
+      <th scope="col">3× threshold (m)</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% set _sorted_keys = agg.keys() | list | sort %}
+  {% for k in _sorted_keys %}
+    {% set tier, phase = k.split('|') %}
+    {% set values = agg[k] | sort %}
+    {% set n = values | length %}
+    {% set median_secs = values[(n // 2)] if n > 0 else 0 %}
+    {% set p90_idx = ((n - 1) * 0.9) | int %}
+    {% set p90_secs = values[p90_idx] if n > 0 else 0 %}
+    {% set max_secs = values[-1] if n > 0 else 0 %}
+    <tr>
+      <td>{{ tier }}</td>
+      <td>{{ phase }}</td>
+      <td>{{ n }}</td>
+      <td>{{ (median_secs / 60) | round(1) }}</td>
+      <td>{{ (p90_secs / 60) | round(1) }}</td>
+      <td>{{ (max_secs / 60) | round(1) }}</td>
+      <td><span class="num--delta-up">{{ (median_secs * 3 / 60) | round(1) }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if state.metrics and state.metrics.get('aggregates') %}
+{% set agg_top = state.metrics.get('aggregates') %}
+<dl class="feature-detail mt-3" style="grid-template-columns: 1fr 1fr 1fr; padding: 0;">
+  {% for key, val in agg_top.items() if val is not mapping %}
+  <div class="feature-detail-block">
+    <h4>{{ key | replace('_', ' ') }}</h4>
+    <dl><dt>value</dt><dd>{{ val }}</dd></dl>
+  </div>
+  {% endfor %}
+</dl>
+{% endif %}
+{% else %}
+<p class="empty-state">metrics file present but has no usable phase_durations</p>
+{% endif %}
+{% else %}
+<p class="empty-state">no baselines · runner has not produced metrics.json yet</p>
+{% endif %}

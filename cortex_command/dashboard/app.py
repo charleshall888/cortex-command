@@ -361,6 +361,15 @@ async def backlog_panel(request: Request):
     )
 
 
+@app.get("/partials/metrics")
+async def metrics_baseline(request: Request):
+    """Return the phase-baseline metrics panel for HTMX polling."""
+    return templates.TemplateResponse(
+        "metrics_baseline.html",
+        {"request": request, "state": state},
+    )
+
+
 @app.get("/partials/swim-lane")
 async def swim_lane(request: Request):
     """Return the swim lane timeline HTML fragment for HTMX polling."""

@@ -1,14 +1,23 @@
 {% from "patterns/badge.html" import badge %}
 {% from "patterns/alert-banner.html" import alert_badge %}
-{% import "patterns/feature-card.html" as fc %}
-{% set phase_order = ["research", "specify", "plan", "implement", "implement-rework", "review", "complete"] %}
+{% set phase_order = ["research", "specify", "plan", "implement", "review", "complete"] %}
+{% set state_color = {
+  "merged":   "var(--c-state-merged)",
+  "running":  "var(--c-state-running)",
+  "stalled":  "var(--c-state-failed)",
+  "paused":   "var(--c-state-paused)",
+  "deferred": "var(--c-state-deferred)",
+  "failed":   "var(--c-state-failed)",
+  "pending":  "var(--c-state-pending)",
+} %}
 <span class="sec-num"><strong>§ 03</strong>features</span>
 <h2>Features <em>in flight</em> <span class="phase-tag">{% if state.overnight %}{{ state.overnight.features | length }} in play · {{ state.feature_display_order | length if state.feature_display_order else state.overnight.features | length }} ordered{% else %}none in play{% endif %}</span></h2>
 {% if state.overnight %}
   <div class="stream-line">
     <span>doc · overnight-state.json + per-feature events</span>
     <span>order · earliest-started first</span>
-    <span style="margin-left:auto;">refresh · 5s</span>
+    <span>click row to launch detail</span>
+    <span class="ml-auto">refresh · 5s</span>
   </div>
   {% set ordered_slugs = state.feature_display_order if state.feature_display_order else state.overnight.features.keys() %}
   {% for slug in ordered_slugs %}
@@ -17,6 +26,7 @@
     {% set ft = state.feature_timestamps.get(slug, {}) %}
     {% set plan_prog = fs.get('plan_progress') %}
     {% set rework = fs.get('rework_cycles', 0) %}
+    {% set transitions = fs.get('phase_transitions', []) %}
     {% set model = state.feature_models.get(slug) %}
     {% set complexity = state.feature_complexities.get(slug) %}
     {% set dispatch = state.dispatch_details.get(slug, {}) %}
@@ -27,207 +37,216 @@
     {% set checkpoints = state.feature_checkpoints.get(slug, []) %}
     {% set retries = state.feature_retries.get(slug, 0) %}
     {% set daytime_result = state.feature_daytime_result.get(slug) %}
+    {% set daytime_state = state.feature_daytime_state.get(slug) %}
     {% set clarify = state.feature_clarify_critic.get(slug) %}
     {% set learnings = state.feature_learnings.get(slug) %}
     {% set complexity_overrides = state.feature_complexity_overrides.get(slug, []) %}
     {% set current_phase = fs.get('current_phase') or '—' %}
-    {% set card_class = 'feature-card--running' if feat.status == 'running' else ('feature-card--failed' if feat.status == 'failed' else ('feature-card--paused' if feat.status == 'paused' else ('feature-card--merged' if feat.status == 'merged' else ''))) %}
-    {% call fc.feature_card(extra_class=card_class) %}
-      {# ── Row 1: title + slug + status + model/complexity ───────────── #}
-      <div class="card-row">
-        {% set title = state.backlog_titles.get(slug) %}
-        {% if title %}
-          <strong>{{ title }}</strong>
-          <span class="phase-label">· {{ slug }}</span>
-        {% else %}
-          <strong>{{ slug }}</strong>
-        {% endif %}
-        {{ badge(status=feat.status) }}
-        <span class="card-hover-reveal">
-          {% if model %}
-            {% set model_class = 'badge-purple' if model == 'opus' else ('badge-gray' if model == 'haiku' else 'badge-blue') %}
-            {{ badge(css_class=model_class, label=model) }}
-          {% endif %}
-          {% if complexity %}{{ badge(css_class="badge-gray", label=complexity) }}{% endif %}
-          {% if dispatch.criticality %}{{ badge(css_class="badge-gray", label="crit·" ~ dispatch.criticality) }}{% endif %}
+    {% set st = feat.status or 'pending' %}
+    {% set is_stalled = (slug, 'stall') in state.alerts %}
+    {% set st_effective = 'stalled' if is_stalled and st == 'running' else st %}
+    {% set st_color = state_color.get(st_effective, 'var(--c-state-pending)') %}
+    {% set title = state.backlog_titles.get(slug) %}
+    {% set is_slow = state.slow_flags.get(slug) %}
+    {% set has_alert = (st == 'failed') or is_stalled or is_slow or (rework >= 2) or escalations or retries %}
+    <details class="feature-block" id="feature-{{ slug }}" style="--c-state: {{ st_color }};">
+      <summary class="feature-row feature-row--{{ st_effective }}" aria-label="{{ slug }} — {{ st_effective }}">
+        <span class="feature-row__pip" aria-hidden="true"></span>
+        <span class="feature-row__title">
+          {% if title %}{{ title }}{% else %}{{ slug }}{% endif %}
+          {% if title %}<small>{{ slug }}</small>{% endif %}
         </span>
-      </div>
-
-      {# ── Row 2: phase timeline (always shown except for pending) ───── #}
-      {% if feat.status != 'pending' %}
-      <div class="card-row card-row--phase-timeline">
-        <ol class="phase-track" aria-label="Lifecycle phase progress">
-          {% set has_complete = current_phase == 'complete' or feat.status == 'merged' %}
-          {% for phase in phase_order %}
-            {% if phase != 'implement-rework' %}
-            {% set class_name = 'phase-step' %}
-            {% set is_current = phase == current_phase or (phase == 'implement' and current_phase == 'implement-rework') %}
-            {% set is_done = false %}
-            {% set seen = false %}
-            {% for p in phase_order %}
-              {% if p == current_phase %}{% set _ = seen or true %}{% endif %}
-            {% endfor %}
-            {% set done = phase_order.index(phase) < (phase_order.index(current_phase) if current_phase in phase_order else 0) %}
-            {% set abbrev_map = {"research": "res", "specify": "spec", "plan": "plan", "implement": "impl", "review": "rev", "complete": "done"} %}
-            <li class="phase-step{% if is_current %} phase-step--current{% endif %}{% if done or has_complete %} phase-step--done{% endif %}" title="{{ phase }}">
-              <span class="phase-step-label">{{ abbrev_map.get(phase, phase[:4]) }}</span>
-            </li>
-            {% endif %}
-          {% endfor %}
-        </ol>
-        {% if plan_prog %}
-        <span class="task-ratio">{{ plan_prog[0] }}/{{ plan_prog[1] }} tasks</span>
-        {% endif %}
-        {% if cost is not none and cost > 0 %}
-        <span class="cost-chip">${{ '%.2f' | format(cost) }}</span>
-        {% endif %}
-        {% if dispatch.max_budget_usd and cost is not none %}
-        <span class="budget-track" title="cost of budget">
-          <span class="budget-fill" style="width: {{ ((cost / dispatch.max_budget_usd * 100) | round(0, 'floor')) | int if dispatch.max_budget_usd else 0 }}%"></span>
-        </span>
-        <span class="phase-label">/ ${{ '%.0f' | format(dispatch.max_budget_usd) }}</span>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      {# ── Row 3: status-specific row (timing / error / round) ───────── #}
-      {% if feat.status == 'running' %}
-        <div class="card-row card-row--meta">
-          <span class="phase-label">phase · <span class="emph">{{ current_phase }}</span></span>
-          {% if ft.get('started_at') %}<span class="phase-label">elapsed · {{ ft.get('started_at') | format_elapsed_no_suffix }}</span>{% endif %}
-          {% if plan_prog and plan_prog[1] > 0 %}
-          <div class="progress-bar" role="progressbar" aria-valuenow="{{ plan_prog[0] }}" aria-valuemin="0" aria-valuemax="{{ plan_prog[1] }}" aria-label="Task progress">
-            <div class="progress-bar-fill" style="width: {{ (plan_prog[0] / plan_prog[1] * 100) | int }}%"></div>
-          </div>
-          {% endif %}
-        </div>
-      {% elif feat.status in ('merged', 'deferred', 'paused') %}
-        <div class="card-row card-row--meta">
-          <span class="phase-label">duration · {{ ft.get('duration_secs') | format_duration_secs }}</span>
-          {% if ft.get('started_at') %}<span class="phase-label">started · {{ ft.get('started_at') | format_elapsed }}</span>{% endif %}
-          {% if daytime_result and daytime_result.get('pr_url') %}
-          <a href="{{ daytime_result.get('pr_url') }}" target="_blank" rel="noopener" class="text-brand-primary">view PR ↗</a>
-          {% endif %}
-        </div>
-      {% elif feat.status == 'failed' %}
-        {% if feat.error %}
-        <div class="card-row card-row--meta">
-          <span class="error-line">— {{ feat.error }}</span>
-        </div>
-        {% endif %}
-      {% else %}
-        <div class="card-row card-row--meta">
-          {% if feat.round_assigned %}
-          <span class="phase-label">queued · round {{ feat.round_assigned }}</span>
+        {{ badge(status=st) }}
+        <span class="feature-row__phase-cell">
+          {% if st == 'pending' %}
+            <span class="phase-label">queued{% if feat.round_assigned %} · R{{ feat.round_assigned }}{% endif %}</span>
           {% else %}
-          <span class="phase-label">queued · awaiting round</span>
+            <span class="phase-label">{{ current_phase }}</span>
+            {% if plan_prog and plan_prog[1] > 0 %}
+            <span class="num num--sm" title="plan tasks complete">· {{ plan_prog[0] }} / {{ plan_prog[1] }} tasks</span>
+            <span class="feature-row__bar" aria-hidden="true"><i style="--w: {{ (plan_prog[0] / plan_prog[1] * 100) | int }}%"></i></span>
+            {% endif %}
+            {% if is_stalled and tool_usage and tool_usage.get('last_tool_ts') %}
+            <span class="num num--sm" style="color: var(--c-state-failed);" title="no tool call since this time">· no tool call {{ tool_usage.last_tool_ts | format_elapsed }}</span>
+            {% endif %}
+          {% endif %}
+        </span>
+        <span class="feature-row__dispatch">
+          {% if model %}
+            {% set model_class = 'badge-purple' if model == 'opus' else ('badge-gray' if model == 'haiku' else 'badge-running') %}
+            <span class="badge {{ model_class }}">{{ model }}</span>
+          {% endif %}
+          {% if complexity %}<span class="badge badge-gray">{{ complexity }}</span>{% endif %}
+          {% if dispatch.criticality %}<span class="badge badge-gray">crit·{{ dispatch.criticality }}</span>{% endif %}
+        </span>
+        <span class="feature-row__money feature-row__money-cell">
+          {% if cost is not none %}
+            <span>${{ '%.2f' | format(cost) }}</span>
+            {% if dispatch.max_budget_usd %}<small>/ ${{ '%.0f' | format(dispatch.max_budget_usd) }}</small>{% endif %}
+          {% else %}
+            <small>—</small>
+          {% endif %}
+        </span>
+        <span class="feature-row__duration">
+          {% set started_iso = ft.get('started_at') or feat.started_at %}
+          {% set completed_iso = ft.get('completed_at') or feat.completed_at %}
+          {% if st in ('running', 'stalled') and started_iso %}{{ started_iso | format_elapsed_no_suffix }}
+          {% elif ft.get('duration_secs') %}{{ ft.get('duration_secs') | format_duration_secs }}
+          {% elif started_iso and completed_iso %}{{ started_iso | format_duration(completed_iso) }}
+          {% else %}—{% endif %}
+        </span>
+        <span class="feature-row__tools">
+          {% if tool_usage and tool_usage.get('total_calls') %}<strong>{{ tool_usage.total_calls }}</strong> calls{% else %}<small>—</small>{% endif %}
+          {% if has_alert %}<span class="num--delta-up" title="alerts active">⚑</span>{% endif %}
+        </span>
+        <span class="feature-row__chev" aria-hidden="true">▸</span>
+      </summary>
+
+      <div class="feature-detail">
+        {# ── Left column: structured status & timing ─────────────────── #}
+        <div class="feature-detail-block">
+          <h3>dispatch &amp; status</h3>
+          <dl>
+            <dt>slug</dt><dd>{{ slug }}</dd>
+            <dt>status</dt><dd>{{ st }}</dd>
+            <dt>phase</dt><dd>{{ current_phase }}</dd>
+            {% if model %}<dt>model</dt><dd>{{ model }}</dd>{% endif %}
+            {% if complexity %}<dt>complexity</dt><dd>{{ complexity }}</dd>{% endif %}
+            {% if dispatch.criticality %}<dt>criticality</dt><dd>{{ dispatch.criticality }}</dd>{% endif %}
+            {% if dispatch.max_turns %}<dt>turn cap</dt><dd>{{ dispatch.max_turns }}</dd>{% endif %}
+            {% if dispatch.max_budget_usd %}<dt>budget cap</dt><dd>${{ '%.2f' | format(dispatch.max_budget_usd) }}</dd>{% endif %}
+            {% if cost is not none %}<dt>cost so far</dt><dd>${{ '%.4f' | format(cost) }}</dd>{% endif %}
+            {% if ft.get('started_at') %}<dt>started</dt><dd>{{ ft.get('started_at') | format_date }}</dd>{% endif %}
+            {% if ft.get('completed_at') %}<dt>completed</dt><dd>{{ ft.get('completed_at') | format_date }}</dd>{% endif %}
+            {% if ft.get('duration_secs') %}<dt>duration</dt><dd>{{ ft.get('duration_secs') | format_duration_secs }}</dd>{% endif %}
+            {% if retries %}<dt>retries</dt><dd>{{ retries }}</dd>{% endif %}
+            {% if rework %}<dt>rework cycles</dt><dd>{{ rework }}</dd>{% endif %}
+            {% if is_slow %}<dt>flag</dt><dd>slow vs baseline (&gt;3× median)</dd>{% endif %}
+            {% if feat.deferred_questions %}<dt>deferred questions</dt><dd>{{ feat.deferred_questions }}</dd>{% endif %}
+            {% if feat.error %}<dt>error</dt><dd style="color: var(--c-state-failed);">{{ feat.error }}</dd>{% endif %}
+            {% if daytime_state %}
+              <dt>daytime state</dt>
+              <dd>
+                {% if daytime_state.get('phase') %}
+                  {{ daytime_state.get('phase') }}
+                  {% if daytime_state.get('dispatch_id') %}
+                    {% set _did = daytime_state.get('dispatch_id') | string %}
+                    · <code class="inline-code" title="{{ _did }}">disp_{{ _did[:6] }}</code>
+                  {% endif %}
+                {% else %}
+                  {{ (daytime_state | tojson)[:160] }}
+                {% endif %}
+              </dd>
+            {% endif %}
+            {% if daytime_result and daytime_result.get('pr_url') %}<dt>PR</dt><dd><a href="{{ daytime_result.get('pr_url') }}" target="_blank" rel="noopener" class="text-brand-primary">view ↗</a></dd>{% endif %}
+          </dl>
+
+          {% if complexity_overrides %}
+          <h3 class="mt-3">complexity overrides</h3>
+          <ul class="phase-timeline">
+          {% for ovr in complexity_overrides %}
+            <li><span class="pt-arrow">»</span><span><span class="pt-from">{{ ovr.get('from','?') }}</span> <span class="pt-to">→ {{ ovr.get('to','?') }}</span></span><span class="pt-ts">{{ ovr.get('ts') | format_elapsed if ovr.get('ts') else '—' }}</span></li>
+          {% endfor %}
+          </ul>
+          {% endif %}
+
+          {% if transitions %}
+          <h3 class="mt-3">phase transitions ({{ transitions | length }})</h3>
+          <ul class="phase-timeline">
+            {% for t in transitions %}
+            <li>
+              <span class="pt-arrow">→</span>
+              <span><span class="pt-from">{{ t.get('from','?') }}</span> <span class="pt-to">{{ t.get('to','?') }}</span></span>
+              <span class="pt-ts">{{ t.get('ts') | format_elapsed if t.get('ts') else '—' }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          {% if checkpoints %}
+          <h3 class="mt-3">checkpoints ({{ checkpoints | length }})</h3>
+          <ul class="phase-timeline">
+            {% for cp in checkpoints[-6:] %}
+            <li><span class="pt-arrow">·</span><span class="pt-to">{{ cp.note or '(no note)' }}</span><span class="pt-ts">{{ cp.ts | format_elapsed if cp.ts else '—' }}</span></li>
+            {% endfor %}
+          </ul>
           {% endif %}
         </div>
-      {% endif %}
 
-      {# ── Row 4: alert badges + retries + clarify findings + complexity overrides ─ #}
-      {% set has_alerts = (
-        feat.deferred_questions or
-        state.slow_flags.get(slug) or
-        (rework >= 2) or
-        (slug, 'stall') in state.alerts or
-        (slug, 'failed') in state.alerts or
-        (slug, 'deferred') in state.alerts or
-        (slug, 'high_rework') in state.alerts or
-        retries or
-        (clarify and clarify.get('findings_count', 0) > 0) or
-        complexity_overrides
-      ) %}
-      {% if has_alerts %}
-      <div class="card-row card-row--gloss">
-        {% if feat.deferred_questions %}{{ badge(css_class="badge-amber", label=feat.deferred_questions ~ " deferred q") }}{% endif %}
-        {% if state.slow_flags.get(slug) %}{{ alert_badge("amber", "⏱ slow") }}{% endif %}
-        {% if rework >= 2 %}{{ alert_badge("amber", "↻ " ~ rework ~ " rework cycles") }}{% endif %}
-        {% if (slug, 'stall') in state.alerts %}{{ alert_badge("red", "⚠ stall") }}{% endif %}
-        {% if (slug, 'deferred') in state.alerts %}{{ alert_badge("amber", "⏸ deferred") }}{% endif %}
-        {% if retries %}{{ alert_badge("amber", "↻ retry ×" ~ retries) }}{% endif %}
-        {% if clarify and clarify.get('findings_count', 0) > 0 %}
-          {% set crit_apply = clarify.get('applied_fixes_count', 0) %}
-          {% set crit_dismiss = clarify.get('dismissals_count', 0) %}
-          {{ badge(css_class="badge-gray", label="critic · " ~ clarify.findings_count ~ " findings · " ~ crit_apply ~ " applied · " ~ crit_dismiss ~ " dismissed") }}
-        {% endif %}
-        {% for ovr in complexity_overrides %}
-        {{ badge(css_class="badge-amber", label="tier · " ~ ovr.get('from','?') ~ "→" ~ ovr.get('to','?')) }}
-        {% endfor %}
-      </div>
-      {% endif %}
+        {# ── Right column: open questions, exit history, learnings, critic, tools ── #}
+        <div class="feature-detail-block">
+          {# Escalations live in §02 only — not duplicated here. The summary
+             row's ⚑ alert glyph signals their existence. #}
 
-      {# ── Row 5: recent tool ticker (running only) ──────────────────── #}
-      {% if feat.status == 'running' and tool_usage and tool_usage.get('total_calls') %}
-      <div class="card-row card-row--tools">
-        <span class="phase-label">tools ·</span>
-        <span class="tool-ticker">
-          {% for t in tool_usage.recent %}
-          <span class="tool-pip{% if t.success is sameas false %} tool-pip--failed{% endif %}" title="{{ t.tool }} · {{ t.ts | format_elapsed }}">{{ t.tool[:1] }}</span>
-          {% endfor %}
-        </span>
-        <span class="phase-label">·</span>
-        {% for tool, n in (tool_usage.counts.items() | list | sort(attribute=1, reverse=true))[:5] %}
-        <span class="tool-count">{{ tool }} <em>{{ n }}</em></span>
-        {% endfor %}
-        <span class="phase-label">· last call {{ tool_usage.last_tool_ts | format_elapsed if tool_usage.last_tool_ts else "—" }}</span>
-      </div>
-      {% endif %}
-
-      {# ── Row 6: open questions (escalations summary) ─────────────────── #}
-      {% if escalations %}
-      <div class="card-row card-row--questions">
-        <span class="phase-label">open q ·</span>
-        <span class="open-q-summary">{{ (escalations[-1].question or '—')[:160] }}{% if (escalations[-1].question or '') | length > 160 %}…{% endif %}</span>
-        {% if escalations | length > 1 %}
-        <span class="phase-label">· +{{ escalations | length - 1 }} more</span>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      {# ── Row 7: exit-report summary (paused/failed) ────────────────── #}
-      {% if exit_reports and feat.status in ('paused', 'failed') %}
-        {% set last_report = exit_reports[-1] %}
-        <div class="card-row card-row--exitreport">
-          <span class="phase-label">exit · task {{ last_report.get('_task_number', '?') }} · {{ last_report.get('action', '—') }}</span>
-          {% if last_report.get('reason') %}
-          <span class="exit-reason">— {{ last_report.get('reason')[:200] }}{% if last_report.get('reason') | length > 200 %}…{% endif %}</span>
+          {% if exit_reports %}
+          <h3>exit-report history ({{ exit_reports | length }})</h3>
+          <ul class="exit-history">
+            {% for r in exit_reports %}
+            <li>
+              <span class="eh-task">#{{ r.get('_task_number', '?') }}</span>
+              {{ badge(css_class=("badge-merged" if r.get('action') == 'complete' else ("badge-amber" if r.get('action') in ('paused','question') else "badge-red")), label=r.get('action','—')) }}
+              <span class="eh-reason">{{ r.get('reason') or r.get('error') or r.get('question') or '—' }}</span>
+            </li>
+            {% endfor %}
+          </ul>
           {% endif %}
+
+          {% if learnings and learnings.recent %}
+          <h3 class="{% if exit_reports %}mt-3{% endif %}">learnings ({{ learnings.attempts }} attempts)</h3>
+          <ul class="learnings-list">
+            {% for a in learnings.recent %}
+            <li>
+              <div class="ll-attempt">attempt {{ a.n }} <time>{{ a.ts | format_elapsed if a.ts else '—' }}</time></div>
+              {% if a.task %}<p class="ll-task">task · {{ a.task }}</p>{% endif %}
+              {% if a.error %}<p class="ll-error">error · {{ a.error }}</p>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          {% if clarify %}
+          <h3 class="{% if exit_reports or learnings %}mt-3{% endif %}">clarify critic</h3>
+          <dl>
+            <dt>findings</dt><dd>{{ clarify.get('findings_count', 0) }}</dd>
+            <dt>applied</dt><dd>{{ clarify.get('applied_fixes_count', 0) }}</dd>
+            <dt>dismissed</dt><dd>{{ clarify.get('dismissals_count', 0) }}</dd>
+            {% if clarify.get('ts') %}<dt>at</dt><dd>{{ clarify.get('ts') | format_elapsed }}</dd>{% endif %}
+          </dl>
+          {% if clarify.get('findings') %}
+          <ul class="critic-findings mt-2">
+            {% for f in clarify.get('findings', []) %}
+            <li>{{ f.get('text') or f.get('summary') or f }}{% if f.get('status') %}<span class="cf-status">{{ f.get('status') }}</span>{% endif %}</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+          {% endif %}
+
+          {% if tool_usage and tool_usage.get('total_calls') %}
+          <h3 class="{% if exit_reports or learnings or clarify %}mt-3{% endif %}">tool usage ({{ tool_usage.total_calls }} calls)</h3>
+          {% set tu_max = 1 %}
+          {% for n in tool_usage.get('counts', {}).values() %}{% if n > tu_max %}{% set tu_max = n %}{% endif %}{% endfor %}
+          <ul class="tool-hist">
+            {% for tool, n in (tool_usage.counts.items() | list | sort(attribute=1, reverse=true))[:8] %}
+            <li>
+              <span class="th-name">{{ tool }}</span>
+              <span class="th-bar"><i style="--w: {{ (n / tu_max * 100) | int }}%"></i></span>
+              <span class="th-n">{{ n }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% if tool_usage.last_tool_ts %}<small class="phase-label">last call {{ tool_usage.last_tool_ts | format_elapsed }}</small>{% endif %}
+          {% endif %}
+
+          <h3 class="mt-3">artifacts</h3>
+          <div class="card-row flex-wrap gap-2">
+            {% if feat.spec_path %}<a class="card-link" href="#" title="{{ feat.spec_path }}">spec.md</a>{% endif %}
+            {% if feat.plan_path %}<a class="card-link" href="#" title="{{ feat.plan_path }}">plan.md</a>{% endif %}
+            {% if feat.backlog_id %}<a class="card-link" href="#" title="backlog item">backlog #{{ feat.backlog_id }}</a>{% endif %}
+            {% if daytime_result and daytime_result.get('pr_url') %}<a class="card-link" href="{{ daytime_result.pr_url }}" target="_blank" rel="noopener">PR ↗</a>{% endif %}
+          </div>
         </div>
-      {% endif %}
-
-      {# ── Row 8: checkpoints (running with checkpoints) ─────────────── #}
-      {% if checkpoints and feat.status == 'running' %}
-      <div class="card-row card-row--checkpoints">
-        <span class="phase-label">checkpoints ·</span>
-        <span class="checkpoint-trail">
-          {% for cp in checkpoints[-4:] %}
-          <span class="checkpoint-dot" title="{{ cp.note }} · {{ cp.ts | format_elapsed }}">•</span>
-          {% endfor %}
-        </span>
-        <span class="phase-label">{{ checkpoints | length }} marked · last {{ checkpoints[-1].ts | format_elapsed }}</span>
       </div>
-      {% endif %}
-
-      {# ── Row 9: learnings (failed/paused with attempt history) ────── #}
-      {% if learnings and learnings.attempts > 0 %}
-      <div class="card-row card-row--learnings">
-        <span class="phase-label">learnings · {{ learnings.attempts }} attempts logged</span>
-        {% set last_attempt = learnings.recent[-1] if learnings.recent else none %}
-        {% if last_attempt and last_attempt.error %}
-        <span class="learning-trace">— attempt {{ last_attempt.n }} · {{ (last_attempt.error)[:140] }}{% if last_attempt.error | length > 140 %}…{% endif %}</span>
-        {% endif %}
-      </div>
-      {% endif %}
-
-      {# ── Footer: links to spec / plan / branch / backlog ───────────── #}
-      <div class="card-row card-row--links card-hover-reveal">
-        {% if feat.spec_path %}<a class="card-link" href="#" title="{{ feat.spec_path }}">spec.md</a>{% endif %}
-        {% if feat.plan_path %}<a class="card-link" href="#" title="{{ feat.plan_path }}">plan.md</a>{% endif %}
-        {% if feat.backlog_id %}<a class="card-link" href="#" title="backlog item">backlog #{{ feat.backlog_id }}</a>{% endif %}
-        {% if dispatch.max_turns %}<span class="phase-label">cap · {{ dispatch.max_turns }} turns</span>{% endif %}
-      </div>
-    {% endcall %}
+    </details>
   {% endfor %}
 {% else %}
 <p class="empty-state">no features in play · awaiting next round</p>

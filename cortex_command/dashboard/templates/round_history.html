@@ -1,22 +1,23 @@
-<span class="sec-num"><strong>§ 07</strong>rounds</span>
+<span class="sec-num"><strong>§ 08</strong>rounds</span>
 <h2>Round <em>history</em> <span class="phase-tag">{% if state.overnight and state.overnight.round_history %}{{ state.overnight.round_history | length }} cleared{% else %}—{% endif %}</span></h2>
 {% if state.overnight and state.overnight.round_history %}
 <div class="stream-line">
   <span>doc · round_history[]</span>
   <span>batches · BATCH_ASSIGNED</span>
-  <span style="margin-left:auto;">durations · derived from events</span>
+  <span class="ml-auto">durations · derived from events</span>
 </div>
 <div class="overflow-x-auto">
 <table class="round-table" aria-label="Round history">
+  <caption class="sr-only">Per-round outcomes — start time, duration, and feature batch dispositions</caption>
   <thead>
     <tr>
-      <th>R#</th>
-      <th>Started</th>
-      <th>Duration</th>
-      <th>Batched</th>
-      <th>Merged</th>
-      <th>Paused</th>
-      <th>Deferred</th>
+      <th scope="col">R#</th>
+      <th scope="col">Started</th>
+      <th scope="col">Duration</th>
+      <th scope="col">Batched</th>
+      <th scope="col">Merged</th>
+      <th scope="col">Paused</th>
+      <th scope="col">Deferred</th>
     </tr>
   </thead>
   <tbody>

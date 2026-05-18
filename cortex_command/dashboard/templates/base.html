@@ -22,10 +22,19 @@
       --color-parchment-2:  #efeadd;
       --color-parchment-3:  #e6dfcc;
 
-      --color-ink:          #0f1219;
+      /* Four-step ink ramp — semantic, not decorative.
+         ink-1 = values & headlines    (highest contrast)
+         ink-2 = secondary values, costs, durations
+         ink-3 = meta tokens, chips
+         ink-4 = labels ONLY ("branch ·", "phase ·")
+         Aliases preserve the existing class API. */
+      --color-ink-1:        #0f1219;
       --color-ink-2:        #1d2230;
-      --color-ink-mute:     #4a4f5c;
-      --color-ink-faint:    #6e6c63;
+      --color-ink-3:        #4a4f5c;
+      --color-ink-4:        #6e6c63;
+      --color-ink:          var(--color-ink-1);
+      --color-ink-mute:     var(--color-ink-3);
+      --color-ink-faint:    var(--color-ink-4);
       --color-ink-50:       #6a6e78;
       --color-ink-30:       #a4a8af;
 
@@ -99,6 +108,28 @@
 
       --spacing: 0.25rem;
 
+      /* Spatial scale — 4px base, predictable steps */
+      --s-1: 4px;
+      --s-2: 8px;
+      --s-3: 12px;
+      --s-4: 16px;
+      --s-5: 24px;
+      --s-6: 32px;
+      --s-7: 48px;
+      --s-8: 64px;
+
+      /* Semantic state palette — DO NOT use for decoration.
+         These tokens are the only legal hues for state. */
+      --c-state-merged:   var(--color-blue);
+      --c-state-running:  var(--color-blue-soft);
+      --c-state-paused:   var(--color-ochre);
+      --c-state-deferred: var(--color-ochre);
+      --c-state-failed:   #d43c2a;
+      --c-state-pending:  var(--color-ink-faint);
+      --c-state-opus:     #a37acf;
+      --c-state-sonnet:   var(--color-ink-2);
+      --c-state-haiku:    var(--color-ink-mute);
+
       --radius-none: 0;
       --radius-sm:   2px;
       --radius-md:   3px;
@@ -118,12 +149,17 @@
       --color-parchment:    #15151a;
       --color-parchment-2:  #1a1a1f;
       --color-parchment-3:  #1d1d23;
-      --color-ink:          #ece6d3;
+      /* Four-step ink ramp — dark theme. Apply the same role contract:
+         ink-1 = primary values, ink-2 = secondary, ink-3 = meta, ink-4 = labels. */
+      --color-ink-1:        #ece6d3;
       --color-ink-2:        #d8d2bf;
-      --color-ink-mute:     #a8a392;
-      --color-ink-faint:    #9a9382;
+      --color-ink-3:        #b6b0a0;
+      --color-ink-4:        #9a9486;
+      --color-ink:          var(--color-ink-1);
+      --color-ink-mute:     var(--color-ink-3);
+      --color-ink-faint:    var(--color-ink-4);
       --color-ink-50:       #908b7a;
-      --color-ink-30:       #62604f;
+      --color-ink-30:       #5c5a4d;
       --color-rule:         #ece6d3;
       --color-rule-soft:    #34333c;
 
@@ -132,6 +168,21 @@
       --color-blue-faint:   #4a567f;
       --color-ochre:        #f0b870;
       --color-ochre-soft:   #f5cb95;
+
+      /* Semantic state palette (carbon)
+         merged = stable cool blue (done, settled)
+         running = warm cyan-green (live, active) — distinct hue from merged
+         paused/deferred = ochre (waiting)
+         failed = red (broken) */
+      --c-state-merged:    #8aa6e3;
+      --c-state-running:   #5fd6c3;
+      --c-state-paused:    #f0b870;
+      --c-state-deferred:  #f0b870;
+      --c-state-failed:    #f08070;
+      --c-state-pending:   var(--color-ink-faint);
+      --c-state-opus:      #c8a8e8;
+      --c-state-sonnet:    var(--color-ink-2);
+      --c-state-haiku:     var(--color-ink-mute);
 
       --color-error:           #f08070;
       --color-error-surface:   rgba(240, 128, 112, 0.10);
@@ -188,6 +239,37 @@
 
     @layer components {
       * { box-sizing: border-box; }
+
+      /* Keyboard-only focus indicator. The Tailwind reset stripped the UA
+         outline; restore it via :focus-visible so mouse clicks don't get a
+         ring but keyboard users always see where focus is. */
+      :focus { outline: none; }
+      :focus-visible {
+        outline: 2px solid var(--c-state-running, var(--color-blue-soft));
+        outline-offset: 2px;
+        border-radius: 1px;
+      }
+      details > summary:focus-visible {
+        outline-offset: -2px;
+      }
+
+      /* Skip-to-main affordance for keyboard users. */
+      .skip-link {
+        position: absolute;
+        left: -9999px;
+        top: 8px;
+        z-index: 100;
+        background: var(--color-parchment-2);
+        color: var(--color-ink-1);
+        padding: 8px 14px;
+        border: 2px solid var(--c-state-running);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-decoration: none;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .skip-link:focus { left: 8px; }
 
       html, body {
         font-family: var(--font-serif);
@@ -382,7 +464,9 @@
       section[data-sec] > h2::before {
         content: "§ " attr(data-numlabel, '');
       }
-      /* Section register marker placed via separate sec-num span (preferred) */
+      /* Section register marker placed via separate sec-num span (preferred).
+         Word-break is normal so multi-word labels read as one phrase, not as
+         vertical poetry. The strong is the §-number; the label flows below. */
       .sec-num {
         position: absolute;
         top: 30px;
@@ -394,7 +478,8 @@
         letter-spacing: 0.06em;
         text-transform: uppercase;
         color: var(--color-ink-faint);
-        line-height: 1.5;
+        line-height: 1.4;
+        word-spacing: 0.05em;
       }
       .sec-num strong {
         display: block;
@@ -402,7 +487,9 @@
         font-weight: 500;
         font-size: 13px;
         letter-spacing: 0.04em;
+        margin-bottom: 2px;
       }
+      .sec-num br { display: none; }
       section h2 {
         margin: 0 0 14px;
         font-family: var(--font-serif);
@@ -508,21 +595,23 @@
       }
       .phase-label {
         font-family: var(--font-mono);
-        font-size: 11px;
+        font-size: 11.5px;
         color: var(--color-ink-faint);
         letter-spacing: 0.02em;
       }
       .task-ratio {
         font-family: var(--font-mono);
-        font-size: 10.5px;
+        font-size: 11px;
         color: var(--color-ink-faint);
         letter-spacing: 0.04em;
+        font-variant-numeric: tabular-nums slashed-zero;
       }
       .cost-chip {
         font-family: var(--font-mono);
-        font-size: 10.5px;
+        font-size: 11px;
         color: var(--color-ink-mute);
         letter-spacing: 0.02em;
+        font-variant-numeric: tabular-nums slashed-zero;
       }
 
       /* ── Badges (timing-diagram four-state vocabulary) ─────────────── */
@@ -530,10 +619,10 @@
         display: inline-flex;
         align-items: center;
         gap: 5px;
-        padding: 3px 8px;
+        padding: 4px 9px;
         border-radius: 2px;
         font-family: var(--font-mono);
-        font-size: 9.5px;
+        font-size: 10.5px;
         font-weight: 500;
         letter-spacing: 0.10em;
         text-transform: uppercase;
@@ -545,15 +634,29 @@
         transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
       }
       .badge > [aria-hidden] { font-size: 0.95em; line-height: 1; }
-      .badge-green {
-        color: var(--color-blue);
-        border-color: var(--color-blue);
-        background: color-mix(in srgb, var(--color-blue) 14%, transparent);
+      /* Merged is the canonical name for the completed-success state;
+         .badge-green is kept as an alias so legacy templates still work,
+         but the visual now differs from running so the hierarchy is real.
+         Running uses a distinct cyan-green hue and a pulse animation —
+         perceptible to color-blind users via motion + hue + fill. */
+      .badge-green,
+      .badge-merged {
+        color: var(--c-state-merged);
+        border-color: var(--c-state-merged);
+        background: color-mix(in srgb, var(--c-state-merged) 12%, transparent);
       }
-      .badge-blue {
-        color: var(--color-blue);
-        border-color: var(--color-blue);
-        background: color-mix(in srgb, var(--color-blue) 22%, transparent);
+      .badge-blue,
+      .badge-running {
+        color: var(--c-state-running);
+        border-color: var(--c-state-running);
+        background: color-mix(in srgb, var(--c-state-running) 22%, transparent);
+        font-weight: 600;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .badge-blue,
+        .badge-running {
+          animation: pulse 2.4s ease-in-out infinite;
+        }
       }
       .badge-red {
         color: var(--color-status-red);
@@ -959,11 +1062,11 @@
         border: 1px solid var(--color-ink-faint);
         border-radius: 1px;
       }
-      .pip--merged   { background: var(--color-blue); border-color: var(--color-blue); }
-      .pip--running  { background: color-mix(in srgb, var(--color-blue) 50%, transparent); border-color: var(--color-blue); animation: pulse 1.8s ease-in-out infinite; }
-      .pip--paused   { background: transparent; border-color: var(--color-ochre); border-style: dashed; }
-      .pip--deferred { background: transparent; border-color: var(--color-ochre); border-style: dashed; }
-      .pip--failed   { background: color-mix(in srgb, var(--color-status-red) 40%, transparent); border-color: var(--color-status-red); }
+      .pip--merged   { background: var(--c-state-merged); border-color: var(--c-state-merged); }
+      .pip--running  { background: color-mix(in srgb, var(--c-state-running) 60%, transparent); border-color: var(--c-state-running); animation: pulse 1.8s ease-in-out infinite; }
+      .pip--paused   { background: transparent; border-color: var(--c-state-paused); border-style: dashed; }
+      .pip--deferred { background: transparent; border-color: var(--c-state-deferred); border-style: dashed; }
+      .pip--failed   { background: color-mix(in srgb, var(--c-state-failed) 50%, transparent); border-color: var(--c-state-failed); }
       .pip--pending  { background: transparent; border-color: var(--color-ink-faint); border-style: dotted; }
 
       /* ── Phase-track (4-step lifecycle progress on feature cards) ──── */
@@ -1425,6 +1528,588 @@
         background: var(--cell-color);
       }
 
+      /* ── .num — tabular monospace numerals (load-bearing) ─────────── */
+      .num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums slashed-zero;
+        font-feature-settings: "tnum" 1, "zero" 1, "ss01" 0;
+        letter-spacing: 0.01em;
+      }
+      .num--lg { font-size: 22px; font-family: var(--font-serif); font-weight: 400; line-height: 1; }
+      .num--md { font-size: 14px; }
+      .num--sm { font-size: 11px; color: var(--color-ink-mute); }
+      .num--delta-up   { color: var(--c-state-failed); }
+      .num--delta-down { color: var(--c-state-merged); }
+      .num--delta-flat { color: var(--color-ink-faint); }
+
+      /* ── Utility classes (replacing inline styles) ────────────────── */
+      .sr-only {
+        position: absolute;
+        width: 1px; height: 1px;
+        padding: 0; margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      .ml-auto { margin-left: auto; }
+      .mt-1 { margin-top: var(--s-1); }
+      .mt-2 { margin-top: var(--s-2); }
+      .mt-3 { margin-top: var(--s-3); }
+      .mt-4 { margin-top: var(--s-4); }
+      .gap-2 { gap: var(--s-2); }
+      .gap-3 { gap: var(--s-3); }
+      .flex-wrap { flex-wrap: wrap; }
+      .flex { display: flex; }
+      .items-baseline { align-items: baseline; }
+      .items-center { align-items: center; }
+
+      /* Use `style="--w: 86%"` instead of inline width: */
+      .fill-w { width: var(--w, 0%); }
+      .fill-h { height: 100%; }
+      /* Use `style="--c: var(--c-state-merged)"` for dynamic color */
+      .stripe-l { border-left: 3px solid var(--c, var(--color-ink-faint)); }
+      .tint-c   { color: var(--c, inherit); }
+
+      /* ── Alert top-rail (true banner — high contrast, prominent) ──── */
+      .alert-rail {
+        position: relative;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        padding: 16px 22px 16px 26px;
+        background: color-mix(in srgb, var(--c-rail, var(--color-ochre)) 16%, var(--color-parchment-2));
+        border: 1px solid color-mix(in srgb, var(--c-rail, var(--color-ochre)) 55%, var(--color-rule-soft));
+        border-left: 6px solid var(--c-rail, var(--color-ochre));
+        font-family: var(--font-mono);
+        font-size: 14px;
+        letter-spacing: 0.04em;
+        color: var(--color-ink-1);
+        box-shadow: 0 12px 28px -24px var(--shadow-tint-deep);
+      }
+      .alert-rail--critical {
+        --c-rail: var(--c-state-failed);
+        background: color-mix(in srgb, var(--c-state-failed) 20%, var(--color-parchment-2));
+      }
+      .alert-rail--warn     { --c-rail: var(--color-ochre); }
+      .alert-rail--info     {
+        --c-rail: var(--c-state-running);
+        color: var(--color-ink-2);
+        border-style: dashed;
+        padding: 12px 20px;
+      }
+      .alert-rail-label {
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        font-size: 13px;
+        text-transform: uppercase;
+        margin-right: var(--s-2);
+        color: var(--c-rail, var(--color-ink-1));
+      }
+      .alert-rail-mark {
+        font-family: var(--font-serif);
+        font-style: italic;
+        font-size: 22px;
+        line-height: 1;
+        margin-right: 8px;
+        color: var(--c-rail, var(--color-ink-1));
+        font-weight: 700;
+      }
+      .alert-rail .alert-rail-detail {
+        font-family: var(--font-serif);
+        font-size: 16px;
+        text-transform: none;
+        letter-spacing: -0.005em;
+        color: var(--color-ink-1);
+        text-decoration: none;
+        border-bottom: 1px solid color-mix(in srgb, var(--c-rail, var(--color-ink-1)) 50%, transparent);
+        padding-bottom: 1px;
+      }
+      .alert-rail .alert-rail-detail em {
+        font-style: italic;
+        color: var(--c-rail, var(--color-ink-1));
+        font-weight: 500;
+      }
+      .alert-rail .alert-rail-detail:hover {
+        color: var(--c-rail, var(--color-ink-1));
+        border-bottom-color: var(--c-rail, var(--color-ink-1));
+      }
+      section#alerts-banner:has(.alert-rail) {
+        background: none;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+      }
+
+      /* ── Feature row (dense one-line-per-feature instrument grid) ───── */
+      .feature-row {
+        display: grid;
+        grid-template-columns:
+          14px                            /* pip */
+          minmax(0, 1.7fr)                /* title + slug */
+          auto                            /* status badge */
+          minmax(120px, 0.9fr)            /* phase track */
+          auto                            /* model+complexity */
+          minmax(110px, 0.7fr)            /* cost+budget */
+          minmax(80px, 0.6fr)             /* duration */
+          minmax(80px, 0.6fr)             /* tools */
+          24px;                           /* expand glyph */
+        gap: var(--s-3);
+        align-items: center;
+        padding: 8px 14px 8px 14px;
+        border-bottom: 1px dotted var(--color-rule-soft);
+        background: var(--color-parchment);
+        cursor: pointer;
+        transition: background 0.18s ease;
+      }
+      .feature-row:hover { background: color-mix(in srgb, var(--color-blue) 5%, var(--color-parchment)); }
+      .feature-row:last-child { border-bottom: none; }
+      .feature-row__pip {
+        width: 10px; height: 10px;
+        background: var(--c-state, var(--color-ink-faint));
+        border: 1px solid var(--c-state, var(--color-ink-faint));
+        border-radius: 1px;
+      }
+      .feature-row--paused .feature-row__pip,
+      .feature-row--deferred .feature-row__pip {
+        background: transparent;
+        border-style: dashed;
+      }
+      .feature-row--pending .feature-row__pip {
+        background: transparent;
+        border-style: dotted;
+      }
+      .feature-row--running .feature-row__pip {
+        background: color-mix(in srgb, var(--c-state) 60%, transparent);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      .feature-row__title {
+        font-family: var(--font-serif);
+        font-weight: 500;
+        font-size: 15px;
+        letter-spacing: -0.005em;
+        color: var(--color-ink-1);
+        line-height: 1.25;
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        min-width: 0;
+      }
+      .feature-row__title small {
+        font-family: var(--font-mono);
+        font-weight: 400;
+        font-size: 10.5px;
+        color: var(--color-ink-3);
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .feature-row__dispatch {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        flex-wrap: nowrap;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-ink-3);
+      }
+      .feature-row__money {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums slashed-zero;
+        font-feature-settings: "tnum" 1, "zero" 1;
+        font-size: 11px;
+        color: var(--color-ink-2);
+      }
+      .feature-row__money small {
+        color: var(--color-ink-4);
+        font-size: 10px;
+        font-variant-numeric: tabular-nums slashed-zero;
+      }
+      .feature-row__bar {
+        position: relative;
+        height: 3px;
+        width: 100%;
+        background: color-mix(in srgb, var(--color-ink) 7%, transparent);
+        margin-top: 3px;
+        overflow: hidden;
+      }
+      .feature-row__bar > i {
+        position: absolute; left: 0; top: 0; bottom: 0;
+        background: var(--c-state, var(--c-state-running));
+        width: var(--w, 0%);
+      }
+      .feature-row__duration {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums slashed-zero;
+        font-feature-settings: "tnum" 1, "zero" 1;
+        font-size: 11px;
+        color: var(--color-ink-2);
+      }
+      .feature-row__tools {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums slashed-zero;
+        font-feature-settings: "tnum" 1, "zero" 1;
+        font-size: 10.5px;
+        color: var(--color-ink-3);
+        display: flex; gap: 4px; align-items: baseline;
+      }
+      .feature-row__tools strong {
+        font-weight: 600;
+        color: var(--color-ink-1);
+      }
+      .feature-row__chev {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-ink-4);
+        text-align: center;
+        transition: transform 0.2s ease;
+      }
+      details[open] > summary .feature-row__chev { transform: rotate(90deg); color: var(--color-ink-1); }
+      summary.feature-row { list-style: none; }
+      summary.feature-row::-webkit-details-marker { display: none; }
+      details.feature-block {
+        background: color-mix(in srgb, var(--c-state, var(--color-ink-faint)) 4%, var(--color-parchment));
+        border-bottom: 1px dotted var(--color-rule-soft);
+      }
+      details.feature-block:last-child { border-bottom: none; }
+      details.feature-block[open] {
+        background: color-mix(in srgb, var(--c-state, var(--color-ink-faint)) 6%, var(--color-parchment));
+        box-shadow: inset 3px 0 0 0 var(--c-state, var(--color-ink-faint));
+      }
+      details.feature-block[open] > summary {
+        border-bottom: 1px solid var(--color-rule-soft);
+      }
+      /* Strong row-level emphasis when a feature needs attention.
+         These selectors apply directly on summary.feature-row, beating
+         the Tailwind reset. */
+      summary.feature-row--failed,
+      summary.feature-row--stalled,
+      summary.feature-row--paused,
+      summary.feature-row--running {
+        border-left: 4px solid var(--c-state, var(--color-ink-faint));
+        padding-left: 12px;
+      }
+      summary.feature-row--failed {
+        background: color-mix(in srgb, var(--c-state-failed) 10%, var(--color-parchment));
+      }
+      summary.feature-row--stalled {
+        background: color-mix(in srgb, var(--c-state-failed) 8%, var(--color-parchment));
+        background-image: repeating-linear-gradient(
+          135deg,
+          transparent 0,
+          transparent 8px,
+          color-mix(in srgb, var(--c-state-failed) 8%, transparent) 8px,
+          color-mix(in srgb, var(--c-state-failed) 8%, transparent) 10px
+        );
+      }
+      summary.feature-row--paused {
+        background: color-mix(in srgb, var(--c-state-paused) 7%, var(--color-parchment));
+      }
+      summary.feature-row--running {
+        background: color-mix(in srgb, var(--c-state-running) 6%, var(--color-parchment));
+      }
+      summary.feature-row--failed:hover,
+      summary.feature-row--stalled:hover {
+        background: color-mix(in srgb, var(--c-state-failed) 18%, var(--color-parchment));
+      }
+
+      /* Feature row -- responsive collapse */
+      @media (max-width: 1080px) {
+        .feature-row {
+          grid-template-columns: 14px minmax(0,1fr) auto auto 24px;
+          row-gap: 4px;
+        }
+        .feature-row__phase-cell,
+        .feature-row__money-cell,
+        .feature-row__tools { display: none; }
+      }
+
+      /* ── Expanded feature detail (the launchpad pane) ─────────────── */
+      .feature-detail {
+        padding: 18px 22px 22px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px;
+        font-family: var(--font-serif);
+      }
+      @media (max-width: 900px) { .feature-detail { grid-template-columns: 1fr; } }
+      .feature-detail h3 {
+        margin: 0 0 8px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-weight: 500;
+        color: var(--color-ink-4);
+        border-bottom: 1px dashed var(--color-rule-soft);
+        padding-bottom: 6px;
+      }
+      .feature-detail-block { display: flex; flex-direction: column; gap: 6px; }
+      .feature-detail-block > p { margin: 0; }
+      .feature-detail dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 4px 14px;
+        margin: 0;
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        line-height: 1.5;
+      }
+      .feature-detail dt {
+        color: var(--color-ink-4);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 10px;
+      }
+      .feature-detail dd {
+        color: var(--color-ink-2);
+        font-variant-numeric: tabular-nums slashed-zero;
+        margin: 0;
+      }
+
+      /* Phase-transition timeline */
+      .phase-timeline {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-ink-2);
+      }
+      .phase-timeline li {
+        display: grid;
+        grid-template-columns: 16px 1fr auto;
+        gap: 8px;
+        align-items: baseline;
+      }
+      .phase-timeline .pt-arrow { color: var(--c-state-running); text-align: center; }
+      .phase-timeline .pt-from  { color: var(--color-ink-4); }
+      .phase-timeline .pt-to    { color: var(--color-ink-1); font-weight: 500; }
+      .phase-timeline .pt-ts {
+        color: var(--color-ink-3);
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums slashed-zero;
+      }
+
+      /* Exit-report history */
+      .exit-history {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+      .exit-history li {
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        gap: 10px;
+        align-items: baseline;
+        padding: 4px 0;
+        border-bottom: 1px dotted var(--color-rule-soft);
+      }
+      .exit-history li:last-child { border-bottom: none; }
+      .exit-history .eh-task {
+        color: var(--c-state-running);
+        font-weight: 500;
+        font-size: 10.5px;
+        letter-spacing: 0.06em;
+      }
+      .exit-history .eh-reason {
+        color: var(--color-ink-2);
+        font-style: italic;
+        font-family: var(--font-serif);
+        font-size: 12.5px;
+      }
+
+      /* Learnings attempts */
+      .learnings-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+      .learnings-list .ll-attempt {
+        font-weight: 600;
+        color: var(--c-state-failed);
+        letter-spacing: 0.06em;
+        font-size: 10.5px;
+        text-transform: uppercase;
+        display: flex; gap: 10px; align-items: baseline;
+      }
+      .learnings-list .ll-attempt time { color: var(--color-ink-4); font-weight: 400; font-variant-numeric: tabular-nums slashed-zero; }
+      .learnings-list .ll-task,
+      .learnings-list .ll-error {
+        font-family: var(--font-mono);
+        color: var(--color-ink-2);
+        margin: 0;
+        font-size: 11px;
+        line-height: 1.5;
+        padding-left: var(--s-3);
+        border-left: 1px solid var(--color-rule-soft);
+      }
+      .learnings-list .ll-error { color: var(--c-state-failed); }
+
+      /* Critic findings list */
+      .critic-findings {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-family: var(--font-serif);
+        font-size: 13px;
+        color: var(--color-ink-2);
+      }
+      .critic-findings li { padding-left: 14px; position: relative; }
+      .critic-findings li::before {
+        content: "•";
+        position: absolute; left: 0;
+        color: var(--c-state-paused);
+      }
+      .critic-findings .cf-status { color: var(--color-ink-4); font-family: var(--font-mono); font-size: 10px; margin-left: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+      /* Tool-usage histogram */
+      .tool-hist {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+      }
+      .tool-hist li {
+        display: grid;
+        grid-template-columns: 90px 1fr auto;
+        gap: 8px;
+        align-items: center;
+      }
+      .tool-hist .th-name { color: var(--color-ink-2); }
+      .tool-hist .th-bar { position: relative; height: 6px; background: color-mix(in srgb, var(--color-ink) 7%, transparent); }
+      .tool-hist .th-bar > i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--c-state-running); width: var(--w, 0%); }
+      .tool-hist .th-n { color: var(--color-ink-1); font-variant-numeric: tabular-nums slashed-zero; font-weight: 500; }
+
+      /* ── Metrics baseline panel ──────────────────────────────────── */
+      .metrics-baseline {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-ink-2);
+      }
+      .metrics-baseline th,
+      .metrics-baseline td {
+        padding: 6px 12px;
+        text-align: right;
+        border-bottom: 1px dashed var(--color-rule-soft);
+        font-variant-numeric: tabular-nums slashed-zero;
+      }
+      .metrics-baseline th:first-child,
+      .metrics-baseline td:first-child { text-align: left; }
+      .metrics-baseline th {
+        font-weight: 500;
+        font-size: 10px;
+        letter-spacing: var(--register);
+        text-transform: uppercase;
+        color: var(--color-ink-4);
+      }
+      .metrics-baseline tr:last-child td { border-bottom: none; }
+
+      /* ── Sparkline (inline svg, single stroke) ───────────────────── */
+      .sparkline {
+        display: inline-block;
+        width: 80px;
+        height: 18px;
+        vertical-align: middle;
+        margin-left: 8px;
+      }
+      .sparkline path {
+        fill: none;
+        stroke: var(--c-state-running);
+        stroke-width: 1.25;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+      }
+      .sparkline .spark-dot {
+        fill: var(--c-state-running);
+      }
+
+      /* ── Stacked bar (backlog) ───────────────────────────────────── */
+      .stack-bar {
+        position: relative;
+        display: flex;
+        height: 18px;
+        width: 100%;
+        background: color-mix(in srgb, var(--color-ink) 5%, transparent);
+        border: 1px solid var(--color-rule-soft);
+        overflow: hidden;
+      }
+      .stack-bar > span {
+        display: block;
+        height: 100%;
+        background: var(--c, var(--color-ink-mute));
+        flex: 0 0 var(--w, 0%);
+        border-right: 1px solid color-mix(in srgb, var(--color-parchment) 50%, transparent);
+        position: relative;
+      }
+      .stack-bar > span:last-child { border-right: none; }
+      .stack-legend {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--color-ink-2);
+        margin-top: 8px;
+      }
+      .stack-legend > span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-variant-numeric: tabular-nums slashed-zero;
+      }
+      .stack-legend > span::before {
+        content: "";
+        width: 8px; height: 8px;
+        background: var(--c, var(--color-ink-mute));
+      }
+      .stack-legend .sl-label {
+        color: var(--color-ink-4);
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+      }
+
+      /* ── Drop italic-WONK header treatment on deep sections ──────── */
+      section#activity-stream h2 em,
+      section#fleet-panel h2 em,
+      section#swim-lane h2 em,
+      section#round-history h2 em,
+      section#pipeline-panel h2 em,
+      section#backlog-panel h2 em,
+      section#metrics-baseline h2 em {
+        font-variation-settings: "SOFT" 30, "WONK" 0;
+        font-style: normal;
+        color: var(--color-ink-1);
+      }
+
       /* Responsive register */
       @media (max-width: 720px) {
         header.manuscript {
@@ -1442,6 +2127,7 @@
   {% block head %}{% endblock %}
 </head>
 <body hx-ext="morph">
+  <a href="#main-content" class="skip-link">skip to dashboard</a>
   <div class="page-wrap">
     <header class="manuscript">
       <div class="manuscript-meta">
@@ -1460,7 +2146,7 @@
       </div>
     </header>
 
-    <main>
+    <main id="main-content" tabindex="-1">
       {% block page_main %}
       <section id="alerts-banner" role="alert" aria-live="assertive" hx-get="/partials/alerts-banner" hx-trigger="load, every 5s" hx-swap="morph"></section>
 
@@ -1474,44 +2160,50 @@
         <p class="empty-state">loading escalations</p>
       </section>
 
-      <section id="feature-cards" class="section-primary" aria-live="polite" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="morph">
+      <section id="feature-cards" class="section-primary" aria-live="polite" aria-busy="false" hx-get="/partials/feature-cards" hx-trigger="load, every 5s" hx-swap="morph">
         <span class="sec-num"><strong>§ 03</strong>features</span>
         <p class="empty-state">loading feature ledger</p>
       </section>
 
       <div class="dash-grid">
         <div class="dash-grid-main">
-          <section id="activity-stream" aria-label="Recent activity" hx-get="/partials/activity-stream" hx-trigger="load, every 3s" hx-swap="morph">
+          <section id="activity-stream" aria-label="Recent activity" aria-live="polite" aria-busy="false" hx-get="/partials/activity-stream" hx-trigger="load, every 3s" hx-swap="morph">
             <span class="sec-num"><strong>§ 04</strong>recent<br>activity</span>
             <p class="empty-state">loading activity stream</p>
           </section>
         </div>
 
         <div class="dash-grid-side">
-          <section id="fleet-panel" aria-label="Agent fleet" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="morph">
+          <section id="fleet-panel" aria-label="Agent fleet" aria-live="polite" aria-busy="false" hx-get="/partials/fleet-panel" hx-trigger="load, every 5s" hx-swap="morph">
             <span class="sec-num"><strong>§ 05</strong>fleet</span>
             <p class="empty-state">loading roster</p>
           </section>
         </div>
       </div>
 
-      <section id="swim-lane" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="morph">
+      <section id="swim-lane" aria-label="Timing diagram" aria-live="polite" hx-get="/partials/swim-lane" hx-trigger="load, every 5s" hx-swap="morph">
         <span class="sec-num"><strong>§ 06</strong>timing</span>
         <h2>Timeline <span class="phase-tag">scrub · per-feature</span></h2>
         <p class="empty-state">loading timing diagram</p>
       </section>
 
-      <section id="round-history" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="morph">
-        <span class="sec-num"><strong>§ 07</strong>rounds</span>
+      <section id="metrics-baseline" aria-label="Phase baselines" aria-live="polite" hx-get="/partials/metrics" hx-trigger="load, every 30s" hx-swap="morph">
+        <span class="sec-num"><strong>§ 07</strong>metrics</span>
+        <h2>Phase <em>baselines</em></h2>
+        <p class="empty-state">loading baseline metrics</p>
+      </section>
+
+      <section id="round-history" aria-label="Round history" aria-live="polite" hx-get="/partials/round-history" hx-trigger="load, every 5s" hx-swap="morph">
+        <span class="sec-num"><strong>§ 08</strong>rounds</span>
         <p class="empty-state">loading round ledger</p>
       </section>
 
-      <section id="pipeline-panel">
+      <section id="pipeline-panel" aria-label="Pipeline queue">
         {% block pipeline_panel %}{% include "pipeline_panel.html" %}{% endblock %}
       </section>
 
-      <section id="backlog-panel" hx-get="/partials/backlog" hx-trigger="load, every 30s" hx-swap="morph">
-        <span class="sec-num"><strong>§ 09</strong>backlog</span>
+      <section id="backlog-panel" aria-label="Backlog ledger" aria-live="polite" hx-get="/partials/backlog" hx-trigger="load, every 30s" hx-swap="morph">
+        <span class="sec-num"><strong>§ 10</strong>backlog</span>
         <p class="empty-state">loading backlog ledger</p>
       </section>
 
@@ -1526,6 +2218,42 @@
   {% block body_extra %}{% endblock %}
   <script>
     setTimeout(function () { document.body.classList.add('page-loaded'); }, 500);
+
+    // Persist <details> open state across htmx morph-swaps and page reloads.
+    // The htmx swap rewrites the open attribute every 5s; without this, every
+    // expanded feature card snaps shut on refresh.
+    (function () {
+      var KEY = 'cortex-dashboard-open-details';
+      function getOpen() {
+        try { return new Set(JSON.parse(sessionStorage.getItem(KEY) || '[]')); }
+        catch (e) { return new Set(); }
+      }
+      function setOpen(set) {
+        try { sessionStorage.setItem(KEY, JSON.stringify(Array.from(set))); }
+        catch (e) { /* quota or private-mode: ignore */ }
+      }
+      function syncOne(d) {
+        var open = getOpen();
+        if (d.open) open.add(d.id); else open.delete(d.id);
+        setOpen(open);
+      }
+      function bindToggle(d) {
+        if (!d.id || d.__cortexBound) return;
+        d.__cortexBound = true;
+        d.addEventListener('toggle', function () { syncOne(d); });
+      }
+      function restoreAll() {
+        var open = getOpen();
+        document.querySelectorAll('details[id]').forEach(function (d) {
+          if (open.has(d.id) && !d.open) d.open = true;
+          bindToggle(d);
+        });
+      }
+      // Initial pass after first paint.
+      document.addEventListener('DOMContentLoaded', restoreAll);
+      // Re-apply after every htmx swap (idiomorph fires afterSettle).
+      document.body.addEventListener('htmx:afterSettle', restoreAll);
+    })();
   </script>
 </body>
 </html>

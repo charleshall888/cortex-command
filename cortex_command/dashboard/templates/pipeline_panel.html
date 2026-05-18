@@ -1,12 +1,12 @@
 {% from "patterns/badge.html" import badge %}
-<span class="sec-num"><strong>§ 08</strong>pipeline</span>
+<span class="sec-num"><strong>§ 09</strong>pipeline</span>
 <h2>Pipeline <em>queue</em> <span class="phase-tag">{% if state.pipeline %}{{ state.pipeline.phase }} · {{ state.pipeline.features | length }} features{% else %}idle{% endif %}</span></h2>
 {% if state.pipeline %}
 <div class="stream-line">
   <span>doc · pipeline-state.json</span>
   <span>mode · {{ state.pipeline.mode or '—' }}</span>
   <span>base · {{ state.pipeline.base_branch or '—' }}</span>
-  <span style="margin-left:auto;">created · {{ state.pipeline.created or '—' }}</span>
+  <span class="ml-auto">created · {{ state.pipeline.created or '—' }}</span>
 </div>
 {% if state.pipeline.overlap_analysis %}
 <p class="pipeline-overlap"><em>overlap·</em> {{ state.pipeline.overlap_analysis }}</p>
