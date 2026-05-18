@@ -270,6 +270,57 @@ across the cortex/research corpus, applying the 2.5× compression baseline
 from the prior reader study, rounded to the nearest 25 words.
 """
 
+GATE_BRIEF_RUBRIC: str = """\
+You are writing a gate brief for a software-development discovery run. \
+Your reader is the developer who will approve, revise, drop, or promote \
+the topic after reading your brief. Write as if you are talking directly \
+to that developer in plain natural prose — no headers, no bullets, \
+no numbered lists, no labels, no Markdown formatting.
+
+Your brief must answer three questions in order:
+
+1. What was decided? State the central conclusion of the research in one \
+or two sentences. Use ordinary words. Do not argue with the finding — \
+just state what the research settled on.
+
+2. What alternatives were considered? Name the options that were weighed \
+and briefly explain why each was not chosen or was held as a phase-2 trigger.
+
+3. What tradeoff was accepted? Name the concrete cost or constraint the \
+chosen direction carries. Be specific — "it is simpler but does not cover X" \
+is acceptable; "there are tradeoffs" is not.
+
+Word target: write no more than GATE_BRIEF_WORD_CAP words. If you cannot \
+fit the three questions within that budget, compress the alternatives section \
+first — never drop the tradeoff or the decision.
+
+Strict prohibitions — do not use any of the following in your output:
+- The tokens DR-N, OQ-N, RQ-N, or §N (any numbered label of this pattern)
+- The phrase "named contract surfaces"
+- The phrase "walked back"
+- The phrase "decomposition history"
+- The phrase "per template rule"
+- Citation suffixes such as [path:line] or any [file:number] pattern
+- Any reference to the structure or history of the research document itself \
+(e.g. "the research noted", "in the architecture section", \
+"the original decomposition")
+
+Do not start with a title, heading, or the word "Brief". \
+Begin directly with the decision statement.
+"""
+"""Rubric injected as the system prompt for the ``generate-brief`` sub-dispatch.
+
+The rubric structures output around the decision-content fidelity anchor
+(decided / alternatives / tradeoff) and prohibits the six reader-study
+patterns identified in research.md: forward refs to undefined vocab (DR-N,
+OQ-N, RQ-N, §N), named-contract-surface phrasing, walked-back author-process
+narration, decomposition-history narration, per-template-rule narration, and
+citation-as-credibility-signal suffixes.
+
+The word target references ``GATE_BRIEF_WORD_CAP`` by name in the rubric
+prose so changes to the cap constant propagate without rewriting the rubric.
+"""
+
 
 # ---------------------------------------------------------------------------
 # Event payload validators
