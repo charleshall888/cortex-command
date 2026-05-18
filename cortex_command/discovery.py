@@ -514,6 +514,61 @@ def emit_prescriptive_check(
 
 
 # ---------------------------------------------------------------------------
+# Brief validation helper (used by generator pre-persist and test suite)
+# ---------------------------------------------------------------------------
+
+def validate_brief(brief: str) -> tuple[bool, str]:
+    """Check a generated brief for decision-content anchors and word-cap tolerance.
+
+    Decision-content anchors (case-insensitive, any one of each pair sufficient):
+
+    - ``decided`` or ``decide``
+    - ``alternative`` or ``options``
+    - ``tradeoff`` or ``cost``
+
+    Word-cap tolerance: the brief must be at most ``GATE_BRIEF_WORD_CAP + 25``
+    words (Req 5a).
+
+    Args:
+        brief: The generated brief text to validate.
+
+    Returns:
+        A tuple ``(ok, reason)`` where ``ok`` is ``True`` when the brief passes
+        all checks, and ``reason`` is an empty string on success or a
+        human-readable failure description on failure.
+    """
+    if not brief or not brief.strip():
+        return False, "brief is empty"
+
+    lower = brief.lower()
+
+    # Decision anchor: decided / decide
+    if "decided" not in lower and "decide" not in lower:
+        return False, "brief is missing decision anchor ('decided' or 'decide')"
+
+    # Alternatives anchor: alternative / options
+    if "alternative" not in lower and "options" not in lower:
+        return False, (
+            "brief is missing alternatives anchor ('alternative' or 'options')"
+        )
+
+    # Tradeoff anchor: tradeoff / cost
+    if "tradeoff" not in lower and "cost" not in lower:
+        return False, "brief is missing tradeoff anchor ('tradeoff' or 'cost')"
+
+    # Word-cap tolerance
+    word_count = len(brief.split())
+    cap = GATE_BRIEF_WORD_CAP + 25
+    if word_count > cap:
+        return False, (
+            f"brief word count {word_count} exceeds cap {cap} "
+            f"(GATE_BRIEF_WORD_CAP={GATE_BRIEF_WORD_CAP} + 25 tolerance)"
+        )
+
+    return True, ""
+
+
+# ---------------------------------------------------------------------------
 # generate-brief: fresh-context sub-dispatch
 # ---------------------------------------------------------------------------
 
@@ -605,6 +660,13 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
     captures the brief, and prints it to stdout.  Emits one
     ``gate_brief_generated`` event via ``append_event``.
 
+    When ``--persist-to`` is supplied, the brief is written to that path after
+    stdout emission, but only if it passes ``validate_brief``.  On empty
+    output, generator failure, or validation failure, persistence is skipped,
+    the event carries ``status: "empty"`` or ``"validation_failed"``, and the
+    subcommand exits non-zero so the gate's caller can route to the dense
+    Architecture fallback.
+
     Returns 0 on success, non-zero on failure.
     """
     import asyncio
@@ -623,6 +685,11 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
         print(f"generate-brief: failed to read research.md: {e}", file=sys.stderr)
         return 2
 
+    # Resolve the optional persist-to path early so we can check writeability.
+    persist_to: Path | None = None
+    if getattr(args, "persist_to", None):
+        persist_to = Path(args.persist_to).resolve()
+
     # Resolve events log path (best-effort: topic derived from arg or path).
     topic = getattr(args, "topic", None) or _derive_topic_from_path(research_md_path)
     events_log_path: Path | None = None
@@ -634,53 +701,10 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
             except ValueError:
                 events_log_path = None
 
-    # Run the fresh-context dispatch.
-    try:
-        brief = asyncio.run(_run_brief_query(research_content))
-    except RuntimeError as e:
-        print(f"generate-brief: SDK not available: {e}", file=sys.stderr)
-        if events_log_path is not None:
-            try:
-                append_event(
-                    events_log_path,
-                    {
-                        "ts": _now_iso(),
-                        "event": "gate_brief_generated",
-                        "status": "validation_failed",
-                        "brief_word_count": 0,
-                        "patterns_detected_count": 0,
-                    },
-                )
-            except OSError:
-                pass
-        return 1
-    except Exception as e:
-        print(f"generate-brief: dispatch failed: {e}", file=sys.stderr)
-        if events_log_path is not None:
-            try:
-                append_event(
-                    events_log_path,
-                    {
-                        "ts": _now_iso(),
-                        "event": "gate_brief_generated",
-                        "status": "validation_failed",
-                        "brief_word_count": 0,
-                        "patterns_detected_count": 0,
-                    },
-                )
-            except OSError:
-                pass
-        return 1
-
-    # Determine status for the event.
-    brief_word_count = len(brief.split()) if brief else 0
-    if not brief:
-        status = "empty"
-    else:
-        status = "ok"
-
-    # Emit the event.
-    if events_log_path is not None:
+    def _emit_event(status: str, word_count: int) -> None:
+        """Best-effort event emission; non-fatal on OSError."""
+        if events_log_path is None:
+            return
         try:
             append_event(
                 events_log_path,
@@ -688,24 +712,67 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
                     "ts": _now_iso(),
                     "event": "gate_brief_generated",
                     "status": status,
-                    "brief_word_count": brief_word_count,
+                    "brief_word_count": word_count,
                     "patterns_detected_count": 0,
                 },
             )
-        except OSError as e:
-            # Event emission failure is non-fatal — the brief is the deliverable.
+        except OSError as exc:
             print(
-                f"generate-brief: warning: failed to emit event: {e}",
+                f"generate-brief: warning: failed to emit event: {exc}",
                 file=sys.stderr,
             )
 
+    # Run the fresh-context dispatch.
+    try:
+        brief = asyncio.run(_run_brief_query(research_content))
+    except RuntimeError as e:
+        print(f"generate-brief: SDK not available: {e}", file=sys.stderr)
+        _emit_event("validation_failed", 0)
+        return 1
+    except Exception as e:
+        print(f"generate-brief: dispatch failed: {e}", file=sys.stderr)
+        _emit_event("validation_failed", 0)
+        return 1
+
+    brief_word_count = len(brief.split()) if brief else 0
+
+    # Empty-brief check.
     if not brief:
         print("generate-brief: dispatch returned empty brief", file=sys.stderr)
+        _emit_event("empty", 0)
         return 1
+
+    # Decision-content anchor + word-cap validation.
+    valid, reason = validate_brief(brief)
+    if not valid:
+        print(
+            f"generate-brief: brief failed validation: {reason}",
+            file=sys.stderr,
+        )
+        _emit_event("validation_failed", brief_word_count)
+        return 1
+
+    # Brief is valid — emit success event and write to stdout.
+    _emit_event("ok", brief_word_count)
 
     sys.stdout.write(brief)
     if not brief.endswith("\n"):
         sys.stdout.write("\n")
+
+    # Persist to file if --persist-to was supplied.
+    if persist_to is not None:
+        try:
+            persist_to.parent.mkdir(parents=True, exist_ok=True)
+            persist_to.write_text(brief if brief.endswith("\n") else brief + "\n",
+                                  encoding="utf-8")
+        except OSError as e:
+            print(
+                f"generate-brief: warning: failed to persist brief to "
+                f"{persist_to}: {e}",
+                file=sys.stderr,
+            )
+            # Persistence failure does not invalidate the brief; exit 0.
+
     return 0
 
 
@@ -947,6 +1014,19 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Discovery topic slug for event log resolution. "
             "If omitted, derived from the research.md parent directory name."
+        ),
+    )
+    gb.add_argument(
+        "--persist-to",
+        default=None,
+        dest="persist_to",
+        metavar="PATH",
+        help=(
+            "When set, write the validated brief to this path after stdout "
+            "emission (e.g. cortex/research/<topic>/brief.md). "
+            "Persistence is skipped on empty output or validation failure; "
+            "the subcommand exits non-zero in those cases so the gate caller "
+            "can route to the dense-Architecture fallback."
         ),
     )
     gb.set_defaults(func=_cmd_generate_brief)
