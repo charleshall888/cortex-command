@@ -4,3 +4,5 @@
 {"ts": "2026-05-18T21:38:44Z", "event": "complexity_override", "feature": "resolve-cortex-interpreter-via-cli", "from": "simple", "to": "complex", "gate": "research_open_questions"}
 {"ts": "2026-05-18T22:12:21Z", "event": "spec_approved", "feature": "resolve-cortex-interpreter-via-cli"}
 {"ts": "2026-05-18T22:12:21Z", "event": "phase_transition", "feature": "resolve-cortex-interpreter-via-cli", "from": "specify", "to": "plan"}
+{"ts": "2026-05-18T22:27:58Z", "event": "plan_approved", "feature": "resolve-cortex-interpreter-via-cli"}
+{"ts": "2026-05-18T22:27:58Z", "event": "phase_transition", "feature": "resolve-cortex-interpreter-via-cli", "from": "plan", "to": "implement"}
