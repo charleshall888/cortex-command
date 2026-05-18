@@ -29,9 +29,17 @@
 <noscript>
   <style>
     /* JS-off fallback: the gatefold panel is normally display:none until JS opens it.
-       Without JS, show it always so readers still see the static (all-zones-lit, per
-       the .scrub-engaged rest-state rule) anatomy diagram. */
+       Without JS, show it always so readers still see the static anatomy diagram.
+       Also unpin the sticky scrub pane — without JS to translate the SVG, a sticky
+       overflow:hidden pane would clip the diagram to a single viewport. */
     .hood-panel { display: block !important; }
+    .hood-anatomy {
+      position: relative !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+    .hood-anatomy-svg { transform: none !important; }
+    .hood-readout, .hood-skip { display: none !important; }
     /* Spec-stream sections normally hide .real content until scroll-driven JS adds
        the .locked class. Without JS, swap placeholders for real prose so screen
        readers and crawlers see the actual content. */
@@ -2595,19 +2603,135 @@
        9.c  How a worker bows out · the three deferral severities
      Plus a lettered registry footnote so the schematic is self-keyed. */
 
-  /* Hood gatefold: the SVG fills the available width when the panel opens.
-     Below 900px the SVG hides and the .hood-manifest <ol> takes over (see
-     mobile block at the bottom). */
-  .hood-wrap { position: relative; }
-  .hood-anatomy { display: block; }
-  .hood-anatomy-svg { display: block; width: 100%; height: auto; max-width: 100%; }
-  .hood-zone { transition: opacity 280ms ease-out, filter 280ms ease-out; opacity: 0.18; filter: grayscale(0.8); }
-  .hood-zone.lit { opacity: 1; filter: none; }
-  /* Rest state — if scrubbing hasn't engaged (no JS or above-the-fold), all
-     zones render fully lit so the diagram still works as a complete poster. */
-  .hood-anatomy:not(.scrub-engaged) .hood-zone { opacity: 1; filter: none; }
-  /* When the integration rail lights, run its rail-pulse once instead of looping. */
-  .hood-zone[data-zone="integration"].lit .a-rail-pulse { animation-iteration-count: 1; }
+  /* Hood gatefold: a temporal scrub. .hood-wrap is the scroll-distance spacer
+     (sized via JS to match SVG natural height + viewport); .hood-anatomy is a
+     sticky 100vh pane that clips the SVG; the SVG is translateY'd through it
+     as scroll progresses. A readout in the top-right reports the current
+     simulated wall-clock time + stage. Zones tense-shift (future/now/past)
+     as they cross the playhead. Below 900px the SVG hides and .hood-manifest
+     takes over (see mobile block lower in this stylesheet). */
+  .hood-wrap { position: relative; height: auto; }
+  /* Default (no scrub-engaged): the anatomy is a static block; the SVG flows
+     inline at natural size — this is the static "plate" state used when the
+     user skips the animation, when prefers-reduced-motion is set, or when JS
+     is unavailable. */
+  .hood-anatomy { position: relative; display: block; }
+  /* Engaged state: the anatomy becomes a sticky 100vh pane that clips the
+     SVG; JS translates the SVG vertically within it as scroll progresses. */
+  .hood-anatomy.scrub-engaged {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .hood-anatomy-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+  }
+  .hood-anatomy.scrub-engaged .hood-anatomy-svg {
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+  .hood-zone {
+    transition: opacity 360ms ease-out, filter 360ms ease-out;
+    opacity: 1;
+    filter: none;
+  }
+  /* When the scrub is engaged, zones express tense relative to the playhead.
+     Rest state (no scrub-engaged, no JS, reduced-motion) renders all zones
+     fully lit so the diagram still works as a complete poster. */
+  .hood-anatomy.scrub-engaged .hood-zone[data-tense="future"] {
+    opacity: 0.16;
+    filter: grayscale(0.85);
+  }
+  .hood-anatomy.scrub-engaged .hood-zone[data-tense="past"] {
+    opacity: 0.82;
+    filter: none;
+  }
+  .hood-anatomy.scrub-engaged .hood-zone[data-tense="now"] {
+    opacity: 1;
+    filter: none;
+  }
+  /* Integration rail pulses once when it lights, then settles. */
+  .hood-zone[data-zone="integration"][data-tense="now"] .a-rail-pulse,
+  .hood-zone[data-zone="integration"][data-tense="past"] .a-rail-pulse {
+    animation-iteration-count: 1;
+  }
+
+  /* Overlay readout — current simulated wall-clock time + stage. Lives in
+     the top-right of the sticky pane, pinned above the SVG. */
+  .hood-readout {
+    position: absolute;
+    top: 22px;
+    right: 28px;
+    z-index: 3;
+    font-family: var(--mono);
+    text-align: right;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 320ms ease;
+  }
+  .hood-anatomy.scrub-engaged .hood-readout { opacity: 1; }
+  .hood-readout-time {
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    color: var(--ochre);
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .hood-readout-stage {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    line-height: 1.2;
+  }
+
+  /* Skip-animation affordance — lets readers bypass the scrub for the
+     fully-lit static plate. Persists via sessionStorage. */
+  .hood-skip {
+    position: absolute;
+    top: 22px;
+    left: 28px;
+    z-index: 3;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: none;
+    border: none;
+    border-bottom: 1px dashed var(--ink-faint);
+    padding: 0 0 2px 0;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 320ms ease, color 200ms ease, border-color 200ms ease;
+  }
+  .hood-anatomy.scrub-engaged .hood-skip { opacity: 1; }
+  .hood-skip:hover { color: var(--ochre); border-bottom-color: var(--ochre); }
+  .hood-skip:focus-visible {
+    outline: 2px solid var(--ochre);
+    outline-offset: 3px;
+  }
+
+  /* Reduced motion: even if scrub-engaged is somehow set, force the static
+     plate — no sticky pin, no transform, no chrome. */
+  @media (prefers-reduced-motion: reduce) {
+    .hood-anatomy.scrub-engaged {
+      position: relative;
+      height: auto;
+      overflow: visible;
+    }
+    .hood-anatomy.scrub-engaged .hood-anatomy-svg {
+      transform: none !important;
+      will-change: auto;
+    }
+    .hood-readout, .hood-skip { display: none; }
+  }
 
   .hood-anatomy-svg .a-rect { fill: var(--paper); stroke: var(--ink); stroke-width: 1.1; }
   .hood-anatomy-svg .a-rect.soft { stroke: color-mix(in srgb, var(--ink) 55%, transparent); }
@@ -3229,9 +3353,14 @@
      scroll pane so the section flows inline like a normal block. */
   .hood-manifest { display: none; }
   @media (max-width: 900px) {
-    .hood-wrap { height: auto; }
-    .hood-anatomy { position: relative; height: auto; display: block; }
+    .hood-wrap { height: auto !important; }
+    .hood-anatomy.scrub-engaged {
+      position: relative;
+      height: auto;
+      overflow: visible;
+    }
     .hood-anatomy-svg { display: none; }
+    .hood-readout, .hood-skip { display: none; }
     .hood-manifest {
       display: flex; flex-direction: column;
       gap: 0;
@@ -4507,6 +4636,11 @@
                — so it reads as the SYSTEM, not as one specific night. -->
           <div class="hood-wrap" id="hood-wrap">
           <div class="hood-anatomy">
+            <button class="hood-skip" type="button" id="hood-skip" aria-label="Skip animation and show the static figure">skip animation →</button>
+            <div class="hood-readout" aria-hidden="true">
+              <div class="hood-readout-time">22:00</div>
+              <div class="hood-readout-stage">dusk · refine + plan</div>
+            </div>
             <svg class="hood-anatomy-svg" viewBox="0 0 1280 1870" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomy of an overnight session, flowing top to bottom: dusk (refine, plan, launch), night (runner: orchestrator first fans out parallel planning agents, then runs rounds; rounds feed into an integration branch), and dawn (morning-report.md, session PR, /morning-review).">
 
               <!-- ═══════════════════ DUSK ROW ═══════════════════
@@ -5906,11 +6040,63 @@
   buildGear(document.getElementById('hood-gear-a'), 12, 15, 3.5, 4.5);
   buildGear(document.getElementById('hood-gear-b'), 16, 19, 4,   6);
 
-  // ── Toggle open/close + auto-open on first intersection ──
+  // ── Temporal scrub: pin the SVG in a sticky 100vh pane and translate it
+  //    vertically as scroll progresses, while a readout reports the
+  //    simulated wall-clock time + stage and zones tense-shift in place.
   const hoodCta = document.getElementById('hood-cta');
   const hoodPanel = document.getElementById('hood-panel');
   const hoodWrap = document.getElementById('hood-wrap');
   const hoodAnatomy = document.querySelector('.hood-anatomy');
+  const hoodSvg = document.querySelector('.hood-anatomy-svg');
+  const hoodReadoutTime = document.querySelector('.hood-readout-time');
+  const hoodReadoutStage = document.querySelector('.hood-readout-stage');
+  const hoodSkipBtn = document.getElementById('hood-skip');
+
+  // Each stage marks the moment its zone becomes "now". Progress thresholds
+  // match the legacy reveal so the scrub cadence is unchanged; the time and
+  // label fields mirror the timestamps already drawn into the SVG.
+  const HOOD_STAGES = [
+    { id: 'dusk',            p: 0.00, time: 'before 22:00',  label: 'dusk · refine + plan' },
+    { id: 'round-1-plan',    p: 0.10, time: '22:00 → 22:06', label: 'orchestrator · fan out' },
+    { id: 'round-1',         p: 0.18, time: '22:06 → 00:15', label: 'round 1 · leads work' },
+    { id: 'round-2-plan',    p: 0.32, time: '00:25 → 00:30', label: 'round 2 · planning' },
+    { id: 'round-2',         p: 0.40, time: '00:30 → 02:15', label: 'round 2 · leads work' },
+    { id: 'round-3-skipped', p: 0.55, time: '02:15',         label: 'round 3 · deferred' },
+    { id: 'integration',     p: 0.62, time: '02:15 → 04:00', label: 'integration · collecting' },
+    { id: 'test-gate',       p: 0.78, time: '05:00 → 05:30', label: 'test gate · final ci' },
+    { id: 'dawn',            p: 0.88, time: '05:42',         label: 'dawn · morning report' },
+  ];
+
+  // Honor sessionStorage and prefers-reduced-motion: either disables the
+  // sticky scrub and renders the diagram as a static, fully-lit plate.
+  let hoodScrubDisabled = false;
+  try {
+    if (sessionStorage.getItem('hood-scrub-disabled') === '1') hoodScrubDisabled = true;
+  } catch (e) { /* sessionStorage may be unavailable */ }
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    hoodScrubDisabled = true;
+  }
+
+  let hoodSvgNaturalH = 0;
+  function measureHoodSvg() {
+    if (!hoodSvg) return;
+    const t = hoodSvg.style.transform;
+    hoodSvg.style.transform = '';
+    hoodSvgNaturalH = hoodSvg.getBoundingClientRect().height;
+    hoodSvg.style.transform = t;
+  }
+  function sizeHoodWrap() {
+    if (!hoodWrap) return;
+    if (hoodScrubDisabled || !hoodAnatomy || !hoodAnatomy.classList.contains('scrub-engaged')) {
+      hoodWrap.style.height = '';
+      return;
+    }
+    if (hoodSvgNaturalH <= 0) measureHoodSvg();
+    // Sticky pins for (wrap.height - innerHeight) of scroll. We want that
+    // pinned distance to equal SVG natural height so the SVG can translate
+    // its full length while the pane stays in view.
+    hoodWrap.style.height = (hoodSvgNaturalH + window.innerHeight) + 'px';
+  }
 
   function openHood() {
     if (!hoodPanel || !hoodCta) return;
@@ -5918,6 +6104,13 @@
     hoodPanel.setAttribute('aria-hidden', 'false');
     hoodCta.setAttribute('aria-expanded', 'true');
     hoodCta.classList.add('open');
+    if (!hoodScrubDisabled && hoodAnatomy) hoodAnatomy.classList.add('scrub-engaged');
+    // Defer measurement until layout has settled.
+    requestAnimationFrame(function () {
+      measureHoodSvg();
+      sizeHoodWrap();
+      applyHood(hoodProgress());
+    });
   }
   function closeHood() {
     if (!hoodPanel || !hoodCta) return;
@@ -5925,28 +6118,30 @@
     hoodPanel.setAttribute('aria-hidden', 'true');
     hoodCta.setAttribute('aria-expanded', 'false');
     hoodCta.classList.remove('open');
+    if (hoodAnatomy) hoodAnatomy.classList.remove('scrub-engaged');
+    if (hoodSvg) hoodSvg.style.transform = '';
+    if (hoodWrap) hoodWrap.style.height = '';
   }
 
   if (hoodCta && hoodPanel) {
-    hoodCta.addEventListener('click', function(){
+    hoodCta.addEventListener('click', function () {
       const isOpen = hoodPanel.getAttribute('data-open') === '1';
       if (isOpen) closeHood();
       else openHood();
     });
   }
 
-  // ── Progressive reveal · zone thresholds along the wrap's scroll length ──
-  const HOOD_THRESHOLDS = {
-    'dusk':              0.00,
-    'round-1-plan':      0.10,
-    'round-1':           0.18,
-    'round-2-plan':      0.32,
-    'round-2':           0.40,
-    'round-3-skipped':   0.55,
-    'integration':       0.62,
-    'test-gate':         0.78,
-    'dawn':              0.88,
-  };
+  if (hoodSkipBtn) {
+    hoodSkipBtn.addEventListener('click', function () {
+      hoodScrubDisabled = true;
+      try { sessionStorage.setItem('hood-scrub-disabled', '1'); } catch (e) {}
+      if (hoodAnatomy) hoodAnatomy.classList.remove('scrub-engaged');
+      if (hoodSvg) hoodSvg.style.transform = '';
+      if (hoodWrap) hoodWrap.style.height = '';
+      const plate = document.querySelector('.hood-plate');
+      if (plate) plate.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 
   function hoodProgress() {
     if (!hoodWrap) return 0;
@@ -5956,32 +6151,74 @@
     const scrolled = Math.max(0, -r.top);
     return Math.max(0, Math.min(1, scrolled / total));
   }
+
   function applyHood(p) {
-    // Monotonic — zones only ever gain .lit. Scroll-back doesn't dim.
-    Object.keys(HOOD_THRESHOLDS).forEach((zone) => {
-      if (p >= HOOD_THRESHOLDS[zone]) {
-        document.querySelectorAll('.hood-zone[data-zone="' + zone + '"]').forEach((el) => {
-          el.classList.add('lit');
-        });
+    if (!hoodSvg || hoodScrubDisabled) return;
+    if (!hoodAnatomy || !hoodAnatomy.classList.contains('scrub-engaged')) return;
+    if (hoodSvgNaturalH <= 0) measureHoodSvg();
+
+    // Pan the SVG so its top aligns with the pane top at p=0 and its bottom
+    // aligns with the pane bottom at p=1.
+    const panDist = Math.max(0, hoodSvgNaturalH - window.innerHeight);
+    const ty = -p * panDist;
+    hoodSvg.style.transform = 'translate3d(0,' + ty.toFixed(1) + 'px,0)';
+
+    // Find current stage (the latest one whose threshold we've passed).
+    let currentIdx = 0;
+    for (let i = 0; i < HOOD_STAGES.length; i++) {
+      if (p >= HOOD_STAGES[i].p) currentIdx = i;
+    }
+    const current = HOOD_STAGES[currentIdx];
+
+    if (hoodReadoutTime && hoodReadoutTime.textContent !== current.time) {
+      hoodReadoutTime.textContent = current.time;
+    }
+    if (hoodReadoutStage && hoodReadoutStage.textContent !== current.label) {
+      hoodReadoutStage.textContent = current.label;
+    }
+
+    // Tense-shift zones: stages before current → past, current → now, after → future.
+    document.querySelectorAll('.hood-zone').forEach(function (el) {
+      const zone = el.getAttribute('data-zone');
+      let stageIdx = -1;
+      for (let i = 0; i < HOOD_STAGES.length; i++) {
+        if (HOOD_STAGES[i].id === zone) { stageIdx = i; break; }
       }
+      if (stageIdx < 0) return;
+      let tense;
+      if (stageIdx < currentIdx) tense = 'past';
+      else if (stageIdx === currentIdx) tense = 'now';
+      else tense = 'future';
+      if (el.getAttribute('data-tense') !== tense) el.setAttribute('data-tense', tense);
     });
   }
+
   // Gate per-frame work on visibility — skips when the wrap is off-screen.
   let _hoodVisible = false;
   if ('IntersectionObserver' in window && hoodWrap) {
-    const _hoodIO = new IntersectionObserver((entries) => {
-      entries.forEach((e) => { _hoodVisible = e.isIntersecting; });
+    const _hoodIO = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { _hoodVisible = e.isIntersecting; });
     });
     _hoodIO.observe(hoodWrap);
   }
   // Exposed to the main IIFE's frame() so we share a single rAF loop.
-  // Accepts an optional progress override so the main script can paint a
-  // poster frame for reduced-motion users; otherwise we no-op when off-screen.
   window.__applyHood = function (p) {
     if (p !== undefined) { applyHood(p); return; }
     if (!_hoodVisible) return;
     applyHood(hoodProgress());
   };
+
+  // Re-measure on resize — SVG width changes with viewport, so does its
+  // rendered height, so does the required wrap height.
+  let _hoodResizeT;
+  window.addEventListener('resize', function () {
+    clearTimeout(_hoodResizeT);
+    _hoodResizeT = setTimeout(function () {
+      measureHoodSvg();
+      sizeHoodWrap();
+      if (_hoodVisible) applyHood(hoodProgress());
+    }, 80);
+  });
 
 })();
 </script>
