@@ -6,6 +6,8 @@
 
 The dashboard is a real-time FastAPI web app that monitors overnight autonomous development sessions. It reads the same files the overnight runner writes and displays live state in a browser via HTMX polling. It is optional but recommended for unattended sessions — open it on a second monitor before you go to bed.
 
+The dashboard binds to `127.0.0.1` (loopback only) when launched via `cortex dashboard`. The contributor recipe `just dashboard` binds to `0.0.0.0` for LAN access during development.
+
 ---
 
 ## Launching the Dashboard
@@ -29,35 +31,51 @@ Contributors with a clone of cortex-command can alternatively run `just dashboar
 
 ## What It Shows
 
-The dashboard is divided into seven panels.
+The dashboard is divided into ten panels plus an Alerts Banner.
+
+### Alerts Banner
+
+Circuit breaker status and per-feature alert indicators with severity-coded colors. A tripped circuit breaker means the runner has paused new dispatches due to repeated failures.
 
 ### 1. Session Panel
 
 Live indicator, session ID, phase status, current round, elapsed time, progress bar, and feature counts broken down by status (merged / running / pending / paused / failed / deferred). When no session is active, the panel falls back to showing the last completed session.
 
-### 2. Feature Cards
+### 2. Open Questions / Escalations
+
+Surfaces worker-to-orchestrator escalations for the active session — open questions, deferred work, and blocking items that require human review. Reads from the per-session `escalations.jsonl` file.
+
+### 3. Feature Cards
 
 One card per feature in the session. Each card shows the feature title, status badge, model tier, and complexity. Running features display the current phase and a task progress bar. Failed features show the error message and recovery attempt count. Alert badges surface deferred questions, stalls, rework, and failures at a glance.
 
-### 3. Agent Fleet Panel
+### 4. Recent Activity Stream
+
+Tails the most recent entries from `overnight-events.log`, surfacing the live event stream so operators can see what the runner is doing right now without scanning the full log.
+
+### 5. Agent Fleet Panel
 
 Count of active agents and, for each agent: its feature slug, current phase, duration, and last activity timestamp. Useful for confirming that agents are making progress and not stalled.
-
-### 4. Alerts Banner
-
-Circuit breaker status and per-feature alert indicators with severity-coded colors. A tripped circuit breaker means the runner has paused new dispatches due to repeated failures.
-
-### 5. Round History Table
-
-Chronological list of completed rounds with feature counts and per-round durations. Shows how the session has progressed over time.
 
 ### 6. Swim-Lane Timeline
 
 Horizontal timeline of feature execution, color-coded by phase (spec, plan, implement, review), with time ticks along the axis. Gives a visual overview of how features overlapped and where time was spent.
 
-### 7. Pipeline Panel
+### 7. Metrics Baseline
+
+API cost and token-usage rollups read from `metrics.json`. Provides at-a-glance spend tracking for the active session and a baseline for comparing against prior runs.
+
+### 8. Round History Table
+
+Chronological list of completed rounds with feature counts and per-round durations. Shows how the session has progressed over time.
+
+### 9. Pipeline Panel
 
 Monitors active interactive pipeline execution (separate from overnight). Visible only when an interactive pipeline session is running alongside the overnight session.
+
+### 10. Backlog
+
+Backlog status counts and ready-queue summary, sourced from `cortex/backlog/`. Provides context on what's queued for the next session without leaving the dashboard.
 
 ---
 
@@ -88,9 +106,11 @@ The dashboard uses two polling layers:
 | Backend (server-side) | `overnight-state.json` and per-feature files | every 2 s |
 | Backend (server-side) | `overnight-events.log` (NDJSON tail) | every 1 s |
 | Backend (server-side) | Backlog counts | every 30 s |
-| HTMX (browser-side) | All dashboard panels | every 5 s |
+| HTMX (browser-side) | Alerts Banner, Session, Feature Cards, Agent Fleet, Swim-Lane, Round History, Escalations | every 5 s |
+| HTMX (browser-side) | Recent Activity Stream | every 3 s |
+| HTMX (browser-side) | Metrics Baseline, Backlog | every 30 s |
 
-Total state-change latency is up to approximately 7 seconds (2 s backend read + 5 s HTMX refresh).
+Total state-change latency is up to approximately 7 seconds (2 s backend read + 5 s HTMX refresh) for panels on the 5 s HTMX interval. For 30 s-polling panels (Metrics Baseline, Backlog), end-to-end latency is up to approximately 32 seconds.
 
 ---
 
@@ -136,6 +156,6 @@ The MCP server is pinned to a specific version in `.mcp.json` to avoid regressio
 
 ## Known Limitations
 
-- No authentication layer — the server binds to `0.0.0.0` (all interfaces) and is accessible to any host on the local network. Do not expose the port beyond a trusted local or internal network. (The `127.0.0.1` address visible in `app.py` is a pre-launch port-availability probe, not the listen address.)
+- No authentication layer — when launched via `cortex dashboard`, the server binds to `127.0.0.1` (loopback only), so the dashboard is reachable only from the local machine. The contributor recipe `just dashboard` binds to `0.0.0.0` (all interfaces) for LAN access during development; do not expose that port beyond a trusted local network.
 - Session history is read-only — the dashboard cannot trigger retries or modify session state.
 - Visual layout may vary between active and idle states; some panels (Agent Fleet, Pipeline) are hidden when there is no active session.

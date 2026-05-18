@@ -220,12 +220,19 @@ After the first `uv tool install`, run `uv tool update-shell` once if `cortex` i
 Once installed, the `cortex` CLI exposes these subcommands:
 
 ```
-cortex overnight start     # Run overnight in detached tmux
-cortex overnight status    # Print session status (use --format json for machine-readable)
-cortex overnight cancel    # Cancel the active session
-cortex overnight logs      # Read session logs
-cortex init                # Scaffold a repo for cortex (run once per project)
-cortex --print-root        # Verify install (prints {version, root, package_root, ...})
+cortex overnight start           # Run overnight as a detached Python process (no tmux)
+cortex overnight status          # Print session status (use --format json for machine-readable)
+cortex overnight cancel          # Cancel the active session
+cortex overnight logs            # Read session logs
+cortex overnight list-sessions   # List recent overnight session directories
+cortex overnight schedule        # Schedule a future overnight run
+cortex auth bootstrap            # One-shot OAuth token bootstrap (Pro/Max subscription)
+cortex auth status               # Show resolved auth vector and shadowed alternatives
+cortex mcp-server                # DEPRECATED — stub retained for backward compatibility (see release-process.md)
+cortex dashboard                 # Launch the web dashboard for monitoring sessions
+cortex upgrade                   # Reinstall the cortex CLI at the latest published tag
+cortex init                      # Scaffold a repo for cortex (run once per project)
+cortex --print-root              # Verify install (prints {version, root, package_root, ...})
 ```
 
 Run `cortex --help` to see all subcommands.
@@ -283,8 +290,11 @@ If you work on both personal and work repos, configure both:
 
 The runner uses `apiKeyHelper` when present (work), and falls back to the OAuth token file when not (personal). See [docs/overnight-operations.md](overnight-operations.md#auth-resolution-apikeyhelper-and-env-var-fallback-order) for the full precedence chain.
 
+---
 
+## Optional Claude Code settings
 
+The following entries in `~/.claude/settings.local.json` are optional but recommended for cortex-command users.
 
 **`statusLine.command`** (optional, requires a clone)
 

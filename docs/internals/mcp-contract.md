@@ -21,7 +21,7 @@ The two fields evolve on independent cadences: a package patch release that adds
 
 ### Forever-public API
 
-The shape of `cortex --print-root` is forever-public-API: append-only after publication; existing fields never change semantics or types without a major bump. Concretely, the five fields named in the [JSON payload reference](#json-payload-reference) below — `version`, `schema_version`, `root`, `remote_url`, `head_sha` — are stable forever in their current types and meanings. New fields may be added under a minor bump; existing fields may not be renamed, retyped, or repurposed without a major bump.
+The shape of `cortex --print-root` is forever-public-API: append-only after publication; existing fields never change semantics or types without a major bump. Concretely, the six fields named in the [JSON payload reference](#json-payload-reference) below — `version`, `schema_version`, `root`, `package_root`, `remote_url`, `head_sha` — are stable forever in their current types and meanings. New fields may be added under a minor bump; existing fields may not be renamed, retyped, or repurposed without a major bump.
 
 This stability commitment exists because `cortex --print-root` is the bootstrap call: it is what the MCP uses to discover where the CLI lives, what remote it tracks, and what HEAD it is at. The MCP cannot version-negotiate before reading this payload, so the payload itself must not move underneath it.
 
@@ -187,9 +187,35 @@ Source: `cortex_command/overnight/cli_handler.py::handle_cancel` (around lines 3
 
 `stale_lock_cleared` indicates self-heal: the recorded PID was not actually alive, so the runner-pid and active-session pointers were cleared. Surfaces as "stale lock cleared — session was not running" in the message.
 
-### `cortex overnight list-sessions`
+### `cortex overnight list-sessions --format json`
 
-Not currently a CLI verb. The `overnight_list_sessions` MCP tool reads the sessions directory directly from the plugin (no `cortex_command` imports). When `overnight list-sessions --format json` is added to the CLI, its payload shape will be documented here under the same schema-versioning rules as the other verbs.
+Source: `cortex_command/overnight/cli_handler.py::handle_list_sessions` (around lines 1318–1405).
+
+Globs `cortex/lifecycle/sessions/*/overnight-state.json`, partitions results into `active` (phases `planning` / `executing` / `paused`) and `recent` (phase `complete`), and applies optional `--status` / `--since` / `--limit` filters.
+
+**Success (exit 0):**
+
+```json
+{
+  "active": [
+    {"session_id": "<id>", "phase": "executing", "updated_at": "<ISO 8601>", ...}
+  ],
+  "recent": [
+    {"session_id": "<id>", "phase": "complete", "updated_at": "<ISO 8601>", ...}
+  ],
+  "total_count": 12,
+  "next_cursor": null
+}
+```
+
+Field semantics:
+
+- `active` — array of session-summary objects whose `phase` is in the active set; each entry is the output of `_summarize_state(data)` from the on-disk `overnight-state.json`.
+- `recent` — array of completed-session summaries, truncated to `--limit` (default 10).
+- `total_count` — integer, the total session count before the `--limit` truncation (active + recent before slicing). Useful for "are there more than I'm seeing?" UX.
+- `next_cursor` — reserved for future pagination; currently always `null`. Pagination is supplied via `--limit` rather than cursor in v1.
+
+The MCP delegate `_delegate_overnight_list_sessions` in `plugins/cortex-overnight/server.py` subprocess-calls this verb (no direct filesystem access from the plugin) and returns the parsed payload to the caller.
 
 ## Threat model
 

@@ -4,7 +4,7 @@ Scoring and gating rules for the pr-review synthesizer. Apply every finding agai
 
 ## Philosophy
 
-- Findings are grounded by evidence or they are not findings — there is no "observation" category. If a claim cannot cite a concrete diff hunk, file path, or behavior trace, drop it. Affirmed by the `/ultrareview` verification philosophy: speculation without grounding is noise.
+- Findings are grounded by evidence or they are not findings — there is no "observation" category. If a claim cannot cite a concrete diff hunk, file path, or behavior trace, drop it. This aligns with the `/cortex-core:critical-review` verification philosophy: speculation without grounding is noise.
 
 ## Axes
 
@@ -82,7 +82,7 @@ Note: `matched_side` is a rubric-input diagnostic consumed by the Stage 4 synthe
 
 ## Stability test protocol
 
-The rewrite ships only if it produces consistent labels and Verdicts across repeated runs on a fixed PR set. This section defines the methodology; calibration run data itself lives in `calibration-log.md`.
+The rewrite ships only if it produces consistent labels and Verdicts across repeated runs on a fixed PR set. This section defines the methodology. Calibration data not yet recorded; future runs may collect baseline stability metrics.
 
 ### PR selection criteria
 
@@ -113,5 +113,5 @@ Run the synthesizer three times per PR across the three selected PRs, for 9 tota
 If the first 9-run calibration lands in the ambiguous band, iterate on the rubric (tighten thresholds, clarify axes, adjust caps) and re-run the full 9-run protocol. Allow up to 3 iterations total. Exit conditions:
 
 - **Ship** on any iteration that clears the ship threshold.
-- **Ship-with-warning** after 3 iterations if α ≥ 0.5 AND majority-Verdict-stable (Verdict exact-match = 3/3 on ≥ 2/3 PRs). Record the warning in `calibration-log.md` with the residual instability noted.
+- **Ship-with-warning** after 3 iterations if α ≥ 0.5 AND majority-Verdict-stable (Verdict exact-match = 3/3 on ≥ 2/3 PRs). Calibration data not yet recorded; future runs may collect baseline stability metrics, and any ship-with-warning should be noted alongside that record.
 - **Block** after 3 iterations if neither ship nor ship-with-warning conditions hold. Do not ship; return the rewrite to spec.

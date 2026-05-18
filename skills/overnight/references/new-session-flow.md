@@ -182,10 +182,10 @@ On user approval, execute these steps in order:
     **Run now (option 1)**: Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and time limit):
 
     ```
-    overnight-start $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json 6h
+    cortex overnight start --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json --time-limit 21600
     ```
 
-    Args are positional — do not use `--flag=value` syntax. `overnight-start` creates a detached tmux session named `overnight-runner` and returns immediately.
+    Args are flagged — pass `--state <absolute path>` and `--time-limit <seconds>` (e.g., `21600` for 6 hours). `cortex overnight start` launches the runner detached and returns immediately.
 
     **Schedule for specific time (option 2)**: Prompt the user for a target time. Accept either `HH:MM` (24-hour local time) or `YYYY-MM-DDTHH:MM` (ISO 8601 date + time with `T` separator). Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` and target time):
 
@@ -196,7 +196,7 @@ On user approval, execute these steps in order:
     `cortex overnight schedule` registers a one-shot LaunchAgent (no tmux) that fires the runner at the target time and returns immediately. The Bash tool call MUST set `dangerouslyDisableSandbox: true` so the harness can reach `launchctl`.
 
 8. **Inform the user**: After the Bash tool returns successfully, report the outcome:
-    - **Run now**: "Overnight session launched. Attach with `tmux attach -t overnight-runner` to monitor progress."
-    - **Scheduled**: Report the scheduled time and tmux session name from the command output. The user can attach before that time to monitor the countdown.
+    - **Run now**: "Overnight session launched. Inspect progress with `cortex overnight status` and `cortex overnight logs <session-id>`."
+    - **Scheduled**: Report the scheduled time and session ID from the command output. Use `cortex overnight status` to inspect the registered schedule before fire time.
 
     The runner operates autonomously and tracks progress in the state file and event log. Resume at any time with `/overnight resume`.

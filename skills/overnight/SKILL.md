@@ -75,7 +75,7 @@ Operational sequence — execute in order. Full per-step detail (error handling,
    - 7.5 `log_event(event='session_start', round=1, ...)` from `cortex_command.overnight.events` (lowercase event names; param is `event`, not `event_type`).
    - 7.6 Launch dashboard if not running; poll `localhost:8080/health`. Dashboard is optional.
    - 7.7 Ask run-now vs. schedule-for-later. Run via Bash with `dangerouslyDisableSandbox: true`:
-     - Run now: `overnight-start $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json 6h`
+     - Run now: `cortex overnight start --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json --time-limit 21600`
      - Schedule: `cortex overnight schedule <target-time> --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json`
    - 7.8 Inform the user; the runner takes over from here.
 
@@ -95,7 +95,7 @@ Operational sequence — full per-step detail in `${CLAUDE_SKILL_DIR}/references
    | `complete` | Direct user to `cortex/lifecycle/morning-report.md` |
    | `planning` | Should not occur. Offer to restart. |
 
-5. **Act on user choice** — resume runs the same `overnight-start` command as 7.7 above (Bash with `dangerouslyDisableSandbox: true`).
+5. **Act on user choice** — resume runs the same `cortex overnight start` command as 7.7 above (Bash with `dangerouslyDisableSandbox: true`).
 
 ## Status Flow (`/overnight status`)
 

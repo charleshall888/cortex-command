@@ -6,7 +6,7 @@ Cortex Command is an AI workflow framework for Claude Code built on a single ins
 
 📖 **[Read the overview →](https://charleshall888.github.io/cortex-command/)**
 
-The front half of the lifecycle is human-driven — discovery maps the problem space, refine clarifies scope, and lifecycle drives features through research, spec, plan, implement, and review. Once scope is genuinely clear, run `/cortex-core:lifecycle` for interactive development or queue refined items for `/overnight` and wake up to a morning report with PRs ready to review. For a visual of the full pipeline, see [docs/agentic-layer.md](docs/agentic-layer.md#diagram-a--main-workflow-flow).
+The front half of the lifecycle is human-driven — discovery maps the problem space, refine clarifies scope, and lifecycle drives features through research, spec, plan, implement, and review. Once scope is genuinely clear, run `/cortex-core:lifecycle` for interactive development or queue refined items for `/cortex-overnight:overnight` and wake up to a morning report with PRs ready to review. For a visual of the full pipeline, see [docs/agentic-layer.md](docs/agentic-layer.md#diagram-a--main-workflow-flow).
 
 ## Prerequisites
 
@@ -25,14 +25,14 @@ claude /plugin install cortex-core@cortex-command        # Base skills + hooks
 claude /plugin install cortex-overnight@cortex-command   # OPTIONAL - autonomous overnight runs
 
 # 3. OPTIONAL - In each project where you want cortex active.
-# Validation rules, settings, demo-commands, xetc...
+# Validation rules, settings, demo-commands, etc.
 cd <your-project>
 cortex init
 ```
 
 - **Recommended:** turn on Auto-Update Marketplace Plugins so the cortex CLI stays in sync with the cortex-overnight plugin. See [docs/internals/auto-update.md](docs/internals/auto-update.md) for the two-layer architecture, component map, and release ritual.
 
-Full Setup Guide[Setup guide](docs/setup.md).
+Full setup guide: [docs/setup.md](docs/setup.md).
 
 ### Plugin roster
 
@@ -41,7 +41,7 @@ Full Setup Guide[Setup guide](docs/setup.md).
 | cortex-core | REQUIRED - Interactive Claude Code skills, hooks, and CLI utilities from cortex-command for day-to-day development workflows |
 | cortex-overnight | Integrates the cortex MCP server and overnight skill runner hooks to drive autonomous lifecycle execution |
 | android-dev-extras | Android development skills vendored from Google's Android Skills (Apache 2.0): R8 analyzer, edge-to-edge migration, and Android CLI orchestration |
-| cortex-dev-extras | Optional assortment of additional skills |
+| cortex-dev-extras | Devil's advocate inline challenge for solo deliberation |
 | cortex-pr-review | Multi-agent GitHub pull request review pipeline for Claude Code. |
 | cortex-ui-extras | EXPERIMENTAL - UI design skills for Claude Code interactive workflows |
 

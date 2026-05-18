@@ -31,6 +31,14 @@ Project and area-level requirements documents: vision statements, priorities, an
 constraints. Read by the harness during Clarify and Research phases to align feature work
 with stated goals.
 
+## adr/
+
+Architecture Decision Records — durable records of significant architectural
+choices made during the project's evolution. Each ADR captures the context,
+the decision, and the consequences of the choice in a stable, append-only
+format. See `cortex/adr/README.md` for the ADR policy, numbering scheme, and
+authoring template.
+
 ## retros/
 
 Retrospective notes written after feature completion or overnight run post-mortems. Not

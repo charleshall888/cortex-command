@@ -17,7 +17,7 @@ Present the current session state to the user:
   Session paused — reason: {paused_reason}
   ```
   With contextual guidance based on the value:
-  - `budget_exhausted` → "Resume when Anthropic budget resets, then run: `overnight-start ...`"
+  - `budget_exhausted` → "Resume when Anthropic budget resets, then run: `cortex overnight start --state <path> --time-limit <seconds>`"
   - `stall_timeout` → "Session stalled; investigate logs before resuming."
   - `signal` → "Session received a kill signal; resume when ready."
   - Unknown value → display the reason string with no additional guidance.
@@ -49,10 +49,10 @@ Based on the session phase, ask the user what to do:
 - **Resume execution**: Execute via Bash tool with `dangerouslyDisableSandbox: true` (substitute actual `{session_id}` from the loaded state):
 
   ```
-  overnight-start $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json 6h
+  cortex overnight start --state $CORTEX_COMMAND_ROOT/cortex/lifecycle/sessions/{session_id}/overnight-state.json --time-limit 21600
   ```
 
-  The runner resumes from where it left off, skipping already-merged features. After the Bash tool returns, report: "Overnight session resumed. Attach with `tmux attach -t overnight-runner` to monitor progress."
+  The runner resumes from where it left off, skipping already-merged features. After the Bash tool returns, report: "Overnight session resumed. Inspect progress with `cortex overnight status` and `cortex overnight logs <session-id>`."
 
 - **View morning report**: Direct the user to read `cortex/lifecycle/morning-report.md` for a summary of what was accomplished, what failed, and any deferred questions.
 

@@ -5,8 +5,8 @@
 **For:** Users with features ready to run in autonomous overnight sessions.  **Assumes:** Familiarity with the lifecycle skill and at least one backlog item with `status: refined`.
 
 The overnight system runs fully autonomous development sessions while you sleep. You
-select features from the backlog, approve a session plan, launch the runner in a
-detached tmux session, and go to bed. In the morning, `/morning-review` walks the
+select features from the backlog, approve a session plan, launch the runner as a
+detached Python process, and go to bed. In the morning, `/morning-review` walks the
 results, closes completed features, and surfaces any decisions that needed a human.
 
 This document covers how it all works — the planning step you do before bed, the
@@ -45,7 +45,7 @@ The overnight runner can be launched from any repo — not just cortex-command.
 
 ### Setup: cortex/lifecycle.config.md
 
-Before running overnight in a new repo, create a `cortex/lifecycle.config.md` at the repo root. A template lives at `skills/lifecycle/assets/cortex/lifecycle.config.md` in cortex-command:
+Before running overnight in a new repo, create a `cortex/lifecycle.config.md` at the repo root. A template lives at `skills/lifecycle/assets/lifecycle.config.md` in cortex-command:
 
 ```yaml
 ---
@@ -239,13 +239,12 @@ session end. `/morning-review` surfaces its URL so you can review and merge.
 
 | Command | What it does |
 |---------|-------------|
-| `cortex overnight start` | Launch runner in a detached tmux session (recommended) |
+| `cortex overnight start` | Launch runner as a detached Python process (no tmux) |
 | `cortex overnight start --max-rounds 5` | Launch with round cap |
 | `just overnight-run` | Launch runner in foreground (useful for debugging) |
 | `cortex overnight status` | Print session status (`--format json` for machine-readable) |
 | `cortex overnight logs` | Tail the active session's event log |
 | `just overnight-smoke-test` | Verify worker commit round-trip (pre-launch sanity check) |
-| `tmux attach -t overnight-runner` | Attach to running session to watch output |
 | `/overnight resume` | Check state and relaunch a paused session |
 | `/morning-review` | Morning close-out: walk report, answer deferrals, close features |
 
@@ -271,9 +270,8 @@ closes lifecycle artifacts and archives backlog items in the right order. Then m
 
 ### If something goes wrong mid-session
 
-- Attach to the runner: `tmux attach -t overnight-runner`
-- Check state: `cortex overnight status`
-- If stalled: Ctrl-C exits gracefully. Then `/overnight resume` + `cortex overnight start`
+- Inspect the runner: `cortex overnight status` (and `cortex overnight logs <session-id>` to tail the events log)
+- If stalled: send SIGINT/SIGTERM to the runner process to exit gracefully. Then `/overnight resume` + `cortex overnight start --state <path> --time-limit <seconds>`
 - Check `deferred/` for blocking questions that paused features
 
 ### Readiness gate: file existence, not quality
@@ -298,7 +296,7 @@ required preparation:
 | **Research needed** | Runs it | Must exist already |
 | **Spec needed** | Runs it | Must exist already |
 | **Plan** | Runs it | Auto-generated if missing |
-| **Execution** | Interactive | Bash runner + tmux |
+| **Execution** | Interactive | Python runner (detached fork) |
 | **Resume** | `/cortex-core:lifecycle resume` | `/overnight resume` |
 | **Morning close-out** | Manual or `/cortex-core:lifecycle complete` | `/morning-review` |
 

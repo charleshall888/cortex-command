@@ -124,7 +124,7 @@ After spec approval, `/cortex-core:refine` writes `status: refined` and `spec:` 
 ### State Resumption
 
 `/cortex-core:refine` resumes at the appropriate point:
-- If `spec.md` already exists: offers to re-run (re-running resets `status` to `in_progress` until the new spec is approved)
+- If both `research.md` and `spec.md` exist, refine is complete and exits at Step 6. To re-run, the user must explicitly say so (e.g., "rerun refine"); re-running resets `status` to `in_progress` until the new spec is approved.
 - If `research.md` exists but not `spec.md`: resumes at Spec (applies a sufficiency check to verify the existing research covers the clarified intent)
 - Otherwise: starts at Clarify
 

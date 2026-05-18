@@ -42,7 +42,7 @@ The runner has three automatic stop conditions:
 | Time limit | Wall-clock elapsed ≥ `--time-limit` | Stops the session, logs `CIRCUIT_BREAKER` |
 | Stall watchdog | No event written to events log for 30 minutes | Kills the Claude agent, pauses state, sends notification |
 
-A stopped session enters phase `paused` (not `complete`) if features remain. Use `/overnight resume` to check state and relaunch with `overnight-start`. The numeric thresholds above are current defaults; treat them as pointers to `runner.sh` rather than load-bearing constants — if they diverge, code wins.
+A stopped session enters phase `paused` (not `complete`) if features remain. Use `/overnight resume` to check state and relaunch with `cortex overnight start --state <path> --time-limit <seconds>`. The numeric thresholds above are current defaults; treat them as pointers to `cortex_command/overnight/runner.py` rather than load-bearing constants — if they diverge, code wins.
 
 ### Signal Handling
 
@@ -60,12 +60,12 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 
 `overnight-strategy.json` is the cross-round continuity artifact: fields the orchestrator wants this round to know from last round. The on-disk schema is documented under [Strategy File (overnight-strategy.json) schema](#strategy-file-overnight-strategyjson-schema) in Observability — this subsection covers who writes which field and who reads it, without repeating the JSON shape.
 
-**Files**: `cortex_command/overnight/strategy.py` (`OvernightStrategy`, `load_strategy`, `save_strategy`), `cortex_command/overnight/runner.sh` (writes on integration-recovery failure), `cortex_command/overnight/prompts/orchestrator-round.md` (end-of-round writer), `cortex_command/pipeline/batch_runner.py` (reader for conflict-recovery decisions).
+**Files**: `cortex_command/overnight/strategy.py` (`OvernightStrategy`, `load_strategy`, `save_strategy`), `cortex_command/overnight/runner.py` (writes on integration-recovery failure), `cortex_command/overnight/prompts/orchestrator-round.md` (end-of-round writer), `cortex_command/pipeline/batch_runner.py` (reader for conflict-recovery decisions).
 
 **Mutators** (who writes):
 
 - **Orchestrator prompt, end of round.** `orchestrator-round.md`'s end-of-round step appends a `round_history_notes` entry and refreshes `hot_files` and `recovery_log_summary` via `save_strategy()` in `cortex_command/overnight/strategy.py`. `save_strategy()` is atomic (tempfile + `os.replace()`).
-- **`runner.sh`, on integration-recovery failure.** When `cortex-integration-recovery` exits non-zero, `runner.sh` sets `integration_health="degraded"` in the file and sets `INTEGRATION_DEGRADED=true` in the environment (the warning file is then prepended to the PR body).
+- **`runner.py`, on integration-recovery failure.** When `cortex-integration-recovery` exits non-zero, `cortex_command/overnight/runner.py` sets `integration_health="degraded"` in the file and sets `INTEGRATION_DEGRADED=true` in the environment (the warning file is then prepended to the PR body).
 
 **Consumers** (who reads):
 
@@ -78,7 +78,7 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 
 | Module | Role |
 |--------|------|
-| `runner.sh` | Entry point: orchestrates rounds, owns the overnight loop |
+| `runner.py` | Entry point: orchestrates rounds, owns the overnight loop (see `cortex_command/overnight/runner.py`) |
 | `state.py` | Core state schema (`OvernightState`, `OvernightFeatureStatus`, `RoundSummary`) + atomic persistence |
 | `events.py` | Append-only JSONL event logger; reader utilities for report/resume |
 | `backlog.py` | Backlog scanner + weighted scoring for overnight selection |
@@ -92,7 +92,7 @@ Forward-only phase transitions apply — the shutdown path writes `paused` via t
 | `deferral.py` | Question deferral file writer (blocking/non-blocking/informational) |
 | `report.py` | Morning report generator (reads state + events + deferrals) |
 | `map_results.py` | Maps `batch-{N}-results.json` → `overnight-state.json` + strategy updates |
-| `status.py` | Live status display (single-screen snapshot; used by `just overnight-status`) |
+| `status.py` | Live status display (single-screen snapshot; used by `cortex overnight status`) |
 | `integration_recovery.py` | Integration branch test-failure recovery; dispatches repair agent |
 | `smoke_test.py` | Pre-launch toolchain sanity check |
 
@@ -162,7 +162,7 @@ The decision:
 - **Repair fallback** fires otherwise. `dispatch_repair_agent` loads `repair-agent.md` and dispatches at complexity=sonnet; on failure the single Sonnet→Opus escalation described under [Repair caps](#repair-caps) applies. This is the merge-conflict codepath specifically — test-failure repair is a different codepath (`integration_recovery.py`) with a different cap; the two are intentionally not unified.
 - **Per-feature budget.** `recovery_depth < 1` gates the repair fallback; a feature that has already consumed one repair attempt this session is deferred on its next conflict rather than looping.
 
-On repair success the feature re-merges and continues; on repair failure the feature is marked failed in the batch results, the integration branch stays at the last clean merge point, and `/morning-review` surfaces it as a blocking item. If the failure path fires on `integration_recovery` (the test-gate sibling), `runner.sh` additionally sets `integration_health="degraded"` in `overnight-strategy.json` so subsequent rounds can consult it in their own conflict-recovery decisions.
+On repair success the feature re-merges and continues; on repair failure the feature is marked failed in the batch results, the integration branch stays at the last clean merge point, and `/morning-review` surfaces it as a blocking item. If the failure path fires on `integration_recovery` (the test-gate sibling), `cortex_command/overnight/runner.py` additionally sets `integration_health="degraded"` in `overnight-strategy.json` so subsequent rounds can consult it in their own conflict-recovery decisions.
 
 ### Cycle-breaking for repeated escalations
 
@@ -183,9 +183,9 @@ This keeps a stuck worker from consuming budget round after round on the same qu
 
 ### Test Gate and integration_health
 
-The test gate runs in `runner.sh` after `batch_runner.py` has merged all passing features onto the integration branch and before the PR is pushed — it is a branch-level gate, not a per-feature gate. The gate is only armed when `--test-command` is passed; if absent, the runner skips straight to PR creation. Per-feature CI signal is separate (`ci_check` inside `merge_feature()`) and covered under [Post-Merge Review](#post-merge-review-review_dispatch); this subsection covers only the integration-branch gate.
+The test gate runs in `cortex_command/overnight/runner.py` after `batch_runner.py` has merged all passing features onto the integration branch and before the PR is pushed — it is a branch-level gate, not a per-feature gate. The gate is only armed when `--test-command` is passed; if absent, the runner skips straight to PR creation. Per-feature CI signal is separate (`ci_check` inside `merge_feature()`) and covered under [Post-Merge Review](#post-merge-review-review_dispatch); this subsection covers only the integration-branch gate.
 
-**Files**: `cortex_command/overnight/runner.sh` (the "Integration gate" block around the post-merge PR-prep stage), `cortex_command/overnight/integration_recovery.py`, `cortex_command/overnight/strategy.py` (`integration_health` field).
+**Files**: `cortex_command/overnight/runner.py` (the "Integration gate" block around the post-merge PR-prep stage), `cortex_command/overnight/integration_recovery.py`, `cortex_command/overnight/strategy.py` (`integration_health` field).
 
 **Inputs**: `$TEST_COMMAND` (from `--test-command`), the integration worktree path, and the current `overnight-strategy.json` (read to update `integration_health` on failure).
 
@@ -197,9 +197,9 @@ For tunable surfaces (`--test-command` choice, the unconditional-repair rule, `i
 
 ### Startup Recovery (interrupt.py)
 
-`cortex_command/overnight/interrupt.py` runs once at session startup to reconcile state that a prior crash or SIGKILL may have left in an inconsistent shape. It is invoked as `cortex-interrupt [state_path]` from `runner.sh` before the round loop begins.
+`cortex_command/overnight/interrupt.py` runs once at session startup to reconcile state that a prior crash or SIGKILL may have left in an inconsistent shape. It is invoked as `cortex-interrupt [state_path]` from `cortex_command/overnight/runner.py` before the round loop begins.
 
-**Files**: `cortex_command/overnight/interrupt.py` (`handle_interrupted_features`, `_infer_interrupt_reason`), invoked by `cortex_command/overnight/runner.sh` at session start.
+**Files**: `cortex_command/overnight/interrupt.py` (`handle_interrupted_features`, `_infer_interrupt_reason`), invoked by `cortex_command/overnight/runner.py` at session start.
 
 **Inputs**: `cortex/lifecycle/overnight-state.json`; per-feature worktree paths and their on-disk state.
 
@@ -277,7 +277,7 @@ The naming convention is "per-task, per-feature" — one prompt file per role an
 
 ### cortex_command/overnight/prompts — orchestrator/session-level prompts
 
-`cortex_command/overnight/prompts/` holds prompts loaded by `runner.sh` and overnight subsystems that operate at the session or orchestrator level — not inside a per-feature worktree. These agents reason about the whole session, read session-scoped state files (`overnight-strategy.json`, `sessions/{session_id}/escalations.jsonl`), and coordinate work across features.
+`cortex_command/overnight/prompts/` holds prompts loaded by `cortex_command/overnight/runner.py` and overnight subsystems that operate at the session or orchestrator level — not inside a per-feature worktree. These agents reason about the whole session, read session-scoped state files (`overnight-strategy.json`, `sessions/{session_id}/escalations.jsonl`), and coordinate work across features.
 
 **Files**: `cortex_command/overnight/prompts/orchestrator-round.md` (the round-loop orchestrator prompt, including the escalations Step 0a–0d cycle-breaking logic), `cortex_command/overnight/prompts/batch-brain.md` (the `brain.py` post-retry triage prompt rendered with `{feature, task_description, retry_count, learnings, spec_excerpt, has_dependents, last_attempt_output}`), `cortex_command/overnight/prompts/repair-agent.md` (conflict-repair and integration-repair agent prose).
 
@@ -291,26 +291,28 @@ The two directories are kept separate because their audiences differ: `pipeline/
 
 ### --tier concurrency (Concurrency Tuning)
 
-The `--tier` CLI flag on `batch_runner.py` selects a throttle profile. Accepted values: `max_5`, `max_100`, `max_200`. Default (flag omitted or unrecognized) is `max_100`.
+The user-facing `--tier` CLI flag on `cortex overnight start` accepts only `simple` or `complex` (default `simple`); see `cortex_command/cli.py`. The flag is currently a no-op for concurrency — every value silently maps to the `max_100` throttle profile. The accepted values describe feature-shape intent rather than a concurrency knob.
 
-| Tier | Runners | Workers |
-|------|---------|---------|
+Internally, `cortex_command/overnight/throttle.py` defines three throttle-profile tier modes — `max_5`, `max_100`, and `max_200` — that map to `(runners, workers)` pairs as follows:
+
+| Internal tier mode | Runners | Workers |
+|--------------------|---------|---------|
 | `max_5` | 1 | 1 |
 | `max_100` | 2 | 2 |
 | `max_200` | 3 | 3 |
 
-Defaults live in `cortex_command/overnight/throttle.py` (`load_throttle_config`); the tier value is wired through `BatchConfig.throttle_tier` and consumed by `ConcurrencyManager`. The limit is a hard ceiling — agents cannot raise it at runtime (orchestrator owns parallelism; agents never spawn peer agents).
+These internal modes are not currently selectable from the CLI; the wiring through `BatchConfig.throttle_tier` and `ConcurrencyManager` exists but every dispatch lands on `max_100`. The limit is a hard ceiling — agents cannot raise it at runtime (orchestrator owns parallelism; agents never spawn peer agents).
 
 Rate-limit pauses are routed through the pipeline api_rate_limit → pause_session path; no in-process shrinkage.
 
-Tune by matching your API plan's parallelism ceiling to the tier. Picking `max_200` on a plan only capable of `max_5` throughput surfaces transient 429s as `api_rate_limit` events that pause the session before the first round finishes.
+If you need to raise or lower concurrency, edit `cortex_command/overnight/throttle.py`'s defaults directly — the CLI flag does not currently provide that affordance. A 429 surfaces as an `api_rate_limit` event that pauses the session, regardless of the `--tier` value.
 
 ### Test Gate and integration_health tuning
 
 The [Test Gate and integration_health](#test-gate-and-integration_health) subsection under Architecture documents the flow; this subsection calls out the *tunable surfaces*:
 
-- **`--test-command`** (passed to `runner.sh` / `batch_runner.py`). This is the command run after every merge onto the integration branch — a non-zero exit invokes `cortex-integration-recovery`. Choosing a slow or flaky command multiplies every round's wall-clock cost; choosing a fast-but-shallow command narrows what the gate catches before repair dispatch.
-- **`integration_health` in `overnight-strategy.json`**. `healthy` is the implicit baseline; `degraded` is set by `runner.sh` when `integration_recovery` fails (alongside `INTEGRATION_DEGRADED=true` and a warning file prepended to the PR body). Downstream rounds consult this field in conflict-recovery decisions.
+- **`--test-command`** (passed to `cortex_command/overnight/runner.py` / `batch_runner.py`). This is the command run after every merge onto the integration branch — a non-zero exit invokes `cortex-integration-recovery`. Choosing a slow or flaky command multiplies every round's wall-clock cost; choosing a fast-but-shallow command narrows what the gate catches before repair dispatch.
+- **`integration_health` in `overnight-strategy.json`**. `healthy` is the implicit baseline; `degraded` is set by `cortex_command/overnight/runner.py` when `integration_recovery` fails (alongside `INTEGRATION_DEGRADED=true` and a warning file prepended to the PR body). Downstream rounds consult this field in conflict-recovery decisions.
 - **Repair dispatch is unconditional** on gate failure — there is no suppression flag. If you need to skip repair, skip the gate (set `--test-command` to a no-op) rather than trying to gate the repair.
 
 ### Model selection matrix (tier × criticality → role)
@@ -371,7 +373,7 @@ Bucket key shape after Task 6 is `"<model>,<tier>,<effort>"` (e.g. `"opus,comple
 The field-by-field writer and reader map is documented under [Strategy File (overnight-strategy.json) — mutators and consumers](#strategy-file-overnight-strategyjson--mutators-and-consumers) in the Architecture section; see [Strategy File (overnight-strategy.json) schema](#strategy-file-overnight-strategyjson-schema) in Observability for the JSON shape. From a tuning perspective, the tunable surfaces are:
 
 - **`hot_files`** — a string list of paths the orchestrator treats as "do not auto-resolve conflicts on." Inflating the list makes the trivial fast-path fire less often (more repair dispatches, more Claude cost); leaving it empty makes every conflict eligible for the trivial path (faster, but higher risk of a stale resolution on a frequently-touched file). The orchestrator prompt populates this from observed round history — manual tuning is rarely needed, but the field is plain JSON and can be edited between sessions.
-- **`integration_health`** — `healthy` or `degraded`; consulted by downstream rounds' conflict-recovery decisions. Not typically tuned by hand; `runner.sh` sets `degraded` after an `integration_recovery` failure and the next round treats the integration branch with more caution.
+- **`integration_health`** — `healthy` or `degraded`; consulted by downstream rounds' conflict-recovery decisions. Not typically tuned by hand; `cortex_command/overnight/runner.py` sets `degraded` after an `integration_recovery` failure and the next round treats the integration branch with more caution.
 - **`recovery_log_summary`** and **`round_history_notes`** — narrative context threaded from the orchestrator prompt into the next round's context window. These fields are surfaced to the orchestrator via the `strategy` key returned by `aggregate_round_context` (see [aggregate_round_context — round-startup state aggregator](#aggregate_round_context--round-startup-state-aggregator)) rather than via a direct file read. Keep them short — the orchestrator prompt budget includes them, so a ballooning `round_history_notes` reduces remaining room for the actual work.
 
 ---
@@ -393,7 +395,6 @@ Every overnight session persists state as files under `cortex/lifecycle/`. The r
 | `cortex/lifecycle/{feature}/agent-activity.jsonl` | `cortex_command/pipeline/dispatch.py` (`_write_activity_event`) | Per-feature per-turn agent tool-call breadcrumbs (tool names, success/failure, turn cost). |
 | `cortex/lifecycle/{feature}/learnings/orchestrator-note.md` | orchestrator prompt + `batch_runner` (review rework cycle) | Accumulated orchestrator feedback handed to the next worker dispatch. |
 | `cortex/lifecycle/morning-report.md` | `cortex_command/overnight/report.py` (`write_report` — atomic tempfile + `os.replace`) | The morning report (see below). Runner emits `morning_report_generate_result` and `morning_report_commit_result` events to `overnight-events.log` around the write + commit so the operator can confirm the file landed on `main`. |
-| `cortex/lifecycle/.runner.lock` | `runner.sh` | PID lock preventing concurrent overnight sessions. See [Runner Lock](#runner-lock-runnerlock). |
 | `deferred/*.md` | `cortex_command/overnight/deferral.py` (`write_deferral`) | Blocking human-decision questions filed during the session. |
 
 State file reads are not lock-protected by design — forward-only phase transitions and atomic replace writes make torn reads impossible. A reader either sees the pre-write state or the post-write state, never a partial record.
@@ -466,7 +467,7 @@ The `OvernightStrategy` dataclass in `cortex_command/overnight/strategy.py` seri
 
 ### Morning Report Generation (report.py)
 
-`cortex_command/overnight/report.py` (`generate_and_write_report`) is invoked by `runner.sh` after the orchestration loop completes. It collects state + events + deferrals, renders the Markdown report, and atomically writes `cortex/lifecycle/morning-report.md`.
+`cortex_command/overnight/report.py` (`generate_and_write_report`) is invoked by `cortex_command/overnight/runner.py` after the orchestration loop completes. It collects state + events + deferrals, renders the Markdown report, and atomically writes `cortex/lifecycle/morning-report.md`.
 
 **Inputs**:
 
@@ -478,7 +479,7 @@ The `OvernightStrategy` dataclass in `cortex_command/overnight/strategy.py` seri
 
 **Assembly**: `generate_report()` concatenates `render_executive_summary`, `render_completed_features`, `render_pending_drift`, `render_deferred_questions`, `render_failed_features`, `render_new_backlog_items`, `render_action_checklist`, `render_run_statistics`, and — when any exist — `render_tool_failures`. Each renderer is a pure function of `ReportData`.
 
-**Output**: `cortex/lifecycle/morning-report.md`. `write_report()` uses tempfile + `os.replace()` so the report is never observed half-written. After the write, `runner.sh` emits a `morning_report_generate_result` event (per-session and latest-copy sha256s + byte counts) and then a `morning_report_commit_result` event recording whether the commit landed on `main`. `notify()` then fires the user's desktop-notifier hook (user/machine-config responsibility, not shipped by this repo) so the operator knows overnight is done.
+**Output**: `cortex/lifecycle/morning-report.md`. `write_report()` uses tempfile + `os.replace()` so the report is never observed half-written. After the write, `cortex_command/overnight/runner.py` emits a `morning_report_generate_result` event (per-session and latest-copy sha256s + byte counts) and then a `morning_report_commit_result` event recording whether the commit landed on `main`. `notify()` then fires the user's desktop-notifier hook (user/machine-config responsibility, not shipped by this repo) so the operator knows overnight is done.
 
 The morning-report commit is the only runner commit that stays on local `main`; all other artifact commits travel on the integration branch. (Historical reports from 2026-04-07, 2026-04-11, and 2026-04-21 were backfilled retroactively under commits whose subject lines end with `(backfill)`.)
 
@@ -660,7 +661,7 @@ The returned dict has five top-level keys:
 | `schema_version` | `int` | Contract version (currently `1`). Consumers must check this and handle drift explicitly — do not assume the value. |
 | `state` | `dict` | Full overnight state from `asdict(load_state(session_dir / "overnight-state.json"))` — phase, per-feature status, round counter. |
 | `strategy` | `dict` | Full overnight strategy from `asdict(load_strategy(session_dir / "overnight-strategy.json"))` — `hot_files`, `integration_health`, `recovery_log_summary`, `round_history_notes`. |
-| `escalations` | `dict` | Pre-computed escalation sets: `{"unresolved": [...], "all_entries": [...]}`. `unresolved` is the set of escalation entries with no matching resolution or promoted entry (same logic as orchestrator-round.md Steps 0a–0d). `all_entries` is the full entry list from `escalations.jsonl`; the cycle-breaker reads `all_entries` directly. |
+| `escalations` | `dict` | Pre-computed escalation sets: `{"unresolved": [...], "prior_resolutions_by_feature": {...}}`. `unresolved` is the set of escalation entries with no matching resolution or promoted entry (same logic as orchestrator-round.md Steps 0a–0d). `prior_resolutions_by_feature` is a dict mapping feature slug → list of prior resolution entries for that feature, so the cycle-breaker can lookup resolutions by feature without re-scanning `escalations.jsonl`. |
 | `session_plan_text` | `str` | Contents of `session_dir / "session-plan.md"`, or `""` if the file is absent. |
 
 **Error behavior**: `aggregate_round_context` raises `FileNotFoundError` if `overnight-state.json` is missing (propagated from `load_state`). It raises `RuntimeError` with the substring `"schema_version drift"` if the assembled dict's `schema_version` does not match the module-level `_EXPECTED_SCHEMA_VERSION` constant — this is the in-process safety net for contract changes. `load_strategy` tolerates missing/invalid `overnight-strategy.json` by returning a default instance; escalation lines that fail JSON parsing are skipped with a stderr warning. The function is read-only with respect to all state files and performs no in-process caching — each call reads fresh from disk.
@@ -682,7 +683,7 @@ Because field drift across consumers is possible, the template is the one place 
 
 ### Auth Resolution (apiKeyHelper and env-var fallback order)
 
-Auth resolution is owned by the shared `cortex_command/overnight/auth.py` module. Both the overnight entry point (`runner.sh`) and the daytime entry point (`daytime_pipeline.py`) delegate to this one module so they share one priority order, one sanitization rule, and one event schema — divergence between the two paths would be a silent correctness hazard.
+Auth resolution is owned by the shared `cortex_command/overnight/auth.py` module. Both the overnight entry point (`cortex_command/overnight/runner.py`) and the daytime entry point (`daytime_pipeline.py`) delegate to this one module so they share one priority order, one sanitization rule, and one event schema — divergence between the two paths would be a silent correctness hazard.
 
 > See [Subscription Auth Setup](setup.md#subscription-auth-setup) for the producer-side bootstrap workflow.
 
@@ -693,15 +694,15 @@ The module resolves Anthropic authentication in a strict 4-step fallback order b
 3. **No helper AND no `CLAUDE_CODE_OAUTH_TOKEN`** — try `~/.claude/personal-oauth-token`; if non-empty, export its contents as `CLAUDE_CODE_OAUTH_TOKEN`. This covers OAuth-style authentication for `claude -p` / SDK usage (vector: `oauth_file`).
 4. **Fall through to keychain-backed auth** — print a warning and proceed; the first subprocess spawn may block on a macOS keychain-access prompt (see [Security and Trust Boundaries](#security-and-trust-boundaries)). Vector: `none`.
 
-**Files**: `cortex_command/overnight/auth.py` (shared resolver — source of truth), `cortex_command/overnight/runner.sh` (shell delegation), `cortex_command/overnight/daytime_pipeline.py` (in-process delegation inside `run_daytime`), `cortex_command/pipeline/dispatch.py` (re-exports both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` into SDK subprocesses).
+**Files**: `cortex_command/overnight/auth.py` (shared resolver — source of truth), `cortex_command/overnight/runner.py` (Python delegation), `cortex_command/overnight/daytime_pipeline.py` (in-process delegation inside `run_daytime`), `cortex_command/pipeline/dispatch.py` (re-exports both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` into SDK subprocesses).
 
-#### Shell entry point: three-exit-code contract
+#### Overnight entry point: three-exit-code contract
 
-`runner.sh` invokes the helper pre-venv via `cortex-auth --shell` and branches on the exit code:
+`cortex_command/overnight/runner.py` invokes the helper via `cortex-auth --shell` and branches on the exit code:
 
-- **exit code 0** — vector resolved. Helper prints `export VAR=VALUE` to stdout; `runner.sh` `eval`s it. Warnings (if any) went to stderr.
-- **exit code 1** — no vector resolved. Helper printed a warning to stderr. `runner.sh` continues; the first SDK spawn may prompt for keychain access.
-- **exit code 2** — helper-internal failure (malformed `~/.claude/settings.json`, stdlib import regression, other deterministic defect inside the resolver itself). `runner.sh` logs `Error: auth helper internal failure` and exits immediately with status 2. User-environment issues (helper binary missing, helper timeout, helper non-zero exit) are NOT exit code 2 — those fall through to the next resolution step.
+- **exit code 0** — vector resolved. Helper prints `export VAR=VALUE` to stdout; the runner parses and applies it to the subprocess environment. Warnings (if any) went to stderr.
+- **exit code 1** — no vector resolved. Helper printed a warning to stderr. The runner continues; the first SDK spawn may prompt for keychain access.
+- **exit code 2** — helper-internal failure (malformed `~/.claude/settings.json`, stdlib import regression, other deterministic defect inside the resolver itself). The runner logs `Error: auth helper internal failure` and exits immediately with status 2. User-environment issues (helper binary missing, helper timeout, helper non-zero exit) are NOT exit code 2 — those fall through to the next resolution step.
 
 #### Daytime entry point: deferred-event-emit pattern
 

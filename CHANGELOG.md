@@ -23,6 +23,18 @@ Closes the plugin/CLI auto-update gaps end-to-end (#213). This is a major releas
 
 - **BREAKING: print-root envelope `version` field semantic changes from schema-major-minor (M.m) to PEP 440 package version**. `cortex --print-root --format json` previously emitted `"version": "1.1"` (the schema floor). It now emits `"version": "<package-version>"` (e.g. `"2.0.0"`, sourced from `importlib.metadata.version("cortex-command")`) and the M.m schema-floor moves to a new sibling field `"schema_version": "2.0"`. Consumers that previously parsed `version` as M.m must migrate to reading `schema_version`. The schema-major bump (1.x → 2.0) is a one-way change per `docs/internals/mcp-contract.md`'s forever-public-API rule that repurposing an existing field requires a major bump; pre-v2.0.0 plugin/CLI pairings hard-fail by design via `_check_version` and `_schema_floor_violated`. **Operator action**: bump both `cortex-command` CLI and the `cortex-overnight` plugin together to v2.0.0+ — running an older plugin against a v2.0.0+ CLI (or vice versa) is unsupported.
 
+## [v1.0.2] - 2026-05-12
+
+### Fixed
+
+- Patch: comprehensive completeness sweep across docs, skills, prompts, fixtures, and bin helpers — closes loose ends from the v1.0.0 `cortex/` umbrella relocation that survived the v1.0.1 follow-up.
+
+## [v1.0.1] - 2026-05-12
+
+### Fixed
+
+- Patch: finish `cortex/` umbrella relocation across the overnight runner, dashboard, pipeline, and tests — paths missed in the v1.0.0 atomic relocation commit are now consistently `cortex/`-prefixed.
+
 ## [v1.0.0] - 2026-05-12
 
 ### Changed
@@ -102,5 +114,7 @@ The first tagged release of cortex-command. Establishes the no-clone install pat
 
 [Unreleased]: https://github.com/charleshall888/cortex-command/compare/v2.0.0...HEAD
 [v2.0.0]: https://github.com/charleshall888/cortex-command/releases/tag/v2.0.0
+[v1.0.2]: https://github.com/charleshall888/cortex-command/releases/tag/v1.0.2
+[v1.0.1]: https://github.com/charleshall888/cortex-command/releases/tag/v1.0.1
 [v1.0.0]: https://github.com/charleshall888/cortex-command/releases/tag/v1.0.0
 [v0.1.0]: https://github.com/charleshall888/cortex-command/releases/tag/v0.1.0

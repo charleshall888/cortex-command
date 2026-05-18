@@ -6,7 +6,7 @@
 
 ## Overview
 
-The observability area covers five subsystems that give the developer visibility into active Claude sessions: the terminal statusline (in-session context and lifecycle state), the web dashboard (full overnight session monitoring), the notification system (macOS desktop and Android push alerts), the in-session status CLI (`cortex overnight status` for sandbox-safe one-shot status), and optional sandbox socket access (tmux socket allowlisting for full interactive access). The first four subsystems read from the same file-based session state; none can write to it. Sandbox socket access is a configuration concern, not a runtime subsystem.
+The observability area covers five subsystems that give the developer visibility into active Claude sessions: the terminal statusline (in-session context and lifecycle state), the web dashboard (full overnight session monitoring), the notification system (macOS desktop alerts), the in-session status CLI (`cortex overnight status` for sandbox-safe one-shot status), and optional sandbox socket access (tmux socket allowlisting for full interactive access). The first four subsystems read from the same file-based session state; none can write to it. Sandbox socket access is a configuration concern, not a runtime subsystem.
 
 ## Functional Requirements
 

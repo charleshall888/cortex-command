@@ -44,7 +44,7 @@ Content rule: a bulleted list of paths under `cortex/requirements/` that every c
 
 ## Area template — `cortex/requirements/{area}.md`
 
-Header `# Requirements: {area-name}` + `> Last gathered: {YYYY-MM-DD}` + `**Parent doc**: [requirements/project.md](project.md)`, then seven H2s in order:
+Header `# Requirements: {area-name}` + `> Last gathered: {YYYY-MM-DD}` + a parent backlink written verbatim as `**Parent doc**: [requirements/project.md](project.md)` (the link is relative to the area doc's location at `cortex/requirements/{area}.md`, where `project.md` is a sibling), then seven H2s in order:
 
 1. `## Overview` — What this area covers and its place in the project.
 2. `## Functional Requirements` — One H3 per capability; canonical bullets `**Description**`, `**Inputs**`, `**Outputs**`, `**Acceptance criteria**` (nested), `**Priority**` (must/should/nice-to-have).

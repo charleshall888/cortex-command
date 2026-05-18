@@ -87,7 +87,7 @@ The following Jinja2 macro files exist in `templates/patterns/`:
 - `templates/patterns/badge.html` — Jinja2 macro for status badge with color variant
 - `templates/patterns/feature-card.html` — feature card with all data rows
 - `templates/patterns/alert-banner.html` — error / warning / success variants using semantic tokens
-- `patterns/data-table.html` — round-table equivalent using Tailwind (not yet implemented)
+- Future: a `patterns/data-table.html` for round-table layouts (not yet implemented; file does not exist on disk).
 
 When building a new component, check for an existing `.badge`, `.feature-card`, or `.round-table` pattern first before writing new CSS.
 

@@ -427,7 +427,7 @@
     }
     .sidebar h3, .sidebar .cta, .meta-spec { display: none; }
     .sidebar.compact-badge::after {
-      content: "cortex-command · v0.4";
+      content: "cortex-command · v2.0.0";
       font-family: var(--mono);
       font-size: 11px;
       color: var(--ink);
@@ -3649,7 +3649,7 @@
   <section class="hero" id="hero">
     <div class="doc-meta">
       <span class="left">cortex-command · <strong>landing.spec.md</strong></span>
-      <span>R3 · live document · MIT · v0.4</span>
+      <span>R3 · live document · MIT · v2.0.0</span>
     </div>
 
     <h1>A Claude Code harness <em>that earns its autonomy.</em></h1>
@@ -4552,7 +4552,7 @@
 
                   <rect class="a-rect" x="882" y="122" width="388" height="100"/>
                   <text class="a-mono b"        x="898" y="146">$ cortex overnight start</text>
-                  <text class="a-mono dim sm"   x="898" y="170">▸ detaches into tmux</text>
+                  <text class="a-mono dim sm"   x="898" y="170">▸ detaches as Python process</text>
                   <text class="a-mono dim sm"   x="898" y="190">▸ survives terminal close</text>
                   <text class="a-mono dim sm"   x="898" y="210">▸ the night is now hands-off</text>
                 </g>
@@ -4579,7 +4579,7 @@
 
                 <!-- runner header strip -->
                 <text class="a-letter" x="14" y="420">[D]</text>
-                <text class="a-mono b" x="50" y="420">runner · tmux · detached · persists across the night</text>
+                <text class="a-mono b" x="50" y="420">runner · Python · detached · persists across the night</text>
                 <text class="a-mono dim sm" x="1266" y="420" text-anchor="end">22:00 → 05:42</text>
 
                 <!-- orchestrator badge — the runner-loop orchestrator is spawned fresh
@@ -4849,7 +4849,7 @@
                   <text class="a-mono sm b" x="1180" y="1072" text-anchor="middle">PR ⇢ main</text>
 
                   <!-- session-end TEST GATE marker · fires ONCE after all rounds finish,
-                       BEFORE the PR is pushed. Doc: runs in runner.sh, branch-level, only
+                       BEFORE the PR is pushed. Doc: runs in runner.py, branch-level, only
                        if --test-command is armed; on fail → cortex-integration-recovery
                        (≤2 tries) → sets integration_health = degraded · PR is still pushed.
                        Diamond shape (vs. the round-marker circles) flags it as a gate, not
@@ -4966,7 +4966,7 @@
                 <div>
                   <div class="hm-name">dusk · 22:00</div>
                   <div class="hm-sub">refine queue · overnight plan written · runner detaches</div>
-                  <div class="hm-detail">3 specs ready · plan.md immutable · cortex overnight start runs in tmux.</div>
+                  <div class="hm-detail">3 specs ready · plan.md immutable · cortex overnight start detaches as a Python process.</div>
                 </div>
               </li>
               <li class="hm-row" data-state="active">
@@ -5070,7 +5070,7 @@
     <div class="repo-line">
       <a class="install-cta" href="https://github.com/charleshall888/cortex-command/blob/main/docs/setup.md" target="_blank" rel="noopener">full setup walkthrough →</a>
       <a href="https://github.com/charleshall888/cortex-command" target="_blank" rel="noopener">github.com/charleshall888/cortex-command ↗</a>
-      <span class="repo-meta">MIT · v0.4 · plain markdown state · readable commands</span>
+      <span class="repo-meta">MIT · v2.0.0 · plain markdown state · readable commands</span>
     </div>
   </section>
 

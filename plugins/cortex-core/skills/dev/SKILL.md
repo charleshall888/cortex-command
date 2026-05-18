@@ -4,7 +4,7 @@ description: Development entry point that analyzes requests and routes to the ap
 inputs:
   - "request: string (optional) — development request or description; omit to trigger backlog triage of refined items"
 outputs:
-  - "Routing delegation (stdout) — one of: /cortex-core:lifecycle, /pipeline, /cortex-core:discovery, or direct implementation"
+  - "Routing delegation (stdout) — one of: /cortex-core:lifecycle, /cortex-overnight:overnight, /cortex-core:discovery, or direct implementation"
   - "Backlog triage summary (stdout) — refined items with recommended workflows (when invoked with no request)"
 preconditions:
   - "Run from project root"
@@ -42,9 +42,9 @@ The user describes multiple features or uses batch language.
 
 **Action**: Assess each task's complexity before routing. Classify each as **trivial** (single file, obvious fix, one approach) or **non-trivial** (needs research, multiple files, architectural decisions).
 
-- **All non-trivial**: State: "Invoke `/pipeline`" with the feature list.
+- **All non-trivial**: State: "Invoke `/cortex-overnight:overnight`" with the feature list.
 - **All trivial**: Execute direct implementation (Step 4) for each sequentially in the current conversation.
-- **Mixed**: Present a **hybrid plan** — `/pipeline` for non-trivial tasks, direct implementation for trivial ones. Execute trivial tasks first (or in parallel with the pipeline) to get quick wins shipped while structured work proceeds.
+- **Mixed**: Present a **hybrid plan** — `/cortex-overnight:overnight` for non-trivial tasks, direct implementation for trivial ones. Execute trivial tasks first (or in parallel with the overnight pipeline) to get quick wins shipped while structured work proceeds.
 
 When presenting the hybrid plan, show a table classifying each task with its routing and brief justification, then ask the user to confirm or adjust before proceeding.
 
@@ -195,9 +195,9 @@ Render each epic in priority order (critical → high → medium → low). For e
 
 - **Blocked children note** — if any children have `status: blocked`, prepend the following to the recommendation: "Note: [N] children are blocked — skip them until unblocked. Recommendations apply to the remaining [M] children." (where N is the count of blocked children and M is the count of non-blocked active children).
 
-- **All children refined** (all active, non-in_progress, non-review, non-blocked children have `spec:` present): "All children are refined. Run `/overnight` — it will auto-select them via its own readiness scan."
+- **All children refined** (all active, non-in_progress, non-review, non-blocked children have `spec:` present): "All children are refined. Run `/cortex-overnight:overnight` — it will auto-select them via its own readiness scan."
 
-- **Any children unrefined** (any active child that is not in_progress/review/blocked lacks `spec:`): "Run `/cortex-core:refine` on each unrefined child one at a time (each requires interactive spec approval before moving to the next): [list unrefined child IDs and titles]. Once all are refined and have `status: refined`, run `/overnight` — it will auto-select the full group."
+- **Any children unrefined** (any active child that is not in_progress/review/blocked lacks `spec:`): "Run `/cortex-core:refine` on each unrefined child one at a time (each requires interactive spec approval before moving to the next): [list unrefined child IDs and titles]. Once all are refined and have `status: refined`, run `/cortex-overnight:overnight` — it will auto-select the full group."
 
 For the blocked-children note: evaluate the all-refined vs any-unrefined branch using only the non-blocked, non-in_progress, non-review active children. The blocked note is prepended to whichever branch applies.
 

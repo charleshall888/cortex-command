@@ -77,7 +77,7 @@ INK CURSOR (v1 SCOPE). Static placement only — small vector ink-cursor glyph i
 SCAN-LAYER SIDEBAR. Persistent top-right panel, ~280px wide on desktop, collapses to a small badge on mobile. Contains in this order, no decoration:
 1. Product line: "Cortex Command — workflow framework for Claude Code"
 2. One-line value prop: "Tighter specs. Faster ships. Optional autonomy."
-3. Tiny status row (monospace, dim): "v0.4 · MIT · github.com/charleshall888/cortex-command"
+3. Tiny status row (monospace, dim): "{{version}} · MIT · github.com/charleshall888/cortex-command" — substitute `{{version}}` at render time with the current shipped tag (e.g. `v2.0.0`). Do not bake a literal version string into this prompt; if the prompt is ever re-run, a stale literal would silently downgrade the rendered status row.
 4. Single CTA: "Install (3 commands) ↓" — anchors to install section.
 
 Background: parchment matching page. Thin blueprint-blue rule-line on its left edge so it reads as marginal annotation, not marketing chrome. Sticky; absorbs into the diegetic conceit as the document's running header.

@@ -12,12 +12,9 @@ This doc owns the **control-plane interface** plane. It is a sibling of `overnig
 
 ## What this server is
 
-`cortex mcp-server` is a stdio-transport MCP server that exposes five tools for driving the overnight runner from a Claude Code conversation. It is stateless: every tool call reads or writes filesystem-grounded state under `cortex/lifecycle/sessions/{session_id}/`, which means an MCP client can be restarted or replaced without affecting an in-flight runner.
+The `cortex-overnight` MCP server is a stdio-transport MCP server that exposes six tools for driving the overnight runner from a Claude Code conversation. It is stateless: every tool call reads or writes filesystem-grounded state under `cortex/lifecycle/sessions/{session_id}/`, which means an MCP client can be restarted or replaced without affecting an in-flight runner.
 
-Two install paths exist; both register the same `cortex mcp-server` subprocess:
-
-1. **CLI registration** — `claude mcp add cortex-overnight ...` (covered in [Registration](#registration)). Best for operators who want one-off control without touching plugins.
-2. **Plugin install** — `/plugin install cortex-overnight` from inside Claude Code, which ships a `.mcp.json` registering the same server.
+The live server lives at `plugins/cortex-overnight/server.py` and is registered automatically when the `cortex-overnight` plugin is installed; the plugin's `.mcp.json` invokes it via `uv run ${CLAUDE_PLUGIN_ROOT}/server.py`. The legacy `cortex mcp-server` CLI verb is now a deprecation stub that prints a migration message and exits with status 1 — install the plugin instead.
 
 The MCP server logs only to `stderr`; `stdout` is reserved for the JSON-RPC stream. Do not redirect `stdout` and do not enable any tooling that writes to it.
 
@@ -25,21 +22,21 @@ The MCP server logs only to `stderr`; `stdout` is reserved for the JSON-RPC stre
 
 ## Registration
 
-To register the server in your user-scoped Claude Code config:
+Install the plugin from a Claude Code session:
 
 ```
-claude mcp add cortex-overnight --scope user --transport stdio -- cortex mcp-server
+/plugin install cortex-overnight@cortex-command
 ```
 
-After registration, restart Claude Code. The five tools listed below become available in any session.
+The plugin ships a `.mcp.json` that registers the server via `uv run ${CLAUDE_PLUGIN_ROOT}/server.py`. After installation, restart Claude Code (or reload the plugin) and the six tools listed below become available in any session.
 
-If you prefer plugin-based distribution, run `/plugin install cortex-overnight` from a Claude Code session. The plugin's bundled `.mcp.json` is equivalent to the `claude mcp add` command above.
+> **Legacy path.** Earlier versions registered the server with `claude mcp add cortex-overnight --scope user --transport stdio -- cortex mcp-server`. That command is no longer supported: `cortex mcp-server` is now a deprecation stub (see `cortex_command/cli.py`) that prints a migration message and exits 1. Use the plugin install path above.
 
 ---
 
 ## Tool inventory
 
-All five tools take JSON object inputs and return JSON object outputs. Schemas are summarized; consult the server's tool descriptions at runtime for canonical field types.
+All six tools take JSON object inputs and return JSON object outputs. Schemas are summarized; consult the server's tool descriptions at runtime for canonical field types.
 
 ### `overnight_start_run`
 
@@ -52,6 +49,16 @@ Spawns a new overnight runner.
 This tool spawns a multi-hour autonomous agent that bypasses permission prompts and consumes Opus tokens. The `confirm_dangerously_skip_permissions` parameter is required precisely so that a model cannot silently start a run without an operator's explicit instruction. Calls without the parameter return a tool-execution error whose body re-states this warning, not a bare schema-validation failure — so the model sees the warning text in the error response.
 
 If another runner is already alive on the same lock, the tool returns `{started: false, reason: "concurrent_runner_alive", existing_session_id: ...}`. There is no race window.
+
+### `overnight_schedule_run`
+
+Schedules a new overnight runner to start at a future wall-clock time via a per-session launchd LaunchAgent (macOS).
+
+- **Input (required):** `confirm_dangerously_skip_permissions: true` (the literal value `true`; any other value or omission is rejected), `target_time: string` (the scheduled start time — accepts the same formats as `cortex overnight schedule`).
+- **Input (optional):** `state_path: string`.
+- **Output:** `{scheduled, session_id?, label?, scheduled_for_iso?}`.
+
+Under the hood the tool invokes `cortex overnight schedule <target_time> --format json` and installs a launchd LaunchAgent that wakes at `scheduled_for_iso` and spawns the runner. The same `confirm_dangerously_skip_permissions: true` gate as `overnight_start_run` applies: the parameter is required so a model cannot silently schedule a multi-hour autonomous run without an operator's explicit instruction.
 
 ### `overnight_status`
 

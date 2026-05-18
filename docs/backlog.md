@@ -5,6 +5,8 @@
 
 The backlog is a flat directory of numbered markdown files (`cortex/backlog/NNN-slug.md`). Each file contains YAML frontmatter describing the item, followed by an optional markdown body. The overnight orchestration system reads these files to select work; the `/cortex-core:backlog` skill manages them interactively.
 
+Automated write-backs to frontmatter use the `cortex-update-item` console script (installed by `pyproject.toml`). Earlier versions of this doc referenced `python3 cortex/backlog/update_item.py …`; that direct invocation is no longer canonical — always invoke via the `cortex-update-item` command.
+
 ---
 
 ## YAML Frontmatter Schema
@@ -16,14 +18,14 @@ Every backlog item uses the following YAML frontmatter contract. Fields listed a
 | `schema_version` | string | yes | `"1"` |
 | `uuid` | string | yes | UUID v4 — stable cross-reference key |
 | `title` | string | yes | Short human-readable name |
-| `status` | enum | yes | `backlog`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` |
+| `status` | enum | yes | `backlog`, `ready`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` (plus legacy values `open`, `in-progress`, `blocked`, `resolved`, `wontfix`, `done` — see `cortex_command/overnight/backlog.py` for the full canonical list) |
 | `priority` | enum | yes | `critical`, `high`, `medium`, `low` |
 | `type` | enum | yes | `feature`, `bug`, `chore`, `spike`, `idea`, `epic` |
 | `tags` | array | no | Inline YAML only: `[tag1, tag2]` |
 | `created` | date | yes | `YYYY-MM-DD` |
-| `updated` | date | yes | `YYYY-MM-DD` — auto-updated by `update_item.py` |
+| `updated` | date | yes | `YYYY-MM-DD` — auto-updated by `cortex-update-item` |
 | `lifecycle_slug` | string | no | Kebab-case slug linking to `cortex/lifecycle/{slug}/`; or `null` |
-| `lifecycle_phase` | string | no | Current lifecycle phase (`research`, `specify`, `plan`, `implement`, `review`, `complete`); or `null` |
+| `lifecycle_phase` | string | no | Current lifecycle phase (`research`, `specify`, `plan`, `implement`, `implement-rework`, `review`, `complete`, `escalated`); or `null` |
 | `session_id` | string | no | ID of the overnight session currently working on this item; or `null` |
 | `blocks` | array | no | Inline YAML only: `[1, 5]` (numeric IDs of items this item blocks) |
 | `blocked-by` | array | no | Inline YAML only: `[3, 7]` (numeric IDs of items blocking this one) |
@@ -32,8 +34,9 @@ Every backlog item uses the following YAML frontmatter contract. Fields listed a
 | `spec` | string | no | Path to spec artifact; set by `/cortex-core:refine` (e.g. `cortex/lifecycle/{slug}/spec.md`) |
 | `discovery_source` | string | no | Path to the `/cortex-core:discovery` research artifact that produced this ticket; triggers auto-copy to lifecycle on `/cortex-core:lifecycle` start |
 | `repo` | string | no | Absolute path to target repository (e.g. `~/Workspaces/wild-light`); `null` = current repo (default) |
-| `complexity` | string | no | Lifecycle complexity tier (`simple`, `standard`, `complex`) |
+| `complexity` | string | no | Lifecycle complexity tier (`simple`, `complex`) |
 | `criticality` | string | no | Criticality tier (`low`, `medium`, `high`, `critical`) |
+| `areas` | array | no | Inline YAML list of area tags (`[area1, area2]`); written by `/cortex-core:refine` |
 
 **Inline array syntax is mandatory.** All array fields (`tags`, `blocks`, `blocked-by`) must use `[value1, value2]` form — never the multiline `- item` form.
 
@@ -55,6 +58,7 @@ lifecycle_phase: null
 session_id: null
 blocks: []
 blocked-by: []
+areas: []
 ---
 
 Optional markdown body describing the problem and acceptance criteria.
@@ -97,11 +101,11 @@ Reads `cortex/backlog/index.md` and presents items from the Ready section (items
 
 ### `archive`
 
-Updates item status in place using `update_item.py`:
+Updates item status in place using `cortex-update-item`:
 
 ```bash
-python3 cortex/backlog/update_item.py <item> status=complete
-python3 cortex/backlog/update_item.py <item> status=abandoned
+cortex-update-item <item> status=complete
+cortex-update-item <item> status=abandoned
 ```
 
 No file is moved. The script cascades `blocked-by` cleanup across the backlog and auto-closes parent epics when all children reach a terminal status.
@@ -116,7 +120,7 @@ Runs `generate-backlog-index` to regenerate `cortex/backlog/index.md` and `corte
 
 Before an item is eligible for overnight execution, `filter_ready()` in `cortex_command/overnight/backlog.py` applies five checks in order. An item fails at the first gate it does not pass.
 
-**Gate 1 — Status.** The item's `status` must be one of the eligible values: `backlog`, `in_progress`, `implementing`, or `refined`. Items in any other status (including `complete`, `abandoned`, `review`) are excluded.
+**Gate 1 — Status.** The item's `status` must be one of the eligible values: `backlog`, `ready`, `in_progress`, `implementing`, or `refined`. Items in any other status (including `complete`, `abandoned`, `review`) are excluded.
 
 **Gate 2 — Blocked.** The item's `blocked-by` list must not contain any item that is itself in a non-terminal status. If any blocker is still active, the item is ineligible. Terminal statuses that satisfy this gate are (canonical source: `cortex_command/common.py`): `complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do`.
 
@@ -154,12 +158,12 @@ This coupling means that features discovered via `/cortex-core:discovery` arrive
 
 ---
 
-## `update_item.py` CLI Reference
+## `cortex-update-item` CLI Reference
 
-`cortex/backlog/update_item.py` is the canonical tool for automated write-backs to backlog frontmatter. It is used by the `/cortex-core:refine` skill, lifecycle hooks, and the overnight pipeline to update items without manual editing.
+`cortex-update-item` (registered as a console script in `pyproject.toml`; canonical source lives at `cortex/backlog/update_item.py`) is the canonical tool for automated write-backs to backlog frontmatter. It is used by the `/cortex-core:refine` skill, lifecycle hooks, and the overnight pipeline to update items without manual editing.
 
 ```
-python3 cortex/backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
+cortex-update-item <slug-or-uuid> key=value [key=value ...]
 ```
 
 **Lookup.** The first argument is matched against item filenames (exact stem, then substring), then against `uuid` fields. UUID prefix matching is supported.
@@ -169,7 +173,7 @@ python3 cortex/backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
 **Side effects on every update:**
 - Writes the updated file atomically (write-then-rename).
 - Appends `status_changed` or `phase_changed` events to the sidecar `{stem}.events.jsonl` log.
-- Regenerates `cortex/backlog/index.json` and `cortex/backlog/index.md` via `generate_index.py`.
+- Regenerates `cortex/backlog/index.json` and `cortex/backlog/index.md` via the `cortex-generate-backlog-index` console script (canonical source `cortex/backlog/generate_index.py`; users invoke the console script, not the file directly).
 
 **Additional side effects for terminal status transitions** (`complete`, `abandoned`, `done`, `resolved`, `wontfix`, `wont-do`, `won't-do` — full list in `cortex_command/common.py`):
 - Removes the closed item's ID and UUID from `blocked-by` arrays across all active backlog items.
@@ -181,16 +185,16 @@ python3 cortex/backlog/update_item.py <slug-or-uuid> key=value [key=value ...]
 
 ```bash
 # Mark an item complete by slug
-python3 cortex/backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete
+cortex-update-item 030-cf-tunnel-fallback-polish status=complete
 
 # Update lifecycle phase by UUID
-python3 cortex/backlog/update_item.py 550e8400-... lifecycle_phase=implement
+cortex-update-item 550e8400-... lifecycle_phase=implement
 
 # Clear the session_id field
-python3 cortex/backlog/update_item.py 030-cf-tunnel-fallback-polish session_id=null
+cortex-update-item 030-cf-tunnel-fallback-polish session_id=null
 
 # Update multiple fields at once
-python3 cortex/backlog/update_item.py 030-cf-tunnel-fallback-polish status=complete session_id=null
+cortex-update-item 030-cf-tunnel-fallback-polish status=complete session_id=null
 ```
 
 ---
@@ -202,5 +206,5 @@ This document describes the backlog system as implemented at the time of writing
 - `cortex_command/overnight/backlog.py` — changes to `ELIGIBLE_STATUSES`, `TERMINAL_STATUSES`, or `filter_ready()` gate logic
 - `skills/backlog/references/schema.md` — additions or removals from the frontmatter schema
 - `skills/backlog/SKILL.md` — new subcommands or changed subcommand behavior
-- `cortex/backlog/update_item.py` — changes to the CLI interface or side-effect behavior
+- `cortex/backlog/update_item.py` (invoked as `cortex-update-item`) — changes to the CLI interface or side-effect behavior
 - `skills/discovery/SKILL.md` — changes to how `discovery_source` is written or consumed

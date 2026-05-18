@@ -6,7 +6,7 @@
 
 The project uses the SDK in two structurally different ways: direct `Agent` tool calls embedded in skill instruction files (daytime, interactive), and the Python `claude_agent_sdk.query()` API called from the overnight execution pipeline (autonomous). These paths have different control points, different permission models, and different reasons for existing.
 
-> For a full analysis of current SDK usage patterns and evaluated trade-offs, see [`cortex/research/claude-code-sdk-usage/research.md`](../../research/claude-code-sdk-usage/research.md).
+> For a full analysis of current SDK usage patterns and evaluated trade-offs, see [`cortex/research/archive/claude-code-sdk-usage/research.md`](../../cortex/research/archive/claude-code-sdk-usage/research.md) (archived).
 
 > For overnight runner operations and architecture, see [overnight-operations.md](../overnight-operations.md).
 
@@ -165,7 +165,7 @@ git branch -d worktree/{name}                              # removes the branch 
 
 ## Settings Configuration
 
-From `claude/settings.json`:
+From `~/.claude/settings.json` (user-global; the project-local `claude/settings.json` was retired):
 
 ```json
 "env": {
@@ -182,7 +182,7 @@ From `claude/settings.json`:
 
 ## Interrupt Recovery
 
-`cortex_command/overnight/interrupt.py` runs at the start of every `overnight-start`. It finds features stuck in `running` status (from a prior interrupted session), classifies their worktree state for diagnostic logging, and resets them to `pending` for retry. The recovery action (reset to pending) is the same regardless of worktree classification.
+`cortex_command/overnight/interrupt.py` runs at the start of every `cortex overnight start` invocation. It finds features stuck in `running` status (from a prior interrupted session), classifies their worktree state for diagnostic logging, and resets them to `pending` for retry. The recovery action (reset to pending) is the same regardless of worktree classification.
 
 Note: **recovery attempt counts are preserved across restarts.** A feature that exhausted its retry budget before the interrupt begins the next session with no remaining attempts and will be paused immediately after a single dispatch. If this is unexpected, reset `retries` manually in `overnight-state.json` before relaunching.
 
@@ -200,7 +200,7 @@ The SDK's `resume: session_id` parameter is a different capability — it restor
 
 **`interrupt.py` over SDK session resumption.** The state-machine recovery on restart (resetting stuck features to pending) was purpose-built for the overnight use case and handles correctness without requiring session ID tracking. SDK resumption is a future optimization, not a correctness gap.
 
-**`overnight-start` + tmux over CronCreate.** The current scheduling mechanism launches the runner in a named tmux session, providing terminal attachment, output visibility, and graceful signal handling. CronCreate's process model (whether it produces a persistent, attachable session) is untested for overnight use.
+**`cortex overnight schedule` (launchd LaunchAgent) + detached Python fork over CronCreate.** The current scheduling mechanism uses macOS launchd LaunchAgents (see `cortex overnight schedule`) to fire `cortex overnight start` at a target time. At launch, `_spawn_runner_async` in `cortex_command/overnight/cli_handler.py` forks a detached Python process that operates without a controlling terminal. Output and state are surfaced via `cortex overnight status` and `cortex overnight logs <session-id>` rather than terminal attachment. CronCreate's process model (whether it produces a persistent, attachable session) is untested for overnight use.
 
 ---
 
@@ -210,7 +210,7 @@ The SDK's `resume: session_id` parameter is a different capability — it restor
 |-----------|-------------|
 | `SendMessage` | Overnight agents run independently; no inter-agent signaling needed at current feature independence level |
 | `TaskCreate` / `TaskUpdate` / task tools | File-based state is more durable; `status.py` provides queryability |
-| `CronCreate` | `overnight-start` + tmux handles scheduling with better visibility |
+| `CronCreate` | `cortex overnight schedule` (launchd LaunchAgent) + detached Python fork handles scheduling with status/logs visibility |
 | `TeamCreate` / `TeamDelete` | Teams feature enabled but Python orchestration layer provides required control granularity |
 | `EnterPlanMode` / `ExitPlanMode` | Lifecycle phases are structurally separated; read-only enforcement not yet added |
 | `EnterWorktree` / `ExitWorktree` | `isolation: "worktree"` on Agent is the safe path in sandbox |

@@ -13,7 +13,7 @@ preconditions:
   - "eslint-plugin-jsx-a11y must be installed"
   - "callees: [\"cn\", \"clsx\", \"cva\", \"classnames\"] must appear in the ESLint Tailwind plugin settings"
   - "stylelint must be installed"
-  - "stylelint-plugin-rhythmguard must be installed"
+  - "stylelint-plugin-rhythmguard is optional — Stylelint pass is skipped with a warning if missing"
   - "ui-check-results/ directory will be created if absent"
 ---
 
@@ -43,7 +43,7 @@ Before running, detect the Tailwind version and config:
 
 Report which plugin was selected at the start of output.
 
-**Stylelint plugin config detection:** Look for the project's stylelint config file: `.stylelintrc`, `.stylelintrc.json`, `.stylelintrc.js`, `stylelint.config.js`, or a `stylelint` key in `package.json`. If a stylelint config is found, check whether `stylelint-plugin-rhythmguard` appears in the config's `plugins` array. If the plugin is NOT present in the config (even if it exists in `node_modules`), print: `"Warning: stylelint-plugin-rhythmguard not found in stylelint config — 8px grid rules will not run. Add the plugin to your stylelint config."` and skip the Stylelint pass (Step 4) for this run.
+**Stylelint plugin config detection:** Look for the project's stylelint config file: `.stylelintrc`, `.stylelintrc.json`, `.stylelintrc.js`, `stylelint.config.js`, or a `stylelint` key in `package.json`. If a stylelint config is found, check whether `stylelint-plugin-rhythmguard` appears in the config's `plugins` array. If the plugin is NOT present in the config (even if it exists in `node_modules`), print: `"Warning: stylelint-plugin-rhythmguard not found in stylelint config — 4px grid rules will not run. Add the plugin to your stylelint config."` and skip the Stylelint pass (Step 4) for this run.
 
 **ESLint Tailwind callees config detection:** Look for the project's ESLint config file: `.eslintrc.json`, `.eslintrc.js`, `eslint.config.js`, `eslint.config.mjs`, or an `eslint` key in `package.json`. If a config is found, search for `callees` in the Tailwind plugin settings. If `callees` is NOT found, print: `"Warning: callees not configured in ESLint Tailwind plugin settings — violations inside cn()/clsx()/cva() calls will not be detected. Add callees: [\"cn\", \"clsx\", \"cva\", \"classnames\"] to the tailwindcss plugin options."` Continue running — this is an advisory warning only, not a fatal error.
 

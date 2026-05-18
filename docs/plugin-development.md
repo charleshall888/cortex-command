@@ -14,7 +14,8 @@ Every `plugins/*/` directory is classified as one of two kinds:
   `hooks/cortex-*.sh`, `claude/hooks/cortex-*.sh`) by `just build-plugin`.
   The assembled tree is committed; never edit it by hand.
 
-- **Hand-maintained plugins** (`cortex-pr-review`, `cortex-ui-extras`)
+- **Hand-maintained plugins** (`cortex-pr-review`, `cortex-ui-extras`,
+  `android-dev-extras`, `cortex-dev-extras`)
   — edited in place inside `plugins/*/`; `just build-plugin` leaves them
   untouched.
 
@@ -37,8 +38,9 @@ Run once after clone (or when `.githooks/` changes):
     just setup-githooks
 
 This sets `core.hooksPath` to `.githooks/` so the pre-commit hook activates.
-The hook runs four phases on every commit — see `.githooks/pre-commit` for
-the full logic.
+The hook runs four conceptual phases on every commit (Phase 1 contains
+multiple sub-phases at runtime — 1.5, 1.6, 1.7, 1.8, 1.85, 1.9, 1.95 — for
+source-of-truth gates); see `.githooks/pre-commit` for the full logic.
 
 ## Building plugins
 
@@ -70,11 +72,17 @@ For example, to install the overnight integration plugin:
 ## Drift detection and the pre-commit hook
 
 The `.githooks/pre-commit` hook enforces that build-output plugin trees
-stay in sync with top-level sources. Its four phases:
+stay in sync with top-level sources. The hook organizes its work into four
+conceptual phases (Phase 1 contains multiple sub-phases at runtime — 1.5,
+1.6, 1.7, 1.8, 1.85, 1.9, 1.95 — that enforce additional source-of-truth
+gates; consult `.githooks/pre-commit` for the full sub-phase breakdown):
 
-1. **Name validation** — every `plugins/*/.claude-plugin/plugin.json` must
-   have a non-empty `.name` field, and every plugin directory must be
-   classified in `BUILD_OUTPUT_PLUGINS` or `HAND_MAINTAINED_PLUGINS`.
+1. **Name validation and source-of-truth gates** — every
+   `plugins/*/.claude-plugin/plugin.json` must have a non-empty `.name`
+   field, and every plugin directory must be classified in
+   `BUILD_OUTPUT_PLUGINS` or `HAND_MAINTAINED_PLUGINS`. Sub-phases 1.5
+   through 1.95 enforce additional canonical-source invariants before any
+   build runs.
 2. **Short-circuit decision** — checks staged paths to decide whether a build
    is needed (triggered by changes under `skills/`, `bin/cortex-*`,
    `hooks/cortex-validate-commit.sh`, or any build-output plugin tree).

@@ -109,6 +109,8 @@ Derives 3-4 challenge angles from the artifact and project context, then dispatc
 ### requirements
 Gather and document project-level and feature-area requirements through structured interviews. Creates a `requirements/` directory with a master project doc and area-specific docs. Downstream skills (lifecycle, discovery) consult these automatically during research, spec, and review.
 
+`requirements-gather` and `requirements-write` are internal sub-skills with `disable-model-invocation: true` — they are invoked only by the `requirements` orchestrator, never directly by the user or model.
+
 [skills/requirements/SKILL.md](../skills/requirements/SKILL.md)
 
 ---

@@ -16,11 +16,11 @@ Cortex uses [SemVer](https://semver.org/):
 - **Minor** (`0.1.x → 0.2.0`): new features, backward-compatible behavior changes.
 - **Major** (`0.x.x → 1.0.0`): breaking changes (CLI flag removals, JSON envelope shape changes that break existing consumers, etc.).
 
-Three distinct version numbers exist in the codebase — keep them straight:
+Three distinct version values coexist — keep them straight:
 
-1. **`pyproject.toml` `version`** — the package version. This is what `uv tool install` resolves and what `cortex --version` reports.
-2. **CLI tag** (`v0.1.0`) — the git tag that pins the wheel build. Always `v` + `pyproject.toml` version. This is what `uv tool install git+<url>@<tag>` and the plugin's `CLI_PIN[0]` reference.
-3. **Schema version** (`CLI_PIN[1]`, `MCP_REQUIRED_CLI_VERSION`) — the major schema version of the print-root JSON envelope. Bumps independently of the package version; bumps when the envelope shape changes incompatibly. Currently `"1.0"` (matched by the envelope's own `"version": "1.1"` field — note the envelope-version is independent of `CLI_PIN[1]` for additive-only changes).
+1. **CLI git tag** (`vX.Y.Z`, e.g. `v2.0.0`) — the git tag that pins the wheel build. Always `v` + `pyproject.toml` `version`. This is what `uv tool install git+<url>@<tag>` resolves and what the plugin's `CLI_PIN[0]` references.
+2. **Envelope `version` field** — the PEP 440 package version emitted by `cortex --print-root` (e.g. `"2.0.0"`). Equal to `pyproject.toml` `version` with no `v` prefix. This is what `cortex --version` reports.
+3. **Envelope `schema_version` field** (`CLI_PIN[1]`, `MCP_REQUIRED_CLI_VERSION`) — the contract-floor schema version of the print-root JSON envelope (currently `"2.0"`; defined as `_JSON_SCHEMA_VERSION` in `cortex_command/overnight/cli_handler.py`). Bumps independently of the package version, and only when the envelope shape changes incompatibly.
 
 ---
 
@@ -39,7 +39,7 @@ version = "0.2.0"
 Add a new entry at the top of `CHANGELOG.md` (under `## [Unreleased]` or directly above the previous release entry):
 
 ```markdown
-## [v0.2.0] - 2026-MM-DD
+## [vX.Y.Z] - 2026-MM-DD
 
 ### Added
 - Brief bullet describing each new feature.
@@ -61,12 +61,12 @@ Use the cortex-core commit skill:
 /cortex-core:commit
 ```
 
-Suggested commit message: `Bump version to v0.2.0` (or similar — imperative mood, capitalized, no trailing period, ≤ 72 chars).
+Suggested commit message: `Bump version to vX.Y.Z` (or similar — imperative mood, capitalized, no trailing period, ≤ 72 chars).
 
 ### 4. Tag the commit
 
 ```bash
-git tag -a v0.2.0 -m "Release v0.2.0"
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
 ```
 
 Use `-a` (annotated tag) so the tag has its own metadata. The message can be brief — the `CHANGELOG.md` entry is the canonical release notes.
@@ -78,7 +78,7 @@ git push origin main
 git push --tags
 ```
 
-(Or `git push origin v0.2.0` to push just that tag.)
+(Or `git push origin vX.Y.Z` to push just that tag.)
 
 ### 6. Watch the release workflow
 
@@ -86,13 +86,13 @@ Pushing a tag matching `v[0-9]+.[0-9]+.[0-9]+` triggers `.github/workflows/relea
 
 ```bash
 gh run watch $(gh run list --workflow=release.yml --limit 1 --json databaseId -q '.[0].databaseId')
-gh release view v0.2.0
+gh release view vX.Y.Z
 ```
 
 The release should have at least one asset — `cortex_command-0.2.0-py3-none-any.whl`. Confirm with:
 
 ```bash
-gh release view v0.2.0 --json assets -q '.assets[].name'
+gh release view vX.Y.Z --json assets -q '.assets[].name'
 ```
 
 ### 7. (Conditional) Bump the plugin's `CLI_PIN`
@@ -102,7 +102,7 @@ gh release view v0.2.0 --json assets -q '.assets[].name'
 **Manual edit only on emergency tags**: if the auto-release workflow is disabled or you push a tag manually (PAT revoked, transient failure, emergency release), edit the `cortex-overnight` plugin's `CLI_PIN` constant in `plugins/cortex-overnight/server.py` directly:
 
 ```python
-CLI_PIN: tuple[str, str] = ("v0.2.0", "2.0")
+CLI_PIN: tuple[str, str] = ("vX.Y.Z", "2.0")
 ```
 
 The CI lint in `.github/workflows/release.yml` (per #213 R18) hard-fails the release-tag push when `CLI_PIN[0]` does not match the pushed tag, catching drift in this emergency path.
@@ -115,7 +115,7 @@ Commit the bump:
 /cortex-core:commit
 ```
 
-Suggested commit message: `Bump plugin CLI_PIN to v0.2.0`.
+Suggested commit message: `Bump plugin CLI_PIN to vX.Y.Z`.
 
 This is the moment the plugin starts requiring the new CLI tag. Until you bump the plugin, users running plugin auto-update remain on the old `CLI_PIN`, which still works because the old CLI tag is still installed for them.
 

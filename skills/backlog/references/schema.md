@@ -11,7 +11,7 @@ Every backlog item file uses this YAML frontmatter contract. Frontmatter must be
 | `schema_version` | string | yes | `"1"` |
 | `uuid` | string | yes | UUID v4 identifier |
 | `title` | string | yes | Short human-readable name |
-| `status` | enum | yes | `backlog`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` |
+| `status` | enum | yes | `backlog`, `ready`, `refined`, `in_progress`, `implementing`, `review`, `complete`, `abandoned` |
 | `priority` | enum | yes | `critical`, `high`, `medium`, `low` |
 | `type` | enum | yes | `feature`, `bug`, `chore`, `spike`, `idea`, `epic` (epics are non-implementable, produced by /cortex-core:discovery) |
 | `tags` | array | no | Inline YAML only: `[tag1, tag2]` |
@@ -32,7 +32,7 @@ Every backlog item file uses this YAML frontmatter contract. Frontmatter must be
 
 ## Enum Reference
 
-**status:** `backlog` | `refined` | `in_progress` | `implementing` | `review` | `complete` | `abandoned`
+**status:** `backlog` | `ready` | `refined` | `in_progress` | `implementing` | `review` | `complete` | `abandoned`
 
 **priority:** `critical` | `high` | `medium` | `low`
 

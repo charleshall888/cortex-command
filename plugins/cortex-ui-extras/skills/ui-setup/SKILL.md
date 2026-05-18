@@ -76,7 +76,7 @@ If config missing:
 {
   "plugins": ["stylelint-plugin-rhythmguard"],
   "rules": {
-    "rhythmguard/spacing-grid": [true, { "grid": 8 }]
+    "rhythmguard/spacing-grid": [true, { "grid": 4 }]
   }
 }
 ```
@@ -123,16 +123,19 @@ If missing: add `ui-check-results/` to `.gitignore`.
 
 ### H. Playwright
 
-Check the combined dependencies for both `@playwright/test` and `@axe-core/playwright`.
+Check the combined dependencies for `@playwright/test`. The accessibility audit toolchain (`/ui-a11y`) uses `axe-playwright-python` and is invoked via `uv run --script` with PEP 723 inline script metadata — no explicit install of the axe binding is required at the project level.
 
 Note: the bare `playwright` package is insufficient — `@playwright/test` is the required test runner package. If only `playwright` is present (without `@playwright/test`), treat as ✗.
 
-If ✓: `✓  Playwright (@playwright/test + @axe-core/playwright)` — do not show browser install step.
+If ✓: `✓  Playwright (@playwright/test; axe binding handled by /ui-a11y via uv run --script)` — do not show browser install step.
 
 If ✗: `✗  Playwright` followed by:
 ```bash
-npm install -D @playwright/test @axe-core/playwright
+npm install -D @playwright/test
 npx playwright install chromium
+# Note: /ui-a11y installs axe-playwright-python on demand via `uv run --script` (PEP 723).
+# To pre-install Playwright browser binaries for the Python runner, run:
+#   uv run --with playwright python -m playwright install chromium
 ```
 
 ## Step 3: Output
@@ -144,7 +147,7 @@ Print a summary header line, then one entry per item:
 
 Item B (shadcn MCP) always prints its instructions — mark it as a manual step rather than ✓/✗.
 
-End with a count: `N/8 items configured.` (exclude item B from the count since it cannot be auto-detected).
+End with a count: `N/7 items configured.` (exclude item B from the count since it cannot be auto-detected).
 
 If all detectable items are configured, close with:
 > All detectable items configured. shadcn MCP requires a one-time manual IDE step (see B above). Next: run `/ui-brief` to generate `DESIGN.md` and design tokens, then `/ui-lint` after building components to verify token conformance.
