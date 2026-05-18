@@ -2,11 +2,15 @@
 schema_version: "1"
 uuid: e697d252-3c14-4d08-a7aa-5e1390186f9f
 title: "Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift"
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-05-18
 updated: 2026-05-18
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/trigger-cortex-cli-reinstall-at-sessionstart/spec.md
+areas: [overnight-runner,hooks]
 ---
 
 ## Problem
