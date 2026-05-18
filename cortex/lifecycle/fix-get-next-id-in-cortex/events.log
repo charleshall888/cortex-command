@@ -1,0 +1,6 @@
+{"schema_version": 3, "ts": "2026-05-16T00:00:00Z", "event": "clarify_critic", "feature": "fix-get-next-id-in-cortex", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 1, "dismiss": 5, "ask": 0}, "applied_fixes_count": 1, "dismissals_count": 5, "status": "ok"}
+{"ts": "2026-05-17T00:23:23Z", "event": "lifecycle_start", "feature": "fix-get-next-id-in-cortex", "tier": "simple", "criticality": "medium"}
+{"ts": "2026-05-17T00:23:23Z", "event": "spec_approved", "feature": "fix-get-next-id-in-cortex"}
+{"ts": "2026-05-17T00:23:24Z", "event": "phase_transition", "feature": "fix-get-next-id-in-cortex", "from": "specify", "to": "plan"}
+{"ts": "2026-05-17T01:21:44Z", "event": "plan_approved", "feature": "fix-get-next-id-in-cortex"}
+{"ts": "2026-05-17T01:21:45Z", "event": "phase_transition", "feature": "fix-get-next-id-in-cortex", "from": "plan", "to": "implement"}

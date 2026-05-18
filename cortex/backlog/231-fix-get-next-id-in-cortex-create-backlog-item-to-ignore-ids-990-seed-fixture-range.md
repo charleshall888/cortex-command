@@ -2,15 +2,18 @@
 schema_version: "1"
 uuid: 9fb784e1-cd80-4887-94df-c675ab12904b
 title: "Fix _get_next_id in cortex-create-backlog-item to ignore IDs >=990 (seed fixture range)"
-status: backlog
+status: in_progress
 priority: low
 type: chore
 tags: [backlog, cli, dashboard-seed, hygiene]
 created: 2026-05-16
-updated: 2026-05-16
+updated: 2026-05-17
 complexity: simple
-criticality: low
+criticality: medium
 areas: [backlog]
+spec: cortex/lifecycle/fix-get-next-id-in-cortex/spec.md
+session_id: 37da6e03-6fec-406e-bae8-35a3eaa82f6d
+lifecycle_phase: plan
 ---
 
 # Fix _get_next_id in cortex-create-backlog-item to ignore IDs >=990 (seed fixture range)
