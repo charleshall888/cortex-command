@@ -313,117 +313,86 @@ def test_outcome_detection_paused_substring_in_failure(tmp_path: Path) -> None:
 
 
 def test_skill_contracts() -> None:
-    """implement.md §1a must satisfy six document invariants.
+    """implement.md §1a (Interactive Worktree Creation) must satisfy invariants.
+
+    The legacy daytime-pipeline contract was removed by lifecycle
+    `manage-interactive-feature-worktree-lifecycle-creation` T10 — option 2
+    now creates an `interactive/{slug}` worktree and hands off to the user
+    (Variant A `cd` / Variant B fresh session, owned by epic #240).
 
     Checks:
-      (a) invocation string `cortex-daytime-pipeline --feature` is present
-          (renamed from `python3 -m cortex_command.overnight.daytime_pipeline`
-          by backlog 208 R10/R14 console-script promotion)
-      (b) no extra flags on that invocation line (--tier, --criticality,
-          --base-branch, --test-command absent from that line)
-      (c) "plan.md" text appears before the first "daytime.pid" reference
-          in §1a (guard ordering)
-      (d) `"mode": "daytime"` appears exactly once in §1a
-          (dispatch_complete only — implementation_dispatch emission was
-          removed as part of the Wave 1 dead-event cleanup in feature #189)
-      (e) §1a.vi invokes the `cortex-daytime-result-reader` helper and
-          documents the full outcome enumeration
-          (merged/deferred/paused/failed/unknown) (step shifted from §vii
-          to §vi after implementation_dispatch emission was removed in
-          feature #189 Wave 1 dead-event cleanup)
-      (f) `cortex-daytime-dispatch-writer` appears ≥ 2 times in §1a
-          (init mode at Step 2, update-pid mode at Step 4) — pins the
-          canonical-helper-pointer pattern so a future edit cannot
-          silently re-inline the atomic-write Python recipes that #177
-          trimmed out (closes adversarial finding A4).
+      (a) `create_worktree(feature="interactive-` invocation appears in §iii
+      (b) `interactive/{slug}` branch shape is documented
+      (c) Interactive PID liveness check (§i) precedes overnight guard (§ii)
+          which precedes worktree creation (§iii)
+      (d) The two pre-flight rejections are documented (interactive PID live,
+          overnight runner active for this repo)
+      (e) Handoff message documents both Variant A (cd) and Variant B
+          (`claude --worktree=`)
+      (f) §v explicitly exits /cortex-core:lifecycle without transitioning
     """
     implement_md = REPO_ROOT / "skills" / "lifecycle" / "references" / "implement.md"
     text = implement_md.read_text()
 
-    # Locate §1a section: text between "### 1a." and the next "### " heading.
     match = re.search(r"### 1a\..*?(?=\n### )", text, flags=re.DOTALL)
     assert match is not None, "could not locate §1a section in implement.md"
     full_section = match.group(0)
 
-    # Ordering checks (c) and (e) compare document positions of strings that
-    # appear both in the §1b preamble paragraph (descriptive) and in the
-    # numbered guard/result steps (normative). To capture the *guard ordering*
-    # the task cares about, narrow the section to the numbered-steps region
-    # starting at the first step marker (`**i.`).
     steps_start = full_section.find("**i.")
-    assert steps_start != -1, "§1b must contain a first step marker '**i.'"
+    assert steps_start != -1, "§1a must contain a first step marker '**i.'"
     section = full_section[steps_start:]
 
-    # (a) invocation string present
-    invocation = "cortex-daytime-pipeline --feature"
-    assert invocation in section, (
-        f"§1b must contain the invocation string {invocation!r}"
+    # (a) create_worktree invocation with interactive- prefix present
+    assert 'create_worktree(feature="interactive-' in section, (
+        '§1a must invoke create_worktree with the interactive- feature prefix'
     )
 
-    # (b) no extra flags on the invocation line
-    invocation_line = ""
-    for line in section.splitlines():
-        if invocation in line:
-            invocation_line = line
-            break
-    assert invocation_line, "invocation line not found in §1b"
-    for extra_flag in ("--tier", "--criticality", "--base-branch", "--test-command"):
-        assert extra_flag not in invocation_line, (
-            f"invocation line must not include {extra_flag!r}: {invocation_line!r}"
+    # (b) branch shape documented
+    assert "interactive/{slug}" in section or "interactive/" in section, (
+        "§1a must document the interactive/{slug} branch shape"
+    )
+
+    # (c) ordering: interactive PID guard (§i) → overnight guard (§ii) → creation (§iii)
+    i_idx = section.find("**i.")
+    ii_idx = section.find("**ii.")
+    iii_idx = section.find("**iii.")
+    assert -1 not in (i_idx, ii_idx, iii_idx), "§1a must have steps i, ii, iii"
+    assert i_idx < ii_idx < iii_idx, (
+        "§1a step ordering must be i (interactive PID) → ii (overnight) → iii (create)"
+    )
+
+    # (d) pre-flight rejections documented
+    assert "interactive.pid" in section, "§1a.i must reference interactive.pid"
+    assert "kill -0" in section, "§1a.i must reference kill -0 liveness check"
+    assert "active-session.json" in section, (
+        "§1a.ii must reference active-session.json overnight guard"
+    )
+    assert "Overnight runner is active" in section, (
+        "§1a.ii must document the overnight-active rejection message"
+    )
+
+    # (e) handoff documents Variant A and Variant B
+    assert "Variant A" in section and "Variant B" in section, (
+        "§1a.iv handoff must document both Variant A and Variant B"
+    )
+    assert "claude --worktree=" in section, (
+        "§1a.iv handoff must reference `claude --worktree=` for Variant B"
+    )
+
+    # (f) §v explicit exit
+    v_idx = section.find("**v.")
+    assert v_idx != -1, "§1a must contain a §v exit step"
+    v_tail = section[v_idx:]
+    assert "Exit /cortex-core:lifecycle" in v_tail or "exit" in v_tail.lower(), (
+        "§1a.v must explicitly exit the lifecycle"
+    )
+
+    # Legacy daytime-pipeline artifacts must NOT reappear (regression guard)
+    for legacy in ("cortex-daytime-pipeline", "cortex-daytime-dispatch-writer",
+                   "cortex-daytime-result-reader", '"mode": "daytime"'):
+        assert legacy not in section, (
+            f"§1a must not re-introduce removed daytime-pipeline artifact {legacy!r}"
         )
-
-    # (c) "plan.md" appears before the first "daytime.pid" reference
-    plan_idx = section.find("plan.md")
-    pid_idx = section.find("daytime.pid")
-    assert plan_idx != -1, "§1b must mention plan.md (prerequisite check)"
-    assert pid_idx != -1, "§1b must mention daytime.pid (double-dispatch guard)"
-    assert plan_idx < pid_idx, (
-        "plan.md prerequisite check must be documented before the first "
-        "daytime.pid reference in §1b"
-    )
-
-    # (d) `"mode": "daytime"` appears exactly once (dispatch_complete only;
-    # implementation_dispatch emission was removed in feature #189 Wave 1
-    # dead-event cleanup)
-    mode_count = section.count('"mode": "daytime"')
-    assert mode_count == 1, (
-        f'§1b must include `"mode": "daytime"` exactly once '
-        f"(dispatch_complete event only); found {mode_count}"
-    )
-
-    # (e) §1b.vi invokes the structured-result-file reader helper (the
-    # ticket-095 replacement for log-sentinel substring classification) and
-    # documents the full outcome enumeration. Narrow to the §vi region.
-    # (Step numbering shifted from §vii to §vi after the implementation_dispatch
-    # emission step was removed as part of the Wave 1 dead-event cleanup in
-    # feature #189.)
-    vi_start = section.find("**vi.")
-    assert vi_start != -1, "§1b must contain a §vi step marker"
-    vi_end_marker = section.find("**vii.", vi_start)
-    vi_section = section[vi_start:vi_end_marker] if vi_end_marker != -1 else section[vi_start:]
-
-    reader_invocation = "cortex-daytime-result-reader"
-    assert reader_invocation in vi_section, (
-        f"§1a.vi must invoke the reader helper {reader_invocation!r}"
-    )
-    for outcome in ("merged", "deferred", "paused", "failed", "unknown"):
-        assert outcome in vi_section, (
-            f'§1a.vi must document the {outcome!r} outcome branch'
-        )
-
-    # (f) daytime_dispatch_writer pointer appears ≥ 2 times in §1a (init at
-    # Step 2 and update-pid at Step 4). Specifically pinned, not loose-regexed:
-    # the surviving Step-3 daytime_pipeline invocation matches a generic
-    # cortex_command.overnight.\w+ regex, defeating the test's stated purpose
-    # of detecting re-inlining of Steps 2 and 4. This invariant requires the
-    # exact daytime_dispatch_writer module name and ≥ 2 occurrences (one per
-    # replaced step).
-    writer_invocation = "cortex-daytime-dispatch-writer"
-    writer_count = section.count(writer_invocation)
-    assert writer_count >= 2, (
-        f"§1a must invoke {writer_invocation!r} at least twice "
-        f"(Step 2 init + Step 4 update-pid); found {writer_count}"
-    )
 
 
 def test_plan_md_dispatcher_contracts() -> None:
