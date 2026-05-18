@@ -1,0 +1,8 @@
+{"schema_version": 3, "ts": "2026-05-18T00:00:00Z", "event": "clarify_critic", "feature": "add-tag-filter-to-backlog-query", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 1, "dismiss": 3, "ask": 2}, "applied_fixes_count": 1, "dismissals_count": 3, "status": "ok"}
+{"ts": "2026-05-18T15:30:00Z", "event": "lifecycle_start", "feature": "add-tag-filter-to-backlog-query", "tier": "complex", "criticality": "medium"}
+{"ts": "2026-05-18T15:31:00Z", "event": "phase_transition", "feature": "add-tag-filter-to-backlog-query", "from": "clarify", "to": "research"}
+{"ts": "2026-05-18T15:45:00Z", "event": "phase_transition", "feature": "add-tag-filter-to-backlog-query", "from": "research", "to": "specify"}
+{"ts": "2026-05-18T15:55:00Z", "event": "spec_approved", "feature": "add-tag-filter-to-backlog-query"}
+{"ts": "2026-05-18T15:56:00Z", "event": "phase_transition", "feature": "add-tag-filter-to-backlog-query", "from": "specify", "to": "plan"}
+{"ts": "2026-05-18T16:10:00Z", "event": "plan_approved", "feature": "add-tag-filter-to-backlog-query"}
+{"ts": "2026-05-18T16:10:00Z", "event": "phase_transition", "feature": "add-tag-filter-to-backlog-query", "from": "plan", "to": "implement"}

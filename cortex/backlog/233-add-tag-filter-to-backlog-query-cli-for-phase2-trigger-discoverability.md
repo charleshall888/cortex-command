@@ -2,14 +2,16 @@
 schema_version: "1"
 uuid: 1288aefd-5f4a-4007-b8b6-8b999eb4b45d
 title: "Add `--tag` filter to backlog query CLI for phase2-trigger discoverability"
-status: backlog
+status: refined
 priority: low
 type: chore
 tags: [tooling-gap]
 created: 2026-05-17
-updated: 2026-05-17
-complexity: simple
-areas: [backlog, cli]
+updated: 2026-05-18
+complexity: complex
+areas: [backlog,cli]
+criticality: medium
+spec: cortex/lifecycle/add-tag-filter-to-backlog-query/spec.md
 ---
 
 # Add `--tag` filter to backlog query CLI for phase2-trigger discoverability
