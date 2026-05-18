@@ -3,7 +3,6 @@
 | ID | Title | Status | Priority | Type | Blocked By | Parent | Spec |
 |-----|-------|--------|----------|------|------------|--------|------|
 | 228 | Wire daytime dispatch through cortex CLI + MCP with launchd detachment | refined | high | feature | — | — | ✓ |
-| 230 | Release-gate empirical from-Claude-session smoke test for #228 daytime dispatch | in_progress | high | chore | — | — | ✓ |
 | 8 | Auto-rename Claude Code session to active lifecycle feature name | backlog | medium | feature | anthropics/claude-code#34243 | — | — |
 | 186 | Clarify-critic schema validator + warning-template runtime validator (per #178 R7 follow-on) | proposed | medium | feature | — | 178 | — |
 | 209 | Lead refine §4 complexity-value gate with recommended option + rationale | in_progress | medium | chore | — | — | ✓ |
@@ -34,7 +33,6 @@
 
 ## In-Progress
 
-- **230** Release-gate empirical from-Claude-session smoke test for #228 daytime dispatch (in_progress)
 - **209** Lead refine §4 complexity-value gate with recommended option + rationale (in_progress)
 - **991** Seed: Migrate database schema to v2 (in_progress)
 

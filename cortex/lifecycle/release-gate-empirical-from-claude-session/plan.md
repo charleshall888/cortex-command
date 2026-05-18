@@ -33,7 +33,7 @@ Four tasks across three spec phases: rewrite the #230 ticket body (procedure + R
   - Frontmatter is already correct (status=in_progress, complexity=simple, criticality=high, areas=[overnight-runner], spec field present). Do not modify frontmatter in this task.
   - §References block already lists parent feature, Spec R16 path, and Plan reference parenthetical. Update only the Plan reference parenthetical to remove the now-stale "Task 17 split out" reference (Task 17 was deleted from plan.md per research finding); replace with a pointer to the HTML comment at plan.md line 206.
 - **Verification**: (a) `grep -c "feature_dispatched" cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` returns 0 (pass if count = 0); (b) `grep -c "pipeline-events.log" cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` returns ≥ 1; (c) `grep -c "uv tool install --reinstall" cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` returns ≥ 1; (d) `grep -c "cortex daytime status" cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` returns ≥ 1; (e) `grep -c "git add" cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` returns ≥ 1; (f) `grep -c "#228 merge commit SHA on main" cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` returns ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 70ffcb69)
 
 ### Task 2: Update #228 spec R16 to remove the same hallucination
 - **Files**: `cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/spec.md`
@@ -46,7 +46,7 @@ Four tasks across three spec phases: rewrite the #230 ticket body (procedure + R
   - Preserve the cross-reference to #230 (the backlog filename + the verification clause `test -f cortex/backlog/230-...md && grep -c "blocked_by: \[228\]"`).
   - Do NOT modify R15 or any other requirement in the file.
 - **Verification**: (a) `grep -c "feature_dispatched" cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/spec.md` returns 0; (b) `grep -c "dispatch_start" cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/spec.md` returns ≥ 1; (c) `grep -c "pipeline-events.log" cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/spec.md` returns ≥ 1; (d) `grep -c "blocked_by: \[228\]" cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/spec.md` returns ≥ 1 (preservation check — the in-lifecycle verification clause for R16 must survive the edit).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 218c5166)
 
 ### Task 3: Add pytest lint that catches event-name hallucinations in backlog grep targets
 - **Files**: `tests/test_backlog_grep_targets_resolve.py`
@@ -64,7 +64,7 @@ Four tasks across three spec phases: rewrite the #230 ticket body (procedure + R
   - **Self-test guidance**: include at least two test cases in the file's body: (1) a positive case (registered-event token in a temp fixture passes), (2) a negative case (hallucinated-event token in a temp fixture fails). Use pytest's `tmp_path` fixture; mirror the helper functions `_write_registry` and `_write_skill_prompt` from `tests/test_check_events_registry.py:45-55` but adapted to backlog markdown.
   - **Live-corpus assertion**: include one terminal test that runs the lint against the actual `cortex/backlog/` corpus (not a tmp_path fixture) and asserts no unregistered targets. After Task 1 lands, this test passes; before Task 1 lands, this test would fail on #230. The dependency on [1] is therefore load-bearing.
 - **Verification**: (a) `pytest tests/test_backlog_grep_targets_resolve.py -v` exits 0 (pass if exit code = 0 — both the fixture-based test cases and the live-corpus assertion pass after Task 1 lands); (b) `grep -c "UNREGISTERED_GREP_TARGET" tests/test_backlog_grep_targets_resolve.py` returns ≥ 1 (verifies the failure-message convention is implemented).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 84d6f314)
 
 ### Task 4: Cross-reference the release-gate pattern from `docs/release-process.md`
 - **Files**: `docs/release-process.md`
@@ -77,7 +77,7 @@ Four tasks across three spec phases: rewrite the #230 ticket body (procedure + R
   - Reference #230 by its full filename `cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` in the paragraph (the grep-c acceptance check expects the prefix `230-release-gate-empirical-from-claude-session`).
   - The cross-reference depends on [1] because the paragraph describes the procedure shape that Task 1 lands — landing the cross-reference first would point at the pre-fix #230 procedure.
 - **Verification**: (a) `grep -c "230-release-gate-empirical-from-claude-session" docs/release-process.md` returns ≥ 1; (b) `grep -c "release-gate" docs/release-process.md` returns ≥ 2 (the new paragraph plus any prior mentions); (c) the paragraph appears in the "Cut a new release" section — verify by `awk` from "Cut a new release" to next H2 and `grep` within that range, e.g., `awk '/^## Cut a new release/,/^## [^C]/' docs/release-process.md | grep -c "230-release-gate-empirical-from-claude-session"` returns ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 1df0a0cf — verification (a) and (b) pass; (c) is broken by the fenced `## [v0.2.0]` CHANGELOG example at line 42 which awk treats as a real H2; structural placement at line 124 is correct)
 
 ## Risks
 
