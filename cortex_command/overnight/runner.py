@@ -2067,7 +2067,11 @@ def run(
             "%Y-%m-%dT%H:%M:%SZ"
         )
         try:
-            probe = seatbelt_probe.run_probe(session_dir, repo_path)
+            probe = seatbelt_probe.run_probe(
+                session_dir,
+                repo_path,
+                cancel_event=coord.shutdown_event,
+            )
             seatbelt_event = {
                 "ts": seatbelt_ts,
                 "event": "seatbelt_probe",
