@@ -119,6 +119,10 @@ Suggested commit message: `Bump plugin CLI_PIN to v0.2.0`.
 
 This is the moment the plugin starts requiring the new CLI tag. Until you bump the plugin, users running plugin auto-update remain on the old `CLI_PIN`, which still works because the old CLI tag is still installed for them.
 
+### release-gate tickets (manual smoke before push)
+
+See `cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` as the canonical example of a release-gated ticket where a manual smoke procedure precedes the `[release-type: minor]` push. Use this pattern when a release-blocking property cannot be verified by pytest — for example, behavior that requires an MCP host (Claude Code session) or other interactive runtime the automated suite cannot reproduce. The ticket's §Procedure describes the operator steps; once executed, the operator populates §Results with the observed evidence, and only then is the empty `[release-type: minor]` commit pushed to `main` to trigger the auto-release workflow. The conventions: a chore ticket (`type: chore`) tagged with both `release-gate` and `manual-verification`, with a populated §Results section gating the release-cut commit.
+
 ---
 
 ## Auto-release PAT setup (one-time)
