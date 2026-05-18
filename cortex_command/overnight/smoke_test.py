@@ -122,7 +122,7 @@ def _setup_artifacts() -> None:
 
 def _cleanup_artifacts() -> None:
     """Remove all artifacts created by the smoke test."""
-    cleanup_worktree(FEATURE_NAME)
+    cleanup_worktree(FEATURE_NAME, branch=f"pipeline/{FEATURE_NAME}")
 
     subprocess.run(
         ["git", "branch", "-D", BRANCH_NAME],

@@ -500,7 +500,7 @@ def _apply_feature_result(
             )
             # Clean up the stale prior-round worktree (failed merge left it intact).
             try:
-                cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+                cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
             except Exception:
                 pass
         else:
@@ -579,7 +579,7 @@ def _apply_feature_result(
                     backlog_id=ctx.backlog_ids.get(name),
                 )
                 try:
-                    cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+                    cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
                 except Exception:
                     pass
                 return
@@ -601,7 +601,7 @@ def _apply_feature_result(
             )
             # Clean up worktree
             try:
-                cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+                cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
             except Exception:
                 pass
         elif merge_result.error in ("ci_pending", "ci_failing"):
@@ -864,7 +864,7 @@ async def apply_feature_result(
                             backlog_id=ctx.backlog_ids.get(name),
                         )
                         try:
-                            cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+                            cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
                         except Exception:
                             pass
                         return
@@ -925,7 +925,7 @@ async def apply_feature_result(
                 backlog_id=ctx.backlog_ids.get(name),
             )
             try:
-                cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+                cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
             except Exception:
                 pass
             return
@@ -1056,7 +1056,7 @@ async def apply_feature_result(
                     backlog_id=ctx.backlog_ids.get(name),
                 )
                 try:
-                    cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+                    cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
                 except Exception:
                     pass
             elif recovery_result.success and not recovery_result.flaky:
@@ -1075,7 +1075,7 @@ async def apply_feature_result(
                     backlog_id=ctx.backlog_ids.get(name),
                 )
                 try:
-                    cleanup_worktree(name, repo_path=repo_path, worktree_path=worktree_path)
+                    cleanup_worktree(name, branch=f"pipeline/{name}", repo_path=repo_path, worktree_path=worktree_path)
                 except Exception:
                     pass
             else:

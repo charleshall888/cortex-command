@@ -257,7 +257,9 @@ async def _orphan_guard(feature: str, pid_path: Path) -> None:
         await asyncio.sleep(1)
         if os.getppid() == 1:
             try:
-                cleanup_worktree(feature)
+                # SIGKILL-recovery path: force=True is required because the
+                # worktree may have uncommitted state from the killed process.
+                cleanup_worktree(feature, branch=f"pipeline/{feature}", force=True)
             finally:
                 pid_path.unlink(missing_ok=True)
                 os._exit(1)
@@ -448,7 +450,7 @@ async def run_daytime(feature: str) -> int:
             return 1
         finally:
             _orphan_task.cancel()
-            cleanup_worktree(feature)
+            cleanup_worktree(feature, branch=f"pipeline/{feature}")
             pid_path.unlink(missing_ok=True)
 
         # Classification branches — all set _terminated_via / _outcome before

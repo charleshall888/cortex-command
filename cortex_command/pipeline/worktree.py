@@ -56,6 +56,34 @@ def _repo_root() -> Path:
     return Path(result.stdout.strip())
 
 
+def _main_worktree_root(repo: Path | None = None) -> Path:
+    """Resolve the main worktree root via ``git worktree list --porcelain``.
+
+    Reads the first ``worktree`` entry from the porcelain output, which is
+    always the main worktree (not a linked worktree).  Falls back to
+    ``_repo_root()`` when parsing fails or the output is empty.
+
+    Args:
+        repo: Optional git repository path to run the command from.  When
+            None, the command is run without ``cwd`` (inherits the process
+            working directory, same semantics as the existing ``_repo_root()``
+            calls).
+    """
+    kwargs: dict = dict(capture_output=True, text=True)
+    if repo is not None:
+        kwargs["cwd"] = str(repo)
+    result = subprocess.run(
+        ["git", "worktree", "list", "--porcelain"],
+        **kwargs,
+    )
+    if result.returncode == 0:
+        for line in result.stdout.splitlines():
+            if line.startswith("worktree "):
+                return Path(line[9:])
+    # Fallback: use the classic rev-parse approach (honors cwd).
+    return _repo_root()
+
+
 def _branch_exists(branch: str, repo: Path) -> bool:
     """Check if a git branch exists."""
     result = subprocess.run(
@@ -308,6 +336,9 @@ def create_worktree(
 
 def cleanup_worktree(
     feature: str,
+    *,
+    branch: str,
+    force: bool = False,
     repo_path: Path | None = None,
     worktree_path: Path | None = None,
 ) -> None:
@@ -318,8 +349,17 @@ def cleanup_worktree(
 
     Args:
         feature: Feature name matching the worktree directory name.
+        branch: The fully-qualified branch name to delete (e.g.
+            ``pipeline/my-feature`` or ``pipeline/my-feature-2``).  Required;
+            callers must pass the actual branch used at worktree-creation time
+            rather than relying on the implicit ``pipeline/{feature}``
+            construction.
+        force: When True, passes ``--force`` to ``git worktree remove``.
+            Reserved for SIGKILL-recovery paths where the worktree may have
+            uncommitted state that would otherwise block removal.
         repo_path: Explicit repository path for cross-repo features.
-            When None, uses _repo_root().
+            When None, uses _main_worktree_root() (resolves via
+            ``git worktree list --porcelain`` first entry).
         worktree_path: Explicit worktree path (e.g. $TMPDIR-based).
             When None, derives the path by routing through
             ``resolve_worktree_root(feature, session_id=None, repo_root=repo)``
@@ -327,7 +367,7 @@ def cleanup_worktree(
             creation, including the branch (c) default and any operator
             overrides via env var or settings.local.json sentinel-suffix entry.
     """
-    repo = repo_path if repo_path is not None else _repo_root()
+    repo = repo_path if repo_path is not None else _main_worktree_root(repo_path)
     wt_path = (
         worktree_path
         if worktree_path is not None
@@ -336,20 +376,16 @@ def cleanup_worktree(
 
     # Remove the worktree if it exists
     if wt_path.exists():
-        result = subprocess.run(
-            ["git", "worktree", "remove", str(wt_path)],
+        remove_cmd = ["git", "worktree", "remove"]
+        if force:
+            remove_cmd.append("--force")
+        remove_cmd.append(str(wt_path))
+        subprocess.run(
+            remove_cmd,
             capture_output=True,
             text=True,
             cwd=str(repo),
         )
-        # If normal remove fails, try with --force
-        if result.returncode != 0:
-            subprocess.run(
-                ["git", "worktree", "remove", "--force", str(wt_path)],
-                capture_output=True,
-                text=True,
-                cwd=str(repo),
-            )
 
     # Prune stale worktree references
     subprocess.run(
@@ -360,7 +396,6 @@ def cleanup_worktree(
     )
 
     # Delete the branch (best-effort — don't fail if missing or unmerged)
-    branch = f"pipeline/{feature}"
     if _branch_exists(branch, repo):
         subprocess.run(
             ["git", "branch", "-d", branch],

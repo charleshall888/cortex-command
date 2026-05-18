@@ -596,7 +596,7 @@ class TestVerifyR4CleanupWorktreeRoutesThroughResolver:
         monkeypatch.setattr(wt_mod, "_repo_root", lambda: tmp_path)
         monkeypatch.setattr(wt_mod.subprocess, "run", fake_run)
 
-        wt_mod.cleanup_worktree("verify-r4")
+        wt_mod.cleanup_worktree("verify-r4", branch="pipeline/verify-r4")
 
         # The resolver was invoked exactly once with the right arguments.
         assert calls == [("verify-r4", None, tmp_path)]
@@ -619,7 +619,7 @@ class TestVerifyR4CleanupWorktreeRoutesThroughResolver:
         monkeypatch.setattr(wt_mod.subprocess, "run", fake_run)
 
         explicit = tmp_path / "explicit-path"
-        wt_mod.cleanup_worktree("verify-r4-neg", worktree_path=explicit)
+        wt_mod.cleanup_worktree("verify-r4-neg", branch="pipeline/verify-r4-neg", worktree_path=explicit)
 
         # When worktree_path is given, the resolver MUST NOT be consulted.
         assert calls == []

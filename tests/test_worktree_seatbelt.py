@@ -82,7 +82,7 @@ def test_python_resolver_default_passes_probe_under_seatbelt(seatbelt_active):
         )
         assert result.cause is None
     finally:
-        cleanup_worktree(feature)
+        cleanup_worktree(feature, branch=f"pipeline/{feature}")
 
 
 def test_hook_emitted_path_passes_probe_under_seatbelt(seatbelt_active):
@@ -113,4 +113,4 @@ def test_hook_emitted_path_passes_probe_under_seatbelt(seatbelt_active):
             f"remediation_hint={result.remediation_hint!r}"
         )
     finally:
-        cleanup_worktree(feature)
+        cleanup_worktree(feature, branch=f"pipeline/{feature}")
