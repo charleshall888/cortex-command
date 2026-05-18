@@ -42,7 +42,7 @@ The user describes multiple features or uses batch language.
 
 **Action**: Assess each task's complexity before routing. Classify each as **trivial** (single file, obvious fix, one approach) or **non-trivial** (needs research, multiple files, architectural decisions).
 
-- **All non-trivial**: State: "Invoke `/cortex-overnight:overnight`" with the feature list.
+- **All non-trivial**: Tell the user to run `/cortex-overnight:overnight` with the feature list.
 - **All trivial**: Execute direct implementation (Step 4) for each sequentially in the current conversation.
 - **Mixed**: Present a **hybrid plan** — `/cortex-overnight:overnight` for non-trivial tasks, direct implementation for trivial ones. Execute trivial tasks first (or in parallel with the overnight pipeline) to get quick wins shipped while structured work proceeds.
 
