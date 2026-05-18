@@ -163,6 +163,46 @@ def test_orchestrator_settings_json_shape() -> None:
     assert reloaded["sandbox"]["enableWeakerNetworkIsolation"] is False
 
 
+def test_excluded_commands_emitted_when_provided() -> None:
+    """When ``excluded_commands`` is non-empty, the builder emits
+    ``sandbox.excludedCommands`` with the provided list. When omitted or
+    empty, the field is absent from the dict so default sandbox enforcement
+    applies to every command.
+
+    Motivation: feature-worker commits in the overnight session fail to sign
+    via gpg-agent because the per-spawn sandbox blocks ``~/.gnupg/`` writes
+    and the agent's unix socket. Passing ``excluded_commands=["git:*"]``
+    routes git-spawned subprocesses (including ``gpg`` invoked by
+    ``git commit -S``) outside the Seatbelt sandbox, matching the
+    user-facing ``~/.claude/settings.json`` ``excludedCommands`` contract.
+    """
+    # Provided non-empty → field present with that list.
+    with_git = sandbox_settings.build_sandbox_settings_dict(
+        deny_paths=[],
+        allow_paths=[],
+        soft_fail=False,
+        excluded_commands=["git:*"],
+    )
+    assert with_git["sandbox"]["excludedCommands"] == ["git:*"]
+
+    # Default (None) → field absent.
+    default = sandbox_settings.build_sandbox_settings_dict(
+        deny_paths=[],
+        allow_paths=[],
+        soft_fail=False,
+    )
+    assert "excludedCommands" not in default["sandbox"]
+
+    # Explicit empty list → field absent (treated as no-exclusions).
+    empty = sandbox_settings.build_sandbox_settings_dict(
+        deny_paths=[],
+        allow_paths=[],
+        soft_fail=False,
+        excluded_commands=[],
+    )
+    assert "excludedCommands" not in empty["sandbox"]
+
+
 # ---------------------------------------------------------------------------
 # Req 3: Deny-set enumerates specific git-state paths per repo
 # ---------------------------------------------------------------------------

@@ -172,6 +172,7 @@ def build_sandbox_settings_dict(
     deny_paths: list[str],
     allow_paths: list[str],
     soft_fail: bool,
+    excluded_commands: list[str] | None = None,
 ) -> dict:
     """Build the canonical per-spawn sandbox-settings JSON dict.
 
@@ -185,23 +186,31 @@ def build_sandbox_settings_dict(
         soft_fail: When ``True``, sets ``sandbox.failIfUnavailable: false``
             (kill-switch active per Req 4); when ``False``, sets
             ``sandbox.failIfUnavailable: true``.
+        excluded_commands: Command prefixes that should run outside the
+            sandbox via the Bash tool's ``sandbox.excludedCommands`` mechanism.
+            Pass e.g. ``["git:*"]`` to let git-spawned subprocesses
+            (including ``gpg`` invoked by ``git commit -S``) bypass the
+            Seatbelt sandbox so signing reaches the host gpg-agent. When
+            ``None`` or empty, no ``excludedCommands`` field is emitted and
+            all commands run sandboxed.
 
     Returns:
         Dict with the spec Req 2 / Req 5 shape, ready for JSON serialization.
     """
-    return {
-        "sandbox": {
-            "enabled": True,
-            "failIfUnavailable": not soft_fail,
-            "allowUnsandboxedCommands": False,
-            "enableWeakerNestedSandbox": False,
-            "enableWeakerNetworkIsolation": False,
-            "filesystem": {
-                "denyWrite": deny_paths,
-                "allowWrite": allow_paths,
-            },
-        }
+    sandbox: dict = {
+        "enabled": True,
+        "failIfUnavailable": not soft_fail,
+        "allowUnsandboxedCommands": False,
+        "enableWeakerNestedSandbox": False,
+        "enableWeakerNetworkIsolation": False,
+        "filesystem": {
+            "denyWrite": deny_paths,
+            "allowWrite": allow_paths,
+        },
     }
+    if excluded_commands:
+        sandbox["excludedCommands"] = list(excluded_commands)
+    return {"sandbox": sandbox}
 
 
 def read_soft_fail_env() -> bool:

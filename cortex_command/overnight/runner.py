@@ -1014,10 +1014,16 @@ def _spawn_orchestrator(
         deny_paths=deny_paths,
     )
     soft_fail = sandbox_settings.read_soft_fail_env()
+    # Exclude git from the sandbox so orchestrator-level commits (plan, defer
+    # events, morning-report follow-ups) sign cleanly via the host gpg-agent.
+    # Matches the user-facing `~/.claude/settings.json` excludedCommands entry
+    # so signing semantics are consistent between the user's interactive
+    # session and the spawned orchestrator.
     settings = sandbox_settings.build_sandbox_settings_dict(
         deny_paths=deny_paths,
         allow_paths=[],
         soft_fail=soft_fail,
+        excluded_commands=["git:*"],
     )
     tempfile_path = sandbox_settings.write_settings_tempfile(
         session_dir, settings

@@ -341,8 +341,11 @@ validate-skill-preconditions skill:
     ./scripts/validate-preconditions.py {{skill}}
 
 # Check SKILL.md-to-bin parity (per DR-5 / lifecycle 102)
+# Uses `uv run` so the script picks up the project's managed deps (PyYAML
+# is required by the sandbox-preflight gate's YAML parser; system python3
+# on Homebrew is PEP-668-protected and cannot install pyyaml directly).
 check-parity *args:
-    python3 bin/cortex-check-parity {{args}}
+    uv run python bin/cortex-check-parity {{args}}
 
 # Check skill-prompt emissions are declared in bin/.events-registry.md (R5 staged-mode gate)
 check-events-registry:
@@ -362,7 +365,7 @@ check-events-registry-audit:
 
 # Audit repo for bare bare-python-m cortex_command callsites against allowlist (R12, off critical path)
 check-bare-python-callsites:
-    python3 bin/cortex-check-parity --audit-bare-python-m-callsites
+    uv run python bin/cortex-check-parity --audit-bare-python-m-callsites
 
 # Check Python sources for bare-prefix path literals (#203 — prevents pre-#202 layout regression)
 check-path-hardcoding *args:

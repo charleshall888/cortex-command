@@ -589,10 +589,16 @@ async def dispatch_task(
     # bind to a local so the sidecar-write below records the same value
     # actually passed to build_sandbox_settings_dict (spec R2 of #164).
     deny_paths: list[str] = []
+    # Exclude git from the sandbox so feature-worker commits sign cleanly via
+    # the host gpg-agent. Without this, `git commit` (with commit.gpgsign=true)
+    # fails because the per-spawn sandbox blocks gpg-agent's unix socket and
+    # writes to ~/.gnupg/. Web tools deliberately omitted — implementation-phase
+    # workers have a spec/plan and shouldn't be reaching for WebFetch/WebSearch.
     _settings_dict = build_sandbox_settings_dict(
         deny_paths=deny_paths,
         allow_paths=_allow_paths,
         soft_fail=_soft_fail,
+        excluded_commands=["git:*"],
     )
     _session_id = os.environ.get("LIFECYCLE_SESSION_ID", "manual")
     _dispatch_session_dir = _session_dir(_session_id)
