@@ -514,6 +514,202 @@ def emit_prescriptive_check(
 
 
 # ---------------------------------------------------------------------------
+# generate-brief: fresh-context sub-dispatch
+# ---------------------------------------------------------------------------
+
+try:
+    from claude_agent_sdk import (  # type: ignore[import]
+        query as _sdk_query,
+        ClaudeAgentOptions as _ClaudeAgentOptions,
+        AssistantMessage as _AssistantMessage,
+        TextBlock as _TextBlock,
+    )
+    _BRIEF_SDK_AVAILABLE = True
+except ImportError:
+    _BRIEF_SDK_AVAILABLE = False
+
+
+def _derive_topic_from_path(research_md: Path) -> str | None:
+    """Attempt to derive a topic slug from the parent directory of research.md.
+
+    Returns the grandparent directory name when the path matches
+    ``cortex/research/<topic>/research.md`` or similar, otherwise returns
+    ``None``.  The result is validated via ``_TOPIC_SLUG_RE``; non-conformant
+    values are silently dropped (the caller falls back to omitting the event
+    path resolution).
+    """
+    # research_md.parent is the topic dir; its name is the slug.
+    candidate = research_md.parent.name
+    if candidate and _TOPIC_SLUG_RE.match(candidate):
+        return candidate
+    return None
+
+
+async def _run_brief_query(research_md_content: str) -> str:
+    """Dispatch a fresh-context sub-agent to generate a gate brief.
+
+    Uses ``claude_agent_sdk.query()`` directly — not ``dispatch_task`` — to
+    avoid the full pipeline overhead (worktrees, sandbox settings, session
+    dirs) that is unsuitable for a single-shot brief generation.  The fresh
+    context is load-bearing: it resets the attention-decay window that drove
+    Phase 1 drift (per research.md §"Mechanisms that BIND prose-output
+    constraints").
+
+    Returns:
+        The brief text collected from the agent's assistant messages.
+
+    Raises:
+        RuntimeError: If ``claude_agent_sdk`` is not installed.
+    """
+    if not _BRIEF_SDK_AVAILABLE:
+        raise RuntimeError(
+            "claude_agent_sdk is not installed. "
+            "Install it with: pip install claude-agent-sdk"
+        )
+
+    # Clear CLAUDECODE so the sub-agent does not hit the nested-session guard.
+    _env: dict[str, str] = {
+        "CLAUDECODE": "",
+        "TMPDIR": os.environ.get("TMPDIR") or tempfile.gettempdir(),
+    }
+    if _api_key := os.environ.get("ANTHROPIC_API_KEY"):
+        _env["ANTHROPIC_API_KEY"] = _api_key
+    if _oauth_token := os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        _env["CLAUDE_CODE_OAUTH_TOKEN"] = _oauth_token
+
+    options = _ClaudeAgentOptions(
+        model="sonnet",
+        max_turns=3,
+        system_prompt=GATE_BRIEF_RUBRIC,
+        env=_env,
+        permission_mode="bypassPermissions",
+    )
+
+    output_parts: list[str] = []
+    async for message in _sdk_query(
+        prompt=research_md_content, options=options
+    ):
+        if isinstance(message, _AssistantMessage):
+            for block in message.content:
+                if isinstance(block, _TextBlock):
+                    output_parts.append(block.text)
+
+    return "\n".join(output_parts).strip()
+
+
+def _cmd_generate_brief(args: argparse.Namespace) -> int:
+    """Handle the ``generate-brief`` subcommand.
+
+    Reads the research.md content at ``--research-md``, dispatches a
+    fresh-context sub-agent with ``GATE_BRIEF_RUBRIC`` as the system prompt,
+    captures the brief, and prints it to stdout.  Emits one
+    ``gate_brief_generated`` event via ``append_event``.
+
+    Returns 0 on success, non-zero on failure.
+    """
+    import asyncio
+
+    research_md_path = Path(args.research_md).resolve()
+    if not research_md_path.is_file():
+        print(
+            f"generate-brief: research.md not found: {research_md_path}",
+            file=sys.stderr,
+        )
+        return 2
+
+    try:
+        research_content = research_md_path.read_text(encoding="utf-8")
+    except OSError as e:
+        print(f"generate-brief: failed to read research.md: {e}", file=sys.stderr)
+        return 2
+
+    # Resolve events log path (best-effort: topic derived from arg or path).
+    topic = getattr(args, "topic", None) or _derive_topic_from_path(research_md_path)
+    events_log_path: Path | None = None
+    if topic is not None:
+        repo_root = _resolve_repo_root_arg(args)
+        if repo_root is not None:
+            try:
+                events_log_path = resolve_events_log_path(topic, repo_root)
+            except ValueError:
+                events_log_path = None
+
+    # Run the fresh-context dispatch.
+    try:
+        brief = asyncio.run(_run_brief_query(research_content))
+    except RuntimeError as e:
+        print(f"generate-brief: SDK not available: {e}", file=sys.stderr)
+        if events_log_path is not None:
+            try:
+                append_event(
+                    events_log_path,
+                    {
+                        "ts": _now_iso(),
+                        "event": "gate_brief_generated",
+                        "status": "validation_failed",
+                        "brief_word_count": 0,
+                        "patterns_detected_count": 0,
+                    },
+                )
+            except OSError:
+                pass
+        return 1
+    except Exception as e:
+        print(f"generate-brief: dispatch failed: {e}", file=sys.stderr)
+        if events_log_path is not None:
+            try:
+                append_event(
+                    events_log_path,
+                    {
+                        "ts": _now_iso(),
+                        "event": "gate_brief_generated",
+                        "status": "validation_failed",
+                        "brief_word_count": 0,
+                        "patterns_detected_count": 0,
+                    },
+                )
+            except OSError:
+                pass
+        return 1
+
+    # Determine status for the event.
+    brief_word_count = len(brief.split()) if brief else 0
+    if not brief:
+        status = "empty"
+    else:
+        status = "ok"
+
+    # Emit the event.
+    if events_log_path is not None:
+        try:
+            append_event(
+                events_log_path,
+                {
+                    "ts": _now_iso(),
+                    "event": "gate_brief_generated",
+                    "status": status,
+                    "brief_word_count": brief_word_count,
+                    "patterns_detected_count": 0,
+                },
+            )
+        except OSError as e:
+            # Event emission failure is non-fatal — the brief is the deliverable.
+            print(
+                f"generate-brief: warning: failed to emit event: {e}",
+                file=sys.stderr,
+            )
+
+    if not brief:
+        print("generate-brief: dispatch returned empty brief", file=sys.stderr)
+        return 1
+
+    sys.stdout.write(brief)
+    if not brief.endswith("\n"):
+        sys.stdout.write("\n")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # CLI subcommand dispatch
 # ---------------------------------------------------------------------------
 
@@ -729,6 +925,31 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     ep.set_defaults(func=_cmd_emit_prescriptive_check)
+
+    # generate-brief
+    gb = sub.add_parser(
+        "generate-brief",
+        help=(
+            "Read a research.md file and dispatch a fresh-context sub-agent "
+            "to generate a plain-prose gate brief on stdout. "
+            "Emits one gate_brief_generated event."
+        ),
+    )
+    _add_repo_root_arg(gb)
+    gb.add_argument(
+        "--research-md",
+        required=True,
+        help="Path to the research.md file to summarise.",
+    )
+    gb.add_argument(
+        "--topic",
+        default=None,
+        help=(
+            "Discovery topic slug for event log resolution. "
+            "If omitted, derived from the research.md parent directory name."
+        ),
+    )
+    gb.set_defaults(func=_cmd_generate_brief)
 
     return p
 
