@@ -218,6 +218,13 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
 
     feature_name = final_complete["feature"]
 
+    # ---- Merge anchor ----
+    # "review" is the legacy default (pre-restructure regime: feature_complete
+    # fired at PR-create / review time).  Post-restructure interactive complete
+    # emits "merge" (after the PR is merged on GitHub).  Backwards-compatible
+    # read so historical events lacking the field keep their prior semantics.
+    merge_anchor: str = final_complete.get("merge_anchor", "review")
+
     # ---- Tier (from lifecycle_start, if present) ----
     start_events = [e for e in events if e["event"] == "lifecycle_start"]
     tier: str | None = start_events[0]["tier"] if start_events else None
@@ -266,6 +273,7 @@ def extract_feature_metrics(events: list[dict[str, Any]]) -> dict[str, Any] | No
     return {
         "feature": feature_name,
         "tier": tier,
+        "merge_anchor": merge_anchor,
         "task_count": task_count,
         "batch_count": batch_count,
         "batch_sizes": batch_sizes,

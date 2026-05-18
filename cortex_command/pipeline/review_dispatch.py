@@ -286,6 +286,7 @@ async def dispatch_review(
         log_event(feature_events_log, {
             "event": "feature_complete",
             "feature": feature,
+            "merge_anchor": "review",
         })
         return ReviewResult(
             approved=True,
@@ -534,6 +535,7 @@ async def dispatch_review(
             log_event(feature_events_log, {
                 "event": "feature_complete",
                 "feature": feature,
+                "merge_anchor": "review",
             })
             return ReviewResult(
                 approved=True,
