@@ -1,8 +1,8 @@
-"""Shared auth-resolution helper for the overnight runner and daytime pipeline.
+"""Shared auth-resolution helper for the overnight runner.
 
 Stdlib-only module invokable both pre-venv (via ``python3 -m cortex_command.overnight.auth
---shell`` from ``runner.sh``) and in-process (via ``ensure_sdk_auth()`` from
-``daytime_pipeline.py``). Resolves the SDK auth vector in the priority order:
+--shell`` from ``runner.sh``) and in-process (via ``ensure_sdk_auth()``).
+Resolves the SDK auth vector in the priority order:
 
     1. Pre-existing ``ANTHROPIC_AUTH_TOKEN`` env var       (vector: auth_token)
     2. Pre-existing ``ANTHROPIC_API_KEY`` env var          (vector: env_preexisting)
@@ -298,8 +298,7 @@ def resolve_and_probe(
 
     Combines ``ensure_sdk_auth`` with ``probe_keychain_presence()`` and
     enforces the spec's Phase 1 R3 policy in one place so both
-    ``runner.py`` and ``daytime_pipeline.py`` call a single function and
-    cannot diverge:
+    ``runner.py`` calls a single function and cannot diverge:
 
     * ``vector != "none"`` → continue (no probe needed).
     * ``vector == "none"`` AND probe in ``{"present", "unavailable"}`` →
@@ -309,8 +308,8 @@ def resolve_and_probe(
       emit ``auth_probe`` event with ``result="absent"``.
 
     Args:
-        feature:        Feature slug for per-feature event logs (daytime
-                        path).  Pass ``None`` from the runner path.
+        feature:        Feature slug for per-feature event logs.
+                        Pass ``None`` from the runner path.
         event_log_path: Path to which both the ``auth_bootstrap`` and
                         ``auth_probe`` events are appended.  ``None``
                         causes ``ensure_sdk_auth`` to write the bootstrap
@@ -550,7 +549,7 @@ def resolve_auth_for_shell() -> int:
 def _main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python3 -m cortex_command.overnight.auth",
-        description="Resolve the SDK auth vector for runner.sh / daytime_pipeline.py.",
+        description="Resolve the SDK auth vector for the overnight runner.",
     )
     parser.add_argument(
         "--shell",
