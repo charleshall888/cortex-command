@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: 9de0e122-b600-41b0-8519-838148d36617
 title: "Swap daytime autonomous for worktree-interactive implement mode"
-status: backlog
+status: complete
 priority: high
 type: epic
 created: 2026-05-18
-updated: 2026-05-18
+updated: 2026-05-19
 tags: [lifecycle, worktree-interactive, daytime-swap, epic]
 areas: [lifecycle, skills, pipeline, overnight-runner]
 discovery_source: cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md

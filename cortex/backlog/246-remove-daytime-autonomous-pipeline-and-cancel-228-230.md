@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: f5b675af-6e35-4cd5-9260-b0cc7b897e47
 title: "Remove daytime autonomous pipeline and cancel #228/#230"
-status: refined
+status: complete
 priority: high
 type: chore
 created: 2026-05-18
