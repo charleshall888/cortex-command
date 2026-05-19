@@ -485,6 +485,11 @@ def _invoke_hook_for_fixture(fixture_dir: Path, tmp_path: Path) -> dict[str, str
     if env.get("PYTHONPATH"):
         pythonpath_parts.append(env["PYTHONPATH"])
     env["PYTHONPATH"] = os.pathsep.join(pythonpath_parts)
+    # Disable the SessionStart staleness filter: parity fixtures stage
+    # minimal trees (often with no events.log content) and would
+    # otherwise be hidden. This test exercises wire-format equivalence,
+    # not staleness.
+    env["CORTEX_SCAN_LIFECYCLE_STALE_DAYS"] = "0"
 
     stdin_payload = json.dumps({
         "session_id": "parity-r12c-test",

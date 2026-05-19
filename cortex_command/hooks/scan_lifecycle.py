@@ -223,6 +223,61 @@ def _events_log_has_event(events_log: Path, event_name: str) -> bool:
     return needle_no_space in content
 
 
+def _is_stale(feature_dir: Path, threshold_days: int) -> bool:
+    """Return True if the latest events.log event is older than threshold_days.
+
+    Uses the max ``ts`` field across parseable JSON lines in
+    ``events.log`` — content-based, not mtime — because mtimes get
+    falsely reset by ``git mv`` bulk operations (e.g. umbrella
+    relocations) and filesystem maintenance. Parses ISO 8601 with
+    trailing ``Z`` support; lines without a parseable ts are skipped.
+    A lifecycle whose ``events.log`` is missing/unreadable or has no
+    parseable ts is treated as stale — covers the skill-test debris
+    case (dirs with only ``learnings/`` and no events.log).
+
+    ``threshold_days <= 0`` disables the filter (returns False) for
+    users who want bash-equivalent unfiltered behavior.
+    """
+
+    if threshold_days <= 0:
+        return False
+    events_log = feature_dir / "events.log"
+    try:
+        content = events_log.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return True
+    import datetime  # local: only needed when filter is active
+    latest: datetime.datetime | None = None
+    for line in content.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        ts_str = event.get("ts") if isinstance(event, dict) else None
+        if not isinstance(ts_str, str) or not ts_str:
+            continue
+        normalized = (
+            ts_str.replace("Z", "+00:00") if ts_str.endswith("Z") else ts_str
+        )
+        try:
+            ts = datetime.datetime.fromisoformat(normalized)
+        except (ValueError, TypeError):
+            continue
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=datetime.timezone.utc)
+        if latest is None or ts > latest:
+            latest = ts
+    if latest is None:
+        return True
+    cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+        days=threshold_days
+    )
+    return latest < cutoff
+
+
 def _metrics_summary_line(metrics_file: Path) -> str | None:
     """Build the metrics-summary line from ``metrics.json``.
 
@@ -561,6 +616,23 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # --- Scan candidate feature directories (bash precedent lines 220-244) ---
+    # Python port diverges from bash with two additional filters that
+    # suppress non-lifecycle clutter the bash hook used to inject into
+    # SessionStart additionalContext:
+    #   (1) ``sessions`` is the per-session registry, not a feature dir
+    #       (its UUID-keyed children made ``detect_lifecycle_phase``
+    #       falsely return ``research``).
+    #   (2) Lifecycles with an unreadable/missing events.log OR whose
+    #       last logged event is older than the staleness threshold
+    #       (default 30 days, env override
+    #       ``CORTEX_SCAN_LIFECYCLE_STALE_DAYS``; <=0 disables) are
+    #       suppressed. ``_is_stale`` treats unreadable events.log as
+    #       stale, so the skill-test debris case (just ``learnings/``,
+    #       no events.log) is covered by the same filter.
+    try:
+        stale_days = int(os.environ.get("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "30"))
+    except (TypeError, ValueError):
+        stale_days = 30
     candidate_dirs: list[Path] = []
     candidate_features: list[str] = []
     try:
@@ -571,7 +643,9 @@ def main(argv: list[str] | None = None) -> int:
         if not child.is_dir():
             continue
         feature = child.name
-        if feature == "archive":
+        if feature in ("archive", "sessions"):
+            continue
+        if _is_stale(child, stale_days):
             continue
         # Suppress Morning Review batch features.
         if pipeline_state.morning_review_active and (

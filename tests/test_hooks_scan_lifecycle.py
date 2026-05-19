@@ -266,6 +266,11 @@ def _run_main(
     env_file.write_text("", encoding="utf-8")
     monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
 
+    # Existing fixtures stage minimal repos without events.log content
+    # (they predate the staleness filter). Disable it for these tests;
+    # the filter is exercised explicitly by ``test_staleness_filter_*``.
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+
     monkeypatch.setattr(
         "sys.stdin", io.StringIO(json.dumps(payload))
     )
@@ -962,3 +967,131 @@ def test_wrapper_probe_pass_run_fail_propagates(
         f"got rc={result.returncode}\nstdout={result.stdout!r}\n"
         f"stderr={result.stderr!r}"
     )
+
+
+# ----------------------------------------------------------------------------
+# Staleness filter + non-lifecycle-dir exclusions
+# ----------------------------------------------------------------------------
+
+
+def test_staleness_filter_drops_old_lifecycles(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Lifecycle whose last events.log ts is older than threshold is hidden."""
+    import datetime
+
+    repo = tmp_path / "repo"
+    (repo / "cortex" / "lifecycle").mkdir(parents=True)
+
+    old_ts = (
+        datetime.datetime.now(datetime.timezone.utc)
+        - datetime.timedelta(days=60)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    new_ts = datetime.datetime.now(datetime.timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+
+    stale_dir = repo / "cortex" / "lifecycle" / "stale-feat"
+    stale_dir.mkdir()
+    (stale_dir / "events.log").write_text(
+        '{"ts":"' + old_ts + '","event":"lifecycle_start","feature":"stale-feat"}\n',
+        encoding="utf-8",
+    )
+    (stale_dir / "research.md").write_text("# stale\n", encoding="utf-8")
+
+    fresh_dir = repo / "cortex" / "lifecycle" / "fresh-feat"
+    fresh_dir.mkdir()
+    (fresh_dir / "events.log").write_text(
+        '{"ts":"' + new_ts + '","event":"lifecycle_start","feature":"fresh-feat"}\n',
+        encoding="utf-8",
+    )
+    (fresh_dir / "research.md").write_text("# fresh\n", encoding="utf-8")
+
+    monkeypatch.delenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", raising=False)
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+    assert "fresh-feat" in additional
+    assert "stale-feat" not in additional
+
+
+def test_staleness_disabled_when_threshold_zero(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """CORTEX_SCAN_LIFECYCLE_STALE_DAYS=0 disables the staleness filter."""
+    import datetime
+
+    repo = tmp_path / "repo"
+    (repo / "cortex" / "lifecycle").mkdir(parents=True)
+    old_ts = (
+        datetime.datetime.now(datetime.timezone.utc)
+        - datetime.timedelta(days=365)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    stale_dir = repo / "cortex" / "lifecycle" / "ancient-feat"
+    stale_dir.mkdir()
+    (stale_dir / "events.log").write_text(
+        '{"ts":"' + old_ts + '","event":"lifecycle_start","feature":"ancient-feat"}\n',
+        encoding="utf-8",
+    )
+    (stale_dir / "research.md").write_text("# ancient\n", encoding="utf-8")
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+    assert "ancient-feat" in additional
+
+
+def test_sessions_registry_dir_excluded(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """sessions/ is the per-session registry, not a feature dir."""
+    repo = tmp_path / "repo"
+    sessions_dir = repo / "cortex" / "lifecycle" / "sessions"
+    sessions_dir.mkdir(parents=True)
+    (sessions_dir / "deadbeef-cafe-1234").mkdir()
+
+    real_dir = repo / "cortex" / "lifecycle" / "real-feat"
+    real_dir.mkdir()
+    (real_dir / "research.md").write_text("# real\n", encoding="utf-8")
+
+    monkeypatch.setenv("CORTEX_SCAN_LIFECYCLE_STALE_DAYS", "0")
+    env_file = repo / ".claude-env"
+    env_file.write_text("", encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_ENV_FILE", str(env_file))
+    monkeypatch.delenv("LIFECYCLE_SESSION_ID", raising=False)
+    monkeypatch.setattr(
+        "sys.stdin",
+        io.StringIO(json.dumps({"session_id": "x", "cwd": str(repo)})),
+    )
+
+    rc = scan_lifecycle_mod.main()
+    assert rc == 0
+    additional = extract_additional_context(capsys.readouterr().out)
+    assert "sessions" not in additional
+    assert "real-feat" in additional
