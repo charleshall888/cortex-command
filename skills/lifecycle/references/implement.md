@@ -19,6 +19,35 @@ Read `cortex/lifecycle/{feature}/plan.md` and identify pending tasks (those with
 - **Implement on feature branch with worktree** — creates an `interactive/{slug}` worktree at `$TMPDIR/cortex-worktrees/interactive-{slug}/` and returns the path; the user then manually cd's into the worktree OR opens a fresh `claude --worktree=<path>` session to continue the implement phase there (Variant A vs Variant B dispatch is owned by epic #240; T10 ships only the create + handoff step). **When to pick**: medium/many-task features where you want an isolated branch with worktree but still need live steering. Proceeds to §1a below.
 - **Create feature branch** — create `feature/{lifecycle-slug}` for PR-based workflow. **When to pick**: you want a PR-based flow but cannot use a worktree (e.g., tooling that assumes a single checkout). NOTE: this runs `git checkout` on the main session and can corrupt parallel sessions in this repo.
 
+**Branch-mode dispatch preflight**: Before the uncommitted-changes guard and the runtime probe below, consult the per-repo `branch-mode` config. The `read_branch_mode` invocation here is the **structural marker** that the parity test (`tests/test_lifecycle_kept_pauses_parity.py`'s `conditional pause` sentinel) anchors against — its presence in this section is load-bearing for the documentation-parity test, in addition to gating the runtime dispatch.
+
+Run two Bash calls (no compound commands):
+
+1. Read the configured `branch-mode` value:
+
+   ```bash
+   python3 -c "import pathlib; from cortex_command.lifecycle_config import read_branch_mode; print(read_branch_mode(pathlib.Path('.')) or '')"
+   ```
+
+   The primitive returns the raw whitespace-stripped string from `cortex/lifecycle.config.md`'s YAML frontmatter, or empty (treated as `None`) when the file is missing, the field is absent, or the frontmatter is malformed. Caller-side closed-set validation is deferred to `should_fire_picker` below — invalid values fall through to the picker via the `branch_mode_unset_or_invalid` reason.
+
+2. Decide whether the picker fires, given the value above and the current preflight state:
+
+   ```bash
+   python3 -c "import pathlib; from cortex_command.lifecycle_implement import should_fire_picker; fire, reason = should_fire_picker(pathlib.Path('.'), '{slug}', '{branch_mode}' or None); print(f'{fire}\t{reason}')"
+   ```
+
+   `should_fire_picker` returns `(True, reason)` when any of these hold (first match wins): `branch_mode` is `None` or outside the closed set `{"worktree-interactive", "trunk", "feature-branch", "prompt"}`; `branch_mode == "prompt"`; `git status --porcelain` is non-empty (dirty-tree carve-out — the existing line 22 demote-and-warn guard handles the user-facing cue when the picker subsequently fires); `cortex/lifecycle/sessions/{slug}.interactive.pid` exists with a live PID (concurrent interactive worktree carve-out — defensively re-checked at §1a:78–82). Otherwise it returns `(False, "suppressed")`.
+
+**Routing on the result.** Each of the four closed-set values has an explicit destination:
+
+- `worktree-interactive` — when `should_fire_picker` returns `(False, "suppressed")`, skip the picker (the uncommitted-changes guard, runtime probe, and `AskUserQuestion` call below) and proceed directly to §1a (Interactive Worktree Creation). The §1a:78–82 liveness check is preserved in place as defensive redundancy.
+- `trunk` — when `should_fire_picker` returns `(False, "suppressed")`, skip the picker and proceed on the current branch directly to §2 Task Dispatch, equivalent to the "Implement on current branch" selection path.
+- `feature-branch` — when `should_fire_picker` returns `(False, "suppressed")`, skip the picker and proceed to §1b (Feature Branch Creation, equivalent to the "Create feature branch" selection path): create and check out `feature/{lifecycle-slug}` before dispatching any tasks, then proceed to §2.
+- `prompt` — `should_fire_picker` returns `(True, "branch_mode_prompt")`, so the picker fires as today: fall through to the uncommitted-changes guard and `AskUserQuestion` call below.
+
+When `should_fire_picker` returns `(True, reason)` for any reason (`branch_mode_unset_or_invalid`, `branch_mode_prompt`, `dirty_tree`, or `live_interactive_worktree_session`), do **not** short-circuit — fall through to the uncommitted-changes guard, the runtime probe, and the existing `AskUserQuestion` call site below (the picker fires as today). The line 22 `AskUserQuestion` site is the canonical picker invocation; the preflight here is additive routing, not a replacement.
+
 **Uncommitted-changes guard**: Immediately before the `AskUserQuestion` call, run `git status --porcelain` (no path filter, no additional flags). If non-empty output is returned, the option that keeps the user on the current branch is demoted in place: (a) prepend the fixed warning `Warning: uncommitted changes in working tree — this will mix them into the commit on main.` as a one-line prefix to that option's description, and (b) strip the `(recommended)` suffix from that option's label if present. The option remains selectable and stays at its existing position — no removal, no gating pre-question. If `git status --porcelain` exits non-zero (e.g., missing `.git`, corrupt index, bisect/rebase state), the guard does not fire — neither the demotion nor the warning prefix are applied — a single-line diagnostic `uncommitted-changes guard skipped: git status failed` is surfaced alongside the prompt, and the pre-flight continues normally as a fallback.
 
 **Runtime probe**: After the uncommitted-changes guard and before assembling the prompt's options array, run a single Bash call that probes for the top-level `cortex_command` package via `importlib.util.find_spec` against that top-level module name. The probe is wrapped in an explicit `try/except` so that an exception inside the import machinery cannot collide with the absence-signaling exit 1:
