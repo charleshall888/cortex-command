@@ -63,7 +63,7 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
   - R6 destructive-recovery negative-test: invoke a STALE-triggering scenario; assert `subprocess.run` is not invoked with any of `("git", "merge", "--abort")`, `("git", "worktree", "remove")` — use `monkeypatch.setattr` on `subprocess.run` to record calls.
   - R3 schema test: call `acquire_lock("probe")` against a `tmp_path` project root (set `CORTEX_REPO_ROOT` env var), `json.load` the resulting file, assert `set(d.keys()) >= {"schema_version","magic","session_id","pid","start_time","acquired_at"}` AND `d["magic"] == "cortex-interactive-lock"` AND `oct(os.stat(path).st_mode)[-3:] == "600"`.
 - **Verification**: `pytest tests/test_interactive_lock.py -v` exits 0 with all 8 `verify_live_owner_row_N` tests + schema + stale-recovery tests passing — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Add sandbox-write probe test verifying worktree-CWD writes to main-repo lock path
 
@@ -79,7 +79,7 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
 - **Verification**:
   - On macOS: `pytest tests/test_interactive_lock_sandbox.py::test_lock_write_from_worktree_cwd` exits 0 — pass if exit 0.
   - On Linux: `pytest tests/test_interactive_lock_sandbox.py::test_lock_write_from_worktree_cwd -v 2>&1 | grep -c 'SKIPPED.*macOS-only sandbox semantics'` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Extract overnight-active probe into sidecar bash + fix §1a.iii typo
 
@@ -111,7 +111,7 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
 - **Complexity**: simple
 - **Context**:
   - Insert location: after the §1 `AskUserQuestion` for branch selection resolves to a path that proceeds with worktree creation (Variant A under #238/#239 — the new "Implement on feature branch with worktree" path #238 introduces). Anchor: the new steps land before the worktree-creation step #239 inserts (which uses `cortex-worktree-resolve` and/or `create_worktree`). Anchor regex: between `/AskUserQuestion.*Implement on feature branch/` and `/create_worktree|cortex-worktree-resolve/`.
-  - Step A (overnight-active mirror) sources `_interactive_overnight_check.sh` via `cat ... | bash -s -- "<interactive-wording>" "$(_resolve_user_project_root)"`. R7 wording: `"Overnight runner is active (session {session_id}, PID {pid}, phase: executing) — wait for the run to complete (\`cortex overnight status\`), or open a different feature."`. Note: this wording uses the substring `"work to complete"` per R15 sub-test C's grep target.
+  - Step A (overnight-active mirror) sources `_interactive_overnight_check.sh` via `cat ... | bash -s -- "<interactive-wording>" "$(_resolve_user_project_root)"`. R7 wording: `"Overnight runner is active (session {session_id}, PID {pid}, phase: executing) — wait for the run to complete (\`cortex overnight status\`), or open a different feature."`. R15 sub-test C grep target is `"the run to complete"` (natural substring of R7's wording — spec.md R15 says `"work to complete"` but that's a spec drift; plan resolves it by anchoring the grep target on the natural R7 substring).
   - Step B (lock acquisition) is a single Bash invocation of `cortex-interactive-lock acquire {slug}`. On exit 0 → proceed. On non-zero exit → the console-script has already written stderr containing R5's exact wording: `"Interactive session already active on this feature (session {session_id}, acquired {acquired_at}). Wait for it to exit, or work on a different feature, or run \`cortex-interactive-lock inspect {slug}\` for details."` — skill prose surfaces stderr verbatim and exits §1.
   - Events-registry row for `interactive_overnight_active_rejected` follows R12 producer: `skills/lifecycle/references/implement.md §1 (interactive mirror)`. Scan-coverage: `gated` (skill-prose-emitted).
   - R13 file-wide-anchor verification target: `git diff main -- skills/lifecycle/references/implement.md | grep -E '^\+' | grep -cE 'kill -0|psutil|create_time'` must return 0. This task's additions to §1 use the console-script and the Task-4 sidecar; the sidecar is in a separate file so it doesn't count against the implement.md file-wide grep.
@@ -123,7 +123,7 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
   - `git diff main -- skills/lifecycle/references/implement.md | grep -E '^\+' | grep -cE 'kill -0|psutil|create_time'` = 0 (R13 — no new inline-liveness primitives) — pass if count = 0.
   - `grep -cE '^\| `interactive_overnight_active_rejected`' bin/.events-registry.md` = 1 — pass if count = 1.
   - `cortex-check-events-registry --staged` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 6: Refactor `run_batch` to call exported `compute_eligible_features` + add sixth events-registry row
 
@@ -146,7 +146,7 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
   - `git diff main -- cortex_command/overnight/orchestrator.py | grep -E '^\+.*save_state\(|^\+.*state\.features\s*=|^\+.*overnight_state\.features\s*=' | wc -l` = 0 (R9 — no new state mutations in the diff) — pass if count = 0.
   - `grep -cE '^\| `feature_skipped_interactive_active`' bin/.events-registry.md` = 1 — pass if count = 1.
   - `cortex-check-events-registry --staged` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 7: Add orchestrator inverse-scan unit tests
 
@@ -168,14 +168,14 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
 - **What**: Four sub-tests invoking PRODUCTION CODE PATHS (no Python stubs of the helper):
   - **A (interactive→interactive)**: two `cortex-interactive-lock acquire X` subprocesses with different `CLAUDE_CODE_SESSION_ID` env values; first exits 0, second exits non-zero with stderr containing `"work on a different feature"`.
   - **B (interactive→overnight via per-round scan)**: synthetic live `interactive.pid` written for feature Y; `scan_live_locks(<test-project-root>)` returns `{"Y"}`; `compute_eligible_features(["Y", "Z"], <test-project-root>)` returns `(["Z"], [<one skip-event containing rationale with test-session-B>])`.
-  - **C (overnight→interactive rejection mirror — actual sidecar bash)**: synthetic `active-session.json` + `runner.pid` written; invoke the Task-4 sidecar via `subprocess.run(["bash", "-c", "cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- '<wording>' '<repo>'"])`; assert non-zero exit AND stderr contains `"work to complete"`.
+  - **C (overnight→interactive rejection mirror — actual sidecar bash)**: synthetic `active-session.json` + `runner.pid` written; invoke the Task-4 sidecar via `subprocess.run(["bash", "-c", "cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- '<wording>' '<repo>'"])`; assert non-zero exit AND stderr contains `"the run to complete"`.
   - **D (lock release)**: `acquire X` → file exists → `release X` → file does not exist → `cortex/lifecycle/X/events.log` contains an `interactive_lock_released` JSON row.
 - **Depends on**: [1], [5], [6]
 - **Complexity**: complex
 - **Context**:
   - Test discipline: NO Python stubs for `cortex-interactive-lock`. Each sub-test uses `subprocess.run([sys.executable, "-m", ...])` or direct `cortex-interactive-lock` console-script invocation. For sub-test B, the production code path is `cortex_command.overnight.orchestrator.compute_eligible_features` (real function, called directly with `tmp_path` project root).
   - Sub-test A's stderr-grep target `"work on a different feature"` is the explicit coupling point with R5's wording; documented in spec R15 as expected coupling — if R5 changes, this test must update in lockstep.
-  - Sub-test C's stderr-grep target `"work to complete"` is the explicit coupling point with R7's wording. The actual bash invocation goes through the Task-4 sidecar at `skills/lifecycle/references/_interactive_overnight_check.sh`; the test does NOT re-implement the four-bash-call logic.
+  - Sub-test C's stderr-grep target `"the run to complete"` is the explicit coupling point with R7's wording. The actual bash invocation goes through the Task-4 sidecar at `skills/lifecycle/references/_interactive_overnight_check.sh`; the test does NOT re-implement the four-bash-call logic.
   - Sub-test B writes a real `interactive.pid` JSON file at `<tmp_path>/cortex/lifecycle/Y/interactive.pid` matching R3's schema with `CLAUDE_CODE_SESSION_ID=test-session-B` and a live PID (test process's own PID) so `scan_live_locks` and `read_lock` both succeed.
   - Fixtures use `tmp_path` + `monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))` to redirect path resolution.
   - Out-of-scope per R15: the principal TOCTOU window (owner acquires AFTER scan but BEFORE round-N dispatch) is NOT exercised. Per Non-Requirements, that surfaces via `git worktree add` failure path in the orchestrator's existing error handling.
