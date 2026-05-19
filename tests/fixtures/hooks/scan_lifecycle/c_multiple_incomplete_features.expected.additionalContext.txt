@@ -1,0 +1,5 @@
+Multiple incomplete lifecycles — select one to resume:
+  - feature-c1 (Specify)
+  - feature-c2 (Specify)
+  - feature-c3 (Plan)
+Resume with /cortex-core:lifecycle resume <feature>.

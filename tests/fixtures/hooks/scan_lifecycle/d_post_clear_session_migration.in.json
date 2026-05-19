@@ -1,0 +1,6 @@
+{
+  "hook_event_name": "SessionStart",
+  "session_id": "NEW-SESSION-ID-d",
+  "cwd": "__TMPDIR__",
+  "_lifecycle_session_id_env": "OLD-SESSION-ID-d"
+}

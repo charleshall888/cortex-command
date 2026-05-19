@@ -1,0 +1,6 @@
+Active pipeline: executing | Features: 3 total, 1 executing, 1 paused, 1 failed
+Multiple incomplete lifecycles — select one to resume:
+  - exec-feature-f1 (Plan)
+  - failed-feature-f3 (Specify)
+  - paused-feature-f2 (Specify)
+Resume with /cortex-core:lifecycle resume <feature>.

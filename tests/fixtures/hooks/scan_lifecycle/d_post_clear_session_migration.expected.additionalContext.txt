@@ -1,0 +1,3 @@
+Active lifecycle: feature-d | Phase: Plan
+Artifacts: cortex/lifecycle/feature-d/
+Metrics: 0 completed features | Simple: avg 0 tasks, 0 rework | Complex: avg 0 tasks, 0 rework

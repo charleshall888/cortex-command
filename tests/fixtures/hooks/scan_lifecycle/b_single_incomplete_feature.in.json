@@ -1,0 +1,5 @@
+{
+  "hook_event_name": "SessionStart",
+  "session_id": "fixture-session-b",
+  "cwd": "__TMPDIR__"
+}
