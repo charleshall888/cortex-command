@@ -29,10 +29,6 @@ cortex/lifecycle/*/agent-activity.jsonl
 cortex/lifecycle/overnight-events-*.log
 cortex/lifecycle/*/learnings/recovery-log.md
 
-# Abandoned tempfiles from interrupted atomic writes in daytime pipeline
-cortex/lifecycle/*/.daytime-result-*.tmp
-cortex/lifecycle/*/.daytime-dispatch-*.tmp
-
 # Backlog audit logs
 cortex/backlog/*.events.jsonl
 
