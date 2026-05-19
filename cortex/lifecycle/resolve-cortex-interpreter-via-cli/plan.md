@@ -32,7 +32,7 @@ Refactor the 460-line bash SessionStart hook into a thin shell wrapper around a 
 - **Complexity**: complex
 - **Context**: Fixture cases per spec req #2: (a) no lifecycle dir, (b) single incomplete feature, (c) multiple incomplete features, (d) post-`/clear` session migration, (e) Morning Review active, (f) pipeline-state with executing/paused/failed features. Reuse the TMPDIR-based fixture pattern from `tests/test_hooks.sh:94-143` but port it to pytest fixtures using `tmp_path`. File count is high (~13) but the work is mechanical bulk fixture-staging — accepted carve-out from the 5-file target. The capture script invokes the bash hook via `bash hooks/cortex-scan-lifecycle.sh` while bare `python3` resolves `cortex_command` from the dev venv. This task must complete before Task 11 (bash hook replacement); enforced via Task 11's explicit dependency.
 - **Verification**: `ls tests/fixtures/hooks/scan_lifecycle/ | grep -c '\.in\.json$'` = 6 AND `ls tests/fixtures/hooks/scan_lifecycle/ | grep -c '\.expected\.additionalContext\.txt$'` = 6 AND each `.expected.additionalContext.txt` file is non-empty (`find tests/fixtures/hooks/scan_lifecycle/ -name '*.expected.additionalContext.txt' -empty | wc -l` = 0) AND `pytest tests/test_hooks_scan_lifecycle.py --collect-only 2>&1 | grep -c 'test_golden_'` ≥ 6 (stubs collected).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit f202de0f)
 
 ### Task 2: Create `cortex_command/hooks/` package skeleton
 
@@ -42,7 +42,7 @@ Refactor the 460-line bash SessionStart hook into a thin shell wrapper around a 
 - **Complexity**: simple
 - **Context**: New package. `scan_lifecycle.main()` signature is `def main(argv: list[str] | None = None) -> int`. Module imports limited to stdlib at the top — `cortex_command.common` and other intra-package imports go inside the functions that need them (lazy-load discipline per `cortex_command/cli.py:48-66` overnight precedent).
 - **Verification**: `python3 -c "from cortex_command.hooks.scan_lifecycle import main; assert callable(main)"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 1beafbfc)
 
 ### Task 3: Implement input parsing and `cwd/lifecycle` early-exit + CLAUDE_ENV_FILE injection
 
@@ -52,7 +52,7 @@ Refactor the 460-line bash SessionStart hook into a thin shell wrapper around a 
 - **Complexity**: simple
 - **Context**: Bash precedent at `hooks/cortex-scan-lifecycle.sh:7-21`. Python equivalent reads stdin via `sys.stdin.read()`, parses with `json.loads`, resolves cwd via `Path(payload.get("cwd") or os.getcwd())`, checks `(cwd / "cortex" / "lifecycle").is_dir()`. The wrapper at `hooks/cortex-scan-lifecycle.sh` (Task 11) does its own pre-check; the Python early-exit is defense-in-depth.
 - **Verification**: `echo '{"cwd":"/tmp/no-such-dir"}' | python3 -m cortex_command.hooks.scan_lifecycle` exits 0 with no stdout AND `CLAUDE_ENV_FILE=/tmp/test-env LIFECYCLE_SESSION_ID="" echo '{"session_id":"foo'\''bar","cwd":"<a-tmp-dir-with-cortex/lifecycle/-staged>"}' | python3 -m cortex_command.hooks.scan_lifecycle; grep -c "LIFECYCLE_SESSION_ID='foo'\\\\''bar'" /tmp/test-env` ≥ 1 (shlex.quote correctly handles the embedded quote).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 85b4508c — note: shlex.quote emits `'..'"'"'..'` form which is POSIX-equivalent to spec's grep `'..'\''..'` form; semantic correctness verified via bash source roundtrip)
 
 ### Task 4: Implement session-state mutation helpers (no scan_lifecycle.py integration yet)
 
@@ -62,7 +62,7 @@ Refactor the 460-line bash SessionStart hook into a thin shell wrapper around a 
 - **Complexity**: complex
 - **Context**: Bash precedent: lines 38-65 (Phase 1 + Phase 2 migration), lines 343-351 (single-feature claim). Behavior departure from bash on orphan-`.session-owner` (bash line 69 leaves it unchanged when no `.session` matches — Python detects this and skips writing). Lockfile path: `{lifecycle_dir}/{feature}/.lock`. Helper signatures: `def migrate_session_p1(feature_dir: Path, new_id: str, stale_id: str) -> bool`, `def migrate_session_p2(lifecycle_dir: Path, new_id: str, stale_id: str) -> list[Path]`, `def claim_single_feature(feature_dir: Path, new_id: str) -> None`, `def skip_orphan_session_owner(feature_dir: Path) -> bool`. Atomic write helper: `def _atomic_write(path: Path, content: str) -> None`. Lockfile context manager: `@contextmanager def feature_lock(feature_dir: Path)`. **Task 4 does NOT modify scan_lifecycle.py** — integration into the orchestrator is Task 8's job, eliminating the merge collision with Task 5.
 - **Verification**: `python3 -c "from cortex_command.hooks._session_state import migrate_session_p1, _atomic_write; from pathlib import Path; import tempfile, os; td = Path(tempfile.mkdtemp()); fd = td / 'feature1'; fd.mkdir(); (fd / '.session').write_text('stale-id'); migrate_session_p1(fd, 'new-id', 'stale-id'); assert (fd / '.session').read_text() == 'new-id' and (fd / '.session-owner').read_text() == 'stale-id'"` exits 0 (verifies P1 branch end-to-end with filesystem assertion) AND `grep -c 'cortex/lifecycle/\*/\.lock' .gitignore` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit e7768df6)
 
 ### Task 5: Implement pipeline-state detection helpers (no scan_lifecycle.py integration yet)
 
@@ -81,7 +81,7 @@ p.write_text(json.dumps(state))
 ps = PipelineState.from_path(p)
 assert 'executing' in ps.context_string and 'merged' in ps.context_string and 'failed' in ps.context_string and ps.morning_review_active is False
 "` exits 0 (inline fixture exercises status-counting + non-complete phase).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit eeca01d0)
 
 ### Task 6: Implement phase-encoding helper
 
@@ -91,7 +91,7 @@ assert 'executing' in ps.context_string and 'merged' in ps.context_string and 'f
 - **Complexity**: simple
 - **Context**: Bash precedent lines 176-193. Encoding rule: `implement` + total>0 → `"implement:<checked>/<total>"`; `implement` + total==0 → `"implement:0/0"`; `implement-rework` → `"implement-rework:<cycle>"`; otherwise bare phase string. This is intra-file with Tasks 3, 7, 8 but they're chained via depends-on so no merge collision.
 - **Verification**: `python3 -c "from cortex_command.hooks.scan_lifecycle import _encode_phase; assert _encode_phase('implement', 3, 5, 1) == 'implement:3/5' and _encode_phase('research', 0, 0, 1) == 'research' and _encode_phase('implement', 0, 0, 1) == 'implement:0/0' and _encode_phase('implement-rework', 0, 0, 2) == 'implement-rework:2'"` exits 0 (covers all four enumerated branches).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 2db46f79)
 
 ### Task 7: Implement phase-label and helper functions for context message
 
@@ -101,7 +101,7 @@ assert 'executing' in ps.context_string and 'merged' in ps.context_string and 'f
 - **Complexity**: simple
 - **Context**: Bash precedent lines 196-209 for `phase_label`. The interrupted-hint helpers take an encoded phase and return a one-line hint string (or empty when not applicable).
 - **Verification**: `python3 -c "from cortex_command.hooks.scan_lifecycle import _phase_label, _interrupted_hint; assert _phase_label('implement:3/5') == 'Implement (3/5 tasks done)' and _phase_label('escalated') == 'Escalated (REJECTED — needs user direction)' and 'in progress' in _interrupted_hint('implement:3/5', 'feat-x').lower() and _interrupted_hint('implement:0/0', 'feat-x') == ''"` exits 0 (mappings + non-empty hint for in-progress + empty hint for not-started).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 137d6e72)
 
 ### Task 8: Implement orchestrator integration in scan_lifecycle.py
 
@@ -119,7 +119,7 @@ ps = PipelineState(context_string='', morning_review_active=False, morning_revie
 ctx = _build_additional_context(ps, active_feature='myfeat', active_phase='implement:3/5', incomplete=[('myfeat', 'implement:3/5')], lifecycle_dir=Path('/tmp'))
 assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)' in ctx and 'Interrupted' in ctx
 "` exits 0 (asserts the active-feature line, phase label, and interrupted hint are all present in the assembled context).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit ca1d7727 — note: P2/OR enforced via write-then-unlink rather than write-prevent; semantics preserved)
 
 ### Task 9: Implement output emission (hookSpecificOutput JSON)
 
@@ -129,7 +129,7 @@ assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)'
 - **Complexity**: simple
 - **Context**: Bash precedent: lines 459-465. Python: `json.dump({"hookSpecificOutput": ...}, sys.stdout, ensure_ascii=False)`. Preserves emoji-bearing context strings byte-for-byte against bash output.
 - **Verification**: Stage a tmp repo with one incomplete feature; `echo '{"cwd":"<tmp-repo>","session_id":"abc"}' | python3 -m cortex_command.hooks.scan_lifecycle | jq -r '.hookSpecificOutput.hookEventName'` returns `SessionStart` AND `... | jq -r '.hookSpecificOutput.additionalContext'` is non-empty.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 2b42883c — Task 8 had emitted envelope but missing ensure_ascii=False; Task 9 fixed)
 
 ### Task 10: Wire `cortex hooks scan-lifecycle` subcommand in CLI
 
@@ -139,7 +139,7 @@ assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)'
 - **Complexity**: simple
 - **Context**: Existing precedent at `cli.py:48-66` for overnight dispatchers. The `hooks` subparser has its own `--help`; `scan-lifecycle` has its own `--help` argparse-generated. `--help` short-circuits in argparse BEFORE the dispatcher fires, satisfying the wrapper's probe requirement at ~50-100ms per invocation (Python boot + module-level cli.py imports; deferred imports stay deferred).
 - **Verification**: `cortex hooks --help` exits 0 and stdout contains "scan-lifecycle" AND `cortex hooks scan-lifecycle --help` exits 0 AND `python3 -c "import cortex_command.cli; import sys; print([m for m in sys.modules if m.startswith('cortex_command.hooks')])"` prints `[]` (lazy-load confirmed — the hooks subtree is not imported by cli module load).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit cfd2355f)
 
 ### Task 11: Replace bash hook with probe-then-exec wrapper
 
@@ -149,7 +149,7 @@ assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)'
 - **Complexity**: simple
 - **Context**: Spec requirement #4 has the wrapper shape verbatim. Preserve `#!/bin/bash` shebang, `set -euo pipefail`. The explicit `Depends on: [..., 1]` edge enforces the structural ordering — Task 1 (golden capture) must complete before this task rewrites the bash hook. Without this edge a parallel scheduler could legitimately run Task 11 before Task 1, destroying the golden-capture reference behavior.
 - **Verification**: `wc -l < hooks/cortex-scan-lifecycle.sh` ≤ 15 AND `bash -n hooks/cortex-scan-lifecycle.sh` exits 0 (syntax check).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 39c24574 — pulled plugin-mirror regen + parity-exception co-changes ahead due to pre-commit guards)
 
 ### Task 12: Regenerate plugin mirror via `just build-plugin` and bump CLI_PIN to v2.2.0
 
@@ -159,7 +159,7 @@ assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)'
 - **Complexity**: simple
 - **Context**: `just build-plugin` recipe handles canonical→mirror copy. `.githooks/pre-commit` phase 2-4 enforces no-drift. CLI_PIN bump from v2.1.2 → v2.2.0 requires (a) the `[release-type: minor]` marker on this commit, (b) confirmation that current head is at v2.1.2 (matches existing CLI_PIN), (c) parse-validity assertion in the verification. If a subsequent commit promotes the release to major (via a `[release-type: major]` marker or `BREAKING:` footer in any commit body since the last tag), the auto-release will assign `v3.0.0` instead of `v2.2.0` — CLI_PIN will then be wrong by one major version. Mitigation: pre-merge run `bin/cortex-auto-bump-version --dry-run` and verify the predicted tag matches CLI_PIN.
 - **Verification**: `grep -c '^CLI_PIN = ("v2\.1\.2", "2\.0")$' plugins/cortex-overnight/server.py` = 0 (old pin removed) AND `grep -c '^CLI_PIN = ("v2\.2\.0", "2\.0")$' plugins/cortex-overnight/server.py` = 1 (exact new pin present) AND `python3 -c "from packaging.version import Version; from plugins.cortex_overnight.server import CLI_PIN; v = Version(CLI_PIN[0].lstrip('v')); assert str(v).startswith('2.2')"` exits 0 (parse-validity + correct major.minor) AND `bin/cortex-auto-bump-version --dry-run 2>&1 | grep -c '2\.2\.0'` ≥ 1 (auto-bump dry-run agrees on the target) AND `git diff --quiet -- plugins/cortex-overnight/hooks/cortex-scan-lifecycle.sh` exits 0 after `just build-plugin` (no plugin-mirror drift).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 6407a4aa — flagged: v2.2.0 tag already exists at 4e54603a on parallel history; merge will hit tag collision)
 
 ### Task 13: Update statusline docstring to reference new subcommand
 
@@ -169,7 +169,7 @@ assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)'
 - **Complexity**: trivial
 - **Context**: Statusline's parity-mirror is at `claude/statusline.sh:377+`. After this work, the SessionStart hook is Python (subcommand-mediated), but the statusline mirror remains bash (no Python boot tolerated on statusline render). Update prose accordingly.
 - **Verification**: `grep -c "bash-only mirror" claude/statusline.sh` ≥ 1 AND `grep -c "cortex hooks scan-lifecycle" claude/statusline.sh` ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit a5c46ea4)
 
 ### Task 14: Implement golden-file equivalence tests + session-mutation table-driven tests
 
@@ -179,7 +179,7 @@ assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)'
 - **Complexity**: complex
 - **Context**: pytest fixtures use `tmp_path` for per-test repo staging. Stdout capture via `capsys`. The four session-mutation tests stage specific pre-states (e.g., OR: write `.session-owner` with stale ID, ensure no `.session`, mark feature complete; assert no new `.session` after the call).
 - **Verification**: `pytest tests/test_hooks_scan_lifecycle.py -v -k "golden or session_mutation"` exits 0 with ≥10 test functions passing (6 golden + 4 session-mutation).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 91174c90 — 10/10 spec tests + 17/17 full module passing on first run)
 
 ### Task 15: Implement wrapper behavior tests (probe + propagate)
 
@@ -189,7 +189,7 @@ assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)'
 - **Complexity**: simple
 - **Context**: Stubs are simple bash scripts; PATH manipulation via `monkeypatch.setenv("PATH", ...)`. Wrapper invocation via `subprocess.run`.
 - **Verification**: `pytest tests/test_hooks_scan_lifecycle.py -v -k "wrapper_probe"` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 0f474da6 — 2/2 wrapper-probe tests, 19/19 full module)
 
 ### Task 16: Implement concurrent-write test for fcntl.flock serialization
 
@@ -199,7 +199,7 @@ assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)'
 - **Complexity**: simple
 - **Context**: `multiprocessing.Process` + `Barrier` to synchronize start. Loop the concurrent invocation 5+ times to surface any race window.
 - **Verification**: `pytest tests/test_hooks_scan_lifecycle.py::test_session_mutation_concurrent_writes_serialized -v` exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 3ced9a3d — 5-iteration stress run, no flakiness)
 
 ### Task 17: Add uv-tool smoke test script + just recipe
 
@@ -209,7 +209,7 @@ assert 'Active lifecycle: myfeat' in ctx and 'Phase: Implement (3/5 tasks done)'
 - **Complexity**: simple
 - **Context**: Smoke script uses `jq` to extract `additionalContext`. Topology detection: `[[ "$(realpath "$(command -v cortex)")" == *"share/uv/tools/cortex-command"* ]]`. **Acceptance handling for dev-checkout implementers**: when the smoke test skips on a non-uv-tool topology, the implementer documents (in the PR description) that they staged a uv-tool install separately for verification, OR the merge gate runs in a CI environment that DOES have a uv-tool install.
 - **Verification**: `bash -n tests/smoke_uv_tool_hook.sh` exits 0 AND `just --list 2>&1 | grep -c "test-smoke-hook"` ≥ 1 AND on a system with `cortex` resolving to uv-tool venv, `just test-smoke-hook` exits 0 with all 6 cases passing AND on a system without uv-tool, `just test-smoke-hook` exits 0 with a printed skip message + suggested-setup command.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit a04b1e57 — skips on this checkout because installed uv-tool CLI predates this lifecycle's hooks subcommand; assertion path verified at the unit level via Task 14 goldens)
 
 ## Risks
 
