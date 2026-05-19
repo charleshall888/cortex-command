@@ -142,3 +142,9 @@ If ANY Step 3 assertion FAILS, the §Acceptance gate is unmet, or the §Results 
 - Parent feature: [[228-wire-daytime-dispatch-through-cli-and-mcp-with-launchd-detachment]]
 - Spec R16: `cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/spec.md` (release-gate requirement)
 - Plan reference: `cortex/lifecycle/release-gate-empirical-from-claude-session/plan.md` (this ticket's Task 1 carries the §Procedure + §Results rewrite landing the paired-events proof shape; see plan.md for the full task breakdown)
+
+## Update — Parent #228 cancelled via #246
+
+Parent #228 (wire-daytime-dispatch-through-cli-and-mcp-with-launchd-detachment) was superseded and cancelled via #246 (remove-daytime-autonomous-pipeline). The daytime pipeline feature is no longer being pursued.
+
+This ticket's `status: complete` is retained as real history — the release-gate procedure was defined and completed under #228's umbrella, and that work is not retroactively invalidated. However, the release-gate procedure no longer applies: with #228 cancelled, there is no daytime dispatch feature to release-gate, and no release tag will be cut for it.
