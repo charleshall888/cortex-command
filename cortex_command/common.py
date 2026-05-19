@@ -19,6 +19,7 @@ Functions:
     atomic_write     -- Write a file atomically via temp + os.replace.
     normalize_status -- Map legacy status values to canonical vocabulary.
     _resolve_user_project_root -- Resolve user's cortex project root at call time.
+    _resolve_user_project_root_from_cwd -- Resolve project root from cwd, ignoring CORTEX_REPO_ROOT.
 
 Exceptions:
     CortexProjectRootError -- Raised when the user's project root cannot be resolved.
@@ -97,6 +98,50 @@ def _resolve_user_project_root() -> Path:
 
     raise CortexProjectRootError(
         "Run from your cortex project root, set CORTEX_REPO_ROOT, or "
+        "create a new project here with `git init && cortex init` "
+        "(cortex init requires a git repository). "
+        f"Searched: {', '.join(str(p) for p in searched)}"
+    )
+
+
+def _resolve_user_project_root_from_cwd() -> Path:
+    """Resolve the directory containing the user's cortex project from cwd.
+
+    Unconditionally walks upward from ``Path.cwd().resolve()`` to the first
+    ancestor whose ``cortex/`` child is a directory, ignoring
+    ``CORTEX_REPO_ROOT``.  The walk terminates on either
+    ``(current / ".git").exists()`` (file or directory shape — handles git
+    worktrees) or ``parent == current`` (filesystem root).
+
+    This is the cwd-only counterpart to :func:`_resolve_user_project_root`.
+    The existing function retains its env-first contract unchanged; this one
+    is suitable for callers (e.g. ``cortex-lifecycle-event log``) that need
+    to determine the project root from the physical working directory
+    regardless of any environment override.
+
+    Returns:
+        Resolved absolute path to the user's cortex project root.
+
+    Raises:
+        CortexProjectRootError: When no ancestor up to the first ``.git/``
+            boundary (or filesystem root) contains ``cortex/``. The exception
+            message lists each directory the walk visited.
+    """
+    searched: list[Path] = []
+    current = Path.cwd().resolve()
+    while True:
+        searched.append(current)
+        if (current / "cortex").is_dir():
+            return current
+        if (current / ".git").exists():
+            break
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+
+    raise CortexProjectRootError(
+        "Run from your cortex project root or "
         "create a new project here with `git init && cortex init` "
         "(cortex init requires a git repository). "
         f"Searched: {', '.join(str(p) for p in searched)}"
