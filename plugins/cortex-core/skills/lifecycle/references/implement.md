@@ -100,22 +100,89 @@ The `interactive-` prefix causes `create_worktree` to resolve the branch as `int
 
 If creation fails (raises `ValueError`): surface the error to the user and exit §1a — do not proceed to handoff.
 
-**iv. Handoff.** Surface the worktree path to the user with the following message (substituting the actual resolved path from `info.path`):
+**iv. Pre-flight check.** Verify that `~/.claude/settings.local.json` contains the worktree base path in both `sandbox.filesystem.allowWrite` and `additionalDirectories`. The worktree base path is `$CORTEX_WORKTREE_ROOT` if set, otherwise `$TMPDIR/cortex-worktrees/`. Run as a single Bash call:
+
+```bash
+python3 - <<'EOF'
+import json, os, sys
+from pathlib import Path
+
+settings_path = Path.home() / ".claude" / "settings.local.json"
+worktree_base = os.environ.get("CORTEX_WORKTREE_ROOT") or os.path.join(os.environ.get("TMPDIR", "/tmp"), "cortex-worktrees/")
+
+if not settings_path.exists():
+    sys.stderr.write(
+        "Variant A requires the worktree base to be registered in your settings. "
+        "Re-run `cortex init` and retry. "
+        "See cortex/lifecycle/implement-variant-a-end-to-end/spec.md Edge Cases for context.\n"
+    )
+    sys.exit(2)
+
+try:
+    settings = json.loads(settings_path.read_text())
+except Exception:
+    sys.stderr.write(
+        "Variant A requires the worktree base to be registered in your settings. "
+        "Re-run `cortex init` and retry. "
+        "See cortex/lifecycle/implement-variant-a-end-to-end/spec.md Edge Cases for context.\n"
+    )
+    sys.exit(3)
+
+allow_write = settings.get("sandbox", {}).get("filesystem", {}).get("allowWrite", [])
+additional = settings.get("additionalDirectories", [])
+
+# Normalise: a path is considered registered if any entry is a prefix of worktree_base
+def is_registered(entries, path):
+    for e in entries:
+        if path.startswith(e) or e.startswith(path.rstrip("/").rstrip("\\")):
+            return True
+    return False
+
+if is_registered(allow_write, worktree_base) and is_registered(additional, worktree_base):
+    sys.exit(0)
+
+sys.stderr.write(
+    "Variant A requires the worktree base to be registered in your settings. "
+    "Re-run `cortex init` and retry. "
+    "See cortex/lifecycle/implement-variant-a-end-to-end/spec.md Edge Cases for context.\n"
+)
+sys.exit(2)
+EOF
+```
+
+Exit-code contract: exit 0 = settings are valid, proceed; exit 2 = worktree base not registered (operator should re-run `cortex init`); exit 3 = `settings.local.json` is malformed or unreadable (operator should re-run `cortex init` to recreate it). On exit 2 or 3, halt §1a — do not cd or emit the event.
+
+**v. Cd handoff.** After the pre-flight check passes (exit 0), perform the following three steps in order:
+
+1. **Capture origin pwd** — run a single Bash call: `_origin_pwd=$(pwd)`. Hold this value for the lifecycle session (it may be needed for restore at Complete phase).
+
+2. **Cd into worktree** — run a single Bash call: `cd $(cortex-worktree-resolve interactive/{slug})`. This sets the orchestrator session's CWD to the interactive worktree for all subsequent Bash tool calls in this lifecycle session.
+
+3. **Emit event** — run a single Bash call after the cd has completed (path now resolves to the worktree):
+
+   ```bash
+   cortex-lifecycle-event log --event interactive_worktree_entered --feature {slug} --worktree-path "$(pwd)"
+   ```
+
+   The `cortex-lifecycle-event` CLI uses `_resolve_user_project_root_from_cwd()` (ignores `CORTEX_REPO_ROOT`), so the event row lands in the worktree's `cortex/lifecycle/{slug}/events.log` — not the main repo's.
+
+Variant A's cd affects only orchestrator-session Bash tool calls; sub-agent dispatch via `Agent(isolation: "worktree")` in §2 is unaffected — each sub-agent is independently rooted at `$TMPDIR/cortex-worktrees/{task-name}/`. The existing §2(e) Worktree Integration step (`implement.md:218-229`) runs `git merge worktree/{task-name}` from the feature-branch CWD (which under Variant A is `interactive/{slug}` post-cd) and then `git worktree remove` for each completed sub-agent worktree — Variant A inherits this merge-back behavior unchanged.
+
+**vi. Handoff.** Surface the worktree path to the user with the following message (substituting the actual resolved path from `info.path`):
 
 ```
 Interactive worktree created at: {info.path}
 Branch: interactive/{slug}
 
-To continue implementation:
-  Variant A — cd into the worktree and resume in this session:
-    cd {info.path}
-  Variant B — open a fresh Claude Code session inside the worktree:
-    claude --worktree={info.path}
+Variant A (active): The orchestrator session has cd'd into the worktree.
+All subsequent Bash tool calls in this lifecycle session resolve relative
+to {info.path}. Your CWD before the cd was saved as _origin_pwd.
 
-(Variant A vs Variant B dispatch is owned by epic #240. This step — worktree creation — is complete.)
+(Variant B — open a fresh Claude Code session via `claude --worktree={info.path}` —
+is an alternative that was considered but not taken. Variant A is in effect.)
 ```
 
-**v. Exit /cortex-core:lifecycle entirely.** Do not transition to any further phase. The worktree has been created; the user's next action is inside the worktree.
+**vii. Continue to §2 Task Dispatch.** Do not exit `/cortex-core:lifecycle`. The orchestrator session is now inside the interactive worktree and proceeds to dispatch implementation tasks from §2 onward. (Note: the legacy §v exit-the-lifecycle behavior no longer applies — Variant A keeps the orchestrator session active and routes it into task dispatch.)
 
 ### 2. Task Dispatch
 
