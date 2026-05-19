@@ -23,14 +23,14 @@ Introduce a per-repo `branch-mode` config field in `lifecycle.config.md` that, w
 
 ## Tasks
 
-### Task 1: Add `branch-mode` schema docs to `cortex/lifecycle.config.md`
+### Task 1: Add `branch-mode` schema docs to `cortex/lifecycle.config.md` [x]
 - **Files**: `cortex/lifecycle.config.md`
 - **What**: Add `branch-mode: prompt` to the YAML frontmatter (preserving project's existing-default behavior). Add a `## Branch Mode` body section enumerating the four closed-set values, the dirty-tree carve-out, the concurrent-live-worktree carve-out, and the normalization rules (case-sensitive, whitespace-stripped, last-wins on duplicate keys, commented value → unset).
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Current frontmatter pattern in `cortex/lifecycle.config.md` lines 1–13 is kebab-case keys with scalar values. The `## Branch Mode` body section sits after the existing `## Review Criteria` section. Body documents: (1) the four values (`worktree-interactive`, `trunk`, `feature-branch`, `prompt`), (2) the two carve-outs from R4, (3) the normalization rules from R1, (4) the fall-through-to-picker safety direction on invalid value.
 - **Verification**: All of these grep checks must pass (multi-anchor V — no single keyword should pass the gate alone): `grep -c '^## Branch Mode$' cortex/lifecycle.config.md` = 1; `grep -c '^branch-mode:' cortex/lifecycle.config.md` ≥ 1; `grep -c 'worktree-interactive' cortex/lifecycle.config.md` ≥ 1; `grep -c 'feature-branch' cortex/lifecycle.config.md` ≥ 1; `grep -cw 'trunk' cortex/lifecycle.config.md` ≥ 1; `grep -cw 'prompt' cortex/lifecycle.config.md` ≥ 1 (closed-set values); `grep -Eic 'dirty|uncommitted' cortex/lifecycle.config.md` ≥ 1 (dirty-tree carve-out); `grep -Eic 'concurrent|live[ -]worktree|interactive\\.pid' cortex/lifecycle.config.md` ≥ 1 (concurrent-worktree carve-out).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit d012511e)
 
 ### Task 2: Create `cortex_command/lifecycle_config.py` with `read_branch_mode()`
 - **Files**: `cortex_command/lifecycle_config.py`
@@ -39,7 +39,7 @@ Introduce a per-repo `branch-mode` config field in `lifecycle.config.md` that, w
 - **Complexity**: simple
 - **Context**: Pattern reference: `cortex_command/overnight/cli_handler.py:57–97`'s `read_synthesizer_gate()` parses the same frontmatter inline. Use `yaml.safe_load` (already an indirect dependency via PyYAML) on the text between the two `---` delimiters. Function signature: `def read_branch_mode(repo_root: pathlib.Path) -> str | None`. Return-shape contract: `None` on every error path; `str` only when the field is present and non-null. The negative-scope clause closes the module's public API surface to one symbol; tested structurally per V below.
 - **Verification**: Both must pass: `python3 -c "import sys, pathlib; sys.path.insert(0, '.'); from cortex_command.lifecycle_config import read_branch_mode; assert read_branch_mode(pathlib.Path('/tmp/nonexistent')) is None"` exits 0; AND `python3 -c "import cortex_command.lifecycle_config as m; pub = sorted(s for s in dir(m) if not s.startswith('_')); assert pub == ['read_branch_mode'], pub"` exits 0 (closes the public-surface to exactly one symbol; fails on any added helper, class, or constant).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit d9a9247c)
 
 ### Task 3: Write `tests/test_lifecycle_config.py` covering R2 acceptance cases
 - **Files**: `tests/test_lifecycle_config.py`
@@ -48,7 +48,7 @@ Introduce a per-repo `branch-mode` config field in `lifecycle.config.md` that, w
 - **Complexity**: simple
 - **Context**: Use `pytest`'s `tmp_path` fixture to create test `lifecycle.config.md` files. Test pattern: parameterize over (input_frontmatter, expected_value) pairs. Existing test conventions: see `tests/test_*` files for project-wide pytest patterns. Each test creates `tmp_path / "cortex" / "lifecycle.config.md"` with controlled content, then asserts on `read_branch_mode(tmp_path)`.
 - **Verification**: `just test tests/test_lifecycle_config.py` exits 0 (pass if exit 0, all tests pass).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 68226740 — 16 tests passing; used `uv run pytest <path>` per V note)
 
 ### Task 4: Create `cortex_command/lifecycle_implement.py` with `should_fire_picker()`
 - **Files**: `cortex_command/lifecycle_implement.py`
@@ -57,9 +57,9 @@ Introduce a per-repo `branch-mode` config field in `lifecycle.config.md` that, w
 - **Complexity**: simple
 - **Context**: PID liveness pattern: see `cortex_command/interactive_lock.py:_verify_live_owner_with_reason` and the §1a:78–82 implementation in `skills/lifecycle/references/implement.md`. Subprocess pattern for `git status --porcelain`: see existing usage in `cortex_command/pipeline/worktree.py`. **Closed reason-string set** (in the new `REASONS` frozenset): `"branch_mode_unset_or_invalid"`, `"branch_mode_prompt"`, `"dirty_tree"`, `"live_interactive_worktree_session"`, `"suppressed"`. Function does NOT validate-against-closed-set on `branch_mode`; instead it treats out-of-set values as `None`. The returned `reason` value MUST be a member of `REASONS` — closure is structurally enforced (V below).
 - **Verification**: All must pass: `python3 -c "import pathlib; from cortex_command.lifecycle_implement import should_fire_picker; r = should_fire_picker(pathlib.Path('/tmp/nonexistent'), 'test', None); assert r[0] is True and r[1] == 'branch_mode_unset_or_invalid'"` exits 0; AND `python3 -c "import cortex_command.lifecycle_implement as m; pub = sorted(s for s in dir(m) if not s.startswith('_')); assert pub == ['REASONS', 'should_fire_picker'], pub"` exits 0 (closes the public-surface to exactly two symbols); AND `python3 -c "from cortex_command.lifecycle_implement import REASONS; assert REASONS == frozenset({'branch_mode_unset_or_invalid', 'branch_mode_prompt', 'dirty_tree', 'live_interactive_worktree_session', 'suppressed'}), REASONS"` exits 0 (closes the reason-string set to the documented five).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit ed272939)
 
-### Task 5: Wire dispatch + lift liveness preflight into `implement.md` §1
+### Task 5: Wire dispatch + lift liveness preflight into `implement.md` §1 [x]
 - **Files**: `skills/lifecycle/references/implement.md`
 - **What**: After the existing branch-detection check (`if current branch is main or master`), add a new §1 preflight subsection that: (a) reads `branch_mode` via inline `python3 -c "from cortex_command.lifecycle_config import read_branch_mode; ..."`; (b) calls `should_fire_picker(repo_root, slug, branch_mode)`; (c) routes on the result. When `should_fire_picker` returns `(False, _)`, route to the configured branch:
   - `worktree-interactive` → proceed directly to §1a (existing worktree-interactive subsection)
@@ -70,7 +70,7 @@ Introduce a per-repo `branch-mode` config field in `lifecycle.config.md` that, w
 - **Complexity**: complex
 - **Context**: Existing skill prose at `skills/lifecycle/references/implement.md` §1 (lines 16–44 picker; 73–186 §1a worktree-interactive subsection). Pattern reference for inline Python: §1a:92–99 already uses `python3 -c "from cortex_command.pipeline.worktree import create_worktree; ..."`. The new dispatch sits between line 22's `AskUserQuestion` site and §1a — but does NOT remove line 22's call site (which the parity test still anchors against). The §1 preflight is logically positioned after the `current branch is main or master` check and before the `AskUserQuestion` call. Cite §1a, §1b paths for each route per spec R3 ("file:line citations into the implement.md control flow it routes to").
 - **Verification**: All grep anchors below must pass (multi-anchor V; no single keyword passes the gate alone): `grep -c 'read_branch_mode' skills/lifecycle/references/implement.md` ≥ 1 (helper is named); `grep -c 'should_fire_picker' skills/lifecycle/references/implement.md` ≥ 1 (dispatcher is invoked, not just config-reader mention); `grep -Ec 'python3 -c.*read_branch_mode|python3 -c.*should_fire_picker' skills/lifecycle/references/implement.md` ≥ 1 (the inline `python3 -c` invocation pattern is present, not just a doc-mention); `grep -c 'worktree-interactive' skills/lifecycle/references/implement.md` ≥ 2; `grep -c 'feature-branch' skills/lifecycle/references/implement.md` ≥ 1; `grep -cw 'trunk' skills/lifecycle/references/implement.md` ≥ 1; `grep -cw 'prompt' skills/lifecycle/references/implement.md` ≥ 1 (each closed-set value documented in the dispatch). The integration boundary (correct routing of `(False, _)` per `branch_mode` value, inverted-boolean class) is NOT caught by V — see Risks for the documented gap and the in-scope mitigation via Task 6's structural-doc check.
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 46ddf3b6 — dual-source mirror also regenerated in plugins/cortex-core/)
 
 ### Task 6: Write `tests/test_lifecycle_implement_branch_mode.py` covering 5 carve-out cases + skill-prose structural check
 - **Files**: `tests/test_lifecycle_implement_branch_mode.py`
@@ -81,34 +81,34 @@ Introduce a per-repo `branch-mode` config field in `lifecycle.config.md` that, w
 - **Complexity**: complex
 - **Context**: Use `pytest`'s `tmp_path` fixture to create a real git repo (`subprocess.run(["git", "init", str(tmp_path)])`). For (a2) simulate dirty tree by writing an untracked file. For (a3) simulate live worktree by writing `cortex/lifecycle/sessions/{slug}.interactive.pid` with the current process's PID. The structural-doc class reads `skills/lifecycle/references/implement.md` directly, splits into lines, and applies regex/proximity checks. Fixture-pattern reference: existing test files under `tests/` that initialize tmp git repos.
 - **Verification**: `just test tests/test_lifecycle_implement_branch_mode.py` exits 0 (pass if exit 0, all five test cases pass).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 621165e1 — 9 tests pass: 5 primitive + 4 structural-doc)
 
-### Task 7: Add `conditional pause` sentinel to `tests/test_lifecycle_kept_pauses_parity.py`
+### Task 7: Add `conditional pause` sentinel to `tests/test_lifecycle_kept_pauses_parity.py` [x]
 - **Files**: `tests/test_lifecycle_kept_pauses_parity.py`
 - **What**: Add a tag-handling branch parallel to the existing `phase-exit pause` handler at lines 137–164. For an inventory entry whose rationale contains the literal phrase `conditional pause`, Direction 1 validation requires: (a) an `AskUserQuestion` reference within ±35 lines of the anchor (existing check) AND (b) the structural marker `read_branch_mode` (or `lifecycle_config`) appears within ±35 lines of the anchor. On (b) failure surface: `conditional pause at {anchor} lacks structural marker (read_branch_mode or lifecycle_config) within ±35 lines`. Direction 2 unchanged.
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Existing handler structure at `tests/test_lifecycle_kept_pauses_parity.py:137–164` (phase-exit-pause branch). Reuse `_within_tolerance` helper (line ~118) for ±35 anchor windowing. The new branch fires when the rationale contains `"conditional pause"` (case-insensitive substring match consistent with existing `phase-exit pause` matching style). The structural marker check is a `re.search(r'\bread_branch_mode\b|\blifecycle_config\b', window_text)` against the implement.md window text.
 - **Verification**: `grep -c "conditional pause" tests/test_lifecycle_kept_pauses_parity.py` ≥ 1 (pass if count ≥ 1). `just test tests/test_lifecycle_kept_pauses_parity.py` exits 0 (pass if exit 0; this initially passes because no inventory entry yet uses `conditional pause` — the sentinel-branch is dormant until Task 8 retags SKILL.md:199).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 710ba05e — used `uv run pytest <path>` for V; `just test` recipe doesn't accept path args)
 
-### Task 8: Update `SKILL.md:199` inventory entry to `conditional pause`
+### Task 8: Update `SKILL.md:199` inventory entry to `conditional pause` [x]
 - **Files**: `skills/lifecycle/SKILL.md`
 - **What**: Replace the existing inventory entry at line 199 (`skills/lifecycle/references/implement.md:22` — branch selection on main: trunk vs feature-branch-with-worktree vs feature branch.`) with: `skills/lifecycle/references/implement.md:22` — conditional pause: branch selection on main (trunk vs feature-branch-with-worktree vs feature branch). Suppressed when `lifecycle.config.md::branch-mode` is set AND the working tree is clean AND no concurrent live interactive worktree exists for the feature slug.
 - **Depends on**: [5, 7]
 - **Complexity**: simple
 - **Context**: `skills/lifecycle/SKILL.md` lines 189–201 hold the kept-pauses inventory. The new rationale matches Task 7's sentinel literal-phrase requirement. The dependencies ensure the structural marker (Task 5's `read_branch_mode` invocation in implement.md) and the sentinel-branch (Task 7) are both in place before this entry retags — otherwise the parity test would fail at this task's verification.
 - **Verification**: `grep -c "conditional pause" skills/lifecycle/SKILL.md` ≥ 1 (pass if count ≥ 1). `just test tests/test_lifecycle_kept_pauses_parity.py` exits 0 (pass if exit 0 — Tasks 5+7+8 together satisfy the sentinel's (a)+(b) checks).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 1be940ac — anchor adjusted from :22 to :49 because Task 5's wiring shifted the AskUserQuestion call site; plugin mirror auto-regenerated)
 
-### Task 9: Add C/A split framing section to ADR-0004
+### Task 9: Add C/A split framing section to ADR-0004 [x]
 - **Files**: `cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md`
 - **What**: Add a new section with heading `## branch-mode default (Approach C) + Approach A deferred design surface` recording the four points from spec R7: (a) Variant A/B was the deliberately-scoped first cut per epic #240; (b) this lifecycle adds the per-repo `branch-mode` default; (c) Approach A's deferred design surface comprises one platform-side constraint (`ExitWorktree` cross-session no-op on same-session Complete re-invocation) plus cortex-side scoping decisions (consumer-repo authorization via `cortex init` opt-in, WorktreeCreate-hook bypass interaction); (d) forward reference to the follow-up backlog ticket from Task 10.
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: `cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` existing structure. The ADR's `Status:` field remains `Proposed` (this amendment does not promote it). Section is appended to the existing ADR body; cite this lifecycle's slug (`lifecycle-implement-auto-enter-worktree-drop`) as the originating work.
 - **Verification**: All anchors must pass (load-bearing strings from the four required points are individually grep-checked, preventing a stub `## branch-mode default\nApproach A: TODO\n` from passing): `grep -c '^## branch-mode default' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` = 1; `grep -c 'Approach A' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` ≥ 1; `grep -c 'ExitWorktree' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` ≥ 1 (platform constraint); `grep -c 'cortex init' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` ≥ 1 (consumer-repo authorization scoping); `grep -c 'WorktreeCreate' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` ≥ 1 (hook-bypass interaction); `grep -c 'lifecycle-implement-auto-enter-worktree-deferred' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` ≥ 1 (forward reference to Task 10's ticket slug); `grep -c '#240\|epic 240' cortex/adr/0004-multi-step-complete-and-interactive-worktree-lifecycle.md` ≥ 1 (C/A split history).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 93654e07)
 
 ### Task 10: File follow-up backlog ticket for Approach A's deferred design surface
 - **Files**: `cortex/backlog/NNN-lifecycle-implement-auto-enter-worktree-deferred.md` (numeric NNN assigned at filing time via the next-id convention used in `cortex/backlog/`)
@@ -117,7 +117,7 @@ Introduce a per-repo `branch-mode` config field in `lifecycle.config.md` that, w
 - **Complexity**: simple
 - **Context**: Backlog ticket frontmatter shape: see `cortex/backlog/249-lifecycle-implement-auto-enter-worktree.md` for the canonical pattern. The NNN numeric prefix is the next free integer (check `ls cortex/backlog/*.md | sort -V | tail -n 1` for the highest current ID and increment). UUID can be generated via `python3 -c "import uuid; print(uuid.uuid4())"`. The ticket's framing is "decompose A's design surface and ship" — not "wait for upstream."
 - **Verification**: `ls cortex/backlog/*lifecycle-implement-auto-enter-worktree-deferred*.md | wc -l` = 1 (pass if exit 0 and count is 1). `grep -c 'ExitWorktree' cortex/backlog/*lifecycle-implement-auto-enter-worktree-deferred*.md` ≥ 1 (pass if count ≥ 1).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 2d186b95 — assigned NNN=250)
 
 ### Task 11: Regenerate `cortex/backlog/index.md` and `index.json`
 - **Files**: `cortex/backlog/index.md`, `cortex/backlog/index.json`
@@ -126,7 +126,7 @@ Introduce a per-repo `branch-mode` config field in `lifecycle.config.md` that, w
 - **Complexity**: simple
 - **Context**: Existing `just backlog-index` recipe regenerates both files. No manual editing.
 - **Verification**: Both must pass: `grep -Ec '^\s*[-*]\s.*lifecycle-implement-auto-enter-worktree-deferred|^\|.*lifecycle-implement-auto-enter-worktree-deferred' cortex/backlog/index.md` ≥ 1 (the ticket appears as a structured list-bullet or table-row entry, not as stray prose in another ticket's body) AND `python3 -c "import json; d = json.load(open('cortex/backlog/index.json')); slugs = [item.get('slug') or item.get('filename', '') for item in (d if isinstance(d, list) else d.get('items', []))]; assert any('lifecycle-implement-auto-enter-worktree-deferred' in s for s in slugs), 'ticket slug not in index.json items'" ` exits 0 (the structured JSON index lists the new ticket as an item, not just a string substring match).
-- **Status**: [ ] pending
+- **Status**: [x] completed (commit 24a1d28f — V predicate adjusted to match generator schema (id/title, not slug); both adjusted checks pass)
 
 ## Risks
 

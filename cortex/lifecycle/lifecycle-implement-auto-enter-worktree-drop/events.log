@@ -6,3 +6,7 @@
 {"schema_version": 1, "ts": "2026-05-19T19:55:30Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-drop", "from": "specify", "to": "plan"}
 {"schema_version": 1, "ts": "2026-05-19T20:30:00Z", "event": "plan_approved", "feature": "lifecycle-implement-auto-enter-worktree-drop"}
 {"schema_version": 1, "ts": "2026-05-19T20:30:30Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-drop", "from": "plan", "to": "implement"}
+{"schema_version": 1, "ts": "2026-05-19T20:35:00Z", "event": "batch_dispatch", "feature": "lifecycle-implement-auto-enter-worktree-drop", "batch": 0, "tasks": [1, 2, 7, 9]}
+{"schema_version": 1, "ts": "2026-05-19T20:45:00Z", "event": "batch_dispatch", "feature": "lifecycle-implement-auto-enter-worktree-drop", "batch": 1, "tasks": [3, 4, 10]}
+{"schema_version": 1, "ts": "2026-05-19T20:55:00Z", "event": "batch_dispatch", "feature": "lifecycle-implement-auto-enter-worktree-drop", "batch": 2, "tasks": [5, 6, 11]}
+{"schema_version": 1, "ts": "2026-05-19T21:05:00Z", "event": "batch_dispatch", "feature": "lifecycle-implement-auto-enter-worktree-drop", "batch": 3, "tasks": [8]}
