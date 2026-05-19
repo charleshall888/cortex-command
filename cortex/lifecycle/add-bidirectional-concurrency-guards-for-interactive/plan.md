@@ -49,7 +49,7 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
   - `grep -cE 'merge --abort|worktree remove --force|_recover_stale' cortex_command/interactive_lock.py` = 0 (R6 — no destructive recovery) — pass if count = 0.
   - `grep -cE '^\| `interactive_lock_(acquired|rejected_concurrent|stale_recovered|released)`' bin/.events-registry.md` = 4 — pass if count = 4.
   - `cortex-check-events-registry --staged` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Add unit tests for `interactive_lock.py` covering all R4 branch-table rows + R3 schema + R6 stale-recovery
 
@@ -99,7 +99,7 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
   - `grep -c '\.runner\.lock' skills/lifecycle/references/implement.md` = 0 (R8 — typo gone) — pass if count = 0.
   - `bash -n skills/lifecycle/references/_interactive_overnight_check.sh` exits 0 (syntax-valid sidecar) — pass if exit 0.
   - `grep -c '_interactive_overnight_check.sh' skills/lifecycle/references/implement.md` ≥ 1 (sidecar referenced from §1a.iii) — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Wire interactive preflight guards into `implement.md` §1 — overnight-active mirror + lock acquisition + fifth events-registry row
 

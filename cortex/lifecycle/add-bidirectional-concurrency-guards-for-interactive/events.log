@@ -10,3 +10,4 @@
 {"schema_version": 1, "ts": "2026-05-18T22:30:00Z", "event": "spec_approved", "feature": "add-bidirectional-concurrency-guards-for-interactive"}
 {"schema_version": 1, "ts": "2026-05-18T23:40:00Z", "event": "plan_approved", "feature": "add-bidirectional-concurrency-guards-for-interactive"}
 {"schema_version": 1, "ts": "2026-05-18T23:40:01Z", "event": "phase_transition", "feature": "add-bidirectional-concurrency-guards-for-interactive", "from": "plan", "to": "implement"}
+{"ts": "2026-05-18T23:42:00Z", "event": "batch_dispatch", "feature": "add-bidirectional-concurrency-guards-for-interactive", "batch": 0, "tasks": [1, 4]}
