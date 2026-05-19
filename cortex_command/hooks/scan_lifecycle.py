@@ -68,6 +68,128 @@ def _encode_phase(phase: str, checked: int, total: int, cycle: int) -> str:
     return phase
 
 
+def _phase_label(encoded_phase: str) -> str:
+    """Translate an encoded phase string into a human-readable label.
+
+    Mirrors the bash ``phase_label`` helper at
+    ``hooks/cortex-scan-lifecycle.sh`` lines 204-218. Pure function: no
+    I/O, no side effects. Consumed by the ``additionalContext`` emitter
+    to produce strings like ``"Phase: Implement (3/5 tasks done)"``.
+
+    Mapping rules:
+
+    * ``"research"``                  -> ``"Research"``
+    * ``"specify"``                   -> ``"Specify"``
+    * ``"plan"``                      -> ``"Plan"``
+    * ``"implement:<x>/<y>"``         -> ``"Implement (<x>/<y> tasks done)"``
+    * ``"implement-rework:<n>"``      -> ``"Implement — rework (review cycle <n>)"``
+    * ``"review"``                    -> ``"Review"``
+    * ``"escalated"``                 -> ``"Escalated (REJECTED — needs user direction)"``
+    * ``"complete:awaiting-merge"``   -> ``"Complete (awaiting merge)"``
+    * ``"complete"``                  -> ``"Complete"``
+    * any other phase                 -> the encoded phase string verbatim
+
+    Parameters
+    ----------
+    encoded_phase:
+        Wire-format phase string as produced by :func:`_encode_phase`.
+
+    Returns
+    -------
+    str
+        The human-readable phase label.
+    """
+
+    if encoded_phase == "research":
+        return "Research"
+    if encoded_phase == "specify":
+        return "Specify"
+    if encoded_phase == "plan":
+        return "Plan"
+    if encoded_phase.startswith("implement:"):
+        progress = encoded_phase[len("implement:") :]
+        return f"Implement ({progress} tasks done)"
+    if encoded_phase.startswith("implement-rework:"):
+        cycle = encoded_phase[len("implement-rework:") :]
+        return f"Implement — rework (review cycle {cycle})"
+    if encoded_phase == "review":
+        return "Review"
+    if encoded_phase == "escalated":
+        return "Escalated (REJECTED — needs user direction)"
+    if encoded_phase == "complete:awaiting-merge":
+        return "Complete (awaiting merge)"
+    if encoded_phase == "complete":
+        return "Complete"
+    return encoded_phase
+
+
+def _interrupted_hint(encoded_phase: str, active_feature: str) -> str:
+    """Return a one-line interrupted-state hint, or empty when not applicable.
+
+    Mirrors the bash interrupted-state hint emission at
+    ``hooks/cortex-scan-lifecycle.sh`` lines 378-398. Pure function: no
+    I/O, no side effects. The caller appends the returned hint to the
+    ``additionalContext`` block on its own line; an empty string signals
+    "no hint applicable" (no extra line should be emitted).
+
+    Hint rules:
+
+    * ``"implement:<checked>/<total>"`` with ``0 < checked < total``
+      -> "Interrupted: implementation in progress ..." hint.
+    * ``"implement:<checked>/<total>"`` with ``checked == 0`` or
+      ``checked >= total`` -> empty (not-started or fully-done).
+    * ``"implement-rework:<cycle>"`` -> "Interrupted: review cycle ..." hint.
+    * ``"escalated"`` -> "Action needed: review returned REJECTED ..." hint.
+    * any other phase -> empty.
+
+    Parameters
+    ----------
+    encoded_phase:
+        Wire-format phase string as produced by :func:`_encode_phase`.
+    active_feature:
+        Feature slug of the active lifecycle, used to render the
+        ``/cortex-core:lifecycle <feature>`` resume command and the
+        ``cortex/lifecycle/<feature>/review.md`` artifact path.
+
+    Returns
+    -------
+    str
+        The hint line (no trailing newline), or an empty string when no
+        interrupted-state hint applies.
+    """
+
+    if encoded_phase.startswith("implement:"):
+        progress = encoded_phase[len("implement:") :]
+        if "/" not in progress:
+            return ""
+        checked_str, _, total_str = progress.partition("/")
+        try:
+            checked = int(checked_str)
+            total = int(total_str)
+        except ValueError:
+            return ""
+        if checked > 0 and checked < total:
+            return (
+                f"Interrupted: implementation in progress "
+                f"({checked} of {total} tasks done). "
+                f"Resume with /cortex-core:lifecycle {active_feature}."
+            )
+        return ""
+    if encoded_phase.startswith("implement-rework:"):
+        cycle = encoded_phase[len("implement-rework:") :]
+        return (
+            f"Interrupted: review cycle {cycle} returned CHANGES_REQUESTED. "
+            f"Re-enter implementation to address feedback. "
+            f"Resume with /cortex-core:lifecycle {active_feature}."
+        )
+    if encoded_phase == "escalated":
+        return (
+            f"Action needed: review returned REJECTED. See "
+            f"cortex/lifecycle/{active_feature}/review.md for analysis."
+        )
+    return ""
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for ``cortex hooks scan-lifecycle``.
 
