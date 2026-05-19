@@ -345,39 +345,6 @@
     "repo": null
   },
   {
-    "id": 241,
-    "title": "Add bidirectional concurrency guards for interactive worktree mode",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "lifecycle",
-      "worktree-interactive",
-      "daytime-swap",
-      "concurrency"
-    ],
-    "areas": [
-      "lifecycle",
-      "skills",
-      "overnight-runner"
-    ],
-    "created": "2026-05-18",
-    "updated": "2026-05-18",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "237",
-    "research": null,
-    "spec": "cortex/lifecycle/add-bidirectional-concurrency-guards-for-interactive/spec.md",
-    "discovery_source": "cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md",
-    "plan": null,
-    "uuid": "8e7f4c78-1ce2-4a63-8309-a3727730598c",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 248,
     "title": "Convert bin/cortex-* and skill-embedded python3 -c callsites to use the cortex CLI",
     "status": "backlog",

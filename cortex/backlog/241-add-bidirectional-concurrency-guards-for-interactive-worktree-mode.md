@@ -2,7 +2,7 @@
 schema_version: "1"
 uuid: 8e7f4c78-1ce2-4a63-8309-a3727730598c
 title: "Add bidirectional concurrency guards for interactive worktree mode"
-status: backlog
+status: complete
 priority: medium
 type: feature
 created: 2026-05-18
@@ -10,11 +10,14 @@ updated: 2026-05-18
 parent: "237"
 blocked-by: []
 tags: [lifecycle, worktree-interactive, daytime-swap, concurrency]
-areas: [skills, lifecycle, overnight-runner]
+areas: [lifecycle,skills,overnight-runner]
 discovery_source: cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md
 session_id: null
 lifecycle_phase: null
 lifecycle_slug: null
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/add-bidirectional-concurrency-guards-for-interactive/spec.md
 ---
 
 ## Role

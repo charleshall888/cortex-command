@@ -13,7 +13,6 @@
 | 211 | R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up) | superseded | medium | bug | — | — | — |
 | 212 | CLI_PIN drift lint (#146 hygiene) | superseded | medium | chore | — | — | — |
 | 235 | Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift | refined | medium | feature | — | — | ✓ |
-| 241 | Add bidirectional concurrency guards for interactive worktree mode | refined | medium | feature | — | 237 | ✓ |
 | 248 | Convert bin/cortex-* and skill-embedded python3 -c callsites to use the cortex CLI | backlog | medium | feature | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 247 | Offer consolidation clusters before R15 gate in discovery decompose | backlog | low | feature | — | — | — |
@@ -22,7 +21,6 @@
 
 - **228** Wire daytime dispatch through cortex CLI + MCP with launchd detachment
 - **235** Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift
-- **241** Add bidirectional concurrency guards for interactive worktree mode
 
 ## Backlog
 
