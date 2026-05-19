@@ -136,6 +136,15 @@ def validate_target_repos(selection: SelectionResult) -> list[str]:
     return failures
 
 
+# Terminal statuses for the Not Ready filter — items in these states are
+# finished work and should be excluded from the "Not Ready" section of the
+# session plan.  Independent of common.TERMINAL_STATUSES by design; changes
+# here must stay in sync with that set.
+_TERMINAL: frozenset[str] = frozenset(
+    ("complete", "done", "resolved", "wontfix", "abandoned", "superseded")
+)
+
+
 def render_session_plan(
     selection: SelectionResult,
     time_limit_hours: int = 6,
@@ -210,7 +219,6 @@ def render_session_plan(
 
     # Not Ready section — exclude terminal items (complete, done, etc.) which are
     # finished work, not items genuinely blocked from overnight execution.
-    _TERMINAL = frozenset(("complete", "done", "resolved", "wontfix", "abandoned"))
     actionable = [
         (item, reason) for item, reason in selection.ineligible
         if item.status not in _TERMINAL

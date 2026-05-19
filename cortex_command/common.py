@@ -167,6 +167,7 @@ TERMINAL_STATUSES: frozenset[str] = frozenset({
     "wontfix",
     "won't-do",
     "wont-do",
+    "superseded",
 })
 
 
@@ -775,6 +776,7 @@ _STATUS_MAP: dict[str, str] = {
     "closed": "complete",
     "wontfix": "abandoned",
     "ready": "refined",
+    "superseded": "superseded",
 }
 
 
