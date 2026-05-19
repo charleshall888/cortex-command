@@ -50,8 +50,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-import psutil
-
 from cortex_command.common import _resolve_user_project_root
 
 # ---------------------------------------------------------------------------
@@ -138,7 +136,14 @@ def _write_lock_atomic(lock_path: Path, payload: dict) -> None:
 
 
 def _get_start_time(pid: int) -> Optional[float]:
-    """Return psutil create_time for *pid*, rounded to ms, or None."""
+    """Return psutil create_time for *pid*, rounded to ms, or None.
+
+    psutil is imported lazily so module load works on Pythons without it;
+    callers needing the auxiliary PID liveness probe pay the import cost
+    at first call.
+    """
+    import psutil
+
     try:
         return round(psutil.Process(pid).create_time(), 3)
     except (psutil.AccessDenied, psutil.NoSuchProcess):
@@ -291,7 +296,11 @@ def _verify_live_owner_with_reason(lock: dict) -> tuple[bool, Optional[str]]:
         # Row 4: no start_time recorded → LIVE (conservative)
         return True, None
 
-    # Rows 5-8: start_time non-null, compare with psutil
+    # Rows 5-8: start_time non-null, compare with psutil. Lazy import so
+    # callers that never reach this branch (e.g., module loaded but liveness
+    # never queried) don't require psutil at install time.
+    import psutil
+
     try:
         actual_start_time = psutil.Process(pid).create_time()
     except psutil.NoSuchProcess:
