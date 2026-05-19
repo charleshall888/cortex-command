@@ -2,12 +2,12 @@
 schema_version: "1"
 uuid: 5fef3a25-7e3d-4ddb-9d18-8bd45a4b5dba
 title: "Wire daytime dispatch through cortex CLI + MCP with launchd detachment"
-status: refined
+status: superseded
 priority: high
 type: feature
 tags: [daytime-pipeline, mcp, cli, launchd, overnight-runner]
 created: 2026-05-16
-updated: 2026-05-16
+updated: 2026-05-19
 complexity: complex
 criticality: high
 areas: [overnight-runner]
@@ -76,3 +76,7 @@ The cleanest fix is architectural parity: give daytime the same CLI verb + MCP t
 - **CLI overnight precedent**: `cortex overnight start --format json` (entry point in cortex CLI bin).
 - **Symptom artifacts**: `cortex/lifecycle/lead-refine-4-complexity-value-gate/exit-reports/{1,2,3,4}.json` (from-Claude-session failures), and the same feature's dispatch `abc4b0bd1e054fcfb2600cbdede979f0` (from-fresh-terminal success — only paused on stale-branch, no sandbox errors).
 - **Binary internals (for context, not action)**: Claude Code 2.1.143's Bash tool calls `z77()` → `XJ8()` → `mkdir(~/.claude/session-env/<session-id>/)` unconditionally per Bash invocation. Sandbox inheritance from the calling Claude session is what fails this for nested daytime dispatches; launchd detachment removes the inheritance.
+
+## Superseded by #246
+
+Superseded by #246 (remove-daytime-autonomous-pipeline-and-cancel): the discovery in `cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md` concluded that the EPERM sandbox-inheritance problem is better resolved by replacing the autonomous daytime dispatch model with a worktree-interactive pattern rather than adding a launchd-detachment wrapper layer. The CLI/MCP surface this ticket proposed is no longer the target architecture. Parent epic: #237.
