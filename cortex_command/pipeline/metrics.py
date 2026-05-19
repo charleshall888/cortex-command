@@ -357,7 +357,8 @@ def pair_dispatch_events(events: list[dict]) -> list[dict]:
     two events sharing the same timestamp are processed in start-before-
     complete order.
 
-    Daytime-schema ``dispatch_complete`` events (identified by the presence of
+    Historical compatibility — skip pre-#246 daytime-schema rows in archived event logs.
+    ``dispatch_complete`` events (identified by the presence of
     ``mode``, ``outcome``, or ``pr_url`` fields) are skipped entirely.
     ``dispatch_progress``, ``dispatch_retry``, and any other ``dispatch_*``
     event types not in ``{dispatch_start, dispatch_complete, dispatch_error}``
