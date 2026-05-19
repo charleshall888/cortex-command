@@ -20,7 +20,10 @@ and trivial dispatch paths do not pay the cost of the full package graph.
 from __future__ import annotations
 
 import json
+import os
+import shlex
 import sys
+from pathlib import Path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -63,9 +66,45 @@ def main(argv: list[str] | None = None) -> int:
     if not isinstance(payload, dict):
         return 0
 
-    # Parsed for use by subsequent tasks; intentionally unused in the skeleton.
-    _session_id = payload.get("session_id")
-    _cwd = payload.get("cwd")
+    session_id_raw = payload.get("session_id") or ""
+    if not isinstance(session_id_raw, str):
+        session_id_raw = ""
+    session_id = session_id_raw
+
+    cwd_raw = payload.get("cwd")
+    if not isinstance(cwd_raw, str) or not cwd_raw:
+        cwd_raw = os.getcwd()
+    cwd = Path(cwd_raw)
+
+    # --- Session identity injection (bash precedent lines 7-13) ---
+    # Emit before the cwd/lifecycle early-exit so non-cortex sessions still
+    # propagate LIFECYCLE_SESSION_ID for downstream hook invocations.
+    if session_id:
+        env_file = os.environ.get("CLAUDE_ENV_FILE")
+        if env_file:
+            export_line = (
+                f"export LIFECYCLE_SESSION_ID={shlex.quote(session_id)}\n"
+            )
+            try:
+                with open(env_file, "a", encoding="utf-8") as fh:
+                    fh.write(export_line)
+            except OSError:
+                # Best-effort: parity with bash, which would surface a
+                # redirection failure but not abort the hook chain.
+                pass
+        else:
+            print(
+                "[scan-lifecycle] CLAUDE_ENV_FILE not set; "
+                "cannot inject LIFECYCLE_SESSION_ID",
+                file=sys.stderr,
+            )
+
+    # --- cwd/lifecycle early-exit (bash precedent lines 26-29) ---
+    # Non-cortex repos: silently exit 0 with no stdout. The wrapper at
+    # hooks/cortex-scan-lifecycle.sh does its own pre-check; this is
+    # defense-in-depth for the direct-invocation path.
+    if not (cwd / "cortex" / "lifecycle").is_dir():
+        return 0
 
     return 0
 
