@@ -10,6 +10,7 @@
 | 212 | CLI_PIN drift lint (#146 hygiene) | superseded | medium | chore | — | — | — |
 | 235 | Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift | refined | medium | feature | — | — | ✓ |
 | 248 | Convert bin/cortex-* and skill-embedded python3 -c callsites to use the cortex CLI | backlog | medium | feature | — | — | — |
+| 249 | Lifecycle implement: auto-enter worktree, drop the cd handoff | backlog | medium | feature | — | — | — |
 | 156 | Make cortex-check-parity context-aware (skip tokens inside fenced code blocks) | deferred | low | feature | — | — | — |
 | 247 | Offer consolidation clusters before R15 gate in discovery decompose | backlog | low | feature | — | — | — |
 
@@ -20,6 +21,7 @@
 ## Backlog
 
 - **248** Convert bin/cortex-* and skill-embedded python3 -c callsites to use the cortex CLI
+- **249** Lifecycle implement: auto-enter worktree, drop the cd handoff
 - **247** Offer consolidation clusters before R15 gate in discovery decompose
 
 ## In-Progress
