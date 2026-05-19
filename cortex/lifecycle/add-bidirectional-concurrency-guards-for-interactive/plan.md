@@ -160,7 +160,7 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
   - Test B is the mirror: round-1 returns the skip-event for X, round-2 returns X in eligible with no skip-events.
   - Synthetic lock-data fixture: write a real lock file under `tmp_path / "cortex/lifecycle/X/interactive.pid"` matching R3's schema so that any code path that reads the lock for `interactive_session_id` / `interactive_acquired_at` (per R11) finds expected values. The mocked `scan_live_locks` returns `{"X"}` to indicate the lock is "live", but `compute_eligible_features` still does a `read_lock("X")` to populate the skip-event payload fields.
 - **Verification**: `pytest tests/test_orchestrator_inverse_scan.py -v` exits 0 with both tests passing — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 8: Add bidirectional concurrency contract integration test (4 sub-tests, production paths only)
 
@@ -180,7 +180,7 @@ Build a new `cortex_command/interactive_lock.py` module exposing five primitives
   - Fixtures use `tmp_path` + `monkeypatch.setenv("CORTEX_REPO_ROOT", str(tmp_path))` to redirect path resolution.
   - Out-of-scope per R15: the principal TOCTOU window (owner acquires AFTER scan but BEFORE round-N dispatch) is NOT exercised. Per Non-Requirements, that surfaces via `git worktree add` failure path in the orchestrator's existing error handling.
 - **Verification**: `pytest tests/test_bidirectional_concurrency_contract.py -v` exits 0 with all four sub-tests (`test_*_A`, `test_*_B`, `test_*_C`, `test_*_D`) passing — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Risks
 
