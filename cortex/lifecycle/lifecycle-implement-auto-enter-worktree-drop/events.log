@@ -1,0 +1,6 @@
+{"schema_version": 3, "ts": "2026-05-19T00:00:00Z", "event": "clarify_critic", "feature": "lifecycle-implement-auto-enter-worktree-drop", "parent_epic_loaded": false, "findings_count": 6, "dispositions": {"apply": 4, "dismiss": 1, "ask": 2}, "applied_fixes_count": 4, "dismissals_count": 1, "status": "ok"}
+{"schema_version": 1, "ts": "2026-05-19T19:25:24Z", "event": "lifecycle_start", "feature": "lifecycle-implement-auto-enter-worktree-drop", "tier": "complex", "criticality": "high", "entry_point": "refine"}
+{"schema_version": 1, "ts": "2026-05-19T19:35:00Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-drop", "from": "clarify", "to": "research"}
+{"schema_version": 1, "ts": "2026-05-19T19:36:00Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-drop", "from": "research", "to": "specify"}
+{"schema_version": 1, "ts": "2026-05-19T19:55:00Z", "event": "spec_approved", "feature": "lifecycle-implement-auto-enter-worktree-drop"}
+{"schema_version": 1, "ts": "2026-05-19T19:55:30Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-drop", "from": "specify", "to": "plan"}

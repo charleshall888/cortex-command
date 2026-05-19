@@ -2,16 +2,19 @@
 schema_version: "1"
 uuid: 0048a013-cb5c-4149-b7fd-0bb8b3c2ef91
 title: "Lifecycle implement: auto-enter worktree, drop the cd handoff"
-status: backlog
+status: refined
 priority: medium
 type: feature
 created: 2026-05-19
 updated: 2026-05-19
 tags: [lifecycle, worktree-interactive, ux]
 areas: [skills]
-session_id: null
-lifecycle_phase: null
-lifecycle_slug: null
+session_id: 0ac6427e-1313-46c6-bd3b-914e72269c3c
+lifecycle_phase: research
+lifecycle_slug: lifecycle-implement-auto-enter-worktree-drop
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/lifecycle-implement-auto-enter-worktree-drop/spec.md
 ---
 
 ## Problem
