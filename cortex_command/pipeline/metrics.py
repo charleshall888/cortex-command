@@ -329,9 +329,10 @@ def discover_pipeline_event_logs(lifecycle_dir: Path) -> list[Path]:
 # Dispatch event pairing
 # ---------------------------------------------------------------------------
 
-#: Fields whose presence identifies a daytime-schema ``dispatch_complete``
-#: event (lifecycle-skill dispatches, not overnight pipeline dispatches).
-#: These records must be skipped entirely — not treated as untiered.
+#: Historical compatibility — skip pre-#246 daytime-schema rows in archived event logs.
+#: Presence of any of these fields in a ``dispatch_complete`` event identifies it
+#: as a lifecycle-skill dispatch record (not an overnight pipeline dispatch) that
+#: must be skipped entirely — not treated as untiered.
 _DAYTIME_DISPATCH_FIELDS = frozenset({"mode", "outcome", "pr_url"})
 
 #: Event types processed by the pairing walker.
