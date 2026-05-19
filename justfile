@@ -347,6 +347,17 @@ validate-skill-preconditions skill:
 check-parity *args:
     uv run python bin/cortex-check-parity {{args}}
 
+# Append one event row to a feature's events.log via the cortex-lifecycle-event CLI
+# Usage: just emit-event <event-name> <feature-slug> [worktree-path]
+emit-event event feature worktree_path="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ -n "{{ worktree_path }}" ]; then
+        uv run cortex-lifecycle-event log --event "{{ event }}" --feature "{{ feature }}" --worktree-path "{{ worktree_path }}"
+    else
+        uv run cortex-lifecycle-event log --event "{{ event }}" --feature "{{ feature }}"
+    fi
+
 # Check skill-prompt emissions are declared in bin/.events-registry.md (R5 staged-mode gate)
 check-events-registry:
     bin/cortex-check-events-registry --staged
