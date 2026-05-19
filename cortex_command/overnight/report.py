@@ -1679,26 +1679,6 @@ def render_scheduled_fire_failures(data: ReportData) -> str:
     return "\n".join(lines)
 
 
-def _read_feature_complete_merge_anchor(feature: str) -> str:
-    """Read the ``merge_anchor`` field from the last ``feature_complete`` event.
-
-    Returns ``"review"`` when the events.log does not exist, contains no
-    ``feature_complete`` event, or when the event was emitted before the
-    ``merge_anchor`` field was added (backwards-compatible default matches the
-    pre-restructure regime where ``feature_complete`` fired at PR-create time).
-    Returns ``"merge"`` for post-restructure interactive completions where the
-    event fires after the PR has been merged on GitHub.
-    """
-    events_path = Path(f"cortex/lifecycle/{feature}/events.log")
-    if not events_path.exists():
-        return "review"
-    events = read_events(events_path)
-    complete_events = [e for e in events if e.get("event") == "feature_complete"]
-    if not complete_events:
-        return "review"
-    return complete_events[-1].get("merge_anchor", "review")
-
-
 def render_new_backlog_items(data: ReportData) -> str:
     """Render the new backlog items section."""
     lines: list[str] = ["## New Backlog Items", ""]
