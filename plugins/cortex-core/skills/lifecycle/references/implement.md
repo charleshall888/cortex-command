@@ -62,10 +62,13 @@ This section runs **only** when the user selected "Implement on feature branch w
 
 If `kill -0` exits 0 (process alive): reject with "An interactive worktree session is already live for `{slug}` (PID {pid}). Resolve it before creating a new worktree." and exit §1a without creating a worktree. If the exit code is non-zero or the file was absent/empty: proceed.
 
-**ii. Overnight concurrent guard.** Two separate Bash calls (no compound commands):
+**ii. Overnight concurrent guard.** Run the overnight-active probe sidecar via `cat`-then-eval. The four-bash-call sequence (read `active-session.json`, parse `repo_path` and `session_dir`, read `{session_dir}/runner.pid`, parse `pid` from the JSON via `python3 -c "import json,sys; print(json.load(sys.stdin)['pid'])" < {session_dir}/runner.pid`) is extracted into the sidecar at `skills/lifecycle/references/_interactive_overnight_check.sh` and invoked as:
 
-1. Read active session descriptor: `cat ~/.local/share/overnight-sessions/active-session.json 2>/dev/null`. If absent or empty: proceed normally (no overnight session active).
-2. Parse the `repo_path` field from the JSON. If `repo_path` equals the current working directory: reject with "Overnight runner is active for this repo — wait for it to complete before creating an interactive worktree." and exit §1a. If `repo_path` does not match (different repo's overnight session): proceed normally.
+```
+cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active for this repo — wait for it to complete before creating an interactive worktree." "$(pwd)"
+```
+
+Sidecar exit codes: `0` = no overnight active, proceed normally; `1` = overnight live for this repo, surface the wording and exit §1a; `2` = stale runner detected (runner.pid absent or process dead), surface a warn-and-continue diagnostic and proceed.
 
 **iii. Worktree creation.** Single Bash call invoking `create_worktree` from `cortex_command.pipeline.worktree`:
 
