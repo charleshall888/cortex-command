@@ -380,7 +380,12 @@ if [ -d "$_lc_base" ]; then
     # a < 500ms render latency budget (see cortex/requirements/observability.md:23, 91),
     # which prohibits subprocessing to a Python interpreter on every render. All
     # other lifecycle phase detection in the codebase delegates to the canonical
-    # Python implementation; the statusline is the documented exception.
+    # Python implementation — notably the canonical SessionStart hook entry point
+    # `cortex hooks scan-lifecycle` (cortex_command.hooks.scan_lifecycle), which
+    # calls detect_lifecycle_phase() directly. The statusline is the documented
+    # exception: it remains a bash-only mirror because Python interpreter boot is
+    # not tolerated on every statusline render, whereas SessionStart fires once
+    # per session and can afford the Python entry point.
     #
     # Equivalence between this bash ladder and the canonical Python function is
     # enforced by the parity test at tests/test_lifecycle_phase_parity.py. If you
