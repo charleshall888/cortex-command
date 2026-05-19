@@ -4,7 +4,7 @@
 
 **For:** Contributors and operators who want to understand how this project is wired to the Claude Code SDK.
 
-The project uses the SDK in two structurally different ways: direct `Agent` tool calls embedded in skill instruction files (daytime, interactive), and the Python `claude_agent_sdk.query()` API called from the overnight execution pipeline (autonomous). These paths have different control points, different permission models, and different reasons for existing.
+The project uses the SDK in two structurally different ways: direct `Agent` tool calls embedded in skill instruction files (interactive), and the Python `claude_agent_sdk.query()` API called from the overnight execution pipeline (autonomous). These paths have different control points, different permission models, and different reasons for existing.
 
 > For a full analysis of current SDK usage patterns and evaluated trade-offs, see [`cortex/research/archive/claude-code-sdk-usage/research.md`](../../cortex/research/archive/claude-code-sdk-usage/research.md) (archived).
 
@@ -14,7 +14,7 @@ The project uses the SDK in two structurally different ways: direct `Agent` tool
 
 ## Path A: Interactive — Agent Tool in Skills
 
-Skills that run daytime dispatch use the `Agent` tool directly inside their SKILL.md instruction files. The agent orchestrator (Claude itself, reading the skill) makes the tool call.
+Skills use the `Agent` tool directly inside their SKILL.md instruction files. The agent orchestrator (Claude itself, reading the skill) makes the tool call.
 
 | File | Usage |
 |------|-------|

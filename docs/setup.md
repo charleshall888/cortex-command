@@ -118,7 +118,7 @@ Additively registers the repo's `cortex/` umbrella path under `sandbox.filesyste
 `cortex init` scaffolds a `cortex/lifecycle.config.md` file with YAML frontmatter — project-specific overrides for the lifecycle skill and overnight runner. Six keys total, three active (consumed by code) and three advisory (scaffolded but not yet wired up):
 
 ```yaml
-test-command: "just test"      # active: shell command for daytime_pipeline.py test step
+test-command: "just test"      # active: shell command for the overnight runner test step
 commit-artifacts: true         # active: include lifecycle artifacts in staged commits
 demo-commands:                 # active: morning-review demo offer (list takes precedence
   - label: "Dashboard"         #         over the legacy single-string demo-command:)
@@ -211,7 +211,7 @@ For the full design — two-layer architecture, component map, release ritual, t
 
 Warning: do **not** run `uv tool uninstall uv`. Removing `uv` via itself breaks the tool environment that hosts cortex-command (and every other `uv tool`-installed CLI on your machine) — recovery requires reinstalling `uv` from scratch via `brew install uv` or the upstream installer. Use `brew uninstall uv` (or the upstream uninstall path matching your install method) if you genuinely need to remove `uv`.
 
-When cortex internally invokes `uv run` (for example, the dashboard recipe or the daytime-pipeline test step), `uv run` operates on the user's current project venv, not cortex-command's tool venv. That means a `uv run` call inside a cortex flow uses your project's `pyproject.toml` / `uv.lock` and your project's dependencies — not anything from the cortex-command install.
+When cortex internally invokes `uv run` (for example, the dashboard recipe or the overnight runner test step), `uv run` operates on the user's current project venv, not cortex-command's tool venv. That means a `uv run` call inside a cortex flow uses your project's `pyproject.toml` / `uv.lock` and your project's dependencies — not anything from the cortex-command install.
 
 After the first `uv tool install`, run `uv tool update-shell` once if `cortex` is not yet on your `PATH`.
 

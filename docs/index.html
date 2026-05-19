@@ -202,7 +202,6 @@
     padding: 0 2px;
   }
   html[data-manuscript="marketing"] .manifesto p,
-  html[data-manuscript="marketing"] .daytime .copy p,
   html[data-manuscript="marketing"] .sec .body { font-weight: 400; }
 
   *,
@@ -915,45 +914,7 @@
     color: var(--ochre);
   }
 
-  /* ───────────── Daytime terminal section ───────────── */
-  .daytime {
-    padding: 56px 0 40px;
-    border-top: 1px solid var(--rule-soft);
-    border-bottom: 1px solid var(--rule-soft);
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 48px;
-    align-items: start;
-  }
-  @media (max-width: 900px) {
-    .daytime { grid-template-columns: 1fr; gap: 28px; }
-  }
-  .daytime .copy .marker {
-    font-family: var(--mono);
-    font-size: 10.5px;
-    color: var(--ink-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin-bottom: 14px;
-  }
-  .daytime .copy p {
-    font-family: var(--serif);
-    font-size: 22px;
-    line-height: 1.45;
-    font-weight: 350;
-    color: var(--ink);
-    margin: 0;
-    letter-spacing: -0.008em;
-    text-wrap: pretty;
-  }
-  .daytime .copy p code {
-    font-family: var(--mono);
-    font-size: 0.78em;
-    color: var(--blue);
-    background: var(--grid-tint-strong);
-    padding: 1px 5px;
-    border-radius: 2px;
-  }
+
 
   .term {
     background: var(--parchment-2);
@@ -2072,7 +2033,6 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
-  /* plan tier — daytime sequence above the runner spine */
   .hood-timing-svg .tm-plan-label {
     font-family: var(--mono); font-size: 10.5px;
     fill: var(--ink-faint); letter-spacing: 0.14em; text-transform: uppercase;

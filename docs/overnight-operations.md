@@ -224,7 +224,7 @@ Discipline obligations on every future production code site (the static gate at 
 - The lockfile is **never written** to by any production module other than `ipc.py:_acquire_takeover_lock`. Production code never appends, truncates, or otherwise modifies its bytes.
 - The lockfile is **never unlinked** by production code. `clear_runner_pid` removes `runner.pid` but leaves the takeover lockfile in place; the file persists for the lifetime of the session directory.
 - The lockfile is **never durable_fsync**'d (nor `os.fsync`'d, `F_FULLFSYNC`'d, or otherwise flushed for durability). It carries no content worth persisting — kernel `flock` state is in-memory coordination, not durable file content.
-- The lockfile must **never be matched by a `*.lock` glob** in any auto-cleanup, archival, or worktree-teardown sweep outside `ipc.py`. The audit at `cortex_command/overnight/daytime_pipeline.py:152` shows that today's `*.lock` rglob targets per-feature `worktree_path` rather than `session_dir`, so the two paths do not currently overlap; future glob callers must keep that invariant or explicitly exclude `.runner.pid.takeover.lock`.
+- The lockfile must **never be matched by a `*.lock` glob** in any auto-cleanup, archival, or worktree-teardown sweep outside `ipc.py`. Any `*.lock` rglob must target per-feature `worktree_path` rather than `session_dir`, so the two paths do not overlap; future glob callers must keep that invariant or explicitly exclude `.runner.pid.takeover.lock`.
 
 The file persists indefinitely under current archival policy: this project does not auto-archive `cortex/lifecycle/sessions/`, so directories (and their lockfiles) accumulate until manually cleaned. After a reboot the kernel `flock` state is gone but the 0-byte file remains; the next runner reopens it on a fresh inode-with-no-locks and acquires immediately. This is benign for correctness and is the documented backwards-compat / rollback path.
 
@@ -683,7 +683,7 @@ Because field drift across consumers is possible, the template is the one place 
 
 ### Auth Resolution (apiKeyHelper and env-var fallback order)
 
-Auth resolution is owned by the shared `cortex_command/overnight/auth.py` module. Both the overnight entry point (`cortex_command/overnight/runner.py`) and the daytime entry point (`daytime_pipeline.py`) delegate to this one module so they share one priority order, one sanitization rule, and one event schema — divergence between the two paths would be a silent correctness hazard.
+Auth resolution is owned by the shared `cortex_command/overnight/auth.py` module. The overnight entry point (`cortex_command/overnight/runner.py`) delegates to this module so there is one priority order, one sanitization rule, and one event schema.
 
 > See [Subscription Auth Setup](setup.md#subscription-auth-setup) for the producer-side bootstrap workflow.
 
@@ -694,7 +694,7 @@ The module resolves Anthropic authentication in a strict 4-step fallback order b
 3. **No helper AND no `CLAUDE_CODE_OAUTH_TOKEN`** — try `~/.claude/personal-oauth-token`; if non-empty, export its contents as `CLAUDE_CODE_OAUTH_TOKEN`. This covers OAuth-style authentication for `claude -p` / SDK usage (vector: `oauth_file`).
 4. **Fall through to keychain-backed auth** — print a warning and proceed; the first subprocess spawn may block on a macOS keychain-access prompt (see [Security and Trust Boundaries](#security-and-trust-boundaries)). Vector: `none`.
 
-**Files**: `cortex_command/overnight/auth.py` (shared resolver — source of truth), `cortex_command/overnight/runner.py` (Python delegation), `cortex_command/overnight/daytime_pipeline.py` (in-process delegation inside `run_daytime`), `cortex_command/pipeline/dispatch.py` (re-exports both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` into SDK subprocesses).
+**Files**: `cortex_command/overnight/auth.py` (shared resolver — source of truth), `cortex_command/overnight/runner.py` (Python delegation), `cortex_command/pipeline/dispatch.py` (re-exports both `ANTHROPIC_API_KEY` and `CLAUDE_CODE_OAUTH_TOKEN` into SDK subprocesses).
 
 #### Overnight entry point: three-exit-code contract
 
@@ -703,15 +703,6 @@ The module resolves Anthropic authentication in a strict 4-step fallback order b
 - **exit code 0** — vector resolved. Helper prints `export VAR=VALUE` to stdout; the runner parses and applies it to the subprocess environment. Warnings (if any) went to stderr.
 - **exit code 1** — no vector resolved. Helper printed a warning to stderr. The runner continues; the first SDK spawn may prompt for keychain access.
 - **exit code 2** — helper-internal failure (malformed `~/.claude/settings.json`, stdlib import regression, other deterministic defect inside the resolver itself). The runner logs `Error: auth helper internal failure` and exits immediately with status 2. User-environment issues (helper binary missing, helper timeout, helper non-zero exit) are NOT exit code 2 — those fall through to the next resolution step.
-
-#### Daytime entry point: deferred-event-emit pattern
-
-`daytime_pipeline.py::run_daytime` calls `ensure_sdk_auth` in-process rather than shelling out, because it runs inside an existing Python process and needs to classify a no-vector result as a `startup_failure` through the same try/except/finally path that writes `daytime-result.json`. The wiring runs in two phases because the event log path is not known at the moment auth resolves:
-
-- **Phase A** (first statement inside `run_daytime`'s try-block, before any other startup work): call `ensure_sdk_auth(event_log_path=None)`. This writes the credential into `os.environ` and returns the `auth_bootstrap` event dict without emitting it anywhere — no pipeline-events.log exists yet because the feature-scoped directory may not even be populated. A `vector == "none"` result is converted to a `RuntimeError` with `_terminated_via = "startup_failure"` so the outer `finally` writes `daytime-result.json` with the right classification.
-- **Phase B** (immediately after `build_config` returns and `pipeline_events_path` is known): append the buffered event dict to `pipeline_events_path` using `json.dumps(event) + "\n"`. This byte-matches `claude.pipeline.state.log_event` output, which is what the R7 byte-equivalence test locks in.
-
-Both phases use the same event payload (built once inside `ensure_sdk_auth` with `ts` first), so there is only ever one `auth_bootstrap` line per daytime run regardless of which phase writes it.
 
 #### Propagation
 
