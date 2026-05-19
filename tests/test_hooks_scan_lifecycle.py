@@ -31,6 +31,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -658,3 +659,127 @@ def test_all_six_cases_enumerated() -> None:
     assert len(CASES) == 6
     prefixes = sorted({c.split("_", 1)[0] for c in CASES})
     assert prefixes == ["a", "b", "c", "d", "e", "f"]
+
+
+# ----------------------------------------------------------------------------
+# Wrapper behavior tests (spec req #9 — probe-then-exec)
+# ----------------------------------------------------------------------------
+
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_WRAPPER_PATH = _REPO_ROOT / "hooks" / "cortex-scan-lifecycle.sh"
+_CORTEX_STUBS_DIR = Path(__file__).resolve().parent / "fixtures" / "cortex_stubs"
+
+
+def _run_wrapper(
+    *,
+    stub_subdir: str,
+    repo: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> subprocess.CompletedProcess[str]:
+    """Drive the wrapper bash script with a stub ``cortex`` on PATH.
+
+    Prepends ``tests/fixtures/cortex_stubs/<stub_subdir>`` to PATH so the
+    wrapper's ``command -v cortex`` and subsequent invocations resolve to
+    the stub. The wrapper reads stdin JSON whose ``cwd`` field controls
+    the lifecycle-dir predicate — we point it at the staged repo so the
+    ``[[ -d "$cwd/cortex/lifecycle" ]]`` predicate passes and execution
+    reaches the probe step.
+    """
+    stub_dir = _CORTEX_STUBS_DIR / stub_subdir
+    assert (stub_dir / "cortex").is_file(), f"missing stub: {stub_dir}/cortex"
+
+    # Preserve bash + jq tool paths but route `cortex` to the stub.
+    original_path = os.environ.get("PATH", "")
+    new_path = f"{stub_dir}{os.pathsep}{original_path}"
+    monkeypatch.setenv("PATH", new_path)
+
+    stdin_payload = json.dumps(
+        {
+            "hook_event_name": "SessionStart",
+            "session_id": "wrapper-test-session",
+            "cwd": str(repo),
+        }
+    )
+
+    return subprocess.run(
+        ["bash", str(_WRAPPER_PATH)],
+        input=stdin_payload,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PATH": new_path},
+        check=False,
+    )
+
+
+def test_wrapper_probe_failure_silent_degrade(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """**(spec req #9a)** Probe failure → wrapper exits 0 silently.
+
+    Stubs ``cortex`` so ``--help`` returns nonzero — modeling an older
+    CLI that doesn't ship ``hooks scan-lifecycle``. The wrapper must
+    short-circuit on probe failure with exit 0, never invoking the real
+    subcommand and never propagating an error to the operator.
+    """
+    repo = stage_lifecycle(
+        tmp_path,
+        StageSpec(
+            features=[
+                FeatureSpec(
+                    name="feature-probe-fail",
+                    research_md="# research probe fail\n",
+                )
+            ]
+        ),
+    )
+
+    result = _run_wrapper(
+        stub_subdir="probe_failure",
+        repo=repo,
+        monkeypatch=monkeypatch,
+    )
+
+    assert result.returncode == 0, (
+        "wrapper must exit 0 silently when probe (--help) fails; "
+        f"got rc={result.returncode}\nstdout={result.stdout!r}\n"
+        f"stderr={result.stderr!r}"
+    )
+
+
+def test_wrapper_probe_pass_run_fail_propagates(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """**(spec req #9b)** Probe passes, run fails → wrapper exits 1.
+
+    Stubs ``cortex`` so ``--help`` returns 0 (probe sees subcommand as
+    present) but any non-``--help`` invocation returns 1 (real internal
+    error). The wrapper must propagate the actual subcommand's nonzero
+    exit code — fail-loud discipline per spec req #9.
+    """
+    repo = stage_lifecycle(
+        tmp_path,
+        StageSpec(
+            features=[
+                FeatureSpec(
+                    name="feature-run-fail",
+                    research_md="# research run fail\n",
+                )
+            ]
+        ),
+    )
+
+    result = _run_wrapper(
+        stub_subdir="probe_pass_run_fail",
+        repo=repo,
+        monkeypatch=monkeypatch,
+    )
+
+    assert result.returncode == 1, (
+        "wrapper must propagate nonzero from the actual subcommand run "
+        "when the probe passes; "
+        f"got rc={result.returncode}\nstdout={result.stdout!r}\n"
+        f"stderr={result.stderr!r}"
+    )

@@ -1,0 +1,10 @@
+#!/bin/bash
+# Probe-pass-run-fail stub: `--help` succeeds (probe sees subcommand "present"),
+# but the actual invocation (no --help flag) returns 1. Models a real internal
+# error from the subcommand — the wrapper must propagate that nonzero exit.
+for arg in "$@"; do
+  if [[ "$arg" == "--help" ]]; then
+    exit 0
+  fi
+done
+exit 1

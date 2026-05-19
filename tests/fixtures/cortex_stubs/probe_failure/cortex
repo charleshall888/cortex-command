@@ -1,0 +1,5 @@
+#!/bin/bash
+# Probe-failure stub: returns nonzero from `--help` (and from any other invocation).
+# Models an older CLI that doesn't support `hooks scan-lifecycle`. The wrapper
+# must short-circuit on probe failure with exit 0 (silent degrade).
+exit 1
