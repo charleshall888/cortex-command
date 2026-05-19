@@ -1057,3 +1057,142 @@ def test_dual_registration_partial_failure_recovery_via_update(
     assert allow.count(cortex_target) == 1
     # Pre-existing entry preserved.
     assert "/kept/" in allow
+
+
+# ---------------------------------------------------------------------------
+# Worktree base registration (spec R6, Phase 2)
+# ---------------------------------------------------------------------------
+
+
+def test_worktree_base_in_allow_write_and_additional_directories(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R6: cortex init writes the worktree base path into both allowWrite and
+    additionalDirectories after a fresh run."""
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    # Set a deterministic TMPDIR so the expected path is stable.
+    fake_tmpdir = tmp_path / "tmp"
+    fake_tmpdir.mkdir()
+    monkeypatch.setenv("TMPDIR", str(fake_tmpdir))
+    # Unset CORTEX_WORKTREE_ROOT to exercise the default code path.
+    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+
+    rc = init_main(_make_args(repo))
+    assert rc == 0
+
+    data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
+    expected_base = str(fake_tmpdir.resolve() / "cortex-worktrees") + "/"
+
+    allow = data["sandbox"]["filesystem"]["allowWrite"]
+    assert expected_base in allow, f"worktree base missing from allowWrite: {allow}"
+
+    additional = data.get("additionalDirectories", [])
+    assert expected_base in additional, (
+        f"worktree base missing from additionalDirectories: {additional}"
+    )
+
+
+def test_worktree_base_idempotent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R6: re-running cortex init does not duplicate the worktree base entry
+    in either allowWrite or additionalDirectories."""
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    fake_tmpdir = tmp_path / "tmp"
+    fake_tmpdir.mkdir()
+    monkeypatch.setenv("TMPDIR", str(fake_tmpdir))
+    monkeypatch.delenv("CORTEX_WORKTREE_ROOT", raising=False)
+
+    assert init_main(_make_args(repo)) == 0
+    assert init_main(_make_args(repo, update=True)) == 0
+
+    data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
+    expected_base = str(fake_tmpdir.resolve() / "cortex-worktrees") + "/"
+
+    allow = data["sandbox"]["filesystem"]["allowWrite"]
+    assert allow.count(expected_base) == 1, (
+        f"worktree base duplicated in allowWrite: {allow}"
+    )
+    additional = data.get("additionalDirectories", [])
+    assert additional.count(expected_base) == 1, (
+        f"worktree base duplicated in additionalDirectories: {additional}"
+    )
+
+
+def test_worktree_base_uses_cortex_worktree_root_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R6: when CORTEX_WORKTREE_ROOT is set, that value is registered instead
+    of the $TMPDIR/cortex-worktrees default."""
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git_init(repo)
+
+    custom_root = tmp_path / "custom-worktrees"
+    custom_root.mkdir()
+    monkeypatch.setenv("CORTEX_WORKTREE_ROOT", str(custom_root))
+
+    rc = init_main(_make_args(repo))
+    assert rc == 0
+
+    data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
+    expected_base = str(custom_root) + "/"
+
+    allow = data["sandbox"]["filesystem"]["allowWrite"]
+    assert expected_base in allow, f"custom worktree root missing from allowWrite: {allow}"
+
+    additional = data.get("additionalDirectories", [])
+    assert expected_base in additional, (
+        f"custom worktree root missing from additionalDirectories: {additional}"
+    )
+
+
+def test_register_additional_directories_idempotent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """register_additional_directories() is idempotent: second call does not
+    duplicate the entry."""
+    from cortex_command.init.settings_merge import register_additional_directories
+
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    path = "/some/worktree-base/"
+
+    register_additional_directories(path, home=fake_home)
+    register_additional_directories(path, home=fake_home)
+
+    data = json.loads(_settings_path(fake_home).read_text(encoding="utf-8"))
+    additional = data.get("additionalDirectories", [])
+    assert additional.count(path) == 1
+
+
+def test_register_additional_directories_preserves_sibling_keys(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """register_additional_directories() preserves all other settings keys."""
+    from cortex_command.init.settings_merge import register_additional_directories
+
+    fake_home = _isolate_home(monkeypatch, tmp_path)
+    settings = _settings_path(fake_home)
+    pre_existing = {
+        "sandbox": {"filesystem": {"allowWrite": ["/kept/"]}},
+        "permissions": {"allow": ["read"]},
+        "additionalDirectories": ["/already/"],
+    }
+    settings.write_text(json.dumps(pre_existing, indent=2) + "\n", encoding="utf-8")
+
+    register_additional_directories("/new-dir/", home=fake_home)
+
+    data = json.loads(settings.read_text(encoding="utf-8"))
+    assert data["sandbox"]["filesystem"]["allowWrite"] == ["/kept/"]
+    assert data["permissions"] == {"allow": ["read"]}
+    assert "/already/" in data["additionalDirectories"]
+    assert "/new-dir/" in data["additionalDirectories"]

@@ -20,6 +20,9 @@ Exposed surface:
     register(repo_root,        -- additive append of ``target_path`` to
             target_path,         ``sandbox.filesystem.allowWrite``.
             *, home=None)
+    register_additional_directories(  -- additive append of ``path`` to the
+            path,                        top-level ``additionalDirectories``
+            *, home=None)                array (controls Bash cd carry-over).
     unregister(repo_root,      -- remove ``target_path`` from
             target_path,         ``sandbox.filesystem.allowWrite``.
             *, home=None)
@@ -283,6 +286,68 @@ def unregister(
 
         # Order-preserving removal of all occurrences of target_path.
         filesystem["allowWrite"] = [e for e in allow_array if e != target_path]
+
+        content = json.dumps(data, indent=2) + "\n"
+        atomic_write(settings_path, content)
+    finally:
+        os.close(lock_fd)
+
+
+def register_additional_directories(
+    path: str,
+    *,
+    home: Path | None = None,
+) -> None:
+    """Additively register ``path`` in the top-level ``additionalDirectories`` array.
+
+    ``additionalDirectories`` is a top-level key in ``settings.local.json``
+    (not nested under ``sandbox``) — it controls which directories Claude
+    Code's Bash tool allows ``cd`` carry-over into.  See Claude Code
+    tools-reference: "additional working directory you added with
+    ``additionalDirectories`` in settings."
+
+    Serializes the full read-mutate-write cycle under the same sibling-lockfile
+    ``fcntl.flock`` discipline as :func:`register` (ADR-0003).
+
+    Args:
+        path: The directory path to append.  Caller is responsible for
+            ensuring it is absolute and canonicalized (trailing slash
+            optional — ``additionalDirectories`` entries are typically
+            passed without a trailing slash).
+        home: Optional HOME override (tests).
+
+    Behavior:
+        * Creates ``~/.claude/`` if absent.
+        * Creates ``settings.local.json`` with
+          ``{"additionalDirectories": [path]}`` if the file is absent.
+        * Validates that ``additionalDirectories``, if present, is a list;
+          raises ``SettingsMergeError`` otherwise.
+        * Order-preserving idempotent append.
+        * Preserves all other existing keys byte-for-byte in the non-mutated
+          subtrees.
+        * Writes via ``cortex_command.common.atomic_write``.
+
+    Raises:
+        SettingsMergeError: malformed ``additionalDirectories`` type,
+            invalid JSON, or an underlying OSError.
+    """
+    settings_path = _settings_path(home)
+    lock_fd = _acquire_lock(home)
+    try:
+        data = _read_settings(settings_path)
+        _validate_sandbox_shape(data)
+
+        additional = data.setdefault("additionalDirectories", [])
+        if not isinstance(additional, list):
+            raise SettingsMergeError(
+                f"~/.claude/settings.local.json: expected "
+                f"additionalDirectories to be an array, got "
+                f"{type(additional).__name__}"
+            )
+
+        # Order-preserving idempotent append.
+        if path not in additional:
+            additional.append(path)
 
         content = json.dumps(data, indent=2) + "\n"
         atomic_write(settings_path, content)
