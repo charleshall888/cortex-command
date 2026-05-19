@@ -38,6 +38,8 @@ _INVENTORY_BULLET = re.compile(
 _STEP_HEADING = re.compile(r"^#{1,4}\s+Step\s+(\d+)\b", re.MULTILINE)
 
 _PHASE_EXIT_PAUSE_TAG = "phase-exit pause"
+_CONDITIONAL_PAUSE_TAG = "conditional pause"
+_CONDITIONAL_PAUSE_MARKER = re.compile(r"\bread_branch_mode\b|\blifecycle_config\b")
 
 
 def _parse_inventory() -> list[tuple[Path, int, str, str]]:
@@ -187,6 +189,29 @@ def test_inventory_entries_resolve_to_real_askuserquestion_sites() -> None:
                 f"{path.relative_to(REPO_ROOT)} is at line(s) {candidates} "
                 f"(±{LINE_TOLERANCE}-line tolerance exceeded)"
             )
+
+        # Conditional pause entries: additionally require a structural marker
+        # (read_branch_mode or lifecycle_config) within ±LINE_TOLERANCE lines
+        # of the anchor. This enforces that the documented suppression
+        # behavior is actually wired in skill prose.
+        if _CONDITIONAL_PAUSE_TAG in rationale.lower():
+            try:
+                file_lines = path.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeDecodeError):
+                violations.append(
+                    f"Inventory entry {raw!r} (conditional pause) names "
+                    f"{path.relative_to(REPO_ROOT)} but the file cannot be read"
+                )
+                continue
+            window_start = max(1, line_num - LINE_TOLERANCE)
+            window_end = min(len(file_lines), line_num + LINE_TOLERANCE)
+            window_text = "\n".join(file_lines[window_start - 1: window_end])
+            if not _CONDITIONAL_PAUSE_MARKER.search(window_text):
+                violations.append(
+                    f"conditional pause at {path.relative_to(REPO_ROOT)}:"
+                    f"{line_num} lacks structural marker (read_branch_mode "
+                    f"or lifecycle_config) within ±{LINE_TOLERANCE} lines"
+                )
     assert not violations, "\n".join(violations)
 
 
