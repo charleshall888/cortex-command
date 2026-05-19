@@ -58,7 +58,7 @@ def read_synthesizer_gate(config_path: Path) -> bool:
     """Read ``synthesizer_overnight_enabled`` from lifecycle.config.md frontmatter.
 
     Mirrors the read pattern in
-    :func:`cortex_command.overnight.daytime_pipeline._read_test_command`:
+    :func:`cortex_command.overnight.auth.ensure_sdk_auth`:
     open the file, scan frontmatter lines (between ``---`` delimiters)
     for the ``synthesizer_overnight_enabled:`` prefix, and parse the
     trailing value case-insensitively (``true``/``True``/``TRUE`` → True;
