@@ -6,6 +6,7 @@ worktrees/
 cortex/lifecycle/*/.session
 cortex/lifecycle/*/.session-owner
 cortex/lifecycle/*/.dispatching
+cortex/lifecycle/*/.lock
 
 # Runtime logs
 claude/statusline.sh.log
