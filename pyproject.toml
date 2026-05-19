@@ -41,6 +41,7 @@ cortex-refine = "cortex_command.refine:main"
 cortex-report = "cortex_command.overnight.report:main"
 cortex-smoke-test = "cortex_command.overnight.smoke_test:main"
 cortex-worktree-resolve = "cortex_command.pipeline.worktree_resolve_cli:main"
+cortex-interactive-lock = "cortex_command.interactive_lock:main"
 
 [tool.hatch.version]
 source = "vcs"
