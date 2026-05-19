@@ -2,10 +2,13 @@
 """Three-layer parity tests for lifecycle phase detection (R12).
 
 Layer 12a — Hook glue unit test
-    Asserts byte-equality of the bash glue function `encode_phase`
-    (defined in hooks/cortex-scan-lifecycle.sh) against the R3 normative
-    wire-format encoding for a fixture matrix of (phase, checked, total,
-    cycle) tuples.
+    Asserts byte-equality of the Python glue function `_encode_phase`
+    (defined in cortex_command/hooks/scan_lifecycle.py) against the R3
+    normative wire-format encoding for a fixture matrix of (phase,
+    checked, total, cycle) tuples. The test now asserts against the
+    Python helper since the bash hook was refactored into a Python
+    subcommand (`cortex hooks scan-lifecycle`); the bash file is now a
+    9-line probe-then-exec wrapper with no encoding logic of its own.
 
 Layer 12b — Statusline ladder + parser vs canonical Python
     Two sub-tests source distinct fragments of `claude/statusline.sh` into
@@ -40,6 +43,7 @@ from pathlib import Path
 import pytest
 
 from cortex_command.common import detect_lifecycle_phase
+from cortex_command.hooks.scan_lifecycle import _encode_phase
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -65,44 +69,17 @@ GLUE_FIXTURES: list[tuple[str, int, int, int, str]] = [
 ]
 
 
-def _extract_encode_phase_function() -> str:
-    """Extract just the `encode_phase` bash function definition from the hook.
-
-    Sourcing the entire hook is impractical: the hook reads stdin at the top
-    and has executable side effects. Instead we slice out the function block
-    by regex and execute it in isolation.
-    """
-    src = HOOK_PATH.read_text()
-    match = re.search(
-        r"^encode_phase\(\)\s*\{.*?^\}\s*$",
-        src,
-        re.MULTILINE | re.DOTALL,
-    )
-    if not match:
-        raise RuntimeError(
-            f"Could not locate encode_phase() in {HOOK_PATH}. "
-            "Hook structure may have changed; update test extractor."
-        )
-    return match.group(0)
-
-
 def _invoke_encode_phase(phase: str, checked: int, total: int, cycle: int) -> str:
-    """Source the extracted glue fragment and call encode_phase, capturing stdout."""
-    fragment = _extract_encode_phase_function()
-    script = f"""
-set -euo pipefail
-{fragment}
-encode_phase {phase!r} {int(checked)} {int(total)} {int(cycle)}
-"""
-    proc = subprocess.run(
-        ["bash", "-c", script],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    # Strip the trailing newline that `echo` always adds; preserve any
-    # internal characters (the wire format never contains newlines).
-    return proc.stdout.rstrip("\n")
+    """Invoke the canonical Python `_encode_phase` helper directly.
+
+    The bash hook is now a 9-line probe-then-exec wrapper into
+    `cortex hooks scan-lifecycle` (a Python subcommand). The wire-format
+    encoding logic lives in `cortex_command.hooks.scan_lifecycle._encode_phase`,
+    which is the canonical implementation. This thin wrapper preserves the
+    original test signature so the parametrized fixture matrix remains
+    untouched.
+    """
+    return _encode_phase(phase, int(checked), int(total), int(cycle))
 
 
 @pytest.mark.parametrize(
@@ -117,7 +94,7 @@ def test_hook_glue(
     cycle: int,
     expected: str,
 ) -> None:
-    """R12a: bash `encode_phase` glue produces byte-equal R3 wire-format output."""
+    """R12a: Python `_encode_phase` glue produces byte-equal R3 wire-format output."""
     actual = _invoke_encode_phase(phase, checked, total, cycle)
     assert actual == expected, (
         f"encode_phase({phase!r}, {checked}, {total}, {cycle}) "
