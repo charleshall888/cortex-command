@@ -715,7 +715,13 @@ def main(argv: list[str] | None = None) -> int:
                 "additionalContext": context,
             }
         }
-        sys.stdout.write(json.dumps(envelope, indent=2) + "\n")
+        # ``ensure_ascii=False`` preserves emoji-bearing context strings
+        # byte-for-byte against bash output (jq -n --arg ctx ... at bash
+        # precedent lines 482-489 emits UTF-8 verbatim; the Python port
+        # must match for parity with golden-file fixtures and downstream
+        # statusline/PipelineState pause/fail glyphs).
+        json.dump(envelope, sys.stdout, ensure_ascii=False, indent=2)
+        sys.stdout.write("\n")
 
     return 0
 
