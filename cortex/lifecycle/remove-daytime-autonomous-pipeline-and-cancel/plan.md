@@ -35,7 +35,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
 - **Complexity**: trivial
 - **Context**: Sibling work is expected to have already removed daytime tokens; this task does no edit, only confirms the precondition by running the grep at current HEAD. The matching pin test (Task 2) will lock the invariant in CI. Do not hardcode a specific commit SHA — anchor on the grep result.
 - **Verification**: `grep -c 'Daytime Dispatch\|cortex-daytime' skills/lifecycle/references/implement.md` outputs `0` — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (inline pre-flight: grep returned 0)
 
 ### Task 2: Add structural pin test for `implement.md` daytime-free invariant
 - **Files**: tests/test_lifecycle_implement_md_daytime_free.py (new file)
@@ -44,7 +44,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
 - **Complexity**: simple
 - **Context**: Test asserts both `"cortex-daytime" not in open("skills/lifecycle/references/implement.md").read()` and `"Daytime Dispatch" not in open("skills/lifecycle/references/implement.md").read()`. Look at neighbor tests in `tests/` for the pytest layout idiom this repo uses (no fixtures needed — straight `open().read()` + `assert`). Single test function `test_implement_md_is_daytime_free()` is sufficient.
 - **Verification**: `pytest tests/test_lifecycle_implement_md_daytime_free.py` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 2951acdd)
 
 ### Task 3: Add structural contract test for worktree-interactive dispatch surface
 - **Files**: tests/test_implement_worktree_interactive_contract.py (new file)
@@ -53,7 +53,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
 - **Complexity**: simple
 - **Context**: Pattern: read `skills/lifecycle/references/implement.md` once at test-module scope; assert each of the three substrings or `re.findall` patterns is present at minimum the required count. The guard test is "count of `_interactive_overnight_check.sh` references ≥ 2" — do not assert location precisely (line numbers drift), only that two distinct call sites exist. Scoped narrower than deleted `test_daytime_preflight.py` per the spec's R3 — not a verbatim coverage replacement. Test does NOT assert lock-release behavior (owned by lifecycle complete flow, not dispatch block).
 - **Verification**: `pytest tests/test_implement_worktree_interactive_contract.py` exits 0 — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit d74de579)
 
 ### Task 4: Phase 2 atomic deletion sweep — modules + tests + console-scripts + state.py + registries + justfile + .gitignore + audit allowlist
 - **Files**:
@@ -89,7 +89,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
   - `grep -c 'daytime' .gitignore` = 0
   - `grep -c 'daytime' bin/.audit-bare-python-m-allowlist.md` = 0
   - `just test` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit cc76eb1f)
 
 ### Task 5: Phase 3 atomic dashboard refactor — add `feature_pr` reader, swap template, remove daytime parsers + fields + call sites, add PR-url test
 - **Files**:
@@ -108,7 +108,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
   - `grep -c 'feature_pr\[\|feature_pr\.get' cortex_command/dashboard/templates/feature_cards.html` ≥ 1
   - `pytest cortex_command/dashboard/tests/test_feature_cards_pr_url.py` exits 0
   - `just test` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 8a68d4bd)
 
 ### Task 6: Retitle `_DAYTIME_DISPATCH_FIELDS` docstring to compat-shim
 - **Files**: cortex_command/pipeline/metrics.py
@@ -120,7 +120,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
   - `grep -c '_DAYTIME_DISPATCH_FIELDS' cortex_command/pipeline/metrics.py` ≥ 1
   - `grep -c 'Historical compatibility' cortex_command/pipeline/metrics.py` ≥ 1
   - `pytest cortex_command/pipeline/tests/test_metrics.py -k test_daytime_schema_skipped` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 5c94c579)
 
 ### Task 7: Clean up `auth.py` — module/function docstrings + argparse description
 - **Files**: cortex_command/overnight/auth.py
@@ -131,7 +131,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
 - **Verification**:
   - `grep -c 'daytime' cortex_command/overnight/auth.py` = 0
   - `python3 -m cortex_command.overnight.auth --help 2>&1 | grep -c daytime` = 0
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit ebf8a680)
 
 ### Task 8: Drop Sphinx xref + update events-registry `auth_probe` row
 - **Files**: cortex_command/overnight/cli_handler.py, bin/.events-registry.md
@@ -142,7 +142,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
 - **Verification**:
   - `grep -c 'daytime_pipeline' cortex_command/overnight/cli_handler.py` = 0
   - `grep -c 'daytime_pipeline' bin/.events-registry.md` = 0
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 2d1dc644)
 
 ### Task 9: Rewrite orphan comments in runner.py, interactive_lock.py, _interactive_overnight_check.sh
 - **Files**: cortex_command/overnight/runner.py, cortex_command/interactive_lock.py, skills/lifecycle/references/_interactive_overnight_check.sh
@@ -154,7 +154,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
 - **Complexity**: simple
 - **Context**: Pure comment edits; no logic change. The implement.md §1a.iii reference is itself dangling because §1a is now the worktree-interactive alternate path, not a daytime mirror. Note that `skills/lifecycle/references/_interactive_overnight_check.sh` is canonical and gets mirrored to `plugins/cortex-core/skills/lifecycle/references/_interactive_overnight_check.sh` via the dual-source pre-commit hook — edit only the canonical file.
 - **Verification**: `grep -c 'daytime' cortex_command/overnight/runner.py cortex_command/interactive_lock.py skills/lifecycle/references/_interactive_overnight_check.sh` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit af47e086)
 
 ### Task 10: Update observability catalog
 - **Files**: cortex/requirements/observability.md
@@ -163,7 +163,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
 - **Complexity**: simple
 - **Context**: Single-file edit. The catalog is a list of modules — drop the two daytime rows; do not restructure neighbors.
 - **Verification**: `grep -c 'daytime' cortex/requirements/observability.md` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 1b6ae623)
 
 ### Task 11: Update docs (setup.md, overnight-operations.md, internals/sdk.md, release-process.md, index.html orphan CSS)
 - **Files**: docs/setup.md, docs/overnight-operations.md, docs/internals/sdk.md, docs/release-process.md, docs/index.html
@@ -177,7 +177,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
 - **Complexity**: simple
 - **Context**: Pure prose / CSS edits. The 707-714 subsection in `overnight-operations.md` is a whole-subsection delete (not a line-by-line trim). Per CLAUDE.md, the overnight docs source-of-truth split is: `docs/overnight-operations.md` owns the round loop and orchestrator behavior; `docs/internals/sdk.md` owns SDK model-selection mechanics — edits should preserve that separation. The release-process.md:124 replacement should be a generic phrase (e.g. "a representative release-gate ticket") rather than naming a specific backlog item. For `docs/index.html`, removing the `.daytime` CSS may leave the adjacent `.runner` / sibling-class rules visually unaffected — verify by loading the page locally after edit if convenient, but no functional regression expected since no element uses the class.
 - **Verification**: `grep -c daytime docs/setup.md docs/overnight-operations.md docs/internals/sdk.md docs/release-process.md docs/index.html | awk -F: '{s+=$NF} END {print s}'` = 0.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 9eb82b99)
 
 ### Task 12: Add `superseded` to TERMINAL_STATUSES + `normalize_status` map + module-local `_TERMINAL`
 - **Files**: cortex_command/common.py, cortex_command/overnight/plan.py, cortex_command/tests/test_terminal_statuses.py (new)
@@ -189,7 +189,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
   - `grep -c '"superseded"' cortex_command/common.py` ≥ 2
   - `grep -c '"superseded"' cortex_command/overnight/plan.py` ≥ 1
   - `pytest cortex_command/tests/test_terminal_statuses.py` exits 0
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 5fa76c54)
 
 ### Task 13: Cancel #228 — set `status: superseded` via working-tree-aware invocation + append `## Superseded by #246` body section
 - **Files**: cortex/backlog/228-wire-daytime-dispatch-through-cli-and-mcp-with-launchd-detachment.md
@@ -201,7 +201,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
   - `grep -c '^status: superseded' cortex/backlog/228-wire-daytime-dispatch-through-cli-and-mcp-with-launchd-detachment.md` = 1
   - `grep -c '## Superseded by' cortex/backlog/228-wire-daytime-dispatch-through-cli-and-mcp-with-launchd-detachment.md` = 1
   - Cascade-fired evidence: extract #228's `uuid:` from frontmatter, then `grep -rn "<uuid>" cortex/backlog/ | grep -i 'blocked_by'` returns nothing (the cascade removes #228's UUID from any `blocked_by` array). If no extant `blocked_by:` chain references #228 today, the grep returns nothing regardless and the cascade-fired evidence is vacuously satisfied — confirm this baseline with `grep -rn "228-wire-daytime-dispatch" cortex/backlog/*.md` (excluding #228 itself) before running Task 13 so the verification is meaningful.
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 4814cc3a; baseline confirmed no extant blocked_by chains, cascade vacuously satisfied)
 
 ### Task 14: Annotate #230 body — do NOT change frontmatter
 - **Files**: cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md
@@ -212,7 +212,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
 - **Verification**:
   - `grep -c '^status: complete' cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` = 1
   - `grep -c 'release-gate procedure no longer applies' cortex/backlog/230-release-gate-empirical-from-claude-session-smoke-test-for-228-daytime-dispatch.md` = 1
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 0a79e94c)
 
 ### Task 15: Add CHANGELOG `### Removed` entry with operator-action migration note
 - **Files**: CHANGELOG.md
@@ -224,7 +224,7 @@ Mechanical-but-bisect-safe removal sweep landing as a series of per-task commits
   - `grep -c '### Removed' CHANGELOG.md` ≥ 1
   - `grep -c 'uv tool uninstall cortex-command' CHANGELOG.md` ≥ 1
   - `just test` exits 0 (final whole-feature check per R25)
-- **Status**: [ ] pending
+- **Status**: [x] complete (commit 1fbec14d)
 
 ## Risks
 
