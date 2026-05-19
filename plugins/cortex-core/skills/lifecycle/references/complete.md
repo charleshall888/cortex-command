@@ -22,7 +22,25 @@ Stage `cortex/lifecycle/{slug}/` artifacts alongside any uncommitted source chan
 
 ### Step 3 — Push Branch and Create PR
 
-Push the branch to the remote, then use `/cortex-core:pr` to create a pull request with a summary of the feature. The PR title and body should reflect the feature's purpose and include a link to the lifecycle directory.
+Push the branch to the remote, then create a pull request with a summary of the feature. The PR title and body should reflect the feature's purpose and include a link to the lifecycle directory.
+
+**Variant A detection (advisory)**: Before invoking `/cortex-core:pr`, perform a two-signal check to determine whether this lifecycle is running from inside an `interactive/{slug}` worktree:
+
+1. **Signal 1 — lock file**: call `cortex_command/interactive_lock.py:read_lock(feature_slug)`. A non-None return indicates an `interactive.pid` lock file is present for this slug.
+2. **Signal 2 — directory corroboration**: run `git rev-parse --show-toplevel` and compare the result against `pwd`. If both resolve to the same path and that path is the `interactive/{slug}` worktree root, the session's CWD is confirmed inside the worktree.
+
+If **both signals are positive** (lock file present and `git rev-parse --show-toplevel` matches the `interactive/{slug}` worktree path), apply the `cd-in-then-out` pattern around `/cortex-core:pr`:
+
+```
+(a) save _origin_pwd=$(pwd)
+(b) cd into the interactive/{slug} worktree if not already there
+(c) invoke /cortex-core:pr
+(d) cd "$_origin_pwd" to restore the original working directory
+```
+
+If **either signal is absent or contradictory** (lock file missing or invalid, or `git rev-parse --show-toplevel` does not match the worktree path, or the two signals disagree), treat the session as NOT in Variant A and invoke `/cortex-core:pr` from the current cwd without any cd.
+
+The detection is purely advisory — it does not block PR creation. When the `cd-in-then-out` path is taken, the restore in step (d) ensures the Step 8 cd-out hard guard composes correctly (Step 8 will find the session back in the original directory, not the worktree).
 
 ### Step 4 — Write `pr.json` Atomically
 
