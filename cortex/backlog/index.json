@@ -1,5 +1,37 @@
 [
   {
+    "id": 228,
+    "title": "Wire daytime dispatch through cortex CLI + MCP with launchd detachment",
+    "status": "superseded",
+    "priority": "high",
+    "type": "feature",
+    "tags": [
+      "daytime-pipeline",
+      "mcp",
+      "cli",
+      "launchd",
+      "overnight-runner"
+    ],
+    "areas": [
+      "overnight-runner"
+    ],
+    "created": "2026-05-16",
+    "updated": "2026-05-19",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": "cortex/lifecycle/wire-daytime-dispatch-through-cortex-cli/spec.md",
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "5fef3a25-7e3d-4ddb-9d18-8bd45a4b5dba",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 8,
     "title": "Auto-rename Claude Code session to active lifecycle feature name",
     "status": "backlog",
@@ -94,6 +126,60 @@
     "repo": null
   },
   {
+    "id": 211,
+    "title": "R8 should track installed-wheel-commit, not CWD-working-tree HEAD (#146 follow-up)",
+    "status": "superseded",
+    "priority": "medium",
+    "type": "bug",
+    "tags": [
+      "mcp",
+      "upgrade"
+    ],
+    "areas": [],
+    "created": "2026-05-13",
+    "updated": "2026-05-13",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "210-refresh-install-update-docs-close-mcp-only-auto-update-gaps.md",
+    "plan": null,
+    "uuid": "3178e5ca-2289-4c21-a2f8-967112806956",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 212,
+    "title": "CLI_PIN drift lint (#146 hygiene)",
+    "status": "superseded",
+    "priority": "medium",
+    "type": "chore",
+    "tags": [
+      "mcp",
+      "upgrade"
+    ],
+    "areas": [],
+    "created": "2026-05-13",
+    "updated": "2026-05-13",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": "210-refresh-install-update-docs-close-mcp-only-auto-update-gaps.md",
+    "plan": null,
+    "uuid": "906b88bb-880d-4c16-ba42-1133a4c1f875",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
+    "schema_version": "1",
+    "repo": null
+  },
+  {
     "id": 235,
     "title": "Trigger cortex CLI reinstall at SessionStart on CLI_PIN drift",
     "status": "refined",
@@ -178,7 +264,36 @@
     "uuid": "0048a013-cb5c-4149-b7fd-0bb8b3c2ef91",
     "lifecycle_slug": "lifecycle-implement-auto-enter-worktree-drop",
     "session_id": "0ac6427e-1313-46c6-bd3b-914e72269c3c",
-    "lifecycle_phase": "plan",
+    "lifecycle_phase": "implement",
+    "schema_version": "1",
+    "repo": null
+  },
+  {
+    "id": 250,
+    "title": "Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)",
+    "status": "backlog",
+    "priority": "medium",
+    "type": "feature",
+    "tags": [
+      "lifecycle",
+      "worktree-interactive"
+    ],
+    "areas": [
+      "skills"
+    ],
+    "created": "2026-05-19",
+    "updated": "2026-05-19",
+    "blocks": [],
+    "blocked_by": [],
+    "parent": null,
+    "research": null,
+    "spec": null,
+    "discovery_source": null,
+    "plan": null,
+    "uuid": "6c945638-4fc4-4f1b-ad68-1c1e102c24b4",
+    "lifecycle_slug": null,
+    "session_id": null,
+    "lifecycle_phase": null,
     "schema_version": "1",
     "repo": null
   },
