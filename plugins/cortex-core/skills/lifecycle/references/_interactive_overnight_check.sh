@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Overnight-active probe sidecar — single source of truth for both the
-# daytime mirror (implement.md §1a.iii, R8) and the interactive mirror
-# (implement.md §1, R7, added by Task 5).
+# Overnight-active probe sidecar — shared implementation used by the
+# interactive overnight-check path (implement.md §1, R7).
 #
 # Usage:
 #   cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- "<rejection-wording>" "<expected-repo-path>"

@@ -166,7 +166,7 @@ def acquire_lock(feature_slug: str) -> bool:
     Returns True on successful acquisition, False when a live owner blocks.
 
     Stale recovery is NON-destructive: no git state manipulation,
-    no worktree removal, no equivalent of daytime's stale-recovery helper.
+    no worktree removal, no filesystem writes beyond the lock file itself.
     Worktree directory contents are untouched.
     """
     lock_path = _lock_path(feature_slug)
