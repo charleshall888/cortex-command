@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import io
 import json
+import multiprocessing
 import os
 import subprocess
 from pathlib import Path
@@ -635,6 +636,184 @@ def test_session_mutation_OR(
     assert "".join(
         owner_path.read_text(encoding="utf-8").split()
     ) == stale_id
+
+
+# ----------------------------------------------------------------------------
+# Concurrent-write serialization test (spec req #11)
+# ----------------------------------------------------------------------------
+
+
+def _concurrent_worker(
+    repo_str: str,
+    feature_name: str,
+    session_id: str,
+    stale_id: str,
+    barrier: "multiprocessing.synchronize.Barrier",
+) -> None:
+    """Worker for ``test_session_mutation_concurrent_writes_serialized``.
+
+    Runs in a child process spawned via ``multiprocessing.Process``. Each
+    worker waits on the shared ``Barrier`` so two workers begin their
+    ``scan_lifecycle.main()`` calls as close to simultaneously as
+    possible, then drives the hook against a feature whose ``.session``
+    contains ``stale_id``. With Task 4's ``feature_lock`` in place the
+    two workers serialize their P1 migrations; without it they could
+    interleave and leave ``.session`` + ``.session-owner`` in a
+    partially-written / inconsistent state.
+
+    Module-level for pickle-compatibility with the macOS default
+    ``spawn`` start method.
+    """
+
+    import io as _io
+    import json as _json
+    import os as _os
+    import sys as _sys
+
+    # Build the SessionStart payload exactly like ``_run_main`` does.
+    payload = {
+        "hook_event_name": "SessionStart",
+        "session_id": session_id,
+        "cwd": repo_str,
+    }
+    # Each worker gets its own .claude-env scratch so concurrent
+    # appenders don't tear at the env-export file.
+    env_file = Path(repo_str) / f".claude-env-{session_id}"
+    env_file.write_text("", encoding="utf-8")
+    _os.environ["CLAUDE_ENV_FILE"] = str(env_file)
+    _os.environ["LIFECYCLE_SESSION_ID"] = stale_id
+
+    _sys.stdin = _io.StringIO(_json.dumps(payload))
+
+    # Synchronize start as tightly as possible — both workers cross
+    # the barrier and immediately call into main().
+    barrier.wait(timeout=10.0)
+
+    from cortex_command.hooks import scan_lifecycle as _scan
+
+    _scan.main()
+
+
+def test_session_mutation_concurrent_writes_serialized(
+    tmp_path: Path,
+) -> None:
+    """**(spec req #11)** Concurrent SessionStart writes are serialized.
+
+    Two child processes (multiprocessing.Process) each invoke
+    ``scan_lifecycle.main()`` against the same feature directory with
+    distinct new session ids. They synchronize on a ``multiprocessing.
+    Barrier`` so both start their write paths as close to simultaneously
+    as possible. Looped ``ITERATIONS`` times to surface any race window.
+
+    Per-iteration assertions:
+      * ``.session`` and ``.session-owner`` both exist (no partial)
+      * ``.session`` contains exactly one of the two candidate new ids
+        (a complete P1 migration ran end-to-end for one winner)
+      * ``.session-owner`` contains the stale id (P1's ``stale_id`` is
+        copied from ``.session`` into ``.session-owner`` — both writes
+        landed atomically under the per-feature flock)
+    """
+
+    iterations = 8
+    stale_id = "STALE"
+    id_a = "ID_A"
+    id_b = "ID_B"
+    feature_name = "feature-concurrent"
+
+    # multiprocessing.Process on macOS defaults to "spawn" — ensure we
+    # use it explicitly so the test behaves the same on Linux where
+    # "fork" is the default and would not exercise spawn-pickling.
+    mp_ctx = multiprocessing.get_context("spawn")
+
+    for iteration in range(iterations):
+        # Per-iteration tmp dir avoids bleed across loop runs even if
+        # a worker leaks state.
+        iter_root = tmp_path / f"iter-{iteration}"
+        iter_root.mkdir()
+
+        repo = stage_lifecycle(
+            iter_root,
+            StageSpec(
+                features=[
+                    FeatureSpec(
+                        name=feature_name,
+                        research_md="# research conc\n",
+                        spec_md="# spec conc\n",
+                        events_log='{"event": "spec_approved"}\n',
+                        session=stale_id,
+                    )
+                ]
+            ),
+        )
+
+        barrier = mp_ctx.Barrier(2)
+        proc_a = mp_ctx.Process(
+            target=_concurrent_worker,
+            args=(str(repo), feature_name, id_a, stale_id, barrier),
+        )
+        proc_b = mp_ctx.Process(
+            target=_concurrent_worker,
+            args=(str(repo), feature_name, id_b, stale_id, barrier),
+        )
+
+        proc_a.start()
+        proc_b.start()
+        try:
+            proc_a.join(timeout=30.0)
+            proc_b.join(timeout=30.0)
+        finally:
+            # Defensive cleanup — never leak a hung worker into the
+            # next iteration.
+            for p in (proc_a, proc_b):
+                if p.is_alive():
+                    p.terminate()
+                    p.join(timeout=5.0)
+                    if p.is_alive():
+                        p.kill()
+                        p.join(timeout=5.0)
+
+        assert proc_a.exitcode == 0, (
+            f"iter {iteration}: worker A exited {proc_a.exitcode}"
+        )
+        assert proc_b.exitcode == 0, (
+            f"iter {iteration}: worker B exited {proc_b.exitcode}"
+        )
+
+        feature_dir = repo / "cortex" / "lifecycle" / feature_name
+        session_path = feature_dir / ".session"
+        owner_path = feature_dir / ".session-owner"
+
+        assert session_path.is_file(), (
+            f"iter {iteration}: .session must exist after concurrent run"
+        )
+        assert owner_path.is_file(), (
+            f"iter {iteration}: .session-owner must exist after concurrent run"
+        )
+
+        session_content = "".join(
+            session_path.read_text(encoding="utf-8").split()
+        )
+        owner_content = "".join(
+            owner_path.read_text(encoding="utf-8").split()
+        )
+
+        assert session_content in (id_a, id_b), (
+            f"iter {iteration}: .session must contain exactly one new id "
+            f"(a complete migration); got {session_content!r}"
+        )
+        # The winner that landed in .session is non-deterministic, but
+        # whichever it was, .session-owner must carry the STALE id —
+        # that's the P1 invariant. If a partial interleave had occurred
+        # we would see .session-owner carry the OTHER worker's new id
+        # (i.e. the worker whose Phase 1 read STALE from .session but
+        # whose .session-owner write landed AFTER the other worker had
+        # overwritten .session — leaving owner pointing at a new id,
+        # not the stale id).
+        assert owner_content == stale_id, (
+            f"iter {iteration}: .session-owner must contain stale id "
+            f"(P1 invariant under serialization); got {owner_content!r} "
+            f"(session={session_content!r})"
+        )
 
 
 # ----------------------------------------------------------------------------
