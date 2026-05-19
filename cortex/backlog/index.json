@@ -66,74 +66,9 @@
     "repo": null
   },
   {
-    "id": 238,
-    "title": "Swap implement-phase preflight option 2 to worktree-interactive",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "lifecycle",
-      "worktree-interactive",
-      "daytime-swap"
-    ],
-    "areas": [
-      "skills",
-      "lifecycle"
-    ],
-    "created": "2026-05-18",
-    "updated": "2026-05-18",
-    "blocks": [],
-    "blocked_by": [
-      "240"
-    ],
-    "parent": "237",
-    "research": null,
-    "spec": "cortex/lifecycle/swap-implement-phase-preflight-option-2/spec.md",
-    "discovery_source": "cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md",
-    "plan": null,
-    "uuid": "d26e66a6-04f4-49bb-8203-f3a56bdd9db4",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
-    "id": 240,
-    "title": "Implement Variant A end-to-end (interaction model + PR-creation hook)",
-    "status": "refined",
-    "priority": "high",
-    "type": "feature",
-    "tags": [
-      "lifecycle",
-      "worktree-interactive",
-      "daytime-swap",
-      "refactor",
-      "pr"
-    ],
-    "areas": [
-      "lifecycle"
-    ],
-    "created": "2026-05-18",
-    "updated": "2026-05-18",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": "237",
-    "research": null,
-    "spec": "cortex/lifecycle/implement-variant-a-end-to-end/spec.md",
-    "discovery_source": "cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md",
-    "plan": null,
-    "uuid": "cfc426e7-5325-4a05-b6a0-bc1a97ee50c3",
-    "lifecycle_slug": null,
-    "session_id": null,
-    "lifecycle_phase": null,
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 246,
     "title": "Remove daytime autonomous pipeline and cancel #228/#230",
-    "status": "backlog",
+    "status": "refined",
     "priority": "high",
     "type": "chore",
     "tags": [
@@ -143,21 +78,15 @@
       "removal"
     ],
     "areas": [
-      "pipeline",
-      "overnight-runner",
-      "skills",
-      "dashboard"
+      "overnight-runner"
     ],
     "created": "2026-05-18",
-    "updated": "2026-05-18",
+    "updated": "2026-05-19",
     "blocks": [],
-    "blocked_by": [
-      "238",
-      "240"
-    ],
+    "blocked_by": [],
     "parent": "237",
     "research": null,
-    "spec": null,
+    "spec": "cortex/lifecycle/remove-daytime-autonomous-pipeline-and-cancel/spec.md",
     "discovery_source": "cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md",
     "plan": null,
     "uuid": "f5b675af-6e35-4cd5-9260-b0cc7b897e47",

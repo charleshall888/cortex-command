@@ -2,19 +2,22 @@
 schema_version: "1"
 uuid: f5b675af-6e35-4cd5-9260-b0cc7b897e47
 title: "Remove daytime autonomous pipeline and cancel #228/#230"
-status: backlog
+status: refined
 priority: high
 type: chore
 created: 2026-05-18
-updated: 2026-05-18
+updated: 2026-05-19
 parent: "237"
-blocked-by: ["238", "240"]
+blocked-by: []
 tags: [lifecycle, worktree-interactive, daytime-swap, removal]
-areas: [pipeline, overnight-runner, skills, dashboard]
+areas: [overnight-runner]
 discovery_source: cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md
 session_id: null
 lifecycle_phase: null
 lifecycle_slug: null
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/remove-daytime-autonomous-pipeline-and-cancel/spec.md
 ---
 
 ## Role
