@@ -43,7 +43,26 @@ Route by exit code into one of three menu dispositions:
 After the probe completes and the options array has been resolved per the routing rules above, the resolved options array is then passed to `AskUserQuestion`.
 
 Dispatch by selection:
-- If the user selects **Implement on feature branch with worktree**, proceed to §1a (Interactive Worktree Creation alternate path below).
+- If the user selects **Implement on feature branch with worktree**, run the two interactive preflight guards below (Steps A and B) before proceeding to §1a. If either guard rejects, exit §1 without creating a worktree.
+
+  **Step A — Overnight-active rejection mirror**: Source the overnight-probe sidecar and surface interactive-tailored wording on exit 1:
+
+  ```
+  cat skills/lifecycle/references/_interactive_overnight_check.sh | bash -s -- "Overnight runner is active (session {session_id}, PID {pid}, phase: executing) — wait for the run to work to complete (`cortex overnight status`), or open a different feature." "$(_resolve_user_project_root)"
+  ```
+
+  Sidecar exit codes: `0` = no overnight active, proceed to Step B; `1` = overnight live for this repo, surface the wording above and exit §1 without creating a worktree; `2` = stale runner detected, surface a warn-and-continue diagnostic and proceed to Step B.
+
+  **Step B — Interactive lock acquisition**: Run a single Bash call to acquire the per-feature interactive lock:
+
+  ```
+  cortex-interactive-lock acquire {slug}
+  ```
+
+  On exit 0: proceed to §1a. On non-zero exit: the console-script has already written R5's rejection wording to stderr — surface stderr verbatim and exit §1 without creating a worktree:
+
+  > Interactive session already active on this feature (session {session_id}, acquired {acquired_at}). Wait for it to exit, or work on a different feature, or run `cortex-interactive-lock inspect {slug}` for details.
+
 - If the user selects **"Implement on current branch"**, remain on the current branch and proceed to §2 Task Dispatch.
 - If the user selects **"Create feature branch"**, create and check out `feature/{lifecycle-slug}` before dispatching any tasks. All lifecycle artifacts (research, spec, plan) are already committed to main at this point, so the feature branch starts with the full artifact trail and only implementation commits diverge. Then proceed to §2 Task Dispatch.
 
