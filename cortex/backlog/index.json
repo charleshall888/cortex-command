@@ -239,36 +239,6 @@
     "repo": null
   },
   {
-    "id": 249,
-    "title": "Lifecycle implement: auto-enter worktree, drop the cd handoff",
-    "status": "refined",
-    "priority": "medium",
-    "type": "feature",
-    "tags": [
-      "lifecycle",
-      "worktree-interactive",
-      "ux"
-    ],
-    "areas": [
-      "skills"
-    ],
-    "created": "2026-05-19",
-    "updated": "2026-05-19",
-    "blocks": [],
-    "blocked_by": [],
-    "parent": null,
-    "research": null,
-    "spec": "cortex/lifecycle/lifecycle-implement-auto-enter-worktree-drop/spec.md",
-    "discovery_source": null,
-    "plan": null,
-    "uuid": "0048a013-cb5c-4149-b7fd-0bb8b3c2ef91",
-    "lifecycle_slug": "lifecycle-implement-auto-enter-worktree-drop",
-    "session_id": "0ac6427e-1313-46c6-bd3b-914e72269c3c",
-    "lifecycle_phase": "implement",
-    "schema_version": "1",
-    "repo": null
-  },
-  {
     "id": 250,
     "title": "Lifecycle implement: auto-enter worktree via EnterWorktree (Approach A, deferred design surface)",
     "status": "backlog",
