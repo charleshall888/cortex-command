@@ -5,3 +5,7 @@
 {"ts": "2026-05-18T19:23:42Z", "event": "phase_transition", "feature": "swap-implement-phase-preflight-option-2", "from": "specify", "to": "plan"}
 {"ts": "2026-05-18T19:28:26Z", "event": "plan_approved", "feature": "swap-implement-phase-preflight-option-2"}
 {"ts": "2026-05-18T19:28:26Z", "event": "phase_transition", "feature": "swap-implement-phase-preflight-option-2", "from": "plan", "to": "implement"}
+{"ts": "2026-05-19T10:56:34Z", "event": "phase_transition", "feature": "swap-implement-phase-preflight-option-2", "from": "implement", "to": "review"}
+{"ts": "2026-05-19T11:00:16Z", "event": "review_verdict", "feature": "swap-implement-phase-preflight-option-2", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-19T11:00:16Z", "event": "phase_transition", "feature": "swap-implement-phase-preflight-option-2", "from": "review", "to": "complete"}
+{"ts": "2026-05-19T11:15:35Z", "event": "feature_complete", "feature": "swap-implement-phase-preflight-option-2", "tasks_total": 5, "rework_cycles": 1}
