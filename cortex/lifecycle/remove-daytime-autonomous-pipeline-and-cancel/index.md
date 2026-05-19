@@ -2,7 +2,7 @@
 feature: remove-daytime-autonomous-pipeline-and-cancel
 parent_backlog_uuid: f5b675af-6e35-4cd5-9260-b0cc7b897e47
 parent_backlog_id: 246
-artifacts: ["research", "spec", "plan"]
+artifacts: ["research", "spec", "plan", "review"]
 tags: [lifecycle, worktree-interactive, daytime-swap, removal]
 created: 2026-05-19
 updated: 2026-05-19
@@ -15,3 +15,4 @@ Feature lifecycle for [[246-remove-daytime-autonomous-pipeline-and-cancel-228-23
 - Research: [[remove-daytime-autonomous-pipeline-and-cancel/research|research.md]]
 - Spec: [[remove-daytime-autonomous-pipeline-and-cancel/spec|spec.md]]
 - Plan: [[remove-daytime-autonomous-pipeline-and-cancel/plan|plan.md]]
+- Review: [[remove-daytime-autonomous-pipeline-and-cancel/review|review.md]]

@@ -10,3 +10,5 @@
 {"ts": "2026-05-19T13:02:17Z", "event": "batch_dispatch", "feature": "remove-daytime-autonomous-pipeline-and-cancel", "batch": 3, "tasks": [5, 6, 7, 8, 9, 10, 11, 12], "note": "dispatched sequentially on main to avoid shared-git-index race"}
 {"ts": "2026-05-19T13:19:22Z", "event": "batch_dispatch", "feature": "remove-daytime-autonomous-pipeline-and-cancel", "batch": 4, "tasks": [13]}
 {"ts": "2026-05-19T13:27:23Z", "event": "phase_transition", "feature": "remove-daytime-autonomous-pipeline-and-cancel", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-19T13:37:34Z", "event": "review_verdict", "feature": "remove-daytime-autonomous-pipeline-and-cancel", "verdict": "CHANGES_REQUESTED", "cycle": 1, "requirements_drift": "detected"}
+{"ts": "2026-05-19T13:38:32Z", "event": "phase_transition", "feature": "remove-daytime-autonomous-pipeline-and-cancel", "from": "review", "to": "implement-rework"}
