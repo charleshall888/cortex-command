@@ -4,6 +4,8 @@
 
 Atomic-rename pass across four sites in `skills/lifecycle/references/implement.md` §1 (label declaration, two probe-routing prose sites, and the dispatch-by-selection branch), plus a parallel rationale update in `skills/lifecycle/SKILL.md:199`, finalized by a consolidated verification step that confirms §1a body is untouched (line 56 deliberately preserved for #246's sweep), the auto-regenerated plugin mirror matches canonical, and the kept-pauses + daytime-preflight contract tests still pass. The backlog `blocked-by` frontmatter (Requirement 8) was already written during refine and is reverified in the final task.
 
+**Status note (added on resume 2026-05-19):** Sibling ticket #240's commits (notably `92bbb434 Wire cd handoff, pre-flight, and event emit into implement.md §1a` and predecessors landing the worktree-interactive flow) supplanted Tasks 1–3 entirely — the four-site rename in `implement.md` is already done, §1a was repurposed (retitled from "Daytime Dispatch" to "Interactive Worktree Creation") rather than left untouched. The spec's Requirement 5 (prose-anchor dispatch line) is now stale: #240's retitle made `proceed to §1a` accurate, not dangling. Tasks 1–3 are annotated as **done-by-#240**; T4 (SKILL.md:199) is the actual residual; T5 reduces to verification only.
+
 ## Outline
 
 ### Phase 1: Atomic rename, rewire, and documentation alignment (tasks: 1, 2, 3, 4, 5)
@@ -13,31 +15,34 @@ Atomic-rename pass across four sites in `skills/lifecycle/references/implement.m
 ## Tasks
 
 ### Task 1: Rename option-2 label and rewrite its description body in implement.md
+- **Done-by-#240** (resume note 2026-05-19): commit `92bbb434` and predecessors landed the rename + description rewrite at L19 of `skills/lifecycle/references/implement.md`. Spec Requirement 2's no-MUST/no-.claude/ constraints are satisfied by the landed prose. Verification: `grep -nE '^- \*\*Implement on feature branch with worktree\*\* —' skills/lifecycle/references/implement.md` returns one line; description body references `$TMPDIR/cortex-worktrees/` not `.claude/`; no MUST/REQUIRED/CRITICAL/MANDATORY tokens.
 - **Files**: `skills/lifecycle/references/implement.md`
 - **What**: At the option-2 bullet inside the `Branch selection` `AskUserQuestion` options list (currently L19), replace the bolded label `Implement in autonomous worktree` with `Implement on feature branch with worktree` and replace the description body with new prose per Requirement 2's shape constraints.
 - **Depends on**: none
 - **Complexity**: simple
 - **Context**: Current L19 reads `- **Implement in autonomous worktree** — dispatch to the daytime pipeline (the `cortex-daytime-pipeline` console-script) which runs the full implement → review → complete cycle headlessly in the background without requiring live steering; note that uncommitted changes remain on main and do not travel to the worktree. **When to pick**: medium/many-task/no-live-steering-needed features where you want to kick off a longer autonomous run and move on. Proceeds to §1a below.` The new body must (i) describe the worktree-interactive flow in one sentence, (ii) include a "When to pick" clause that is robust to #240's eventual Variant A or B choice, (iii) close with a routing-pointer phrase consistent with Task 3's dispatch-branch rewrite. Constraints: do not include `MUST`/`REQUIRED`/`CRITICAL`/`MANDATORY` tokens, do not reference any path beginning with `.claude/`, match the imperative-style and "**When to pick**:" pattern used by option 1 (L18) and option 3 (L20). Reference shape (illustrative — implementer chooses exact wording): `- **Implement on feature branch with worktree** — create a feature branch and an isolated worktree, then run the implementation interactively in the active session, ending with a pull request. **When to pick**: medium-task features where you want feature-branch isolation and a PR-based handoff, with live steering throughout. Proceeds to the worktree-interactive dispatch path (defined by #240).`
 - **Verification**: `grep -nE '^- \*\*Implement on feature branch with worktree\*\* —' skills/lifecycle/references/implement.md` returns one line at the option-declaration position — pass if exit code = 0 and line count = 1. AND `grep -E 'Implement on feature branch with worktree' -A 3 skills/lifecycle/references/implement.md | grep -cE 'MUST|REQUIRED|CRITICAL|MANDATORY'` returns 0 — pass if count = 0. AND `grep -E 'Implement on feature branch with worktree' -A 3 skills/lifecycle/references/implement.md | grep -c '\.claude/'` returns 0 — pass if count = 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Update probe-routing prose at the exit-0 and exit-1 rules in implement.md
+- **Done-by-#240** (resume note 2026-05-19): L39 (exit-0 enumeration) and L40 (exit-1 rule) of `skills/lifecycle/references/implement.md` already use the new label string. Probe block at L24–L42 is structurally unchanged (`grep -c "find_spec('cortex_command')" skills/lifecycle/references/implement.md` returns 1).
 - **Files**: `skills/lifecycle/references/implement.md`
 - **What**: Replace the literal `Implement in autonomous worktree` at the exit-0 routing enumeration (currently L39) and at the exit-1 rule (currently L40, including the backtick-quoted form `\`Implement in autonomous worktree\``) with the new label `Implement on feature branch with worktree`. The probe block itself (the `python3 -c "..."` invocation, the `try/except` structure, the exit-code dispatch logic) is structurally unchanged — only the prose that names the option is updated.
 - **Depends on**: [1]
 - **Complexity**: simple
 - **Context**: The exit-0 bullet currently reads `- **exit 0** → the cortex_command module is present → all three options remain unchanged: \`Implement on current branch\`, \`Implement in autonomous worktree\`, and \`Create feature branch\`.` and the exit-1 bullet currently reads `- **exit 1** → the module is absent → remove \`Implement in autonomous worktree\` from the options array; this is a silent hide, with no diagnostic surfaced. The post-degrade option set is \`Implement on current branch\` and \`Create feature branch\`.` Line numbers may shift by ±a few after Task 1's description rewrite; locate by the `exit 0` and `exit 1` bullet anchors, not absolute lines. The silent-hide semantics and post-degrade option-set wording are preserved unchanged; only the label string updates.
 - **Verification**: `grep -nF 'remove \`Implement on feature branch with worktree\` from the options array' skills/lifecycle/references/implement.md` returns one line — pass if exit code = 0 and line count = 1. AND `grep -c "find_spec('cortex_command')" skills/lifecycle/references/implement.md` returns 1 — pass if count = 1 (probe block intact). AND `grep -cF 'all three options remain unchanged: \`Implement on current branch\`, \`Implement on feature branch with worktree\`' skills/lifecycle/references/implement.md` returns 1 — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Rewrite the dispatch-by-selection branch as a prose anchor in implement.md
+- **Done-by-#240, spec-Requirement-5-stale** (resume note 2026-05-19): the dispatch branch at L46 was updated by #240 to `If the user selects **Implement on feature branch with worktree**, run the two interactive preflight guards below (Steps A and B) before proceeding to §1a.` The spec required a prose anchor instead of `§1a`, on the theory that §1a would be deleted by #246. That prediction was wrong — #240 *retitled* §1a (from "Daytime Dispatch" to "Interactive Worktree Creation") rather than deleted it, so the `§1a` citation is now accurate and not a dangling reference. Spec Requirement 5 is moot; the current state better than what the spec proposed.
 - **Files**: `skills/lifecycle/references/implement.md`
 - **What**: Under the `Dispatch by selection:` heading, replace the option-2 bullet `- If the user selects **Implement in autonomous worktree**, proceed to §1a (Daytime Dispatch alternate path below).` with `- If the user selects **Implement on feature branch with worktree**, proceed to the worktree-interactive dispatch path (defined by ticket #240).`. Option 1 and option 3 dispatch bullets are unchanged.
 - **Depends on**: [1]
 - **Complexity**: simple
 - **Context**: The dispatch-branch line is currently L46. The §1b citation is intentionally NOT used — research established that §1b will never exist (renumber-on-deletion convention means the new worktree-interactive flow inherits the §1a slot after #246 deletes the current daytime §1a). The prose anchor `worktree-interactive dispatch path (defined by ticket #240)` avoids the dangling-reference both pre- and post-#246 sweep. A follow-up edit owned by #240 or #246 can pin the eventual §N anchor once the section structure stabilizes.
 - **Verification**: `grep -cF 'proceed to the worktree-interactive dispatch path' skills/lifecycle/references/implement.md` returns 1 — pass if count = 1. AND `grep -cF 'proceed to §1b' skills/lifecycle/references/implement.md` returns 0 — pass if count = 0. AND `grep -cF 'If the user selects **Implement on feature branch with worktree**' skills/lifecycle/references/implement.md` returns 1 — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Update SKILL.md kept-pauses inventory rationale prose
 - **Files**: `skills/lifecycle/SKILL.md`
@@ -46,7 +51,7 @@ Atomic-rename pass across four sites in `skills/lifecycle/references/implement.m
 - **Complexity**: simple
 - **Context**: The current bullet reads `- skills/lifecycle/references/implement.md:22 — branch selection on main: trunk vs autonomous worktree vs feature branch.` The parity test at `tests/test_lifecycle_kept_pauses_parity.py` enforces file:line presence with ±35-line tolerance — it does not parse the rationale text — so this is a human-facing documentation refresh rather than a test-required edit. Parallel-OK with Tasks 1–3 since this touches a different file.
 - **Verification**: `grep -c 'autonomous worktree' skills/lifecycle/SKILL.md` returns 0 — pass if count = 0. AND `grep -c 'feature-branch-with-worktree' skills/lifecycle/SKILL.md` returns at least 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Consolidated acceptance verification — §1a body untouched, mirror parity, tests pass, frontmatter canonical
 - **Files**: `skills/lifecycle/references/implement.md` (read-only verification), `plugins/cortex-core/skills/lifecycle/references/implement.md` (read-only verification), `cortex/backlog/238-swap-implement-phase-preflight-option-2-to-worktree-interactive.md` (read-only verification)
@@ -55,7 +60,7 @@ Atomic-rename pass across four sites in `skills/lifecycle/references/implement.m
 - **Complexity**: simple
 - **Context**: This task consolidates Requirements 6 (line-56 invariant), 9 (mirror regeneration), 10 (existing tests pass), and re-verifies Requirement 8 (frontmatter — already set during refine but reverify in case of regression). The mirror diff requires the pre-commit hook to have fired against canonical changes from Tasks 1–4 — the implementer either stages canonical first (`git add skills/lifecycle/references/implement.md skills/lifecycle/SKILL.md`) and lets the hook regenerate the mirror, or manually invokes `just build-plugin`. PyYAML is available via `uv run python3` (system `python3` may not have it).
 - **Verification**: `grep -c 'Implement in autonomous worktree' skills/lifecycle/references/implement.md` returns 1 — pass if count = 1. AND `diff skills/lifecycle/references/implement.md plugins/cortex-core/skills/lifecycle/references/implement.md` produces no output — pass if exit code = 0. AND `just test tests/test_lifecycle_kept_pauses_parity.py` — pass if exit 0. AND `just test tests/test_daytime_preflight.py` — pass if exit 0. AND `uv run python3 -c "import yaml,sys; fm=yaml.safe_load(open('cortex/backlog/238-swap-implement-phase-preflight-option-2-to-worktree-interactive.md').read().split('---')[1]); sys.exit(0 if fm['blocked-by']==['239','240'] else 1)"` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 
