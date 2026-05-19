@@ -99,6 +99,20 @@ def _dispatch_auth_status(args: argparse.Namespace) -> int:
     return status.run(args)
 
 
+# ---------------------------------------------------------------------------
+# Hooks dispatchers — lazy-import the hooks submodules so neither
+# `cortex --help` nor `cortex hooks --help` pays the cost of importing the
+# scan-lifecycle module (which transitively pulls in lifecycle scanning
+# machinery). The lazy import inside the dispatcher body is load-bearing for
+# the bash-wrapper probe latency budget (~50-100ms per invocation).
+# ---------------------------------------------------------------------------
+
+def _dispatch_hooks_scan_lifecycle(args: argparse.Namespace) -> int:
+    from cortex_command.hooks import scan_lifecycle
+
+    return scan_lifecycle.main()
+
+
 _MCP_SERVER_DEPRECATION_BASE = (
     "cortex mcp-server is removed; install the cortex-overnight "
     "plugin (/plugin install cortex-overnight@cortex-command) "
@@ -690,6 +704,39 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     auth_status.set_defaults(func=_dispatch_auth_status)
+
+    # -------------------------------------------------------------------
+    # cortex hooks — Python-driven implementations of harness hooks.
+    # The bash entry points in `hooks/` shell out to these subcommands so
+    # the lifecycle-scan logic lives in one place. The subparser registration
+    # is at module scope (cheap); the dispatcher body imports the
+    # implementation lazily so `cortex hooks --help` and unrelated subcommands
+    # do not pay the import cost of the hooks subtree.
+    # -------------------------------------------------------------------
+    hooks = subparsers.add_parser(
+        "hooks",
+        help="Harness hook implementations",
+        description=(
+            "Python implementations of the harness hooks. Invoked by the "
+            "thin bash wrappers under hooks/ so the underlying logic lives "
+            "in one place."
+        ),
+    )
+    hooks_sub = hooks.add_subparsers(
+        dest="hooks_command",
+        required=True,
+        metavar="<subcommand>",
+    )
+
+    scan_lifecycle = hooks_sub.add_parser(
+        "scan-lifecycle",
+        help="Scan lifecycle artifacts for the active feature",
+        description=(
+            "Scan the active feature's lifecycle directory and emit the "
+            "result. Replaces the bash scan-lifecycle hook."
+        ),
+    )
+    scan_lifecycle.set_defaults(func=_dispatch_hooks_scan_lifecycle)
 
     # -------------------------------------------------------------------
     # Remaining stubs — not yet implemented.
