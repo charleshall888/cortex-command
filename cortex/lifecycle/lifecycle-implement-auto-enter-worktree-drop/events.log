@@ -4,3 +4,5 @@
 {"schema_version": 1, "ts": "2026-05-19T19:36:00Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-drop", "from": "research", "to": "specify"}
 {"schema_version": 1, "ts": "2026-05-19T19:55:00Z", "event": "spec_approved", "feature": "lifecycle-implement-auto-enter-worktree-drop"}
 {"schema_version": 1, "ts": "2026-05-19T19:55:30Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-drop", "from": "specify", "to": "plan"}
+{"schema_version": 1, "ts": "2026-05-19T20:30:00Z", "event": "plan_approved", "feature": "lifecycle-implement-auto-enter-worktree-drop"}
+{"schema_version": 1, "ts": "2026-05-19T20:30:30Z", "event": "phase_transition", "feature": "lifecycle-implement-auto-enter-worktree-drop", "from": "plan", "to": "implement"}
