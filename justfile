@@ -397,6 +397,12 @@ test-hook-commit:
 test-hooks:
     bash tests/test_hooks.sh
 
+# Run the uv-tool-topology smoke test for cortex-scan-lifecycle (spec req #7).
+# Skips with a clear message on non-uv-tool topology (dev-checkout); only
+# runs assertions when `cortex` resolves into a uv-tool-managed venv.
+test-smoke-hook:
+    bash tests/smoke_uv_tool_hook.sh
+
 # Run lifecycle state machine tests
 test-lifecycle-state:
     uv run pytest tests/test_lifecycle_state.py -q
