@@ -14,14 +14,17 @@ imports from this module.  ``orchestrator.py`` must not import from
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 from asyncio import create_task
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
 from cortex_command.common import _resolve_user_project_root
+from cortex_command import interactive_lock
 from cortex_command.pipeline.parser import parse_master_plan
 from cortex_command.pipeline.state import log_event as pipeline_log_event
 from cortex_command.pipeline.worktree import create_worktree
@@ -55,6 +58,90 @@ from cortex_command.overnight import outcome_router
 from cortex_command.overnight.outcome_router import OutcomeContext
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Per-round interactive-lock filter
+# ---------------------------------------------------------------------------
+
+
+def compute_eligible_features(
+    feature_names: list[str],
+    project_root: Path,
+) -> tuple[list[str], list[dict]]:
+    """Filter *feature_names* by live interactive owners for the current round.
+
+    Calls ``scan_live_locks(project_root)`` to discover features with live
+    interactive owners, then returns the eligible subset and a list of
+    skip-event payloads to emit for each excluded feature.
+
+    Args:
+        feature_names: Master-plan-derived feature list for this round.
+        project_root: Root of the user's project (passed explicitly so tests
+            can supply a synthetic root via ``tmp_path`` without relying on
+            ``_resolve_user_project_root()``).
+
+    Returns:
+        ``(eligible, skip_events)`` where:
+        - ``eligible`` is the subset of ``feature_names`` with no live
+          interactive owner.
+        - ``skip_events`` is a list of dicts, one per excluded feature, with
+          schema ``{ts, event, feature, session_id, round_number,
+          interactive_session_id, interactive_acquired_at, rationale}``.
+          ``interactive_pid`` is intentionally omitted per spec R11.
+    """
+    try:
+        live_owned: set[str] = interactive_lock.scan_live_locks(project_root)
+    except Exception:
+        # Defensive: if scan fails, treat as no live owners so overnight
+        # is not silently starved of features by a transient I/O error.
+        live_owned = set()
+
+    if not live_owned:
+        return list(feature_names), []
+
+    ts = datetime.now(tz=timezone.utc).isoformat()
+    session_id: str = os.environ.get("LIFECYCLE_SESSION_ID", "manual")
+
+    eligible: list[str] = []
+    skip_events: list[dict] = []
+
+    for name in feature_names:
+        if name not in live_owned:
+            eligible.append(name)
+            continue
+
+        # Read the lock to extract interactive_session_id and acquired_at.
+        lock_path = project_root / "cortex" / "lifecycle" / name / "interactive.pid"
+        interactive_session_id: Optional[str] = None
+        interactive_acquired_at: Optional[str] = None
+        try:
+            lock_data = json.loads(lock_path.read_text(encoding="utf-8"))
+            if isinstance(lock_data, dict):
+                interactive_session_id = lock_data.get("session_id")
+                interactive_acquired_at = lock_data.get("acquired_at")
+        except (OSError, json.JSONDecodeError):
+            pass
+
+        round_number: int = 0  # round_number is not available here; caller may patch
+
+        rationale = (
+            f"Skipped at round {round_number}: feature has a live interactive "
+            f"owner (session {interactive_session_id}, acquired {interactive_acquired_at})."
+        )
+
+        skip_events.append({
+            "ts": ts,
+            "event": "feature_skipped_interactive_active",
+            "feature": name,
+            "session_id": session_id,
+            "round_number": round_number,
+            "interactive_session_id": interactive_session_id,
+            "interactive_acquired_at": interactive_acquired_at,
+            "rationale": rationale,
+        })
+
+    return eligible, skip_events
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +310,29 @@ async def run_batch(config: BatchConfig) -> BatchResult:
     if not config.session_id:
         config.session_id = session_id
 
+    # Per-round interactive-lock filter (R9/R11): exclude features that have a
+    # live interactive owner so overnight does not clobber uncommitted work.
+    # No state.features mutation, no save_state call — the filter is re-derived
+    # on every run_batch invocation so convergence is per-round.
+    eligible, skip_events = compute_eligible_features(
+        feature_names, _resolve_user_project_root()
+    )
+    # Patch round_number into skip_events now that config.batch_id is known,
+    # then emit each event directly to overnight-events.log.
+    for evt in skip_events:
+        evt["round_number"] = config.batch_id
+        evt["rationale"] = (
+            f"Skipped at round {config.batch_id}: feature has a live interactive "
+            f"owner (session {evt['interactive_session_id']}, "
+            f"acquired {evt['interactive_acquired_at']})."
+        )
+        try:
+            config.overnight_events_path.parent.mkdir(parents=True, exist_ok=True)
+            with config.overnight_events_path.open("a", encoding="utf-8") as _fh:
+                _fh.write(json.dumps(evt) + "\n")
+        except Exception:
+            pass  # Don't let event-write failure stall the batch
+
     # Create worktrees; capture actual branch names (may include -2/-N suffixes)
     worktree_paths: dict[str, Path] = {}
     worktree_branches: dict[str, str] = {}
@@ -373,7 +483,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
     heartbeat_task = create_task(_heartbeat_loop())
 
     gather_results = await asyncio.gather(
-        *[_run_one(n) for n in feature_names],
+        *[_run_one(n) for n in eligible],
         return_exceptions=True,
     )
 
@@ -382,7 +492,7 @@ async def run_batch(config: BatchConfig) -> BatchResult:
         await heartbeat_task
     except asyncio.CancelledError:
         pass
-    for n, exc in zip(feature_names, gather_results):
+    for n, exc in zip(eligible, gather_results):
         if isinstance(exc, Exception):
             failed_result = FeatureResult(
                 name=n,
