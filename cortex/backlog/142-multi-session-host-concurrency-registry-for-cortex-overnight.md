@@ -2,12 +2,12 @@
 schema_version: "1"
 uuid: 092f85f8-4ffa-4af6-a32e-e466a6bfdd0f
 title: "Multi-session host concurrency registry for cortex overnight"
-status: backlog
+status: abandoned
 priority: contingent
 type: feature
 tags: [overnight, ipc]
 created: 2026-04-24
-updated: 2026-04-24
+updated: 2026-05-18
 blocks: []
 blocked-by: []
 ---

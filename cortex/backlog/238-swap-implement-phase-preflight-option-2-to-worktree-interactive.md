@@ -8,7 +8,7 @@ type: feature
 created: 2026-05-18
 updated: 2026-05-18
 parent: "237"
-blocked-by: ["239","240"]
+blocked-by: [240]
 tags: [lifecycle, worktree-interactive, daytime-swap]
 areas: [skills,lifecycle]
 discovery_source: cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md

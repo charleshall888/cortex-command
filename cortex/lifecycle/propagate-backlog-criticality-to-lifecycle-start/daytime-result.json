@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "dispatch_id": "55f5091b3ffc443e85cb8b2d3860e183",
+  "feature": "propagate-backlog-criticality-to-lifecycle-start",
+  "start_ts": "2026-05-18T16:18:07.858093+00:00",
+  "end_ts": "2026-05-18T16:26:47.542766+00:00",
+  "outcome": "deferred",
+  "terminated_via": "classification",
+  "deferred_files": [],
+  "error": null,
+  "pr_url": null
+}

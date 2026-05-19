@@ -13,7 +13,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 - **Complexity**: simple
 - **Context**: Current definition is at `batch_runner.py` line 1200. Value is `3`. The constant appears at three sites in batch_runner (lines 517, 1515, 1966) — Task 4 removes the definition and adds the import. Task 3 imports from constants.py instead of batch_runner.
 - **Verification**: `grep -n "CIRCUIT_BREAKER_THRESHOLD" claude/overnight/constants.py` — pass if exits 0 with one match. `python3 -c "from cortex_command.overnight.constants import CIRCUIT_BREAKER_THRESHOLD"` — pass if exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 2: Create `claude/overnight/types.py`
 - **Files**: `claude/overnight/types.py`
@@ -22,7 +22,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 - **Complexity**: simple
 - **Context**: Current `FeatureResult` is defined at `batch_runner.py` lines 125–138. Fields: `name: str`, `status: str`, `error: Optional[str] = None`, `deferred_question_count: int = 0`, `files_changed: list[str] = field(default_factory=list)`, `repair_branch: Optional[str] = None`, `trivial_resolved: bool = False`, `repair_agent_used: bool = False`, `parse_error: bool = False`, `resolved_files: list[str] = field(default_factory=list)`. Use `@dataclass` decorator. Import `Optional` from `typing`, `dataclass` and `field` from `dataclasses`. Status-to-field mapping from the spec: merged (no optional fields), repair_completed (repair_branch, trivial_resolved, resolved_files, repair_agent_used), paused (error required, parse_error may be True), deferred (deferred_question_count), failed (error required).
 - **Verification**: `grep -n "class FeatureResult" claude/overnight/types.py` — pass if exits 0 with one match. `python3 -c "from cortex_command.overnight.types import FeatureResult"` — pass if exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 3: Create `claude/overnight/feature_executor.py`
 - **Files**: `claude/overnight/feature_executor.py`
@@ -64,7 +64,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 
   Precedent: `claude/pipeline/conflict.py` line 23 for the TYPE_CHECKING pattern.
 - **Verification**: (a) `grep -n "^async def execute_feature" claude/overnight/feature_executor.py` — pass if exits 0 with one match. (b) `python3 -c "from cortex_command.overnight.feature_executor import execute_feature"` — pass if exits 0. (c) `grep -cn "^def _run_task\|^async def _run_task" claude/overnight/feature_executor.py` — pass if prints `0`.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 4: Update `claude/overnight/batch_runner.py` — remove moved symbols, add imports and re-export
 - **Files**: `claude/overnight/batch_runner.py`
@@ -90,7 +90,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 
   Note: `_apply_feature_result` (line ~1200), `_accumulate_result` (line ~1535), `run_batch`, `BatchConfig`, `BatchResult`, `__main__` block — all stay in batch_runner unchanged.
 - **Verification**: (a) `grep -n "from cortex_command.overnight.feature_executor import execute_feature" claude/overnight/batch_runner.py` — pass if exits 0 with one match. (b) `python3 -c "from cortex_command.overnight.batch_runner import execute_feature"` — pass if exits 0. (c) `grep -cn "^class FeatureResult" claude/overnight/batch_runner.py` — pass if prints `0`. (d) `grep -n "^CIRCUIT_BREAKER_THRESHOLD = " claude/overnight/batch_runner.py` — pass if exits 1 (no match). (e) `grep -n "^async def execute_feature" claude/overnight/batch_runner.py` — pass if exits 1 (no match).
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 5: Create `claude/overnight/tests/test_feature_executor_boundary.py`
 - **Files**: `claude/overnight/tests/test_feature_executor_boundary.py`
@@ -101,7 +101,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
   Test uses `ast.parse(Path("claude/overnight/feature_executor.py").read_text())`. Walk all nodes — for `ast.ImportFrom` nodes check `node.module` does not start with `"claude.overnight.batch_runner"` or `"claude.overnight.orchestrator"`. For `ast.Import` nodes check no `alias.name` starts with those prefixes. Use `unittest.TestCase`. Module docstring: "Enforces that feature_executor.py does not import from batch_runner or orchestrator — prevents circular imports."
   Pattern: existing boundary tests in the codebase for reference (check `tests/` for ast-based test patterns if any exist).
 - **Verification**: `pytest claude/overnight/tests/test_feature_executor_boundary.py -v` — pass if exits 0.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 6: Update test imports and patch paths — `test_idempotency.py`, `test_exit_report.py`, `test_brain.py`, `feature_result_variants.py`
 - **Files**:
@@ -126,7 +126,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 
   **feature_result_variants.py** (line 6): `from cortex_command.overnight.batch_runner import FeatureResult` → `from cortex_command.overnight.types import FeatureResult`.
 - **Verification**: `pytest claude/overnight/tests/test_idempotency.py claude/overnight/tests/test_exit_report.py claude/overnight/tests/test_brain.py -v` — pass if exits 0 with all tests passing.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 7: Update `claude/overnight/tests/test_lead_unit.py`
 - **Files**: `claude/overnight/tests/test_lead_unit.py`
@@ -151,7 +151,7 @@ Extract `execute_feature()` and ~600 LOC of helpers from `batch_runner.py` into 
 
   **TestAccumulateResultViaBatch** (class around line 370): leave `patch.object(batch_runner_module, "execute_feature", ...)` unchanged (lines 378, 464). The re-export works because `_run_one` calls `execute_feature` as a bare name resolved via `batch_runner.__dict__` at call time — patching `batch_runner_module.execute_feature` replaces that entry, so the lookup inside `_run_one` finds the mock. Do not rewrite `_run_one` to call `feature_executor.execute_feature(...)` directly, as that would bypass this patch mechanism.
 - **Verification**: `just test` — pass if exits 0 with all tests passing.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Verification Strategy
 

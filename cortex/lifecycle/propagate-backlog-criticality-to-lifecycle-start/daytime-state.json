@@ -1,0 +1,38 @@
+{
+  "session_id": "4adf18d0-f2e1-4ca4-8339-d70b85a3447c",
+  "plan_ref": "/Users/charlie.hall/Workspaces/cortex-command/cortex/lifecycle/propagate-backlog-criticality-to-lifecycle-start/plan.md",
+  "plan_hash": null,
+  "current_round": 1,
+  "phase": "executing",
+  "features": {
+    "propagate-backlog-criticality-to-lifecycle-start": {
+      "status": "running",
+      "round_assigned": 1,
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "deferred_questions": 0,
+      "spec_path": null,
+      "plan_path": null,
+      "backlog_id": null,
+      "recovery_attempts": 0,
+      "recovery_depth": 0,
+      "repo_path": null,
+      "intra_session_blocked_by": []
+    }
+  },
+  "round_history": [],
+  "started_at": "2026-05-18T16:18:07.860389+00:00",
+  "updated_at": "2026-05-18T16:18:07.860392+00:00",
+  "paused_from": null,
+  "paused_reason": null,
+  "integration_branch": null,
+  "integration_branches": {},
+  "worktree_path": null,
+  "project_root": null,
+  "integration_worktrees": {},
+  "scheduled_start": null,
+  "integration_pr_flipped_once": false,
+  "integration_degraded": false,
+  "schema_version": 1
+}

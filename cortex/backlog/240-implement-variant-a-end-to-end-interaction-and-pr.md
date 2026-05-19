@@ -2,19 +2,22 @@
 schema_version: "1"
 uuid: cfc426e7-5325-4a05-b6a0-bc1a97ee50c3
 title: "Implement Variant A end-to-end (interaction model + PR-creation hook)"
-status: backlog
+status: refined
 priority: high
 type: feature
 created: 2026-05-18
 updated: 2026-05-18
 parent: "237"
-blocked-by: ["239"]
+blocked-by: []
 tags: [lifecycle, worktree-interactive, daytime-swap, refactor, pr]
-areas: [skills, lifecycle, python]
+areas: [lifecycle]
 discovery_source: cortex/research/swap-daytime-autonomous-for-worktree-interactive/research.md
 session_id: null
 lifecycle_phase: null
 lifecycle_slug: null
+complexity: complex
+criticality: high
+spec: cortex/lifecycle/implement-variant-a-end-to-end/spec.md
 ---
 
 ## Role
