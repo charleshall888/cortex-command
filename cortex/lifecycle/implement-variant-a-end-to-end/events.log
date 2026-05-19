@@ -10,3 +10,8 @@
 {"ts": "2026-05-18T22:25:00Z", "event": "phase_transition", "feature": "implement-variant-a-end-to-end", "from": "specify", "to": "plan"}
 {"schema_version": 1, "ts": "2026-05-19T02:46:41Z", "event": "plan_approved", "feature": "implement-variant-a-end-to-end"}
 {"ts": "2026-05-19T02:46:41Z", "event": "phase_transition", "feature": "implement-variant-a-end-to-end", "from": "plan", "to": "implement"}
+{"ts": "2026-05-19T03:07:55Z", "event": "batch_dispatch", "feature": "implement-variant-a-end-to-end", "batch": 2, "tasks": [9, 11, 14], "note": "task 10 satisfied de facto by task 8 builder; batches 2 and 3 collapsed since deps allow"}
+{"ts": "2026-05-19T03:23:06Z", "event": "phase_transition", "feature": "implement-variant-a-end-to-end", "tier": "complex", "from": "implement", "to": "review"}
+{"ts": "2026-05-19T10:47:14Z", "event": "review_verdict", "feature": "implement-variant-a-end-to-end", "verdict": "APPROVED", "cycle": 1, "requirements_drift": "none"}
+{"ts": "2026-05-19T10:47:14Z", "event": "phase_transition", "feature": "implement-variant-a-end-to-end", "from": "review", "to": "complete"}
+{"ts": "2026-05-19T11:13:17Z", "event": "feature_complete", "feature": "implement-variant-a-end-to-end", "tasks_total": 14, "rework_cycles": 1}

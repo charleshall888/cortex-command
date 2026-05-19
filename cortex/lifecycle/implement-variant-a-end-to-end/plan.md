@@ -32,7 +32,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Spec R4. Start from the eight ticket-named sites in `research.md` § "The eight named writer sites — verified state" and add any additional sites surfaced by call-graph audit. The classification informs reviewers that no parameter refactor is planned (Phase 3 routes via the new CLI helper instead); the size signal informs the Task 3 gate.
 - **Verification**: `test -f cortex/lifecycle/implement-variant-a-end-to-end/writer-sites.md` — pass if exit 0; `grep -c "^site_count: " cortex/lifecycle/implement-variant-a-end-to-end/writer-sites.md` = 1 — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 2: Characterization tests pinning current writer-site behavior
 - **Files**: `tests/test_variant_a_writer_sites_baseline.py` (new), or per-module additions to existing test files where suitable.
@@ -41,7 +41,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: complex
 - **Context**: Spec R5. Pattern reference: env-var assertion structure in `cortex_command/tests/test_common.py:55-56`. Use `tmp_path` + `monkeypatch.chdir`/`monkeypatch.setenv` per case.
 - **Verification**: `just test` — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 3: Inventory-size operator gate
 - **Files**: `cortex/lifecycle/implement-variant-a-end-to-end/phase-1-gate.md` (new) — a short structured note that records the inventory size and the gate decision (auto-passed vs surfaced-to-operator).
@@ -50,7 +50,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Resolves the critical-review A-class objection that the Risks-bullet mitigation "surface back at end of Task 1" had no executor. This task is the executor. The threshold is heuristic, not specced — chosen because the plan as written assumes ≲10 sites; a doubling justifies operator attention.
 - **Verification**: `test -f cortex/lifecycle/implement-variant-a-end-to-end/phase-1-gate.md` — pass if exit 0; `grep -E "^decision: (auto-passed|surface-to-operator)$" cortex/lifecycle/implement-variant-a-end-to-end/phase-1-gate.md` returns 1 line — pass if exit 0.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 4: Extend `cortex init` to register worktree base in `allowWrite` and `additionalDirectories`
 - **Files**: `cortex_command/init/handler.py`
@@ -59,7 +59,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Spec R6. Pattern reference: existing umbrella registration at `cortex_command/init/handler.py:194-198` (Step 7). Reuse the existing merge helpers — additive only.
 - **Verification**: `grep -c "additionalDirectories" cortex_command/init/handler.py` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 5: Tests for `cortex init` worktree-base registration
 - **Files**: `cortex_command/init/tests/test_settings_merge.py` (additions) or new sibling test file under `cortex_command/init/tests/`.
@@ -68,7 +68,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Spec R6 acceptance. Pattern reference: fixtures in `cortex_command/init/tests/test_settings_merge.py:954`. Use `tmp_path` + `monkeypatch.setenv("HOME", ...)` to isolate the user settings path.
 - **Verification**: `uv run python -m pytest cortex_command/init/tests/ -k "worktree_base"` — pass if exit 0 and at least one test in the selection passes.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 6: Add `_resolve_user_project_root_from_cwd()` helper
 - **Files**: `cortex_command/common.py`
@@ -77,7 +77,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Spec R1, R2. Existing function at `cortex_command/common.py:55-103` retains its env-first contract — do not modify. Reuse the existing walk-up loop body (extract into a shared private helper if natural, otherwise duplicate the loop).
 - **Verification**: `grep -c "def _resolve_user_project_root_from_cwd" cortex_command/common.py` = 1 — pass if count = 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 7: Tests for `_resolve_user_project_root_from_cwd()`
 - **Files**: `cortex_command/tests/test_common.py`
@@ -86,7 +86,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Spec R2 acceptance. Pattern reference: `cortex_command/tests/test_common.py:55-56`. Use `tmp_path` + a fake `.git` file (worktree-shaped) + `monkeypatch.setenv("CORTEX_REPO_ROOT", ...)`.
 - **Verification**: `uv run python -m pytest cortex_command/tests/test_common.py -k "from_cwd"` — pass if exit 0 and at least one test in the selection passes.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 8: Build `cortex-lifecycle-event log` CLI helper
 - **Files**: `cortex_command/lifecycle_event.py` (new), `pyproject.toml` (add `cortex-lifecycle-event` to `[project.scripts]`), plus one in-scope wiring reference (a `justfile` recipe `emit-event` is the lightest option, but the implementer may instead add a `docs/internals/events.md` mention — either satisfies the SKILL.md-to-bin parity rule). Eventual consumer wiring lands in Task 11.
@@ -95,7 +95,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: complex
 - **Context**: This is the load-bearing production caller of Task 6's helper — the resolver is exercised in production, not test-only. Pattern reference: `cortex_command/interactive_lock.py:92-102` (`_emit_event` helper). The console-script entry-point pattern is documented in `cortex/requirements/project.md:35` ("Skill-helper modules"). Same task adds one in-scope wiring reference to satisfy the parity check (`bin/cortex-check-parity`); the recommended choice is a `justfile` recipe (`emit-event` that proxies to the CLI) because the justfile is already in-scope per the parity rule.
 - **Verification**: `grep -c "cortex-lifecycle-event" pyproject.toml` ≥ 1 — pass if count ≥ 1; `grep -c "cortex-lifecycle-event\|emit-event" justfile` ≥ 1 OR `grep -c "cortex-lifecycle-event" docs/internals/events.md` ≥ 1 — pass if either count ≥ 1 (one in-scope reference suffices).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 9: Tests for `cortex-lifecycle-event log`
 - **Files**: `cortex_command/tests/test_lifecycle_event.py` (new)
@@ -104,7 +104,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: complex
 - **Context**: Use `tmp_path` + `monkeypatch.chdir` for CWD control + `monkeypatch.setenv("CORTEX_REPO_ROOT", ...)` to verify CWD-override behavior. Pattern reference: existing test fixtures in `cortex_command/tests/`.
 - **Verification**: `uv run python -m pytest cortex_command/tests/test_lifecycle_event.py` — pass if exit 0 and at least one test in the file passes.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 10: Register `interactive_worktree_entered` event in events registry
 - **Files**: `bin/.events-registry.md`
@@ -113,7 +113,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Spec R7 acceptance gates on `grep -c "interactive_worktree_entered" bin/.events-registry.md` = 1. Producer is the new module from Task 8 — making this entry consistent with adjacent entries (`interactive_lock_acquired`, `pr_opened`, `feature_complete`) which point at executable producers.
 - **Verification**: `grep -c "interactive_worktree_entered" bin/.events-registry.md` = 1 — pass if count = 1; `grep -c "cortex_command/lifecycle_event" bin/.events-registry.md` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 11: Wire cd handoff + migration pre-flight + CLI emission into `implement.md` §1a
 - **Files**: `skills/lifecycle/references/implement.md`. Plugin mirror at `plugins/cortex-core/skills/lifecycle/references/implement.md` regenerates via the pre-commit hook — edit canonical source only.
@@ -127,7 +127,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Spec R7. The pre-flight check resolves the critical-review B-class objection that the Risks-bullet migration gap was unmitigated. The CLI emission resolves the A-class objection that the emission mechanism was unspecified. Kept-pauses parity: if line shifts cause the inventory anchor at `skills/lifecycle/SKILL.md:60` or `implement.md:22` to move >35 lines, update `skills/lifecycle/SKILL.md` "Kept user pauses" inventory in this task.
 - **Verification**: `grep -c "cortex-lifecycle-event log" skills/lifecycle/references/implement.md` ≥ 1 — pass if count ≥ 1; `grep -c "Variant A's cd affects only orchestrator-session Bash" skills/lifecycle/references/implement.md` = 1 — pass if count = 1; `grep -c "settings.local.json" skills/lifecycle/references/implement.md` ≥ 1 — pass if count ≥ 1; `just test` — pass if exit 0 (kept-pauses parity included).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 12: Add advisory worktree-detection prose to `complete.md` Step 3
 - **Files**: `skills/lifecycle/references/complete.md`. Plugin mirror regenerates via pre-commit hook.
@@ -136,7 +136,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Spec R9. Public API reference: `cortex_command/interactive_lock.py` `read_lock`. Pattern reference: existing cd-out-or-bail guard at `complete.md:159-163` (Step 8).
 - **Verification**: `grep -c "git rev-parse --show-toplevel" skills/lifecycle/references/complete.md` ≥ 1 — pass if count ≥ 1; `grep -c "interactive.pid" skills/lifecycle/references/complete.md` ≥ 1 — pass if count ≥ 1.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 13: Wire cd-in-then-out around `/cortex-core:pr` in `complete.md` Step 3
 - **Files**: `skills/lifecycle/references/complete.md`. Plugin mirror regenerates via pre-commit hook.
@@ -145,7 +145,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: simple
 - **Context**: Spec R8. Pattern reference: existing Step 3 prose. Kept-pauses parity: if line shifts cause `complete.md` inventory anchors to move >35 lines, update `skills/lifecycle/SKILL.md` "Kept user pauses" inventory in this task.
 - **Verification**: `grep -c "_origin_pwd" skills/lifecycle/references/complete.md` ≥ 2 — pass if count ≥ 2; `just test` — pass if exit 0 (kept-pauses parity included).
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ### Task 14: Add detection-case tests in `test_complete_pr_routing.py`
 - **Files**: `tests/test_complete_pr_routing.py` (new)
@@ -154,7 +154,7 @@ Wire the orchestrator session's mid-lifecycle `cd` into the interactive worktree
 - **Complexity**: complex
 - **Context**: Spec R9 acceptance. Mock `cortex_command.interactive_lock.read_lock` and `subprocess.run` for `git rev-parse --show-toplevel`. Use `tmp_path` + `monkeypatch.chdir` to control `pwd`.
 - **Verification**: `uv run python -m pytest tests/test_complete_pr_routing.py` — pass if exit 0 and at least one test in the file passes.
-- **Status**: [ ] pending
+- **Status**: [x] completed
 
 ## Risks
 

@@ -2,11 +2,11 @@
 schema_version: "1"
 uuid: cfc426e7-5325-4a05-b6a0-bc1a97ee50c3
 title: "Implement Variant A end-to-end (interaction model + PR-creation hook)"
-status: refined
+status: complete
 priority: high
 type: feature
 created: 2026-05-18
-updated: 2026-05-18
+updated: 2026-05-19
 parent: "237"
 blocked-by: []
 tags: [lifecycle, worktree-interactive, daytime-swap, refactor, pr]
