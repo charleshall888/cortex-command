@@ -1362,22 +1362,28 @@ def parse_exit_reports(feature_slug: str, lifecycle_dir: Path) -> list[dict]:
     return out
 
 
-def parse_daytime_state(feature_slug: str, lifecycle_dir: Path) -> dict | None:
-    """Return parsed ``daytime-state.json`` dict, or None when absent."""
-    path = lifecycle_dir / feature_slug / "daytime-state.json"
+def parse_feature_pr_artifact(lifecycle_dir: Path, feature_slug: str) -> dict | None:
+    """Return parsed ``pr.json`` dict for a feature, or None when absent or invalid.
+
+    Reads ``lifecycle_dir/{feature_slug}/pr.json``. The canonical schema
+    (per ``skills/lifecycle/references/complete.md``) contains ``number``,
+    ``url``, ``head_branch``, ``opened_at``, and ``repo``. Only ``number``
+    and ``url`` are required for template rendering; additional fields are
+    tolerated without raising.
+
+    Returns ``None`` on ``FileNotFoundError``, ``json.JSONDecodeError``, or
+    when either required key is absent.
+    """
+    path = lifecycle_dir / feature_slug / "pr.json"
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
-
-
-def parse_daytime_result(feature_slug: str, lifecycle_dir: Path) -> dict | None:
-    """Return parsed ``daytime-result.json`` dict, or None when absent."""
-    path = lifecycle_dir / feature_slug / "daytime-result.json"
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    if not isinstance(data, dict):
         return None
+    if "number" not in data or "url" not in data:
+        return None
+    return data
 
 
 def parse_learnings_progress(

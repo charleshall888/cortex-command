@@ -30,9 +30,8 @@ from cortex_command.dashboard.data import (
     parse_checkpoints_per_feature,
     parse_clarify_critic,
     parse_complexity_overrides,
-    parse_daytime_result,
-    parse_daytime_state,
     parse_dispatch_details,
+    parse_feature_pr_artifact,
     parse_escalations,
     parse_exit_reports,
     parse_feature_cost_delta,
@@ -103,8 +102,7 @@ class DashboardState:
     feature_complexities: dict = field(default_factory=dict)
     feature_escalations: dict = field(default_factory=dict)
     feature_exit_reports: dict = field(default_factory=dict)
-    feature_daytime_state: dict = field(default_factory=dict)
-    feature_daytime_result: dict = field(default_factory=dict)
+    feature_pr: dict = field(default_factory=dict)
     feature_learnings: dict = field(default_factory=dict)
     feature_clarify_critic: dict = field(default_factory=dict)
     feature_complexity_overrides: dict = field(default_factory=dict)
@@ -266,7 +264,7 @@ async def _poll_state_files(state: DashboardState, root: Path) -> None:
                 )
 
                 # Per-feature deep state: escalations, exit reports,
-                # daytime artifacts, learnings, clarify critic, tool usage.
+                # learnings, clarify critic, tool usage.
                 open_q_total = 0
                 for slug in features_raw:
                     escalations = parse_escalations(slug, project_lifecycle_dir)
@@ -275,12 +273,9 @@ async def _poll_state_files(state: DashboardState, root: Path) -> None:
                     state.feature_exit_reports[slug] = parse_exit_reports(
                         slug, project_lifecycle_dir
                     )
-                    dts = parse_daytime_state(slug, project_lifecycle_dir)
-                    if dts is not None:
-                        state.feature_daytime_state[slug] = dts
-                    dtr = parse_daytime_result(slug, project_lifecycle_dir)
-                    if dtr is not None:
-                        state.feature_daytime_result[slug] = dtr
+                    pr = parse_feature_pr_artifact(project_lifecycle_dir, slug)
+                    if pr is not None:
+                        state.feature_pr[slug] = pr
                     learnings = parse_learnings_progress(slug, project_lifecycle_dir)
                     if learnings is not None:
                         state.feature_learnings[slug] = learnings

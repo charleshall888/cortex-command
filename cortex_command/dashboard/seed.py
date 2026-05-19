@@ -589,7 +589,7 @@ def write_feature_files(repo_root: Path, slug: str, status: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Extended per-feature fixtures (escalations, exit-reports, daytime artifacts,
+# Extended per-feature fixtures (escalations, exit-reports,
 # learnings, enriched events.log) — added for the new dashboard panels.
 # ---------------------------------------------------------------------------
 
@@ -822,73 +822,6 @@ def write_exit_reports(repo_root: Path, slug: str, status: str) -> int:
 
     print(f"  wrote cortex/lifecycle/{slug}/exit-reports/ ({len(reports)} reports)")
     return len(reports)
-
-
-def write_daytime_artifacts(repo_root: Path, slug: str, status: str) -> list[str]:
-    """Write daytime-state.json and/or daytime-result.json for a feature.
-
-    Returns list of relative filenames written.
-    """
-    feature_dir = repo_root / "cortex" / "lifecycle" / slug
-    feature_dir.mkdir(parents=True, exist_ok=True)
-
-    dispatch_id = _FEATURE_DISPATCH_IDS[slug]
-    written: list[str] = []
-
-    if status == "running":
-        # daytime-state for currently-executing feature
-        state = {
-            "schema_version": 1,
-            "dispatch_id": dispatch_id,
-            "feature": slug,
-            "phase": "executing",
-            "recovery_attempts": 0,
-            "recovery_depth": 0,
-            "started_at": ts_at(40),
-            "updated_at": ts_at(0),
-        }
-        path = feature_dir / "daytime-state.json"
-        path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
-        written.append("daytime-state.json")
-
-    if status == "merged":
-        pr_num = _FEATURE_PR_NUMBER[slug]
-        result = {
-            "schema_version": 1,
-            "dispatch_id": dispatch_id,
-            "feature": slug,
-            "start_ts": ts_at(88 if slug == "seed-feature-alpha" else 85),
-            "end_ts": ts_at(78 if slug == "seed-feature-alpha" else 75),
-            "outcome": "merged",
-            "terminated_via": "completion",
-            "deferred_files": [],
-            "error": None,
-            "pr_url": f"https://github.com/example/repo/pull/{pr_num}",
-        }
-        path = feature_dir / "daytime-result.json"
-        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-        written.append("daytime-result.json")
-
-    if status == "failed":
-        result = {
-            "schema_version": 1,
-            "dispatch_id": dispatch_id,
-            "feature": slug,
-            "start_ts": ts_at(41),
-            "end_ts": ts_at(28),
-            "outcome": "failed",
-            "terminated_via": "agent_exit",
-            "deferred_files": [],
-            "error": "Agent exited with non-zero status",
-            "pr_url": None,
-        }
-        path = feature_dir / "daytime-result.json"
-        path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-        written.append("daytime-result.json")
-
-    if written:
-        print(f"  wrote cortex/lifecycle/{slug}/{{{','.join(written)}}}")
-    return written
 
 
 def write_learnings_progress(repo_root: Path, slug: str, status: str) -> bool:
@@ -1181,9 +1114,6 @@ def write_all(repo_root: Path, session_id: str) -> None:
         report_count = write_exit_reports(repo_root, slug, status)
         for i in range(1, report_count + 1):
             written_paths.append(feature_dir / "exit-reports" / f"{i}.json")
-
-        for fname in write_daytime_artifacts(repo_root, slug, status):
-            written_paths.append(feature_dir / fname)
 
         if write_learnings_progress(repo_root, slug, status):
             written_paths.append(feature_dir / "learnings" / "progress.txt")

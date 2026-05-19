@@ -36,8 +36,6 @@
     {% set tool_usage = state.feature_tool_usage.get(slug, {}) %}
     {% set checkpoints = state.feature_checkpoints.get(slug, []) %}
     {% set retries = state.feature_retries.get(slug, 0) %}
-    {% set daytime_result = state.feature_daytime_result.get(slug) %}
-    {% set daytime_state = state.feature_daytime_state.get(slug) %}
     {% set clarify = state.feature_clarify_critic.get(slug) %}
     {% set learnings = state.feature_learnings.get(slug) %}
     {% set complexity_overrides = state.feature_complexity_overrides.get(slug, []) %}
@@ -124,21 +122,7 @@
             {% if is_slow %}<dt>flag</dt><dd>slow vs baseline (&gt;3× median)</dd>{% endif %}
             {% if feat.deferred_questions %}<dt>deferred questions</dt><dd>{{ feat.deferred_questions }}</dd>{% endif %}
             {% if feat.error %}<dt>error</dt><dd style="color: var(--c-state-failed);">{{ feat.error }}</dd>{% endif %}
-            {% if daytime_state %}
-              <dt>daytime state</dt>
-              <dd>
-                {% if daytime_state.get('phase') %}
-                  {{ daytime_state.get('phase') }}
-                  {% if daytime_state.get('dispatch_id') %}
-                    {% set _did = daytime_state.get('dispatch_id') | string %}
-                    · <code class="inline-code" title="{{ _did }}">disp_{{ _did[:6] }}</code>
-                  {% endif %}
-                {% else %}
-                  {{ (daytime_state | tojson)[:160] }}
-                {% endif %}
-              </dd>
-            {% endif %}
-            {% if daytime_result and daytime_result.get('pr_url') %}<dt>PR</dt><dd><a href="{{ daytime_result.get('pr_url') }}" target="_blank" rel="noopener" class="text-brand-primary">view ↗</a></dd>{% endif %}
+            {% if state.feature_pr.get(slug) %}<dt>PR</dt><dd><a href="{{ state.feature_pr[slug].url }}" target="_blank" rel="noopener" class="text-brand-primary">PR #{{ state.feature_pr[slug].number }}</a></dd>{% endif %}
           </dl>
 
           {% if complexity_overrides %}
@@ -242,7 +226,6 @@
             {% if feat.spec_path %}<a class="card-link" href="#" title="{{ feat.spec_path }}">spec.md</a>{% endif %}
             {% if feat.plan_path %}<a class="card-link" href="#" title="{{ feat.plan_path }}">plan.md</a>{% endif %}
             {% if feat.backlog_id %}<a class="card-link" href="#" title="backlog item">backlog #{{ feat.backlog_id }}</a>{% endif %}
-            {% if daytime_result and daytime_result.get('pr_url') %}<a class="card-link" href="{{ daytime_result.pr_url }}" target="_blank" rel="noopener">PR ↗</a>{% endif %}
           </div>
         </div>
       </div>
