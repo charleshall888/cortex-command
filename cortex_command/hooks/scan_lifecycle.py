@@ -26,6 +26,48 @@ import sys
 from pathlib import Path
 
 
+def _encode_phase(phase: str, checked: int, total: int, cycle: int) -> str:
+    """Encode (phase, checked, total, cycle) into the wire-format string.
+
+    Mirrors the bash ``encode_phase`` helper at
+    ``hooks/cortex-scan-lifecycle.sh`` lines 184-200. Pure function: no
+    I/O, no side effects. Downstream code consumes the encoded string to
+    produce phase labels like ``"Phase: Implement (3/5 tasks done)"``.
+
+    Encoding rules per R3:
+
+    * ``phase == "implement"`` and ``total > 0``  -> ``"implement:<checked>/<total>"``
+    * ``phase == "implement"`` and ``total == 0`` -> ``"implement:0/0"``
+    * ``phase == "implement-rework"``             -> ``"implement-rework:<cycle>"``
+    * any other phase                             -> bare ``phase`` string
+
+    Parameters
+    ----------
+    phase:
+        Lifecycle phase identifier (e.g. ``"research"``, ``"implement"``,
+        ``"implement-rework"``).
+    checked:
+        Number of completed implementation tasks.
+    total:
+        Total implementation tasks.
+    cycle:
+        Implement-rework cycle index.
+
+    Returns
+    -------
+    str
+        The wire-format encoded phase string.
+    """
+
+    if phase == "implement":
+        if total > 0:
+            return f"implement:{checked}/{total}"
+        return "implement:0/0"
+    if phase == "implement-rework":
+        return f"implement-rework:{cycle}"
+    return phase
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for ``cortex hooks scan-lifecycle``.
 
