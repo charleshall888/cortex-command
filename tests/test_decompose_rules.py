@@ -24,6 +24,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent
 DECOMPOSE_MD = REPO_ROOT / "skills" / "discovery" / "references" / "decompose.md"
+BODY_TEMPLATE_MD = REPO_ROOT / "skills" / "backlog-author" / "references" / "body-template.md"
 
 
 def _strip_html_comments(text: str) -> str:
@@ -189,15 +190,26 @@ def test_zero_piece_branch_decomposed_md_still_written(sections: dict[str, str])
 # ---- Uniform body template — Role/Integration/Edges/Touch-points (3 tests) ----
 
 def test_uniform_template_four_section_headers_present(raw_text: str) -> None:
-    """The uniform body template names all four section headers at column 0."""
-    # The template block in §2 lists these as `^## Role$`, `^## Integration$`, etc.
-    assert re.search(r"^## Role$", raw_text, re.MULTILINE), "uniform template missing `## Role`"
-    assert re.search(r"^## Integration$", raw_text, re.MULTILINE), (
-        "uniform template missing `## Integration`"
+    """The uniform body template names all five section headers at column 0.
+
+    Post-Task-11, the template lives in `skills/backlog-author/references/body-template.md`;
+    decompose.md references it by path. This test verifies (a) decompose.md links to the
+    canonical template location and (b) the canonical template file names the five headers.
+    """
+    assert "backlog-author/references/body-template.md" in raw_text, (
+        "decompose.md must reference the canonical template at "
+        "skills/backlog-author/references/body-template.md"
     )
-    assert re.search(r"^## Edges$", raw_text, re.MULTILINE), "uniform template missing `## Edges`"
-    assert re.search(r"^## Touch points", raw_text, re.MULTILINE), (
-        "uniform template missing `## Touch points`"
+    assert BODY_TEMPLATE_MD.exists(), f"body-template.md not found at {BODY_TEMPLATE_MD}"
+    template_text = BODY_TEMPLATE_MD.read_text()
+    assert re.search(r"^## Why$", template_text, re.MULTILINE), "template missing `## Why`"
+    assert re.search(r"^## Role$", template_text, re.MULTILINE), "template missing `## Role`"
+    assert re.search(r"^## Integration$", template_text, re.MULTILINE), (
+        "template missing `## Integration`"
+    )
+    assert re.search(r"^## Edges$", template_text, re.MULTILINE), "template missing `## Edges`"
+    assert re.search(r"^## Touch points", template_text, re.MULTILINE), (
+        "template missing `## Touch points`"
     )
 
 

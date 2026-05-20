@@ -104,7 +104,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: `Justfile` lines 542–575 (build-plugin recipe) regenerate the plugin mirror byte-identically from canonical sources. The pre-commit hook also runs this so editing the mirror directly is forbidden. The parity test scans for mirror-vs-canonical drift; new files must be picked up automatically by the existing parity scan (which walks `skills/` and `bin/`).
 - **Verification**: `just build-plugin` exits 0 AND `test -f plugins/cortex-core/skills/backlog-author/SKILL.md` AND `diff -q skills/backlog-author/SKILL.md plugins/cortex-core/skills/backlog-author/SKILL.md` exits 0 AND `just test` exits 0 — pass if all four hold.
-- **Status**: [ ] pending
+- **Status**: [x] done (also added backlog-author to build-plugin SKILLS manifest — surfaced gap)
 
 ### Task 11: Extract decompose.md §2 template to backlog-author (Req 7a)
 - **Files**: `skills/discovery/references/decompose.md`
@@ -122,7 +122,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: This sub-criterion (7b) is decoupled from 7a's template extraction but lives in the same file. The §5 prose is documentation of the scanner contract — it must mirror the scanner's actual `FORBIDDEN_SECTIONS` constant set. Without this update, the docs and the scanner disagree, which is a parity defect waiting to bite future contributors.
 - **Verification**: `awk '/^## /{section=$0} /Forbidden sections/{print section": "$0}' skills/discovery/references/decompose.md | grep -c 'Why'` ≥ 1 — pass if it returns success.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 13: Extend decompose.md §3 R15 revise-piece walk to five sections (Req 7c)
 - **Files**: `skills/discovery/references/decompose.md`
@@ -131,7 +131,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: R15's revise-piece is the user's interactive path to resolve LEX-1 flags inside the batch-review gate. With Task 5's scanner extension, Why is now a forbidden-section; without this update, a Why-flagged ticket cannot be resolved through revise-piece because the walk doesn't visit Why.
 - **Verification**: `awk '/revise.piece/,/^### |^## /' skills/discovery/references/decompose.md | grep -cE 'Why.*Role.*Integration.*Edges|## Why'` ≥ 1 — pass if the walk references Why explicitly.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ### Task 14: Wire morning-review to `/backlog-author compose`
 - **Files**: `skills/morning-review/SKILL.md`
@@ -176,7 +176,7 @@ Phase 1 ships the shared `/backlog-author` sub-skill (with structurally-separate
 - **Complexity**: simple
 - **Context**: Audit prose-mention surfaces, not active callers (Tasks 14–17 cover the active callers). Docs and requirements files may reference creation paths informationally — those can be either rewritten for consistency or annotated as intentional bypasses. The acceptance criterion in spec Requirement 9 codifies the "no untreated matches remain" rule.
 - **Verification**: `grep -rln 'backlog add\|cortex-create-backlog-item\|create a backlog\|add to backlog\|file a ticket\|open a backlog item' skills/ docs/ cortex/requirements/ CLAUDE.md | xargs -I{} grep -L 'backlog new\|backlog-author\|intentional bypass' {}` returns no files — pass if the command produces empty output.
-- **Status**: [ ] pending
+- **Status**: [x] done
 
 ## Risks
 
