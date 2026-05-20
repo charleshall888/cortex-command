@@ -820,3 +820,103 @@ def test_retry_feedback_covers_example_tokens() -> None:
         f"_GATE_BRIEF_EXAMPLE_TOKENS: {missing}\n"
         f"Rendered prose:\n{rendered}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 9: canonical-floor parity test (validator side) — Req 8
+#
+# Pins the validator's accepted vocabulary against a FROZEN LITERAL canonical
+# token set declared inside this test file (NOT imported from
+# cortex_command.discovery). This is the durability guard against the
+# regression mode the previous spec draft missed: even if a future commit
+# shrinks both ``_GATE_BRIEF_EXAMPLE_TOKENS`` (Task 3) AND the validator's
+# anchor sets (Task 4) in lockstep, this test still fails because the floor
+# is declared independently in this file.
+#
+# DO NOT import the canonical floor from cortex_command/discovery — doing so
+# would defeat the lockstep regression guard (per spec Req 8).
+# ---------------------------------------------------------------------------
+
+
+# Frozen at this spec's approval (verbatim from spec Reqs 3-5):
+# 12 decision tokens + 9 alternatives tokens + 9 tradeoff tokens = 30 tokens.
+_CANONICAL_FLOOR_DECISION_TOKENS = (
+    "decide",
+    "decided",
+    "decision",
+    "decisions",
+    "chose",
+    "chosen",
+    "concluded",
+    "settled",
+    "selected",
+    "picked",
+    "opted",
+    "agreed",
+)
+
+_CANONICAL_FLOOR_ALTERNATIVES_TOKENS = (
+    "alternative",
+    "alternatives",
+    "option",
+    "options",
+    "considered",
+    "considerations",
+    "weighed",
+    "evaluated",
+    "rejected",
+)
+
+_CANONICAL_FLOOR_TRADEOFF_TOKENS = (
+    "tradeoff",
+    "trade-off",
+    "cost",
+    "drawback",
+    "downside",
+    "sacrifice",
+    "consequence",
+    "compromise",
+    "risk",
+)
+
+
+def _minimal_brief_for(anchor: str, token: str) -> str:
+    """Build a minimal brief that places ``token`` in ``anchor``'s sentence and
+    fills the other two anchors with canonical tokens.
+
+    The decision sentence uses ``chose``; alternatives uses ``options were
+    weighed``; tradeoff uses ``compromise``. When ``token`` belongs to one of
+    those anchors, that anchor's slot is rewritten to host the token instead.
+    """
+    if anchor == "decision":
+        return f"We {token} on X. Two options were weighed. The compromise was Y."
+    if anchor == "alternatives":
+        return f"We chose X. Two {token} shaped the path. The compromise was Y."
+    if anchor == "tradeoff":
+        return f"We chose X. Two options were weighed. The {token} was Y."
+    raise ValueError(f"Unknown anchor: {anchor!r}")
+
+
+_CANONICAL_FLOOR_CASES = (
+    [("decision", t) for t in _CANONICAL_FLOOR_DECISION_TOKENS]
+    + [("alternatives", t) for t in _CANONICAL_FLOOR_ALTERNATIVES_TOKENS]
+    + [("tradeoff", t) for t in _CANONICAL_FLOOR_TRADEOFF_TOKENS]
+)
+
+
+@pytest.mark.parametrize("anchor,token", _CANONICAL_FLOOR_CASES)
+def test_validate_brief_canonical_floor(anchor: str, token: str) -> None:
+    """validate_brief() accepts every token in the frozen canonical floor.
+
+    The floor (30 tokens) is declared as a frozen literal in this test file,
+    independent of ``cortex_command.discovery``. If the validator's anchor
+    set shrinks below this floor (alone or in lockstep with
+    ``_GATE_BRIEF_EXAMPLE_TOKENS``), this test fails.
+    """
+    brief = _minimal_brief_for(anchor, token)
+    result = validate_brief(brief)
+    assert result == (True, ""), (
+        f"Expected validate_brief to accept canonical {anchor} token "
+        f"{token!r} and return (True, ''), but got {result!r}.\n"
+        f"Brief: {brief!r}"
+    )
