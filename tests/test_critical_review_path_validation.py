@@ -3,14 +3,23 @@
 Covers the Requirement 9 path-validation gate at TWO layers:
 
   1. Module API — direct calls to ``validate_artifact_path`` / ``prepare_dispatch``:
-       (a) symlink rejection (Req 9d)
+       (a) direct-symlink whose realpath escapes the root: rejected with the
+           realpath endpoint named in the message (Req 9d / post-Phase-1
+           gate-policy Req 3)
+       (a') ancestor-symlink whose realpath endpoint still lives under the
+            root's realpath endpoint: accepted (post-Phase-1 under-root
+            scoping; the pre-Phase-1 ``realpath != abspath`` gate would
+            false-positive this case)
        (b) out-of-prefix rejection
        (c) feature-narrowing acceptance + rejection
        (d) ``lifecycle_root`` itself rejected (strict prefix)
        (e) valid path returns realpath
 
   2. CLI subprocess — ``python3 -m cortex_command.critical_review``:
-       (f) symlink rejected end-to-end (non-zero exit + stderr message)
+       (f) direct-symlink realpath-escaping-root rejected end-to-end
+           (non-zero exit + stderr message naming the realpath endpoint)
+       (f') ancestor-symlink-with-realpath-under-root accepted end-to-end
+            (exit 0 + JSON payload)
        (g) valid path returns exit 0 + JSON on stdout
 
 Each scenario is its own ``def test_*`` for granular failure reporting.
@@ -89,17 +98,62 @@ def lifecycle_layout(tmp_path: Path) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def test_module_api_rejects_symlink_with_realpath_in_message(lifecycle_layout: dict) -> None:
-    """Req 9d: symlink under lifecycle/ is rejected; message names the path and realpath."""
+def test_module_api_rejects_realpath_escaping_root(lifecycle_layout: dict) -> None:
+    """Req 3/Req 5 (post-Phase-1): a direct symlink whose realpath escapes the
+    lifecycle root is rejected. The stderr message must name the realpath
+    endpoint (not the literal symlink path) so callers can debug what the path
+    actually pointed at after resolution.
+    """
     evil = lifecycle_layout["evil_symlink"]
     root = lifecycle_layout["lifecycle_root"]
     with pytest.raises(ValueError) as exc_info:
         validate_artifact_path(str(evil), str(root))
     msg = str(exc_info.value)
-    # Message must name the offending path.
-    assert str(evil) in msg or "evil.md" in msg
-    # Message must name the realpath target (the symlink resolved to /etc/hostname).
-    assert "/etc/hostname" in msg or "realpath" in msg
+    # Contract: the message names the *realpath endpoint*, not the literal
+    # symlink path. On macOS ``/etc/hostname`` realpaths to
+    # ``/private/etc/hostname``; both endings are acceptable.
+    assert "/etc/hostname" in msg or "/private/etc/hostname" in msg, (
+        f"Expected realpath endpoint in rejection message; got {msg!r}"
+    )
+
+
+def test_module_api_accepts_ancestor_symlink_if_realpath_under_root(
+    tmp_path: Path,
+) -> None:
+    """Req 3 (post-Phase-1): a candidate path that traverses an *ancestor*
+    symlink is accepted as long as the candidate's realpath endpoint still
+    lives under the root's realpath endpoint.
+
+    Layout::
+
+        tmp_path/real/cortex/lifecycle/foo/spec.md   (real file)
+        tmp_path/via_link -> tmp_path/real           (ancestor symlink)
+
+    Validation is invoked with both the candidate and the root expressed
+    through the ancestor symlink (``tmp_path/via_link/...``). Under the
+    pre-Phase-1 ``realpath != abspath`` gate this would false-positive as
+    a symlinked path; under the under-root scoping replacement it is
+    accepted because both realpaths resolve under ``tmp_path/real``.
+    """
+    real_dir = tmp_path / "real"
+    feature_dir = real_dir / "cortex" / "lifecycle" / "foo"
+    feature_dir.mkdir(parents=True)
+    spec = feature_dir / "spec.md"
+    spec.write_text("hello via ancestor symlink\n", encoding="utf-8")
+
+    via_link = tmp_path / "via_link"
+    via_link.symlink_to(real_dir, target_is_directory=True)
+
+    # Both candidate and root traverse the ancestor symlink. The realpath
+    # endpoints both land under ``tmp_path/real/cortex/lifecycle``, so the
+    # under-root scoping check accepts.
+    candidate_via_link = via_link / "cortex" / "lifecycle" / "foo" / "spec.md"
+    root_via_link = via_link / "cortex" / "lifecycle"
+
+    resolved = validate_artifact_path(str(candidate_via_link), str(root_via_link))
+    # Return value is the realpath (resolved through the ancestor symlink).
+    assert resolved == str(spec.resolve())
+    assert isinstance(resolved, str)
 
 
 def test_module_api_rejects_path_outside_lifecycle_root(lifecycle_layout: dict) -> None:
@@ -183,8 +237,11 @@ def _run_cli(lifecycle_root: Path, *args: str) -> subprocess.CompletedProcess:
     )
 
 
-def test_cli_rejects_symlink_nonzero_exit_and_stderr(lifecycle_layout: dict) -> None:
-    """Req 9d end-to-end: CLI rejects a symlink path with non-zero exit + stderr message."""
+def test_cli_rejects_realpath_escaping_root(lifecycle_layout: dict) -> None:
+    """Req 3/Req 5 (post-Phase-1) end-to-end: CLI rejects a direct-symlink
+    candidate whose realpath escapes the lifecycle root. The stderr message
+    must name the realpath endpoint for caller-debuggability.
+    """
     evil = lifecycle_layout["evil_symlink"]
     root = lifecycle_layout["lifecycle_root"]
     result = _run_cli(root, "prepare-dispatch", str(evil))
@@ -192,11 +249,50 @@ def test_cli_rejects_symlink_nonzero_exit_and_stderr(lifecycle_layout: dict) -> 
         f"Expected non-zero exit; got {result.returncode}. "
         f"stdout={result.stdout!r} stderr={result.stderr!r}"
     )
+    stderr_lower = result.stderr.lower()
     # Stderr must carry the rejection diagnostic.
     assert (
-        "symlink" in result.stderr.lower()
-        or "path validation failed" in result.stderr.lower()
+        "symlink" in stderr_lower
+        or "path validation failed" in stderr_lower
     ), f"Expected rejection message in stderr; got {result.stderr!r}"
+    # Stderr must name the *realpath endpoint*, not just the literal
+    # symlink path — this is the caller-debuggability contract.
+    assert (
+        "/etc/hostname" in result.stderr
+        or "/private/etc/hostname" in result.stderr
+    ), f"Expected realpath endpoint in stderr; got {result.stderr!r}"
+
+
+def test_cli_accepts_ancestor_symlink_if_realpath_under_root(
+    tmp_path: Path,
+) -> None:
+    """Req 3 (post-Phase-1) end-to-end: CLI accepts a candidate whose path
+    traverses an *ancestor* symlink, as long as the realpath endpoint still
+    lives under the root's realpath endpoint.
+
+    See ``test_module_api_accepts_ancestor_symlink_if_realpath_under_root``
+    for the layout rationale.
+    """
+    real_dir = tmp_path / "real"
+    feature_dir = real_dir / "cortex" / "lifecycle" / "foo"
+    feature_dir.mkdir(parents=True)
+    spec = feature_dir / "spec.md"
+    spec.write_text("hello via ancestor symlink (cli)\n", encoding="utf-8")
+
+    via_link = tmp_path / "via_link"
+    via_link.symlink_to(real_dir, target_is_directory=True)
+
+    candidate_via_link = via_link / "cortex" / "lifecycle" / "foo" / "spec.md"
+    root_via_link = via_link / "cortex" / "lifecycle"
+
+    result = _run_cli(root_via_link, "prepare-dispatch", str(candidate_via_link))
+    assert result.returncode == 0, (
+        f"Expected exit 0; got {result.returncode}. "
+        f"stdout={result.stdout!r} stderr={result.stderr!r}"
+    )
+    payload = json.loads(result.stdout)
+    assert payload["resolved_path"] == str(spec.resolve())
+    assert payload["sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
 
 
 def test_cli_accepts_valid_path_and_emits_json(lifecycle_layout: dict) -> None:
