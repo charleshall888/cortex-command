@@ -732,21 +732,33 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
             except ValueError:
                 events_log_path = None
 
-    def _emit_event(status: str, word_count: int) -> None:
-        """Best-effort event emission; non-fatal on OSError."""
+    def _emit_event(
+        status: str,
+        word_count: int,
+        brief_text: str | None = None,
+    ) -> None:
+        """Best-effort event emission; non-fatal on OSError.
+
+        When ``status == "validation_failed"`` and ``brief_text`` is a
+        non-empty string, the event payload includes a ``brief_excerpt``
+        field containing the first 200 characters of the rejected brief.
+        Successful events (status ``"ok"`` / ``"empty"`` / pre-brief
+        failures) omit the field, keeping the schema backward-compatible
+        with legacy readers.
+        """
         if events_log_path is None:
             return
+        payload: dict = {
+            "ts": _now_iso(),
+            "event": "gate_brief_generated",
+            "status": status,
+            "brief_word_count": word_count,
+            "patterns_detected_count": 0,
+        }
+        if status == "validation_failed" and brief_text:
+            payload["brief_excerpt"] = brief_text[:200]
         try:
-            append_event(
-                events_log_path,
-                {
-                    "ts": _now_iso(),
-                    "event": "gate_brief_generated",
-                    "status": status,
-                    "brief_word_count": word_count,
-                    "patterns_detected_count": 0,
-                },
-            )
+            append_event(events_log_path, payload)
         except OSError as exc:
             print(
                 f"generate-brief: warning: failed to emit event: {exc}",
@@ -800,11 +812,11 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
             )
         except RuntimeError as e:
             print(f"generate-brief: retry SDK not available: {e}", file=sys.stderr)
-            _emit_event("validation_failed", brief_word_count)
+            _emit_event("validation_failed", brief_word_count, brief_text=brief)
             return 1
         except Exception as e:
             print(f"generate-brief: retry dispatch failed: {e}", file=sys.stderr)
-            _emit_event("validation_failed", brief_word_count)
+            _emit_event("validation_failed", brief_word_count, brief_text=brief)
             return 1
 
         brief_word_count = len(brief.split()) if brief else 0
@@ -822,7 +834,7 @@ def _cmd_generate_brief(args: argparse.Namespace) -> int:
             f"generate-brief: brief failed validation: {reason}",
             file=sys.stderr,
         )
-        _emit_event("validation_failed", brief_word_count)
+        _emit_event("validation_failed", brief_word_count, brief_text=brief)
         return 1
 
     # Brief is valid — emit success event and write to stdout.

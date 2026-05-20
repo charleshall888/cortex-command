@@ -399,3 +399,113 @@ def test_gate_renders_brief_not_architecture(tmp_path: Path) -> None:
             "Req 7 requires all four options (approve, revise, drop, promote-sub-topic) "
             "to be preserved in the Research → Decompose gate prose."
         )
+
+
+# ---------------------------------------------------------------------------
+# Test 4: validation_failed event payload carries brief_excerpt (no auth)
+# ---------------------------------------------------------------------------
+
+
+def test_validation_failed_event_includes_brief_excerpt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The gate_brief_generated event with status=validation_failed must include
+    a non-empty ``brief_excerpt`` (first 200 chars) when the rejected brief was
+    non-empty.
+
+    Drives the validation_failed branch by stubbing ``_run_brief_query`` to
+    return a deterministic non-empty brief that fails ``validate_brief`` (it
+    contains no decision/alternatives/tradeoff anchors). Asserts the events.log
+    entry written under ``tmp_path`` carries the new ``brief_excerpt`` field.
+    """
+    import argparse
+
+    from cortex_command import discovery
+
+    # A non-empty brief that fails validate_brief: no decision/alternatives/
+    # tradeoff anchors anywhere in the text. The "X" filler keeps the brief
+    # under the word cap so the rejection reason is anchor-missing rather than
+    # over-cap (either failure mode would still emit validation_failed, but
+    # anchor-missing is the more representative case we want to instrument).
+    rejected_brief = (
+        "This brief discusses several topics in plain prose without any of "
+        "the required anchor vocabulary. It enumerates findings, surveys the "
+        "landscape, and notes observations. No conclusion is rendered here."
+    )
+    ok, _ = validate_brief(rejected_brief)
+    assert not ok, (
+        "Test setup: the rejected_brief is supposed to fail validate_brief "
+        "so the validation_failed branch fires — fix the test fixture."
+    )
+
+    async def _stub_run_brief_query(
+        research_md_content: str,
+        retry_feedback: str | None = None,
+    ) -> str:
+        return rejected_brief
+
+    monkeypatch.setattr(discovery, "_run_brief_query", _stub_run_brief_query)
+
+    # Lay out a research.md under tmp_path so the subcommand can resolve a
+    # topic + repo-root and find the events log target.
+    topic = "validation-failed-excerpt-test"
+    research_dir = tmp_path / "cortex" / "research" / topic
+    research_dir.mkdir(parents=True)
+    research_md = research_dir / "research.md"
+    research_md.write_text(
+        "# Research: validation-failed-excerpt-test\n\nstub content.\n",
+        encoding="utf-8",
+    )
+
+    args = argparse.Namespace(
+        research_md=str(research_md),
+        topic=topic,
+        repo_root=str(tmp_path),
+        persist_to=None,
+    )
+
+    rc = discovery._cmd_generate_brief(args)
+    assert rc != 0, (
+        "generate-brief was expected to exit non-zero when the stubbed brief "
+        f"fails validate_brief, but exit code was {rc}."
+    )
+
+    events_log = research_dir / "events.log"
+    assert events_log.is_file(), (
+        f"Expected events.log at {events_log} after generate-brief failure, "
+        "but file was not created."
+    )
+
+    events = [
+        json.loads(line)
+        for line in events_log.read_text().splitlines()
+        if line.strip()
+    ]
+    brief_events = [e for e in events if e.get("event") == "gate_brief_generated"]
+    assert brief_events, (
+        f"No gate_brief_generated event found in events.log.\nEvents: {events}"
+    )
+
+    failed_events = [e for e in brief_events if e.get("status") == "validation_failed"]
+    assert failed_events, (
+        "Expected at least one gate_brief_generated event with "
+        f"status=validation_failed; got statuses: "
+        f"{[e.get('status') for e in brief_events]}"
+    )
+
+    last_failed = failed_events[-1]
+    assert "brief_excerpt" in last_failed, (
+        f"validation_failed event payload is missing brief_excerpt field.\n"
+        f"Event: {last_failed}"
+    )
+    excerpt = last_failed["brief_excerpt"]
+    assert isinstance(excerpt, str) and excerpt, (
+        f"brief_excerpt must be a non-empty string; got {excerpt!r}"
+    )
+    # The excerpt is the first 200 chars of the rejected brief (or fewer if
+    # the brief is shorter). Verify the prefix matches.
+    assert excerpt == rejected_brief[:200], (
+        f"brief_excerpt does not match first 200 chars of rejected brief.\n"
+        f"Expected: {rejected_brief[:200]!r}\nGot: {excerpt!r}"
+    )
