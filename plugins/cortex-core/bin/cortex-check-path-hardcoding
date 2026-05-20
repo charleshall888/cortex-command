@@ -41,7 +41,13 @@ Stdlib-only. See
 and ``plan.md`` for the design rationale.
 """
 
-import os, subprocess, sys; subprocess.run([os.path.join(os.path.dirname(os.path.realpath(__file__)), "cortex-log-invocation"), sys.argv[0], *sys.argv[1:]], check=False)
+import shutil, subprocess, sys
+_li = shutil.which("cortex-log-invocation")
+if _li is not None:
+    try:
+        subprocess.run([_li, sys.argv[0], *sys.argv[1:]], check=False, timeout=2)
+    except (subprocess.SubprocessError, OSError) as _e:
+        print(f"cortex-log-invocation failed: {_e}", file=sys.stderr)
 
 import argparse
 import os
