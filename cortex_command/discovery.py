@@ -282,6 +282,23 @@ section dump. Pair with the retry-on-overflow logic in
 ``_cmd_generate_brief`` for additional resilience.
 """
 
+_GATE_BRIEF_EXAMPLE_TOKENS: dict[str, tuple[str, ...]] = {
+    "decision": ("decided", "chose", "settled", "selected"),
+    "alternatives": ("alternatives", "options", "considered", "weighed"),
+    "tradeoff": ("tradeoff", "cost", "drawback", "compromise"),
+}
+"""Agent-facing representative tokens per anchor, drawn from the canonical floor.
+
+Single source of truth for tokens that appear in agent-facing prose:
+``GATE_BRIEF_RUBRIC`` examples (this module) and the retry-feedback prompt
+(see ``_cmd_generate_brief``). This is **not** the validator's accepted
+vocabulary — the validator accepts the full 30-token canonical floor
+(Reqs 3-5 of the fix-validate-brief-substring-anchors spec), pinned by a
+frozen literal in ``tests/test_discovery_gate_brief.py``. The deliberate
+asymmetry between agent-facing examples and validator-accepted vocabulary
+is the regression guard against lockstep shrinkage.
+"""
+
 GATE_BRIEF_RUBRIC: str = f"""\
 You are writing a gate brief for a software-development discovery run. \
 Your reader is the developer who will approve, revise, drop, or promote \
@@ -291,16 +308,26 @@ no numbered lists, no labels, no Markdown formatting.
 
 Your brief must answer three questions in order:
 
-1. What was decided? State the central conclusion of the research in one \
-or two sentences. Use ordinary words. Do not argue with the finding — \
-just state what the research settled on.
+1. What was {_GATE_BRIEF_EXAMPLE_TOKENS['decision'][0]}? State the central \
+conclusion of the research in one or two sentences. Use ordinary words — \
+verbs like {', '.join(_GATE_BRIEF_EXAMPLE_TOKENS['decision'])} are all fine. \
+Do not argue with the finding — just state what the research settled on.
 
-2. What alternatives were considered? Name the options that were weighed \
-and briefly explain why each was not chosen or was held as a phase-2 trigger.
+2. What {_GATE_BRIEF_EXAMPLE_TOKENS['alternatives'][0]} were \
+{_GATE_BRIEF_EXAMPLE_TOKENS['alternatives'][2]}? Name the \
+{_GATE_BRIEF_EXAMPLE_TOKENS['alternatives'][0]} or \
+{_GATE_BRIEF_EXAMPLE_TOKENS['alternatives'][1]} that were \
+{_GATE_BRIEF_EXAMPLE_TOKENS['alternatives'][2]} or \
+{_GATE_BRIEF_EXAMPLE_TOKENS['alternatives'][3]} on the table, and briefly \
+explain why each was not chosen or was held as a phase-2 trigger.
 
-3. What tradeoff was accepted? Name the concrete cost or constraint the \
-chosen direction carries. Be specific — "it is simpler but does not cover X" \
-is acceptable; "there are tradeoffs" is not.
+3. What {_GATE_BRIEF_EXAMPLE_TOKENS['tradeoff'][0]} was accepted? Name the \
+concrete {_GATE_BRIEF_EXAMPLE_TOKENS['tradeoff'][1]}, \
+{_GATE_BRIEF_EXAMPLE_TOKENS['tradeoff'][2]}, or \
+{_GATE_BRIEF_EXAMPLE_TOKENS['tradeoff'][3]} the chosen direction carries \
+(equivalently a {_GATE_BRIEF_EXAMPLE_TOKENS['tradeoff'][0]}). Be specific \
+— "it is simpler but does not cover X" is acceptable; "there are tradeoffs" \
+is not.
 
 Word target: write no more than {GATE_BRIEF_WORD_CAP} words. If you cannot \
 fit the three questions within that budget, compress the alternatives section \
