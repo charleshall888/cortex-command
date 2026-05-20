@@ -1,0 +1,1 @@
+[{"path": "bin/cortex-bar", "line": 1, "col": 1, "code": "W003", "message": "orphan: 'cortex-bar' deployed but not referenced in scope"}]

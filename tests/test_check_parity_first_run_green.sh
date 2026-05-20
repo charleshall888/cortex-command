@@ -13,4 +13,4 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-python3 bin/cortex-check-parity
+python3 -m cortex_command.parity_check

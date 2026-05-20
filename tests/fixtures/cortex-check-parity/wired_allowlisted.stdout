@@ -1,0 +1,1 @@
+[{"path": "bin/.parity-exceptions.md", "line": 5, "col": 1, "code": "W005", "message": "allowlist-superfluous: 'cortex-baz' is allowlisted but has a wiring signal in scope"}]

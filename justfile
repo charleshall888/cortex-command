@@ -341,11 +341,13 @@ validate-skill-preconditions skill:
     ./scripts/validate-preconditions.py {{skill}}
 
 # Check SKILL.md-to-bin parity (per DR-5 / lifecycle 102)
-# Uses `uv run` so the script picks up the project's managed deps (PyYAML
+# Uses `uv run` so the module picks up the project's managed deps (PyYAML
 # is required by the sandbox-preflight gate's YAML parser; system python3
 # on Homebrew is PEP-668-protected and cannot install pyyaml directly).
+# bin/cortex-check-parity is now a dual-channel bash wrapper; invoke the
+# module directly to avoid shell-in-Python confusion in the pre-commit hook.
 check-parity *args:
-    uv run python bin/cortex-check-parity {{args}}
+    uv run python3 -m cortex_command.parity_check {{args}}
 
 # Append one event row to a feature's events.log via the cortex-lifecycle-event CLI
 # Usage: just emit-event <event-name> <feature-slug> [worktree-path]
@@ -376,7 +378,7 @@ check-events-registry-audit:
 
 # Audit repo for bare bare-python-m cortex_command callsites against allowlist (R12, off critical path)
 check-bare-python-callsites:
-    uv run python bin/cortex-check-parity --audit-bare-python-m-callsites
+    uv run python3 -m cortex_command.parity_check --audit-bare-python-m-callsites
 
 # Check Python sources for bare-prefix path literals (#203 — prevents pre-#202 layout regression)
 check-path-hardcoding *args:
