@@ -74,7 +74,7 @@ Read **only** the reference for the current phase.
 Between the Research and Decompose phases a single-question user-blocking gate fires. The gate's first content section is the contents of `cortex/research/<topic>/brief.md`, generated via:
 
 ```
-python3 -m cortex_command.discovery generate-brief \
+cortex-discovery generate-brief \
     --research-md cortex/research/<topic>/research.md \
     --persist-to cortex/research/<topic>/brief.md
 ```
