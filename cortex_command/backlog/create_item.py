@@ -89,6 +89,7 @@ def create_item(
     priority: str = "low",
     rework_of: str | None = None,
     parent: str | None = None,
+    body: str | None = None,
 ) -> Path:
     """Create a new backlog item atomically and return its path."""
     if backlog_dir is None:
@@ -120,6 +121,8 @@ def create_item(
     if parent is not None:
         lines.append(f'parent: "{parent}"\n')
     lines.append("---\n")
+    if body is not None:
+        lines.append(body)
 
     atomic_write(item_path, "".join(lines))
 
@@ -156,6 +159,7 @@ def main() -> int:
     parser.add_argument("--rework-of", dest="rework_of", default=None,
                         help="ID of the original item this reworks")
     parser.add_argument("--parent", default=None, help="Parent epic ID")
+    parser.add_argument("--body", default=None, help="Markdown body content to append after frontmatter")
     args = parser.parse_args()
 
     # CLI-layer resolver routing — internal callers must pass backlog_dir
@@ -172,6 +176,7 @@ def main() -> int:
             priority=args.priority,
             rework_of=args.rework_of,
             parent=args.parent,
+            body=args.body,
         )
         print(str(item_path))
         return 0
