@@ -3,10 +3,11 @@
 This file is established in Phase 1 (Task 1) of the
 ``gate-policy-taxonomy-and-critical-review`` lifecycle. It ships
 ``test_no_root_pre_resolution_gate`` (Phase 1 atomicity invariant for
-Fix 2 / Requirements 3 and 4) and ``test_renamed_verifiers_have_caveat_substrings``
+Fix 2 / Requirements 3 and 4), ``test_renamed_verifiers_have_caveat_substrings``
 (Task 3 / Requirement 2(b) — the renamed verifier docstring caveat
-contract). Future Phase 2 additions will extend this file with
-``# gate-class:`` annotation assertions, reusing the module-level
+contract), and ``test_every_gate_site_carries_in_scope_annotation``
+(Task 4 / Requirement 2(a) — the closed-set gate-class annotation
+contract). All three tests share the module-level
 ``_get_function_source`` helper.
 
 Why a structural parity test (not prose convention):
@@ -22,6 +23,12 @@ Why a structural parity test (not prose convention):
     immediately so the rename's primary value (honesty: name +
     docstring + ``advisory`` annotation match what the gate actually
     delivers) cannot silently regress.
+  - Requirement 2(a) binds every gate raise/return site to a
+    closed-set ``# gate-class:`` annotation. If a future commit adds a
+    new gate without annotation, removes an existing annotation, or
+    introduces a class value outside the closed set
+    ``{security, hygiene, advisory}``, the test fires immediately with
+    a named failure message identifying the offending site.
 """
 
 from __future__ import annotations
@@ -223,6 +230,195 @@ def test_renamed_verifiers_have_caveat_substrings() -> None:
             f"Restore the substrings (or update the spec — but the spec is "
             f"the source of truth here)."
         )
+
+
+# ---------------------------------------------------------------------------
+# Task 4 / Requirement 2(a): closed-set gate-class annotation contract
+# ---------------------------------------------------------------------------
+
+
+# Closed set of valid gate-class values. Any value outside this set fires
+# the parity test immediately. Adding a new class requires updating this
+# constant AND the spec's Requirement 1 enumeration in lock-step.
+_VALID_GATE_CLASSES = frozenset({"security", "hygiene", "advisory"})
+
+# Regex matching the lines we consider gate-decision sites in
+# ``validate_artifact_path``. Two shapes are matched:
+#   - ``raise <Error>(...)`` — a direct raise of an Error class.
+#   - ``last_err = <Error>(...)`` — a deferred raise constructed for
+#     subsequent ``raise last_err`` propagation (the gate decision is
+#     made at the assignment, not at the propagation site).
+# The bare ``raise last_err`` propagation site is intentionally not
+# matched — it carries no gate-decision logic of its own.
+_VALIDATE_SITE_RE = re.compile(
+    r"^[ ]+(?:raise [A-Za-z_]\w*Error\(|last_err = [A-Za-z_]\w*Error\()",
+    re.MULTILINE,
+)
+
+# Regex matching the tuple-return shape in the verifier functions
+# (``check_synth_stable``, ``check_artifact_stable``). Each verifier
+# carries a single ``# gate-class: advisory`` annotation that classifies
+# the gate as a whole — the parity assertion below verifies the
+# annotation is present and that it precedes one of these tuple-return
+# sites within the in-scope window.
+_VERIFIER_SITE_RE = re.compile(
+    r"""^[ ]+return \(["'](?:absent|mismatch|read_failed|ok)["']""",
+    re.MULTILINE,
+)
+
+# In-scope window: an annotation is in-scope if it appears on one of the
+# 3 lines immediately preceding the site. Generous enough to allow a
+# blank line or a brief comment between the annotation and the site;
+# tight enough that an annotation 30 lines away cannot silently drift.
+_IN_SCOPE_WINDOW_LINES = 3
+
+# Regex that captures a ``# gate-class: <value>`` annotation and the
+# class value. Whitespace around the value is tolerated; only the
+# captured value is validated against ``_VALID_GATE_CLASSES`` so that
+# trailing comment text after the value (rare but legal) does not
+# false-negative.
+_ANNOTATION_RE = re.compile(r"#\s*gate-class:\s*([A-Za-z_]+)\b")
+
+
+def _find_annotation_in_window(
+    lines: list[str], site_line_idx: int
+) -> str | None:
+    """Return the gate-class value within ``_IN_SCOPE_WINDOW_LINES`` preceding ``site_line_idx``.
+
+    Walks the ``_IN_SCOPE_WINDOW_LINES`` lines immediately preceding the
+    site line (exclusive of the site line itself). Returns the captured
+    class value (e.g. ``"hygiene"``) on the first match, or ``None`` if
+    no annotation is in scope.
+
+    Args:
+        lines: The function source split on ``\\n``.
+        site_line_idx: Zero-based index of the site line in ``lines``.
+
+    Returns:
+        The captured class value, or ``None`` if not found in scope.
+    """
+    start = max(0, site_line_idx - _IN_SCOPE_WINDOW_LINES)
+    for line in lines[start:site_line_idx]:
+        m = _ANNOTATION_RE.search(line)
+        if m:
+            return m.group(1)
+    return None
+
+
+def test_every_gate_site_carries_in_scope_annotation() -> None:
+    """Phase 2 closed-set parity: every gate site carries an in-scope ``# gate-class:`` annotation.
+
+    Spec Requirement 2(a) / Task 4: every gate raise/return site inside
+    ``validate_artifact_path``, ``check_synth_stable``, and
+    ``check_artifact_stable`` must carry an in-scope (≤
+    ``_IN_SCOPE_WINDOW_LINES`` lines preceding) ``# gate-class: <value>``
+    annotation where ``<value>`` is one of
+    ``{security, hygiene, advisory}``.
+
+    Two site shapes are walked:
+      - ``validate_artifact_path``: ``raise <Error>(...)`` and
+        ``last_err = <Error>(...)`` deferred-raise sites. The bare
+        ``raise last_err`` propagation is intentionally excluded — it
+        carries no gate-decision logic of its own; the decision lives
+        at the ``last_err = ...`` assignment.
+      - ``check_synth_stable`` and ``check_artifact_stable``:
+        tuple-return sites whose first element is one of
+        ``{"absent", "mismatch", "read_failed", "ok"}``. The verifier
+        carries a single ``# gate-class: advisory`` annotation that
+        classifies the function as a gate-as-a-whole; the parity check
+        asserts that at least one such tuple-return site within the
+        function has the annotation in its in-scope window (i.e. the
+        annotation has not drifted away from the return it precedes).
+
+    Failure modes detected:
+      - A new gate added to ``validate_artifact_path`` without an
+        accompanying ``# gate-class:`` annotation.
+      - An existing annotation removed from any of the 5 site
+        annotations in ``validate_artifact_path`` (Task 4 sites) or
+        either of the 2 verifier annotations (Task 3 sites).
+      - An annotation whose class value falls outside the closed set
+        (e.g. ``# gate-class: low-priority`` or a bare
+        ``# gate-class:``).
+
+    The named failure message ``Gate-class parity violated`` matches the
+    spec's Requirement 2(a) acceptance criterion so the failure is
+    grep-discoverable from CI output.
+    """
+    # --- validate_artifact_path: every site needs its own annotation.
+    validate_source = _get_function_source("validate_artifact_path")
+    validate_lines = validate_source.split("\n")
+    validate_sites = list(_VALIDATE_SITE_RE.finditer(validate_source))
+    assert validate_sites, (
+        "Gate-class parity violated — walker found zero raise/last_err "
+        "sites in validate_artifact_path. The function should have at "
+        "least one gate-decision site; the regex may be broken."
+    )
+
+    failures: list[str] = []
+    for match in validate_sites:
+        # Compute the 1-based line number of the site within the function source.
+        line_idx = validate_source.count("\n", 0, match.start())
+        site_text = validate_lines[line_idx].strip()
+        gate_class = _find_annotation_in_window(validate_lines, line_idx)
+        if gate_class is None:
+            failures.append(
+                f"validate_artifact_path site {site_text!r} (function-relative "
+                f"line {line_idx + 1}) has no `# gate-class:` annotation in "
+                f"the {_IN_SCOPE_WINDOW_LINES}-line preceding window."
+            )
+        elif gate_class not in _VALID_GATE_CLASSES:
+            failures.append(
+                f"validate_artifact_path site {site_text!r} (function-relative "
+                f"line {line_idx + 1}) carries `# gate-class: {gate_class}` "
+                f"which is not in the closed set "
+                f"{sorted(_VALID_GATE_CLASSES)!r}."
+            )
+
+    # --- check_synth_stable and check_artifact_stable: at least one
+    # tuple-return site in each function must carry an in-scope
+    # advisory annotation. The verifier annotation classifies the
+    # function as a gate-as-a-whole; placing it on a single tuple-return
+    # site is the canonical idiom.
+    for verifier in ("check_synth_stable", "check_artifact_stable"):
+        verifier_source = _get_function_source(verifier)
+        verifier_lines = verifier_source.split("\n")
+        verifier_sites = list(_VERIFIER_SITE_RE.finditer(verifier_source))
+        assert verifier_sites, (
+            f"Gate-class parity violated — walker found zero "
+            f"tuple-return sites in {verifier}. The regex may be broken."
+        )
+
+        # The verifier must have at least one annotated tuple-return
+        # site, and every annotation that IS present must be from the
+        # closed set.
+        annotated_sites: list[tuple[int, str]] = []
+        for match in verifier_sites:
+            line_idx = verifier_source.count("\n", 0, match.start())
+            gate_class = _find_annotation_in_window(verifier_lines, line_idx)
+            if gate_class is not None:
+                annotated_sites.append((line_idx, gate_class))
+                if gate_class not in _VALID_GATE_CLASSES:
+                    failures.append(
+                        f"{verifier} site at function-relative line "
+                        f"{line_idx + 1} carries `# gate-class: {gate_class}` "
+                        f"which is not in the closed set "
+                        f"{sorted(_VALID_GATE_CLASSES)!r}."
+                    )
+
+        if not annotated_sites:
+            failures.append(
+                f"{verifier} has no `# gate-class:` annotation in scope of "
+                f"any tuple-return site. Per spec Requirement 2(a) and "
+                f"Task 3, each verifier must carry one `# gate-class: "
+                f"advisory` annotation preceding a tuple-return site."
+            )
+
+    assert not failures, (
+        "Gate-class parity violated — "
+        + str(len(failures))
+        + " site(s) failed the closed-set annotation check:\n  - "
+        + "\n  - ".join(failures)
+    )
 
 
 # ---------------------------------------------------------------------------

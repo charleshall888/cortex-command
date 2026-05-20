@@ -99,6 +99,7 @@ def validate_artifact_path(
     else:
         roots = list(lifecycle_root)
     if not roots:
+        # gate-class: hygiene
         raise ValueError(
             "Path validation failed: no artifact roots supplied."
         )
@@ -115,6 +116,7 @@ def validate_artifact_path(
         root_norm = Path(os.path.normcase(str(root_path)))
         # Strict prefix: candidate must be *under* the root, not equal to it.
         if candidate_norm == root_norm or not candidate_norm.is_relative_to(root_norm):
+            # gate-class: hygiene
             last_err = ValueError(
                 f"Path validation failed (Req 9b): {realpath!r} is not "
                 f"strictly under {str(root_path)!r}."
@@ -124,6 +126,7 @@ def validate_artifact_path(
         if feature is not None:
             feature_root_norm = Path(os.path.normcase(str(root_path / feature)))
             if not candidate_norm.is_relative_to(feature_root_norm):
+                # gate-class: hygiene
                 last_err = ValueError(
                     f"Path validation failed (Req 9b auto-trigger): {realpath!r} "
                     f"is not under {str(root_path / feature)!s}/."
@@ -132,6 +135,7 @@ def validate_artifact_path(
 
         # Root + feature checks passed; the file check is invariant of root.
         if not candidate_path.is_file():
+            # gate-class: security
             raise ValueError(
                 f"Path validation failed: {realpath!r} is not a regular file."
             )
@@ -139,6 +143,7 @@ def validate_artifact_path(
         return realpath
 
     if len(roots) > 1:
+        # gate-class: hygiene
         raise ValueError(
             f"Path validation failed (Req 9b): {realpath!r} is not "
             f"strictly under any of: {', '.join(repr(r) for r in roots)}."
